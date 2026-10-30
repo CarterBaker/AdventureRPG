@@ -8,6 +8,8 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -46,6 +48,10 @@ public class ShipwrightManager extends ManagerPackage {
     // Internal
     private VehicleManager vehicleManager;
     private FurnishingManager furnishingManager;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int launchCueID;
 
     // Branches
     private ShipwrightCompileBranch shipwrightCompileBranch;
@@ -88,10 +94,14 @@ public class ShipwrightManager extends ManagerPackage {
     protected void get() {
         this.vehicleManager = get(VehicleManager.class);
         this.furnishingManager = get(FurnishingManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     @Override
     protected void awake() {
+
+        // Cues
+        this.launchCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_SHIP_LAUNCH);
 
         furnishingManager.collectFurnishingNames(EngineSetting.SHIPWRIGHT_FURNISHING_FOLDER, furnishingNames);
         internalLoader.requestAll();
@@ -336,7 +346,10 @@ public class ShipwrightManager extends ManagerPackage {
             return false;
         }
 
-        vehicleManager.spawnBeside(vehicleManager.getVehicleHandleFromVehicleName(vehicleName), entity, direction);
+        VehicleInstance vehicle = vehicleManager.spawnBeside(
+                vehicleManager.getVehicleHandleFromVehicleName(vehicleName), entity, direction);
+
+        soundCueManager.playCueAt(launchCueID, vehicle.getWorldHandle(), vehicle.getWorldPositionStruct());
         session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_LAUNCHED + session.getBlueprint().getDisplayName());
 
         return true;

@@ -16,9 +16,10 @@ public class MovementManager extends ManagerPackage {
      * Drives the full movement pipeline for any entity in a fixed order: liquid
      * contact and ladders, leaps, horizontal movement and the waves carrying
      * it, swimming, climbing or gravity, collision against vehicles and then
-     * the world, correction, water state, position, boarding, ground offset
-     * and facing. Vehicles are reached through VehicleRiderSystem, which
-     * sweeps every move through their decks and keeps whoever rides them.
+     * the world, correction, water state, position, boarding, ground offset,
+     * facing and the sound of it all. Vehicles are reached through
+     * VehicleRiderSystem, which sweeps every move through their decks and
+     * keeps whoever rides them.
      * fly() is the physics-free path for free cameras, and face() turns a body
      * without moving it. writeMovementState() is the one place an entity's
      * input decides how it moves on the ground, whoever drives it.
@@ -35,6 +36,7 @@ public class MovementManager extends ManagerPackage {
     private NaturalGroundOffsetBranch naturalGroundOffsetBranch;
     private FlightBranch flightBranch;
     private FacingBranch facingBranch;
+    private MovementSoundBranch movementSoundBranch;
 
     // Cached Vectors
     private Vector3 movement;
@@ -53,6 +55,7 @@ public class MovementManager extends ManagerPackage {
         this.naturalGroundOffsetBranch = create(NaturalGroundOffsetBranch.class);
         this.flightBranch = create(FlightBranch.class);
         this.facingBranch = create(FacingBranch.class);
+        this.movementSoundBranch = create(MovementSoundBranch.class);
 
         // Cached Vectors
         this.movement = new Vector3();
@@ -159,6 +162,9 @@ public class MovementManager extends ManagerPackage {
 
         // 12. Facing — turns the body toward the heading just travelled
         facingBranch.update(entity);
+
+        // 13. Sound — steps, strokes, jumps, landings and splashes from what it just did
+        movementSoundBranch.update(entity, inWater, swimming, climbing, onDeck);
     }
 
     public void fly(EntityInstance entity) {

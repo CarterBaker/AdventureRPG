@@ -7,6 +7,7 @@ import editor.runtime.dev.freecamera.FreeCameraSystem;
 import editor.runtime.dev.item.DevItemSystem;
 import editor.runtime.dev.recorder.DevRecorderExportSystem;
 import editor.runtime.dev.recorder.DevRecorderOverlaySystem;
+import editor.runtime.dev.recorder.DevRecorderSoundSystem;
 import editor.runtime.dev.recorder.DevRecorderSystem;
 import editor.runtime.dev.teleport.DevTeleportSystem;
 import editor.runtime.dev.time.DevTimeSystem;
@@ -23,8 +24,9 @@ public class DevContext extends RuntimeContext {
      * commands use, the teleporter its teleport command uses, and the clock
      * mover its time, dawn, noon, dusk and midnight commands use. The
      * recorder's systems carry out a recording session in this window —
-     * capturing and playing it back, its interface included, and rendering
-     * its export — which its record, play, stop and mark commands drive too.
+     * capturing and playing it back, its interface and sounds included, and
+     * rendering its export — which its record, play, stop and mark commands
+     * drive too.
      * The editor pairs it with a Dev Mode tab exactly as it does a preview.
      * Dev-only systems live beside it in the editor's runtime, never in the
      * game's.
@@ -42,6 +44,7 @@ public class DevContext extends RuntimeContext {
     // interface renders after every other system so it sees every overlay the window pushes
     private DevRecorderExportSystem devRecorderExportSystem;
     private DevRecorderSystem devRecorderSystem;
+    private DevRecorderSoundSystem devRecorderSoundSystem;
     private DevRecorderOverlaySystem devRecorderOverlaySystem;
 
     // Internal \\
@@ -62,6 +65,7 @@ public class DevContext extends RuntimeContext {
         // Recorder
         this.devRecorderExportSystem = create(DevRecorderExportSystem.class);
         this.devRecorderSystem = create(DevRecorderSystem.class);
+        this.devRecorderSoundSystem = create(DevRecorderSoundSystem.class);
         this.devRecorderOverlaySystem = create(DevRecorderOverlaySystem.class);
     }
 
@@ -74,5 +78,6 @@ public class DevContext extends RuntimeContext {
     // Hands the recorder everything a take still holds here before it is saved
     public void finishTake() {
         devRecorderOverlaySystem.finishTake();
+        devRecorderSoundSystem.finishTake();
     }
 }

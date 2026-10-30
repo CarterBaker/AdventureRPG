@@ -42,9 +42,10 @@ public class VehicleManager extends ManagerPackage {
      * again under the same name replaces the old one, which keeps sailing
      * where it already floats and frees its meshes once the last of it
      * leaves the world. spawnBeside() launches a vehicle beside an entity.
-     * While the game is paused no vehicle steps. While held — a recording
-     * plays back in their stead — none steps or is drawn, and createPuppet()
-     * makes the drawn-only vehicles a recording poses instead.
+     * Every vehicle is heard through VehicleSoundBranch, and while the game
+     * is paused no vehicle steps and every one falls silent. While held — a
+     * recording plays back in their stead — none steps or is drawn, and
+     * createPuppet() makes the drawn-only vehicles a recording poses instead.
      */
 
     // Internal
@@ -61,6 +62,7 @@ public class VehicleManager extends ManagerPackage {
     private VehicleGroundBranch vehicleGroundBranch;
     private VehicleMooringBranch vehicleMooringBranch;
     private VehicleDoorBranch vehicleDoorBranch;
+    private VehicleSoundBranch vehicleSoundBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<String, VehicleHandle> vehicleName2VehicleHandle;
@@ -104,6 +106,7 @@ public class VehicleManager extends ManagerPackage {
         this.vehicleGroundBranch = create(VehicleGroundBranch.class);
         this.vehicleMooringBranch = create(VehicleMooringBranch.class);
         this.vehicleDoorBranch = create(VehicleDoorBranch.class);
+        this.vehicleSoundBranch = create(VehicleSoundBranch.class);
 
         // Systems
         this.vehicleRiderSystem = create(VehicleRiderSystem.class);
@@ -142,7 +145,12 @@ public class VehicleManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        if (vehicles.isEmpty() || held || clockManager.isPaused()) {
+        boolean moving = !held && !clockManager.isPaused();
+
+        for (int i = 0; i < vehicles.size(); i++)
+            vehicleSoundBranch.update(vehicles.get(i), moving);
+
+        if (vehicles.isEmpty() || !moving) {
             accumulatedTime = 0f;
             return;
         }
@@ -320,6 +328,7 @@ public class VehicleManager extends ManagerPackage {
 
         vehicle.getWorldPositionStruct().getPosition().y = vehicleMooringBranch.resolveRestHeight(vehicle);
         vehicles.add(vehicle);
+        vehicleSoundBranch.attach(vehicle);
         vehicleMooringBranch.dropAnchor(vehicle);
         vehicleCargoSystem.stow(vehicle);
 
@@ -363,6 +372,7 @@ public class VehicleManager extends ManagerPackage {
         if (!vehicles.remove(vehicle))
             return;
 
+        vehicleSoundBranch.detach(vehicle);
         vehicle.setHelmsman(null);
         vehicleRiderSystem.releaseVehicle(vehicle);
         releaseRetired();
@@ -398,6 +408,7 @@ public class VehicleManager extends ManagerPackage {
 
         releaseHelm(entity);
         vehicle.setHelmsman(entity);
+        vehicleSoundBranch.helm(vehicle);
     }
 
     // Lets go of whatever helm an entity holds
@@ -442,6 +453,8 @@ public class VehicleManager extends ManagerPackage {
         for (int sailIndex = 0; sailIndex < vehicleHandle.getSailCount(); sailIndex++)
             if (vehicleHandle.getSail(sailIndex).getYardIndex() == yardPartIndex)
                 setSail(vehicle, sailIndex, !anySet);
+
+        vehicleSoundBranch.hoist(vehicle, !anySet);
     }
 
     // Doors \\
@@ -455,6 +468,7 @@ public class VehicleManager extends ManagerPackage {
             return;
 
         vehicle.setDoorOpen(doorIndex, open);
+        vehicleSoundBranch.door(vehicle);
     }
 
     // Anchor \\
@@ -465,6 +479,8 @@ public class VehicleManager extends ManagerPackage {
             vehicleMooringBranch.weighAnchor(vehicle);
         else
             vehicleMooringBranch.dropAnchor(vehicle);
+
+        vehicleSoundBranch.anchor(vehicle);
     }
 
     // Query \\

@@ -19,6 +19,7 @@ import editor.runtime.menueventsmanager.menus.RecorderBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
 import editor.runtime.menueventsmanager.menus.ToolBranch;
 import editor.runtime.menueventsmanager.menus.SettlementPlannerBranch;
+import editor.runtime.menueventsmanager.menus.SoundLibraryBranch;
 import editor.runtime.menueventsmanager.menus.WorldEditorBranch;
 import editor.runtime.menueventsmanager.menus.WorldMapBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsBranch;
@@ -62,5 +63,6 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(AnimationEditorBranch.class);
         create(AnimationTreeEditorBranch.class);
         create(RecorderBranch.class);
+        create(SoundLibraryBranch.class);
     }
 }

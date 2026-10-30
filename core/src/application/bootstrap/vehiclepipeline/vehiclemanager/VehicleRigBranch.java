@@ -203,7 +203,12 @@ class VehicleRigBranch extends BranchPackage {
     // Wind \\
 
     // The wind over the grid streaming the vehicle, in blocks per second, or the prevailing wind where none does
-    private void resolveWind(VehicleInstance vehicle, Vector3 out) {
+    // How fast the wind blows where the vehicle floats, in blocks a second
+    float resolveWindSpeed(VehicleInstance vehicle) {
+        return resolveWind(vehicle, windScratch).length();
+    }
+
+    private Vector3 resolveWind(VehicleInstance vehicle, Vector3 out) {
 
         GridInstance grid = worldStreamManager.getGridForChunk(vehicle.getWorldPositionStruct().getChunkCoordinate());
 
@@ -212,13 +217,12 @@ class VehicleRigBranch extends BranchPackage {
             WindInstance wind = grid.getWindInstance();
             Vector3 direction = wind.getLocalWindDirection();
 
-            out.set(direction).multiply(wind.getLocalWindSpeed());
-            return;
+            return out.set(direction).multiply(wind.getLocalWindSpeed());
         }
 
         WindHandle wind = windManager.getWindHandle();
 
-        out.set(wind.getGlobalWindDirection()).multiply(wind.getGlobalWindSpeed());
+        return out.set(wind.getGlobalWindDirection()).multiply(wind.getGlobalWindSpeed());
     }
 
     // Utility \\

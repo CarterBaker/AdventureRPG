@@ -4,7 +4,8 @@ public enum RecorderDragKind {
 
     /*
      * What the Recorder tab is carrying under the cursor: nothing, a take
-     * picked up from the bin to lay on the timeline, a clip already on it
+     * picked up from the bin to lay on the timeline, a sound picked up from
+     * the sound library to lay as a take of its own, a clip already on it
      * being moved along its lanes, the start or the end of a clip being
      * dragged to trim it, a cut being placed through a clip, a node on a clip
      * being retimed or moved, the empty lanes being dragged to scroll the view
@@ -18,6 +19,7 @@ public enum RecorderDragKind {
 
     NONE,
     TAKE,
+    SOUND,
     CLIP,
     TRIM_START,
     TRIM_END,
@@ -37,7 +39,7 @@ public enum RecorderDragKind {
 
     // True for what carries a whole span to lay on the lanes
     public boolean isSpan() {
-        return this == TAKE || this == CLIP;
+        return this == TAKE || this == SOUND || this == CLIP;
     }
 
     // True for what is let go at a single moment of the timeline

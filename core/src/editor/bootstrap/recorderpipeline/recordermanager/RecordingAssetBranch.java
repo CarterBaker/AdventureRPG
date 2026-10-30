@@ -10,6 +10,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
+import application.bootstrap.soundpipeline.soundmanager.SoundManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
@@ -20,6 +21,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingAssetStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import engine.root.BranchPackage;
 import engine.util.arpg.ArpgElementStruct;
@@ -34,8 +36,9 @@ class RecordingAssetBranch extends BranchPackage {
      * Gathers every asset a recording uses, across every take in its bin,
      * into one section per RecorderAssetKind. The recording names its world,
      * and each take its characters' templates, genders and animations, the
-     * features and items each look wore, the items thrown, the vehicles and
-     * the interface targets it captured. Each named asset is looked up once,
+     * features and items each look wore, the items thrown, the vehicles, the
+     * interface targets it captured and the sounds it holds. Each named asset
+     * is looked up once,
      * the first time it is named, for what it is drawn and moved with — a
      * template's model, material and animation tree, a feature's model and
      * textures, an item's model, a vehicle's textures and the world's
@@ -50,6 +53,7 @@ class RecordingAssetBranch extends BranchPackage {
     private ItemDefinitionManager itemDefinitionManager;
     private VehicleManager vehicleManager;
     private AnimationManager animationManager;
+    private SoundManager soundManager;
 
     // Sections
     private RecordingAssetSectionStruct[] sections;
@@ -75,6 +79,7 @@ class RecordingAssetBranch extends BranchPackage {
         this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.vehicleManager = get(VehicleManager.class);
         this.animationManager = get(AnimationManager.class);
+        this.soundManager = get(SoundManager.class);
     }
 
     // Gather \\
@@ -117,6 +122,9 @@ class RecordingAssetBranch extends BranchPackage {
 
         if (take.getOverlayTrack() != null)
             gatherOverlays(take.getOverlayTrack(), owner);
+
+        if (take.getSoundTrack() != null)
+            gatherSounds(take.getSoundTrack(), owner);
     }
 
     // World \\
@@ -291,6 +299,21 @@ class RecordingAssetBranch extends BranchPackage {
         for (RecorderOverlay overlay : RecorderOverlay.VALUES)
             if (!overlayTrack.getStream(overlay).isEmpty())
                 add(RecorderAssetKind.INTERFACE, overlay.getFboName(), owner);
+    }
+
+    // Sounds \\
+
+    // Every sound the take names, marked missing once the game no longer has it
+    private void gatherSounds(RecordingSoundTrackStruct soundTrack, String owner) {
+
+        RecordingAssetSectionStruct section = sections[RecorderAssetKind.SOUNDS.ordinal()];
+
+        for (int i = 0; i < soundTrack.getSoundNames().size(); i++) {
+
+            String soundName = soundTrack.getSoundNames().get(i);
+
+            section.add(soundName, owner).setMissing(!soundManager.hasSound(soundName));
+        }
     }
 
     // Utility \\

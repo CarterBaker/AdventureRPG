@@ -14,6 +14,9 @@ import application.runtime.shipwright.ShipwrightRenderSystem;
 import application.runtime.shipwright.ShipwrightSystem;
 import application.runtime.sky.SkySystem;
 import application.runtime.sky.SquintSystem;
+import application.runtime.sound.AmbienceSoundSystem;
+import application.runtime.sound.MusicSoundSystem;
+import application.runtime.sound.SoundListenerSystem;
 import application.runtime.tree.TreeSystem;
 import application.runtime.vehicle.VehicleSystem;
 import application.runtime.vitality.VitalitySystem;
@@ -56,6 +59,9 @@ public class RuntimeContext extends ContextPackage {
     private TreeSystem treeSystem;
     private ShipwrightSystem shipwrightSystem;
     private ShipwrightRenderSystem shipwrightRenderSystem;
+    private SoundListenerSystem soundListenerSystem;
+    private AmbienceSoundSystem ambienceSoundSystem;
+    private MusicSoundSystem musicSoundSystem;
 
     // Internal \\
 
@@ -84,5 +90,8 @@ public class RuntimeContext extends ContextPackage {
         this.treeSystem = create(TreeSystem.class);
         this.shipwrightSystem = create(ShipwrightSystem.class);
         this.shipwrightRenderSystem = create(ShipwrightRenderSystem.class);
+        this.soundListenerSystem = create(SoundListenerSystem.class);
+        this.ambienceSoundSystem = create(AmbienceSoundSystem.class);
+        this.musicSoundSystem = create(MusicSoundSystem.class);
     }
 }

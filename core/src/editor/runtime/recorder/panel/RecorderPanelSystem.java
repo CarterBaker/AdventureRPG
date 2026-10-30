@@ -40,7 +40,8 @@ public class RecorderPanelSystem extends SystemPackage {
      * it and every edit it takes, and the stretch of the timeline in view: its
      * ruler's ticks, its export range, and its clips on their lanes, highest
      * on top, each with what the player does along it — the movement it is in
-     * along its lower row and every gesture of its hands along its upper row.
+     * along its lower row and every gesture of its hands along its upper row —
+     * a sound laid from the sound library in a shade of its own.
      * Only what lies in view is drawn, cut at the view's edges, and the view's
      * zooming and scrolling redraws the timeline alone. Both playheads follow
      * the playhead every frame from positions built once, hidden while it is
@@ -656,7 +657,8 @@ public class RecorderPanelSystem extends SystemPackage {
         return (float) Math.ceil(wanted / longest) * longest;
     }
 
-    // One bar per clip across the part of it in view, on its own lane, named after its take
+    // One bar per clip across the part of it in view, on its own lane, named after its take; a take of one sound
+    // dropped from the sound library is drawn in its own shade
     private void injectClipBar(RecordingClipStruct clip, int clipIndex, RecordingViewStruct view) {
 
         if (!clip.overlaps(view.getStart(), view.getEnd()))
@@ -667,7 +669,10 @@ public class RecorderPanelSystem extends SystemPackage {
         DimensionVector2Struct size = resolveBarSize(toViewStep(clip.getEnd()) - fromStep);
         String template = clipIndex == recorderManager.getSelectedClip()
                 ? RecorderSetting.TEMPLATE_CLIP_BAR_SELECTED
-                : clip.isMuted() ? RecorderSetting.TEMPLATE_CLIP_BAR_MUTED : RecorderSetting.TEMPLATE_CLIP_BAR;
+                : clip.isMuted() ? RecorderSetting.TEMPLATE_CLIP_BAR_MUTED
+                        : clip.getTake().getChannelMask() == RecorderChannel.SOUND.getBit()
+                                ? RecorderSetting.TEMPLATE_CLIP_BAR_SOUND
+                                : RecorderSetting.TEMPLATE_CLIP_BAR;
 
         ElementInstance bar = menuManager.inject(recorderMenu, EditorSetting.RECORDER_ENTRY_CLIP_LANES, template,
                 injected -> {

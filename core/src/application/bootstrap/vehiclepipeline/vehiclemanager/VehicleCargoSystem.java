@@ -14,6 +14,7 @@ import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
@@ -60,6 +61,11 @@ public class VehicleCargoSystem extends SystemPackage {
     private ItemManager itemManager;
     private FurnishingManager furnishingManager;
     private LootTableManager lootTableManager;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int pickUpCueID;
+    private int setDownCueID;
 
     // Cast
     private VehicleCastStruct castStruct;
@@ -95,6 +101,15 @@ public class VehicleCargoSystem extends SystemPackage {
         this.itemManager = get(ItemManager.class);
         this.furnishingManager = get(FurnishingManager.class);
         this.lootTableManager = get(LootTableManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.pickUpCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_PICK_UP);
+        this.setDownCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_SET_DOWN);
     }
 
     // Cast \\
@@ -168,6 +183,7 @@ public class VehicleCargoSystem extends SystemPackage {
             return false;
 
         castStruct.getVehicleInstance().getCargo().remove(cargo);
+        soundCueManager.playCueAt(pickUpCueID, entity.getWorldHandle(), entity.getWorldPositionStruct());
 
         return true;
     }
@@ -198,6 +214,7 @@ public class VehicleCargoSystem extends SystemPackage {
             return false;
 
         addCargo(vehicle, inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND), orientation);
+        soundCueManager.playCueAt(setDownCueID, entity.getWorldHandle(), entity.getWorldPositionStruct());
 
         return true;
     }

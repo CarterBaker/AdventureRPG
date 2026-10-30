@@ -7,6 +7,7 @@ import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.progressionpipeline.statmanager.StatManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.quaternions.Quaternion;
@@ -31,6 +32,10 @@ class ThrowBranch extends BranchPackage {
     private PlacementManager placementManager;
     private ProjectileManager projectileManager;
     private StatManager statManager;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int throwCueID;
 
     // Scratch
     private Vector3 eyeScratch;
@@ -60,6 +65,14 @@ class ThrowBranch extends BranchPackage {
         this.placementManager = get(PlacementManager.class);
         this.projectileManager = get(ProjectileManager.class);
         this.statManager = get(StatManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.throwCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_THROW);
     }
 
     // Release \\
@@ -94,6 +107,8 @@ class ThrowBranch extends BranchPackage {
                 spinAxis,
                 EngineSetting.THROW_SPIN_RATE / (1f + itemInstance.getTotalWeight()),
                 orientation);
+
+        soundCueManager.playCueAt(throwCueID, entity.getWorldHandle(), entity.getWorldPositionStruct());
     }
 
     // Impulse over mass, plus the thrower's own run

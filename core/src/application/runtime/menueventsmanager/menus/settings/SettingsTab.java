@@ -14,7 +14,7 @@ public enum SettingsTab {
     GRAPHICS(RuntimeSetting.SETTINGS_TAB_GRAPHICS, null),
     MAIN_MENU(RuntimeSetting.SETTINGS_TAB_MAIN_MENU, null),
     CONTROLS(RuntimeSetting.SETTINGS_TAB_CONTROLS, null),
-    AUDIO(RuntimeSetting.SETTINGS_TAB_AUDIO, RuntimeSetting.SETTINGS_PLACEHOLDER_AUDIO),
+    AUDIO(RuntimeSetting.SETTINGS_TAB_AUDIO, null),
     GAMEPLAY(RuntimeSetting.SETTINGS_TAB_GAMEPLAY, null),
     ACCESSIBILITY(RuntimeSetting.SETTINGS_TAB_ACCESSIBILITY, RuntimeSetting.SETTINGS_PLACEHOLDER_ACCESSIBILITY);
 

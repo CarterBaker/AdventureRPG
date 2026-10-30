@@ -8,6 +8,7 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelQuadListStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import application.bootstrap.worldpipeline.tree.TreeFallInstance;
 import application.bootstrap.worldpipeline.tree.TreeFallState;
@@ -53,6 +54,11 @@ class TreeFallBranch extends BranchPackage {
     private ItemManager itemManager;
     private ProjectileManager projectileManager;
     private ThreadHandle threadHandle;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int fallCueID;
+    private int landCueID;
 
     // Falls
     private ObjectArrayList<TreeFallInstance> falls;
@@ -99,6 +105,15 @@ class TreeFallBranch extends BranchPackage {
         this.itemManager = get(ItemManager.class);
         this.projectileManager = get(ProjectileManager.class);
         this.threadHandle = getThreadHandleFromThreadName(EngineSetting.WORLD_STREAMING_THREAD_NAME);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.fallCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_TREE_FALL);
+        this.landCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_TREE_LAND);
     }
 
     // Fell \\
@@ -197,6 +212,7 @@ class TreeFallBranch extends BranchPackage {
 
         fall.setAngle(EngineSetting.TREE_FALL_START_RADIANS, 0f);
         fall.setState(TreeFallState.FALLING);
+        playAtRoot(fallCueID, fall.getTree());
     }
 
     // A rod hinged at its foot swings faster the further it leans, by three halves of gravity over its length
@@ -231,6 +247,19 @@ class TreeFallBranch extends BranchPackage {
     private void settle(TreeFallInstance fall) {
         fall.setRestSeconds(EngineSetting.TREE_FALL_REST_SECONDS);
         fall.setState(TreeFallState.RESTING);
+        playAtRoot(landCueID, fall.getTree());
+    }
+
+    // At the foot of the tree, where its trunk stood
+    private void playAtRoot(int cueID, TreeInstance tree) {
+        soundCueManager.playCueAt(
+                cueID,
+                1f,
+                tree.getWorldHandle(),
+                tree.getRootChunkCoordinate(),
+                Math.floorMod(tree.getAnchorX(), EngineSetting.CHUNK_SIZE) + 0.5f,
+                tree.getBaseY(),
+                Math.floorMod(tree.getAnchorZ(), EngineSetting.CHUNK_SIZE) + 0.5f);
     }
 
     private void rest(TreeFallInstance fall, float deltaTime) {

@@ -46,6 +46,7 @@ class ProficiencyBranch extends BranchPackage {
     private ProfessionManager professionManager;
     private ConductBranch conductBranch;
     private CareerBranch careerBranch;
+    private ProgressionSoundBranch progressionSoundBranch;
 
     // Skills
     private short unarmedSkillID;
@@ -64,6 +65,7 @@ class ProficiencyBranch extends BranchPackage {
         this.professionManager = get(ProfessionManager.class);
         this.conductBranch = get(ConductBranch.class);
         this.careerBranch = get(CareerBranch.class);
+        this.progressionSoundBranch = get(ProgressionSoundBranch.class);
     }
 
     @Override
@@ -157,8 +159,11 @@ class ProficiencyBranch extends BranchPackage {
 
         markChanged(entity);
 
-        if (steps > 0)
-            conductBranch.perform(entity, advanceDeedID, steps, entity.getLevel());
+        if (steps <= 0)
+            return;
+
+        conductBranch.perform(entity, advanceDeedID, steps, entity.getLevel());
+        progressionSoundBranch.skill(entity);
     }
 
     // The skill whatever the main hand holds trains — the unarmed skill for bare hands, SKILL_NONE for an item that

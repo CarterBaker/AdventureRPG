@@ -10,7 +10,9 @@ public class RecordingTakeStruct extends StructPackage {
      * Stop, its own clock running from zero. It knows the channels it
      * recorded, how long it ran, and holds a track for each thing it saw —
      * the camera, the player, every resident, thrown item and vehicle about
-     * them, the weather, the clock and the interface. A take is never played
+     * them, the weather, the clock, the interface and the sounds. A take
+     * dropped from the sound library holds that one sound alone, from its
+     * start, and runs as long as it plays. A take is never played
      * by itself: clips placed on the timeline play spans of it, each with
      * whichever of its channels it is given.
      */
@@ -29,6 +31,7 @@ public class RecordingTakeStruct extends StructPackage {
     private final RecordingWeatherTrackStruct weatherTrack;
     private final RecordingClockTrackStruct clockTrack;
     private final RecordingOverlayTrackStruct overlayTrack;
+    private final RecordingSoundTrackStruct soundTrack;
 
     // Constructor \\
 
@@ -46,6 +49,7 @@ public class RecordingTakeStruct extends StructPackage {
         this.weatherTrack = RecorderChannel.WEATHER.isIn(channelMask) ? new RecordingWeatherTrackStruct() : null;
         this.clockTrack = RecorderChannel.TIME.isIn(channelMask) ? new RecordingClockTrackStruct() : null;
         this.overlayTrack = RecorderChannel.INTERFACE.isIn(channelMask) ? new RecordingOverlayTrackStruct() : null;
+        this.soundTrack = RecorderChannel.SOUND.isIn(channelMask) ? new RecordingSoundTrackStruct() : null;
     }
 
     // Management \\
@@ -80,6 +84,14 @@ public class RecordingTakeStruct extends StructPackage {
 
         if (overlayTrack != null)
             overlayTrack.shiftTimes(seconds);
+
+        if (soundTrack != null)
+            soundTrack.shiftTimes(seconds);
+    }
+
+    // True for a take dropped from the sound library for the sound: that sound alone, from its start
+    public boolean isSoundOf(String soundName) {
+        return channelMask == RecorderChannel.SOUND.getBit() && soundTrack.isSingle(soundName);
     }
 
     // Accessible \\
@@ -142,5 +154,9 @@ public class RecordingTakeStruct extends StructPackage {
 
     public RecordingOverlayTrackStruct getOverlayTrack() {
         return overlayTrack;
+    }
+
+    public RecordingSoundTrackStruct getSoundTrack() {
+        return soundTrack;
     }
 }

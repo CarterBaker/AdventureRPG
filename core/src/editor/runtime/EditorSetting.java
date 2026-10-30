@@ -320,6 +320,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_PALETTE = "Palette";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
+    public static final String TAB_TITLE_SOUND_LIBRARY = "Sound Library";
     public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
@@ -1383,12 +1384,30 @@ public class EditorSetting {
     public static final String RECORDER_VIDEO_NAME_SEPARATOR = "_";
     public static final String RECORDER_EXTENSION_SEPARATOR = ".";
     public static final int RECORDER_FILE_VERSION = 2;
+    public static final int RECORDER_SOUND_TAKE_FIRST_NUMBER = 2;
+    public static final float RECORDER_SOUND_JUMP_SECONDS = 0.25f;
+    public static final String RECORDER_SOUND_TAKE_NAME_SEPARATOR = " ";
+    public static final int RECORDER_AUDIO_SAMPLE_RATE = 48_000;
+    public static final int RECORDER_AUDIO_CHANNELS = 2;
+    public static final int RECORDER_AUDIO_SAMPLE_BYTES = Short.BYTES;
+    public static final float RECORDER_AUDIO_PAN_EIGHTH_TURN = (float) (Math.PI / 4.0);
     public static final int RECORDER_FILE_VERSION_LAYERS = 1;
     public static final String RECORDER_FILE_CHANNEL_WORLD = "world";
 
     // Recorder — the tab's menu, and the lanes its drags land on and the ruler and graph its wheel zooms, which
     // every Recorder tab shares
     public static final String RECORDER_MENU = "editor/Recorder/Recorder";
+    public static final String SOUND_LIBRARY_MENU = "editor/SoundLibrary/SoundLibrary";
+    public static final String SOUND_LIBRARY_STATUS_READY =
+            "Pick a sound to sample it, or drag it onto the Recorder's timeline";
+    public static final String SOUND_LIBRARY_STATUS_SELECTED = "Selected ";
+    public static final String SOUND_LIBRARY_STATUS_PLAYING = "Playing ";
+    public static final String SOUND_LIBRARY_STATUS_PAUSED = "Paused";
+    public static final String SOUND_LIBRARY_STATUS_STOPPED = "Stopped";
+    public static final String SOUND_LIBRARY_STATUS_ENDED = "Finished playing";
+    public static final String SOUND_LIBRARY_STATUS_NO_SOUND = "Select a sound first";
+    public static final String SOUND_LIBRARY_STATUS_SILENT = "No audio device is open, so nothing can play";
+    public static final String SOUND_LIBRARY_STATUS_ADDED = "Laid on the Recorder's timeline: ";
     public static final int RECORDER_ENTRY_CLIP_LANES = 5;
     public static final int RECORDER_ENTRY_RULER = 6;
     public static final int RECORDER_ENTRY_KEY_ROWS = 16;
@@ -1403,6 +1422,7 @@ public class EditorSetting {
     public static final String RECORDER_CHANNEL_LABEL_WEATHER = "Weather";
     public static final String RECORDER_CHANNEL_LABEL_TIME = "Time and light";
     public static final String RECORDER_CHANNEL_LABEL_INTERFACE = "Interface";
+    public static final String RECORDER_CHANNEL_LABEL_SOUND = "Sound";
 
     // Recorder — the timeline; clips stack on a fixed number of lanes, the highest playing over the rest, and the
     // timeline runs on past the recording's end so there is room to lay a clip after it
@@ -1523,6 +1543,7 @@ public class EditorSetting {
     public static final String RECORDER_ASSET_LABEL_ANIMATION_TREES = "Animation trees";
     public static final String RECORDER_ASSET_LABEL_ANIMATIONS = "Animations";
     public static final String RECORDER_ASSET_LABEL_INTERFACE = "Interface";
+    public static final String RECORDER_ASSET_LABEL_SOUNDS = "Sounds";
 
     // Recorder — key modes, as the Keys pane names them
     public static final String RECORDER_KEY_MODE_LABEL_AUTO = "Auto";
@@ -1560,6 +1581,7 @@ public class EditorSetting {
             + Integer.BYTES * 4;
     public static final int RECORDER_PROJECTILE_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 4;
     public static final int RECORDER_CLOCK_SAMPLE_BYTES = Float.BYTES + Long.BYTES;
+    public static final int RECORDER_SOUND_EVENT_BYTES = Float.BYTES * 9 + Integer.BYTES * 2 + Long.BYTES;
     public static final int RECORDER_CURVE_KEY_BYTES = Float.BYTES * 3 + Double.BYTES * 3 + Integer.BYTES;
     public static final int RECORDER_WEATHER_SAMPLE_BYTES = Float.BYTES * 2 + Double.BYTES * 2;
     public static final int RECORDER_VEHICLE_SAMPLE_BYTES = RECORDER_PLACE_SAMPLE_BYTES + Float.BYTES * 5
@@ -1665,6 +1687,12 @@ public class EditorSetting {
     public static final String RECORDER_AVI_STANDARD_INDEX = "ix00";
     public static final String RECORDER_AVI_OLD_INDEX = "idx1";
     public static final String RECORDER_AVI_VIDEO_STREAM = "vids";
+    public static final String RECORDER_AVI_AUDIO_STREAM = "auds";
+    public static final String RECORDER_AVI_AUDIO_CHUNK = "01wb";
+    public static final String RECORDER_AVI_AUDIO_STANDARD_INDEX = "ix01";
+    public static final int RECORDER_AVI_WAVE_FORMAT_BYTES = 18;
+    public static final int RECORDER_AVI_FRAME_RECT_BYTES = 8;
+    public static final short RECORDER_AVI_WAVE_FORMAT_PCM = 1;
     public static final String RECORDER_AVI_CODEC = "MJPG";
     public static final int RECORDER_AVI_CHUNK_HEADER_BYTES = 8;
     public static final int RECORDER_AVI_LIST_HEADER_BYTES = 12;
@@ -1688,6 +1716,12 @@ public class EditorSetting {
             + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_MAIN_HEADER_BYTES
             + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_STREAM_LIST_BYTES
             + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_EXTENDED_LIST_BYTES;
+    public static final int RECORDER_AVI_AUDIO_STREAM_LIST_BYTES = 4
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_STREAM_HEADER_BYTES
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_WAVE_FORMAT_BYTES
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_SUPER_INDEX_BYTES;
+    public static final int RECORDER_AVI_AUDIO_HEADER_LIST_BYTES = RECORDER_AVI_HEADER_LIST_BYTES
+            + RECORDER_AVI_CHUNK_HEADER_BYTES + RECORDER_AVI_AUDIO_STREAM_LIST_BYTES;
     public static final int RECORDER_AVI_STANDARD_INDEX_HEADER_BYTES = 24;
     public static final int RECORDER_AVI_STANDARD_INDEX_ENTRY_BYTES = 8;
     public static final int RECORDER_AVI_OLD_INDEX_ENTRY_BYTES = 16;
@@ -1698,6 +1732,7 @@ public class EditorSetting {
     public static final int RECORDER_AVI_KEYFRAME_FLAG = 0x10;
     public static final int RECORDER_AVI_HAS_INDEX_FLAG = 0x10;
     public static final int RECORDER_AVI_STREAM_COUNT = 1;
+    public static final int RECORDER_AVI_AUDIO_STREAM_COUNT = 2;
     public static final int RECORDER_AVI_DEFAULT_QUALITY = -1;
     public static final short RECORDER_AVI_PLANES = 1;
     public static final short RECORDER_AVI_BITS_PER_PIXEL = 24;
@@ -1755,6 +1790,7 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_TAKE_TOO_SHORT = "Take too short to keep";
     public static final String RECORDER_STATUS_NOTHING_ARMED = "Arm at least one channel to record";
     public static final String RECORDER_STATUS_NOTHING_RECORDED = "Nothing recorded yet";
+    public static final String RECORDER_STATUS_NO_RECORDING_FOR_SOUND = "Open or make a recording to lay sounds on";
     public static final String RECORDER_STATUS_NO_DEV_WINDOW = "Open a Dev Mode tab to record or play";
     public static final String RECORDER_STATUS_WRONG_WORLD = "This recording was made in another world: ";
     public static final String RECORDER_STATUS_NAME_TAKEN = "That name is taken or not a valid file name: ";

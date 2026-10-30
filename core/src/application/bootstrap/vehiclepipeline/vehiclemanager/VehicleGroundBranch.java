@@ -27,6 +27,7 @@ class VehicleGroundBranch extends BranchPackage {
     // Internal
     private WorldStreamManager worldStreamManager;
     private BlockManager blockManager;
+    private VehicleSoundBranch vehicleSoundBranch;
 
     // Settings
     private float subBlockSize;
@@ -52,6 +53,7 @@ class VehicleGroundBranch extends BranchPackage {
     protected void get() {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.blockManager = get(BlockManager.class);
+        this.vehicleSoundBranch = get(VehicleSoundBranch.class);
     }
 
     // Contact \\
@@ -146,6 +148,8 @@ class VehicleGroundBranch extends BranchPackage {
 
         if (press <= 0f)
             return;
+
+        vehicleSoundBranch.ground(vehicle, -normalSpeed);
 
         float slideX = pointX - normalSpeed * normalScratch.x;
         float slideY = pointY - normalSpeed * normalScratch.y;

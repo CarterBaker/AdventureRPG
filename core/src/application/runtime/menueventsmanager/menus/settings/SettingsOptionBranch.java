@@ -13,14 +13,15 @@ import engine.root.BranchPackage;
 public class SettingsOptionBranch extends BranchPackage {
 
     /*
-     * Fills the Display, Graphics, Main Menu and Gameplay tabs and the
+     * Fills the Display, Graphics, Main Menu, Audio and Gameplay tabs and the
      * Controls tab's mouse section, and writes each change into Settings
      * through SettingsValueUtility, the model every settings menu shares.
      * Display, field of view, both tree detail distances and every
      * post-processing effect take effect at once through SettingsSystem, the
      * trees redrawing only those crossing the line, and sensitivity is read
      * live by InputManager, as is the third person depth of field by
-     * AutoFocusSystem, and the camera's shake and head bob by PlayerManager.
+     * AutoFocusSystem, the camera's shake and head bob by PlayerManager, and
+     * every volume by SoundManager, so a sound playing changes as it moves.
      * Render distance, terrain detail, distant terrain and the main menu's
      * world reshape how the world streams and shades — a distance change
      * reloads every chunk — so they only mark the session, and
@@ -112,6 +113,16 @@ public class SettingsOptionBranch extends BranchPackage {
     void populateMouse(SettingsSessionStruct session) {
         settingsMenuBranch.injectSectionHeader(session, RuntimeSetting.SETTINGS_SECTION_MOUSE);
         injectSlider(session, SettingsSlider.MOUSE_SENSITIVITY);
+    }
+
+    void populateAudio(SettingsSessionStruct session) {
+        settingsMenuBranch.injectSectionHeader(session, RuntimeSetting.SETTINGS_SECTION_VOLUME);
+        injectSlider(session, SettingsSlider.MASTER_VOLUME);
+        injectSlider(session, SettingsSlider.MUSIC_VOLUME);
+        injectSlider(session, SettingsSlider.EFFECT_VOLUME);
+        injectSlider(session, SettingsSlider.AMBIENT_VOLUME);
+        injectSlider(session, SettingsSlider.INTERFACE_VOLUME);
+        injectSlider(session, SettingsSlider.VOICE_VOLUME);
     }
 
     void populateGameplay(SettingsSessionStruct session) {

@@ -14,6 +14,7 @@ import application.bootstrap.progressionpipeline.damagetypemanager.DamageTypeMan
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.progressionpipeline.skillmanager.SkillManager;
 import application.bootstrap.progressionpipeline.statmanager.StatManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCastStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
@@ -67,6 +68,10 @@ class ProjectileFlightBranch extends BranchPackage {
     private StatManager statManager;
     private SkillManager skillManager;
     private DamageTypeManager damageTypeManager;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int bounceCueID;
 
     // Skills
     private short thrownSkillID;
@@ -111,10 +116,14 @@ class ProjectileFlightBranch extends BranchPackage {
         this.statManager = get(StatManager.class);
         this.skillManager = get(SkillManager.class);
         this.damageTypeManager = get(DamageTypeManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     @Override
     protected void awake() {
+
+        // Cues
+        this.bounceCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_PROJECTILE_BOUNCE);
 
         // Skills
         this.thrownSkillID = skillManager.getSkillIDFromSkillName(EngineSetting.SKILL_THROWN);
@@ -262,6 +271,11 @@ class ProjectileFlightBranch extends BranchPackage {
             return;
         }
 
+        soundCueManager.playCueAt(
+                bounceCueID,
+                Math.min(1f, Math.abs(normalSpeed) / EngineSetting.SOUND_PROJECTILE_SPEED_LOUD),
+                projectile.getWorldHandle(),
+                projectile.getWorldPositionStruct());
         reflect(projectile, face);
     }
 

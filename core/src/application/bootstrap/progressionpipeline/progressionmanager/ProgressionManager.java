@@ -64,6 +64,7 @@ public class ProgressionManager extends ManagerPackage {
         this.careerBranch = create(CareerBranch.class);
         this.vitalityBranch = create(VitalityBranch.class);
         this.gearBranch = create(GearBranch.class);
+        create(ProgressionSoundBranch.class);
 
         // Beings
         this.beings = new ObjectArrayList<>();

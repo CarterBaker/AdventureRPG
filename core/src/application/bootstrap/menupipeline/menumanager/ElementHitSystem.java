@@ -8,6 +8,7 @@ import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
 import application.bootstrap.menupipeline.util.StackDirection;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.input.Buttons;
@@ -28,11 +29,13 @@ public class ElementHitSystem extends SystemPackage {
      * in the clicked window's context, inside that context's crash boundary. A
      * method receives whichever of String, MenuInstance, WindowInstance and
      * ElementInstance it declares. Actions run from outside a menu, such as a
-     * shortcut, take the same path with no menu or element to hand over.
+     * shortcut, take the same path with no menu or element to hand over. A
+     * click on a menu that names a click cue plays it.
      */
 
     // Internal
     private InputManager inputManager;
+    private SoundCueManager soundCueManager;
 
     // Interaction
     private ElementInstance hoveredElement;
@@ -59,6 +62,7 @@ public class ElementHitSystem extends SystemPackage {
     @Override
     protected void get() {
         this.inputManager = get(InputManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     // Entry Point \\
@@ -542,6 +546,8 @@ public class ElementHitSystem extends SystemPackage {
             if (!isHit(element, mouseX, mouseY))
                 continue;
 
+            playClick(menu);
+
             if (element.hasClickState() && element.hasClickStateChildren()) {
                 toggleClickState(element, menu.getWindow());
                 return true;
@@ -586,6 +592,12 @@ public class ElementHitSystem extends SystemPackage {
         if (active == handle.getHoverExitState())
             return element.getHoverExitStateChildren();
         return null;
+    }
+
+    // Sound \\
+
+    private void playClick(MenuInstance menu) {
+        soundCueManager.playCue(menu.getMenuData().getClickCueID());
     }
 
     // Toggle \\

@@ -6,6 +6,8 @@ import java.util.Arrays;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
+import application.bootstrap.soundpipeline.sound.SoundHandle;
+import application.bootstrap.soundpipeline.soundmanager.SoundManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
@@ -90,7 +92,13 @@ public class RecorderManager extends ManagerPackage {
      * What is selected is deleted as one: the keys, else the node, else the
      * clip. The Assets pane lists
      * every asset the whole recording uses, section by section, each section
-     * opened or closed here. The player cannot be recorded without the camera
+     * opened or closed here. A sound dragged in from the sound library, or
+     * added at the playhead, is laid as a take of its own holding that sound
+     * alone, the bin keeping one such take for each sound however often it is
+     * laid. Sounds add up rather than give way: while the timeline plays or a
+     * take records, every clip covering the playhead sounds together, and an
+     * export mixes every one of them into its video's sound. The player
+     * cannot be recorded without the camera
      * that follows it. While a session plays the world, residents, thrown
      * items and vehicles are held. While the game is paused the session is
      * suspended — the playhead waits and a take records nothing — and it
@@ -109,11 +117,13 @@ public class RecorderManager extends ManagerPackage {
     private NpcManager npcManager;
     private ProjectileManager projectileManager;
     private VehicleManager vehicleManager;
+    private SoundManager soundManager;
     private RecordingFileBranch recordingFileBranch;
     private RecordingTimelineBranch recordingTimelineBranch;
     private RecordingNodeBranch recordingNodeBranch;
     private RecordingCurveBranch recordingCurveBranch;
     private RecordingAssetBranch recordingAssetBranch;
+    private RecordingMixBranch recordingMixBranch;
 
     // Directory
     private File recordingDirectory;
@@ -208,6 +218,7 @@ public class RecorderManager extends ManagerPackage {
         this.recordingNodeBranch = create(RecordingNodeBranch.class);
         this.recordingCurveBranch = create(RecordingCurveBranch.class);
         this.recordingAssetBranch = create(RecordingAssetBranch.class);
+        this.recordingMixBranch = create(RecordingMixBranch.class);
 
         // Directory
         this.recordingDirectory = new File(internal.path, EditorSetting.RECORDER_DIRECTORY);
@@ -270,6 +281,7 @@ public class RecorderManager extends ManagerPackage {
         this.npcManager = get(NpcManager.class);
         this.projectileManager = get(ProjectileManager.class);
         this.vehicleManager = get(VehicleManager.class);
+        this.soundManager = get(SoundManager.class);
     }
 
     // Update \\
@@ -821,6 +833,81 @@ public class RecorderManager extends ManagerPackage {
         setStatus(EditorSetting.RECORDER_STATUS_PLACED + placed.getName());
     }
 
+    // Sounds \\
+
+    // The sound laid from the playhead, on the lowest clear lane
+    public void placeSoundAtPlayhead(int soundID) {
+        placeSound(soundID, playhead, 0);
+    }
+
+    // The sound laid on the timeline as a take holding it alone, the take it was given before reused so the bin holds
+    // each sound once
+    public void placeSound(int soundID, float start, int lane) {
+
+        if (recording == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_RECORDING_FOR_SOUND);
+            return;
+        }
+
+        if (!canEditTimeline())
+            return;
+
+        SoundHandle soundHandle = soundManager.getSoundHandleFromSoundID(soundID);
+        int takeIndex = findSoundTake(soundHandle.getSoundName());
+
+        placeTake(takeIndex != EngineSetting.INDEX_NOT_FOUND ? takeIndex : addSoundTake(soundHandle), start, lane);
+    }
+
+    private int findSoundTake(String soundName) {
+
+        ObjectArrayList<RecordingTakeStruct> takes = recording.getTakes();
+
+        for (int i = 0; i < takes.size(); i++)
+            if (takes.get(i).isSoundOf(soundName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // A take of the sound alone, heard from its start as the sound library plays it, named after the sound
+    private int addSoundTake(SoundHandle soundHandle) {
+
+        float length = soundHandle.getPlayedLength();
+        RecordingTakeStruct soundTake = new RecordingTakeStruct(
+                resolveSoundTakeName(soundHandle.getSoundName()), RecorderChannel.SOUND.getBit());
+
+        soundTake.getSoundTrack().addEvent(
+                0f,
+                length,
+                soundHandle.getSoundName(),
+                EngineSetting.DEFAULT_SOUND_VOLUME,
+                EngineSetting.DEFAULT_SOUND_PITCH,
+                false,
+                0L,
+                0f,
+                0f,
+                0f,
+                soundHandle.getVolume(),
+                0f);
+        soundTake.setDuration(length);
+        recording.addTake(soundTake);
+        this.assetsStale = true;
+        return recording.getTakes().size() - 1;
+    }
+
+    // The last part of the sound's name, numbered on when a take already has it
+    private String resolveSoundTakeName(String soundName) {
+
+        String baseName = soundName.substring(soundName.lastIndexOf(EngineSetting.PATH_SEPARATOR) + 1);
+        String takeName = baseName;
+        int number = EditorSetting.RECORDER_SOUND_TAKE_FIRST_NUMBER;
+
+        while (recording.hasTakeName(takeName))
+            takeName = baseName + EditorSetting.RECORDER_SOUND_TAKE_NAME_SEPARATOR + number++;
+
+        return takeName;
+    }
+
     // Clips \\
 
     public void selectClip(int clipIndex) {
@@ -1049,6 +1136,16 @@ public class RecorderManager extends ManagerPackage {
         beginDrag(RecorderDragKind.TAKE, takeIndex, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
     }
 
+    // A sound picked up from the sound library in any window, to be laid where it is let go over the lanes; nothing
+    // is picked up while no recording is open to lay it on
+    public void beginSoundDrag(int soundID, WindowInstance window, float pressX, float pressY) {
+
+        if (drag.isActive() || !canEditTimeline())
+            return;
+
+        beginDrag(RecorderDragKind.SOUND, soundID, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
+    }
+
     // What a press on the lanes takes hold of, read once where it began: a clip's edge to trim it, a node's notch or a
     // gesture to retime or move it, a clip to move it, or the empty lanes to scroll the view; the timeline can only
     // be scrolled under a take or an export
@@ -1170,7 +1267,7 @@ public class RecorderManager extends ManagerPackage {
         float tolerance = snapping ? EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel : 0f;
 
         switch (drag.getKind()) {
-            case TAKE, CLIP -> landSpan(overLanes, time, lane, tolerance);
+            case TAKE, SOUND, CLIP -> landSpan(overLanes, time, lane, tolerance);
             case TRIM_START, TRIM_END -> landEdge(time, tolerance);
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
@@ -1258,6 +1355,10 @@ public class RecorderManager extends ManagerPackage {
                 else
                     selectTake(index);
             }
+            case SOUND -> {
+                if (dropped)
+                    placeSound(index, landingStart, landingLane);
+            }
             case CLIP -> {
                 if (dropped)
                     moveClip(index, landingStart, landingLane);
@@ -1333,6 +1434,7 @@ public class RecorderManager extends ManagerPackage {
     public float resolveDragLength() {
         return switch (drag.getKind()) {
             case TAKE -> recording.getTakes().get(drag.getIndex()).getDuration();
+            case SOUND -> soundManager.getSoundHandleFromSoundID(drag.getIndex()).getPlayedLength();
             case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
             case TRIM_START, TRIM_END, CUT, NODE, PAN, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS,
                     KEYS_BOX, GRAPH_BOX, NONE -> 0f;
@@ -2497,6 +2599,26 @@ public class RecorderManager extends ManagerPackage {
         setStatus(EditorSetting.RECORDER_STATUS_EXPORTING + exportFile.getName());
     }
 
+    // The sounds of the export range decoded for its mix, true when it holds any to be heard
+    public boolean prepareExportMix(int sampleRate) {
+
+        RecordingExportStruct exportStruct = recording.getExportStruct();
+        float duration = recording.getDuration();
+
+        return recordingMixBranch.prepare(
+                recording, exportStruct.resolveStart(duration), exportStruct.resolveEnd(duration), sampleRate);
+    }
+
+    // Every sound the timeline holds mixed over the frames of sound from the moment, both sides of each frame
+    // side by side
+    public void mixExportAudio(float time, short[] samples, int frameCount) {
+        recordingMixBranch.mix(recording, time, samples, frameCount);
+    }
+
+    public void releaseExportMix() {
+        recordingMixBranch.clear();
+    }
+
     public void reportExportProgress(int exportedFrames) {
         this.exportedFrames = exportedFrames;
     }
@@ -2640,6 +2762,11 @@ public class RecorderManager extends ManagerPackage {
     // True while the game is paused under a running session, and for the few frames after
     public boolean isSuspended() {
         return suspended;
+    }
+
+    // True while the timeline's sounds are heard — playing or recording, and not suspended
+    public boolean isSoundPlayed() {
+        return (state == RecorderState.PLAYING || state == RecorderState.RECORDING) && !suspended;
     }
 
     // The channels a session plays from the timeline — everything but what a take records live

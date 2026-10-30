@@ -9,8 +9,10 @@ public class EntityStateHandle extends HandlePackage {
     /*
      * Per-entity movement state: movement state, gravity and horizontal
      * velocity, jump start, liquid contact, cosmetic ground offset, the speeds
-     * actually travelled last frame, and body yaw and look angles written by
-     * FacingBranch. Lives on EntityInstance.
+     * actually travelled last frame, body yaw and look angles written by
+     * FacingBranch, and what MovementSoundBranch last heard of it — the stride
+     * walked since its last step, whether it was in the air and how fast it
+     * fell, and whether it was in water. Lives on EntityInstance.
      */
 
     // State
@@ -34,6 +36,12 @@ public class EntityStateHandle extends HandlePackage {
 
     // Ground Offset — cosmetic only, never fed back into physics position
     private float groundOffset;
+
+    // Sound
+    private float stepStride;
+    private boolean heardAirborne;
+    private float heardFallSpeed;
+    private boolean heardInLiquid;
 
     // Internal \\
 
@@ -61,6 +69,12 @@ public class EntityStateHandle extends HandlePackage {
 
         // Ground Offset
         this.groundOffset = 0f;
+
+        // Sound
+        this.stepStride = 0f;
+        this.heardAirborne = false;
+        this.heardFallSpeed = 0f;
+        this.heardInLiquid = false;
     }
 
     // Accessible \\
@@ -142,6 +156,32 @@ public class EntityStateHandle extends HandlePackage {
 
     public void setGroundOffset(float groundOffset) {
         this.groundOffset = groundOffset;
+    }
+
+    public float getStepStride() {
+        return stepStride;
+    }
+
+    public void setStepStride(float stepStride) {
+        this.stepStride = stepStride;
+    }
+
+    public boolean isHeardAirborne() {
+        return heardAirborne;
+    }
+
+    public float getHeardFallSpeed() {
+        return heardFallSpeed;
+    }
+
+    public boolean isHeardInLiquid() {
+        return heardInLiquid;
+    }
+
+    public void setHeard(boolean heardAirborne, float heardFallSpeed, boolean heardInLiquid) {
+        this.heardAirborne = heardAirborne;
+        this.heardFallSpeed = heardFallSpeed;
+        this.heardInLiquid = heardInLiquid;
     }
 
     // Utility \\

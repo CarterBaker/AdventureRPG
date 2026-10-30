@@ -169,6 +169,12 @@ public class SettingsValueUtility extends EngineUtility {
             case CHROMATIC_ABERRATION -> settings.chromaticAberration = value;
             case FILM_GRAIN -> settings.filmGrain = value;
             case CAMERA_SHAKE_INTENSITY -> settings.cameraShakeIntensity = value;
+            case MASTER_VOLUME -> settings.masterVolume = value;
+            case MUSIC_VOLUME -> settings.musicVolume = value;
+            case EFFECT_VOLUME -> settings.effectVolume = value;
+            case AMBIENT_VOLUME -> settings.ambientVolume = value;
+            case INTERFACE_VOLUME -> settings.interfaceVolume = value;
+            case VOICE_VOLUME -> settings.voiceVolume = value;
         }
 
         if (slider.isPostProcessing())
@@ -191,7 +197,8 @@ public class SettingsValueUtility extends EngineUtility {
                     resolveValue(settings, slider));
             case OUTLINE_STRENGTH, DEPTH_OF_FIELD_STRENGTH, DEPTH_OF_FIELD_BLUR, DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH,
                     BLOOM_INTENSITY, BRIGHTNESS, CONTRAST, SATURATION, VIGNETTE, CHROMATIC_ABERRATION, FILM_GRAIN,
-                    CAMERA_SHAKE_INTENSITY -> String.format(
+                    CAMERA_SHAKE_INTENSITY, MASTER_VOLUME, MUSIC_VOLUME, EFFECT_VOLUME, AMBIENT_VOLUME,
+                    INTERFACE_VOLUME, VOICE_VOLUME -> String.format(
                             RuntimeSetting.SETTINGS_FORMAT_PERCENT,
                             resolveValue(settings, slider) * RuntimeSetting.SETTINGS_SLIDER_PERCENT_SCALE);
         };
@@ -212,6 +219,12 @@ public class SettingsValueUtility extends EngineUtility {
             case CHROMATIC_ABERRATION -> settings.chromaticAberration;
             case FILM_GRAIN -> settings.filmGrain;
             case CAMERA_SHAKE_INTENSITY -> settings.cameraShakeIntensity;
+            case MASTER_VOLUME -> settings.masterVolume;
+            case MUSIC_VOLUME -> settings.musicVolume;
+            case EFFECT_VOLUME -> settings.effectVolume;
+            case AMBIENT_VOLUME -> settings.ambientVolume;
+            case INTERFACE_VOLUME -> settings.interfaceVolume;
+            case VOICE_VOLUME -> settings.voiceVolume;
         };
     }
 
@@ -230,6 +243,8 @@ public class SettingsValueUtility extends EngineUtility {
             case CHROMATIC_ABERRATION -> EngineSetting.CHROMATIC_ABERRATION_MIN;
             case FILM_GRAIN -> EngineSetting.FILM_GRAIN_MIN;
             case CAMERA_SHAKE_INTENSITY -> EngineSetting.CAMERA_SHAKE_INTENSITY_MIN;
+            case MASTER_VOLUME, MUSIC_VOLUME, EFFECT_VOLUME, AMBIENT_VOLUME, INTERFACE_VOLUME,
+                    VOICE_VOLUME -> EngineSetting.VOLUME_MIN;
         };
     }
 
@@ -248,6 +263,8 @@ public class SettingsValueUtility extends EngineUtility {
             case CHROMATIC_ABERRATION -> EngineSetting.CHROMATIC_ABERRATION_MAX;
             case FILM_GRAIN -> EngineSetting.FILM_GRAIN_MAX;
             case CAMERA_SHAKE_INTENSITY -> EngineSetting.CAMERA_SHAKE_INTENSITY_MAX;
+            case MASTER_VOLUME, MUSIC_VOLUME, EFFECT_VOLUME, AMBIENT_VOLUME, INTERFACE_VOLUME,
+                    VOICE_VOLUME -> EngineSetting.VOLUME_MAX;
         };
     }
 

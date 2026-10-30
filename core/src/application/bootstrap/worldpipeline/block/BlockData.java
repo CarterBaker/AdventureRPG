@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.block;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import application.bootstrap.soundpipeline.soundcue.SoundSurfaceStruct;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Direction3Vector;
@@ -40,6 +41,9 @@ public class BlockData extends DataPackage {
     // Physics
     private final float viscosity;
 
+    // Sound — the surface it sounds with, null when it is silent
+    private final SoundSurfaceStruct soundSurface;
+
     // Constructor \\
 
     public BlockData(
@@ -57,7 +61,8 @@ public class BlockData extends DataPackage {
             short requiredToolTypeID,
             int durability,
             String itemTextureName,
-            float viscosity) {
+            float viscosity,
+            SoundSurfaceStruct soundSurface) {
 
         this.blockName = blockName;
         this.localName = localName;
@@ -83,6 +88,8 @@ public class BlockData extends DataPackage {
         this.itemTextureName = itemTextureName;
 
         this.viscosity = viscosity;
+
+        this.soundSurface = soundSurface;
     }
 
     // Accessible \\
@@ -157,5 +164,13 @@ public class BlockData extends DataPackage {
 
     public boolean hasViscosity() {
         return viscosity != EngineSetting.BLOCK_VISCOSITY_UNDEFINED;
+    }
+
+    public boolean hasSoundSurface() {
+        return soundSurface != null;
+    }
+
+    public SoundSurfaceStruct getSoundSurface() {
+        return soundSurface;
     }
 }

@@ -26,6 +26,7 @@ class ExperienceBranch extends BranchPackage {
     // Internal
     private CareerBranch careerBranch;
     private VitalityBranch vitalityBranch;
+    private ProgressionSoundBranch progressionSoundBranch;
 
     // Base \\
 
@@ -35,6 +36,7 @@ class ExperienceBranch extends BranchPackage {
         // Internal
         this.careerBranch = get(CareerBranch.class);
         this.vitalityBranch = get(VitalityBranch.class);
+        this.progressionSoundBranch = get(ProgressionSoundBranch.class);
     }
 
     // Curve \\
@@ -113,6 +115,7 @@ class ExperienceBranch extends BranchPackage {
                 progressionHandle.getUnspentPoints() + EngineSetting.ATTRIBUTE_POINTS_PER_LEVEL);
         progressionHandle.countLevelUp();
         vitalityBranch.restore(entity);
+        progressionSoundBranch.levelUp(entity);
     }
 
     // Level \\

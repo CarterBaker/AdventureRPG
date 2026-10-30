@@ -25,6 +25,7 @@ import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.progressionpipeline.util.ProgressionArpgUtility;
 import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
 import engine.root.BuilderPackage;
@@ -88,6 +89,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private CoveringManager coveringManager;
     private StatManager statManager;
     private SkillManager skillManager;
+    private SoundCueManager soundCueManager;
 
     // Directory
     private File meshRoot;
@@ -113,6 +115,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.weaponManager = get(WeaponManager.class);
         this.coveringManager = get(CoveringManager.class);
         this.statManager = get(StatManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
         this.skillManager = get(SkillManager.class);
     }
 
@@ -749,6 +752,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 ? new ItemShapeStruct(isolateParts(model, actionArpg.getAsArray("parts"), itemName))
                 : null;
         String becomesItemName = ArpgUtility.validateString(actionArpg, "becomes");
+        int cueID = ArpgUtility.hasString(actionArpg, "cue")
+                ? soundCueManager.getCueIDFromCueName(actionArpg.get("cue").getAsString())
+                : EngineSetting.INDEX_NOT_FOUND;
 
         if (!ArpgUtility.hasObject(actionArpg, "fire"))
             return new ItemActionStruct(
@@ -757,6 +763,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
                     consumesHeld,
                     partShape,
                     becomesItemName,
+                    cueID,
                     EngineSetting.ITEM_ACTION_FIRE_NONE,
                     new Vector3(),
                     new Vector3(),
@@ -774,6 +781,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 consumesHeld,
                 partShape,
                 becomesItemName,
+                cueID,
                 ArpgUtility.validateString(fireArpg, "item"),
                 parseFloatVector(fireArpg, "muzzle"),
                 aim.normalize(),

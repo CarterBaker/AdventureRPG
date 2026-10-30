@@ -20,6 +20,7 @@ import application.bootstrap.savepipeline.SavePipeline;
 import application.bootstrap.settingspipeline.SettingsPipeline;
 import application.bootstrap.shaderpipeline.ShaderPipeline;
 import application.bootstrap.shipwrightpipeline.ShipwrightPipeline;
+import application.bootstrap.soundpipeline.SoundPipeline;
 import application.bootstrap.vehiclepipeline.VehiclePipeline;
 import application.bootstrap.weatherpipeline.WeatherPipeline;
 import application.bootstrap.worldpipeline.WorldPipeline;
@@ -38,6 +39,7 @@ public class ApplicationBootstrapAssembly extends AssemblyPackage {
         create(AnimationPipeline.class);
         create(ShaderPipeline.class);
         create(RenderPipeline.class);
+        create(SoundPipeline.class);
         create(ProgressionPipeline.class);
         create(ItemPipeline.class);
         create(FurnishingPipeline.class);

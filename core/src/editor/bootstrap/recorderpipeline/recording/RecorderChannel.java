@@ -12,10 +12,14 @@ public enum RecorderChannel {
      * weather over the world and the gusts of the wind; time is the world's
      * clock, and with it the sun, moon, sky and all their light; the
      * interface is everything drawn over the world — every menu, the HUD,
-     * the inventory and the vitality effects. A take's and a clip's channels
-     * are a mask of these bits, and recording files name channels by their
-     * lower-case constant names, which are also the keys the Recorder tab's
-     * channel rows hand back.
+     * the inventory and the vitality effects; sound is every sound the window
+     * played, and every sound laid on the timeline from the sound library.
+     * For every other channel the clip on the highest lane plays it, but
+     * sounds add up: every clip covering a moment sounds together, and a take
+     * recording sound live still hears what the timeline holds. A take's and
+     * a clip's channels are a mask of these bits, and recording files name
+     * channels by their lower-case constant names, which are also the keys
+     * the Recorder tab's channel rows hand back.
      */
 
     CAMERA(EditorSetting.RECORDER_CHANNEL_LABEL_CAMERA),
@@ -25,7 +29,8 @@ public enum RecorderChannel {
     VEHICLES(EditorSetting.RECORDER_CHANNEL_LABEL_VEHICLES),
     WEATHER(EditorSetting.RECORDER_CHANNEL_LABEL_WEATHER),
     TIME(EditorSetting.RECORDER_CHANNEL_LABEL_TIME),
-    INTERFACE(EditorSetting.RECORDER_CHANNEL_LABEL_INTERFACE);
+    INTERFACE(EditorSetting.RECORDER_CHANNEL_LABEL_INTERFACE),
+    SOUND(EditorSetting.RECORDER_CHANNEL_LABEL_SOUND);
 
     // Values
     public static final RecorderChannel[] VALUES = values();

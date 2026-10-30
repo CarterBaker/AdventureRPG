@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.block;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import application.bootstrap.soundpipeline.soundcue.SoundSurfaceStruct;
 import engine.root.HandlePackage;
 import engine.util.mathematics.extras.Direction3Vector;
 
@@ -96,5 +97,13 @@ public class BlockHandle extends HandlePackage {
 
     public boolean hasViscosity() {
         return blockData.hasViscosity();
+    }
+
+    public boolean hasSoundSurface() {
+        return blockData.hasSoundSurface();
+    }
+
+    public SoundSurfaceStruct getSoundSurface() {
+        return blockData.getSoundSurface();
     }
 }

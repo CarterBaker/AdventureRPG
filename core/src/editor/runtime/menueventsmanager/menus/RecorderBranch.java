@@ -2,6 +2,7 @@ package editor.runtime.menueventsmanager.menus;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
+import application.bootstrap.soundpipeline.soundmanager.SoundManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -25,7 +26,10 @@ public class RecorderBranch extends BranchPackage {
      * the name dialog, takes through the text dialog, and deleting a recording
      * or a take asks for its name to be typed back. Dragging along the ruler
      * moves the playhead to the moment under the cursor. Pressing a take in
-     * the bin picks it up, and letting go over the lanes lays it there. A
+     * the bin picks it up, and letting go over the lanes lays it there; a
+     * sound pressed in the sound library is picked up the same way and laid
+     * as a take of its own over the lanes of whichever Recorder tab the
+     * cursor is let go above, in any window. A
      * press on the lanes is handed to the recorder once, where it began, to
      * take hold of a clip's edge, a node, a clip or the empty lanes; letting
      * go trims, retimes, moves or scrolls, and a press that never travels
@@ -62,6 +66,7 @@ public class RecorderBranch extends BranchPackage {
     private InputManager inputManager;
     private WindowManager windowManager;
     private ShortcutManager shortcutManager;
+    private SoundManager soundManager;
 
     // Shortcuts
     private int freeDragShortcutID;
@@ -80,6 +85,7 @@ public class RecorderBranch extends BranchPackage {
         this.inputManager = get(InputManager.class);
         this.windowManager = get(WindowManager.class);
         this.shortcutManager = get(ShortcutManager.class);
+        this.soundManager = get(SoundManager.class);
     }
 
     @Override
@@ -436,7 +442,23 @@ public class RecorderBranch extends BranchPackage {
                     inputManager.getHoverMouseX(window),
                     inputManager.getHoverMouseY(window));
 
-        dragOver(window, findLanes(window));
+        dragOver(window, window, findLanes(window));
+    }
+
+    // A sound is picked up on the press wherever it was pressed, and carried over the lanes of the Recorder tab under
+    // the cursor until let go
+    public void dragSound(String soundName, WindowInstance window) {
+
+        if (!recorderManager.getDrag().isActive())
+            recorderManager.beginSoundDrag(
+                    soundManager.getSoundIDFromSoundName(soundName),
+                    window,
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window));
+
+        WindowInstance hovered = windowManager.getHoveredWindow();
+
+        dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
     }
 
     public void placeTake(String takeKey) {
@@ -486,11 +508,12 @@ public class RecorderBranch extends BranchPackage {
                     inputManager.getHoverMouseX(window),
                     inputManager.getHoverMouseY(window));
 
-        dragOver(window, lanes);
+        dragOver(window, window, lanes);
     }
 
-    // Tells the recorder where what is carried would land with the cursor where it is now
-    private void dragOver(WindowInstance window, ElementInstance lanes) {
+    // Tells the recorder where what is carried would land with the cursor where it is now: how far it has travelled
+    // is read in the window the press began in, where it lands on the lanes in the window showing them
+    private void dragOver(WindowInstance window, WindowInstance lanesWindow, ElementInstance lanes) {
 
         float x = inputManager.getHoverMouseX(window);
         float y = inputManager.getHoverMouseY(window);
@@ -503,11 +526,11 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.dragTo(
                 x,
                 y,
-                isUnderCursor(window, lanes),
-                resolveTime(window, lanes),
-                resolveLane(window, lanes),
+                isUnderCursor(lanesWindow, lanes),
+                resolveTime(lanesWindow, lanes),
+                resolveLane(lanesWindow, lanes),
                 resolveSecondsPerPixel(lanes),
-                isSnapping(window));
+                isSnapping(lanesWindow));
     }
 
     // How far along the element the cursor stands, 0 to 1

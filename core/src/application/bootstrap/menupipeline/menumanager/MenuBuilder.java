@@ -16,6 +16,7 @@ import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.StackDirection;
 import application.bootstrap.menupipeline.util.TextAlign;
 import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
@@ -28,7 +29,8 @@ class MenuBuilder extends BuilderPackage {
 
     /*
      * Parses menu ARPG into MenuHandles and ElementHandles at bootstrap: the
-     * four state blocks, click and drag callbacks, and animation timelines.
+     * four state blocks, click and drag callbacks, animation timelines, and
+     * the sound cues a menu plays as it opens, closes and is clicked.
      * Inline masters are registered under the scope they are declared in, so
      * two templates can share a child id.
      */
@@ -38,6 +40,7 @@ class MenuBuilder extends BuilderPackage {
     // Internal
     private SpriteManager spriteManager;
     private ElementSystem elementSystem;
+    private SoundCueManager soundCueManager;
     private File root;
     private ObjectOpenHashSet<String> registeredFiles;
     private ObjectArrayList<Runnable> deferredRefs;
@@ -46,6 +49,7 @@ class MenuBuilder extends BuilderPackage {
     protected void get() {
         this.spriteManager = get(SpriteManager.class);
         this.elementSystem = get(ElementSystem.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     void init(File root) {
@@ -116,11 +120,25 @@ class MenuBuilder extends BuilderPackage {
                 DimensionValueStruct.parse(EngineSetting.FONT_DEFAULT_SIZE_PERCENT), true);
 
         MenuData data = new MenuData(
-                filePath + "/" + id, lockInput, raycastInput, hasCanvasArea, entryPoints);
+                filePath + "/" + id,
+                lockInput,
+                raycastInput,
+                hasCanvasArea,
+                entryPoints,
+                resolveCue(menuArpg, "open_cue"),
+                resolveCue(menuArpg, "close_cue"),
+                resolveCue(menuArpg, "click_cue"));
         MenuHandle handle = create(MenuHandle.class);
         handle.constructor(data, nodes);
 
         return handle;
+    }
+
+    // The cue a menu names for a moment, INDEX_NOT_FOUND when it names none
+    private int resolveCue(ArpgObjectStruct menuArpg, String key) {
+        return ArpgUtility.hasString(menuArpg, key)
+                ? soundCueManager.getCueIDFromCueName(menuArpg.get(key).getAsString())
+                : EngineSetting.INDEX_NOT_FOUND;
     }
 
     private boolean scanForCanvasArea(ArpgObjectStruct arpg) {

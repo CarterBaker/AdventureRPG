@@ -7,6 +7,7 @@ import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worlditem.WorldItemCastStruct;
@@ -38,6 +39,11 @@ class ItemBranch extends BranchPackage {
     private WorldItemSpaceSystem worldItemSpaceSystem;
     private ItemRotationBufferSystem itemRotationBufferSystem;
     private ItemManager itemManager;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int pickUpCueID;
+    private int setDownCueID;
 
     // Settings
     private int chunkSize;
@@ -70,6 +76,15 @@ class ItemBranch extends BranchPackage {
         this.worldItemSpaceSystem = get(WorldItemSpaceSystem.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
         this.itemManager = get(ItemManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.pickUpCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_PICK_UP);
+        this.setDownCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_SET_DOWN);
     }
 
     // Place \\
@@ -134,6 +149,7 @@ class ItemBranch extends BranchPackage {
             return false;
 
         worldItemPlacementSystem.placeItem(placementStruct, inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND));
+        soundCueManager.playCueAt(setDownCueID, entity.getWorldHandle(), entity.getWorldPositionStruct());
 
         return true;
     }
@@ -168,6 +184,7 @@ class ItemBranch extends BranchPackage {
             return false;
 
         worldItemPlacementSystem.removeItem(chunk, worldItemInstance);
+        soundCueManager.playCueAt(pickUpCueID, entity.getWorldHandle(), entity.getWorldPositionStruct());
 
         return true;
     }

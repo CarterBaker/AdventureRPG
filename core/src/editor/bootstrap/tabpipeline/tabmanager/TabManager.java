@@ -32,6 +32,7 @@ import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
 import editor.runtime.settlementplanner.SettlementPlannerContext;
 import editor.runtime.shipwright.ShipwrightContext;
+import editor.runtime.soundlibrary.SoundLibraryContext;
 import editor.runtime.textureviewer.TextureViewerContext;
 import editor.runtime.tools.ToolsContext;
 import editor.runtime.worldeditor.WorldEditorContext;
@@ -212,6 +213,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openRecorder(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_RECORDER, RecorderContext.class, osWindow);
+    }
+
+    public TabHandle openSoundLibrary(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_SOUND_LIBRARY, SoundLibraryContext.class, osWindow);
     }
 
     public TabHandle openTab(

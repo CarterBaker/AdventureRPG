@@ -14,7 +14,8 @@ public class RecorderContext extends ContextPackage implements ToolCanvasProvide
      * Editor tab for the recorder: the recordings saved in the game's
      * directory, the transport that records, plays and stops in the Dev
      * window, the timeline's lanes of clips to move, split, trim, stamp, mute
-     * and strip of channels, zoomed and scrolled, each clip showing the nodes
+     * and strip of channels, zoomed and scrolled, sounds dropped onto them from
+     * the sound library, each clip showing the nodes
      * of what the player does along it, the channels armed for the next take,
      * the export settings, and below the timeline one of three panes: the
      * Keys, where every value the selected clip's take recorded is a curve of

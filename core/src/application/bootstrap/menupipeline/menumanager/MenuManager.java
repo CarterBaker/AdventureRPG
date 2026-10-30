@@ -10,6 +10,7 @@ import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.menupipeline.menulist.MenuListHandle;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
@@ -42,6 +43,7 @@ public class MenuManager extends ManagerPackage {
     private WindowManager windowManager;
     private InputManager inputManager;
     private FBOManager fboManager;
+    private SoundCueManager soundCueManager;
 
     // Palette
     private Object2IntOpenHashMap<String> menuName2MenuID;
@@ -72,6 +74,7 @@ public class MenuManager extends ManagerPackage {
         this.windowManager = get(WindowManager.class);
         this.inputManager = get(InputManager.class);
         this.fboManager = get(FBOManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     @Override
@@ -244,6 +247,7 @@ public class MenuManager extends ManagerPackage {
         holder[0] = instance;
 
         window.getMenuListHandle().add(instance);
+        soundCueManager.playCue(handle.getMenuData().getOpenCueID());
 
         if (window.getMenuListHandle().isInputLocked()
                 && window == windowManager.getFocusedWindow())
@@ -258,6 +262,7 @@ public class MenuManager extends ManagerPackage {
             return null;
 
         instance.hide();
+        soundCueManager.playCue(instance.getMenuData().getCloseCueID());
 
         if (!pendingCloseMenus.contains(instance))
             pendingCloseMenus.add(instance);

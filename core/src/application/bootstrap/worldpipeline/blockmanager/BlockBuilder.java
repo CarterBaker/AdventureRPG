@@ -6,6 +6,8 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import application.bootstrap.soundpipeline.soundcue.SoundSurfaceStruct;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.worldpipeline.block.BlockData;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
@@ -27,7 +29,9 @@ class BlockBuilder extends BuilderPackage {
      * an untextured face.
      * Every breakable solid block must name the tool that breaks it and the
      * item texture its block piece is drawn with, since breaking it hands
-     * those pieces out. Bootstrap only.
+     * those pieces out. "sound" names the surface it sounds with when stepped
+     * on, worked, broken and set down, none when it is left out. Bootstrap
+     * only.
      */
 
     // Internal
@@ -35,6 +39,7 @@ class BlockBuilder extends BuilderPackage {
     private TextureManager textureManager;
     private MaterialManager materialManager;
     private ToolTypeManager toolTypeManager;
+    private SoundCueManager soundCueManager;
 
     // Base \\
 
@@ -44,6 +49,7 @@ class BlockBuilder extends BuilderPackage {
         this.textureManager = get(TextureManager.class);
         this.materialManager = get(MaterialManager.class);
         this.toolTypeManager = get(ToolTypeManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     // Build \\
@@ -168,6 +174,10 @@ class BlockBuilder extends BuilderPackage {
             viscosity = blockArpg.get("viscosity").getAsFloat();
         }
 
+        // Sound — the surface it is stepped on, worked, broken and set down with
+        SoundSurfaceStruct soundSurface = soundCueManager.getSurfaceStruct(
+                ArpgUtility.getString(blockArpg, "sound", EngineSetting.SOUND_SURFACE_NONE));
+
         // Construct
         BlockData blockData = new BlockData(
                 blockName, localName, blockID,
@@ -182,7 +192,8 @@ class BlockBuilder extends BuilderPackage {
                 faceMapColors,
                 breakTier, requiredToolTypeID, durability,
                 itemTextureName,
-                viscosity);
+                viscosity,
+                soundSurface);
 
         BlockHandle blockHandle = create(BlockHandle.class);
         blockHandle.constructor(blockData);

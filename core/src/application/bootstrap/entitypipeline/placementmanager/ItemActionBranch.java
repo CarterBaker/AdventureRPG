@@ -11,6 +11,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCargoInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleCargoSystem;
@@ -45,6 +46,7 @@ class ItemActionBranch extends BranchPackage {
     private WorldItemPlacementSystem worldItemPlacementSystem;
     private VehicleCargoSystem vehicleCargoSystem;
     private ProjectileManager projectileManager;
+    private SoundCueManager soundCueManager;
 
     // Scratch
     private Matrix4 transformScratch;
@@ -76,6 +78,7 @@ class ItemActionBranch extends BranchPackage {
         this.worldItemPlacementSystem = get(WorldItemPlacementSystem.class);
         this.vehicleCargoSystem = get(VehicleCargoSystem.class);
         this.projectileManager = get(ProjectileManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     // World \\
@@ -112,6 +115,7 @@ class ItemActionBranch extends BranchPackage {
             return false;
 
         consumeHeld(entity, action);
+        playCue(entity, action);
 
         if (action.fires() && worldItemPlacementSystem.composeTransform(
                 replaced, entity.getWorldHandle(), replaced.getChunkCoordinate(), transformScratch))
@@ -148,6 +152,7 @@ class ItemActionBranch extends BranchPackage {
             return false;
 
         consumeHeld(entity, action);
+        playCue(entity, action);
 
         long frameChunk = entity.getWorldPositionStruct().getChunkCoordinate();
 
@@ -184,6 +189,12 @@ class ItemActionBranch extends BranchPackage {
 
         if (action.isConsumingHeld())
             inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND);
+    }
+
+    // Heard where its doer stands, within reach of what it was done to
+    private void playCue(EntityInstance entity, ItemActionStruct action) {
+        if (action.hasCue())
+            soundCueManager.playCueAt(action.getCueID(), entity.getWorldHandle(), entity.getWorldPositionStruct());
     }
 
     // Fire \\

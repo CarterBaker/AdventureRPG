@@ -818,6 +818,11 @@ public class PlayerManager extends ManagerPackage {
         return windowID2Player.containsKey(windowID);
     }
 
+    // True when some window plays as the entity
+    public boolean isPlayer(EntityInstance entity) {
+        return windowID2Player.containsValue(entity);
+    }
+
     public boolean isFreeCameraForWindow(int windowID) {
         return windowID2FreeCamera.get(windowID);
     }

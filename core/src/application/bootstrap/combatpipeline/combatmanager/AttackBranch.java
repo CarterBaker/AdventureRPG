@@ -9,6 +9,7 @@ import application.bootstrap.entitypipeline.entity.EntityActionHandle;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 
@@ -35,6 +36,10 @@ class AttackBranch extends BranchPackage {
     private CombatManager combatManager;
     private StrikeBranch strikeBranch;
     private GuardBranch guardBranch;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int swingCueID;
 
     // Internal \\
 
@@ -46,6 +51,14 @@ class AttackBranch extends BranchPackage {
         this.combatManager = get(CombatManager.class);
         this.strikeBranch = get(StrikeBranch.class);
         this.guardBranch = get(GuardBranch.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.swingCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_SWING);
     }
 
     // Attack \\
@@ -66,6 +79,8 @@ class AttackBranch extends BranchPackage {
                 attack.getDuration() / combatManager.resolveAttackSpeed(entity),
                 attack.getImpact(),
                 weaponHandle.getAttackStrike(rigHandle, side));
+
+        soundCueManager.playCueAt(swingCueID, entity.getWorldHandle(), entity.getWorldPositionStruct());
     }
 
     // Control \\

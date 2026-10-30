@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.covering;
 
 import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
+import application.bootstrap.soundpipeline.soundcue.SoundSurfaceStruct;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
@@ -47,6 +48,9 @@ public class CoveringData extends DataPackage {
     // Drop — the item a fully grown cell hands out, COVERING_DROP_NONE for none
     private final String dropItemName;
 
+    // Sound — the surface stepped on where it grows, null when it adds none
+    private final SoundSurfaceStruct soundSurface;
+
     // Constructor \\
 
     public CoveringData(
@@ -64,7 +68,8 @@ public class CoveringData extends DataPackage {
             int spreadLevel,
             boolean requiresOpenTop,
             int moistureRadius,
-            String dropItemName) {
+            String dropItemName,
+            SoundSurfaceStruct soundSurface) {
 
         // Identity
         this.coveringName = coveringName;
@@ -90,6 +95,9 @@ public class CoveringData extends DataPackage {
 
         // Drop
         this.dropItemName = dropItemName;
+
+        // Sound
+        this.soundSurface = soundSurface;
     }
 
     // Accessible \\
@@ -165,5 +173,13 @@ public class CoveringData extends DataPackage {
 
     public boolean hasDrop() {
         return !dropItemName.equals(EngineSetting.COVERING_DROP_NONE);
+    }
+
+    public boolean hasSoundSurface() {
+        return soundSurface != null;
+    }
+
+    public SoundSurfaceStruct getSoundSurface() {
+        return soundSurface;
     }
 }

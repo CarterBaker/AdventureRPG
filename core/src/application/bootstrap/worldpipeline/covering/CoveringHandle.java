@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.covering;
 
 import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
+import application.bootstrap.soundpipeline.soundcue.SoundSurfaceStruct;
 import engine.root.HandlePackage;
 
 public class CoveringHandle extends HandlePackage {
@@ -96,5 +97,13 @@ public class CoveringHandle extends HandlePackage {
 
     public boolean hasDrop() {
         return coveringData.hasDrop();
+    }
+
+    public boolean hasSoundSurface() {
+        return coveringData.hasSoundSurface();
+    }
+
+    public SoundSurfaceStruct getSoundSurface() {
+        return coveringData.getSoundSurface();
     }
 }

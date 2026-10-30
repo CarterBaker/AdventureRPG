@@ -78,6 +78,28 @@ public class EngineSetting {
     public static final int GL_UNSIGNED_SHORT = 0x1403;
     public static final int GL_VERTEX_SHADER = 0x8B31;
 
+    // OpenAL Constants
+    public static final int AL_BUFFER = 0x1009;
+    public static final int AL_FALSE = 0;
+    public static final int AL_FORMAT_MONO16 = 0x1101;
+    public static final int AL_FORMAT_STEREO16 = 0x1103;
+    public static final int AL_GAIN = 0x100A;
+    public static final int AL_INVERSE_DISTANCE_CLAMPED = 0xD002;
+    public static final int AL_LOOPING = 0x1007;
+    public static final int AL_MAX_DISTANCE = 0x1023;
+    public static final int AL_NONE = 0;
+    public static final int AL_ORIENTATION = 0x100F;
+    public static final int AL_PAUSED = 0x1013;
+    public static final int AL_PITCH = 0x1003;
+    public static final int AL_PLAYING = 0x1012;
+    public static final int AL_POSITION = 0x1004;
+    public static final int AL_REFERENCE_DISTANCE = 0x1020;
+    public static final int AL_ROLLOFF_FACTOR = 0x1021;
+    public static final int AL_SEC_OFFSET = 0x1024;
+    public static final int AL_SOURCE_RELATIVE = 0x202;
+    public static final int AL_SOURCE_STATE = 0x1010;
+    public static final int AL_TRUE = 1;
+
     // Buffers
     public static final int BYTES_PER_PIXEL_BGRA = 4;
     public static final int SCRATCH_BUFFER_GROWTH_FACTOR = 2;
@@ -216,6 +238,11 @@ public class EngineSetting {
     public static final String SETTLEMENT_PATH = "settlements";
     public static final String SHADER_PATH = "shaders";
     public static final String SKILL_PATH = "skills";
+    public static final String SOUND_VORBIS_EXTENSION = "ogg";
+    public static final String SOUND_WAV_EXTENSION = "wav";
+    public static final ObjectArraySet<String> SOUND_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] {
+        SOUND_WAV_EXTENSION, SOUND_VORBIS_EXTENSION });
+    public static final String SOUND_PATH = "sounds";
     public static final String SPRITE_PATH = "sprites";
     public static final String STAT_PATH = "stats";
     public static final String STRUCTURE_LIST_PATH = "structurelists";
@@ -354,6 +381,137 @@ public class EngineSetting {
             { "sun.java2d.d3d", "false" },
             { "sun.java2d.opengl", "false" } };
 
+    // Sound — every sound is decoded once into 16-bit samples at no more than the sample rate cap, a spatial one
+    // downmixed to mono so it can be placed, and played through a fixed pool of voices. A voice handle packs its
+    // pool slot in the low bits and the generation of that slot above them, so a handle kept after its voice ended
+    // or was taken never reaches the sound that took its slot.
+    public static final int SOUND_VOICE_COUNT = 64;
+    public static final int SOUND_VOICE_SLOT_BITS = 8;
+    public static final int SOUND_VOICE_SLOT_MASK = (1 << SOUND_VOICE_SLOT_BITS) - 1;
+    public static final int SOUND_VOICE_GENERATION_MASK = 0x7FFFFF;
+    public static final int SOUND_MAX_SAMPLE_RATE = 48_000;
+    public static final int SOUND_SAMPLE_BITS = 16;
+    public static final int SOUND_MONO_CHANNELS = 1;
+    public static final int SOUND_STEREO_CHANNELS = 2;
+    public static final float SOUND_SAMPLE_SCALE = 32767f;
+    public static final float SOUND_SECONDS_PER_MILLI = 0.001f;
+    public static final double SOUND_QUARTER_TURN = Math.PI / 2.0;
+    public static final float SOUND_LISTENER_FALLBACK_FORWARD_Z = -1f;
+    public static final float SOUND_LISTENER_FALLBACK_UP_Y = 1f;
+    public static final int SOUND_LISTENER_ORIENTATION_FLOATS = 6;
+
+    // Sound Defaults — every optional field of a sound's companion file
+    public static final String DEFAULT_SOUND_CATEGORY = "effect";
+    public static final float DEFAULT_SOUND_VOLUME = 1f;
+    public static final float DEFAULT_SOUND_PITCH = 1f;
+    public static final boolean DEFAULT_SOUND_LOOP = false;
+    public static final boolean DEFAULT_SOUND_SPATIAL = false;
+    public static final boolean DEFAULT_SOUND_MONO = false;
+    public static final float DEFAULT_SOUND_LENGTH = 0f;
+    public static final float DEFAULT_SOUND_LOOP_CROSSFADE = 0.5f;
+    public static final float DEFAULT_SOUND_REFERENCE_DISTANCE = 4f;
+    public static final float DEFAULT_SOUND_MAX_DISTANCE = 48f;
+    public static final float DEFAULT_SOUND_ROLLOFF = 1f;
+
+    // Sound Cues — what the game plays for each kind of moment, and the defaults of every optional cue field
+    public static final String SOUND_CUE_PATH = "soundcues";
+    public static final long SOUND_CUE_RANDOM_SEED = 0x50554E44L;
+    public static final float DEFAULT_SOUND_CUE_VOLUME = 1f;
+    public static final float DEFAULT_SOUND_CUE_VOLUME_VARIANCE = 0f;
+    public static final float DEFAULT_SOUND_CUE_PITCH = 1f;
+    public static final float DEFAULT_SOUND_CUE_PITCH_VARIANCE = 0f;
+    public static final float DEFAULT_SOUND_CUE_FADE_SECONDS = 0.5f;
+
+    // Sound Surfaces — the cue folder a block or covering names, and the four cues every surface folder holds
+    public static final String SOUND_SURFACE_NONE = "";
+    public static final String SOUND_SURFACE_CUE_PATH = "surfaces/";
+    public static final String SOUND_SURFACE_STEP_CUE = "/Step";
+    public static final String SOUND_SURFACE_DIG_CUE = "/Dig";
+    public static final String SOUND_SURFACE_BREAK_CUE = "/Break";
+    public static final String SOUND_SURFACE_PLACE_CUE = "/Place";
+    public static final String SOUND_SURFACE_LEAVES = "leaves";
+    public static final String SOUND_SURFACE_DECK = "wood";
+
+    // Sound Cue Names — the moments the shared world sounds, each a file under SOUND_CUE_PATH
+    public static final String SOUND_CUE_JUMP = "movement/Jump";
+    public static final String SOUND_CUE_LAND = "movement/Land";
+    public static final String SOUND_CUE_LAND_HARD = "movement/LandHard";
+    public static final String SOUND_CUE_WADE = "movement/Wade";
+    public static final String SOUND_CUE_SWIM = "movement/Swim";
+    public static final String SOUND_CUE_SPLASH = "movement/Splash";
+    public static final String SOUND_CUE_SPLASH_BIG = "movement/SplashBig";
+    public static final String SOUND_CUE_CLIMB = "movement/Climb";
+    public static final String SOUND_CUE_SWING = "combat/Swing";
+    public static final String SOUND_CUE_HIT = "combat/Hit";
+    public static final String SOUND_CUE_GUARD = "combat/Guard";
+    public static final String SOUND_CUE_TURNED = "combat/Turned";
+    public static final String SOUND_CUE_DEFEAT = "combat/Defeat";
+    public static final String SOUND_CUE_THROW = "combat/Throw";
+    public static final String SOUND_CUE_PROJECTILE_BOUNCE = "combat/ProjectileBounce";
+    public static final String SOUND_CUE_PICK_UP = "items/PickUp";
+    public static final String SOUND_CUE_SET_DOWN = "items/SetDown";
+    public static final String SOUND_CUE_CHOP = "trees/Chop";
+    public static final String SOUND_CUE_TREE_FALL = "trees/Fall";
+    public static final String SOUND_CUE_TREE_LAND = "trees/Land";
+    public static final String SOUND_CUE_SHIP_HULL = "ships/Hull";
+    public static final String SOUND_CUE_SHIP_WAKE = "ships/Wake";
+    public static final String SOUND_CUE_SHIP_SAILS = "ships/Sails";
+    public static final String SOUND_CUE_SHIP_RIGGING = "ships/Rigging";
+    public static final String SOUND_CUE_SAIL_HOIST = "ships/SailHoist";
+    public static final String SOUND_CUE_SAIL_SET = "ships/SailSet";
+    public static final String SOUND_CUE_ANCHOR = "ships/Anchor";
+    public static final String SOUND_CUE_HELM = "ships/Helm";
+    public static final String SOUND_CUE_SHIP_DOOR = "ships/Door";
+    public static final String SOUND_CUE_SHIP_GROUND = "ships/Ground";
+    public static final String SOUND_CUE_SHIP_LAUNCH = "ships/Launch";
+    public static final String SOUND_CUE_SHIPWRIGHT_PLACE = "shipwright/Place";
+    public static final String SOUND_CUE_SHIPWRIGHT_REFUSED = "shipwright/Refused";
+    public static final String SOUND_CUE_LEVEL_UP = "progression/LevelUp";
+    public static final String SOUND_CUE_SKILL = "progression/Skill";
+    public static final String SOUND_CUE_PROFESSION = "progression/Profession";
+
+    // Sound Moments — how the shared world's movement, blows and ships set what they sound
+    public static final float SOUND_STEP_STRIDE = 1.1f;
+    public static final float SOUND_STEP_STRIDE_PER_SPEED = 0.12f;
+    public static final float SOUND_STEP_FIRST_SHARE = 0.6f;
+    public static final float SOUND_STEP_SPEED_MIN = 0.4f;
+    public static final float SOUND_STEP_SPEED_LOUD = 7f;
+    public static final float SOUND_STEP_VOLUME_MIN = 0.45f;
+    public static final float SOUND_SWIM_STRIDE = 1.6f;
+    public static final float SOUND_HIT_VOLUME_MIN = 0.6f;
+    public static final float SOUND_LAND_SPEED_MIN = 3f;
+    public static final float SOUND_LAND_SPEED_HARD = 11f;
+    public static final float SOUND_SPLASH_SPEED_BIG = 9f;
+    public static final float SOUND_SHIP_HEARING_DISTANCE = 96f;
+    public static final float SOUND_SHIP_SPEED_FULL = 8f;
+    public static final float SOUND_SHIP_TURN_FULL = 0.35f;
+    public static final float SOUND_SHIP_WIND_FULL = 12f;
+    public static final float SOUND_SHIP_HULL_REST = 0.25f;
+    public static final float SOUND_SHIP_GROUND_SPEED_MIN = 1.5f;
+    public static final float SOUND_SHIP_GROUND_SPEED_LOUD = 6f;
+    public static final float SOUND_SHIP_GROUND_SECONDS = 1.2f;
+    public static final float SOUND_PROJECTILE_SPEED_LOUD = 20f;
+
+    // Sound Decoding — the RIFF chunks and sample formats a WAV file is read by
+    public static final int SOUND_VORBIS_FORMAT_FIELDS = 2;
+    public static final int SOUND_VORBIS_FORMAT_CHANNELS = 0;
+    public static final int SOUND_VORBIS_FORMAT_SAMPLE_RATE = 1;
+    public static final String SOUND_WAV_RIFF = "RIFF";
+    public static final String SOUND_WAV_WAVE = "WAVE";
+    public static final String SOUND_WAV_FORMAT_CHUNK = "fmt ";
+    public static final String SOUND_WAV_DATA_CHUNK = "data";
+    public static final int SOUND_WAV_HEADER_BYTES = 12;
+    public static final int SOUND_WAV_CHUNK_HEADER_BYTES = 8;
+    public static final int SOUND_WAV_FORMAT_MIN_BYTES = 16;
+    public static final int SOUND_WAV_EXTENSIBLE_SUBFORMAT_OFFSET = 24;
+    public static final int SOUND_WAV_FORMAT_PCM = 1;
+    public static final int SOUND_WAV_FORMAT_FLOAT = 3;
+    public static final int SOUND_WAV_FORMAT_EXTENSIBLE = 0xFFFE;
+    public static final int SOUND_WAV_SIGNED_8_BIT_OFFSET = 128;
+    public static final float SOUND_WAV_8_BIT_SCALE = 128f;
+    public static final float SOUND_WAV_24_BIT_SCALE = 8_388_608f;
+    public static final float SOUND_WAV_32_BIT_SCALE = 2_147_483_648f;
+
     // Input & Bindings
     public static final int BINDING_MOUSE_CODE_OFFSET = 1000;
     public static final int INPUT_KEY_CODE_COUNT = 512;
@@ -390,6 +548,8 @@ public class EngineSetting {
     public static final int DETAIL_RADIUS_MIN = 16;
     public static final float FIELD_OF_VIEW_MAX = 110f;
     public static final float FIELD_OF_VIEW_MIN = 50f;
+    public static final float VOLUME_MAX = 1f;
+    public static final float VOLUME_MIN = 0f;
     public static final float MOUSE_SENSITIVITY_MAX = 1.0f;
     public static final float MOUSE_SENSITIVITY_MIN = 0.01f;
     public static final int RENDER_DISTANCE_MAX = 112;

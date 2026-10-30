@@ -102,12 +102,13 @@ add it to the schema in the same change. Keys a schema does not declare are show
 
 | Schema | Directory under `assets/` | Layout |
 |---|---|---|
-| AnimationTrees, Animations, Architectures, Behaviors, Biomes, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Materials, Passes, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, Sprites, StructureLists, Structures, TextureAliases, UBOs, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
+| AnimationTrees, Animations, Architectures, Behaviors, Biomes, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Materials, Passes, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, SoundCues, Sounds, Sprites, StructureLists, Structures, TextureAliases, UBOs, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
 | Blocks, FBOs, Items, Threads, Tools | `blocks`, `application/fbos`, `items`, `application/threads`, `tools` | an array (`blocks`, `fbos`, `items`, `threads`, `tools`) of entries, each named by its `name` field |
 | (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `CommandBuilder`, `SubVoxelArpgUtility`) |
 
 Sprite and world companions sit beside their PNG with the same stem (`sprites/menus/Button.arpg` next to
-`Button.png`; `worlds/TerraArcana.arpg` next to `TerraArcana.png`).
+`Button.png`; `worlds/TerraArcana.arpg` next to `TerraArcana.png`). Sound companions sit beside their WAV or OGG
+the same way (`sounds/interface/Click.arpg` next to `Click.wav`); a sound without one plays with every default.
 
 ## The ARPG tool
 

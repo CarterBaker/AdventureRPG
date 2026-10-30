@@ -11,9 +11,9 @@ public class ItemActionStruct extends StructPackage {
      * its trigger while the main hand holds the item it names, or anything at
      * all when it names none, and only on the parts it names when it names
      * any. It may use up one of the held item, and it always turns the item
-     * into the item it names in the same place. It may also fire an item from
-     * a muzzle, given in model sub-voxels, along an aim in the model's frame
-     * at a speed in blocks a second.
+     * into the item it names in the same place, sounding its cue when it has
+     * one. It may also fire an item from a muzzle, given in model sub-voxels,
+     * along an aim in the model's frame at a speed in blocks a second.
      */
 
     // Trigger
@@ -24,6 +24,9 @@ public class ItemActionStruct extends StructPackage {
 
     // Result
     private final String becomesItemName;
+
+    // Sound — the cue played as it is done, INDEX_NOT_FOUND for none
+    private final int cueID;
 
     // Fire
     private final String fireItemName;
@@ -39,6 +42,7 @@ public class ItemActionStruct extends StructPackage {
             boolean consumesHeld,
             ItemShapeStruct partShape,
             String becomesItemName,
+            int cueID,
             String fireItemName,
             Vector3 muzzle,
             Vector3 aim,
@@ -52,6 +56,9 @@ public class ItemActionStruct extends StructPackage {
 
         // Result
         this.becomesItemName = becomesItemName;
+
+        // Sound
+        this.cueID = cueID;
 
         // Fire
         this.fireItemName = fireItemName;
@@ -85,6 +92,14 @@ public class ItemActionStruct extends StructPackage {
 
     public String getBecomesItemName() {
         return becomesItemName;
+    }
+
+    public boolean hasCue() {
+        return cueID != EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    public int getCueID() {
+        return cueID;
     }
 
     public boolean fires() {

@@ -8,7 +8,8 @@ public enum SettingsSlider {
      * The settings the menu shows as sliders. Each slider's name rides as its
      * drag argument, so the one drag handler knows which setting the track it
      * received controls. A post-processing slider's value is pushed to the
-     * GPU as it moves; the rest are read live where they are used.
+     * GPU as it moves; the rest are read live where they are used, the
+     * volumes by SoundManager.
      */
 
     MOUSE_SENSITIVITY(RuntimeSetting.SETTINGS_SLIDER_MOUSE_SENSITIVITY, false),
@@ -23,7 +24,13 @@ public enum SettingsSlider {
     VIGNETTE(RuntimeSetting.SETTINGS_SLIDER_VIGNETTE, true),
     CHROMATIC_ABERRATION(RuntimeSetting.SETTINGS_SLIDER_CHROMATIC_ABERRATION, true),
     FILM_GRAIN(RuntimeSetting.SETTINGS_SLIDER_FILM_GRAIN, true),
-    CAMERA_SHAKE_INTENSITY(RuntimeSetting.SETTINGS_SLIDER_CAMERA_SHAKE_INTENSITY, false);
+    CAMERA_SHAKE_INTENSITY(RuntimeSetting.SETTINGS_SLIDER_CAMERA_SHAKE_INTENSITY, false),
+    MASTER_VOLUME(RuntimeSetting.SETTINGS_SLIDER_MASTER_VOLUME, false),
+    MUSIC_VOLUME(RuntimeSetting.SETTINGS_SLIDER_MUSIC_VOLUME, false),
+    EFFECT_VOLUME(RuntimeSetting.SETTINGS_SLIDER_EFFECT_VOLUME, false),
+    AMBIENT_VOLUME(RuntimeSetting.SETTINGS_SLIDER_AMBIENT_VOLUME, false),
+    INTERFACE_VOLUME(RuntimeSetting.SETTINGS_SLIDER_INTERFACE_VOLUME, false),
+    VOICE_VOLUME(RuntimeSetting.SETTINGS_SLIDER_VOICE_VOLUME, false);
 
     // Internal
     private final String label;

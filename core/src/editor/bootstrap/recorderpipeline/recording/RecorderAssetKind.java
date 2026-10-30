@@ -10,7 +10,8 @@ public enum RecorderAssetKind {
      * every character template and gender, the features and items they wore
      * or threw, the vehicles about them, the models, textures and materials
      * all of those are drawn with, the animation trees and animations the
-     * characters moved by, and the interface targets the take captured.
+     * characters moved by, the interface targets the take captured, and the
+     * sounds it heard or was given from the sound library.
      */
 
     WORLD(EditorSetting.RECORDER_ASSET_LABEL_WORLD),
@@ -25,7 +26,8 @@ public enum RecorderAssetKind {
     MATERIALS(EditorSetting.RECORDER_ASSET_LABEL_MATERIALS),
     ANIMATION_TREES(EditorSetting.RECORDER_ASSET_LABEL_ANIMATION_TREES),
     ANIMATIONS(EditorSetting.RECORDER_ASSET_LABEL_ANIMATIONS),
-    INTERFACE(EditorSetting.RECORDER_ASSET_LABEL_INTERFACE);
+    INTERFACE(EditorSetting.RECORDER_ASSET_LABEL_INTERFACE),
+    SOUNDS(EditorSetting.RECORDER_ASSET_LABEL_SOUNDS);
 
     // Values
     public static final RecorderAssetKind[] VALUES = values();

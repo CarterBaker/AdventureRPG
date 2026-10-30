@@ -11,7 +11,10 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
+import application.bootstrap.soundpipeline.soundcue.SoundLoopInstance;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.runtime.RuntimeSetting;
+import application.runtime.sound.SoundListenerSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -30,7 +33,8 @@ public class VitalitySystem extends SystemPackage {
      * darkens. A level gained flashes a glow in from the edges, white for the
      * virtuous, grey between and black for the wicked, fading over a few
      * seconds. Each effect follows its target smoothly, and nothing is drawn
-     * while all of them are clear.
+     * while all of them are clear. The darkness is heard as a heartbeat,
+     * louder the nearer death, while this window is the one heard.
      */
 
     // Internal
@@ -40,6 +44,8 @@ public class VitalitySystem extends SystemPackage {
     private RenderManager renderManager;
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
+    private SoundCueManager soundCueManager;
+    private SoundListenerSystem soundListenerSystem;
 
     // Render Target
     private PassInstance vitalityPass;
@@ -55,6 +61,9 @@ public class VitalitySystem extends SystemPackage {
     private EntityInstance watchedPlayer;
     private int seenLevelUps;
 
+    // Heartbeat
+    private SoundLoopInstance heartbeat;
+
     // Uniforms
     private final Vector4 vitality = new Vector4();
     private final Vector3 glowColor = new Vector3();
@@ -69,12 +78,16 @@ public class VitalitySystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
+        this.soundCueManager = get(SoundCueManager.class);
+        this.soundListenerSystem = get(SoundListenerSystem.class);
     }
 
     @Override
     protected void awake() {
         this.vitalityPass = passManager.clonePass(RuntimeSetting.PASS_VITALITY);
         this.vitalityFbo = fboManager.cloneFbo(RuntimeSetting.FBO_VITALITY, context.getWindow());
+        this.heartbeat = create(SoundLoopInstance.class);
+        heartbeat.constructor(soundCueManager.getCueIDFromCueName(RuntimeSetting.SOUND_CUE_HEARTBEAT));
     }
 
     @Override
@@ -91,6 +104,7 @@ public class VitalitySystem extends SystemPackage {
         if (player == null) {
             approach(0f, 0f, deltaTime);
             glow = Math.max(0f, glow - deltaTime / RuntimeSetting.VITALITY_GLOW_SECONDS);
+            heartbeat.hold(0f);
             return;
         }
 
@@ -98,6 +112,7 @@ public class VitalitySystem extends SystemPackage {
 
         approach(resolveDarkness(statisticsHandle), statisticsHandle.getBleed(), deltaTime);
         updateGlow(player, deltaTime);
+        heartbeat.hold(soundListenerSystem.isHeardHere() ? darkness : 0f);
     }
 
     @Override

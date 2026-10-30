@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.covering.CoveringData;
@@ -30,13 +31,15 @@ class CoveringBuilder extends BuilderPackage {
      * live in the same texture array as each host's own faces, since the
      * surface shader reads both from the one array it draws the host with.
      * Chances run from 0 to 1, the spread level from 1 to the full level,
-     * and the tint strength from 0 to 1. Bootstrap only.
+     * and the tint strength from 0 to 1. "sound" names the surface stepped on
+     * where it grows, in place of its host's. Bootstrap only.
      */
 
     // Internal
     private CoveringManager coveringManager;
     private BlockManager blockManager;
     private TextureManager textureManager;
+    private SoundCueManager soundCueManager;
 
     // Base \\
 
@@ -45,6 +48,7 @@ class CoveringBuilder extends BuilderPackage {
         this.coveringManager = get(CoveringManager.class);
         this.blockManager = get(BlockManager.class);
         this.textureManager = get(TextureManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     // Build \\
@@ -104,7 +108,9 @@ class CoveringBuilder extends BuilderPackage {
                 spreadLevel,
                 requiresOpenTop,
                 moistureRadius,
-                dropItemName);
+                dropItemName,
+                soundCueManager.getSurfaceStruct(
+                        ArpgUtility.getString(arpg, "sound", EngineSetting.SOUND_SURFACE_NONE)));
 
         CoveringHandle coveringHandle = create(CoveringHandle.class);
         coveringHandle.constructor(coveringData);

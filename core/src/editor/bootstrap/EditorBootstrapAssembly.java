@@ -13,6 +13,7 @@ import editor.bootstrap.itemeditorpipeline.ItemEditorPipeline;
 import editor.bootstrap.recorderpipeline.RecorderPipeline;
 import editor.bootstrap.settlementplannerpipeline.SettlementPlannerPipeline;
 import editor.bootstrap.shortcutpipeline.ShortcutPipeline;
+import editor.bootstrap.soundlibrarypipeline.SoundLibraryPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
 import editor.bootstrap.toolpipeline.ToolPipeline;
 import editor.bootstrap.worldeditorpipeline.WorldEditorPipeline;
@@ -58,6 +59,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(AnimationTreeEditorPipeline.class);
         create(CommandPipeline.class);
         create(RecorderPipeline.class);
+        create(SoundLibraryPipeline.class);
         create(ShortcutPipeline.class);
         create(EditorMenuEventsManager.class);
     }

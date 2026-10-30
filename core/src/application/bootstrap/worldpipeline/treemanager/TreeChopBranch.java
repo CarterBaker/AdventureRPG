@@ -6,6 +6,8 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.soundpipeline.soundcue.SoundSurfaceStruct;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.worldpipeline.tree.TreeCarveStruct;
 import application.bootstrap.worldpipeline.tree.TreeCastStruct;
 import application.bootstrap.worldpipeline.tree.TreeGrowthStruct;
@@ -40,6 +42,12 @@ class TreeChopBranch extends BranchPackage {
     private TreeManager treeManager;
     private TreeRebuildBranch treeRebuildBranch;
     private TreeFallBranch treeFallBranch;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int chopCueID;
+    private int turnedCueID;
+    private SoundSurfaceStruct leafSurface;
 
     // Settings
     private int resolution;
@@ -66,6 +74,16 @@ class TreeChopBranch extends BranchPackage {
         this.treeManager = get(TreeManager.class);
         this.treeRebuildBranch = get(TreeRebuildBranch.class);
         this.treeFallBranch = get(TreeFallBranch.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.leafSurface = soundCueManager.getSurfaceStruct(EngineSetting.SOUND_SURFACE_LEAVES);
+        this.chopCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_CHOP);
+        this.turnedCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_TURNED);
     }
 
     // Strike \\
@@ -74,16 +92,33 @@ class TreeChopBranch extends BranchPackage {
     BlowOutcome strike(BlowStruct blow, TreeCastStruct cast) {
 
         if (!cast.isWood()) {
+            playAt(leafSurface.getDigCueID(), blow.getSource(), cast);
             knockLeaf(blow.getSource(), cast);
             return BlowOutcome.WORKED;
         }
 
         TreeInstance tree = cast.getTree();
 
-        if (!canCut(blow.getItem(), tree.getTreeHandle().getWood()))
+        if (!canCut(blow.getItem(), tree.getTreeHandle().getWood())) {
+            playAt(turnedCueID, blow.getSource(), cast);
             return BlowOutcome.TURNED;
+        }
+
+        playAt(chopCueID, blow.getSource(), cast);
 
         return notch(blow, tree, cast) ? BlowOutcome.BROKEN : BlowOutcome.WORKED;
+    }
+
+    // Where the blow met the tree, in the frame of the chunk its striker stands in
+    private void playAt(int cueID, EntityInstance striker, TreeCastStruct cast) {
+        soundCueManager.playCueAt(
+                cueID,
+                1f,
+                striker.getWorldHandle(),
+                striker.getWorldPositionStruct().getChunkCoordinate(),
+                cast.getPointX(),
+                cast.getPointY(),
+                cast.getPointZ());
     }
 
     private boolean canCut(ItemInstance itemInstance, TreeWoodStruct wood) {

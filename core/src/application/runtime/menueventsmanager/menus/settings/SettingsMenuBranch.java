@@ -184,7 +184,8 @@ public class SettingsMenuBranch extends BranchPackage {
                 settingsBindingBranch.populateBindings(session);
             }
             case GAMEPLAY -> settingsOptionBranch.populateGameplay(session);
-            case AUDIO, ACCESSIBILITY -> injectPlaceholder(
+            case AUDIO -> settingsOptionBranch.populateAudio(session);
+            case ACCESSIBILITY -> injectPlaceholder(
                     session,
                     tab.getTitle(),
                     RuntimeSetting.SETTINGS_PLACEHOLDER_COMING_SOON,

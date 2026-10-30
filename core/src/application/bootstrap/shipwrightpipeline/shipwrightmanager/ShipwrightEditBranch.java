@@ -8,6 +8,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -32,12 +33,26 @@ class ShipwrightEditBranch extends BranchPackage {
 
     // Internal
     private ShipwrightManager shipwrightManager;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int placeCueID;
+    private int refusedCueID;
 
     // Base \\
 
     @Override
     protected void get() {
         this.shipwrightManager = get(ShipwrightManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.placeCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_SHIPWRIGHT_PLACE);
+        this.refusedCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_SHIPWRIGHT_REFUSED);
     }
 
     // Stroke \\
@@ -448,11 +463,13 @@ class ShipwrightEditBranch extends BranchPackage {
             session.discardLast();
             shipwrightManager.compileSession(session);
             session.setStatus(refusal);
+            soundCueManager.playCue(refusedCueID);
             return;
         }
 
         session.markDirty();
         session.setStatus(session.getLayout().getProblem());
+        soundCueManager.playCue(placeCueID);
     }
 
     // Utility \\

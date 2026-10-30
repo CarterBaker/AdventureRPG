@@ -94,7 +94,19 @@ public class SettingsUtility extends EngineUtility {
                 EngineSetting.CAMERA_SHAKE_INTENSITY_MAX);
 
         sanitizePostProcessing(settings);
+        sanitizeAudio(settings);
         sanitizeColors(settings);
+    }
+
+    private static void sanitizeAudio(Settings settings) {
+        settings.masterVolume = Math.clamp(settings.masterVolume, EngineSetting.VOLUME_MIN, EngineSetting.VOLUME_MAX);
+        settings.musicVolume = Math.clamp(settings.musicVolume, EngineSetting.VOLUME_MIN, EngineSetting.VOLUME_MAX);
+        settings.effectVolume = Math.clamp(settings.effectVolume, EngineSetting.VOLUME_MIN, EngineSetting.VOLUME_MAX);
+        settings.ambientVolume = Math.clamp(
+                settings.ambientVolume, EngineSetting.VOLUME_MIN, EngineSetting.VOLUME_MAX);
+        settings.interfaceVolume = Math.clamp(
+                settings.interfaceVolume, EngineSetting.VOLUME_MIN, EngineSetting.VOLUME_MAX);
+        settings.voiceVolume = Math.clamp(settings.voiceVolume, EngineSetting.VOLUME_MIN, EngineSetting.VOLUME_MAX);
     }
 
     private static void sanitizePostProcessing(Settings settings) {

@@ -7,8 +7,10 @@ import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.menupipeline.element.ElementInstance;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import application.runtime.RuntimeSetting;
 import application.runtime.inventory.InventoryViewUtility;
 import engine.input.Buttons;
 import engine.root.BranchPackage;
@@ -32,6 +34,11 @@ public class InventoryDragBranch extends BranchPackage {
     // Internal
     private InputManager inputManager;
     private InventoryContainerBranch inventoryContainerBranch;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int equipCueID;
+    private int stowCueID;
 
     // Scratch
     private Vector3 aimPoint;
@@ -49,6 +56,15 @@ public class InventoryDragBranch extends BranchPackage {
     protected void get() {
         this.inputManager = get(InputManager.class);
         this.inventoryContainerBranch = get(InventoryContainerBranch.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.equipCueID = soundCueManager.getCueIDFromCueName(RuntimeSetting.SOUND_CUE_EQUIP);
+        this.stowCueID = soundCueManager.getCueIDFromCueName(RuntimeSetting.SOUND_CUE_STOW);
     }
 
     // Update \\
@@ -202,13 +218,19 @@ public class InventoryDragBranch extends BranchPackage {
                     session.getDropY(),
                     session.getDropZ(),
                     held.getRotation());
+            soundCueManager.playCue(stowCueID);
 
             return true;
         }
 
         InventoryViewStruct listView = findListAt(session, x, y);
 
-        return listView != null && listView.getContainerInstance().autoPlace(held.getItemInstance()) != null;
+        if (listView == null || listView.getContainerInstance().autoPlace(held.getItemInstance()) == null)
+            return false;
+
+        soundCueManager.playCue(stowCueID);
+
+        return true;
     }
 
     // Receive \\
@@ -253,6 +275,7 @@ public class InventoryDragBranch extends BranchPackage {
         }
 
         inventory.equip(equipmentSlot, itemInstance);
+        soundCueManager.playCue(equipCueID);
 
         return true;
     }

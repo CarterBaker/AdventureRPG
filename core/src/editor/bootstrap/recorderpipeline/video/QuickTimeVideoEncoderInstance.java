@@ -2,7 +2,9 @@ package editor.bootstrap.recorderpipeline.video;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
+import org.jcodec.common.AudioFormat;
 import org.jcodec.common.Codec;
 import org.jcodec.common.VideoCodecMeta;
 import org.jcodec.common.VideoEncoder.EncodedFrame;
@@ -20,6 +22,7 @@ import org.jcodec.containers.mp4.Brand;
 import org.jcodec.containers.mp4.boxes.ColorExtension;
 import org.jcodec.containers.mp4.muxer.CodecMP4MuxerTrack;
 import org.jcodec.containers.mp4.muxer.MP4Muxer;
+import org.jcodec.containers.mp4.muxer.PCMMP4MuxerTrack;
 
 import editor.runtime.EditorSetting;
 
@@ -32,20 +35,27 @@ public abstract class QuickTimeVideoEncoderInstance extends VideoEncoderInstance
      * the encoded frame is written to the file at once as its own chunk, so
      * one picture, one packet and one packet buffer serve the whole export.
      * Frames are stamped one tick of the export's rate apart, and the track
-     * names its colour as BT.709. Formats supply their brand, codec, colour
-     * space, how a frame becomes the picture, and the encoding itself.
+     * names its colour as BT.709. A video with sound carries it as a track
+     * of little-endian 16-bit stereo samples, each frame's stretch written as
+     * its own chunk beside the frame through one buffer. Formats supply their
+     * brand, codec, colour space, how a frame becomes the picture, and the
+     * encoding itself.
      */
 
     // File
     private SeekableByteChannel channel;
     private MP4Muxer muxer;
     private CodecMP4MuxerTrack track;
+    private PCMMP4MuxerTrack audioTrack;
 
     // Frame
     private Picture picture;
     private ByteBuffer packetBuffer;
     private Packet packet;
     private long frameNumber;
+
+    // Audio
+    private ByteBuffer audioBuffer;
 
     // Management \\
 
@@ -69,6 +79,7 @@ public abstract class QuickTimeVideoEncoderInstance extends VideoEncoderInstance
                     VideoCodecMeta.createSimpleVideoCodecMeta(new Size(width, height), getColorSpace()));
             track.setTgtChunkDuration(new Rational(EditorSetting.RECORDER_FRAMES_PER_CHUNK, 1), Unit.FRAME);
             describeColor();
+            openAudio();
             openEncoder();
             return true;
         } catch (IOException e) {
@@ -97,6 +108,23 @@ public abstract class QuickTimeVideoEncoderInstance extends VideoEncoderInstance
         try {
             track.addFrame(packet);
             frameNumber++;
+        } catch (IOException e) {
+            fail(EditorSetting.RECORDER_MESSAGE_WRITE_FAILED + e.getMessage());
+        }
+    }
+
+    @Override
+    protected void writeAudio(short[] samples) {
+
+        audioBuffer.clear();
+
+        for (int i = 0; i < samples.length; i++)
+            audioBuffer.putShort(samples[i]);
+
+        audioBuffer.flip();
+
+        try {
+            audioTrack.addSamples(audioBuffer);
         } catch (IOException e) {
             fail(EditorSetting.RECORDER_MESSAGE_WRITE_FAILED + e.getMessage());
         }
@@ -147,6 +175,18 @@ public abstract class QuickTimeVideoEncoderInstance extends VideoEncoderInstance
     protected abstract EncodedFrame encodePicture(Picture picture, ByteBuffer packetBuffer);
 
     // Utility \\
+
+    // The sound track, its chunks one video frame's stretch long so each is written as soon as it is given
+    private void openAudio() {
+
+        if (!audio)
+            return;
+
+        this.audioTrack = muxer.addPCMAudioTrack(AudioFormat.STEREO_S16_LE(EditorSetting.RECORDER_AUDIO_SAMPLE_RATE));
+        audioTrack.setTgtChunkDuration(new Rational(audioFramesPerFrame, 1), Unit.FRAME);
+        this.audioBuffer = ByteBuffer.allocate(audioFramesPerFrame * EditorSetting.RECORDER_AUDIO_CHANNELS
+                * EditorSetting.RECORDER_AUDIO_SAMPLE_BYTES).order(ByteOrder.LITTLE_ENDIAN);
+    }
 
     private void describeColor() {
         track.getEntries().get(0).add(ColorExtension.createColorExtension(

@@ -19,10 +19,20 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-10-29: Rule change. Maps generated from the owner's art are the owner's and are not catalogued;
   `.claude/assets/` added as the owner's asset folder.
 - 2026-10-29: `.claude/catalogue/` added as the owner's personal library, listed in `.claude/assets/Catalogue.txt`.
+- 2026-10-30: Sound pipeline. Added the transport icons `LoopIcon`, `PauseIcon`, `PlayIcon`, `RecordIcon`,
+  `RewindIcon`, `SkipEndIcon` and `StopIcon`, the interface sounds `Click.wav` and `Confirm.wav` with their
+  companions, the `SoundLibrary.arpg` menu and the `Sounds.arpg` schema; regenerated `Recorder.arpg` (icon transport,
+  sound clip bars) and `EditorWindow.arpg` (Sound Library entry).
+- 2026-10-30: Full game audio. Added 159 generated placeholder sounds (footsteps per surface, movement, water,
+  combat, blocks, items, trees, weather, ambience, ships, cannons, chests, progression, vitality, interface and three
+  music pieces), a companion `.arpg` for every sound the game plays (generated or imported by the bat), 106 sound
+  cues under `assets/soundcues/` and the `SoundCues.arpg` schema; rewrote `TerraArcanaBlocks.arpg` and every covering
+  (surface sounds), `Cannons.arpg` and `Furniture.arpg` (action cues), the game menus (open, close and click cues),
+  `Launcher.arpg` (manifest) and the `Blocks`, `Coverings`, `Items` and `Sounds` schemas.
 
 ---
 
-## Textures and Sprites (2187 files)
+## Textures and Sprites (2194 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -39,13 +49,20 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `DialRing`
 - `EditorTab`
 - `FrameOutline`
+- `LoopIcon`
 - `MaximizeIcon`
 - `MinimizeIcon`
 - `Panel`
 - `PanelHeader`
 - `PanelOutline`
+- `PauseIcon`
+- `PlayIcon`
+- `RecordIcon`
+- `RewindIcon`
 - `Shadow`
+- `SkipEndIcon`
 - `StatusBar`
+- `StopIcon`
 - `Sword`
 - `Title`
 - `ToolBar`
@@ -1109,7 +1126,130 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 `WeatherShader.fsh`
 
-## Data Files (1436 files)
+## Sounds (161 files)
+
+Audio the sound pipeline loads from `assets/sounds/`, each beside its companion `.arpg` (listed under Data Files).
+Sounds the import bat copies from `.claude/catalogue/` are the owner's library and are not listed.
+
+### `assets/sounds/ambience/`
+
+`Birds.ogg`, `Crickets.ogg`, `Ocean.ogg`
+
+### `assets/sounds/blocks/dirt/`
+
+`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
+`Place_C.wav`
+
+### `assets/sounds/blocks/glass/`
+
+`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
+`Place_C.wav`
+
+### `assets/sounds/blocks/leaves/`
+
+`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
+`Place_C.wav`
+
+### `assets/sounds/blocks/stone/`
+
+`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
+`Place_C.wav`
+
+### `assets/sounds/blocks/wood/`
+
+`Break_A.wav`, `Break_B.wav`, `Break_C.wav`, `Dig_A.wav`, `Dig_B.wav`, `Dig_C.wav`, `Place_A.wav`, `Place_B.wav`,
+`Place_C.wav`
+
+### `assets/sounds/combat/`
+
+`Death.wav`, `HitFlesh_A.wav`, `HitFlesh_B.wav`, `HitFlesh_C.wav`, `HitWood_A.wav`, `HitWood_B.wav`, `HitWood_C.wav`,
+`Swing_A.wav`, `Swing_B.wav`, `Swing_C.wav`, `SwingHeavy_A.wav`, `SwingHeavy_B.wav`, `SwingHeavy_C.wav`, `Throw_A.wav`,
+`Throw_B.wav`, `Throw_C.wav`
+
+### `assets/sounds/footsteps/dirt/`
+
+`Dirt_A.wav`, `Dirt_B.wav`, `Dirt_C.wav`, `Dirt_D.wav`
+
+### `assets/sounds/footsteps/grass/`
+
+`Grass_A.wav`, `Grass_B.wav`, `Grass_C.wav`, `Grass_D.wav`
+
+### `assets/sounds/footsteps/gravel/`
+
+`Gravel_A.wav`, `Gravel_B.wav`, `Gravel_C.wav`, `Gravel_D.wav`
+
+### `assets/sounds/footsteps/leaves/`
+
+`Leaves_A.wav`, `Leaves_B.wav`, `Leaves_C.wav`, `Leaves_D.wav`
+
+### `assets/sounds/footsteps/sand/`
+
+`Sand_A.wav`, `Sand_B.wav`, `Sand_C.wav`, `Sand_D.wav`
+
+### `assets/sounds/footsteps/stone/`
+
+`Stone_A.wav`, `Stone_B.wav`, `Stone_C.wav`, `Stone_D.wav`
+
+### `assets/sounds/footsteps/water/`
+
+`Water_A.wav`, `Water_B.wav`, `Water_C.wav`, `Water_D.wav`
+
+### `assets/sounds/footsteps/wood/`
+
+`Wood_A.wav`, `Wood_B.wav`, `Wood_C.wav`, `Wood_D.wav`
+
+### `assets/sounds/furnishings/`
+
+`ChestClose.wav`, `ChestOpen.wav`
+
+### `assets/sounds/interface/`
+
+`Click.wav`, `Close.wav`, `Confirm.wav`, `Error.wav`
+
+### `assets/sounds/items/`
+
+`BagClose.wav`, `BagOpen.wav`, `Drop_A.wav`, `Drop_B.wav`, `Equip_A.wav`, `Equip_B.wav`, `EquipMetal_A.wav`,
+`EquipMetal_B.wav`, `Pickup_A.wav`, `Pickup_B.wav`
+
+### `assets/sounds/movement/`
+
+`Jump_A.wav`, `Jump_B.wav`, `Land_A.wav`, `Land_B.wav`, `LandHard_A.wav`, `LandHard_B.wav`
+
+### `assets/sounds/music/`
+
+`Day.ogg`, `MainMenu.ogg`, `Night.ogg`
+
+### `assets/sounds/progression/`
+
+`LevelUp.ogg`, `Profession.ogg`, `Skill.wav`
+
+### `assets/sounds/trees/`
+
+`Chop_A.wav`, `Chop_B.wav`, `Chop_C.wav`, `Fall.ogg`, `Land.ogg`
+
+### `assets/sounds/vehicles/ship/`
+
+`Anchor.ogg`, `HullCreak.ogg`, `HullImpact_A.ogg`, `HullImpact_B.ogg`, `Rudder_A.wav`, `Rudder_B.wav`, `SailLuff.ogg`
+
+### `assets/sounds/vitality/`
+
+`Defeat.ogg`, `Heartbeat.wav`
+
+### `assets/sounds/water/`
+
+`Splash_A.wav`, `Splash_B.wav`, `Splash_C.wav`, `SplashBig_A.wav`, `SplashBig_B.wav`, `SplashBig_C.wav`,
+`SwimStroke_A.wav`, `SwimStroke_B.wav`, `SwimStroke_C.wav`, `Underwater.ogg`
+
+### `assets/sounds/weapons/`
+
+`Fizzle.wav`, `Load.wav`, `Prime.wav`
+
+### `assets/sounds/weather/`
+
+`Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
+`ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
+
+## Data Files (1722 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -1912,7 +2052,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePlanner.arpg`, `BiomeViewer.arpg`,
 `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`,
 `EditorWindow.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Palette.arpg`, `Profiler.arpg`, `Recorder.arpg`,
-`SettlementPlanner.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
+`SettlementPlanner.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`, `WorldEditor.arpg`,
+`WorldMap.arpg`
 
 ### `assets/menus/util/`
 
@@ -2067,9 +2208,9 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `DamageTypes.arpg`, `Deeds.arpg`, `Entities.arpg`, `FBOs.arpg`, `Features.arpg`, `Furnishings.arpg`, `Genders.arpg`,
 `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Npcs.arpg`, `Passes.arpg`, `Professions.arpg`, `Rigs.arpg`,
 `Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Ships.arpg`, `Shortcuts.arpg`, `Skills.arpg`,
-`Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`, `TextureAliases.arpg`, `Threads.arpg`,
-`Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Trees.arpg`, `UBOs.arpg`, `Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`,
-`Worlds.arpg`
+`SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`,
+`TextureAliases.arpg`, `Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Trees.arpg`, `UBOs.arpg`,
+`Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
 
 ### `assets/seasons/`
 
@@ -2216,6 +2357,227 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/skills/`
 
 `Skills.arpg`
+
+### `assets/soundcues/ambience/`
+
+`Birds.arpg`, `Crickets.arpg`, `Gust.arpg`, `Ocean.arpg`, `Rain.arpg`, `RainHeavy.arpg`, `Shore.arpg`, `Thunder.arpg`,
+`TreesCalm.arpg`, `TreesStormy.arpg`, `TreesWindy.arpg`, `Underwater.arpg`, `Wind.arpg`, `WindStrong.arpg`
+
+### `assets/soundcues/combat/`
+
+`Defeat.arpg`, `Guard.arpg`, `Hit.arpg`, `ProjectileBounce.arpg`, `Swing.arpg`, `Throw.arpg`, `Turned.arpg`
+
+### `assets/soundcues/furnishings/`
+
+`ChestClose.arpg`, `ChestOpen.arpg`, `DoorClose.arpg`, `DoorOpen.arpg`
+
+### `assets/soundcues/interface/`
+
+`Click.arpg`, `Close.arpg`, `Open.arpg`
+
+### `assets/soundcues/items/`
+
+`BagClose.arpg`, `BagOpen.arpg`, `Equip.arpg`, `PickUp.arpg`, `SetDown.arpg`, `Stow.arpg`
+
+### `assets/soundcues/movement/`
+
+`Climb.arpg`, `Jump.arpg`, `Land.arpg`, `LandHard.arpg`, `Splash.arpg`, `SplashBig.arpg`, `Swim.arpg`, `Wade.arpg`
+
+### `assets/soundcues/music/`
+
+`Day.arpg`, `MainMenu.arpg`, `Night.arpg`
+
+### `assets/soundcues/progression/`
+
+`LevelUp.arpg`, `Profession.arpg`, `Skill.arpg`
+
+### `assets/soundcues/ships/`
+
+`Anchor.arpg`, `Door.arpg`, `Ground.arpg`, `Helm.arpg`, `Hull.arpg`, `Launch.arpg`, `Rigging.arpg`, `SailHoist.arpg`,
+`Sails.arpg`, `SailSet.arpg`, `Wake.arpg`
+
+### `assets/soundcues/shipwright/`
+
+`Place.arpg`, `Refused.arpg`
+
+### `assets/soundcues/surfaces/dirt/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/surfaces/glass/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/surfaces/grass/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/surfaces/gravel/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/surfaces/ice/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/surfaces/leaves/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/surfaces/sand/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/surfaces/stone/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/surfaces/wood/`
+
+`Break.arpg`, `Dig.arpg`, `Place.arpg`, `Step.arpg`
+
+### `assets/soundcues/trees/`
+
+`Chop.arpg`, `Fall.arpg`, `Land.arpg`
+
+### `assets/soundcues/vitality/`
+
+`Defeat.arpg`, `Heartbeat.arpg`
+
+### `assets/soundcues/weapons/`
+
+`CannonFire.arpg`, `CannonFizzle.arpg`, `CannonLoad.arpg`, `CannonPrime.arpg`
+
+### `assets/sounds/ambience/`
+
+`Birds.arpg`, `Crickets.arpg`, `Gust.arpg`, `Ocean.arpg`
+
+### `assets/sounds/ambience/trees/`
+
+`AspenGusts.arpg`, `CherryStrong.arpg`, `OakCalm.arpg`
+
+### `assets/sounds/ambience/water/`
+
+`Shore.arpg`
+
+### `assets/sounds/blocks/dirt/`
+
+`Break_A.arpg`, `Break_B.arpg`, `Break_C.arpg`, `Dig_A.arpg`, `Dig_B.arpg`, `Dig_C.arpg`, `Place_A.arpg`,
+`Place_B.arpg`, `Place_C.arpg`
+
+### `assets/sounds/blocks/glass/`
+
+`Break_A.arpg`, `Break_B.arpg`, `Break_C.arpg`, `Dig_A.arpg`, `Dig_B.arpg`, `Dig_C.arpg`, `Place_A.arpg`,
+`Place_B.arpg`, `Place_C.arpg`
+
+### `assets/sounds/blocks/leaves/`
+
+`Break_A.arpg`, `Break_B.arpg`, `Break_C.arpg`, `Dig_A.arpg`, `Dig_B.arpg`, `Dig_C.arpg`, `Place_A.arpg`,
+`Place_B.arpg`, `Place_C.arpg`
+
+### `assets/sounds/blocks/stone/`
+
+`Break_A.arpg`, `Break_B.arpg`, `Break_C.arpg`, `Dig_A.arpg`, `Dig_B.arpg`, `Dig_C.arpg`, `Place_A.arpg`,
+`Place_B.arpg`, `Place_C.arpg`
+
+### `assets/sounds/blocks/wood/`
+
+`Break_A.arpg`, `Break_B.arpg`, `Break_C.arpg`, `Dig_A.arpg`, `Dig_B.arpg`, `Dig_C.arpg`, `Place_A.arpg`,
+`Place_B.arpg`, `Place_C.arpg`
+
+### `assets/sounds/combat/`
+
+`Death.arpg`, `HitFlesh_A.arpg`, `HitFlesh_B.arpg`, `HitFlesh_C.arpg`, `HitWood_A.arpg`, `HitWood_B.arpg`,
+`HitWood_C.arpg`, `Swing_A.arpg`, `Swing_B.arpg`, `Swing_C.arpg`, `SwingHeavy_A.arpg`, `SwingHeavy_B.arpg`,
+`SwingHeavy_C.arpg`, `Throw_A.arpg`, `Throw_B.arpg`, `Throw_C.arpg`
+
+### `assets/sounds/combat/metal/`
+
+`BarrelHit.arpg`, `IronHit.arpg`, `SpadeHit.arpg`
+
+### `assets/sounds/footsteps/dirt/`
+
+`Dirt_A.arpg`, `Dirt_B.arpg`, `Dirt_C.arpg`, `Dirt_D.arpg`
+
+### `assets/sounds/footsteps/grass/`
+
+`Grass_A.arpg`, `Grass_B.arpg`, `Grass_C.arpg`, `Grass_D.arpg`
+
+### `assets/sounds/footsteps/gravel/`
+
+`Gravel_A.arpg`, `Gravel_B.arpg`, `Gravel_C.arpg`, `Gravel_D.arpg`
+
+### `assets/sounds/footsteps/leaves/`
+
+`Leaves_A.arpg`, `Leaves_B.arpg`, `Leaves_C.arpg`, `Leaves_D.arpg`
+
+### `assets/sounds/footsteps/sand/`
+
+`Sand_A.arpg`, `Sand_B.arpg`, `Sand_C.arpg`, `Sand_D.arpg`
+
+### `assets/sounds/footsteps/stone/`
+
+`Stone_A.arpg`, `Stone_B.arpg`, `Stone_C.arpg`, `Stone_D.arpg`
+
+### `assets/sounds/footsteps/water/`
+
+`Water_A.arpg`, `Water_B.arpg`, `Water_C.arpg`, `Water_D.arpg`
+
+### `assets/sounds/footsteps/wood/`
+
+`Wood_A.arpg`, `Wood_B.arpg`, `Wood_C.arpg`, `Wood_D.arpg`
+
+### `assets/sounds/furnishings/`
+
+`ChestClose.arpg`, `ChestOpen.arpg`, `DoorCreak.arpg`, `DoorSlam.arpg`
+
+### `assets/sounds/interface/`
+
+`Click.arpg`, `Close.arpg`, `Confirm.arpg`, `Error.arpg`, `WindowOpen.arpg`
+
+### `assets/sounds/items/`
+
+`BagClose.arpg`, `BagOpen.arpg`, `Drop_A.arpg`, `Drop_B.arpg`, `Equip_A.arpg`, `Equip_B.arpg`, `EquipMetal_A.arpg`,
+`EquipMetal_B.arpg`, `Pickup_A.arpg`, `Pickup_B.arpg`
+
+### `assets/sounds/movement/`
+
+`Jump_A.arpg`, `Jump_B.arpg`, `Land_A.arpg`, `Land_B.arpg`, `LandHard_A.arpg`, `LandHard_B.arpg`
+
+### `assets/sounds/music/`
+
+`Day.arpg`, `MainMenu.arpg`, `Night.arpg`
+
+### `assets/sounds/progression/`
+
+`LevelUp.arpg`, `Profession.arpg`, `Skill.arpg`
+
+### `assets/sounds/trees/`
+
+`Chop_A.arpg`, `Chop_B.arpg`, `Chop_C.arpg`, `Fall.arpg`, `Land.arpg`
+
+### `assets/sounds/vehicles/ship/`
+
+`Anchor.arpg`, `Hoist.arpg`, `HullCreak.arpg`, `HullImpact_A.arpg`, `HullImpact_B.arpg`, `RopeCreak.arpg`,
+`Rudder_A.arpg`, `Rudder_B.arpg`, `SailFill.arpg`, `SailLuff.arpg`, `WaveImpacts.arpg`
+
+### `assets/sounds/vitality/`
+
+`Defeat.arpg`, `Heartbeat.arpg`
+
+### `assets/sounds/water/`
+
+`Splash_A.arpg`, `Splash_B.arpg`, `Splash_C.arpg`, `SplashBig_A.arpg`, `SplashBig_B.arpg`, `SplashBig_C.arpg`,
+`SwimStroke_A.arpg`, `SwimStroke_B.arpg`, `SwimStroke_C.arpg`, `Underwater.arpg`
+
+### `assets/sounds/weapons/`
+
+`CannonFire.arpg`, `Fizzle.arpg`, `Load.arpg`, `Prime.arpg`
+
+### `assets/sounds/weather/`
+
+`Rain.arpg`, `RainHeavy.arpg`, `Thunder_A.arpg`, `Thunder_B.arpg`, `Thunder_C.arpg`, `ThunderFar_A.arpg`,
+`ThunderFar_B.arpg`, `ThunderFar_C.arpg`, `Wind.arpg`, `WindStrong.arpg`
 
 ### `assets/sprites/menus/`
 

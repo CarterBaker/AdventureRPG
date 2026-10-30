@@ -3,7 +3,9 @@ package application.runtime.menueventsmanager.menus;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import application.runtime.RuntimeSetting;
 import application.runtime.menueventsmanager.menus.inventory.InventoryBranch;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -24,6 +26,10 @@ public class DefeatBranch extends BranchPackage {
     private MainMenuBranch mainMenuBranch;
     private PauseMenuBranch pauseMenuBranch;
     private InventoryBranch inventoryBranch;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int defeatCueID;
 
     // Base \\
 
@@ -34,6 +40,14 @@ public class DefeatBranch extends BranchPackage {
         this.mainMenuBranch = get(MainMenuBranch.class);
         this.pauseMenuBranch = get(PauseMenuBranch.class);
         this.inventoryBranch = get(InventoryBranch.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.defeatCueID = soundCueManager.getCueIDFromCueName(RuntimeSetting.SOUND_CUE_DEFEAT);
     }
 
     @Override
@@ -50,6 +64,7 @@ public class DefeatBranch extends BranchPackage {
         if (!player.getStatisticsHandle().isDefeated())
             return;
 
+        soundCueManager.playCue(defeatCueID);
         inventoryBranch.closeMenu();
 
         if (pauseMenuBranch.isOpen())

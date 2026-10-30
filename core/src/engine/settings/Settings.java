@@ -74,6 +74,14 @@ public class Settings {
     public float cameraShakeIntensity = 0.7f;
     public boolean headBob = true;
 
+    // Audio — every level from silent to full, the master scaling each category
+    public float masterVolume = 1f;
+    public float musicVolume = 0.7f;
+    public float effectVolume = 1f;
+    public float ambientVolume = 0.8f;
+    public float interfaceVolume = 0.8f;
+    public float voiceVolume = 1f;
+
     // Editor — Interface Colors
     public float[] uiColorBackground = { 0.075f, 0.082f, 0.098f, 1.0f };
     public float[] uiColorPanel = { 0.118f, 0.129f, 0.153f, 1.0f };

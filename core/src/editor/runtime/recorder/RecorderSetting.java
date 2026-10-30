@@ -22,6 +22,7 @@ public class RecorderSetting {
     public static final String TEMPLATE_CLIP_BAR = "editor/Recorder/recorder_clip_bar";
     public static final String TEMPLATE_CLIP_BAR_SELECTED = "editor/Recorder/recorder_clip_bar_selected";
     public static final String TEMPLATE_CLIP_BAR_MUTED = "editor/Recorder/recorder_clip_bar_muted";
+    public static final String TEMPLATE_CLIP_BAR_SOUND = "editor/Recorder/recorder_clip_bar_sound";
     public static final String TEMPLATE_RULER_TICK = "editor/Recorder/recorder_ruler_tick";
     public static final String TEMPLATE_NODE_MOVEMENT = "editor/Recorder/recorder_node_movement";
     public static final String TEMPLATE_NODE_MOVEMENT_SELECTED = "editor/Recorder/recorder_node_movement_selected";

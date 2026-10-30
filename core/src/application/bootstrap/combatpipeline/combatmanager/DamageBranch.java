@@ -12,6 +12,7 @@ import application.bootstrap.progressionpipeline.damagetypemanager.DamageTypeMan
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.progressionpipeline.util.PowerUtility;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector2;
@@ -53,6 +54,12 @@ class DamageBranch extends BranchPackage {
     private ProgressionManager progressionManager;
     private StatManager statManager;
     private DamageTypeManager damageTypeManager;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int hitCueID;
+    private int guardCueID;
+    private int defeatCueID;
 
     // Internal \\
 
@@ -67,6 +74,16 @@ class DamageBranch extends BranchPackage {
         this.progressionManager = get(ProgressionManager.class);
         this.statManager = get(StatManager.class);
         this.damageTypeManager = get(DamageTypeManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        // Cues
+        this.hitCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_HIT);
+        this.guardCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_GUARD);
+        this.defeatCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_DEFEAT);
     }
 
     // Damage \\
@@ -123,6 +140,11 @@ class DamageBranch extends BranchPackage {
             share *= EngineSetting.CRIT_DAMAGE_MULTIPLIER;
 
         knockBack(target, direction, passed);
+        soundCueManager.playCueAt(
+                guarded > 0f ? guardCueID : hitCueID,
+                Math.min(1f, EngineSetting.SOUND_HIT_VOLUME_MIN + share),
+                target.getWorldHandle(),
+                target.getWorldPositionStruct());
 
         if (guarded > 0f)
             practiceGuard(target);
@@ -230,6 +252,7 @@ class DamageBranch extends BranchPackage {
     private void defeat(EntityInstance source, EntityInstance target) {
 
         target.getEntityActionHandle().release();
+        soundCueManager.playCueAt(defeatCueID, target.getWorldHandle(), target.getWorldPositionStruct());
 
         if (source != null)
             progressionManager.recordKill(source, target);

@@ -1,5 +1,6 @@
 package engine.root;
 
+import engine.audio.Audio;
 import engine.graphics.display.Display;
 import engine.graphics.gl.GL20;
 import engine.graphics.gl.GL30;
@@ -19,4 +20,5 @@ public class EngineContext {
     public static GL20 gl20;
     public static GL30 gl30;
     public static GL40 gl40;
+    public static Audio audio;
 }

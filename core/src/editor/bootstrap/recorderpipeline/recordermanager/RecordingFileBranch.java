@@ -20,6 +20,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayStreamStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingVehicleTrackStruct;
@@ -43,11 +44,13 @@ class RecordingFileBranch extends BranchPackage {
      * takes with their tracks — each track's samples packed into one block by
      * RecordingArpgUtility, a character's identity, clips and looks written
      * plainly beside them, an overlay's frames as one block of frame sizes and
-     * one of their packed bytes — and the clips on its timeline, each naming
+     * one of their packed bytes, its sounds as the names they use and one
+     * block of every sound heard — and the clips on its timeline, each naming
      * its take by its place in the bin. Beside each track lie the curves it
      * has been given, each naming its property and part with its keys packed
      * into one block, their modes named once for the whole file as the states
-     * and actions are. A file of the first version, which laid takes straight
+     * and actions are. A file written before sounds were recorded reads with
+     * every take silent. A file of the first version, which laid takes straight
      * onto the timeline as layers, is read as a bin of those takes each placed
      * once where it was recorded, and is saved in the new form from then on. A
      * file that cannot be read, or no longer fits the game, is logged and
@@ -155,6 +158,9 @@ class RecordingFileBranch extends BranchPackage {
 
         if (take.getOverlayTrack() != null)
             takeArpg.add("interface", buildOverlays(take.getOverlayTrack()));
+
+        if (take.getSoundTrack() != null)
+            takeArpg.add("sounds", buildSounds(take.getSoundTrack()));
 
         return takeArpg;
     }
@@ -283,6 +289,20 @@ class RecordingFileBranch extends BranchPackage {
         return overlaysArpg;
     }
 
+    // The names the sounds use, and every sound heard naming its sound by its place among them
+    private ArpgObjectStruct buildSounds(RecordingSoundTrackStruct track) {
+
+        ArpgArrayStruct namesArpg = new ArpgArrayStruct();
+
+        for (int i = 0; i < track.getSoundNames().size(); i++)
+            namesArpg.add(track.getSoundNames().get(i));
+
+        ArpgObjectStruct soundsArpg = new ArpgObjectStruct();
+        soundsArpg.add("names", namesArpg);
+        soundsArpg.addProperty("events", packSounds(track));
+        return soundsArpg;
+    }
+
     private ArpgArrayStruct buildClips(RecordingInstance recording) {
 
         ArpgArrayStruct clipsArpg = new ArpgArrayStruct();
@@ -390,6 +410,24 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.writeDoubles(block, track.getFlowsX());
         RecordingArpgUtility.writeDoubles(block, track.getFlowsZ());
         RecordingArpgUtility.writeFloats(block, track.getGustTimes());
+        return RecordingArpgUtility.toText(block);
+    }
+
+    private String packSounds(RecordingSoundTrackStruct track) {
+
+        ByteBuffer block = RecordingArpgUtility.allocateBlock(track.size(), EditorSetting.RECORDER_SOUND_EVENT_BYTES);
+        RecordingArpgUtility.writeFloats(block, track.getTimes());
+        RecordingArpgUtility.writeFloats(block, track.getDurations());
+        RecordingArpgUtility.writeInts(block, track.getNameIndices());
+        RecordingArpgUtility.writeFloats(block, track.getVolumes());
+        RecordingArpgUtility.writeFloats(block, track.getPitches());
+        RecordingArpgUtility.writeInts(block, track.getSpatials());
+        RecordingArpgUtility.writeLongs(block, track.getChunkCoordinates());
+        RecordingArpgUtility.writeFloats(block, track.getPositionsX());
+        RecordingArpgUtility.writeFloats(block, track.getPositionsY());
+        RecordingArpgUtility.writeFloats(block, track.getPositionsZ());
+        RecordingArpgUtility.writeFloats(block, track.getHeardGains());
+        RecordingArpgUtility.writeFloats(block, track.getHeardPans());
         return RecordingArpgUtility.toText(block);
     }
 
@@ -720,9 +758,28 @@ class RecordingFileBranch extends BranchPackage {
                         || !parseCurves(takeArpg.getAsObject("clock"), "curves", take.getClockTrack())))
             return false;
 
-        return take.getOverlayTrack() == null
-                || !ArpgUtility.hasArray(takeArpg, "interface")
-                || parseOverlays(takeArpg.getAsArray("interface"), take.getOverlayTrack());
+        if (take.getOverlayTrack() != null
+                && ArpgUtility.hasArray(takeArpg, "interface")
+                && !parseOverlays(takeArpg.getAsArray("interface"), take.getOverlayTrack()))
+            return false;
+
+        return take.getSoundTrack() == null
+                || !ArpgUtility.hasObject(takeArpg, "sounds")
+                || parseSounds(takeArpg.getAsObject("sounds"), take.getSoundTrack());
+    }
+
+    // The sounds' names first, so every sound heard names one of them
+    private boolean parseSounds(ArpgObjectStruct soundsArpg, RecordingSoundTrackStruct track) {
+
+        if (!ArpgUtility.hasArray(soundsArpg, "names") || !ArpgUtility.hasString(soundsArpg, "events"))
+            return false;
+
+        ArpgArrayStruct namesArpg = soundsArpg.getAsArray("names");
+
+        for (int i = 0; i < namesArpg.size(); i++)
+            track.resolveNameIndex(namesArpg.get(i).getAsString());
+
+        return unpackSounds(soundsArpg.get("events").getAsString(), track);
     }
 
     private boolean parseResidents(
@@ -1047,6 +1104,37 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.readFloats(block, count * track.getMastCount(), track.getBraceAngles());
         RecordingArpgUtility.readFloats(block, count * track.getSailCount(), track.getSailHoists());
         RecordingArpgUtility.readFloats(block, count * track.getDoorCount(), track.getDoorOpenings());
+        return true;
+    }
+
+    private boolean unpackSounds(String text, RecordingSoundTrackStruct track) {
+
+        ByteBuffer block = RecordingArpgUtility.fromText(text, EditorSetting.RECORDER_SOUND_EVENT_BYTES);
+
+        if (block == null)
+            return false;
+
+        int count = RecordingArpgUtility.readSampleCount(block);
+
+        RecordingArpgUtility.readFloats(block, count, track.getTimes());
+        RecordingArpgUtility.readFloats(block, count, track.getDurations());
+        RecordingArpgUtility.readInts(block, count, track.getNameIndices());
+        RecordingArpgUtility.readFloats(block, count, track.getVolumes());
+        RecordingArpgUtility.readFloats(block, count, track.getPitches());
+        RecordingArpgUtility.readInts(block, count, track.getSpatials());
+        RecordingArpgUtility.readLongs(block, count, track.getChunkCoordinates());
+        RecordingArpgUtility.readFloats(block, count, track.getPositionsX());
+        RecordingArpgUtility.readFloats(block, count, track.getPositionsY());
+        RecordingArpgUtility.readFloats(block, count, track.getPositionsZ());
+        RecordingArpgUtility.readFloats(block, count, track.getHeardGains());
+        RecordingArpgUtility.readFloats(block, count, track.getHeardPans());
+        track.resolveLongestDuration();
+
+        for (int i = 0; i < count; i++)
+            if (track.getNameIndices().getInt(i) < 0
+                    || track.getNameIndices().getInt(i) >= track.getSoundNames().size())
+                return false;
+
         return true;
     }
 

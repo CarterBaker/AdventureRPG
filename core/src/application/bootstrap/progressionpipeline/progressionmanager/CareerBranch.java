@@ -28,6 +28,7 @@ class CareerBranch extends BranchPackage {
     // Internal
     private ProfessionManager professionManager;
     private ProficiencyBranch proficiencyBranch;
+    private ProgressionSoundBranch progressionSoundBranch;
 
     // Base \\
 
@@ -37,6 +38,7 @@ class CareerBranch extends BranchPackage {
         // Internal
         this.professionManager = get(ProfessionManager.class);
         this.proficiencyBranch = get(ProficiencyBranch.class);
+        this.progressionSoundBranch = get(ProgressionSoundBranch.class);
     }
 
     // Evaluate \\
@@ -54,8 +56,10 @@ class CareerBranch extends BranchPackage {
         for (short professionID = EngineSetting.REGISTRY_RESERVED_ID + 1;
                 professionID < careerHandle.getProfessionCount();
                 professionID++)
-            if (!careerHandle.isUnlocked(professionID) && meetsAnyGroup(entity, professionID))
+            if (!careerHandle.isUnlocked(professionID) && meetsAnyGroup(entity, professionID)) {
                 careerHandle.setUnlocked(professionID, true);
+                progressionSoundBranch.profession(entity);
+            }
     }
 
     private boolean meetsAnyGroup(EntityInstance entity, short professionID) {

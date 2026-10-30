@@ -5,6 +5,7 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
@@ -37,6 +38,43 @@ public class SubBlockSampleUtility extends EngineUtility {
             long chunkCoordinate,
             int subX, int subY, int subZ) {
 
+        SubChunkInstance subChunk = resolveSubChunk(worldStreamManager, chunkCoordinate, subX, subY, subZ);
+
+        if (subChunk == null)
+            return null;
+
+        int cellXYZ = resolveCell(subX, subY, subZ);
+
+        int octant = SubBlockUtility.getOctant(
+                Math.floorMod(subX, SubBlockUtility.DIVISIONS),
+                Math.floorMod(subY, SubBlockUtility.DIVISIONS),
+                Math.floorMod(subZ, SubBlockUtility.DIVISIONS));
+
+        if (!SubBlockUtility.hasOctant(subChunk.getSubBlockMask(cellXYZ), octant))
+            return null;
+
+        BlockHandle blockHandle = blockManager.getBlockHandleFromBlockID(subChunk.getBlock(cellXYZ));
+
+        return blockHandle.getGeometry() == DynamicGeometryType.NONE ? null : blockHandle;
+    }
+
+    // The packed coverage laid over the block holding the sub-cell, bare when its chunk is not loaded
+    public static short getCoverageAt(
+            WorldStreamManager worldStreamManager,
+            long chunkCoordinate,
+            int subX, int subY, int subZ) {
+
+        SubChunkInstance subChunk = resolveSubChunk(worldStreamManager, chunkCoordinate, subX, subY, subZ);
+
+        return subChunk != null ? subChunk.getCoverage(resolveCell(subX, subY, subZ)) : CoverageUtility.NONE;
+    }
+
+    // The subchunk holding the sub-cell, across into a neighboring chunk; null above or below the world or unloaded
+    private static SubChunkInstance resolveSubChunk(
+            WorldStreamManager worldStreamManager,
+            long chunkCoordinate,
+            int subX, int subY, int subZ) {
+
         int cellX = Math.floorDiv(subX, SubBlockUtility.DIVISIONS);
         int cellY = Math.floorDiv(subY, SubBlockUtility.DIVISIONS);
         int cellZ = Math.floorDiv(subZ, SubBlockUtility.DIVISIONS);
@@ -52,26 +90,15 @@ public class SubBlockSampleUtility extends EngineUtility {
 
         ChunkInstance chunk = worldStreamManager.getChunkInstance(chunkCoordinate);
 
-        if (chunk == null)
-            return null;
+        return chunk != null ? chunk.getSubChunk(cellY / CHUNK_SIZE) : null;
+    }
 
-        SubChunkInstance subChunk = chunk.getSubChunk(cellY / CHUNK_SIZE);
-        int cellXYZ = Coordinate3Int.pack(
-                Math.floorMod(cellX, CHUNK_SIZE),
-                cellY % CHUNK_SIZE,
-                Math.floorMod(cellZ, CHUNK_SIZE));
-
-        int octant = SubBlockUtility.getOctant(
-                Math.floorMod(subX, SubBlockUtility.DIVISIONS),
-                Math.floorMod(subY, SubBlockUtility.DIVISIONS),
-                Math.floorMod(subZ, SubBlockUtility.DIVISIONS));
-
-        if (!SubBlockUtility.hasOctant(subChunk.getSubBlockMask(cellXYZ), octant))
-            return null;
-
-        BlockHandle blockHandle = blockManager.getBlockHandleFromBlockID(subChunk.getBlock(cellXYZ));
-
-        return blockHandle.getGeometry() == DynamicGeometryType.NONE ? null : blockHandle;
+    // The sub-cell's block, packed within its subchunk
+    private static int resolveCell(int subX, int subY, int subZ) {
+        return Coordinate3Int.pack(
+                Math.floorMod(Math.floorDiv(subX, SubBlockUtility.DIVISIONS), CHUNK_SIZE),
+                Math.floorDiv(subY, SubBlockUtility.DIVISIONS) % CHUNK_SIZE,
+                Math.floorMod(Math.floorDiv(subZ, SubBlockUtility.DIVISIONS), CHUNK_SIZE));
     }
 
     public static boolean isSolid(

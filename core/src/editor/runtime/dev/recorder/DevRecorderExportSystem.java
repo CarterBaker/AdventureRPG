@@ -44,7 +44,9 @@ public class DevRecorderExportSystem extends SystemPackage {
      * stalling. Motion blur renders several moments across a 180 degree
      * shutter and supersampling renders at twice the size; both are averaged
      * down into each video frame, which goes to the encoder on its own thread
-     * while the next renders. A frame also waits until the
+     * while the next renders, with the stretch of sound the timeline's sounds
+     * mix to across it when the export range holds any. A frame also waits
+     * until the
      * recorded interface shows the moment it is rendered at, and nothing is
      * rendered while the game is paused under the export or while the Dev tab
      * waits hidden behind another in its stack, since it then shows nothing to
@@ -82,6 +84,10 @@ public class DevRecorderExportSystem extends SystemPackage {
     private float frameSeconds;
     private float subframeSeconds;
 
+    // Audio
+    private boolean audio;
+    private int audioFramesPerFrame;
+
     // Progress
     private boolean warming;
     private boolean finishing;
@@ -100,6 +106,7 @@ public class DevRecorderExportSystem extends SystemPackage {
     // Frames
     private int[] frameSum;
     private byte[][] frames;
+    private short[][] audioFrames;
     private Future<?>[] frameFutures;
     private int frameCursor;
     private int encodedFrames;
@@ -172,9 +179,13 @@ public class DevRecorderExportSystem extends SystemPackage {
         this.frameSeconds = 1f / settings.getFrameRate();
         this.subframeSeconds = frameSeconds * EditorSetting.RECORDER_EXPORT_SHUTTER / subframes;
 
+        this.audio = recorderManager.prepareExportMix(EditorSetting.RECORDER_AUDIO_SAMPLE_RATE);
+        this.audioFramesPerFrame = EditorSetting.RECORDER_AUDIO_SAMPLE_RATE / settings.getFrameRate();
         this.encoder = createEncoder(settings.getFormat());
 
-        if (!encoder.open(recorderManager.getExportFile(), outputWidth, outputHeight, settings.getFrameRate())) {
+        if (!encoder.open(
+                recorderManager.getExportFile(), outputWidth, outputHeight, settings.getFrameRate(), audio)) {
+            recorderManager.releaseExportMix();
             recorderManager.finishExport(false, encoder.getFailure());
             return false;
         }
@@ -195,6 +206,10 @@ public class DevRecorderExportSystem extends SystemPackage {
         this.readback = ByteBuffer.allocateDirect(renderWidth * renderHeight * EngineSetting.BYTES_PER_PIXEL_BGRA);
         this.frameSum = new int[frameBytes];
         this.frames = new byte[EditorSetting.RECORDER_EXPORT_FRAME_SLOTS][frameBytes];
+        this.audioFrames = audio
+                ? new short[EditorSetting.RECORDER_EXPORT_FRAME_SLOTS]
+                        [audioFramesPerFrame * EditorSetting.RECORDER_AUDIO_CHANNELS]
+                : null;
         this.frameFutures = new Future<?>[EditorSetting.RECORDER_EXPORT_FRAME_SLOTS];
         this.frameCursor = 0;
         this.encodedFrames = 0;
@@ -333,10 +348,18 @@ public class DevRecorderExportSystem extends SystemPackage {
             return;
 
         byte[] frame = frames[slot];
+        short[] audioFrame = audio ? audioFrames[slot] : null;
         VideoEncoderInstance frameEncoder = encoder;
 
         VideoFrameUtility.resolve(frameSum, subframes * scale * scale, frame);
-        frameFutures[slot] = executeAsync(encodingThread, () -> frameEncoder.encodeFrame(frame));
+
+        if (audio)
+            recorderManager.mixExportAudio(resolveTime(encodedFrames, 0), audioFrame, audioFramesPerFrame);
+
+        frameFutures[slot] = executeAsync(encodingThread, () -> {
+            frameEncoder.encodeFrame(frame);
+            frameEncoder.encodeAudio(audioFrame);
+        });
 
         this.frameCursor = (slot + 1) % EditorSetting.RECORDER_EXPORT_FRAME_SLOTS;
         this.encodedFrames++;
@@ -453,5 +476,7 @@ public class DevRecorderExportSystem extends SystemPackage {
         this.readback = null;
         this.frameSum = null;
         this.frames = null;
+        this.audioFrames = null;
+        recorderManager.releaseExportMix();
     }
 }

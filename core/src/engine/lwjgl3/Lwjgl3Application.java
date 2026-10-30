@@ -127,6 +127,7 @@ public class Lwjgl3Application {
         EngineContext.gl20 = gl;
         EngineContext.gl30 = gl;
         EngineContext.gl40 = gl;
+        EngineContext.audio = new Lwjgl3Audio();
 
         registerCallbacks(mainHandle, input);
         registerPlacementCallbacks();

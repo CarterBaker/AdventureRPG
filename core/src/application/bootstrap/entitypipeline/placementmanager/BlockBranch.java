@@ -13,10 +13,13 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
+import application.bootstrap.soundpipeline.soundcue.SoundSurfaceStruct;
+import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.blockmanager.BlockPlacementSystem;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate3Int;
@@ -59,6 +62,10 @@ class BlockBranch extends BranchPackage {
     private CoverageBranch coverageBranch;
     private ContentManager contentManager;
     private ProjectileManager projectileManager;
+    private SoundCueManager soundCueManager;
+
+    // Cues
+    private int turnedCueID;
 
     // Block IDs
     private short airBlockID;
@@ -101,10 +108,14 @@ class BlockBranch extends BranchPackage {
         this.coverageBranch = get(CoverageBranch.class);
         this.contentManager = get(ContentManager.class);
         this.projectileManager = get(ProjectileManager.class);
+        this.soundCueManager = get(SoundCueManager.class);
     }
 
     @Override
     protected void awake() {
+
+        // Cues
+        this.turnedCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_TURNED);
 
         // Block IDs
         this.airBlockID = (short) blockManager.getBlockIDFromBlockName(EngineSetting.AIR_BLOCK_NAME);
@@ -119,21 +130,31 @@ class BlockBranch extends BranchPackage {
         ContentHandle content = contentManager.getContentHandleFromContent(
                 blockPlacementSystem.getContent(castStruct));
 
-        if (block == null || block.isUnbreakable())
+        if (block == null)
             return BlowOutcome.TURNED;
+
+        WorldHandle worldHandle = blow.getSource().getWorldHandle();
+
+        if (block.isUnbreakable()) {
+            playAt(turnedCueID, worldHandle, castStruct);
+            return BlowOutcome.TURNED;
+        }
 
         boolean subdivided = SubBlockUtility.isSubdivided(blockPlacementSystem.getSubBlockMask(castStruct));
         boolean tooled = canWork(blow.getItem(), block, content);
         float durability = resolveDurability(block, content);
         float work = blow.getWork();
 
-        if (!tooled && work < durability)
+        if (!tooled && work < durability) {
+            playAt(turnedCueID, worldHandle, castStruct);
             return BlowOutcome.TURNED;
+        }
 
         float prior = tooled ? resolvePriorWork(castStruct, subdivided) : 0f;
 
         if (prior + work < durability) {
             currentHits = prior + work;
+            playSurfaceAt(block.getSoundSurface(), false, worldHandle, castStruct);
             return BlowOutcome.WORKED;
         }
 
@@ -149,6 +170,7 @@ class BlockBranch extends BranchPackage {
             return BlowOutcome.WORKED;
 
         blow.spend(durability - prior);
+        playSurfaceAt(block.getSoundSurface(), true, worldHandle, castStruct);
         yieldPieces(blow, castStruct, block, content, subdivided);
 
         if (!coveringDrop.equals(EngineSetting.COVERING_DROP_NONE))
@@ -293,7 +315,36 @@ class BlockBranch extends BranchPackage {
 
         inventoryHandle.takeOne(EquipmentSlot.MAIN_HAND);
 
+        SoundSurfaceStruct surface = blockManager.getBlockHandleFromBlockID(piece.getBlockID()).getSoundSurface();
+
+        if (surface != null)
+            playAt(surface.getPlaceCueID(), entity.getWorldHandle(), castStruct);
+
         return true;
+    }
+
+    // Sound \\
+
+    // The block's surface struck while it is worked, or as it breaks
+    private void playSurfaceAt(
+            SoundSurfaceStruct surface,
+            boolean broken,
+            WorldHandle worldHandle,
+            BlockCastStruct castStruct) {
+        if (surface != null)
+            playAt(broken ? surface.getBreakCueID() : surface.getDigCueID(), worldHandle, castStruct);
+    }
+
+    // At the middle of the block cast at
+    private void playAt(int cueID, WorldHandle worldHandle, BlockCastStruct castStruct) {
+        soundCueManager.playCueAt(
+                cueID,
+                1f,
+                worldHandle,
+                castStruct.getChunkCoordinate(),
+                castStruct.getBlockX() + 0.5f,
+                castStruct.getSubChunkY() * EngineSetting.CHUNK_SIZE + castStruct.getBlockY() + 0.5f,
+                castStruct.getBlockZ() + 0.5f);
     }
 
     // Break Target \\

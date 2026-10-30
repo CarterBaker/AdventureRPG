@@ -309,7 +309,6 @@ public class RuntimeSetting {
     public static final String SETTINGS_TAB_AUDIO = "Audio";
     public static final String SETTINGS_TAB_GAMEPLAY = "Gameplay";
     public static final String SETTINGS_TAB_ACCESSIBILITY = "Accessibility";
-    public static final String SETTINGS_PLACEHOLDER_AUDIO = "Volume and sound options will be set here.";
     public static final String SETTINGS_PLACEHOLDER_ACCESSIBILITY = "Text size and color options will be set here.";
     public static final String SETTINGS_PLACEHOLDER_COMING_SOON = "Coming soon";
     public static final String SETTINGS_PLACEHOLDER_GAME_WINDOW_ONLY = "Game window only";
@@ -321,6 +320,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_SECTION_WORLD = "World";
     public static final String SETTINGS_SECTION_MENU_WORLD = "World Behind the Menu";
     public static final String SETTINGS_SECTION_MOUSE = "Mouse";
+    public static final String SETTINGS_SECTION_VOLUME = "Volume";
     public static final String SETTINGS_SECTION_MOVEMENT = "Movement";
     public static final String SETTINGS_SECTION_ACTIONS = "Actions";
     public static final String SETTINGS_SECTION_OUTLINES = "Outlines";
@@ -366,6 +366,12 @@ public class RuntimeSetting {
     public static final String SETTINGS_SLIDER_CHROMATIC_ABERRATION = "Chromatic Aberration";
     public static final String SETTINGS_SLIDER_FILM_GRAIN = "Film Grain";
     public static final String SETTINGS_SLIDER_CAMERA_SHAKE_INTENSITY = "Shake Intensity";
+    public static final String SETTINGS_SLIDER_MASTER_VOLUME = "Master";
+    public static final String SETTINGS_SLIDER_MUSIC_VOLUME = "Music";
+    public static final String SETTINGS_SLIDER_EFFECT_VOLUME = "Effects";
+    public static final String SETTINGS_SLIDER_AMBIENT_VOLUME = "Ambience";
+    public static final String SETTINGS_SLIDER_INTERFACE_VOLUME = "Interface";
+    public static final String SETTINGS_SLIDER_VOICE_VOLUME = "Voices";
     public static final String SETTINGS_VALUE_ON = "On";
     public static final String SETTINGS_VALUE_OFF = "Off";
     public static final String SETTINGS_FORMAT_BLOCKS = "%d blocks";
@@ -647,4 +653,48 @@ public class RuntimeSetting {
     public static final Vector4 INVENTORY_TINT_HIDDEN = new Vector4(0.35f, 0.35f, 0.35f, 0.55f);
     public static final Vector4 INVENTORY_TINT_VALID = new Vector4(0.45f, 1f, 0.5f, 0.45f);
     public static final Vector4 INVENTORY_TINT_INVALID = new Vector4(1f, 0.35f, 0.3f, 0.55f);
+
+    // Sound Cue Names — the moments a window itself sounds, each a file under EngineSetting.SOUND_CUE_PATH
+    public static final String SOUND_CUE_WIND = "ambience/Wind";
+    public static final String SOUND_CUE_WIND_STRONG = "ambience/WindStrong";
+    public static final String SOUND_CUE_TREES_CALM = "ambience/TreesCalm";
+    public static final String SOUND_CUE_TREES_WINDY = "ambience/TreesWindy";
+    public static final String SOUND_CUE_TREES_STORMY = "ambience/TreesStormy";
+    public static final String SOUND_CUE_RAIN = "ambience/Rain";
+    public static final String SOUND_CUE_RAIN_HEAVY = "ambience/RainHeavy";
+    public static final String SOUND_CUE_OCEAN = "ambience/Ocean";
+    public static final String SOUND_CUE_SHORE = "ambience/Shore";
+    public static final String SOUND_CUE_BIRDS = "ambience/Birds";
+    public static final String SOUND_CUE_CRICKETS = "ambience/Crickets";
+    public static final String SOUND_CUE_UNDERWATER = "ambience/Underwater";
+    public static final String SOUND_CUE_THUNDER = "ambience/Thunder";
+    public static final String SOUND_CUE_GUST = "ambience/Gust";
+    public static final String SOUND_CUE_MUSIC_MENU = "music/MainMenu";
+    public static final String SOUND_CUE_MUSIC_DAY = "music/Day";
+    public static final String SOUND_CUE_MUSIC_NIGHT = "music/Night";
+    public static final String SOUND_CUE_HEARTBEAT = "vitality/Heartbeat";
+    public static final String SOUND_CUE_DEFEAT = "vitality/Defeat";
+    public static final String SOUND_CUE_EQUIP = "items/Equip";
+    public static final String SOUND_CUE_STOW = "items/Stow";
+
+    // Sound Ambience — how the weather, the land and the hour set what a window hears around its player
+    public static final long SOUND_AMBIENCE_RANDOM_SEED = 0x414D4249L;
+    public static final float SOUND_WIND_SPEED_FULL = 12f;
+    public static final float SOUND_WIND_STRONG_START = 0.55f;
+    public static final float SOUND_RAIN_HEAVY_START = 0.6f;
+    public static final float SOUND_OCEAN_HEARD_HEIGHT = 24f;
+    public static final float SOUND_DAY_TWILIGHT = 0.15f;
+    public static final float SOUND_BIRDS_OPEN_SHARE = 0.35f;
+    public static final float SOUND_THUNDER_START = 0.7f;
+    public static final float SOUND_THUNDER_SECONDS_MIN = 9f;
+    public static final float SOUND_THUNDER_SECONDS_MAX = 40f;
+    public static final float SOUND_GUST_START = 0.6f;
+    public static final float SOUND_GUST_SECONDS_MIN = 6f;
+    public static final float SOUND_GUST_SECONDS_MAX = 22f;
+
+    // Sound Music — the silence left between in-game pieces
+    public static final long SOUND_MUSIC_RANDOM_SEED = 0x4D555349L;
+    public static final float SOUND_MUSIC_GAP_SECONDS_MIN = 45f;
+    public static final float SOUND_MUSIC_GAP_SECONDS_MAX = 150f;
+    public static final float SOUND_MUSIC_FIRST_GAP_SECONDS = 8f;
 }
