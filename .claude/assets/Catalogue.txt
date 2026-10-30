@@ -1,0 +1,91 @@
+Sonniss.com-GDC2024-GameAudioBundle/Game Audio GDC Bundle 2024 (Part 8) Filelist.xlsx
+Sonniss.com-GDC2024-GameAudioBundle/License - GDC Game Audio.pdf
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Aircraft Ambient Library/Airplane - FLY - By - Overhead - Groan - DPA4021.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Aircraft Ambient Library/Helicopter - Military - FLY - By - Overhead - ORTF - MKH8040.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Aircraft Ambient Library/Jet - Airliner - Fly - By - Overhead - Distant - Some Leaves and Wind - CMC6.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Aircraft Ambient Library/P51 Mustang - TAKE OFF - By - DPA4017.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Garden Tools Library/Chainsaw Large - ONBRD - STEADY RPMS - Start Run Off - EXHAUST - RE50.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Garden Tools Library/Clearing Saw - EXT - IDLE - Start Various Off x3 - Distant - D100.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Garden Tools Library/Lawn Mower - EXT - IDLE - Start Run Off - Turn Point 2 - ORTF - MKH 8040.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Garden Tools Library/Leaf Blower - ONBRD - WORK - Start Run Off - EXHAUST - A - DPA 4062.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Guitaresque Power Tools Library/Guitar Pickup - Blade - Single Coil - Bridge - Boltdriver - Short Swells.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Guitaresque Power Tools Library/Guitar Pickup - Ibanez - Humbucker - Neck - Dremel - Constant - Rising Tones 1.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Guitaresque Power Tools Library/Guitar Pickup - Squier P-Bass - Dremel - One Shots.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Indoor Gun Acoustics 2 Library/AK5 7,62mm - FIRING - Large Hall - Long Bursts - 3m Behind Left - MS Decoded - MKH418S.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Indoor Gun Acoustics 2 Library/Glock 17 9mm - FIRING - Small Living Room - Single Shots - 5m In Front - MS - RSM191.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Indoor Gun Acoustics 2 Library/Mossberg 12-Gauge - FIRING - Office Corridor - Single Shots - 20m Adjacent Room - M10.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Indoor Gun Acoustics 2 Library/MP5 9mm - FIRING - Large Hall - Bursts - 1m Side - MKH8060.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Metal Hit Sweeteners Library/Iron - Thick - HIT - Hammer.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Metal Hit Sweeteners Library/Oil Barrel - HIT - Hammer - Take 2.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Metal Hit Sweeteners Library/Spade - HIT - Drumstick - Ring - Mute.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Metal Hit Sweeteners Library/Toolbox - DROP.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Plastic Textures Library/Bubble Wrap - UNFOLD - Hard - Stereo.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Plastic Textures Library/Flexible Pipe - BLOW - Long - Low Intensity - Mono - 100k.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Plastic Textures Library/Flexible Sewer Pipe Big - Broken - DROP - Thump - Mono.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Plastic Textures Library/Plastic Bag Thick - TWIST - Burst - Low Intensity - Mono.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Skydiving and Parachute Library/DeHavilland DHC6 - EXT - TAKE OFF - By 4 - ORTF - MKH8040.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Skydiving and Parachute Library/Parachutist - EXT - PARACHUTE DEPLOY - Distant 3 - RSM191.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Skydiving and Parachute Library/Skydiver - ONBRD - FLYING - Exit Plane Jump and Flying 2 - Chest - MKH8020.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Skydiving and Parachute Library/Skydiver - ONBRD - INTERIOR PLANE - Flying with Door Open - Chest - MKH8020.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Stormbat Hull Interaction Library/Aluminium Boat Hull - ACCELERATION - Engine On - CO100k.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Stormbat Hull Interaction Library/Aluminium Boat Hull - ROCKING - High Intensity - MKH8060.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Stormbat Hull Interaction Library/Aluminium Boat Hull - WAVE IMPACTS - Medium - DPA4061.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Stormbat Hull Interaction Library/Metal - RATTLE - Shudder Constant - Geofon.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Vehicle Doors and More Library/Black Hawk - VAR SFX - Stabilizer Manual Slew Switch - MKH418S.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Vehicle Doors and More Library/Man Lions Coach - VAR SFX - Horn Various - Mono - RSM191.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Vehicle Doors and More Library/Mercedes AMG GTR - VAR SFX - Hand Movement on Steering Wheel - XY - RSM191.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Vehicle Doors and More Library/Pontiac Trans Am 84 - VAR SFX - Window - MS Decoded RSM191.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Vehicle Impulse Response Library/MAN Lions Coach - IMPULSE RESPONSE - Toilet - Altiverb 2 - INTERIOR - MS Decoded - RSM191.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Vehicle Impulse Response Library/Patria 6x6 - IMPULSE RESPONSE - Passenger Compartment - Altiverb 3 - INTERIOR - Middle - MKH8020.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Vehicle Impulse Response Library/Pontiac Firebird - IMPULSE RESPONSE - Altiverb - INTERIOR - DPA4021.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Warfare 2 Library/Ak 5 - FIRING - Hit Metal Armor Plate - Single Shots 2 - HANDHELD NEAR SHOOTER - MS - 418-S.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Warfare 2 Library/Haubits FH77 Howitzer - FIRING - Multiple Shots 2 - FRONT - MKH8060.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Warfare 2 Library/RPG - FIRING AND IMPACT - Through Car Roof Hit Metal - XY - MKH8040.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - The Warfare 2 Library/Tank Mine - EXPLOSION - Mounted on Metal Beam - DISTANT - AMBEO BLD.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - Wind In Trees/Wind - Aspen - Gusts - Close - Inside Canopy - XY - MKH8060.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - Wind In Trees/Wind - Cherry Tree - Strong - Bed - On Ground - ORTF - CMC6.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - Wind In Trees/Wind - Oak - Calm - Close - Inside Canopy - XY - MKH8060.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - Winter Forest Stream/Stream - LIGHT - Medium Speed - Flow - Left-Heavy Trickles.wav
+Sonniss.com-GDC2024-GameAudioBundle/Pole Position - Winter Forest Stream/Stream - STRONG - Medium Speed - Flow - Gush - Thick Surge with Tonal Burbling.wav
+Sonniss.com-GDC2024-GameAudioBundle/Readme.txt
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Distinct Whooshes/WHSH_Airy-Whoosh Wind Gust 11_RSCPC_DW.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Distinct Whooshes/WHSH_Deviant-Whoosh Flabby Slow 09_RSCPC_DW.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Distinct Whooshes/WHSH_Pure SciFi-Whoosh Fast 03_RSCPC_DW.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Distinct Whooshes/WHSH_Watery-Whoosh FIzzy Fast 03_RSCPC_DW.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - High Voltage/DSGNSrce_Synth Source Loop 12_RSCPC_HV.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - High Voltage/ELECEmf_Electrical Panel Pitchdown 12st_RSCPC_HV.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - High Voltage/ELECEmf_WiFi Router Pitchdown 36st_RSCPC_HV.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - High Voltage/UIData_UI Calculation Loop 05_RSCPC_HV.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Parallax/AMBMisc_Ambience Low 03_RSCPC_PX.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Parallax/SCIMisc_Movement 03_RSCPC_PX.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Parallax/SCIMisc_Ping 18_RSCPC_PX.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Parallax/SCIMisc_Zap Short 14_RSCPC_PX.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Sci-Fi Energy Weapons/SCIMech_Mech Processed Metal 27_RSCPC_SFEW.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Sci-Fi Energy Weapons/SCIWeap_Flyby Plasma J 01_RSCPC_SFEW.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Sci-Fi Energy Weapons/SCIWeap_Reload Compact O 01_RSCPC_SFEW.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - Sci-Fi Energy Weapons/SCIWeap_Shot Pulse YR 05_RSCPC_SFEW.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - User Interaction/UIAlert_Confirm Middle 12_RSCPC_USIN.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - User Interaction/UIClick_Select Middle 29_RSCPC_USIN.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - User Interaction/UIData_Progress 19_RSCPC_USIN.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rescopic Sound - User Interaction/UIMvmt_Window Open Thin 05_RSCPC_USIN.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Anime Studio/DSGNMisc_Charge Down Classic 1_RogueWaves_AnimeStudio.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Anime Studio/FGHTImpt_Fight Combo x4_RogueWaves_AnimeStudio.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Anime Studio/WEAPSwrd_Mecha Energy Sword Cut_RogueWaves_AnimeStudio.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Anime Studio/WHSH_Whoosh Synth Noise 28_RogueWaves_AnimeStudio.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Creaking Door/DOORCreak_Wooden Door, Door Slams, Impacts, 3_RogueWaves_CreakingDoor.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Creaking Door/DOORCreak_Wooden Door, Opening and Closing 09_RogueWaves_CreakingDoor.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Kawaii UI/OBJCont_Coffee Tin Lid Open 3_RogueWaves_KawaiiUI.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Kawaii UI/TOONPop_Syringe Pop 4_RogueWaves_KawaiiUI.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Kawaii UI/UIClick_Hand Pop UI Diminished 1_RogueWaves_KawaiiUI.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Kawaii UI/UIClick_Operating System UI Cursor_RogueWaves_KawaiiUI.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Metal Tensions/MUSCStngr_Open String Dive Bomb Down, Whammy bar, Low_RogueWaves_MetalTensions_13.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Metal Tensions/MUSCStngr_Pick Scrape Down, Short, Overdriven_RogueWaves_MetalTensions.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Metal Tensions/MUSCStngr_Plastic Comb Scraping Strings, 2, Overdriven_RogueWaves_MetalTensions.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Metal Tensions/MUSCStngr_Whammy Bar Flutter, Clean_RogueWaves_MetalTensions.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Yacht & Marina/AMBNaut_Atmos, EXT Marina, boats, rope creaking,_RogueWaves_YachtMarina_11.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Yacht & Marina/BOATInt_Atmos, INT Small yacht cabin, hatch open,_RogueWaves_YachtMarina.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Yacht & Marina/BOATMech_EXT Small yacht, rope moving through metal_RogueWaves_YachtMarina.wav
+Sonniss.com-GDC2024-GameAudioBundle/Rogue Waves - Yacht & Marina/METLTonl_Contact Mic, Cable Rope Stays, Percussive_RogueWaves_YachtMarina_02.wav
+Sonniss.com-GDC2024-GameAudioBundle/Sonic Bat - Ambisonics - Beach/SBAb_5 Meters From Shore Early Morning 005.wav
+Sonniss.com-GDC2024-GameAudioBundle/Sonic Bat - Ambisonics - Beach/SBAb_In Water Crowded Afternoon 004.wav
+Sonniss.com-GDC2024-GameAudioBundle/Sonic Bat - Ambisonics - Beach/SBAb_Palm Trees Detail 004.wav

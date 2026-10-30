@@ -66,6 +66,9 @@ desktop.ini
 *#*#
 /.kotlin/
 
+## Personal asset library (listed in .claude/assets/Catalogue.txt by .claude/Catalogue.bat):
+/.claude/catalogue/
+
 ## Runtime logs:
 /logs/
 *.log
@@ -74,4 +77,3 @@ desktop.ini
 *.rtf
 /projects
 /prompts
-/.claude/catologue/Sonniss.com-GDC2024-GameAudioBundle
