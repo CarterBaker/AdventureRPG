@@ -32,6 +32,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.longs.Long2FloatMap;
+import it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -68,7 +70,12 @@ public class WorldRenderManager extends ManagerPackage {
      * a chunk's full trees, a mega's stand-ins — drawn whenever the terrain
      * they belong to is, so a tree that changes reuploads only itself. Until
      * a mega's stand-ins land, the trees its chunks still hold stand in for
-     * them, so no forest blinks out as the player walks away from it.
+     * them, so no forest blinks out as the player walks away from it. A chunk
+     * or mega that redraws its trees keeps the ones it drew before for
+     * TREE_FADE_SECONDS, falling away through a dither pattern as the new
+     * ones rise through it, and a chunk whose trees are taken down lets them
+     * fall away over its mega's stand-ins, so a tree changing its look never
+     * pops.
      */
 
     // Internal
@@ -89,9 +96,13 @@ public class WorldRenderManager extends ManagerPackage {
     private LongOpenHashSet emptyChunks;
 
     // Tree Entries
-    private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> chunkTreeEntries;
-    private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> megaTreeEntries;
+    private TreeEntries chunkTrees;
+    private TreeEntries megaTrees;
     private LongOpenHashSet drawnMegaTrees;
+
+    // Tree Fades — every fade step's value for the look rising in and the look falling away, boxed once
+    private Float[] treeFadeRising;
+    private Float[] treeFadeFalling;
 
     // Stand-In — resolved once per grid per frame
     private LongOpenHashSet resolvedStandIns;
@@ -139,9 +150,19 @@ public class WorldRenderManager extends ManagerPackage {
         this.emptyChunks = new LongOpenHashSet();
 
         // Tree Entries
-        this.chunkTreeEntries = new Long2ObjectOpenHashMap<>();
-        this.megaTreeEntries = new Long2ObjectOpenHashMap<>();
+        this.chunkTrees = new TreeEntries();
+        this.megaTrees = new TreeEntries();
         this.drawnMegaTrees = new LongOpenHashSet();
+
+        // Tree Fades
+        this.treeFadeRising = new Float[EngineSetting.TREE_FADE_STEPS + 1];
+        this.treeFadeFalling = new Float[EngineSetting.TREE_FADE_STEPS + 1];
+
+        for (int step = 0; step <= EngineSetting.TREE_FADE_STEPS; step++) {
+            float share = (float) step / EngineSetting.TREE_FADE_STEPS;
+            treeFadeRising[step] = 1f - share;
+            treeFadeFalling[step] = -share;
+        }
 
         // Stand-In
         this.resolvedStandIns = new LongOpenHashSet();
@@ -176,6 +197,8 @@ public class WorldRenderManager extends ManagerPackage {
 
     @Override
     protected void lateUpdate() {
+        advanceTreeFades(chunkTrees);
+        advanceTreeFades(megaTrees);
         renderWorld();
     }
 
@@ -236,10 +259,38 @@ public class WorldRenderManager extends ManagerPackage {
 
             pushEntries(materialEntries, slot.getSlotUBO(), grid, worldFbo, window);
 
-            if (drawnMegaTrees.contains(coordinate))
-                pushTrees(megaTreeEntries, coordinate, slot.getSlotUBO(), grid, worldFbo, window);
-            else
+            if (drawnMegaTrees.contains(coordinate)) {
+                pushTrees(megaTrees, coordinate, slot.getSlotUBO(), grid, worldFbo, window);
+                pushCoveredChunkFades(slot, grid, window, worldFbo);
+            } else
                 pushCoveredChunkTrees(slot, grid, window, worldFbo);
+        }
+    }
+
+    // The trees a mega's chunks drew before handing them to the mega, falling away over its stand-ins
+    private void pushCoveredChunkFades(
+            GridSlotHandle megaSlot,
+            GridInstance grid,
+            WindowInstance window,
+            FBOInstance worldFbo) {
+
+        if (chunkTrees.fadingEntries.isEmpty())
+            return;
+
+        ObjectArrayList<GridSlotHandle> coveredSlots = megaSlot.getCoveredSlots();
+
+        for (int i = 0; i < coveredSlots.size(); i++) {
+
+            GridSlotHandle coveredSlot = coveredSlots.get(i);
+            long chunkCoordinate = coveredSlot.getChunkCoordinate();
+
+            if (!chunkTrees.fadingEntries.containsKey(chunkCoordinate)
+                    || !frustumCullingSystem.isChunkVisible(coveredSlot))
+                continue;
+
+            pushFadingTrees(
+                    chunkTrees, chunkCoordinate, resolveTreeFadeStep(chunkTrees, chunkCoordinate),
+                    coveredSlot.getSlotUBO(), grid, worldFbo, window);
         }
     }
 
@@ -257,7 +308,7 @@ public class WorldRenderManager extends ManagerPackage {
             GridSlotHandle coveredSlot = coveredSlots.get(i);
 
             if (frustumCullingSystem.isChunkVisible(coveredSlot))
-                pushTrees(chunkTreeEntries, coveredSlot.getChunkCoordinate(), coveredSlot.getSlotUBO(), grid,
+                pushTrees(chunkTrees, coveredSlot.getChunkCoordinate(), coveredSlot.getSlotUBO(), grid,
                         worldFbo, window);
         }
     }
@@ -326,7 +377,7 @@ public class WorldRenderManager extends ManagerPackage {
         if (materialEntries != null)
             pushEntries(materialEntries, slotUBO, grid, worldFbo, window);
 
-        pushTrees(chunkTreeEntries, coordinate, slotUBO, grid, worldFbo, window);
+        pushTrees(chunkTrees, coordinate, slotUBO, grid, worldFbo, window);
     }
 
     // A standing-in mega is drawn once, the first time one of its chunks comes up, and covers all of them
@@ -348,25 +399,53 @@ public class WorldRenderManager extends ManagerPackage {
 
         if (frustumCullingSystem.isMegaVisible(megaSlot)) {
             pushEntries(megaEntries.get(megaCoordinate), megaSlot.getSlotUBO(), grid, worldFbo, window);
-            pushTrees(megaTreeEntries, megaCoordinate, megaSlot.getSlotUBO(), grid, worldFbo, window);
+            pushTrees(megaTrees, megaCoordinate, megaSlot.getSlotUBO(), grid, worldFbo, window);
         }
 
         return true;
     }
 
-    // The trees standing on a chunk or mega, when it has any on the GPU
+    // The trees standing on a chunk or mega, when it has any on the GPU, and those it drew before its last redraw
+    // while they are still falling away
     private void pushTrees(
-            Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> treeEntries,
+            TreeEntries trees,
             long coordinate,
             UBOInstance slotUBO,
             GridInstance grid,
             FBOInstance worldFbo,
             WindowInstance window) {
 
-        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = treeEntries.get(coordinate);
+        int step = resolveTreeFadeStep(trees, coordinate);
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = trees.entries.get(coordinate);
 
-        if (materialEntries != null)
+        if (materialEntries != null) {
+            applyTreeFade(materialEntries, treeFadeRising[step]);
             pushEntries(materialEntries, slotUBO, grid, worldFbo, window);
+        }
+
+        pushFadingTrees(trees, coordinate, step, slotUBO, grid, worldFbo, window);
+    }
+
+    // The trees a chunk or mega drew before its last redraw, while their fade has steps left to run
+    private void pushFadingTrees(
+            TreeEntries trees,
+            long coordinate,
+            int step,
+            UBOInstance slotUBO,
+            GridInstance grid,
+            FBOInstance worldFbo,
+            WindowInstance window) {
+
+        if (step == EngineSetting.TREE_FADE_STEPS)
+            return;
+
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> fadingEntries = trees.fadingEntries.get(coordinate);
+
+        if (fadingEntries == null)
+            return;
+
+        applyTreeFade(fadingEntries, treeFadeFalling[step]);
+        pushEntries(fadingEntries, slotUBO, grid, worldFbo, window);
     }
 
     private void pushEntries(
@@ -497,16 +576,17 @@ public class WorldRenderManager extends ManagerPackage {
     // A chunk's tree packet on the GPU, or its old trees taken down when it holds none — false only when no grid
     // draws the chunk any more
     public boolean addChunkTrees(long coordinate, DynamicPacketInstance treePacket) {
-        return updateTrees(coordinate, treePacket, chunkTreeEntries);
+        return updateTrees(coordinate, treePacket, chunkTrees);
     }
 
+    // A chunk's trees taken down fall away rather than vanish, under whatever draws the ground they stood on next
     public void removeChunkTrees(long coordinate) {
-        removeEntries(coordinate, chunkTreeEntries);
+        retireTrees(coordinate, chunkTrees);
     }
 
     public boolean addMegaTrees(long coordinate, DynamicPacketInstance treePacket) {
 
-        if (!updateTrees(coordinate, treePacket, megaTreeEntries))
+        if (!updateTrees(coordinate, treePacket, megaTrees))
             return false;
 
         drawnMegaTrees.add(coordinate);
@@ -519,24 +599,106 @@ public class WorldRenderManager extends ManagerPackage {
         return drawnMegaTrees.contains(megaCoordinate);
     }
 
-    private boolean updateTrees(
-            long coordinate,
-            DynamicPacketInstance treePacket,
-            Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> treeEntries) {
+    // The trees drawn until now fall away under the new packet's, uploaded into entries of their own
+    private boolean updateTrees(long coordinate, DynamicPacketInstance treePacket, TreeEntries trees) {
 
         if (!hasGridSlotForChunk(coordinate)) {
-            removeEntries(coordinate, treeEntries);
+            removeTrees(coordinate, trees);
             return false;
         }
 
-        if (treePacket.getState() != DynamicPacketState.READY) {
-            removeEntries(coordinate, treeEntries);
-            return true;
-        }
+        retireTrees(coordinate, trees);
 
-        updateEntries(coordinate, treePacket, treeEntries);
+        if (treePacket.getState() == DynamicPacketState.READY)
+            updateEntries(coordinate, treePacket, trees.entries);
 
         return true;
+    }
+
+    private void removeTrees(long coordinate, TreeEntries trees) {
+
+        removeEntries(coordinate, trees.entries);
+        removeEntries(coordinate, trees.fadingEntries);
+        trees.fadeAges.remove(coordinate);
+    }
+
+    // Tree Fades \\
+
+    // The trees a chunk or mega draws now set falling away from this frame on, any still falling from an earlier
+    // redraw let go at once; with nothing drawn now, a fade already under way runs on for whatever comes next
+    private void retireTrees(long coordinate, TreeEntries trees) {
+
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries = trees.entries.remove(coordinate);
+
+        if (materialEntries == null)
+            return;
+
+        drawnRevision++;
+
+        Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> earlier = trees.fadingEntries.put(
+                coordinate, materialEntries);
+
+        if (earlier != null)
+            releaseMaterialEntries(earlier);
+
+        trees.fadeAges.put(coordinate, 0f);
+    }
+
+    // Every fade aged by the frame, and the trees of each one that has run its course let go
+    private void advanceTreeFades(TreeEntries trees) {
+
+        if (trees.fadeAges.isEmpty())
+            return;
+
+        float deltaTime = internal.getDeltaTime();
+        ObjectIterator<Long2FloatMap.Entry> iterator = trees.fadeAges.long2FloatEntrySet().fastIterator();
+
+        while (iterator.hasNext()) {
+
+            Long2FloatMap.Entry fade = iterator.next();
+            float age = fade.getFloatValue() + deltaTime;
+
+            if (age < EngineSetting.TREE_FADE_SECONDS) {
+                fade.setValue(age);
+                continue;
+            }
+
+            removeEntries(fade.getLongKey(), trees.fadingEntries);
+            iterator.remove();
+        }
+    }
+
+    // How far a chunk's or mega's fade has run, in steps of the dither pattern — every step once none is under way
+    private int resolveTreeFadeStep(TreeEntries trees, long coordinate) {
+
+        float age = trees.fadeAges.get(coordinate);
+
+        if (age < 0f)
+            return EngineSetting.TREE_FADE_STEPS;
+
+        return Math.min(
+                (int) (age / EngineSetting.TREE_FADE_SECONDS * EngineSetting.TREE_FADE_STEPS),
+                EngineSetting.TREE_FADE_STEPS);
+    }
+
+    private void applyTreeFade(Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries, Float fade) {
+
+        ObjectIterator<Int2ObjectMap.Entry<ObjectArrayList<RenderEntry>>> iterator = materialEntries
+                .int2ObjectEntrySet()
+                .fastIterator();
+
+        while (iterator.hasNext()) {
+
+            ObjectArrayList<RenderEntry> bucketList = iterator.next().getValue();
+
+            for (int i = 0; i < bucketList.size(); i++) {
+
+                MaterialInstance material = bucketList.get(i).modelInstance.getMaterial();
+
+                if (material.getUniform(EngineSetting.UNIFORM_TREE_FADE) != null)
+                    material.setUniform(EngineSetting.UNIFORM_TREE_FADE, fade);
+            }
+        }
     }
 
     // Macro \\
@@ -808,7 +970,7 @@ public class WorldRenderManager extends ManagerPackage {
     // A mega's stand-in trees leave with it
     public void removeMegaInstance(long coordinate) {
         removeEntries(coordinate, megaEntries);
-        removeEntries(coordinate, megaTreeEntries);
+        removeTrees(coordinate, megaTrees);
         drawnMegaTrees.remove(coordinate);
     }
 
@@ -949,6 +1111,22 @@ public class WorldRenderManager extends ManagerPackage {
             quadBufferManager.removeQuadBuffer(entry.quadBuffer);
         else
             modelManager.removeMesh(entry.modelInstance);
+    }
+
+    // Tree Entries \\
+
+    private static final class TreeEntries {
+
+        final Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> entries;
+        final Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> fadingEntries;
+        final Long2FloatOpenHashMap fadeAges;
+
+        TreeEntries() {
+            this.entries = new Long2ObjectOpenHashMap<>();
+            this.fadingEntries = new Long2ObjectOpenHashMap<>();
+            this.fadeAges = new Long2FloatOpenHashMap();
+            this.fadeAges.defaultReturnValue(EngineSetting.TREE_FADE_NONE);
+        }
     }
 
     // Render Entry \\

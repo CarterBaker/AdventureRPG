@@ -1907,8 +1907,18 @@ public class EngineSetting {
     // Tree Lifetime — how long a tree nothing has touched keeps its grown shape before letting it go
     public static final float TREE_SHAPE_IDLE_SECONDS = 30f;
 
-    // Tree Detail — how often every tree is judged against the tree detail distance besides whenever a grid moves
+    // Tree Detail — how often every tree is judged against the tree detail distance besides whenever a grid moves,
+    // and the chunks past it a tree drawn in full keeps its detail for
     public static final float TREE_DETAIL_CHECK_SECONDS = 1f;
+    public static final int TREE_DETAIL_KEEP_CHUNKS = 1;
+
+    // Tree Fade — how long a chunk's or mega's old trees take to fall away under its new ones, the steps of the
+    // dither pattern they fall through (TreeFade.glsl draws sixteen), the fade age that marks none under way, and the
+    // uniform each standing tree material takes its fade through
+    public static final float TREE_FADE_NONE = -1f;
+    public static final float TREE_FADE_SECONDS = 0.6f;
+    public static final int TREE_FADE_STEPS = 16;
+    public static final String UNIFORM_TREE_FADE = "u_treeFade";
 
     // Tree Model — how a tree drawn coarser than in full keeps its own wood and crown: how near a segment must set
     // out to the last one's end to carry its trunk on, how far a trunk box runs before its top strays past a share

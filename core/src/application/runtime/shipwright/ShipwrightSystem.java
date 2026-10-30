@@ -37,9 +37,11 @@ public class ShipwrightSystem extends SystemPackage {
      * The jump binding or the left button draws with the tool in hand while
      * held and the sprint binding or the right button erases, a stroke at a
      * time; the activate binding takes up the next tool, the rotate binding
-     * turns what is set down next and the wheel steps the deck. Undo, redo
-     * and save work as everywhere else; the pause binding walks away from a
-     * table in the game. While the name is typed the keys type it, Enter keeps
+     * turns what is set down next, the cycle bindings step the option of the
+     * tool in hand and the level bindings or the wheel step the deck, so
+     * every change the menu makes can also be made from the bindings alone, a
+     * controller's among them. Undo, redo and save work as everywhere else;
+     * the pause binding walks away from a table in the game. While the name is typed the keys type it, Enter keeps
      * it and the pause binding drops it. Whenever the session changes the
      * labels are rewritten, every measure of the ship among them.
      */
@@ -186,6 +188,18 @@ public class ShipwrightSystem extends SystemPackage {
 
         if (inputManager.bindingClicked(KeyBindings.ROTATE_ITEM, window))
             shipwrightManager.turn(session);
+
+        if (inputManager.bindingClicked(KeyBindings.CYCLE_NEXT, window))
+            shipwrightManager.stepOption(session, 1);
+
+        if (inputManager.bindingClicked(KeyBindings.CYCLE_PREVIOUS, window))
+            shipwrightManager.stepOption(session, -1);
+
+        if (inputManager.bindingClicked(KeyBindings.LEVEL_UP, window))
+            shipwrightManager.stepDeck(session, 1);
+
+        if (inputManager.bindingClicked(KeyBindings.LEVEL_DOWN, window))
+            shipwrightManager.stepDeck(session, -1);
 
         if (inputManager.bindingClicked(KeyBindings.UNDO, window))
             shipwrightManager.undo(session);
@@ -405,9 +419,9 @@ public class ShipwrightSystem extends SystemPackage {
         return switch (tool) {
             case WALLS -> text.append(session.isHalfWalls()
                     ? EngineSetting.SHIPWRIGHT_TEXT_HALF_WALL : EngineSetting.SHIPWRIGHT_TEXT_FULL_WALL).toString();
-            case OPENINGS -> appendFacing(text.append(session.isWindows()
-                    ? EngineSetting.SHIPWRIGHT_TEXT_WINDOW : EngineSetting.SHIPWRIGHT_TEXT_DOOR)).toString();
-            case STAIRS -> appendFacing(text.append(EngineSetting.SHIPWRIGHT_TEXT_STAIR)).toString();
+            case OPENINGS -> appendFacing(text.append(session.getOpening().getTitle())).toString();
+            case STAIRS -> appendFacing(text.append(session.isLadders()
+                    ? EngineSetting.SHIPWRIGHT_TEXT_LADDER : EngineSetting.SHIPWRIGHT_TEXT_STAIR)).toString();
             case FURNITURE -> appendFacing(text.append(shipwrightManager.getItemName(session.getItemIndex())))
                     .toString();
             case MASTS -> appendMast(text).toString();

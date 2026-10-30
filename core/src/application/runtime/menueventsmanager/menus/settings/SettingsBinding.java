@@ -11,7 +11,9 @@ public enum SettingsBinding {
      * they are listed and grouped under their section. Primary stays fixed —
      * it is the button that clicks menus and attacks, so it can never be
      * rebound away. Block is the Secondary binding, and Activate also sets
-     * down whatever is held.
+     * down whatever is held. The cycle and level bindings step through a
+     * list of choices and up and down a stack of levels wherever a menu
+     * offers them, so a table can be worked without a pointer.
      * Editor bindings are not listed; they stay with the editor.
      */
 
@@ -36,7 +38,15 @@ public enum SettingsBinding {
     INVENTORY(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_INVENTORY,
             KeyBindings.INVENTORY),
     ROTATE_ITEM(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_ROTATE_ITEM,
-            KeyBindings.ROTATE_ITEM);
+            KeyBindings.ROTATE_ITEM),
+    CYCLE_PREVIOUS(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_CYCLE_PREVIOUS,
+            KeyBindings.CYCLE_PREVIOUS),
+    CYCLE_NEXT(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_CYCLE_NEXT,
+            KeyBindings.CYCLE_NEXT),
+    LEVEL_UP(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_LEVEL_UP,
+            KeyBindings.LEVEL_UP),
+    LEVEL_DOWN(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_LEVEL_DOWN,
+            KeyBindings.LEVEL_DOWN);
 
     // Values
     public static final SettingsBinding[] VALUES = values();

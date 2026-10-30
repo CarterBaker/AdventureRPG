@@ -50,33 +50,36 @@ public final class TreeMeshUtility extends EngineUtility {
             float originZ,
             FloatArrayList out) {
 
-        float[] corner = new float[EngineSetting.AXIS_COUNT];
+        float[] corners = new float[EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.AXIS_COUNT];
+        float[] bounds = new float[EngineSetting.AXIS_COUNT * 2];
+        int[] cell = new int[EngineSetting.AXIS_COUNT];
 
         for (int quad = 0; quad < quads.size(); quad++) {
 
-            if (isHidden(quads, quad, hiders, corner))
+            resolveWoodCorners(quads, quad, corners, bounds);
+
+            if (isHidden(corners, bounds, hiders))
                 continue;
 
             int part = quads.getPart(quad);
             TreeHandle treeHandle = partSpecies.get(part / EngineSetting.TREE_WOOD_PART_COUNT);
             int woodPart = part % EngineSetting.TREE_WOOD_PART_COUNT;
-            float[] corners = treeHandle.getPartCorners();
-            float cornerU = corners[woodPart * EngineSetting.TREE_PART_CORNER_FLOATS];
-            float cornerV = corners[woodPart * EngineSetting.TREE_PART_CORNER_FLOATS + 1];
+            float[] partCorners = treeHandle.getPartCorners();
+            float cornerU = partCorners[woodPart * EngineSetting.TREE_PART_CORNER_FLOATS];
+            float cornerV = partCorners[woodPart * EngineSetting.TREE_PART_CORNER_FLOATS + 1];
             float color = treeHandle.getPartColors()[woodPart];
             int face = quads.getFace(quad);
-            float meta = face | resolveEdges(grid, quads, quad) << EngineSetting.TREE_META_EDGE_SHIFT;
+            float meta = face | resolveEdges(grid, quads, quad, cell) << EngineSetting.TREE_META_EDGE_SHIFT;
 
             for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT; vertex++) {
 
+                int corner = vertex * EngineSetting.AXIS_COUNT;
                 float localU = isHighU(vertex) ? quads.getWidth(quad) : 0f;
                 float localV = isHighV(vertex) ? quads.getHeight(quad) : 0f;
 
-                resolveWoodCorner(quads, quad, vertex, corner);
-
-                out.add(originX + corner[0] * SCALE);
-                out.add(originY + corner[1] * SCALE);
-                out.add(originZ + corner[2] * SCALE);
+                out.add(originX + corners[corner] * SCALE);
+                out.add(originY + corners[corner + 1] * SCALE);
+                out.add(originZ + corners[corner + 2] * SCALE);
                 out.add(cornerU);
                 out.add(cornerV);
                 out.add(meta);
@@ -91,7 +94,8 @@ public final class TreeMeshUtility extends EngineUtility {
     }
 
     // A box of one wood part, in blocks of the caller's frame — its four upright faces, rounded over at their
-    // upright edges, and its top and foot as well when capped, every edge then rounding over
+    // upright edges, and its top and foot as well when capped, every edge then rounding over; scratch holds the
+    // box's corner, size and the corner being written, three floats each
     public static void emitWoodBox(
             float minX,
             float minY,
@@ -103,14 +107,19 @@ public final class TreeMeshUtility extends EngineUtility {
             float cornerV,
             float color,
             boolean capped,
+            float[] scratch,
             FloatArrayList out) {
 
-        float[] min = { minX, minY, minZ };
-        float[] size = {
-                (maxX - minX) * EngineSetting.SUB_VOXEL_RESOLUTION,
-                (maxY - minY) * EngineSetting.SUB_VOXEL_RESOLUTION,
-                (maxZ - minZ) * EngineSetting.SUB_VOXEL_RESOLUTION };
-        float[] corner = new float[EngineSetting.AXIS_COUNT];
+        int min = 0;
+        int size = EngineSetting.AXIS_COUNT;
+        int corner = EngineSetting.AXIS_COUNT * 2;
+
+        scratch[min] = minX;
+        scratch[min + 1] = minY;
+        scratch[min + 2] = minZ;
+        scratch[size] = (maxX - minX) * EngineSetting.SUB_VOXEL_RESOLUTION;
+        scratch[size + 1] = (maxY - minY) * EngineSetting.SUB_VOXEL_RESOLUTION;
+        scratch[size + 2] = (maxZ - minZ) * EngineSetting.SUB_VOXEL_RESOLUTION;
 
         for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++) {
 
@@ -121,8 +130,8 @@ public final class TreeMeshUtility extends EngineUtility {
 
             int uAxis = (axis + 1) % EngineSetting.AXIS_COUNT;
             int vAxis = (axis + 2) % EngineSetting.AXIS_COUNT;
-            float width = size[uAxis];
-            float height = size[vAxis];
+            float width = scratch[size + uAxis];
+            float height = scratch[size + vAxis];
             int uEdge = resolveBoxEdge(uAxis, capped);
             int vEdge = resolveBoxEdge(vAxis, capped);
             int edges = uEdge
@@ -131,19 +140,19 @@ public final class TreeMeshUtility extends EngineUtility {
                     | vEdge << EngineSetting.TREE_EDGE_BITS * 3;
             float meta = face | edges << EngineSetting.TREE_META_EDGE_SHIFT;
 
-            corner[axis] = SubVoxelMeshUtility.getFaceNormal(face, axis) > 0 ? size[axis] : 0f;
+            scratch[corner + axis] = SubVoxelMeshUtility.getFaceNormal(face, axis) > 0 ? scratch[size + axis] : 0f;
 
             for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT; vertex++) {
 
                 float localU = isHighU(vertex) ? width : 0f;
                 float localV = isHighV(vertex) ? height : 0f;
 
-                corner[uAxis] = localU;
-                corner[vAxis] = localV;
+                scratch[corner + uAxis] = localU;
+                scratch[corner + vAxis] = localV;
 
-                out.add(min[0] + corner[0] * SCALE);
-                out.add(min[1] + corner[1] * SCALE);
-                out.add(min[2] + corner[2] * SCALE);
+                out.add(scratch[min] + scratch[corner] * SCALE);
+                out.add(scratch[min + 1] + scratch[corner + 1] * SCALE);
+                out.add(scratch[min + 2] + scratch[corner + 2] * SCALE);
                 out.add(cornerU);
                 out.add(cornerV);
                 out.add(meta);
@@ -162,16 +171,37 @@ public final class TreeMeshUtility extends EngineUtility {
         return axis == EngineSetting.AXIS_Y && !capped ? EngineSetting.TREE_EDGE_FLAT : EngineSetting.TREE_EDGE_CONVEX;
     }
 
-    // A quad corner in grid sub-voxels, corners running low-low, high-low, high-high, low-high on the face's axes
-    private static void resolveWoodCorner(SubVoxelQuadListStruct quads, int quad, int vertex, float[] corner) {
+    // A quad's four corners in grid sub-voxels, three floats each, running low-low, high-low, high-high, low-high on
+    // the face's axes, and the box they span, its low corner then its high
+    private static void resolveWoodCorners(
+            SubVoxelQuadListStruct quads,
+            int quad,
+            float[] corners,
+            float[] bounds) {
 
         int axis = SubVoxelMeshUtility.resolveAxis(quads.getFace(quad));
         int uAxis = (axis + 1) % EngineSetting.AXIS_COUNT;
         int vAxis = (axis + 2) % EngineSetting.AXIS_COUNT;
+        int lowU = quads.getU(quad);
+        int lowV = quads.getV(quad);
+        int highU = lowU + quads.getWidth(quad);
+        int highV = lowV + quads.getHeight(quad);
 
-        corner[axis] = quads.getPlane(quad);
-        corner[uAxis] = quads.getU(quad) + (isHighU(vertex) ? quads.getWidth(quad) : 0);
-        corner[vAxis] = quads.getV(quad) + (isHighV(vertex) ? quads.getHeight(quad) : 0);
+        for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT; vertex++) {
+
+            int corner = vertex * EngineSetting.AXIS_COUNT;
+
+            corners[corner + axis] = quads.getPlane(quad);
+            corners[corner + uAxis] = isHighU(vertex) ? highU : lowU;
+            corners[corner + vAxis] = isHighV(vertex) ? highV : lowV;
+        }
+
+        bounds[axis] = quads.getPlane(quad);
+        bounds[uAxis] = lowU;
+        bounds[vAxis] = lowV;
+        bounds[EngineSetting.AXIS_COUNT + axis] = quads.getPlane(quad);
+        bounds[EngineSetting.AXIS_COUNT + uAxis] = highU;
+        bounds[EngineSetting.AXIS_COUNT + vAxis] = highV;
     }
 
     private static boolean isHighU(int vertex) {
@@ -185,7 +215,7 @@ public final class TreeMeshUtility extends EngineUtility {
     // Edges \\
 
     // The four edges' kinds packed two bits each — low u, high u, low v, high v
-    private static int resolveEdges(SubVoxelGridStruct grid, SubVoxelQuadListStruct quads, int quad) {
+    private static int resolveEdges(SubVoxelGridStruct grid, SubVoxelQuadListStruct quads, int quad, int[] cell) {
 
         int face = quads.getFace(quad);
         int axis = SubVoxelMeshUtility.resolveAxis(face);
@@ -196,10 +226,10 @@ public final class TreeMeshUtility extends EngineUtility {
         int width = quads.getWidth(quad);
         int height = quads.getHeight(quad);
 
-        int lowU = classifyEdge(grid, axis, solid, normal, true, u - 1, v, height);
-        int highU = classifyEdge(grid, axis, solid, normal, true, u + width, v, height);
-        int lowV = classifyEdge(grid, axis, solid, normal, false, v - 1, u, width);
-        int highV = classifyEdge(grid, axis, solid, normal, false, v + height, u, width);
+        int lowU = classifyEdge(grid, axis, solid, normal, true, u - 1, v, height, cell);
+        int highU = classifyEdge(grid, axis, solid, normal, true, u + width, v, height, cell);
+        int lowV = classifyEdge(grid, axis, solid, normal, false, v - 1, u, width, cell);
+        int highV = classifyEdge(grid, axis, solid, normal, false, v + height, u, width, cell);
 
         return lowU
                 | highU << EngineSetting.TREE_EDGE_BITS
@@ -216,11 +246,11 @@ public final class TreeMeshUtility extends EngineUtility {
             boolean alongV,
             int across,
             int from,
-            int length) {
+            int length,
+            int[] cell) {
 
         int uAxis = (axis + 1) % EngineSetting.AXIS_COUNT;
         int vAxis = (axis + 2) % EngineSetting.AXIS_COUNT;
-        int[] cell = new int[EngineSetting.AXIS_COUNT];
         int convex = 0;
         int concave = 0;
 
@@ -271,26 +301,33 @@ public final class TreeMeshUtility extends EngineUtility {
         }
     }
 
-    // True when every corner of a quad lies inside one cluster
-    private static boolean isHidden(
-            SubVoxelQuadListStruct quads,
-            int quad,
-            FloatArrayList hiders,
-            float[] corner) {
+    // True when every corner of a quad lies inside one cluster — a cluster whose bounds fall short of the quad's
+    // own is passed over before any corner is tried
+    private static boolean isHidden(float[] corners, float[] bounds, FloatArrayList hiders) {
 
         float[] spheres = hiders.elements();
+        int high = EngineSetting.AXIS_COUNT;
 
         for (int hider = 0; hider < hiders.size(); hider += EngineSetting.TREE_HIDER_FLOATS) {
 
+            float centerX = spheres[hider];
+            float centerY = spheres[hider + 1];
+            float centerZ = spheres[hider + 2];
+            float radiusH = spheres[hider + 3];
+            float radiusV = spheres[hider + 4];
+
+            if (bounds[0] <= centerX - radiusH || bounds[high] >= centerX + radiusH
+                    || bounds[1] <= centerY - radiusV || bounds[high + 1] >= centerY + radiusV
+                    || bounds[2] <= centerZ - radiusH || bounds[high + 2] >= centerZ + radiusH)
+                continue;
+
             boolean inside = true;
 
-            for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT && inside; vertex++) {
+            for (int corner = 0; corner < corners.length && inside; corner += EngineSetting.AXIS_COUNT) {
 
-                resolveWoodCorner(quads, quad, vertex, corner);
-
-                float dx = (corner[0] - spheres[hider]) / spheres[hider + 3];
-                float dy = (corner[1] - spheres[hider + 1]) / spheres[hider + 4];
-                float dz = (corner[2] - spheres[hider + 2]) / spheres[hider + 3];
+                float dx = (corners[corner] - centerX) / radiusH;
+                float dy = (corners[corner + 1] - centerY) / radiusV;
+                float dz = (corners[corner + 2] - centerZ) / radiusH;
 
                 inside = dx * dx + dy * dy + dz * dz < 1f;
             }

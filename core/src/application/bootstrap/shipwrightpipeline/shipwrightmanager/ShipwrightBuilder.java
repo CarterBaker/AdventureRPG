@@ -10,9 +10,9 @@ import engine.util.arpg.ArpgUtility;
 class ShipwrightBuilder extends BuilderPackage {
 
     /*
-     * Parses one ship ARPG file from the assets into a ShipBlueprintStruct
-     * through ShipBlueprintArpgUtility, the one reader of ship files; a ship
-     * in the assets that cannot be read fails at boot.
+     * Parses one vehicle ARPG file from the assets into a ShipBlueprintStruct
+     * through ShipBlueprintArpgUtility, the one reader of vehicle files; a
+     * vehicle in the assets that cannot be read fails at boot.
      */
 
     // Build \\

@@ -47,7 +47,7 @@ public class ShipwrightTabSystem extends SystemPackage {
 
         menuManager.setMenuTargetFbo(window, fboManager.cloneFbo(RuntimeSetting.FBO_UI, window));
         shipwrightManager.setAssetWriter((shipName, shipArpg) -> infoManager.writeDocument(
-                EditorSetting.INFO_SCHEMA_SHIPS, shipName, shipArpg)
+                EditorSetting.INFO_SCHEMA_VEHICLES, shipName, shipArpg)
                         ? EngineSetting.SHIPWRIGHT_STATUS_NONE
                         : infoManager.getRefusal());
         shipwrightSystem.open(ShipwrightStorage.ASSETS);

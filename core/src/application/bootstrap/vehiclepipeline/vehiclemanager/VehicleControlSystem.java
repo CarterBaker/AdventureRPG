@@ -24,8 +24,9 @@ public class VehicleControlSystem extends SystemPackage {
      * taken in together, the anchor dropped or weighed, and a door opened or
      * shut. While an entity holds a helm, activate() lets it go wherever the
      * entity looks, and steer() is its turn at the wheel: its sideways input
-     * swings the rudder and it stands fast; it lets go once it moves off the
-     * helm or starts to swim.
+     * turns the wheel and it stands fast, the rudder answering only while
+     * the anchors are up and the vehicle is driven; it lets go once it moves
+     * off the helm or starts to swim.
      */
 
     // Internal

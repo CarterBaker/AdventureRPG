@@ -184,6 +184,7 @@ public final class TreeModelUtility extends EngineUtility {
 
         emitBarkBox(
                 treeHandle,
+                model,
                 centerX - halfWidth, rootY + bottom, centerZ - halfWidth,
                 centerX + halfWidth, rootY + top, centerZ + halfWidth,
                 capped, bark);
@@ -277,6 +278,7 @@ public final class TreeModelUtility extends EngineUtility {
 
             emitBarkBox(
                     treeHandle,
+                    model,
                     Math.min(fromX, toX) - radius, Math.min(fromY, toY) - radius, Math.min(fromZ, toZ) - radius,
                     Math.max(fromX, toX) + radius, Math.max(fromY, toY) + radius, Math.max(fromZ, toZ) + radius,
                     true, bark);
@@ -288,6 +290,7 @@ public final class TreeModelUtility extends EngineUtility {
 
     private static void emitBarkBox(
             TreeHandle treeHandle,
+            TreeModelStruct model,
             float minX,
             float minY,
             float minZ,
@@ -304,7 +307,7 @@ public final class TreeModelUtility extends EngineUtility {
                 minX, minY, minZ, maxX, maxY, maxZ,
                 corners[barkCorner], corners[barkCorner + 1],
                 treeHandle.getPartColors()[EngineSetting.TREE_PART_BARK],
-                capped, bark);
+                capped, model.getBox(), bark);
     }
 
     // Crown \\
@@ -472,6 +475,7 @@ public final class TreeModelUtility extends EngineUtility {
         if (trunkTop > 0f)
             emitBarkBox(
                     treeHandle,
+                    model,
                     rootX - halfWidth, rootY - EngineSetting.TREE_TRUNK_SINK_BLOCKS, rootZ - halfWidth,
                     rootX + halfWidth, rootY + trunkTop, rootZ + halfWidth,
                     false, bark);

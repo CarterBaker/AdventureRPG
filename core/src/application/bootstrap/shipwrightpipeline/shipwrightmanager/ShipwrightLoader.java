@@ -14,7 +14,9 @@ class ShipwrightLoader extends LoaderPackage {
      * ShipwrightManager, one ship per file, named by its path below the
      * directory, each registered as a vehicle as it loads. ShipwrightManager
      * requests every one in its awake(), so every ship can be launched before
-     * the game starts.
+     * the game starts. It is the one loader of vehicles, which are only ever
+     * drawn, never written by hand; the directory is optional, so a game may
+     * keep none of its own until the editor draws one.
      */
 
     // Internal
@@ -27,9 +29,10 @@ class ShipwrightLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.SHIP_PATH);
+        this.root = new File(EngineSetting.VEHICLE_PATH);
 
-        FileUtility.verifyDirectory(root, "Ship directory not found: " + root.getAbsolutePath());
+        if (!root.isDirectory())
+            return;
 
         for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS))
             queueFile(file);

@@ -3,6 +3,7 @@ package application.bootstrap.shipwrightpipeline.util;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipFurnitureStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.arpg.ArpgArrayStruct;
@@ -14,14 +15,16 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 public class ShipBlueprintArpgUtility extends EngineUtility {
 
     /*
-     * The one reader and writer of ship files, shared by the loader at boot
-     * and the drafting table's library while the game runs. A ship file keeps
-     * its display name and its "decks" from the bottom up. Each deck keeps its
+     * The one reader and writer of vehicle files, shared by the loader at boot
+     * and the drafting table's library while the game runs. A vehicle file
+     * keeps its display name, the "category" it is built as and its "decks"
+     * from the bottom up. Each deck keeps its
      * "outline": the octants it reaches out from the centre line at every
      * octant along the sheet from its "start", aft to fore; and everything
      * standing on it, each at [x, z] across the full breadth, or [x, z, spin]
      * where it faces a way: "walls", "half_walls", "doors", "windows",
-     * "stairs" and every piece of "furniture" naming its furnishing table and
+     * "hatches", "stairs", "ladders" and every piece of "furniture" naming its
+     * furnishing table and
      * its "cell". The "helm" and "capstan" are one [deck, x, z] each, empty
      * for none, the "porch" the deck it hangs at, SHIP_DECK_NONE for none, and
      * every mast keeps its "x", "height", and whether it carries a
@@ -105,8 +108,10 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
                 || !areCellsSound(deckArpg, "half_walls", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "doors", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "windows", EngineSetting.SHIP_PLACE_FIELDS + 1)
-                || !areCellsSound(deckArpg, "stairs", EngineSetting.SHIP_PLACE_FIELDS + 1))
-            return "a wall, door, window or stair stands off its sheet";
+                || !areCellsSound(deckArpg, "hatches", EngineSetting.SHIP_PLACE_FIELDS + 1)
+                || !areCellsSound(deckArpg, "stairs", EngineSetting.SHIP_PLACE_FIELDS + 1)
+                || !areCellsSound(deckArpg, "ladders", EngineSetting.SHIP_PLACE_FIELDS + 1))
+            return "a wall, door, window, hatch, stair or ladder stands off its sheet";
 
         if (ArpgUtility.hasArray(deckArpg, "furniture"))
             for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
@@ -178,7 +183,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         String problem = findProblem(arpg);
 
         if (!problem.isEmpty())
-            throwException("Ship '" + shipName + "' cannot be read: " + problem + ".");
+            throwException("Vehicle '" + shipName + "' cannot be read: " + problem + ".");
 
         return parse(arpg, shipName);
     }
@@ -191,6 +196,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
 
         blueprint.setShipName(shipName);
         blueprint.setDisplayName(ArpgUtility.getString(arpg, "display_name", shipName));
+        blueprint.setCategory(ArpgUtility.getEnum(arpg, "category", VehicleCategory.class, VehicleCategory.SHIP));
         blueprint.setDeckCount(decksArpg.size());
 
         for (int deck = 0; deck < decksArpg.size(); deck++)
@@ -227,7 +233,9 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         parseWalls(deckArpg, "half_walls", deck, true, blueprint);
         parsePlaces(deckArpg, "doors", deck, blueprint.getDoors());
         parsePlaces(deckArpg, "windows", deck, blueprint.getWindows());
+        parsePlaces(deckArpg, "hatches", deck, blueprint.getHatches());
         parsePlaces(deckArpg, "stairs", deck, blueprint.getStairs());
+        parsePlaces(deckArpg, "ladders", deck, blueprint.getLadders());
 
         if (ArpgUtility.hasArray(deckArpg, "furniture"))
             for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
@@ -286,6 +294,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
             decksArpg.add(writeDeck(blueprint, deck));
 
         arpg.addProperty("display_name", blueprint.getDisplayName());
+        arpg.addProperty("category", ArpgUtility.toEnumName(blueprint.getCategory()));
         arpg.add("decks", decksArpg);
         arpg.add("helm", writeCell(blueprint.getHelm()));
         arpg.add("capstan", writeCell(blueprint.getCapstan()));
@@ -317,7 +326,9 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         deckArpg.add("half_walls", writePlaces(blueprint.getHalfWalls(), deck, false));
         deckArpg.add("doors", writePlaces(blueprint.getDoors(), deck, true));
         deckArpg.add("windows", writePlaces(blueprint.getWindows(), deck, true));
+        deckArpg.add("hatches", writePlaces(blueprint.getHatches(), deck, true));
         deckArpg.add("stairs", writePlaces(blueprint.getStairs(), deck, true));
+        deckArpg.add("ladders", writePlaces(blueprint.getLadders(), deck, true));
         deckArpg.add("furniture", writeFurniture(blueprint, deck));
 
         return deckArpg;

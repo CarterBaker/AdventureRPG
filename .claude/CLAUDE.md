@@ -48,7 +48,8 @@ Catalogue). Paths in these instructions are relative to the project root.
   (`.claude/docs/ProgressionPipeline.md`: where things live, which method owns each operation, and the traps).
   Before working in a pipeline, read both when they exist, small tasks included. Before touching levels, stats,
   gear, trades, skills, professions, morality or health, read `.claude/docs/ProgressionPipeline.md` (design:
-  `.claude/docs/Progression.md`).
+  `.claude/docs/Progression.md`). Before touching vehicles, ships, the drafting table (Shipwright), riders or the sea's
+  hold on a hull, read `.claude/docs/VehiclePipeline.md` (design: `.claude/docs/Vehicle.md`).
 
 @docs/Engine.md
 

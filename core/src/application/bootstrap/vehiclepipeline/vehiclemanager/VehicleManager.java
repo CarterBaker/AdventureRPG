@@ -37,8 +37,9 @@ public class VehicleManager extends ManagerPackage {
      * stepped, and every door swings toward open or shut. The helm, the
      * sails, the doors and the anchor change only through here, and an entity
      * leaving the world lets go of every vehicle through releaseEntity().
-     * Every vehicle type is assembled through assembleVehicle(), from a file
-     * at boot or from a drafting table while the game runs; a type drawn
+     * Every vehicle type is drawn at the drafting table, the game's own by
+     * the editor and the player's in the game, and enters the palette through
+     * registerVehicle(), at boot or while the game runs; a type drawn
      * again under the same name replaces the old one, which keeps sailing
      * where it already floats and frees its meshes once the last of it
      * leaves the world. spawnBeside() launches a vehicle beside an entity.
@@ -94,7 +95,6 @@ public class VehicleManager extends ManagerPackage {
         this.vehicleName2VehicleHandle = new Object2ObjectOpenHashMap<>();
         this.vehicleHandles = new ObjectArrayList<>();
         this.retiredHandles = new ObjectArrayList<>();
-        create(VehicleLoader.class);
 
         // Branches
         create(VehicleGeometryBranch.class);
@@ -133,11 +133,6 @@ public class VehicleManager extends ManagerPackage {
     protected void get() {
         this.worldStreamManager = get(WorldStreamManager.class);
         this.clockManager = get(ClockManager.class);
-    }
-
-    @Override
-    protected void awake() {
-        internalLoader.requestAll();
     }
 
     // Update \\
@@ -201,21 +196,8 @@ public class VehicleManager extends ManagerPackage {
 
     // Management \\
 
-    void addVehicleHandle(VehicleHandle vehicleHandle) {
-
-        if (vehicleName2VehicleHandle.containsKey(vehicleHandle.getVehicleName()))
-            throwException("Vehicle '" + vehicleHandle.getVehicleName() + "' is registered twice.");
-
-        vehicleName2VehicleHandle.put(vehicleHandle.getVehicleName(), vehicleHandle);
-        vehicleHandles.add(vehicleHandle);
-    }
-
-    // The one way a vehicle type is made, from whatever it was written as
-    VehicleHandle assembleVehicle(VehicleDesignStruct design) {
-        return vehicleAssemblyBranch.assemble(design);
-    }
-
-    // Assembles a type drawn while the game runs and enters it in the palette, replacing any type of its name
+    // The one way a vehicle type enters the palette: assembled from the design drawn for it, replacing any type of
+    // its name
     public VehicleHandle registerVehicle(VehicleDesignStruct design) {
 
         VehicleHandle vehicleHandle = vehicleAssemblyBranch.assemble(design);
@@ -563,13 +545,8 @@ public class VehicleManager extends ManagerPackage {
 
         VehicleHandle handle = vehicleName2VehicleHandle.get(vehicleName);
 
-        if (handle == null) {
-            ((VehicleLoader) internalLoader).request(vehicleName);
-            handle = vehicleName2VehicleHandle.get(vehicleName);
-        }
-
         if (handle == null)
-            throwException("[VehicleManager] Vehicle could not be loaded: \"" + vehicleName + "\"");
+            throwException("[VehicleManager] No vehicle is registered as \"" + vehicleName + "\"");
 
         return handle;
     }

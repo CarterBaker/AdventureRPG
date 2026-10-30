@@ -39,9 +39,9 @@ class ShipwrightLibraryBranch extends BranchPackage {
     protected void create() {
 
         // Directory
-        this.assetRoot = new File(EngineSetting.SHIP_PATH);
+        this.assetRoot = new File(EngineSetting.VEHICLE_PATH);
         this.saveRoot = new File(internal.path, EngineSetting.SAVE_DIRECTORY + EngineSetting.PATH_SEPARATOR
-                + EngineSetting.SHIP_SAVE_DIRECTORY);
+                + EngineSetting.VEHICLE_SAVE_DIRECTORY);
     }
 
     // Names \\

@@ -65,6 +65,11 @@ public class ShipCellUtility extends EngineUtility {
 
     // Spin \\
 
+    // The quarter turn an item takes to face the way a cell's quarter turn faces: items turn the other way round
+    public static int toItemSpin(int spin) {
+        return Math.floorMod(-spin, EngineSetting.ENCODED_FACE_SPIN_COUNT);
+    }
+
     // One step along the length a quarter turn faces: forward, across to starboard, aft, across to port
     public static int stepX(int spin) {
         return spin == 0 ? 1 : spin == 2 ? -1 : 0;

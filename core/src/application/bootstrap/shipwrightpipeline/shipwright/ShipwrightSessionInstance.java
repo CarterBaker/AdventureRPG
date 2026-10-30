@@ -12,7 +12,8 @@ public class ShipwrightSessionInstance extends InstancePackage {
      * history every change can be undone and redone through, one stroke or
      * press at a time. It holds the tool in hand and what it works on — the
      * deck picked, whether walls stand full or half height, whether an
-     * opening is a door or a window, the mast picked, the furniture item and
+     * opening is a door, a window or a hatch, whether a climb is a stair or a
+     * ladder, the mast picked, the furniture item and
      * the quarter turn something is set down at — and the cursor, the octant
      * of the sheet the pointer or the movement bindings last put it on. The
      * blueprint compiles into this session's own layout whenever it changes,
@@ -49,7 +50,8 @@ public class ShipwrightSessionInstance extends InstancePackage {
     private ShipwrightTool tool;
     private int deck;
     private boolean halfWalls;
-    private boolean windows;
+    private ShipOpening opening;
+    private boolean ladders;
     private int mastIndex;
     private int itemIndex;
     private int spin;
@@ -128,7 +130,8 @@ public class ShipwrightSessionInstance extends InstancePackage {
         // Tool
         this.tool = ShipwrightTool.DECK;
         this.halfWalls = false;
-        this.windows = false;
+        this.opening = ShipOpening.DOOR;
+        this.ladders = false;
         this.itemIndex = 0;
         this.spin = 0;
 
@@ -307,8 +310,13 @@ public class ShipwrightSessionInstance extends InstancePackage {
         markChanged();
     }
 
-    public void setWindows(boolean windows) {
-        this.windows = windows;
+    public void setOpening(ShipOpening opening) {
+        this.opening = opening;
+        markChanged();
+    }
+
+    public void setLadders(boolean ladders) {
+        this.ladders = ladders;
         markChanged();
     }
 
@@ -454,8 +462,13 @@ public class ShipwrightSessionInstance extends InstancePackage {
         return halfWalls;
     }
 
-    public boolean isWindows() {
-        return windows;
+    public ShipOpening getOpening() {
+        return opening;
+    }
+
+    // True while the stairs tool sets ladders down in place of stairs
+    public boolean isLadders() {
+        return ladders;
     }
 
     public int getMastIndex() {

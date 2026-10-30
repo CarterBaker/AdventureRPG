@@ -334,8 +334,9 @@ class VehicleAssemblyBranch extends BranchPackage {
         return sails;
     }
 
-    // Every box of every ladder, reaching out a little either side so a climber can take hold from beside it; a
-    // zone per box keeps a ladder laid along a curved side as close to it as its rungs are
+    // Every box and quad of every ladder, reaching out a little either side so a climber can take hold from beside
+    // it; a zone per box or quad keeps a ladder laid along a curved side or a slanting shroud as close to it as its
+    // rungs are
     private IntArrayList buildClimbZones(ObjectArrayList<VehiclePartStruct> parts) {
 
         IntArrayList climbZones = new IntArrayList();
@@ -348,22 +349,37 @@ class VehicleAssemblyBranch extends BranchPackage {
                 continue;
 
             for (int box = 0; box < part.getBoxCount(); box++)
-                addClimbZone(climbZones, part, box);
+                addClimbZone(climbZones,
+                        part.getBoxBound(box, EngineSetting.BOX_MIN_X),
+                        part.getBoxBound(box, EngineSetting.BOX_MIN_Y),
+                        part.getBoxBound(box, EngineSetting.BOX_MIN_Z),
+                        part.getBoxBound(box, EngineSetting.BOX_MAX_X),
+                        part.getBoxBound(box, EngineSetting.BOX_MAX_Y),
+                        part.getBoxBound(box, EngineSetting.BOX_MAX_Z));
+
+            for (int quad = 0; quad < part.getQuadCount(); quad++)
+                addClimbZone(climbZones,
+                        part.getQuadBound(quad, EngineSetting.BOX_MIN_X),
+                        part.getQuadBound(quad, EngineSetting.BOX_MIN_Y),
+                        part.getQuadBound(quad, EngineSetting.BOX_MIN_Z),
+                        part.getQuadBound(quad, EngineSetting.BOX_MAX_X),
+                        part.getQuadBound(quad, EngineSetting.BOX_MAX_Y),
+                        part.getQuadBound(quad, EngineSetting.BOX_MAX_Z));
         }
 
         return climbZones;
     }
 
-    private void addClimbZone(IntArrayList climbZones, VehiclePartStruct part, int box) {
+    private void addClimbZone(IntArrayList climbZones, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
 
         int reach = EngineSetting.VEHICLE_LADDER_REACH_SUB_VOXELS;
 
-        climbZones.add(part.getBoxBound(box, EngineSetting.BOX_MIN_X) - reach);
-        climbZones.add(part.getBoxBound(box, EngineSetting.BOX_MIN_Y));
-        climbZones.add(part.getBoxBound(box, EngineSetting.BOX_MIN_Z) - reach);
-        climbZones.add(part.getBoxBound(box, EngineSetting.BOX_MAX_X) + reach);
-        climbZones.add(part.getBoxBound(box, EngineSetting.BOX_MAX_Y) + reach);
-        climbZones.add(part.getBoxBound(box, EngineSetting.BOX_MAX_Z) + reach);
+        climbZones.add(minX - reach);
+        climbZones.add(minY);
+        climbZones.add(minZ - reach);
+        climbZones.add(maxX + reach);
+        climbZones.add(maxY + reach);
+        climbZones.add(maxZ + reach);
     }
 
     // Bounds \\

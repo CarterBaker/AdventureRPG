@@ -39,6 +39,12 @@ public final class KeyBindings {
     public static Binding INVENTORY = new Binding(InputCode.key(Keys.I));
     public static Binding ROTATE_ITEM = new Binding(InputCode.key(Keys.R));
 
+    // Cycling — step through a list of choices, or up and down a stack of levels
+    public static Binding CYCLE_PREVIOUS = new Binding(InputCode.key(Keys.Q));
+    public static Binding CYCLE_NEXT = new Binding(InputCode.key(Keys.F));
+    public static Binding LEVEL_UP = new Binding(InputCode.key(Keys.PAGE_UP));
+    public static Binding LEVEL_DOWN = new Binding(InputCode.key(Keys.PAGE_DOWN));
+
     // Editor — Single
     public static Binding TOGGLE_INSPECTOR = new Binding(InputCode.key(Keys.I));
     public static Binding FOCUS_SELECTED = new Binding(InputCode.key(Keys.F));

@@ -19,8 +19,11 @@ class VehicleRigBranch extends BranchPackage {
 
     /*
      * A vehicle's sails and rudder. Once a step the wheel swings the rudder
-     * while the helm is held over and leaves it where it lies when let go,
-     * every sail is set or taken in at its hoist rate, and every mast's yards
+     * while the helm is held over, but only while someone stands at the helm,
+     * every anchor is up and something drives the vehicle — its sails
+     * drawing; otherwise the rudder swings free with the sea running across
+     * the hull, so a vehicle under way with no hand at the helm wanders where
+     * the waves turn it. Every sail is set or taken in at its hoist rate, and every mast's yards
      * brace toward the angle that draws the most drive from the wind across
      * the deck, within their limit. Every sub-step each sail is pushed along
      * its face by the wind it meets, the wind over the grid less the sail's
@@ -64,15 +67,64 @@ class VehicleRigBranch extends BranchPackage {
     void trim(VehicleInstance vehicle, float timeStep) {
 
         VehicleHandlingStruct handling = vehicle.getVehicleHandle().getHandling();
+        float rudderStep = handling.getRudderRate() * timeStep;
+        float rudder = vehicle.getRudderAngle();
 
-        vehicle.setRudderAngle(clamp(
-                vehicle.getRudderAngle() + vehicle.getWheelInput() * handling.getRudderRate() * timeStep,
-                -handling.getRudderLimit(),
-                handling.getRudderLimit()));
+        if (isSteered(vehicle))
+            rudder += vehicle.getWheelInput() * rudderStep;
+        else
+            rudder += clamp(resolveFreeRudder(vehicle, handling) - rudder, -rudderStep, rudderStep);
+
+        vehicle.setRudderAngle(clamp(rudder, -handling.getRudderLimit(), handling.getRudderLimit()));
 
         hoistSails(vehicle, handling.getHoistRate() * timeStep);
         braceYards(vehicle, handling, timeStep);
     }
+
+    // Steering \\
+
+    // True while the helm answers: someone stands at it, the anchors are up and the vehicle is driven
+    private boolean isSteered(VehicleInstance vehicle) {
+        return vehicle.getHelmsman() != null && !vehicle.isAnchored() && isPropelled(vehicle);
+    }
+
+    // True while anything drives the vehicle: a sail drawing
+    private boolean isPropelled(VehicleInstance vehicle) {
+
+        for (int sailIndex = 0; sailIndex < vehicle.getVehicleHandle().getSailCount(); sailIndex++)
+            if (vehicle.getSailHoist(sailIndex) > EngineSetting.VEHICLE_PROPELLED_HOIST)
+                return true;
+
+        return false;
+    }
+
+    // The angle a free rudder swings toward: pushed over by the sea running across the hull, on average over every
+    // column, so it wanders as the waves pass under it
+    private float resolveFreeRudder(VehicleInstance vehicle, VehicleHandlingStruct handling) {
+
+        float[] motion = vehicle.getColumnMotion();
+        int columns = motion.length / EngineSetting.AXIS_COUNT;
+
+        if (columns == 0)
+            return 0f;
+
+        float seaX = 0f;
+        float seaY = 0f;
+        float seaZ = 0f;
+
+        for (int i = 0; i < columns; i++) {
+            seaX += motion[i * EngineSetting.AXIS_COUNT];
+            seaY += motion[i * EngineSetting.AXIS_COUNT + 1];
+            seaZ += motion[i * EngineSetting.AXIS_COUNT + 2];
+        }
+
+        VehicleSpaceUtility.toModelDirection(vehicle, seaX / columns, seaY / columns, seaZ / columns, bodyScratch);
+
+        return clamp(bodyScratch.z * EngineSetting.VEHICLE_FREE_RUDDER_GAIN,
+                -handling.getRudderLimit(), handling.getRudderLimit());
+    }
+
+    // Sails \\
 
     private void hoistSails(VehicleInstance vehicle, float hoistStep) {
 

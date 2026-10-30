@@ -327,6 +327,10 @@ public class SettingsUtility extends EngineUtility {
         KeyBindings.ACTIVATE.set(toInputCodes(settings.bindActivate));
         KeyBindings.INVENTORY.set(toInputCodes(settings.bindInventory));
         KeyBindings.ROTATE_ITEM.set(toInputCodes(settings.bindRotateItem));
+        KeyBindings.CYCLE_PREVIOUS.set(toInputCodes(settings.bindCyclePrevious));
+        KeyBindings.CYCLE_NEXT.set(toInputCodes(settings.bindCycleNext));
+        KeyBindings.LEVEL_UP.set(toInputCodes(settings.bindLevelUp));
+        KeyBindings.LEVEL_DOWN.set(toInputCodes(settings.bindLevelDown));
         KeyBindings.TOGGLE_INSPECTOR.set(toInputCodes(settings.bindToggleInspector));
         KeyBindings.FOCUS_SELECTED.set(toInputCodes(settings.bindFocusSelected));
         KeyBindings.DELETE_SELECTED.set(toInputCodes(settings.bindDeleteSelected));
@@ -350,6 +354,10 @@ public class SettingsUtility extends EngineUtility {
         settings.bindActivate = toCodes(KeyBindings.ACTIVATE);
         settings.bindInventory = toCodes(KeyBindings.INVENTORY);
         settings.bindRotateItem = toCodes(KeyBindings.ROTATE_ITEM);
+        settings.bindCyclePrevious = toCodes(KeyBindings.CYCLE_PREVIOUS);
+        settings.bindCycleNext = toCodes(KeyBindings.CYCLE_NEXT);
+        settings.bindLevelUp = toCodes(KeyBindings.LEVEL_UP);
+        settings.bindLevelDown = toCodes(KeyBindings.LEVEL_DOWN);
         settings.bindToggleInspector = toCodes(KeyBindings.TOGGLE_INSPECTOR);
         settings.bindFocusSelected = toCodes(KeyBindings.FOCUS_SELECTED);
         settings.bindDeleteSelected = toCodes(KeyBindings.DELETE_SELECTED);

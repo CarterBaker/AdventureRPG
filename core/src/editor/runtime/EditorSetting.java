@@ -1240,7 +1240,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_ANIMATIONS = "Animations";
     public static final String INFO_SCHEMA_ANIMATION_TREES = "AnimationTrees";
     public static final String INFO_SCHEMA_WORLDS = "Worlds";
-    public static final String INFO_SCHEMA_SHIPS = "Ships";
+    public static final String INFO_SCHEMA_VEHICLES = "Vehicles";
     public static final String INFO_SCHEMA_SHORTCUTS = "Shortcuts";
     public static final String INFO_SCHEMA_SETTLEMENTS = "Settlements";
     public static final String INFO_SCHEMA_STRUCTURES = "Structures";

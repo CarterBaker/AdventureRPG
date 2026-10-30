@@ -10,7 +10,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class VehicleData extends DataPackage {
 
     /*
-     * Immutable vehicle definition built from ARPG by VehicleBuilder. Holds its
+     * Immutable vehicle definition assembled from its design. Holds its
      * identity and category, every part in data order with the masts, sails, helm, rudder,
      * capstan and doors its rig and controls work through, the solid sub-voxels
      * riders and cargo collide with, the zones its ladders can be climbed in,

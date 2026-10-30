@@ -7,7 +7,9 @@ import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 class VehicleGeometryBranch extends BranchPackage {
 
@@ -20,7 +22,10 @@ class VehicleGeometryBranch extends BranchPackage {
      * greedy mesher, which merges each part's faces across block boundaries
      * so a long plank is one quad end to end; a face carries only its part's
      * texture corner and the vehicle shader repeats the texture once per
-     * block. A mesh is cut before it passes the mesh vertex limit. The
+     * block. Rope and netting are flat quads laid alongside, each drawn from
+     * both sides with its texture's cut-outs left open, so a whole shroud is
+     * a handful of quads however many ratlines its texture shows. A mesh is
+     * cut before it passes the mesh vertex limit. The
      * triangles a set of parts would draw are counted through the same mesher
      * without building a mesh, so a design is measured exactly as it will be
      * drawn. Lives for the engine lifetime, so a vehicle designed while the
@@ -33,6 +38,9 @@ class VehicleGeometryBranch extends BranchPackage {
     // Scratch — main thread only
     private SubVoxelGridStruct countGrid;
     private SubVoxelQuadListStruct countQuads;
+    private FloatArrayList quadVertices;
+    private ShortArrayList quadIndices;
+    private float[] cornerScratch;
 
     // Base \\
 
@@ -42,6 +50,9 @@ class VehicleGeometryBranch extends BranchPackage {
         // Scratch
         this.countGrid = new SubVoxelGridStruct();
         this.countQuads = new SubVoxelQuadListStruct();
+        this.quadVertices = new FloatArrayList();
+        this.quadIndices = new ShortArrayList();
+        this.cornerScratch = new float[EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.AXIS_COUNT];
     }
 
     @Override
@@ -82,12 +93,24 @@ class VehicleGeometryBranch extends BranchPackage {
     ObjectArrayList<MeshInstance> buildHullMeshes(ObjectArrayList<VehiclePartStruct> parts) {
 
         SubVoxelGridStruct grid = new SubVoxelGridStruct();
+        float[] partUVBounds = resolveUVBounds(parts);
 
         for (int partIndex = 0; partIndex < parts.size(); partIndex++)
             if (parts.get(partIndex).getRole().isStatic())
                 rasterize(grid, parts.get(partIndex), partIndex);
 
-        return subVoxelManager.createGridMeshes(grid, resolveUVBounds(parts));
+        ObjectArrayList<MeshInstance> meshes = subVoxelManager.createGridMeshes(grid, partUVBounds);
+
+        quadVertices.clear();
+        quadIndices.clear();
+
+        for (int partIndex = 0; partIndex < parts.size(); partIndex++)
+            if (parts.get(partIndex).getRole().isStatic())
+                emitPartQuads(parts.get(partIndex), partIndex, partUVBounds, meshes);
+
+        flushQuads(meshes);
+
+        return meshes;
     }
 
     // Every moving part meshed alone, so it can be drawn through its own transform
@@ -108,9 +131,69 @@ class VehicleGeometryBranch extends BranchPackage {
 
             ObjectArrayList<MeshInstance> meshes = subVoxelManager.createGridMeshes(grid, partUVBounds);
 
+            quadVertices.clear();
+            quadIndices.clear();
+            emitPartQuads(part, partIndex, partUVBounds, meshes);
+            flushQuads(meshes);
+
             for (int i = 0; i < meshes.size(); i++)
                 part.addMesh(meshes.get(i));
         }
+    }
+
+    // Quads \\
+
+    // Every quad of a part written from both sides, a mesh cut off whenever the next would pass the vertex limit
+    private void emitPartQuads(
+            VehiclePartStruct part,
+            int partIndex,
+            float[] partUVBounds,
+            ObjectArrayList<MeshInstance> meshes) {
+
+        int uvBase = partIndex * EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS;
+        int sideVertices = EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.VEHICLE_QUAD_SIDES;
+
+        for (int quad = 0; quad < part.getQuadCount(); quad++) {
+
+            if (quadVertices.size() / EngineSetting.SUB_VOXEL_VERTEX_STRIDE + sideVertices
+                    > EngineSetting.MESH_VERT_LIMIT)
+                flushQuads(meshes);
+
+            int face = part.getQuadFace(quad);
+            int back = subVoxelManager.resolveFace(subVoxelManager.getFaceAxis(face),
+                    subVoxelManager.getFaceNormal(face, subVoxelManager.getFaceAxis(face)) < 0);
+
+            writeCorners(part, quad, false);
+            subVoxelManager.emitQuad(face, cornerScratch, partUVBounds, uvBase, quadVertices, quadIndices);
+            writeCorners(part, quad, true);
+            subVoxelManager.emitQuad(back, cornerScratch, partUVBounds, uvBase, quadVertices, quadIndices);
+        }
+    }
+
+    // A quad's corners in blocks, in its own winding or the reverse for its back
+    private void writeCorners(VehiclePartStruct part, int quad, boolean reversed) {
+
+        float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
+
+        for (int corner = 0; corner < EngineSetting.QUAD_VERTEX_COUNT; corner++) {
+
+            int source = reversed ? EngineSetting.QUAD_VERTEX_COUNT - 1 - corner : corner;
+
+            for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++)
+                cornerScratch[corner * EngineSetting.AXIS_COUNT + axis] =
+                        part.getQuadCorner(quad, source, axis) * scale;
+        }
+    }
+
+    // The quads gathered so far uploaded as one mesh
+    private void flushQuads(ObjectArrayList<MeshInstance> meshes) {
+
+        if (quadIndices.isEmpty())
+            return;
+
+        meshes.add(subVoxelManager.createMesh(quadVertices, quadIndices));
+        quadVertices.clear();
+        quadIndices.clear();
     }
 
     // Count \\
@@ -139,6 +222,9 @@ class VehicleGeometryBranch extends BranchPackage {
         }
 
         countGrid.clear();
+
+        for (int partIndex = 0; partIndex < parts.size(); partIndex++)
+            quads += parts.get(partIndex).getQuadCount() * EngineSetting.VEHICLE_QUAD_SIDES;
 
         return quads * EngineSetting.QUAD_TRIANGLE_COUNT;
     }

@@ -32,6 +32,9 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-10-30: Sounds are Ogg Vorbis only. The 134 generated `.wav` sounds under `assets/sounds/` renamed to `.ogg`,
   converted on the owner's PC.
 - 2026-10-30: Removed `sounds/interface/Confirm.ogg` and its companion `Confirm.arpg`: no cue or code plays it.
+- 2026-10-30: Tree performance and fades. Added `shaders/trees/includes/TreeFade.glsl` (dithered hand-over between a
+  tree's looks); rewrote `TreeBarkShader.fsh`, `TreeLeafShader.fsh` (fade) and `TreeLeafSprig.glsl` (far leaves read
+  as solid foliage without tracing blades).
 
 ---
 
@@ -945,7 +948,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (172 files)
+## Shaders (173 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1103,7 +1106,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/trees/includes/`
 
-`TreeBark.glsl`, `TreeLeaf.glsl`, `TreeLeafSprig.glsl`, `TreeShading.glsl`
+`TreeBark.glsl`, `TreeFade.glsl`, `TreeLeaf.glsl`, `TreeLeafSprig.glsl`, `TreeShading.glsl`
 
 ### `assets/shaders/trees/leaf/`
 

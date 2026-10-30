@@ -254,6 +254,23 @@ public class SubVoxelManager extends ManagerPackage {
         SubVoxelMeshUtility.emitFace(face, min, max, uvBounds[uvBase], uvBounds[uvBase + 1], vertices, indices);
     }
 
+    // One quad through four corners in block units, wound as given, carrying the texture corner at uvBase — a face
+    // laid at any slant, read by the shader as the face given
+    public void emitQuad(
+            int face,
+            float[] corners,
+            float[] uvBounds,
+            int uvBase,
+            FloatArrayList vertices,
+            ShortArrayList indices) {
+        SubVoxelMeshUtility.emitCorners(face, corners, uvBounds[uvBase], uvBounds[uvBase + 1], vertices, indices);
+    }
+
+    // The face whose normal runs along an axis, toward its positive or negative side
+    public int resolveFace(int axis, boolean positive) {
+        return SubVoxelMeshUtility.resolveFace(axis, positive);
+    }
+
     // One component of a face's outward normal, faces numbered as the item shader numbers them
     public int getFaceNormal(int face, int axis) {
         return SubVoxelMeshUtility.getFaceNormal(face, axis);

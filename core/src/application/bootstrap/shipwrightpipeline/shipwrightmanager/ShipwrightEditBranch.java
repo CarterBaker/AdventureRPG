@@ -4,6 +4,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipFurnitureStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
@@ -22,8 +23,12 @@ class ShipwrightEditBranch extends BranchPackage {
      * sheet it crosses, mirrored either side of the centre line, and walls are
      * painted on the open floor it passes over; every other tool works the octant the stroke
      * began on once, setting a thing down or taking up whatever already stands
-     * there. Every stroke, and every option worked from the menu, is one
-     * change: the blueprint as it stood is kept to undo and the blueprint is
+     * there. Only the outline is mirrored; walls, openings, stairs, ladders
+     * and furniture stand only where they are set. A door or a window is set
+     * on the wall or side it is cut through and turns itself to face across
+     * it, and taking a wall down takes every door and window in it along.
+     * Every stroke, and every option worked from the menu, is one change:
+     * the blueprint as it stood is kept to undo and the blueprint is
      * compiled. Redrawing a deck takes up whatever no longer stands on it and
      * is always kept, its shape's problems only shown; any other change that
      * leaves something built with no room to stand when nothing was is taken
@@ -33,6 +38,7 @@ class ShipwrightEditBranch extends BranchPackage {
 
     // Internal
     private ShipwrightManager shipwrightManager;
+    private ShipwrightFittingBranch shipwrightFittingBranch;
     private SoundCueManager soundCueManager;
 
     // Cues
@@ -44,6 +50,7 @@ class ShipwrightEditBranch extends BranchPackage {
     @Override
     protected void get() {
         this.shipwrightManager = get(ShipwrightManager.class);
+        this.shipwrightFittingBranch = get(ShipwrightFittingBranch.class);
         this.soundCueManager = get(SoundCueManager.class);
     }
 
@@ -110,9 +117,9 @@ class ShipwrightEditBranch extends BranchPackage {
         return switch (session.getTool()) {
             case DECK -> drawOutline(blueprint, session.getDeck(), x, z, erasing);
             case WALLS -> paintWall(session, x, z, erasing);
-            case OPENINGS -> togglePlacement(session,
-                    session.isWindows() ? blueprint.getWindows() : blueprint.getDoors(), x, z, erasing);
-            case STAIRS -> togglePlacement(session, blueprint.getStairs(), x, z, erasing);
+            case OPENINGS -> placeOpening(session, x, z, erasing);
+            case STAIRS -> togglePlacement(session,
+                    session.isLadders() ? blueprint.getLadders() : blueprint.getStairs(), x, z, erasing);
             case MASTS -> pickMast(session, x, erasing);
             case FURNITURE -> placeItem(session, x, z, erasing);
         };
@@ -141,7 +148,11 @@ class ShipwrightEditBranch extends BranchPackage {
             if (!blueprint.hasWall(deck, x, z))
                 return false;
 
+            int place = ShipCellUtility.pack(deck, x, z, 0);
+
             blueprint.setWall(deck, x, z, false, false);
+            removePlacement(blueprint.getDoors(), place);
+            removePlacement(blueprint.getWindows(), place);
 
             return true;
         }
@@ -170,6 +181,62 @@ class ShipwrightEditBranch extends BranchPackage {
         ShipBlueprintStruct.togglePlacement(cells, cell);
 
         return true;
+    }
+
+    // Takes up a door, window or hatch standing at the cursor, or sets the kind picked down: a hatch on any floor
+    // over a deck, a door or window only on a wall or the side, turned to face across it
+    private boolean placeOpening(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
+
+        ShipBlueprintStruct blueprint = session.getBlueprint();
+        ShipOpening opening = session.getOpening();
+        IntArrayList cells = blueprint.getOpenings(opening);
+        int deck = session.getDeck();
+        int place = ShipCellUtility.pack(deck, x, z, 0);
+
+        if (ShipBlueprintStruct.findPlacement(cells, place) != EngineSetting.INDEX_NOT_FOUND) {
+            removePlacement(cells, place);
+            return true;
+        }
+
+        if (erasing || !blueprint.isOnDeck(deck, x, z))
+            return false;
+
+        if (opening == ShipOpening.HATCH) {
+
+            if (deck == 0)
+                return refuse(session, EngineSetting.SHIPWRIGHT_PROBLEM_HATCH_BOTTOM);
+
+            ShipBlueprintStruct.togglePlacement(cells, resolveCell(session, x, z));
+
+            return true;
+        }
+
+        int sill = opening == ShipOpening.WINDOW ? EngineSetting.SHIP_WINDOW_SILL : 1;
+
+        if (!shipwrightFittingBranch.isOpeningWall(session.getLayout(), deck, x, z, sill))
+            return refuse(session, EngineSetting.SHIPWRIGHT_PROBLEM_OPENING_WALL);
+
+        ShipBlueprintStruct.togglePlacement(cells, ShipCellUtility.pack(deck, x, z,
+                shipwrightFittingBranch.resolveOpeningSpin(session.getLayout(), deck, x, z, sill, session.getSpin())));
+
+        return true;
+    }
+
+    private static void removePlacement(IntArrayList cells, int place) {
+
+        int index = ShipBlueprintStruct.findPlacement(cells, place);
+
+        if (index != EngineSetting.INDEX_NOT_FOUND)
+            cells.removeInt(index);
+    }
+
+    // A placement turned down with the reason shown, nothing changed
+    private boolean refuse(ShipwrightSessionInstance session, String reason) {
+
+        session.setStatus(reason);
+        soundCueManager.playCue(refusedCueID);
+
+        return false;
     }
 
     // Picks the mast at an octant along the length, steps a new one there, or with erasing takes it down
@@ -346,12 +413,14 @@ class ShipwrightEditBranch extends BranchPackage {
         session.setSpin((session.getSpin() + 1) % EngineSetting.ENCODED_FACE_SPIN_COUNT);
     }
 
-    // Steps the option of the tool in hand: wall height, door or window, the furniture item, or the mast picked
+    // Steps the option of the tool in hand: wall height, door, window or hatch, stair or ladder, the furniture item,
+    // or the mast picked
     void stepOption(ShipwrightSessionInstance session, int step) {
 
         switch (session.getTool()) {
             case WALLS -> session.setHalfWalls(!session.isHalfWalls());
-            case OPENINGS -> session.setWindows(!session.isWindows());
+            case OPENINGS -> session.setOpening(session.getOpening().step(step));
+            case STAIRS -> session.setLadders(!session.isLadders());
             case FURNITURE -> session.setItemIndex(Math.floorMod(session.getItemIndex() + step, resolveItemCount()));
             case MASTS -> stepMast(session, step);
             default -> stepDeck(session, step);

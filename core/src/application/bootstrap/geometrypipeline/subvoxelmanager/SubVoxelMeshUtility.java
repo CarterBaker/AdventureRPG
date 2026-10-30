@@ -147,10 +147,23 @@ public class SubVoxelMeshUtility extends EngineUtility {
             FloatArrayList vertices,
             ShortArrayList indices) {
 
-        int baseVertex = vertices.size() / EngineSetting.SUB_VOXEL_VERTEX_STRIDE;
         float[] corners = new float[EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.AXIS_COUNT];
 
         resolveCorners(face, min, max, corners);
+        emitCorners(face, corners, u0, v0, vertices, indices);
+    }
+
+    // One quad through four corners in block units, three floats each in winding order, carrying its texture's
+    // corner and read by the shader as the face given
+    static void emitCorners(
+            int face,
+            float[] corners,
+            float u0,
+            float v0,
+            FloatArrayList vertices,
+            ShortArrayList indices) {
+
+        int baseVertex = vertices.size() / EngineSetting.SUB_VOXEL_VERTEX_STRIDE;
 
         for (int corner = 0; corner < EngineSetting.QUAD_VERTEX_COUNT; corner++)
             putVertex(

@@ -9,7 +9,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class VehicleHullStruct extends StructPackage {
 
     /*
-     * Everything VehicleBuilder works out about a hull from its watertight
+     * Everything assembly works out about a hull from its watertight
      * parts. The dry volume is a grid of cells the sea cannot reach inside the
      * hull; its columns each sample the sea once and flood at their deck edge,
      * its lumps are what the sea lifts, and the hull displaces exactly its own

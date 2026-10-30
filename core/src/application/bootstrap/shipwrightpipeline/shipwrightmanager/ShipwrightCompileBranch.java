@@ -4,7 +4,6 @@ import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
-import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleDesignStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandlingStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
@@ -23,10 +22,11 @@ class ShipwrightCompileBranch extends BranchPackage {
      * pieces of one deck — must rest on the deck below. The octant grid is laid out round
      * the sheet with room aft for the rudder and the porch and headroom for
      * deckhouses and bulwarks; the hull, its decks, porch, bulwarks, walls,
-     * stairs, doors and windows are laid into it through ShipwrightHullBranch
-     * and ShipwrightFittingBranch, and every piece merged into its part. The
-     * bowsprit, helm, capstan, rudder and the whole rig are then built as
-     * parts of their own, and the cargo is placed and checked against
+     * stairs, ladders, hatches, doors, windows and gun ports are laid into it
+     * through ShipwrightHullBranch and ShipwrightFittingBranch, and every piece
+     * merged into its part. The bowsprit, helm, capstan, rudder, anchors,
+     * lids, ladders, glass and the whole rig are then built as parts of their
+     * own, and the cargo is placed and checked against
      * everything solid. Last the ship is weighed, every box by what it is
      * made of, and floated: stone ballast is laid along its bottom until it
      * sinks to its share of the height the sea may rise to before it comes
@@ -36,8 +36,9 @@ class ShipwrightCompileBranch extends BranchPackage {
      * out, never drawn. A hull too short, too round or too blunt at its
      * waterline to sail, or one that would sink, is a problem in its shape. A
      * compiled layout becomes a VehicleDesignStruct, named for the vehicle it
-     * is registered as, with every handling value at its default and the drag
-     * along its length left to the shape of its bow.
+     * is registered as, with every handling value at its default but the
+     * drop its anchors fall to, and the drag along its length left to the
+     * shape of its bow.
      */
 
     // Internal
@@ -79,6 +80,8 @@ class ShipwrightCompileBranch extends BranchPackage {
         shipwrightHullBranch.layBulwarks(layout);
         shipwrightHullBranch.layWalls(blueprint, layout);
         shipwrightHullBranch.layStairs(blueprint, layout);
+        shipwrightHullBranch.layLadders(blueprint, layout);
+        shipwrightHullBranch.layHatches(blueprint, layout);
         shipwrightFittingBranch.cutOpenings(blueprint, layout);
 
         mergePieces(layout);
@@ -303,23 +306,23 @@ class ShipwrightCompileBranch extends BranchPackage {
     // Design \\
 
     // A compiled layout as the design its vehicle is assembled from; it must have compiled without a problem
-    VehicleDesignStruct toDesign(ShipLayoutStruct layout, String vehicleName, String displayName) {
+    VehicleDesignStruct toDesign(ShipBlueprintStruct blueprint, ShipLayoutStruct layout, String vehicleName) {
 
         ObjectArrayList<VehiclePartStruct> parts = new ObjectArrayList<>(layout.getParts());
         ObjectArrayList<FurnishingSlotStruct> cargoSlots = new ObjectArrayList<>(layout.getCargoSlots());
 
         return new VehicleDesignStruct(
                 vehicleName,
-                displayName,
-                VehicleCategory.SHIP,
+                blueprint.getDisplayName(),
+                blueprint.getCategory(),
                 parts,
                 layout.getDraft(),
                 layout.getCenterOfMassHeight(),
-                createHandling(),
+                createHandling(layout),
                 cargoSlots);
     }
 
-    private VehicleHandlingStruct createHandling() {
+    private VehicleHandlingStruct createHandling(ShipLayoutStruct layout) {
         return new VehicleHandlingStruct(
                 EngineSetting.DEFAULT_VEHICLE_SWAY_DRAG,
                 EngineSetting.DEFAULT_VEHICLE_HEAVE_DRAG,
@@ -333,6 +336,6 @@ class ShipwrightCompileBranch extends BranchPackage {
                 (float) Math.toRadians(EngineSetting.DEFAULT_VEHICLE_RUDDER_RATE_DEGREES),
                 EngineSetting.DEFAULT_VEHICLE_RUDDER_FORCE,
                 EngineSetting.DEFAULT_VEHICLE_ANCHOR_HOLD,
-                EngineSetting.DEFAULT_VEHICLE_ANCHOR_DROP);
+                layout.getAnchorDrop());
     }
 }

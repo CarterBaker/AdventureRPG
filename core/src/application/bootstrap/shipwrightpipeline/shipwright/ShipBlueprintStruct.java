@@ -3,6 +3,7 @@ package application.bootstrap.shipwrightpipeline.shipwright;
 import java.util.Arrays;
 
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
+import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -12,12 +13,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class ShipBlueprintStruct extends StructPackage {
 
     /*
-     * A ship as it is drawn at the drafting table, everything a ship file
-     * keeps. A ship is a stack of decks from the bottom up, each drawn as its
+     * A vehicle as it is drawn at the drafting table, everything its file
+     * keeps, and the category it is drawn and built as. A ship is a stack of
+     * decks from the bottom up, each drawn as its
      * outline: how many octants it reaches out from the centre line at every
      * octant along the sheet, mirrored to the other side. Walls, half walls,
-     * doors, windows, stairs and furniture stand on a deck at an octant along
-     * the length and across the full breadth, each packed through
+     * doors, windows, hatches, stairs, ladders and furniture stand on a deck
+     * at an octant along the length and across the full breadth, never
+     * mirrored, each packed through
      * ShipCellUtility with its deck as its level; walls are kept sorted and a
      * place holds at most one of each. The helm and the capstan are one
      * placement each, masts stand on the centre line kept from the stern
@@ -29,6 +32,7 @@ public class ShipBlueprintStruct extends StructPackage {
     // Identity
     private String shipName;
     private String displayName;
+    private VehicleCategory category;
 
     // Decks — the half-beam of every deck at every octant along the sheet, deck after deck
     private final byte[] outlines;
@@ -39,7 +43,9 @@ public class ShipBlueprintStruct extends StructPackage {
     private final IntArrayList halfWalls;
     private final IntArrayList doors;
     private final IntArrayList windows;
+    private final IntArrayList hatches;
     private final IntArrayList stairs;
+    private final IntArrayList ladders;
 
     // Fittings — packed cells
     private int helm;
@@ -61,6 +67,7 @@ public class ShipBlueprintStruct extends StructPackage {
         // Identity
         this.shipName = EngineSetting.SHIP_NAME_NONE;
         this.displayName = EngineSetting.SHIP_NAME_NONE;
+        this.category = VehicleCategory.SHIP;
 
         // Decks
         this.outlines = new byte[EngineSetting.SHIP_MAX_DECKS * EngineSetting.SHIP_SHEET_LENGTH];
@@ -71,7 +78,9 @@ public class ShipBlueprintStruct extends StructPackage {
         this.halfWalls = new IntArrayList();
         this.doors = new IntArrayList();
         this.windows = new IntArrayList();
+        this.hatches = new IntArrayList();
         this.stairs = new IntArrayList();
+        this.ladders = new IntArrayList();
 
         // Fittings
         this.helm = EngineSetting.SHIP_CELL_NONE;
@@ -101,6 +110,7 @@ public class ShipBlueprintStruct extends StructPackage {
         // Identity
         this.shipName = other.shipName;
         this.displayName = other.displayName;
+        this.category = other.category;
 
         // Decks
         System.arraycopy(other.outlines, 0, outlines, 0, outlines.length);
@@ -111,7 +121,9 @@ public class ShipBlueprintStruct extends StructPackage {
         copyCells(other.halfWalls, halfWalls);
         copyCells(other.doors, doors);
         copyCells(other.windows, windows);
+        copyCells(other.hatches, hatches);
         copyCells(other.stairs, stairs);
+        copyCells(other.ladders, ladders);
 
         // Fittings
         this.helm = other.helm;
@@ -200,7 +212,9 @@ public class ShipBlueprintStruct extends StructPackage {
         removeDeckCells(halfWalls, deck);
         removeDeckCells(doors, deck);
         removeDeckCells(windows, deck);
+        removeDeckCells(hatches, deck);
         removeDeckCells(stairs, deck);
+        removeDeckCells(ladders, deck);
         this.helm = removeDeckCell(helm, deck);
         this.capstan = removeDeckCell(capstan, deck);
 
@@ -261,7 +275,9 @@ public class ShipBlueprintStruct extends StructPackage {
         pruneCells(halfWalls);
         pruneCells(doors);
         pruneCells(windows);
+        pruneCells(hatches);
         pruneCells(stairs);
+        pruneCells(ladders);
 
         if (!isCellOnDeck(helm))
             this.helm = EngineSetting.SHIP_CELL_NONE;
@@ -478,6 +494,10 @@ public class ShipBlueprintStruct extends StructPackage {
         this.displayName = displayName;
     }
 
+    public void setCategory(VehicleCategory category) {
+        this.category = category;
+    }
+
     // Sets how many decks the stack holds, as a ship file is read
     public void setDeckCount(int deckCount) {
         this.deckCount = Math.max(1, Math.min(EngineSetting.SHIP_MAX_DECKS, deckCount));
@@ -509,6 +529,10 @@ public class ShipBlueprintStruct extends StructPackage {
         return displayName;
     }
 
+    public VehicleCategory getCategory() {
+        return category;
+    }
+
     public int getDeckCount() {
         return deckCount;
     }
@@ -533,8 +557,16 @@ public class ShipBlueprintStruct extends StructPackage {
         return windows;
     }
 
+    public IntArrayList getHatches() {
+        return hatches;
+    }
+
     public IntArrayList getStairs() {
         return stairs;
+    }
+
+    public IntArrayList getLadders() {
+        return ladders;
     }
 
     public int getHelm() {
@@ -551,6 +583,15 @@ public class ShipBlueprintStruct extends StructPackage {
 
     public boolean hasCapstan() {
         return capstan != EngineSetting.SHIP_CELL_NONE;
+    }
+
+    // The placements of one kind of opening
+    public IntArrayList getOpenings(ShipOpening opening) {
+        return switch (opening) {
+            case DOOR -> doors;
+            case WINDOW -> windows;
+            case HATCH -> hatches;
+        };
     }
 
     public ObjectArrayList<ShipFurnitureStruct> getFurniture() {

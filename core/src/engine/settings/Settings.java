@@ -113,6 +113,10 @@ public class Settings {
     public int[] bindActivate = { Keys.E };
     public int[] bindInventory = { Keys.I };
     public int[] bindRotateItem = { Keys.R };
+    public int[] bindCyclePrevious = { Keys.Q };
+    public int[] bindCycleNext = { Keys.F };
+    public int[] bindLevelUp = { Keys.PAGE_UP };
+    public int[] bindLevelDown = { Keys.PAGE_DOWN };
 
     // Bindings — Editor Single
     public int[] bindToggleInspector = { Keys.I };

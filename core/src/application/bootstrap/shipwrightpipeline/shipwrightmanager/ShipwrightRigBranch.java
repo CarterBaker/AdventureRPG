@@ -5,6 +5,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
+import application.bootstrap.shipwrightpipeline.util.ShipRopeUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartRole;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import engine.root.BranchPackage;
@@ -16,9 +17,9 @@ class ShipwrightRigBranch extends BranchPackage {
 
     /*
      * Works out a blueprint's spars, canvas and rope. The bowsprit is worked
-     * out from the bow alone once the ship carries a mast: it runs forward
-     * from just inboard of the stem over the deck there, rising an octant every
-     * few, as long as the hull's length sets. Every mast the player steps
+     * out from the bow alone on every hull long enough to carry one: it runs
+     * forward from just inboard of the stem over the deck there, rising an
+     * octant every few, as long as the hull's length sets. Every mast the player steps
      * stands on the keel at its place on the centre line and rises its height
      * above the highest deck it passes through. Its sails
      * follow from that height: the course clears the deck by a man's height
@@ -27,13 +28,14 @@ class ShipwrightRigBranch extends BranchPackage {
      * below, the course as wide as the hull is there. A crow's nest is a railed
      * platform at the head of the lower mast, and lifts every sail above it
      * clear. A rigged mast's shrouds step down from its nest, or its head, to
-     * the deck edge either side as ratlines the crew climb, two rope rails
-     * with a rung at every step, and a stay runs forward and down from its
-     * head to the foot of the next mast forward, or to the bowsprit's tip. A
-     * new mast is as tall as the hull's length sets. Masts are named from the
-     * bow aft. Spars, canvas and rope are laid as boxes of their own in
-     * sub-voxels, rope and canvas a single sub-voxel thick, so the rig stays
-     * light however tall it stands.
+     * the deck edge either side as ratlines the crew climb, and a stay runs
+     * forward and down from its head to the foot of the next mast forward, or
+     * to the bowsprit's tip. A new mast is as tall as the hull's length sets.
+     * Masts are named from the bow aft. Spars and canvas are laid as boxes of
+     * their own in sub-voxels, canvas a single sub-voxel thick; rope is never
+     * built of sub-voxels but laid as flat quads its texture is drawn on, the
+     * ratlines a sheet of netting a step at a time and every stay two crossed
+     * ribbons, so the rig stays light however tall it stands.
      */
 
     // Internal
@@ -55,12 +57,13 @@ class ShipwrightRigBranch extends BranchPackage {
     }
 
     // Steps forward and up from inboard of the stem, a square spar an octant pair across, its tip kept for the stays;
-    // a ship with no mast carries none
+    // a hull too short for one carries none
     void addBowsprit(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
         int stem = findStem(layout);
 
-        if (stem == EngineSetting.INDEX_NOT_FOUND || blueprint.getMasts().isEmpty())
+        if (stem == EngineSetting.INDEX_NOT_FOUND
+                || resolveHullLength(layout) < EngineSetting.SHIP_BOWSPRIT_MIN_HULL_LENGTH)
             return;
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
@@ -306,7 +309,7 @@ class ShipwrightRigBranch extends BranchPackage {
 
         VehiclePartStruct shrouds = createPart(
                 mastName + EngineSetting.SHIP_PART_SHROUDS_SUFFIX, VehiclePartRole.LADDER,
-                EngineSetting.SHIP_TEXTURE_ROPE);
+                EngineSetting.SHIP_TEXTURE_RATLINES);
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
         int deckHalf = layout.getSection(mast.getX(), deck);
@@ -333,30 +336,22 @@ class ShipwrightRigBranch extends BranchPackage {
 
             int high = top - fall * step / steps;
             int low = top - fall * (step + 1) / steps;
-            int starboard = (center + 1 + step) * octant;
-            int port = (center - 1 - step) * octant;
 
-            addRatline(shrouds, minX, maxX, low, high, starboard, starboard + octant, starboard);
-            addRatline(shrouds, minX, maxX, low, high, port - octant, port, port - 1);
+            addRatline(shrouds, minX, maxX, low, high, (center + 1 + step) * octant, (center + 2 + step) * octant);
+            addRatline(shrouds, minX, maxX, low, high, (center - 1 - step) * octant, (center - 2 - step) * octant);
         }
 
         return shrouds;
     }
 
-    // One step of a ratline: its two rope rails falling at the shroud's face and the rung it is stepped down at
-    private void addRatline(
-            VehiclePartStruct shrouds,
-            int minX,
-            int maxX,
-            int low,
-            int high,
-            int rungMinZ,
-            int rungMaxZ,
-            int railZ) {
-
-        shrouds.addBox(minX, low, railZ, minX + 1, high, railZ + 1);
-        shrouds.addBox(maxX - 1, low, railZ, maxX, high, railZ + 1);
-        shrouds.addBox(minX, low, rungMinZ, maxX, low + 1, rungMaxZ);
+    // One step of a shroud's netting: a sheet falling from the inboard edge at its head to the outboard edge at its
+    // foot, the ratlines drawn on it, its own climb zone keeping the climber close to it
+    private void addRatline(VehiclePartStruct shrouds, int minX, int maxX, int low, int high, int innerZ, int outerZ) {
+        shrouds.addQuad(EngineSetting.SUB_VOXEL_FACE_POSITIVE_Z,
+                minX, low, outerZ,
+                maxX, low, outerZ,
+                maxX, high, innerZ,
+                minX, high, innerZ);
     }
 
     // Stays \\
@@ -394,22 +389,12 @@ class ShipwrightRigBranch extends BranchPackage {
             return;
         }
 
-        int steps = (endX - startX) / octant;
-        int fall = top - bottom;
         int z = EngineSetting.SHIP_SHEET_HALF_BREADTH * octant;
 
-        if (steps < 1 || fall <= 0)
+        if (endX <= startX || top <= bottom)
             return;
 
-        for (int step = 0; step < steps; step++) {
-
-            int x = startX + step * octant;
-            int high = top - fall * step / steps;
-            int low = top - fall * (step + 1) / steps;
-
-            stays.addBox(x, high - 1, z, x + octant, high, z + 1);
-            stays.addBox(x + octant - 1, low, z, x + octant, high, z + 1);
-        }
+        ShipRopeUtility.addRope(stays, startX, top, z, endX, bottom, z);
     }
 
     // Mast \\

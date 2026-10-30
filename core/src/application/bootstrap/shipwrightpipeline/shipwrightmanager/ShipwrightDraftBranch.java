@@ -7,6 +7,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipFurnitureStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
@@ -30,8 +31,11 @@ class ShipwrightDraftBranch extends BranchPackage {
      * tool it is the deck as it was built — floor, planking, bulwarks, stairs
      * and hatches — with every wall, half wall, door, window, stair foot,
      * piece of furniture, the helm and the capstan on it straight from the
-     * blueprint, so a stroke shows as it is drawn. Every mast is marked, the
-     * picked one brighter. Plans run bow to the right and starboard down. The
+     * blueprint, so a stroke shows as it is drawn, and every hatch and ladder
+     * where it was built. While a stair, ladder or hatch is in hand its whole
+     * run or footprint is laid faintly under the cursor, red where it would
+     * leave the deck, so it is placed knowing it fits. Every mast is marked,
+     * the picked one brighter. Plans run bow to the right and starboard down. The
      * views are every part's boxes seen from starboard and from above,
      * nearest drawn over farthest, shaded by depth and coloured by what they
      * are made of, with the cargo in its places and the sea below the
@@ -156,6 +160,87 @@ class ShipwrightDraftBranch extends BranchPackage {
         drawFitting(session, blueprint.getHelm(), deck, 1, EngineSetting.SHIP_FITTING_OCTANTS);
         drawFitting(session, blueprint.getCapstan(), deck, EngineSetting.SHIP_FITTING_OCTANTS,
                 EngineSetting.SHIP_FITTING_OCTANTS);
+        drawFittingBoxes(session, layout.getHatchBoxes(), deck * EngineSetting.SHIP_DECK_HEIGHT,
+                EngineSetting.SHIPWRIGHT_INK_HATCH);
+        drawFittingBoxes(session, layout.getLadderBoxes(), deck * EngineSetting.SHIP_DECK_HEIGHT + 1,
+                EngineSetting.SHIPWRIGHT_INK_LADDER);
+        drawGhost(session);
+    }
+
+    // Every hatch or ladder whose octant box starts at a layer, where it was built
+    private void drawFittingBoxes(ShipwrightSessionInstance session, IntArrayList boxes, int layer, int color) {
+
+        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
+
+            if (ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Y) != layer)
+                continue;
+
+            for (int z = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Z);
+                    z < ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Z); z++)
+                for (int x = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_X);
+                        x < ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_X); x++)
+                    writePlan(session, x, z, color);
+        }
+    }
+
+    // Ghost \\
+
+    // The whole of what the tool in hand would set down at the cursor, faint where it fits and red where it leaves
+    // the deck: a stair's run from the floor before its foot to its landing, or a ladder's or hatch's square
+    private void drawGhost(ShipwrightSessionInstance session) {
+
+        ShipwrightTool tool = session.getTool();
+        boolean square = tool == ShipwrightTool.STAIRS && session.isLadders()
+                || tool == ShipwrightTool.OPENINGS && session.getOpening() == ShipOpening.HATCH;
+
+        if (tool != ShipwrightTool.STAIRS && !square)
+            return;
+
+        int x = session.getCursorU() - EngineSetting.SHIP_AFT_MARGIN;
+        int z = EngineSetting.SHIP_SHEET_BREADTH - 1 - session.getCursorV();
+
+        if (square) {
+            drawGhostRect(session, x, z, EngineSetting.SHIP_HATCH_OCTANTS, EngineSetting.SHIP_HATCH_OCTANTS);
+            return;
+        }
+
+        int spin = session.getSpin();
+        int stepX = ShipCellUtility.stepX(spin);
+        int stepZ = ShipCellUtility.stepZ(spin);
+        int acrossX = stepX == 0 ? 1 : 0;
+        int acrossZ = stepZ == 0 ? 1 : 0;
+        boolean fits = true;
+
+        for (int pass = 0; pass < 2; pass++)
+            for (int along = -EngineSetting.SHIP_STAIR_HEADROOM; along <= EngineSetting.SHIP_DECK_HEIGHT; along++)
+                for (int across = 0; across < EngineSetting.SHIP_STAIR_WIDTH; across++) {
+
+                    int atX = x + stepX * along + acrossX * across;
+                    int atZ = z + stepZ * along + acrossZ * across;
+
+                    if (pass == 0)
+                        fits &= session.getBlueprint().isOnDeck(session.getDeck(), atX, atZ);
+                    else
+                        writeGhost(session, atX, atZ, fits);
+                }
+    }
+
+    private void drawGhostRect(ShipwrightSessionInstance session, int x, int z, int sizeX, int sizeZ) {
+
+        boolean fits = true;
+
+        for (int atZ = z; atZ < z + sizeZ; atZ++)
+            for (int atX = x; atX < x + sizeX; atX++)
+                fits &= session.getBlueprint().isOnDeck(session.getDeck(), atX, atZ);
+
+        for (int atZ = z; atZ < z + sizeZ; atZ++)
+            for (int atX = x; atX < x + sizeX; atX++)
+                writeGhost(session, atX, atZ, fits);
+    }
+
+    private void writeGhost(ShipwrightSessionInstance session, int x, int z, boolean fits) {
+        writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, z,
+                fits ? EngineSetting.SHIPWRIGHT_INK_GHOST : EngineSetting.SHIPWRIGHT_INK_GHOST_BLOCKED);
     }
 
     private void drawFloor(ShipwrightSessionInstance session, ShipOctantGridStruct grid, int floor) {
@@ -344,6 +429,8 @@ class ShipwrightDraftBranch extends BranchPackage {
                         part.getBoxBound(box, EngineSetting.BOX_MAX_Y),
                         part.getBoxBound(box, EngineSetting.BOX_MAX_Z),
                         shadeColor(color, part.getBoxBound(box, EngineSetting.BOX_MAX_Z), maxZ));
+
+            drawQuads(pixels, width, height, scale, part, false, maxZ, shadeColor(color, part.getMaxZ(), maxZ));
         }
 
         for (int slot = 0; slot < layout.getCargoCount(); slot++)
@@ -384,6 +471,8 @@ class ShipwrightDraftBranch extends BranchPackage {
                         maxZ - part.getBoxBound(box, EngineSetting.BOX_MIN_Z),
                         part.getBoxBound(box, EngineSetting.BOX_MAX_Y),
                         shadeColor(color, part.getBoxBound(box, EngineSetting.BOX_MAX_Y), maxY));
+
+            drawQuads(pixels, width, height, scale, part, true, maxZ, shadeColor(color, part.getMaxY(), maxY));
         }
 
         for (int slot = 0; slot < layout.getCargoCount(); slot++)
@@ -406,6 +495,57 @@ class ShipwrightDraftBranch extends BranchPackage {
 
         fillBox(pixels, width, height, scale, middle - half, sail.getMinY(), middle + half, sail.getMaxY(),
                 Integer.MIN_VALUE + 1, EngineSetting.SHIPWRIGHT_COLOR_SAIL_PLAN);
+    }
+
+    // Every rope quad of a part as the four edges it is drawn between, seen from starboard or from above
+    private void drawQuads(
+            byte[] pixels,
+            int width,
+            int height,
+            int scale,
+            VehiclePartStruct part,
+            boolean fromAbove,
+            int maxZ,
+            int color) {
+
+        int depth = fromAbove ? part.getMaxY() : part.getMaxZ();
+
+        for (int quad = 0; quad < part.getQuadCount(); quad++)
+            for (int corner = 0; corner < EngineSetting.QUAD_VERTEX_COUNT; corner++) {
+
+                int next = (corner + 1) % EngineSetting.QUAD_VERTEX_COUNT;
+
+                drawLine(pixels, width, height, depth, color,
+                        part.getQuadCorner(quad, corner, EngineSetting.AXIS_X) / scale,
+                        resolveViewV(part, quad, corner, fromAbove, maxZ) / scale,
+                        part.getQuadCorner(quad, next, EngineSetting.AXIS_X) / scale,
+                        resolveViewV(part, quad, next, fromAbove, maxZ) / scale);
+            }
+    }
+
+    // A quad corner's height in the side view, or its breadth from the far side in the top view, in sub-voxels
+    private int resolveViewV(VehiclePartStruct part, int quad, int corner, boolean fromAbove, int maxZ) {
+        return fromAbove
+                ? maxZ - part.getQuadCorner(quad, corner, EngineSetting.AXIS_Z)
+                : part.getQuadCorner(quad, corner, EngineSetting.AXIS_Y);
+    }
+
+    private void drawLine(byte[] pixels, int width, int height, int depth, int color, int u0, int v0, int u1,
+            int v1) {
+
+        int steps = Math.max(1, Math.max(Math.abs(u1 - u0), Math.abs(v1 - v0)));
+
+        for (int step = 0; step <= steps; step++) {
+
+            int u = u0 + (u1 - u0) * step / steps;
+            int v = v0 + (v1 - v0) * step / steps;
+
+            if (u < 0 || v < 0 || u >= width || v >= height || depthScratch[u + v * width] > depth)
+                continue;
+
+            depthScratch[u + v * width] = depth;
+            writePixel(pixels, width, u, v, color);
+        }
     }
 
     // A box's face toward the viewer, kept wherever it lies nearer than what is drawn

@@ -15,8 +15,9 @@ public class TreeModelStruct extends StructPackage {
      * grown into again for every tree, the growth, severs and leaf marks it is
      * evaluated at an age with, the wood and leaf clusters the tree stands as
      * in blocks from the centre of its root, the cells its clusters merge
-     * into, TREE_MODEL_CELL_FLOATS apiece, and the crown and lumps an outline
-     * is sized and laid out by. Nothing is ever cut or broken off a
+     * into, TREE_MODEL_CELL_FLOATS apiece, the crown and lumps an outline is
+     * sized and laid out by, and the box each box of bark is written through.
+     * Nothing is ever cut or broken off a
      * tree drawn from its seed, so the severs stay whole and the marks clear.
      * Kept warm between trees, so drawing one allocates nothing once its lists
      * have grown.
@@ -54,6 +55,9 @@ public class TreeModelStruct extends StructPackage {
     // Outline
     private final float[] crown;
     private final float[] lumps;
+
+    // Box — its corner, its size and the corner being written
+    private final float[] box;
 
     // Constructor \\
 
@@ -93,6 +97,9 @@ public class TreeModelStruct extends StructPackage {
         // Outline
         this.crown = new float[EngineSetting.TREE_IMPOSTOR_CROWN_FLOATS];
         this.lumps = new float[EngineSetting.TREE_IMPOSTOR_LUMPS_MAX_FLOATS];
+
+        // Box
+        this.box = new float[EngineSetting.AXIS_COUNT * 3];
     }
 
     // Management \\
@@ -250,5 +257,9 @@ public class TreeModelStruct extends StructPackage {
 
     public float[] getLumps() {
         return lumps;
+    }
+
+    public float[] getBox() {
+        return box;
     }
 }

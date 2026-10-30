@@ -18,7 +18,12 @@ public class ShipLayoutStruct extends StructPackage {
      * porch fit behind it; its vehicle parts are those pieces merged into
      * boxes and every spar, sail, rope and fitting, in the order they fill the
      * model grid; its cargo is every door and piece of furniture, each with
-     * the sub-voxel box it stands in. It knows how many sails each mast
+     * the sub-voxel box it stands in. Every hatch, ladder, gun-port lid and
+     * window pane is
+     * kept as the octant box it fills and the quarter turn it faces, laid by
+     * the hull and the openings before the grid is merged and built as a
+     * part of its own after. It knows how far its anchors drop and how many
+     * sails each mast
      * carries and where its bowsprit's tip reaches; what the ship weighs, the
      * ballast it is trimmed with, the height of its centre of mass and the
      * draft it floats at; how high the sea may rise before it comes aboard;
@@ -43,6 +48,15 @@ public class ShipLayoutStruct extends StructPackage {
     // Cargo — one sub-voxel box of six ints per slot
     private final ObjectArrayList<FurnishingSlotStruct> cargoSlots;
     private final IntArrayList cargoBoxes;
+
+    // Fittings — an octant box of six ints and a quarter turn for each, in model octants
+    private final IntArrayList hatchBoxes;
+    private final IntArrayList ladderBoxes;
+    private final IntArrayList portBoxes;
+    private final IntArrayList paneBoxes;
+
+    // Anchors — model blocks
+    private float anchorDrop;
 
     // Rig — sails per mast, from the stern forward
     private final IntArrayList mastSailCounts;
@@ -88,6 +102,12 @@ public class ShipLayoutStruct extends StructPackage {
         this.cargoSlots = new ObjectArrayList<>();
         this.cargoBoxes = new IntArrayList();
 
+        // Fittings
+        this.hatchBoxes = new IntArrayList();
+        this.ladderBoxes = new IntArrayList();
+        this.portBoxes = new IntArrayList();
+        this.paneBoxes = new IntArrayList();
+
         // Rig
         this.mastSailCounts = new IntArrayList();
 
@@ -105,6 +125,11 @@ public class ShipLayoutStruct extends StructPackage {
         parts.clear();
         cargoSlots.clear();
         cargoBoxes.clear();
+        hatchBoxes.clear();
+        ladderBoxes.clear();
+        portBoxes.clear();
+        paneBoxes.clear();
+        this.anchorDrop = EngineSetting.DEFAULT_VEHICLE_ANCHOR_DROP;
         mastSailCounts.clear();
         this.bowspritTipX = EngineSetting.SHIP_LEVEL_NONE;
         this.bowspritTipY = EngineSetting.SHIP_LEVEL_NONE;
@@ -181,6 +206,49 @@ public class ShipLayoutStruct extends StructPackage {
         cargoBoxes.add(maxX);
         cargoBoxes.add(maxY);
         cargoBoxes.add(maxZ);
+    }
+
+    // A hatch lid lying in a floor, the octants it closes
+    public void addHatch(int minX, int y, int minZ, int maxX, int maxZ, int spin) {
+        addFittingBox(hatchBoxes, minX, y, minZ, maxX, y + 1, maxZ, spin);
+    }
+
+    // A ladder's octants from the floor it stands on up past the floor it climbs to
+    public void addLadder(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int spin) {
+        addFittingBox(ladderBoxes, minX, minY, minZ, maxX, maxY, maxZ, spin);
+    }
+
+    // A gun port cut through the planking, its lid filling the octants cut
+    public void addPort(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int spin) {
+        addFittingBox(portBoxes, minX, minY, minZ, maxX, maxY, maxZ, spin);
+    }
+
+    // A window cut through a wall or the side, glazed across the octants cut
+    public void addPane(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int spin) {
+        addFittingBox(paneBoxes, minX, minY, minZ, maxX, maxY, maxZ, spin);
+    }
+
+    private static void addFittingBox(
+            IntArrayList boxes,
+            int minX,
+            int minY,
+            int minZ,
+            int maxX,
+            int maxY,
+            int maxZ,
+            int spin) {
+
+        boxes.add(minX);
+        boxes.add(minY);
+        boxes.add(minZ);
+        boxes.add(maxX);
+        boxes.add(maxY);
+        boxes.add(maxZ);
+        boxes.add(spin);
+    }
+
+    public void setAnchorDrop(float anchorDrop) {
+        this.anchorDrop = anchorDrop;
     }
 
     public void addMastSailCount(int sailCount) {
@@ -264,6 +332,37 @@ public class ShipLayoutStruct extends StructPackage {
     // One bound of a cargo slot's box: 0 to 2 its minimum on x, y and z, 3 to 5 its maximum
     public int getCargoBound(int slotIndex, int bound) {
         return cargoBoxes.getInt(slotIndex * EngineSetting.BOX_INT_STRIDE + bound);
+    }
+
+    public IntArrayList getHatchBoxes() {
+        return hatchBoxes;
+    }
+
+    public IntArrayList getLadderBoxes() {
+        return ladderBoxes;
+    }
+
+    public IntArrayList getPortBoxes() {
+        return portBoxes;
+    }
+
+    public IntArrayList getPaneBoxes() {
+        return paneBoxes;
+    }
+
+    // How many fittings a list of fitting boxes holds
+    public static int countFittings(IntArrayList boxes) {
+        return boxes.size() / EngineSetting.SHIP_FITTING_BOX_STRIDE;
+    }
+
+    // One bound of a fitting's octant box, 0 to 5 as a box's bounds run, 6 the quarter turn it faces
+    public static int getFittingBound(IntArrayList boxes, int fittingIndex, int bound) {
+        return boxes.getInt(fittingIndex * EngineSetting.SHIP_FITTING_BOX_STRIDE + bound);
+    }
+
+    // How far the anchors fall below their catheads when let go, in model blocks
+    public float getAnchorDrop() {
+        return anchorDrop;
     }
 
     public IntArrayList getMastSailCounts() {

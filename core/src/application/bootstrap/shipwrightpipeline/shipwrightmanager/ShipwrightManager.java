@@ -21,9 +21,11 @@ public class ShipwrightManager extends ManagerPackage {
 
     /*
      * Owns the drafting table, the one shipwright the editor and the game
-     * share. Every ship in the assets is loaded at boot and every ship in the
-     * player's saves once the game is up, each compiled and registered as a
-     * vehicle, so any of them can be launched; a ship saved at a table is
+     * share, and with it every vehicle there is: no vehicle is written by
+     * hand. Every vehicle the editor drew into the assets is loaded at boot
+     * and every one the player drew into their saves once the game is up,
+     * each compiled and registered as a vehicle, so any of them can be
+     * launched; a ship saved at a table is
      * registered again at once. A drafting table in use is a session opened
      * here, writing to the assets or to the saves, and every change it makes
      * is worked through ShipwrightEditBranch, compiled through
@@ -32,7 +34,8 @@ public class ShipwrightManager extends ManagerPackage {
      * that waits until the drawing has rested a moment, keeping every stroke
      * and press free of a hitch. A new ship starts as a blank sheet, its
      * bottom deck waiting to be drawn. A ship must be named, buildable, within the triangle
-     * limit — at boot as at the table — and fitted with a helm to be saved,
+     * limit — at boot as at the table — and fitted with a helm to steer by and
+     * a capstan to weigh the anchors it always carries to be saved,
      * and saved to be launched; a ship that would capsize may still be saved,
      * the table having said so. Opening or starting another ship over unsaved
      * work asks twice. A table writing to the assets hands each ship to the
@@ -121,7 +124,7 @@ public class ShipwrightManager extends ManagerPackage {
         String problem = compileForRegistration(blueprint);
 
         if (!problem.isEmpty())
-            throwException("Ship '" + blueprint.getShipName() + "' cannot be built: " + problem);
+            throwException("Vehicle '" + blueprint.getShipName() + "' cannot be built: " + problem);
 
         registerVehicle(ShipwrightStorage.ASSETS, blueprint, contentLayout);
     }
@@ -141,7 +144,7 @@ public class ShipwrightManager extends ManagerPackage {
             String problem = compileForRegistration(blueprint);
 
             if (!problem.isEmpty()) {
-                errorLog("Saved ship '" + shipNames.get(i) + "' was skipped: " + problem);
+                errorLog("Saved vehicle '" + shipNames.get(i) + "' was skipped: " + problem);
                 continue;
             }
 
@@ -165,16 +168,15 @@ public class ShipwrightManager extends ManagerPackage {
 
     private void registerVehicle(ShipwrightStorage storage, ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
         vehicleManager.registerVehicle(shipwrightCompileBranch.toDesign(
+                blueprint,
                 layout,
-                toVehicleName(storage, blueprint.getShipName()),
-                blueprint.getDisplayName()));
+                toVehicleName(storage, blueprint.getShipName())));
     }
 
-    // The vehicle a ship kept in a storage is registered as
+    // The vehicle a design kept in a storage is registered as: the game's own by its path below the vehicle
+    // directory, as every resource is named, the player's apart from them
     public String toVehicleName(ShipwrightStorage storage, String shipName) {
-        return (storage == ShipwrightStorage.ASSETS
-                ? EngineSetting.SHIP_VEHICLE_PREFIX
-                : EngineSetting.SHIP_SAVED_VEHICLE_PREFIX) + shipName;
+        return storage == ShipwrightStorage.ASSETS ? shipName : EngineSetting.VEHICLE_SAVED_PREFIX + shipName;
     }
 
     // Session \\
@@ -332,6 +334,9 @@ public class ShipwrightManager extends ManagerPackage {
 
         if (!blueprint.hasHelm())
             return EngineSetting.SHIPWRIGHT_REFUSAL_HELM;
+
+        if (!blueprint.hasCapstan())
+            return EngineSetting.SHIPWRIGHT_REFUSAL_CAPSTAN;
 
         return EngineSetting.SHIPWRIGHT_STATUS_NONE;
     }

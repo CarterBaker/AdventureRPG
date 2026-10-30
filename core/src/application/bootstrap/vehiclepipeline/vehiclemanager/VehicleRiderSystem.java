@@ -32,10 +32,14 @@ public class VehicleRiderSystem extends SystemPackage {
      * entity's box and move are turned into the vehicle's model axes, swept
      * through its solid sub-voxels and the rough boxes of solid cargo one axis
      * at a time with the same skin and stair step the world uses, and turned
-     * back. An entity that lands on a deck, or climbs, boards that vehicle; a
-     * rider in the air stays aboard while it stays over the vehicle, so a jump
-     * on a moving deck comes down where it left, and one that swims or leaves
-     * the vehicle's reach goes ashore.
+     * back. A deck that has moved into an entity's feet, as a hull heaving or
+     * rolling in a storm does between two moves, lifts it clear before the
+     * move is swept, so nothing ever sinks through a deck. A climber cresting
+     * the top of a ladder may step off it onto the deck. An entity that lands
+     * on a deck, or climbs, boards that vehicle; a rider in the air, or
+     * washed off its feet by a sea coming aboard, stays aboard while it stays
+     * over the vehicle, so a jump on a moving deck comes down where it left,
+     * and one that swims clear of the hull or leaves its reach goes ashore.
      */
 
     // Internal
@@ -47,6 +51,10 @@ public class VehicleRiderSystem extends SystemPackage {
     // Move — the vehicle the entity moving now stood on or held the ladder of, null when none
     private VehicleInstance groundVehicle;
     private VehicleInstance climbVehicle;
+
+    // Climb — the climber's centre and the top of the highest climb zone it holds, in model blocks
+    private float climbHeight;
+    private float climbTop;
 
     // Settings
     private float resolution;
@@ -179,8 +187,12 @@ public class VehicleRiderSystem extends SystemPackage {
                     position.z + size.z * 0.5f,
                     modelScratch);
 
-            if (isInClimbZone(vehicle.getVehicleHandle(), modelScratch)) {
+            float top = resolveClimbTop(vehicle.getVehicleHandle(), modelScratch);
+
+            if (top != EngineSetting.VEHICLE_CLIMB_NONE) {
                 this.climbVehicle = vehicle;
+                this.climbHeight = modelScratch.y;
+                this.climbTop = top;
                 return true;
             }
         }
@@ -188,11 +200,13 @@ public class VehicleRiderSystem extends SystemPackage {
         return false;
     }
 
-    private boolean isInClimbZone(VehicleHandle vehicleHandle, Vector3 model) {
+    // The top of the highest climb zone holding a model point, in model blocks, VEHICLE_CLIMB_NONE when none does
+    private float resolveClimbTop(VehicleHandle vehicleHandle, Vector3 model) {
 
         float x = model.x * resolution;
         float y = model.y * resolution;
         float z = model.z * resolution;
+        float top = EngineSetting.VEHICLE_CLIMB_NONE;
 
         for (int zone = 0; zone < vehicleHandle.getClimbZoneCount(); zone++)
             if (x >= vehicleHandle.getClimbZoneBound(zone, EngineSetting.BOX_MIN_X)
@@ -201,19 +215,20 @@ public class VehicleRiderSystem extends SystemPackage {
                     && x < vehicleHandle.getClimbZoneBound(zone, EngineSetting.BOX_MAX_X)
                     && y < vehicleHandle.getClimbZoneBound(zone, EngineSetting.BOX_MAX_Y)
                     && z < vehicleHandle.getClimbZoneBound(zone, EngineSetting.BOX_MAX_Z))
-                return true;
+                top = Math.max(top, vehicleHandle.getClimbZoneBound(zone, EngineSetting.BOX_MAX_Y) / resolution);
 
-        return false;
+        return top;
     }
 
-    // Up or down the vehicle's own up axis in place of falling, holding still on the ladder without input; only a
-    // climber holding still can step off sideways
+    // Up or down the vehicle's own up axis in place of falling, holding still on the ladder without input; a
+    // climber holding still can step off sideways, and one cresting the ladder's top walks off it as it climbs
     public void climb(Vector3 movement, EntityInstance entity) {
 
         EntityInputHandle input = entity.getEntityInputHandle();
         EntityStateHandle state = entity.getEntityStateHandle();
         int direction = input.isForward() || input.isJump() ? 1 : (input.isBack() ? -1 : 0);
-        float share = direction == 0 ? EngineSetting.VEHICLE_CLIMB_SIDESTEP_SHARE : 0f;
+        boolean cresting = direction > 0 && climbHeight >= climbTop - EngineSetting.VEHICLE_CLIMB_CREST_HEIGHT;
+        float share = direction == 0 ? EngineSetting.VEHICLE_CLIMB_SIDESTEP_SHARE : cresting ? 1f : 0f;
         float rise = direction * EngineSetting.VEHICLE_CLIMB_SPEED * internal.getDeltaTime();
 
         state.getGravityVelocity().set(0f, 0f, 0f);
@@ -263,6 +278,10 @@ public class VehicleRiderSystem extends SystemPackage {
         VehicleSpaceUtility.toModelDirection(vehicle, movement.x, movement.y, movement.z, moveScratch);
 
         setBox(modelScratch, size);
+
+        float lift = resolveUnstick(vehicle);
+
+        translate(EngineSetting.AXIS_Y, lift);
         gatherCargoBoxes(vehicle, moveScratch);
 
         float requestedX = moveScratch.x;
@@ -278,7 +297,7 @@ public class VehicleRiderSystem extends SystemPackage {
         float moveZ = sweep(vehicle, EngineSetting.AXIS_Z, requestedZ);
         translate(EngineSetting.AXIS_Z, moveZ);
 
-        boolean landed = requestedY < 0f && moveY > requestedY + skin;
+        boolean landed = lift > 0f || requestedY < 0f && moveY > requestedY + skin;
         boolean blocked = moveX != requestedX || moveZ != requestedZ;
 
         if (blocked && entity.getEntityStateHandle().isGrounded())
@@ -286,13 +305,50 @@ public class VehicleRiderSystem extends SystemPackage {
         else
             moveScratch.set(moveX, moveY, moveZ);
 
-        if (moveScratch.x == requestedX && moveScratch.y == requestedY && moveScratch.z == requestedZ)
+        if (lift == 0f && moveScratch.x == requestedX && moveScratch.y == requestedY && moveScratch.z == requestedZ)
             return false;
+
+        moveScratch.y += lift;
 
         VehicleSpaceUtility.toWorldDirection(vehicle, moveScratch.x, moveScratch.y, moveScratch.z, movement);
 
         return landed;
     }
+
+    // Unstick \\
+
+    // How far the box must rise to clear a deck that has moved up into its feet: to the top of the highest solid
+    // layer under the unstick limit, but only when the box then stands clear, else nothing
+    private float resolveUnstick(VehicleInstance vehicle) {
+
+        int firstZ = toSubVoxel(boxMin[EngineSetting.AXIS_Z] + skin);
+        int lastZ = toSubVoxel(boxMax[EngineSetting.AXIS_Z] - skin);
+        int firstX = toSubVoxel(boxMin[EngineSetting.AXIS_X] + skin);
+        int lastX = toSubVoxel(boxMax[EngineSetting.AXIS_X] - skin);
+        int bottom = toSubVoxel(boxMin[EngineSetting.AXIS_Y] + skin);
+        int band = toSubVoxel(boxMin[EngineSetting.AXIS_Y] + EngineSetting.VEHICLE_RIDER_UNSTICK_LIMIT);
+        int highest = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int layer = bottom; layer <= band; layer++)
+            if (isLayerSolid(vehicle, EngineSetting.AXIS_Y, layer,
+                    EngineSetting.AXIS_Z, firstZ, lastZ, EngineSetting.AXIS_X, firstX, lastX))
+                highest = layer;
+
+        if (highest == EngineSetting.INDEX_NOT_FOUND)
+            return 0f;
+
+        float lift = (highest + 1) / resolution - boxMin[EngineSetting.AXIS_Y] + skin;
+        int top = toSubVoxel(boxMax[EngineSetting.AXIS_Y] + lift - skin);
+
+        for (int layer = highest + 1; layer <= top; layer++)
+            if (isLayerSolid(vehicle, EngineSetting.AXIS_Y, layer,
+                    EngineSetting.AXIS_Z, firstZ, lastZ, EngineSetting.AXIS_X, firstX, lastX))
+                return 0f;
+
+        return lift;
+    }
+
+    // Step Up \\
 
     // A grounded entity cut short tries the move again a stair step higher, easing the lift into its ground offset
     private void stepUp(VehicleInstance vehicle, float moveX, float moveY, float moveZ, EntityInstance entity) {
@@ -522,8 +578,9 @@ public class VehicleRiderSystem extends SystemPackage {
         VehicleInstance vehicle = climbVehicle != null ? climbVehicle : groundVehicle;
         VehicleRiderStruct rider = entity2VehicleRider.get(entity);
 
-        if (vehicle == null && rider != null && !swimming
-                && isNear(rider.getVehicleInstance(), entity, EngineSetting.VEHICLE_RIDER_REACH))
+        if (vehicle == null && rider != null
+                && isNear(rider.getVehicleInstance(), entity, EngineSetting.VEHICLE_RIDER_REACH)
+                && (!swimming || isOverDeck(rider.getVehicleInstance(), entity)))
             vehicle = rider.getVehicleInstance();
 
         if (vehicle == null) {
@@ -597,6 +654,30 @@ public class VehicleRiderSystem extends SystemPackage {
         float reach = vehicle.getVehicleHandle().getBoundingRadius() + size.length() + margin;
 
         return offsetScratch.lengthSquared() <= reach * reach;
+    }
+
+    // Whether the entity's centre lies within the vehicle's length and breadth, over its deck in its own frame
+    private boolean isOverDeck(VehicleInstance vehicle, EntityInstance entity) {
+
+        WorldPositionStruct worldPosition = entity.getWorldPositionStruct();
+        Vector3 position = worldPosition.getPosition();
+        Vector3 size = entity.getSize();
+        VehicleHandle vehicleHandle = vehicle.getVehicleHandle();
+
+        VehicleSpaceUtility.toModel(
+                vehicle,
+                worldPosition.getChunkCoordinate(),
+                position.x + size.x * 0.5f,
+                position.y + size.y * 0.5f,
+                position.z + size.z * 0.5f,
+                modelScratch);
+
+        float x = modelScratch.x * resolution;
+        float z = modelScratch.z * resolution;
+
+        return x >= vehicleHandle.getMinX() && x < vehicleHandle.getMaxX()
+                && z >= vehicleHandle.getMinZ() && z < vehicleHandle.getMaxZ()
+                && modelScratch.y * resolution >= vehicleHandle.getMinY();
     }
 
     private int toSubVoxel(float blocks) {

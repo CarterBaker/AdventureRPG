@@ -8,9 +8,10 @@ public enum ShipwrightTool {
      * What the drafting table's cursor does, always on the plan of the deck
      * picked. A deck's outline is drawn mirrored either side of the centre
      * line; walls, full or half height, are painted where they stand; a door
-     * or a window is cut through the wall or side it faces; a stair is set at
-     * its foot facing the way it climbs; a mast is stepped on the centre line;
-     * furniture, the helm and the capstan are set down. A painted tool works
+     * or a window is set on the wall or side it is cut through, and a hatch
+     * in a floor; a stair is set at its foot facing the way it climbs, and a
+     * ladder at its foot; a mast is stepped on the centre line; furniture,
+     * cannons, the helm and the capstan are set down. A painted tool works
      * every octant the cursor crosses while held, any other the octant it
      * was pressed on once.
      */

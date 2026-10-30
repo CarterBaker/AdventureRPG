@@ -21,10 +21,13 @@ class TreeDetailBranch extends BranchPackage {
      * theirs. The anchors — every grid's world, active chunk and reach — are
      * published on the main thread the frame any of them changes and read
      * under their lock on any thread, so a tree first grown on a streaming
-     * thread starts with its flag set. Every registered tree is judged again
-     * whenever the anchors change and once a check besides, and each one that
-     * crosses the line is redrawn through TreeRebuildBranch alone, its old
-     * look standing until the new one lands.
+     * thread starts with its flag set. A tree drawn in full keeps its detail
+     * until its root lies a margin of chunks past the distance, so a player
+     * pacing along the line never has the trees on it redrawn back and forth.
+     * Every registered tree is judged again whenever the anchors change and
+     * once a check besides, and each one that crosses the line is redrawn
+     * through TreeRebuildBranch alone, its old look standing until the new one
+     * lands.
      */
 
     // Internal
@@ -32,10 +35,11 @@ class TreeDetailBranch extends BranchPackage {
     private TreeRegistryBranch treeRegistryBranch;
     private TreeRebuildBranch treeRebuildBranch;
 
-    // Anchors — all three guarded by anchorChunks
+    // Anchors — all four guarded by anchorChunks
     private LongArrayList anchorChunks;
     private ObjectArrayList<WorldHandle> anchorWorlds;
     private IntArrayList anchorReachesSq;
+    private IntArrayList anchorKeepsSq;
 
     // Walk
     private ObjectArrayList<TreeInstance> trees;
@@ -50,6 +54,7 @@ class TreeDetailBranch extends BranchPackage {
         this.anchorChunks = new LongArrayList();
         this.anchorWorlds = new ObjectArrayList<>();
         this.anchorReachesSq = new IntArrayList();
+        this.anchorKeepsSq = new IntArrayList();
 
         // Walk
         this.trees = new ObjectArrayList<>();
@@ -83,7 +88,7 @@ class TreeDetailBranch extends BranchPackage {
     // A tree whose side of the line changed is redrawn at its new detail
     private void judge(TreeInstance tree) {
 
-        boolean detailed = isDetailed(tree);
+        boolean detailed = isDetailed(tree, tree.isDetailed());
 
         if (detailed == tree.isDetailed())
             return;
@@ -107,15 +112,18 @@ class TreeDetailBranch extends BranchPackage {
             anchorChunks.clear();
             anchorWorlds.clear();
             anchorReachesSq.clear();
+            anchorKeepsSq.clear();
 
             for (int i = 0; i < grids.size(); i++) {
 
                 GridInstance grid = grids.get(i);
                 int distance = grid.getTreeDetailDistance();
+                int keep = distance + EngineSetting.TREE_DETAIL_KEEP_CHUNKS;
 
                 anchorChunks.add(grid.getActiveChunkCoordinate());
                 anchorWorlds.add(grid.getWorldHandle());
                 anchorReachesSq.add(distance * distance);
+                anchorKeepsSq.add(keep * keep);
             }
 
             return true;
@@ -145,11 +153,12 @@ class TreeDetailBranch extends BranchPackage {
 
     // Any thread — a tree first grown takes its flag from where the grids stand now
     void adopt(TreeInstance tree) {
-        tree.setDetailed(isDetailed(tree));
+        tree.setDetailed(isDetailed(tree, false));
     }
 
-    // Any thread — true when the tree's root chunk lies within the distance of an anchor in its world
-    private boolean isDetailed(TreeInstance tree) {
+    // Any thread — true when the tree's root chunk lies within the distance of an anchor in its world, or within the
+    // margin past it for a tree already drawn in full
+    private boolean isDetailed(TreeInstance tree, boolean keeping) {
 
         WorldHandle worldHandle = tree.getWorldHandle();
         long rootChunk = tree.getRootChunkCoordinate();
@@ -165,7 +174,9 @@ class TreeDetailBranch extends BranchPackage {
                 int deltaX = Coordinate2Long.unpackX(delta);
                 int deltaZ = Coordinate2Long.unpackY(delta);
 
-                if (deltaX * deltaX + deltaZ * deltaZ <= anchorReachesSq.getInt(i))
+                int reachSq = keeping ? anchorKeepsSq.getInt(i) : anchorReachesSq.getInt(i);
+
+                if (deltaX * deltaX + deltaZ * deltaZ <= reachSq)
                     return true;
             }
 

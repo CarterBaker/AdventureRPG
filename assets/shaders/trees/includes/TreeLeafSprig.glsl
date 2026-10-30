@@ -14,7 +14,9 @@
 // fragment's normal leans from its card's facing toward the way out from the cluster's centre, and the clump darkens
 // toward its heart and its underside. Far off, where a leaf would shrink below a pixel, leaves and stems widen with the
 // fragment's footprint, so a distant sheaf fills in rather than shimmering away, and a stem thinner than its footprint
-// wears its leaves' shade, so no spokes show from afar. A card turning edge-on to the camera draws in toward its
+// wears its leaves' shade, so no spokes show from afar. Once the widened leaves of one frond already overlap row on
+// row, the sheaf is read as solid foliage out to each frond's ragged reach, its blades never traced, so a far crown
+// costs a fraction of a near one and looks the same. A card turning edge-on to the camera draws in toward its
 // centre, so no card ever shows as a streak. Fragment stage only.
 
 const float TREE_LEAF_FROND_ARC       = 0.7;
@@ -49,6 +51,8 @@ const float TREE_LEAF_HEART_AO        = 0.5;
 const float TREE_LEAF_UNDERSIDE_AO    = 0.55;
 const float TREE_LEAF_SPECULAR        = 0.04;
 const float TREE_LEAF_SEED_SPREAD     = 37.0;
+const float TREE_LEAF_SOLID_SPACING   = 1.0;
+const float TREE_LEAF_SOLID_RIB       = 0.16;
 const float TREE_LEAF_PI              = 3.14159265359;
 
 const int   TREE_LEAF_MISS            = 0;
@@ -89,16 +93,24 @@ bool traceTreeLeafBlade(
     return rib < 1.0;
 }
 
-// What one frond's sprig holds at a point of the card: a blade, its stem, or nothing; a frond reaching down the card
-// falls short by the underside share
+// The way one frond leaves the card's centre and how far it reaches along it; a frond reaching down the card falls
+// short by the underside share
+float resolveTreeLeafFrond(float frond, float count, vec2 cardRadii, float underside, float seed, out vec2 axis) {
+    float angle = (frond + (hashTreeLeaf(frond, -1.0, seed) - 0.5) * TREE_LEAF_FROND_JITTER) * TREE_LEAF_TWO_PI
+                / count + seed * TREE_LEAF_TWO_PI;
+
+    axis = vec2(cos(angle), sin(angle));
+
+    return mix(TREE_LEAF_FROND_RAGGED, 1.0, hashTreeLeaf(frond, -2.0, seed))
+         * mix(underside, 1.0, smoothstep(-1.0, TREE_LEAF_FROND_RISE, axis.y)) / length(axis / cardRadii);
+}
+
+// What one frond's sprig holds at a point of the card: a blade, its stem, or nothing
 int traceTreeLeafFrond(
     vec2 point, float frond, float count, vec2 cardRadii, float spacing, float longest, float underside, float widen,
     float seed, out float rib) {
-    float angle  = (frond + (hashTreeLeaf(frond, -1.0, seed) - 0.5) * TREE_LEAF_FROND_JITTER) * TREE_LEAF_TWO_PI
-                 / count + seed * TREE_LEAF_TWO_PI;
-    vec2  axis   = vec2(cos(angle), sin(angle));
-    float reach  = mix(TREE_LEAF_FROND_RAGGED, 1.0, hashTreeLeaf(frond, -2.0, seed))
-                 * mix(underside, 1.0, smoothstep(-1.0, TREE_LEAF_FROND_RISE, axis.y)) / length(axis / cardRadii);
+    vec2  axis;
+    float reach  = resolveTreeLeafFrond(frond, count, cardRadii, underside, seed, axis);
     float along  = dot(point, axis);
     float across = dot(point, vec2(-axis.y, axis.x));
     float away   = abs(across);
@@ -147,6 +159,16 @@ int traceTreeLeafCard(
 
     if (dot(rim, rim) > shown * shown)
     return TREE_LEAF_MISS;
+
+    if (widen >= spacing * TREE_LEAF_SOLID_SPACING) {
+        vec2  axis;
+        float reach = resolveTreeLeafFrond(mod(nearest, count), count, cardRadii, underside, seed, axis);
+        float along = dot(point, axis);
+
+        rib = TREE_LEAF_SOLID_RIB;
+
+        return along > 0.0 && along < reach + widen ? TREE_LEAF_BLADE : TREE_LEAF_MISS;
+    }
 
     int kind = traceTreeLeafFrond(
         point, mod(nearest, count), count, cardRadii, spacing, longest, underside, widen, seed, rib);
