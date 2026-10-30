@@ -148,4 +148,9 @@ public class ContentManager extends ManagerPackage {
 
         return handle;
     }
+
+    // Every content ID lies below this — the length of an array indexed by content ID
+    public int getContentIDCount() {
+        return contentID2ContentHandle.size();
+    }
 }

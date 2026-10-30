@@ -25,9 +25,11 @@ public class CommandConsoleTileGridSystem extends SystemPackage {
      * Fills every tile grid the command tree lays out, one per category, with
      * a tile for each item or vehicle type in it, named in order, so a command
      * that takes an item — give — or a vehicle — spawnvehicle — is run by
-     * picking one. Items and vehicles lay out identically: a row holds as many
-     * tiles as the grid is wide and reflows whenever its width changes, and a
-     * grid is exactly as tall as its rows, so the whole tree scrolls as one.
+     * picking one. Every item a container can hold is listed, every block's
+     * piece in a grid of its own and every other item under its category.
+     * Items and vehicles lay out identically: a row holds as many tiles as
+     * the grid is wide and reflows whenever its width changes, and a grid is
+     * exactly as tall as its rows, so the whole tree scrolls as one.
      * Pressing a tile hands its command and entry to CommandManager's drag:
      * let go on the same tile and it runs on every Dev window, drop it on a
      * Dev window and it runs there.
@@ -96,7 +98,7 @@ public class CommandConsoleTileGridSystem extends SystemPackage {
 
     // Management \\
 
-    // Every item in a category, named in order — empty when the category holds none
+    // Every item in a category but the block pieces, named in order — empty when the category holds none
     public ObjectArrayList<ItemDefinitionHandle> collectItems(ItemCategory itemCategory) {
 
         ObjectArrayList<ItemDefinitionHandle> items = itemDefinitionManager.getItemHandles();
@@ -104,8 +106,27 @@ public class CommandConsoleTileGridSystem extends SystemPackage {
         categoryItems.clear();
 
         for (int i = 0; i < items.size(); i++)
-            if (items.get(i).getCategory() == itemCategory)
+            if (items.get(i).getCategory() == itemCategory && !items.get(i).isBlockPiece())
                 categoryItems.add(items.get(i));
+
+        return sortItems();
+    }
+
+    // Every block's piece, named in order
+    public ObjectArrayList<ItemDefinitionHandle> collectBlockPieces() {
+
+        ObjectArrayList<ItemDefinitionHandle> items = itemDefinitionManager.getItemHandles();
+
+        categoryItems.clear();
+
+        for (int i = 0; i < items.size(); i++)
+            if (items.get(i).isBlockPiece())
+                categoryItems.add(items.get(i));
+
+        return sortItems();
+    }
+
+    private ObjectArrayList<ItemDefinitionHandle> sortItems() {
 
         categoryItems.sort((first, second) -> first.getDisplayName().compareTo(second.getDisplayName()));
 

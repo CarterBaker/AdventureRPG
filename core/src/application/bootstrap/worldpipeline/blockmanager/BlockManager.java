@@ -122,6 +122,11 @@ public class BlockManager extends ManagerPackage {
         return blockName2BlockID.getInt(blockName);
     }
 
+    // Every block ID lies below this — the length of an array indexed by block ID
+    public int getBlockIDCount() {
+        return blockID2BlockHandle.size();
+    }
+
     public BlockHandle getBlockHandleFromBlockID(int blockID) {
 
         BlockHandle handle = RegistryUtility.getHandle(blockID2BlockHandle, blockID);

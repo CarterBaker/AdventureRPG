@@ -25,10 +25,12 @@ public class ItemDefinitionManager extends ManagerPackage {
      * loaded from files: getBlockPieceHandle() builds a block's piece through
      * BlockPieceBranch the first time it is needed, and a piece's name
      * resolves to its block the same way; content pieces are built and
-     * resolved through getContentPieceHandle() alike. The farthest any
-     * registered item's shape reaches past the block its corner lies in,
-     * before it and after it, tells world queries how far around a block to
-     * look for items.
+     * resolved through getContentPieceHandle() alike. Listing every item, or
+     * resolving a typed name, first builds the piece of every block and
+     * content that breaks into one, once, so anything a container can hold
+     * is in the palette to be given. The farthest any registered item's
+     * shape reaches past the block its corner lies in, before it and after
+     * it, tells world queries how far around a block to look for items.
      */
 
     // Internal
@@ -42,6 +44,9 @@ public class ItemDefinitionManager extends ManagerPackage {
     private ObjectArrayList<ItemDefinitionHandle> itemHandles;
     private Int2ObjectOpenHashMap<ItemDefinitionHandle> blockID2BlockPieceHandle;
     private Int2ObjectOpenHashMap<ItemDefinitionHandle> contentID2ContentPieceHandle;
+
+    // Pieces
+    private boolean allPiecesRequested;
 
     // Reach
     private int maxReachBefore;
@@ -156,6 +161,27 @@ public class ItemDefinitionManager extends ManagerPackage {
         return true;
     }
 
+    // Every Piece \\
+
+    // Builds the piece of every block and content that breaks into one, the first time every item is needed
+    private void requestAllPieces() {
+
+        if (allPiecesRequested)
+            return;
+
+        for (int blockID = RegistryUtility.RESERVED_ID + 1; blockID < blockManager.getBlockIDCount(); blockID++)
+            if (blockManager.getBlockHandleFromBlockID(blockID).hasPiece())
+                getBlockPieceHandle((short) blockID);
+
+        for (int contentID = RegistryUtility.RESERVED_ID + 1;
+                contentID < contentManager.getContentIDCount();
+                contentID++)
+            if (contentManager.getContentHandleFromContentID(contentID).hasPiece())
+                getContentPieceHandle((short) contentID);
+
+        this.allPiecesRequested = true;
+    }
+
     // Accessible \\
 
     private boolean isItemRegistered(String itemName) {
@@ -201,6 +227,8 @@ public class ItemDefinitionManager extends ManagerPackage {
 
     public ItemDefinitionHandle findItemHandle(String query) {
 
+        requestAllPieces();
+
         ItemDefinitionHandle match = null;
 
         for (int i = 0; i < itemHandles.size(); i++) {
@@ -222,7 +250,11 @@ public class ItemDefinitionManager extends ManagerPackage {
         return match;
     }
 
+    // Every item a container can hold, every block and content piece included
     public ObjectArrayList<ItemDefinitionHandle> getItemHandles() {
+
+        requestAllPieces();
+
         return itemHandles;
     }
 

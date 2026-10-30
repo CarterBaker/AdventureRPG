@@ -26,9 +26,10 @@ public class CommandConsoleTreeSystem extends SystemPackage {
      * Lays out the command console's tree, one group per command file. A group
      * lists every command that takes no arguments first, each run with a
      * single click, then a section per item or vehicle category that holds
-     * any, each a grid of tiles filled by the tile grid system, for every
-     * command that takes one, a row of X and Y fields, filled by the chunk
-     * field system, for every command that takes a chunk, and a section of
+     * any, and one of every block's piece after the item categories, each a
+     * grid of tiles filled by the tile grid system, for every command that
+     * takes one, a row of X and Y fields, filled by the chunk field system,
+     * for every command that takes a chunk, and a section of
      * dials per group of the clock's units, filled by the dial system, for
      * every command that takes a time unit and its value. An item or time
      * command heads its sections with its own name; a vehicle's tile is the
@@ -165,22 +166,37 @@ public class CommandConsoleTreeSystem extends SystemPackage {
                 CommandConsoleSetting.MENU_TILE_HEADER,
                 CommandConsoleSetting.ELEMENT_TILE_HEADER_LABEL);
 
-        for (ItemCategory itemCategory : ItemCategory.VALUES) {
-
-            ObjectArrayList<ItemDefinitionHandle> items = commandConsoleTileGridSystem.collectItems(itemCategory);
-
-            if (items.isEmpty())
-                continue;
-
-            ElementInstance grid = injectCategory(
+        for (ItemCategory itemCategory : ItemCategory.VALUES)
+            injectItemGrid(
                     commandConsoleMenu,
                     commandHandle,
                     itemCategory.getTitle(),
-                    CommandConsoleSetting.MENU_TILE_GRID);
+                    commandConsoleTileGridSystem.collectItems(itemCategory));
 
-            if (grid != null)
-                commandConsoleTileGridSystem.addItemGrid(grid, commandHandle, items);
-        }
+        injectItemGrid(
+                commandConsoleMenu,
+                commandHandle,
+                CommandConsoleSetting.TILE_CATEGORY_BLOCKS,
+                commandConsoleTileGridSystem.collectBlockPieces());
+    }
+
+    private void injectItemGrid(
+            MenuInstance commandConsoleMenu,
+            CommandHandle commandHandle,
+            String categoryTitle,
+            ObjectArrayList<ItemDefinitionHandle> items) {
+
+        if (items.isEmpty())
+            return;
+
+        ElementInstance grid = injectCategory(
+                commandConsoleMenu,
+                commandHandle,
+                categoryTitle,
+                CommandConsoleSetting.MENU_TILE_GRID);
+
+        if (grid != null)
+            commandConsoleTileGridSystem.addItemGrid(grid, commandHandle, items);
     }
 
     private void injectVehicleCommand(MenuInstance commandConsoleMenu, CommandHandle commandHandle) {

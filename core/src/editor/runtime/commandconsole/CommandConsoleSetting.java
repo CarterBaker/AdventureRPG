@@ -38,6 +38,7 @@ public class CommandConsoleSetting {
     public static final String ELEMENT_TILE_CATEGORY_LABEL = "command_tile_category_label";
     public static final String ELEMENT_TILE_ICON = "command_tile_icon";
     public static final String ELEMENT_TILE_LABEL = "command_tile_label";
+    public static final String TILE_CATEGORY_BLOCKS = "Blocks";
     public static final int TILE_GRID_MIN_COLUMNS = 1;
 
     // Tile Icons
