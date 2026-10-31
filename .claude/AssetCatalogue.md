@@ -42,6 +42,7 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-10-30: Vehicles (recorded again after the tree change overwrote this file). Added the textures `Ratlines`,
   `Rope`, `Rungs` and `ShipGlass` under `textures/items/standard/` and the test ship `vehicles/Galleon.arpg`; removed
   `schemas/Ships.arpg` and `ships/Sloop.arpg`, deleted when ships became vehicles.
+- 2026-10-31: Rewrote `menus/editor/BiomePlanner.arpg`: the 3x3 biome grid is held square at the top of its panel.
 
 ---
 

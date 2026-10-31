@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 5
-Task: BiomeViewerCrash
+Delivery: 7
+Task: BiomeViewerProjection
 Applied: 2026-10-31
 
 ## Log
@@ -15,3 +15,5 @@ Applied: 2026-10-31
 - 3, 2026-10-30, DeliveryStatus
 - 4, 2026-10-30, CommandConsoleEveryItem
 - 5, 2026-10-31, BiomeViewerCrash
+- 6, 2026-10-31, BiomePlannerSquareGrid
+- 7, 2026-10-31, BiomeViewerProjection

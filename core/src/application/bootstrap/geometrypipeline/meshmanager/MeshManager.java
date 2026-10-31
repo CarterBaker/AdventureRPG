@@ -286,7 +286,7 @@ public class MeshManager extends ManagerPackage {
     // Removal \\
 
     public void removeMesh(MeshData meshData) {
-        vaoManager.removeSourceVAOClones(meshData.getAttributeHandle());
+        vaoManager.removeSourceVAOClones(meshData.getVAOData());
         vaoManager.removeVAOData(meshData.getVAOData());
         vboManager.removeVBO(meshData.getVBOData());
         iboManager.removeIBO(meshData.getIBOData());

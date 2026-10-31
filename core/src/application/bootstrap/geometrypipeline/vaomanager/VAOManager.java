@@ -12,11 +12,11 @@ import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 
 public class VAOManager extends ManagerPackage {
 
@@ -28,7 +28,10 @@ public class VAOManager extends ManagerPackage {
      * removing every clone of one mesh's VAO — which happens on every chunk
      * render-bucket rebuild, not just on chunk unload — costs O(windows that
      * cloned it) instead of a full scan of every clone ever created across
-     * the whole session.
+     * the whole session. The source is keyed by its VAOData rather than its
+     * GL name, since a name is only unique within the context that made it
+     * and two meshes must never share a clone. Every context switch made to
+     * delete clones ends back on the main window's context.
      */
 
     // Internal
@@ -39,8 +42,8 @@ public class VAOManager extends ManagerPackage {
     private Object2IntOpenHashMap<String> vaoName2VAOID;
     private ObjectArrayList<VAOHandle> vaoID2VAOHandle;
 
-    // Runtime Window Cache — sourceVAO -> (windowID -> clonedVAO)
-    private Int2ObjectOpenHashMap<Int2IntOpenHashMap> sourceVAO2WindowClones;
+    // Runtime Window Cache — source VAO data -> (windowID -> clonedVAO)
+    private Reference2ObjectOpenHashMap<VAOData, Int2IntOpenHashMap> vaoData2WindowClones;
 
     // Base \\
 
@@ -52,7 +55,7 @@ public class VAOManager extends ManagerPackage {
         this.vaoID2VAOHandle = RegistryUtility.createPalette();
 
         // Runtime Window Cache
-        this.sourceVAO2WindowClones = new Int2ObjectOpenHashMap<>();
+        this.vaoData2WindowClones = new Reference2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -104,17 +107,17 @@ public class VAOManager extends ManagerPackage {
 
     public int getVAOForWindow(MeshData meshData, int windowID) {
 
-        int sourceVAO = meshData.getAttributeHandle();
+        VAOData sourceVAOData = meshData.getVAOData();
 
-        if (sourceVAO == 0)
+        if (sourceVAOData.getAttributeHandle() == 0)
             throwException("Mesh drawn without a source VAO. Upload the mesh before submitting it for render.");
 
-        Int2IntOpenHashMap windowClones = sourceVAO2WindowClones.get(sourceVAO);
+        Int2IntOpenHashMap windowClones = vaoData2WindowClones.get(sourceVAOData);
 
         if (windowClones == null) {
             windowClones = new Int2IntOpenHashMap();
             windowClones.defaultReturnValue(0);
-            sourceVAO2WindowClones.put(sourceVAO, windowClones);
+            vaoData2WindowClones.put(sourceVAOData, windowClones);
         }
 
         int cachedVAO = windowClones.get(windowID);
@@ -144,12 +147,12 @@ public class VAOManager extends ManagerPackage {
 
         internal.windowPlatform.makeContextCurrent(window);
 
-        ObjectIterator<Int2ObjectMap.Entry<Int2IntOpenHashMap>> sourceIterator = sourceVAO2WindowClones
-                .int2ObjectEntrySet().fastIterator();
+        ObjectIterator<Reference2ObjectMap.Entry<VAOData, Int2IntOpenHashMap>> sourceIterator = vaoData2WindowClones
+                .reference2ObjectEntrySet().fastIterator();
 
         while (sourceIterator.hasNext()) {
 
-            Int2ObjectMap.Entry<Int2IntOpenHashMap> sourceEntry = sourceIterator.next();
+            Reference2ObjectMap.Entry<VAOData, Int2IntOpenHashMap> sourceEntry = sourceIterator.next();
             Int2IntOpenHashMap windowClones = sourceEntry.getValue();
             int clonedVAO = windowClones.remove(windowID);
 
@@ -159,14 +162,13 @@ public class VAOManager extends ManagerPackage {
             if (windowClones.isEmpty())
                 sourceIterator.remove();
         }
+
+        restoreMainContext();
     }
 
-    public void removeSourceVAOClones(int sourceVAO) {
+    public void removeSourceVAOClones(VAOData sourceVAOData) {
 
-        if (sourceVAO == 0)
-            return;
-
-        Int2IntOpenHashMap windowClones = sourceVAO2WindowClones.remove(sourceVAO);
+        Int2IntOpenHashMap windowClones = vaoData2WindowClones.remove(sourceVAOData);
 
         if (windowClones == null)
             return;
@@ -191,6 +193,11 @@ public class VAOManager extends ManagerPackage {
 
             VAOGLSLUtility.removeVAOHandle(clonedVAO);
         }
+
+        restoreMainContext();
+    }
+
+    private void restoreMainContext() {
 
         WindowInstance mainWindow = windowManager.getMainWindow();
 
