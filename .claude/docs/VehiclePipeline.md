@@ -36,9 +36,9 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 | `ShipwrightLibraryBranch` | Reading and writing files in the assets or `Saves/Vehicles` |
 | `ShipwrightEditBranch` | Every change: strokes, placement rules, options, decks, undo, commit/refuse |
 | `ShipwrightCompileBranch` | `compile(blueprint, layout)` order, weighing, floating, `toDesign` |
-| `ShipwrightHullBranch` | Sections, shell, bulwarks, porch, walls, stairs, ladders, hatches |
+| `ShipwrightHullBranch` | Sections, shell, bulwarks, porch, waist and its rails, walls, stairs, ladders, hatches |
 | `ShipwrightFittingBranch` | Doors, windows, gun ports, helm, capstan, rudder, anchors, lids, ladders, glass, cargo |
-| `ShipwrightRigBranch` | Bowsprit, masts, sails, crow's nests, shrouds, stays |
+| `ShipwrightRigBranch` | Bowsprit, masts (height, sails and nest worked out), crow's nests, shrouds, stays |
 | `ShipwrightDraftBranch` | Sheet, ghost, side and top views |
 | `ShipwrightSurveyBranch` | Stability, speed, triangle survey |
 
@@ -54,11 +54,12 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 
 ## Compile order
 
-`ShipwrightCompileBranch.compile`: sections → shell → porch → bulwarks → walls → stairs → ladders → hatches →
+`ShipwrightCompileBranch.compile`: sections → shell → porch → bulwarks → waist → walls → stairs → ladders → hatches →
 openings (doors, windows, gun ports) → merge pieces into parts → bowsprit → fittings (helm, capstan, rudder, anchors,
 hatch lids, port lids, ladders, glass) → rig → cargo → float → waterline. Everything that cuts the grid runs before
 the merge; everything built as its own part runs after. Hatches run after stairs and ladders so they can close the
-openings those cut.
+openings those cut. The waist runs before walls, stairs and furniture so they see its cut floor; it cuts every octant
+first and rails the rim after, so a waist painted wide never rails its own octants.
 
 ---
 
@@ -96,5 +97,12 @@ openings those cut.
 - **Edit-time checks read the last compiled layout**, so they see the ship as it stood before the change.
 - **The vehicle shader's alpha is a dither share.** Any vehicle texture with partial alpha is drawn see-through.
 - **Stair rise vs ghost:** the ghost assumes a deck's height of rise; a stair onto a raised deck may rise less.
+- **Masts are only a place.** `ShipMastStruct` keeps its `x` alone; height, sails and the crow's nest are worked out
+  in `ShipwrightRigBranch.addRig` and kept per mast in the layout (`getMastHeight`, `getMastSailCount`,
+  `hasCrowsNest`). Read them from the layout, never from the blueprint.
+- **Rails are landings.** `clearLanding` opens a bulwark or a rail (porch or waist) where a stair or ladder lands;
+  the table lets the waist widen into a rim that carries only its own rail.
+- **Gun ports are one per cannon.** `cutPort` refuses a cannon that cuts no planking and one whose port touches a port
+  already cut; never reintroduce open ports over a bulwark.
 - **Bindings:** the table reads `CYCLE_*` and `LEVEL_*` from `KeyBindings`; adding one means `KeyBindings`,
   `Settings`, `SettingsUtility` (apply and store), `SettingsBinding` and its `RuntimeSetting` label.

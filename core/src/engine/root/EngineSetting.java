@@ -2782,6 +2782,7 @@ public class EngineSetting {
     public static final int SHIP_STAIR_HEADROOM = 2;
     public static final int SHIP_STAIR_MAX_RISE = 12;
     public static final int SHIP_STAIR_WIDTH = 2;
+    public static final int SHIP_WAIST_RAIL_HEIGHT = 2;
     public static final int SHIP_WINDOW_HEIGHT = 2;
     public static final int SHIP_WINDOW_SILL = 2;
 
@@ -2806,8 +2807,11 @@ public class EngineSetting {
     public static final int SHIP_BOWSPRIT_MIN_LENGTH = 8;
     public static final int SHIP_BOWSPRIT_RUN = 3;
     public static final int SHIP_CROWS_NEST_GAP = 2;
+    public static final int SHIP_CROWS_NEST_MIN_SAILS = 2;
     public static final int SHIP_CROWS_NEST_RAIL = 8;
     public static final int SHIP_CROWS_NEST_REACH = 2;
+    public static final float SHIP_MAST_BEAM_SHARE = 1.8f;
+    public static final float SHIP_MAST_END_TAPER = 0.45f;
     public static final int SHIP_MAST_HEAD = 3;
     public static final float SHIP_MAST_HEIGHT_SHARE = 0.8f;
     public static final int SHIP_MAST_MAX_HEIGHT = 128;
@@ -2877,6 +2881,7 @@ public class EngineSetting {
     public static final String SHIP_PART_SHROUDS_SUFFIX = "Shrouds";
     public static final String SHIP_PART_STAIRS = "Stairs";
     public static final String SHIP_PART_STAYS = "Stays";
+    public static final String SHIP_PART_TOPMAST_SHROUDS_SUFFIX = "TopmastShrouds";
     public static final String SHIP_PART_TOPS = "Tops";
     public static final String SHIP_PART_WALLS = "Walls";
     public static final String SHIP_PART_WEATHER_DECK = "WeatherDeck";
@@ -2888,6 +2893,7 @@ public class EngineSetting {
     // into an octant: planking, spars and rope far thinner than the octant they fill
     public static final String SHIP_TEXTURE_DECK = "items/standard/OakPlanks";
     public static final String SHIP_TEXTURE_GLASS = "items/standard/ShipGlass";
+    public static final String SHIP_TEXTURE_GRATING = "items/standard/ShipGrating";
     public static final String SHIP_TEXTURE_HULL = "items/standard/Oak";
     public static final String SHIP_TEXTURE_IRON = "items/standard/Iron";
     public static final String SHIP_TEXTURE_RATLINES = "items/standard/Ratlines";
@@ -2951,6 +2957,7 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_INK_STAIRS = 0x3E7A3AFF;
     public static final int SHIPWRIGHT_INK_STAIR_FOOT = 0x5FB04FFF;
     public static final int SHIPWRIGHT_INK_SUBMERGED = 0x2E6EA8FF;
+    public static final int SHIPWRIGHT_INK_WAIST = 0x3B2A1EA0;
     public static final int SHIPWRIGHT_INK_WALL = 0x6B4426FF;
     public static final int SHIPWRIGHT_INK_WATERLINE = 0x52B8F0FF;
     public static final int SHIPWRIGHT_INK_WINDOW = 0x7FC8E8FF;
@@ -2970,14 +2977,18 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TOOL_MASTS = "Masts";
     public static final String SHIPWRIGHT_TOOL_OPENINGS = "Openings";
     public static final String SHIPWRIGHT_TOOL_STAIRS = "Stairs & Ladders";
+    public static final String SHIPWRIGHT_TOOL_WAIST = "Waist";
     public static final String SHIPWRIGHT_TOOL_WALLS = "Walls";
 
     // Shipwright Problems — what keeps a ship from being built
+    public static final String SHIPWRIGHT_PROBLEM_CANNON_PORT = "A cannon must fire through its own port in the side";
+    public static final String SHIPWRIGHT_PROBLEM_CANNON_SHARED = "Cannons stand too close to cut a port each";
     public static final String SHIPWRIGHT_PROBLEM_CAPSTAN_FLOOR = "The capstan must stand on open floor";
     public static final String SHIPWRIGHT_PROBLEM_CARGO_FIT = "No room to stand ";
     public static final String SHIPWRIGHT_PROBLEM_DECK_EMPTY = " is empty: draw it or remove it";
     public static final String SHIPWRIGHT_PROBLEM_DECK_FLOATING = " has a piece not resting on the deck below it";
     public static final String SHIPWRIGHT_PROBLEM_FURNISHING_UNKNOWN = "No furnishing is named ";
+    public static final String SHIPWRIGHT_PROBLEM_FURNITURE_FLOOR = "Furniture must stand on open floor";
     public static final String SHIPWRIGHT_PROBLEM_HATCH_BOTTOM = "A hatch cannot lie in the bottom deck";
     public static final String SHIPWRIGHT_PROBLEM_HATCH_FLOOR = "A hatch must lie in open floor over open room below";
     public static final String SHIPWRIGHT_PROBLEM_HELM_FLOOR = "The helm must stand on open floor";
@@ -2998,6 +3009,8 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_TOO_BLUNT = "Her bow is too blunt to cut the water";
     public static final String SHIPWRIGHT_PROBLEM_TOO_ROUND = "Too round to sail: make her twice as long as broad";
     public static final String SHIPWRIGHT_PROBLEM_TOO_SHORT = "Too short to sail: draw her longer";
+    public static final String SHIPWRIGHT_PROBLEM_WAIST_BOTTOM = "The waist cannot be cut through the bottom deck";
+    public static final String SHIPWRIGHT_PROBLEM_WAIST_FLOOR = "The waist must be cut through open floor";
     public static final String SHIPWRIGHT_PROBLEM_WALL_FLOOR = "A wall must stand on open floor";
 
     // Shipwright Refusals — why a change, a save or a launch was not made
@@ -3029,7 +3042,6 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_DEPTH_TABLE = 0;
     public static final String SHIPWRIGHT_FBO = "ShipwrightScene";
     public static final int SHIPWRIGHT_LAYER = 9;
-    public static final int SHIPWRIGHT_MAST_STEP = 2;
     public static final String SHIPWRIGHT_MATERIAL_PAPER = "shipwright/ShipwrightPaperMaterial";
     public static final String SHIPWRIGHT_MESH_QUAD = "shipwright/ShipwrightQuad";
     public static final float SHIPWRIGHT_MODE_CARD = 2f;
@@ -3077,10 +3089,11 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_FORMAT_WEIGHT = "Weighs %.0f t";
     public static final String[] SHIPWRIGHT_HINTS = {
             "Draw the outline out to the cursor, mirrored; Shift or right erases; Add Deck for the next one",
+            "Cut the waist open through this deck, mirrored, railed round; cut decks below to sink it deeper",
             "Paint walls on this deck; < > full or half height",
-            "Set a door or window facing its wall; < > door or window; R turns",
+            "Set a door or window facing its wall, or a grated hatch in the floor; < > door, window or hatch; R turns",
             "Set a stair's foot, climbing the way it faces to the deck above; R turns",
-            "Step a mast on the centre line or pick one; erase takes it down",
+            "Step a mast on the centre line or pick one; its height, sails and rigging follow the hull",
             "Set the item down; < > picks the item, the helm and capstan first; R turns" };
     public static final String SHIPWRIGHT_NAME_CARET = "|";
     public static final String SHIPWRIGHT_NAME_DIRTY = " *";
@@ -3101,7 +3114,6 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TEXT_NOT_AFLOAT = "Not afloat";
     public static final String SHIPWRIGHT_TEXT_NO_MAST = "No mast picked";
     public static final String SHIPWRIGHT_TEXT_OF = " of ";
-    public static final String SHIPWRIGHT_TEXT_RIGGED = "rigged";
     public static final String SHIPWRIGHT_TEXT_SAILS = " sails";
     public static final String SHIPWRIGHT_TEXT_SEPARATOR = "  |  ";
     public static final String SHIPWRIGHT_TEXT_STAIR = "Stair";

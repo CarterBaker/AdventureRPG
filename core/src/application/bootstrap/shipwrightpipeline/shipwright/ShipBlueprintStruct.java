@@ -17,8 +17,10 @@ public class ShipBlueprintStruct extends StructPackage {
      * keeps, and the category it is drawn and built as. A ship is a stack of
      * decks from the bottom up, each drawn as its
      * outline: how many octants it reaches out from the centre line at every
-     * octant along the sheet, mirrored to the other side. Walls, half walls,
-     * doors, windows, hatches, stairs, ladders and furniture stand on a deck
+     * octant along the sheet, mirrored to the other side. The waist is cut
+     * through a deck's floor octant by octant, kept sorted, every octant and
+     * its mirror together. Walls, half walls, doors, windows, hatches,
+     * stairs, ladders and furniture stand on a deck
      * at an octant along the length and across the full breadth, never
      * mirrored, each packed through
      * ShipCellUtility with its deck as its level; walls are kept sorted and a
@@ -37,6 +39,9 @@ public class ShipBlueprintStruct extends StructPackage {
     // Decks — the half-beam of every deck at every octant along the sheet, deck after deck
     private final byte[] outlines;
     private int deckCount;
+
+    // Waist — packed cells cut out of a deck's floor, their level the deck they are cut through
+    private final IntArrayList waists;
 
     // Rooms — packed cells, their level the deck they stand on
     private final IntArrayList walls;
@@ -72,6 +77,9 @@ public class ShipBlueprintStruct extends StructPackage {
         // Decks
         this.outlines = new byte[EngineSetting.SHIP_MAX_DECKS * EngineSetting.SHIP_SHEET_LENGTH];
         this.deckCount = 1;
+
+        // Waist
+        this.waists = new IntArrayList();
 
         // Rooms
         this.walls = new IntArrayList();
@@ -115,6 +123,9 @@ public class ShipBlueprintStruct extends StructPackage {
         // Decks
         System.arraycopy(other.outlines, 0, outlines, 0, outlines.length);
         this.deckCount = other.deckCount;
+
+        // Waist
+        copyCells(other.waists, waists);
 
         // Rooms
         copyCells(other.walls, walls);
@@ -208,6 +219,7 @@ public class ShipBlueprintStruct extends StructPackage {
         Arrays.fill(outlines, (deckCount - 1) * length, deckCount * length, (byte) 0);
         deckCount--;
 
+        removeDeckCells(waists, deck);
         removeDeckCells(walls, deck);
         removeDeckCells(halfWalls, deck);
         removeDeckCells(doors, deck);
@@ -271,6 +283,7 @@ public class ShipBlueprintStruct extends StructPackage {
     // Everything standing off the deck it was set down on taken up, and every mast with no deck under it
     public void prunePlacements() {
 
+        pruneCells(waists);
         pruneCells(walls);
         pruneCells(halfWalls);
         pruneCells(doors);
@@ -344,6 +357,22 @@ public class ShipBlueprintStruct extends StructPackage {
         return bounds[0] <= bounds[1];
     }
 
+    // Waist \\
+
+    // True when the waist is cut through a deck's floor at a place
+    public boolean hasWaist(int level, int x, int z) {
+        return findSorted(waists, ShipCellUtility.pack(level, x, z, 0)) >= 0;
+    }
+
+    // Cuts the waist through a deck's floor at a place and its mirror across the centre line, or fills both back in
+    public void setWaist(int level, int x, int z, boolean cut) {
+
+        int halfZ = ShipCellUtility.toHalfBreadth(z);
+
+        setSorted(waists, ShipCellUtility.pack(level, x, ShipCellUtility.toStarboard(halfZ), 0), cut);
+        setSorted(waists, ShipCellUtility.pack(level, x, ShipCellUtility.toPort(halfZ), 0), cut);
+    }
+
     // Walls \\
 
     public boolean hasWall(int level, int x, int z) {
@@ -361,12 +390,8 @@ public class ShipBlueprintStruct extends StructPackage {
         removeSorted(walls, place);
         removeSorted(halfWalls, place);
 
-        if (!standing)
-            return;
-
-        IntArrayList cells = half ? halfWalls : walls;
-
-        cells.add(-findSorted(cells, place) - 1, place);
+        if (standing)
+            setSorted(half ? halfWalls : walls, place, true);
     }
 
     // True when the wall at a place stands at the height asked for
@@ -375,10 +400,17 @@ public class ShipBlueprintStruct extends StructPackage {
     }
 
     private static void removeSorted(IntArrayList cells, int cell) {
+        setSorted(cells, cell, false);
+    }
+
+    // Keeps a cell in a sorted list, or takes it out
+    private static void setSorted(IntArrayList cells, int cell, boolean kept) {
 
         int index = findSorted(cells, cell);
 
-        if (index >= 0)
+        if (kept && index < 0)
+            cells.add(-index - 1, cell);
+        else if (!kept && index >= 0)
             cells.removeInt(index);
     }
 
@@ -539,6 +571,10 @@ public class ShipBlueprintStruct extends StructPackage {
 
     public boolean hasHull() {
         return isDeckDrawn(0);
+    }
+
+    public IntArrayList getWaists() {
+        return waists;
     }
 
     public IntArrayList getWalls() {

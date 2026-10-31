@@ -25,7 +25,12 @@ class ShipwrightHullBranch extends BranchPackage {
      * at their height. Every open deck is ringed by a bulwark where it looks
      * out over nothing, the lowest of them the sill the sea comes aboard over.
      * A porch hangs off the stern at its deck as wide as the stern is there,
-     * railed. A wall rises from its deck to the deck above it under cover, or
+     * railed. The waist is cut out of a deck's floor wherever it is drawn,
+     * over open room below, and railed round wherever the floor left
+     * standing looks down into it, so a deck cut through its middle is left
+     * as gangways either side over the deck below, open to the sky; cut
+     * through several decks, the pit runs as deep. A wall rises from its
+     * deck to the deck above it under cover, or
      * a deckhouse high in the open; a half wall stands waist high. A stair
      * climbs one octant per step along the way it faces, two octants wide,
      * until it meets a floor level with its last tread, and opens the floor
@@ -213,6 +218,66 @@ class ShipwrightHullBranch extends BranchPackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
+    // Waist \\
+
+    // The waist cut out of every deck's floor where it is drawn, then railed round wherever a floor left standing
+    // looks down into it
+    void layWaists(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+
+        IntArrayList waists = blueprint.getWaists();
+
+        for (int i = 0; i < waists.size(); i++)
+            cutWaist(layout, waists.getInt(i));
+
+        for (int i = 0; i < waists.size(); i++)
+            railWaist(layout, waists.getInt(i));
+    }
+
+    // One octant of a deck's floor inside the hull cut away over open room below; never the bottom deck, the side or
+    // anything built on it
+    private void cutWaist(ShipLayoutStruct layout, int cell) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int deck = ShipCellUtility.unpackLevel(cell);
+        int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
+        int x = ShipCellUtility.unpackX(cell);
+        int gridX = layout.getOriginX() + x;
+        int z = ShipCellUtility.unpackZ(cell);
+
+        if (deck == 0) {
+            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_WAIST_BOTTOM);
+            return;
+        }
+
+        if (!layout.isVolume(x, floor, z) || !isFloor(grid, gridX, floor, z) || !grid.isEmpty(gridX, floor + 1, z)
+                || !grid.isEmpty(gridX, floor - 1, z)) {
+            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_WAIST_FLOOR);
+            return;
+        }
+
+        grid.clear(gridX, floor, z);
+    }
+
+    // A rail waist high on every floor octant beside a cut one
+    private void railWaist(ShipLayoutStruct layout, int cell) {
+
+        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int gridX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
+        int z = ShipCellUtility.unpackZ(cell);
+
+        for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++)
+            railRim(layout.getGrid(), gridX + ShipCellUtility.stepX(spin), floor, z + ShipCellUtility.stepZ(spin));
+    }
+
+    private void railRim(ShipOctantGridStruct grid, int x, int floor, int z) {
+
+        if (!isFloor(grid, x, floor, z))
+            return;
+
+        for (int rise = 1; rise <= EngineSetting.SHIP_WAIST_RAIL_HEIGHT; rise++)
+            grid.setIfEmpty(x, floor + rise, z, ShipPiece.RAILS);
+    }
+
     // Walls \\
 
     void layWalls(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
@@ -332,12 +397,17 @@ class ShipwrightHullBranch extends BranchPackage {
             grid.clear(x, floor, z);
     }
 
-    // The bulwark along a deck's edge opened where a stair climbs onto it
+    // The bulwark along a deck's edge, or the rail round a porch or the waist, opened where a stair or ladder climbs
+    // onto it
     private void clearLanding(ShipOctantGridStruct grid, int x, int floor, int z) {
 
-        for (int rise = 1; rise <= EngineSetting.SHIP_BULWARK_HEIGHT; rise++)
-            if (grid.get(x, floor + rise, z) == ShipPiece.BULWARK)
+        for (int rise = 1; rise <= EngineSetting.SHIP_BULWARK_HEIGHT; rise++) {
+
+            ShipPiece piece = grid.get(x, floor + rise, z);
+
+            if (piece == ShipPiece.BULWARK || piece == ShipPiece.RAILS)
                 grid.clear(x, floor + rise, z);
+        }
     }
 
     // The octants a stair rises: the first run whose next octant along holds a floor that high, SHIP_LEVEL_NONE

@@ -406,18 +406,6 @@ public class ShipwrightManager extends ManagerPackage {
         session.setTool(session.getTool().next());
     }
 
-    public void stepMastHeight(ShipwrightSessionInstance session, int step) {
-        shipwrightEditBranch.stepMastHeight(session, step);
-    }
-
-    public void toggleCrowsNest(ShipwrightSessionInstance session) {
-        shipwrightEditBranch.toggleCrowsNest(session);
-    }
-
-    public void toggleRigging(ShipwrightSessionInstance session) {
-        shipwrightEditBranch.toggleRigging(session);
-    }
-
     public void undo(ShipwrightSessionInstance session) {
         shipwrightEditBranch.undo(session);
     }
@@ -451,11 +439,6 @@ public class ShipwrightManager extends ManagerPackage {
         String furnishingName = furnishingNames.get(item - EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS);
 
         return furnishingName.substring(furnishingName.lastIndexOf(EngineSetting.PATH_SEPARATOR) + 1);
-    }
-
-    // The height a mast stepped on the session's ship rises above its deck, as the hull's length sets
-    public int resolveMastHeight(ShipwrightSessionInstance session) {
-        return shipwrightRigBranch.resolveMastHeight(session.getLayout());
     }
 
     // The furnishing table at an index of the drafting table's list of furnishings

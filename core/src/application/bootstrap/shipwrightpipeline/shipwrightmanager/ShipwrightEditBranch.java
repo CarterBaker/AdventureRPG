@@ -20,11 +20,14 @@ class ShipwrightEditBranch extends BranchPackage {
      * Works every change a drafting table makes to its blueprint, always on
      * the deck picked. Holding draw or erase starts a stroke at the cursor: a
      * deck's outline is drawn out to the cursor at every octant along the
-     * sheet it crosses, mirrored either side of the centre line, and walls are
+     * sheet it crosses, mirrored either side of the centre line, the waist is
+     * cut through the open floor it passes over, mirrored too, and walls are
      * painted on the open floor it passes over; every other tool works the octant the stroke
      * began on once, setting a thing down or taking up whatever already stands
-     * there. Only the outline is mirrored; walls, openings, stairs, ladders
-     * and furniture stand only where they are set. A door or a window is set
+     * there. Only the outline and the waist are mirrored; walls, openings,
+     * stairs, ladders and furniture stand only where they are set. A mast is
+     * only stepped or taken down; its height, sails and rigging are worked
+     * out from the hull. A door or a window is set
      * on the wall or side it is cut through and turns itself to face across
      * it, and taking a wall down takes every door and window in it along.
      * Every stroke, and every option worked from the menu, is one change:
@@ -116,6 +119,7 @@ class ShipwrightEditBranch extends BranchPackage {
 
         return switch (session.getTool()) {
             case DECK -> drawOutline(blueprint, session.getDeck(), x, z, erasing);
+            case WAIST -> paintWaist(session, x, z, erasing);
             case WALLS -> paintWall(session, x, z, erasing);
             case OPENINGS -> placeOpening(session, x, z, erasing);
             case STAIRS -> togglePlacement(session,
@@ -136,6 +140,56 @@ class ShipwrightEditBranch extends BranchPackage {
         blueprint.setOutline(deck, x, halfBeam);
 
         return true;
+    }
+
+    // Cuts the waist through the deck picked at an octant and its mirror, or fills both back in; only open floor with
+    // open room below it is cut, so a stroke dragged across the deck stops at whatever stands on it
+    private boolean paintWaist(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
+
+        ShipBlueprintStruct blueprint = session.getBlueprint();
+        int deck = session.getDeck();
+
+        if (erasing) {
+
+            if (!blueprint.hasWaist(deck, x, z))
+                return false;
+
+            blueprint.setWaist(deck, x, z, false);
+
+            return true;
+        }
+
+        if (deck == 0) {
+
+            if (session.isStrokeStart())
+                refuse(session, EngineSetting.SHIPWRIGHT_PROBLEM_WAIST_BOTTOM);
+
+            return false;
+        }
+
+        int mirrorZ = EngineSetting.SHIP_SHEET_BREADTH - 1 - z;
+
+        if (blueprint.hasWaist(deck, x, z) || !isCuttableFloor(session, x, z)
+                || !isCuttableFloor(session, x, mirrorZ))
+            return false;
+
+        blueprint.setWaist(deck, x, z, true);
+
+        return true;
+    }
+
+    // True when the deck picked is drawn and was built with open floor at an octant, nothing standing on it but the
+    // rail round the waist already cut beside it, and open room below
+    private boolean isCuttableFloor(ShipwrightSessionInstance session, int x, int z) {
+
+        ShipLayoutStruct layout = session.getLayout();
+        int gridX = layout.getOriginX() + x;
+        int floor = session.getDeck() * EngineSetting.SHIP_DECK_HEIGHT;
+        ShipPiece standing = layout.getGrid().get(gridX, floor + 1, z);
+
+        return session.getBlueprint().isOnDeck(session.getDeck(), x, z) && isOpenFloor(session, x, z)
+                && (standing == null || standing == ShipPiece.RAILS)
+                && layout.getGrid().isEmpty(gridX, floor - 1, z);
     }
 
     private boolean paintWall(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
@@ -265,9 +319,7 @@ class ShipwrightEditBranch extends BranchPackage {
                 || blueprint.findLowestDeck(foot + EngineSetting.SHIP_MAST_OCTANTS - 1) == EngineSetting.SHIP_DECK_NONE)
             return false;
 
-        int height = shipwrightManager.resolveMastHeight(session);
-
-        session.setMastIndex(blueprint.addMast(new ShipMastStruct(foot, height, false, true)));
+        session.setMastIndex(blueprint.addMast(new ShipMastStruct(foot)));
 
         return true;
     }
@@ -414,7 +466,7 @@ class ShipwrightEditBranch extends BranchPackage {
     }
 
     // Steps the option of the tool in hand: wall height, door, window or hatch, stair or ladder, the furniture item,
-    // or the mast picked
+    // or the mast picked; the deck and the waist step the deck
     void stepOption(ShipwrightSessionInstance session, int step) {
 
         switch (session.getTool()) {
@@ -437,45 +489,6 @@ class ShipwrightEditBranch extends BranchPackage {
         int index = session.hasMastPicked() ? Math.floorMod(session.getMastIndex() + step, count) : 0;
 
         session.setMastIndex(index);
-    }
-
-    // Masts \\
-
-    void stepMastHeight(ShipwrightSessionInstance session, int step) {
-
-        if (!session.hasMastPicked())
-            return;
-
-        ShipBlueprintStruct before = session.getBlueprint().copy();
-        ShipMastStruct mast = session.getBlueprint().getMasts().get(session.getMastIndex());
-
-        mast.setHeight(clamp(mast.getHeight() + step,
-                EngineSetting.SHIP_MAST_MIN_HEIGHT, EngineSetting.SHIP_MAST_MAX_HEIGHT));
-        commit(session, before, true);
-    }
-
-    void toggleCrowsNest(ShipwrightSessionInstance session) {
-
-        if (!session.hasMastPicked())
-            return;
-
-        ShipBlueprintStruct before = session.getBlueprint().copy();
-        ShipMastStruct mast = session.getBlueprint().getMasts().get(session.getMastIndex());
-
-        mast.setCrowsNest(!mast.hasCrowsNest());
-        commit(session, before, true);
-    }
-
-    void toggleRigging(ShipwrightSessionInstance session) {
-
-        if (!session.hasMastPicked())
-            return;
-
-        ShipBlueprintStruct before = session.getBlueprint().copy();
-        ShipMastStruct mast = session.getBlueprint().getMasts().get(session.getMastIndex());
-
-        mast.setRigging(!mast.isRigged());
-        commit(session, before, true);
     }
 
     // Naming \\

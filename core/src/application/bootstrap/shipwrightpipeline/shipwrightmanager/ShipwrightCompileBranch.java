@@ -21,7 +21,7 @@ class ShipwrightCompileBranch extends BranchPackage {
      * every piece of a deck above the bottom — a forecastle and a poop are two
      * pieces of one deck — must rest on the deck below. The octant grid is laid out round
      * the sheet with room aft for the rudder and the porch and headroom for
-     * deckhouses and bulwarks; the hull, its decks, porch, bulwarks, walls,
+     * deckhouses and bulwarks; the hull, its decks, porch, bulwarks, waist, walls,
      * stairs, ladders, hatches, doors, windows and gun ports are laid into it
      * through ShipwrightHullBranch and ShipwrightFittingBranch, and every piece
      * merged into its part. The bowsprit, helm, capstan, rudder, anchors,
@@ -78,6 +78,7 @@ class ShipwrightCompileBranch extends BranchPackage {
         shipwrightHullBranch.layShell(layout);
         shipwrightHullBranch.layPorch(blueprint, layout);
         shipwrightHullBranch.layBulwarks(layout);
+        shipwrightHullBranch.layWaists(blueprint, layout);
         shipwrightHullBranch.layWalls(blueprint, layout);
         shipwrightHullBranch.layStairs(blueprint, layout);
         shipwrightHullBranch.layLadders(blueprint, layout);

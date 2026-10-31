@@ -11,7 +11,6 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.shipwright.ShipwrightSystem;
 import engine.root.BranchPackage;
-import engine.root.EngineSetting;
 import engine.settings.KeyBindings;
 import engine.util.arpg.ArpgUtility;
 
@@ -161,24 +160,6 @@ public class ShipwrightBranch extends BranchPackage {
 
     public void previousOption() {
         shipwrightManager.stepOption(session(), -1);
-    }
-
-    // Masts \\
-
-    public void mastTaller() {
-        shipwrightManager.stepMastHeight(session(), EngineSetting.SHIPWRIGHT_MAST_STEP);
-    }
-
-    public void mastShorter() {
-        shipwrightManager.stepMastHeight(session(), -EngineSetting.SHIPWRIGHT_MAST_STEP);
-    }
-
-    public void toggleCrowsNest() {
-        shipwrightManager.toggleCrowsNest(session());
-    }
-
-    public void toggleRigging() {
-        shipwrightManager.toggleRigging(session());
     }
 
     // Utility \\

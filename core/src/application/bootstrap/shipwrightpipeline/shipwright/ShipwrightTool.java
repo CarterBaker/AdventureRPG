@@ -7,7 +7,8 @@ public enum ShipwrightTool {
     /*
      * What the drafting table's cursor does, always on the plan of the deck
      * picked. A deck's outline is drawn mirrored either side of the centre
-     * line; walls, full or half height, are painted where they stand; a door
+     * line, and the waist is cut through a deck's floor the same way; walls,
+     * full or half height, are painted where they stand; a door
      * or a window is set on the wall or side it is cut through, and a hatch
      * in a floor; a stair is set at its foot facing the way it climbs, and a
      * ladder at its foot; a mast is stepped on the centre line; furniture,
@@ -17,6 +18,7 @@ public enum ShipwrightTool {
      */
 
     DECK(EngineSetting.SHIPWRIGHT_TOOL_DECK, true, true),
+    WAIST(EngineSetting.SHIPWRIGHT_TOOL_WAIST, true, true),
     WALLS(EngineSetting.SHIPWRIGHT_TOOL_WALLS, true, false),
     OPENINGS(EngineSetting.SHIPWRIGHT_TOOL_OPENINGS, false, false),
     STAIRS(EngineSetting.SHIPWRIGHT_TOOL_STAIRS, false, false),

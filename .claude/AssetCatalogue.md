@@ -43,10 +43,15 @@ One line per session that changed this file: the date, what was added or removed
   `Rope`, `Rungs` and `ShipGlass` under `textures/items/standard/` and the test ship `vehicles/Galleon.arpg`; removed
   `schemas/Ships.arpg` and `ships/Sloop.arpg`, deleted when ships became vehicles.
 - 2026-10-31: Rewrote `menus/editor/BiomePlanner.arpg`: the 3x3 biome grid is held square at the top of its panel.
+- 2026-10-31: Ship waist, rig and furniture. Added the texture `ShipGrating` under `textures/items/standard/` (grated
+  hatch lids); regenerated `vehicles/Galleon.arpg` (open waist, guns behind their own ports, two-floor captain's loft
+  with a porch, more windows), `menus/Shipwright.arpg` (Waist tool, mast buttons removed), `schemas/Vehicles.arpg`
+  (waists), `items/furniture/Furniture.arpg` and the meshes `furniture/Barrel.arpg` and `furniture/CargoCrate.arpg`
+  (barrels and crates open as containers).
 
 ---
 
-## Textures and Sprites (2198 files)
+## Textures and Sprites (2199 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -528,6 +533,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `ShellSand`: A
 - `Shingle`: A
 - `ShipGlass`: A
+- `ShipGrating`: A
 - `SideriteOre`: A
 - `Silt`: A
 - `Siltstone`: A

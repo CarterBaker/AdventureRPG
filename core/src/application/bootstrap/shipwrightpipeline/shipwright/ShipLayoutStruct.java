@@ -4,6 +4,7 @@ import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
+import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -22,9 +23,9 @@ public class ShipLayoutStruct extends StructPackage {
      * window pane is
      * kept as the octant box it fills and the quarter turn it faces, laid by
      * the hull and the openings before the grid is merged and built as a
-     * part of its own after. It knows how far its anchors drop and how many
-     * sails each mast
-     * carries and where its bowsprit's tip reaches; what the ship weighs, the
+     * part of its own after. It knows how far its anchors drop, how tall each
+     * mast rises, how many sails it carries and whether it has a crow's nest,
+     * and where its bowsprit's tip reaches; what the ship weighs, the
      * ballast it is trimmed with, the height of its centre of mass and the
      * draft it floats at; how high the sea may rise before it comes aboard;
      * and how long, how broad and how sharp it is at its waterline. A problem
@@ -58,8 +59,10 @@ public class ShipLayoutStruct extends StructPackage {
     // Anchors — model blocks
     private float anchorDrop;
 
-    // Rig — sails per mast, from the stern forward
+    // Rig — every mast's height in octants, its sails and its crow's nest, from the stern forward
+    private final IntArrayList mastHeights;
     private final IntArrayList mastSailCounts;
+    private final BooleanArrayList mastNests;
 
     // Bowsprit — its tip in model sub-voxels, SHIP_LEVEL_NONE while there is none
     private int bowspritTipX;
@@ -109,7 +112,9 @@ public class ShipLayoutStruct extends StructPackage {
         this.paneBoxes = new IntArrayList();
 
         // Rig
+        this.mastHeights = new IntArrayList();
         this.mastSailCounts = new IntArrayList();
+        this.mastNests = new BooleanArrayList();
 
         // Problems
         this.buildProblem = EngineSetting.SHIP_PROBLEM_NONE;
@@ -130,7 +135,9 @@ public class ShipLayoutStruct extends StructPackage {
         portBoxes.clear();
         paneBoxes.clear();
         this.anchorDrop = EngineSetting.DEFAULT_VEHICLE_ANCHOR_DROP;
+        mastHeights.clear();
         mastSailCounts.clear();
+        mastNests.clear();
         this.bowspritTipX = EngineSetting.SHIP_LEVEL_NONE;
         this.bowspritTipY = EngineSetting.SHIP_LEVEL_NONE;
         this.structureMass = 0f;
@@ -251,8 +258,11 @@ public class ShipLayoutStruct extends StructPackage {
         this.anchorDrop = anchorDrop;
     }
 
-    public void addMastSailCount(int sailCount) {
+    // The rig worked out for the next mast from the stern forward
+    public void addMast(int height, int sailCount, boolean crowsNest) {
+        mastHeights.add(height);
         mastSailCounts.add(sailCount);
+        mastNests.add(crowsNest);
     }
 
     public void setBowspritTip(int bowspritTipX, int bowspritTipY) {
@@ -365,8 +375,20 @@ public class ShipLayoutStruct extends StructPackage {
         return anchorDrop;
     }
 
-    public IntArrayList getMastSailCounts() {
-        return mastSailCounts;
+    public int getMastCount() {
+        return mastHeights.size();
+    }
+
+    public int getMastHeight(int mastIndex) {
+        return mastHeights.getInt(mastIndex);
+    }
+
+    public int getMastSailCount(int mastIndex) {
+        return mastSailCounts.getInt(mastIndex);
+    }
+
+    public boolean hasCrowsNest(int mastIndex) {
+        return mastNests.getBoolean(mastIndex);
     }
 
     public int getSailCount() {

@@ -28,8 +28,8 @@ class ShipwrightDraftBranch extends BranchPackage {
      * the deck picked. While a deck is drawn its outline is inked, blue where
      * it lies under the waterline, the decks under and over it faint, and the
      * hull's outline where the water meets it ruled across; with any other
-     * tool it is the deck as it was built — floor, planking, bulwarks, stairs
-     * and hatches — with every wall, half wall, door, window, stair foot,
+     * tool it is the deck as it was built — floor, planking, bulwarks, rails,
+     * stairs and hatches — with the waist cut through it, every wall, half wall, door, window, stair foot,
      * piece of furniture, the helm and the capstan on it straight from the
      * blueprint, so a stroke shows as it is drawn, and every hatch and ladder
      * where it was built. While a stair, ladder or hatch is in hand its whole
@@ -151,6 +151,7 @@ class ShipwrightDraftBranch extends BranchPackage {
         if (layout.getSectionLayers() > 0)
             drawFloor(session, layout.getGrid(), deck * EngineSetting.SHIP_DECK_HEIGHT);
 
+        drawCells(session, blueprint.getWaists(), deck, EngineSetting.SHIPWRIGHT_INK_WAIST);
         drawCells(session, blueprint.getWalls(), deck, EngineSetting.SHIPWRIGHT_INK_WALL);
         drawCells(session, blueprint.getHalfWalls(), deck, EngineSetting.SHIPWRIGHT_INK_HALF_WALL);
         drawCells(session, blueprint.getWindows(), deck, EngineSetting.SHIPWRIGHT_INK_WINDOW);

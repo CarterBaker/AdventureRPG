@@ -6,7 +6,6 @@ import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
-import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipSurveyStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
@@ -22,7 +21,6 @@ import engine.input.Keys;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.settings.KeyBindings;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class ShipwrightSystem extends SystemPackage {
 
@@ -434,28 +432,25 @@ public class ShipwrightSystem extends SystemPackage {
                 .append(EngineSetting.SHIPWRIGHT_FACINGS[session.getSpin()]);
     }
 
-    // The mast picked: its height, the sails it carries and its fittings
+    // The mast picked as the hull rigs it: its height, the sails it carries and its crow's nest
     private StringBuilder appendMast(StringBuilder out) {
 
-        if (!session.hasMastPicked())
+        ShipLayoutStruct layout = session.getLayout();
+        int mastIndex = session.getMastIndex();
+
+        if (!session.hasMastPicked() || mastIndex >= layout.getMastCount())
             return out.append(EngineSetting.SHIPWRIGHT_TEXT_NO_MAST);
 
-        ShipMastStruct mast = session.getBlueprint().getMasts().get(session.getMastIndex());
-        IntArrayList sails = session.getLayout().getMastSailCounts();
-
-        out.append(shipwrightManager.getMastName(session, session.getMastIndex()))
+        out.append(shipwrightManager.getMastName(session, mastIndex))
                 .append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
-                .append(mast.getHeight() * EngineSetting.SUB_BLOCK_SIZE)
+                .append(layout.getMastHeight(mastIndex) * EngineSetting.SUB_BLOCK_SIZE)
                 .append(EngineSetting.SHIPWRIGHT_TEXT_BLOCKS)
                 .append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
-                .append(session.getMastIndex() < sails.size() ? sails.getInt(session.getMastIndex()) : 0)
+                .append(layout.getMastSailCount(mastIndex))
                 .append(EngineSetting.SHIPWRIGHT_TEXT_SAILS);
 
-        if (mast.hasCrowsNest())
+        if (layout.hasCrowsNest(mastIndex))
             out.append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR).append(EngineSetting.SHIPWRIGHT_TEXT_NEST);
-
-        if (mast.isRigged())
-            out.append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR).append(EngineSetting.SHIPWRIGHT_TEXT_RIGGED);
 
         return out;
     }

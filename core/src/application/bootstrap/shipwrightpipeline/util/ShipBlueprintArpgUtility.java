@@ -20,15 +20,16 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
      * keeps its display name, the "category" it is built as and its "decks"
      * from the bottom up. Each deck keeps its
      * "outline": the octants it reaches out from the centre line at every
-     * octant along the sheet from its "start", aft to fore; and everything
+     * octant along the sheet from its "start", aft to fore; the "waists" cut
+     * through its floor; and everything
      * standing on it, each at [x, z] across the full breadth, or [x, z, spin]
      * where it faces a way: "walls", "half_walls", "doors", "windows",
      * "hatches", "stairs", "ladders" and every piece of "furniture" naming its
      * furnishing table and
      * its "cell". The "helm" and "capstan" are one [deck, x, z] each, empty
      * for none, the "porch" the deck it hangs at, SHIP_DECK_NONE for none, and
-     * every mast keeps its "x", "height", and whether it carries a
-     * "crows_nest" and "rigging". findProblem() says what keeps a file from
+     * every mast keeps only its "x", everything else about it following from
+     * the hull. findProblem() says what keeps a file from
      * being read, so a ship in the assets fails loudly and a ship in a
      * player's saves is skipped.
      */
@@ -77,12 +78,9 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
             for (ArpgElementStruct mastArpg : mastsArpg)
                 if (!mastArpg.isObject()
                         || !ArpgUtility.hasNumber(mastArpg.getAsObject(), "x")
-                        || !ArpgUtility.hasNumber(mastArpg.getAsObject(), "height")
                         || !isWithin(mastArpg.getAsObject().get("x").getAsInt(), 0,
-                                EngineSetting.SHIP_SHEET_LENGTH - EngineSetting.SHIP_MAST_OCTANTS)
-                        || !isWithin(mastArpg.getAsObject().get("height").getAsInt(),
-                                EngineSetting.SHIP_MAST_MIN_HEIGHT, EngineSetting.SHIP_MAST_MAX_HEIGHT))
-                    return "a mast stands off its sheet or rises outside the heights a mast may";
+                                EngineSetting.SHIP_SHEET_LENGTH - EngineSetting.SHIP_MAST_OCTANTS))
+                    return "a mast stands off its sheet";
         }
 
         return EngineSetting.SHIP_PROBLEM_NONE;
@@ -104,14 +102,15 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
                     || !isWithin(halfBeam.getAsInt(), 0, EngineSetting.SHIP_SHEET_HALF_BREADTH))
                 return "a deck's outline reaches wider than its sheet";
 
-        if (!areCellsSound(deckArpg, "walls", EngineSetting.SHIP_PLACE_FIELDS)
+        if (!areCellsSound(deckArpg, "waists", EngineSetting.SHIP_PLACE_FIELDS)
+                || !areCellsSound(deckArpg, "walls", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "half_walls", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "doors", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "windows", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "hatches", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "stairs", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "ladders", EngineSetting.SHIP_PLACE_FIELDS + 1))
-            return "a wall, door, window, hatch, stair or ladder stands off its sheet";
+            return "its waist, a wall, door, window, hatch, stair or ladder stands off its sheet";
 
         if (ArpgUtility.hasArray(deckArpg, "furniture"))
             for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
@@ -212,11 +211,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
 
         if (ArpgUtility.hasArray(arpg, "masts"))
             for (ArpgElementStruct mastArpg : arpg.getAsArray("masts"))
-                blueprint.addMast(new ShipMastStruct(
-                        mastArpg.getAsObject().get("x").getAsInt(),
-                        mastArpg.getAsObject().get("height").getAsInt(),
-                        ArpgUtility.getBoolean(mastArpg.getAsObject(), "crows_nest", false),
-                        ArpgUtility.getBoolean(mastArpg.getAsObject(), "rigging", false)));
+                blueprint.addMast(new ShipMastStruct(mastArpg.getAsObject().get("x").getAsInt()));
 
         return blueprint;
     }
@@ -229,6 +224,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         for (int i = 0; i < outlineArpg.size(); i++)
             blueprint.setOutline(deck, start + i, outlineArpg.get(i).getAsInt());
 
+        parseWaists(deckArpg, deck, blueprint);
         parseWalls(deckArpg, "walls", deck, false, blueprint);
         parseWalls(deckArpg, "half_walls", deck, true, blueprint);
         parsePlaces(deckArpg, "doors", deck, blueprint.getDoors());
@@ -242,6 +238,16 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
                 blueprint.getFurniture().add(new ShipFurnitureStruct(
                         pieceArpg.getAsObject().get("furnishing").getAsString(),
                         parsePlace(pieceArpg.getAsObject().getAsArray("cell"), deck)));
+    }
+
+    private static void parseWaists(ArpgObjectStruct deckArpg, int deck, ShipBlueprintStruct blueprint) {
+
+        if (!ArpgUtility.hasArray(deckArpg, "waists"))
+            return;
+
+        for (ArpgElementStruct placeArpg : deckArpg.getAsArray("waists"))
+            blueprint.setWaist(deck, placeArpg.getAsArray().get(0).getAsInt(),
+                    placeArpg.getAsArray().get(1).getAsInt(), true);
     }
 
     private static void parseWalls(
@@ -322,6 +328,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
 
         deckArpg.addProperty("start", start);
         deckArpg.add("outline", outlineArpg);
+        deckArpg.add("waists", writePlaces(blueprint.getWaists(), deck, false));
         deckArpg.add("walls", writePlaces(blueprint.getWalls(), deck, false));
         deckArpg.add("half_walls", writePlaces(blueprint.getHalfWalls(), deck, false));
         deckArpg.add("doors", writePlaces(blueprint.getDoors(), deck, true));
@@ -404,9 +411,6 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
             ArpgObjectStruct mastArpg = new ArpgObjectStruct();
 
             mastArpg.addProperty("x", mast.getX());
-            mastArpg.addProperty("height", mast.getHeight());
-            mastArpg.addProperty("crows_nest", mast.hasCrowsNest());
-            mastArpg.addProperty("rigging", mast.isRigged());
             mastsArpg.add(mastArpg);
         }
 

@@ -19,23 +19,29 @@ class ShipwrightRigBranch extends BranchPackage {
      * Works out a blueprint's spars, canvas and rope. The bowsprit is worked
      * out from the bow alone on every hull long enough to carry one: it runs
      * forward from just inboard of the stem over the deck there, rising an
-     * octant every few, as long as the hull's length sets. Every mast the player steps
-     * stands on the keel at its place on the centre line and rises its height
-     * above the highest deck it passes through. Its sails
-     * follow from that height: the course clears the deck by a man's height
-     * and each sail above stands a fixed pitch over the last under its own
-     * yard, as many as fit under the mast's head, each narrower than the one
-     * below, the course as wide as the hull is there. A crow's nest is a railed
-     * platform at the head of the lower mast, and lifts every sail above it
-     * clear. A rigged mast's shrouds step down from its nest, or its head, to
-     * the deck edge either side as ratlines the crew climb, and a stay runs
+     * octant every few, as long as the hull's length sets. The player only
+     * steps a mast at its place on the centre line; everything else about it
+     * follows from the hull. It stands on the keel and rises above the
+     * highest deck it passes through as tall as the hull's length and beam
+     * let it, shorter the farther from the middle of the hull it stands. Its
+     * sails follow from that height: the course clears the deck by a man's
+     * height and each sail above stands a fixed pitch over the last under its
+     * own yard, as many as fit under the mast's head, each narrower than the
+     * one below, the course as wide as the hull is there. A mast tall enough
+     * to carry two sails over one gets a crow's nest, a railed platform at
+     * the head of the lower mast that lifts every sail above it clear. Every
+     * mast is rigged so each sail and the nest can be reached: its shrouds
+     * step down to the deck edge either side as ratlines the crew climb, from
+     * the nest's rim level with its floor, where its rail is left open, or
+     * from the mast's head where it has none, and over a nest the topmast
+     * shrouds climb on from its rim in to the mast's head; a stay runs
      * forward and down from its head to the foot of the next mast forward, or
-     * to the bowsprit's tip. A new mast is as tall as the hull's length sets.
-     * Masts are named from the bow aft. Spars and canvas are laid as boxes of
-     * their own in sub-voxels, canvas a single sub-voxel thick; rope is never
-     * built of sub-voxels but laid as flat quads its texture is drawn on, the
-     * ratlines a sheet of netting a step at a time and every stay two crossed
-     * ribbons, so the rig stays light however tall it stands.
+     * to the bowsprit's tip. Masts are named from the bow aft. Spars and
+     * canvas are laid as boxes of their own in sub-voxels, canvas a single
+     * sub-voxel thick; rope is never built of sub-voxels but laid as flat
+     * quads its texture is drawn on, the ratlines a sheet of netting a step
+     * at a time and every stay two crossed ribbons, so the rig stays light
+     * however tall it stands.
      */
 
     // Internal
@@ -104,26 +110,23 @@ class ShipwrightRigBranch extends BranchPackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
+    // The first octant along the sheet the hull reaches on the centre line, INDEX_NOT_FOUND when none
+    private int findStern(ShipLayoutStruct layout) {
+
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+            if (shipwrightHullBranch.findColumnTop(layout, x, EngineSetting.SHIP_SHEET_HALF_BREADTH)
+                    != EngineSetting.SHIP_LEVEL_NONE)
+                return x;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
     // How many octants the hull runs from its stern to its stem
     private int resolveHullLength(ShipLayoutStruct layout) {
 
-        int stem = findStem(layout);
+        int stern = findStern(layout);
 
-        if (stem == EngineSetting.INDEX_NOT_FOUND)
-            return 0;
-
-        for (int x = 0; x <= stem; x++)
-            if (shipwrightHullBranch.findColumnTop(layout, x, EngineSetting.SHIP_SHEET_HALF_BREADTH)
-                    != EngineSetting.SHIP_LEVEL_NONE)
-                return stem - x + 1;
-
-        return 0;
-    }
-
-    // The height a newly stepped mast rises above its deck, as the hull's length sets
-    int resolveMastHeight(ShipLayoutStruct layout) {
-        return Math.max(EngineSetting.SHIP_MAST_MIN_HEIGHT, Math.min(EngineSetting.SHIP_MAST_MAX_HEIGHT,
-                Math.round(resolveHullLength(layout) * EngineSetting.SHIP_MAST_HEIGHT_SHARE)));
+        return stern == EngineSetting.INDEX_NOT_FOUND ? 0 : findStem(layout) - stern + 1;
     }
 
     // Rig \\
@@ -144,7 +147,7 @@ class ShipwrightRigBranch extends BranchPackage {
 
             if (deck == EngineSetting.SHIP_LEVEL_NONE) {
                 layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_MAST_NO_HULL);
-                layout.addMastSailCount(0);
+                layout.addMast(0, 0, false);
                 continue;
             }
 
@@ -152,20 +155,21 @@ class ShipwrightRigBranch extends BranchPackage {
                 layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_MAST_BLOCKED);
 
             String mastName = resolveMastName(masts.size(), i);
-            int tiers = resolveTierCount(mast);
+            int height = resolveMastHeight(layout, mast);
+            boolean nest = hasCrowsNest(height);
+            int tiers = resolveTierCount(height, nest);
 
-            layout.addPart(buildMast(layout, mast, mastName, deck));
-            layout.addMastSailCount(tiers);
-            addCanvas(layout, mast, mastName, deck, tiers, canvas);
+            layout.addMast(height, tiers, nest);
+            layout.addPart(buildMast(layout, mast, mastName, deck, height));
+            addCanvas(layout, mast, mastName, deck, tiers, nest, canvas);
+            canvas.add(buildShrouds(layout, mast, mastName, deck, height, tiers, nest));
 
-            if (mast.hasCrowsNest())
-                addTop(layout, mast, deck, tiers, tops);
+            if (nest) {
+                addTop(layout, mast, deck, height, tiers, tops);
+                canvas.add(buildTopmastShrouds(layout, mast, mastName, deck, height, tiers));
+            }
 
-            if (!mast.isRigged())
-                continue;
-
-            canvas.add(buildShrouds(layout, mast, mastName, deck, tiers));
-            addStay(blueprint, layout, i, deck, stays);
+            addStay(blueprint, layout, i, deck, height, stays);
         }
 
         if (!tops.isEmpty())
@@ -180,7 +184,12 @@ class ShipwrightRigBranch extends BranchPackage {
     }
 
     // A mast from its step on the keel to its head, pivoting about its centre on the deck it rises from
-    private VehiclePartStruct buildMast(ShipLayoutStruct layout, ShipMastStruct mast, String mastName, int deck) {
+    private VehiclePartStruct buildMast(
+            ShipLayoutStruct layout,
+            ShipMastStruct mast,
+            String mastName,
+            int deck,
+            int height) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
@@ -204,7 +213,7 @@ class ShipwrightRigBranch extends BranchPackage {
                 (keel + 1) * octant,
                 (center - 1) * octant,
                 (x + EngineSetting.SHIP_MAST_OCTANTS) * octant,
-                resolveMastTop(mast, deck),
+                resolveMastTop(height, deck),
                 (center + 1) * octant);
 
         return part;
@@ -237,6 +246,7 @@ class ShipwrightRigBranch extends BranchPackage {
             String mastName,
             int deck,
             int tiers,
+            boolean nest,
             ObjectArrayList<VehiclePartStruct> canvas) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
@@ -249,7 +259,7 @@ class ShipwrightRigBranch extends BranchPackage {
 
             String tierName = mastName + EngineSetting.SHIP_SAIL_TIER_NAMES[tier];
             String yardName = tierName + EngineSetting.SHIP_PART_YARD_SUFFIX;
-            int base = resolveTierBase(mast, deck, tier);
+            int base = resolveTierBase(nest, deck, tier);
             int head = base + (EngineSetting.SHIP_SAIL_TIER_PITCH - 1) * octant;
             int sailHalf = Math.max(EngineSetting.SHIP_SAIL_MIN_HALF_SPAN, Math.min(center,
                     Math.round(span * (float) Math.pow(EngineSetting.SHIP_SAIL_TAPER, tier))));
@@ -271,11 +281,13 @@ class ShipwrightRigBranch extends BranchPackage {
         }
     }
 
-    // A railed platform round the mast at the head of the lower mast
+    // A railed platform round the mast at the head of the lower mast, its rail left open either side where the
+    // shrouds come up to it
     private void addTop(
             ShipLayoutStruct layout,
             ShipMastStruct mast,
             int deck,
+            int height,
             int tiers,
             VehiclePartStruct tops) {
 
@@ -283,29 +295,37 @@ class ShipwrightRigBranch extends BranchPackage {
         int reach = EngineSetting.SHIP_CROWS_NEST_REACH;
         int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
         int x = layout.getOriginX() + mast.getX();
-        int floor = resolveNestFloor(mast, deck, tiers);
+        int floor = resolveNestFloor(height, deck, tiers);
         int minX = (x - reach) * octant;
         int maxX = (x + EngineSetting.SHIP_MAST_OCTANTS + reach) * octant;
         int minZ = (center - 1 - reach) * octant;
         int maxZ = (center + 1 + reach) * octant;
-        int railTop = floor + octant + EngineSetting.SHIP_CROWS_NEST_RAIL;
+        int railBottom = floor + octant;
+        int railTop = railBottom + EngineSetting.SHIP_CROWS_NEST_RAIL;
+        int gapMinX = resolveShroudMiddle(layout, mast) - EngineSetting.SHIP_SHROUD_HALF_SPAN;
+        int gapMaxX = resolveShroudMiddle(layout, mast) + EngineSetting.SHIP_SHROUD_HALF_SPAN;
 
-        tops.addBox(minX, floor, minZ, maxX, floor + octant, maxZ);
-        tops.addBox(minX, floor + octant, minZ, maxX, railTop, minZ + 1);
-        tops.addBox(minX, floor + octant, maxZ - 1, maxX, railTop, maxZ);
-        tops.addBox(minX, floor + octant, minZ + 1, minX + 1, railTop, maxZ - 1);
-        tops.addBox(maxX - 1, floor + octant, minZ + 1, maxX, railTop, maxZ - 1);
+        tops.addBox(minX, floor, minZ, maxX, railBottom, maxZ);
+        tops.addBox(minX, railBottom, minZ, gapMinX, railTop, minZ + 1);
+        tops.addBox(gapMaxX, railBottom, minZ, maxX, railTop, minZ + 1);
+        tops.addBox(minX, railBottom, maxZ - 1, gapMinX, railTop, maxZ);
+        tops.addBox(gapMaxX, railBottom, maxZ - 1, maxX, railTop, maxZ);
+        tops.addBox(minX, railBottom, minZ + 1, minX + 1, railTop, maxZ - 1);
+        tops.addBox(maxX - 1, railBottom, minZ + 1, maxX, railTop, maxZ - 1);
     }
 
     // Shrouds \\
 
-    // Either side, a ladder stepping down and out from the nest or the mast's head to the deck edge
+    // Either side, netting stepping down and out to the deck edge from the crow's nest's rim, level with its floor so
+    // a climber walks onto it, or from the mast's head where it has none, within reach of every yard below it
     private VehiclePartStruct buildShrouds(
             ShipLayoutStruct layout,
             ShipMastStruct mast,
             String mastName,
             int deck,
-            int tiers) {
+            int height,
+            int tiers,
+            boolean nest) {
 
         VehiclePartStruct shrouds = createPart(
                 mastName + EngineSetting.SHIP_PART_SHROUDS_SUFFIX, VehiclePartRole.LADDER,
@@ -313,32 +333,71 @@ class ShipwrightRigBranch extends BranchPackage {
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
         int deckHalf = layout.getSection(mast.getX(), deck);
-        int steps = deckHalf - 1;
-
-        if (steps < 1)
-            return shrouds;
-
-        int edge = shipwrightHullBranch.findColumnTop(layout, mast.getX(), center + deckHalf - 1);
-        int top = mast.hasCrowsNest()
-                ? resolveNestFloor(mast, deck, tiers)
-                : resolveMastTop(mast, deck) - EngineSetting.SHIP_MAST_HEAD * octant;
+        int inner = nest ? 1 + EngineSetting.SHIP_CROWS_NEST_REACH : 1;
+        int edge = shipwrightHullBranch.findColumnTop(layout, mast.getX(), center + Math.max(1, deckHalf) - 1);
+        int top = nest
+                ? resolveNestFloor(height, deck, tiers) + octant
+                : resolveMastTop(height, deck) - EngineSetting.SHIP_MAST_HEAD * octant;
         int bottom = (edge + 1 + EngineSetting.SHIP_BULWARK_HEIGHT) * octant;
-        int fall = top - bottom;
+        int run = Math.max(0, deckHalf - inner);
+        int steps = Math.max(1, run);
 
-        if (fall <= 0)
+        if (top <= bottom)
             return shrouds;
 
-        int middleX = (layout.getOriginX() + mast.getX()) * octant + EngineSetting.SHIP_MAST_OCTANTS * octant / 2;
+        int middleX = resolveShroudMiddle(layout, mast);
         int minX = middleX - EngineSetting.SHIP_SHROUD_HALF_SPAN;
         int maxX = middleX + EngineSetting.SHIP_SHROUD_HALF_SPAN;
 
         for (int step = 0; step < steps; step++) {
 
-            int high = top - fall * step / steps;
-            int low = top - fall * (step + 1) / steps;
+            int high = top - (top - bottom) * step / steps;
+            int low = top - (top - bottom) * (step + 1) / steps;
+            int near = inner + run * step / steps;
+            int far = inner + run * (step + 1) / steps;
 
-            addRatline(shrouds, minX, maxX, low, high, (center + 1 + step) * octant, (center + 2 + step) * octant);
-            addRatline(shrouds, minX, maxX, low, high, (center - 1 - step) * octant, (center - 2 - step) * octant);
+            addRatline(shrouds, minX, maxX, low, high, (center + near) * octant, (center + far) * octant);
+            addRatline(shrouds, minX, maxX, low, high, (center - near) * octant, (center - far) * octant);
+        }
+
+        return shrouds;
+    }
+
+    // Either side, netting rising from the crow's nest's rim in to the mast's head, within reach of every yard over
+    // the nest
+    private VehiclePartStruct buildTopmastShrouds(
+            ShipLayoutStruct layout,
+            ShipMastStruct mast,
+            String mastName,
+            int deck,
+            int height,
+            int tiers) {
+
+        VehiclePartStruct shrouds = createPart(
+                mastName + EngineSetting.SHIP_PART_TOPMAST_SHROUDS_SUFFIX, VehiclePartRole.LADDER,
+                EngineSetting.SHIP_TEXTURE_RATLINES);
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        int reach = EngineSetting.SHIP_CROWS_NEST_REACH;
+        int bottom = resolveNestFloor(height, deck, tiers) + octant;
+        int top = resolveMastTop(height, deck) - EngineSetting.SHIP_MAST_HEAD * octant;
+
+        if (top <= bottom)
+            return shrouds;
+
+        int middleX = resolveShroudMiddle(layout, mast);
+        int minX = middleX - EngineSetting.SHIP_SHROUD_HALF_SPAN;
+        int maxX = middleX + EngineSetting.SHIP_SHROUD_HALF_SPAN;
+
+        for (int step = 0; step < reach; step++) {
+
+            int low = bottom + (top - bottom) * step / reach;
+            int high = bottom + (top - bottom) * (step + 1) / reach;
+            int far = 1 + reach - step;
+            int near = far - 1;
+
+            addRatline(shrouds, minX, maxX, low, high, (center + near) * octant, (center + far) * octant);
+            addRatline(shrouds, minX, maxX, low, high, (center - near) * octant, (center - far) * octant);
         }
 
         return shrouds;
@@ -354,6 +413,14 @@ class ShipwrightRigBranch extends BranchPackage {
                 minX, high, innerZ);
     }
 
+    // The sub-voxel along the length a mast's shrouds are centred on
+    private int resolveShroudMiddle(ShipLayoutStruct layout, ShipMastStruct mast) {
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+
+        return (layout.getOriginX() + mast.getX()) * octant + EngineSetting.SHIP_MAST_OCTANTS * octant / 2;
+    }
+
     // Stays \\
 
     // From a mast's head forward and down to the foot of the next mast forward, or to the bowsprit's tip
@@ -362,13 +429,14 @@ class ShipwrightRigBranch extends BranchPackage {
             ShipLayoutStruct layout,
             int mastIndex,
             int deck,
+            int height,
             VehiclePartStruct stays) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         ObjectArrayList<ShipMastStruct> masts = blueprint.getMasts();
         ShipMastStruct mast = masts.get(mastIndex);
         int startX = (layout.getOriginX() + mast.getX() + EngineSetting.SHIP_MAST_OCTANTS) * octant;
-        int top = resolveMastTop(mast, deck) - EngineSetting.SHIP_MAST_HEAD * octant;
+        int top = resolveMastTop(height, deck) - EngineSetting.SHIP_MAST_HEAD * octant;
         int endX;
         int bottom;
 
@@ -404,39 +472,66 @@ class ShipwrightRigBranch extends BranchPackage {
         return shipwrightHullBranch.findColumnTop(layout, mast.getX(), EngineSetting.SHIP_SHEET_HALF_BREADTH);
     }
 
-    // How many sails a mast carries: every tier that fits between the deck clearance and its head
-    int resolveTierCount(ShipMastStruct mast) {
+    // How many octants a mast rises above its deck: as tall as the hull's length and its beam let it stand, and
+    // shorter the farther from the middle of the hull it is stepped
+    private int resolveMastHeight(ShipLayoutStruct layout, ShipMastStruct mast) {
 
-        int room = mast.getHeight() - EngineSetting.SHIP_SAIL_CLEARANCE - EngineSetting.SHIP_MAST_HEAD;
-        int tiers = Math.max(0, room / EngineSetting.SHIP_SAIL_TIER_PITCH);
+        int stern = findStern(layout);
+        int length = resolveHullLength(layout);
+        int beam = 0;
 
-        if (mast.hasCrowsNest() && tiers > 1)
-            tiers = Math.max(1, (room - EngineSetting.SHIP_CROWS_NEST_GAP) / EngineSetting.SHIP_SAIL_TIER_PITCH);
+        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+            beam = Math.max(beam, shipwrightHullBranch.findWidestSection(layout, x) * 2);
 
-        return Math.min(EngineSetting.SHIP_SAIL_TIER_NAMES.length, tiers);
+        float tallest = Math.min(length * EngineSetting.SHIP_MAST_HEIGHT_SHARE,
+                beam * EngineSetting.SHIP_MAST_BEAM_SHARE);
+        float middle = stern + length * 0.5f;
+        float offset = Math.abs(mast.getX() + EngineSetting.SHIP_MAST_OCTANTS * 0.5f - middle)
+                / Math.max(1f, length * 0.5f);
+        float share = 1f - EngineSetting.SHIP_MAST_END_TAPER * Math.min(1f, offset);
+
+        return Math.max(EngineSetting.SHIP_MAST_MIN_HEIGHT,
+                Math.min(EngineSetting.SHIP_MAST_MAX_HEIGHT, Math.round(tallest * share)));
     }
 
-    // The sub-voxel height a tier's sail hangs down to, the crow's nest lifting every tier above the course
-    private int resolveTierBase(ShipMastStruct mast, int deck, int tier) {
+    // True when a mast stands tall enough to carry SHIP_CROWS_NEST_MIN_SAILS sails over a crow's nest, the nest the
+    // crew climbs to for every sail above the course
+    private boolean hasCrowsNest(int height) {
+        return resolveTierCount(height, true) >= EngineSetting.SHIP_CROWS_NEST_MIN_SAILS;
+    }
 
-        int gap = mast.hasCrowsNest() && tier > 0 ? EngineSetting.SHIP_CROWS_NEST_GAP : 0;
+    // How many sails a mast carries: every tier that fits between the deck clearance and its head, a crow's nest
+    // lifting every tier above the course
+    private int resolveTierCount(int height, boolean nest) {
+
+        int room = height - EngineSetting.SHIP_SAIL_CLEARANCE - EngineSetting.SHIP_MAST_HEAD
+                - (nest ? EngineSetting.SHIP_CROWS_NEST_GAP : 0);
+
+        return Math.min(EngineSetting.SHIP_SAIL_TIER_NAMES.length,
+                Math.max(0, room / EngineSetting.SHIP_SAIL_TIER_PITCH));
+    }
+
+    // The sub-voxel height a tier's sail hangs down to, a crow's nest lifting every tier above the course
+    private int resolveTierBase(boolean nest, int deck, int tier) {
+
+        int gap = nest && tier > 0 ? EngineSetting.SHIP_CROWS_NEST_GAP : 0;
 
         return (deck + 1 + EngineSetting.SHIP_SAIL_CLEARANCE + tier * EngineSetting.SHIP_SAIL_TIER_PITCH + gap)
                 * EngineSetting.SHIP_OCTANT_SUB_VOXELS;
     }
 
     // The sub-voxel height of the crow's nest floor, over the course yard, below the mast's head however short
-    private int resolveNestFloor(ShipMastStruct mast, int deck, int tiers) {
+    private int resolveNestFloor(int height, int deck, int tiers) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int floor = (deck + 1 + EngineSetting.SHIP_SAIL_CLEARANCE
                 + Math.min(tiers, 1) * EngineSetting.SHIP_SAIL_TIER_PITCH) * octant;
 
-        return Math.min(floor, resolveMastTop(mast, deck) - (EngineSetting.SHIP_MAST_HEAD + 1) * octant);
+        return Math.min(floor, resolveMastTop(height, deck) - (EngineSetting.SHIP_MAST_HEAD + 1) * octant);
     }
 
-    private int resolveMastTop(ShipMastStruct mast, int deck) {
-        return (deck + 1 + mast.getHeight()) * EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+    private int resolveMastTop(int height, int deck) {
+        return (deck + 1 + height) * EngineSetting.SHIP_OCTANT_SUB_VOXELS;
     }
 
     // Masts are named from the bow aft; a lone mast is the mainmast

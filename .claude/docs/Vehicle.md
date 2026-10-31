@@ -27,8 +27,9 @@ How vehicles are made, stored, sailed, ridden and broken, and what is still open
 | The editor | `assets/vehicles/<Name>.arpg`, through the Info Panel | `<Name>`, its path below `vehicles/` |
 | The player | `Documents/My Games/AdventureRPG/Saves/Vehicles/<Name>.arpg` | `saved/<Name>` |
 
-- The file is the `Vehicles` schema: `display_name`, `category`, `decks` (each `start`, `outline`, `walls`,
-  `half_walls`, `doors`, `windows`, `hatches`, `stairs`, `ladders`, `furniture`), `helm`, `capstan`, `porch`, `masts`.
+- The file is the `Vehicles` schema: `display_name`, `category`, `decks` (each `start`, `outline`, `waists`,
+  `walls`, `half_walls`, `doors`, `windows`, `hatches`, `stairs`, `ladders`, `furniture`), `helm`, `capstan`, `porch`,
+  `masts` (each only its `x`; older files' `height`, `crows_nest` and `rigging` are ignored).
 - `assets/vehicles/` is optional; the game boots with no vehicle of its own. A saved vehicle that cannot be read or
   built is logged and skipped; one in the assets stops the game.
 - Saving a design registers it again at once. Vehicles already afloat keep the type they were launched as (section 9).
@@ -42,10 +43,11 @@ The sheet is the plan of the deck picked, bow to the right, starboard down, in o
 | Tool | Does | Option (cycle) |
 |---|---|---|
 | Deck | Draws the deck's outline out to the cursor, **mirrored** port and starboard | — |
+| Waist | Cuts the deck's floor open, **mirrored**, railed round | — |
 | Walls | Paints walls on open floor, **not mirrored** | Full / half height |
-| Openings | Door or window **on the wall it is cut through**; hatch in a floor | Door / Window / Hatch |
+| Openings | Door or window **on the wall it is cut through**; grated hatch in a floor | Door / Window / Hatch |
 | Stairs & Ladders | Stair foot climbing the way it faces; ladder foot (1×1 block) | Stair / Ladder |
-| Masts | Steps a mast on the centre line, or picks one | Picks the mast |
+| Masts | Steps a mast on the centre line, or picks one; the rest is worked out | Picks the mast |
 | Furniture | Sets the helm, the capstan or any `ship/` furnishing (cannons included) down | Picks the item |
 
 Rules the compile enforces (the change is refused with the reason shown when it breaks one):
@@ -60,22 +62,38 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   clears the deck above from the first step. The ghost under the cursor shows the run, red when it leaves the deck.
 - **Ladders** stand on 2×2 octants of open floor and climb to the floor right over them, cutting a hatchway there, or
   in the open up the face of the raised deck they face. Rails and a rung sheet; climbable.
-- **Hatches** lie in a deck's floor over a deck below (never on the bottom deck). Set on a stair or ladder opening, the
-  lid closes the whole opening; anywhere else it cuts a 2×2 hole. Lids swing open with Activate.
-- **Cannons** (`ship/Cannon`) facing the side cut a gun port right before the muzzle: through a bulwark it is open,
-  through the planking it gets a lid that swings out and up. A port in the hull lowers the opening sill, so one under
-  the waterline is a shape problem.
-- **Masts** are placed by hand. The **bowsprit is automatic** on every hull at least `SHIP_BOWSPRIT_MIN_HULL_LENGTH`
-  long, sized to the hull. Sails follow each mast's height.
+- **The waist** is cut out of a deck's floor (never the bottom deck), mirrored, only where the floor is open with open
+  room below. Every floor octant left beside it gets a rail `SHIP_WAIST_RAIL_HEIGHT` high, so a main deck cut through
+  its middle is left as railed gangways either side looking down onto the deck below, which is open to the sky. Cut
+  the decks below as well and the pit runs as many decks deep. A stair or ladder climbing out of it opens the rail
+  where it lands; a hatch set on it closes as much of it as the largest lid covers.
+- **Hatches** lie in a deck's floor over a deck below (never on the bottom deck). Set on a stair, ladder or waist
+  opening, the lid closes the whole opening; anywhere else it cuts a 2×2 hole. Every lid is a wooden grating
+  (`ShipGrating`, see-through between its bars) that swings open with Activate.
+- **Cannons** (`ship/Cannon`) each fire through a **port of their own** cut through the planking right before the
+  muzzle, with a lid that swings out and up. A cannon facing a bulwark or nothing (one on an open deck) and two
+  cannons whose ports would touch are refused, so guns stand on covered decks or down in the waist. A port lowers the
+  opening sill, so one under the waterline is a shape problem.
+- **Masts** are placed by hand; **everything else about them is worked out**. A mast rises as tall as the hull's
+  length (`SHIP_MAST_HEIGHT_SHARE`) and beam (`SHIP_MAST_BEAM_SHARE`) let it, shorter by up to `SHIP_MAST_END_TAPER`
+  the farther from the middle of the hull it stands. Its sails are every tier that fits under its head. A mast that
+  can carry `SHIP_CROWS_NEST_MIN_SAILS` sails over a crow's nest gets one. Every mast is rigged so **every sail and
+  the nest can be reached**: the shrouds climb from the deck edge to the nest's rim, level with its floor, where its
+  rail is left open, or to the mast's head where it has none; over a nest the topmast shrouds climb on from the rim to
+  the head, past every upper yard. The **bowsprit is automatic** on every hull at least
+  `SHIP_BOWSPRIT_MIN_HULL_LENGTH` long, sized to the hull.
+- **Furniture** must stand on open floor. Every door and piece of furniture is cargo: a real item, taken up, set down
+  and used like the same item in the world. Chests, barrels and cargo crates open (`ship/Chest`, `ship/Stores`).
 - **Anchors are automatic**: one per `SHIP_ANCHOR_LENGTH_PER_ANCHOR` blocks of hull, up to `SHIP_MAX_ANCHORS`, bow
   pair first, then the quarters, hung at catheads outboard of the side. Their cables show only while they are down.
 - **Facings.** A placement's quarter turn is the way it faces on the sheet: a cannon facing starboard points its
   muzzle to starboard, and a door or window faces across the wall it is cut through.
 - **Saving needs** a name, a buildable ship within the triangle limit, a **helm** and a **capstan** (it weighs the
   anchors).
-- **The test ship** is `assets/vehicles/Galleon.arpg`: a large Spanish galleon of seven decks (hold, orlop, lower and
-  upper gun decks, quarterdeck and forecastle, poop, poop royal), four masts, forty guns, cabins, stairs, ladders and
-  hatches, drawn only with what the table offers.
+- **The test ship** is `assets/vehicles/Galleon.arpg`: a large Spanish galleon of seven decks (hold, orlop, lower gun
+  deck, main deck, quarterdeck and forecastle, poop, poop royal), four masts, thirty guns each behind its own port, the
+  main deck's waist cut open over the lower gun deck, grated hatches, forty windows, and a captain's loft of two floors
+  (great cabin and bedchamber, a stair inside) with a porch off the stern, drawn only with what the table offers.
 
 ---
 
@@ -159,7 +177,11 @@ All are rebindable on the Controls tab. The engine has no gamepad input yet; a c
 - **Categories:** only `ship` exists. A car or an air ship needs its own compile step (chassis and wheels, envelope)
   and its own propulsion and support (ground, air lift) alongside the sea's.
 - **Naming:** the table and its classes are still called Shipwright; a generic name is the owner's call.
-- **Untested in play:** the lid hinge directions, ladder climbing, anchor placement, the unstick lift, washed riders,
-  the free rudder gain and storm strength were built and compiled but not yet sailed. Tune them from a test ship.
+- **Untested in play:** the lid hinge directions, ladder climbing, climbing onto a crow's nest and up the topmast
+  shrouds, the waist's rails, anchor placement, the unstick lift, washed riders, the free rudder gain and storm
+  strength were built and compiled but not yet sailed. Tune them from a test ship.
+- **Furniture use:** cargo is taken up, set down, opened and acted on as in the world, but the engine has no sitting
+  or sleeping yet, and a container's model must span one block, so beds, tables, desks, sideboards and bookshelves
+  cannot hold anything.
 - **Saves moved:** ships a player saved before to `Saves/Ships/` load only once moved to `Saves/Vehicles/`.
 - **Q/F:** F is also the editor's Focus Selected binding.

@@ -36,10 +36,14 @@ class ShipwrightFittingBranch extends BranchPackage {
      * window is cut through the first wall, bulwark or planking it faces,
      * searching a little outward from where it was set down, a door full
      * height and a window at chest height; one cut through the hull's side
-     * lowers the sill the sea comes aboard over. Doors and furniture are cargo
-     * drawn from furnishing tables: each is turned the way it faces, sized to
-     * the octants its largest item takes up and centred in them, standing on
-     * its deck's floor. Once every part is built, every item each
+     * lowers the sill the sea comes aboard over. Every cannon fires through a
+     * port of its own cut through the planking right before its muzzle, lidded,
+     * never over a bulwark and never through a port another cannon shares.
+     * Every hatch is a wooden grating swinging open over its hatchway. Doors
+     * and furniture are cargo, real items drawn from furnishing tables to be
+     * taken up, set down and used like any other: each is turned the way it
+     * faces, sized to the octants its largest item takes up and centred in
+     * them, standing on open floor. Once every part is built, every item each
      * place could be furnished with must fit clear of every solid sub-voxel
      * and of every other place, exactly as a vehicle stows its cargo, so a
      * ship that compiles always furnishes.
@@ -161,8 +165,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         }
     }
 
-    // Every cannon facing the side cuts a port through the bulwark or planking right before its muzzle, lidded
-    // where it pierces the planking
+    // Every cannon cuts a lidded port of its own through the planking right before its muzzle
     private void cutPorts(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
         for (int i = 0; i < blueprint.getFurniture().size(); i++) {
@@ -190,6 +193,16 @@ class ShipwrightFittingBranch extends BranchPackage {
         int sizeX = footprint[EngineSetting.AXIS_X];
         int sizeZ = footprint[EngineSetting.AXIS_Z];
         int span = ShipCellUtility.stepX(spin) != 0 ? sizeZ : sizeX;
+        int rowMinX = resolveMuzzleX(startX, sizeX, spin, 0);
+        int rowMinZ = resolveMuzzleZ(startZ, sizeZ, spin, 0);
+        int rowMaxX = resolveMuzzleX(startX, sizeX, spin, span - 1) + 1;
+        int rowMaxZ = resolveMuzzleZ(startZ, sizeZ, spin, span - 1) + 1;
+
+        if (touchesPort(layout, rowMinX, floor + 1, rowMinZ, rowMaxX, rowMaxZ)) {
+            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_CANNON_SHARED);
+            return;
+        }
+
         int minX = Integer.MAX_VALUE;
         int minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE;
@@ -221,8 +234,29 @@ class ShipwrightFittingBranch extends BranchPackage {
             }
         }
 
-        if (planking)
-            layout.addPort(minX, floor + 1, minZ, maxX, floor + 1 + EngineSetting.SHIP_GUN_PORT_HEIGHT, maxZ, spin);
+        if (!planking) {
+            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_CANNON_PORT);
+            return;
+        }
+
+        layout.addPort(minX, floor + 1, minZ, maxX, floor + 1 + EngineSetting.SHIP_GUN_PORT_HEIGHT, maxZ, spin);
+    }
+
+    // True when the row before a muzzle, at a port's sill, overlaps or touches a port already cut, so two cannons would
+    // fire through one opening
+    private boolean touchesPort(ShipLayoutStruct layout, int minX, int minY, int minZ, int maxX, int maxZ) {
+
+        IntArrayList boxes = layout.getPortBoxes();
+
+        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++)
+            if (ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Y) == minY
+                    && minX <= ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_X)
+                    && maxX >= ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_X)
+                    && minZ <= ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Z)
+                    && maxZ >= ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Z))
+                return true;
+
+        return false;
     }
 
     // One octant of the row right before a turned footprint's muzzle edge
@@ -296,7 +330,7 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // Lids \\
 
-    // A lid lying in every hatchway, hinged along the edge its quarter turn faces, swinging up and over
+    // A wooden grating lying in every hatchway, hinged along the edge its quarter turn faces, swinging up and over
     private void addHatchLids(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getHatchBoxes();
@@ -309,7 +343,7 @@ class ShipwrightFittingBranch extends BranchPackage {
             boolean positive = ShipCellUtility.stepX(spin) > 0 || ShipCellUtility.stepZ(spin) > 0;
             float sign = spin == 1 || spin == 2 ? 1f : -1f;
 
-            addLid(layout, boxes, i, EngineSetting.SHIP_PART_HATCH + (i + 1), EngineSetting.SHIP_TEXTURE_DECK,
+            addLid(layout, boxes, i, EngineSetting.SHIP_PART_HATCH + (i + 1), EngineSetting.SHIP_TEXTURE_GRATING,
                     alongX, positive, alongX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X, sign * angle);
         }
     }
@@ -691,7 +725,8 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // Cargo \\
 
-    // Every door and piece of furniture as a furnished place, then every place checked to fit
+    // Every door and piece of furniture as a furnished place, every piece on open floor, then every place checked to
+    // fit
     void addCargo(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
         IntArrayList doors = blueprint.getDoors();
@@ -706,6 +741,14 @@ class ShipwrightFittingBranch extends BranchPackage {
             if (!furnishingManager.hasFurnishing(piece.getFurnishingName())) {
                 layout.reportBuildProblem(
                         EngineSetting.SHIPWRIGHT_PROBLEM_FURNISHING_UNKNOWN + piece.getFurnishingName());
+                continue;
+            }
+
+            resolveFootprint(piece.getFurnishingName(), ShipCellUtility.unpackSpin(piece.getCell()));
+
+            if (!isOnFloor(layout, piece.getCell(), footprint[EngineSetting.AXIS_X],
+                    footprint[EngineSetting.AXIS_Z])) {
+                layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_FURNITURE_FLOOR);
                 continue;
             }
 
