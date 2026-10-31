@@ -22,7 +22,9 @@ public class WorldData extends DataPackage {
      * or neutral everywhere until one is painted. The placements are the
      * settlements and structures picked by hand for this world as it was
      * loaded, and naturalSettlements whether settlements also grow on their
-     * own wherever its biomes allow.
+     * own wherever its biomes allow. warpedBorders lets the borders between
+     * its biomes wander off the map's pixel edges, as a real world's do; a
+     * world without it keeps every border straight along those edges.
      */
 
     // Identity
@@ -63,6 +65,9 @@ public class WorldData extends DataPackage {
     private final ObjectArrayList<WorldPlacementStruct> placements;
     private final boolean naturalSettlements;
 
+    // Biomes
+    private final boolean warpedBorders;
+
     // Constructor \\
 
     public WorldData(
@@ -81,7 +86,8 @@ public class WorldData extends DataPackage {
             float planetaryOffset,
             long seed,
             ObjectArrayList<WorldPlacementStruct> placements,
-            boolean naturalSettlements) {
+            boolean naturalSettlements,
+            boolean warpedBorders) {
 
         // Identity
         this.worldName = worldName;
@@ -116,6 +122,9 @@ public class WorldData extends DataPackage {
         // Placement
         this.placements = placements;
         this.naturalSettlements = naturalSettlements;
+
+        // Biomes
+        this.warpedBorders = warpedBorders;
     }
 
     // Accessible \\
@@ -182,5 +191,9 @@ public class WorldData extends DataPackage {
 
     public boolean hasNaturalSettlements() {
         return naturalSettlements;
+    }
+
+    public boolean hasWarpedBorders() {
+        return warpedBorders;
     }
 }

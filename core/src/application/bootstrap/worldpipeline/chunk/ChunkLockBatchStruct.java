@@ -15,7 +15,8 @@ public class ChunkLockBatchStruct extends StructPackage {
      * ever taken with tryAcquire; a batch that cannot take them all releases
      * what it holds and the work is retried on a later pass. addNeighborhood()
      * gathers a chunk with its eight neighbors, the set any geometry build
-     * reads.
+     * reads, and binds them to the chunk's neighbor handle while every lock
+     * is held, so the build reads the very chunks this batch checked.
      */
 
     // Batch
@@ -24,6 +25,10 @@ public class ChunkLockBatchStruct extends StructPackage {
     private final ChunkDataSyncContainer[] locks;
     private int count;
     private int heldCount;
+
+    // Neighborhood — the chunk whose neighbors this batch binds while it holds them
+    private ChunkInstance neighborhoodChunk;
+    private boolean neighborsBound;
 
     // Constructor \\
 
@@ -72,6 +77,7 @@ public class ChunkLockBatchStruct extends StructPackage {
             add(neighborChunk);
         }
 
+        this.neighborhoodChunk = chunk;
         return true;
     }
 
@@ -104,10 +110,25 @@ public class ChunkLockBatchStruct extends StructPackage {
                 return ChunkLockResult.STALE;
         }
 
+        bindNeighbors();
         return ChunkLockResult.ACQUIRED;
     }
 
+    private void bindNeighbors() {
+
+        if (neighborhoodChunk == null)
+            return;
+
+        neighborhoodChunk.getChunkNeighbors().bindLockedNeighbors(chunks, count);
+        this.neighborsBound = true;
+    }
+
     public void unlockAll() {
+
+        if (neighborsBound) {
+            neighborhoodChunk.getChunkNeighbors().unbindLockedNeighbors();
+            this.neighborsBound = false;
+        }
 
         for (int i = 0; i < heldCount; i++)
             locks[i].release();
@@ -122,5 +143,7 @@ public class ChunkLockBatchStruct extends StructPackage {
         Arrays.fill(locks, null);
         count = 0;
         heldCount = 0;
+        neighborhoodChunk = null;
+        neighborsBound = false;
     }
 }

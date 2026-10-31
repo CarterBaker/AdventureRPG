@@ -339,7 +339,7 @@ class GeometryBuildManager extends ManagerPackage {
 
         for (Direction3Vector direction : LATERAL_DIRECTIONS) {
 
-            ChunkInstance neighborChunk = neighbors.getNeighborChunk(direction.to2D().index);
+            ChunkInstance neighborChunk = neighbors.getBuildNeighborChunk(direction.to2D().index);
 
             if (neighborChunk == null)
                 return false;
@@ -388,7 +388,7 @@ class GeometryBuildManager extends ManagerPackage {
 
         for (Direction3Vector direction : LATERAL_DIRECTIONS) {
 
-            ChunkInstance neighborChunk = neighbors.getNeighborChunk(direction.to2D().index);
+            ChunkInstance neighborChunk = neighbors.getBuildNeighborChunk(direction.to2D().index);
 
             if (neighborChunk == null)
                 return false;

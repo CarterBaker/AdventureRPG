@@ -284,7 +284,7 @@ class LiquidGeometryBranch extends BranchPackage {
 
         Direction2Vector direction2Vector = direction3Vector.to2D();
         ChunkNeighborHandle chunkNeighborHandle = chunkInstance.getChunkNeighbors();
-        ChunkInstance neighborChunkInstance = chunkNeighborHandle.getNeighborChunk(direction2Vector.index);
+        ChunkInstance neighborChunkInstance = chunkNeighborHandle.getBuildNeighborChunk(direction2Vector.index);
 
         if (neighborChunkInstance == null)
             return ERROR;

@@ -26,18 +26,19 @@ public class BiomeManager extends ManagerPackage {
     /*
      * Owns the biome palette and the biome field, the continuous function
      * giving each biome's share at any world position. The world map is
-     * reconstructed through a warped kernel so painted borders blend, probable
-     * biomes scatter as shaped patches or sit at the center of their parent's
-     * patches, chaining their own probable biomes to any depth, and land
-     * meets ocean through its declared beach. Every biome's weight is also
-     * credited to the ground it stands on, its own or, for a relative biome,
-     * that of the absolute biome above it, and a biome holding still water
-     * relative to its host is scattered exclusively and tagged with the lake
-     * its chain belongs to. Biome IDs are assigned in registration order.
-     * Reads are lock-free: registries are copy-on-write snapshots and each
-     * worker memoizes map colors in its own scratch. Biomes can be rebuilt or
-     * retired live from an edited ARPG tree; the revision moves on every such
-     * change, so whatever derives from the field knows to refresh.
+     * reconstructed through a kernel, warped where the world allows it, so
+     * painted borders blend, probable biomes scatter as shaped patches or sit
+     * at the center of their parent's patches, chaining their own probable
+     * biomes to any depth, and land meets ocean through its declared beach.
+     * Every biome's weight is also credited to the ground it stands on, its
+     * own or, for a relative biome, that of the absolute biome above it, and
+     * a biome holding still water relative to its host is scattered
+     * exclusively and tagged with the lake its chain belongs to. Biome IDs
+     * are assigned in registration order. Reads are lock-free: registries are
+     * copy-on-write snapshots and each worker memoizes map colors in its own
+     * scratch. Biomes can be rebuilt or retired live from an edited ARPG
+     * tree; the revision moves on every such change, so whatever derives from
+     * the field knows to refresh.
      */
 
     // Palette
@@ -271,15 +272,21 @@ public class BiomeManager extends ManagerPackage {
         double pixelX = worldX / blocksPerPixel;
         double pixelZ = worldZ / blocksPerPixel;
 
-        double warpedPixelX = pixelX + BiomeFieldUtility.computeBorderWarpOffset(
-                seed ^ EngineSetting.BIOME_BORDER_WARP_SEED, pixelX, pixelZ);
+        double borderPixelX = pixelX;
+        double borderPixelZ = pixelZ;
 
-        double warpedPixelZ = pixelZ + BiomeFieldUtility.computeBorderWarpOffset(
-                seed ^ EngineSetting.BIOME_BORDER_WARP_SEED ^ EngineSetting.HASH_FINALIZER_MULTIPLIER_1,
-                pixelX, pixelZ);
+        if (worldHandle.hasWarpedBorders()) {
+
+            borderPixelX += BiomeFieldUtility.computeBorderWarpOffset(
+                    seed ^ EngineSetting.BIOME_BORDER_WARP_SEED, pixelX, pixelZ);
+
+            borderPixelZ += BiomeFieldUtility.computeBorderWarpOffset(
+                    seed ^ EngineSetting.BIOME_BORDER_WARP_SEED ^ EngineSetting.HASH_FINALIZER_MULTIPLIER_1,
+                    pixelX, pixelZ);
+        }
 
         BiomeFieldUtility.computeMapSamples(
-                warpedPixelX, warpedPixelZ, map.getWidth(), map.getHeight(),
+                borderPixelX, borderPixelZ, map.getWidth(), map.getHeight(),
                 scratch.mapPixelX, scratch.mapPixelZ, scratch.mapWeights);
 
         int mapBiomeCount = collectMapBiomes(scratch, map);

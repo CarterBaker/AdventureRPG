@@ -13,7 +13,9 @@ toolchain downloads may be blocked), compile directly with the installed JDK 21:
 ```
 mkdir -p $S/libs && cd $S/libs    # $S = your scratchpad directory
 for a in org/lwjgl/lwjgl/3.3.4/lwjgl-3.3.4.jar org/lwjgl/lwjgl-glfw/3.3.4/lwjgl-glfw-3.3.4.jar \
-         org/lwjgl/lwjgl-opengl/3.3.4/lwjgl-opengl-3.3.4.jar it/unimi/dsi/fastutil/8.5.15/fastutil-8.5.15.jar
+         org/lwjgl/lwjgl-opengl/3.3.4/lwjgl-opengl-3.3.4.jar org/lwjgl/lwjgl-openal/3.3.4/lwjgl-openal-3.3.4.jar \
+         org/lwjgl/lwjgl-stb/3.3.4/lwjgl-stb-3.3.4.jar org/jcodec/jcodec/0.2.5/jcodec-0.2.5.jar \
+         it/unimi/dsi/fastutil/8.5.15/fastutil-8.5.15.jar
 do curl -sSfLO "https://repo1.maven.org/maven2/$a"; done
 cd <project root>
 CP=$(ls $S/libs/*.jar | tr '\n' ':')

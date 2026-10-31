@@ -93,4 +93,8 @@ public class WorldHandle extends HandlePackage {
     public boolean hasNaturalSettlements() {
         return data.hasNaturalSettlements();
     }
+
+    public boolean hasWarpedBorders() {
+        return data.hasWarpedBorders();
+    }
 }

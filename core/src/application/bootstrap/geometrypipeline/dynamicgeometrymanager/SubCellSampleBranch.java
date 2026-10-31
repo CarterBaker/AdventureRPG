@@ -160,7 +160,7 @@ class SubCellSampleBranch extends BranchPackage {
         if (chunkOffsetX != 0 || chunkOffsetZ != 0) {
 
             Direction2Vector direction2Vector = Direction2Vector.getDirection(chunkOffsetX, chunkOffsetZ);
-            cellChunkInstance = chunkInstance.getChunkNeighbors().getNeighborChunk(direction2Vector.index);
+            cellChunkInstance = chunkInstance.getChunkNeighbors().getBuildNeighborChunk(direction2Vector.index);
 
             if (cellChunkInstance == null)
                 return null;

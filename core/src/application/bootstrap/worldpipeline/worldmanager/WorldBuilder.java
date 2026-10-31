@@ -35,8 +35,9 @@ class WorldBuilder extends BuilderPackage {
      * once the editor saves what is painted on it. A virtual world is built
      * over an image held in memory instead, for the editor's previews: it has
      * no files, a neutral height layer, every default, a seed taken from its
-     * name so it generates the same each time, and nothing placed or grown
-     * on it.
+     * name so it generates the same each time, nothing placed or grown on
+     * it, and biome borders running straight along its pixel edges, so the
+     * areas painted on it keep their shape.
      */
 
     // Internal
@@ -122,7 +123,8 @@ class WorldBuilder extends BuilderPackage {
                 planetaryOffset,
                 seed,
                 placements,
-                naturalSettlements);
+                naturalSettlements,
+                true);
 
         WorldHandle handle = create(WorldHandle.class);
         handle.constructor(data);
@@ -151,6 +153,7 @@ class WorldBuilder extends BuilderPackage {
                 EngineSetting.DEFAULT_PLANETARY_OFFSET,
                 RegistryUtility.toNameSeed(worldName),
                 new ObjectArrayList<>(),
+                false,
                 false);
 
         WorldHandle handle = create(WorldHandle.class);
