@@ -89,9 +89,14 @@ public class RecordingTakeStruct extends StructPackage {
             soundTrack.shiftTimes(seconds);
     }
 
+    // True for a take that holds sounds and nothing else, as one dropped from the sound library does
+    public boolean isSoundAlone() {
+        return channelMask == RecorderChannel.SOUND.getBit();
+    }
+
     // True for a take dropped from the sound library for the sound: that sound alone, from its start
     public boolean isSoundOf(String soundName) {
-        return channelMask == RecorderChannel.SOUND.getBit() && soundTrack.isSingle(soundName);
+        return isSoundAlone() && soundTrack.isSingle(soundName);
     }
 
     // Accessible \\

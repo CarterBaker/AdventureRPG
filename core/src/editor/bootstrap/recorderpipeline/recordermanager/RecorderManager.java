@@ -103,7 +103,9 @@ public class RecorderManager extends ManagerPackage {
      * opened or closed here. A sound dragged in from the sound library, or
      * added at the playhead, is laid as a take of its own holding that sound
      * alone, the bin keeping one such take for each sound however often it is
-     * laid. Sounds add up rather than give way: while the timeline plays or a
+     * laid; a clip of such a take selected selects its sound, so its volume,
+     * pitch and length are changed straight from the clip. Sounds add up
+     * rather than give way: while the timeline plays or a
      * take records, every clip covering the playhead sounds together, and an
      * export mixes every one of them into its video's sound. The player
      * cannot be recorded without the camera
@@ -1726,7 +1728,8 @@ public class RecorderManager extends ManagerPackage {
     // Keys \\
 
     // The tracks of the selected clip's take, listed again whenever another take's clip is selected; a take none of
-    // whose tracks is open opens its first, with its first value selected so its graph shows at once
+    // whose tracks is open opens its first, with its first value selected so its graph shows at once, and a take of
+    // sounds alone has its first sound within the clip selected so it is changed from the clip
     private void updateKeyTracks() {
 
         RecordingClipStruct clip = getSelectedClipStruct();
@@ -1743,6 +1746,9 @@ public class RecorderManager extends ManagerPackage {
 
         if (take == null)
             return;
+
+        if (take.isSoundAlone())
+            selectFirstSound(EngineSetting.INDEX_NOT_FOUND);
 
         collectCurveTracks(take, keyTracks);
 
@@ -2541,6 +2547,7 @@ public class RecorderManager extends ManagerPackage {
         revision++;
     }
 
+    // The first sound heard within the selected clip — any sound when no name is given, else a sound of that name
     private void selectFirstSound(int nameIndex) {
 
         RecordingClipStruct clip = getSelectedClipStruct();
@@ -2550,7 +2557,8 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         for (int i = 0; i < track.size(); i++)
-            if (track.getNameIndex(i) == nameIndex && recordingSoundBranch.isHeardIn(clip, track, i)) {
+            if ((nameIndex == EngineSetting.INDEX_NOT_FOUND || track.getNameIndex(i) == nameIndex)
+                    && recordingSoundBranch.isHeardIn(clip, track, i)) {
                 selectSound(i);
                 return;
             }
