@@ -3267,6 +3267,7 @@ public class EngineSetting {
     public static final int SUB_BLOCK_AXIS_BIT_Z = 2;
     public static final int SUB_BLOCK_AXIS_BIT_Y = 4;
     public static final int FBO_LAYER_STRIDE = 10_000;
+    public static final int FBO_STAND_IN_LAYER = 0;
     public static final int SUB_VOXEL_FLOATS_PER_TRIANGLE = 9;
     public static final int PARTIAL_CELLS_PER_EDGE_ENTRY = 1;
     public static final int FONT_FLOATS_PER_INSTANCE = 8;

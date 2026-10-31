@@ -23,7 +23,8 @@ class RecordingMixBranch extends BranchPackage {
      * mixed from every unmuted clip holding the sound channel — sounds add up,
      * whatever their lanes — each sound read from the moment it began, at its
      * pitch, looping when its sound loops, cut where its clip ends, as loud
-     * and from the side it reached the camera when it was recorded. A mono
+     * and from the side it reached the camera when it was recorded, and faded
+     * in and out across its clip's transitions. A mono
      * sound is spread over both sides by equal power, a stereo one balanced.
      * A sound the game no longer has is left silent. The decoded sounds are
      * let go once the export ends.
@@ -31,6 +32,7 @@ class RecordingMixBranch extends BranchPackage {
 
     // Internal
     private SoundManager soundManager;
+    private RecordingTransitionBranch recordingTransitionBranch;
 
     // Samples
     private Object2ObjectOpenHashMap<String, SoundPcmStruct> soundName2Pcm;
@@ -54,6 +56,7 @@ class RecordingMixBranch extends BranchPackage {
     @Override
     protected void get() {
         this.soundManager = get(SoundManager.class);
+        this.recordingTransitionBranch = get(RecordingTransitionBranch.class);
     }
 
     // Prepare \\
@@ -163,6 +166,7 @@ class RecordingMixBranch extends BranchPackage {
         float pan = track.getHeardPan(event);
         float leftGain = resolveLeftGain(channels, gain, pan);
         float rightGain = resolveRightGain(channels, gain, pan);
+        boolean faded = clip.hasTransitions();
 
         for (int frame = firstFrame; frame < endFrame; frame++, position += step) {
 
@@ -180,8 +184,10 @@ class RecordingMixBranch extends BranchPackage {
                     ? left
                     : readBlended(source, channels, first, second, 1, blend);
 
-            mixScratch[out] += left * leftGain;
-            mixScratch[out + 1] += right * rightGain;
+            float fade = faded ? recordingTransitionBranch.resolveGain(clip, time + (float) frame / sampleRate) : 1f;
+
+            mixScratch[out] += left * leftGain * fade;
+            mixScratch[out + 1] += right * rightGain * fade;
         }
     }
 

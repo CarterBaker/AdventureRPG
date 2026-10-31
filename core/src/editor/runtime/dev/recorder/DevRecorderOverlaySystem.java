@@ -346,7 +346,7 @@ public class DevRecorderOverlaySystem extends SystemPackage {
             return true;
 
         float time = recorderManager.getPlayhead();
-        RecordingClipStruct clip = recorderManager.getRecording().findPlayingClip(RecorderChannel.INTERFACE, time);
+        RecordingClipStruct clip = recorderManager.findPlayingClip(RecorderChannel.INTERFACE, time);
         RecordingOverlayTrackStruct track = clip == null ? null : clip.getTake().getOverlayTrack();
         boolean settled = true;
 

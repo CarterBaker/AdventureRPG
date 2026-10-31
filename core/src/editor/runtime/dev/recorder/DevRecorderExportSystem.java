@@ -17,6 +17,7 @@ import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
+import editor.bootstrap.recorderpipeline.recording.RecordingTransitionStruct;
 import editor.bootstrap.recorderpipeline.recording.VideoFormat;
 import editor.bootstrap.recorderpipeline.util.VideoFrameUtility;
 import editor.bootstrap.recorderpipeline.video.AviVideoEncoderInstance;
@@ -50,9 +51,12 @@ public class DevRecorderExportSystem extends SystemPackage {
      * recorded interface shows the moment it is rendered at, and nothing is
      * rendered while the game is paused under the export or while the Dev tab
      * waits hidden behind another in its stack, since it then shows nothing to
-     * capture. This system updates
-     * before DevRecorderSystem, so the playhead it sets is the one played that
-     * frame.
+     * capture. A moment the picture passes through a transition at, with a
+     * picture on both of its sides, is rendered twice — first the timeline
+     * without the transition's clip, then with it — and only the second,
+     * which shows the two blended, is captured. This system updates before
+     * DevRecorderTransitionSystem and DevRecorderSystem, so the playhead and
+     * the side it sets are the ones played that frame.
      */
 
     // Internal
@@ -97,6 +101,7 @@ public class DevRecorderExportSystem extends SystemPackage {
     private int nextSubframe;
     private boolean renderedCapture;
     private int renderedSubframe;
+    private boolean withoutRendered;
 
     // Read Back — captures arrive one frame behind, oldest first
     private ByteBuffer readback;
@@ -222,6 +227,7 @@ public class DevRecorderExportSystem extends SystemPackage {
         this.nextFrame = 0;
         this.nextSubframe = 0;
         this.renderedCapture = false;
+        this.withoutRendered = false;
         this.pendingCount = 0;
 
         internal.beginFixedClock(0f);
@@ -252,6 +258,11 @@ public class DevRecorderExportSystem extends SystemPackage {
         recorderManager.setExportPlayhead(time);
         this.renderedCapture = false;
 
+        RecordingTransitionStruct transition = recorderManager.resolveTransition();
+        boolean twoSided = transition.isActive() && transition.isWithoutShown();
+
+        recorderManager.setTransitionWithout(twoSided && !withoutRendered);
+
         if (recorderManager.isSuspended() || context.getWindow().isWithdrawn()) {
             internal.setFixedFrameSeconds(0f);
             return;
@@ -279,6 +290,14 @@ public class DevRecorderExportSystem extends SystemPackage {
         }
 
         this.settleFrames = 0;
+
+        if (twoSided && !withoutRendered) {
+            this.withoutRendered = true;
+            internal.setFixedFrameSeconds(0f);
+            return;
+        }
+
+        this.withoutRendered = false;
         this.renderedCapture = true;
         this.renderedSubframe = nextSubframe;
 

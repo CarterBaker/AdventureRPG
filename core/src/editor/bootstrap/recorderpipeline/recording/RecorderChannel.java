@@ -19,7 +19,8 @@ public enum RecorderChannel {
      * recording sound live still hears what the timeline holds. A take's and
      * a clip's channels are a mask of these bits, and recording files name
      * channels by their lower-case constant names, which are also the keys
-     * the Recorder tab's channel rows hand back.
+     * the Recorder tab's channel rows hand back. Every channel but sound is
+     * part of the picture, which a transition carries from clip to clip.
      */
 
     CAMERA(EditorSetting.RECORDER_CHANNEL_LABEL_CAMERA),
@@ -36,6 +37,7 @@ public enum RecorderChannel {
     public static final RecorderChannel[] VALUES = values();
     public static final int ALL = (1 << VALUES.length) - 1;
     public static final int NONE = 0;
+    public static final int PICTURE = ALL & ~SOUND.getBit();
 
     // Internal
     private final String label;

@@ -16,6 +16,7 @@ import editor.bootstrap.shortcutpipeline.ShortcutPipeline;
 import editor.bootstrap.soundlibrarypipeline.SoundLibraryPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
 import editor.bootstrap.toolpipeline.ToolPipeline;
+import editor.bootstrap.transitionpipeline.TransitionPipeline;
 import editor.bootstrap.treeplannerpipeline.TreePlannerPipeline;
 import editor.bootstrap.worldeditorpipeline.WorldEditorPipeline;
 import editor.runtime.menueventsmanager.EditorMenuEventsManager;
@@ -37,9 +38,11 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
      * detail the tree viewer shows, the character, animation and animation
      * tree editor pipelines, the command pipeline that routes console
      * commands to every Dev window, the recorder pipeline that records,
-     * plays back and exports from a Dev window, the shortcut pipeline that
-     * runs every tool's keys, and the one set of editor menu branches the
-     * toolbar, every tab's chrome, and every tool route their callbacks to.
+     * plays back and exports from a Dev window, the transitions every tool
+     * that cuts footage together lays between its clips, the shortcut
+     * pipeline that runs every tool's keys, and the one set of editor menu
+     * branches the toolbar, every tab's chrome, and every tool route their
+     * callbacks to.
      */
 
     // Internal \\
@@ -61,6 +64,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(AnimationEditorPipeline.class);
         create(AnimationTreeEditorPipeline.class);
         create(CommandPipeline.class);
+        create(TransitionPipeline.class);
         create(RecorderPipeline.class);
         create(SoundLibraryPipeline.class);
         create(ShortcutPipeline.class);

@@ -28,6 +28,7 @@ import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.palette.PaletteContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.recorder.RecorderContext;
+import editor.runtime.recordings.RecordingsContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
 import editor.runtime.settlementplanner.SettlementPlannerContext;
@@ -35,6 +36,7 @@ import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.soundlibrary.SoundLibraryContext;
 import editor.runtime.textureviewer.TextureViewerContext;
 import editor.runtime.tools.ToolsContext;
+import editor.runtime.transitions.TransitionsContext;
 import editor.runtime.treeplanner.TreePlannerContext;
 import editor.runtime.treeviewer.TreeViewerContext;
 import editor.runtime.worldeditor.WorldEditorContext;
@@ -225,8 +227,16 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_RECORDER, RecorderContext.class, osWindow);
     }
 
+    public TabHandle openRecordings(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_RECORDINGS, RecordingsContext.class, osWindow);
+    }
+
     public TabHandle openSoundLibrary(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_SOUND_LIBRARY, SoundLibraryContext.class, osWindow);
+    }
+
+    public TabHandle openTransitions(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_TRANSITIONS, TransitionsContext.class, osWindow);
     }
 
     public TabHandle openTab(

@@ -190,11 +190,13 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_NODE = "Rename Node";
     public static final String DIALOG_TITLE_NEW_RECORDING = "New Recording";
     public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
+    public static final String DIALOG_TITLE_DUPLICATE_RECORDING = "Copy Recording As";
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
     public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
     public static final String DIALOG_TITLE_SOUND_VOLUME = "Sound Volume (%)";
     public static final String DIALOG_TITLE_SOUND_PITCH = "Sound Pitch (%)";
     public static final String DIALOG_TITLE_SOUND_LENGTH = "Sound Length (seconds)";
+    public static final String DIALOG_TITLE_TRANSITION_LENGTH = "Transition Length (seconds)";
     public static final String DIALOG_TITLE_PLACEMENT_X = "Placement X";
     public static final String DIALOG_TITLE_PLACEMENT_Z = "Placement Z";
     public static final String DIALOG_TITLE_CAMERA_NAME = "Camera Name";
@@ -323,11 +325,13 @@ public class EditorSetting {
     public static final String TAB_TITLE_PALETTE = "Palette";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
+    public static final String TAB_TITLE_RECORDINGS = "Recordings";
     public static final String TAB_TITLE_SOUND_LIBRARY = "Sound Library";
     public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
     public static final String TAB_TITLE_TOOLS = "Tools";
+    public static final String TAB_TITLE_TRANSITIONS = "Transitions";
     public static final String TAB_TITLE_TREE_PLANNER = "Tree Planner";
     public static final String TAB_TITLE_TREE_VIEWER = "Tree Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
@@ -1118,6 +1122,30 @@ public class EditorSetting {
     public static final String BRUSH_KEY_HARDNESS = "hardness";
     public static final String BRUSH_KEY_DENSITY = "density";
     public static final String BRUSH_KEY_SPACING = "spacing";
+
+    // Transitions — loaded from this directory, the default one standing in for any deleted or no longer found; a
+    // transition runs at least and at most this long, and unless it says otherwise is first laid this long with an
+    // edge this soft
+    public static final String TRANSITION_PATH = "transitions";
+    public static final String TRANSITION_DEFAULT = "Crossfade";
+    public static final String TRANSITION_MESSAGE_REFUSED = "Transition not applied: ";
+    public static final float TRANSITION_MIN_SECONDS = 0.05f;
+    public static final float TRANSITION_MAX_SECONDS = 10f;
+    public static final float TRANSITION_DEFAULT_SECONDS = 1f;
+    public static final float TRANSITION_DEFAULT_SOFTNESS = 0.05f;
+    public static final String TRANSITION_KIND_DISSOLVE = "Dissolve";
+    public static final String TRANSITION_KIND_DIP = "Dip through colour";
+    public static final String TRANSITION_KIND_WIPE = "Wipe";
+    public static final String TRANSITION_KIND_PUSH = "Push";
+    public static final String TRANSITION_KIND_IRIS = "Iris";
+    public static final String TRANSITION_DIRECTION_LEFT = "Left";
+    public static final String TRANSITION_DIRECTION_RIGHT = "Right";
+    public static final String TRANSITION_DIRECTION_UP = "Up";
+    public static final String TRANSITION_DIRECTION_DOWN = "Down";
+    public static final String TRANSITION_EASING_LINEAR = "Even";
+    public static final String TRANSITION_EASING_EASE_IN = "Slow start";
+    public static final String TRANSITION_EASING_EASE_OUT = "Slow finish";
+    public static final String TRANSITION_EASING_EASE_IN_OUT = "Slow start and finish";
     public static final float BRUSH_FIELD_MIN = 0.05f;
     public static final float BRUSH_HARDNESS_DEFAULT = 1f;
     public static final float BRUSH_DENSITY_DEFAULT = 1f;
@@ -1276,6 +1304,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_SETTLEMENTS = "Settlements";
     public static final String INFO_SCHEMA_STRUCTURES = "Structures";
     public static final String INFO_SCHEMA_BRUSHES = "Brushes";
+    public static final String INFO_SCHEMA_TRANSITIONS = "Transitions";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";
@@ -1436,11 +1465,34 @@ public class EditorSetting {
     public static final float RECORDER_AUDIO_PAN_EIGHTH_TURN = (float) (Math.PI / 4.0);
     public static final int RECORDER_FILE_VERSION_LAYERS = 1;
     public static final String RECORDER_FILE_CHANNEL_WORLD = "world";
+    public static final String RECORDER_FILE_TRANSITION_PREFIX = "transition_";
 
-    // Recorder — the tab's menu, and the lanes its drags land on and the ruler and graph its wheel zooms, which
-    // every Recorder tab shares
+    // Recorder — transitions; clips this near meet at a cut, a transition dropped on the first share of a clip
+    // lands on its start and on the rest its end, and the length dialog writes its seconds so
+    public static final float RECORDER_ADJOIN_SECONDS = 0.001f;
+    public static final float RECORDER_TRANSITION_EDGE_SHARE = 0.5f;
+    public static final String RECORDER_TRANSITION_SECONDS_FORMAT = "%.2f";
+    public static final String RECORDER_EDGE_LABEL_START = "Start";
+    public static final String RECORDER_EDGE_LABEL_END = "End";
+
+    // Recorder — a transition shown in the Dev window: the timeline drawn with its clip and without it, one side a
+    // frame, each into its own target, and blended by this material
+    public static final int RECORDER_TRANSITION_SIDES = 2;
+    public static final int RECORDER_TRANSITION_SIDE_WITH = 0;
+    public static final int RECORDER_TRANSITION_SIDE_WITHOUT = 1;
+    public static final String RECORDER_TRANSITION_MATERIAL = "editor/RecorderTransitionMaterial";
+    public static final String RECORDER_TRANSITION_UNIFORM_FROM = "u_from";
+    public static final String RECORDER_TRANSITION_UNIFORM_TO = "u_to";
+    public static final String RECORDER_TRANSITION_UNIFORM_MIX_PARAMS = "u_mixParams";
+    public static final String RECORDER_TRANSITION_UNIFORM_SIDE_PARAMS = "u_sideParams";
+    public static final String RECORDER_TRANSITION_UNIFORM_COLOR = "u_color";
+
+    // Recorder — the tab's menu and those of the tools beside it, and the lanes its drags land on and the ruler and
+    // graph its wheel zooms, which every Recorder tab shares
     public static final String RECORDER_MENU = "editor/Recorder/Recorder";
     public static final String SOUND_LIBRARY_MENU = "editor/SoundLibrary/SoundLibrary";
+    public static final String TRANSITIONS_MENU = "editor/Transitions/Transitions";
+    public static final String RECORDINGS_MENU = "editor/Recordings/Recordings";
     public static final String SOUND_LIBRARY_STATUS_READY =
             "Pick a sound to sample it, or drag it onto the Recorder's timeline";
     public static final String SOUND_LIBRARY_STATUS_SELECTED = "Selected ";
@@ -1451,10 +1503,10 @@ public class EditorSetting {
     public static final String SOUND_LIBRARY_STATUS_NO_SOUND = "Select a sound first";
     public static final String SOUND_LIBRARY_STATUS_SILENT = "No audio device is open, so nothing can play";
     public static final String SOUND_LIBRARY_STATUS_ADDED = "Laid on the Recorder's timeline: ";
-    public static final int RECORDER_ENTRY_CLIP_LANES = 5;
-    public static final int RECORDER_ENTRY_RULER = 6;
-    public static final int RECORDER_ENTRY_KEY_ROWS = 16;
-    public static final int RECORDER_ENTRY_KEY_GRAPH = 17;
+    public static final int RECORDER_ENTRY_CLIP_LANES = 4;
+    public static final int RECORDER_ENTRY_RULER = 5;
+    public static final int RECORDER_ENTRY_KEY_ROWS = 15;
+    public static final int RECORDER_ENTRY_KEY_GRAPH = 16;
 
     // Recorder — channels
     public static final String RECORDER_CHANNEL_LABEL_CAMERA = "Camera";
@@ -1856,6 +1908,12 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_RENAME_FAILED = "Could not rename ";
     public static final String RECORDER_STATUS_DELETED = "Deleted ";
     public static final String RECORDER_STATUS_DELETE_FAILED = "Could not delete ";
+    public static final String RECORDER_STATUS_DUPLICATED = "Copied and opened as ";
+    public static final String RECORDER_STATUS_NO_RECORDING = "Open a recording in the Recordings tool first";
+    public static final String RECORDER_STATUS_TRANSITION_PLACED = "Laid transition ";
+    public static final String RECORDER_STATUS_TRANSITION_CHANGED = "Changed transition ";
+    public static final String RECORDER_STATUS_TRANSITION_REMOVED = "Removed transition ";
+    public static final String RECORDER_STATUS_NO_TRANSITION = "Click a transition on a clip first";
     public static final String RECORDER_STATUS_EXPORT_WHILE_RECORDING = "Stop the take before exporting";
     public static final String RECORDER_STATUS_EXPORT_WHILE_PAUSED =
             "Close the pause menu in the Dev Mode tab before exporting";
@@ -1871,9 +1929,11 @@ public class EditorSetting {
     public static final String RECORDER_SHORTCUT_EXTEND_SELECTION = "Recorder/ExtendSelection";
     public static final String RECORDER_SHORTCUT_SUBTRACT_SELECTION = "Recorder/SubtractSelection";
 
-    // Recorder — the keys the Recorder tab's setting rows hand back; channel rows add the channel's key to a prefix
+    // Recorder — the keys the Recorder tab's setting rows hand back; channel rows add the channel's key to a prefix,
+    // and the rows laying a transition on a clip's edge add the edge's key to theirs
     public static final String RECORDER_KEY_ARM_PREFIX = "arm_";
     public static final String RECORDER_KEY_CLIP_CHANNEL_PREFIX = "clip_channel_";
+    public static final String RECORDER_KEY_TRANSITION_PREFIX = "transition_on_";
     public static final String RECORDER_KEY_CLIP_MUTE = "clip_mute";
     public static final String RECORDER_KEY_CLIP_RAMP = "clip_ramp";
     public static final String RECORDER_KEY_CLIP_TRIM_START = "clip_trim_start";
@@ -1899,6 +1959,9 @@ public class EditorSetting {
     public static final String RECORDER_KEY_SOUND_SEEK = "sound_seek";
     public static final String RECORDER_KEY_SOUND_REMOVE = "sound_remove";
     public static final String RECORDER_KEY_SOUND_REMOVE_ALL = "sound_remove_all";
+    public static final String RECORDER_KEY_TRANSITION_LENGTH = "transition_length";
+    public static final String RECORDER_KEY_TRANSITION_REPLACE = "transition_replace";
+    public static final String RECORDER_KEY_TRANSITION_REMOVE = "transition_remove";
     public static final String RECORDER_KEY_RESOLUTION = "resolution";
     public static final String RECORDER_KEY_FRAME_RATE = "frame_rate";
     public static final String RECORDER_KEY_FORMAT = "format";

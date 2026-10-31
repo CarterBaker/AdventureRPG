@@ -48,6 +48,11 @@ One line per session that changed this file: the date, what was added or removed
   with a porch, more windows), `menus/Shipwright.arpg` (Waist tool, mast buttons removed), `schemas/Vehicles.arpg`
   (waists), `items/furniture/Furniture.arpg` and the meshes `furniture/Barrel.arpg` and `furniture/CargoCrate.arpg`
   (barrels and crates open as containers).
+- 2026-10-31: Transitions, and the Recordings tool. Added the 12 transitions under `assets/transitions/` with the
+  `Transitions.arpg` schema, the shader `editor/recorder/TransitionShader` (`.arpg` and `.fsh`) with the material
+  `RecorderTransitionMaterial.arpg`, and the menus `Transitions.arpg` and `Recordings.arpg`; regenerated
+  `Recorder.arpg` (recordings panel moved to its own tool, transition marks on clips) and `EditorWindow.arpg`
+  (Recordings and Transitions entries).
 
 ---
 
@@ -966,7 +971,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (176 files)
+## Shaders (177 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -998,6 +1003,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/editor/placementicon/`
 
 `PlacementIconShader.fsh`
+
+### `assets/shaders/editor/recorder/`
+
+`TransitionShader.fsh`
 
 ### `assets/shaders/editor/textureviewer/`
 
@@ -1277,7 +1286,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1726 files)
+## Data Files (1743 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2016,10 +2025,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `CharacterMeshOverlayMaterial.arpg`, `CharacterViewCharacterMaterial.arpg`, `CharacterViewGridMaterial.arpg`,
 `CharacterViewMarkerMaterial.arpg`, `CharacterViewMarkerSelectedMaterial.arpg`, `ItemEditorCursorEraseMaterial.arpg`,
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
-`ItemEditorModelMaterial.arpg`, `PlacementIconMaterial.arpg`, `TextureViewerAtlasMaterial.arpg`,
-`TreeViewerBarkMaterial.arpg`, `TreeViewerLeafMaterial.arpg`, `WorldEditorBrushMaterial.arpg`,
-`WorldEditorHeightMaterial.arpg`, `WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`,
-`WorldMapTileMaterial.arpg`
+`ItemEditorModelMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
+`TextureViewerAtlasMaterial.arpg`, `TreeViewerBarkMaterial.arpg`, `TreeViewerLeafMaterial.arpg`,
+`WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`, `WorldEditorImageMaterial.arpg`,
+`WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
 
 ### `assets/materials/fonts/`
 
@@ -2081,8 +2090,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePlanner.arpg`, `BiomeViewer.arpg`,
 `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`,
 `EditorWindow.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Palette.arpg`, `Profiler.arpg`, `Recorder.arpg`,
-`SettlementPlanner.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`,
-`TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
+`Recordings.arpg`, `SettlementPlanner.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`,
+`Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
 
@@ -2238,8 +2247,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Npcs.arpg`, `Passes.arpg`, `Professions.arpg`, `Rigs.arpg`,
 `Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Shortcuts.arpg`, `Skills.arpg`, `SoundCues.arpg`,
 `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`, `TextureAliases.arpg`,
-`Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Trees.arpg`, `UBOs.arpg`, `Vehicles.arpg`,
-`Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
+`Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Transitions.arpg`, `Trees.arpg`, `UBOs.arpg`,
+`Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
 
 ### `assets/seasons/`
 
@@ -2273,6 +2282,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/shaders/editor/placementicon/`
 
 `PlacementIconShader.arpg`
+
+### `assets/shaders/editor/recorder/`
+
+`TransitionShader.arpg`
 
 ### `assets/shaders/editor/textureviewer/`
 
@@ -2686,6 +2699,11 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/trades/`
 
 `Trades.arpg`
+
+### `assets/transitions/`
+
+`Crossfade.arpg`, `DipToBlack.arpg`, `DipToWhite.arpg`, `Iris.arpg`, `PushDown.arpg`, `PushLeft.arpg`,
+`PushRight.arpg`, `PushUp.arpg`, `WipeDown.arpg`, `WipeLeft.arpg`, `WipeRight.arpg`, `WipeUp.arpg`
 
 ### `assets/trees/broadleaf/`
 

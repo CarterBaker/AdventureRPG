@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.renderpipeline.fbo.FBODestinationStruct;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.fbo.FBOStandInStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -27,9 +28,14 @@ public class FBORenderSystem extends SystemPackage {
      * A window given a capture target also has every layer it pushes
      * gathered into that target, in layer order, just before its OS window
      * draws, so a recording can read back exactly what the window
-     * shows at whatever size it renders. findPushedFbo() answers which target
-     * a window has pushed on a layer so far this frame, and withdrawPushedFbos()
-     * takes back every target a window has pushed from a layer up.
+     * shows at whatever size it renders. A window given a stand-in has every
+     * layer it pushes gathered into a target of its own instead of being
+     * shown, and the stand-in — drawn from its model once every layer is
+     * gathered — shown in their place, and captured in their place too, so
+     * what the window shows can be built from what it drew this frame and
+     * before. findPushedFbo() answers which target a window has pushed on a
+     * layer so far this frame, and withdrawPushedFbos() takes back every
+     * target a window has pushed from a layer up.
      */
 
     // Internal
@@ -44,6 +50,10 @@ public class FBORenderSystem extends SystemPackage {
     // Capture
     private Object2ObjectOpenHashMap<WindowInstance, FBOInstance> window2CaptureTarget;
 
+    // Stand-In
+    private Object2ObjectOpenHashMap<WindowInstance, FBOStandInStruct> window2StandIn;
+    private ObjectArrayList<FBOStandInStruct> standIns;
+
     // Scratch
     private final Vector4 destRectScratch = new Vector4();
     private final Vector2 resolutionScratch = new Vector2();
@@ -55,6 +65,8 @@ public class FBORenderSystem extends SystemPackage {
         fbo2BlitModel = new Object2ObjectOpenHashMap<>();
         window2BlitQueue = new Object2ObjectOpenHashMap<>();
         window2CaptureTarget = new Object2ObjectOpenHashMap<>();
+        window2StandIn = new Object2ObjectOpenHashMap<>();
+        standIns = new ObjectArrayList<>();
     }
 
     @Override
@@ -133,6 +145,10 @@ public class FBORenderSystem extends SystemPackage {
 
         for (int i = 0; i < queue.size(); i++) {
             FBOInstance fbo = queue.get(i);
+
+            if (isStoodIn(fbo))
+                continue;
+
             ModelInstance model = bindBlitModel(fbo, fbo.getPushDestRect(), window);
 
             renderManager.pushScreenCall(model, window, fbo.getPushScreenOrder());
@@ -152,6 +168,7 @@ public class FBORenderSystem extends SystemPackage {
     public void removeWindowResources(WindowInstance window) {
         window2BlitQueue.remove(window);
         clearCaptureTarget(window);
+        clearStandIn(window);
     }
 
     // The target the window pushed on the layer this frame, null when it pushed none there
@@ -203,10 +220,11 @@ public class FBORenderSystem extends SystemPackage {
         window2CaptureTarget.remove(window);
     }
 
-    // Queued just before the OS window's targets draw, so each capture target follows every layer it gathers
+    // Queued just before the OS window's targets draw, so each capture target follows every layer it gathers, and
+    // each stand-in follows every layer its window gathered
     public void pushCaptures(WindowInstance window) {
 
-        if (window2CaptureTarget.isEmpty())
+        if (window2CaptureTarget.isEmpty() && standIns.isEmpty())
             return;
 
         ObjectArrayList<FBOInstance> queue = window2BlitQueue.get(window);
@@ -218,13 +236,83 @@ public class FBORenderSystem extends SystemPackage {
 
             FBOInstance fbo = queue.get(i);
             WindowInstance source = fbo.getPushWindow();
-            FBOInstance target = window2CaptureTarget.get(source);
+            FBOStandInStruct standIn = window2StandIn.get(source);
+            FBOInstance target = standIn != null ? standIn.getGatherTarget() : window2CaptureTarget.get(source);
 
             if (target == null)
                 continue;
 
+            if (standIn != null)
+                standIn.setGathered(true);
+
             renderManager.pushRenderCall(bindBlitModel(fbo, null, source), target, fbo.getPushLayer(), source);
         }
+
+        pushStandIns(window);
+    }
+
+    // Stand-In \\
+
+    // From now on every layer the window pushes is gathered into the gather target instead of being shown, and the
+    // stand-in, drawn from its model once every layer is gathered, is shown and captured in their place
+    public void setStandIn(
+            WindowInstance window,
+            FBOInstance gatherTarget,
+            FBOInstance standIn,
+            ModelInstance standInModel) {
+
+        FBOStandInStruct standInStruct = window2StandIn.get(window);
+
+        if (standInStruct == null) {
+            standInStruct = new FBOStandInStruct(window);
+            window2StandIn.put(window, standInStruct);
+            standIns.add(standInStruct);
+        }
+
+        standInStruct.set(gatherTarget, standIn, standInModel);
+    }
+
+    public void clearStandIn(WindowInstance window) {
+
+        FBOStandInStruct standInStruct = window2StandIn.remove(window);
+
+        if (standInStruct != null)
+            standIns.remove(standInStruct);
+    }
+
+    // Each stand-in of a window drawing into this OS window that gathered anything is drawn, captured when its
+    // window has a capture target, and shown on the window's lowest layer
+    private void pushStandIns(WindowInstance osWindow) {
+
+        for (int i = 0; i < standIns.size(); i++) {
+
+            FBOStandInStruct standIn = standIns.get(i);
+            WindowInstance source = standIn.getWindow();
+            WindowInstance target = source.hasCompositeTarget() ? source.getCompositeTarget() : source;
+
+            if (target != osWindow || !standIn.isGathered())
+                continue;
+
+            standIn.setGathered(false);
+            renderManager.pushRenderCall(
+                    standIn.getStandInModel(), standIn.getStandIn(), EngineSetting.FBO_STAND_IN_LAYER, source);
+
+            FBOInstance capture = window2CaptureTarget.get(source);
+
+            if (capture != null)
+                renderManager.pushRenderCall(bindBlitModel(standIn.getStandIn(), null, source), capture,
+                        EngineSetting.FBO_STAND_IN_LAYER, source);
+
+            pushFbo(standIn.getStandIn(), EngineSetting.FBO_STAND_IN_LAYER, source);
+        }
+    }
+
+    // True for a layer pushed by a window something stands in for, which is gathered rather than shown
+    private boolean isStoodIn(FBOInstance fbo) {
+
+        FBOStandInStruct standIn = window2StandIn.get(fbo.getPushWindow());
+
+        return standIn != null && standIn.getStandIn() != fbo;
     }
 
     public void removeBlitModel(FBOInstance fbo) {

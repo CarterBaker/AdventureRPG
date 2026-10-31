@@ -26,7 +26,9 @@ public class DevRecorderSoundSystem extends SystemPackage {
      * every sound of its take that spans the playhead, all together whatever
      * their lanes: each is started where the playhead stands within it, at
      * its volume and pitch and, when it was placed, where it was placed, and
-     * stopped once the playhead leaves it or its clip. A jump of the playhead
+     * stopped once the playhead leaves it or its clip; across its clip's
+     * transitions its volume fades in and out, set again whenever the fade
+     * moves it. A jump of the playhead
      * — a seek, a pause, the playhead running back — stops every sound so
      * each starts again from where the playhead now stands, and so does any
      * change made to a sound on the timeline. While a take records sound live,
@@ -51,6 +53,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
     private ObjectArrayList<RecordingClipStruct> playingClips;
     private int[] playingEvents;
     private int[] playingVoices;
+    private float[] playingFades;
     private boolean[] playingSeen;
     private int playingCount;
     private float lastPlayhead;
@@ -75,6 +78,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
         this.playingClips = new ObjectArrayList<>();
         this.playingEvents = new int[EngineSetting.SOUND_VOICE_COUNT];
         this.playingVoices = new int[EngineSetting.SOUND_VOICE_COUNT];
+        this.playingFades = new float[EngineSetting.SOUND_VOICE_COUNT];
         this.playingSeen = new boolean[EngineSetting.SOUND_VOICE_COUNT];
 
         // Capture
@@ -174,7 +178,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
             for (int event = track.findFirstSounding(takeTime);
                     event < track.size() && track.getTime(event) <= takeTime; event++)
                 if (takeTime < track.getTime(event) + track.getDuration(event))
-                    sound(clip, track, event, takeTime);
+                    sound(clip, track, event, takeTime, recorderManager.resolveClipGain(clip, time));
         }
 
         for (int i = playingCount - 1; i >= 0; i--)
@@ -182,13 +186,26 @@ public class DevRecorderSoundSystem extends SystemPackage {
                 release(i);
     }
 
-    // The sound kept sounding when it already is, else started where the playhead stands within it
-    private void sound(RecordingClipStruct clip, RecordingSoundTrackStruct track, int event, float takeTime) {
+    // The sound kept sounding when it already is, its volume set again when its clip's fade has moved, else started
+    // where the playhead stands within it
+    private void sound(
+            RecordingClipStruct clip,
+            RecordingSoundTrackStruct track,
+            int event,
+            float takeTime,
+            float fade) {
 
         int playing = findPlaying(clip, event);
 
         if (playing != EngineSetting.INDEX_NOT_FOUND) {
+
             playingSeen[playing] = true;
+
+            if (playingFades[playing] != fade) {
+                playingFades[playing] = fade;
+                soundManager.setVoiceVolume(playingVoices[playing], track.getVolume(event) * fade);
+            }
+
             return;
         }
 
@@ -202,10 +219,10 @@ public class DevRecorderSoundSystem extends SystemPackage {
         float pitch = track.getPitch(event);
         float offset = resolveOffset(soundHandle, (takeTime - track.getTime(event)) * pitch * soundHandle.getPitch());
         int voice = track.isSpatial(event)
-                ? soundManager.playSoundAt(soundID, track.getVolume(event), pitch, offset, resolveWorld(),
+                ? soundManager.playSoundAt(soundID, track.getVolume(event) * fade, pitch, offset, resolveWorld(),
                         track.getChunkCoordinate(event), track.getPositionX(event), track.getPositionY(event),
                         track.getPositionZ(event))
-                : soundManager.playSound(soundID, track.getVolume(event), pitch, offset);
+                : soundManager.playSound(soundID, track.getVolume(event) * fade, pitch, offset);
 
         if (voice == EngineSetting.INDEX_NOT_FOUND)
             return;
@@ -217,6 +234,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
 
         playingEvents[playingCount] = event;
         playingVoices[playingCount] = voice;
+        playingFades[playingCount] = fade;
         playingSeen[playingCount] = true;
         this.playingCount++;
     }
@@ -245,6 +263,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
         playingClips.set(playing, playingClips.get(last));
         playingEvents[playing] = playingEvents[last];
         playingVoices[playing] = playingVoices[last];
+        playingFades[playing] = playingFades[last];
         playingSeen[playing] = playingSeen[last];
         playingClips.set(last, null);
         this.playingCount--;

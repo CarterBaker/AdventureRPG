@@ -16,7 +16,10 @@ public enum RecorderDragKind {
      * nothing on the Keys pane's rows or graph, which scrolls the view along
      * as it travels — on the graph its values too — or else moves the
      * playhead, or a box drawn with Shift or Ctrl across a curve's row or its
-     * graph to select the keys within it, or take them out.
+     * graph to select the keys within it, or take them out; a transition
+     * picked up from the transitions tool to lay on the clip edge it is let go
+     * over, or the far side of a transition laid on a clip being dragged to
+     * make it run longer or shorter.
      */
 
     NONE,
@@ -36,7 +39,9 @@ public enum RecorderDragKind {
     GRAPH_PRESS,
     KEYS_BOX,
     GRAPH_BOX,
-    SOUND_EVENT;
+    SOUND_EVENT,
+    TRANSITION,
+    TRANSITION_LENGTH;
 
     // Accessible \\
 
@@ -47,7 +52,12 @@ public enum RecorderDragKind {
 
     // True for what is let go at a single moment of the timeline
     public boolean isMoment() {
-        return this == TRIM_START || this == TRIM_END || this == CUT || this == NODE;
+        return this == TRIM_START || this == TRIM_END || this == CUT || this == NODE || this == TRANSITION_LENGTH;
+    }
+
+    // True for what is let go on a clip's edge, and lands only where there is one
+    public boolean isAimed() {
+        return this == TRANSITION;
     }
 
     // True for a key or a handle edited live on the Keys tab while it is dragged

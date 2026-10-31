@@ -9,6 +9,7 @@ import editor.runtime.dev.recorder.DevRecorderExportSystem;
 import editor.runtime.dev.recorder.DevRecorderOverlaySystem;
 import editor.runtime.dev.recorder.DevRecorderSoundSystem;
 import editor.runtime.dev.recorder.DevRecorderSystem;
+import editor.runtime.dev.recorder.DevRecorderTransitionSystem;
 import editor.runtime.dev.teleport.DevTeleportSystem;
 import editor.runtime.dev.time.DevTimeSystem;
 import editor.runtime.dev.vehicle.DevVehicleSystem;
@@ -24,8 +25,8 @@ public class DevContext extends RuntimeContext {
      * commands use, the teleporter its teleport command uses, and the clock
      * mover its time, dawn, noon, dusk and midnight commands use. The
      * recorder's systems carry out a recording session in this window —
-     * capturing and playing it back, its interface and sounds included, and
-     * rendering its export — which its record, play, stop and mark commands
+     * capturing and playing it back, its interface, sounds and transitions
+     * included, and rendering its export — which its record, play, stop and mark commands
      * drive too.
      * The editor pairs it with a Dev Mode tab exactly as it does a preview.
      * Dev-only systems live beside it in the editor's runtime, never in the
@@ -40,9 +41,11 @@ public class DevContext extends RuntimeContext {
     private DevTeleportSystem devTeleportSystem;
     private DevTimeSystem devTimeSystem;
 
-    // Recorder — the export sets the playhead before the recorder plays it, so it is created first, and the
-    // interface renders after every other system so it sees every overlay the window pushes
+    // Recorder — the export sets the playhead before the recorder plays it, so it is created first, then the
+    // transitions, which pick the side the recorder plays; the interface renders after every other system so it sees
+    // every overlay the window pushes
     private DevRecorderExportSystem devRecorderExportSystem;
+    private DevRecorderTransitionSystem devRecorderTransitionSystem;
     private DevRecorderSystem devRecorderSystem;
     private DevRecorderSoundSystem devRecorderSoundSystem;
     private DevRecorderOverlaySystem devRecorderOverlaySystem;
@@ -64,6 +67,7 @@ public class DevContext extends RuntimeContext {
 
         // Recorder
         this.devRecorderExportSystem = create(DevRecorderExportSystem.class);
+        this.devRecorderTransitionSystem = create(DevRecorderTransitionSystem.class);
         this.devRecorderSystem = create(DevRecorderSystem.class);
         this.devRecorderSoundSystem = create(DevRecorderSoundSystem.class);
         this.devRecorderOverlaySystem = create(DevRecorderOverlaySystem.class);

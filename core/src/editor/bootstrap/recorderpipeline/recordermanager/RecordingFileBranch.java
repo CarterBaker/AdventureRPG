@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveProperty;
 import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecorderOverlay;
@@ -46,7 +47,9 @@ class RecordingFileBranch extends BranchPackage {
      * plainly beside them, an overlay's frames as one block of frame sizes and
      * one of their packed bytes, its sounds as the names they use and one
      * block of every sound heard — and the clips on its timeline, each naming
-     * its take by its place in the bin. Beside each track lie the curves it
+     * its take by its place in the bin and the transition on each edge by
+     * name, with how long it runs; a clip written before transitions were
+     * laid reads with none. Beside each track lie the curves it
      * has been given, each naming its property and part with its keys packed
      * into one block, their modes named once for the whole file as the states
      * and actions are. A file written before sounds were recorded reads with
@@ -319,10 +322,28 @@ class RecordingFileBranch extends BranchPackage {
             clipArpg.add("channels", buildChannels(clip.getChannelMask()));
             clipArpg.addProperty("muted", clip.isMuted());
             clipArpg.addProperty("time_ramp", clip.getTimeRampSeconds());
+            addTransitions(clipArpg, clip);
             clipsArpg.add(clipArpg);
         }
 
         return clipsArpg;
+    }
+
+    // Each edge holding a transition written under its own key, its name and how long it was asked to run
+    private void addTransitions(ArpgObjectStruct clipArpg, RecordingClipStruct clip) {
+
+        for (int i = 0; i < RecorderClipEdge.VALUES.length; i++) {
+
+            RecorderClipEdge edge = RecorderClipEdge.VALUES[i];
+
+            if (!clip.hasTransition(edge))
+                continue;
+
+            ArpgObjectStruct transitionArpg = new ArpgObjectStruct();
+            transitionArpg.addProperty("name", clip.getTransitionName(edge));
+            transitionArpg.addProperty("seconds", clip.getTransitionSeconds(edge));
+            clipArpg.add(EditorSetting.RECORDER_FILE_TRANSITION_PREFIX + edge.getKey(), transitionArpg);
+        }
     }
 
     // Pack \\
@@ -643,10 +664,31 @@ class RecordingFileBranch extends BranchPackage {
             clip.setSpan(clip.getInPoint(), clip.getOutPoint());
             clip.setMuted(ArpgUtility.getBoolean(clipArpg, "muted", false));
             clip.setTimeRampSeconds(ArpgUtility.getFloat(clipArpg, "time_ramp", 0f));
+            parseTransitions(clipArpg, clip);
             recording.addClip(clip);
         }
 
         return true;
+    }
+
+    // Each edge's transition read back when it names one, every other edge left without
+    private void parseTransitions(ArpgObjectStruct clipArpg, RecordingClipStruct clip) {
+
+        for (int i = 0; i < RecorderClipEdge.VALUES.length; i++) {
+
+            RecorderClipEdge edge = RecorderClipEdge.VALUES[i];
+            String key = EditorSetting.RECORDER_FILE_TRANSITION_PREFIX + edge.getKey();
+
+            if (!ArpgUtility.hasObject(clipArpg, key))
+                continue;
+
+            ArpgObjectStruct transitionArpg = clipArpg.getAsObject(key);
+
+            if (ArpgUtility.hasString(transitionArpg, "name"))
+                clip.setTransition(edge, transitionArpg.get("name").getAsString(), Math.clamp(
+                        ArpgUtility.getFloat(transitionArpg, "seconds", EditorSetting.TRANSITION_DEFAULT_SECONDS),
+                        EditorSetting.TRANSITION_MIN_SECONDS, EditorSetting.TRANSITION_MAX_SECONDS));
+        }
     }
 
     // Each first-version layer becomes a take of its own, timed from its own start, and one clip of it laid where

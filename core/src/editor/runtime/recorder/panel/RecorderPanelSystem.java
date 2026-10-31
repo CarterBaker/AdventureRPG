@@ -11,6 +11,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
@@ -23,6 +24,8 @@ import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
+import editor.bootstrap.transitionpipeline.transition.TransitionHandle;
+import editor.bootstrap.transitionpipeline.transitionmanager.TransitionManager;
 import editor.runtime.recorder.RecorderSetting;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -35,22 +38,24 @@ public class RecorderPanelSystem extends SystemPackage {
      * Binds this window to a UI render target and shows the recorder, with
      * whichever pane below the timeline it asks for — the Keys, the Bin or the
      * Assets — and the others set aside. When the recorder's revision moves it
-     * refills every panel — the recordings in the game's directory with the
-     * open one marked, the channels armed for the next take and the export
-     * settings, the bin of takes with their channels, length and how often
-     * each is laid, the clip selected with what it plays, the node or sound
-     * selected on it and every edit it takes, and the stretch of the timeline
-     * in view: its
-     * ruler's ticks, its export range, and its clips on their lanes, highest
-     * on top, each with what the player does along it — the movement it is in
-     * along its lower row and every gesture of its hands along its upper row —
-     * a sound laid from the sound library in a shade of its own.
+     * refills every panel — the channels armed for the next take and the
+     * export settings, the bin of takes with their channels, length and how
+     * often each is laid, the clip selected with what it plays, the node,
+     * sound or transition selected on it and every edit it takes, and the
+     * stretch of the timeline in view: its ruler's ticks, its export range,
+     * and its clips on their lanes, highest on top, each with what the player
+     * does along it — the movement it is in along its lower row and every
+     * gesture of its hands along its upper row — and a mark across each
+     * transition laid on it, named after the transition; a sound laid from
+     * the sound library is drawn in a shade of its own. The recordings
+     * themselves are listed in the Recordings tool.
      * Only what lies in view is drawn, cut at the view's edges, and the view's
      * zooming and scrolling redraws the timeline alone. Both playheads follow
      * the playhead every frame from positions built once, hidden while it is
      * out of view, and what is being dragged shows where it would land — a
      * span on the lane it would really take, or a line at the moment an edge,
-     * a cut or a node would move to — from positions built the first time each
+     * a cut, a node or a transition's far side would move to, or at the clip
+     * edge a transition would be laid on — from positions built the first time each
      * is needed, so neither playback nor a drag allocates; the Cut tool shows
      * the same line where it would cut under the pointer. The clock text, the
      * export's progress, a timeline still growing under a take and a resized
@@ -62,6 +67,7 @@ public class RecorderPanelSystem extends SystemPackage {
     private FBOManager fboManager;
     private RecorderManager recorderManager;
     private SoundManager soundManager;
+    private TransitionManager transitionManager;
 
     // Menus
     private MenuInstance recorderMenu;
@@ -175,6 +181,7 @@ public class RecorderPanelSystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.recorderManager = get(RecorderManager.class);
         this.soundManager = get(SoundManager.class);
+        this.transitionManager = get(TransitionManager.class);
     }
 
     @Override
@@ -198,7 +205,6 @@ public class RecorderPanelSystem extends SystemPackage {
         this.clipPanel = requireEntryPoint(RecorderSetting.ENTRY_CLIP_PANEL);
         this.assetsPanel = requireEntryPoint(RecorderSetting.ENTRY_ASSETS_PANEL);
 
-        requireEntryPoint(RecorderSetting.ENTRY_RECORDINGS);
         requireEntryPoint(RecorderSetting.ENTRY_SETTINGS);
         requireEntryPoint(RecorderSetting.ENTRY_TAKES);
         requireEntryPoint(RecorderSetting.ENTRY_CLIP);
@@ -247,7 +253,6 @@ public class RecorderPanelSystem extends SystemPackage {
 
     private void refreshAll() {
         refreshStatus();
-        refreshRecordings();
         refreshSettings();
         refreshTakes();
         refreshClip();
@@ -311,33 +316,6 @@ public class RecorderPanelSystem extends SystemPackage {
                     RecorderSetting.FORMAT_PROGRESS,
                     recorderManager.getExportedFrames(),
                     recorderManager.getExportFrameCount()));
-    }
-
-    // Recordings \\
-
-    private void refreshRecordings() {
-
-        menuManager.ejectAll(recorderMenu, RecorderSetting.ENTRY_RECORDINGS);
-
-        ObjectArrayList<String> recordingNames = recorderManager.getRecordingNames();
-        String openName = recorderManager.hasRecording() ? recorderManager.getRecording().getRecordingName() : null;
-
-        if (recordingNames.isEmpty())
-            injectText(RecorderSetting.ENTRY_RECORDINGS, RecorderSetting.TEXT_NO_RECORDINGS);
-
-        for (int i = 0; i < recordingNames.size(); i++) {
-
-            String recordingName = recordingNames.get(i);
-            ElementInstance row = menuManager.inject(
-                    recorderMenu,
-                    RecorderSetting.ENTRY_RECORDINGS,
-                    recordingName.equals(openName)
-                            ? RecorderSetting.TEMPLATE_RECORDING_ROW_SELECTED
-                            : RecorderSetting.TEMPLATE_RECORDING_ROW);
-
-            row.setActionArgOverride(recordingName);
-            row.findChildById(RecorderSetting.ELEMENT_ROW_LABEL).setFontText(recordingName);
-        }
     }
 
     // Settings \\
@@ -496,7 +474,12 @@ public class RecorderPanelSystem extends SystemPackage {
         RecordingInstance recording = recorderManager.getRecording();
         int selected = recorderManager.getSelectedClip();
 
-        if (recording == null || selected < 0 || selected >= recording.getClips().size()) {
+        if (recording == null) {
+            injectText(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_OPEN_RECORDING_HINT);
+            return;
+        }
+
+        if (selected < 0 || selected >= recording.getClips().size()) {
             injectText(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_NO_CLIP);
             return;
         }
@@ -511,6 +494,7 @@ public class RecorderPanelSystem extends SystemPackage {
                 formatTime(clip.getInPoint()), formatTime(clip.getOutPoint())));
         refreshNode(RecorderSetting.ENTRY_CLIP);
         refreshSound(RecorderSetting.ENTRY_CLIP);
+        refreshTransition(RecorderSetting.ENTRY_CLIP);
         injectHeader(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_HEADER_PLAYS);
 
         for (RecorderChannel channel : RecorderChannel.VALUES)
@@ -538,6 +522,11 @@ public class RecorderPanelSystem extends SystemPackage {
         if (take.holds(RecorderChannel.SOUND))
             injectAction(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_SOUNDS_ADD,
                     EditorSetting.RECORDER_KEY_SOUND_ADD);
+
+        injectAction(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_TRANSITION_IN,
+                EditorSetting.RECORDER_KEY_TRANSITION_PREFIX + RecorderClipEdge.START.getKey());
+        injectAction(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_TRANSITION_OUT,
+                EditorSetting.RECORDER_KEY_TRANSITION_PREFIX + RecorderClipEdge.END.getKey());
 
         injectAction(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_REMOVE_CLIP,
                 EditorSetting.RECORDER_KEY_CLIP_REMOVE);
@@ -625,6 +614,40 @@ public class RecorderPanelSystem extends SystemPackage {
         injectText(entryPoint, RecorderSetting.TEXT_SOUND_SHARED);
     }
 
+    // The transition selected on a clip: which it is, the edge it lies on and when it runs, how it looks, and how
+    // it is changed; the Clip panel and the Keys pane's inspector both show it
+    void refreshTransition(int entryPoint) {
+
+        RecordingClipStruct clip = recorderManager.getSelectedTransitionClip();
+
+        if (clip == null)
+            return;
+
+        RecorderClipEdge edge = recorderManager.getSelectedTransitionEdge();
+        TransitionHandle transitionHandle = recorderManager.resolveTransitionHandle(clip, edge);
+        float from = clip.resolveTransitionStart(edge);
+        float seconds = clip.resolveTransitionSeconds(edge);
+
+        injectHeader(entryPoint, String.format(RecorderSetting.FORMAT_TRANSITION_HEADER,
+                transitionHandle.getDisplayName()));
+        injectText(entryPoint, String.format(RecorderSetting.FORMAT_TRANSITION_SPAN,
+                edge.getLabel().toLowerCase(), formatTime(from), formatTime(from + seconds)));
+        injectText(entryPoint, String.format(RecorderSetting.FORMAT_TRANSITION_LOOK,
+                transitionHandle.getKind().getLabel(), transitionHandle.getEasing().getLabel().toLowerCase()));
+
+        if (!transitionManager.hasTransition(clip.getTransitionName(edge)))
+            injectText(entryPoint, RecorderSetting.TEXT_TRANSITION_MISSING);
+
+        injectSetting(entryPoint, RecorderSetting.TEXT_TRANSITION_LENGTH,
+                String.format(RecorderSetting.FORMAT_TRANSITION_SECONDS, seconds),
+                EditorSetting.RECORDER_KEY_TRANSITION_LENGTH);
+        injectAction(entryPoint, RecorderSetting.TEXT_TRANSITION_REPLACE,
+                EditorSetting.RECORDER_KEY_TRANSITION_REPLACE);
+        injectAction(entryPoint, RecorderSetting.TEXT_TRANSITION_REMOVE, EditorSetting.RECORDER_KEY_TRANSITION_REMOVE);
+        injectText(entryPoint, RecorderSetting.TEXT_TRANSITION_DRAG_HINT);
+        injectText(entryPoint, RecorderSetting.TEXT_TRANSITION_SOUND);
+    }
+
     // Timeline \\
 
     // The timeline is drawn again when the view has moved since, or the lanes were resized
@@ -673,6 +696,9 @@ public class RecorderPanelSystem extends SystemPackage {
 
         for (int i = 0; i < nodes.size(); i++)
             injectNode(nodes.get(i), i, recording, view, lanesWidth);
+
+        for (int i = 0; i < clips.size(); i++)
+            injectTransitionMarks(clips.get(i), view);
 
         RecordingExportStruct exportStruct = recording.getExportStruct();
 
@@ -739,6 +765,47 @@ public class RecorderPanelSystem extends SystemPackage {
                 });
 
         bar.findChildById(RecorderSetting.ELEMENT_CLIP_LABEL).setFontText(clip.getTake().getName());
+    }
+
+    // A mark across each transition laid on the clip, over the part of it in view, named after the transition; too
+    // narrow to see, it is left out until the view is zoomed in on it
+    private void injectTransitionMarks(RecordingClipStruct clip, RecordingViewStruct view) {
+
+        for (int e = 0; e < RecorderClipEdge.VALUES.length; e++) {
+
+            RecorderClipEdge edge = RecorderClipEdge.VALUES[e];
+
+            if (!clip.hasTransition(edge))
+                continue;
+
+            float from = clip.resolveTransitionStart(edge);
+            float to = from + clip.resolveTransitionSeconds(edge);
+
+            if (to <= view.getStart() || from >= view.getEnd())
+                continue;
+
+            int fromStep = toViewStep(from);
+            int steps = toViewStep(to) - fromStep;
+
+            if (steps <= 0)
+                continue;
+
+            DimensionVector2Struct position = resolveLanePosition(clip.getLane(), fromStep);
+            DimensionVector2Struct size = resolveBarSize(steps);
+            String template = clip == recorderManager.getSelectedTransitionClip()
+                    && edge == recorderManager.getSelectedTransitionEdge()
+                            ? RecorderSetting.TEMPLATE_TRANSITION_MARK_SELECTED
+                            : RecorderSetting.TEMPLATE_TRANSITION_MARK;
+
+            ElementInstance mark = menuManager.inject(recorderMenu, EditorSetting.RECORDER_ENTRY_CLIP_LANES, template,
+                    injected -> {
+                        injected.setPositionOverride(position);
+                        injected.setSizeOverride(size);
+                    });
+
+            mark.findChildById(RecorderSetting.ELEMENT_TRANSITION_LABEL).setFontText(
+                    recorderManager.resolveTransitionHandle(clip, edge).getDisplayName());
+        }
     }
 
     // One of the player's nodes across the part of its run in view, on its clip's lane over the clip's bar; too
@@ -821,14 +888,15 @@ public class RecorderPanelSystem extends SystemPackage {
     }
 
     // Where what is dragged would land, shown once the drag has travelled, or at once for a cut: a span over the
-    // lanes on the lane it would really take, or a line at the moment an edge, a cut or a node would move to; with
-    // nothing dragged, the cut tool's line where it would cut under the pointer
+    // lanes on the lane it would really take, or a line at the moment an edge, a cut, a node or a transition's far
+    // side would move to, or at the clip edge a transition would be laid on; with nothing dragged, the cut tool's
+    // line where it would cut under the pointer
     private void moveGhost() {
 
         RecordingDragStruct drag = recorderManager.getDrag();
         RecorderDragKind kind = drag.getKind();
         boolean dragShown = drag.isActive() && (drag.isMoved() || kind == RecorderDragKind.CUT)
-                && (kind.isSpan() && drag.isOverLanes() || kind.isMoment());
+                && ((kind.isSpan() || kind.isAimed()) && drag.isOverLanes() || kind.isMoment());
         int cutClip = recorderManager.getCutHoverClip();
         RecordingInstance recording = recorderManager.getRecording();
         boolean cutShown = !drag.isActive() && recording != null

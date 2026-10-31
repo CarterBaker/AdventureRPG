@@ -48,8 +48,16 @@ public class EditorBranch extends BranchPackage {
         tabManager.openRecorder(window.getGLWindow());
     }
 
+    public void openRecordings(WindowInstance window) {
+        tabManager.openRecordings(window.getGLWindow());
+    }
+
     public void openSoundLibrary(WindowInstance window) {
         tabManager.openSoundLibrary(window.getGLWindow());
+    }
+
+    public void openTransitions(WindowInstance window) {
+        tabManager.openTransitions(window.getGLWindow());
     }
 
     // Tool Operations \\

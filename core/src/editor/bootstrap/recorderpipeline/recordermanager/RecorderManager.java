@@ -14,6 +14,7 @@ import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.recorderpipeline.recording.RecorderAssetKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderExportResult;
@@ -32,6 +33,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingTransitionStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
 import editor.bootstrap.recorderpipeline.recording.VideoFormat;
 import editor.bootstrap.recorderpipeline.util.RecordingCurveUtility;
@@ -40,6 +42,8 @@ import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
+import editor.bootstrap.transitionpipeline.transition.TransitionHandle;
+import editor.bootstrap.transitionpipeline.transitionmanager.TransitionManager;
 import editor.runtime.dev.DevContext;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -118,7 +122,18 @@ public class RecorderManager extends ManagerPackage {
      * suspended — the playhead waits and a take records nothing — and it
      * carries on a few frames after the pause ends, so the pause menu never
      * reaches a take. Stopping ends every session and the Dev window goes back
-     * to just where it was. Each structural change marks the recording unsaved
+     * to just where it was. A transition dragged in from the transitions
+     * tool is laid on the clip edge it is let go over, the end of a clip
+     * another follows on its lane handing it to the start of the one
+     * following; a press on one laid selects it, and dragging it moves its far
+     * side to make it run longer or shorter. While the timeline plays or
+     * exports, the transition the picture passes through at the playhead is
+     * read again whenever it is asked for, and the Dev window renders the
+     * timeline both with and without the clip it lies on — the side it plays
+     * each frame set here — so the two can be blended; every clip's own
+     * sounds fade in and out with its transitions. The recordings themselves
+     * are listed, opened, renamed, copied and deleted from the Recordings
+     * tool. Each structural change marks the recording unsaved
      * and moves the revision the recorder tab redraws on. Takes save the
      * recording at once.
      */
@@ -132,6 +147,7 @@ public class RecorderManager extends ManagerPackage {
     private ProjectileManager projectileManager;
     private VehicleManager vehicleManager;
     private SoundManager soundManager;
+    private TransitionManager transitionManager;
     private RecordingFileBranch recordingFileBranch;
     private RecordingTimelineBranch recordingTimelineBranch;
     private RecordingNodeBranch recordingNodeBranch;
@@ -139,6 +155,7 @@ public class RecorderManager extends ManagerPackage {
     private RecordingAssetBranch recordingAssetBranch;
     private RecordingMixBranch recordingMixBranch;
     private RecordingSoundBranch recordingSoundBranch;
+    private RecordingTransitionBranch recordingTransitionBranch;
 
     // Directory
     private File recordingDirectory;
@@ -169,6 +186,10 @@ public class RecorderManager extends ManagerPackage {
     private RecordingBodyTrackStruct selectedNodeTrack;
     private RecorderNodeKind selectedNodeKind;
     private float selectedNodeTime;
+    private int selectedTransition;
+
+    // Transition — the one the picture passes through at the playhead, read again whenever it is asked for
+    private RecordingTransitionStruct transition;
 
     // Nodes
     private ObjectArrayList<RecordingNodeStruct> nodes;
@@ -241,6 +262,7 @@ public class RecorderManager extends ManagerPackage {
         this.recordingAssetBranch = create(RecordingAssetBranch.class);
         this.recordingMixBranch = create(RecordingMixBranch.class);
         this.recordingSoundBranch = create(RecordingSoundBranch.class);
+        this.recordingTransitionBranch = create(RecordingTransitionBranch.class);
 
         // Directory
         this.recordingDirectory = new File(internal.path, EditorSetting.RECORDER_DIRECTORY);
@@ -252,6 +274,9 @@ public class RecorderManager extends ManagerPackage {
 
         // Selection
         clearSelection();
+
+        // Transition
+        this.transition = new RecordingTransitionStruct();
 
         // Nodes
         this.nodes = new ObjectArrayList<>();
@@ -308,6 +333,7 @@ public class RecorderManager extends ManagerPackage {
         this.projectileManager = get(ProjectileManager.class);
         this.vehicleManager = get(VehicleManager.class);
         this.soundManager = get(SoundManager.class);
+        this.transitionManager = get(TransitionManager.class);
     }
 
     // Update \\
@@ -539,6 +565,7 @@ public class RecorderManager extends ManagerPackage {
     private void endSession() {
         this.state = RecorderState.IDLE;
         this.devContext = null;
+        transition.clear();
         this.suspended = false;
         this.resumeFrames = 0;
         holdWorld();
@@ -756,6 +783,29 @@ public class RecorderManager extends ManagerPackage {
         setStatus(EditorSetting.RECORDER_STATUS_RENAMED + recordingName);
     }
 
+    // A copy of the open recording saved under the name and opened in its place
+    public void duplicateRecording(String recordingName) {
+
+        if (recording == null || state.isSession() || !isRecordingNameAvailable(recordingName))
+            return;
+
+        saveRecording();
+
+        String sourceName = recording.getRecordingName();
+        RecordingInstance copy = recordingFileBranch.read(getRecordingFile(sourceName), recordingName);
+
+        if (copy == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_UNREADABLE + sourceName);
+            return;
+        }
+
+        closeRecording();
+        activateRecording(copy);
+        markUnsaved();
+        saveRecording();
+        setStatus(EditorSetting.RECORDER_STATUS_DUPLICATED + recordingName);
+    }
+
     public void deleteRecording() {
 
         if (recording == null)
@@ -777,6 +827,7 @@ public class RecorderManager extends ManagerPackage {
         this.assetsStale = true;
         cancelDrag();
         clearSelection();
+        transition.clear();
         rebuildNodes();
         setStatus(EditorSetting.RECORDER_STATUS_DELETED + recordingName);
     }
@@ -801,6 +852,7 @@ public class RecorderManager extends ManagerPackage {
         this.playhead = 0f;
         cancelDrag();
         clearSelection();
+        transition.clear();
         openedTracks.clear();
         unlaidTracks.clear();
         this.curvesLaid = false;
@@ -959,14 +1011,19 @@ public class RecorderManager extends ManagerPackage {
         if (clipIndex != selectedNodeClip)
             clearNodeSelection();
 
+        if (selectedTransition != EngineSetting.INDEX_NOT_FOUND
+                && recordingTransitionBranch.toClipIndex(selectedTransition) != clipIndex)
+            clearTransitionSelection();
+
         this.selectedClip = clipIndex;
         this.selectedTake = recording.getTakes().indexOf(recording.getClips().get(clipIndex).getTake());
         revision++;
     }
 
-    // The clip selected with none of its nodes, as a click on it away from them selects it
+    // The clip selected with none of its nodes or transitions, as a click on it away from them selects it
     private void selectClipAlone(int clipIndex) {
         clearNodeSelection();
+        clearTransitionSelection();
         selectClip(clipIndex);
     }
 
@@ -1142,6 +1199,7 @@ public class RecorderManager extends ManagerPackage {
         recording.removeClip(selectedClip);
         this.selectedClip = EngineSetting.INDEX_NOT_FOUND;
         clearNodeSelection();
+        clearTransitionSelection();
         this.playhead = Math.min(playhead, recording.getDuration());
         markUnsaved();
         setStatus(EditorSetting.RECORDER_STATUS_CLIP_REMOVED + clip.getTake().getName());
@@ -1187,6 +1245,17 @@ public class RecorderManager extends ManagerPackage {
         beginDrag(RecorderDragKind.SOUND, soundID, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
     }
 
+    // A transition picked up from the transitions tool in any window, to be laid on the clip edge it is let go
+    // over; nothing is picked up while no recording is open to lay it on
+    public void beginTransitionDrag(int transitionID, WindowInstance window, float pressX, float pressY) {
+
+        if (drag.isActive() || !canEditTimeline())
+            return;
+
+        beginDrag(RecorderDragKind.TRANSITION, transitionID, EngineSetting.INDEX_NOT_FOUND,
+                window, pressX, pressY, 0f, 0f);
+    }
+
     // What a press on the lanes takes hold of, read once where it began: a clip's edge to trim it, a node's notch or a
     // gesture to retime or move it, a clip to move it, or the empty lanes to scroll the view; the timeline can only
     // be scrolled under a take or an export
@@ -1220,6 +1289,17 @@ public class RecorderManager extends ManagerPackage {
 
         if (startEdge != EngineSetting.INDEX_NOT_FOUND || endEdge != EngineSetting.INDEX_NOT_FOUND) {
             beginTrimDrag(time, startEdge, endEdge, clipIndex, window, pressX, pressY);
+            return;
+        }
+
+        int transitionTarget = canEditTimeline()
+                ? recordingTransitionBranch.findTransitionAt(recording, time, lane, 0f)
+                : EngineSetting.INDEX_NOT_FOUND;
+
+        if (transitionTarget != EngineSetting.INDEX_NOT_FOUND) {
+            beginDrag(RecorderDragKind.TRANSITION_LENGTH, recordingTransitionBranch.toClipIndex(transitionTarget),
+                    EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, time, 0f);
+            drag.aim(transitionTarget);
             return;
         }
 
@@ -1313,6 +1393,9 @@ public class RecorderManager extends ManagerPackage {
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
             case PAN -> panView(x, secondsPerPixel);
+            case TRANSITION -> landTransition(overLanes, time, lane,
+                    EditorSetting.RECORDER_EDGE_GRAB_PIXELS * secondsPerPixel);
+            case TRANSITION_LENGTH -> landTransitionLength(time, tolerance);
             case KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS, KEYS_BOX, GRAPH_BOX, SOUND_EVENT,
                     NONE -> {
             }
@@ -1371,6 +1454,38 @@ public class RecorderManager extends ManagerPackage {
                 clip.getLane());
     }
 
+    // A transition lands on the clip edge under the cursor, shown as a line at that edge; over no clip it lands
+    // nowhere
+    private void landTransition(boolean overLanes, float time, int lane, float tolerance) {
+
+        int target = overLanes && canEditTimeline()
+                ? recordingTransitionBranch.findDropTarget(recording, time, lane, tolerance)
+                : EngineSetting.INDEX_NOT_FOUND;
+
+        drag.aim(target);
+
+        if (target == EngineSetting.INDEX_NOT_FOUND) {
+            drag.land(false, time, lane);
+            return;
+        }
+
+        RecordingClipStruct clip = recording.getClips().get(recordingTransitionBranch.toClipIndex(target));
+
+        drag.land(true, recordingTransitionBranch.resolveEdgeTime(clip, recordingTransitionBranch.toEdge(target)),
+                clip.getLane());
+    }
+
+    // The far side of a transition dragged to the moment, snapped as an edge is and held within its clip
+    private void landTransitionLength(float time, float tolerance) {
+
+        RecordingClipStruct clip = recording.getClips().get(drag.getIndex());
+        RecorderClipEdge edge = recordingTransitionBranch.toEdge(drag.getTarget());
+        float snapped = recordingTimelineBranch.snapTime(recording, time, playhead, tolerance, clip);
+
+        drag.land(true, recordingTransitionBranch.resolveFarSide(clip, edge,
+                recordingTransitionBranch.resolveSecondsTo(clip, edge, snapped)), clip.getLane());
+    }
+
     private void panView(float x, float secondsPerPixel) {
         if (drag.isMoved() && view.scrollTo(
                 drag.getViewStart() - (x - drag.getPressX()) * secondsPerPixel, resolveTimelineSpan()))
@@ -1399,6 +1514,7 @@ public class RecorderManager extends ManagerPackage {
         float reachTime = drag.getReachTime();
         double pressValue = drag.getPressValue();
         double reachValue = drag.getReachValue();
+        int target = drag.getTarget();
 
         cancelDrag();
 
@@ -1418,6 +1534,16 @@ public class RecorderManager extends ManagerPackage {
             case SOUND_EVENT -> {
                 if (moved)
                     moveSound(nodeIndex, landingStart);
+            }
+            case TRANSITION -> {
+                if (moved && target != EngineSetting.INDEX_NOT_FOUND)
+                    placeTransition(index, target);
+            }
+            case TRANSITION_LENGTH -> {
+                if (moved)
+                    stretchTransition(target, landingStart);
+                else
+                    selectTransition(target);
             }
             case CLIP -> {
                 if (dropped)
@@ -1497,13 +1623,13 @@ public class RecorderManager extends ManagerPackage {
             case SOUND -> soundManager.getSoundHandleFromSoundID(drag.getIndex()).getPlayedLength();
             case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
             case TRIM_START, TRIM_END, CUT, NODE, PAN, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS,
-                    KEYS_BOX, GRAPH_BOX, SOUND_EVENT, NONE -> 0f;
+                    KEYS_BOX, GRAPH_BOX, SOUND_EVENT, TRANSITION, TRANSITION_LENGTH, NONE -> 0f;
         };
     }
 
     // Nodes \\
 
-    // Selecting a node selects the clip it lies on, and lets every selected key go
+    // Selecting a node selects the clip it lies on, and lets every selected key and any transition go
     public void selectNode(int nodeIndex) {
 
         if (!isNodeIndex(nodeIndex))
@@ -1514,6 +1640,7 @@ public class RecorderManager extends ManagerPackage {
         selectClip(node.getClipIndex());
         anchorNode(node, node.getTakeStart());
         this.selectedNode = nodeIndex;
+        clearTransitionSelection();
         clearKeySelection();
         releaseSound();
         keysRevision++;
@@ -1636,7 +1763,8 @@ public class RecorderManager extends ManagerPackage {
 
     // Selection \\
 
-    // What is selected removed as one: the keys on the Keys pane, else the sound, else the node, else the clip
+    // What is selected removed as one: the keys on the Keys pane, else the sound, else the transition, else the
+    // node, else the clip
     public void deleteSelection() {
 
         if (pane == RecorderPane.KEYS && !selectedKeys.isEmpty()) {
@@ -1646,6 +1774,11 @@ public class RecorderManager extends ManagerPackage {
 
         if (isSoundIndex(selectedSound)) {
             removeSound();
+            return;
+        }
+
+        if (isTransitionTarget(selectedTransition)) {
+            removeTransition();
             return;
         }
 
@@ -1729,7 +1862,8 @@ public class RecorderManager extends ManagerPackage {
 
     // The tracks of the selected clip's take, listed again whenever another take's clip is selected; a take none of
     // whose tracks is open opens its first, with its first value selected so its graph shows at once, and a take of
-    // sounds alone has its first sound within the clip selected so it is changed from the clip
+    // sounds alone has its first sound within the clip selected so it is changed from the clip, unless a transition
+    // on the clip was what selected it
     private void updateKeyTracks() {
 
         RecordingClipStruct clip = getSelectedClipStruct();
@@ -1747,7 +1881,7 @@ public class RecorderManager extends ManagerPackage {
         if (take == null)
             return;
 
-        if (take.isSoundAlone())
+        if (take.isSoundAlone() && selectedTransition == EngineSetting.INDEX_NOT_FOUND)
             selectFirstSound(EngineSetting.INDEX_NOT_FOUND);
 
         collectCurveTracks(take, keyTracks);
@@ -2534,13 +2668,15 @@ public class RecorderManager extends ManagerPackage {
         keysRevision++;
     }
 
-    // Selecting a sound lets every selected key and any node go, so Delete always knows what it removes
+    // Selecting a sound lets every selected key, any node and any transition go, so Delete always knows what it
+    // removes
     public void selectSound(int soundIndex) {
 
         if (!isSoundIndex(soundIndex) || soundIndex == selectedSound)
             return;
 
         this.selectedSound = soundIndex;
+        clearTransitionSelection();
         clearKeySelection();
         releaseNode();
         keysRevision++;
@@ -2884,6 +3020,189 @@ public class RecorderManager extends ManagerPackage {
         return track != null && soundIndex >= 0 && soundIndex < track.size();
     }
 
+    // Transitions \\
+
+    // The transition the picture passes through at the playhead while the timeline plays or exports; none while a
+    // take records or nothing plays
+    public RecordingTransitionStruct resolveTransition() {
+
+        if (state == RecorderState.IDLE || state == RecorderState.RECORDING) {
+            transition.clear();
+            return transition;
+        }
+
+        recordingTransitionBranch.resolve(recording, playhead, transition);
+        return transition;
+    }
+
+    // Whether this frame plays the timeline without the transition's clip or with it
+    public void setTransitionWithout(boolean without) {
+        transition.setWithoutPlayed(without);
+    }
+
+    // The transition as it was last read, without reading it again
+    public RecordingTransitionStruct getTransition() {
+        return transition;
+    }
+
+    // The clip playing the channel at the moment on the side of the transition this frame plays
+    public RecordingClipStruct findPlayingClip(RecorderChannel channel, float time) {
+        return transition.isWithoutPlayed()
+                ? recording.findPlayingClipWithout(channel, time, transition.getClip(), transition.getCarried())
+                : recording.findPlayingClip(channel, time);
+    }
+
+    // How loud the clip's own sounds are at the moment, faded across its transitions
+    public float resolveClipGain(RecordingClipStruct clip, float time) {
+        return recordingTransitionBranch.resolveGain(clip, time);
+    }
+
+    // The transition laid on the clip edge, as long as it runs when first laid
+    public void placeTransition(int transitionID, int target) {
+
+        if (!canEditTimeline() || !isClipIndex(recordingTransitionBranch.toClipIndex(target)))
+            return;
+
+        TransitionHandle transitionHandle = transitionManager.getTransitionHandleFromTransitionID(transitionID);
+
+        recordingTransitionBranch.setTransition(
+                recording.getClips().get(recordingTransitionBranch.toClipIndex(target)),
+                recordingTransitionBranch.toEdge(target),
+                transitionHandle,
+                transitionHandle.getSeconds());
+        selectTransition(target);
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_TRANSITION_PLACED + transitionHandle.getDisplayName());
+    }
+
+    // The transitions tool's selection laid on the selected clip's edge, or on the start of the clip following it
+    // when the edge is its end
+    public void applyTransition(RecorderClipEdge edge) {
+
+        if (requireSelectedClip() == null)
+            return;
+
+        placeTransition(transitionManager.getSelectedTransition().getTransitionID(),
+                recordingTransitionBranch.resolveEdgeTarget(recording, selectedClip, edge));
+    }
+
+    // Selecting a transition selects the clip it lies on, and lets every selected key, node and sound go
+    public void selectTransition(int target) {
+
+        if (!isTransitionTarget(target))
+            return;
+
+        selectClip(recordingTransitionBranch.toClipIndex(target));
+        clearNodeSelection();
+        clearKeySelection();
+        releaseSound();
+        this.selectedTransition = target;
+        keysRevision++;
+        revision++;
+    }
+
+    // The transition's far side dragged to the moment, so it runs from its edge to there
+    private void stretchTransition(int target, float farSide) {
+
+        if (!isTransitionTarget(target) || !canEditTimeline())
+            return;
+
+        RecordingClipStruct clip = recording.getClips().get(recordingTransitionBranch.toClipIndex(target));
+        RecorderClipEdge edge = recordingTransitionBranch.toEdge(target);
+
+        recordingTransitionBranch.setSeconds(
+                clip, edge, recordingTransitionBranch.resolveSecondsTo(clip, edge, farSide));
+        selectTransition(target);
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_TRANSITION_CHANGED
+                + recordingTransitionBranch.resolveHandle(clip, edge).getDisplayName());
+    }
+
+    // The transitions tool's selection in the selected transition's place, running as long as it did
+    public void replaceTransition() {
+
+        RecordingClipStruct clip = requireSelectedTransition();
+
+        if (clip == null)
+            return;
+
+        RecorderClipEdge edge = recordingTransitionBranch.toEdge(selectedTransition);
+        TransitionHandle transitionHandle = transitionManager.getSelectedTransition();
+
+        recordingTransitionBranch.setTransition(clip, edge, transitionHandle, clip.getTransitionSeconds(edge));
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_TRANSITION_CHANGED + transitionHandle.getDisplayName());
+    }
+
+    public void removeTransition() {
+
+        RecordingClipStruct clip = requireSelectedTransition();
+
+        if (clip == null)
+            return;
+
+        RecorderClipEdge edge = recordingTransitionBranch.toEdge(selectedTransition);
+        String displayName = recordingTransitionBranch.resolveHandle(clip, edge).getDisplayName();
+
+        clip.clearTransition(edge);
+        clearTransitionSelection();
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_TRANSITION_REMOVED + displayName);
+    }
+
+    public boolean isTransitionLengthValid(String text) {
+        return isTransitionTarget(selectedTransition) && !Float.isNaN(recordingTransitionBranch.parseSeconds(text));
+    }
+
+    // As long as the seconds typed, within what its clip leaves it
+    public void setTransitionLength(String text) {
+
+        RecordingClipStruct clip = requireSelectedTransition();
+
+        if (clip == null || !isTransitionLengthValid(text))
+            return;
+
+        RecorderClipEdge edge = recordingTransitionBranch.toEdge(selectedTransition);
+
+        recordingTransitionBranch.setSeconds(clip, edge, recordingTransitionBranch.parseSeconds(text));
+        markUnsaved();
+        setStatus(EditorSetting.RECORDER_STATUS_TRANSITION_CHANGED
+                + recordingTransitionBranch.resolveHandle(clip, edge).getDisplayName());
+    }
+
+    public String formatTransitionLengthInput() {
+        return isTransitionTarget(selectedTransition)
+                ? String.format(EditorSetting.RECORDER_TRANSITION_SECONDS_FORMAT,
+                        getSelectedTransitionClip().resolveTransitionSeconds(getSelectedTransitionEdge()))
+                : "";
+    }
+
+    // The clip holding the selected transition when the timeline can be edited, null after saying why not
+    private RecordingClipStruct requireSelectedTransition() {
+
+        if (!canEditTimeline())
+            return null;
+
+        if (!isTransitionTarget(selectedTransition)) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_TRANSITION);
+            return null;
+        }
+
+        return getSelectedTransitionClip();
+    }
+
+    // True for a clip edge that holds a transition
+    private boolean isTransitionTarget(int target) {
+        return target != EngineSetting.INDEX_NOT_FOUND
+                && isClipIndex(recordingTransitionBranch.toClipIndex(target))
+                && recording.getClips().get(recordingTransitionBranch.toClipIndex(target))
+                        .hasTransition(recordingTransitionBranch.toEdge(target));
+    }
+
+    private void clearTransitionSelection() {
+        this.selectedTransition = EngineSetting.INDEX_NOT_FOUND;
+    }
+
     // Assets \\
 
     // The recording's assets gathered again while the Assets pane shows and something they come from has changed
@@ -3201,6 +3520,7 @@ public class RecorderManager extends ManagerPackage {
         this.selectedTake = EngineSetting.INDEX_NOT_FOUND;
         this.selectedClip = EngineSetting.INDEX_NOT_FOUND;
         clearNodeSelection();
+        clearTransitionSelection();
     }
 
     // Every edit moves the nodes with it
@@ -3292,6 +3612,22 @@ public class RecorderManager extends ManagerPackage {
 
     public int getSelectedNode() {
         return selectedNode;
+    }
+
+    // The clip holding the selected transition, null when none is selected
+    public RecordingClipStruct getSelectedTransitionClip() {
+        return isTransitionTarget(selectedTransition)
+                ? recording.getClips().get(recordingTransitionBranch.toClipIndex(selectedTransition))
+                : null;
+    }
+
+    public RecorderClipEdge getSelectedTransitionEdge() {
+        return isTransitionTarget(selectedTransition) ? recordingTransitionBranch.toEdge(selectedTransition) : null;
+    }
+
+    // The transition the clip's edge plays, the default standing in for one that no longer exists
+    public TransitionHandle resolveTransitionHandle(RecordingClipStruct clip, RecorderClipEdge edge) {
+        return recordingTransitionBranch.resolveHandle(clip, edge);
     }
 
     public ObjectArrayList<RecordingNodeStruct> getNodes() {

@@ -3,8 +3,8 @@ package editor.runtime.recorder;
 public class RecorderSetting {
 
     /*
-     * Constants used only by RecorderContext — the row, clip, node, timeline,
-     * Keys and Assets templates its panels are filled from and their elements,
+     * Constants used only by RecorderContext — the row, clip, transition,
+     * node, timeline, Keys and Assets templates its panels are filled from and their elements,
      * its entry points, the timeline's fixed steps, its ruler's ticks, the
      * sizes the timeline and the Keys tab draw at, how often the clock and
      * export progress refresh, and every word the tab shows.
@@ -13,8 +13,6 @@ public class RecorderSetting {
     // Templates
     public static final String TEMPLATE_HEADER_ROW = "editor/Recorder/recorder_header_row";
     public static final String TEMPLATE_TEXT_ROW = "editor/Recorder/recorder_text_row";
-    public static final String TEMPLATE_RECORDING_ROW = "editor/Recorder/recorder_recording_row";
-    public static final String TEMPLATE_RECORDING_ROW_SELECTED = "editor/Recorder/recorder_recording_row_selected";
     public static final String TEMPLATE_SETTING_ROW = "editor/Recorder/recorder_setting_row";
     public static final String TEMPLATE_ACTION_ROW = "editor/Recorder/recorder_action_row";
     public static final String TEMPLATE_TAKE_ROW = "editor/Recorder/recorder_take_row";
@@ -23,6 +21,8 @@ public class RecorderSetting {
     public static final String TEMPLATE_CLIP_BAR_SELECTED = "editor/Recorder/recorder_clip_bar_selected";
     public static final String TEMPLATE_CLIP_BAR_MUTED = "editor/Recorder/recorder_clip_bar_muted";
     public static final String TEMPLATE_CLIP_BAR_SOUND = "editor/Recorder/recorder_clip_bar_sound";
+    public static final String TEMPLATE_TRANSITION_MARK = "editor/Recorder/recorder_transition_mark";
+    public static final String TEMPLATE_TRANSITION_MARK_SELECTED = "editor/Recorder/recorder_transition_mark_selected";
     public static final String TEMPLATE_RULER_TICK = "editor/Recorder/recorder_ruler_tick";
     public static final String TEMPLATE_NODE_MOVEMENT = "editor/Recorder/recorder_node_movement";
     public static final String TEMPLATE_NODE_MOVEMENT_SELECTED = "editor/Recorder/recorder_node_movement_selected";
@@ -57,6 +57,7 @@ public class RecorderSetting {
     public static final String ELEMENT_ROW_RENAME = "recorder_row_rename";
     public static final String ELEMENT_ROW_DELETE = "recorder_row_delete";
     public static final String ELEMENT_CLIP_LABEL = "recorder_clip_label";
+    public static final String ELEMENT_TRANSITION_LABEL = "recorder_transition_label";
     public static final String ELEMENT_NODE_LABEL = "recorder_node_label";
     public static final String ELEMENT_RULER_LABEL = "recorder_ruler_label";
     public static final String ELEMENT_KEY_NAME = "recorder_key_name";
@@ -69,28 +70,27 @@ public class RecorderSetting {
     // drags and the wheel share
     public static final int ENTRY_STATUS = 0;
     public static final int ENTRY_CLOCK = 1;
-    public static final int ENTRY_RECORDINGS = 2;
-    public static final int ENTRY_SETTINGS = 3;
-    public static final int ENTRY_TAKES = 4;
-    public static final int ENTRY_PLAYHEAD = 7;
-    public static final int ENTRY_RANGE_START = 8;
-    public static final int ENTRY_RANGE_END = 9;
-    public static final int ENTRY_CLIP = 10;
-    public static final int ENTRY_DRAG_GHOST = 11;
-    public static final int ENTRY_LANE_PLAYHEAD = 12;
-    public static final int ENTRY_VIEW = 13;
-    public static final int ENTRY_KEYS_PANEL = 14;
-    public static final int ENTRY_KEYS_TITLE = 15;
-    public static final int ENTRY_GRAPH_MARKS = 18;
-    public static final int ENTRY_KEYS_PLAYHEAD = 19;
-    public static final int ENTRY_GRAPH_TOP = 20;
-    public static final int ENTRY_GRAPH_BOTTOM = 21;
-    public static final int ENTRY_KEY_INSPECTOR = 22;
-    public static final int ENTRY_TAKES_PANEL = 23;
-    public static final int ENTRY_CLIP_PANEL = 24;
-    public static final int ENTRY_ASSETS_PANEL = 25;
-    public static final int ENTRY_ASSETS_TITLE = 26;
-    public static final int ENTRY_ASSET_ROWS = 27;
+    public static final int ENTRY_SETTINGS = 2;
+    public static final int ENTRY_TAKES = 3;
+    public static final int ENTRY_PLAYHEAD = 6;
+    public static final int ENTRY_RANGE_START = 7;
+    public static final int ENTRY_RANGE_END = 8;
+    public static final int ENTRY_CLIP = 9;
+    public static final int ENTRY_DRAG_GHOST = 10;
+    public static final int ENTRY_LANE_PLAYHEAD = 11;
+    public static final int ENTRY_VIEW = 12;
+    public static final int ENTRY_KEYS_PANEL = 13;
+    public static final int ENTRY_KEYS_TITLE = 14;
+    public static final int ENTRY_GRAPH_MARKS = 17;
+    public static final int ENTRY_KEYS_PLAYHEAD = 18;
+    public static final int ENTRY_GRAPH_TOP = 19;
+    public static final int ENTRY_GRAPH_BOTTOM = 20;
+    public static final int ENTRY_KEY_INSPECTOR = 21;
+    public static final int ENTRY_TAKES_PANEL = 22;
+    public static final int ENTRY_CLIP_PANEL = 23;
+    public static final int ENTRY_ASSETS_PANEL = 24;
+    public static final int ENTRY_ASSETS_TITLE = 25;
+    public static final int ENTRY_ASSET_ROWS = 26;
 
     // Timeline — positions across the view as a percentage of it; a drag's ghost may reach a view's width past
     // either side, where the lanes' mask hides it
@@ -129,9 +129,9 @@ public class RecorderSetting {
 
     // Text — rows
     public static final String TEXT_EMPTY = "";
-    public static final String TEXT_NO_RECORDINGS = "No recordings yet: press Record or New";
     public static final String TEXT_NO_TAKES = "No takes yet: arm channels and press Record";
     public static final String TEXT_NO_RECORDING = "No recording open";
+    public static final String TEXT_OPEN_RECORDING_HINT = "Open or make a recording in the Recordings tool";
     public static final String TEXT_NO_CLIP = "Click a clip on the timeline to edit it";
     public static final String TEXT_UNSAVED_SUFFIX = " *";
     public static final String TEXT_CHANNEL_SEPARATOR = " ";
@@ -152,6 +152,8 @@ public class RecorderSetting {
     public static final String TEXT_SPLIT = "Cut at playhead";
     public static final String TEXT_STAMP = "Stamp a copy at playhead";
     public static final String TEXT_REMOVE_CLIP = "Remove from timeline";
+    public static final String TEXT_TRANSITION_IN = "Lay the Transitions selection on its start";
+    public static final String TEXT_TRANSITION_OUT = "Lay the Transitions selection on its end";
     public static final String TEXT_HEADER_NODE = "Node";
     public static final String TEXT_NODE_DOING = "Doing";
     public static final String TEXT_NODE_PREVIOUS = "Previous movement";
@@ -205,6 +207,12 @@ public class RecorderSetting {
     public static final String TEXT_SOUNDS_ADD = "Add the Sound Library's selection at the playhead";
     public static final String TEXT_SOUNDS_HINT_SELECT = "Click a sound on the Sounds layer to change or remove it";
     public static final String TEXT_SOUNDS_HINT_DROP = "Drop a sound from the Sound Library onto the rows to add it";
+    public static final String TEXT_TRANSITION_LENGTH = "Length";
+    public static final String TEXT_TRANSITION_MISSING = "That transition no longer exists: it plays as the default";
+    public static final String TEXT_TRANSITION_REPLACE = "Play the Transitions selection instead";
+    public static final String TEXT_TRANSITION_REMOVE = "Remove transition";
+    public static final String TEXT_TRANSITION_DRAG_HINT = "Drag it on the clip to make it run longer or shorter";
+    public static final String TEXT_TRANSITION_SOUND = "The clip's own sounds fade with it";
     public static final String TEXT_RESOLUTION = "Resolution";
     public static final String TEXT_FRAME_RATE = "Frame rate";
     public static final String TEXT_FORMAT = "Format";
@@ -248,6 +256,10 @@ public class RecorderSetting {
     public static final String FORMAT_SOUND_SPAN = "%s to %s";
     public static final String FORMAT_SOUND_PERCENT = "%.0f%%";
     public static final String FORMAT_SOUND_SECONDS = "%.2fs";
+    public static final String FORMAT_TRANSITION_HEADER = "Transition: %s";
+    public static final String FORMAT_TRANSITION_SPAN = "On its %s   %s to %s";
+    public static final String FORMAT_TRANSITION_LOOK = "%s, %s";
+    public static final String FORMAT_TRANSITION_SECONDS = "%.2fs";
     public static final String FORMAT_ASSETS_TITLE = "Assets: %s";
     public static final String FORMAT_ASSET_OWNERS = "%s and %d more";
     public static final String FORMAT_PROGRESS = "Frame %d of %d";

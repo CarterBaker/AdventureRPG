@@ -1,5 +1,6 @@
 package editor.bootstrap.recorderpipeline.recordermanager;
 
+import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
@@ -289,7 +290,8 @@ class RecordingTimelineBranch extends BranchPackage {
     }
 
     // The clip cut in two at the moment: a copy laid where it lies, the clip's end and the copy's start both
-    // trimmed to the moment; the copy's index, -1 when the moment is not inside it
+    // trimmed to the moment, the clip keeping the transition into it and the copy the one out of it; the copy's
+    // index, -1 when the moment is not inside it
     int splitClip(RecordingInstance recording, RecordingClipStruct clip, float time) {
 
         if (!isInside(clip, time))
@@ -299,6 +301,8 @@ class RecordingTimelineBranch extends BranchPackage {
 
         trimEndTo(clip, time);
         trimStartTo(second, time);
+        clip.clearTransition(RecorderClipEdge.END);
+        second.clearTransition(RecorderClipEdge.START);
 
         return recording.addClip(second);
     }

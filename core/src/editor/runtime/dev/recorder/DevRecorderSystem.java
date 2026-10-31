@@ -40,7 +40,6 @@ import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCameraTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
-import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingVehicleTrackStruct;
@@ -77,7 +76,11 @@ public class DevRecorderSystem extends SystemPackage {
      * went; the weather is held where it had drifted; the clock is held to the
      * recording, and a time command used while it plays shifts it from there
      * on. Every value a track has a curve for is read from that curve instead
-     * of its samples. The interface plays through DevRecorderOverlaySystem. A
+     * of its samples. While the picture passes through a transition, each
+     * frame plays the side of it DevRecorderTransitionSystem picked — the
+     * timeline with the transition's clip or without it — and each side's
+     * puppets move on from that side's own last frame. The interface plays
+     * through DevRecorderOverlaySystem. A
      * take records each live channel after the frame has moved, at the take's
      * own time: the camera, the player, the clock, the weather, and every
      * resident, thrown item and vehicle near the window. Starting a take hands
@@ -109,7 +112,7 @@ public class DevRecorderSystem extends SystemPackage {
     // Session
     private boolean sessionActive;
     private int seenTakeCount;
-    private float lastPlayhead;
+    private float[] lastPlayheads;
 
     // Snapshot — where the window stood when the session began
     private WorldPositionStruct snapshotPlace;
@@ -164,6 +167,9 @@ public class DevRecorderSystem extends SystemPackage {
 
     @Override
     protected void create() {
+
+        // Session
+        this.lastPlayheads = new float[EditorSetting.RECORDER_TRANSITION_SIDES];
 
         // Snapshot
         this.snapshotPlace = new WorldPositionStruct();
@@ -283,7 +289,8 @@ public class DevRecorderSystem extends SystemPackage {
         this.snapshotGustTime = windManager.getGustTime();
 
         this.sessionActive = true;
-        this.lastPlayhead = recorderManager.getPlayhead();
+        lastPlayheads[EditorSetting.RECORDER_TRANSITION_SIDE_WITH] = recorderManager.getPlayhead();
+        lastPlayheads[EditorSetting.RECORDER_TRANSITION_SIDE_WITHOUT] = recorderManager.getPlayhead();
         this.clockHeld = false;
         this.liveClockOffsetMillis = 0L;
     }
@@ -367,15 +374,14 @@ public class DevRecorderSystem extends SystemPackage {
         projectile2Track.clear();
         vehicle2Track.clear();
 
-        RecordingInstance recording = recorderManager.getRecording();
         int live = recorderManager.getLiveChannels();
         float time = recorderManager.getPlayhead();
 
         if (RecorderChannel.PLAYER.isIn(live))
-            handOverPlayer(recording.findPlayingClip(RecorderChannel.PLAYER, time), time);
+            handOverPlayer(recorderManager.findPlayingClip(RecorderChannel.PLAYER, time), time);
 
         if (RecorderChannel.TIME.isIn(live))
-            handOverClock(recording.findPlayingClip(RecorderChannel.TIME, time), time);
+            handOverClock(recorderManager.findPlayingClip(RecorderChannel.TIME, time), time);
 
         if (RecorderChannel.WEATHER.isIn(live))
             releaseWeather();
@@ -410,36 +416,38 @@ public class DevRecorderSystem extends SystemPackage {
 
     private void play() {
 
-        RecordingInstance recording = recorderManager.getRecording();
         int played = recorderManager.getPlayedChannels();
         float time = recorderManager.getPlayhead();
-        float animationDelta = Math.max(0f, time - lastPlayhead);
+        int side = recorderManager.getTransition().isWithoutPlayed()
+                ? EditorSetting.RECORDER_TRANSITION_SIDE_WITHOUT
+                : EditorSetting.RECORDER_TRANSITION_SIDE_WITH;
+        float animationDelta = Math.max(0f, time - lastPlayheads[side]);
 
-        this.lastPlayhead = time;
+        lastPlayheads[side] = time;
         shownPuppets.clear();
         shownItems.clear();
         shownVehicles.clear();
 
         if (RecorderChannel.CAMERA.isIn(played))
-            playCamera(recording.findPlayingClip(RecorderChannel.CAMERA, time), time);
+            playCamera(recorderManager.findPlayingClip(RecorderChannel.CAMERA, time), time);
 
         if (RecorderChannel.PLAYER.isIn(played))
-            playPlayer(recording.findPlayingClip(RecorderChannel.PLAYER, time), time, animationDelta);
+            playPlayer(recorderManager.findPlayingClip(RecorderChannel.PLAYER, time), time, animationDelta);
 
         if (RecorderChannel.CHARACTERS.isIn(played))
-            playCharacters(recording.findPlayingClip(RecorderChannel.CHARACTERS, time), time, animationDelta);
+            playCharacters(recorderManager.findPlayingClip(RecorderChannel.CHARACTERS, time), time, animationDelta);
 
         if (RecorderChannel.ITEMS.isIn(played))
-            playItems(recording.findPlayingClip(RecorderChannel.ITEMS, time), time);
+            playItems(recorderManager.findPlayingClip(RecorderChannel.ITEMS, time), time);
 
         if (RecorderChannel.VEHICLES.isIn(played))
-            playVehicles(recording.findPlayingClip(RecorderChannel.VEHICLES, time), time);
+            playVehicles(recorderManager.findPlayingClip(RecorderChannel.VEHICLES, time), time);
 
         if (RecorderChannel.WEATHER.isIn(played))
-            playWeather(recording.findPlayingClip(RecorderChannel.WEATHER, time), time);
+            playWeather(recorderManager.findPlayingClip(RecorderChannel.WEATHER, time), time);
 
         if (RecorderChannel.TIME.isIn(played))
-            playClock(recording.findPlayingClip(RecorderChannel.TIME, time), time);
+            playClock(recorderManager.findPlayingClip(RecorderChannel.TIME, time), time);
         else
             this.clockHeld = false;
 

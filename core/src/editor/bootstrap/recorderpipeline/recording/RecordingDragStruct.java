@@ -17,7 +17,8 @@ public class RecordingDragStruct extends StructPackage {
      * whether the key pressed was among them already, the moment and value a
      * box reaches to, and where it would land now — its start and lane, and
      * whether the cursor is over the lanes at all, or over the Keys pane's
-     * rows, where a sound from the sound library is added to the take shown.
+     * rows, where a sound from the sound library is added to the take shown —
+     * and the clip edge a transition is aimed at, named by one number.
      */
 
     // Carried
@@ -51,6 +52,7 @@ public class RecordingDragStruct extends StructPackage {
     private boolean overKeys;
     private float landingStart;
     private int landingLane;
+    private int target;
 
     // Constructor \\
 
@@ -88,6 +90,7 @@ public class RecordingDragStruct extends StructPackage {
         // Landing
         this.overLanes = false;
         this.overKeys = false;
+        this.target = EngineSetting.INDEX_NOT_FOUND;
     }
 
     // The key taken hold of as it stood, and the value under the cursor, so a drag moves it by how far it travels
@@ -126,6 +129,12 @@ public class RecordingDragStruct extends StructPackage {
         this.extending = false;
         this.subtracting = false;
         this.keySelected = false;
+        this.target = EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // The clip edge what is carried is aimed at, -1 for none
+    public void aim(int target) {
+        this.target = target;
     }
 
     // Travel past the threshold from where the press began makes it a drag for good
@@ -237,5 +246,9 @@ public class RecordingDragStruct extends StructPackage {
 
     public int getLandingLane() {
         return landingLane;
+    }
+
+    public int getTarget() {
+        return target;
     }
 }

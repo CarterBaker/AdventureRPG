@@ -42,7 +42,8 @@ public class RecorderKeysSystem extends SystemPackage {
      * handles of the key shown and the box a selection is being drawn with,
      * from marks made once and placed again, so a mark that has not moved is
      * left alone. Its inspector shows the selected sound, else the selected
-     * curve, key or node, and what can be done to it. The whole pane is drawn
+     * transition, else the selected curve, key or node, and what can be done
+     * to it. The whole pane is drawn
      * again when the recorder's revision, its keys or its view move; keys or a
      * handle being dragged move only the selected marks on their strip, the
      * graph's marks that changed and the inspector's key, a sound carried only
@@ -829,6 +830,11 @@ public class RecorderKeysSystem extends SystemPackage {
 
         if (recorderManager.getSelectedSound() != EngineSetting.INDEX_NOT_FOUND) {
             recorderPanelSystem.refreshSound(entryPoint);
+            return;
+        }
+
+        if (recorderManager.getSelectedTransitionClip() != null) {
+            recorderPanelSystem.refreshTransition(entryPoint);
             return;
         }
 

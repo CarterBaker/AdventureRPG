@@ -8,10 +8,12 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.soundlibrarypipeline.soundlibrarymanager.SoundLibraryManager;
+import editor.bootstrap.transitionpipeline.transitionmanager.TransitionManager;
 import editor.runtime.EditorSetting;
 import engine.input.Buttons;
 import engine.input.Input;
@@ -23,16 +25,19 @@ public class RecorderBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the Recorder tab. Every action works on the one
-     * recorder all tabs share. New and renamed recordings are named through
-     * the name dialog, takes through the text dialog, and deleting a recording
-     * or a take asks for its name to be typed back. Dragging along the ruler
+     * recorder all tabs share; the recordings themselves are made, opened,
+     * renamed, copied and deleted from the Recordings tool. Takes are named
+     * through the text dialog, and deleting a take asks for its name to be
+     * typed back. Dragging along the ruler
      * moves the playhead to the moment under the cursor. Pressing a take in
      * the bin picks it up, and letting go over the lanes lays it there; a
      * sound pressed in the sound library is picked up the same way and laid
      * as a take of its own over the lanes of whichever Recorder tab the
      * cursor is let go above, in any window, or let go over the rows of its
      * Keys pane is added to the take shown there at the moment under the
-     * cursor. A
+     * cursor; a transition pressed in the transitions tool is picked up the
+     * same way and laid on the clip edge of whichever Recorder tab's lanes it
+     * is let go over. A
      * press on the lanes is handed to the recorder once, where it began, to
      * take hold of a clip's edge, a node, a clip or the empty lanes; letting
      * go trims, retimes, moves or scrolls, and a press that never travels
@@ -54,15 +59,17 @@ public class RecorderBranch extends BranchPackage {
      * the Sounds layer is selected and dragged along its row to retime it, and
      * its volume, pitch and length are typed in the text dialog, while the
      * Sound Library's selection is what a sound is added from or replaced
-     * with. The value under the cursor on the graph is read from the
-     * span of values it shows. On the Assets pane a section's head opens or
+     * with; a selected transition's length is typed the same way, and the
+     * transitions tool's selection is what one is laid from or replaced
+     * with. The value under the cursor on the graph is read from the span of
+     * values it shows. On the Assets pane a section's head opens or
      * closes it. The drag is read from the window the press began in until the
      * button is let go. Rows hand back the index of the take they show, Keys
      * rows their track's place and what they show, section heads their
      * section, and setting rows the key of what they change. Exporting goes
      * through the export dialog, which holds the editor until the video is
-     * finished. Deleting removes whatever is selected, keys before a node
-     * before a clip.
+     * finished. Deleting removes whatever is selected, keys before a sound
+     * before a transition before a node before a clip.
      */
 
     // Internal
@@ -74,6 +81,7 @@ public class RecorderBranch extends BranchPackage {
     private ShortcutManager shortcutManager;
     private SoundManager soundManager;
     private SoundLibraryManager soundLibraryManager;
+    private TransitionManager transitionManager;
 
     // Shortcuts
     private int freeDragShortcutID;
@@ -94,6 +102,7 @@ public class RecorderBranch extends BranchPackage {
         this.shortcutManager = get(ShortcutManager.class);
         this.soundManager = get(SoundManager.class);
         this.soundLibraryManager = get(SoundLibraryManager.class);
+        this.transitionManager = get(TransitionManager.class);
     }
 
     @Override
@@ -219,46 +228,8 @@ public class RecorderBranch extends BranchPackage {
 
     // Recordings \\
 
-    public void newRecording(WindowInstance window) {
-        nameDialogBranch.open(
-                window,
-                EditorSetting.DIALOG_TITLE_NEW_RECORDING,
-                recorderManager::isRecordingNameAvailable,
-                recorderManager::createRecording);
-    }
-
-    public void openRecording(String recordingName) {
-        recorderManager.openRecording(recordingName);
-    }
-
     public void saveRecording() {
         recorderManager.saveRecording();
-    }
-
-    public void renameRecording(WindowInstance window) {
-
-        if (!recorderManager.hasRecording())
-            return;
-
-        nameDialogBranch.open(
-                window,
-                EditorSetting.DIALOG_TITLE_RENAME_RECORDING,
-                recorderManager::isRecordingNameAvailable,
-                recorderManager::renameRecording);
-    }
-
-    public void deleteRecording(WindowInstance window) {
-
-        if (!recorderManager.hasRecording())
-            return;
-
-        String recordingName = recorderManager.getRecording().getRecordingName();
-
-        nameDialogBranch.open(
-                window,
-                EditorSetting.DIALOG_TITLE_DELETE_PREFIX + recordingName + EditorSetting.DIALOG_TITLE_DELETE_SUFFIX,
-                recordingName::equals,
-                confirmedName -> recorderManager.deleteRecording());
     }
 
     // Transport \\
@@ -490,6 +461,19 @@ public class RecorderBranch extends BranchPackage {
                 recorderManager::setSoundLength);
     }
 
+    private void openTransitionLength(WindowInstance window) {
+
+        if (recorderManager.getSelectedTransitionClip() == null)
+            return;
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.DIALOG_TITLE_TRANSITION_LENGTH,
+                recorderManager.formatTransitionLengthInput(),
+                recorderManager::isTransitionLengthValid,
+                recorderManager::setTransitionLength);
+    }
+
     // Takes \\
 
     // The take is picked up on the press and carried over the lanes until let go
@@ -526,6 +510,22 @@ public class RecorderBranch extends BranchPackage {
                     resolveTime(hovered, graph));
             return;
         }
+
+        dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
+    }
+
+    // A transition is picked up on the press wherever it was pressed, and carried over the lanes of the Recorder tab
+    // under the cursor until let go
+    public void dragTransition(String transitionName, WindowInstance window) {
+
+        if (!recorderManager.getDrag().isActive())
+            recorderManager.beginTransitionDrag(
+                    transitionManager.getTransitionHandleFromTransitionName(transitionName).getTransitionID(),
+                    window,
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window));
+
+        WindowInstance hovered = windowManager.getHoveredWindow();
 
         dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
     }
@@ -720,6 +720,11 @@ public class RecorderBranch extends BranchPackage {
             return;
         }
 
+        if (settingKey.startsWith(EditorSetting.RECORDER_KEY_TRANSITION_PREFIX)) {
+            recorderManager.applyTransition(resolveEdge(settingKey));
+            return;
+        }
+
         switch (settingKey) {
             case EditorSetting.RECORDER_KEY_CLIP_MUTE -> recorderManager.toggleClipMute();
             case EditorSetting.RECORDER_KEY_CLIP_RAMP -> recorderManager.cycleClipTimeRamp();
@@ -746,6 +751,9 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_SOUND_SEEK -> recorderManager.seekSound();
             case EditorSetting.RECORDER_KEY_SOUND_REMOVE -> recorderManager.removeSound();
             case EditorSetting.RECORDER_KEY_SOUND_REMOVE_ALL -> recorderManager.removeEverySound();
+            case EditorSetting.RECORDER_KEY_TRANSITION_LENGTH -> openTransitionLength(window);
+            case EditorSetting.RECORDER_KEY_TRANSITION_REPLACE -> recorderManager.replaceTransition();
+            case EditorSetting.RECORDER_KEY_TRANSITION_REMOVE -> recorderManager.removeTransition();
             case EditorSetting.RECORDER_KEY_RESOLUTION -> recorderManager.cycleResolution();
             case EditorSetting.RECORDER_KEY_FRAME_RATE -> recorderManager.cycleFrameRate();
             case EditorSetting.RECORDER_KEY_FORMAT -> recorderManager.cycleFormat();
@@ -758,6 +766,17 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_CANCEL_EXPORT -> recorderManager.stop();
             default -> throwException("Unknown recorder setting: " + settingKey);
         }
+    }
+
+    private RecorderClipEdge resolveEdge(String settingKey) {
+
+        RecorderClipEdge edge = RecorderClipEdge.findByKey(
+                settingKey.substring(EditorSetting.RECORDER_KEY_TRANSITION_PREFIX.length()));
+
+        if (edge == null)
+            throwException("Unknown recorder clip edge: " + settingKey);
+
+        return edge;
     }
 
     private RecorderChannel resolveChannel(String settingKey, String prefix) {
