@@ -30,9 +30,11 @@ public class SoundManager extends ManagerPackage {
      * started; a handle whose sound has ended does nothing. Each voice
      * remembers the window whose systems asked for it, so a recording can
      * capture one window's sounds alone. The window playing the game places the
-     * listener at its camera every frame. The master and category volumes of
-     * the player's settings scale everything that plays. With no audio device the game runs silent and
-     * every play hands back -1. Decoded samples are only ever kept in the
+     * listener at its camera every frame; one window can be pinned as the one
+     * heard whichever has focus, with its own ambience, music and heartbeat
+     * quieted when asked, as a recording session does. The master and
+     * category volumes of the player's settings scale everything that plays.
+     * With no audio device the game runs silent and every play hands back -1. Decoded samples are only ever kept in the
      * device's buffers; a tool that mixes sounds itself decodes them again.
      */
 
@@ -45,6 +47,10 @@ public class SoundManager extends ManagerPackage {
     private ObjectArrayList<SoundHandle> soundID2SoundHandle;
     private int soundCount;
 
+    // Heard
+    private int pinnedWindowID;
+    private boolean pinnedQuiet;
+
     // Base \\
 
     @Override
@@ -53,6 +59,9 @@ public class SoundManager extends ManagerPackage {
         // Palette
         this.soundName2SoundID = RegistryUtility.createNameIndex();
         this.soundID2SoundHandle = RegistryUtility.createPalette();
+
+        // Heard
+        this.pinnedWindowID = EngineSetting.INDEX_NOT_FOUND;
 
         this.soundVoiceBranch = create(SoundVoiceBranch.class);
         create(SoundLoader.class);
@@ -269,6 +278,29 @@ public class SoundManager extends ManagerPackage {
 
     public float resolveHeardPan(SoundVoiceStruct voice) {
         return soundVoiceBranch.resolveHeardPan(voice);
+    }
+
+    // Heard \\
+
+    // The window heard whichever has focus, its own ambience, music and heartbeat holding silent while quiet
+    public void pinHeardWindow(int windowID, boolean quiet) {
+        this.pinnedWindowID = windowID;
+        this.pinnedQuiet = quiet;
+    }
+
+    // Every window heard by focus again
+    public void unpinHeardWindow() {
+        this.pinnedWindowID = EngineSetting.INDEX_NOT_FOUND;
+        this.pinnedQuiet = false;
+    }
+
+    // The window pinned as the one heard, -1 while focus decides
+    public int getPinnedWindowID() {
+        return pinnedWindowID;
+    }
+
+    public boolean isPinnedQuiet() {
+        return pinnedQuiet;
     }
 
     // Listener \\

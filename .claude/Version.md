@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 8
-Task: ShipWaistRigFurniture
+Delivery: 9
+Task: RecorderSoundEditing
 Applied: 2026-10-31
 
 ## Log
@@ -18,3 +18,4 @@ Applied: 2026-10-31
 - 6, 2026-10-31, BiomePlannerSquareGrid
 - 7, 2026-10-31, BiomeViewerProjection
 - 8, 2026-10-31, ShipWaistRigFurniture
+- 9, 2026-10-31, RecorderSoundEditing

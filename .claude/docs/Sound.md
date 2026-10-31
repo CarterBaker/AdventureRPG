@@ -51,7 +51,8 @@ soundCueManager.playCue(chopCueID);
   `hold(intensity)` or `holdAt(intensity, world, place)` every frame with 0 to 1; it eases toward it over the cue's
   `fadeSeconds`, begins when heard, follows its place, and gives its voice back at 0. Never start a loop by hand.
 - `SoundManager` is the layer below (raw sounds, voices, the listener). Use it only for what cues do not cover:
-  `stopVoice`, `isVoicePlaying`, `getListenerDistance`, the recorder and the Sound Library.
+  `stopVoice`, `isVoicePlaying`, `getListenerDistance`, `pinHeardWindow`/`unpinHeardWindow`, the recorder and the
+  Sound Library.
 
 ## Surfaces
 
@@ -85,8 +86,9 @@ its window's world). Runtime systems play what only their window hears.
 | Equip, stow in the inventory | `InventoryDragBranch` | `items/Equip`, `items/Stow` |
 | Menu open, close, click | `MenuManager.openMenu/closeMenu`, `ElementHitSystem` | a menu's `open_cue`, `close_cue`, `click_cue` |
 
-- Only the window that is heard (`SoundListenerSystem.isHeardHere()`: it has focus, or none does) holds ambience,
-  music and the heartbeat; others let them fade.
+- The window that is heard (`SoundListenerSystem.isHeardHere()`) places the listener: the window pinned with
+  `SoundManager.pinHeardWindow`, else the one with focus, or any while none has it. Only it holds ambience, music and
+  the heartbeat (`isAmbientHere()`), unless it is pinned quiet; others let them fade.
 - Ambience reads the place without extra data: a biome with trees is wooded, one with ocean water is sea (a coast makes
   it shore), the camera's height above the sea surface sets how near the water is, and solar elevation sets day.
 - To add a moment: write its cue file, add the name constant, resolve it in the owning class's `awake()` and play it
@@ -129,10 +131,24 @@ owner's: never catalogue them, only their companions and cues.
 
 ## Recorder and Sound Library
 
-- `RecorderChannel.SOUND`: a take records every sound its Dev window's systems start, and every placed sound the
-  shared world starts in that window's world, while it records (`DevRecorderSoundSystem`), into the take's
-  `RecordingSoundTrackStruct`, with how loud and from which side it reached the camera. Unlike every other channel,
-  sounds add up: every unmuted clip holding the channel sounds together.
+- `RecorderChannel.SOUND`: a take records every sound its Dev window's systems start, every placed sound the shared
+  world starts in that window's world and every unplaced one it starts, while it records (`DevRecorderSoundSystem`),
+  into the take's `RecordingSoundTrackStruct`, with how loud and from which side it reached the camera. Sounds already
+  playing when the take begins are captured too: a loop (ambience, rain, wind) from the take's start, any other (a
+  music piece) at a negative time, so it is heard from as far in as it had played. Unlike every other channel, sounds
+  add up: every unmuted clip holding the channel sounds together.
+- While a session runs, `RecorderManager.holdSound` pins its Dev window as the one heard, so clicking into the
+  Recorder tab never freezes the listener or fades the ambience a take records; while the timeline plays the sound
+  channel the pin is quiet, so live ambience, music and heartbeat never double what the take holds.
+- The Keys pane shows the selected clip's take's Sounds layer (`RecorderKeysSystem.injectSounds`): its own row marks
+  every sound, and opened it holds a row per sound name with a bar for every time it is heard. A sound is selected by
+  clicking its bar (or its row's name for the first one), dragged along its row to retime it, and the inspector
+  (`RecorderPanelSystem.refreshSound`, also in the Clip panel) types its volume, pitch and length, moves the playhead
+  to it, copies it to the playhead, replaces it with the Sound Library's selection, or removes it or every one of it;
+  Delete removes the selected sound after selected keys. A sound from the Sound Library dropped on the Keys rows, or
+  added with "Add the Sound Library's selection at the playhead", joins the selected clip's take. Edits live in
+  `RecorderManager` (`// Sound Layer`) over `RecordingSoundBranch`; each moves `getSoundRevision()`, which stops the
+  timeline's voices so they start again as edited.
 - A sound dropped from the Sound Library (or added at the playhead) becomes a take holding that sound alone
   (`RecordingTakeStruct.isSoundOf`), reused for every later drop of the same sound, laid as an ordinary clip.
 - Exports mix every sound clip offline (`RecordingMixBranch`) into 48 kHz 16-bit stereo PCM, written beside each

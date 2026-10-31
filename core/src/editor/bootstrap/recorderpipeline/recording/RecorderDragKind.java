@@ -5,7 +5,9 @@ public enum RecorderDragKind {
     /*
      * What the Recorder tab is carrying under the cursor: nothing, a take
      * picked up from the bin to lay on the timeline, a sound picked up from
-     * the sound library to lay as a take of its own, a clip already on it
+     * the sound library to lay as a take of its own or to add to the Sounds
+     * layer of the Keys pane, a sound on that layer being retimed along its
+     * row, a clip already on it
      * being moved along its lanes, the start or the end of a clip being
      * dragged to trim it, a cut being placed through a clip, a node on a clip
      * being retimed or moved, the empty lanes being dragged to scroll the view
@@ -33,7 +35,8 @@ public enum RecorderDragKind {
     KEYS_PRESS,
     GRAPH_PRESS,
     KEYS_BOX,
-    GRAPH_BOX;
+    GRAPH_BOX,
+    SOUND_EVENT;
 
     // Accessible \\
 

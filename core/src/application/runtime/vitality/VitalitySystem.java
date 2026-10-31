@@ -34,7 +34,8 @@ public class VitalitySystem extends SystemPackage {
      * virtuous, grey between and black for the wicked, fading over a few
      * seconds. Each effect follows its target smoothly, and nothing is drawn
      * while all of them are clear. The darkness is heard as a heartbeat,
-     * louder the nearer death, while this window is the one heard.
+     * louder the nearer death, while this window is the one heard and not
+     * pinned quiet.
      */
 
     // Internal
@@ -112,7 +113,7 @@ public class VitalitySystem extends SystemPackage {
 
         approach(resolveDarkness(statisticsHandle), statisticsHandle.getBleed(), deltaTime);
         updateGlow(player, deltaTime);
-        heartbeat.hold(soundListenerSystem.isHeardHere() ? darkness : 0f);
+        heartbeat.hold(soundListenerSystem.isAmbientHere() ? darkness : 0f);
     }
 
     @Override

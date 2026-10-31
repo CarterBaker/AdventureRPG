@@ -28,15 +28,18 @@ public class DevRecorderSoundSystem extends SystemPackage {
      * its volume and pitch and, when it was placed, where it was placed, and
      * stopped once the playhead leaves it or its clip. A jump of the playhead
      * — a seek, a pause, the playhead running back — stops every sound so
-     * each starts again from where the playhead now stands. While a take
-     * records sound live, every sound this window's own systems start, and
-     * every sound the shared world starts within this window's world, is
-     * captured onto the take from the moment it began — never one this
-     * system started, nor one begun before the take or while it was
-     * suspended — its length the sound's own unless it is cut short or loops,
-     * when it runs until it stops; finishing the take ends every sound still
-     * running at the take's end. Nothing here allocates once its lists
-     * have grown to the most sounds heard at once.
+     * each starts again from where the playhead now stands, and so does any
+     * change made to a sound on the timeline. While a take records sound live,
+     * every sound this window's own systems play, every sound the shared world
+     * plays within this window's world and every one it plays for no world at
+     * all is captured onto the take from the moment it began — never one this
+     * system started, nor one begun while the take was suspended. A sound
+     * already playing when the take begins is captured too: a loop from the
+     * take's start, any other from before it, as far in as it had played. Its
+     * length is the sound's own unless it is cut short or loops, when it runs
+     * until it stops; finishing the take ends every sound still running at the
+     * take's end. Nothing here allocates once its lists have grown to the most
+     * sounds heard at once.
      */
 
     // Internal
@@ -52,6 +55,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
     private int playingCount;
     private float lastPlayhead;
     private boolean sounding;
+    private int shownSoundRevision;
 
     // Capture — for each voice slot, the voice captured from it and the sound it became on the take
     private int[] capturedVoices;
@@ -59,6 +63,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
     private boolean[] capturedLoops;
     private long[] capturedStartMillis;
     private boolean capturing;
+    private boolean takeBegun;
     private long capturingSinceMillis;
 
     // Base \\
@@ -100,11 +105,12 @@ public class DevRecorderSoundSystem extends SystemPackage {
         boolean wanted = recorderManager.isSessionFor((DevContext) context) && recorderManager.isSoundPlayed();
         float time = recorderManager.getPlayhead();
 
-        if (!wanted || !sounding || isJump(time))
+        if (!wanted || !sounding || isJump(time) || recorderManager.getSoundRevision() != shownSoundRevision)
             stopAll();
 
         this.sounding = wanted;
         this.lastPlayhead = time;
+        this.shownSoundRevision = recorderManager.getSoundRevision();
 
         if (wanted)
             play(recorderManager.getRecording(), time);
@@ -115,7 +121,8 @@ public class DevRecorderSoundSystem extends SystemPackage {
         return time < lastPlayhead || time - lastPlayhead > EditorSetting.RECORDER_SOUND_JUMP_SECONDS;
     }
 
-    // While the session is suspended the sounds already followed are kept, and none begun meanwhile is taken
+    // While the session is suspended the sounds already followed are kept, and none begun meanwhile is taken; the
+    // take's first frame takes every sound already playing, a frame after a suspension only those begun since
     @Override
     protected void lateUpdate() {
 
@@ -126,6 +133,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
         if (!recording) {
             clearCapture();
             this.capturing = false;
+            this.takeBegun = false;
             return;
         }
 
@@ -136,7 +144,8 @@ public class DevRecorderSoundSystem extends SystemPackage {
 
         if (!capturing) {
             this.capturing = true;
-            this.capturingSinceMillis = internal.getTime();
+            this.capturingSinceMillis = takeBegun ? internal.getTime() : Long.MIN_VALUE;
+            this.takeBegun = true;
         }
 
         capture(recorderManager.getTake(), recorderManager.getTakeTime());
@@ -301,12 +310,17 @@ public class DevRecorderSoundSystem extends SystemPackage {
         }
     }
 
-    // The sound laid on the take from the moment it began, as long as it plays unless it loops
+    // The sound laid on the take from the moment it began, as long as it plays unless it loops; one begun before the
+    // take starts before it, so it is heard from as far in as it had played, but a loop starts with the take, where
+    // it plays on all the same
     private void beginCapture(RecordingSoundTrackStruct track, int slot, SoundVoiceStruct voice, float takeTime) {
 
         SoundHandle soundHandle = voice.getSoundHandle();
-        float began = Math.max(0f, takeTime - (internal.getTime() - voice.getStartMillis())
-                * EngineSetting.SOUND_SECONDS_PER_MILLI);
+        float began = takeTime - (internal.getTime() - voice.getStartMillis()) * EngineSetting.SOUND_SECONDS_PER_MILLI;
+
+        if (voice.isLooping())
+            began = Math.max(0f, began);
+
         float length = voice.isLooping() ? 0f : soundHandle.getPlayedLength() / voice.getPitch();
 
         capturedVoices[slot] = voice.getHandle();
@@ -353,11 +367,11 @@ public class DevRecorderSoundSystem extends SystemPackage {
 
     // Utility \\
 
-    // Begun by this window's own systems, or by the shared world within this window's world
+    // Begun by this window's own systems, or by the shared world within this window's world or for no world at all
     private boolean isHeardHere(SoundVoiceStruct voice, int windowID, WorldHandle worldHandle) {
         return voice.getOwnerWindowID() == windowID
                 || voice.getOwnerWindowID() == EngineSetting.INDEX_NOT_FOUND
-                        && voice.isSpatial() && voice.getWorldHandle() == worldHandle;
+                        && (!voice.isSpatial() || voice.getWorldHandle() == worldHandle);
     }
 
     private WorldHandle resolveWorld() {

@@ -16,6 +16,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
 import editor.runtime.EditorSetting;
 import editor.runtime.recorder.RecorderSetting;
@@ -32,17 +33,20 @@ public class RecorderKeysSystem extends SystemPackage {
      * every value it holds and, for a character, a row of its movement and one
      * of its gestures; every row's strip shows its keys or nodes across the
      * stretch of the timeline in view, a closed track's strip every key of
-     * every curve it holds. Beneath the rows the graph draws the selected
-     * curve across the same stretch, between the least and greatest values
-     * framed, with its keys — every selected one marked — the handles of the
-     * key shown and the box a selection is being drawn with, from marks made
-     * once and placed again, so a mark that has not moved is left alone.
-     * Its inspector shows the selected curve, key or node and what can be
-     * done to it. The whole pane is drawn again when the recorder's revision,
-     * its keys or its view move; keys or a handle being dragged move only the
-     * selected marks on their strip, the graph's marks that changed and the
-     * inspector's key, and the playhead follows every frame from positions
-     * built once.
+     * every curve it holds. Last comes the take's Sounds layer, its own strip
+     * marking where every sound begins and, opened, a row for each sound it
+     * names with a bar for every time it is heard, the selected one marked and
+     * following the cursor while it is dragged. Beneath the rows the graph
+     * draws the selected curve across the same stretch, between the least and
+     * greatest values framed, with its keys — every selected one marked — the
+     * handles of the key shown and the box a selection is being drawn with,
+     * from marks made once and placed again, so a mark that has not moved is
+     * left alone. Its inspector shows the selected sound, else the selected
+     * curve, key or node, and what can be done to it. The whole pane is drawn
+     * again when the recorder's revision, its keys or its view move; keys or a
+     * handle being dragged move only the selected marks on their strip, the
+     * graph's marks that changed and the inspector's key, a sound carried only
+     * its bar, and the playhead follows every frame from positions built once.
      */
 
     // Internal
@@ -71,6 +75,7 @@ public class RecorderKeysSystem extends SystemPackage {
     private DimensionVector2Struct hiddenSize;
     private ObjectArrayList<ElementInstance> selectedDiamonds;
     private IntArrayList selectedDiamondKeys;
+    private ElementInstance selectedSoundBar;
 
     // Graph
     private RecorderMarkPoolStruct segmentPool;
@@ -252,8 +257,8 @@ public class RecorderKeysSystem extends SystemPackage {
         refreshInspector(clip);
     }
 
-    // Keys or a handle being dragged, or a box drawn: only the selected marks on their strip, the graph's marks and
-    // the inspector's key move
+    // Keys or a handle being dragged, a sound carried, or a box drawn: only the selected marks on their strip, the
+    // selected sound's bar, the graph's marks and the inspector's key move
     private void refreshCurve() {
 
         RecordingClipStruct clip = recorderManager.getKeyClip();
@@ -261,6 +266,7 @@ public class RecorderKeysSystem extends SystemPackage {
         this.shownCurveRevision = recorderManager.getCurveRevision();
 
         moveSelectedDiamonds(clip);
+        moveSelectedSoundBar();
         refreshGraph(clip);
         refreshKey(clip);
     }
@@ -272,6 +278,7 @@ public class RecorderKeysSystem extends SystemPackage {
         menuManager.ejectAll(recorderMenu, EditorSetting.RECORDER_ENTRY_KEY_ROWS);
         selectedDiamonds.clear();
         selectedDiamondKeys.clear();
+        this.selectedSoundBar = null;
 
         if (clip == null) {
             recorderPanelSystem.injectText(EditorSetting.RECORDER_ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_CLIP);
@@ -279,12 +286,16 @@ public class RecorderKeysSystem extends SystemPackage {
         }
 
         ObjectArrayList<RecordingCurveTrackStruct> tracks = recorderManager.getKeyTracks();
+        RecordingSoundTrackStruct soundTrack = recorderManager.getKeySoundTrack();
 
-        if (tracks.isEmpty())
+        if (tracks.isEmpty() && soundTrack == null)
             recorderPanelSystem.injectText(EditorSetting.RECORDER_ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_TRACKS);
 
         for (int i = 0; i < tracks.size(); i++)
             injectTrack(tracks.get(i), i, clip);
+
+        if (soundTrack != null)
+            injectSounds(soundTrack, clip);
     }
 
     // A track's own row with every key it holds, and, opened, its node rows and a row for every value it holds
@@ -472,16 +483,115 @@ public class RecorderKeysSystem extends SystemPackage {
             String template = kind == RecorderNodeKind.MOVEMENT
                     ? selected ? RecorderSetting.TEMPLATE_KEY_MOVEMENT_SELECTED : RecorderSetting.TEMPLATE_KEY_MOVEMENT
                     : selected ? RecorderSetting.TEMPLATE_KEY_GESTURE_SELECTED : RecorderSetting.TEMPLATE_KEY_GESTURE;
-            DimensionVector2Struct position = stripPositions[fromStep];
-            DimensionVector2Struct size = new DimensionVector2Struct(
-                    DimensionValueStruct.ofPercent(toPercent(steps)),
-                    DimensionValueStruct.ofAbsolute(RecorderSetting.KEY_NODE_PIXELS));
 
-            menuManager.inject(strip, template, injected -> {
-                injected.setPositionOverride(position);
-                injected.setSizeOverride(size);
-            }).findChildById(RecorderSetting.ELEMENT_NODE_LABEL).setFontText(node.getLabel());
+            injectBar(strip, template, fromStep, steps, node.getLabel());
         }
+    }
+
+    // A named bar across a row's strip from a step for a number of steps; the bar comes back
+    private ElementInstance injectBar(ElementInstance strip, String template, int fromStep, int steps, String label) {
+
+        DimensionVector2Struct position = stripPositions[fromStep];
+        DimensionVector2Struct size = new DimensionVector2Struct(
+                DimensionValueStruct.ofPercent(toPercent(steps)),
+                DimensionValueStruct.ofAbsolute(RecorderSetting.KEY_NODE_PIXELS));
+        ElementInstance bar = menuManager.inject(strip, template, injected -> {
+            injected.setPositionOverride(position);
+            injected.setSizeOverride(size);
+        });
+
+        bar.findChildById(RecorderSetting.ELEMENT_NODE_LABEL).setFontText(label);
+        return bar;
+    }
+
+    // Sounds \\
+
+    // The Sounds layer's own row marking where every sound begins within the clip and the view, and, opened, a row
+    // for each sound it names
+    private void injectSounds(RecordingSoundTrackStruct track, RecordingClipStruct clip) {
+
+        boolean opened = recorderManager.isSoundLayerOpened();
+        ElementInstance layerStrip = injectRow(
+                RecorderSetting.TEMPLATE_KEY_TRACK_ROW,
+                (opened ? RecorderSetting.TEXT_TRACK_OPENED : RecorderSetting.TEXT_TRACK_CLOSED)
+                        + String.format(RecorderSetting.FORMAT_SOUND_LAYER, track.size()),
+                toRowKey(EditorSetting.RECORDER_KEY_TRACK_SOUNDS, EditorSetting.RECORDER_KEY_ROW_TRACK));
+
+        clearSteps();
+
+        for (int i = 0; i < track.size(); i++) {
+
+            int step = resolveKeyStep(clip, track.getTime(i));
+
+            if (step == EngineSetting.INDEX_NOT_FOUND || stepTaken[step])
+                continue;
+
+            stepTaken[step] = true;
+            injectDiamond(layerStrip, RecorderSetting.TEMPLATE_KEY_SUMMARY, step);
+        }
+
+        if (!opened)
+            return;
+
+        for (int nameIndex = 0; nameIndex < track.getSoundNames().size(); nameIndex++)
+            injectSoundRow(track, clip, nameIndex);
+    }
+
+    // One sound's row with a bar across every time it is heard within the clip and the view, at least a step wide;
+    // a bar lying wholly within one drawn before it is left out unless it is the one selected
+    private void injectSoundRow(RecordingSoundTrackStruct track, RecordingClipStruct clip, int nameIndex) {
+
+        ElementInstance strip = injectRow(
+                RecorderSetting.TEMPLATE_KEY_NODE_ROW,
+                String.format(RecorderSetting.FORMAT_SOUND_ROW,
+                        track.getSoundNames().get(nameIndex), recorderManager.countSounds(nameIndex)),
+                toRowKey(EditorSetting.RECORDER_KEY_TRACK_SOUNDS, nameIndex));
+        RecordingViewStruct view = recorderManager.getView();
+        int selectedSound = recorderManager.getSelectedSound();
+        int coveredStep = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int i = 0; i < track.size(); i++) {
+
+            if (track.getNameIndex(i) != nameIndex || !recorderManager.isSoundHeardIn(clip, i))
+                continue;
+
+            float start = Math.max(clip.toTimelineTime(track.getTime(i)), clip.getStart());
+            float end = Math.min(clip.toTimelineTime(track.getTime(i) + track.getDuration(i)), clip.getEnd());
+
+            if (end <= view.getStart() || start >= view.getEnd())
+                continue;
+
+            int fromStep = Math.min(toViewStep(start), RecorderSetting.TIMELINE_STEPS - 1);
+            int toStep = Math.max(fromStep + 1, toViewStep(end));
+            boolean selected = i == selectedSound;
+
+            if (!selected && toStep <= coveredStep)
+                continue;
+
+            coveredStep = Math.max(coveredStep, toStep);
+
+            ElementInstance bar = injectBar(strip, selected
+                    ? RecorderSetting.TEMPLATE_KEY_GESTURE_SELECTED
+                    : RecorderSetting.TEMPLATE_KEY_GESTURE, fromStep, toStep - fromStep, RecorderSetting.TEXT_EMPTY);
+
+            if (selected)
+                this.selectedSoundBar = bar;
+        }
+    }
+
+    // The selected sound's bar follows where it would land while it is carried, set aside while that lies out of view
+    private void moveSelectedSoundBar() {
+
+        RecordingDragStruct drag = recorderManager.getDrag();
+
+        if (selectedSoundBar == null || drag.getKind() != RecorderDragKind.SOUND_EVENT || !drag.isMoved())
+            return;
+
+        float landing = drag.getLandingStart();
+
+        selectedSoundBar.setPositionOverride(recorderManager.getView().contains(landing)
+                ? stripPositions[Math.min(toViewStep(landing), RecorderSetting.TIMELINE_STEPS - 1)]
+                : hiddenPosition);
     }
 
     // Graph \\
@@ -717,6 +827,11 @@ public class RecorderKeysSystem extends SystemPackage {
             return;
         }
 
+        if (recorderManager.getSelectedSound() != EngineSetting.INDEX_NOT_FOUND) {
+            recorderPanelSystem.refreshSound(entryPoint);
+            return;
+        }
+
         if (track == null || recorderManager.getSelectedSlot() < 0) {
             recorderPanelSystem.refreshNode(entryPoint);
             recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_KEYS);
@@ -724,6 +839,7 @@ public class RecorderKeysSystem extends SystemPackage {
             recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_SELECT);
             recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_VIEW);
             recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_VALUES);
+            refreshSoundHints(entryPoint);
             return;
         }
 
@@ -766,6 +882,20 @@ public class RecorderKeysSystem extends SystemPackage {
         recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_TAKE_REFIT,
                 EditorSetting.RECORDER_KEY_TAKE_REFIT);
         recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_CURVE_SHARED);
+        refreshSoundHints(entryPoint);
+    }
+
+    // How the take's sounds are changed and added to, when it holds the sound channel
+    private void refreshSoundHints(int entryPoint) {
+
+        if (recorderManager.getKeySoundTrack() == null)
+            return;
+
+        recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_SOUNDS);
+        recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_SOUNDS_HINT_SELECT);
+        recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_SOUNDS_HINT_DROP);
+        recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_SOUNDS_ADD,
+                EditorSetting.RECORDER_KEY_SOUND_ADD);
     }
 
     // The selected key's moment and value, kept up as it is dragged

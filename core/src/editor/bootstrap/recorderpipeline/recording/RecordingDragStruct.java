@@ -16,7 +16,8 @@ public class RecordingDragStruct extends StructPackage {
      * whether the press adds to the keys selected or takes from them and
      * whether the key pressed was among them already, the moment and value a
      * box reaches to, and where it would land now — its start and lane, and
-     * whether the cursor is over the lanes at all.
+     * whether the cursor is over the lanes at all, or over the Keys pane's
+     * rows, where a sound from the sound library is added to the take shown.
      */
 
     // Carried
@@ -47,6 +48,7 @@ public class RecordingDragStruct extends StructPackage {
 
     // Landing
     private boolean overLanes;
+    private boolean overKeys;
     private float landingStart;
     private int landingLane;
 
@@ -85,6 +87,7 @@ public class RecordingDragStruct extends StructPackage {
 
         // Landing
         this.overLanes = false;
+        this.overKeys = false;
     }
 
     // The key taken hold of as it stood, and the value under the cursor, so a drag moves it by how far it travels
@@ -118,6 +121,7 @@ public class RecordingDragStruct extends StructPackage {
         this.node = EngineSetting.INDEX_NOT_FOUND;
         this.window = null;
         this.overLanes = false;
+        this.overKeys = false;
         this.moved = false;
         this.extending = false;
         this.subtracting = false;
@@ -132,8 +136,17 @@ public class RecordingDragStruct extends StructPackage {
 
     public void land(boolean overLanes, float landingStart, int landingLane) {
         this.overLanes = overLanes;
+        this.overKeys = false;
         this.landingStart = landingStart;
         this.landingLane = landingLane;
+    }
+
+    // Over the Keys pane's rows rather than the lanes, at the moment under the cursor
+    public void landOnKeys(float landingStart) {
+        this.overLanes = false;
+        this.overKeys = true;
+        this.landingStart = landingStart;
+        this.landingLane = EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Accessible \\
@@ -212,6 +225,10 @@ public class RecordingDragStruct extends StructPackage {
 
     public boolean isOverLanes() {
         return overLanes;
+    }
+
+    public boolean isOverKeys() {
+        return overKeys;
     }
 
     public float getLandingStart() {

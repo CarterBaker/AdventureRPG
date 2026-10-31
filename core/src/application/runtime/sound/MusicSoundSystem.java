@@ -21,8 +21,9 @@ public class MusicSoundSystem extends SystemPackage {
      * then — the day's while the sun is up, the night's once it is down —
      * each followed by a silence of a random length before the next, so the
      * music comes and goes rather than running on. Only the window that is
-     * heard plays music; one that stops being heard lets its theme fade and
-     * stops its piece, and starts again after a short silence.
+     * heard plays music, unless it is pinned quiet; one that stops being
+     * heard lets its theme fade and stops its piece, and starts again after a
+     * short silence.
      */
 
     // Internal
@@ -80,7 +81,7 @@ public class MusicSoundSystem extends SystemPackage {
     protected void update() {
 
         int windowID = context.getWindow().getWindowID();
-        boolean heard = soundListenerSystem.isHeardHere();
+        boolean heard = soundListenerSystem.isAmbientHere();
         boolean inWorld = playerManager.hasPlayerForWindow(windowID)
                 && !playerManager.isMenuViewForWindow(windowID)
                 && !playerManager.isCharacterPreview(windowID);

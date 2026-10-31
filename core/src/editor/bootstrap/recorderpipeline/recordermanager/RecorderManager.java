@@ -30,6 +30,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
 import editor.bootstrap.recorderpipeline.recording.VideoFormat;
@@ -82,15 +83,22 @@ public class RecorderManager extends ManagerPackage {
      * keys. The Keys pane below the timeline shows the selected clip's take
      * track by track — the camera, the player, every resident, item and
      * vehicle, the weather and the clock — with the graph of the value
-     * selected. Keys are added, deleted, retimed on their rows, moved and bent
-     * by their handles on the graph, given a mode or a typed value, and a
+     * selected, and beneath them the take's Sounds layer, a row for each sound
+     * it heard with a bar for every time it was heard. Sounds are selected,
+     * retimed along their rows, copied to the playhead, added from the sound
+     * library, given another volume, pitch, length or sound, and removed one
+     * by one or every one of a sound at once, each by one method here, and a
+     * change to any of them stops whatever the timeline was sounding so it is
+     * heard again as it now stands. Keys are added, deleted, retimed on their
+     * rows, moved and bent by their handles on the graph, given a mode or a
+     * typed value, and a
      * curve is laid again from the recording, each by one method here; a key
      * or handle dragged changes its curve as it moves. Any number of a curve's
      * keys are selected at once — picked one by one or boxed on the graph or
      * a row, added to or taken away from — and move and delete together; the
      * last picked is the one the inspector shows and whose handles are drawn.
-     * What is selected is deleted as one: the keys, else the node, else the
-     * clip. The Assets pane lists
+     * What is selected is deleted as one: the keys, else the sound, else the
+     * node, else the clip. The Assets pane lists
      * every asset the whole recording uses, section by section, each section
      * opened or closed here. A sound dragged in from the sound library, or
      * added at the playhead, is laid as a take of its own holding that sound
@@ -100,7 +108,11 @@ public class RecorderManager extends ManagerPackage {
      * export mixes every one of them into its video's sound. The player
      * cannot be recorded without the camera
      * that follows it. While a session plays the world, residents, thrown
-     * items and vehicles are held. While the game is paused the session is
+     * items and vehicles are held. While a session runs, its Dev window is
+     * the one heard whichever window has focus, so the world is heard from its
+     * camera and its ambience and music are what a take records; while the
+     * timeline plays the sound channel, they hold silent, as the take already
+     * holds them. While the game is paused the session is
      * suspended — the playhead waits and a take records nothing — and it
      * carries on a few frames after the pause ends, so the pause menu never
      * reaches a take. Stopping ends every session and the Dev window goes back
@@ -124,6 +136,7 @@ public class RecorderManager extends ManagerPackage {
     private RecordingCurveBranch recordingCurveBranch;
     private RecordingAssetBranch recordingAssetBranch;
     private RecordingMixBranch recordingMixBranch;
+    private RecordingSoundBranch recordingSoundBranch;
 
     // Directory
     private File recordingDirectory;
@@ -187,6 +200,12 @@ public class RecorderManager extends ManagerPackage {
     private int keysRevision;
     private int curveRevision;
 
+    // Sounds — whether the Sounds layer of the Keys pane is opened, the sound selected on it, and how often a sound
+    // was changed
+    private boolean soundLayerOpened;
+    private int selectedSound;
+    private int soundRevision;
+
     // Curves
     private ObjectArrayList<RecordingCurveTrackStruct> unlaidTracks;
     private boolean curvesLaid;
@@ -219,6 +238,7 @@ public class RecorderManager extends ManagerPackage {
         this.recordingCurveBranch = create(RecordingCurveBranch.class);
         this.recordingAssetBranch = create(RecordingAssetBranch.class);
         this.recordingMixBranch = create(RecordingMixBranch.class);
+        this.recordingSoundBranch = create(RecordingSoundBranch.class);
 
         // Directory
         this.recordingDirectory = new File(internal.path, EditorSetting.RECORDER_DIRECTORY);
@@ -253,6 +273,10 @@ public class RecorderManager extends ManagerPackage {
         this.draggedKeyTimes = new FloatArrayList();
         this.draggedKeyValues = new DoubleArrayList();
         clearCurveSelection();
+
+        // Sounds
+        this.soundLayerOpened = true;
+        clearSoundSelection();
 
         // Curves
         this.unlaidTracks = new ObjectArrayList<>();
@@ -296,6 +320,7 @@ public class RecorderManager extends ManagerPackage {
         layCurves();
         updateAssets();
         holdWorld();
+        holdSound();
     }
 
     private void releaseCrashedDevContext() {
@@ -368,6 +393,19 @@ public class RecorderManager extends ManagerPackage {
         npcManager.setHeld(RecorderChannel.CHARACTERS.isIn(played));
         projectileManager.setHeld(RecorderChannel.ITEMS.isIn(played));
         vehicleManager.setHeld(RecorderChannel.VEHICLES.isIn(played));
+    }
+
+    // A session's Dev window is the one heard whatever has focus, and its own ambience, music and heartbeat hold
+    // silent while the timeline plays the sound channel in their place
+    private void holdSound() {
+
+        if (devContext == null) {
+            soundManager.unpinHeardWindow();
+            return;
+        }
+
+        soundManager.pinHeardWindow(devContext.getWindow().getWindowID(),
+                RecorderChannel.SOUND.isIn(getPlayedChannels()));
     }
 
     // Session \\
@@ -502,6 +540,7 @@ public class RecorderManager extends ManagerPackage {
         this.suspended = false;
         this.resumeFrames = 0;
         holdWorld();
+        holdSound();
     }
 
     // The take joins the bin and is laid where it was recorded, once the Dev window has handed over all it holds
@@ -1272,9 +1311,21 @@ public class RecorderManager extends ManagerPackage {
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
             case PAN -> panView(x, secondsPerPixel);
-            case KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS, KEYS_BOX, GRAPH_BOX, NONE -> {
+            case KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS, KEYS_BOX, GRAPH_BOX, SOUND_EVENT,
+                    NONE -> {
             }
         }
+    }
+
+    // A sound from the sound library carried over the Keys pane's rows, to be added to the take shown there at the
+    // moment under the cursor
+    public void dragSoundOverKeys(float x, float y, float time) {
+
+        if (drag.getKind() != RecorderDragKind.SOUND)
+            return;
+
+        drag.travel(x, y, EditorSetting.RECORDER_DRAG_THRESHOLD_PIXELS);
+        drag.landOnKeys(time);
     }
 
     // The span lands on the lane it would really be laid on, which the tab shows before it is let go
@@ -1336,6 +1387,7 @@ public class RecorderManager extends ManagerPackage {
         int nodeIndex = drag.getNode();
         boolean moved = drag.isMoved();
         boolean dropped = moved && drag.isOverLanes();
+        boolean droppedOnKeys = drag.isOverKeys();
         float pressTime = drag.getPressTime();
         float landingStart = drag.getLandingStart();
         int landingLane = drag.getLandingLane();
@@ -1358,6 +1410,12 @@ public class RecorderManager extends ManagerPackage {
             case SOUND -> {
                 if (dropped)
                     placeSound(index, landingStart, landingLane);
+                else if (moved && droppedOnKeys)
+                    addSound(index, landingStart);
+            }
+            case SOUND_EVENT -> {
+                if (moved)
+                    moveSound(nodeIndex, landingStart);
             }
             case CLIP -> {
                 if (dropped)
@@ -1437,7 +1495,7 @@ public class RecorderManager extends ManagerPackage {
             case SOUND -> soundManager.getSoundHandleFromSoundID(drag.getIndex()).getPlayedLength();
             case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
             case TRIM_START, TRIM_END, CUT, NODE, PAN, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS,
-                    KEYS_BOX, GRAPH_BOX, NONE -> 0f;
+                    KEYS_BOX, GRAPH_BOX, SOUND_EVENT, NONE -> 0f;
         };
     }
 
@@ -1455,6 +1513,7 @@ public class RecorderManager extends ManagerPackage {
         anchorNode(node, node.getTakeStart());
         this.selectedNode = nodeIndex;
         clearKeySelection();
+        releaseSound();
         keysRevision++;
     }
 
@@ -1575,11 +1634,16 @@ public class RecorderManager extends ManagerPackage {
 
     // Selection \\
 
-    // What is selected removed as one: the keys on the Keys pane, else the node, else the clip
+    // What is selected removed as one: the keys on the Keys pane, else the sound, else the node, else the clip
     public void deleteSelection() {
 
         if (pane == RecorderPane.KEYS && !selectedKeys.isEmpty()) {
             deleteKeys();
+            return;
+        }
+
+        if (isSoundIndex(selectedSound)) {
+            removeSound();
             return;
         }
 
@@ -1674,6 +1738,7 @@ public class RecorderManager extends ManagerPackage {
         this.keyTake = take;
         keyTracks.clear();
         clearCurveSelection();
+        clearSoundSelection();
         keysRevision++;
 
         if (take == null)
@@ -1701,6 +1766,11 @@ public class RecorderManager extends ManagerPackage {
 
     // A track opened shows every value it holds, each laid on a curve now if the queue has not reached it yet
     public void toggleTrack(int trackIndex) {
+
+        if (trackIndex == EditorSetting.RECORDER_KEY_TRACK_SOUNDS) {
+            toggleSoundLayer();
+            return;
+        }
 
         if (!isKeyTrackIndex(trackIndex))
             return;
@@ -1734,8 +1804,14 @@ public class RecorderManager extends ManagerPackage {
         return laid;
     }
 
-    // A curve selected for its keys to be edited, laid now if the queue has not reached it yet
+    // A curve selected for its keys to be edited, laid now if the queue has not reached it yet; on the Sounds layer
+    // the first time the sound is heard within the clip is selected instead
     public void selectCurve(int trackIndex, int slot) {
+
+        if (trackIndex == EditorSetting.RECORDER_KEY_TRACK_SOUNDS) {
+            selectFirstSound(slot);
+            return;
+        }
 
         if (!isKeyTrackIndex(trackIndex))
             return;
@@ -1752,6 +1828,7 @@ public class RecorderManager extends ManagerPackage {
         this.selectedTrack = track;
         this.selectedSlot = slot;
         clearKeySelection();
+        releaseSound();
         frameGraph();
         keysRevision++;
     }
@@ -1786,6 +1863,7 @@ public class RecorderManager extends ManagerPackage {
 
         this.selectedKey = shownKey != EngineSetting.INDEX_NOT_FOUND ? shownKey : curve.size() - 1;
         releaseNode();
+        releaseSound();
         keysRevision++;
     }
 
@@ -1837,9 +1915,9 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // What a press on a row of the Keys tab takes hold of: a key on a curve's row to retime it with every key
-    // selected, or a node on a character's movement or gesture row to retime or move it; on nothing on a curve's row
-    // with Shift or Ctrl it boxes the moments it travels over, and anywhere else it selects what it lies on, or with
-    // nothing there moves the playhead
+    // selected, a node on a character's movement or gesture row to retime or move it, or a sound on the Sounds
+    // layer to retime it; on nothing on a curve's row with Shift or Ctrl it boxes the moments it travels over, and
+    // anywhere else it selects what it lies on, or with nothing there moves the playhead
     public void pressKeyRow(
             int trackIndex,
             int row,
@@ -1853,7 +1931,15 @@ public class RecorderManager extends ManagerPackage {
 
         RecordingClipStruct clip = getSelectedClipStruct();
 
-        if (drag.isActive() || clip == null || !isKeyTrackIndex(trackIndex))
+        if (drag.isActive() || clip == null)
+            return;
+
+        if (trackIndex == EditorSetting.RECORDER_KEY_TRACK_SOUNDS) {
+            pressSoundRow(clip, row, time, secondsPerPixel, window, pressX, pressY);
+            return;
+        }
+
+        if (!isKeyTrackIndex(trackIndex))
             return;
 
         RecordingCurveTrackStruct track = keyTracks.get(trackIndex);
@@ -2048,7 +2134,8 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // A key or handle carried on the Keys pane follows the cursor, its curve changing as it moves, and every other
-    // key selected moves with the key carried; a node carried there lands as it does on the lanes, a box reaches to
+    // key selected moves with the key carried; a node carried there lands as it does on the lanes, a sound lands
+    // where it would begin, a box reaches to
     // the cursor, and a press on nothing scrolls the view, on the graph its values too
     public void dragKeysTo(float x, float y, float time, double value, float secondsPerPixel, boolean snapping) {
 
@@ -2062,6 +2149,11 @@ public class RecorderManager extends ManagerPackage {
 
         if (drag.getKind() == RecorderDragKind.NODE) {
             landNode(time);
+            return;
+        }
+
+        if (drag.getKind() == RecorderDragKind.SOUND_EVENT) {
+            landSound(time, secondsPerPixel, snapping);
             return;
         }
 
@@ -2355,9 +2447,10 @@ public class RecorderManager extends ManagerPackage {
         return curve;
     }
 
-    // A press on nothing lets the selected keys go and moves the playhead to where it was
+    // A press on nothing lets the selected keys and sound go and moves the playhead to where it was
     private void releaseKeyAt(float time) {
         clearKeySelection();
+        releaseSound();
         keysRevision++;
         seek(time);
     }
@@ -2368,7 +2461,8 @@ public class RecorderManager extends ManagerPackage {
         clearKeySelection();
     }
 
-    // The keys selected kept in order; the one last added is the key shown, and a key joining lets any node go
+    // The keys selected kept in order; the one last added is the key shown, and a key joining lets any node or sound
+    // go
     private void addKeyToSelection(int keyIndex) {
 
         int slot = Arrays.binarySearch(selectedKeys.elements(), 0, selectedKeys.size(), keyIndex);
@@ -2378,6 +2472,7 @@ public class RecorderManager extends ManagerPackage {
 
         this.selectedKey = keyIndex;
         releaseNode();
+        releaseSound();
     }
 
     // Keys selected let any selected node go, so Delete always knows which of them it removes
@@ -2420,6 +2515,365 @@ public class RecorderManager extends ManagerPackage {
 
     private boolean isKeyTrackIndex(int trackIndex) {
         return trackIndex >= 0 && trackIndex < keyTracks.size();
+    }
+
+    // Sound Layer \\
+
+    public void toggleSoundLayer() {
+
+        if (getKeySoundTrack() == null)
+            return;
+
+        this.soundLayerOpened = !soundLayerOpened;
+        keysRevision++;
+    }
+
+    // Selecting a sound lets every selected key and any node go, so Delete always knows what it removes
+    public void selectSound(int soundIndex) {
+
+        if (!isSoundIndex(soundIndex) || soundIndex == selectedSound)
+            return;
+
+        this.selectedSound = soundIndex;
+        clearKeySelection();
+        releaseNode();
+        keysRevision++;
+        revision++;
+    }
+
+    private void selectFirstSound(int nameIndex) {
+
+        RecordingClipStruct clip = getSelectedClipStruct();
+        RecordingSoundTrackStruct track = getKeySoundTrack();
+
+        if (clip == null || track == null)
+            return;
+
+        for (int i = 0; i < track.size(); i++)
+            if (track.getNameIndex(i) == nameIndex && recordingSoundBranch.isHeardIn(clip, track, i)) {
+                selectSound(i);
+                return;
+            }
+    }
+
+    // A press on the Sounds layer takes hold of the sound under it — any sound on the layer's own row, a sound of
+    // the row's own on a sound's row — selecting it and carrying it to retime it; on nothing it moves the playhead
+    private void pressSoundRow(
+            RecordingClipStruct clip,
+            int row,
+            float time,
+            float secondsPerPixel,
+            WindowInstance window,
+            float pressX,
+            float pressY) {
+
+        RecordingSoundTrackStruct track = clip.getTake().getSoundTrack();
+        int soundIndex = track != null
+                ? recordingSoundBranch.findSoundAt(clip, track, row >= 0 ? row : EngineSetting.INDEX_NOT_FOUND, time,
+                        EditorSetting.RECORDER_SOUND_GRAB_PIXELS * secondsPerPixel)
+                : EngineSetting.INDEX_NOT_FOUND;
+
+        if (soundIndex == EngineSetting.INDEX_NOT_FOUND) {
+            beginDrag(RecorderDragKind.KEYS_PRESS, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
+                    window, pressX, pressY, time, 0f);
+            return;
+        }
+
+        selectSound(soundIndex);
+
+        if (!canEditTimeline())
+            return;
+
+        float start = clip.toTimelineTime(track.getTime(soundIndex));
+
+        beginDrag(RecorderDragKind.SOUND_EVENT, selectedClip, soundIndex, window, pressX, pressY, time, time - start);
+        drag.land(false, start, clip.getLane());
+    }
+
+    // A sound carried lands where it would begin with the cursor where it is now, within its clip, snapped to the
+    // timeline's edges when asked; the Keys pane moves its bar there
+    private void landSound(float time, float secondsPerPixel, boolean snapping) {
+
+        RecordingClipStruct clip = recording.getClips().get(drag.getIndex());
+        float landing = time - drag.getGrabOffset();
+
+        if (snapping)
+            landing = recordingTimelineBranch.snapTime(recording, landing, playhead,
+                    EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel, null);
+
+        drag.land(false, recordingSoundBranch.resolveLanding(clip, landing), clip.getLane());
+        curveRevision++;
+    }
+
+    // The sound heard from the moment of its clip instead, still selected
+    public void moveSound(int soundIndex, float time) {
+
+        RecordingClipStruct clip = getSelectedClipStruct();
+
+        if (!canEditTimeline() || clip == null || !isSoundIndex(soundIndex))
+            return;
+
+        RecordingSoundTrackStruct track = clip.getTake().getSoundTrack();
+        String soundName = track.getSoundName(soundIndex);
+
+        this.selectedSound = track.moveEvent(soundIndex,
+                clip.toTakeTime(recordingSoundBranch.resolveLanding(clip, time)));
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_MOVED + soundName);
+    }
+
+    // A sound from the sound library heard from the moment within the selected clip, the Sounds layer opened to show
+    // it selected
+    public void addSound(int soundID, float time) {
+
+        if (!canEditTimeline())
+            return;
+
+        if (soundID == EngineSetting.INDEX_NOT_FOUND) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_LIBRARY_SOUND);
+            return;
+        }
+
+        RecordingClipStruct clip = getSelectedClipStruct();
+
+        if (clip == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_CLIP);
+            return;
+        }
+
+        RecordingSoundTrackStruct track = clip.getTake().getSoundTrack();
+
+        if (track == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_SOUND_LAYER);
+            return;
+        }
+
+        SoundHandle soundHandle = soundManager.getSoundHandleFromSoundID(soundID);
+        float takeTime = Math.clamp(clip.toTakeTime(time), clip.getInPoint(), clip.getOutPoint());
+
+        this.selectedSound = recordingSoundBranch.addSound(track, soundHandle, takeTime);
+        this.soundLayerOpened = true;
+        clearKeySelection();
+        releaseNode();
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_ADDED + soundHandle.getSoundName());
+    }
+
+    public void addSoundAtPlayhead(int soundID) {
+
+        if (requirePlayheadInClip())
+            addSound(soundID, playhead);
+    }
+
+    // A second hearing of the selected sound from the playhead, selected in its place
+    public void copySoundToPlayhead() {
+
+        RecordingSoundTrackStruct track = requireSelectedSound();
+
+        if (track == null || !requirePlayheadInClip())
+            return;
+
+        String soundName = track.getSoundName(selectedSound);
+
+        this.selectedSound = track.copyEvent(selectedSound, getSelectedClipStruct().toTakeTime(playhead));
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_ADDED + soundName);
+    }
+
+    public void seekSound() {
+
+        RecordingSoundTrackStruct track = requireSelectedSound();
+
+        if (track != null)
+            seek(getSelectedClipStruct().toTimelineTime(track.getTime(selectedSound)));
+    }
+
+    // Another sound from the sound library heard in the selected one's place
+    public void replaceSound(int soundID) {
+
+        RecordingSoundTrackStruct track = requireSelectedSound();
+
+        if (track == null)
+            return;
+
+        if (soundID == EngineSetting.INDEX_NOT_FOUND) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_LIBRARY_SOUND);
+            return;
+        }
+
+        SoundHandle soundHandle = soundManager.getSoundHandleFromSoundID(soundID);
+
+        recordingSoundBranch.replaceSound(track, selectedSound, soundHandle);
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_REPLACED + soundHandle.getSoundName());
+    }
+
+    public void removeSound() {
+
+        RecordingSoundTrackStruct track = requireSelectedSound();
+
+        if (track == null)
+            return;
+
+        String soundName = track.getSoundName(selectedSound);
+
+        track.removeEvent(selectedSound);
+        clearSoundSelection();
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_REMOVED + soundName);
+    }
+
+    // Every time the take heard the selected sound, removed at once
+    public void removeEverySound() {
+
+        RecordingSoundTrackStruct track = requireSelectedSound();
+
+        if (track == null)
+            return;
+
+        String soundName = track.getSoundName(selectedSound);
+
+        recordingSoundBranch.removeEvery(track, soundName);
+        clearSoundSelection();
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUNDS_REMOVED + soundName);
+    }
+
+    public boolean isSoundVolumeValid(String text) {
+        return isSoundIndex(selectedSound) && !Float.isNaN(recordingSoundBranch.parseAmount(text,
+                EditorSetting.RECORDER_SOUND_VOLUME_MIN_PERCENT, EditorSetting.RECORDER_SOUND_VOLUME_MAX_PERCENT));
+    }
+
+    // As loud as the percentage typed, reaching the camera louder or quieter by just as much
+    public void setSoundVolume(String text) {
+
+        RecordingSoundTrackStruct track = requireSelectedSound();
+
+        if (track == null || !isSoundVolumeValid(text))
+            return;
+
+        track.setVolume(selectedSound, recordingSoundBranch.parseAmount(text,
+                EditorSetting.RECORDER_SOUND_VOLUME_MIN_PERCENT, EditorSetting.RECORDER_SOUND_VOLUME_MAX_PERCENT)
+                / EditorSetting.RECORDER_SOUND_PERCENT);
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_CHANGED + track.getSoundName(selectedSound));
+    }
+
+    public String formatSoundVolumeInput() {
+
+        RecordingSoundTrackStruct track = getKeySoundTrack();
+
+        return isSoundIndex(selectedSound) ? String.format(EditorSetting.RECORDER_SOUND_PERCENT_FORMAT,
+                track.getVolume(selectedSound) * EditorSetting.RECORDER_SOUND_PERCENT) : "";
+    }
+
+    public boolean isSoundPitchValid(String text) {
+        return isSoundIndex(selectedSound) && !Float.isNaN(recordingSoundBranch.parseAmount(text,
+                EditorSetting.RECORDER_SOUND_PITCH_MIN_PERCENT, EditorSetting.RECORDER_SOUND_PITCH_MAX_PERCENT));
+    }
+
+    // Played at the percentage typed, a sound that plays through running shorter or longer with it
+    public void setSoundPitch(String text) {
+
+        RecordingSoundTrackStruct track = requireSelectedSound();
+
+        if (track == null || !isSoundPitchValid(text))
+            return;
+
+        recordingSoundBranch.setPitch(track, selectedSound, recordingSoundBranch.parseAmount(text,
+                EditorSetting.RECORDER_SOUND_PITCH_MIN_PERCENT, EditorSetting.RECORDER_SOUND_PITCH_MAX_PERCENT)
+                / EditorSetting.RECORDER_SOUND_PERCENT);
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_CHANGED + track.getSoundName(selectedSound));
+    }
+
+    public String formatSoundPitchInput() {
+
+        RecordingSoundTrackStruct track = getKeySoundTrack();
+
+        return isSoundIndex(selectedSound) ? String.format(EditorSetting.RECORDER_SOUND_PERCENT_FORMAT,
+                track.getPitch(selectedSound) * EditorSetting.RECORDER_SOUND_PERCENT) : "";
+    }
+
+    public boolean isSoundLengthValid(String text) {
+        return isSoundIndex(selectedSound) && !Float.isNaN(recordingSoundBranch.parseAmount(text,
+                EditorSetting.RECORDER_SOUND_MIN_LENGTH_SECONDS, Float.MAX_VALUE));
+    }
+
+    // Heard for the seconds typed, no longer than it can run unless it loops
+    public void setSoundLength(String text) {
+
+        RecordingSoundTrackStruct track = requireSelectedSound();
+
+        if (track == null || !isSoundLengthValid(text))
+            return;
+
+        recordingSoundBranch.setLength(track, selectedSound, recordingSoundBranch.parseAmount(
+                text, EditorSetting.RECORDER_SOUND_MIN_LENGTH_SECONDS, Float.MAX_VALUE));
+        finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_CHANGED + track.getSoundName(selectedSound));
+    }
+
+    public String formatSoundLengthInput() {
+
+        RecordingSoundTrackStruct track = getKeySoundTrack();
+
+        return isSoundIndex(selectedSound)
+                ? String.format(EditorSetting.RECORDER_SOUND_LENGTH_FORMAT, track.getDuration(selectedSound))
+                : "";
+    }
+
+    // Every sound edit stops what the timeline was sounding, lists the take's assets again and marks it unsaved
+    private void finishSoundEdit(String status) {
+        soundRevision++;
+        this.assetsStale = true;
+        markUnsaved();
+        keysRevision++;
+        setStatus(status);
+    }
+
+    // The selected sound's track when sounds can be edited, null after saying why not
+    private RecordingSoundTrackStruct requireSelectedSound() {
+
+        if (!canEditTimeline())
+            return null;
+
+        if (!isSoundIndex(selectedSound)) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_SOUND);
+            return null;
+        }
+
+        return getKeySoundTrack();
+    }
+
+    // True when the playhead lies within the selected clip, after saying why not
+    private boolean requirePlayheadInClip() {
+
+        RecordingClipStruct clip = getSelectedClipStruct();
+
+        if (clip == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_CLIP);
+            return false;
+        }
+
+        if (playhead < clip.getStart() || playhead > clip.getEnd()) {
+            setStatus(EditorSetting.RECORDER_STATUS_OUTSIDE_CLIP);
+            return false;
+        }
+
+        return true;
+    }
+
+    // A key or node selected lets the selected sound go
+    private void releaseSound() {
+
+        if (selectedSound == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        clearSoundSelection();
+        revision++;
+    }
+
+    private void clearSoundSelection() {
+        this.selectedSound = EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private boolean isSoundIndex(int soundIndex) {
+
+        RecordingSoundTrackStruct track = getKeySoundTrack();
+
+        return track != null && soundIndex >= 0 && soundIndex < track.size();
     }
 
     // Assets \\
@@ -2889,6 +3343,37 @@ public class RecorderManager extends ManagerPackage {
     // The indices of every key selected on the selected curve, in order
     public IntArrayList getSelectedKeys() {
         return selectedKeys;
+    }
+
+    // The sounds of the take the Keys pane shows, null when it holds no sound channel
+    public RecordingSoundTrackStruct getKeySoundTrack() {
+        return keyTake != null ? keyTake.getSoundTrack() : null;
+    }
+
+    public boolean isSoundLayerOpened() {
+        return soundLayerOpened;
+    }
+
+    public int getSelectedSound() {
+        return selectedSound;
+    }
+
+    // True when the sound loops, running for as long as it is asked
+    public boolean isSoundLooping(int soundIndex) {
+        return recordingSoundBranch.isLooping(getKeySoundTrack(), soundIndex);
+    }
+
+    public boolean isSoundHeardIn(RecordingClipStruct clip, int soundIndex) {
+        return recordingSoundBranch.isHeardIn(clip, getKeySoundTrack(), soundIndex);
+    }
+
+    public int countSounds(int nameIndex) {
+        return recordingSoundBranch.countSounds(getKeySoundTrack(), nameIndex);
+    }
+
+    // Moves whenever a sound is changed, so whatever the timeline sounds is started again as it now stands
+    public int getSoundRevision() {
+        return soundRevision;
     }
 
     public RecordingClipStruct getKeyClip() {

@@ -17,9 +17,13 @@ public class RecordingSoundTrackStruct extends StructPackage {
      * it was — named once in the track's own list of names — how loud and at
      * what pitch it was asked for, whether it was placed in the world and
      * where, and how loud and from which side it reached the camera, so an
-     * export can mix it as it was heard. One list per field, so a track of any
-     * length stores no object per sound. The longest any sound runs is kept,
-     * so the sounds sounding at a moment are found from a binary search.
+     * export can mix it as it was heard. A sound already playing when the take
+     * began starts before it, so it is heard from as far into it as it had
+     * reached. Sounds are moved, copied, changed and removed in place, and a
+     * name no sound uses any longer leaves the list. One list per field, so a
+     * track of any length stores no object per sound. The longest any sound
+     * runs is kept, so the sounds sounding at a moment are found from a binary
+     * search.
      */
 
     // Names
@@ -106,9 +110,74 @@ public class RecordingSoundTrackStruct extends StructPackage {
         return index;
     }
 
+    // The sound heard again from another moment, every other field kept; its new place comes back
+    public int moveEvent(int index, float time) {
+
+        int moved = copyEvent(index, time);
+
+        removeEvent(moved > index ? index : index + 1);
+        return moved > index ? moved - 1 : moved;
+    }
+
+    // A second hearing of the sound from another moment, every other field kept; its place comes back
+    public int copyEvent(int index, float time) {
+        return addEvent(
+                time,
+                getDuration(index),
+                getSoundName(index),
+                getVolume(index),
+                getPitch(index),
+                isSpatial(index),
+                getChunkCoordinate(index),
+                getPositionX(index),
+                getPositionY(index),
+                getPositionZ(index),
+                getHeardGain(index),
+                getHeardPan(index));
+    }
+
+    // The sound gone from the track, and its name with it once no other sound uses it
+    public void removeEvent(int index) {
+
+        times.removeFloat(index);
+        durations.removeFloat(index);
+        nameIndices.removeInt(index);
+        volumes.removeFloat(index);
+        pitches.removeFloat(index);
+        spatials.removeInt(index);
+        chunkCoordinates.removeLong(index);
+        positionsX.removeFloat(index);
+        positionsY.removeFloat(index);
+        positionsZ.removeFloat(index);
+        heardGains.removeFloat(index);
+        heardPans.removeFloat(index);
+        pruneNames();
+        resolveLongestDuration();
+    }
+
     public void setDuration(int index, float duration) {
         durations.set(index, duration);
         this.longestDuration = Math.max(longestDuration, duration);
+    }
+
+    // As loud as asked, and reaching the camera louder or quieter by just as much
+    public void setVolume(int index, float volume) {
+
+        float previous = getVolume(index);
+
+        heardGains.set(index, previous > 0f ? getHeardGain(index) * volume / previous : getHeardGain(index));
+        volumes.set(index, volume);
+    }
+
+    public void setPitch(int index, float pitch) {
+        pitches.set(index, pitch);
+    }
+
+    // Another sound heard in its place, reaching the camera as loud as the gain given
+    public void setSound(int index, String soundName, float heardGain) {
+        nameIndices.set(index, resolveNameIndex(soundName));
+        heardGains.set(index, heardGain);
+        pruneNames();
     }
 
     // The name's place in the track's list, added the first time it is named
@@ -122,6 +191,30 @@ public class RecordingSoundTrackStruct extends StructPackage {
         soundNames.add(soundName);
         soundName2Index.put(soundName, soundNames.size() - 1);
         return soundNames.size() - 1;
+    }
+
+    // Every name no sound uses dropped from the list, the rest keeping their order
+    private void pruneNames() {
+
+        int kept = 0;
+
+        for (int name = 0; name < soundNames.size(); name++) {
+
+            if (!nameIndices.contains(name))
+                continue;
+
+            for (int i = 0; i < nameIndices.size(); i++)
+                if (nameIndices.getInt(i) == name)
+                    nameIndices.set(i, kept);
+
+            soundNames.set(kept++, soundNames.get(name));
+        }
+
+        soundNames.size(kept);
+        soundName2Index.clear();
+
+        for (int name = 0; name < kept; name++)
+            soundName2Index.put(soundNames.get(name), name);
     }
 
     // The longest duration measured again, as reading a track back needs
@@ -167,6 +260,10 @@ public class RecordingSoundTrackStruct extends StructPackage {
 
     public String getSoundName(int index) {
         return soundNames.get(nameIndices.getInt(index));
+    }
+
+    public int getNameIndex(int index) {
+        return nameIndices.getInt(index);
     }
 
     public float getVolume(int index) {

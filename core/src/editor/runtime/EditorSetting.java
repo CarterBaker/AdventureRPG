@@ -192,6 +192,9 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
     public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
+    public static final String DIALOG_TITLE_SOUND_VOLUME = "Sound Volume (%)";
+    public static final String DIALOG_TITLE_SOUND_PITCH = "Sound Pitch (%)";
+    public static final String DIALOG_TITLE_SOUND_LENGTH = "Sound Length (seconds)";
     public static final String DIALOG_TITLE_PLACEMENT_X = "Placement X";
     public static final String DIALOG_TITLE_PLACEMENT_Z = "Placement Z";
     public static final String DIALOG_TITLE_CAMERA_NAME = "Camera Name";
@@ -1415,6 +1418,18 @@ public class EditorSetting {
     public static final int RECORDER_SOUND_TAKE_FIRST_NUMBER = 2;
     public static final float RECORDER_SOUND_JUMP_SECONDS = 0.25f;
     public static final String RECORDER_SOUND_TAKE_NAME_SEPARATOR = " ";
+
+    // Recorder — a sound's volume and pitch are typed as a percentage within these bounds, its length in seconds no
+    // shorter than this; a sound is taken hold of this near its bar
+    public static final float RECORDER_SOUND_PERCENT = 100f;
+    public static final float RECORDER_SOUND_VOLUME_MIN_PERCENT = 1f;
+    public static final float RECORDER_SOUND_VOLUME_MAX_PERCENT = 100f;
+    public static final float RECORDER_SOUND_PITCH_MIN_PERCENT = 25f;
+    public static final float RECORDER_SOUND_PITCH_MAX_PERCENT = 400f;
+    public static final float RECORDER_SOUND_MIN_LENGTH_SECONDS = 0.01f;
+    public static final float RECORDER_SOUND_GRAB_PIXELS = 4f;
+    public static final String RECORDER_SOUND_PERCENT_FORMAT = "%.0f";
+    public static final String RECORDER_SOUND_LENGTH_FORMAT = "%.2f";
     public static final int RECORDER_AUDIO_SAMPLE_RATE = 48_000;
     public static final int RECORDER_AUDIO_CHANNELS = 2;
     public static final int RECORDER_AUDIO_SAMPLE_BYTES = Short.BYTES;
@@ -1547,11 +1562,13 @@ public class EditorSetting {
     public static final String RECORDER_VALUE_CLOCK_SEPARATOR = ":";
 
     // Recorder — the Keys tab; a row hands back its track's place and what it shows, a curve's slot or one of the
-    // rows below, and a press takes hold of a key or a handle this near it
+    // rows below, the Sounds layer standing in a place of its own with a row for each sound it names, and a press
+    // takes hold of a key or a handle this near it
     public static final String RECORDER_KEY_ROW_SEPARATOR = ":";
     public static final int RECORDER_KEY_ROW_TRACK = -1;
     public static final int RECORDER_KEY_ROW_MOVEMENT = -2;
     public static final int RECORDER_KEY_ROW_GESTURES = -3;
+    public static final int RECORDER_KEY_TRACK_SOUNDS = -1;
     public static final float RECORDER_KEY_GRAB_PIXELS = 6f;
     public static final float RECORDER_GRAPH_GRAB_PIXELS = 9f;
     public static final double RECORDER_GRAPH_MARGIN_SHARE = 0.1;
@@ -1810,6 +1827,15 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_LAST_KEY = "A value keeps at least one key: change its value instead";
     public static final String RECORDER_STATUS_NO_CURVE = "Click a value on the Keys pane first";
     public static final String RECORDER_STATUS_NO_KEY = "Click a key first";
+    public static final String RECORDER_STATUS_SOUND_MOVED = "Moved sound ";
+    public static final String RECORDER_STATUS_SOUND_REMOVED = "Removed sound ";
+    public static final String RECORDER_STATUS_SOUNDS_REMOVED = "Removed every ";
+    public static final String RECORDER_STATUS_SOUND_ADDED = "Added sound ";
+    public static final String RECORDER_STATUS_SOUND_CHANGED = "Changed sound ";
+    public static final String RECORDER_STATUS_SOUND_REPLACED = "Now plays ";
+    public static final String RECORDER_STATUS_NO_SOUND = "Click a sound on the Sounds layer first";
+    public static final String RECORDER_STATUS_NO_SOUND_LAYER = "This take holds no sound channel to add to";
+    public static final String RECORDER_STATUS_NO_LIBRARY_SOUND = "Select a sound in the Sound Library first";
     public static final String RECORDER_STATUS_CLIP_REMOVED = "Removed a clip of ";
     public static final String RECORDER_STATUS_TAKE_DELETED = "Deleted take ";
     public static final String RECORDER_STATUS_NO_CLIP = "Select a clip on the timeline first";
@@ -1864,6 +1890,15 @@ public class EditorSetting {
     public static final String RECORDER_KEY_KEY_VALUE = "key_value";
     public static final String RECORDER_KEY_CURVE_REFIT = "curve_refit";
     public static final String RECORDER_KEY_TAKE_REFIT = "take_refit";
+    public static final String RECORDER_KEY_SOUND_VOLUME = "sound_volume";
+    public static final String RECORDER_KEY_SOUND_PITCH = "sound_pitch";
+    public static final String RECORDER_KEY_SOUND_LENGTH = "sound_length";
+    public static final String RECORDER_KEY_SOUND_REPLACE = "sound_replace";
+    public static final String RECORDER_KEY_SOUND_COPY = "sound_copy";
+    public static final String RECORDER_KEY_SOUND_ADD = "sound_add";
+    public static final String RECORDER_KEY_SOUND_SEEK = "sound_seek";
+    public static final String RECORDER_KEY_SOUND_REMOVE = "sound_remove";
+    public static final String RECORDER_KEY_SOUND_REMOVE_ALL = "sound_remove_all";
     public static final String RECORDER_KEY_RESOLUTION = "resolution";
     public static final String RECORDER_KEY_FRAME_RATE = "frame_rate";
     public static final String RECORDER_KEY_FORMAT = "format";

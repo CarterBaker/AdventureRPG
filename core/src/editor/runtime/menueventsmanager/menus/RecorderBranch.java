@@ -11,6 +11,7 @@ import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
+import editor.bootstrap.soundlibrarypipeline.soundlibrarymanager.SoundLibraryManager;
 import editor.runtime.EditorSetting;
 import engine.input.Buttons;
 import engine.input.Input;
@@ -29,7 +30,9 @@ public class RecorderBranch extends BranchPackage {
      * the bin picks it up, and letting go over the lanes lays it there; a
      * sound pressed in the sound library is picked up the same way and laid
      * as a take of its own over the lanes of whichever Recorder tab the
-     * cursor is let go above, in any window. A
+     * cursor is let go above, in any window, or let go over the rows of its
+     * Keys pane is added to the take shown there at the moment under the
+     * cursor. A
      * press on the lanes is handed to the recorder once, where it began, to
      * take hold of a clip's edge, a node, a clip or the empty lanes; letting
      * go trims, retimes, moves or scrolls, and a press that never travels
@@ -47,8 +50,11 @@ public class RecorderBranch extends BranchPackage {
      * row's strip or on the graph is handed to the recorder once to take hold
      * of a key, a handle or a node, or on nothing to scroll the view as it
      * travels; with Shift a key pressed joins the keys selected and a press
-     * on nothing boxes keys to add, with Ctrl to take away. The value under
-     * the cursor on the graph is read from the
+     * on nothing boxes keys to add, with Ctrl to take away; a sound's bar on
+     * the Sounds layer is selected and dragged along its row to retime it, and
+     * its volume, pitch and length are typed in the text dialog, while the
+     * Sound Library's selection is what a sound is added from or replaced
+     * with. The value under the cursor on the graph is read from the
      * span of values it shows. On the Assets pane a section's head opens or
      * closes it. The drag is read from the window the press began in until the
      * button is let go. Rows hand back the index of the take they show, Keys
@@ -67,6 +73,7 @@ public class RecorderBranch extends BranchPackage {
     private WindowManager windowManager;
     private ShortcutManager shortcutManager;
     private SoundManager soundManager;
+    private SoundLibraryManager soundLibraryManager;
 
     // Shortcuts
     private int freeDragShortcutID;
@@ -86,6 +93,7 @@ public class RecorderBranch extends BranchPackage {
         this.windowManager = get(WindowManager.class);
         this.shortcutManager = get(ShortcutManager.class);
         this.soundManager = get(SoundManager.class);
+        this.soundLibraryManager = get(SoundLibraryManager.class);
     }
 
     @Override
@@ -331,7 +339,8 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.deleteSelection();
     }
 
-    // A track's name opens or closes it, a curve's name selects it
+    // A track's name opens or closes it, a curve's name selects it, and a sound's name selects the first time it is
+    // heard
     public void pressKeyName(String rowKey) {
 
         int trackIndex = resolveKeyTrack(rowKey);
@@ -430,6 +439,57 @@ public class RecorderBranch extends BranchPackage {
                 recorderManager::setKeyValue);
     }
 
+    // Sounds \\
+
+    // The Sound Library's selection heard in the selected sound's place
+    private void replaceSound() {
+        recorderManager.replaceSound(soundLibraryManager.getSelectedSoundID());
+    }
+
+    // The Sound Library's selection added to the selected clip's take at the playhead
+    private void addSound() {
+        recorderManager.addSoundAtPlayhead(soundLibraryManager.getSelectedSoundID());
+    }
+
+    private void openSoundVolume(WindowInstance window) {
+
+        if (recorderManager.getSelectedSound() < 0)
+            return;
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.DIALOG_TITLE_SOUND_VOLUME,
+                recorderManager.formatSoundVolumeInput(),
+                recorderManager::isSoundVolumeValid,
+                recorderManager::setSoundVolume);
+    }
+
+    private void openSoundPitch(WindowInstance window) {
+
+        if (recorderManager.getSelectedSound() < 0)
+            return;
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.DIALOG_TITLE_SOUND_PITCH,
+                recorderManager.formatSoundPitchInput(),
+                recorderManager::isSoundPitchValid,
+                recorderManager::setSoundPitch);
+    }
+
+    private void openSoundLength(WindowInstance window) {
+
+        if (recorderManager.getSelectedSound() < 0)
+            return;
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.DIALOG_TITLE_SOUND_LENGTH,
+                recorderManager.formatSoundLengthInput(),
+                recorderManager::isSoundLengthValid,
+                recorderManager::setSoundLength);
+    }
+
     // Takes \\
 
     // The take is picked up on the press and carried over the lanes until let go
@@ -445,8 +505,8 @@ public class RecorderBranch extends BranchPackage {
         dragOver(window, window, findLanes(window));
     }
 
-    // A sound is picked up on the press wherever it was pressed, and carried over the lanes of the Recorder tab under
-    // the cursor until let go
+    // A sound is picked up on the press wherever it was pressed, and carried over the lanes or the Keys pane's rows
+    // of the Recorder tab under the cursor until let go
     public void dragSound(String soundName, WindowInstance window) {
 
         if (!recorderManager.getDrag().isActive())
@@ -457,8 +517,33 @@ public class RecorderBranch extends BranchPackage {
                     inputManager.getHoverMouseY(window));
 
         WindowInstance hovered = windowManager.getHoveredWindow();
+        ElementInstance graph = hovered != null ? findKeyStrips(hovered) : null;
+
+        if (graph != null) {
+            recorderManager.dragSoundOverKeys(
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window),
+                    resolveTime(hovered, graph));
+            return;
+        }
 
         dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
+    }
+
+    // The graph whose span the Keys pane's strips share, when the cursor is over those strips in the window; null
+    // otherwise
+    private ElementInstance findKeyStrips(WindowInstance window) {
+
+        MenuInstance menu = findRecorderMenu(window);
+
+        if (menu == null || recorderManager.getPane() != RecorderPane.KEYS)
+            return null;
+
+        ElementInstance keyRows = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
+        ElementInstance graph = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
+
+        return isUnderCursor(window, keyRows) && graph.getComputedW() > 0f
+                && inputManager.getHoverMouseX(window) >= graph.getComputedLeft() ? graph : null;
     }
 
     public void placeTake(String takeKey) {
@@ -652,6 +737,15 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_KEY_VALUE -> openKeyValue(window);
             case EditorSetting.RECORDER_KEY_CURVE_REFIT -> recorderManager.refitCurve();
             case EditorSetting.RECORDER_KEY_TAKE_REFIT -> recorderManager.refitTake();
+            case EditorSetting.RECORDER_KEY_SOUND_VOLUME -> openSoundVolume(window);
+            case EditorSetting.RECORDER_KEY_SOUND_PITCH -> openSoundPitch(window);
+            case EditorSetting.RECORDER_KEY_SOUND_LENGTH -> openSoundLength(window);
+            case EditorSetting.RECORDER_KEY_SOUND_REPLACE -> replaceSound();
+            case EditorSetting.RECORDER_KEY_SOUND_COPY -> recorderManager.copySoundToPlayhead();
+            case EditorSetting.RECORDER_KEY_SOUND_ADD -> addSound();
+            case EditorSetting.RECORDER_KEY_SOUND_SEEK -> recorderManager.seekSound();
+            case EditorSetting.RECORDER_KEY_SOUND_REMOVE -> recorderManager.removeSound();
+            case EditorSetting.RECORDER_KEY_SOUND_REMOVE_ALL -> recorderManager.removeEverySound();
             case EditorSetting.RECORDER_KEY_RESOLUTION -> recorderManager.cycleResolution();
             case EditorSetting.RECORDER_KEY_FRAME_RATE -> recorderManager.cycleFrameRate();
             case EditorSetting.RECORDER_KEY_FORMAT -> recorderManager.cycleFormat();

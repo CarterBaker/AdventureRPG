@@ -27,8 +27,8 @@ public class AmbienceSoundSystem extends SystemPackage {
      * to the water; birds by day and crickets by night on land, hushed by the
      * rain; and nothing but the hush under water while the camera is beneath
      * it. In a hard storm thunder rolls now and then, and in a strong wind it
-     * gusts. Only the window that is heard holds them; any other lets them
-     * fade, and a window with no player hears none. The biome is read again
+     * gusts. Only the window that is heard holds them, unless it is pinned
+     * quiet; any other lets them fade, and a window with no player hears none. The biome is read again
      * only when the player steps into another chunk.
      */
 
@@ -104,7 +104,7 @@ public class AmbienceSoundSystem extends SystemPackage {
         for (int i = 0; i < levels.length; i++)
             levels[i] = 0f;
 
-        if (soundListenerSystem.isHeardHere() && playerManager.hasPlayerForWindow(windowID) && grid != null)
+        if (soundListenerSystem.isAmbientHere() && playerManager.hasPlayerForWindow(windowID) && grid != null)
             listen(playerManager.getPlayerForWindow(windowID), grid,
                     playerManager.getCameraForWindow(windowID).getPosition().y);
 

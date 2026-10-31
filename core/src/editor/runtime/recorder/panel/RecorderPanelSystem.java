@@ -6,6 +6,7 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.soundpipeline.soundmanager.SoundManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
@@ -19,6 +20,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
 import editor.runtime.recorder.RecorderSetting;
@@ -36,8 +38,9 @@ public class RecorderPanelSystem extends SystemPackage {
      * refills every panel — the recordings in the game's directory with the
      * open one marked, the channels armed for the next take and the export
      * settings, the bin of takes with their channels, length and how often
-     * each is laid, the clip selected with what it plays, the node selected on
-     * it and every edit it takes, and the stretch of the timeline in view: its
+     * each is laid, the clip selected with what it plays, the node or sound
+     * selected on it and every edit it takes, and the stretch of the timeline
+     * in view: its
      * ruler's ticks, its export range, and its clips on their lanes, highest
      * on top, each with what the player does along it — the movement it is in
      * along its lower row and every gesture of its hands along its upper row —
@@ -58,6 +61,7 @@ public class RecorderPanelSystem extends SystemPackage {
     private MenuManager menuManager;
     private FBOManager fboManager;
     private RecorderManager recorderManager;
+    private SoundManager soundManager;
 
     // Menus
     private MenuInstance recorderMenu;
@@ -170,6 +174,7 @@ public class RecorderPanelSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
         this.recorderManager = get(RecorderManager.class);
+        this.soundManager = get(SoundManager.class);
     }
 
     @Override
@@ -505,6 +510,7 @@ public class RecorderPanelSystem extends SystemPackage {
         injectText(RecorderSetting.ENTRY_CLIP, String.format(RecorderSetting.FORMAT_CLIP_SOURCE,
                 formatTime(clip.getInPoint()), formatTime(clip.getOutPoint())));
         refreshNode(RecorderSetting.ENTRY_CLIP);
+        refreshSound(RecorderSetting.ENTRY_CLIP);
         injectHeader(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_HEADER_PLAYS);
 
         for (RecorderChannel channel : RecorderChannel.VALUES)
@@ -528,6 +534,11 @@ public class RecorderPanelSystem extends SystemPackage {
                 EditorSetting.RECORDER_KEY_CLIP_TRIM_END);
         injectAction(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_SPLIT, EditorSetting.RECORDER_KEY_CLIP_SPLIT);
         injectAction(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_STAMP, EditorSetting.RECORDER_KEY_CLIP_STAMP);
+
+        if (take.holds(RecorderChannel.SOUND))
+            injectAction(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_SOUNDS_ADD,
+                    EditorSetting.RECORDER_KEY_SOUND_ADD);
+
         injectAction(RecorderSetting.ENTRY_CLIP, RecorderSetting.TEXT_REMOVE_CLIP,
                 EditorSetting.RECORDER_KEY_CLIP_REMOVE);
     }
@@ -565,6 +576,53 @@ public class RecorderPanelSystem extends SystemPackage {
                     : RecorderSetting.TEXT_GESTURE_MOVE_HINT);
 
         injectText(entryPoint, RecorderSetting.TEXT_NODE_SHARED);
+    }
+
+    // The sound selected on the Sounds layer: what it is, when and how it is heard within its clip, and how it is
+    // changed; the Clip panel and the Keys pane's inspector both show it
+    void refreshSound(int entryPoint) {
+
+        RecordingSoundTrackStruct track = recorderManager.getKeySoundTrack();
+        RecordingClipStruct clip = recorderManager.getKeyClip();
+        int selected = recorderManager.getSelectedSound();
+
+        if (track == null || clip == null || selected < 0 || selected >= track.size())
+            return;
+
+        String soundName = track.getSoundName(selected);
+        float start = clip.toTimelineTime(track.getTime(selected));
+
+        injectHeader(entryPoint, String.format(RecorderSetting.FORMAT_SOUND_HEADER, soundName));
+        injectText(entryPoint, String.format(RecorderSetting.FORMAT_SOUND_SPAN,
+                formatTime(Math.max(start, clip.getStart())),
+                formatTime(Math.min(start + track.getDuration(selected), clip.getEnd()))));
+        injectText(entryPoint, track.isSpatial(selected)
+                ? RecorderSetting.TEXT_SOUND_PLACED
+                : RecorderSetting.TEXT_SOUND_UNPLACED);
+
+        if (!soundManager.hasSound(soundName))
+            injectText(entryPoint, RecorderSetting.TEXT_SOUND_MISSING);
+        else if (recorderManager.isSoundLooping(selected))
+            injectText(entryPoint, RecorderSetting.TEXT_SOUND_LOOPS);
+
+        injectSetting(entryPoint, RecorderSetting.TEXT_SOUND_VOLUME,
+                String.format(RecorderSetting.FORMAT_SOUND_PERCENT,
+                        track.getVolume(selected) * EditorSetting.RECORDER_SOUND_PERCENT),
+                EditorSetting.RECORDER_KEY_SOUND_VOLUME);
+        injectSetting(entryPoint, RecorderSetting.TEXT_SOUND_PITCH,
+                String.format(RecorderSetting.FORMAT_SOUND_PERCENT,
+                        track.getPitch(selected) * EditorSetting.RECORDER_SOUND_PERCENT),
+                EditorSetting.RECORDER_KEY_SOUND_PITCH);
+        injectSetting(entryPoint, RecorderSetting.TEXT_SOUND_LENGTH,
+                String.format(RecorderSetting.FORMAT_SOUND_SECONDS, track.getDuration(selected)),
+                EditorSetting.RECORDER_KEY_SOUND_LENGTH);
+        injectAction(entryPoint, RecorderSetting.TEXT_SOUND_SEEK, EditorSetting.RECORDER_KEY_SOUND_SEEK);
+        injectAction(entryPoint, RecorderSetting.TEXT_SOUND_COPY, EditorSetting.RECORDER_KEY_SOUND_COPY);
+        injectAction(entryPoint, RecorderSetting.TEXT_SOUND_REPLACE, EditorSetting.RECORDER_KEY_SOUND_REPLACE);
+        injectAction(entryPoint, RecorderSetting.TEXT_SOUND_REMOVE, EditorSetting.RECORDER_KEY_SOUND_REMOVE);
+        injectAction(entryPoint, RecorderSetting.TEXT_SOUND_REMOVE_ALL, EditorSetting.RECORDER_KEY_SOUND_REMOVE_ALL);
+        injectText(entryPoint, RecorderSetting.TEXT_SOUND_MOVE_HINT);
+        injectText(entryPoint, RecorderSetting.TEXT_SOUND_SHARED);
     }
 
     // Timeline \\
