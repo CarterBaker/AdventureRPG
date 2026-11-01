@@ -9,8 +9,11 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.shipwrightpipeline.shipwrightmanager.ShipwrightManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import application.runtime.shipwright.ShipwrightDialogSystem;
+import application.runtime.shipwright.ShipwrightLeave;
 import application.runtime.shipwright.ShipwrightSystem;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 import engine.settings.KeyBindings;
 import engine.util.arpg.ArpgUtility;
 
@@ -23,11 +26,13 @@ public class ShipwrightBranch extends BranchPackage {
      * world or aboard a vehicle, opens the table writing to the player's saves,
      * found through the same use target a chest is opened through. Launching
      * a saved ship sets it afloat beside the player and walks away from the
-     * table.
+     * table. Starting, opening and closing go through ShipwrightDialogSystem,
+     * which asks first over unsaved work, as do its dialogs' own buttons.
      */
 
     // Internal
     private ShipwrightSystem shipwrightSystem;
+    private ShipwrightDialogSystem shipwrightDialogSystem;
     private ShipwrightManager shipwrightManager;
     private PlayerManager playerManager;
     private InputManager inputManager;
@@ -47,6 +52,7 @@ public class ShipwrightBranch extends BranchPackage {
     @Override
     protected void get() {
         this.shipwrightSystem = get(ShipwrightSystem.class);
+        this.shipwrightDialogSystem = get(ShipwrightDialogSystem.class);
         this.shipwrightManager = get(ShipwrightManager.class);
         this.playerManager = get(PlayerManager.class);
         this.inputManager = get(InputManager.class);
@@ -71,7 +77,7 @@ public class ShipwrightBranch extends BranchPackage {
     // Table \\
 
     public void closeTable() {
-        shipwrightSystem.close();
+        shipwrightDialogSystem.requestLeave(ShipwrightLeave.CLOSE, EngineSetting.SHIP_NAME_NONE);
     }
 
     public void launchShip(WindowInstance window) {
@@ -97,19 +103,34 @@ public class ShipwrightBranch extends BranchPackage {
     }
 
     public void newShip() {
-        shipwrightManager.newShip(session());
+        shipwrightDialogSystem.requestLeave(ShipwrightLeave.NEW, EngineSetting.SHIP_NAME_NONE);
     }
 
-    public void openNext() {
-        shipwrightManager.openShip(session(), 1);
+    public void openShipList() {
+        shipwrightDialogSystem.openShipList();
     }
 
-    public void openPrevious() {
-        shipwrightManager.openShip(session(), -1);
+    // A ship picked by its resource name from the list Open shows
+    public void pickShip(String shipName) {
+        shipwrightDialogSystem.pickShip(shipName);
     }
 
     public void saveShip() {
-        shipwrightManager.saveShip(session());
+        shipwrightDialogSystem.save();
+    }
+
+    // Dialogs \\
+
+    public void confirmSave() {
+        shipwrightDialogSystem.confirmSave();
+    }
+
+    public void confirmDiscard() {
+        shipwrightDialogSystem.confirmDiscard();
+    }
+
+    public void closeDialog() {
+        shipwrightDialogSystem.closeDialog();
     }
 
     public void undo() {
@@ -150,10 +171,6 @@ public class ShipwrightBranch extends BranchPackage {
 
     public void removeDeck() {
         shipwrightManager.removeDeck(session());
-    }
-
-    public void togglePorch() {
-        shipwrightManager.togglePorch(session());
     }
 
     // Options \\

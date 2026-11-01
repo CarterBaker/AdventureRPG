@@ -15,8 +15,8 @@ public class ShipLayoutStruct extends StructPackage {
      * hull's half-beam at every layer and octant along the sheet, every layer
      * between two decks blended from the one below to the one above; its
      * octant grid holds every piece laid out in model octants, the sheet
-     * standing originX octants in from the grid's aft edge so a rudder and a
-     * porch fit behind it; its vehicle parts are those pieces merged into
+     * standing originX octants in from the grid's aft edge so a rudder fits
+     * behind it; its vehicle parts are those pieces merged into
      * boxes and every spar, sail, rope and fitting, in the order they fill the
      * model grid; its cargo is every door and piece of furniture, each with
      * the sub-voxel box it stands in. Every hatch, ladder, boarding ladder,

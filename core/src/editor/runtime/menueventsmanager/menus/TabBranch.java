@@ -67,7 +67,7 @@ public class TabBranch extends BranchPackage {
 
     public void closeTab(String tabTitle) {
         if (tabManager.hasTab(tabTitle))
-            tabManager.closeTab(tabManager.getTabHandleFromTabName(tabTitle));
+            tabManager.requestCloseTab(tabManager.getTabHandleFromTabName(tabTitle));
     }
 
     public void onTabFrameHover(WindowInstance window) {

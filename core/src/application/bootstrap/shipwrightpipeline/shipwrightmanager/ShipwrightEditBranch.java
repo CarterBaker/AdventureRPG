@@ -8,6 +8,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPickStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipWall;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
@@ -22,9 +23,12 @@ class ShipwrightEditBranch extends BranchPackage {
      * Works every change a drafting table makes to its blueprint, always on
      * the deck picked. Holding draw or erase starts a stroke at the cursor: a
      * deck's outline is drawn out to the cursor at every octant along the
-     * sheet it crosses, mirrored either side of the centre line, the waist is
-     * cut through the open floor it passes over, mirrored too, and walls are
-     * painted on the open floor it passes over. Every other tool works the
+     * sheet it crosses, mirrored either side of the centre line; the waist is
+     * cut through the open floor it passes over, mirrored too; and walls and
+     * half walls are painted on the open floor it passes over, railings on
+     * open floor or in place of the ship's side or bulwark at the deck's edge
+     * above the waterline, erase taking any of them down and so putting the
+     * side or bulwark back. Every other tool works the
      * octant the stroke began on once, the same way for everything: erase
      * takes away whatever stands there, found over its whole footprint;
      * draw over something already set down picks it up into the hand — the
@@ -215,9 +219,12 @@ class ShipwrightEditBranch extends BranchPackage {
                 && layout.getGrid().isEmpty(gridX, floor - 1, z);
     }
 
+    // Paints the wall picked on open floor, a railing also in place of the side or a bulwark at the deck's edge;
+    // erase takes a wall down with its doors and windows, putting back whatever it stood in place of
     private boolean paintWall(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
+        ShipWall wall = session.getWall();
         int deck = session.getDeck();
 
         if (erasing) {
@@ -227,17 +234,31 @@ class ShipwrightEditBranch extends BranchPackage {
 
             int place = ShipCellUtility.pack(deck, x, z, 0);
 
-            blueprint.setWall(deck, x, z, false, false);
+            blueprint.setWall(deck, x, z, null);
             removePlacement(blueprint.getDoors(), place);
             removePlacement(blueprint.getWindows(), place);
 
             return true;
         }
 
-        if (!isOpenFloor(session, x, z) || blueprint.hasWallOf(deck, x, z, session.isHalfWalls()))
+        if (blueprint.getWall(deck, x, z) == wall)
             return false;
 
-        blueprint.setWall(deck, x, z, true, session.isHalfWalls());
+        if (wall == ShipWall.RAILING) {
+
+            String problem = shipwrightHullBranch.findRailingProblem(session.getLayout(), deck, x, z);
+
+            if (!problem.isEmpty()) {
+
+                if (session.isStrokeStart())
+                    refuse(session, problem);
+
+                return false;
+            }
+        } else if (!isOpenFloor(session, x, z))
+            return false;
+
+        blueprint.setWall(deck, x, z, wall);
 
         return true;
     }
@@ -528,17 +549,6 @@ class ShipwrightEditBranch extends BranchPackage {
 
     // Options \\
 
-    // Hangs the porch off the stern at the deck picked, or takes it down when it already hangs there
-    void togglePorch(ShipwrightSessionInstance session) {
-
-        ShipBlueprintStruct blueprint = session.getBlueprint();
-        ShipBlueprintStruct before = blueprint.copy();
-        int deck = session.getDeck();
-
-        blueprint.setPorchDeck(blueprint.getPorchDeck() == deck ? EngineSetting.SHIP_DECK_NONE : deck);
-        commit(session, before, true, EngineSetting.SHIPWRIGHT_STATUS_NONE);
-    }
-
     // Turns what is set down next a quarter turn either way
     void turn(ShipwrightSessionInstance session, int step) {
         session.setSpin(Math.floorMod(session.getSpin() + step, EngineSetting.ENCODED_FACE_SPIN_COUNT));
@@ -546,11 +556,11 @@ class ShipwrightEditBranch extends BranchPackage {
 
     // Catalogue \\
 
-    // How many options the tool in hand offers: wall heights, openings, climbs, furniture items or masts; none for the
-    // deck and the waist
+    // How many options the tool in hand offers: walls, openings, climbs, furniture items or masts; none for the deck
+    // and the waist
     int getOptionCount(ShipwrightSessionInstance session) {
         return switch (session.getTool()) {
-            case WALLS -> EngineSetting.SHIPWRIGHT_WALL_OPTIONS;
+            case WALLS -> ShipWall.VALUES.length;
             case OPENINGS -> ShipOpening.VALUES.length;
             case STAIRS -> ShipClimb.VALUES.length;
             case FURNITURE -> resolveItemCount();
@@ -562,7 +572,7 @@ class ShipwrightEditBranch extends BranchPackage {
     // The option of the tool in hand picked, INDEX_NOT_FOUND when none is
     int getOptionIndex(ShipwrightSessionInstance session) {
         return switch (session.getTool()) {
-            case WALLS -> session.isHalfWalls() ? 1 : 0;
+            case WALLS -> session.getWall().ordinal();
             case OPENINGS -> session.getOpening().ordinal();
             case STAIRS -> session.getClimb().ordinal();
             case FURNITURE -> Math.floorMod(session.getItemIndex(), resolveItemCount());
@@ -578,7 +588,7 @@ class ShipwrightEditBranch extends BranchPackage {
             return;
 
         switch (session.getTool()) {
-            case WALLS -> session.setHalfWalls(index == 1);
+            case WALLS -> session.setWall(ShipWall.VALUES[index]);
             case OPENINGS -> session.setOpening(ShipOpening.VALUES[index]);
             case STAIRS -> session.setClimb(ShipClimb.VALUES[index]);
             case FURNITURE -> session.setItemIndex(index);

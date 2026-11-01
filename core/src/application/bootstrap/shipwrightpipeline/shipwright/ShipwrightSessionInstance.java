@@ -11,7 +11,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
      * blueprint on the sheet and the name it was last saved under, and the
      * history every change can be undone and redone through, one stroke or
      * press at a time. It holds the tool in hand and what it works on — the
-     * deck picked, whether walls stand full or half height, whether an
+     * deck picked, the wall, half wall or railing painted, whether an
      * opening is a door, a window or a hatch, whether a climb is a stair, a
      * ladder or a boarding ladder, the mast picked, the furniture item and
      * the quarter turn something is set down at — and the cursor, the octant
@@ -34,7 +34,6 @@ public class ShipwrightSessionInstance extends InstancePackage {
     private ShipBlueprintStruct blueprint;
     private String savedName;
     private boolean dirty;
-    private boolean discardArmed;
 
     // History
     private ObjectArrayList<ShipBlueprintStruct> undoStack;
@@ -51,7 +50,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
     // Tool
     private ShipwrightTool tool;
     private int deck;
-    private boolean halfWalls;
+    private ShipWall wall;
     private ShipOpening opening;
     private ShipClimb climb;
     private int mastIndex;
@@ -74,9 +73,6 @@ public class ShipwrightSessionInstance extends InstancePackage {
     // Survey — due once the blueprint has rested since it last compiled
     private boolean surveyDue;
     private float surveyCountdown;
-
-    // Library — the saved ship Open last showed
-    private int libraryIndex;
 
     // Status
     private String status;
@@ -139,7 +135,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
         // Tool
         this.tool = ShipwrightTool.DECK;
-        this.halfWalls = false;
+        this.wall = ShipWall.FULL;
         this.opening = ShipOpening.DOOR;
         this.climb = ShipClimb.STAIR;
         this.itemIndex = 0;
@@ -148,9 +144,6 @@ public class ShipwrightSessionInstance extends InstancePackage {
         // Cursor
         this.cursorU = EngineSetting.SHIP_AFT_MARGIN + EngineSetting.SHIP_SHEET_LENGTH / 2;
         this.cursorV = EngineSetting.SHIP_SHEET_HALF_BREADTH;
-
-        // Library
-        this.libraryIndex = EngineSetting.INDEX_NOT_FOUND;
 
         // Status
         this.status = EngineSetting.SHIPWRIGHT_STATUS_NONE;
@@ -166,7 +159,6 @@ public class ShipwrightSessionInstance extends InstancePackage {
         this.blueprint = blueprint;
         this.savedName = savedName;
         this.dirty = false;
-        this.discardArmed = false;
         this.strokeSnapshot = null;
         this.deck = 0;
         this.mastIndex = EngineSetting.INDEX_NOT_FOUND;
@@ -188,17 +180,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     public void markDirty() {
         this.dirty = true;
-        this.discardArmed = false;
         markChanged();
-    }
-
-    // Asks once before unsaved work is thrown away; the next try goes ahead
-    public void armDiscard() {
-        this.discardArmed = true;
-    }
-
-    public boolean isDiscardArmed() {
-        return discardArmed;
     }
 
     // History \\
@@ -315,8 +297,8 @@ public class ShipwrightSessionInstance extends InstancePackage {
         markChanged();
     }
 
-    public void setHalfWalls(boolean halfWalls) {
-        this.halfWalls = halfWalls;
+    public void setWall(ShipWall wall) {
+        this.wall = wall;
         markChanged();
     }
 
@@ -415,12 +397,6 @@ public class ShipwrightSessionInstance extends InstancePackage {
         return surveyDue;
     }
 
-    // Library \\
-
-    public void setLibraryIndex(int libraryIndex) {
-        this.libraryIndex = libraryIndex;
-    }
-
     // Draw \\
 
     public void setSheetSize(int sheetWidth, int sheetHeight) {
@@ -475,8 +451,9 @@ public class ShipwrightSessionInstance extends InstancePackage {
         return Math.min(deck, blueprint.getDeckCount() - 1);
     }
 
-    public boolean isHalfWalls() {
-        return halfWalls;
+    // The wall the walls tool paints: full or half height, or a railing
+    public ShipWall getWall() {
+        return wall;
     }
 
     public ShipOpening getOpening() {
@@ -530,10 +507,6 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     public int getRevision() {
         return revision;
-    }
-
-    public int getLibraryIndex() {
-        return libraryIndex;
     }
 
     public String getStatus() {

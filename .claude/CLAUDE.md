@@ -159,10 +159,14 @@ delivery. Only `Delivery.bat` writes it; never edit or ship it. You see two copi
 - **Check at the start of every session and before building every delivery:** `git fetch origin main` and read
   `Delivery:` from `origin/main:.claude/Version.md`; then `git fetch origin refs/delivery/status` and read it from
   `FETCH_HEAD:Version.md`. A missing file or ref counts as 0.
-- **Tell the owner at once,** before anything else in the reply, when the status number is higher than `main`'s
-  (delivery N is applied on their PC but not pushed: they must commit and push it), or when `main`'s is lower than the
-  last delivery you sent in this session (it is not applied or not pushed yet). Build nothing until `main` catches up,
-  unless the owner says to go ahead.
+- **Deliveries you sent in this session chain.** The owner applies each delivery as it arrives and pushes once the
+  conversation is done, so a status number ahead of `main` is expected while every delivery between them is one you
+  sent in this session: build the next on your last delivery (`BASE` is its number) without asking. The bat's
+  overwrite warnings then name only your own earlier files.
+- **Tell the owner at once,** before anything else in the reply, when the status number is ahead of `main` because of
+  a delivery you did not send in this session (another session's work, applied but not pushed: they must commit and
+  push it before you build), or when the status number is lower than the last delivery you sent in this session (it
+  was not applied). Build nothing until that is resolved, unless the owner says to go ahead.
 - **Build on current code.** `BASE` is the delivery the work is built on: `main`'s number in a fresh session, or
   your last delivery in this session while its files are still in your working tree. When `main` is ahead of your
   working tree, bring the tree up to `main` before building.

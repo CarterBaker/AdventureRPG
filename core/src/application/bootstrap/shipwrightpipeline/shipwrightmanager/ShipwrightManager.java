@@ -2,16 +2,20 @@ package application.bootstrap.shipwrightpipeline.shipwrightmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipClimb;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipPreviewStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipWall;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
+import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -42,8 +46,9 @@ public class ShipwrightManager extends ManagerPackage {
      * limit — at boot as at the table — and fitted with a helm to steer by and
      * a capstan to weigh the anchors it always carries to be saved,
      * and saved to be launched; a ship that would capsize may still be saved,
-     * the table having said so. Opening or starting another ship over unsaved
-     * work asks twice. A table writing to the assets hands each ship to the
+     * the table having said so; a save says where the file was written, or
+     * why it was not. Whether unsaved work may be thrown away is asked by the
+     * table before it starts or opens another ship. A table writing to the assets hands each ship to the
      * asset writer set on it, so the editor checks and records the write as it
      * does every content file; with none set the file is written directly.
      */
@@ -69,9 +74,16 @@ public class ShipwrightManager extends ManagerPackage {
     private ShipwrightEditBranch shipwrightEditBranch;
     private ShipwrightRigBranch shipwrightRigBranch;
     private ShipwrightInspectBranch shipwrightInspectBranch;
+    private ShipwrightFittingBranch shipwrightFittingBranch;
 
-    // Furnishings — the tables furniture is drawn from at a drafting table
+    // Furnishings — every furnishing table in the game, by section then by the name of the item it furnishes, and the
+    // section each is listed under
     private ObjectArrayList<String> furnishingNames;
+    private ObjectArrayList<String> furnishingSections;
+
+    // Previews — the helm and the capstan as the catalogue pictures them
+    private ShipPreviewStruct helmPreview;
+    private ShipPreviewStruct capstanPreview;
 
     // Scratch — main thread only
     private ShipLayoutStruct contentLayout;
@@ -84,7 +96,7 @@ public class ShipwrightManager extends ManagerPackage {
         // Branches
         create(ShipwrightHullBranch.class);
         this.shipwrightRigBranch = create(ShipwrightRigBranch.class);
-        create(ShipwrightFittingBranch.class);
+        this.shipwrightFittingBranch = create(ShipwrightFittingBranch.class);
         this.shipwrightInspectBranch = create(ShipwrightInspectBranch.class);
         this.shipwrightCompileBranch = create(ShipwrightCompileBranch.class);
         this.shipwrightSurveyBranch = create(ShipwrightSurveyBranch.class);
@@ -95,6 +107,7 @@ public class ShipwrightManager extends ManagerPackage {
 
         // Furnishings
         this.furnishingNames = new ObjectArrayList<>();
+        this.furnishingSections = new ObjectArrayList<>();
 
         // Scratch
         this.contentLayout = new ShipLayoutStruct(new ShipOctantGridStruct());
@@ -113,9 +126,53 @@ public class ShipwrightManager extends ManagerPackage {
         // Cues
         this.launchCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_SHIP_LAUNCH);
 
-        furnishingManager.collectFurnishingNames(EngineSetting.SHIPWRIGHT_FURNISHING_FOLDER, furnishingNames);
+        collectFurnishings();
+        buildPreviews();
         internalLoader.requestAll();
         registerSavedShips();
+    }
+
+    // Every furnishing table in the game listed by the folder it is kept in, then by the name of the item it furnishes
+    private void collectFurnishings() {
+
+        furnishingManager.collectFurnishingNames(EngineSetting.SHIPWRIGHT_FURNISHING_FOLDER, furnishingNames);
+        furnishingNames.sort((first, second) -> {
+            int section = resolveSection(first).compareTo(resolveSection(second));
+            return section != 0 ? section : resolveDisplayName(first).compareTo(resolveDisplayName(second));
+        });
+
+        for (int i = 0; i < furnishingNames.size(); i++)
+            furnishingSections.add(resolveSection(furnishingNames.get(i)));
+    }
+
+    // The helm and the capstan built and meshed apart from any ship, each from the origin the previews stand at
+    private void buildPreviews() {
+
+        int origin = EngineSetting.SHIPWRIGHT_PREVIEW_ORIGIN_SUB_VOXELS;
+        ObjectArrayList<VehiclePartStruct> helmParts = new ObjectArrayList<>();
+        ObjectArrayList<VehiclePartStruct> capstanParts = new ObjectArrayList<>();
+
+        shipwrightFittingBranch.buildHelm(helmParts, origin, 0, origin);
+        shipwrightFittingBranch.buildCapstan(capstanParts, origin, 0, origin);
+
+        this.helmPreview = new ShipPreviewStruct(helmParts, vehicleManager.buildRestingMeshes(helmParts));
+        this.capstanPreview = new ShipPreviewStruct(capstanParts, vehicleManager.buildRestingMeshes(capstanParts));
+    }
+
+    // The section a furnishing table is listed under: the folder it is kept in, capitalised
+    private static String resolveSection(String furnishingName) {
+
+        int separator = furnishingName.indexOf(EngineSetting.PATH_SEPARATOR);
+
+        if (separator <= 0)
+            return EngineSetting.SHIPWRIGHT_TEXT_OTHER_FURNITURE;
+
+        return Character.toUpperCase(furnishingName.charAt(0)) + furnishingName.substring(1, separator);
+    }
+
+    private String resolveDisplayName(String furnishingName) {
+        return furnishingManager.getFurnishingHandleFromFurnishingName(furnishingName).getItems()[0]
+                .getDisplayName();
     }
 
     // Writes every ship a table keeps in the assets through the writer given, in place of writing its file directly
@@ -251,59 +308,36 @@ public class ShipwrightManager extends ManagerPackage {
     // File \\
 
     public void newShip(ShipwrightSessionInstance session) {
-
-        if (!confirmDiscard(session))
-            return;
-
         session.load(new ShipBlueprintStruct(), EngineSetting.SHIP_NAME_NONE);
-        session.setLibraryIndex(EngineSetting.INDEX_NOT_FOUND);
         compileSession(session);
         session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_NEW);
     }
 
-    // The next or previous ship kept in the session's storage put on the sheet
-    public void openShip(ShipwrightSessionInstance session, int step) {
+    // Every ship kept in the session's storage, by resource name, sorted
+    public ObjectArrayList<String> listShips(ShipwrightSessionInstance session) {
+        return shipwrightLibraryBranch.listShips(session.getStorage());
+    }
 
-        ObjectArrayList<String> shipNames = shipwrightLibraryBranch.listShips(session.getStorage());
+    // A ship kept in the session's storage put on the sheet by its resource name
+    public void openShip(ShipwrightSessionInstance session, String shipName) {
 
-        if (shipNames.isEmpty()) {
-            session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_NONE_KEPT);
-            return;
-        }
-
-        if (!confirmDiscard(session))
-            return;
-
-        int index = session.getLibraryIndex() == EngineSetting.INDEX_NOT_FOUND
-                ? (step > 0 ? 0 : shipNames.size() - 1)
-                : Math.floorMod(session.getLibraryIndex() + step, shipNames.size());
-        ShipBlueprintStruct blueprint = shipwrightLibraryBranch.load(session.getStorage(), shipNames.get(index));
-
-        session.setLibraryIndex(index);
+        ShipBlueprintStruct blueprint = shipwrightLibraryBranch.hasShip(session.getStorage(), shipName)
+                ? shipwrightLibraryBranch.load(session.getStorage(), shipName)
+                : null;
 
         if (blueprint == null) {
-            session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_UNREADABLE + shipNames.get(index));
+            session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_UNREADABLE + shipName);
             return;
         }
 
-        session.load(blueprint, shipNames.get(index));
+        session.load(blueprint, shipName);
         compileSession(session);
         session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_OPENED + blueprint.getDisplayName());
     }
 
-    // True when nothing unsaved would be lost, or when the loss was asked about once already
-    private boolean confirmDiscard(ShipwrightSessionInstance session) {
-
-        if (!session.isDirty() || session.isDiscardArmed())
-            return true;
-
-        session.armDiscard();
-        session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_DISCARD);
-
-        return false;
-    }
-
-    public void saveShip(ShipwrightSessionInstance session) {
+    // Writes the ship on the sheet to its storage and registers it, true once it is; otherwise the status says why
+    // it was not saved
+    public boolean saveShip(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
         String shipName = shipwrightLibraryBranch.toShipName(blueprint.getDisplayName());
@@ -314,8 +348,8 @@ public class ShipwrightManager extends ManagerPackage {
         String refusal = resolveSaveRefusal(session, shipName);
 
         if (!refusal.isEmpty()) {
-            session.setStatus(refusal);
-            return;
+            session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_NOT_SAVED + refusal);
+            return false;
         }
 
         blueprint.setShipName(shipName);
@@ -323,15 +357,18 @@ public class ShipwrightManager extends ManagerPackage {
         String writeRefusal = shipwrightLibraryBranch.save(session.getStorage(), blueprint);
 
         if (!writeRefusal.isEmpty()) {
-            session.setStatus(writeRefusal);
-            return;
+            session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_NOT_SAVED + writeRefusal);
+            return false;
         }
 
         registerVehicle(session.getStorage(), blueprint, session.getLayout());
         compileSession(session);
         surveySession(session);
         session.markSaved(shipName);
-        session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_SAVED + blueprint.getDisplayName());
+        session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_SAVED
+                + shipwrightLibraryBranch.describeFile(session.getStorage(), shipName));
+
+        return true;
     }
 
     private String resolveSaveRefusal(ShipwrightSessionInstance session, String shipName) {
@@ -409,10 +446,6 @@ public class ShipwrightManager extends ManagerPackage {
         shipwrightEditBranch.removeDeck(session);
     }
 
-    public void togglePorch(ShipwrightSessionInstance session) {
-        shipwrightEditBranch.togglePorch(session);
-    }
-
     public void turn(ShipwrightSessionInstance session, int step) {
         shipwrightEditBranch.turn(session, step);
     }
@@ -464,7 +497,7 @@ public class ShipwrightManager extends ManagerPackage {
             return tool == ShipwrightTool.FURNITURE ? EngineSetting.SHIPWRIGHT_TEXT_UNKNOWN_ITEM : tool.getTitle();
 
         return switch (tool) {
-            case WALLS -> option == 1 ? EngineSetting.SHIPWRIGHT_TEXT_HALF_WALL : EngineSetting.SHIPWRIGHT_TEXT_FULL_WALL;
+            case WALLS -> ShipWall.VALUES[option].getTitle();
             case OPENINGS -> ShipOpening.VALUES[option].getTitle();
             case STAIRS -> ShipClimb.VALUES[option].getTitle();
             case FURNITURE -> getItemName(option);
@@ -485,8 +518,45 @@ public class ShipwrightManager extends ManagerPackage {
         if (item == EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN)
             return EngineSetting.SHIPWRIGHT_TEXT_CAPSTAN;
 
-        return furnishingManager.getFurnishingHandleFromFurnishingName(getItemFurnishingName(item)).getItems()[0]
-                .getDisplayName();
+        return resolveDisplayName(getItemFurnishingName(item));
+    }
+
+    // The section of a tool's catalogue an option is listed under: furniture by the folder its table is kept in, the
+    // helm and the capstan first, every other tool's options under the tool
+    public String getOptionSection(ShipwrightTool tool, int option) {
+
+        if (tool != ShipwrightTool.FURNITURE)
+            return tool.getTitle();
+
+        if (option < EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS)
+            return EngineSetting.SHIPWRIGHT_TEXT_FITTINGS;
+
+        return furnishingSections.get(option - EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS);
+    }
+
+    // The built fitting an option of a tool's catalogue is pictured by where no item stands for it, null for none
+    public ShipPreviewStruct getOptionPreview(ShipwrightTool tool, int option) {
+
+        if (tool != ShipwrightTool.FURNITURE)
+            return null;
+
+        return option == EngineSetting.SHIPWRIGHT_ITEM_HELM ? helmPreview
+                : option == EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN ? capstanPreview : null;
+    }
+
+    // The item an option of a tool's catalogue is pictured by, null for one no item stands for
+    public ItemDefinitionHandle getOptionItem(ShipwrightTool tool, int option) {
+
+        String furnishingName = tool == ShipwrightTool.FURNITURE && option >= EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS
+                ? getItemFurnishingName(option)
+                : tool == ShipwrightTool.OPENINGS && option == ShipOpening.DOOR.ordinal()
+                        ? EngineSetting.SHIP_DOOR_FURNISHING
+                        : null;
+
+        if (furnishingName == null || !furnishingManager.hasFurnishing(furnishingName))
+            return null;
+
+        return furnishingManager.getFurnishingHandleFromFurnishingName(furnishingName).getItems()[0];
     }
 
     // The furnishing table a furniture item past the helm and the capstan is drawn from

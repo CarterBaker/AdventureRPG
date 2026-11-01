@@ -46,16 +46,18 @@ public class ShipwrightSystem extends SystemPackage {
      * on, the cycle bindings step through the catalogue of the tool in hand
      * and the level bindings or the wheel step the deck, so every change the
      * menu makes can also be made from the bindings alone, a controller's
-     * among them. Undo, redo and save work as everywhere else; the pause
-     * binding walks away from a table in the game. While the name is typed
+     * among them. Undo, redo and save work as everywhere else, a save that
+     * cannot be made saying why through ShipwrightDialogSystem; the pause
+     * binding walks away from a table in the game, asking first over unsaved
+     * work, and while any dialog is open the table takes no input of its
+     * own. While the name is typed
      * the keys type it, Enter keeps it and the pause binding drops it.
      * Whenever the session changes, what stands under the cursor is looked
      * at again and the labels are rewritten: the tool in hand lit among the
      * tools, the line under the sheet naming what stands under the cursor and
      * what draw and erase will do there, or why the thing in hand cannot
      * stand there, and every measure of the ship. The catalogue of the tool
-     * in hand is laid out a page at a time, the option picked lit, whenever
-     * the tool, the option or the options themselves change.
+     * in hand is ShipwrightCatalogueSystem's.
      */
 
     // Internal
@@ -64,6 +66,7 @@ public class ShipwrightSystem extends SystemPackage {
     private InputManager inputManager;
     private WindowManager windowManager;
     private ElementHitSystem elementHitSystem;
+    private ShipwrightDialogSystem shipwrightDialogSystem;
 
     // Session
     private ShipwrightSessionInstance session;
@@ -94,11 +97,6 @@ public class ShipwrightSystem extends SystemPackage {
     private int shownRevision;
     private StringBuilder text;
 
-    // Catalogue — what the catalogue was last laid out for
-    private ShipwrightTool shownTool;
-    private int shownOption;
-    private int shownOptionCount;
-
     // Colors
     private MenuColorStruct pickedToolColor;
 
@@ -122,6 +120,7 @@ public class ShipwrightSystem extends SystemPackage {
         this.inputManager = get(InputManager.class);
         this.windowManager = get(WindowManager.class);
         this.elementHitSystem = get(ElementHitSystem.class);
+        this.shipwrightDialogSystem = get(ShipwrightDialogSystem.class);
     }
 
     // Open / Close \\
@@ -142,7 +141,6 @@ public class ShipwrightSystem extends SystemPackage {
             this.leaveMenu = menuManager.openMenu(EngineSetting.SHIPWRIGHT_MENU_LEAVE, window);
 
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
-        this.shownTool = null;
         this.opening = true;
         this.focused = false;
         this.focusedLastFrame = false;
@@ -155,6 +153,7 @@ public class ShipwrightSystem extends SystemPackage {
             return;
 
         shipwrightManager.endStroke(session);
+        shipwrightDialogSystem.closeDialog();
 
         if (session.isNaming())
             session.endNaming();
@@ -163,6 +162,26 @@ public class ShipwrightSystem extends SystemPackage {
 
         if (leaveMenu != null)
             this.leaveMenu = menuManager.closeMenu(leaveMenu);
+    }
+
+    // Shows the table's menus, or hides them while a dialog stands over the table
+    public void setMenusShown(boolean shown) {
+
+        if (!isOpen())
+            return;
+
+        if (shown)
+            tableMenu.show();
+        else
+            tableMenu.hide();
+
+        if (leaveMenu == null)
+            return;
+
+        if (shown)
+            leaveMenu.show();
+        else
+            leaveMenu.hide();
     }
 
     // Update \\
@@ -186,7 +205,9 @@ public class ShipwrightSystem extends SystemPackage {
             this.opening = false;
             this.pointerX = inputManager.getHoverMouseX(window);
             this.pointerY = inputManager.getHoverMouseY(window);
-        } else if (session.isNaming())
+        } else if (shipwrightDialogSystem.isOpen())
+            shipwrightManager.endStroke(session);
+        else if (session.isNaming())
             updateNaming(window, rawInput);
         else if (updateBindings(window))
             return;
@@ -197,11 +218,11 @@ public class ShipwrightSystem extends SystemPackage {
         refreshLabels();
     }
 
-    // The table's bindings, true when the pause binding walked away from a table in the game
+    // The table's bindings, true when the pause binding asked to walk away from a table in the game
     private boolean updateBindings(WindowInstance window) {
 
         if (isClosable() && inputManager.bindingClicked(KeyBindings.PAUSE, window)) {
-            close();
+            shipwrightDialogSystem.requestLeave(ShipwrightLeave.CLOSE, EngineSetting.SHIP_NAME_NONE);
             return true;
         }
 
@@ -236,7 +257,7 @@ public class ShipwrightSystem extends SystemPackage {
             shipwrightManager.redo(session);
 
         if (inputManager.bindingClicked(KeyBindings.SAVE, window))
-            shipwrightManager.saveShip(session);
+            shipwrightDialogSystem.save();
 
         return false;
     }
@@ -392,7 +413,6 @@ public class ShipwrightSystem extends SystemPackage {
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_INSPECT, resolveInspection());
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_CATALOGUE_TITLE, resolveCatalogueTitle());
         refreshTools();
-        refreshCatalogue();
         writeSurvey();
     }
 
@@ -534,12 +554,11 @@ public class ShipwrightSystem extends SystemPackage {
         return out.append(InputNameUtility.getName(binding)).append(pointer);
     }
 
-    // The tool in hand's catalogue, how many it offers, the page shown and the bindings that choose and turn
+    // The tool in hand's catalogue, how many it offers and the bindings that choose and turn
     private String resolveCatalogueTitle() {
 
         text.setLength(0);
         int count = shipwrightManager.getOptionCount(session);
-        int pageSize = EngineSetting.SHIPWRIGHT_CATALOGUE_COLUMNS * EngineSetting.SHIPWRIGHT_CATALOGUE_ROWS;
 
         text.append(session.getTool().getTitle());
 
@@ -549,14 +568,7 @@ public class ShipwrightSystem extends SystemPackage {
                             ? EngineSetting.SHIPWRIGHT_TEXT_NO_MASTS
                             : EngineSetting.SHIPWRIGHT_TEXT_NO_CATALOGUE).toString();
 
-        int pages = (count + pageSize - 1) / pageSize;
-        int page = Math.max(0, shipwrightManager.getOptionIndex(session)) / pageSize;
-
         text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH).append(count).append(EngineSetting.SHIPWRIGHT_TEXT_TO_CHOOSE);
-
-        if (pages > 1)
-            text.append(EngineSetting.SHIPWRIGHT_TEXT_PAGE).append(page + 1)
-                    .append(EngineSetting.SHIPWRIGHT_TEXT_OF).append(pages);
 
         return text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH)
                 .append(InputNameUtility.getName(KeyBindings.CYCLE_PREVIOUS)).append(EngineSetting.SHIPWRIGHT_TEXT_SLASH)
@@ -577,55 +589,6 @@ public class ShipwrightSystem extends SystemPackage {
             if (button != null)
                 button.setColorOverride(ShipwrightTool.VALUES[i] == session.getTool() ? pickedToolColor : null);
         }
-    }
-
-    // Catalogue \\
-
-    // The page of the tool in hand's catalogue holding the option picked, laid out again only when the tool, the
-    // option or the options offered changed
-    private void refreshCatalogue() {
-
-        ShipwrightTool tool = session.getTool();
-        int option = shipwrightManager.getOptionIndex(session);
-        int count = shipwrightManager.getOptionCount(session);
-
-        if (tool == shownTool && option == shownOption && count == shownOptionCount)
-            return;
-
-        this.shownTool = tool;
-        this.shownOption = option;
-        this.shownOptionCount = count;
-
-        menuManager.ejectAll(tableMenu, EngineSetting.SHIPWRIGHT_ENTRY_CATALOGUE);
-
-        int columns = EngineSetting.SHIPWRIGHT_CATALOGUE_COLUMNS;
-        int pageSize = columns * EngineSetting.SHIPWRIGHT_CATALOGUE_ROWS;
-        int first = Math.max(0, option) / pageSize * pageSize;
-
-        for (int rowStart = first; rowStart < Math.min(count, first + pageSize); rowStart += columns) {
-
-            ElementInstance row = menuManager.inject(tableMenu, EngineSetting.SHIPWRIGHT_ENTRY_CATALOGUE,
-                    EngineSetting.SHIPWRIGHT_TEMPLATE_CATALOGUE_ROW);
-
-            for (int index = rowStart; index < Math.min(count, rowStart + columns); index++)
-                injectCatalogueItem(row, tool, index, index == option);
-        }
-    }
-
-    private void injectCatalogueItem(ElementInstance row, ShipwrightTool tool, int index, boolean picked) {
-
-        String name = shipwrightManager.getOptionName(session, tool, index);
-
-        menuManager.inject(row, picked
-                ? EngineSetting.SHIPWRIGHT_TEMPLATE_CATALOGUE_PICKED
-                : EngineSetting.SHIPWRIGHT_TEMPLATE_CATALOGUE_ITEM, element -> {
-                    element.setActionArgOverride(Integer.toString(index));
-
-                    ElementInstance label = element.findChildById(EngineSetting.SHIPWRIGHT_ELEMENT_CATALOGUE_LABEL);
-
-                    if (label != null)
-                        label.setFontText(name);
-                });
     }
 
     // Survey \\

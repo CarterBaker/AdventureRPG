@@ -20,6 +20,7 @@ import application.runtime.RuntimeSetting;
 import application.runtime.inventory.InventoryViewUtility;
 import editor.runtime.commandconsole.CommandConsoleSetting;
 import editor.runtime.commandconsole.panel.CommandConsolePanelSystem;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -89,8 +90,7 @@ public class CommandConsoleTileRenderSystem extends SystemPackage {
 
         // Resources
         this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_ITEM);
-        this.vehicleMaterialID = materialManager.getMaterialIDFromMaterialName(
-                CommandConsoleSetting.MATERIAL_TILE_VEHICLE);
+        this.vehicleMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.VEHICLE_MATERIAL_ICON);
     }
 
     // Render \\

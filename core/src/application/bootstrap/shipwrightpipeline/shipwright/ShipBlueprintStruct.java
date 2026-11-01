@@ -19,16 +19,14 @@ public class ShipBlueprintStruct extends StructPackage {
      * outline: how many octants it reaches out from the centre line at every
      * octant along the sheet, mirrored to the other side. The waist is cut
      * through a deck's floor octant by octant, kept sorted, every octant and
-     * its mirror together. Walls, half walls, doors, windows, hatches,
-     * stairs, ladders, boarding ladders and furniture stand on a deck
-     * at an octant along the length and across the full breadth, never
-     * mirrored, each packed through
-     * ShipCellUtility with its deck as its level; walls are kept sorted and a
-     * place holds at most one of each. The helm and the capstan are one
-     * placement each, masts stand on the centre line kept from the stern
-     * forward, and a porch may hang off the stern at one deck. Copied whole for
-     * undo; every list writes in a fixed order, so saving an unchanged
-     * blueprint writes the same bytes.
+     * its mirror together. Walls, half walls, railings, doors, windows,
+     * hatches, stairs, ladders, boarding ladders and furniture stand on a
+     * deck at an octant along the length and across the full breadth, never
+     * mirrored, each packed through ShipCellUtility with its deck as its
+     * level; walls, half walls and railings are kept sorted and a place holds
+     * at most one of them. The helm and the capstan are one placement each,
+     * and masts stand on the centre line kept from the stern forward. Copied whole for undo; every list writes in a fixed
+     * order, so saving an unchanged blueprint writes the same bytes.
      */
 
     // Identity
@@ -46,6 +44,7 @@ public class ShipBlueprintStruct extends StructPackage {
     // Rooms — packed cells, their level the deck they stand on
     private final IntArrayList walls;
     private final IntArrayList halfWalls;
+    private final IntArrayList railings;
     private final IntArrayList doors;
     private final IntArrayList windows;
     private final IntArrayList hatches;
@@ -62,9 +61,6 @@ public class ShipBlueprintStruct extends StructPackage {
 
     // Masts — from the stern forward
     private final ObjectArrayList<ShipMastStruct> masts;
-
-    // Porch — the deck it hangs off the stern at
-    private int porchDeck;
 
     // Constructor \\
 
@@ -85,6 +81,7 @@ public class ShipBlueprintStruct extends StructPackage {
         // Rooms
         this.walls = new IntArrayList();
         this.halfWalls = new IntArrayList();
+        this.railings = new IntArrayList();
         this.doors = new IntArrayList();
         this.windows = new IntArrayList();
         this.hatches = new IntArrayList();
@@ -101,9 +98,6 @@ public class ShipBlueprintStruct extends StructPackage {
 
         // Masts
         this.masts = new ObjectArrayList<>();
-
-        // Porch
-        this.porchDeck = EngineSetting.SHIP_DECK_NONE;
     }
 
     public ShipBlueprintStruct copy() {
@@ -132,6 +126,7 @@ public class ShipBlueprintStruct extends StructPackage {
         // Rooms
         copyCells(other.walls, walls);
         copyCells(other.halfWalls, halfWalls);
+        copyCells(other.railings, railings);
         copyCells(other.doors, doors);
         copyCells(other.windows, windows);
         copyCells(other.hatches, hatches);
@@ -152,9 +147,6 @@ public class ShipBlueprintStruct extends StructPackage {
 
         for (int i = 0; i < other.masts.size(); i++)
             masts.add(other.masts.get(i).copy());
-
-        // Porch
-        this.porchDeck = other.porchDeck;
     }
 
     private static void copyCells(IntArrayList from, IntArrayList to) {
@@ -225,6 +217,7 @@ public class ShipBlueprintStruct extends StructPackage {
         removeDeckCells(waists, deck);
         removeDeckCells(walls, deck);
         removeDeckCells(halfWalls, deck);
+        removeDeckCells(railings, deck);
         removeDeckCells(doors, deck);
         removeDeckCells(windows, deck);
         removeDeckCells(hatches, deck);
@@ -244,11 +237,6 @@ public class ShipBlueprintStruct extends StructPackage {
             else
                 furniture.set(i, new ShipFurnitureStruct(piece.getFurnishingName(), cell));
         }
-
-        if (porchDeck == deck)
-            this.porchDeck = EngineSetting.SHIP_DECK_NONE;
-        else if (porchDeck > deck)
-            this.porchDeck--;
 
         return true;
     }
@@ -290,6 +278,7 @@ public class ShipBlueprintStruct extends StructPackage {
         pruneCells(waists);
         pruneCells(walls);
         pruneCells(halfWalls);
+        pruneCells(railings);
         pruneCells(doors);
         pruneCells(windows);
         pruneCells(hatches);
@@ -310,9 +299,6 @@ public class ShipBlueprintStruct extends StructPackage {
         for (int i = masts.size() - 1; i >= 0; i--)
             if (findLowestDeck(masts.get(i).getX()) == EngineSetting.SHIP_DECK_NONE)
                 masts.remove(i);
-
-        if (porchDeck >= deckCount)
-            this.porchDeck = EngineSetting.SHIP_DECK_NONE;
     }
 
     private void pruneCells(IntArrayList cells) {
@@ -380,28 +366,35 @@ public class ShipBlueprintStruct extends StructPackage {
 
     // Walls \\
 
-    public boolean hasWall(int level, int x, int z) {
+    // The wall standing at a place, null when none does
+    public ShipWall getWall(int level, int x, int z) {
 
         int place = ShipCellUtility.pack(level, x, z, 0);
 
-        return findSorted(walls, place) >= 0 || findSorted(halfWalls, place) >= 0;
+        if (findSorted(walls, place) >= 0)
+            return ShipWall.FULL;
+
+        if (findSorted(halfWalls, place) >= 0)
+            return ShipWall.HALF;
+
+        return findSorted(railings, place) >= 0 ? ShipWall.RAILING : null;
     }
 
-    // Stands a full or half wall at a place, replacing whichever stood there, or with neither takes it down
-    public void setWall(int level, int x, int z, boolean standing, boolean half) {
+    public boolean hasWall(int level, int x, int z) {
+        return getWall(level, x, z) != null;
+    }
+
+    // Stands a full wall, half wall or railing at a place, replacing whichever stood there, or with null takes it down
+    public void setWall(int level, int x, int z, ShipWall wall) {
 
         int place = ShipCellUtility.pack(level, x, z, 0);
 
         removeSorted(walls, place);
         removeSorted(halfWalls, place);
+        removeSorted(railings, place);
 
-        if (standing)
-            setSorted(half ? halfWalls : walls, place, true);
-    }
-
-    // True when the wall at a place stands at the height asked for
-    public boolean hasWallOf(int level, int x, int z, boolean half) {
-        return findSorted(half ? halfWalls : walls, ShipCellUtility.pack(level, x, z, 0)) >= 0;
+        if (wall != null)
+            setSorted(getWalls(wall), place, true);
     }
 
     private static void removeSorted(IntArrayList cells, int cell) {
@@ -537,9 +530,6 @@ public class ShipBlueprintStruct extends StructPackage {
         this.capstan = capstan;
     }
 
-    public void setPorchDeck(int porchDeck) {
-        this.porchDeck = porchDeck;
-    }
 
     // Accessible \\
 
@@ -577,6 +567,19 @@ public class ShipBlueprintStruct extends StructPackage {
 
     public IntArrayList getHalfWalls() {
         return halfWalls;
+    }
+
+    public IntArrayList getRailings() {
+        return railings;
+    }
+
+    // The placements of one kind of standing wall
+    public IntArrayList getWalls(ShipWall wall) {
+        return switch (wall) {
+            case HALF -> halfWalls;
+            case RAILING -> railings;
+            default -> walls;
+        };
     }
 
     public IntArrayList getDoors() {
@@ -643,13 +646,5 @@ public class ShipBlueprintStruct extends StructPackage {
 
     public ObjectArrayList<ShipMastStruct> getMasts() {
         return masts;
-    }
-
-    public int getPorchDeck() {
-        return porchDeck;
-    }
-
-    public boolean hasPorch() {
-        return porchDeck != EngineSetting.SHIP_DECK_NONE;
     }
 }

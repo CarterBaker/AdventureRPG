@@ -37,7 +37,7 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 | `ShipwrightEditBranch` | Every change: strokes, pick up / take away / place, `findPlacementProblem`, catalogue options, decks, undo, commit/refuse |
 | `ShipwrightInspectBranch` | What stands at an octant over its whole footprint (`pick`), and the footprint any tool's option covers (`resolveFootprint`) |
 | `ShipwrightCompileBranch` | `compile(blueprint, layout)` order, weighing, floating, `toDesign` |
-| `ShipwrightHullBranch` | Sections, shell, bulwarks, porch, waist and its rails, walls, stairs, ladders, boarding ladders, hatches; their `find...Problem` rules |
+| `ShipwrightHullBranch` | Sections, shell, bulwarks, waist and its rails, walls and railings, stairs, ladders, boarding ladders, hatches; their `find...Problem` rules |
 | `ShipwrightFittingBranch` | Doors, windows, gun ports, helm, capstan, rudder, anchors, hatch and port lids (`addPanel`, `resolveHingeSpin`), ladders, boarding ladders, glass, cargo |
 | `ShipwrightRigBranch` | Bowsprit, masts (height, sails and nest worked out), crow's nests, shrouds, stays |
 | `ShipwrightDraftBranch` | Sheet glyphs at `SHIPWRIGHT_INK_SCALE`, the thing in hand, the hover outline, side and top views |
@@ -48,8 +48,10 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
   facing, cursor, `hover` and `placementProblem`), `ShipPickStruct` (what stands somewhere, and its footprint),
   `ShipPiece`, `ShipwrightTool`, `ShipOpening`, `ShipClimb`. **Utilities:** `ShipBlueprintArpgUtility` (the one file reader/writer),
   `ShipCellUtility` (cell packing, mirroring, steps), `ShipRopeUtility` (the one rope layer).
-- **Runtime glue:** `application/runtime/shipwright/ShipwrightSystem` (input, bindings, labels, the catalogue panel
-  injected from the `shipwright_catalogue_*` templates, the lit tool),
+- **Runtime glue:** `application/runtime/shipwright/ShipwrightSystem` (input, bindings, labels, the lit tool),
+  `ShipwrightCatalogueSystem` (the scrolling, sectioned tile list injected from the `shipwright_catalogue_*`
+  templates; `ShipwrightManager.getOptionSection` / `getOptionItem` feed it), `ShipwrightDialogSystem` (the ship
+  list, the unsaved-changes question through `requestLeave` / `ShipwrightLeave`, the save notice, the close action),
   `ShipwrightRenderSystem`, `menus/shipwright/ShipwrightBranch` (menu events), and in the editor
   `editor/runtime/shipwright/ShipwrightTabSystem` (writes through `InfoManager` with the `Vehicles` schema).
 
@@ -57,7 +59,7 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 
 ## Compile order
 
-`ShipwrightCompileBranch.compile`: sections → shell → porch → bulwarks → waist → walls → stairs → ladders → boarding
+`ShipwrightCompileBranch.compile`: sections → shell → bulwarks → waist → walls and railings → stairs → ladders → boarding
 ladders → hatches →
 openings (doors, windows, gun ports) → merge pieces into parts → bowsprit → fittings (helm, capstan, rudder, anchors,
 hatch lids, port lids, ladders, glass) → rig → cargo → float → waterline. Everything that cuts the grid runs before
@@ -120,10 +122,20 @@ first and rails the rim after, so a waist painted wide never rails its own octan
 - **Masts are only a place.** `ShipMastStruct` keeps its `x` alone; height, sails and the crow's nest are worked out
   in `ShipwrightRigBranch.addRig` and kept per mast in the layout (`getMastHeight`, `getMastSailCount`,
   `hasCrowsNest`). Read them from the layout, never from the blueprint.
-- **Rails are landings.** `clearLanding` opens a bulwark or a rail (porch or waist) where a stair or ladder lands;
+- **Rails are landings.** `clearLanding` opens a bulwark, rail or railing where a stair or ladder lands;
   the table lets the waist widen into a rim that carries only its own rail.
 - **Gun ports are one per cannon.** `cutPort` refuses a cannon that cuts no planking and one whose port touches a port
   already cut; never reintroduce open ports over a bulwark.
+- **Railings replace the edge.** `layRailing` clears the side, bulwark or rail standing over its octant up to the deck
+  above before laying the rail, so walls run after bulwarks and the waist; `findRailingProblem` is the one rule (above
+  the last waterline, open floor or the deck's own side or bulwark). There is no porch: never add an overhanging
+  floor; a porch is a railed stretch of deck.
+- **Dialogs hide the table.** A label draws over every menu's sprites, so the table's menus are hidden
+  (`ShipwrightSystem.setMenusShown`) while a dialog is open, as the Settings menu hides its parent; the catalogue's
+  icons are skipped then too.
+- **Every leave goes through `ShipwrightDialogSystem.requestLeave`.** New, Open, Close and Pause never call the
+  manager directly; the editor tab's close button reaches it through `TabManager.setCloseGuard`, and the dialog's
+  close action closes the tab (`TabManager.closeTabOf`).
 - **Bindings:** the table reads `CYCLE_*`, `LEVEL_*`, `TURN_LEFT`, `TURN_RIGHT` and `ROTATE_ITEM` from
   `KeyBindings`; adding one means `KeyBindings`,
   `Settings`, `SettingsUtility` (apply and store), `SettingsBinding` and its `RuntimeSetting` label.

@@ -10,6 +10,8 @@ import application.runtime.player.PlayerRenderSystem;
 import application.runtime.player.PlayerSystem;
 import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.projectile.ProjectileSystem;
+import application.runtime.shipwright.ShipwrightCatalogueSystem;
+import application.runtime.shipwright.ShipwrightDialogSystem;
 import application.runtime.shipwright.ShipwrightRenderSystem;
 import application.runtime.shipwright.ShipwrightSystem;
 import application.runtime.sky.SkySystem;
@@ -58,6 +60,8 @@ public class RuntimeContext extends ContextPackage {
     private NpcSystem npcSystem;
     private TreeSystem treeSystem;
     private ShipwrightSystem shipwrightSystem;
+    private ShipwrightCatalogueSystem shipwrightCatalogueSystem;
+    private ShipwrightDialogSystem shipwrightDialogSystem;
     private ShipwrightRenderSystem shipwrightRenderSystem;
     private SoundListenerSystem soundListenerSystem;
     private AmbienceSoundSystem ambienceSoundSystem;
@@ -89,6 +93,8 @@ public class RuntimeContext extends ContextPackage {
         this.npcSystem = create(NpcSystem.class);
         this.treeSystem = create(TreeSystem.class);
         this.shipwrightSystem = create(ShipwrightSystem.class);
+        this.shipwrightCatalogueSystem = create(ShipwrightCatalogueSystem.class);
+        this.shipwrightDialogSystem = create(ShipwrightDialogSystem.class);
         this.shipwrightRenderSystem = create(ShipwrightRenderSystem.class);
         this.soundListenerSystem = create(SoundListenerSystem.class);
         this.ambienceSoundSystem = create(AmbienceSoundSystem.class);

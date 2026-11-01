@@ -32,7 +32,8 @@ class ShipwrightDraftBranch extends BranchPackage {
      * decks under and over it faint, and the hull's outline where the water
      * meets it ruled across; with any other tool it is the deck as it was
      * built — floor, planking, bulwarks, rails and the wells left open in it —
-     * with the waist cut through it and every wall and half wall, and over it
+     * with the waist cut through it and every wall, half wall and railing, and
+     * over it
      * everything set down drawn whole as what it is: a stair's run in treads
      * climbing darker, a ladder's rails and rungs, a hatch's grating with its
      * hinge, a window's panes, a door, a cannon, the helm, the capstan and
@@ -172,6 +173,7 @@ class ShipwrightDraftBranch extends BranchPackage {
         drawCells(session, blueprint.getWaists(), deck, EngineSetting.SHIPWRIGHT_INK_WAIST);
         drawCells(session, blueprint.getWalls(), deck, EngineSetting.SHIPWRIGHT_INK_WALL);
         drawCells(session, blueprint.getHalfWalls(), deck, EngineSetting.SHIPWRIGHT_INK_HALF_WALL);
+        drawCells(session, blueprint.getRailings(), deck, EngineSetting.SHIPWRIGHT_INK_RAILING);
         drawHatches(session, layout, deck * EngineSetting.SHIP_DECK_HEIGHT);
         drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.STAIR.ordinal(), blueprint.getStairs(), deck);
         drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.LADDER.ordinal(), blueprint.getLadders(), deck);

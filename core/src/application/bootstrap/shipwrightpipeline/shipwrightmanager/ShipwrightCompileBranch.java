@@ -20,8 +20,8 @@ class ShipwrightCompileBranch extends BranchPackage {
      * at the drafting table becomes a ship. Every deck must be drawn, and
      * every piece of a deck above the bottom — a forecastle and a poop are two
      * pieces of one deck — must rest on the deck below. The octant grid is laid out round
-     * the sheet with room aft for the rudder and the porch and headroom for
-     * deckhouses and bulwarks; the hull, its decks, porch, bulwarks, waist, walls,
+     * the sheet with room aft for the rudder and headroom for deckhouses and
+     * bulwarks; the hull, its decks, bulwarks, waist, walls and railings,
      * stairs, ladders, boarding ladders, hatches, doors, windows and gun ports
      * are laid into it
      * through ShipwrightHullBranch and ShipwrightFittingBranch, and every piece
@@ -78,7 +78,6 @@ class ShipwrightCompileBranch extends BranchPackage {
                 EngineSetting.SHIP_SHEET_BREADTH);
 
         shipwrightHullBranch.layShell(layout);
-        shipwrightHullBranch.layPorch(blueprint, layout);
         shipwrightHullBranch.layBulwarks(layout);
         shipwrightHullBranch.layWaists(blueprint, layout);
         shipwrightHullBranch.layWalls(blueprint, layout);

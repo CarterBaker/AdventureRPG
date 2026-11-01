@@ -42,7 +42,6 @@ public class CommandConsoleSetting {
     public static final int TILE_GRID_MIN_COLUMNS = 1;
 
     // Tile Icons
-    public static final String MATERIAL_TILE_VEHICLE = "items/InventoryVehicleMaterial";
     public static final int DEPTH_TILE_ICON = 0;
 
     // Chunk Fields

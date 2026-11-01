@@ -130,6 +130,20 @@ class VehicleAssemblyBranch extends BranchPackage {
         return vehicleGeometryBranch.buildSolidGrid(parts);
     }
 
+    // Every part of a set meshed as an assembled vehicle meshes it, the parts that never move together and every
+    // moving part alone, gathered into one list to draw them all at rest
+    ObjectArrayList<MeshInstance> buildRestingMeshes(ObjectArrayList<VehiclePartStruct> parts) {
+
+        ObjectArrayList<MeshInstance> meshes = vehicleGeometryBranch.buildHullMeshes(parts);
+
+        vehicleGeometryBranch.buildPartMeshes(parts);
+
+        for (int i = 0; i < parts.size(); i++)
+            meshes.addAll(parts.get(i).getMeshes());
+
+        return meshes;
+    }
+
     // Release \\
 
     // Every mesh the type draws with, once nothing will draw it again

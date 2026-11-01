@@ -3,6 +3,7 @@ package application.bootstrap.shipwrightpipeline.util;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipFurnitureStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipWall;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -21,15 +22,14 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
      * from the bottom up. Each deck keeps its
      * "outline": the octants it reaches out from the centre line at every
      * octant along the sheet from its "start", aft to fore; the "waists" cut
-     * through its floor; and everything
-     * standing on it, each at [x, z] across the full breadth, or [x, z, spin]
-     * where it faces a way: "walls", "half_walls", "doors", "windows",
-     * "hatches", "stairs", "ladders", "boarding_ladders" and every piece of
-     * "furniture" naming its furnishing table and
-     * its "cell". The "helm" and "capstan" are one [deck, x, z] each, empty
-     * for none, the "porch" the deck it hangs at, SHIP_DECK_NONE for none, and
-     * every mast keeps only its "x", everything else about it following from
-     * the hull. findProblem() says what keeps a file from
+     * through its floor; and everything standing on it, each at [x, z]
+     * across the full breadth, or [x, z, spin] where it faces a way: "walls",
+     * "half_walls", "railings", "doors", "windows", "hatches", "stairs",
+     * "ladders", "boarding_ladders" and every piece of "furniture" naming its
+     * furnishing table and its "cell". The "helm" and "capstan" are one
+     * [deck, x, z] each, empty for none, and every mast keeps only its "x",
+     * everything else about it following from the hull. findProblem() says
+     * what keeps a file from
      * being read, so a ship in the assets fails loudly and a ship in a
      * player's saves is skipped.
      */
@@ -63,10 +63,6 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         if (hasCell(arpg, "helm") && !isCellSound(arpg.getAsArray("helm"), deckCount)
                 || hasCell(arpg, "capstan") && !isCellSound(arpg.getAsArray("capstan"), deckCount))
             return "its helm or capstan stands off its sheet";
-
-        if (ArpgUtility.hasNumber(arpg, "porch") && arpg.get("porch").getAsInt() != EngineSetting.SHIP_DECK_NONE
-                && !isWithin(arpg.get("porch").getAsInt(), 0, deckCount - 1))
-            return "its porch hangs at a deck it does not have";
 
         if (ArpgUtility.hasArray(arpg, "masts")) {
 
@@ -105,13 +101,14 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         if (!areCellsSound(deckArpg, "waists", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "walls", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "half_walls", EngineSetting.SHIP_PLACE_FIELDS)
+                || !areCellsSound(deckArpg, "railings", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "doors", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "windows", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "hatches", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "stairs", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "ladders", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "boarding_ladders", EngineSetting.SHIP_PLACE_FIELDS + 1))
-            return "its waist, a wall, door, window, hatch, stair or ladder stands off its sheet";
+            return "its waist, a wall, railing, door, window, hatch, stair or ladder stands off its sheet";
 
         if (ArpgUtility.hasArray(deckArpg, "furniture"))
             for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
@@ -208,8 +205,6 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         if (hasCell(arpg, "capstan"))
             blueprint.setCapstan(parseCell(arpg.getAsArray("capstan")));
 
-        blueprint.setPorchDeck(ArpgUtility.getInt(arpg, "porch", EngineSetting.SHIP_DECK_NONE));
-
         if (ArpgUtility.hasArray(arpg, "masts"))
             for (ArpgElementStruct mastArpg : arpg.getAsArray("masts"))
                 blueprint.addMast(new ShipMastStruct(mastArpg.getAsObject().get("x").getAsInt()));
@@ -226,8 +221,9 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
             blueprint.setOutline(deck, start + i, outlineArpg.get(i).getAsInt());
 
         parseWaists(deckArpg, deck, blueprint);
-        parseWalls(deckArpg, "walls", deck, false, blueprint);
-        parseWalls(deckArpg, "half_walls", deck, true, blueprint);
+        parseWalls(deckArpg, "walls", deck, ShipWall.FULL, blueprint);
+        parseWalls(deckArpg, "half_walls", deck, ShipWall.HALF, blueprint);
+        parseWalls(deckArpg, "railings", deck, ShipWall.RAILING, blueprint);
         parsePlaces(deckArpg, "doors", deck, blueprint.getDoors());
         parsePlaces(deckArpg, "windows", deck, blueprint.getWindows());
         parsePlaces(deckArpg, "hatches", deck, blueprint.getHatches());
@@ -256,7 +252,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
             ArpgObjectStruct deckArpg,
             String key,
             int deck,
-            boolean half,
+            ShipWall wall,
             ShipBlueprintStruct blueprint) {
 
         if (!ArpgUtility.hasArray(deckArpg, key))
@@ -264,7 +260,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
 
         for (ArpgElementStruct placeArpg : deckArpg.getAsArray(key))
             blueprint.setWall(deck, placeArpg.getAsArray().get(0).getAsInt(),
-                    placeArpg.getAsArray().get(1).getAsInt(), true, half);
+                    placeArpg.getAsArray().get(1).getAsInt(), wall);
     }
 
     private static void parsePlaces(ArpgObjectStruct deckArpg, String key, int deck, IntArrayList cells) {
@@ -306,7 +302,6 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         arpg.add("decks", decksArpg);
         arpg.add("helm", writeCell(blueprint.getHelm()));
         arpg.add("capstan", writeCell(blueprint.getCapstan()));
-        arpg.addProperty("porch", blueprint.getPorchDeck());
         arpg.add("masts", writeMasts(blueprint));
 
         return arpg;
@@ -333,6 +328,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         deckArpg.add("waists", writePlaces(blueprint.getWaists(), deck, false));
         deckArpg.add("walls", writePlaces(blueprint.getWalls(), deck, false));
         deckArpg.add("half_walls", writePlaces(blueprint.getHalfWalls(), deck, false));
+        deckArpg.add("railings", writePlaces(blueprint.getRailings(), deck, false));
         deckArpg.add("doors", writePlaces(blueprint.getDoors(), deck, true));
         deckArpg.add("windows", writePlaces(blueprint.getWindows(), deck, true));
         deckArpg.add("hatches", writePlaces(blueprint.getHatches(), deck, true));

@@ -2,6 +2,7 @@ package application.bootstrap.vehiclepipeline.vehiclemanager;
 
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleDesignStruct;
@@ -284,6 +285,11 @@ public class VehicleManager extends ManagerPackage {
     // The triangles a set of parts draws once meshed, counted through the vehicle mesher without building a mesh
     public int countTriangles(ObjectArrayList<VehiclePartStruct> parts) {
         return vehicleAssemblyBranch.countTriangles(parts);
+    }
+
+    // A set of parts meshed as an assembled vehicle meshes them, as one list to draw at rest, such as a picture of them
+    public ObjectArrayList<MeshInstance> buildRestingMeshes(ObjectArrayList<VehiclePartStruct> parts) {
+        return vehicleAssemblyBranch.buildRestingMeshes(parts);
     }
 
     // The sub-voxels riders and cargo would collide with, laid exactly as an assembled vehicle lays them

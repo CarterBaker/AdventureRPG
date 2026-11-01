@@ -60,8 +60,16 @@ public class TabManager extends ManagerPackage {
      * closes instead of taking the editor down. pushRects() and
      * notifyLayoutChanged() are the single call sites for rect propagation and
      * layout saving and no-op while a batch is open. Tab IDs are assigned in
-     * registration order and never reused.
+     * registration order and never reused. A tab's content may set a close
+     * guard: closing it from its chrome asks the guard first, so content
+     * holding unsaved work can ask before it goes and close itself after.
      */
+
+    @FunctionalInterface
+    public interface TabCloseGuard {
+        boolean allowClose();
+    }
+
     // Palette
     private Object2IntOpenHashMap<String> tabName2TabID;
     private ObjectArrayList<TabHandle> tabID2TabHandle;
@@ -74,6 +82,8 @@ public class TabManager extends ManagerPackage {
     // Batch — suppresses pushRects()/notifyLayoutChanged() side effects while
     // many structural changes happen back to back
     private boolean batching;
+    // Guards — the close guard of each content window that set one
+    private Object2ObjectOpenHashMap<WindowInstance, TabCloseGuard> contentWindow2CloseGuard;
     // Internal
     private WindowManager windowManager;
     private DockLayoutSystem dockLayoutSystem;
@@ -89,6 +99,7 @@ public class TabManager extends ManagerPackage {
         classInstanceCounter = new Object2IntOpenHashMap<>();
         classInstanceCounter.defaultReturnValue(0);
         osWindow2DockRect = new Object2ObjectOpenHashMap<>();
+        contentWindow2CloseGuard = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -284,11 +295,32 @@ public class TabManager extends ManagerPackage {
         return handle;
     }
 
+    // Closes a tab as its chrome asks: only once its content's close guard, if it set one, allows it
+    public void requestCloseTab(TabHandle handle) {
+        TabCloseGuard guard = contentWindow2CloseGuard.get(handle.getTabContext().getContentContext().getWindow());
+        if (guard == null || guard.allowClose())
+            closeTab(handle);
+    }
+
+    // The tab whose content runs in a window closed without asking its guard
+    public void closeTabOf(WindowInstance contentWindow) {
+        for (int i = 0; i < openTabs.size(); i++)
+            if (openTabs.get(i).getTabContext().getContentContext().getWindow() == contentWindow) {
+                closeTab(openTabs.get(i));
+                return;
+            }
+    }
+
+    public void setCloseGuard(WindowInstance contentWindow, TabCloseGuard guard) {
+        contentWindow2CloseGuard.put(contentWindow, guard);
+    }
+
     public void closeTab(TabHandle handle) {
         if (handle == null)
             throwException("Cannot close a null tab handle.");
         if (!handle.isOpen())
             throwException("Cannot close tab that is not open: " + handle.getTabTitle());
+        contentWindow2CloseGuard.remove(handle.getTabContext().getContentContext().getWindow());
         WindowInstance osWindow = handle.getTabContext().getWindow().getGLWindow();
         handle.getTabContext().getWindow().dispose();
         closeOsWindowIfEmpty(osWindow);

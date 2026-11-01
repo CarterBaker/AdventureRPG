@@ -28,12 +28,18 @@ How vehicles are made, stored, sailed, ridden and broken, and what is still open
 | The player | `Documents/My Games/AdventureRPG/Saves/Vehicles/<Name>.arpg` | `saved/<Name>` |
 
 - The file is the `Vehicles` schema: `display_name`, `category`, `decks` (each `start`, `outline`, `waists`,
-  `walls`, `half_walls`, `doors`, `windows`, `hatches`, `stairs`, `ladders`, `boarding_ladders`, `furniture`), `helm`,
-  `capstan`, `porch`,
+  `walls`, `half_walls`, `railings`, `doors`, `windows`, `hatches`, `stairs`, `ladders`, `boarding_ladders`,
+  `furniture`), `helm`, `capstan`,
   `masts` (each only its `x`; older files' `height`, `crows_nest` and `rigging` are ignored).
 - `assets/vehicles/` is optional; the game boots with no vehicle of its own. A saved vehicle that cannot be read or
   built is logged and skipped; one in the assets stops the game.
-- Saving a design registers it again at once. Vehicles already afloat keep the type they were launched as (section 9).
+- Saving a design registers it again at once, and the status line says the file it was written to. A save that
+  cannot be made (no name, no helm or capstan, a problem in the design, the triangle limit) says why in a notice and
+  leaves the ship on the sheet. Vehicles already afloat keep the type they were launched as (section 9).
+- **Open** lists every ship kept where the table writes, to pick one. **New**, **Open** and closing the table (Close or
+  Pause in the game, the tab's close button in the editor) go ahead at once over saved work; over unsaved work a
+  dialog asks first: **Save** (and go on once saved), **Don't Save**, or **Cancel**. Closing the whole editor window
+  does not ask yet.
 
 ---
 
@@ -48,14 +54,17 @@ cannon in iron, every piece of furniture over its whole footprint with its front
 |---|---|---|
 | Deck | Draws the deck's outline out to the cursor, **mirrored** port and starboard | — |
 | Waist | Cuts the deck's floor open, **mirrored**, railed round | — |
-| Walls | Paints walls on open floor, **not mirrored** | Full / half height |
+| Walls | Paints walls on open floor, **not mirrored**; railings also in place of the side or a bulwark | Full wall / Half wall / Railing |
 | Openings | Door or window **on the wall it is cut through**; hatch in a floor | Door / Window / Hatch |
 | Stairs & Ladders | Staircase climbing one deck the way it faces; ladder; boarding ladder over the side | Staircase / Ladder / Boarding ladder |
 | Masts | Steps a mast on the centre line; the rest is worked out | Every mast stepped |
-| Furniture | Sets the helm, the capstan or any `ship/` furnishing (cannons included) down | Every item, by name |
+| Furniture | Sets the helm, the capstan or any furnishing in the game (cannons included) down | Every item, pictured, by section |
 
-**Working the table.** The catalogue under the sheet lists every option of the tool in hand, the one picked lit; a
-click or Previous / Next Option picks one, a page at a time. Under the cursor the thing in hand is drawn whole, as it
+**Working the table.** The catalogue under the sheet is one scrolling list of every option of the tool in hand,
+grouped under section headings (furniture by the folder its furnishing table is kept in, the helm and capstan
+first), each a tile pictured by its item's model, the helm and the capstan by the very fittings a ship builds, an
+option with no picture a tile of its name, the one picked lit; a click or Previous / Next Option picks one, and an
+option picked by the bindings is scrolled into view. Under the cursor the thing in hand is drawn whole, as it
 would be set down, red where it could not stand, and the line under the sheet says why. Draw sets it down. Draw over
 anything already set down **picks it up** (the tool, option and facing that set it down go into the hand) so the
 next draw moves it; Erase **takes away** whatever is under the cursor, found over its whole footprint. Whatever is
@@ -80,6 +89,12 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   its middle is left as railed gangways either side looking down onto the deck below, which is open to the sky. Cut
   the decks below as well and the pit runs as many decks deep. A stair or ladder climbing out of it opens the rail
   where it lands; a hatch set on it closes as much of it as the largest lid covers.
+- **Railings** stand rail high (`SHIP_RAILING_HEIGHT`) on open floor, or **in place of the ship's own side** (the
+  planking between a deck and the one above) or of a **bulwark** at a deck's edge, which they replace up to the deck
+  above. There is no porch of its own: a porch, a balcony or a stern gallery is a stretch of deck railed round
+  instead of walled. A railing must stand **above the waterline** (refused at the table; one in the side lowers the
+  sill to its deck, so the compile calls it a shape problem if the sea would reach it). Erasing a railing puts the
+  side or bulwark back. Painting a full or half wall over a railing, or a railing over a wall, replaces it.
 - **Hatches** lie in a deck's floor over a deck below (never on the bottom deck). Set on a stair, ladder or waist
   opening, the lid closes the whole opening; anywhere else it cuts a 2×2 hole. Every lid is built as a hatch: a plank
   frame flush with the deck, slats set a sub-voxel down between it with gaps you can see through, two battens under
@@ -114,8 +129,8 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   deck, main deck, quarterdeck and forecastle, poop, poop royal), four masts, thirty guns each behind its own lidded
   port, the main deck's waist cut open over the lower gun deck, hatches, forty windows, a boarding ladder over either
   side of the main deck's gangways amidships, and a captain's loft of two floors (great cabin and bedchamber, a stair
-  inside) with a porch off the stern, drawn only with what the table offers and editable piece by piece at the
-  table.
+  inside) with a railed stern gallery off it, drawn only with what the table offers and editable piece by piece at
+  the table.
 
 ---
 
@@ -131,7 +146,7 @@ Rules the compile enforces (the change is refused with the reason shown when it 
 | Previous / Next Option | Q / F | Steps through the tool's catalogue |
 | Level Up / Down | Page Up / Page Down (and the wheel) | Steps the deck |
 | Save, Undo, Redo | Ctrl+S, Ctrl+Z, Ctrl+Y | As everywhere |
-| Pause | Escape | Leaves a table in the game |
+| Pause | Escape | Leaves a table in the game (asking over unsaved work); answers any open dialog as Cancel |
 
 All are rebindable on the Controls tab. The engine has no gamepad input yet; a controller is mapped onto these.
 

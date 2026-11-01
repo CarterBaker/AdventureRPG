@@ -2657,6 +2657,7 @@ public class EngineSetting {
     public static final float VEHICLE_DRY_FLOOD_LIMIT = 0.5f;
     public static final float VEHICLE_FREE_RUDDER_GAIN = 0.1f;
     public static final String VEHICLE_ITEM_MATERIAL = "items/VehicleItemMaterial";
+    public static final String VEHICLE_MATERIAL_ICON = "items/InventoryVehicleMaterial";
     public static final float VEHICLE_MAX_SPEED = 30f;
     public static final float VEHICLE_MAX_SPIN = 3f;
     public static final float VEHICLE_PROPELLED_HOIST = 0.05f;
@@ -2777,8 +2778,7 @@ public class EngineSetting {
     public static final int SHIP_HATCH_OCTANTS = 2;
     public static final int SHIP_LADDER_HANDHOLD = 2;
     public static final int SHIP_OPENING_REACH = 3;
-    public static final int SHIP_PORCH_DEPTH = 3;
-    public static final int SHIP_PORCH_RAIL_HEIGHT = 2;
+    public static final int SHIP_RAILING_HEIGHT = 2;
     public static final int SHIP_STAIR_HEADROOM = 2;
     public static final int SHIP_STAIR_MAX_RISE = 12;
     public static final int SHIP_STAIR_WIDTH = 2;
@@ -2886,7 +2886,6 @@ public class EngineSetting {
     public static final String SHIP_PART_HULL = "Hull";
     public static final String SHIP_PART_LADDERS = "Ladders";
     public static final String SHIP_PART_LADDER_RAILS = "LadderRails";
-    public static final String SHIP_PART_PORCH = "Porch";
     public static final String SHIP_PART_PORT_LID = "PortLid";
     public static final String SHIP_PART_RAILS = "Rails";
     public static final String SHIP_PART_RUDDER = "Rudder";
@@ -2918,10 +2917,10 @@ public class EngineSetting {
             SHIP_TEXTURE_ROPE };
     public static final float[] SHIP_MATERIAL_DENSITIES = { 0.2f, 0.15f, 0.15f, 0.08f, 0.05f, 0.05f };
 
-    // Shipwright — the drafting table the editor and the game share
+    // Shipwright — the drafting table the editor and the game share; its furniture is every furnishing in the game
     public static final float SHIPWRIGHT_BREEZE_WIND = DEFAULT_SEASON_BASE_WIND_SPEED;
     public static final float SHIPWRIGHT_GALE_WIND = DEFAULT_SEASON_BASE_WIND_SPEED * 2.5f;
-    public static final String SHIPWRIGHT_FURNISHING_FOLDER = "ship/";
+    public static final String SHIPWRIGHT_FURNISHING_FOLDER = "";
     public static final float SHIPWRIGHT_STABILITY_MAX_DEGREES = 90f;
     public static final float SHIPWRIGHT_STABILITY_STEP_DEGREES = 5f;
     public static final float SHIPWRIGHT_SURVEY_DELAY = 0.35f;
@@ -2933,10 +2932,12 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_ITEM_FURNISHINGS = 2;
     public static final int SHIPWRIGHT_ITEM_HELM = 0;
 
-    // Shipwright Catalogue — the options of the tool in hand laid out a page of rows at a time; walls full or half
-    public static final int SHIPWRIGHT_CATALOGUE_COLUMNS = 6;
-    public static final int SHIPWRIGHT_CATALOGUE_ROWS = 4;
-    public static final int SHIPWRIGHT_WALL_OPTIONS = 2;
+    // Shipwright Catalogue — the options of the tool in hand as tiles in rows under section headings, each picture
+    // drawn this much larger than an inventory slot draws it, the fittings pictured from a corner this far out in
+    // sub-voxels
+    public static final int SHIPWRIGHT_CATALOGUE_COLUMNS = 8;
+    public static final float SHIPWRIGHT_ICON_ZOOM = 1.3f;
+    public static final int SHIPWRIGHT_PREVIEW_ORIGIN_SUB_VOXELS = 16;
 
     // Shipwright Cursor — seconds a held movement binding waits before it repeats, then between steps
     public static final float SHIPWRIGHT_CURSOR_REPEAT_DELAY = 0.3f;
@@ -2979,6 +2980,7 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_INK_PANE = 0xEAF6FFFF;
     public static final int SHIPWRIGHT_INK_PICKED_MAST = 0xE0B030FF;
     public static final int SHIPWRIGHT_INK_RAIL = 0x4A3020FF;
+    public static final int SHIPWRIGHT_INK_RAILING = 0x7A5230FF;
     public static final int SHIPWRIGHT_INK_RUNG = 0x2E3A1EFF;
     public static final int SHIPWRIGHT_INK_SHELL = 0x2A2018FF;
     public static final int SHIPWRIGHT_INK_STAIRS = 0x3E7A3AFF;
@@ -3035,7 +3037,8 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_OPENING_HEIGHT = "A door is taller than the room it opens from";
     public static final String SHIPWRIGHT_PROBLEM_OPENING_SUBMERGED = "A door or window lies under the waterline";
     public static final String SHIPWRIGHT_PROBLEM_OPENING_WALL = "A door or window must face a wall or the side";
-    public static final String SHIPWRIGHT_PROBLEM_PORCH = "There is no stern at the porch's deck";
+    public static final String SHIPWRIGHT_PROBLEM_RAILING_PLACE = "A railing stands on open floor or in the deck's side";
+    public static final String SHIPWRIGHT_PROBLEM_RAILING_WATER = "A railing must stand above the waterline";
     public static final String SHIPWRIGHT_PROBLEM_SINKS = "Too heavy: the sea would come over her side";
     public static final String SHIPWRIGHT_PROBLEM_STAIRS_BLOCKED = "A stair runs into something already built";
     public static final String SHIPWRIGHT_PROBLEM_STAIRS_FLOOR = "A stair must stand on open floor";
@@ -3059,22 +3062,23 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_REFUSAL_TRIANGLES = "Too detailed: over the triangle limit of ";
 
     // Shipwright Status
-    public static final String SHIPWRIGHT_STATUS_DISCARD = "Unsaved changes: press again to discard them";
     public static final String SHIPWRIGHT_STATUS_LAUNCHED = "Launched ";
     public static final String SHIPWRIGHT_STATUS_NEW = "New ship";
     public static final String SHIPWRIGHT_STATUS_NONE = "";
     public static final String SHIPWRIGHT_STATUS_NONE_KEPT = "No ships are kept here yet";
+    public static final String SHIPWRIGHT_STATUS_NOT_SAVED = "Not saved: ";
     public static final String SHIPWRIGHT_STATUS_OPENED = "Opened ";
     public static final String SHIPWRIGHT_STATUS_PICKED_UP = "Picked up, set it down anywhere: ";
     public static final String SHIPWRIGHT_STATUS_REDONE = "Redone";
     public static final String SHIPWRIGHT_STATUS_REMOVED = "Took away ";
-    public static final String SHIPWRIGHT_STATUS_SAVED = "Saved ";
+    public static final String SHIPWRIGHT_STATUS_SAVED = "Saved to ";
     public static final String SHIPWRIGHT_STATUS_SAVE_FAILED = "The ship could not be written";
     public static final String SHIPWRIGHT_STATUS_UNDONE = "Undone";
     public static final String SHIPWRIGHT_STATUS_UNREADABLE = "Could not read ";
 
     // Shipwright Screen — drawn between the vitality overlay and the menus, the views on cards inside a margin
     public static final float SHIPWRIGHT_CARD_MARGIN = 0.06f;
+    public static final int SHIPWRIGHT_DEPTH_ICON = 0;
     public static final int SHIPWRIGHT_DEPTH_PAPER = 1;
     public static final int SHIPWRIGHT_DEPTH_TABLE = 0;
     public static final String SHIPWRIGHT_FBO = "ShipwrightScene";
@@ -3096,14 +3100,16 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_UNIFORM_MODE = "u_mode";
     public static final String SHIPWRIGHT_UNIFORM_VIEW_RECT = "u_viewRect";
 
-    // Shipwright Menus — entry points in the order the table menu lists them
+    // Shipwright Menus — entry points in the order each menu lists them
     public static final int SHIPWRIGHT_ENTRY_BUOYANCY = 9;
     public static final int SHIPWRIGHT_ENTRY_DECK = 6;
+    public static final int SHIPWRIGHT_ENTRY_DIALOG_MESSAGE = 0;
     public static final int SHIPWRIGHT_ENTRY_NAME = 3;
     public static final int SHIPWRIGHT_ENTRY_CATALOGUE = 14;
     public static final int SHIPWRIGHT_ENTRY_CATALOGUE_TITLE = 15;
     public static final int SHIPWRIGHT_ENTRY_INSPECT = 7;
     public static final int SHIPWRIGHT_ENTRY_SHEET = 0;
+    public static final int SHIPWRIGHT_ENTRY_SHIP_LIST = 0;
     public static final int SHIPWRIGHT_ENTRY_SIDE = 1;
     public static final int SHIPWRIGHT_ENTRY_SIZE = 12;
     public static final int SHIPWRIGHT_ENTRY_SPEED = 11;
@@ -3114,12 +3120,20 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_ENTRY_TOP = 2;
     public static final int SHIPWRIGHT_ENTRY_TRIANGLES = 13;
     public static final int SHIPWRIGHT_ENTRY_WATER = 8;
+    public static final String SHIPWRIGHT_MENU_CONFIRM = "Shipwright/Confirm";
     public static final String SHIPWRIGHT_MENU_LEAVE = "Shipwright/Leave";
+    public static final String SHIPWRIGHT_MENU_NOTICE = "Shipwright/Notice";
+    public static final String SHIPWRIGHT_MENU_SHIPS = "Shipwright/Ships";
     public static final String SHIPWRIGHT_MENU_TABLE = "Shipwright/Table";
+    public static final String SHIPWRIGHT_ELEMENT_CATALOGUE_HEADING_LABEL = "shipwright_catalogue_heading_label";
+    public static final String SHIPWRIGHT_ELEMENT_CATALOGUE_ICON = "shipwright_catalogue_item_icon";
     public static final String SHIPWRIGHT_ELEMENT_CATALOGUE_LABEL = "shipwright_catalogue_item_label";
+    public static final String SHIPWRIGHT_ELEMENT_SHIP_ROW_LABEL = "shipwright_ship_row_label";
+    public static final String SHIPWRIGHT_TEMPLATE_CATALOGUE_HEADING = "Shipwright/shipwright_catalogue_heading";
     public static final String SHIPWRIGHT_TEMPLATE_CATALOGUE_ITEM = "Shipwright/shipwright_catalogue_item";
-    public static final String SHIPWRIGHT_TEMPLATE_CATALOGUE_PICKED = "Shipwright/shipwright_catalogue_item_picked";
     public static final String SHIPWRIGHT_TEMPLATE_CATALOGUE_ROW = "Shipwright/shipwright_catalogue_row";
+    public static final String SHIPWRIGHT_TEMPLATE_CATALOGUE_TEXT = "Shipwright/shipwright_catalogue_text";
+    public static final String SHIPWRIGHT_TEMPLATE_SHIP_ROW = "Shipwright/shipwright_ship_row";
 
     // Shipwright Text
     public static final String[] SHIPWRIGHT_FACINGS = { "facing forward", "facing starboard", "facing aft",
@@ -3135,7 +3149,7 @@ public class EngineSetting {
     public static final String[] SHIPWRIGHT_HINTS = {
             "Draw the deck's outline out to the cursor, mirrored; Add Deck stacks the next deck on top",
             "Cut the waist through this deck's floor, mirrored and railed; cut the decks below to sink it deeper",
-            "Paint walls on this deck's open floor, full or half height",
+            "Paint walls or half walls; a railing also replaces the side or bulwark above water, making a porch",
             "Doors and windows turn to face their wall; a hatch lies in the floor, hinged on its long side",
             "A staircase climbs one deck the way it faces; a boarding ladder hangs over the side of an open deck",
             "Step a mast on the centre line; its height, sails and rigging follow from the hull",
@@ -3143,6 +3157,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_NAME_CARET = "|";
     public static final String SHIPWRIGHT_NAME_DIRTY = " *";
     public static final String SHIPWRIGHT_NAME_UNNAMED = "Unnamed ship - click to name";
+    public static final String SHIPWRIGHT_NAME_UNNAMED_SHIP = "This ship";
     public static final String SHIPWRIGHT_TEXT_ABOVE_WATER = "  (above water)";
     public static final String SHIPWRIGHT_TEXT_BLOCKS = " blocks";
     public static final String SHIPWRIGHT_TEXT_BOARDING = "Boarding ladder";
@@ -3154,6 +3169,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TEXT_DECK = "Deck ";
     public static final String SHIPWRIGHT_TEXT_DOOR = "Door";
     public static final String SHIPWRIGHT_TEXT_ERASES = " erases";
+    public static final String SHIPWRIGHT_TEXT_FITTINGS = "Helm & Capstan";
     public static final String SHIPWRIGHT_TEXT_FULL_WALL = "Full walls";
     public static final String SHIPWRIGHT_TEXT_HALF_WALL = "Half walls";
     public static final String SHIPWRIGHT_TEXT_HATCH = "Hatch";
@@ -3167,9 +3183,10 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TEXT_NO_CATALOGUE = "nothing to choose: draw straight onto the sheet";
     public static final String SHIPWRIGHT_TEXT_NO_MASTS = "no masts yet: set one on the centre line";
     public static final String SHIPWRIGHT_TEXT_OF = " of ";
-    public static final String SHIPWRIGHT_TEXT_PAGE = ", page ";
+    public static final String SHIPWRIGHT_TEXT_OTHER_FURNITURE = "Other";
     public static final String SHIPWRIGHT_TEXT_PAINTS = " paints";
     public static final String SHIPWRIGHT_TEXT_PICKS_UP = " picks it up";
+    public static final String SHIPWRIGHT_TEXT_RAILING = "Railing";
     public static final String SHIPWRIGHT_TEXT_RIGHT_CLICK = " / right click";
     public static final String SHIPWRIGHT_TEXT_SAILS = " sails";
     public static final String SHIPWRIGHT_TEXT_SEPARATOR = "  |  ";
@@ -3181,6 +3198,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TEXT_TURNS = " turn";
     public static final String SHIPWRIGHT_TEXT_UNDER_WATER = "  (under water)";
     public static final String SHIPWRIGHT_TEXT_UNKNOWN_ITEM = "Unknown furniture";
+    public static final String SHIPWRIGHT_TEXT_UNSAVED_CHANGES = " has unsaved changes. Save them before going on?";
     public static final String SHIPWRIGHT_TEXT_WINDOW = "Window";
 
     // Appearance

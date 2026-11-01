@@ -4,6 +4,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipWall;
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -24,14 +25,17 @@ class ShipwrightHullBranch extends BranchPackage {
      * deck's open end is closed by a bulkhead; interior decks floor the inside
      * at their height. Every open deck is ringed by a bulwark where it looks
      * out over nothing, the lowest of them the sill the sea comes aboard over.
-     * A porch hangs off the stern at its deck as wide as the stern is there,
-     * railed. The waist is cut out of a deck's floor wherever it is drawn,
+     * The waist is cut out of a deck's floor wherever it is drawn,
      * over open room below, and railed round wherever the floor left
      * standing looks down into it, so a deck cut through its middle is left
      * as gangways either side over the deck below, open to the sky; cut
      * through several decks, the pit runs as deep. A wall rises from its
-     * deck to the deck above it under cover, or
-     * a deckhouse high in the open; a half wall stands waist high. A stair
+     * deck to the deck above it under cover, or a deckhouse high in the open;
+     * a half wall stands waist high. A railing stands rail high on open
+     * floor, or in place of the ship's own side up to the deck above, or of a
+     * bulwark, at a deck's edge, lowering the sill to its deck where it opens
+     * the side, so a porch or a gallery is a deck railed round instead of
+     * walled. A stair
      * always climbs one deck: an octant per step along the way it faces, two
      * octants wide, onto the floor a deck's height up just past its last
      * tread, and opens the floor over its run and over the floor before its
@@ -173,57 +177,6 @@ class ShipwrightHullBranch extends BranchPackage {
         return !layout.isVolume(x, y + 1, inboard);
     }
 
-    // Porch \\
-
-    // A floor hanging off the stern at the porch's deck, as wide as the stern is there, railed where it looks out
-    void layPorch(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
-
-        if (!blueprint.hasPorch())
-            return;
-
-        int deck = blueprint.getPorchDeck();
-        int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
-        int stern = findStern(blueprint, deck);
-
-        if (stern == EngineSetting.INDEX_NOT_FOUND) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_PORCH);
-            return;
-        }
-
-        ShipOctantGridStruct grid = layout.getGrid();
-        int sternX = layout.getOriginX() + stern;
-
-        for (int z = 0; z < EngineSetting.SHIP_SHEET_BREADTH; z++)
-            if (blueprint.isOnDeck(deck, stern, z))
-                for (int depth = 1; depth <= EngineSetting.SHIP_PORCH_DEPTH; depth++)
-                    grid.set(sternX - depth, floor, z, ShipPiece.PORCH);
-
-        for (int z = 0; z < EngineSetting.SHIP_SHEET_BREADTH; z++)
-            for (int x = sternX - EngineSetting.SHIP_PORCH_DEPTH; x < sternX; x++)
-                if (grid.get(x, floor, z) == ShipPiece.PORCH && isPorchEdge(grid, x, floor, z, sternX))
-                    for (int rise = 1; rise <= EngineSetting.SHIP_PORCH_RAIL_HEIGHT; rise++)
-                        grid.setIfEmpty(x, floor + rise, z, ShipPiece.RAILS);
-    }
-
-    private boolean isPorchEdge(ShipOctantGridStruct grid, int x, int y, int z, int sternX) {
-        return isOffPorch(grid, x - 1, y, z, sternX) || isOffPorch(grid, x, y, z + 1, sternX)
-                || isOffPorch(grid, x, y, z - 1, sternX);
-    }
-
-    private boolean isOffPorch(ShipOctantGridStruct grid, int x, int y, int z, int sternX) {
-        return x < sternX && grid.get(x, y, z) != ShipPiece.PORCH;
-    }
-
-    // The aftmost octant along the sheet a deck is drawn at, INDEX_NOT_FOUND when it is drawn at none
-    private int findStern(ShipBlueprintStruct blueprint, int deck) {
-
-        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
-            if (blueprint.getOutline(deck, x) > 0)
-                return x;
-
-        return EngineSetting.INDEX_NOT_FOUND;
-    }
-
     // Waist \\
 
     // The waist cut out of every deck's floor where it is drawn, then railed round wherever a floor left standing
@@ -288,11 +241,12 @@ class ShipwrightHullBranch extends BranchPackage {
 
     void layWalls(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
-        layWallList(layout, blueprint.getWalls(), false);
-        layWallList(layout, blueprint.getHalfWalls(), true);
+        layWallList(layout, blueprint.getWalls(), ShipWall.FULL);
+        layWallList(layout, blueprint.getHalfWalls(), ShipWall.HALF);
+        layWallList(layout, blueprint.getRailings(), ShipWall.RAILING);
     }
 
-    private void layWallList(ShipLayoutStruct layout, IntArrayList walls, boolean half) {
+    private void layWallList(ShipLayoutStruct layout, IntArrayList walls, ShipWall wall) {
 
         for (int i = 0; i < walls.size(); i++) {
 
@@ -303,16 +257,21 @@ class ShipwrightHullBranch extends BranchPackage {
                     ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT,
                     ShipCellUtility.unpackX(cell),
                     ShipCellUtility.unpackZ(cell),
-                    half);
+                    wall);
         }
     }
 
     // A wall rises from its floor to the floor above it under cover, or a deckhouse high in the open; a half wall
-    // stands waist high either way
-    private void layWall(ShipLayoutStruct layout, int floor, int x, int z, boolean half) {
+    // stands waist high either way; a railing is laid by layRailing
+    private void layWall(ShipLayoutStruct layout, int floor, int x, int z, ShipWall wall) {
 
         ShipOctantGridStruct grid = layout.getGrid();
         int gridX = layout.getOriginX() + x;
+
+        if (wall == ShipWall.RAILING) {
+            layRailing(layout, floor, x, z);
+            return;
+        }
 
         if (!isFloor(grid, gridX, floor, z)) {
             layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_WALL_FLOOR);
@@ -320,7 +279,7 @@ class ShipwrightHullBranch extends BranchPackage {
         }
 
         boolean covered = layout.isVolume(x, floor + 1, z);
-        int height = half ? EngineSetting.SHIP_HALF_WALL_HEIGHT
+        int height = wall == ShipWall.HALF ? EngineSetting.SHIP_HALF_WALL_HEIGHT
                 : covered ? EngineSetting.SHIP_DECK_HEIGHT - 1 : EngineSetting.SHIP_DECKHOUSE_HEIGHT;
 
         for (int y = floor + 1; y <= floor + height; y++) {
@@ -330,6 +289,59 @@ class ShipwrightHullBranch extends BranchPackage {
 
             grid.set(gridX, y, z, ShipPiece.WALLS);
         }
+    }
+
+    // A railing rail high over a deck's octant, the side, bulwark or rail standing there up to the deck above taken
+    // down first; opening the side lowers the sill to the deck, so one under the water is a shape problem
+    private void layRailing(ShipLayoutStruct layout, int floor, int x, int z) {
+
+        String problem = findRailingProblem(layout, floor / EngineSetting.SHIP_DECK_HEIGHT, x, z);
+
+        if (!problem.isEmpty()) {
+            layout.reportBuildProblem(problem);
+            return;
+        }
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int gridX = layout.getOriginX() + x;
+
+        for (int y = floor + 1; y < floor + EngineSetting.SHIP_DECK_HEIGHT; y++) {
+
+            ShipPiece piece = grid.get(gridX, y, z);
+
+            if (piece == ShipPiece.HULL || piece == ShipPiece.BULWARK)
+                layout.lowerOpeningSill((floor + 1) * EngineSetting.SUB_BLOCK_SIZE);
+
+            if (piece != ShipPiece.HULL && piece != ShipPiece.BULWARK && piece != ShipPiece.RAILS)
+                break;
+
+            grid.clear(gridX, y, z);
+        }
+
+        for (int y = floor + 1; y <= floor + EngineSetting.SHIP_RAILING_HEIGHT; y++)
+            grid.setIfEmpty(gridX, y, z, ShipPiece.RAILS);
+    }
+
+    // Why a railing cannot stand over a deck's octant, SHIP_PROBLEM_NONE when it can: above the waterline the ship
+    // last floated at, on open floor or in place of the side, a bulwark or a rail at the deck's edge
+    String findRailingProblem(ShipLayoutStruct layout, int deck, int x, int z) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
+        int gridX = layout.getOriginX() + x;
+        ShipPiece standing = grid.get(gridX, floor + 1, z);
+
+        if (layout.isAfloat() && (floor + 1) * EngineSetting.SUB_BLOCK_SIZE <= layout.getDraft())
+            return EngineSetting.SHIPWRIGHT_PROBLEM_RAILING_WATER;
+
+        if (isFloor(grid, gridX, floor, z)
+                && (standing == null || standing == ShipPiece.BULWARK || standing == ShipPiece.RAILS))
+            return EngineSetting.SHIP_PROBLEM_NONE;
+
+        if (standing == ShipPiece.HULL && layout.isVolume(x, floor, z) && grid.get(gridX, floor, z) != null)
+            return EngineSetting.SHIP_PROBLEM_NONE;
+
+        return EngineSetting.SHIPWRIGHT_PROBLEM_RAILING_PLACE;
     }
 
     // Stairs \\
@@ -432,7 +444,7 @@ class ShipwrightHullBranch extends BranchPackage {
             grid.clear(x, floor, z);
     }
 
-    // The bulwark along a deck's edge, or the rail round a porch or the waist, opened where a stair or ladder climbs
+    // The bulwark along a deck's edge, or a rail or railing, opened where a stair or ladder climbs
     // onto it
     private void clearLanding(ShipOctantGridStruct grid, int x, int floor, int z) {
 

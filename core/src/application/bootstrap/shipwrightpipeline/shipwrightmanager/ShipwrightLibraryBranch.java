@@ -141,6 +141,11 @@ class ShipwrightLibraryBranch extends BranchPackage {
 
     // Utility \\
 
+    // The path of the file a ship is kept in, as it is shown
+    String describeFile(ShipwrightStorage storage, String shipName) {
+        return resolveFile(storage, shipName).getPath();
+    }
+
     private File resolveFile(ShipwrightStorage storage, String shipName) {
         return ArpgUtility.resolveFile(getRoot(storage), shipName);
     }

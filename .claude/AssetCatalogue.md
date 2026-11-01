@@ -58,6 +58,12 @@ One line per session that changed this file: the date, what was added or removed
   line naming what is under the cursor, turn buttons, tool buttons inline so the picked one lights) and
   `schemas/Vehicles.arpg` (`boarding_ladders`). The texture `ShipGrating` is no longer used by any lid; its entry
   stays until the owner says otherwise.
+- 2026-11-01: Shipwright catalogue and dialogs. Regenerated `menus/Shipwright.arpg` (scrolling pictured catalogue with
+  section headings, one Open button, the Ships, Confirm and Notice dialogs).
+- 2026-11-01: Shipwright railings. Regenerated `vehicles/Galleon.arpg` (the stern porch is now the poop deck drawn
+  three octants further aft and railed round, its two stern windows below moved onto the new counter),
+  `menus/Shipwright.arpg` (Porch button removed, name-only catalogue tiles) and `schemas/Vehicles.arpg` (`railings`,
+  no `porch`).
 
 ---
 

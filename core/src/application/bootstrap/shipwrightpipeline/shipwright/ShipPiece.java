@@ -12,8 +12,8 @@ public enum ShipPiece {
      * texture, named for it, in this order. The planking a hull is shelled in,
      * its bottom, the weather deck that caps it and the bulwarks round every
      * open deck all keep the sea out, so every layer of the hull stays sealed
-     * however its decks flare or narrow; floors, walls, stairs, the porch and
-     * its rails are what is walked on and built against. Spars, canvas, rope
+     * however its decks flare or narrow; floors, walls, stairs, rails and
+     * railings are what is walked on and built against. Spars, canvas, rope
      * and fittings rise above the hull's grid and are built as boxes of their
      * own.
      */
@@ -25,7 +25,6 @@ public enum ShipPiece {
     DECKS(EngineSetting.SHIP_PART_DECKS, VehiclePartRole.DECK, EngineSetting.SHIP_TEXTURE_DECK, true),
     WALLS(EngineSetting.SHIP_PART_WALLS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_WALL, false),
     STAIRS(EngineSetting.SHIP_PART_STAIRS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_DECK, false),
-    PORCH(EngineSetting.SHIP_PART_PORCH, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_DECK, true),
     RAILS(EngineSetting.SHIP_PART_RAILS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_HULL, false);
 
     // Values

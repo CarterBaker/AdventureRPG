@@ -25,6 +25,7 @@ import engine.util.mathematics.extras.Coordinate3Long;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class ShipwrightFittingBranch extends BranchPackage {
 
@@ -792,12 +793,19 @@ class ShipwrightFittingBranch extends BranchPackage {
         }
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+
+        buildHelm(layout.getParts(),
+                (layout.getOriginX() + ShipCellUtility.unpackX(cell)) * octant + octant / 2,
+                (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant,
+                (ShipCellUtility.unpackZ(cell) + 1) * octant);
+    }
+
+    // The helm's stand and wheel, the wheel's axle over a point of the floor given in sub-voxels, added to the parts
+    void buildHelm(ObjectArrayList<VehiclePartStruct> parts, int centerX, int floor, int centerZ) {
+
         int radius = EngineSetting.SHIP_WHEEL_RADIUS;
         int reach = EngineSetting.SHIP_WHEEL_HANDLE_REACH;
-        int floor = (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant;
-        int centerX = (layout.getOriginX() + ShipCellUtility.unpackX(cell)) * octant + octant / 2;
         int centerY = floor + EngineSetting.SHIP_WHEEL_HEIGHT;
-        int centerZ = (ShipCellUtility.unpackZ(cell) + 1) * octant;
         int wheelX = centerX + 1;
         int wheelEndX = wheelX + EngineSetting.SHIP_WHEEL_THICKNESS;
         float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
@@ -833,8 +841,8 @@ class ShipwrightFittingBranch extends BranchPackage {
         wheel.addBox(wheelX, centerY - reach, centerZ - 1, wheelEndX, centerY + reach, centerZ + 1);
         wheel.addBox(wheelX, centerY - 1, centerZ - reach, wheelEndX, centerY + 1, centerZ + reach);
 
-        layout.addPart(stand);
-        layout.addPart(wheel);
+        parts.add(stand);
+        parts.add(wheel);
     }
 
     // A drum under a broad cap, two bars crossing over it
@@ -848,10 +856,17 @@ class ShipwrightFittingBranch extends BranchPackage {
         }
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int minX = (layout.getOriginX() + ShipCellUtility.unpackX(cell)) * octant;
-        int minZ = ShipCellUtility.unpackZ(cell) * octant;
-        int floor = (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant;
-        int span = size * octant;
+
+        buildCapstan(layout.getParts(),
+                (layout.getOriginX() + ShipCellUtility.unpackX(cell)) * octant,
+                (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant,
+                ShipCellUtility.unpackZ(cell) * octant);
+    }
+
+    // The capstan's drum, cap and bars over its square of floor from a corner given in sub-voxels, added to the parts
+    void buildCapstan(ObjectArrayList<VehiclePartStruct> parts, int minX, int floor, int minZ) {
+
+        int span = EngineSetting.SHIP_FITTING_OCTANTS * EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int middleX = minX + span / 2;
         int middleZ = minZ + span / 2;
         int drum = EngineSetting.SHIP_CAPSTAN_DRUM_HEIGHT;
@@ -865,7 +880,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         capstan.addBox(middleX - bar, floor + drum + 2, middleZ - 1, middleX + bar, floor + drum + 3, middleZ + 1);
         capstan.addBox(middleX - 1, floor + drum + 2, middleZ - bar, middleX + 1, floor + drum + 3, middleZ + bar);
 
-        layout.addPart(capstan);
+        parts.add(capstan);
     }
 
     // A blade off the stern post from the keel up the stern, no higher than a deck over the keel, hinged at the post
