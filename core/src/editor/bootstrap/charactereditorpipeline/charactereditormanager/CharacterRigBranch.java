@@ -1,0 +1,820 @@
+package editor.bootstrap.charactereditorpipeline.charactereditormanager;
+
+import java.util.function.Consumer;
+
+import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.rig.RigMathUtility;
+import application.bootstrap.geometrypipeline.rigmanager.RigManager;
+import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
+import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
+import editor.bootstrap.infopipeline.infomanager.InfoManager;
+import editor.runtime.characterview.history.CharacterViewHistoryStruct;
+import editor.runtime.characterview.util.CharacterPoseUtility;
+import editor.runtime.characterview.util.CharacterViewUtility;
+import editor.runtime.EditorSetting;
+import engine.root.BranchPackage;
+import engine.root.EngineSetting;
+import engine.root.UtilityPackage.InternalException;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
+import engine.util.io.FileUtility;
+import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+
+class CharacterRigBranch extends BranchPackage {
+
+    /*
+     * Owns the rig the active character is built on as the Rig mode edits
+     * it: its ARPG entry, owned by InfoManager, read into a draft of every
+     * bone's name, parent and bind pose with its joint placed in the world,
+     * the bone selected, and the rig's undo history. Every change goes
+     * through InfoManager, so the Info Panel and every tab see it, and is
+     * applied to the registered rig in place while the rig keeps its bones —
+     * moving a joint, turning or sizing a bone shows at once on every
+     * character, clip and pose built on it. Adding a bone, naming one,
+     * moving it under another or mirroring one across the body changes the
+     * bones themselves, which everything loaded is laid out by, so those
+     * are written to the rig and take hold the next time the editor starts;
+     * only bones added since it started can be renamed or removed, since
+     * nothing loaded can name them yet. A bone moved under another keeps its
+     * joint where it stood, and the bones stay parent before child.
+     */
+
+    // Internal
+    private InfoManager infoManager;
+    private RigManager rigManager;
+    private CharacterEditorManager characterEditorManager;
+
+    // Rig
+    private RigHandle rigHandle;
+    private boolean structureChanged;
+    private String refusal;
+    private CharacterViewHistoryStruct history;
+
+    // Draft — one entry per bone of the rig as it stands in its entry, storage only ever growing
+    private ObjectArrayList<String> boneNames;
+    private IntArrayList parents;
+    private ObjectArrayList<Vector3> positions;
+    private ObjectArrayList<Vector3> rotations;
+    private ObjectArrayList<Vector3> sizes;
+    private ObjectArrayList<Matrix4> worldMatrices;
+    private int boneCount;
+    private int selectedBone;
+
+    // Gesture
+    private Vector3 gesturePosition;
+    private Vector3 gestureSize;
+    private Matrix4 gestureParentInverse;
+
+    // Scratch
+    private Vector3 unitScale;
+    private Vector3 vectorScratch;
+    private Matrix4 localScratch;
+    private Matrix4 matrixScratchA;
+    private Matrix4 matrixScratchB;
+    private Matrix4 matrixScratchC;
+    private BooleanArrayList subtree;
+    private IntArrayList orderScratch;
+
+    // Base \\
+
+    @Override
+    protected void create() {
+
+        // Rig
+        this.history = new CharacterViewHistoryStruct();
+
+        // Draft
+        this.boneNames = new ObjectArrayList<>();
+        this.parents = new IntArrayList();
+        this.positions = new ObjectArrayList<>();
+        this.rotations = new ObjectArrayList<>();
+        this.sizes = new ObjectArrayList<>();
+        this.worldMatrices = new ObjectArrayList<>();
+        this.selectedBone = EngineSetting.INDEX_NOT_FOUND;
+
+        // Gesture
+        this.gesturePosition = new Vector3();
+        this.gestureSize = new Vector3();
+        this.gestureParentInverse = new Matrix4();
+
+        // Scratch
+        this.unitScale = new Vector3(1f, 1f, 1f);
+        this.vectorScratch = new Vector3();
+        this.localScratch = new Matrix4();
+        this.matrixScratchA = new Matrix4();
+        this.matrixScratchB = new Matrix4();
+        this.matrixScratchC = new Matrix4();
+        this.subtree = new BooleanArrayList();
+        this.orderScratch = new IntArrayList();
+    }
+
+    @Override
+    protected void get() {
+        this.infoManager = get(InfoManager.class);
+        this.rigManager = get(RigManager.class);
+        this.characterEditorManager = get(CharacterEditorManager.class);
+    }
+
+    // Rig \\
+
+    // Follows the rig the active character is built on, reading it afresh whenever that rig changes
+    void sync(RigHandle activeRig) {
+
+        if (activeRig == rigHandle)
+            return;
+
+        this.rigHandle = activeRig;
+        this.selectedBone = activeRig != null ? 0 : EngineSetting.INDEX_NOT_FOUND;
+        this.structureChanged = false;
+        this.refusal = null;
+        history.clear();
+        reload();
+    }
+
+    // A change to a rig entry, made here or in the Info Panel: the draft read again and the bind pose applied
+    void refreshEntry(InfoEntryStruct entry) {
+
+        if (rigHandle == null || !entry.getEntryName().equals(rigHandle.getRigName()))
+            return;
+
+        reload();
+        apply(entry.getArpg());
+        characterEditorManager.notifyChanged();
+    }
+
+    private void apply(ArpgObjectStruct rigArpg) {
+
+        try {
+            this.structureChanged = !rigManager.updateRig(rigHandle, rigArpg);
+            this.refusal = null;
+        } catch (InternalException e) {
+            errorLog(e.getMessage());
+            this.refusal = e.getMessage();
+        }
+    }
+
+    private ArpgObjectStruct getRigArpg() {
+
+        if (rigHandle == null)
+            return null;
+
+        InfoEntryStruct entry = infoManager.findEntry(
+                EditorSetting.INFO_SCHEMA_RIGS,
+                rigHandle.getRigName(),
+                rigHandle.getRigName());
+
+        return entry != null ? entry.getArpg() : null;
+    }
+
+    private ArpgArrayStruct getBonesArpg() {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        return rigArpg != null && ArpgUtility.hasArray(rigArpg, EditorSetting.CHARACTER_RIG_FIELD_BONES)
+                ? rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES)
+                : null;
+    }
+
+    // Draft \\
+
+    // Every bone of the entry read into the draft, each joint placed by its parent's, the selection kept in range
+    private void reload() {
+
+        ArpgArrayStruct bones = getBonesArpg();
+
+        this.boneCount = bones != null ? bones.size() : 0;
+
+        for (int i = 0; i < boneCount; i++)
+            readBone(i, bones.get(i).getAsObject());
+
+        if (selectedBone >= boneCount)
+            this.selectedBone = boneCount > 0 ? 0 : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private void readBone(int boneIndex, ArpgObjectStruct boneArpg) {
+
+        while (worldMatrices.size() <= boneIndex) {
+            boneNames.add("");
+            parents.add(EngineSetting.INDEX_NOT_FOUND);
+            positions.add(new Vector3());
+            rotations.add(new Vector3());
+            sizes.add(new Vector3());
+            worldMatrices.add(new Matrix4());
+        }
+
+        boneNames.set(boneIndex, ArpgUtility.getString(boneArpg, EditorSetting.CHARACTER_RIG_FIELD_NAME, ""));
+        parents.set(boneIndex, findBefore(
+                ArpgUtility.getString(boneArpg, EditorSetting.CHARACTER_RIG_FIELD_PARENT, ""),
+                boneIndex));
+        readVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, 0f, positions.get(boneIndex));
+        readVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION, 0f, rotations.get(boneIndex));
+        readVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_SIZE, EngineSetting.DEFAULT_BONE_SIZE,
+                sizes.get(boneIndex));
+
+        RigMathUtility.composeLocal(
+                positions.get(boneIndex),
+                rotations.get(boneIndex),
+                unitScale,
+                localScratch,
+                matrixScratchA,
+                matrixScratchB);
+
+        int parent = parents.getInt(boneIndex);
+        Matrix4 world = worldMatrices.get(boneIndex);
+
+        if (parent == EngineSetting.INDEX_NOT_FOUND)
+            world.set(localScratch);
+        else
+            world.set(worldMatrices.get(parent)).multiply(localScratch);
+    }
+
+    private void readVector(ArpgObjectStruct boneArpg, String key, float defaultValue, Vector3 out) {
+        out.set(
+                CharacterViewUtility.getComponent(boneArpg, key, 0, defaultValue),
+                CharacterViewUtility.getComponent(boneArpg, key, 1, defaultValue),
+                CharacterViewUtility.getComponent(boneArpg, key, 2, defaultValue));
+    }
+
+    // A bone named before another in the draft, as a parent must be
+    private int findBefore(String boneName, int limit) {
+
+        for (int i = 0; i < limit; i++)
+            if (boneNames.get(i).equals(boneName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private int findBone(String boneName) {
+        return findBefore(boneName, boneCount);
+    }
+
+    // Edits \\
+
+    // One change to the rig's bones, recorded for undo first unless a gesture already holds the rig as it stood
+    private void edit(Consumer<ArpgArrayStruct> editor) {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        if (rigArpg == null)
+            return;
+
+        history.record(rigArpg);
+        infoManager.editEntry(
+                EditorSetting.INFO_SCHEMA_RIGS,
+                rigHandle.getRigName(),
+                rigHandle.getRigName(),
+                rig -> editor.accept(rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES)));
+    }
+
+    private void replace(ArpgObjectStruct snapshot) {
+        infoManager.editEntry(
+                EditorSetting.INFO_SCHEMA_RIGS,
+                rigHandle.getRigName(),
+                rigHandle.getRigName(),
+                rig -> CharacterViewUtility.replaceObject(rig, snapshot));
+    }
+
+    // One axis of a bone's position, rotation or size
+    void setComponent(int boneIndex, String field, int axis, float value) {
+
+        float defaultValue = field.equals(EditorSetting.CHARACTER_EDITOR_FIELD_SIZE)
+                ? EngineSetting.DEFAULT_BONE_SIZE
+                : 0f;
+        float written = field.equals(EditorSetting.CHARACTER_EDITOR_FIELD_SIZE)
+                ? Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, value)
+                : value;
+
+        edit(bones -> CharacterViewUtility.setObjectComponent(
+                bones.get(boneIndex).getAsObject(), field, axis, written, defaultValue));
+    }
+
+    private void writeVector(ArpgObjectStruct boneArpg, String field, Vector3 value) {
+        for (int axis = 0; axis < EditorSetting.CHARACTER_VIEW_AXIS_NAMES.length; axis++)
+            CharacterViewUtility.setObjectComponent(boneArpg, field, axis, getAxis(value, axis), 0f);
+    }
+
+    // Gestures \\
+
+    // Opens one undo step for a drag on the selected bone, holding where it started
+    boolean beginGesture() {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        if (rigArpg == null || selectedBone == EngineSetting.INDEX_NOT_FOUND)
+            return false;
+
+        history.begin(rigArpg);
+        gesturePosition.set(positions.get(selectedBone));
+        gestureSize.set(sizes.get(selectedBone));
+        resolveParentRotation(selectedBone, gestureParentInverse);
+        gestureParentInverse.inverse();
+
+        return true;
+    }
+
+    // The selected joint carried by a move in the world from where the drag began, children following
+    void moveGesture(Vector3 worldMove) {
+
+        int boneIndex = selectedBone;
+
+        CharacterPoseUtility.transformDirection(gestureParentInverse, worldMove.x, worldMove.y, worldMove.z,
+                vectorScratch);
+        vectorScratch.add(gesturePosition);
+        edit(bones -> writeVector(bones.get(boneIndex).getAsObject(), EditorSetting.CHARACTER_EDITOR_FIELD_POSITION,
+                vectorScratch));
+    }
+
+    // The selected bone's size grown or shrunk from what it was when the drag began
+    void scaleGesture(float factor) {
+
+        int boneIndex = selectedBone;
+
+        vectorScratch.set(gestureSize).multiply(factor);
+        vectorScratch.set(
+                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, vectorScratch.x),
+                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, vectorScratch.y),
+                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, vectorScratch.z));
+        edit(bones -> writeVector(bones.get(boneIndex).getAsObject(), EditorSetting.CHARACTER_EDITOR_FIELD_SIZE,
+                vectorScratch));
+    }
+
+    void endGesture() {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        if (rigArpg != null)
+            history.commit(rigArpg);
+    }
+
+    void cancelGesture() {
+
+        ArpgObjectStruct snapshot = history.cancel();
+
+        if (snapshot != null && rigHandle != null)
+            replace(snapshot);
+    }
+
+    boolean isGesturing() {
+        return history.isOpen();
+    }
+
+    // Structure \\
+
+    // A new child of the selected bone at a point in the world, or a step above it, named after the parent
+    void addBone(Vector3 worldPoint) {
+
+        if (selectedBone == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        int parent = selectedBone;
+        String boneName = resolveNewName(boneNames.get(parent));
+        Vector3 position = new Vector3(0f, EditorSetting.CHARACTER_RIG_NEW_BONE_OFFSET, 0f);
+        float size = EditorSetting.CHARACTER_RIG_NEW_BONE_SIZE;
+
+        if (worldPoint != null) {
+            matrixScratchA.set(worldMatrices.get(parent)).inverse();
+            CharacterPoseUtility.transformPoint(matrixScratchA, worldPoint.x, worldPoint.y, worldPoint.z, position);
+        }
+
+        ArpgObjectStruct boneArpg = new ArpgObjectStruct();
+
+        boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, boneName);
+        boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_PARENT, boneNames.get(parent));
+        writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, position);
+        writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_SIZE, vectorScratch.set(size, size, size));
+
+        edit(bones -> bones.add(boneArpg));
+        this.selectedBone = findBone(boneName);
+        characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_ADDED + boneName);
+    }
+
+    // The first free name of the editor's new bones, carrying the parent's side so the bone mirrors with it
+    private String resolveNewName(String parentName) {
+
+        String side = resolveSide(parentName);
+
+        for (int number = 1;; number++) {
+
+            String boneName = EditorSetting.CHARACTER_RIG_NEW_BONE_NAME + number + side;
+
+            if (findBone(boneName) == EngineSetting.INDEX_NOT_FOUND)
+                return boneName;
+        }
+    }
+
+    private String resolveSide(String boneName) {
+
+        if (boneName.endsWith(EditorSetting.CHARACTER_MESH_BONE_SUFFIX_LEFT))
+            return EditorSetting.CHARACTER_MESH_BONE_SUFFIX_LEFT;
+
+        if (boneName.endsWith(EditorSetting.CHARACTER_MESH_BONE_SUFFIX_RIGHT))
+            return EditorSetting.CHARACTER_MESH_BONE_SUFFIX_RIGHT;
+
+        return "";
+    }
+
+    // A bone added since the editor started and every bone below it removed
+    void removeBone(int boneIndex) {
+
+        if (!canRename(boneIndex)) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_LOADED_BONE);
+            return;
+        }
+
+        String boneName = boneNames.get(boneIndex);
+        int parent = parents.getInt(boneIndex);
+
+        markSubtree(boneIndex);
+        edit(bones -> {
+            for (int i = boneCount - 1; i >= 0; i--)
+                if (subtree.getBoolean(i))
+                    bones.remove(i);
+        });
+        this.selectedBone = parent;
+        characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_REMOVED + boneName);
+    }
+
+    boolean isBoneNameValid(int boneIndex, String boneName) {
+        return canRename(boneIndex)
+                && FileUtility.isValidFileName(boneName, EditorSetting.NAME_INPUT_MAX_LENGTH)
+                && (boneName.equals(boneNames.get(boneIndex)) || findBone(boneName) == EngineSetting.INDEX_NOT_FOUND);
+    }
+
+    // A bone added since the editor started given a new name, its children following it
+    void renameBone(int boneIndex, String boneName) {
+
+        if (!isBoneNameValid(boneIndex, boneName))
+            return;
+
+        String oldName = boneNames.get(boneIndex);
+
+        edit(bones -> {
+            for (int i = 0; i < bones.size(); i++) {
+
+                ArpgObjectStruct boneArpg = bones.get(i).getAsObject();
+
+                if (i == boneIndex)
+                    boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, boneName);
+                else if (oldName.equals(ArpgUtility.getString(boneArpg, EditorSetting.CHARACTER_RIG_FIELD_PARENT, "")))
+                    boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_PARENT, boneName);
+            }
+        });
+    }
+
+    // Only a bone nothing loaded can name yet takes a new name or goes; the root never does
+    boolean canRename(int boneIndex) {
+        return boneIndex > 0 && boneIndex < boneCount && rigHandle != null
+                && !rigHandle.hasBone(boneNames.get(boneIndex));
+    }
+
+    // Parent \\
+
+    // The bone moved under the next or previous bone that is neither itself nor below it, its joint kept in place
+    void cycleParent(int boneIndex, int direction) {
+
+        if (boneIndex <= 0 || boneIndex >= boneCount)
+            return;
+
+        markSubtree(boneIndex);
+
+        int parent = parents.getInt(boneIndex);
+        int candidate = parent;
+
+        do {
+            candidate = Math.floorMod(candidate + direction, boneCount);
+        } while (subtree.getBoolean(candidate) && candidate != parent);
+
+        if (candidate == parent)
+            return;
+
+        reparent(boneIndex, candidate);
+    }
+
+    private void reparent(int boneIndex, int parent) {
+
+        String boneName = boneNames.get(boneIndex);
+        String parentName = boneNames.get(parent);
+        Vector3 position = new Vector3();
+        Vector3 rotation = new Vector3();
+
+        matrixScratchA.set(worldMatrices.get(parent)).inverse();
+        matrixScratchC.set(matrixScratchA).multiply(worldMatrices.get(boneIndex));
+        CharacterPoseUtility.getTranslation(matrixScratchC, position);
+        CharacterPoseUtility.extractRotation(matrixScratchC, matrixScratchB);
+        CharacterPoseUtility.toEuler(matrixScratchB, rotations.get(boneIndex), rotation);
+
+        edit(bones -> {
+
+            ArpgObjectStruct boneArpg = bones.get(boneIndex).getAsObject();
+
+            boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_PARENT, parentName);
+            writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, position);
+
+            if (boneArpg.has(EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION) || rotation.lengthSquared() > 0f)
+                writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION, rotation);
+
+            reorder(bones);
+        });
+
+        this.selectedBone = findBone(boneName);
+    }
+
+    // The bones laid out again parent before child, each keeping its place among those free to stand there; a bone
+    // naming a parent the rig lacks keeps its turn at the end, for the builder to refuse with its reason
+    private void reorder(ArpgArrayStruct bones) {
+
+        ObjectArrayList<ArpgObjectStruct> ordered = new ObjectArrayList<>();
+        ObjectArrayList<String> placed = new ObjectArrayList<>();
+
+        boolean progressed = true;
+
+        orderScratch.clear();
+
+        while (progressed && ordered.size() < bones.size())
+            progressed = placeFree(bones, ordered, placed);
+
+        for (int i = 0; i < bones.size(); i++)
+            if (!orderScratch.contains(i))
+                ordered.add(bones.get(i).getAsObject());
+
+        for (int i = 0; i < ordered.size(); i++)
+            bones.set(i, ordered.get(i));
+    }
+
+    // One pass placing every bone whose parent is already placed; false when the pass placed none
+    private boolean placeFree(
+            ArpgArrayStruct bones,
+            ObjectArrayList<ArpgObjectStruct> ordered,
+            ObjectArrayList<String> placed) {
+
+        boolean progressed = false;
+
+        for (int i = 0; i < bones.size(); i++) {
+
+            ArpgObjectStruct boneArpg = bones.get(i).getAsObject();
+            String parent = ArpgUtility.getString(boneArpg, EditorSetting.CHARACTER_RIG_FIELD_PARENT, "");
+
+            if (!orderScratch.contains(i) && (parent.isEmpty() || placed.contains(parent))) {
+                orderScratch.add(i);
+                ordered.add(boneArpg);
+                placed.add(ArpgUtility.getString(boneArpg, EditorSetting.CHARACTER_RIG_FIELD_NAME, ""));
+                progressed = true;
+            }
+        }
+
+        return progressed;
+    }
+
+    // Mirror \\
+
+    // The selected bone and every bone below it given a twin across the body, made where none exists yet
+    void mirrorBone(int boneIndex) {
+
+        if (boneIndex <= 0 || boneIndex >= boneCount)
+            return;
+
+        markSubtree(boneIndex);
+
+        for (int i = 0; i < boneCount; i++)
+            if (subtree.getBoolean(i) && resolveSide(boneNames.get(i)).isEmpty()) {
+                characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NO_SIDE);
+                return;
+            }
+
+        edit(bones -> {
+            for (int i = 0; i < boneCount; i++)
+                if (subtree.getBoolean(i))
+                    mirrorInto(bones, i);
+        });
+        characterEditorManager.setStatusMessage(
+                EditorSetting.CHARACTER_RIG_MESSAGE_MIRRORED + boneNames.get(boneIndex));
+    }
+
+    // Every bone on one side handed to its existing twin on the other, mirrored across the body
+    void symmetrize(String fromSide) {
+
+        edit(bones -> {
+            for (int i = 0; i < boneCount; i++)
+                if (boneNames.get(i).endsWith(fromSide)
+                        && findBone(CharacterMeshUtility.toMirrorBoneName(boneNames.get(i)))
+                                != EngineSetting.INDEX_NOT_FOUND)
+                    mirrorInto(bones, i);
+        });
+    }
+
+    // A bone's bind pose written onto its twin across x, the twin made under the parent's twin where it is missing
+    private void mirrorInto(ArpgArrayStruct bones, int boneIndex) {
+
+        String twinName = CharacterMeshUtility.toMirrorBoneName(boneNames.get(boneIndex));
+        ArpgObjectStruct twin = findBoneArpg(bones, twinName);
+
+        if (twin == null) {
+
+            String parentName = boneNames.get(parents.getInt(boneIndex));
+            String twinParent = CharacterMeshUtility.toMirrorBoneName(parentName);
+
+            twin = new ArpgObjectStruct();
+            twin.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, twinName);
+            twin.addProperty(
+                    EditorSetting.CHARACTER_RIG_FIELD_PARENT,
+                    findBoneArpg(bones, twinParent) != null ? twinParent : parentName);
+            bones.add(twin);
+        }
+
+        Vector3 position = positions.get(boneIndex);
+        Vector3 rotation = rotations.get(boneIndex);
+
+        writeVector(twin, EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, vectorScratch.set(-position.x, position.y,
+                position.z));
+
+        if (rotation.lengthSquared() > 0f || twin.has(EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION))
+            writeVector(twin, EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION, vectorScratch.set(rotation.x,
+                    -rotation.y, -rotation.z));
+
+        writeVector(twin, EditorSetting.CHARACTER_EDITOR_FIELD_SIZE, sizes.get(boneIndex));
+    }
+
+    private ArpgObjectStruct findBoneArpg(ArpgArrayStruct bones, String boneName) {
+
+        for (int i = 0; i < bones.size(); i++) {
+
+            ArpgObjectStruct boneArpg = bones.get(i).getAsObject();
+
+            if (boneName.equals(ArpgUtility.getString(boneArpg, EditorSetting.CHARACTER_RIG_FIELD_NAME, "")))
+                return boneArpg;
+        }
+
+        return null;
+    }
+
+    // Marks a bone and every bone below it, which in parent-before-child order all come after it
+    private void markSubtree(int boneIndex) {
+
+        subtree.clear();
+        subtree.size(boneCount);
+        subtree.set(boneIndex, true);
+
+        for (int i = boneIndex + 1; i < boneCount; i++) {
+
+            int parent = parents.getInt(i);
+
+            if (parent != EngineSetting.INDEX_NOT_FOUND && subtree.getBoolean(parent))
+                subtree.set(i, true);
+        }
+    }
+
+    // History \\
+
+    boolean undo() {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        return rigArpg != null && restore(history.undo(rigArpg));
+    }
+
+    boolean redo() {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        return rigArpg != null && restore(history.redo(rigArpg));
+    }
+
+    private boolean restore(ArpgObjectStruct snapshot) {
+
+        if (snapshot == null)
+            return false;
+
+        replace(snapshot);
+        return true;
+    }
+
+    // File \\
+
+    boolean isDirty() {
+        return rigHandle != null
+                && infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_RIGS, rigHandle.getRigName());
+    }
+
+    // The rig written when it holds unsaved changes; false, with the refusal said, when it could not be
+    boolean save() {
+
+        if (!isDirty())
+            return true;
+
+        if (infoManager.saveDocument(EditorSetting.INFO_SCHEMA_RIGS, rigHandle.getRigName()))
+            return true;
+
+        characterEditorManager.setStatusMessage(infoManager.getRefusal());
+        return false;
+    }
+
+    void revert() {
+
+        if (!isDirty())
+            return;
+
+        history.clear();
+        infoManager.revertDocument(EditorSetting.INFO_SCHEMA_RIGS, rigHandle.getRigName());
+    }
+
+    // Selection \\
+
+    void selectBone(int boneIndex) {
+
+        if (boneIndex >= 0 && boneIndex < boneCount) {
+            this.selectedBone = boneIndex;
+            characterEditorManager.notifyChanged();
+        }
+    }
+
+    // Measure \\
+
+    // A bone's parent's turn in the world, or none for the root
+    private void resolveParentRotation(int boneIndex, Matrix4 out) {
+
+        int parent = parents.getInt(boneIndex);
+
+        if (parent == EngineSetting.INDEX_NOT_FOUND)
+            out.set(1f);
+        else
+            CharacterPoseUtility.extractRotation(worldMatrices.get(parent), out);
+    }
+
+    private float getAxis(Vector3 vector, int axis) {
+        return axis == 0 ? vector.x : axis == 1 ? vector.y : vector.z;
+    }
+
+    // Status \\
+
+    void appendStatus(StringBuilder status) {
+
+        if (rigHandle == null)
+            return;
+
+        status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(rigHandle.getRigName());
+
+        if (isDirty())
+            status.append(EditorSetting.CHARACTER_VIEW_DIRTY_MARKER);
+
+        if (refusal != null)
+            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)
+                    .append(EditorSetting.CHARACTER_RIG_MESSAGE_REFUSED)
+                    .append(refusal);
+        else if (structureChanged)
+            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)
+                    .append(EditorSetting.CHARACTER_RIG_MESSAGE_RESTART);
+    }
+
+    // Accessible \\
+
+    boolean hasRig() {
+        return rigHandle != null && boneCount > 0;
+    }
+
+    String getRigName() {
+        return rigHandle != null ? rigHandle.getRigName() : "";
+    }
+
+    int getBoneCount() {
+        return boneCount;
+    }
+
+    int getSelectedBone() {
+        return selectedBone;
+    }
+
+    String getBoneName(int boneIndex) {
+        return boneNames.get(boneIndex);
+    }
+
+    int getParent(int boneIndex) {
+        return parents.getInt(boneIndex);
+    }
+
+    Vector3 getPosition(int boneIndex) {
+        return positions.get(boneIndex);
+    }
+
+    Vector3 getRotation(int boneIndex) {
+        return rotations.get(boneIndex);
+    }
+
+    Vector3 getSize(int boneIndex) {
+        return sizes.get(boneIndex);
+    }
+
+    Matrix4 getWorldMatrix(int boneIndex) {
+        return worldMatrices.get(boneIndex);
+    }
+
+    // True for a bone the loaded content is laid out by, false for one added since the editor started
+    boolean isLoaded(int boneIndex) {
+        return rigHandle != null && rigHandle.hasBone(boneNames.get(boneIndex));
+    }
+}

@@ -8,10 +8,14 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 public class RigData extends DataPackage {
 
     /*
-     * Immutable bone hierarchy for one rig, stored parent before child so poses
-     * evaluate in one pass. Bind-pose world matrices and their inverses are
-     * baked once per rig at load time.
+     * Immutable bone hierarchy for one rig under its registered name, stored
+     * parent before child so poses evaluate in one pass. Bind-pose world
+     * matrices and their inverses are baked once per rig whenever it is
+     * built.
      */
+
+    // Identity
+    private final String rigName;
 
     // Bones
     private final RigBoneStruct[] bones;
@@ -23,7 +27,10 @@ public class RigData extends DataPackage {
 
     // Constructor \\
 
-    public RigData(RigBoneStruct[] bones, Object2IntOpenHashMap<String> boneName2Index) {
+    public RigData(String rigName, RigBoneStruct[] bones, Object2IntOpenHashMap<String> boneName2Index) {
+
+        // Identity
+        this.rigName = rigName;
 
         // Bones
         this.bones = bones;
@@ -58,7 +65,27 @@ public class RigData extends DataPackage {
         }
     }
 
+    // Structure \\
+
+    // True when another rig holds the same bones by name, in the same order, under the same parents
+    public boolean hasSameStructure(RigData other) {
+
+        if (other.bones.length != bones.length)
+            return false;
+
+        for (int i = 0; i < bones.length; i++)
+            if (!bones[i].getName().equals(other.bones[i].getName())
+                    || bones[i].getParentIndex() != other.bones[i].getParentIndex())
+                return false;
+
+        return true;
+    }
+
     // Accessible \\
+
+    public String getRigName() {
+        return rigName;
+    }
 
     public RigBoneStruct[] getBones() {
         return bones;

@@ -4,12 +4,14 @@ import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
+import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -25,8 +27,12 @@ public class CharacterEditorSculptSystem extends SystemPackage {
      * Turns this tab's pointer and keys into mesh edits while a mesh mode is
      * open. A click picks the vertex under the pointer and a drag selects a
      * box, Shift adding and Ctrl taking away; in Mesh mode the Move, Rotate and
-     * Scale tools drag the selection instead, letting go to confirm, and in
-     * Weights mode the Brush, Erase and Smooth tools stroke the weights. A
+     * Scale tools drag the selection instead, letting go to confirm, in
+     * Sculpt mode every tool strokes the surface, Ctrl inverting the stroke,
+     * and in Weights mode the Brush, Erase and Smooth tools stroke the
+     * weights. Each stamp of a stroke is placed on the mesh at the depth of
+     * the vertex nearest the brush's centre, which gives the brush its radius
+     * there and the distance the pointer carried it since the last stamp. A
      * transform the panel asks for — by its button or its shortcut, G, R or S —
      * holds the selection to the pointer: X, Y and Z lock it to an axis, Ctrl
      * snaps it, a click or Enter confirms and a right click or Escape puts it
@@ -47,6 +53,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     private int addSelectionShortcutID;
     private int subtractSelectionShortcutID;
     private int snapShortcutID;
+    private int invertStrokeShortcutID;
 
     // Selection
     private boolean pressed;
@@ -58,6 +65,10 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     private boolean stroking;
     private float strokeX;
     private float strokeY;
+    private float stampX;
+    private float stampY;
+    private CharacterStampStruct stamp;
+    private Vector3 stampDepth;
 
     // Transform
     private CharacterEditorTransform transform;
@@ -84,6 +95,10 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     @Override
     protected void create() {
+
+        // Stroke
+        this.stamp = new CharacterStampStruct();
+        this.stampDepth = new Vector3();
 
         // Transform
         this.transformAxis = EngineSetting.INDEX_NOT_FOUND;
@@ -119,6 +134,8 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.subtractSelectionShortcutID = shortcutManager.getShortcutIDFromShortcutName(
                 CharacterEditorSetting.SHORTCUT_SUBTRACT_SELECTION);
         this.snapShortcutID = shortcutManager.getShortcutIDFromShortcutName(CharacterEditorSetting.SHORTCUT_SNAP);
+        this.invertStrokeShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                CharacterEditorSetting.SHORTCUT_INVERT_STROKE);
     }
 
     // Update \\
@@ -158,7 +175,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         if (!editorInputSystem.isPointerActive() || rawInput.isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_ORBIT))
             return;
 
-        if (editorInputSystem.isClicked(CharacterEditorSetting.BUTTON_SELECT))
+        if (editorInputSystem.isClicked(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT))
             press(rawInput);
     }
 
@@ -230,6 +247,8 @@ public class CharacterEditorSculptSystem extends SystemPackage {
             this.stroking = true;
             this.strokeX = rawInput.getMouseX();
             this.strokeY = rawInput.getMouseY();
+            this.stampX = strokeX;
+            this.stampY = strokeY;
             stamp(strokeX, strokeY);
             return;
         }
@@ -246,7 +265,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         float mouseX = rawInput.getMouseX();
         float mouseY = rawInput.getMouseY();
 
-        if (rawInput.isButtonHeld(CharacterEditorSetting.BUTTON_SELECT)) {
+        if (rawInput.isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT)) {
 
             float dx = mouseX - pressX;
             float dy = mouseY - pressY;
@@ -298,7 +317,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     private void updateStroke(RawInputHandle rawInput) {
 
-        if (!rawInput.isButtonHeld(CharacterEditorSetting.BUTTON_SELECT)) {
+        if (!rawInput.isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT)) {
             characterEditorManager.endStroke();
             this.stroking = false;
             return;
@@ -333,7 +352,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.strokeY += dy * travelled;
     }
 
-    // One stamp of the weight brush, at the tool's strength scaled by how much of the tip covers each vertex
+    // One stamp of the brush, at the tool's strength scaled by how much of the tip covers each vertex
     private void stamp(float x, float y) {
 
         characterEditorMeshViewSystem.collectBrush(
@@ -344,8 +363,47 @@ public class CharacterEditorSculptSystem extends SystemPackage {
                 hits,
                 strengths);
 
-        if (!hits.isEmpty())
-            characterEditorManager.stroke(hits, strengths);
+        if (!hits.isEmpty()) {
+            placeStamp(x, y);
+            characterEditorManager.stroke(hits, strengths, stamp);
+        }
+
+        this.stampX = x;
+        this.stampY = y;
+    }
+
+    // The stamp's centre, radius and drag on the plane facing the camera through the vertex the brush covers most
+    private void placeStamp(float x, float y) {
+
+        int nearest = hits.getInt(0);
+        float strongest = strengths.getFloat(0);
+
+        for (int i = 1; i < hits.size(); i++)
+            if (strengths.getFloat(i) > strongest) {
+                strongest = strengths.getFloat(i);
+                nearest = hits.getInt(i);
+            }
+
+        Vector3 view = context.getWindow().getActiveCamera().getDirection();
+
+        stampDepth.set(
+                characterEditorMeshViewSystem.getX(nearest),
+                characterEditorMeshViewSystem.getY(nearest),
+                characterEditorMeshViewSystem.getZ(nearest));
+        stamp.getViewDirection().set(view);
+
+        resolveAtDepth(x, y, stamp.getCenter());
+        resolveAtDepth(x + characterEditorManager.getBrushRadius(), y, hitScratch);
+        stamp.setRadius(hitScratch.subtract(stamp.getCenter()).length());
+        resolveAtDepth(stampX, stampY, hitScratch);
+        stamp.getDrag().set(stamp.getCenter()).subtract(hitScratch);
+        stamp.setInverted(isShortcutHeld(invertStrokeShortcutID));
+    }
+
+    // Where a window pixel's ray meets the plane facing the camera through the stamp's depth
+    private void resolveAtDepth(float x, float y, Vector3 out) {
+        characterEditorMeshViewSystem.resolveRay(x, y, rayOrigin, rayDirection);
+        resolvePlaneHit(stampDepth, out);
     }
 
     // Transform \\
@@ -382,14 +440,14 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         if (hasAxis())
             this.startAxisParameter = resolveAxisParameter();
         else
-            resolvePlaneHit(startHit);
+            resolvePlaneHit(pivot, startHit);
     }
 
     // A dragged transform confirms when the button is let go, a held one on a click or Enter
     private void updateTransform(RawInputHandle rawInput) {
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)
-                || rawInput.isButtonClicked(CharacterEditorSetting.BUTTON_CANCEL)) {
+                || rawInput.isButtonClicked(EditorSetting.CHARACTER_VIEW_BUTTON_CANCEL)) {
             characterEditorManager.cancelTransform();
             endTransform();
             return;
@@ -398,9 +456,9 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         lockAxis(rawInput);
         applyTransform(rawInput);
 
-        boolean released = draggingTransform && !rawInput.isButtonHeld(CharacterEditorSetting.BUTTON_SELECT);
+        boolean released = draggingTransform && !rawInput.isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
 
-        if (released || rawInput.isButtonClicked(CharacterEditorSetting.BUTTON_SELECT)
+        if (released || rawInput.isButtonClicked(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT)
                 || rawInput.isKeyClicked(EditorSetting.KEY_ENTER)
                 || rawInput.isKeyClicked(EditorSetting.KEY_ENTER_NUMPAD)) {
             characterEditorManager.confirmTransform();
@@ -416,9 +474,9 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     // X, Y or Z holds the transform to that axis, the same key again frees it
     private void lockAxis(RawInputHandle rawInput) {
 
-        for (int axis = 0; axis < CharacterEditorSetting.KEY_AXES.length; axis++) {
+        for (int axis = 0; axis < EditorSetting.CHARACTER_VIEW_KEY_AXES.length; axis++) {
 
-            if (!rawInput.isKeyClicked(CharacterEditorSetting.KEY_AXES[axis]))
+            if (!rawInput.isKeyClicked(EditorSetting.CHARACTER_VIEW_KEY_AXES[axis]))
                 continue;
 
             this.customAxis = false;
@@ -451,7 +509,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
             vectorScratch.set(axisVector).multiply(distance);
         } else {
 
-            resolvePlaneHit(hitScratch);
+            resolvePlaneHit(pivot, hitScratch);
             vectorScratch.set(
                     snapValue(hitScratch.x - startHit.x, snap),
                     snapValue(hitScratch.y - startHit.y, snap),
@@ -479,8 +537,8 @@ public class CharacterEditorSculptSystem extends SystemPackage {
             vectorScratch.set(-viewDirection.x, -viewDirection.y, -viewDirection.z).normalize();
 
         if (snap)
-            angle = (float) Math.toRadians(Math.round(Math.toDegrees(angle) / CharacterEditorSetting.SNAP_DEGREES)
-                    * CharacterEditorSetting.SNAP_DEGREES);
+            angle = (float) Math.toRadians(Math.round(Math.toDegrees(angle) / EditorSetting.CHARACTER_VIEW_SNAP_DEGREES)
+                    * EditorSetting.CHARACTER_VIEW_SNAP_DEGREES);
 
         characterEditorManager.updateTransform(CharacterEditorTransform.ROTATE, vectorScratch, angle);
     }
@@ -489,12 +547,13 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     private void applyScale(float mouseX, float mouseY, boolean snap) {
 
         float start = Math.max(
-                CharacterEditorSetting.SCALE_MIN_PIXELS,
+                EditorSetting.CHARACTER_VIEW_SCALE_MIN_PIXELS,
                 (float) Math.hypot(startMouseX - pivotScreen.x, startMouseY - pivotScreen.y));
         float factor = (float) Math.hypot(mouseX - pivotScreen.x, mouseY - pivotScreen.y) / start;
 
         if (snap)
-            factor = Math.round(factor / CharacterEditorSetting.SNAP_SCALE) * CharacterEditorSetting.SNAP_SCALE;
+            factor = Math.round(factor / EditorSetting.CHARACTER_VIEW_SNAP_SCALE)
+                    * EditorSetting.CHARACTER_VIEW_SNAP_SCALE;
 
         if (transformAxis == EngineSetting.INDEX_NOT_FOUND)
             vectorScratch.set(factor, factor, factor);
@@ -513,25 +572,14 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         return customAxis || transformAxis != EngineSetting.INDEX_NOT_FOUND;
     }
 
-    // Where the pointer's ray meets the plane through the pivot facing the camera
-    private void resolvePlaneHit(Vector3 out) {
-
-        Vector3 normal = context.getWindow().getActiveCamera().getDirection();
-        float facing = rayDirection.x * normal.x + rayDirection.y * normal.y + rayDirection.z * normal.z;
-
-        if (Math.abs(facing) < CharacterEditorSetting.RAY_EPSILON) {
-            out.set(pivot);
-            return;
-        }
-
-        float t = ((pivot.x - rayOrigin.x) * normal.x
-                + (pivot.y - rayOrigin.y) * normal.y
-                + (pivot.z - rayOrigin.z) * normal.z) / facing;
-
-        out.set(
-                rayOrigin.x + rayDirection.x * t,
-                rayOrigin.y + rayDirection.y * t,
-                rayOrigin.z + rayDirection.z * t);
+    // Where the pointer's ray meets the plane through a point facing the camera
+    private void resolvePlaneHit(Vector3 point, Vector3 out) {
+        CharacterPoseUtility.resolvePlaneHit(
+                rayOrigin,
+                rayDirection,
+                point,
+                context.getWindow().getActiveCamera().getDirection(),
+                out);
     }
 
     // How far along the held axis through the pivot the point nearest the pointer's ray lies
@@ -545,7 +593,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         float e = rayDirection.x * wx + rayDirection.y * wy + rayDirection.z * wz;
         float denominator = 1f - b * b;
 
-        if (denominator < CharacterEditorSetting.RAY_EPSILON)
+        if (denominator < EditorSetting.CHARACTER_VIEW_RAY_EPSILON)
             return 0f;
 
         return (b * e - d) / denominator;
@@ -596,7 +644,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         return pivot;
     }
 
-    // Whether the weight brush shows under the pointer
+    // Whether the brush shows under the pointer
     public boolean isBrushShown() {
         return characterEditorManager.isBrushTool() && (stroking || editorInputSystem.isPointerActive());
     }

@@ -1,14 +1,15 @@
 package editor.runtime.charactereditor.meshview;
 
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
-import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.runtime.charactereditor.CharacterEditorSetting;
+import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import engine.assets.camera.CameraInstance;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
@@ -151,32 +152,12 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
     // A world point in window pixels, the origin bottom left as the pointer reads; false behind the camera
     public boolean project(float x, float y, float z, Vector2 out) {
-
-        WindowInstance window = context.getWindow();
-        float[] m = window.getActiveCamera().getViewProjection().val;
-        float clipX = m[0] * x + m[4] * y + m[8] * z + m[12];
-        float clipY = m[1] * x + m[5] * y + m[9] * z + m[13];
-        float clipW = m[3] * x + m[7] * y + m[11] * z + m[15];
-
-        if (clipW <= 0f)
-            return false;
-
-        out.set(
-                (clipX / clipW + 1f) * 0.5f * window.getWidth(),
-                (clipY / clipW + 1f) * 0.5f * window.getHeight());
-        return true;
+        return CharacterPoseUtility.project(context.getWindow(), x, y, z, out);
     }
 
     // The ray from the camera through a window pixel
     public void resolveRay(float pixelX, float pixelY, Vector3 origin, Vector3 direction) {
-
-        WindowInstance window = context.getWindow();
-
-        window.getActiveCamera().getPickRay(
-                pixelX / window.getWidth() * 2f - 1f,
-                pixelY / window.getHeight() * 2f - 1f,
-                origin,
-                direction);
+        CharacterPoseUtility.resolveRay(context.getWindow(), pixelX, pixelY, origin, direction);
     }
 
     // Picking \\
@@ -187,7 +168,8 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         if (activeDocument == null)
             return EngineSetting.INDEX_NOT_FOUND;
 
-        float nearest = CharacterEditorSetting.PICK_RADIUS_PIXELS * CharacterEditorSetting.PICK_RADIUS_PIXELS;
+        float radius = EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS;
+        float nearest = radius * radius;
         int found = EngineSetting.INDEX_NOT_FOUND;
 
         for (int v = 0; v < getVertexCount(); v++) {

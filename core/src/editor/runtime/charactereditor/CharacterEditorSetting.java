@@ -1,57 +1,29 @@
 package editor.runtime.charactereditor;
 
-import engine.input.Buttons;
-
 public class CharacterEditorSetting {
 
     /*
      * Constants used only by CharacterEditorContext — its toolbar menu, the
-     * row templates its two panels are filled from, the size of the box
-     * shown for a held anchor, and the mesh modes' pointer, keys, picking and
-     * the overlay their vertices and edges are drawn with.
+     * size of the box shown for a held anchor, and the mesh modes' box
+     * selection, held shortcuts and the overlay their vertices and edges are
+     * drawn with. Its panels' rows are the docker windows'.
      */
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/CharacterEditor/Toolbar";
     public static final int ENTRY_STATUS = 0;
-    public static final int ENTRY_LIST = 1;
-    public static final int ENTRY_PROPERTIES = 2;
-
-    // Templates
-    public static final String TEMPLATE_HEADER_ROW = "editor/CharacterEditor/character_editor_header_row";
-    public static final String TEMPLATE_ITEM_ROW = "editor/CharacterEditor/character_editor_item_row";
-    public static final String TEMPLATE_ITEM_ROW_SELECTED = "editor/CharacterEditor/character_editor_item_row_selected";
-    public static final String TEMPLATE_NUMBER_ROW = "editor/CharacterEditor/character_editor_number_row";
-    public static final String TEMPLATE_CHOICE_ROW = "editor/CharacterEditor/character_editor_choice_row";
-    public static final String TEMPLATE_ACTION_ROW = "editor/CharacterEditor/character_editor_action_row";
-
-    // Elements
-    public static final String ELEMENT_ROW_LABEL = "character_editor_row_label";
-    public static final String ELEMENT_ROW_VALUE = "character_editor_row_value";
-    public static final String ELEMENT_ROW_VALUE_BUTTON = "character_editor_row_value_button";
-    public static final String ELEMENT_ROW_DECREASE = "character_editor_row_decrease";
-    public static final String ELEMENT_ROW_INCREASE = "character_editor_row_increase";
 
     // Markers — the box shown for a held anchor, in blocks
     public static final float HELD_ANCHOR_MARKER_SIZE = 0.06f;
 
-    // Mesh Input — buttons and the GLFW keys a transform locks its axis with
-    public static final int BUTTON_SELECT = Buttons.LEFT;
-    public static final int BUTTON_CANCEL = Buttons.RIGHT;
-    public static final int[] KEY_AXES = { 88, 89, 90 };
-
-    // Mesh Input — the held shortcuts a selection and a transform read, named in shortcuts/CharacterEditor
+    // Mesh Input — the held shortcuts a selection, a transform and a stroke read, named in shortcuts/CharacterEditor
     public static final String SHORTCUT_ADD_SELECTION = "CharacterEditor/AddSelection";
     public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterEditor/SubtractSelection";
     public static final String SHORTCUT_SNAP = "CharacterEditor/Snap";
+    public static final String SHORTCUT_INVERT_STROKE = "CharacterEditor/InvertStroke";
 
-    // Mesh Input — pointer distances in pixels and transform snapping
-    public static final float PICK_RADIUS_PIXELS = 10f;
+    // Mesh Input — the pointer distance in pixels a press travels before it draws a box
     public static final float DRAG_PIXELS = 4f;
-    public static final float SCALE_MIN_PIXELS = 4f;
-    public static final float SNAP_DEGREES = 15f;
-    public static final float SNAP_SCALE = 0.1f;
-    public static final float RAY_EPSILON = 0.00001f;
 
     // Mesh View — a point is hidden by a face nearer the camera than it by more than the bias, in blocks
     public static final float OCCLUSION_BIAS = 0.003f;

@@ -51,6 +51,10 @@ public class CharacterViewRowStruct extends StructPackage {
         return new CharacterViewRowStruct(CharacterViewRowKind.NUMBER, key, label, value, false);
     }
 
+    public static CharacterViewRowStruct text(String key, String label, String value) {
+        return new CharacterViewRowStruct(CharacterViewRowKind.TEXT, key, label, value, false);
+    }
+
     public static CharacterViewRowStruct choice(String key, String label, String value) {
         return new CharacterViewRowStruct(CharacterViewRowKind.CHOICE, key, label, value, false);
     }

@@ -27,8 +27,9 @@ public class CharacterViewRenderSystem extends SystemPackage {
      * Draws a character viewport: the character CharacterViewPoseSystem holds,
      * lit by the viewport's own material so it never batches with a game
      * view's characters, standing on a floor grid in this window's scene
-     * target. The markers its tool asks for during update — bone joints and
-     * oriented boxes on a bone — go to an overlay above the scene, so they
+     * target. The markers its tool asks for during update — bone joints,
+     * oriented boxes on a bone and cubes or boxes placed by any matrix — go to
+     * an overlay above the scene, so they
      * show through the body. Marker models are pooled and only ever grow.
      * Tools drawing more of their own into the viewport use the same scene
      * and overlay targets.
@@ -119,17 +120,29 @@ public class CharacterViewRenderSystem extends SystemPackage {
 
     // A cube at a bone's joint, turned with the bone
     public void addJointMarker(int boneIndex, boolean selected) {
+        addWorldMarker(
+                characterViewPoseSystem.getAnimationStateHandle().getWorldMatrix(boneIndex),
+                selected ? EditorSetting.CHARACTER_VIEW_JOINT_SELECTED_SIZE : EditorSetting.CHARACTER_VIEW_JOINT_SIZE,
+                selected);
+    }
 
-        float size = selected
-                ? EditorSetting.CHARACTER_VIEW_JOINT_SELECTED_SIZE
-                : EditorSetting.CHARACTER_VIEW_JOINT_SIZE;
+    // A cube of a size in blocks where a matrix places it, turned with it
+    public void addWorldMarker(Matrix4 worldMatrix, float size, boolean selected) {
 
         sizeScratch.set(size, size, size);
         RigMathUtility.setScale(matrixScratchA, sizeScratch);
-        markerScratch.set(characterViewPoseSystem.getAnimationStateHandle().getWorldMatrix(boneIndex));
-        markerScratch.multiply(matrixScratchA);
+        markerScratch.set(worldMatrix).multiply(matrixScratchA);
 
         pushMarker(selected);
+    }
+
+    // A box of a size in blocks centred where a matrix places it, turned with it
+    public void addWorldBoxMarker(Matrix4 worldMatrix, Vector3 size) {
+
+        RigMathUtility.setScale(matrixScratchA, size);
+        markerScratch.set(worldMatrix).multiply(matrixScratchA);
+
+        pushMarker(false);
     }
 
     // A box placed on a bone in the character's bind pose, as an equipment anchor places what it holds

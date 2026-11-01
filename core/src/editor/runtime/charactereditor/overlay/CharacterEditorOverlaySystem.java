@@ -32,14 +32,15 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
     /*
      * Draws the active part's vertices and edges over this tab's character
-     * while a mesh mode is open, as one mesh of dots and lines the overlay
+     * while Mesh or Weights mode is open, as one mesh of dots and lines the overlay
      * shader keeps a fixed number of pixels wide however far the camera
      * orbits. In Mesh mode the selection and the active vertex stand out; in
      * Weights mode each vertex is coloured by the selected bone's weight on
      * it. With X-Ray off the overlay is depth tested against the character,
      * nudged toward the camera, so hidden vertices stay hidden; with it on it
-     * draws over everything. The box being dragged, the weight brush and the
-     * axis a transform is held to are drawn on top as guides. The overlay is
+     * draws over everything. The box being dragged, the brush of any mesh
+     * mode, Sculpt's included, and the axis a transform is held to are drawn
+     * on top as guides. The overlay is
      * rebuilt in place only when what it shows has moved.
      */
 
@@ -149,6 +150,19 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         WindowInstance window = context.getWindow();
         boolean xray = characterEditorManager.isXray();
 
+        if (characterEditorManager.getMode().showsVertices())
+            pushMeshOverlay(window, xray);
+
+        if (buildGuides())
+            renderManager.pushRenderCall(
+                    guideModel,
+                    characterViewRenderSystem.getOverlayFbo(),
+                    CharacterEditorSetting.DEPTH_GUIDES,
+                    window);
+    }
+
+    private void pushMeshOverlay(WindowInstance window, boolean xray) {
+
         syncMeshOverlay();
 
         if (meshModel != null && !indices.isEmpty()) {
@@ -159,13 +173,6 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                     CharacterEditorSetting.DEPTH_OVERLAY,
                     window);
         }
-
-        if (buildGuides())
-            renderManager.pushRenderCall(
-                    guideModel,
-                    characterViewRenderSystem.getOverlayFbo(),
-                    CharacterEditorSetting.DEPTH_GUIDES,
-                    window);
     }
 
     // Depth tested a hair toward the camera, or drawn over everything with X-Ray; set only when that flips
@@ -316,7 +323,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
     // Guides \\
 
-    // The box being dragged, the weight brush and a held transform's axis; false when none shows
+    // The box being dragged, the brush and a held transform's axis; false when none shows
     private boolean buildGuides() {
 
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();

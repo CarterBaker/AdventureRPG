@@ -6,9 +6,12 @@ import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.arpg.ArpgValueStruct;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterViewUtility extends EngineUtility {
 
@@ -134,6 +137,18 @@ public class CharacterViewUtility extends EngineUtility {
     // The object under a key, or null when the key holds none
     public static ArpgObjectStruct findObject(ArpgObjectStruct arpg, String key) {
         return arpg != null && ArpgUtility.hasObject(arpg, key) ? arpg.getAsObject(key) : null;
+    }
+
+    // Puts an object's whole content in place of another's, keeping the target itself and the source's key order
+    public static void replaceObject(ArpgObjectStruct target, ArpgObjectStruct source) {
+
+        ObjectArrayList<String> keys = new ObjectArrayList<>(target.keySet());
+
+        for (int i = 0; i < keys.size(); i++)
+            target.remove(keys.get(i));
+
+        for (Object2ObjectMap.Entry<String, ArpgElementStruct> entry : source.entrySet())
+            target.add(entry.getKey(), entry.getValue().deepCopy());
     }
 
     // Vectors \\

@@ -23,9 +23,11 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   also runs S. Two pressed shortcuts of one tool on the same chord fail at load.
 - **Shared tool keys.** `assets/shortcuts/Tools.arpg` names `ToolsContext` and is marked `"shared": true`: its keys
   choose the editor's generic tools (`V` Select, `B` Brush, `E` Erase, `S` Smooth, `Q` Swirl, `J` Scatter, `F` Fill,
-  `I` Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut), resize the brush (`[` and `]`)
+  `I` Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut, `O` Inflate, `K` Pinch,
+  `Shift+F` Flatten, `N` Nudge), resize the brush (`[` and `]`)
   and step through the brushes (`-` and `=`). Besides the Tools tab, they work in every window `ToolManager` counts as
-  a tool window — each canvas (World Editor, Item Editor, Character Editor, Recorder) and the Brushes tab, each opened
+  a tool window — each canvas (World Editor, Item Editor, Character Editor, Animation Editor, Recorder), the Brushes
+  tab and the character and animation docker windows (Outliner, Properties, Timeline), each opened
   there by its `ToolCanvasSystem` — after that window's own keys, so a window's own shortcut wins where both use a key
   (the Character Editor's `E` extrudes and `S` scales; the Recorder's `F`, `B` and `T` keep their own actions). A tool
   a canvas does not take is ignored there. Rebinding one on the Settings dialog's Shortcuts page rebinds it in every

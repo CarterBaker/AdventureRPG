@@ -2,6 +2,7 @@ package editor.bootstrap.animationeditorpipeline.animationdocument;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import editor.runtime.characterview.history.CharacterViewHistoryStruct;
 import engine.root.InstancePackage;
 
 public class AnimationDocumentInstance extends InstancePackage {
@@ -12,7 +13,8 @@ public class AnimationDocumentInstance extends InstancePackage {
      * InfoManager owns. The preview revision moves every time it is rebuilt.
      * A refused rebuild — a clip with no keyframe past its start yet, say —
      * drops the clip rather than keep one that no longer matches the ARPG,
-     * and remembers why; the rig stays when it could still be resolved.
+     * and remembers why; the rig stays when it could still be resolved. The
+     * clip keeps its own undo history for as long as it is open.
      */
 
     // Identity
@@ -24,12 +26,18 @@ public class AnimationDocumentInstance extends InstancePackage {
     private String previewError;
     private int previewRevision;
 
+    // History
+    private CharacterViewHistoryStruct history;
+
     // Constructor \\
 
     public void constructor(String clipName) {
 
         // Identity
         this.clipName = clipName;
+
+        // History
+        this.history = new CharacterViewHistoryStruct();
     }
 
     // Management \\
@@ -86,5 +94,9 @@ public class AnimationDocumentInstance extends InstancePackage {
 
     public int getPreviewRevision() {
         return previewRevision;
+    }
+
+    public CharacterViewHistoryStruct getHistory() {
+        return history;
     }
 }

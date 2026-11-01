@@ -1,8 +1,10 @@
 package application.bootstrap.geometrypipeline.rigmanager;
 
+import application.bootstrap.geometrypipeline.rig.RigData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -14,7 +16,11 @@ public class RigManager extends ManagerPackage {
      * hierarchy template shared by every entity that uses it — the
      * runtime pose lives on each entity's AnimationStateHandle, never
      * here. Rig IDs are assigned in registration order. Auto-triggers an
-     * on-demand load via RigLoader on a name-based cache miss.
+     * on-demand load via RigLoader on a name-based cache miss. A rig's bind
+     * pose — where its joints sit, how they turn and how large its parts are
+     * — can be rebuilt in place from its ARPG while it keeps its bones by
+     * name, order and parent, since every clip, mask, mesh and pose built on
+     * it is laid out by those bones.
      */
 
     // Palette
@@ -37,6 +43,20 @@ public class RigManager extends ManagerPackage {
     void addRig(String rigName, RigHandle handle) {
         RegistryUtility.registerHandle(
                 rigName2RigID, rigID2RigHandle, rigName, handle, EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
+
+    // Update \\
+
+    // Rebuilds a rig's bind pose in place; false, with nothing changed, when its bones themselves would change
+    public boolean updateRig(RigHandle rigHandle, ArpgObjectStruct rigArpg) {
+
+        RigData rigData = ((RigLoader) internalLoader).rebuild(rigHandle, rigArpg);
+
+        if (!rigData.hasSameStructure(rigHandle.getRigData()))
+            return false;
+
+        rigHandle.constructor(rigData);
+        return true;
     }
 
     // Accessible \\

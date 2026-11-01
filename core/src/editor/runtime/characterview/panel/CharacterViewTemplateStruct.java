@@ -7,8 +7,10 @@ public class CharacterViewTemplateStruct extends StructPackage {
     /*
      * The row templates one character tool's menu declares, one per row kind
      * and a second for a selected item, and the ids of the label, the value
-     * and the button it sits on, and the step buttons inside them. Each tool's templates call its own menu
-     * branch, so the panels it fills route back to it.
+     * and the button it sits on, and the step buttons inside them. A tool
+     * that lists no text rows declares no text template. Each tool's
+     * templates call its own menu branch, so the panels it fills route back
+     * to it.
      */
 
     // Templates
@@ -16,6 +18,7 @@ public class CharacterViewTemplateStruct extends StructPackage {
     private final String itemTemplate;
     private final String selectedItemTemplate;
     private final String numberTemplate;
+    private final String textTemplate;
     private final String choiceTemplate;
     private final String actionTemplate;
 
@@ -33,6 +36,7 @@ public class CharacterViewTemplateStruct extends StructPackage {
             String itemTemplate,
             String selectedItemTemplate,
             String numberTemplate,
+            String textTemplate,
             String choiceTemplate,
             String actionTemplate,
             String labelElement,
@@ -46,6 +50,7 @@ public class CharacterViewTemplateStruct extends StructPackage {
         this.itemTemplate = itemTemplate;
         this.selectedItemTemplate = selectedItemTemplate;
         this.numberTemplate = numberTemplate;
+        this.textTemplate = textTemplate;
         this.choiceTemplate = choiceTemplate;
         this.actionTemplate = actionTemplate;
 
@@ -73,6 +78,11 @@ public class CharacterViewTemplateStruct extends StructPackage {
 
     public String getNumberTemplate() {
         return numberTemplate;
+    }
+
+    // Null for a tool that lists no text rows
+    public String getTextTemplate() {
+        return textTemplate;
     }
 
     public String getChoiceTemplate() {

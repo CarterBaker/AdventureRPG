@@ -50,6 +50,7 @@ public class AnimationTreeEditorMenuSystem extends SystemPackage {
                 AnimationTreeEditorSetting.TEMPLATE_ITEM_ROW,
                 AnimationTreeEditorSetting.TEMPLATE_ITEM_ROW_SELECTED,
                 AnimationTreeEditorSetting.TEMPLATE_NUMBER_ROW,
+                null,
                 AnimationTreeEditorSetting.TEMPLATE_CHOICE_ROW,
                 AnimationTreeEditorSetting.TEMPLATE_ACTION_ROW,
                 AnimationTreeEditorSetting.ELEMENT_ROW_LABEL,

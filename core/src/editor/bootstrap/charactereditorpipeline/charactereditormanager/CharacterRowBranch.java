@@ -21,17 +21,19 @@ class CharacterRowBranch extends BranchPackage {
      * Lists the rows of the character editor's two panels for its mode. The
      * left panel holds how the preview stands and what can be picked — the
      * features in Appearance, the bones in Build, the anchors in Equipment,
-     * the worn parts and the bones in Mesh and Weights — and the right panel
-     * the values of the mode and of what is picked, the mesh modes' from
-     * CharacterMeshRowBranch. Every value shown is read through
-     * CharacterPropertyBranch, the same path that edits it. Mesh mode holds
-     * the bind pose, so it lists no pose.
+     * the worn parts and the bones in Mesh and Weights, the worn parts in
+     * Sculpt and the rig's bones in Rig — and the right panel the values of
+     * the mode and of what is picked, the mesh modes' from
+     * CharacterMeshRowBranch and the rig's from CharacterRigRowBranch. Every
+     * value shown is read through CharacterPropertyBranch, the same path that
+     * edits it. A mode that holds the bind pose lists no pose.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private CharacterPropertyBranch characterPropertyBranch;
     private CharacterMeshRowBranch characterMeshRowBranch;
+    private CharacterRigRowBranch characterRigRowBranch;
 
     // Base \\
 
@@ -40,6 +42,7 @@ class CharacterRowBranch extends BranchPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterPropertyBranch = get(CharacterPropertyBranch.class);
         this.characterMeshRowBranch = get(CharacterMeshRowBranch.class);
+        this.characterRigRowBranch = get(CharacterRigRowBranch.class);
     }
 
     // List \\
@@ -48,7 +51,7 @@ class CharacterRowBranch extends BranchPackage {
 
         CharacterEditorMode mode = characterEditorManager.getMode();
 
-        if (mode != CharacterEditorMode.MESH) {
+        if (!mode.holdsBindPose()) {
             rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
             addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_POSE,
                     EditorSetting.CHARACTER_EDITOR_LABEL_POSE);
@@ -67,6 +70,8 @@ class CharacterRowBranch extends BranchPackage {
                 characterMeshRowBranch.addPartRows(document, rows);
                 addBoneRows(rigHandle, rows);
             }
+            case SCULPT -> characterMeshRowBranch.addPartRows(document, rows);
+            case RIG -> characterRigRowBranch.addBoneRows(rows);
         }
     }
 
@@ -134,7 +139,9 @@ class CharacterRowBranch extends BranchPackage {
             case BUILD -> addBuildRows(document, rows);
             case EQUIPMENT -> addAnchorPropertyRows(document, rows);
             case MESH -> characterMeshRowBranch.buildMeshRows(rows);
+            case SCULPT -> characterMeshRowBranch.buildSculptRows(rows);
             case WEIGHTS -> characterMeshRowBranch.buildWeightRows(rows);
+            case RIG -> characterRigRowBranch.buildPropertyRows(rows);
         }
     }
 

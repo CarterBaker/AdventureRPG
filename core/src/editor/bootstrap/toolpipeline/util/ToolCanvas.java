@@ -12,7 +12,9 @@ public enum ToolCanvas {
      * a brush is sized in image pixels on the world's layers and in window
      * pixels on a character. A tool shows only the options both it and the
      * canvas have, and a canvas without Size takes no brush. Biome colors
-     * name biomes, so they never blend; heights and bone weights do.
+     * name biomes, so they never blend; heights, bone weights and a sculpted
+     * surface do. A character's rig and an animation's pose take the tools
+     * that pick and drag its joints.
      */
 
     BIOMES(
@@ -45,17 +47,29 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_MESH,
             new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
             false),
+    CHARACTER_SCULPT(
+            EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
+            new EditorTool[] {
+                    EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.INFLATE, EditorTool.PINCH,
+                    EditorTool.FLATTEN, EditorTool.NUDGE },
+            true,
+            screenSize(),
+            strength(EditorSetting.TOOL_SCULPT_STRENGTH_DEFAULT)),
     CHARACTER_WEIGHTS(
             EditorSetting.TOOL_CANVAS_CHARACTER_WEIGHTS,
             new EditorTool[] { EditorTool.SELECT, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH },
             true,
-            new ToolOptionStruct(
-                    ToolOption.SIZE,
-                    EditorSetting.TOOL_SCREEN_SIZE_MIN,
-                    EditorSetting.TOOL_SCREEN_SIZE_MAX,
-                    EditorSetting.TOOL_SCREEN_SIZE_STEP,
-                    EditorSetting.TOOL_SCREEN_SIZE_DEFAULT),
+            screenSize(),
             strength(EditorSetting.TOOL_WEIGHT_STRENGTH_DEFAULT)),
+    CHARACTER_RIG(
+            EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
+            new EditorTool[] {
+                    EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.PLACE, EditorTool.ERASE },
+            false),
+    ANIMATION_POSE(
+            EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
+            new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE },
+            false),
     ITEM(
             EditorSetting.TOOL_CANVAS_ITEM,
             new EditorTool[] { EditorTool.PLACE, EditorTool.WALL, EditorTool.ERASE, EditorTool.BRUSH, EditorTool.PICK },
@@ -92,6 +106,15 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_IMAGE_SIZE_MAX,
                 EditorSetting.TOOL_IMAGE_SIZE_STEP,
                 EditorSetting.TOOL_IMAGE_SIZE_DEFAULT);
+    }
+
+    private static ToolOptionStruct screenSize() {
+        return new ToolOptionStruct(
+                ToolOption.SIZE,
+                EditorSetting.TOOL_SCREEN_SIZE_MIN,
+                EditorSetting.TOOL_SCREEN_SIZE_MAX,
+                EditorSetting.TOOL_SCREEN_SIZE_STEP,
+                EditorSetting.TOOL_SCREEN_SIZE_DEFAULT);
     }
 
     private static ToolOptionStruct strength(float defaultValue) {

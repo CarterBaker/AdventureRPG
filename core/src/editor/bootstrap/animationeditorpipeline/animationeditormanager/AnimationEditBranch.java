@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.animationeditorpipeline.util.AnimationEditorChannel;
+import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
@@ -24,7 +25,8 @@ class AnimationEditBranch extends BranchPackage {
      * the pose it is given. A key writes its rotation always, and position
      * and scale only once they leave their defaults, as authored clips do;
      * a track left with no key is removed. Changes that touch several bones
-     * go through as one edit.
+     * go through as one edit. Every edit is recorded in the clip's history
+     * first, and undo and redo put a recorded clip back whole.
      */
 
     // Internal
@@ -40,11 +42,79 @@ class AnimationEditBranch extends BranchPackage {
     // Clip \\
 
     private void edit(AnimationDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
+
+        ArpgObjectStruct clipArpg = findClip(document);
+
+        if (clipArpg == null)
+            return;
+
+        document.getHistory().record(clipArpg);
+        apply(document, editor);
+    }
+
+    private void apply(AnimationDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
         infoManager.editEntry(
                 EditorSetting.INFO_SCHEMA_ANIMATIONS,
                 document.getClipName(),
                 document.getClipName(),
                 editor);
+    }
+
+    // The clip's live ARPG, as InfoManager holds it
+    ArpgObjectStruct findClip(AnimationDocumentInstance document) {
+
+        InfoEntryStruct entry = infoManager.findEntry(
+                EditorSetting.INFO_SCHEMA_ANIMATIONS,
+                document.getClipName(),
+                document.getClipName());
+
+        return entry != null ? entry.getArpg() : null;
+    }
+
+    // History \\
+
+    boolean undo(AnimationDocumentInstance document) {
+
+        ArpgObjectStruct clipArpg = findClip(document);
+
+        return clipArpg != null && restore(document, document.getHistory().undo(clipArpg));
+    }
+
+    boolean redo(AnimationDocumentInstance document) {
+
+        ArpgObjectStruct clipArpg = findClip(document);
+
+        return clipArpg != null && restore(document, document.getHistory().redo(clipArpg));
+    }
+
+    // Opens one undo step for a drag that keys the clip on every frame it moves
+    void beginGesture(AnimationDocumentInstance document) {
+
+        ArpgObjectStruct clipArpg = findClip(document);
+
+        if (clipArpg != null)
+            document.getHistory().begin(clipArpg);
+    }
+
+    void endGesture(AnimationDocumentInstance document) {
+
+        ArpgObjectStruct clipArpg = findClip(document);
+
+        if (clipArpg != null)
+            document.getHistory().commit(clipArpg);
+    }
+
+    void cancelGesture(AnimationDocumentInstance document) {
+        restore(document, document.getHistory().cancel());
+    }
+
+    private boolean restore(AnimationDocumentInstance document, ArpgObjectStruct snapshot) {
+
+        if (snapshot == null)
+            return false;
+
+        apply(document, clip -> CharacterViewUtility.replaceObject(clip, snapshot));
+        return true;
     }
 
     void setLoop(AnimationDocumentInstance document, boolean loop) {

@@ -5,6 +5,9 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
+import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
@@ -26,13 +29,18 @@ public class AnimationEditorManager extends ManagerPackage {
      * there opens it here, every edit goes back through it, and every change
      * to an open clip, made here or in the Info Panel, rebuilds its preview
      * live. The playhead stops on whole frames; playback runs it freely and
-     * loops or holds at the end as the clip does. Edits, previews, panel
-     * values and panel rows each live in their own branch.
+     * loops or holds at the end as the clip does. While a clip with a rig
+     * plays on a character, the viewport is a tool canvas whose tools pose
+     * the selected bone, keying it at the playhead as a drag goes and
+     * undoing a whole drag at once; every edit of the clip has its undo.
+     * Edits, previews, panel values and panel rows each live in their own
+     * branch.
      */
 
     // Internal
     private InfoManager infoManager;
     private EntityManager entityManager;
+    private ToolManager toolManager;
     private AnimationEditBranch animationEditBranch;
     private AnimationPreviewBranch animationPreviewBranch;
     private AnimationPropertyBranch animationPropertyBranch;
@@ -54,6 +62,12 @@ public class AnimationEditorManager extends ManagerPackage {
     private ObjectArrayList<float[]> clipboardPoses;
     private RigHandle clipboardRig;
 
+    // Pose
+    private float[] poseStart;
+    private boolean posing;
+    private ObjectArrayList<String> poseBoneNames;
+    private ObjectArrayList<float[]> posePoses;
+
     // Status
     private String statusMessage;
     private int revision;
@@ -74,12 +88,17 @@ public class AnimationEditorManager extends ManagerPackage {
 
         // Clipboard
         this.clipboardPoses = new ObjectArrayList<>();
+
+        // Pose
+        this.poseBoneNames = new ObjectArrayList<>();
+        this.posePoses = new ObjectArrayList<>();
     }
 
     @Override
     protected void get() {
         this.infoManager = get(InfoManager.class);
         this.entityManager = get(EntityManager.class);
+        this.toolManager = get(ToolManager.class);
     }
 
     @Override
@@ -220,6 +239,8 @@ public class AnimationEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
+        cancelPose();
+        activeDocument.getHistory().clear();
         infoManager.revertDocument(EditorSetting.INFO_SCHEMA_ANIMATIONS, activeDocument.getClipName());
         setStatusMessage(EditorSetting.ANIMATION_EDITOR_MESSAGE_REVERTED + activeDocument.getClipName());
     }
@@ -408,12 +429,112 @@ public class AnimationEditorManager extends ManagerPackage {
             animationPropertyBranch.collectKeyTimes(activeDocument, selectedTimes, otherTimes);
     }
 
+    public void collectBoneKeyTimes(int boneIndex, FloatArrayList times) {
+
+        times.clear();
+
+        if (activeDocument != null)
+            animationPropertyBranch.collectBoneKeyTimes(activeDocument, boneIndex, times);
+    }
+
+    // The bones of the clip's rig a timeline lists, none while the clip names no rig the engine knows
+    public int getBoneCount() {
+        return activeDocument != null && activeDocument.hasRig() ? activeDocument.getRigHandle().getBoneCount() : 0;
+    }
+
+    public String getBoneName(int boneIndex) {
+        return activeDocument.getRigHandle().getBone(boneIndex).getName();
+    }
+
     // Selection \\
 
-    void selectBone(int boneIndex) {
+    public void selectBone(int boneIndex) {
+
+        if (activeDocument == null || !activeDocument.hasRig() || posing || boneIndex == selectedBoneIndex
+                || boneIndex < 0 || boneIndex >= activeDocument.getRigHandle().getBoneCount())
+            return;
 
         this.selectedBoneIndex = boneIndex;
         notifyChanged();
+    }
+
+    // Pose \\
+
+    // Opens a drag posing the selected bone at the playhead from how it stands there; false with nothing to pose
+    public boolean beginPose() {
+
+        if (getToolCanvas() == null || posing)
+            return false;
+
+        pause();
+        animationEditBranch.beginGesture(activeDocument);
+
+        this.poseStart = animationPropertyBranch.samplePose(activeDocument, selectedBoneIndex);
+        this.posing = true;
+
+        return true;
+    }
+
+    // The selected bone keyed at the playhead holding a pose of every channel
+    public void writePose(float[] pose) {
+
+        if (!posing)
+            return;
+
+        poseBoneNames.clear();
+        poseBoneNames.add(activeDocument.getRigHandle().getBone(selectedBoneIndex).getName());
+        posePoses.clear();
+        posePoses.add(pose);
+        animationEditBranch.writeKeys(activeDocument, poseBoneNames, getTime(), posePoses);
+    }
+
+    public void endPose() {
+
+        if (!posing)
+            return;
+
+        this.posing = false;
+        animationEditBranch.endGesture(activeDocument);
+    }
+
+    public void cancelPose() {
+
+        if (!posing)
+            return;
+
+        this.posing = false;
+        animationEditBranch.cancelGesture(activeDocument);
+    }
+
+    public boolean isPosing() {
+        return posing;
+    }
+
+    // The selected bone's rotation, position and scale at the playhead when the drag began
+    public float[] getPoseStart() {
+        return poseStart;
+    }
+
+    // History \\
+
+    public void undo() {
+
+        if (activeDocument == null || posing)
+            return;
+
+        setStatusMessage(animationEditBranch.undo(activeDocument)
+                ? EditorSetting.ANIMATION_EDITOR_MESSAGE_UNDONE
+                : EditorSetting.ANIMATION_EDITOR_MESSAGE_NOTHING_TO_UNDO);
+    }
+
+    public void redo() {
+
+        if (activeDocument == null || posing)
+            return;
+
+        setStatusMessage(animationEditBranch.redo(activeDocument)
+                ? EditorSetting.ANIMATION_EDITOR_MESSAGE_REDONE
+                : EditorSetting.ANIMATION_EDITOR_MESSAGE_NOTHING_TO_REDO);
     }
 
     // Clipboard \\
@@ -490,6 +611,17 @@ public class AnimationEditorManager extends ManagerPackage {
         return Math.max(duration, EditorSetting.ANIMATION_EDITOR_TIMELINE_MIN_SPAN);
     }
 
+    // What the viewport's tools work on: the pose while a clip with a rig plays on a character, nothing otherwise
+    public ToolCanvas getToolCanvas() {
+        return activeDocument != null && activeDocument.hasRig() && characterName != null
+                ? ToolCanvas.ANIMATION_POSE
+                : null;
+    }
+
+    public EditorTool getPoseTool() {
+        return toolManager.getTool(ToolCanvas.ANIMATION_POSE);
+    }
+
     public int getRevision() {
         return revision;
     }
@@ -532,6 +664,10 @@ public class AnimationEditorManager extends ManagerPackage {
         else if (characterName == null)
             status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)
                     .append(EditorSetting.ANIMATION_EDITOR_STATUS_NO_CHARACTER);
+
+        else
+            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)
+                    .append(EditorSetting.ANIMATION_EDITOR_STATUS_POSE_HINT);
 
         if (activeDocument.hasPreviewError())
             status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)

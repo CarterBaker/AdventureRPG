@@ -8,33 +8,25 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.runtime.charactereditor.CharacterEditorSetting;
-import editor.runtime.characterview.panel.CharacterViewPanelSystem;
-import editor.runtime.characterview.panel.CharacterViewRowStruct;
-import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterEditorMenuSystem extends SystemPackage {
 
     /*
-     * Opens the Character Editor toolbar, its two panels and its status bar
-     * over the viewport. When the editor's revision moves it rewrites the
-     * status line and refills both panels from the rows the editor lists.
+     * Opens the Character Editor toolbar and its status bar over the
+     * viewport, and rewrites the status line when the editor's revision
+     * moves. The editor's panels are the Character Outliner and Character
+     * Properties docker windows.
      */
 
     // Internal
     private MenuManager menuManager;
     private FBOManager fboManager;
     private CharacterEditorManager characterEditorManager;
-    private CharacterViewPanelSystem characterViewPanelSystem;
 
     // Menus
     private MenuInstance toolbarMenu;
-    private CharacterViewTemplateStruct templates;
-
-    // Rows
-    private ObjectArrayList<CharacterViewRowStruct> rows;
 
     // Status
     private int shownRevision;
@@ -43,23 +35,6 @@ public class CharacterEditorMenuSystem extends SystemPackage {
 
     @Override
     protected void create() {
-
-        // Menus
-        this.templates = new CharacterViewTemplateStruct(
-                CharacterEditorSetting.TEMPLATE_HEADER_ROW,
-                CharacterEditorSetting.TEMPLATE_ITEM_ROW,
-                CharacterEditorSetting.TEMPLATE_ITEM_ROW_SELECTED,
-                CharacterEditorSetting.TEMPLATE_NUMBER_ROW,
-                CharacterEditorSetting.TEMPLATE_CHOICE_ROW,
-                CharacterEditorSetting.TEMPLATE_ACTION_ROW,
-                CharacterEditorSetting.ELEMENT_ROW_LABEL,
-                CharacterEditorSetting.ELEMENT_ROW_VALUE,
-                CharacterEditorSetting.ELEMENT_ROW_VALUE_BUTTON,
-                CharacterEditorSetting.ELEMENT_ROW_DECREASE,
-                CharacterEditorSetting.ELEMENT_ROW_INCREASE);
-
-        // Rows
-        this.rows = new ObjectArrayList<>();
 
         // Status
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -70,7 +45,6 @@ public class CharacterEditorMenuSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
-        this.characterViewPanelSystem = get(CharacterViewPanelSystem.class);
     }
 
     @Override
@@ -96,13 +70,5 @@ public class CharacterEditorMenuSystem extends SystemPackage {
 
         if (statusLabel != null)
             statusLabel.setFontText(characterEditorManager.getStatusText());
-
-        rows.clear();
-        characterEditorManager.buildListRows(rows);
-        characterViewPanelSystem.fill(toolbarMenu, CharacterEditorSetting.ENTRY_LIST, rows, templates);
-
-        rows.clear();
-        characterEditorManager.buildPropertyRows(rows);
-        characterViewPanelSystem.fill(toolbarMenu, CharacterEditorSetting.ENTRY_PROPERTIES, rows, templates);
     }
 }

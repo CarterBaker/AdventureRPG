@@ -12,11 +12,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class CharacterMeshRowBranch extends BranchPackage {
 
     /*
-     * Lists the rows of the Mesh and Weights panels. The left panel names
-     * every part the character wears a mesh for, the active one selected;
-     * the right panel holds the active part's options, selection, geometry
-     * tools, new parts and file in Mesh mode, and the selected bone's weight
-     * tools and the active vertex's weights in Weights mode. Every value
+     * Lists the rows of the Mesh, Sculpt and Weights panels. The left panel
+     * names every part the character wears a mesh for, the active one
+     * selected; the right panel holds the active part's options, selection,
+     * geometry tools, new parts and file in Mesh mode, its mirror, x-ray and
+     * file in Sculpt mode, whose tools are the Tools panel's, and the selected
+     * bone's weight tools and the active vertex's weights in Weights mode. Every value
      * shown is read through CharacterMeshPropertyBranch, the same path that
      * edits it.
      */
@@ -157,6 +158,18 @@ class CharacterMeshRowBranch extends BranchPackage {
         addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_PART_TEXTURE, EditorSetting.CHARACTER_EDITOR_LABEL_TEXTURE);
         addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_ADD_PART,
                 EditorSetting.CHARACTER_EDITOR_LABEL_ADD_PART + characterEditorManager.getSelectedBoneName());
+    }
+
+    // Sculpt \\
+
+    void buildSculptRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (!addDocumentHeader(characterEditorManager.getActiveMeshDocument(), rows))
+            return;
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_OPTIONS));
+        addViewOptions(rows);
+        addFileRows(rows);
     }
 
     // Weights \\

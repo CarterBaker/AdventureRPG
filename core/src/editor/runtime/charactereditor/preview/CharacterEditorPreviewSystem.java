@@ -9,9 +9,9 @@ import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
 import editor.runtime.charactereditor.CharacterEditorSetting;
+import editor.runtime.EditorSetting;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import engine.graphics.color.Color;
@@ -28,9 +28,9 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * tone worn, the build and the head shape are applied whenever the
      * editor's state moves; and each frame the preview is posed — at rest or
      * played in the chosen movement, or held in the exact bind pose while its
-     * mesh is edited — and given the markers of the mode: the joints in Build,
-     * Mesh and Weights, every equipment anchor in Equipment, the selected one
-     * highlighted.
+     * mesh or rig is edited — and given the markers of the mode: the joints in
+     * Build, Mesh and Weights, the rig's bones as they are being edited in
+     * Rig, every equipment anchor in Equipment, the selected one highlighted.
      */
 
     // Internal
@@ -138,7 +138,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         CharacterEditorPose pose = characterEditorManager.getPose();
 
-        if (characterEditorManager.getMode() == CharacterEditorMode.MESH) {
+        if (characterEditorManager.getMode().holdsBindPose()) {
             characterViewPoseSystem.poseBind();
             return;
         }
@@ -158,6 +158,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         switch (characterEditorManager.getMode()) {
             case BUILD, MESH, WEIGHTS -> pushJointMarkers();
+            case RIG -> pushRigMarkers();
             case EQUIPMENT -> pushAnchorMarkers();
             default -> {
             }
@@ -170,6 +171,25 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         for (int i = 0; i < boneCount; i++)
             characterViewRenderSystem.addJointMarker(i, i == characterEditorManager.getSelectedBoneIndex());
+    }
+
+    // Every bone of the rig as it is being edited, at its bind joint, and the selected one's size about its joint
+    private void pushRigMarkers() {
+
+        int boneCount = characterEditorManager.getRigBoneCount();
+        int selected = characterEditorManager.getSelectedRigBoneIndex();
+
+        for (int i = 0; i < boneCount; i++)
+            characterViewRenderSystem.addWorldMarker(
+                    characterEditorManager.getRigBoneWorldMatrix(i),
+                    i == selected ? EditorSetting.CHARACTER_VIEW_JOINT_SELECTED_SIZE
+                            : EditorSetting.CHARACTER_VIEW_JOINT_SIZE,
+                    i == selected);
+
+        if (selected != EngineSetting.INDEX_NOT_FOUND)
+            characterViewRenderSystem.addWorldBoxMarker(
+                    characterEditorManager.getRigBoneWorldMatrix(selected),
+                    characterEditorManager.getRigBoneSize(selected));
     }
 
     private void pushAnchorMarkers() {

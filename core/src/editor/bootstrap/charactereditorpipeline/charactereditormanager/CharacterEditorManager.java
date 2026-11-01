@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
@@ -24,6 +25,7 @@ import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.io.FileUtility;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -38,16 +40,19 @@ public class CharacterEditorManager extends ManagerPackage {
      * built and is colored. Templates are ARPG entries owned by InfoManager:
      * selecting one there opens it here, every edit goes back through it, and
      * every change to an open template, made here or in the Info Panel,
-     * rebuilds its preview live. The Mesh and Weights modes edit the rigged
-     * mesh of the part picked — the body or a default feature — with the tool
-     * options and the transform asked for held here, and are each a tool canvas
-     * whose tool and options are ToolManager's: on the mesh Move, Rotate and
-     * Scale drag the selection, and on the weights the brush strokes with
-     * BrushManager's brush in use, Brush drawing toward the target weight,
-     * Erase toward none and Smooth blending between neighbours. Save and Revert
-     * carry every open mesh's changes with the template's. Edits, previews,
-     * mesh files, selection, sculpting, weights, history, panel values and
-     * panel rows each live in their own branch.
+     * rebuilds its preview live. The Mesh, Sculpt and Weights modes edit the
+     * rigged mesh of the part picked — the body or a default feature — with the
+     * tool options and the transform asked for held here, and the Rig mode the
+     * rig the character is built on; each is a tool canvas whose tool and
+     * options are ToolManager's: on the mesh Move, Rotate and Scale drag the
+     * selection, on the sculpt every tool strokes the surface, on the weights
+     * the brush strokes with BrushManager's brush in use, Brush drawing toward
+     * the target weight, Erase toward none and Smooth blending between
+     * neighbours, and on the rig the tools pick, drag, size, add and remove
+     * bones. Save and Revert carry every open mesh's changes and the rig's with
+     * the template's. Edits, previews, mesh files, selection, geometry,
+     * sculpting, weights, the rig, history, panel values and panel rows each
+     * live in their own branch.
      */
 
     // Internal
@@ -62,6 +67,10 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterSelectionBranch characterSelectionBranch;
     private CharacterWeightBranch characterWeightBranch;
     private CharacterSculptBranch characterSculptBranch;
+    private CharacterShapeBranch characterShapeBranch;
+    private CharacterRigBranch characterRigBranch;
+    private CharacterRigPropertyBranch characterRigPropertyBranch;
+    private CharacterRigRowBranch characterRigRowBranch;
     private CharacterMeshPropertyBranch characterMeshPropertyBranch;
     private CharacterMeshRowBranch characterMeshRowBranch;
 
@@ -124,6 +133,10 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterSelectionBranch = create(CharacterSelectionBranch.class);
         this.characterWeightBranch = create(CharacterWeightBranch.class);
         this.characterSculptBranch = create(CharacterSculptBranch.class);
+        this.characterShapeBranch = create(CharacterShapeBranch.class);
+        this.characterRigBranch = create(CharacterRigBranch.class);
+        this.characterRigPropertyBranch = create(CharacterRigPropertyBranch.class);
+        this.characterRigRowBranch = create(CharacterRigRowBranch.class);
         this.characterMeshPropertyBranch = create(CharacterMeshPropertyBranch.class);
         this.characterMeshRowBranch = create(CharacterMeshRowBranch.class);
 
@@ -173,6 +186,7 @@ public class CharacterEditorManager extends ManagerPackage {
         infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::openEntry);
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::refreshEntry);
         infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::closeEntry);
+        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_RIGS, characterRigBranch::refreshEntry);
     }
 
     // Templates \\
@@ -249,6 +263,9 @@ public class CharacterEditorManager extends ManagerPackage {
             return;
         }
 
+        if (!saveRigFile())
+            return;
+
         setStatusMessage(infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ENTITIES, activeDocument.getTemplateName())
                 ? EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + activeDocument.getTemplateName()
                 : infoManager.getRefusal());
@@ -261,6 +278,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
         infoManager.revertDocument(EditorSetting.INFO_SCHEMA_ENTITIES, activeDocument.getTemplateName());
         revertDirtyMeshes();
+        revertRigFile();
         setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + activeDocument.getTemplateName());
     }
 
@@ -520,23 +538,34 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Strokes \\
 
+    // A brush stroke on the active part, its shape in Sculpt mode and its weights otherwise
     public void beginStroke() {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
-        if (document != null)
+        if (document == null)
+            return;
+
+        if (mode == CharacterEditorMode.SCULPT)
+            characterShapeBranch.beginStroke(document);
+        else
             characterWeightBranch.beginStroke(document);
     }
 
-    // One step of the weight brush over the vertices under it, each at the strength the brush has there
-    public void stroke(IntArrayList vertices, FloatArrayList strengths) {
+    // One step of the brush over the vertices under it, each at the strength the brush has there
+    public void stroke(IntArrayList vertices, FloatArrayList strengths, CharacterStampStruct stamp) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
         if (document == null || !document.hasOpenStep())
             return;
 
-        EditorTool tool = toolManager.getTool(ToolCanvas.CHARACTER_WEIGHTS);
+        EditorTool tool = toolManager.getTool(mode.getToolCanvas());
+
+        if (mode == CharacterEditorMode.SCULPT) {
+            characterShapeBranch.stroke(document, tool, vertices, strengths, stamp);
+            return;
+        }
 
         if (tool == EditorTool.SMOOTH) {
             characterWeightBranch.blur(document, vertices, strengths);
@@ -551,42 +580,156 @@ public class CharacterEditorManager extends ManagerPackage {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
-        if (document != null)
+        if (document == null)
+            return;
+
+        if (mode == CharacterEditorMode.SCULPT)
+            characterShapeBranch.endStroke(document);
+        else
             characterWeightBranch.endStroke(document);
     }
 
     // History \\
 
+    // A step back in the history of what the mode edits: the rig in Rig mode, the active part's mesh otherwise
     public void undo() {
+
+        if (mode == CharacterEditorMode.RIG) {
+            reportHistory(syncRig() && characterRigBranch.undo(), true);
+            return;
+        }
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
         if (document == null || characterSculptBranch.isTransforming())
             return;
 
-        if (!characterHistoryBranch.undo(document)) {
-            setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_NOTHING_TO_UNDO);
-            return;
-        }
+        boolean undone = characterHistoryBranch.undo(document);
 
-        characterMeshBranch.upload(document);
-        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_UNDONE);
+        if (undone)
+            characterMeshBranch.upload(document);
+
+        reportHistory(undone, true);
     }
 
     public void redo() {
 
+        if (mode == CharacterEditorMode.RIG) {
+            reportHistory(syncRig() && characterRigBranch.redo(), false);
+            return;
+        }
+
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
         if (document == null || characterSculptBranch.isTransforming())
             return;
 
-        if (!characterHistoryBranch.redo(document)) {
-            setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_NOTHING_TO_REDO);
-            return;
-        }
+        boolean redone = characterHistoryBranch.redo(document);
 
-        characterMeshBranch.upload(document);
-        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REDONE);
+        if (redone)
+            characterMeshBranch.upload(document);
+
+        reportHistory(redone, false);
+    }
+
+    private void reportHistory(boolean stepped, boolean back) {
+
+        if (back)
+            setStatusMessage(stepped
+                    ? EditorSetting.CHARACTER_EDITOR_MESSAGE_UNDONE
+                    : EditorSetting.CHARACTER_EDITOR_MESSAGE_NOTHING_TO_UNDO);
+        else
+            setStatusMessage(stepped
+                    ? EditorSetting.CHARACTER_EDITOR_MESSAGE_REDONE
+                    : EditorSetting.CHARACTER_EDITOR_MESSAGE_NOTHING_TO_REDO);
+    }
+
+    // Rig \\
+
+    // Follows the rig the active character is built on; false while there is none to edit
+    private boolean syncRig() {
+
+        characterRigBranch.sync(activeDocument != null && activeDocument.hasPreview()
+                ? activeDocument.getPreviewData().getRigHandle()
+                : null);
+
+        return characterRigBranch.hasRig();
+    }
+
+    public void selectRigBone(int boneIndex) {
+
+        if (syncRig() && !characterRigBranch.isGesturing())
+            characterRigBranch.selectBone(boneIndex);
+    }
+
+    // Opens a drag on the selected bone in the viewport; false when there is no bone to drag
+    public boolean beginRigGesture() {
+        return mode == CharacterEditorMode.RIG && syncRig() && characterRigBranch.beginGesture();
+    }
+
+    public void moveRigJoint(Vector3 worldMove) {
+
+        if (characterRigBranch.isGesturing())
+            characterRigBranch.moveGesture(worldMove);
+    }
+
+    public void scaleRigBone(float factor) {
+
+        if (characterRigBranch.isGesturing())
+            characterRigBranch.scaleGesture(factor);
+    }
+
+    public void endRigGesture() {
+        characterRigBranch.endGesture();
+    }
+
+    public void cancelRigGesture() {
+        characterRigBranch.cancelGesture();
+    }
+
+    public boolean isRigGesturing() {
+        return characterRigBranch.isGesturing();
+    }
+
+    // A child of the selected bone with its joint at a point in the world
+    public void addRigBone(Vector3 worldPoint) {
+
+        if (syncRig() && !characterRigBranch.isGesturing())
+            characterRigBranch.addBone(worldPoint);
+    }
+
+    public void removeRigBone(int boneIndex) {
+
+        if (syncRig() && !characterRigBranch.isGesturing())
+            characterRigBranch.removeBone(boneIndex);
+    }
+
+    void saveRig() {
+
+        if (saveRigFile())
+            setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + characterRigBranch.getRigName());
+    }
+
+    void revertRig() {
+
+        revertRigFile();
+        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + characterRigBranch.getRigName());
+    }
+
+    // The rig written when it holds unsaved changes; false, after saying why, when it could not be
+    private boolean saveRigFile() {
+
+        characterRigBranch.endGesture();
+
+        return !syncRig() || characterRigBranch.save();
+    }
+
+    private void revertRigFile() {
+
+        characterRigBranch.cancelGesture();
+
+        if (syncRig())
+            characterRigBranch.revert();
     }
 
     // Mesh Files \\
@@ -839,24 +982,24 @@ public class CharacterEditorManager extends ManagerPackage {
         return weightTarget;
     }
 
-    // How strongly the weight brush strokes, the Strength option of the tool in use
+    // How strongly the brush strokes, the Strength option of the mode's tool in use
     public float getBrushStrength() {
-        return toolManager.getOption(ToolCanvas.CHARACTER_WEIGHTS, ToolOption.STRENGTH);
+        return toolManager.getOption(mode.getToolCanvas(), ToolOption.STRENGTH);
     }
 
-    // What the viewport's tools work on: the mesh or its weights while a mesh mode is open, nothing otherwise
+    // What the viewport's tools work on: the mesh, its sculpt, its weights or the rig, nothing in the other modes
     public ToolCanvas getToolCanvas() {
         return mode.getToolCanvas();
     }
 
-    // True while the weights are open and the tool chosen for them strokes
+    // True while a mesh mode is open and the tool chosen for it strokes
     public boolean isBrushTool() {
-        return mode == CharacterEditorMode.WEIGHTS && toolManager.getTool(ToolCanvas.CHARACTER_WEIGHTS).isStroke();
+        return mode.isMeshMode() && toolManager.getTool(mode.getToolCanvas()).isStroke();
     }
 
-    // The weight brush's radius, in window pixels
+    // The brush's radius, in window pixels
     public float getBrushRadius() {
-        return toolManager.getOption(ToolCanvas.CHARACTER_WEIGHTS, ToolOption.SIZE);
+        return toolManager.getOption(mode.getToolCanvas(), ToolOption.SIZE);
     }
 
     // The transform the mesh's tool drags, null while the tool in use is not one
@@ -864,6 +1007,27 @@ public class CharacterEditorManager extends ManagerPackage {
         return mode == CharacterEditorMode.MESH
                 ? CharacterEditorTransform.forTool(toolManager.getTool(ToolCanvas.CHARACTER_MESH))
                 : null;
+    }
+
+    public int getRigBoneCount() {
+        return syncRig() ? characterRigBranch.getBoneCount() : 0;
+    }
+
+    public int getSelectedRigBoneIndex() {
+        return syncRig() ? characterRigBranch.getSelectedBone() : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // A bone's joint in the world as the rig is being edited
+    public Matrix4 getRigBoneWorldMatrix(int boneIndex) {
+        return characterRigBranch.getWorldMatrix(boneIndex);
+    }
+
+    public Vector3 getRigBoneSize(int boneIndex) {
+        return characterRigBranch.getSize(boneIndex);
+    }
+
+    public EditorTool getRigTool() {
+        return toolManager.getTool(ToolCanvas.CHARACTER_RIG);
     }
 
     public int getRevision() {
@@ -911,9 +1075,14 @@ public class CharacterEditorManager extends ManagerPackage {
         if (characterSculptBranch.isTransforming())
             status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)
                     .append(EditorSetting.CHARACTER_EDITOR_STATUS_TRANSFORM_HINT);
-        else if (mode == CharacterEditorMode.MESH)
-            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)
-                    .append(EditorSetting.CHARACTER_EDITOR_STATUS_MESH_HINT);
+        else
+            appendHint(status);
+    }
+
+    private void appendHint(StringBuilder status) {
+
+        if (mode.getHint() != null)
+            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(mode.getHint());
     }
 
     private void appendDocumentStatus(StringBuilder status) {
@@ -921,16 +1090,22 @@ public class CharacterEditorManager extends ManagerPackage {
         status.append(activeDocument.getTemplateName());
 
         if (infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_ENTITIES, activeDocument.getTemplateName())
-                || hasDirtyWornMesh())
+                || hasDirtyWornMesh()
+                || syncRig() && characterRigBranch.isDirty())
             status.append(EditorSetting.CHARACTER_VIEW_DIRTY_MARKER);
 
         status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(mode.getLabel());
 
-        if (mode != CharacterEditorMode.MESH)
+        if (!mode.holdsBindPose())
             status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(pose.getLabel());
 
         if (mode.isMeshMode())
             appendMeshStatus(status);
+        else if (mode == CharacterEditorMode.RIG && syncRig())
+            characterRigBranch.appendStatus(status);
+
+        if (!mode.isMeshMode())
+            appendHint(status);
 
         if (activeDocument.hasPreviewError())
             status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)

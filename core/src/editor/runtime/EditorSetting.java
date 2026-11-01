@@ -1,6 +1,7 @@
 package editor.runtime;
 
 import application.runtime.RuntimeSetting;
+import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import engine.input.Buttons;
 import engine.root.EngineSetting;
 
@@ -313,11 +314,16 @@ public class EditorSetting {
     public static final String TAB_TITLE_ARPG_VIEWER = "ARPG Viewer";
     public static final String TAB_TITLE_ANIMATION_EDITOR = "Animation Editor";
     public static final String TAB_TITLE_ANIMATION_TREE_EDITOR = "Animation Tree Editor";
+    public static final String TAB_TITLE_ANIMATION_OUTLINER = "Animation Outliner";
+    public static final String TAB_TITLE_ANIMATION_PROPERTIES = "Animation Properties";
+    public static final String TAB_TITLE_ANIMATION_TIMELINE = "Animation Timeline";
     public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
     public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
     public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
+    public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
+    public static final String TAB_TITLE_CHARACTER_PROPERTIES = "Character Properties";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
@@ -505,6 +511,57 @@ public class EditorSetting {
     public static final String CHARACTER_VIEW_STATUS_SEPARATOR = "  |  ";
     public static final String CHARACTER_VIEW_MESSAGE_PREVIEW_REFUSED = "Preview not rebuilt: ";
 
+    // Character View — docker windows: the menu each fills, its title and row entries, and the titles they show
+    public static final String CHARACTER_VIEW_MENU_DOCK = "editor/CharacterDock/Dock";
+    public static final int CHARACTER_VIEW_DOCK_ENTRY_TITLE = 0;
+    public static final int CHARACTER_VIEW_DOCK_ENTRY_ROWS = 1;
+    public static final String CHARACTER_OUTLINER_TITLE = "Character";
+    public static final String CHARACTER_PROPERTIES_TITLE = "Properties";
+    public static final String ANIMATION_OUTLINER_TITLE = "Clip";
+    public static final String ANIMATION_PROPERTIES_TITLE = "Key";
+
+    // Character View — the row templates of each tool's menu its docker windows fill with
+    public static final CharacterViewTemplateStruct CHARACTER_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            "editor/CharacterEditor/character_editor_header_row",
+            "editor/CharacterEditor/character_editor_item_row",
+            "editor/CharacterEditor/character_editor_item_row_selected",
+            "editor/CharacterEditor/character_editor_number_row",
+            "editor/CharacterEditor/character_editor_text_row",
+            "editor/CharacterEditor/character_editor_choice_row",
+            "editor/CharacterEditor/character_editor_action_row",
+            "character_editor_row_label",
+            "character_editor_row_value",
+            "character_editor_row_value_button",
+            "character_editor_row_decrease",
+            "character_editor_row_increase");
+    public static final CharacterViewTemplateStruct ANIMATION_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            "editor/AnimationEditor/animation_editor_header_row",
+            "editor/AnimationEditor/animation_editor_item_row",
+            "editor/AnimationEditor/animation_editor_item_row_selected",
+            "editor/AnimationEditor/animation_editor_number_row",
+            null,
+            "editor/AnimationEditor/animation_editor_choice_row",
+            "editor/AnimationEditor/animation_editor_action_row",
+            "animation_editor_row_label",
+            "animation_editor_row_value",
+            "animation_editor_row_value_button",
+            "animation_editor_row_decrease",
+            "animation_editor_row_increase");
+
+    // Character View — viewport gestures: the buttons, the GLFW keys a transform locks its axis with, pointer
+    // distances in pixels, snapping, and the undo history they record
+    public static final int CHARACTER_VIEW_BUTTON_SELECT = Buttons.LEFT;
+    public static final int CHARACTER_VIEW_BUTTON_CANCEL = Buttons.RIGHT;
+    public static final int[] CHARACTER_VIEW_KEY_AXES = { 88, 89, 90 };
+    public static final float CHARACTER_VIEW_PICK_RADIUS_PIXELS = 10f;
+    public static final float CHARACTER_VIEW_SCALE_MIN_PIXELS = 4f;
+    public static final float CHARACTER_VIEW_SNAP_DEGREES = 15f;
+    public static final float CHARACTER_VIEW_SNAP_SCALE = 0.1f;
+    public static final float CHARACTER_VIEW_RAY_EPSILON = 0.00001f;
+    public static final float CHARACTER_VIEW_GIMBAL_LIMIT = 0.99999f;
+    public static final float CHARACTER_VIEW_HALF_TURN_DEGREES = 180f;
+    public static final int CHARACTER_VIEW_HISTORY_MAX_STEPS = 64;
+
     // Character Editor — template fields
     public static final String CHARACTER_EDITOR_FIELD_MODEL = "model";
     public static final String CHARACTER_EDITOR_FIELD_APPEARANCE = "appearance";
@@ -578,7 +635,9 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_BUILD = "Build";
     public static final String CHARACTER_EDITOR_MODE_EQUIPMENT = "Equipment";
     public static final String CHARACTER_EDITOR_MODE_MESH = "Mesh";
+    public static final String CHARACTER_EDITOR_MODE_SCULPT = "Sculpt";
     public static final String CHARACTER_EDITOR_MODE_WEIGHTS = "Weights";
+    public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
     public static final String CHARACTER_EDITOR_POSE_REST = "Rest";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
@@ -772,6 +831,10 @@ public class EditorSetting {
 
     // Character Editor — mesh status text
     public static final String CHARACTER_EDITOR_STATUS_MESH_HINT = "Click or drag to select, Shift adds, Ctrl removes";
+    public static final String CHARACTER_EDITOR_STATUS_SCULPT_HINT = "Drag to sculpt with the tool in use,"
+            + " Ctrl inverts the stroke";
+    public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
+            + " Scale sizes it, Place adds a child, Erase removes one";
     public static final String CHARACTER_EDITOR_STATUS_TRANSFORM_HINT = "X Y Z hold to an axis, Ctrl snaps, click or "
             + "Enter confirms, right click or Esc cancels";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_EMPTY = "A mesh needs at least one face";
@@ -789,6 +852,68 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MESSAGE_REDONE = "Redone";
     public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_UNDO = "Nothing to undo";
     public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_REDO = "Nothing to redo";
+
+    // Character Editor — sculpt strokes, each the share of the brush's radius or of the way a full-strength stamp
+    // moves a vertex
+    public static final float CHARACTER_SCULPT_DRAW_RATE = 0.1f;
+    public static final float CHARACTER_SCULPT_INFLATE_RATE = 0.1f;
+    public static final float CHARACTER_SCULPT_SMOOTH_RATE = 0.5f;
+    public static final float CHARACTER_SCULPT_PINCH_RATE = 0.2f;
+    public static final float CHARACTER_SCULPT_FLATTEN_RATE = 0.5f;
+
+    // Character Rig — rig fields
+    public static final String CHARACTER_RIG_FIELD_BONES = "bones";
+    public static final String CHARACTER_RIG_FIELD_NAME = "name";
+    public static final String CHARACTER_RIG_FIELD_PARENT = "parent";
+
+    // Character Rig — new bones and sizes, in blocks; a new bone is named this and a number, then its parent's side
+    public static final float CHARACTER_RIG_SIZE_MIN = 0.005f;
+    public static final float CHARACTER_RIG_NEW_BONE_OFFSET = 0.1f;
+    public static final float CHARACTER_RIG_NEW_BONE_SIZE = 0.08f;
+    public static final String CHARACTER_RIG_NEW_BONE_NAME = "bone_";
+
+    // Character Rig — panel keys
+    public static final String CHARACTER_RIG_KEY_BONE = "rig_bone";
+    public static final String CHARACTER_RIG_KEY_NAME = "rig_name";
+    public static final String CHARACTER_RIG_KEY_PARENT = "rig_parent";
+    public static final String CHARACTER_RIG_KEY_POSITION = "rig_position";
+    public static final String CHARACTER_RIG_KEY_ROTATION = "rig_rotation";
+    public static final String CHARACTER_RIG_KEY_SIZE = "rig_size";
+    public static final String CHARACTER_RIG_KEY_ADD_BONE = "rig_add_bone";
+    public static final String CHARACTER_RIG_KEY_REMOVE_BONE = "rig_remove_bone";
+    public static final String CHARACTER_RIG_KEY_MIRROR_BONE = "rig_mirror_bone";
+    public static final String CHARACTER_RIG_KEY_SYMMETRIZE_LEFT = "rig_symmetrize_left";
+    public static final String CHARACTER_RIG_KEY_SYMMETRIZE_RIGHT = "rig_symmetrize_right";
+    public static final String CHARACTER_RIG_KEY_UNDO = "rig_undo";
+    public static final String CHARACTER_RIG_KEY_REDO = "rig_redo";
+    public static final String CHARACTER_RIG_KEY_SAVE = "rig_save";
+    public static final String CHARACTER_RIG_KEY_REVERT = "rig_revert";
+
+    // Character Rig — panel text
+    public static final String CHARACTER_RIG_INDENT = "   ";
+    public static final String CHARACTER_RIG_ADDED_MARKER = "  +";
+    public static final String CHARACTER_RIG_HEADER_NO_RIG = "This character has no rig to edit";
+    public static final String CHARACTER_RIG_HEADER_STRUCTURE = "Edit Bones";
+    public static final String CHARACTER_RIG_HEADER_FILE = "Rig File";
+    public static final String CHARACTER_RIG_LABEL_NAME = "Name";
+    public static final String CHARACTER_RIG_LABEL_PARENT = "Parent";
+    public static final String CHARACTER_RIG_LABEL_ADD_BONE = "Add Child Bone";
+    public static final String CHARACTER_RIG_LABEL_REMOVE_BONE = "Remove Bone";
+    public static final String CHARACTER_RIG_LABEL_MIRROR_BONE = "Mirror to Other Side";
+    public static final String CHARACTER_RIG_LABEL_SYMMETRIZE_LEFT = "Symmetrize  Left to Right";
+    public static final String CHARACTER_RIG_LABEL_SYMMETRIZE_RIGHT = "Symmetrize  Right to Left";
+    public static final String CHARACTER_RIG_LABEL_SAVE = "Save Rig";
+    public static final String CHARACTER_RIG_LABEL_REVERT = "Revert Rig";
+
+    // Character Rig — status text
+    public static final String CHARACTER_RIG_MESSAGE_ADDED = "Added ";
+    public static final String CHARACTER_RIG_MESSAGE_REMOVED = "Removed ";
+    public static final String CHARACTER_RIG_MESSAGE_MIRRORED = "Mirrored ";
+    public static final String CHARACTER_RIG_MESSAGE_LOADED_BONE = "Only bones added since the editor started can be"
+            + " renamed or removed";
+    public static final String CHARACTER_RIG_MESSAGE_NO_SIDE = "Every bone to mirror must end in _l or _r";
+    public static final String CHARACTER_RIG_MESSAGE_REFUSED = "Rig not applied: ";
+    public static final String CHARACTER_RIG_MESSAGE_RESTART = "Bone changes take hold when the editor next starts";
 
     // Animation Editor — clip fields
     public static final String ANIMATION_EDITOR_FIELD_RIG = "rig";
@@ -865,6 +990,12 @@ public class EditorSetting {
     public static final String ANIMATION_EDITOR_MESSAGE_REVERTED = "Reverted ";
     public static final String ANIMATION_EDITOR_MESSAGE_DELETED = "Deleted ";
     public static final String ANIMATION_EDITOR_MESSAGE_POSE_COPIED = "Pose copied";
+    public static final String ANIMATION_EDITOR_MESSAGE_UNDONE = "Undone";
+    public static final String ANIMATION_EDITOR_MESSAGE_REDONE = "Redone";
+    public static final String ANIMATION_EDITOR_MESSAGE_NOTHING_TO_UNDO = "Nothing to undo";
+    public static final String ANIMATION_EDITOR_MESSAGE_NOTHING_TO_REDO = "Nothing to redo";
+    public static final String ANIMATION_EDITOR_STATUS_POSE_HINT = "Click a joint to pick its bone; drag to pose it,"
+            + " keyed at the playhead; X Y Z hold a turn to an axis, Ctrl snaps";
 
     // Animation Tree Editor — tree fields
     public static final String ANIMATION_TREE_EDITOR_FIELD_RIG = "rig";
@@ -1166,12 +1297,19 @@ public class EditorSetting {
     public static final String TOOL_ROTATE = "Rotate";
     public static final String TOOL_SCALE = "Scale";
     public static final String TOOL_CUT = "Cut";
+    public static final String TOOL_INFLATE = "Inflate";
+    public static final String TOOL_PINCH = "Pinch";
+    public static final String TOOL_FLATTEN = "Flatten";
+    public static final String TOOL_NUDGE = "Nudge";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
     public static final String TOOL_CANVAS_CAMERAS = "World Cameras";
     public static final String TOOL_CANVAS_CHARACTER_MESH = "Character Mesh";
     public static final String TOOL_CANVAS_CHARACTER_WEIGHTS = "Character Weights";
+    public static final String TOOL_CANVAS_CHARACTER_SCULPT = "Character Sculpt";
+    public static final String TOOL_CANVAS_CHARACTER_RIG = "Character Rig";
+    public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Recorder Timeline";
     public static final String TOOL_OPTION_SIZE = "Size";
@@ -1189,6 +1327,7 @@ public class EditorSetting {
     public static final float TOOL_STRENGTH_STEP = 0.05f;
     public static final float TOOL_STRENGTH_DEFAULT = 1f;
     public static final float TOOL_WEIGHT_STRENGTH_DEFAULT = 0.2f;
+    public static final float TOOL_SCULPT_STRENGTH_DEFAULT = 0.5f;
     public static final float TOOL_TWIST_STEP = 15f;
     public static final float TOOL_TWIST_MAX = 360f;
     public static final float TOOL_TWIST_DEFAULT = 90f;
@@ -1298,6 +1437,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_ENTITIES = "Entities";
     public static final String INFO_SCHEMA_ANIMATIONS = "Animations";
     public static final String INFO_SCHEMA_ANIMATION_TREES = "AnimationTrees";
+    public static final String INFO_SCHEMA_RIGS = "Rigs";
     public static final String INFO_SCHEMA_WORLDS = "Worlds";
     public static final String INFO_SCHEMA_VEHICLES = "Vehicles";
     public static final String INFO_SCHEMA_SHORTCUTS = "Shortcuts";

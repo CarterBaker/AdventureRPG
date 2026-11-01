@@ -78,8 +78,28 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterEditor(window.getGLWindow());
     }
 
+    public void openCharacterOutliner(WindowInstance window) {
+        tabManager.openCharacterOutliner(window.getGLWindow());
+    }
+
+    public void openCharacterProperties(WindowInstance window) {
+        tabManager.openCharacterProperties(window.getGLWindow());
+    }
+
     public void openAnimationEditor(WindowInstance window) {
         tabManager.openAnimationEditor(window.getGLWindow());
+    }
+
+    public void openAnimationOutliner(WindowInstance window) {
+        tabManager.openAnimationOutliner(window.getGLWindow());
+    }
+
+    public void openAnimationProperties(WindowInstance window) {
+        tabManager.openAnimationProperties(window.getGLWindow());
+    }
+
+    public void openAnimationTimeline(WindowInstance window) {
+        tabManager.openAnimationTimeline(window.getGLWindow());
     }
 
     public void openAnimationTreeEditor(WindowInstance window) {

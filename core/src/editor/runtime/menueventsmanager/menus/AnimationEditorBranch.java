@@ -14,8 +14,10 @@ public class AnimationEditorBranch extends BranchPackage {
      * panels. Every action works on the shared active clip. New clips are
      * named through the name dialog, deleting a clip asks for its name to be
      * typed back as confirmation, and a number's value opens in the text
-     * dialog. Dragging along the timeline moves the playhead to the frame
-     * under the cursor. Panel rows hand back the key of the value they show.
+     * dialog. Undo and redo step the clip's history. Dragging along the
+     * timeline moves the playhead to the frame under the cursor, and along a
+     * bone's lane picks that bone too. Panel rows and lanes hand back the key
+     * of the value they show.
      */
 
     // Internal
@@ -63,6 +65,16 @@ public class AnimationEditorBranch extends BranchPackage {
                 confirmedName -> animationEditorManager.deleteActiveClip());
     }
 
+    // History \\
+
+    public void undo() {
+        animationEditorManager.undo();
+    }
+
+    public void redo() {
+        animationEditorManager.redo();
+    }
+
     // Playback \\
 
     public void togglePlayback() {
@@ -90,6 +102,12 @@ public class AnimationEditorBranch extends BranchPackage {
         if (track.getComputedW() > 0f)
             animationEditorManager.scrub(
                     (inputManager.getHoverMouseX(window) - track.getComputedLeft()) / track.getComputedW());
+    }
+
+    // A dope sheet lane's track picks its bone and moves the playhead to the frame under the cursor
+    public void scrubLane(String key, WindowInstance window, ElementInstance track) {
+        animationEditorManager.select(key);
+        scrubTimeline(window, track);
     }
 
     // Rows \\

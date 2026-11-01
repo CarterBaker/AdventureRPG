@@ -9,7 +9,8 @@ public class RigHandle extends HandlePackage {
      * Persistent reference to a loaded rig template. Registered and owned
      * by RigManager for the engine lifetime. Delegates all bone lookups
      * through RigData — used as the shared bind-pose source every
-     * AnimationStateHandle evaluates its runtime pose against.
+     * AnimationStateHandle evaluates its runtime pose against. Its data is
+     * replaced in place when the rig's bind pose is edited, its bones kept.
      */
 
     // Internal
@@ -27,6 +28,10 @@ public class RigHandle extends HandlePackage {
 
     public RigData getRigData() {
         return rigData;
+    }
+
+    public String getRigName() {
+        return rigData.getRigName();
     }
 
     public int getBoneCount() {

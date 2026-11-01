@@ -31,13 +31,16 @@ class CharacterPropertyBranch extends BranchPackage {
      * CharacterEditBranch, clamped to the range the game reads them in;
      * preview values — the pose, the tone worn, the build and head shape —
      * live on the manager and never touch the template. The keys of the
-     * Mesh and Weights panels pass straight to CharacterMeshPropertyBranch.
+     * Mesh, Sculpt and Weights panels pass straight to
+     * CharacterMeshPropertyBranch, and those of the Rig panels to
+     * CharacterRigPropertyBranch.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private CharacterEditBranch characterEditBranch;
     private CharacterMeshPropertyBranch characterMeshPropertyBranch;
+    private CharacterRigPropertyBranch characterRigPropertyBranch;
     private FeatureManager featureManager;
 
     // Base \\
@@ -47,6 +50,7 @@ class CharacterPropertyBranch extends BranchPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditBranch = get(CharacterEditBranch.class);
         this.characterMeshPropertyBranch = get(CharacterMeshPropertyBranch.class);
+        this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
         this.featureManager = get(FeatureManager.class);
     }
 
@@ -59,6 +63,8 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (characterMeshPropertyBranch.handles(keyName))
             characterMeshPropertyBranch.select(key);
+        else if (characterRigPropertyBranch.handles(keyName))
+            characterRigPropertyBranch.select(key);
         else if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BONE))
             characterEditorManager.selectBone(index);
         else if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR))
@@ -72,6 +78,9 @@ class CharacterPropertyBranch extends BranchPackage {
         if (isMeshKey(key))
             return characterMeshPropertyBranch.getValueText(key);
 
+        if (isRigKey(key))
+            return characterRigPropertyBranch.getValueText(key);
+
         if (isNumberKey(key))
             return CharacterViewUtility.formatNumber(getNumber(document, key));
 
@@ -83,6 +92,9 @@ class CharacterPropertyBranch extends BranchPackage {
         if (isMeshKey(key))
             return characterMeshPropertyBranch.isValueValid(key, text);
 
+        if (isRigKey(key))
+            return characterRigPropertyBranch.isValueValid(key, text);
+
         return isNumberKey(key) && hasTarget(document, key) && CharacterViewUtility.isNumber(text);
     }
 
@@ -90,6 +102,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isMeshKey(key)) {
             characterMeshPropertyBranch.setValue(key, text);
+            return;
+        }
+
+        if (isRigKey(key)) {
+            characterRigPropertyBranch.setValue(key, text);
             return;
         }
 
@@ -103,12 +120,21 @@ class CharacterPropertyBranch extends BranchPackage {
             return;
         }
 
+        if (isRigKey(key)) {
+            characterRigPropertyBranch.step(key, direction);
+            return;
+        }
+
         if (isNumberKey(key) && hasTarget(document, key))
             writeNumber(document, key, getNumber(document, key) + direction * getStep(key));
     }
 
     private boolean isMeshKey(String key) {
         return characterMeshPropertyBranch.handles(CharacterViewUtility.getKeyName(key));
+    }
+
+    private boolean isRigKey(String key) {
+        return characterRigPropertyBranch.handles(CharacterViewUtility.getKeyName(key));
     }
 
     // Numbers \\
@@ -293,6 +319,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isMeshKey(key)) {
             characterMeshPropertyBranch.cycle(key, direction);
+            return;
+        }
+
+        if (isRigKey(key)) {
+            characterRigPropertyBranch.cycle(key, direction);
             return;
         }
 
@@ -602,6 +633,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isMeshKey(key)) {
             characterMeshPropertyBranch.act(key);
+            return;
+        }
+
+        if (isRigKey(key)) {
+            characterRigPropertyBranch.act(key);
             return;
         }
 

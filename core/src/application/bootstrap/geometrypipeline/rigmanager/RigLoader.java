@@ -2,9 +2,11 @@ package application.bootstrap.geometrypipeline.rigmanager;
 
 import java.io.File;
 
+import application.bootstrap.geometrypipeline.rig.RigData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -13,7 +15,8 @@ class RigLoader extends LoaderPackage {
     /*
      * Scans the rig ARPG directory and loads every rig template into
      * RigManager. Supports on-demand loading for rigs not yet in the
-     * palette at runtime.
+     * palette at runtime, and rebuilds a loaded rig's data from its ARPG as
+     * it stands for the rig to take in place.
      */
 
     // Internal
@@ -63,6 +66,12 @@ class RigLoader extends LoaderPackage {
             throwException("Failed to build rig from: " + file.getAbsolutePath());
 
         rigManager.addRig(rigName, handle);
+    }
+
+    // Rebuild \\
+
+    RigData rebuild(RigHandle rigHandle, ArpgObjectStruct rigArpg) {
+        return internalBuilder.buildData(rigArpg, rigHandle.getRigName(), rigHandle.getRigName());
     }
 
     // On-Demand \\

@@ -5,6 +5,9 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeContext;
 import editor.runtime.animationeditor.AnimationEditorContext;
+import editor.runtime.animationoutliner.AnimationOutlinerContext;
+import editor.runtime.animationproperties.AnimationPropertiesContext;
+import editor.runtime.animationtimeline.AnimationTimelineContext;
 import editor.runtime.animationtreeeditor.AnimationTreeEditorContext;
 import editor.runtime.arpgviewer.ArpgViewerContext;
 import editor.runtime.biomeplanner.BiomePlannerContext;
@@ -19,6 +22,8 @@ import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.runtime.charactereditor.CharacterEditorContext;
+import editor.runtime.characteroutliner.CharacterOutlinerContext;
+import editor.runtime.characterproperties.CharacterPropertiesContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
@@ -149,8 +154,28 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_EDITOR, CharacterEditorContext.class, osWindow);
     }
 
+    public TabHandle openCharacterOutliner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_OUTLINER, CharacterOutlinerContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterProperties(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_PROPERTIES, CharacterPropertiesContext.class, osWindow);
+    }
+
     public TabHandle openAnimationEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ANIMATION_EDITOR, AnimationEditorContext.class, osWindow);
+    }
+
+    public TabHandle openAnimationOutliner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_ANIMATION_OUTLINER, AnimationOutlinerContext.class, osWindow);
+    }
+
+    public TabHandle openAnimationProperties(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_ANIMATION_PROPERTIES, AnimationPropertiesContext.class, osWindow);
+    }
+
+    public TabHandle openAnimationTimeline(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_ANIMATION_TIMELINE, AnimationTimelineContext.class, osWindow);
     }
 
     public TabHandle openAnimationTreeEditor(WindowInstance osWindow) {

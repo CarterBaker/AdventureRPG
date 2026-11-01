@@ -12,8 +12,9 @@ public class CharacterEditorBranch extends BranchPackage {
      * Menu event handlers for the Character Editor toolbar and panels. Every
      * action works on the shared active character. A copy is named through
      * the name dialog, deleting a character asks for its name to be typed
-     * back as confirmation, and a number's value opens in the text dialog.
-     * Undo and redo step the history of the mesh being edited. Panel rows
+     * back as confirmation, and a number's or a name's value opens in the
+     * text dialog. Undo and redo step the history of what the mode edits,
+     * the rig in Rig mode and the mesh being edited otherwise. Panel rows
      * hand back the key of the value they show.
      */
 
@@ -83,17 +84,25 @@ public class CharacterEditorBranch extends BranchPackage {
         characterEditorManager.setMode(CharacterEditorMode.MESH);
     }
 
+    public void showSculpt() {
+        characterEditorManager.setMode(CharacterEditorMode.SCULPT);
+    }
+
     public void showWeights() {
         characterEditorManager.setMode(CharacterEditorMode.WEIGHTS);
     }
 
+    public void showRig() {
+        characterEditorManager.setMode(CharacterEditorMode.RIG);
+    }
+
     // History \\
 
-    public void undoMesh() {
+    public void undo() {
         characterEditorManager.undo();
     }
 
-    public void redoMesh() {
+    public void redo() {
         characterEditorManager.redo();
     }
 

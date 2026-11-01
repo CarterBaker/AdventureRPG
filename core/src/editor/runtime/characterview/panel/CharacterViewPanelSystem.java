@@ -62,9 +62,18 @@ public class CharacterViewPanelSystem extends SystemPackage {
             case HEADER -> templates.getHeaderTemplate();
             case ITEM -> row.isSelected() ? templates.getSelectedItemTemplate() : templates.getItemTemplate();
             case NUMBER -> templates.getNumberTemplate();
+            case TEXT -> resolveTextTemplate(templates);
             case CHOICE -> templates.getChoiceTemplate();
             case ACTION -> templates.getActionTemplate();
         };
+    }
+
+    private String resolveTextTemplate(CharacterViewTemplateStruct templates) {
+
+        if (templates.getTextTemplate() == null)
+            throwException("A character tool listed a text row but its menu declares no text row template.");
+
+        return templates.getTextTemplate();
     }
 
     // Utility \\

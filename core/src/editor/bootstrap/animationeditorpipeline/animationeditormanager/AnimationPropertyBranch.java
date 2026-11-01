@@ -452,6 +452,23 @@ class AnimationPropertyBranch extends BranchPackage {
         }
     }
 
+    // Every key time of one bone's track, in time order
+    void collectBoneKeyTimes(AnimationDocumentInstance document, int boneIndex, FloatArrayList times) {
+
+        times.clear();
+
+        if (!document.hasRig())
+            return;
+
+        ArpgArrayStruct track = findBoneTrack(document, boneIndex);
+
+        if (track == null)
+            return;
+
+        for (int i = 0; i < track.size(); i++)
+            times.add(animationEditBranch.getKeyTime(track, i));
+    }
+
     private boolean containsTime(FloatArrayList times, float time) {
 
         for (int i = 0; i < times.size(); i++)
