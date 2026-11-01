@@ -400,6 +400,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_BINDING_BLOCK = "Block";
     public static final String SETTINGS_BINDING_INVENTORY = "Inventory";
     public static final String SETTINGS_BINDING_ROTATE_ITEM = "Rotate Item";
+    public static final String SETTINGS_BINDING_TURN_LEFT = "Turn Left";
+    public static final String SETTINGS_BINDING_TURN_RIGHT = "Turn Right";
     public static final String SETTINGS_BINDING_CYCLE_PREVIOUS = "Previous Option";
     public static final String SETTINGS_BINDING_CYCLE_NEXT = "Next Option";
     public static final String SETTINGS_BINDING_LEVEL_UP = "Level Up";

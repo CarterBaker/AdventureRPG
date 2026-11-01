@@ -10,11 +10,13 @@ public enum ShipwrightTool {
      * line, and the waist is cut through a deck's floor the same way; walls,
      * full or half height, are painted where they stand; a door
      * or a window is set on the wall or side it is cut through, and a hatch
-     * in a floor; a stair is set at its foot facing the way it climbs, and a
-     * ladder at its foot; a mast is stepped on the centre line; furniture,
-     * cannons, the helm and the capstan are set down. A painted tool works
-     * every octant the cursor crosses while held, any other the octant it
-     * was pressed on once.
+     * in a floor; a staircase is set at its foot facing the way it climbs, a
+     * ladder at its foot and a boarding ladder over the side of an open deck;
+     * a mast is stepped on the centre line; furniture, cannons, the helm and
+     * the capstan are set down. A painted tool works every octant the cursor
+     * crosses while held; any other works the octant it was pressed on once,
+     * setting the thing in hand down there or picking up or taking away
+     * whatever already stands there.
      */
 
     DECK(EngineSetting.SHIPWRIGHT_TOOL_DECK, true, true),

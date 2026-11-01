@@ -28,7 +28,8 @@ public class ShipwrightRenderSystem extends SystemPackage {
     /*
      * Draws the drafting table in this window under its menus: the wooden
      * table across the whole window, the sheet in its area ruled in octants,
-     * heavier every block, with the ink ShipwrightDraftBranch draws, the
+     * heavier every block, with the ink ShipwrightDraftBranch draws at
+     * SHIPWRIGHT_INK_SCALE texels to the octant, the
      * cursor and — while a deck is drawn — its mirror across the centre
      * line, and the side and top views each on a card fitted into its area.
      * The sheet is drawn and uploaded whenever the session changes, the views
@@ -134,8 +135,11 @@ public class ShipwrightRenderSystem extends SystemPackage {
                 EngineSetting.SHIPWRIGHT_SIDE_TEXELS_Y);
         this.topTexture = createTexture(EngineSetting.SHIPWRIGHT_TOP_TEXELS_X,
                 EngineSetting.SHIPWRIGHT_TOP_TEXELS_Y);
-        this.uploadBuffer = BufferUtility.newByteBuffer(EngineSetting.SHIPWRIGHT_SIDE_TEXELS_X
-                * EngineSetting.SHIPWRIGHT_SIDE_TEXELS_Y * EngineSetting.COLOR_CHANNEL_COUNT);
+        this.uploadBuffer = BufferUtility.newByteBuffer(Math.max(
+                EngineSetting.SHIPWRIGHT_SHEET_TEXELS_X * EngineSetting.SHIPWRIGHT_SHEET_TEXELS_Y,
+                Math.max(EngineSetting.SHIPWRIGHT_SIDE_TEXELS_X * EngineSetting.SHIPWRIGHT_SIDE_TEXELS_Y,
+                        EngineSetting.SHIPWRIGHT_TOP_TEXELS_X * EngineSetting.SHIPWRIGHT_TOP_TEXELS_Y))
+                * EngineSetting.COLOR_CHANNEL_COUNT);
 
         this.tableModel = createModel(quad, EngineSetting.SHIPWRIGHT_MODE_TABLE, sheetTexture);
         this.sheetModel = createModel(quad, EngineSetting.SHIPWRIGHT_MODE_SHEET, sheetTexture);
@@ -201,7 +205,8 @@ public class ShipwrightRenderSystem extends SystemPackage {
         this.drawnRevision = session.getRevision();
 
         shipwrightManager.drawSheet(session);
-        upload(sheetTexture, session.getSheetPixels(), session.getSheetWidth(), session.getSheetHeight());
+        upload(sheetTexture, session.getSheetPixels(), session.getSheetWidth() * EngineSetting.SHIPWRIGHT_INK_SCALE,
+                session.getSheetHeight() * EngineSetting.SHIPWRIGHT_INK_SCALE);
     }
 
     private void uploadViews(ShipwrightSessionInstance session) {
@@ -252,8 +257,10 @@ public class ShipwrightRenderSystem extends SystemPackage {
                 (shipwrightSystem.getSheetBottom() + shipwrightSystem.getSheetHeight() - area.getComputedTop())
                         / areaHeight);
         inkRect.set(0f, 0f,
-                (float) session.getSheetWidth() / EngineSetting.SHIPWRIGHT_SHEET_TEXELS_X,
-                (float) session.getSheetHeight() / EngineSetting.SHIPWRIGHT_SHEET_TEXELS_Y);
+                (float) session.getSheetWidth() * EngineSetting.SHIPWRIGHT_INK_SCALE
+                        / EngineSetting.SHIPWRIGHT_SHEET_TEXELS_X,
+                (float) session.getSheetHeight() * EngineSetting.SHIPWRIGHT_INK_SCALE
+                        / EngineSetting.SHIPWRIGHT_SHEET_TEXELS_Y);
         cells.set(session.getSheetWidth(), session.getSheetHeight());
 
         cursorRect.set(session.getCursorU(), session.getCursorV(),

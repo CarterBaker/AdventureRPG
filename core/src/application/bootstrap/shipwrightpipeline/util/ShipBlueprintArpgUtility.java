@@ -24,8 +24,8 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
      * through its floor; and everything
      * standing on it, each at [x, z] across the full breadth, or [x, z, spin]
      * where it faces a way: "walls", "half_walls", "doors", "windows",
-     * "hatches", "stairs", "ladders" and every piece of "furniture" naming its
-     * furnishing table and
+     * "hatches", "stairs", "ladders", "boarding_ladders" and every piece of
+     * "furniture" naming its furnishing table and
      * its "cell". The "helm" and "capstan" are one [deck, x, z] each, empty
      * for none, the "porch" the deck it hangs at, SHIP_DECK_NONE for none, and
      * every mast keeps only its "x", everything else about it following from
@@ -109,7 +109,8 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
                 || !areCellsSound(deckArpg, "windows", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "hatches", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "stairs", EngineSetting.SHIP_PLACE_FIELDS + 1)
-                || !areCellsSound(deckArpg, "ladders", EngineSetting.SHIP_PLACE_FIELDS + 1))
+                || !areCellsSound(deckArpg, "ladders", EngineSetting.SHIP_PLACE_FIELDS + 1)
+                || !areCellsSound(deckArpg, "boarding_ladders", EngineSetting.SHIP_PLACE_FIELDS + 1))
             return "its waist, a wall, door, window, hatch, stair or ladder stands off its sheet";
 
         if (ArpgUtility.hasArray(deckArpg, "furniture"))
@@ -232,6 +233,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         parsePlaces(deckArpg, "hatches", deck, blueprint.getHatches());
         parsePlaces(deckArpg, "stairs", deck, blueprint.getStairs());
         parsePlaces(deckArpg, "ladders", deck, blueprint.getLadders());
+        parsePlaces(deckArpg, "boarding_ladders", deck, blueprint.getBoardingLadders());
 
         if (ArpgUtility.hasArray(deckArpg, "furniture"))
             for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
@@ -336,6 +338,7 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         deckArpg.add("hatches", writePlaces(blueprint.getHatches(), deck, true));
         deckArpg.add("stairs", writePlaces(blueprint.getStairs(), deck, true));
         deckArpg.add("ladders", writePlaces(blueprint.getLadders(), deck, true));
+        deckArpg.add("boarding_ladders", writePlaces(blueprint.getBoardingLadders(), deck, true));
         deckArpg.add("furniture", writeFurniture(blueprint, deck));
 
         return deckArpg;

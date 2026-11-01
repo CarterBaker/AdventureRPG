@@ -13,7 +13,8 @@ public enum SettingsBinding {
      * rebound away. Block is the Secondary binding, and Activate also sets
      * down whatever is held. The cycle and level bindings step through a
      * list of choices and up and down a stack of levels wherever a menu
-     * offers them, so a table can be worked without a pointer.
+     * offers them, and the turn bindings turn what is about to be set down
+     * either way, so a table can be worked without a pointer.
      * Editor bindings are not listed; they stay with the editor.
      */
 
@@ -39,6 +40,10 @@ public enum SettingsBinding {
             KeyBindings.INVENTORY),
     ROTATE_ITEM(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_ROTATE_ITEM,
             KeyBindings.ROTATE_ITEM),
+    TURN_LEFT(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_TURN_LEFT,
+            KeyBindings.TURN_LEFT),
+    TURN_RIGHT(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_TURN_RIGHT,
+            KeyBindings.TURN_RIGHT),
     CYCLE_PREVIOUS(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_CYCLE_PREVIOUS,
             KeyBindings.CYCLE_PREVIOUS),
     CYCLE_NEXT(RuntimeSetting.SETTINGS_SECTION_ACTIONS, RuntimeSetting.SETTINGS_BINDING_CYCLE_NEXT,

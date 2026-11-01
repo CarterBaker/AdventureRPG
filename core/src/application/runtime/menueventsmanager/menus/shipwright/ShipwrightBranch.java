@@ -126,8 +126,12 @@ public class ShipwrightBranch extends BranchPackage {
         shipwrightManager.setTool(session(), ArpgUtility.toEnum(toolName, ShipwrightTool.class));
     }
 
-    public void turn() {
-        shipwrightManager.turn(session());
+    public void turnLeft() {
+        shipwrightManager.turn(session(), -1);
+    }
+
+    public void turnRight() {
+        shipwrightManager.turn(session(), 1);
     }
 
     // Decks \\
@@ -160,6 +164,11 @@ public class ShipwrightBranch extends BranchPackage {
 
     public void previousOption() {
         shipwrightManager.stepOption(session(), -1);
+    }
+
+    // Picks an option of the tool in hand by its index in the catalogue, as a catalogue entry clicked does
+    public void pickOption(String index) {
+        shipwrightManager.pickOption(session(), Integer.parseInt(index));
     }
 
     // Utility \\

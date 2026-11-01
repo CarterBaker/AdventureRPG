@@ -4,19 +4,26 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipClimb;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipPickStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipSurveyStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.shipwrightpipeline.shipwrightmanager.ShipwrightManager;
+import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.menueventsmanager.util.NameInputUtility;
+import engine.input.Binding;
 import engine.input.Buttons;
 import engine.input.Input;
+import engine.input.InputNameUtility;
 import engine.input.Keys;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -34,14 +41,21 @@ public class ShipwrightSystem extends SystemPackage {
      * while held, and the pointer moves it whenever it passes over the sheet.
      * The jump binding or the left button draws with the tool in hand while
      * held and the sprint binding or the right button erases, a stroke at a
-     * time; the activate binding takes up the next tool, the rotate binding
-     * turns what is set down next, the cycle bindings step the option of the
-     * tool in hand and the level bindings or the wheel step the deck, so
-     * every change the menu makes can also be made from the bindings alone, a
-     * controller's among them. Undo, redo and save work as everywhere else;
-     * the pause binding walks away from a table in the game. While the name is typed the keys type it, Enter keeps
-     * it and the pause binding drops it. Whenever the session changes the
-     * labels are rewritten, every measure of the ship among them.
+     * time; the activate binding takes up the next tool, the turn bindings
+     * turn what is set down next either way and the rotate binding turns it
+     * on, the cycle bindings step through the catalogue of the tool in hand
+     * and the level bindings or the wheel step the deck, so every change the
+     * menu makes can also be made from the bindings alone, a controller's
+     * among them. Undo, redo and save work as everywhere else; the pause
+     * binding walks away from a table in the game. While the name is typed
+     * the keys type it, Enter keeps it and the pause binding drops it.
+     * Whenever the session changes, what stands under the cursor is looked
+     * at again and the labels are rewritten: the tool in hand lit among the
+     * tools, the line under the sheet naming what stands under the cursor and
+     * what draw and erase will do there, or why the thing in hand cannot
+     * stand there, and every measure of the ship. The catalogue of the tool
+     * in hand is laid out a page at a time, the option picked lit, whenever
+     * the tool, the option or the options themselves change.
      */
 
     // Internal
@@ -80,6 +94,14 @@ public class ShipwrightSystem extends SystemPackage {
     private int shownRevision;
     private StringBuilder text;
 
+    // Catalogue — what the catalogue was last laid out for
+    private ShipwrightTool shownTool;
+    private int shownOption;
+    private int shownOptionCount;
+
+    // Colors
+    private MenuColorStruct pickedToolColor;
+
     // Base \\
 
     @Override
@@ -88,6 +110,9 @@ public class ShipwrightSystem extends SystemPackage {
         // Labels
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
         this.text = new StringBuilder();
+
+        // Colors
+        this.pickedToolColor = new MenuColorStruct(EngineSetting.SHIPWRIGHT_PICKED_TOOL_COLOR);
     }
 
     @Override
@@ -117,6 +142,7 @@ public class ShipwrightSystem extends SystemPackage {
             this.leaveMenu = menuManager.openMenu(EngineSetting.SHIPWRIGHT_MENU_LEAVE, window);
 
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.shownTool = null;
         this.opening = true;
         this.focused = false;
         this.focusedLastFrame = false;
@@ -184,8 +210,12 @@ public class ShipwrightSystem extends SystemPackage {
             shipwrightManager.nextTool(session);
         }
 
-        if (inputManager.bindingClicked(KeyBindings.ROTATE_ITEM, window))
-            shipwrightManager.turn(session);
+        if (inputManager.bindingClicked(KeyBindings.ROTATE_ITEM, window)
+                || inputManager.bindingClicked(KeyBindings.TURN_RIGHT, window))
+            shipwrightManager.turn(session, 1);
+
+        if (inputManager.bindingClicked(KeyBindings.TURN_LEFT, window))
+            shipwrightManager.turn(session, -1);
 
         if (inputManager.bindingClicked(KeyBindings.CYCLE_NEXT, window))
             shipwrightManager.stepOption(session, 1);
@@ -354,11 +384,15 @@ public class ShipwrightSystem extends SystemPackage {
 
         this.shownRevision = session.getRevision();
 
+        shipwrightManager.inspect(session);
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_NAME, resolveName());
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_STATUS, session.getStatus());
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_TOOL, resolveToolHint());
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_DECK, resolveDeck());
-        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_OPTION, resolveOption());
+        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_INSPECT, resolveInspection());
+        setLabel(EngineSetting.SHIPWRIGHT_ENTRY_CATALOGUE_TITLE, resolveCatalogueTitle());
+        refreshTools();
+        refreshCatalogue();
         writeSurvey();
     }
 
@@ -408,51 +442,190 @@ public class ShipwrightSystem extends SystemPackage {
                 : EngineSetting.SHIPWRIGHT_TEXT_ABOVE_WATER).toString();
     }
 
-    // What the tool in hand sets down next and which way it faces
-    private String resolveOption() {
+    // What stands under the cursor and what draw and erase do to it; with nothing there, the thing in hand and
+    // whether it can be set down; for a painted tool, what draw and erase paint
+    private String resolveInspection() {
 
         text.setLength(0);
+        ShipPickStruct hover = session.getHover();
         ShipwrightTool tool = session.getTool();
 
-        return switch (tool) {
-            case WALLS -> text.append(session.isHalfWalls()
-                    ? EngineSetting.SHIPWRIGHT_TEXT_HALF_WALL : EngineSetting.SHIPWRIGHT_TEXT_FULL_WALL).toString();
-            case OPENINGS -> appendFacing(text.append(session.getOpening().getTitle())).toString();
-            case STAIRS -> appendFacing(text.append(session.isLadders()
-                    ? EngineSetting.SHIPWRIGHT_TEXT_LADDER : EngineSetting.SHIPWRIGHT_TEXT_STAIR)).toString();
-            case FURNITURE -> appendFacing(text.append(shipwrightManager.getItemName(session.getItemIndex())))
-                    .toString();
-            case MASTS -> appendMast(text).toString();
-            default -> text.append(EngineSetting.SHIPWRIGHT_TEXT_MIRRORED).toString();
-        };
+        if (!hover.isEmpty()) {
+
+            appendThing(text, hover.getTool(), hover.getOption(), ShipCellUtility.unpackSpin(hover.getCell()));
+
+            if (tool.isPainted())
+                return text.toString();
+
+            appendKeys(text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH), KeyBindings.JUMP,
+                    EngineSetting.SHIPWRIGHT_TEXT_LEFT_CLICK).append(EngineSetting.SHIPWRIGHT_TEXT_PICKS_UP)
+                    .append(EngineSetting.SHIPWRIGHT_TEXT_COMMA);
+
+            return appendKeys(text, KeyBindings.SPRINT, EngineSetting.SHIPWRIGHT_TEXT_RIGHT_CLICK)
+                    .append(EngineSetting.SHIPWRIGHT_TEXT_TAKES_AWAY).toString();
+        }
+
+        if (tool.isPainted()) {
+
+            appendKeys(text, KeyBindings.JUMP, EngineSetting.SHIPWRIGHT_TEXT_LEFT_CLICK)
+                    .append(EngineSetting.SHIPWRIGHT_TEXT_PAINTS).append(EngineSetting.SHIPWRIGHT_TEXT_COMMA);
+
+            return appendKeys(text, KeyBindings.SPRINT, EngineSetting.SHIPWRIGHT_TEXT_RIGHT_CLICK)
+                    .append(EngineSetting.SHIPWRIGHT_TEXT_ERASES).toString();
+        }
+
+        int option = shipwrightManager.getOptionIndex(session);
+
+        if (option == EngineSetting.INDEX_NOT_FOUND && tool != ShipwrightTool.MASTS)
+            return text.append(EngineSetting.SHIPWRIGHT_TEXT_NOTHING_IN_HAND).toString();
+
+        if (tool == ShipwrightTool.MASTS)
+            text.append(EngineSetting.SHIPWRIGHT_TEXT_NEW_MAST);
+        else
+            appendThing(text, tool, option, session.getSpin());
+
+        if (!session.getPlacementProblem().isEmpty())
+            return text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH).append(session.getPlacementProblem()).toString();
+
+        return appendKeys(text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH), KeyBindings.JUMP,
+                EngineSetting.SHIPWRIGHT_TEXT_LEFT_CLICK).append(EngineSetting.SHIPWRIGHT_TEXT_SETS_DOWN).toString();
     }
 
-    private StringBuilder appendFacing(StringBuilder out) {
-        return out.append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
-                .append(EngineSetting.SHIPWRIGHT_FACINGS[session.getSpin()]);
+    // A thing's name and, for one that is turned as it is set down, the way it faces
+    private StringBuilder appendThing(StringBuilder out, ShipwrightTool tool, int option, int spin) {
+
+        out.append(shipwrightManager.getOptionName(session, tool, option));
+
+        boolean turned = tool == ShipwrightTool.FURNITURE
+                || tool == ShipwrightTool.STAIRS && option != ShipClimb.BOARDING.ordinal()
+                || tool == ShipwrightTool.OPENINGS && option == ShipOpening.HATCH.ordinal();
+
+        if (turned)
+            out.append(EngineSetting.SHIPWRIGHT_TEXT_COMMA).append(EngineSetting.SHIPWRIGHT_FACINGS[spin]);
+
+        if (tool == ShipwrightTool.MASTS)
+            appendMast(out.append(EngineSetting.SHIPWRIGHT_TEXT_COMMA), option);
+
+        return out;
     }
 
-    // The mast picked as the hull rigs it: its height, the sails it carries and its crow's nest
-    private StringBuilder appendMast(StringBuilder out) {
+    // A mast as the hull rigs it: its height, the sails it carries and its crow's nest
+    private StringBuilder appendMast(StringBuilder out, int mastIndex) {
 
         ShipLayoutStruct layout = session.getLayout();
-        int mastIndex = session.getMastIndex();
 
-        if (!session.hasMastPicked() || mastIndex >= layout.getMastCount())
-            return out.append(EngineSetting.SHIPWRIGHT_TEXT_NO_MAST);
+        if (mastIndex < 0 || mastIndex >= layout.getMastCount())
+            return out;
 
-        out.append(shipwrightManager.getMastName(session, mastIndex))
-                .append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
-                .append(layout.getMastHeight(mastIndex) * EngineSetting.SUB_BLOCK_SIZE)
+        out.append(layout.getMastHeight(mastIndex) * EngineSetting.SUB_BLOCK_SIZE)
                 .append(EngineSetting.SHIPWRIGHT_TEXT_BLOCKS)
-                .append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
+                .append(EngineSetting.SHIPWRIGHT_TEXT_COMMA)
                 .append(layout.getMastSailCount(mastIndex))
                 .append(EngineSetting.SHIPWRIGHT_TEXT_SAILS);
 
         if (layout.hasCrowsNest(mastIndex))
-            out.append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR).append(EngineSetting.SHIPWRIGHT_TEXT_NEST);
+            out.append(EngineSetting.SHIPWRIGHT_TEXT_COMMA).append(EngineSetting.SHIPWRIGHT_TEXT_NEST);
 
         return out;
+    }
+
+    // A binding's keys, then the pointer's button that does the same
+    private StringBuilder appendKeys(StringBuilder out, Binding binding, String pointer) {
+        return out.append(InputNameUtility.getName(binding)).append(pointer);
+    }
+
+    // The tool in hand's catalogue, how many it offers, the page shown and the bindings that choose and turn
+    private String resolveCatalogueTitle() {
+
+        text.setLength(0);
+        int count = shipwrightManager.getOptionCount(session);
+        int pageSize = EngineSetting.SHIPWRIGHT_CATALOGUE_COLUMNS * EngineSetting.SHIPWRIGHT_CATALOGUE_ROWS;
+
+        text.append(session.getTool().getTitle());
+
+        if (count == 0)
+            return text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH)
+                    .append(session.getTool() == ShipwrightTool.MASTS
+                            ? EngineSetting.SHIPWRIGHT_TEXT_NO_MASTS
+                            : EngineSetting.SHIPWRIGHT_TEXT_NO_CATALOGUE).toString();
+
+        int pages = (count + pageSize - 1) / pageSize;
+        int page = Math.max(0, shipwrightManager.getOptionIndex(session)) / pageSize;
+
+        text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH).append(count).append(EngineSetting.SHIPWRIGHT_TEXT_TO_CHOOSE);
+
+        if (pages > 1)
+            text.append(EngineSetting.SHIPWRIGHT_TEXT_PAGE).append(page + 1)
+                    .append(EngineSetting.SHIPWRIGHT_TEXT_OF).append(pages);
+
+        return text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH)
+                .append(InputNameUtility.getName(KeyBindings.CYCLE_PREVIOUS)).append(EngineSetting.SHIPWRIGHT_TEXT_SLASH)
+                .append(InputNameUtility.getName(KeyBindings.CYCLE_NEXT)).append(EngineSetting.SHIPWRIGHT_TEXT_CHOOSES)
+                .append(EngineSetting.SHIPWRIGHT_TEXT_COMMA)
+                .append(InputNameUtility.getName(KeyBindings.TURN_LEFT)).append(EngineSetting.SHIPWRIGHT_TEXT_SLASH)
+                .append(InputNameUtility.getName(KeyBindings.TURN_RIGHT)).append(EngineSetting.SHIPWRIGHT_TEXT_TURNS)
+                .toString();
+    }
+
+    // The tool in hand lit among the tools
+    private void refreshTools() {
+
+        for (int i = 0; i < ShipwrightTool.VALUES.length; i++) {
+
+            ElementInstance button = tableMenu.getEntryPoint(EngineSetting.SHIPWRIGHT_ENTRY_TOOLS + i);
+
+            if (button != null)
+                button.setColorOverride(ShipwrightTool.VALUES[i] == session.getTool() ? pickedToolColor : null);
+        }
+    }
+
+    // Catalogue \\
+
+    // The page of the tool in hand's catalogue holding the option picked, laid out again only when the tool, the
+    // option or the options offered changed
+    private void refreshCatalogue() {
+
+        ShipwrightTool tool = session.getTool();
+        int option = shipwrightManager.getOptionIndex(session);
+        int count = shipwrightManager.getOptionCount(session);
+
+        if (tool == shownTool && option == shownOption && count == shownOptionCount)
+            return;
+
+        this.shownTool = tool;
+        this.shownOption = option;
+        this.shownOptionCount = count;
+
+        menuManager.ejectAll(tableMenu, EngineSetting.SHIPWRIGHT_ENTRY_CATALOGUE);
+
+        int columns = EngineSetting.SHIPWRIGHT_CATALOGUE_COLUMNS;
+        int pageSize = columns * EngineSetting.SHIPWRIGHT_CATALOGUE_ROWS;
+        int first = Math.max(0, option) / pageSize * pageSize;
+
+        for (int rowStart = first; rowStart < Math.min(count, first + pageSize); rowStart += columns) {
+
+            ElementInstance row = menuManager.inject(tableMenu, EngineSetting.SHIPWRIGHT_ENTRY_CATALOGUE,
+                    EngineSetting.SHIPWRIGHT_TEMPLATE_CATALOGUE_ROW);
+
+            for (int index = rowStart; index < Math.min(count, rowStart + columns); index++)
+                injectCatalogueItem(row, tool, index, index == option);
+        }
+    }
+
+    private void injectCatalogueItem(ElementInstance row, ShipwrightTool tool, int index, boolean picked) {
+
+        String name = shipwrightManager.getOptionName(session, tool, index);
+
+        menuManager.inject(row, picked
+                ? EngineSetting.SHIPWRIGHT_TEMPLATE_CATALOGUE_PICKED
+                : EngineSetting.SHIPWRIGHT_TEMPLATE_CATALOGUE_ITEM, element -> {
+                    element.setActionArgOverride(Integer.toString(index));
+
+                    ElementInstance label = element.findChildById(EngineSetting.SHIPWRIGHT_ELEMENT_CATALOGUE_LABEL);
+
+                    if (label != null)
+                        label.setFontText(name);
+                });
     }
 
     // Survey \\

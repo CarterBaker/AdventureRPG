@@ -12,10 +12,12 @@ public class ShipwrightSessionInstance extends InstancePackage {
      * history every change can be undone and redone through, one stroke or
      * press at a time. It holds the tool in hand and what it works on — the
      * deck picked, whether walls stand full or half height, whether an
-     * opening is a door, a window or a hatch, whether a climb is a stair or a
-     * ladder, the mast picked, the furniture item and
+     * opening is a door, a window or a hatch, whether a climb is a stair, a
+     * ladder or a boarding ladder, the mast picked, the furniture item and
      * the quarter turn something is set down at — and the cursor, the octant
-     * of the sheet the pointer or the movement bindings last put it on. The
+     * of the sheet the pointer or the movement bindings last put it on, with
+     * whatever stands under it and why the thing in hand could not be set
+     * down there, worked out again whenever either changes. The
      * blueprint compiles into this session's own layout whenever it changes,
      * and is surveyed once it has rested, and the sheet and the top and side
      * views are drawn into its own pixels: the sheet whenever anything shown
@@ -51,7 +53,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
     private int deck;
     private boolean halfWalls;
     private ShipOpening opening;
-    private boolean ladders;
+    private ShipClimb climb;
     private int mastIndex;
     private int itemIndex;
     private int spin;
@@ -59,6 +61,10 @@ public class ShipwrightSessionInstance extends InstancePackage {
     // Cursor — the octant of the sheet the cursor stands on
     private int cursorU;
     private int cursorV;
+
+    // Inspect — whatever stands under the cursor, and why the thing in hand could not be set down there
+    private ShipPickStruct hover;
+    private String placementProblem;
 
     // Compile
     private ShipLayoutStruct layout;
@@ -106,6 +112,10 @@ public class ShipwrightSessionInstance extends InstancePackage {
         this.layout = new ShipLayoutStruct(new ShipOctantGridStruct());
         this.survey = new ShipSurveyStruct();
 
+        // Inspect
+        this.hover = new ShipPickStruct();
+        this.placementProblem = EngineSetting.SHIP_PROBLEM_NONE;
+
         // Naming
         this.nameBuffer = new StringBuilder();
 
@@ -131,7 +141,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
         this.tool = ShipwrightTool.DECK;
         this.halfWalls = false;
         this.opening = ShipOpening.DOOR;
-        this.ladders = false;
+        this.climb = ShipClimb.STAIR;
         this.itemIndex = 0;
         this.spin = 0;
 
@@ -315,8 +325,8 @@ public class ShipwrightSessionInstance extends InstancePackage {
         markChanged();
     }
 
-    public void setLadders(boolean ladders) {
-        this.ladders = ladders;
+    public void setClimb(ShipClimb climb) {
+        this.climb = climb;
         markChanged();
     }
 
@@ -348,6 +358,13 @@ public class ShipwrightSessionInstance extends InstancePackage {
         markChanged();
 
         return true;
+    }
+
+    // Inspect \\
+
+    // Why the thing in hand could not be set down under the cursor, SHIP_PROBLEM_NONE when it could
+    public void setPlacementProblem(String placementProblem) {
+        this.placementProblem = placementProblem;
     }
 
     // Status \\
@@ -466,9 +483,8 @@ public class ShipwrightSessionInstance extends InstancePackage {
         return opening;
     }
 
-    // True while the stairs tool sets ladders down in place of stairs
-    public boolean isLadders() {
-        return ladders;
+    public ShipClimb getClimb() {
+        return climb;
     }
 
     public int getMastIndex() {
@@ -494,6 +510,14 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     public int getCursorV() {
         return cursorV;
+    }
+
+    public ShipPickStruct getHover() {
+        return hover;
+    }
+
+    public String getPlacementProblem() {
+        return placementProblem;
     }
 
     public ShipLayoutStruct getLayout() {

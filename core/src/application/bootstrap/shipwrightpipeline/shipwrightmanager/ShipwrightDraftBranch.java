@@ -3,11 +3,13 @@ package application.bootstrap.shipwrightpipeline.shipwrightmanager;
 import java.util.Arrays;
 
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipClimb;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipFurnitureStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipPickStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
@@ -23,18 +25,21 @@ class ShipwrightDraftBranch extends BranchPackage {
 
     /*
      * Draws a drafting table's sheet and its top and side views into the
-     * session's own pixels, one texel per octant on the sheet, the paper and
-     * its ruling left to the sheet's shader. The sheet is always the plan of
-     * the deck picked. While a deck is drawn its outline is inked, blue where
-     * it lies under the waterline, the decks under and over it faint, and the
-     * hull's outline where the water meets it ruled across; with any other
-     * tool it is the deck as it was built — floor, planking, bulwarks, rails,
-     * stairs and hatches — with the waist cut through it, every wall, half wall, door, window, stair foot,
-     * piece of furniture, the helm and the capstan on it straight from the
-     * blueprint, so a stroke shows as it is drawn, and every hatch and ladder
-     * where it was built. While a stair, ladder or hatch is in hand its whole
-     * run or footprint is laid faintly under the cursor, red where it would
-     * leave the deck, so it is placed knowing it fits. Every mast is marked,
+     * session's own pixels, SHIPWRIGHT_INK_SCALE texels a side to every
+     * octant on the sheet, the paper and its ruling left to the sheet's
+     * shader. The sheet is always the plan of the deck picked. While a deck is
+     * drawn its outline is inked, blue where it lies under the waterline, the
+     * decks under and over it faint, and the hull's outline where the water
+     * meets it ruled across; with any other tool it is the deck as it was
+     * built — floor, planking, bulwarks, rails and the wells left open in it —
+     * with the waist cut through it and every wall and half wall, and over it
+     * everything set down drawn whole as what it is: a stair's run in treads
+     * climbing darker, a ladder's rails and rungs, a hatch's grating with its
+     * hinge, a window's panes, a door, a cannon, the helm, the capstan and
+     * every piece of furniture over its footprint, its front edge marked the
+     * way it faces. Whatever stands under the cursor is outlined; with
+     * nothing there, the thing in hand is drawn whole at the cursor as it
+     * would be set down, red where it could not stand. Every mast is marked,
      * the picked one brighter. Plans run bow to the right and starboard down. The
      * views are every part's boxes seen from starboard and from above,
      * nearest drawn over farthest, shaded by depth and coloured by what they
@@ -45,10 +50,14 @@ class ShipwrightDraftBranch extends BranchPackage {
      */
 
     // Internal
+    private ShipwrightManager shipwrightManager;
     private ShipwrightFittingBranch shipwrightFittingBranch;
+    private ShipwrightInspectBranch shipwrightInspectBranch;
+    private ShipwrightEditBranch shipwrightEditBranch;
 
     // Scratch — main thread only
     private int[] depthScratch;
+    private ShipPickStruct footprint;
 
     // Base \\
 
@@ -59,11 +68,15 @@ class ShipwrightDraftBranch extends BranchPackage {
         this.depthScratch = new int[Math.max(
                 EngineSetting.SHIPWRIGHT_SIDE_TEXELS_X * EngineSetting.SHIPWRIGHT_SIDE_TEXELS_Y,
                 EngineSetting.SHIPWRIGHT_TOP_TEXELS_X * EngineSetting.SHIPWRIGHT_TOP_TEXELS_Y)];
+        this.footprint = new ShipPickStruct();
     }
 
     @Override
     protected void get() {
+        this.shipwrightManager = get(ShipwrightManager.class);
         this.shipwrightFittingBranch = get(ShipwrightFittingBranch.class);
+        this.shipwrightInspectBranch = get(ShipwrightInspectBranch.class);
+        this.shipwrightEditBranch = get(ShipwrightEditBranch.class);
     }
 
     // Sheet \\
@@ -76,8 +89,10 @@ class ShipwrightDraftBranch extends BranchPackage {
 
     void drawSheet(ShipwrightSessionInstance session) {
 
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+
         resolveSheetSize(session);
-        Arrays.fill(session.getSheetPixels(), 0, session.getSheetWidth() * session.getSheetHeight()
+        Arrays.fill(session.getSheetPixels(), 0, session.getSheetWidth() * scale * session.getSheetHeight() * scale
                 * EngineSetting.COLOR_CHANNEL_COUNT, (byte) 0);
 
         if (session.getTool() == ShipwrightTool.DECK)
@@ -86,6 +101,9 @@ class ShipwrightDraftBranch extends BranchPackage {
             drawDeck(session);
 
         drawMasts(session);
+
+        if (!session.getTool().isPainted())
+            drawHand(session);
     }
 
     // The deck picked inked, blue under the waterline, the decks under and over it faint, the waterline ruled
@@ -111,7 +129,7 @@ class ShipwrightDraftBranch extends BranchPackage {
                 else
                     continue;
 
-                writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, z, color);
+                fillOctant(session, EngineSetting.SHIP_AFT_MARGIN + x, z, color);
             }
 
         drawWaterline(session, layout);
@@ -133,15 +151,15 @@ class ShipwrightDraftBranch extends BranchPackage {
 
             for (int halfZ = 0; halfZ < halfBeam; halfZ++)
                 if (halfZ == halfBeam - 1 || halfZ >= sternward || halfZ >= bowward) {
-                    writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, ShipCellUtility.toStarboard(halfZ),
+                    fillOctant(session, EngineSetting.SHIP_AFT_MARGIN + x, ShipCellUtility.toStarboard(halfZ),
                             EngineSetting.SHIPWRIGHT_INK_WATERLINE);
-                    writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, ShipCellUtility.toPort(halfZ),
+                    fillOctant(session, EngineSetting.SHIP_AFT_MARGIN + x, ShipCellUtility.toPort(halfZ),
                             EngineSetting.SHIPWRIGHT_INK_WATERLINE);
                 }
         }
     }
 
-    // The deck picked as it was built, and everything set down on it
+    // The deck picked as it was built, and everything set down on it drawn as what it is
     private void drawDeck(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
@@ -149,102 +167,26 @@ class ShipwrightDraftBranch extends BranchPackage {
         int deck = session.getDeck();
 
         if (layout.getSectionLayers() > 0)
-            drawFloor(session, layout.getGrid(), deck * EngineSetting.SHIP_DECK_HEIGHT);
+            drawFloor(session, layout, deck * EngineSetting.SHIP_DECK_HEIGHT);
 
         drawCells(session, blueprint.getWaists(), deck, EngineSetting.SHIPWRIGHT_INK_WAIST);
         drawCells(session, blueprint.getWalls(), deck, EngineSetting.SHIPWRIGHT_INK_WALL);
         drawCells(session, blueprint.getHalfWalls(), deck, EngineSetting.SHIPWRIGHT_INK_HALF_WALL);
-        drawCells(session, blueprint.getWindows(), deck, EngineSetting.SHIPWRIGHT_INK_WINDOW);
-        drawCells(session, blueprint.getStairs(), deck, EngineSetting.SHIPWRIGHT_INK_STAIR_FOOT);
-        drawDoors(session, blueprint, deck);
+        drawHatches(session, layout, deck * EngineSetting.SHIP_DECK_HEIGHT);
+        drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.STAIR.ordinal(), blueprint.getStairs(), deck);
+        drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.LADDER.ordinal(), blueprint.getLadders(), deck);
+        drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.BOARDING.ordinal(), blueprint.getBoardingLadders(),
+                deck);
+        drawPlacements(session, ShipwrightTool.OPENINGS, ShipOpening.WINDOW.ordinal(), blueprint.getWindows(), deck);
+        drawPlacements(session, ShipwrightTool.OPENINGS, ShipOpening.DOOR.ordinal(), blueprint.getDoors(), deck);
         drawFurniture(session, blueprint, deck);
-        drawFitting(session, blueprint.getHelm(), deck, 1, EngineSetting.SHIP_FITTING_OCTANTS);
-        drawFitting(session, blueprint.getCapstan(), deck, EngineSetting.SHIP_FITTING_OCTANTS,
-                EngineSetting.SHIP_FITTING_OCTANTS);
-        drawFittingBoxes(session, layout.getHatchBoxes(), deck * EngineSetting.SHIP_DECK_HEIGHT,
-                EngineSetting.SHIPWRIGHT_INK_HATCH);
-        drawFittingBoxes(session, layout.getLadderBoxes(), deck * EngineSetting.SHIP_DECK_HEIGHT + 1,
-                EngineSetting.SHIPWRIGHT_INK_LADDER);
-        drawGhost(session);
+        drawItem(session, EngineSetting.SHIPWRIGHT_ITEM_HELM, blueprint.getHelm(), deck);
+        drawItem(session, EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN, blueprint.getCapstan(), deck);
     }
 
-    // Every hatch or ladder whose octant box starts at a layer, where it was built
-    private void drawFittingBoxes(ShipwrightSessionInstance session, IntArrayList boxes, int layer, int color) {
+    private void drawFloor(ShipwrightSessionInstance session, ShipLayoutStruct layout, int floor) {
 
-        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
-
-            if (ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Y) != layer)
-                continue;
-
-            for (int z = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Z);
-                    z < ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Z); z++)
-                for (int x = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_X);
-                        x < ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_X); x++)
-                    writePlan(session, x, z, color);
-        }
-    }
-
-    // Ghost \\
-
-    // The whole of what the tool in hand would set down at the cursor, faint where it fits and red where it leaves
-    // the deck: a stair's run from the floor before its foot to its landing, or a ladder's or hatch's square
-    private void drawGhost(ShipwrightSessionInstance session) {
-
-        ShipwrightTool tool = session.getTool();
-        boolean square = tool == ShipwrightTool.STAIRS && session.isLadders()
-                || tool == ShipwrightTool.OPENINGS && session.getOpening() == ShipOpening.HATCH;
-
-        if (tool != ShipwrightTool.STAIRS && !square)
-            return;
-
-        int x = session.getCursorU() - EngineSetting.SHIP_AFT_MARGIN;
-        int z = EngineSetting.SHIP_SHEET_BREADTH - 1 - session.getCursorV();
-
-        if (square) {
-            drawGhostRect(session, x, z, EngineSetting.SHIP_HATCH_OCTANTS, EngineSetting.SHIP_HATCH_OCTANTS);
-            return;
-        }
-
-        int spin = session.getSpin();
-        int stepX = ShipCellUtility.stepX(spin);
-        int stepZ = ShipCellUtility.stepZ(spin);
-        int acrossX = stepX == 0 ? 1 : 0;
-        int acrossZ = stepZ == 0 ? 1 : 0;
-        boolean fits = true;
-
-        for (int pass = 0; pass < 2; pass++)
-            for (int along = -EngineSetting.SHIP_STAIR_HEADROOM; along <= EngineSetting.SHIP_DECK_HEIGHT; along++)
-                for (int across = 0; across < EngineSetting.SHIP_STAIR_WIDTH; across++) {
-
-                    int atX = x + stepX * along + acrossX * across;
-                    int atZ = z + stepZ * along + acrossZ * across;
-
-                    if (pass == 0)
-                        fits &= session.getBlueprint().isOnDeck(session.getDeck(), atX, atZ);
-                    else
-                        writeGhost(session, atX, atZ, fits);
-                }
-    }
-
-    private void drawGhostRect(ShipwrightSessionInstance session, int x, int z, int sizeX, int sizeZ) {
-
-        boolean fits = true;
-
-        for (int atZ = z; atZ < z + sizeZ; atZ++)
-            for (int atX = x; atX < x + sizeX; atX++)
-                fits &= session.getBlueprint().isOnDeck(session.getDeck(), atX, atZ);
-
-        for (int atZ = z; atZ < z + sizeZ; atZ++)
-            for (int atX = x; atX < x + sizeX; atX++)
-                writeGhost(session, atX, atZ, fits);
-    }
-
-    private void writeGhost(ShipwrightSessionInstance session, int x, int z, boolean fits) {
-        writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, z,
-                fits ? EngineSetting.SHIPWRIGHT_INK_GHOST : EngineSetting.SHIPWRIGHT_INK_GHOST_BLOCKED);
-    }
-
-    private void drawFloor(ShipwrightSessionInstance session, ShipOctantGridStruct grid, int floor) {
+        ShipOctantGridStruct grid = layout.getGrid();
 
         for (int z = 0; z < grid.getSizeZ(); z++)
             for (int x = 0; x < grid.getSizeX(); x++) {
@@ -265,10 +207,12 @@ class ShipwrightDraftBranch extends BranchPackage {
                     color = EngineSetting.SHIPWRIGHT_INK_FLOOR;
                 else if (piece != null)
                     color = EngineSetting.SHIPWRIGHT_INK_SHELL;
+                else if (floor > 0 && layout.isVolume(x - layout.getOriginX(), floor, z))
+                    color = EngineSetting.SHIPWRIGHT_INK_WELL;
                 else
                     continue;
 
-                writePlan(session, x, z, color);
+                fillOctant(session, x, z, color);
             }
     }
 
@@ -279,28 +223,44 @@ class ShipwrightDraftBranch extends BranchPackage {
             int cell = cells.getInt(i);
 
             if (ShipCellUtility.unpackLevel(cell) == deck)
-                writePlan(
-                        session,
-                        EngineSetting.SHIP_AFT_MARGIN + ShipCellUtility.unpackX(cell),
-                        ShipCellUtility.unpackZ(cell),
-                        color);
+                fillOctant(session, EngineSetting.SHIP_AFT_MARGIN + ShipCellUtility.unpackX(cell),
+                        ShipCellUtility.unpackZ(cell), color);
         }
     }
 
-    private void drawDoors(ShipwrightSessionInstance session, ShipBlueprintStruct blueprint, int deck) {
+    // Every hatch lid lying in a floor, where it was built: a grating, its hinge drawn heavy
+    private void drawHatches(ShipwrightSessionInstance session, ShipLayoutStruct layout, int floor) {
 
-        IntArrayList doors = blueprint.getDoors();
+        IntArrayList boxes = layout.getHatchBoxes();
 
-        for (int i = 0; i < doors.size(); i++) {
+        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
 
-            int cell = doors.getInt(i);
+            if (ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Y) != floor)
+                continue;
+
+            footprint.setFootprint(
+                    ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_X) - layout.getOriginX(),
+                    ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Z),
+                    ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_X) - layout.getOriginX(),
+                    ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Z));
+            drawGrating(session, footprint, shipwrightFittingBranch.resolveHingeSpin(boxes, i),
+                    EngineSetting.SHIPWRIGHT_INK_HATCH);
+        }
+    }
+
+    // Every placement of one tool's option on a deck, each over its whole footprint
+    private void drawPlacements(ShipwrightSessionInstance session, ShipwrightTool tool, int option,
+            IntArrayList cells, int deck) {
+
+        for (int i = 0; i < cells.size(); i++) {
+
+            int cell = cells.getInt(i);
 
             if (ShipCellUtility.unpackLevel(cell) != deck)
                 continue;
 
-            shipwrightFittingBranch.resolveFootprint(
-                    EngineSetting.SHIP_DOOR_FURNISHING, ShipCellUtility.unpackSpin(cell));
-            drawFootprint(session, cell, EngineSetting.SHIPWRIGHT_INK_DOOR);
+            shipwrightInspectBranch.resolveFootprint(session, tool, option, cell, footprint);
+            drawGlyph(session, tool, option, ShipCellUtility.unpackSpin(cell), footprint, false);
         }
     }
 
@@ -312,58 +272,282 @@ class ShipwrightDraftBranch extends BranchPackage {
 
             ShipFurnitureStruct piece = furniture.get(i);
 
-            if (ShipCellUtility.unpackLevel(piece.getCell()) != deck
-                    || !shipwrightFittingBranch.isKnownFurnishing(piece.getFurnishingName()))
-                continue;
-
-            shipwrightFittingBranch.resolveFootprint(
-                    piece.getFurnishingName(), ShipCellUtility.unpackSpin(piece.getCell()));
-            drawFootprint(session, piece.getCell(), EngineSetting.SHIPWRIGHT_INK_FURNITURE);
+            if (ShipCellUtility.unpackLevel(piece.getCell()) == deck)
+                drawItem(session, shipwrightManager.findItemIndex(piece.getFurnishingName()), piece.getCell(), deck);
         }
     }
 
-    private void drawFitting(ShipwrightSessionInstance session, int cell, int deck, int sizeX, int sizeZ) {
+    private void drawItem(ShipwrightSessionInstance session, int item, int cell, int deck) {
 
         if (cell == EngineSetting.SHIP_CELL_NONE || ShipCellUtility.unpackLevel(cell) != deck)
             return;
 
-        int startX = EngineSetting.SHIP_AFT_MARGIN + ShipCellUtility.unpackX(cell);
-        int startZ = ShipCellUtility.unpackZ(cell);
-
-        for (int z = startZ; z < startZ + sizeZ; z++)
-            for (int x = startX; x < startX + sizeX; x++)
-                writePlan(session, x, z, EngineSetting.SHIPWRIGHT_INK_FITTING);
-    }
-
-    // The octants the footprint last resolved covers from a cell
-    private void drawFootprint(ShipwrightSessionInstance session, int cell, int color) {
-
-        int startX = EngineSetting.SHIP_AFT_MARGIN + ShipCellUtility.unpackX(cell);
-        int startZ = ShipCellUtility.unpackZ(cell);
-
-        for (int z = startZ; z < startZ + shipwrightFittingBranch.getFootprint(EngineSetting.AXIS_Z); z++)
-            for (int x = startX; x < startX + shipwrightFittingBranch.getFootprint(EngineSetting.AXIS_X); x++)
-                writePlan(session, x, z, color);
+        shipwrightInspectBranch.resolveFootprint(session, ShipwrightTool.FURNITURE, item, cell, footprint);
+        drawGlyph(session, ShipwrightTool.FURNITURE, item, ShipCellUtility.unpackSpin(cell), footprint, false);
     }
 
     // Every mast on the centre line, the one picked brighter while masts are being stepped
     private void drawMasts(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
-        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
         boolean picking = session.getTool() == ShipwrightTool.MASTS;
 
         for (int i = 0; i < blueprint.getMasts().size(); i++) {
 
             ShipMastStruct mast = blueprint.getMasts().get(i);
-            int color = picking && i == session.getMastIndex()
-                    ? EngineSetting.SHIPWRIGHT_INK_PICKED_MAST
-                    : EngineSetting.SHIPWRIGHT_INK_MAST;
 
-            for (int z = center - 1; z <= center; z++)
-                for (int x = mast.getX(); x < mast.getX() + EngineSetting.SHIP_MAST_OCTANTS; x++)
-                    writePlan(session, EngineSetting.SHIP_AFT_MARGIN + x, z, color);
+            footprint.setFootprint(mast.getX(), EngineSetting.SHIP_SHEET_HALF_BREADTH - 1,
+                    mast.getX() + EngineSetting.SHIP_MAST_OCTANTS, EngineSetting.SHIP_SHEET_HALF_BREADTH + 1);
+            fillFootprint(session, footprint, picking && i == session.getMastIndex()
+                    ? EngineSetting.SHIPWRIGHT_INK_PICKED_MAST
+                    : EngineSetting.SHIPWRIGHT_INK_MAST);
         }
+    }
+
+    // Hand \\
+
+    // Whatever stands under the cursor outlined, to be picked up or taken away; with nothing there, the thing in
+    // hand drawn whole at the cursor as it would be set down, red where it could not stand
+    private void drawHand(ShipwrightSessionInstance session) {
+
+        ShipPickStruct hover = session.getHover();
+
+        if (!hover.isEmpty()) {
+            outlineFootprint(session, hover, EngineSetting.SHIPWRIGHT_INK_HIGHLIGHT);
+            return;
+        }
+
+        int x = ShipwrightEditBranch.toSheetX(session.getCursorU());
+        int z = ShipwrightEditBranch.toSheetZ(session.getCursorV());
+        int option = shipwrightManager.getOptionIndex(session);
+
+        if (x < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH || z < 0 || z >= EngineSetting.SHIP_SHEET_BREADTH
+                || option == EngineSetting.INDEX_NOT_FOUND && session.getTool() != ShipwrightTool.MASTS)
+            return;
+
+        int cell = shipwrightEditBranch.resolvePlacementCell(session, x, z);
+
+        shipwrightInspectBranch.resolveFootprint(session, session.getTool(), option, cell, footprint);
+        drawGlyph(session, session.getTool(), option, ShipCellUtility.unpackSpin(cell), footprint, true);
+    }
+
+    // Glyphs \\
+
+    // One thing set down drawn over its footprint as what it is — a stair its treads climbing darker, a ladder its
+    // rails and rungs, a window its panes, anything that faces a way its front edge — or, as the ghost of the thing
+    // in hand, in the ghost's ink with its front edge and treads
+    private void drawGlyph(
+            ShipwrightSessionInstance session,
+            ShipwrightTool tool,
+            int option,
+            int spin,
+            ShipPickStruct footprint,
+            boolean ghost) {
+
+        int ghostColor = session.getPlacementProblem().isEmpty()
+                ? EngineSetting.SHIPWRIGHT_INK_GHOST
+                : EngineSetting.SHIPWRIGHT_INK_GHOST_BLOCKED;
+
+        if (tool == ShipwrightTool.STAIRS && option == ShipClimb.STAIR.ordinal()) {
+            drawStair(session, footprint, spin, ghost, ghostColor);
+            return;
+        }
+
+        if (tool == ShipwrightTool.STAIRS) {
+            drawLadder(session, footprint, spin, ghost ? ghostColor : option == ShipClimb.BOARDING.ordinal()
+                    ? EngineSetting.SHIPWRIGHT_INK_BOARDING : EngineSetting.SHIPWRIGHT_INK_LADDER);
+            return;
+        }
+
+        if (tool == ShipwrightTool.OPENINGS && option == ShipOpening.HATCH.ordinal()) {
+            drawGrating(session, footprint, spin, ghost ? ghostColor : EngineSetting.SHIPWRIGHT_INK_HATCH);
+            return;
+        }
+
+        if (tool == ShipwrightTool.OPENINGS && option == ShipOpening.WINDOW.ordinal()) {
+            fillFootprint(session, footprint, ghost ? ghostColor : EngineSetting.SHIPWRIGHT_INK_WINDOW);
+            crossFootprint(session, footprint, EngineSetting.SHIPWRIGHT_INK_PANE);
+            return;
+        }
+
+        fillFootprint(session, footprint, ghost ? ghostColor : resolveItemInk(tool, option));
+        outlineFootprint(session, footprint, EngineSetting.SHIPWRIGHT_INK_OUTLINE);
+
+        if (tool != ShipwrightTool.MASTS)
+            edgeFootprint(session, footprint, spin, EngineSetting.SHIPWRIGHT_INK_FACING);
+    }
+
+    private int resolveItemInk(ShipwrightTool tool, int option) {
+
+        if (tool == ShipwrightTool.OPENINGS)
+            return EngineSetting.SHIPWRIGHT_INK_DOOR;
+
+        if (tool == ShipwrightTool.MASTS)
+            return EngineSetting.SHIPWRIGHT_INK_MAST;
+
+        if (option == EngineSetting.SHIPWRIGHT_ITEM_HELM || option == EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN)
+            return EngineSetting.SHIPWRIGHT_INK_FITTING;
+
+        if (option == shipwrightManager.findItemIndex(EngineSetting.SHIP_CANNON_FURNISHING))
+            return EngineSetting.SHIPWRIGHT_INK_CANNON;
+
+        return EngineSetting.SHIPWRIGHT_INK_FURNITURE;
+    }
+
+    // A stair's run, every step a shade darker as it climbs and a tread line at its foot end, its head edge marked
+    private void drawStair(ShipwrightSessionInstance session, ShipPickStruct footprint, int spin, boolean ghost,
+            int ghostColor) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+        int stepX = ShipCellUtility.stepX(spin);
+        int stepZ = ShipCellUtility.stepZ(spin);
+        int run = Math.max(1, EngineSetting.SHIP_DECK_HEIGHT - 1);
+
+        for (int z = footprint.getMinZ(); z < footprint.getMaxZ(); z++)
+            for (int x = footprint.getMinX(); x < footprint.getMaxX(); x++) {
+
+                int step = stepX > 0 ? x - footprint.getMinX()
+                        : stepX < 0 ? footprint.getMaxX() - 1 - x
+                                : stepZ > 0 ? z - footprint.getMinZ() : footprint.getMaxZ() - 1 - z;
+                int color = ghost ? ghostColor : blendInk(EngineSetting.SHIPWRIGHT_INK_STAIR_LOW,
+                        EngineSetting.SHIPWRIGHT_INK_STAIR_HIGH, (float) step / run);
+                int texelX = (EngineSetting.SHIP_AFT_MARGIN + x) * scale;
+                int texelZ = z * scale;
+
+                fillPlan(session, texelX, texelZ, texelX + scale, texelZ + scale, color);
+
+                int treadX = stepX > 0 ? texelX : stepX < 0 ? texelX + scale - 1 : texelX;
+                int treadZ = stepZ > 0 ? texelZ : stepZ < 0 ? texelZ + scale - 1 : texelZ;
+
+                fillPlan(session, treadX, treadZ, stepX != 0 ? treadX + 1 : texelX + scale,
+                        stepZ != 0 ? treadZ + 1 : texelZ + scale, EngineSetting.SHIPWRIGHT_INK_TREAD);
+            }
+
+        edgeFootprint(session, footprint, spin, EngineSetting.SHIPWRIGHT_INK_FACING);
+    }
+
+    // A ladder's two rails along the way it climbs, and a rung across them every other texel
+    private void drawLadder(ShipwrightSessionInstance session, ShipPickStruct footprint, int spin, int color) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+        int minX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMinX()) * scale;
+        int minZ = footprint.getMinZ() * scale;
+        int maxX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMaxX()) * scale;
+        int maxZ = footprint.getMaxZ() * scale;
+        boolean alongX = ShipCellUtility.stepX(spin) != 0;
+        int rung = EngineSetting.SHIPWRIGHT_INK_RUNG;
+
+        fillPlan(session, minX, minZ, maxX, maxZ, color);
+
+        if (alongX) {
+
+            fillPlan(session, minX, minZ, maxX, minZ + 1, rung);
+            fillPlan(session, minX, maxZ - 1, maxX, maxZ, rung);
+
+            for (int x = minX + 1; x < maxX; x += 2)
+                fillPlan(session, x, minZ, x + 1, maxZ, rung);
+
+            return;
+        }
+
+        fillPlan(session, minX, minZ, minX + 1, maxZ, rung);
+        fillPlan(session, maxX - 1, minZ, maxX, maxZ, rung);
+
+        for (int z = minZ + 1; z < maxZ; z += 2)
+            fillPlan(session, minX, z, maxX, z + 1, rung);
+    }
+
+    // A grating of bars every other texel, its hinge edge drawn heavy
+    private void drawGrating(ShipwrightSessionInstance session, ShipPickStruct footprint, int hinge, int color) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+        int minX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMinX()) * scale;
+        int minZ = footprint.getMinZ() * scale;
+        int maxX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMaxX()) * scale;
+        int maxZ = footprint.getMaxZ() * scale;
+
+        fillPlan(session, minX, minZ, maxX, maxZ, color);
+
+        for (int x = minX; x < maxX; x += 2)
+            fillPlan(session, x, minZ, x + 1, maxZ, EngineSetting.SHIPWRIGHT_INK_GRATING);
+
+        for (int z = minZ; z < maxZ; z += 2)
+            fillPlan(session, minX, z, maxX, z + 1, EngineSetting.SHIPWRIGHT_INK_GRATING);
+
+        edgeFootprint(session, footprint, hinge, EngineSetting.SHIPWRIGHT_INK_HINGE);
+    }
+
+    // Footprints \\
+
+    private void fillFootprint(ShipwrightSessionInstance session, ShipPickStruct footprint, int color) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+
+        fillPlan(session,
+                (EngineSetting.SHIP_AFT_MARGIN + footprint.getMinX()) * scale, footprint.getMinZ() * scale,
+                (EngineSetting.SHIP_AFT_MARGIN + footprint.getMaxX()) * scale, footprint.getMaxZ() * scale, color);
+    }
+
+    // The texels just inside a footprint's rim
+    private void outlineFootprint(ShipwrightSessionInstance session, ShipPickStruct footprint, int color) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+        int minX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMinX()) * scale;
+        int minZ = footprint.getMinZ() * scale;
+        int maxX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMaxX()) * scale;
+        int maxZ = footprint.getMaxZ() * scale;
+
+        fillPlan(session, minX, minZ, maxX, minZ + 1, color);
+        fillPlan(session, minX, maxZ - 1, maxX, maxZ, color);
+        fillPlan(session, minX, minZ, minX + 1, maxZ, color);
+        fillPlan(session, maxX - 1, minZ, maxX, maxZ, color);
+    }
+
+    // The rim of a footprint on the side a quarter turn faces, a texel deep
+    private void edgeFootprint(ShipwrightSessionInstance session, ShipPickStruct footprint, int spin, int color) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+        int minX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMinX()) * scale;
+        int minZ = footprint.getMinZ() * scale;
+        int maxX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMaxX()) * scale;
+        int maxZ = footprint.getMaxZ() * scale;
+        int stepX = ShipCellUtility.stepX(spin);
+        int stepZ = ShipCellUtility.stepZ(spin);
+
+        fillPlan(session,
+                stepX > 0 ? maxX - 1 : minX, stepZ > 0 ? maxZ - 1 : minZ,
+                stepX < 0 ? minX + 1 : maxX, stepZ < 0 ? minZ + 1 : maxZ, color);
+    }
+
+    // A cross through the middle of a footprint, a texel wide
+    private void crossFootprint(ShipwrightSessionInstance session, ShipPickStruct footprint, int color) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+        int minX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMinX()) * scale;
+        int minZ = footprint.getMinZ() * scale;
+        int maxX = (EngineSetting.SHIP_AFT_MARGIN + footprint.getMaxX()) * scale;
+        int maxZ = footprint.getMaxZ() * scale;
+        int middleX = (minX + maxX) / 2;
+        int middleZ = (minZ + maxZ) / 2;
+
+        fillPlan(session, middleX, minZ, middleX + 1, maxZ, color);
+        fillPlan(session, minX, middleZ, maxX, middleZ + 1, color);
+    }
+
+    // A colour between two, a share of the way from the first to the second
+    private static int blendInk(int from, int to, float share) {
+
+        int blended = 0;
+
+        for (int shift = 0; shift < Integer.SIZE; shift += Byte.SIZE) {
+
+            int a = (from >>> shift) & 0xFF;
+            int b = (to >>> shift) & 0xFF;
+
+            blended |= Math.round(a + (b - a) * share) << shift;
+        }
+
+        return blended;
     }
 
     // Views \\
@@ -604,17 +788,23 @@ class ShipwrightDraftBranch extends BranchPackage {
 
     // Texels \\
 
-    // A plan texel at an octant along the grid and across the full breadth, starboard drawn down
-    private void writePlan(ShipwrightSessionInstance session, int x, int z, int color) {
-        writeTexel(session, x, session.getSheetHeight() - 1 - z, color);
+    // Every texel of one octant of the plan, at an octant along the grid and across the full breadth
+    private void fillOctant(ShipwrightSessionInstance session, int x, int z, int color) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+
+        fillPlan(session, x * scale, z * scale, (x + 1) * scale, (z + 1) * scale, color);
     }
 
-    private void writeTexel(ShipwrightSessionInstance session, int u, int v, int color) {
+    // Every plan texel of a rectangle, in texels along the grid and across the full breadth, starboard drawn down
+    private void fillPlan(ShipwrightSessionInstance session, int minX, int minZ, int maxX, int maxZ, int color) {
 
-        if (u < 0 || v < 0 || u >= session.getSheetWidth() || v >= session.getSheetHeight())
-            return;
+        int width = session.getSheetWidth() * EngineSetting.SHIPWRIGHT_INK_SCALE;
+        int height = session.getSheetHeight() * EngineSetting.SHIPWRIGHT_INK_SCALE;
 
-        writePixel(session.getSheetPixels(), session.getSheetWidth(), u, v, color);
+        for (int z = Math.max(0, minZ); z < Math.min(height, maxZ); z++)
+            for (int x = Math.max(0, minX); x < Math.min(width, maxX); x++)
+                writePixel(session.getSheetPixels(), width, x, height - 1 - z, color);
     }
 
     private void writePixel(byte[] pixels, int width, int u, int v, int color) {

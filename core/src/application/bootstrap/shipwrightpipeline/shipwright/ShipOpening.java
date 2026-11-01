@@ -30,11 +30,6 @@ public enum ShipOpening {
         this.title = title;
     }
 
-    // The opening a step along the list lies at, round either end
-    public ShipOpening step(int step) {
-        return VALUES[Math.floorMod(ordinal() + step, VALUES.length)];
-    }
-
     // Accessible \\
 
     public String getTitle() {

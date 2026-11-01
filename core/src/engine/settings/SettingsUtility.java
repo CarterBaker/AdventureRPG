@@ -327,6 +327,8 @@ public class SettingsUtility extends EngineUtility {
         KeyBindings.ACTIVATE.set(toInputCodes(settings.bindActivate));
         KeyBindings.INVENTORY.set(toInputCodes(settings.bindInventory));
         KeyBindings.ROTATE_ITEM.set(toInputCodes(settings.bindRotateItem));
+        KeyBindings.TURN_LEFT.set(toInputCodes(settings.bindTurnLeft));
+        KeyBindings.TURN_RIGHT.set(toInputCodes(settings.bindTurnRight));
         KeyBindings.CYCLE_PREVIOUS.set(toInputCodes(settings.bindCyclePrevious));
         KeyBindings.CYCLE_NEXT.set(toInputCodes(settings.bindCycleNext));
         KeyBindings.LEVEL_UP.set(toInputCodes(settings.bindLevelUp));
@@ -354,6 +356,8 @@ public class SettingsUtility extends EngineUtility {
         settings.bindActivate = toCodes(KeyBindings.ACTIVATE);
         settings.bindInventory = toCodes(KeyBindings.INVENTORY);
         settings.bindRotateItem = toCodes(KeyBindings.ROTATE_ITEM);
+        settings.bindTurnLeft = toCodes(KeyBindings.TURN_LEFT);
+        settings.bindTurnRight = toCodes(KeyBindings.TURN_RIGHT);
         settings.bindCyclePrevious = toCodes(KeyBindings.CYCLE_PREVIOUS);
         settings.bindCycleNext = toCodes(KeyBindings.CYCLE_NEXT);
         settings.bindLevelUp = toCodes(KeyBindings.LEVEL_UP);

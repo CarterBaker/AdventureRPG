@@ -20,7 +20,7 @@ public class ShipBlueprintStruct extends StructPackage {
      * octant along the sheet, mirrored to the other side. The waist is cut
      * through a deck's floor octant by octant, kept sorted, every octant and
      * its mirror together. Walls, half walls, doors, windows, hatches,
-     * stairs, ladders and furniture stand on a deck
+     * stairs, ladders, boarding ladders and furniture stand on a deck
      * at an octant along the length and across the full breadth, never
      * mirrored, each packed through
      * ShipCellUtility with its deck as its level; walls are kept sorted and a
@@ -51,6 +51,7 @@ public class ShipBlueprintStruct extends StructPackage {
     private final IntArrayList hatches;
     private final IntArrayList stairs;
     private final IntArrayList ladders;
+    private final IntArrayList boardingLadders;
 
     // Fittings — packed cells
     private int helm;
@@ -89,6 +90,7 @@ public class ShipBlueprintStruct extends StructPackage {
         this.hatches = new IntArrayList();
         this.stairs = new IntArrayList();
         this.ladders = new IntArrayList();
+        this.boardingLadders = new IntArrayList();
 
         // Fittings
         this.helm = EngineSetting.SHIP_CELL_NONE;
@@ -135,6 +137,7 @@ public class ShipBlueprintStruct extends StructPackage {
         copyCells(other.hatches, hatches);
         copyCells(other.stairs, stairs);
         copyCells(other.ladders, ladders);
+        copyCells(other.boardingLadders, boardingLadders);
 
         // Fittings
         this.helm = other.helm;
@@ -227,6 +230,7 @@ public class ShipBlueprintStruct extends StructPackage {
         removeDeckCells(hatches, deck);
         removeDeckCells(stairs, deck);
         removeDeckCells(ladders, deck);
+        removeDeckCells(boardingLadders, deck);
         this.helm = removeDeckCell(helm, deck);
         this.capstan = removeDeckCell(capstan, deck);
 
@@ -291,6 +295,7 @@ public class ShipBlueprintStruct extends StructPackage {
         pruneCells(hatches);
         pruneCells(stairs);
         pruneCells(ladders);
+        pruneCells(boardingLadders);
 
         if (!isCellOnDeck(helm))
             this.helm = EngineSetting.SHIP_CELL_NONE;
@@ -463,17 +468,6 @@ public class ShipBlueprintStruct extends StructPackage {
         IntArrays.quickSort(cells.elements(), 0, cells.size());
     }
 
-    public int findFurniture(int cell) {
-
-        int place = ShipCellUtility.toPlace(cell);
-
-        for (int i = 0; i < furniture.size(); i++)
-            if (ShipCellUtility.toPlace(furniture.get(i).getCell()) == place)
-                return i;
-
-        return EngineSetting.INDEX_NOT_FOUND;
-    }
-
     // Masts \\
 
     // The mast whose foot covers an octant along the length, INDEX_NOT_FOUND when none does
@@ -605,6 +599,10 @@ public class ShipBlueprintStruct extends StructPackage {
         return ladders;
     }
 
+    public IntArrayList getBoardingLadders() {
+        return boardingLadders;
+    }
+
     public int getHelm() {
         return helm;
     }
@@ -627,6 +625,15 @@ public class ShipBlueprintStruct extends StructPackage {
             case DOOR -> doors;
             case WINDOW -> windows;
             case HATCH -> hatches;
+        };
+    }
+
+    // The placements of one kind of climb
+    public IntArrayList getClimbs(ShipClimb climb) {
+        return switch (climb) {
+            case STAIR -> stairs;
+            case LADDER -> ladders;
+            case BOARDING -> boardingLadders;
         };
     }
 

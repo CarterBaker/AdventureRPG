@@ -53,6 +53,11 @@ One line per session that changed this file: the date, what was added or removed
   `RecorderTransitionMaterial.arpg`, and the menus `Transitions.arpg` and `Recordings.arpg`; regenerated
   `Recorder.arpg` (recordings panel moved to its own tool, transition marks on clips) and `EditorWindow.arpg`
   (Recordings and Transitions entries).
+- 2026-10-31: Shipwright table rework. Regenerated `vehicles/Galleon.arpg` (a boarding ladder over either side of the
+  main deck amidships; otherwise unchanged and buildable at the new table), `menus/Shipwright.arpg` (catalogue panel,
+  line naming what is under the cursor, turn buttons, tool buttons inline so the picked one lights) and
+  `schemas/Vehicles.arpg` (`boarding_ladders`). The texture `ShipGrating` is no longer used by any lid; its entry
+  stays until the owner says otherwise.
 
 ---
 

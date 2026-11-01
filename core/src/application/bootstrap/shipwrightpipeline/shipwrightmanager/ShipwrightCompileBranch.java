@@ -22,10 +22,12 @@ class ShipwrightCompileBranch extends BranchPackage {
      * pieces of one deck — must rest on the deck below. The octant grid is laid out round
      * the sheet with room aft for the rudder and the porch and headroom for
      * deckhouses and bulwarks; the hull, its decks, porch, bulwarks, waist, walls,
-     * stairs, ladders, hatches, doors, windows and gun ports are laid into it
+     * stairs, ladders, boarding ladders, hatches, doors, windows and gun ports
+     * are laid into it
      * through ShipwrightHullBranch and ShipwrightFittingBranch, and every piece
      * merged into its part. The bowsprit, helm, capstan, rudder, anchors,
-     * lids, ladders, glass and the whole rig are then built as parts of their
+     * lids, ladders, boarding ladders, glass and the whole rig are then built
+     * as parts of their
      * own, and the cargo is placed and checked against
      * everything solid. Last the ship is weighed, every box by what it is
      * made of, and floated: stone ballast is laid along its bottom until it
@@ -82,6 +84,7 @@ class ShipwrightCompileBranch extends BranchPackage {
         shipwrightHullBranch.layWalls(blueprint, layout);
         shipwrightHullBranch.layStairs(blueprint, layout);
         shipwrightHullBranch.layLadders(blueprint, layout);
+        shipwrightHullBranch.layBoardingLadders(blueprint, layout);
         shipwrightHullBranch.layHatches(blueprint, layout);
         shipwrightFittingBranch.cutOpenings(blueprint, layout);
 

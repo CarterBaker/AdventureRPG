@@ -38,6 +38,8 @@ public final class KeyBindings {
     // Inventory
     public static Binding INVENTORY = new Binding(InputCode.key(Keys.I));
     public static Binding ROTATE_ITEM = new Binding(InputCode.key(Keys.R));
+    public static Binding TURN_LEFT = new Binding(InputCode.key(Keys.COMMA));
+    public static Binding TURN_RIGHT = new Binding(InputCode.key(Keys.PERIOD));
 
     // Cycling — step through a list of choices, or up and down a stack of levels
     public static Binding CYCLE_PREVIOUS = new Binding(InputCode.key(Keys.Q));

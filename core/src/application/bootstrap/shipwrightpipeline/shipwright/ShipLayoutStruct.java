@@ -19,8 +19,8 @@ public class ShipLayoutStruct extends StructPackage {
      * porch fit behind it; its vehicle parts are those pieces merged into
      * boxes and every spar, sail, rope and fitting, in the order they fill the
      * model grid; its cargo is every door and piece of furniture, each with
-     * the sub-voxel box it stands in. Every hatch, ladder, gun-port lid and
-     * window pane is
+     * the sub-voxel box it stands in. Every hatch, ladder, boarding ladder,
+     * gun-port lid and window pane is
      * kept as the octant box it fills and the quarter turn it faces, laid by
      * the hull and the openings before the grid is merged and built as a
      * part of its own after. It knows how far its anchors drop, how tall each
@@ -53,6 +53,7 @@ public class ShipLayoutStruct extends StructPackage {
     // Fittings — an octant box of six ints and a quarter turn for each, in model octants
     private final IntArrayList hatchBoxes;
     private final IntArrayList ladderBoxes;
+    private final IntArrayList boardingLadderBoxes;
     private final IntArrayList portBoxes;
     private final IntArrayList paneBoxes;
 
@@ -108,6 +109,7 @@ public class ShipLayoutStruct extends StructPackage {
         // Fittings
         this.hatchBoxes = new IntArrayList();
         this.ladderBoxes = new IntArrayList();
+        this.boardingLadderBoxes = new IntArrayList();
         this.portBoxes = new IntArrayList();
         this.paneBoxes = new IntArrayList();
 
@@ -132,6 +134,7 @@ public class ShipLayoutStruct extends StructPackage {
         cargoBoxes.clear();
         hatchBoxes.clear();
         ladderBoxes.clear();
+        boardingLadderBoxes.clear();
         portBoxes.clear();
         paneBoxes.clear();
         this.anchorDrop = EngineSetting.DEFAULT_VEHICLE_ANCHOR_DROP;
@@ -223,6 +226,12 @@ public class ShipLayoutStruct extends StructPackage {
     // A ladder's octants from the floor it stands on up past the floor it climbs to
     public void addLadder(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int spin) {
         addFittingBox(ladderBoxes, minX, minY, minZ, maxX, maxY, maxZ, spin);
+    }
+
+    // A boarding ladder's octants from the deck's edge out to the widest of the side below it, from the keel up past
+    // the deck it comes aboard at, facing outboard
+    public void addBoardingLadder(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int spin) {
+        addFittingBox(boardingLadderBoxes, minX, minY, minZ, maxX, maxY, maxZ, spin);
     }
 
     // A gun port cut through the planking, its lid filling the octants cut
@@ -350,6 +359,10 @@ public class ShipLayoutStruct extends StructPackage {
 
     public IntArrayList getLadderBoxes() {
         return ladderBoxes;
+    }
+
+    public IntArrayList getBoardingLadderBoxes() {
+        return boardingLadderBoxes;
     }
 
     public IntArrayList getPortBoxes() {

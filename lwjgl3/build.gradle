@@ -59,12 +59,16 @@ dependencies {
 
 def os = System.properties['os.name'].toLowerCase()
 def logDirectory = rootProject.file('logs')
-def gameJvmArgs = [
+def sharedJvmArgs = [
   "-XX:ErrorFile=${logDirectory}/AdventureRPG_%p.log".toString(),
   "-Dadventurerpg.logDirectory=${logDirectory}".toString()
 ]
-if (os.contains('mac')) gameJvmArgs += '-XstartOnFirstThread'
-def editorJvmArgs = ['-XX:+UseSerialGC', '-XX:CICompilerCount=2'] + gameJvmArgs
+if (os.contains('mac')) sharedJvmArgs += '-XstartOnFirstThread'
+
+// The game runs on generational ZGC, whose pauses stay under a millisecond whatever the heap size, so collection
+// never shows as a frame hitch. The editor keeps the serial collector for its small footprint.
+def gameJvmArgs = ['-XX:+UseZGC', '-XX:+ZGenerational'] + sharedJvmArgs
+def editorJvmArgs = ['-XX:+UseSerialGC', '-XX:CICompilerCount=2'] + sharedJvmArgs
 
 run {
   workingDir = rootProject.file('assets').path

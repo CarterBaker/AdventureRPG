@@ -34,19 +34,22 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 | `ShipwrightManager` | Sessions, `compileSession`, save, open, launch, `toVehicleName`, registration at boot |
 | `ShipwrightLoader` / `ShipwrightBuilder` | The one vehicle loader: scans `assets/vehicles/` |
 | `ShipwrightLibraryBranch` | Reading and writing files in the assets or `Saves/Vehicles` |
-| `ShipwrightEditBranch` | Every change: strokes, placement rules, options, decks, undo, commit/refuse |
+| `ShipwrightEditBranch` | Every change: strokes, pick up / take away / place, `findPlacementProblem`, catalogue options, decks, undo, commit/refuse |
+| `ShipwrightInspectBranch` | What stands at an octant over its whole footprint (`pick`), and the footprint any tool's option covers (`resolveFootprint`) |
 | `ShipwrightCompileBranch` | `compile(blueprint, layout)` order, weighing, floating, `toDesign` |
-| `ShipwrightHullBranch` | Sections, shell, bulwarks, porch, waist and its rails, walls, stairs, ladders, hatches |
-| `ShipwrightFittingBranch` | Doors, windows, gun ports, helm, capstan, rudder, anchors, lids, ladders, glass, cargo |
+| `ShipwrightHullBranch` | Sections, shell, bulwarks, porch, waist and its rails, walls, stairs, ladders, boarding ladders, hatches; their `find...Problem` rules |
+| `ShipwrightFittingBranch` | Doors, windows, gun ports, helm, capstan, rudder, anchors, hatch and port lids (`addPanel`, `resolveHingeSpin`), ladders, boarding ladders, glass, cargo |
 | `ShipwrightRigBranch` | Bowsprit, masts (height, sails and nest worked out), crow's nests, shrouds, stays |
-| `ShipwrightDraftBranch` | Sheet, ghost, side and top views |
+| `ShipwrightDraftBranch` | Sheet glyphs at `SHIPWRIGHT_INK_SCALE`, the thing in hand, the hover outline, side and top views |
 | `ShipwrightSurveyBranch` | Stability, speed, triangle survey |
 
 - **Data:** `ShipBlueprintStruct` (the file's content, `category` included), `ShipLayoutStruct` (one compile),
-  `ShipOctantGridStruct` (octant grid and box merge), `ShipwrightSessionInstance` (one table in use), `ShipPiece`,
-  `ShipwrightTool`, `ShipOpening`. **Utilities:** `ShipBlueprintArpgUtility` (the one file reader/writer),
+  `ShipOctantGridStruct` (octant grid and box merge), `ShipwrightSessionInstance` (one table in use: tool, option,
+  facing, cursor, `hover` and `placementProblem`), `ShipPickStruct` (what stands somewhere, and its footprint),
+  `ShipPiece`, `ShipwrightTool`, `ShipOpening`, `ShipClimb`. **Utilities:** `ShipBlueprintArpgUtility` (the one file reader/writer),
   `ShipCellUtility` (cell packing, mirroring, steps), `ShipRopeUtility` (the one rope layer).
-- **Runtime glue:** `application/runtime/shipwright/ShipwrightSystem` (input, bindings, labels),
+- **Runtime glue:** `application/runtime/shipwright/ShipwrightSystem` (input, bindings, labels, the catalogue panel
+  injected from the `shipwright_catalogue_*` templates, the lit tool),
   `ShipwrightRenderSystem`, `menus/shipwright/ShipwrightBranch` (menu events), and in the editor
   `editor/runtime/shipwright/ShipwrightTabSystem` (writes through `InfoManager` with the `Vehicles` schema).
 
@@ -54,7 +57,8 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 
 ## Compile order
 
-`ShipwrightCompileBranch.compile`: sections → shell → porch → bulwarks → waist → walls → stairs → ladders → hatches →
+`ShipwrightCompileBranch.compile`: sections → shell → porch → bulwarks → waist → walls → stairs → ladders → boarding
+ladders → hatches →
 openings (doors, windows, gun ports) → merge pieces into parts → bowsprit → fittings (helm, capstan, rudder, anchors,
 hatch lids, port lids, ladders, glass) → rig → cargo → float → waterline. Everything that cuts the grid runs before
 the merge; everything built as its own part runs after. Hatches run after stairs and ladders so they can close the
@@ -69,16 +73,26 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   `ShipwrightManager.registerVehicle`. Never add a second loader or a hand-written format.
 - **One file format.** Every read and write of a vehicle file is `ShipBlueprintArpgUtility`. A new blueprint field
   gets its reader, writer, `findProblem` check and the `Vehicles` schema in the same change.
-- **One placement rule each.** A placement rule lives in `ShipwrightEditBranch` (what may be set where) and is
-  enforced again in the compile (`reportBuildProblem`), so a file can never load what the table would refuse.
+- **One placement rule each.** Each kind's rule is one `find...Problem` query (`ShipwrightHullBranch` for stairs,
+  ladders, boarding ladders and hatches; `ShipwrightEditBranch` for furniture, masts, doors and windows), returning
+  the reason or `SHIP_PROBLEM_NONE`. `ShipwrightEditBranch.findPlacementProblem` asks it for the ghost (through
+  `ShipwrightManager.inspect`) and before setting anything down, and the compile's `lay...` asks the same query before
+  laying (`reportBuildProblem`), so the ghost, the table and a loaded file never disagree.
+- **One footprint each.** What an option covers once set down is `ShipwrightInspectBranch.resolveFootprint`; picking,
+  the ghost, the hover outline, the sheet's glyphs and the furniture overlap check all read it.
+- **New option.** Add it to its tool's enum or list, `getOptionCount` / `getOptionIndex` / `pickOption` in
+  `ShipwrightEditBranch`, `ShipwrightManager.getOptionName`, its footprint, its `find...Problem`, its glyph in
+  `ShipwrightDraftBranch.drawGlyph` and its `pick` order in `ShipwrightInspectBranch`.
 - **New fitting.** Lay what it cuts into the grid before the merge, record its octant box in `ShipLayoutStruct`
-  (`addHatch`/`addLadder`/`addPort`/`addPane` pattern), build its part in `ShipwrightFittingBranch.addFittings`, draw
+  (`addHatch`/`addLadder`/`addBoardingLadder`/`addPort`/`addPane` pattern), build its part in `ShipwrightFittingBranch.addFittings`, draw
   it in `ShipwrightDraftBranch`.
 - **New category.** Add it to `VehicleCategory` and the schema's enum, branch the compile by the blueprint's category
   through data, and add its propulsion to `VehicleRigBranch.isPropelled`. The runtime stays shared.
 - **Rope** goes through `ShipRopeUtility.addRope` or `VehiclePartStruct.addQuad`, never `addBox`.
-- **A swinging lid** is a `DOOR` part: pivot on the hinge line at the lid's top, axis along the hinge,
-  `openAngle` signed for the way it must turn. Check the sign against `addHatchLids` and `addPortLids`.
+- **A swinging lid** is a `DOOR` part built by `createLid` and `addPanel` (frame, recessed slats, battens on the inner
+  face, all inside the fitting's octant box so it never meets cargo): pivot on the hinge line at the lid's top, axis
+  along the hinge, `openAngle` signed for the way it must turn. A hatch hinges on the side `resolveHingeSpin` gives
+  (a longer side); check the sign against `addHatchLids` and `addPortLids`.
 
 ---
 
@@ -96,7 +110,13 @@ first and rails the rim after, so a waist painted wide never rails its own octan
 - **Fitting boxes are in grid octants** (the sheet's x plus `originX`); blueprint cells are in sheet octants.
 - **Edit-time checks read the last compiled layout**, so they see the ship as it stood before the change.
 - **The vehicle shader's alpha is a dither share.** Any vehicle texture with partial alpha is drawn see-through.
-- **Stair rise vs ghost:** the ghost assumes a deck's height of rise; a stair onto a raised deck may rise less.
+- **Stairs always rise `SHIP_DECK_HEIGHT`.** A stair that cannot land a deck up is refused, never shortened;
+  `SHIP_STAIR_MAX_RISE` is only the tallest a ladder climbs.
+- **Menu entry points name inline elements.** An element built with `use` takes its template's id, so an entry point
+  naming it resolves to nothing. Every element the system reaches by entry point (the tool buttons, the name label) is
+  written inline in `menus/Shipwright.arpg`.
+- **The sheet's ink is `SHIPWRIGHT_INK_SCALE` texels to the octant.** The session's sheet size stays in octants (the
+  cursor's units); the pixels, the upload and the ink rect multiply by the scale.
 - **Masts are only a place.** `ShipMastStruct` keeps its `x` alone; height, sails and the crow's nest are worked out
   in `ShipwrightRigBranch.addRig` and kept per mast in the layout (`getMastHeight`, `getMastSailCount`,
   `hasCrowsNest`). Read them from the layout, never from the blueprint.
@@ -104,5 +124,6 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   the table lets the waist widen into a rim that carries only its own rail.
 - **Gun ports are one per cannon.** `cutPort` refuses a cannon that cuts no planking and one whose port touches a port
   already cut; never reintroduce open ports over a bulwark.
-- **Bindings:** the table reads `CYCLE_*` and `LEVEL_*` from `KeyBindings`; adding one means `KeyBindings`,
+- **Bindings:** the table reads `CYCLE_*`, `LEVEL_*`, `TURN_LEFT`, `TURN_RIGHT` and `ROTATE_ITEM` from
+  `KeyBindings`; adding one means `KeyBindings`,
   `Settings`, `SettingsUtility` (apply and store), `SettingsBinding` and its `RuntimeSetting` label.

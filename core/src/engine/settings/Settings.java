@@ -113,6 +113,8 @@ public class Settings {
     public int[] bindActivate = { Keys.E };
     public int[] bindInventory = { Keys.I };
     public int[] bindRotateItem = { Keys.R };
+    public int[] bindTurnLeft = { Keys.COMMA };
+    public int[] bindTurnRight = { Keys.PERIOD };
     public int[] bindCyclePrevious = { Keys.Q };
     public int[] bindCycleNext = { Keys.F };
     public int[] bindLevelUp = { Keys.PAGE_UP };

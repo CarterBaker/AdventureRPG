@@ -32,15 +32,21 @@ class ShipwrightHullBranch extends BranchPackage {
      * through several decks, the pit runs as deep. A wall rises from its
      * deck to the deck above it under cover, or
      * a deckhouse high in the open; a half wall stands waist high. A stair
-     * climbs one octant per step along the way it faces, two octants wide,
-     * until it meets a floor level with its last tread, and opens the floor
-     * over its run and over the floor before its foot, so a climber's head
-     * clears the deck above from the first step. A ladder stands on two by
-     * two octants of floor and climbs to the floor right over it, opening a
-     * hatchway there, or in the open up the face of the raised deck it faces.
-     * A hatch lies in a floor over a deck: set on an opening a stair or
-     * ladder climbs through it closes the whole of it, anywhere else it cuts
-     * its own. Every query about where floors lie goes through here.
+     * always climbs one deck: an octant per step along the way it faces, two
+     * octants wide, onto the floor a deck's height up just past its last
+     * tread, and opens the floor over its run and over the floor before its
+     * foot, so a climber's head clears the deck above from the first step. A
+     * ladder stands on two by two octants of floor and climbs to the floor
+     * right over it, opening a hatchway there, or in the open up the face of
+     * the raised deck it faces. A boarding ladder hangs from the edge of an
+     * open deck down the outside of the hull to its keel, clear of the widest
+     * of the side below, its bulwark opened where it comes aboard. A hatch
+     * lies in a floor over a deck: set on an opening a stair or ladder climbs
+     * through it closes the whole of it, anywhere else it cuts its own. Every
+     * placement that can be refused says why through its find...Problem
+     * query, which the table asks before it sets anything down and the
+     * compile asks again before laying it. Every query about where floors lie
+     * goes through here.
      */
 
     // Sections \\
@@ -336,57 +342,86 @@ class ShipwrightHullBranch extends BranchPackage {
             layStair(layout, stairs.getInt(i));
     }
 
-    // One step an octant up per octant along the way it faces, until the next octant along holds a floor level with
-    // its last tread — a deck over the run, opened above every step, or a raised deck the run climbs onto
+    // One step an octant up per octant along the way it faces, a deck's height in all, onto the floor just past its
+    // last tread — a deck over the run, opened above every step, or a raised deck the run climbs onto
     private void layStair(ShipLayoutStruct layout, int cell) {
 
+        String problem = findStairProblem(layout, cell);
+
+        if (!problem.isEmpty()) {
+            layout.reportBuildProblem(problem);
+            return;
+        }
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int rise = EngineSetting.SHIP_DECK_HEIGHT;
         int level = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
         int spin = ShipCellUtility.unpackSpin(cell);
         int footX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
         int footZ = ShipCellUtility.unpackZ(cell);
         int stepX = ShipCellUtility.stepX(spin);
         int stepZ = ShipCellUtility.stepZ(spin);
-
-        if (!isFloor(layout.getGrid(), footX, level, footZ)) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_STAIRS_FLOOR);
-            return;
-        }
-
-        int rise = findStairRise(layout.getGrid(), footX, footZ, stepX, stepZ, level);
-
-        if (rise == EngineSetting.SHIP_LEVEL_NONE) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_STAIRS_NO_FLOOR);
-            return;
-        }
-
         int acrossX = stepX == 0 ? 1 : 0;
         int acrossZ = stepZ == 0 ? 1 : 0;
 
         for (int step = 0; step < rise; step++)
-            for (int across = 0; across < EngineSetting.SHIP_STAIR_WIDTH; across++) {
-
-                int x = footX + stepX * step + acrossX * across;
-                int z = footZ + stepZ * step + acrossZ * across;
-
-                if (!layStep(layout, x, z, level + 1, level + 1 + step, level + rise))
-                    return;
-            }
+            for (int across = 0; across < EngineSetting.SHIP_STAIR_WIDTH; across++)
+                layStep(grid, footX + stepX * step + acrossX * across, footZ + stepZ * step + acrossZ * across,
+                        level + 1, level + 1 + step, level + rise);
 
         for (int across = 0; across < EngineSetting.SHIP_STAIR_WIDTH; across++) {
 
-            clearLanding(
-                    layout.getGrid(),
-                    footX + stepX * rise + acrossX * across,
-                    level + rise,
+            clearLanding(grid, footX + stepX * rise + acrossX * across, level + rise,
                     footZ + stepZ * rise + acrossZ * across);
 
             for (int back = 1; back <= EngineSetting.SHIP_STAIR_HEADROOM; back++)
-                clearHeadroom(
-                        layout.getGrid(),
-                        footX - stepX * back + acrossX * across,
-                        level + rise,
+                clearHeadroom(grid, footX - stepX * back + acrossX * across, level + rise,
                         footZ - stepZ * back + acrossZ * across);
         }
+    }
+
+    // Why a stair cannot stand with its foot at a cell, SHIP_PROBLEM_NONE when it can: its foot on floor, its run
+    // clear of the hull, its bulwarks and anything built under the deck above, and a floor a deck's height up just
+    // past its last tread to land on
+    String findStairProblem(ShipLayoutStruct layout, int cell) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int rise = EngineSetting.SHIP_DECK_HEIGHT;
+        int level = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int spin = ShipCellUtility.unpackSpin(cell);
+        int footX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
+        int footZ = ShipCellUtility.unpackZ(cell);
+        int stepX = ShipCellUtility.stepX(spin);
+        int stepZ = ShipCellUtility.stepZ(spin);
+        int acrossX = stepX == 0 ? 1 : 0;
+        int acrossZ = stepZ == 0 ? 1 : 0;
+
+        for (int across = 0; across < EngineSetting.SHIP_STAIR_WIDTH; across++) {
+
+            int x = footX + acrossX * across;
+            int z = footZ + acrossZ * across;
+
+            if (!isFloor(grid, x, level, z))
+                return EngineSetting.SHIPWRIGHT_PROBLEM_STAIRS_FLOOR;
+
+            for (int step = 0; step < rise; step++)
+                for (int y = level + 1; y <= level + rise; y++) {
+
+                    ShipPiece piece = grid.get(x + stepX * step, y, z + stepZ * step);
+
+                    if (!grid.contains(x + stepX * step, y, z + stepZ * step)
+                            || piece == ShipPiece.HULL || piece == ShipPiece.BULWARK)
+                        return EngineSetting.SHIPWRIGHT_PROBLEM_STAIRS_HULL;
+
+                    if (piece != null && y < level + rise)
+                        return EngineSetting.SHIPWRIGHT_PROBLEM_STAIRS_BLOCKED;
+                }
+
+            if (!isFloor(grid, x + stepX * rise, level + rise, z + stepZ * rise))
+                return EngineSetting.SHIPWRIGHT_PROBLEM_STAIRS_NO_FLOOR;
+        }
+
+        return EngineSetting.SHIP_PROBLEM_NONE;
     }
 
     // The floor over the approach to a stair's foot opened, so a climber's head clears it from the first step; a
@@ -410,38 +445,16 @@ class ShipwrightHullBranch extends BranchPackage {
         }
     }
 
-    // The octants a stair rises: the first run whose next octant along holds a floor that high, SHIP_LEVEL_NONE
-    // when none does within the tallest stair
-    private int findStairRise(ShipOctantGridStruct grid, int footX, int footZ, int stepX, int stepZ, int level) {
-
-        for (int rise = 1; rise <= EngineSetting.SHIP_STAIR_MAX_RISE; rise++)
-            if (isFloor(grid, footX + stepX * rise, level + rise, footZ + stepZ * rise))
-                return rise;
-
-        return EngineSetting.SHIP_LEVEL_NONE;
-    }
-
-    // A step's riser filled up to its tread and the floors over it opened; false when it runs into the hull
-    private boolean layStep(ShipLayoutStruct layout, int x, int z, int bottom, int tread, int top) {
-
-        ShipOctantGridStruct grid = layout.getGrid();
+    // A step's riser filled up to its tread and the floors over it opened
+    private void layStep(ShipOctantGridStruct grid, int x, int z, int bottom, int tread, int top) {
 
         for (int y = bottom; y <= top; y++) {
-
-            ShipPiece piece = grid.get(x, y, z);
-
-            if (!grid.contains(x, y, z) || piece == ShipPiece.HULL || piece == ShipPiece.BULWARK) {
-                layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_STAIRS_HULL);
-                return false;
-            }
 
             if (y <= tread)
                 grid.set(x, y, z, ShipPiece.STAIRS);
             else
                 grid.clear(x, y, z);
         }
-
-        return true;
     }
 
     // Ladders \\
@@ -458,24 +471,20 @@ class ShipwrightHullBranch extends BranchPackage {
     // up the face of the raised deck the ladder faces, its bulwark opened where the climber steps onto it
     private void layLadder(ShipLayoutStruct layout, int cell) {
 
+        String problem = findLadderProblem(layout, cell);
+
+        if (!problem.isEmpty()) {
+            layout.reportBuildProblem(problem);
+            return;
+        }
+
         ShipOctantGridStruct grid = layout.getGrid();
         int size = EngineSetting.SHIP_HATCH_OCTANTS;
         int level = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
         int spin = ShipCellUtility.unpackSpin(cell);
         int minX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
         int minZ = ShipCellUtility.unpackZ(cell);
-
-        if (!isOpenFloor(grid, minX, level, minZ, size, size)) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_LADDER_FLOOR);
-            return;
-        }
-
         int top = findLadderHead(grid, minX, level, minZ, size);
-
-        if (top == EngineSetting.SHIP_LEVEL_NONE) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_LADDER_BLOCKED);
-            return;
-        }
 
         if (top != EngineSetting.SHIP_DECK_NONE) {
 
@@ -487,17 +496,37 @@ class ShipwrightHullBranch extends BranchPackage {
 
         int rise = findFaceRise(grid, minX, level, minZ, size, spin);
 
-        if (rise == EngineSetting.SHIP_LEVEL_NONE) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_LADDER_NO_FLOOR);
-            return;
-        }
-
         for (int along = 0; along < size; along++)
             clearLanding(grid, resolveBeyondX(minX, size, spin, along), level + rise,
                     resolveBeyondZ(minZ, size, spin, along));
 
         layout.addLadder(minX, level + 1, minZ, minX + size, level + rise + 1 + EngineSetting.SHIP_LADDER_HANDHOLD,
                 minZ + size, spin);
+    }
+
+    // Why a ladder cannot stand at a cell, SHIP_PROBLEM_NONE when it can: on open floor, with a floor right over it
+    // or, in the open, the face of a raised deck before it to climb to
+    String findLadderProblem(ShipLayoutStruct layout, int cell) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int size = EngineSetting.SHIP_HATCH_OCTANTS;
+        int level = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int minX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
+        int minZ = ShipCellUtility.unpackZ(cell);
+
+        if (!isOpenFloor(grid, minX, level, minZ, size, size))
+            return EngineSetting.SHIPWRIGHT_PROBLEM_LADDER_FLOOR;
+
+        int top = findLadderHead(grid, minX, level, minZ, size);
+
+        if (top == EngineSetting.SHIP_LEVEL_NONE)
+            return EngineSetting.SHIPWRIGHT_PROBLEM_LADDER_BLOCKED;
+
+        if (top == EngineSetting.SHIP_DECK_NONE && findFaceRise(grid, minX, level, minZ, size,
+                ShipCellUtility.unpackSpin(cell)) == EngineSetting.SHIP_LEVEL_NONE)
+            return EngineSetting.SHIPWRIGHT_PROBLEM_LADDER_NO_FLOOR;
+
+        return EngineSetting.SHIP_PROBLEM_NONE;
     }
 
     // The floor right over a ladder's footprint: its layer once every octant of it is floor, SHIP_DECK_NONE when
@@ -568,6 +597,71 @@ class ShipwrightHullBranch extends BranchPackage {
         return stepZ < 0 ? minZ - 1 : minZ + along;
     }
 
+    // Boarding Ladders \\
+
+    void layBoardingLadders(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+
+        IntArrayList boardingLadders = blueprint.getBoardingLadders();
+
+        for (int i = 0; i < boardingLadders.size(); i++)
+            layBoardingLadder(layout, boardingLadders.getInt(i));
+    }
+
+    // A rope ladder hung from the edge of an open deck down the side to the keel, kept as the octants from the deck's
+    // edge out to the widest the side reaches below it, so it hangs clear of the hull all the way down; the bulwark is
+    // opened where it comes aboard
+    private void layBoardingLadder(ShipLayoutStruct layout, int cell) {
+
+        String problem = findBoardingProblem(layout, cell);
+
+        if (!problem.isEmpty()) {
+            layout.reportBuildProblem(problem);
+            return;
+        }
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int width = EngineSetting.SHIP_STAIR_WIDTH;
+        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int x = ShipCellUtility.unpackX(cell);
+        int z = ShipCellUtility.unpackZ(cell);
+        int gridX = layout.getOriginX() + x;
+        boolean starboard = z >= EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        int keel = floor;
+        int widest = ShipCellUtility.toHalfBreadth(z) + 1;
+
+        for (int along = 0; along < width; along++) {
+
+            clearLanding(grid, gridX + along, floor, z);
+            keel = Math.min(keel, findKeel(layout, x + along, EngineSetting.SHIP_SHEET_HALF_BREADTH));
+
+            for (int y = 0; y <= floor; y++)
+                widest = Math.max(widest, layout.getSection(x + along, y));
+        }
+
+        int outer = starboard ? ShipCellUtility.toStarboard(widest - 1) : ShipCellUtility.toPort(widest - 1);
+
+        layout.addBoardingLadder(gridX, keel, Math.min(z, outer), gridX + width,
+                floor + 1 + EngineSetting.SHIP_LADDER_HANDHOLD, Math.max(z, outer) + 1,
+                starboard ? 1 : EngineSetting.ENCODED_FACE_SPIN_COUNT - 1);
+    }
+
+    // Why a boarding ladder cannot hang at a cell, SHIP_PROBLEM_NONE when it can: both its octants the outermost of an
+    // open deck's floor
+    String findBoardingProblem(ShipLayoutStruct layout, int cell) {
+
+        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int x = ShipCellUtility.unpackX(cell);
+        int z = ShipCellUtility.unpackZ(cell);
+        int halfZ = ShipCellUtility.toHalfBreadth(z);
+
+        for (int along = 0; along < EngineSetting.SHIP_STAIR_WIDTH; along++)
+            if (layout.getSection(x + along, floor) != halfZ + 1
+                    || layout.getGrid().get(layout.getOriginX() + x + along, floor, z) != ShipPiece.WEATHER_DECK)
+                return EngineSetting.SHIPWRIGHT_PROBLEM_BOARDING_EDGE;
+
+        return EngineSetting.SHIP_PROBLEM_NONE;
+    }
+
     // Hatches \\
 
     void layHatches(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
@@ -581,32 +675,51 @@ class ShipwrightHullBranch extends BranchPackage {
     // A lid over the opening a hatch is set on, or over two by two octants of floor cut for it, over a deck below
     private void layHatch(ShipLayoutStruct layout, int cell) {
 
-        ShipOctantGridStruct grid = layout.getGrid();
-        int deck = ShipCellUtility.unpackLevel(cell);
-        int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
+        String problem = findHatchProblem(layout, cell);
+
+        if (!problem.isEmpty()) {
+            layout.reportBuildProblem(problem);
+            return;
+        }
+
+        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
         int x = ShipCellUtility.unpackX(cell);
         int z = ShipCellUtility.unpackZ(cell);
         int gridX = layout.getOriginX() + x;
         int spin = ShipCellUtility.unpackSpin(cell);
         int size = EngineSetting.SHIP_HATCH_OCTANTS;
 
-        if (deck == 0) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_HATCH_BOTTOM);
-            return;
-        }
-
         if (isOpening(layout, x, floor, z)) {
             layOpeningLid(layout, x, floor, z, spin);
             return;
         }
 
-        if (!isOpenFloor(grid, gridX, floor, z, size, size) || !isClearBelow(grid, gridX, floor, z, size)) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_HATCH_FLOOR);
-            return;
-        }
-
-        clearRect(grid, gridX, floor, z, size, size);
+        clearRect(layout.getGrid(), gridX, floor, z, size, size);
         layout.addHatch(gridX, floor, z, gridX + size, z + size, spin);
+    }
+
+    // Why a hatch cannot lie at a cell, SHIP_PROBLEM_NONE when it can: above the bottom deck, on the opening a stair or
+    // ladder leaves or on two by two octants of open floor over open room below
+    String findHatchProblem(ShipLayoutStruct layout, int cell) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int deck = ShipCellUtility.unpackLevel(cell);
+        int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
+        int x = ShipCellUtility.unpackX(cell);
+        int z = ShipCellUtility.unpackZ(cell);
+        int gridX = layout.getOriginX() + x;
+        int size = EngineSetting.SHIP_HATCH_OCTANTS;
+
+        if (deck == 0)
+            return EngineSetting.SHIPWRIGHT_PROBLEM_HATCH_BOTTOM;
+
+        if (isOpening(layout, x, floor, z))
+            return EngineSetting.SHIP_PROBLEM_NONE;
+
+        if (!isOpenFloor(grid, gridX, floor, z, size, size) || !isClearBelow(grid, gridX, floor, z, size))
+            return EngineSetting.SHIPWRIGHT_PROBLEM_HATCH_FLOOR;
+
+        return EngineSetting.SHIP_PROBLEM_NONE;
     }
 
     // The whole opening a hatch is set on closed by its lid: the run of opening along the length through the cell,
@@ -663,7 +776,7 @@ class ShipwrightHullBranch extends BranchPackage {
     // Queries \\
 
     // True when every octant of a rectangle is floor with nothing standing on it
-    private boolean isOpenFloor(ShipOctantGridStruct grid, int minX, int floor, int minZ, int sizeX, int sizeZ) {
+    boolean isOpenFloor(ShipOctantGridStruct grid, int minX, int floor, int minZ, int sizeX, int sizeZ) {
 
         for (int z = minZ; z < minZ + sizeZ; z++)
             for (int x = minX; x < minX + sizeX; x++)

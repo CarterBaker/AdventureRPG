@@ -39,7 +39,13 @@ class ShipwrightFittingBranch extends BranchPackage {
      * lowers the sill the sea comes aboard over. Every cannon fires through a
      * port of its own cut through the planking right before its muzzle, lidded,
      * never over a bulwark and never through a port another cannon shares.
-     * Every hatch is a wooden grating swinging open over its hatchway. Doors
+     * Every hatch lid and port lid is a framed panel battened on its inner
+     * face: a hatch lid lies flush in its hatchway, slats with gaps between
+     * them, and swings up about its longer side; a port lid closes the port
+     * from outside, one board set in from its frame, and swings out and up
+     * about its top edge; both open and shut with Activate. Every
+     * boarding ladder is rope and rungs hung clear of the side from the keel
+     * to past the deck's edge, a step bridging it to the deck. Doors
      * and furniture are cargo, real items drawn from furnishing tables to be
      * taken up, set down and used like any other: each is turned the way it
      * faces, sized to the octants its largest item takes up and centred in
@@ -59,6 +65,10 @@ class ShipwrightFittingBranch extends BranchPackage {
     // Scratch — main thread only
     private int[] footprint;
     private LongOpenHashSet claimedCells;
+    private int[] panelMin;
+    private int[] panelMax;
+    private int[] boxMin;
+    private int[] boxMax;
 
     // Base \\
 
@@ -68,6 +78,10 @@ class ShipwrightFittingBranch extends BranchPackage {
         // Scratch
         this.footprint = new int[EngineSetting.AXIS_COUNT];
         this.claimedCells = new LongOpenHashSet();
+        this.panelMin = new int[EngineSetting.AXIS_COUNT];
+        this.panelMax = new int[EngineSetting.AXIS_COUNT];
+        this.boxMin = new int[EngineSetting.AXIS_COUNT];
+        this.boxMax = new int[EngineSetting.AXIS_COUNT];
     }
 
     @Override
@@ -325,77 +339,203 @@ class ShipwrightFittingBranch extends BranchPackage {
         addHatchLids(layout);
         addPortLids(layout);
         addLadders(layout);
+        addBoardingLadders(layout);
         addPanes(layout);
     }
 
     // Lids \\
 
-    // A wooden grating lying in every hatchway, hinged along the edge its quarter turn faces, swinging up and over
+    // A lid lying flush in every hatchway, hinged along its longer side, swinging up and over
     private void addHatchLids(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getHatchBoxes();
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         float angle = (float) Math.toRadians(EngineSetting.SHIP_HATCH_OPEN_DEGREES);
 
         for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
 
-            int spin = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.SHIP_FITTING_SPIN);
-            boolean alongX = ShipCellUtility.stepX(spin) != 0;
-            boolean positive = ShipCellUtility.stepX(spin) > 0 || ShipCellUtility.stepZ(spin) > 0;
-            float sign = spin == 1 || spin == 2 ? 1f : -1f;
+            int hinge = resolveHingeSpin(boxes, i);
+            boolean acrossX = ShipCellUtility.stepX(hinge) != 0;
+            int top = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Y) * octant;
 
-            addLid(layout, boxes, i, EngineSetting.SHIP_PART_HATCH + (i + 1), EngineSetting.SHIP_TEXTURE_GRATING,
-                    alongX, positive, alongX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X, sign * angle);
+            readFittingBox(boxes, i);
+            panelMin[EngineSetting.AXIS_Y] = top - EngineSetting.SHIP_LID_THICKNESS_SUB_VOXELS;
+            panelMax[EngineSetting.AXIS_Y] = top;
+
+            VehiclePartStruct lid = createLid(EngineSetting.SHIP_PART_HATCH + (i + 1), EngineSetting.SHIP_TEXTURE_DECK,
+                    hinge, top, acrossX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X,
+                    (hinge == 1 || hinge == 2 ? 1f : -1f) * angle);
+
+            addPanel(lid, EngineSetting.AXIS_Y, true, acrossX ? EngineSetting.AXIS_X : EngineSetting.AXIS_Z, true);
+            layout.addPart(lid);
         }
     }
 
-    // A lid over every gun port cut through the planking, hinged along its top outer edge, swinging out and up
+    // The side of a hatch's box its lid is hinged along: one of its two longer sides, the one its quarter turn
+    // favours, or the side it faces when the box is square
+    int resolveHingeSpin(IntArrayList boxes, int fittingIndex) {
+
+        int spin = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.SHIP_FITTING_SPIN);
+        int sizeX = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MAX_X)
+                - ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MIN_X);
+        int sizeZ = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MAX_Z)
+                - ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MIN_Z);
+
+        if (sizeX > sizeZ && ShipCellUtility.stepX(spin) != 0)
+            return spin == 0 ? 1 : EngineSetting.ENCODED_FACE_SPIN_COUNT - 1;
+
+        if (sizeZ > sizeX && ShipCellUtility.stepZ(spin) != 0)
+            return spin == 1 ? 0 : 2;
+
+        return spin;
+    }
+
+    // A lid over every gun port cut through the planking, closing it from outside, hinged along its top outer edge,
+    // swinging out and up
     private void addPortLids(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getPortBoxes();
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int thickness = EngineSetting.SHIP_LID_THICKNESS_SUB_VOXELS;
         float angle = (float) Math.toRadians(EngineSetting.SHIP_PORT_OPEN_DEGREES);
 
         for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
 
             int spin = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.SHIP_FITTING_SPIN);
             boolean alongX = ShipCellUtility.stepX(spin) != 0;
-            boolean positive = ShipCellUtility.stepX(spin) > 0 || ShipCellUtility.stepZ(spin) > 0;
-            float sign = spin == 0 || spin == EngineSetting.ENCODED_FACE_SPIN_COUNT - 1 ? 1f : -1f;
+            boolean outward = ShipCellUtility.stepX(spin) > 0 || ShipCellUtility.stepZ(spin) > 0;
+            int normal = alongX ? EngineSetting.AXIS_X : EngineSetting.AXIS_Z;
+            int top = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Y) * octant;
 
-            addLid(layout, boxes, i, EngineSetting.SHIP_PART_PORT_LID + (i + 1), EngineSetting.SHIP_TEXTURE_HULL,
-                    alongX, positive, alongX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X, sign * angle);
+            readFittingBox(boxes, i);
+
+            if (outward)
+                panelMin[normal] = panelMax[normal] - thickness;
+            else
+                panelMax[normal] = panelMin[normal] + thickness;
+
+            VehiclePartStruct lid = createLid(EngineSetting.SHIP_PART_PORT_LID + (i + 1),
+                    EngineSetting.SHIP_TEXTURE_WALL, spin, top, alongX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X,
+                    (spin == 0 || spin == EngineSetting.ENCODED_FACE_SPIN_COUNT - 1 ? 1f : -1f) * angle);
+
+            addPanel(lid, normal, outward, EngineSetting.AXIS_Y, false);
+            layout.addPart(lid);
         }
     }
 
-    // A door part filling a fitting's octants, hinged across the top of the edge given: the far or near end along
-    // the length or across it
-    private void addLid(
-            ShipLayoutStruct layout,
-            IntArrayList boxes,
-            int lidIndex,
+    // A fitting's octant box in sub-voxels, written to the panel scratch
+    private void readFittingBox(IntArrayList boxes, int fittingIndex) {
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+
+        for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++) {
+            panelMin[axis] = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MIN_X + axis)
+                    * octant;
+            panelMax[axis] = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MAX_X + axis)
+                    * octant;
+        }
+    }
+
+    // A door part hinged at a height along the edge of the panel scratch a quarter turn faces
+    private VehiclePartStruct createLid(
             String partName,
             String textureName,
-            boolean alongX,
-            boolean positive,
+            int hinge,
+            int hingeY,
             int axis,
             float openAngle) {
 
-        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
-        int minX = ShipLayoutStruct.getFittingBound(boxes, lidIndex, EngineSetting.BOX_MIN_X) * octant;
-        int minY = ShipLayoutStruct.getFittingBound(boxes, lidIndex, EngineSetting.BOX_MIN_Y) * octant;
-        int minZ = ShipLayoutStruct.getFittingBound(boxes, lidIndex, EngineSetting.BOX_MIN_Z) * octant;
-        int maxX = ShipLayoutStruct.getFittingBound(boxes, lidIndex, EngineSetting.BOX_MAX_X) * octant;
-        int maxY = ShipLayoutStruct.getFittingBound(boxes, lidIndex, EngineSetting.BOX_MAX_Y) * octant;
-        int maxZ = ShipLayoutStruct.getFittingBound(boxes, lidIndex, EngineSetting.BOX_MAX_Z) * octant;
-        float hingeX = alongX ? (positive ? maxX : minX) : (minX + maxX) * 0.5f;
-        float hingeZ = alongX ? (minZ + maxZ) * 0.5f : (positive ? maxZ : minZ);
+        int stepX = ShipCellUtility.stepX(hinge);
+        int stepZ = ShipCellUtility.stepZ(hinge);
+        float hingeX = stepX > 0 ? panelMax[EngineSetting.AXIS_X]
+                : stepX < 0 ? panelMin[EngineSetting.AXIS_X]
+                        : (panelMin[EngineSetting.AXIS_X] + panelMax[EngineSetting.AXIS_X]) * 0.5f;
+        float hingeZ = stepZ > 0 ? panelMax[EngineSetting.AXIS_Z]
+                : stepZ < 0 ? panelMin[EngineSetting.AXIS_Z]
+                        : (panelMin[EngineSetting.AXIS_Z] + panelMax[EngineSetting.AXIS_Z]) * 0.5f;
 
-        VehiclePartStruct lid = new VehiclePartStruct(
+        return new VehiclePartStruct(
                 partName, VehiclePartRole.DOOR, textureName, EngineSetting.SHIP_LINK_NONE,
-                new Vector3(hingeX * scale, maxY * scale, hingeZ * scale), axis, openAngle);
-        lid.addBox(minX, minY, minZ, maxX, maxY, maxZ);
+                new Vector3(hingeX * scale, hingeY * scale, hingeZ * scale), axis, openAngle);
+    }
 
-        layout.addPart(lid);
+    // The panel scratch built as a lid a thickness along its normal: a frame round its rim, set in from the outer face
+    // between it either slats running along an axis and parted by gaps or one board, and two battens across them on
+    // the inner face
+    private void addPanel(VehiclePartStruct part, int normal, boolean outerPositive, int runAxis, boolean slatted) {
+
+        int across = EngineSetting.AXIS_COUNT * (EngineSetting.AXIS_COUNT - 1) / 2 - normal - runAxis;
+        int frame = EngineSetting.SHIP_LID_FRAME_SUB_VOXELS;
+        int recess = EngineSetting.SHIP_LID_RECESS_SUB_VOXELS;
+        int batten = EngineSetting.SHIP_LID_BATTEN_SUB_VOXELS;
+        int pitch = slatted
+                ? EngineSetting.SHIP_LID_SLAT_SUB_VOXELS + EngineSetting.SHIP_LID_GAP_SUB_VOXELS
+                : panelMax[across] - panelMin[across];
+        int runLength = panelMax[runAxis] - panelMin[runAxis];
+
+        addPanelBox(part, across, panelMin[across], panelMin[across] + frame, normal, 0, 0);
+        addPanelBox(part, across, panelMax[across] - frame, panelMax[across], normal, 0, 0);
+        addPanelBox(part, runAxis, panelMin[runAxis], panelMin[runAxis] + frame, across, frame, frame);
+        addPanelBox(part, runAxis, panelMax[runAxis] - frame, panelMax[runAxis], across, frame, frame);
+
+        for (int slat = panelMin[across] + frame; slat < panelMax[across] - frame; slat += pitch) {
+
+            resetPanelBox();
+            boxMin[across] = slat;
+            boxMax[across] = slatted
+                    ? Math.min(slat + EngineSetting.SHIP_LID_SLAT_SUB_VOXELS, panelMax[across] - frame)
+                    : panelMax[across] - frame;
+            boxMin[runAxis] += frame;
+            boxMax[runAxis] -= frame;
+
+            if (outerPositive)
+                boxMax[normal] -= recess;
+            else
+                boxMin[normal] += recess;
+
+            part.addBox(boxMin[0], boxMin[1], boxMin[2], boxMax[0], boxMax[1], boxMax[2]);
+        }
+
+        for (int quarter = 1; quarter < EngineSetting.SHIP_LID_BATTEN_COUNT * 2; quarter += 2) {
+
+            int middle = panelMin[runAxis] + runLength * quarter / (EngineSetting.SHIP_LID_BATTEN_COUNT * 2);
+
+            resetPanelBox();
+            boxMin[runAxis] = middle - batten / 2;
+            boxMax[runAxis] = boxMin[runAxis] + batten;
+            boxMin[across] += frame;
+            boxMax[across] -= frame;
+
+            if (outerPositive) {
+                boxMax[normal] = panelMin[normal];
+                boxMin[normal] = panelMin[normal] - batten;
+            } else {
+                boxMin[normal] = panelMax[normal];
+                boxMax[normal] = panelMax[normal] + batten;
+            }
+
+            part.addBox(boxMin[0], boxMin[1], boxMin[2], boxMax[0], boxMax[1], boxMax[2]);
+        }
+    }
+
+    // One strip of the panel scratch between two bounds on an axis, the whole thickness of the panel, trimmed at both
+    // ends of another axis
+    private void addPanelBox(VehiclePartStruct part, int axis, int min, int max, int trimAxis, int trimMin,
+            int trimMax) {
+
+        resetPanelBox();
+        boxMin[axis] = min;
+        boxMax[axis] = max;
+        boxMin[trimAxis] += trimMin;
+        boxMax[trimAxis] -= trimMax;
+
+        part.addBox(boxMin[0], boxMin[1], boxMin[2], boxMax[0], boxMax[1], boxMax[2]);
+    }
+
+    private void resetPanelBox() {
+        System.arraycopy(panelMin, 0, boxMin, 0, EngineSetting.AXIS_COUNT);
+        System.arraycopy(panelMax, 0, boxMax, 0, EngineSetting.AXIS_COUNT);
     }
 
     // Ladders \\
@@ -458,6 +598,71 @@ class ShipwrightFittingBranch extends BranchPackage {
         ladders.addQuad(
                 stepZ > 0 ? EngineSetting.SUB_VOXEL_FACE_POSITIVE_Z : EngineSetting.SUB_VOXEL_FACE_NEGATIVE_Z,
                 minX, minY, face, maxX, minY, face, maxX, maxY, face, minX, maxY, face);
+    }
+
+    // Boarding Ladders \\
+
+    // Every boarding ladder rungs between two ropes hung clear of the side from the keel up past the deck's edge, and a
+    // step bridging its head to the deck, its rungs and ropes climbable
+    private void addBoardingLadders(ShipLayoutStruct layout) {
+
+        IntArrayList boxes = layout.getBoardingLadderBoxes();
+
+        if (ShipLayoutStruct.countFittings(boxes) == 0)
+            return;
+
+        VehiclePartStruct rungs = new VehiclePartStruct(
+                EngineSetting.SHIP_PART_BOARDING_LADDERS, VehiclePartRole.LADDER, EngineSetting.SHIP_TEXTURE_RUNGS,
+                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
+        VehiclePartStruct ropes = new VehiclePartStruct(
+                EngineSetting.SHIP_PART_BOARDING_ROPES, VehiclePartRole.LADDER, EngineSetting.SHIP_TEXTURE_ROPE,
+                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
+        VehiclePartStruct steps = new VehiclePartStruct(
+                EngineSetting.SHIP_PART_BOARDING_STEPS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_DECK,
+                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
+
+        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++)
+            addBoardingLadder(boxes, i, rungs, ropes, steps);
+
+        layout.addPart(steps);
+        layout.addPart(ropes);
+        layout.addPart(rungs);
+    }
+
+    private void addBoardingLadder(
+            IntArrayList boxes,
+            int ladderIndex,
+            VehiclePartStruct rungs,
+            VehiclePartStruct ropes,
+            VehiclePartStruct steps) {
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int step = EngineSetting.SHIP_BOARDING_STEP_SUB_VOXELS;
+        int inset = EngineSetting.SHIP_LADDER_INSET_SUB_VOXELS;
+        boolean starboard = ShipLayoutStruct.getFittingBound(boxes, ladderIndex, EngineSetting.SHIP_FITTING_SPIN) == 1;
+        int minX = ShipLayoutStruct.getFittingBound(boxes, ladderIndex, EngineSetting.BOX_MIN_X) * octant;
+        int minY = ShipLayoutStruct.getFittingBound(boxes, ladderIndex, EngineSetting.BOX_MIN_Y) * octant;
+        int minZ = ShipLayoutStruct.getFittingBound(boxes, ladderIndex, EngineSetting.BOX_MIN_Z) * octant;
+        int maxX = ShipLayoutStruct.getFittingBound(boxes, ladderIndex, EngineSetting.BOX_MAX_X) * octant;
+        int maxY = ShipLayoutStruct.getFittingBound(boxes, ladderIndex, EngineSetting.BOX_MAX_Y) * octant;
+        int maxZ = ShipLayoutStruct.getFittingBound(boxes, ladderIndex, EngineSetting.BOX_MAX_Z) * octant;
+        int deckTop = maxY - EngineSetting.SHIP_LADDER_HANDHOLD * octant;
+        int edge = starboard ? minZ + octant : maxZ - octant;
+        int reach = starboard
+                ? Math.max(maxZ + EngineSetting.SHIP_BOARDING_OUTBOARD_SUB_VOXELS, edge + step)
+                : Math.min(minZ - EngineSetting.SHIP_BOARDING_OUTBOARD_SUB_VOXELS, edge - step);
+        int face = Math.max(0, Math.min(EngineSetting.SHIP_SHEET_BREADTH * octant, reach));
+
+        if (face != edge)
+            steps.addBox(minX, deckTop - EngineSetting.SHIP_LID_THICKNESS_SUB_VOXELS, Math.min(edge, face),
+                    maxX, deckTop, Math.max(edge, face));
+
+        rungs.addQuad(
+                starboard ? EngineSetting.SUB_VOXEL_FACE_POSITIVE_Z : EngineSetting.SUB_VOXEL_FACE_NEGATIVE_Z,
+                minX + inset, minY, face, maxX - inset, minY, face, maxX - inset, maxY, face, minX + inset, maxY,
+                face);
+        ShipRopeUtility.addRope(ropes, minX + inset, minY, face, minX + inset, maxY, face);
+        ShipRopeUtility.addRope(ropes, maxX - inset, minY, face, maxX - inset, maxY, face);
     }
 
     // Glass \\
@@ -905,10 +1110,6 @@ class ShipwrightFittingBranch extends BranchPackage {
     }
 
     // Accessible \\
-
-    boolean isKnownFurnishing(String furnishingName) {
-        return furnishingManager.hasFurnishing(furnishingName);
-    }
 
     // The octants along x, up y and across z the footprint last resolved spans
     int getFootprint(int axis) {

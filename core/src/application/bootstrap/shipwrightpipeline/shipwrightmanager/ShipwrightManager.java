@@ -3,8 +3,10 @@ package application.bootstrap.shipwrightpipeline.shipwrightmanager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipClimb;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
@@ -30,6 +32,9 @@ public class ShipwrightManager extends ManagerPackage {
      * here, writing to the assets or to the saves, and every change it makes
      * is worked through ShipwrightEditBranch, compiled through
      * ShipwrightCompileBranch at once and drawn through ShipwrightDraftBranch;
+     * what stands under the cursor, and why the thing in hand could not be
+     * set down there, is found through ShipwrightInspectBranch whenever the
+     * table changes;
      * measuring it through ShipwrightSurveyBranch meshes the whole ship, so
      * that waits until the drawing has rested a moment, keeping every stroke
      * and press free of a hitch. A new ship starts as a blank sheet, its
@@ -63,6 +68,7 @@ public class ShipwrightManager extends ManagerPackage {
     private ShipwrightLibraryBranch shipwrightLibraryBranch;
     private ShipwrightEditBranch shipwrightEditBranch;
     private ShipwrightRigBranch shipwrightRigBranch;
+    private ShipwrightInspectBranch shipwrightInspectBranch;
 
     // Furnishings — the tables furniture is drawn from at a drafting table
     private ObjectArrayList<String> furnishingNames;
@@ -79,6 +85,7 @@ public class ShipwrightManager extends ManagerPackage {
         create(ShipwrightHullBranch.class);
         this.shipwrightRigBranch = create(ShipwrightRigBranch.class);
         create(ShipwrightFittingBranch.class);
+        this.shipwrightInspectBranch = create(ShipwrightInspectBranch.class);
         this.shipwrightCompileBranch = create(ShipwrightCompileBranch.class);
         this.shipwrightSurveyBranch = create(ShipwrightSurveyBranch.class);
         this.shipwrightDraftBranch = create(ShipwrightDraftBranch.class);
@@ -222,6 +229,18 @@ public class ShipwrightManager extends ManagerPackage {
 
     public void drawSheet(ShipwrightSessionInstance session) {
         shipwrightDraftBranch.drawSheet(session);
+    }
+
+    // Whatever stands under the cursor, and why the thing in hand could not be set down there, written to the session
+    public void inspect(ShipwrightSessionInstance session) {
+
+        int x = ShipwrightEditBranch.toSheetX(session.getCursorU());
+        int z = ShipwrightEditBranch.toSheetZ(session.getCursorV());
+
+        shipwrightInspectBranch.pick(session, x, z, session.getHover());
+        session.setPlacementProblem(session.getHover().isEmpty()
+                ? shipwrightEditBranch.findPlacementProblem(session, x, z)
+                : EngineSetting.SHIP_PROBLEM_NONE);
     }
 
     // The octants the sheet spans, written to the session
@@ -394,12 +413,16 @@ public class ShipwrightManager extends ManagerPackage {
         shipwrightEditBranch.togglePorch(session);
     }
 
-    public void turn(ShipwrightSessionInstance session) {
-        shipwrightEditBranch.turn(session);
+    public void turn(ShipwrightSessionInstance session, int step) {
+        shipwrightEditBranch.turn(session, step);
     }
 
     public void stepOption(ShipwrightSessionInstance session, int step) {
         shipwrightEditBranch.stepOption(session, step);
+    }
+
+    public void pickOption(ShipwrightSessionInstance session, int index) {
+        shipwrightEditBranch.pickOption(session, index);
     }
 
     public void nextTool(ShipwrightSessionInstance session) {
@@ -424,8 +447,34 @@ public class ShipwrightManager extends ManagerPackage {
         return furnishingNames.size();
     }
 
+    // How many options the tool in hand offers in its catalogue
+    public int getOptionCount(ShipwrightSessionInstance session) {
+        return shipwrightEditBranch.getOptionCount(session);
+    }
+
+    // The option of the tool in hand picked, INDEX_NOT_FOUND when none is
+    public int getOptionIndex(ShipwrightSessionInstance session) {
+        return shipwrightEditBranch.getOptionIndex(session);
+    }
+
+    // The name an option of a tool's catalogue is shown by
+    public String getOptionName(ShipwrightSessionInstance session, ShipwrightTool tool, int option) {
+
+        if (option < 0)
+            return tool == ShipwrightTool.FURNITURE ? EngineSetting.SHIPWRIGHT_TEXT_UNKNOWN_ITEM : tool.getTitle();
+
+        return switch (tool) {
+            case WALLS -> option == 1 ? EngineSetting.SHIPWRIGHT_TEXT_HALF_WALL : EngineSetting.SHIPWRIGHT_TEXT_FULL_WALL;
+            case OPENINGS -> ShipOpening.VALUES[option].getTitle();
+            case STAIRS -> ShipClimb.VALUES[option].getTitle();
+            case FURNITURE -> getItemName(option);
+            case MASTS -> getMastName(session, option);
+            default -> tool.getTitle();
+        };
+    }
+
     // The name of the furniture item at an index of the drafting table's list: the helm, the capstan, then every
-    // furnishing table by its own name
+    // furnishing by the name of the item it furnishes
     public String getItemName(int itemIndex) {
 
         int item = Math.floorMod(itemIndex, EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS + furnishingNames.size());
@@ -436,14 +485,21 @@ public class ShipwrightManager extends ManagerPackage {
         if (item == EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN)
             return EngineSetting.SHIPWRIGHT_TEXT_CAPSTAN;
 
-        String furnishingName = furnishingNames.get(item - EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS);
-
-        return furnishingName.substring(furnishingName.lastIndexOf(EngineSetting.PATH_SEPARATOR) + 1);
+        return furnishingManager.getFurnishingHandleFromFurnishingName(getItemFurnishingName(item)).getItems()[0]
+                .getDisplayName();
     }
 
-    // The furnishing table at an index of the drafting table's list of furnishings
-    public String getFurnishingName(int index) {
-        return furnishingNames.get(index);
+    // The furnishing table a furniture item past the helm and the capstan is drawn from
+    public String getItemFurnishingName(int itemIndex) {
+        return furnishingNames.get(itemIndex - EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS);
+    }
+
+    // The furniture item a furnishing table is listed as, INDEX_NOT_FOUND for one the drafting table does not offer
+    public int findItemIndex(String furnishingName) {
+
+        int index = furnishingNames.indexOf(furnishingName);
+
+        return index == EngineSetting.INDEX_NOT_FOUND ? index : EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS + index;
     }
 
     public String getMastName(ShipwrightSessionInstance session, int mastIndex) {
