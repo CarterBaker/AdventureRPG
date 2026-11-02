@@ -13,9 +13,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class EditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the editor toolbar. Window and tool operations
-     * open tabs in the clicked OS window; layout operations list saved layouts
-     * and create, load, save over, and delete them.
+     * Menu event handlers for the editor toolbar. Each dropdown's operations
+     * open their tool's tab in the clicked OS window; layout operations list
+     * saved layouts and create, load, save over, and delete them, listing
+     * them again the moment one is created or deleted so the dropdown never
+     * shows a layout that is not on disk.
      */
 
     // Internal
@@ -23,6 +25,9 @@ public class EditorBranch extends BranchPackage {
     private TabManager tabManager;
     private LayoutManager layoutManager;
     private NameDialogBranch nameDialogBranch;
+
+    // Layouts
+    private MenuInstance layoutMenu;
 
     // Base \\
 
@@ -34,33 +39,7 @@ public class EditorBranch extends BranchPackage {
         this.nameDialogBranch = get(NameDialogBranch.class);
     }
 
-    // Window Operations \\
-
-    public void openPreview(WindowInstance window) {
-        tabManager.openPreview(window.getGLWindow());
-    }
-
-    public void openDev(WindowInstance window) {
-        tabManager.openDev(window.getGLWindow());
-    }
-
-    public void openRecorder(WindowInstance window) {
-        tabManager.openRecorder(window.getGLWindow());
-    }
-
-    public void openRecordings(WindowInstance window) {
-        tabManager.openRecordings(window.getGLWindow());
-    }
-
-    public void openSoundLibrary(WindowInstance window) {
-        tabManager.openSoundLibrary(window.getGLWindow());
-    }
-
-    public void openTransitions(WindowInstance window) {
-        tabManager.openTransitions(window.getGLWindow());
-    }
-
-    // Tool Operations \\
+    // Content Dropdown \\
 
     public void openHierarchy(WindowInstance window) {
         tabManager.openHierarchy(window.getGLWindow());
@@ -70,9 +49,33 @@ public class EditorBranch extends BranchPackage {
         tabManager.openInfoPanel(window.getGLWindow());
     }
 
+    public void openArpgViewer(WindowInstance window) {
+        tabManager.openArpgViewer(window.getGLWindow());
+    }
+
+    public void openTools(WindowInstance window) {
+        tabManager.openTools(window.getGLWindow());
+    }
+
+    public void openBrushes(WindowInstance window) {
+        tabManager.openBrushes(window.getGLWindow());
+    }
+
+    // Assets Dropdown \\
+
     public void openItemEditor(WindowInstance window) {
         tabManager.openItemEditor(window.getGLWindow());
     }
+
+    public void openTextureViewer(WindowInstance window) {
+        tabManager.openTextureViewer(window.getGLWindow());
+    }
+
+    public void openShipwright(WindowInstance window) {
+        tabManager.openShipwright(window.getGLWindow());
+    }
+
+    // Characters Dropdown \\
 
     public void openCharacterEditor(WindowInstance window) {
         tabManager.openCharacterEditor(window.getGLWindow());
@@ -106,13 +109,7 @@ public class EditorBranch extends BranchPackage {
         tabManager.openAnimationTreeEditor(window.getGLWindow());
     }
 
-    public void openTextureViewer(WindowInstance window) {
-        tabManager.openTextureViewer(window.getGLWindow());
-    }
-
-    public void openShipwright(WindowInstance window) {
-        tabManager.openShipwright(window.getGLWindow());
-    }
+    // World Dropdown \\
 
     public void openWorldMap(WindowInstance window) {
         tabManager.openWorldMap(window.getGLWindow());
@@ -122,20 +119,16 @@ public class EditorBranch extends BranchPackage {
         tabManager.openWorldEditor(window.getGLWindow());
     }
 
+    public void openPalette(WindowInstance window) {
+        tabManager.openPalette(window.getGLWindow());
+    }
+
     public void openSettlementPlanner(WindowInstance window) {
         tabManager.openSettlementPlanner(window.getGLWindow());
     }
 
     public void openCameraPlanner(WindowInstance window) {
         tabManager.openCameraPlanner(window.getGLWindow());
-    }
-
-    public void openTools(WindowInstance window) {
-        tabManager.openTools(window.getGLWindow());
-    }
-
-    public void openBrushes(WindowInstance window) {
-        tabManager.openBrushes(window.getGLWindow());
     }
 
     public void openBiomePlanner(WindowInstance window) {
@@ -154,8 +147,32 @@ public class EditorBranch extends BranchPackage {
         tabManager.openTreeViewer(window.getGLWindow());
     }
 
-    public void openPalette(WindowInstance window) {
-        tabManager.openPalette(window.getGLWindow());
+    // Media Dropdown \\
+
+    public void openRecorder(WindowInstance window) {
+        tabManager.openRecorder(window.getGLWindow());
+    }
+
+    public void openRecordings(WindowInstance window) {
+        tabManager.openRecordings(window.getGLWindow());
+    }
+
+    public void openSoundLibrary(WindowInstance window) {
+        tabManager.openSoundLibrary(window.getGLWindow());
+    }
+
+    public void openTransitions(WindowInstance window) {
+        tabManager.openTransitions(window.getGLWindow());
+    }
+
+    // Debug Dropdown \\
+
+    public void openPreview(WindowInstance window) {
+        tabManager.openPreview(window.getGLWindow());
+    }
+
+    public void openDev(WindowInstance window) {
+        tabManager.openDev(window.getGLWindow());
     }
 
     public void openConsole(WindowInstance window) {
@@ -170,13 +187,11 @@ public class EditorBranch extends BranchPackage {
         tabManager.openProfiler(window.getGLWindow());
     }
 
-    public void openArpgViewer(WindowInstance window) {
-        tabManager.openArpgViewer(window.getGLWindow());
-    }
-
     // Layout Dropdown \\
 
     public void refreshLayoutList(MenuInstance menu) {
+
+        this.layoutMenu = menu;
 
         ElementInstance list = menu.getEntryPoint(EditorSetting.ENTRY_LAYOUTS_LIST);
 
@@ -212,7 +227,7 @@ public class EditorBranch extends BranchPackage {
                 window,
                 EditorSetting.DIALOG_TITLE_CREATE_LAYOUT,
                 layoutManager::isLayoutNameAvailable,
-                layoutManager::createLayout);
+                this::createLayout);
     }
 
     public void loadLayout(String layoutName) {
@@ -228,6 +243,18 @@ public class EditorBranch extends BranchPackage {
                 window,
                 EditorSetting.DIALOG_TITLE_DELETE_PREFIX + layoutName + EditorSetting.DIALOG_TITLE_DELETE_SUFFIX,
                 layoutName::equals,
-                confirmedName -> layoutManager.deleteLayout(layoutName));
+                this::removeLayout);
+    }
+
+    private void createLayout(String layoutName) {
+
+        layoutManager.createLayout(layoutName);
+        refreshLayoutList(layoutMenu);
+    }
+
+    private void removeLayout(String layoutName) {
+
+        layoutManager.deleteLayout(layoutName);
+        refreshLayoutList(layoutMenu);
     }
 }

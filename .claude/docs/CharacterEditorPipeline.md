@@ -9,7 +9,7 @@ shaders). `.claude/CLAUDE.md` still applies in full.
 ## Windows
 
 Every character tool is split into windows, the way Krita splits its dockers. A viewport tab holds the toolbar, the
-status bar and the viewport; everything else is its own tab, opened from the editor's Content menu and restored by
+status bar and the viewport; everything else is its own tab, opened from the editor's Characters menu and restored by
 layouts like any other.
 
 | Window | Context | Shows |

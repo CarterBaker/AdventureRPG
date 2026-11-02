@@ -82,6 +82,9 @@ One line per session that changed this file: the date, what was added or removed
   and mouth features, the face overlay textures (`Face`, every eye, brow and mouth set), `Hair_A.png`,
   `CharacterFace.glsl`, and the hair styles `BunHair`, `BuzzHair`, `LongHair`, `MohawkHair`, `SpikyHair` and
   `SweptHair` (meshes and features), built for the old split head.
+- 2026-11-02: Editor menus. Regenerated `menus/editor/EditorWindow.arpg` (every tool sorted into the Content, Assets,
+  Characters, World, Media and Debug dropdowns, each sectioned under headers; the Testing dropdown folded into Media
+  and Debug).
 
 ---
 
