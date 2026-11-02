@@ -6,8 +6,8 @@ public class ShipViewerSetting {
 
     /*
      * Constants used only by ShipViewerContext — its material and render
-     * order, its orbit camera and mouse binding, its menu and the steps its
-     * buttons take through the vehicles, and the text of its status line.
+     * order, its orbit camera and mouse binding, its menu, and the text of
+     * its status line.
      */
 
     // Materials
@@ -33,9 +33,9 @@ public class ShipViewerSetting {
 
     // Text
     public static final String STATUS_PREFIX = "Ship Viewer  |  ";
-    public static final String STATUS_NONE = "No ship registered — save one at the Shipwright";
+    public static final String STATUS_NONE =
+            "No ship chosen — select one in the hierarchy or open one at the Shipwright";
+    public static final String STATUS_UNREGISTERED = " is not built — save it at the Shipwright";
     public static final String STATUS_SEPARATOR = "  ·  ";
-    public static final String STATUS_OF = " of ";
     public static final String STATUS_PARTS = " parts";
-    public static final String STATUS_FOLLOWING = "shows each ship as it is saved";
 }

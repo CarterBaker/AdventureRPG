@@ -96,6 +96,8 @@ One line per session that changed this file: the date, what was added or removed
   `editor/shipviewer/ShipViewerShader` (`.arpg` and `.fsh`) and the material `ShipViewerMaterial.arpg`, for the editor
   tab that shows each ship as it is saved at the Shipwright; regenerated `EditorWindow.arpg` (Ship Viewer button under
   Vehicles in the Assets dropdown).
+- 2026-11-02: Ship Viewer follows the choice. Regenerated `menus/editor/ShipViewer.arpg` (Previous and Next toolbar
+  removed; the viewer shows the ship chosen in the hierarchy or at the Shipwright).
 ---
 
 ## Textures and Sprites (2174 files)

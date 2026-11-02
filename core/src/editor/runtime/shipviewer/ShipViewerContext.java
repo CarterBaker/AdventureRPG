@@ -10,12 +10,11 @@ import engine.root.ContextPackage;
 public class ShipViewerContext extends ContextPackage {
 
     /*
-     * Editor tab showing a vehicle as the game draws it, at rest with its
-     * sails set and its anchors aboard, lit by one fixed light. It follows
-     * the palette: each ship saved at the Shipwright is registered again at
-     * once and shows here the moment it is, and the toolbar steps through
-     * every vehicle there is. The orbit button turns the view and scrolling
-     * zooms.
+     * Editor tab showing the ship chosen in the hierarchy or at the
+     * Shipwright as the game draws it, at rest with its sails set and its
+     * anchors aboard, lit by one fixed light. A ship saved at the Shipwright
+     * is registered again at once and shows here the moment it is. The orbit
+     * button turns the view and scrolling zooms.
      */
 
     // Internal
@@ -39,12 +38,5 @@ public class ShipViewerContext extends ContextPackage {
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
-    }
-
-    // Management \\
-
-    // The vehicle a number of places along the palette from the one shown
-    public void step(int step) {
-        shipViewerSystem.step(step);
     }
 }

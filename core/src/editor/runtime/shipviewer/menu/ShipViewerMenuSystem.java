@@ -15,10 +15,9 @@ import engine.root.SystemPackage;
 public class ShipViewerMenuSystem extends SystemPackage {
 
     /*
-     * Opens the Ship Viewer's toolbar and status line over the viewport. The
-     * toolbar steps to the previous or next vehicle; the status line names
-     * the one shown, its place among them all and how many parts it is
-     * built of, rewritten only when what is shown is chosen again.
+     * Opens the Ship Viewer's status line over the viewport: it names the
+     * ship shown and how many parts it is built of, or why none is shown,
+     * rewritten only when what is shown is chosen again.
      */
 
     // Internal
@@ -73,23 +72,20 @@ public class ShipViewerMenuSystem extends SystemPackage {
             label.setFontText(ShipViewerSetting.STATUS_PREFIX + describeShip());
     }
 
-    // The ship's name, its place among every vehicle and its part count
+    // The ship's name and part count, or why no ship is shown
     private String describeShip() {
 
         VehicleHandle vehicleHandle = shipViewerSystem.getVehicleHandle();
+        String vehicleName = shipViewerSystem.getVehicleName();
 
-        if (vehicleHandle == null)
-            return ShipViewerSetting.STATUS_NONE;
+        if (vehicleHandle != null)
+            return vehicleHandle.getDisplayName()
+                    + ShipViewerSetting.STATUS_SEPARATOR
+                    + vehicleHandle.getPartCount()
+                    + ShipViewerSetting.STATUS_PARTS;
 
-        return vehicleHandle.getDisplayName()
-                + ShipViewerSetting.STATUS_SEPARATOR
-                + (shipViewerSystem.getVehicleIndex() + 1)
-                + ShipViewerSetting.STATUS_OF
-                + shipViewerSystem.getVehicleCount()
-                + ShipViewerSetting.STATUS_SEPARATOR
-                + vehicleHandle.getPartCount()
-                + ShipViewerSetting.STATUS_PARTS
-                + ShipViewerSetting.STATUS_SEPARATOR
-                + ShipViewerSetting.STATUS_FOLLOWING;
+        return vehicleName == null
+                ? ShipViewerSetting.STATUS_NONE
+                : vehicleName + ShipViewerSetting.STATUS_UNREGISTERED;
     }
 }
