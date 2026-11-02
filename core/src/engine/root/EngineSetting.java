@@ -2320,16 +2320,48 @@ public class EngineSetting {
     public static final float SKINNED_HIDDEN_BONE_NONE = -1f;
     public static final int RIGGED_MESH_POSITION_FLOATS = 3;
     public static final int RIGGED_MESH_UV_FLOATS = 2;
+    public static final int RIGGED_MESH_MORPH_FLOATS = 2;
+    public static final int RIGGED_MESH_DETAIL_FLOATS = 3;
+    public static final String[] RIGGED_MESH_MASK_CHANNELS = { "freckles", "blush", "lips", "liner" };
+    public static final int RIGGED_MESH_MASK_FLOATS = 4;
+    public static final int[] RIGGED_MESH_TRAILING_ATTRIBUTE_SIZES = {
+            MAX_BONE_INFLUENCES, MAX_BONE_INFLUENCES, SKINNED_NORMAL_FLOATS,
+            RIGGED_MESH_MORPH_FLOATS, RIGGED_MESH_DETAIL_FLOATS, RIGGED_MESH_MASK_FLOATS };
     public static final int RIGGED_MESH_VERTEX_STRIDE = RIGGED_MESH_POSITION_FLOATS + RIGGED_MESH_UV_FLOATS
-            + MAX_BONE_INFLUENCES * 2 + SKINNED_NORMAL_FLOATS;
+            + MAX_BONE_INFLUENCES * 2 + SKINNED_NORMAL_FLOATS + RIGGED_MESH_MORPH_FLOATS + RIGGED_MESH_DETAIL_FLOATS
+            + RIGGED_MESH_MASK_FLOATS;
     public static final int RIGGED_MESH_TILE_FLOATS = 6;
+    public static final int RIGGED_MESH_VERT_LIMIT = 65536;
+    public static final int RIGGED_MESH_MORPH_ENTRY_FLOATS = 4;
+    public static final String[] RIGGED_MESH_NO_MORPHS = {};
+    public static final int RIGGED_MESH_MORPH_TEXTURE_WIDTH = 1024;
+    public static final float RIGGED_MESH_MORPH_DELTA_EPSILON = 0.000001f;
     public static final float[] MESH_QUAD_DEFAULT_UVS = { 0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f };
-    public static final int SKINNED_INSTANCE_APPEARANCE_FLOATS = 24;
-    public static final int[] SKINNED_INSTANCE_ATTRIBUTE_SIZES = { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
+    public static final int[] SKINNED_INSTANCE_ATTRIBUTE_SIZES = { 4, 4, 4, 4 };
     public static final int SKINNED_INSTANCE_INITIAL_CAPACITY = 64;
     public static final int SKINNED_INSTANCE_MODEL_FLOATS = 16;
-    public static final int SKINNED_INSTANCE_FLOATS = SKINNED_INSTANCE_MODEL_FLOATS
-            + SKINNED_INSTANCE_APPEARANCE_FLOATS;
+    public static final int SKINNED_INSTANCE_FLOATS = SKINNED_INSTANCE_MODEL_FLOATS;
+    public static final int SKINNED_APPEARANCE_HEADER_TEXELS = 1;
+    public static final int SKINNED_APPEARANCE_DETAIL_TEXELS = 2;
+    public static final int SKINNED_MORPH_WEIGHTS_PER_TEXEL = 4;
+    public static final String UNIFORM_MORPH_TARGETS = "u_morphTargets";
+    public static final String UNIFORM_APPEARANCE_BASE = "u_appearanceBase";
+    public static final String UNIFORM_MORPH_BASE = "u_morphBase";
+
+    // Face Animation — blinks fall at a pseudo-random interval per character, each closing and opening the lids
+    public static final float FACE_BLINK_INTERVAL_MIN = 2.2f;
+    public static final float FACE_BLINK_INTERVAL_MAX = 6.0f;
+    public static final float FACE_BLINK_DURATION = 0.16f;
+    public static final float FACE_BLINK_HALF = 0.5f;
+
+    // Appearance — detail defaults in SkinnedDetail order (iris size, pupil size, hair shine, lips, blush, freckles,
+    // liner, blemishes), and the range a shape slider takes when its template leaves it out
+    public static final float[] APPEARANCE_DETAIL_DEFAULTS = { 1f, 1f, 0.6f, 0.55f, 0.3f, 0f, 0.8f, 0f };
+    public static final float APPEARANCE_SHAPE_MIN = -1f;
+    public static final float APPEARANCE_SHAPE_MAX = 1f;
+    public static final float APPEARANCE_SHAPE_DEFAULT = 0f;
+    public static final String APPEARANCE_SHAPE_GROUP_DEFAULT = "face";
+    public static final float NPC_SHAPE_VARIATION = 0.18f;
 
     // Progression Text
     public static final String PROGRESSION_TEXT_NONE = "";

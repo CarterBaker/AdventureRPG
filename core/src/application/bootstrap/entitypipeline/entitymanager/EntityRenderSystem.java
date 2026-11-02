@@ -33,9 +33,9 @@ public class EntityRenderSystem extends SystemPackage {
      * The single entry point for drawing animated characters. Resets the shared
      * skinned buffers once per frame, then pushCharacter() builds a character's
      * model matrix from its footprint, yaw and size, placed relative to the
-     * chunk the viewer stands in across the world's wrap, packs its appearance
-     * into one instance row, and submits its body, head parts and worn
-     * equipment as skinned and rigid draws. pushPreview() draws a posed
+     * chunk the viewer stands in across the world's wrap, plays its face,
+     * packs its appearance into its palette row, and submits its body, worn
+     * features and equipment as skinned and rigid draws. pushPreview() draws a posed
      * character outside any world for editors. Runtime code never touches the
      * skinned buffers directly.
      */
@@ -149,37 +149,19 @@ public class EntityRenderSystem extends SystemPackage {
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        if (appearance == null) {
-            pushCharacterPart(characterMesh, material, skinningMatrices, targetFbo, window);
-            return;
-        }
-
-        appearanceScratch.setTint(appearance.getSkinColor());
         pushCharacterPart(characterMesh, material, skinningMatrices, targetFbo, window);
-        pushCharacterPart(appearance.getHeadMesh(), material, skinningMatrices, targetFbo, window);
-        pushFeaturePart(appearance, FeatureSlot.NOSE, material, skinningMatrices, targetFbo, window);
 
-        appearanceScratch.setTint(appearance.getHairColor());
-        pushFeaturePart(appearance, FeatureSlot.HAIR, material, skinningMatrices, targetFbo, window);
-    }
-
-    private void pushFeaturePart(
-            AppearanceHandle appearance,
-            FeatureSlot featureSlot,
-            MaterialInstance material,
-            Matrix4[] skinningMatrices,
-            FBOInstance targetFbo,
-            WindowInstance window) {
-
-        if (!appearance.hasFeature(featureSlot))
+        if (appearance == null)
             return;
 
-        pushCharacterPart(
-                appearance.getFeature(featureSlot).getMeshHandle(),
-                material,
-                skinningMatrices,
-                targetFbo,
-                window);
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+            if (appearance.hasFeature(featureSlot))
+                pushCharacterPart(
+                        appearance.getFeature(featureSlot).getMeshHandle(),
+                        material,
+                        skinningMatrices,
+                        targetFbo,
+                        window);
     }
 
     private void pushCharacterPart(
@@ -322,10 +304,7 @@ public class EntityRenderSystem extends SystemPackage {
         if (appearance == null)
             return;
 
-        appearanceScratch.setDetailTint(appearance.getHairColor());
-        appearanceScratch.setFaceRegion(appearance.getFaceTexture());
-        appearanceScratch.setEyesRegion(appearance.getFeatureTexture(FeatureSlot.EYES));
-        appearanceScratch.setBrowsRegion(appearance.getFeatureTexture(FeatureSlot.BROWS));
-        appearanceScratch.setMouthRegion(appearance.getFeatureTexture(FeatureSlot.MOUTH));
+        appearance.updateFace(internal.getTime() / EngineSetting.MILLIS_PER_SECOND);
+        appearance.writeAppearance(appearanceScratch);
     }
 }

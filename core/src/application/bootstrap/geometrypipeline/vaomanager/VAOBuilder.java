@@ -17,10 +17,11 @@ public class VAOBuilder extends BuilderPackage {
      * Parses the 'vao' field from mesh ARPG and constructs a VAOHandle layout
      * template. Supports direct attribute size arrays and string references to
      * other registered VAOs; an empty array is an attribute-less layout, for
-     * meshes whose shader pulls its data by vertex index. When the mesh ARPG declares a "rig", three extra
-     * trailing attributes are appended after the declared attributes — bone
-     * indices and bone weights, each EngineSetting.MAX_BONE_INFLUENCES floats
-     * wide, and the smooth normal MeshBuilder bakes for every corner.
+     * meshes whose shader pulls its data by vertex index. When the mesh ARPG declares a "rig", the
+     * trailing attributes RIGGED_MESH_TRAILING_ATTRIBUTE_SIZES lists are
+     * appended after the declared attributes — bone indices and bone weights,
+     * the smooth normal, the morph entry run, the zone with its raw UV and
+     * the mask channels MeshBuilder bakes for every corner.
      * Bootstrap-only.
      */
 
@@ -108,7 +109,8 @@ public class VAOBuilder extends BuilderPackage {
     private VAOHandle buildLayout(ArpgArrayStruct arpgArray, File file, boolean hasBones) {
 
         int declaredCount = arpgArray.size();
-        int totalCount = hasBones ? declaredCount + 3 : declaredCount;
+        int[] trailing = EngineSetting.RIGGED_MESH_TRAILING_ATTRIBUTE_SIZES;
+        int totalCount = hasBones ? declaredCount + trailing.length : declaredCount;
         int[] attrSizes = new int[totalCount];
 
         for (int i = 0; i < declaredCount; i++) {
@@ -117,11 +119,8 @@ public class VAOBuilder extends BuilderPackage {
                 throwException("VAO attribute size must be positive in file: " + file.getName());
         }
 
-        if (hasBones) {
-            attrSizes[declaredCount] = EngineSetting.MAX_BONE_INFLUENCES;
-            attrSizes[declaredCount + 1] = EngineSetting.MAX_BONE_INFLUENCES;
-            attrSizes[declaredCount + 2] = EngineSetting.SKINNED_NORMAL_FLOATS;
-        }
+        if (hasBones)
+            System.arraycopy(trailing, 0, attrSizes, declaredCount, trailing.length);
 
         VAOHandle handle = create(VAOHandle.class);
         handle.constructor(attrSizes);

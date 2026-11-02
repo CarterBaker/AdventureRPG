@@ -8,6 +8,7 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
@@ -21,21 +22,19 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
     /*
      * Fills the Appearance and Hair tabs and applies their choices to the
-     * player's AppearanceHandle. Every feature slot is a stepper over the
-     * features FeatureManager holds that fit the character, sorted by name,
-     * led by None for a slot that may be left empty — a new feature file
-     * shows up here with no code change. Skin and hair colors are swatch
-     * grids painted from the character's palettes.
+     * player's AppearanceHandle. Colors are swatch grids painted from the
+     * character's palettes; the face's shape sliders, grouped as the
+     * template groups them, and the detail amounts are sliders owned by
+     * CreatorBodyBranch. The hairstyle is a stepper over the features
+     * FeatureManager holds that fit the character, sorted by name, led by
+     * None — a new feature file shows up here with no code change.
      */
-
-    // Face slots, in the order the Appearance tab lists them
-    private static final FeatureSlot[] FACE_SLOTS = {
-            FeatureSlot.HEAD, FeatureSlot.EYES, FeatureSlot.BROWS, FeatureSlot.NOSE, FeatureSlot.MOUTH };
 
     // Internal
     private MenuManager menuManager;
     private FeatureManager featureManager;
     private CharacterCreatorBranch characterCreatorBranch;
+    private CreatorBodyBranch creatorBodyBranch;
 
     // Colors
     private MenuColorStruct swatchSelectedColor;
@@ -56,24 +55,21 @@ public class CreatorAppearanceBranch extends BranchPackage {
         this.menuManager = get(MenuManager.class);
         this.featureManager = get(FeatureManager.class);
         this.characterCreatorBranch = get(CharacterCreatorBranch.class);
+        this.creatorBodyBranch = get(CreatorBodyBranch.class);
     }
 
     // Populate \\
 
-    void populateFeatures(CreatorSessionStruct session) {
+    void populateAppearance(CreatorSessionStruct session) {
 
         if (!session.getPlayer().hasAppearance())
             return;
 
-        AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
-
-        characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_FEATURES);
-
-        for (FeatureSlot featureSlot : FACE_SLOTS)
-            injectFeatureRow(session, appearance, featureSlot);
-
-        characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_SKIN);
-        injectSwatches(session, CreatorPalette.SKIN, appearance.getSkinColor());
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_SKIN, SkinnedColor.SKIN);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_EYE_COLOR, SkinnedColor.EYES);
+        creatorBodyBranch.injectShapeGroups(session, false);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_LIP_COLOR, SkinnedColor.LIPS);
+        injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_DETAILS, RuntimeSetting.CREATOR_APPEARANCE_DETAILS);
     }
 
     void populateHair(CreatorSessionStruct session) {
@@ -84,10 +80,26 @@ public class CreatorAppearanceBranch extends BranchPackage {
         AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
 
         characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_HAIRSTYLE);
-        injectFeatureRow(session, appearance, FeatureSlot.HAIR);
 
-        characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_HAIR_COLOR);
-        injectSwatches(session, CreatorPalette.HAIR, appearance.getHairColor());
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+            injectFeatureRow(session, appearance, featureSlot);
+
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_HAIR_COLOR, SkinnedColor.HAIR);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BROW_COLOR, SkinnedColor.BROWS);
+        injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_HAIR_DETAILS, RuntimeSetting.CREATOR_HAIR_DETAILS);
+    }
+
+    private void injectColorSection(CreatorSessionStruct session, String title, SkinnedColor skinnedColor) {
+        characterCreatorBranch.injectSectionHeader(session, title);
+        injectSwatches(session, skinnedColor, session.getPlayer().getAppearanceHandle().getColor(skinnedColor));
+    }
+
+    private void injectDetailSection(CreatorSessionStruct session, String title, int[] details) {
+
+        characterCreatorBranch.injectSectionHeader(session, title);
+
+        for (int detail : details)
+            creatorBodyBranch.injectSlider(session, CreatorSlider.DETAIL, detail);
     }
 
     // Features \\
@@ -124,7 +136,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
         ObjectArrayList<FeatureHandle> options = resolveOptions(
-                session.getPlayer().getEntityData().getAppearanceData(), featureSlot, !featureSlot.isRequired());
+                session.getPlayer().getEntityData().getAppearanceData(), featureSlot, true);
         int index = Math.floorMod(options.indexOf(appearance.getFeature(featureSlot)) + step, options.size());
 
         applyFeature(appearance, featureSlot, options.get(index));
@@ -161,9 +173,9 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
     // Colors \\
 
-    private void injectSwatches(CreatorSessionStruct session, CreatorPalette palette, Color currentColor) {
+    private void injectSwatches(CreatorSessionStruct session, SkinnedColor skinnedColor, Color currentColor) {
 
-        Color[] colors = resolvePalette(session.getPlayer().getEntityData().getAppearanceData(), palette);
+        Color[] colors = session.getPlayer().getEntityData().getAppearanceData().getPalette(skinnedColor);
         ElementInstance row = null;
 
         for (int i = 0; i < colors.length; i++) {
@@ -174,7 +186,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
                         RuntimeSetting.MENU_CREATOR_SWATCH_ROW);
 
             Color color = colors[i];
-            String argument = palette.name() + RuntimeSetting.CREATOR_ARGUMENT_SEPARATOR + i;
+            String argument = skinnedColor.name() + RuntimeSetting.CREATOR_ARGUMENT_SEPARATOR + i;
 
             menuManager.inject(row, RuntimeSetting.MENU_CREATOR_SWATCH, swatch -> {
                 swatch.setActionArgOverride(argument);
@@ -193,24 +205,12 @@ public class CreatorAppearanceBranch extends BranchPackage {
             return;
 
         String[] parts = argument.split(RuntimeSetting.CREATOR_ARGUMENT_SEPARATOR);
-        CreatorPalette palette = CreatorPalette.valueOf(parts[0]);
-        Color color = resolvePalette(session.getPlayer().getEntityData().getAppearanceData(), palette)[Integer
+        SkinnedColor skinnedColor = SkinnedColor.valueOf(parts[0]);
+        Color color = session.getPlayer().getEntityData().getAppearanceData().getPalette(skinnedColor)[Integer
                 .parseInt(parts[1])];
 
-        applyColor(session.getPlayer().getAppearanceHandle(), palette, color);
+        session.getPlayer().getAppearanceHandle().setColor(skinnedColor, color.r, color.g, color.b);
         characterCreatorBranch.refreshOptions(session);
-    }
-
-    private void applyColor(AppearanceHandle appearance, CreatorPalette palette, Color color) {
-
-        if (palette == CreatorPalette.SKIN)
-            appearance.setSkinColor(color.r, color.g, color.b);
-        else
-            appearance.setHairColor(color.r, color.g, color.b);
-    }
-
-    private Color[] resolvePalette(AppearanceData appearanceData, CreatorPalette palette) {
-        return palette == CreatorPalette.SKIN ? appearanceData.getSkinPalette() : appearanceData.getHairPalette();
     }
 
     private boolean isSameColor(Color first, Color second) {
@@ -237,9 +237,10 @@ public class CreatorAppearanceBranch extends BranchPackage {
                 appearance.setFeature(options.get(randomIndex(options.size())));
         }
 
-        for (CreatorPalette palette : CreatorPalette.VALUES) {
-            Color[] colors = resolvePalette(appearanceData, palette);
-            applyColor(appearance, palette, colors[randomIndex(colors.length)]);
+        for (SkinnedColor skinnedColor : SkinnedColor.VALUES) {
+            Color[] colors = appearanceData.getPalette(skinnedColor);
+            Color color = colors[randomIndex(colors.length)];
+            appearance.setColor(skinnedColor, color.r, color.g, color.b);
         }
     }
 

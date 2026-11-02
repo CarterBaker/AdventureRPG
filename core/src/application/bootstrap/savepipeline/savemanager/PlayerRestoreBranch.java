@@ -12,8 +12,11 @@ import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
@@ -93,33 +96,70 @@ class PlayerRestoreBranch extends BranchPackage {
         player.setWeight(ArpgUtility.validateFloat(characterArpg, "weight"));
 
         if (player.hasAppearance())
-            restoreAppearance(ArpgUtility.validateObject(characterArpg, "appearance"), player.getAppearanceHandle());
+            restoreAppearance(
+                    ArpgUtility.validateObject(characterArpg, "appearance"),
+                    player.getAppearanceHandle(),
+                    player.getEntityData().getAppearanceData());
     }
 
-    private void restoreAppearance(ArpgObjectStruct appearanceArpg, AppearanceHandle appearanceHandle) {
+    // Every color, amount and shape the save holds; anything it leaves out keeps the template's default
+    private void restoreAppearance(
+            ArpgObjectStruct appearanceArpg,
+            AppearanceHandle appearanceHandle,
+            AppearanceData appearanceData) {
 
-        ArpgObjectStruct skinColorArpg = ArpgUtility.validateObject(appearanceArpg, "skin_color");
-        ArpgObjectStruct hairColorArpg = ArpgUtility.validateObject(appearanceArpg, "hair_color");
         Vector3 headProportion = parseVector(appearanceArpg, "head_proportion");
+        ArpgObjectStruct colorsArpg = getBlock(appearanceArpg, "colors");
+        ArpgObjectStruct detailsArpg = getBlock(appearanceArpg, "details");
+        ArpgObjectStruct shapesArpg = getBlock(appearanceArpg, "shapes");
 
-        appearanceHandle.setSkinColor(
-                ArpgUtility.validateFloat(skinColorArpg, "r"),
-                ArpgUtility.validateFloat(skinColorArpg, "g"),
-                ArpgUtility.validateFloat(skinColorArpg, "b"));
-        appearanceHandle.setHairColor(
-                ArpgUtility.validateFloat(hairColorArpg, "r"),
-                ArpgUtility.validateFloat(hairColorArpg, "g"),
-                ArpgUtility.validateFloat(hairColorArpg, "b"));
+        appearanceHandle.resetToDefaults();
+
+        for (SkinnedColor skinnedColor : SkinnedColor.VALUES) {
+
+            String key = ArpgUtility.toEnumName(skinnedColor);
+
+            if (!colorsArpg.has(key))
+                continue;
+
+            ArpgObjectStruct colorArpg = colorsArpg.getAsObject(key);
+            appearanceHandle.setColor(
+                    skinnedColor,
+                    ArpgUtility.validateFloat(colorArpg, "r"),
+                    ArpgUtility.validateFloat(colorArpg, "g"),
+                    ArpgUtility.validateFloat(colorArpg, "b"));
+        }
+
+        for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES) {
+
+            String key = ArpgUtility.toEnumName(skinnedDetail);
+
+            if (detailsArpg.has(key))
+                appearanceHandle.setDetail(skinnedDetail, ArpgUtility.validateFloat(detailsArpg, key));
+        }
+
+        for (String morphName : shapesArpg.keySet()) {
+
+            int shapeIndex = appearanceData.findShape(morphName);
+
+            if (shapeIndex != EngineSetting.INDEX_NOT_FOUND)
+                appearanceHandle.setShapeValue(shapeIndex, ArpgUtility.validateFloat(shapesArpg, morphName));
+        }
+
         appearanceHandle.setHeadProportion(headProportion.x, headProportion.y, headProportion.z);
 
         restoreFeatures(ArpgUtility.validateObject(appearanceArpg, "features"), appearanceHandle);
+    }
+
+    private ArpgObjectStruct getBlock(ArpgObjectStruct arpg, String key) {
+        return ArpgUtility.hasObject(arpg, key) ? arpg.getAsObject(key) : new ArpgObjectStruct();
     }
 
     private void restoreFeatures(ArpgObjectStruct featuresArpg, AppearanceHandle appearanceHandle) {
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
-            String key = featureSlot.name().toLowerCase();
+            String key = ArpgUtility.toEnumName(featureSlot);
 
             if (featuresArpg.has(key))
                 appearanceHandle.setFeature(featureManager.getFeatureHandleFromFeatureName(
@@ -303,38 +343,47 @@ class PlayerRestoreBranch extends BranchPackage {
                         player.getEntityData().getAppearanceData());
     }
 
+    // A save's appearance block is valid when every entry it holds is well formed; entries it leaves out, or names the
+    // template no longer has, fall back to the template
     private boolean isAppearanceValid(ArpgObjectStruct appearanceArpg, AppearanceData appearanceData) {
-        return isColorValid(appearanceArpg, "skin_color")
-                && isColorValid(appearanceArpg, "hair_color")
-                && isVectorValid(appearanceArpg, "head_proportion")
+        return isVectorValid(appearanceArpg, "head_proportion")
                 && isVectorPositive(appearanceArpg.getAsObject("head_proportion"))
+                && areColorsValid(getBlock(appearanceArpg, "colors"))
+                && areNumbersValid(getBlock(appearanceArpg, "details"))
+                && areNumbersValid(getBlock(appearanceArpg, "shapes"))
                 && ArpgUtility.hasObject(appearanceArpg, "features")
                 && areFeaturesValid(appearanceArpg.getAsObject("features"), appearanceData);
     }
 
-    private boolean areFeaturesValid(ArpgObjectStruct featuresArpg, AppearanceData appearanceData) {
+    private boolean areColorsValid(ArpgObjectStruct colorsArpg) {
 
-        int filledSlotCount = 0;
+        for (String key : colorsArpg.keySet())
+            if (!isColorValid(colorsArpg, key))
+                return false;
+
+        return true;
+    }
+
+    private boolean areNumbersValid(ArpgObjectStruct numbersArpg) {
+
+        for (String key : numbersArpg.keySet())
+            if (!ArpgUtility.hasNumber(numbersArpg, key))
+                return false;
+
+        return true;
+    }
+
+    private boolean areFeaturesValid(ArpgObjectStruct featuresArpg, AppearanceData appearanceData) {
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
-            String key = featureSlot.name().toLowerCase();
+            String key = ArpgUtility.toEnumName(featureSlot);
 
-            if (!featuresArpg.has(key)) {
-
-                if (featureSlot.isRequired())
-                    return false;
-
-                continue;
-            }
-
-            if (!isFeatureValid(featuresArpg, key, featureSlot, appearanceData))
+            if (featuresArpg.has(key) && !isFeatureValid(featuresArpg, key, featureSlot, appearanceData))
                 return false;
-
-            filledSlotCount++;
         }
 
-        return filledSlotCount == featuresArpg.size();
+        return true;
     }
 
     private boolean isFeatureValid(

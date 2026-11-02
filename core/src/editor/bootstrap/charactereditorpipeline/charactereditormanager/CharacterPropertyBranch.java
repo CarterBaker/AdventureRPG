@@ -1,12 +1,14 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
+import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
@@ -149,6 +151,9 @@ class CharacterPropertyBranch extends BranchPackage {
 
         return keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_THIN)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_HEAVY)
+                || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_DETAIL)
+                || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE)
+                || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BLINK)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_HEAD)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_GIRTH)
@@ -172,10 +177,13 @@ class CharacterPropertyBranch extends BranchPackage {
 
         return switch (keyName) {
             case EditorSetting.CHARACTER_EDITOR_KEY_THIN,
-                    EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> appearance;
+                    EditorSetting.CHARACTER_EDITOR_KEY_HEAVY,
+                    EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> appearance;
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> resolveShape(key) != null;
             case EditorSetting.CHARACTER_EDITOR_KEY_GIRTH -> appearance && resolveRig(document) != null;
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT,
-                    EditorSetting.CHARACTER_EDITOR_KEY_HEAD -> true;
+                    EditorSetting.CHARACTER_EDITOR_KEY_HEAD,
+                    EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> true;
             default -> getSelectedAnchor() != null;
         };
     }
@@ -189,7 +197,10 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (color != null && keyName.equals(color.getColorKey()))
             return CharacterViewUtility.getComponent(
-                    appearance, color.getColorField(), axis, EditorSetting.CHARACTER_EDITOR_COLOR_DEFAULT);
+                    CharacterViewUtility.findObject(appearance, EditorSetting.CHARACTER_EDITOR_FIELD_COLORS),
+                    color.getField(),
+                    axis,
+                    EditorSetting.CHARACTER_EDITOR_COLOR_DEFAULT);
 
         if (color != null)
             return getToneArpg(color).get(axis).getAsFloat();
@@ -197,6 +208,9 @@ class CharacterPropertyBranch extends BranchPackage {
         return switch (keyName) {
             case EditorSetting.CHARACTER_EDITOR_KEY_THIN -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_THIN);
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_HEAVY);
+            case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> getDetail(SkinnedDetail.VALUES[axis]);
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> characterEditorManager.getShapeValue(axis);
+            case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.getBlink();
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT -> characterEditorManager.getWeightRatio();
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAD -> getAxis(characterEditorManager.getHeadProportion(), axis);
             case EditorSetting.CHARACTER_EDITOR_KEY_GIRTH -> getGirth(document);
@@ -233,6 +247,17 @@ class CharacterPropertyBranch extends BranchPackage {
                     document, EditorSetting.CHARACTER_EDITOR_FIELD_THIN, clampBuildFactor(value));
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> characterEditBranch.setBuildFactor(
                     document, EditorSetting.CHARACTER_EDITOR_FIELD_HEAVY, clampBuildFactor(value));
+            case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> characterEditBranch.setDetail(
+                    document,
+                    SkinnedDetail.VALUES[axis],
+                    CharacterViewUtility.clamp(
+                            value,
+                            EditorSetting.CHARACTER_EDITOR_DETAIL_MIN,
+                            EditorSetting.CHARACTER_EDITOR_DETAIL_MAX));
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> characterEditorManager.setShapeValue(
+                    axis, CharacterViewUtility.round(resolveShape(key).clamp(value)));
+            case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.setBlink(
+                    CharacterViewUtility.round(channel));
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT -> characterEditorManager.setWeightRatio(
                     CharacterViewUtility.round(channel));
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAD -> characterEditorManager.setHeadProportion(
@@ -273,6 +298,9 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_THIN,
                     EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> EditorSetting.CHARACTER_EDITOR_BUILD_FACTOR_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT -> EditorSetting.CHARACTER_EDITOR_WEIGHT_STEP;
+            case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> EditorSetting.CHARACTER_EDITOR_DETAIL_STEP;
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> EditorSetting.CHARACTER_EDITOR_SHAPE_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAD -> EditorSetting.CHARACTER_EDITOR_HEAD_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_GIRTH -> EditorSetting.CHARACTER_EDITOR_GIRTH_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_POSITION -> EditorSetting.CHARACTER_EDITOR_POSITION_STEP;
@@ -297,6 +325,29 @@ class CharacterPropertyBranch extends BranchPackage {
         return build != null
                 ? ArpgUtility.getFloat(build, factorField, EngineSetting.DEFAULT_BUILD_FACTOR)
                 : EngineSetting.DEFAULT_BUILD_FACTOR;
+    }
+
+    private float getDetail(SkinnedDetail skinnedDetail) {
+
+        ArpgObjectStruct details = CharacterViewUtility.findObject(
+                getAppearanceArpg(),
+                EditorSetting.CHARACTER_EDITOR_FIELD_DETAILS);
+        float defaultValue = EngineSetting.APPEARANCE_DETAIL_DEFAULTS[skinnedDetail.ordinal()];
+
+        return details != null
+                ? ArpgUtility.getFloat(details, ArpgUtility.toEnumName(skinnedDetail), defaultValue)
+                : defaultValue;
+    }
+
+    // The slider a shape key names, null when the preview's template has none at that index
+    private AppearanceShapeStruct resolveShape(String key) {
+
+        AppearanceData appearanceData = resolveAppearanceData();
+        int shapeIndex = CharacterViewUtility.getKeyIndex(key);
+
+        return appearanceData != null && shapeIndex >= 0 && shapeIndex < appearanceData.getShapeCount()
+                ? appearanceData.getShape(shapeIndex)
+                : null;
     }
 
     private float getGirth(CharacterDocumentInstance document) {
@@ -400,10 +451,12 @@ class CharacterPropertyBranch extends BranchPackage {
 
     private ArpgArrayStruct getPaletteArpg(CharacterEditorColor color) {
 
-        ArpgObjectStruct appearance = getAppearanceArpg();
+        ArpgObjectStruct palettes = CharacterViewUtility.findObject(
+                getAppearanceArpg(),
+                EditorSetting.CHARACTER_EDITOR_FIELD_PALETTES);
 
-        return appearance != null && ArpgUtility.hasArray(appearance, color.getPaletteField())
-                ? appearance.getAsArray(color.getPaletteField())
+        return palettes != null && ArpgUtility.hasArray(palettes, color.getField())
+                ? palettes.getAsArray(color.getField())
                 : null;
     }
 
@@ -447,7 +500,7 @@ class CharacterPropertyBranch extends BranchPackage {
 
     // Features \\
 
-    // The features the preview could wear in a slot, by name, with none first where the slot may stay empty
+    // The features the preview could wear in a slot, by name, with none first
     private ObjectArrayList<String> getFeatureOptions(FeatureSlot featureSlot) {
 
         ObjectArrayList<String> options = new ObjectArrayList<>();
@@ -459,9 +512,7 @@ class CharacterPropertyBranch extends BranchPackage {
                 options.add(features.get(i).getFeatureName());
 
         options.sort(String.CASE_INSENSITIVE_ORDER);
-
-        if (!featureSlot.isRequired())
-            options.add(0, null);
+        options.add(0, null);
 
         return options;
     }

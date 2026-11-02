@@ -14,7 +14,8 @@ class RiggedMeshScratchStruct extends StructPackage {
      * Reusable working storage for building a rigged mesh's vertex data: each
      * face's area-weighted normal, the position group every vertex falls in,
      * and the corners of each group laid out group by group, so the normals
-     * smoothed across a shared position are summed without allocating. One
+     * smoothed across a shared position are summed without allocating, and
+     * where each vertex's morph entries start. One
      * lives on MeshManager; every array is cleared and refilled per build,
      * and the position keys only ever grow.
      */
@@ -31,6 +32,9 @@ class RiggedMeshScratchStruct extends StructPackage {
     final IntArrayList groupStarts;
     final IntArrayList groupCursors;
     final IntArrayList groupFaces;
+
+    // Morphs
+    final IntArrayList vertexMorphStarts;
 
     // Textures
     float[] textureTiles;
@@ -52,6 +56,9 @@ class RiggedMeshScratchStruct extends StructPackage {
         this.groupStarts = new IntArrayList();
         this.groupCursors = new IntArrayList();
         this.groupFaces = new IntArrayList();
+
+        // Morphs
+        this.vertexMorphStarts = new IntArrayList();
 
         // Textures
         this.textureTiles = new float[0];

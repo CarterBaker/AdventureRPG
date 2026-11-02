@@ -8,7 +8,6 @@ import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeMa
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
-import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
@@ -102,10 +101,10 @@ class EntityBuilder extends BuilderPackage {
             if (ArpgUtility.hasObject(modelArpg, "appearance"))
                 appearanceData = appearanceBuilder.build(
                         modelArpg.getAsObject("appearance"),
-                        characterMesh.getRigHandle(),
+                        characterMesh,
                         sourceName);
 
-            modelHeight = resolveModelHeight(characterMesh, appearanceData);
+            modelHeight = characterMesh.getHeight();
 
             if (ArpgUtility.hasArray(modelArpg, "equipment"))
                 parseEquipmentAnchors(
@@ -213,18 +212,6 @@ class EntityBuilder extends BuilderPackage {
                 vectorArpg.get(0).getAsFloat(),
                 vectorArpg.get(1).getAsFloat(),
                 vectorArpg.get(2).getAsFloat());
-    }
-
-    private float resolveModelHeight(MeshHandle characterMesh, AppearanceData appearanceData) {
-
-        if (appearanceData == null)
-            return characterMesh.getHeight();
-
-        MeshHandle headMesh = appearanceData.getDefaultFeature(FeatureSlot.HEAD).getMeshHandle();
-        float bottom = Math.min(characterMesh.getBoundsMin().y, headMesh.getBoundsMin().y);
-        float top = Math.max(characterMesh.getBoundsMax().y, headMesh.getBoundsMax().y);
-
-        return top - bottom;
     }
 
     // Parse \\

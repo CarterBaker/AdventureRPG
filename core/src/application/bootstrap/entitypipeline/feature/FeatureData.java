@@ -1,16 +1,13 @@
 package application.bootstrap.entitypipeline.feature;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import engine.root.DataPackage;
 
 public class FeatureData extends DataPackage {
 
     /*
-     * Immutable definition of one selectable appearance option. meshHandle
-     * is set only for mesh slots, textureHandle only for texture slots, and
-     * faceTextureHandle only for the head — the tile its front face maps to
-     * and every face overlay is painted across. Owned by FeatureHandle in
+     * Immutable definition of one selectable modelled part: the slot it is
+     * worn in and the rigged mesh drawn for it. Owned by FeatureHandle in
      * FeatureManager's palette for the engine lifetime.
      */
 
@@ -21,8 +18,6 @@ public class FeatureData extends DataPackage {
 
     // Content
     private final MeshHandle meshHandle;
-    private final TextureHandle textureHandle;
-    private final TextureHandle faceTextureHandle;
 
     // Constructor \\
 
@@ -30,9 +25,7 @@ public class FeatureData extends DataPackage {
             String featureName,
             short featureID,
             FeatureSlot featureSlot,
-            MeshHandle meshHandle,
-            TextureHandle textureHandle,
-            TextureHandle faceTextureHandle) {
+            MeshHandle meshHandle) {
 
         // Identity
         this.featureName = featureName;
@@ -41,8 +34,6 @@ public class FeatureData extends DataPackage {
 
         // Content
         this.meshHandle = meshHandle;
-        this.textureHandle = textureHandle;
-        this.faceTextureHandle = faceTextureHandle;
     }
 
     // Accessible \\
@@ -61,13 +52,5 @@ public class FeatureData extends DataPackage {
 
     public MeshHandle getMeshHandle() {
         return meshHandle;
-    }
-
-    public TextureHandle getTextureHandle() {
-        return textureHandle;
-    }
-
-    public TextureHandle getFaceTextureHandle() {
-        return faceTextureHandle;
     }
 }

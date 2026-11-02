@@ -11,6 +11,7 @@ import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -82,7 +83,7 @@ class CharacterMeshBranch extends BranchPackage {
             return;
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
-            if (featureSlot.isMeshSlot() && entityData.getAppearanceData().getDefaultFeature(featureSlot) != null)
+            if (entityData.getAppearanceData().getDefaultFeature(featureSlot) != null)
                 partKeys.add(ArpgUtility.toEnumName(featureSlot));
     }
 
@@ -98,7 +99,7 @@ class CharacterMeshBranch extends BranchPackage {
 
         FeatureSlot featureSlot = CharacterViewUtility.toEnumOrDefault(partKey, FeatureSlot.class, null);
 
-        if (featureSlot == null || !featureSlot.isMeshSlot() || !entityData.hasAppearance())
+        if (featureSlot == null || !entityData.hasAppearance())
             return null;
 
         FeatureHandle featureHandle = entityData.getAppearanceData().getDefaultFeature(featureSlot);
@@ -131,9 +132,17 @@ class CharacterMeshBranch extends BranchPackage {
         return document;
     }
 
+    // Writes the mesh, a shape key being sculpted written back into its morph first
     boolean save(CharacterMeshDocumentInstance document) {
 
-        ArpgObjectStruct meshArpg = meshManager.toRiggedMeshArpg(document.getMesh(), document.getSourceArpg());
+        RiggedMeshStruct mesh = document.getMesh();
+
+        if (document.isEditingShape()) {
+            mesh = new RiggedMeshStruct(mesh);
+            CharacterMeshUtility.bakeShapeKey(mesh, document.getEditShape(), document.getShapeBase());
+        }
+
+        ArpgObjectStruct meshArpg = meshManager.toRiggedMeshArpg(mesh, document.getSourceArpg());
 
         if (!ArpgUtility.tryWriteObject(getMeshFile(document.getMeshName()), meshArpg))
             return false;
@@ -158,6 +167,53 @@ class CharacterMeshBranch extends BranchPackage {
         upload(document);
 
         return true;
+    }
+
+    // Shape Keys \\
+
+    // Sculpts a morph instead of the base: the morph is lifted into the positions every tool edits and baked back into
+    // its deltas when sculpting returns to the base, so each tool shapes it unchanged. The history is cleared on either
+    // side, since its steps hold the surface as it was being sculpted.
+    void editShape(CharacterMeshDocumentInstance document, int morphIndex) {
+
+        if (document.getEditShape() == morphIndex)
+            return;
+
+        RiggedMeshStruct mesh = document.getMesh();
+
+        if (document.isEditingShape())
+            CharacterMeshUtility.bakeShapeKey(mesh, document.getEditShape(), document.getShapeBase());
+
+        if (morphIndex != EngineSetting.INDEX_NOT_FOUND)
+            CharacterMeshUtility.liftShapeKey(mesh, morphIndex, document.getShapeBase());
+
+        document.setEditShape(morphIndex);
+        characterHistoryBranch.clear(document);
+        upload(document);
+        characterEditorManager.notifyChanged();
+    }
+
+    // A new, empty shape key under the first free numbered name, sculpted at once
+    void addShape(CharacterMeshDocumentInstance document) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+        int number = mesh.getMorphCount() + 1;
+
+        while (mesh.getMorphIndex(EditorSetting.CHARACTER_EDITOR_SHAPE_NAME_PREFIX + number)
+                != EngineSetting.INDEX_NOT_FOUND)
+            number++;
+
+        int morphIndex = mesh.resolveMorph(EditorSetting.CHARACTER_EDITOR_SHAPE_NAME_PREFIX + number);
+
+        document.markEdited();
+        editShape(document, morphIndex);
+    }
+
+    // Every open mesh back to sculpting its base
+    void endShapeEdits() {
+
+        for (CharacterMeshDocumentInstance document : meshName2MeshDocument.values())
+            editShape(document, EngineSetting.INDEX_NOT_FOUND);
     }
 
     // Edits \\

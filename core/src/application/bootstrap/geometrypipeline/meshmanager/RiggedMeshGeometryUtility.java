@@ -18,8 +18,13 @@ class RiggedMeshGeometryUtility extends EngineUtility {
      * angle, so a low-poly body shades as one continuous surface. Authored
      * winding is free to vary, so each face is turned to the corner's own
      * side before it is added and only the line of the result is kept; the
-     * shader turns it toward the face it shades. Texture tiles arrive
-     * resolved, RIGGED_MESH_TILE_FLOATS per palette entry.
+     * shader turns it toward the face it shades. Each corner also carries
+     * where its vertex's morph entries start and how many there are, its
+     * face's zone with the raw corner UV the zone's procedural shading reads,
+     * and its vertex's mask channels. The morph entries — a delta and the
+     * morph it belongs to, grouped vertex by vertex — fill the entry list the
+     * mesh's morph texture is made from. Texture tiles arrive resolved,
+     * RIGGED_MESH_TILE_FLOATS per palette entry.
      */
 
     // Build \\
@@ -29,7 +34,8 @@ class RiggedMeshGeometryUtility extends EngineUtility {
             float[] textureTiles,
             RiggedMeshScratchStruct scratch,
             FloatArrayList vertices,
-            ShortArrayList indices) {
+            ShortArrayList indices,
+            FloatArrayList morphEntries) {
 
         int faceCount = mesh.getFaceCount();
         int cornerCount = faceCount * EngineSetting.QUAD_VERTEX_COUNT;
@@ -41,6 +47,7 @@ class RiggedMeshGeometryUtility extends EngineUtility {
 
         resolveFaceNormals(mesh, scratch.faceNormals);
         resolvePositionGroups(mesh, scratch);
+        resolveMorphEntries(mesh, scratch.vertexMorphStarts, morphEntries);
 
         for (int f = 0; f < faceCount; f++) {
 
@@ -91,6 +98,73 @@ class RiggedMeshGeometryUtility extends EngineUtility {
             vertices.add(i < influenceCount ? mesh.getInfluenceWeight(vertexIndex, i) : 0f);
 
         writeSmoothNormal(faceIndex, scratch.vertexGroups.getInt(vertexIndex), scratch, vertices);
+
+        int morphStart = scratch.vertexMorphStarts.getInt(vertexIndex);
+
+        vertices.add(morphStart);
+        vertices.add(scratch.vertexMorphStarts.getInt(vertexIndex + 1) - morphStart);
+        vertices.add(mesh.getFaceZone(faceIndex).ordinal());
+        vertices.add(mesh.getFaceU(faceIndex, corner));
+        vertices.add(mesh.getFaceV(faceIndex, corner));
+
+        for (int i = 0; i < EngineSetting.RIGGED_MESH_MASK_FLOATS; i++)
+            vertices.add(mesh.getMask(vertexIndex, i));
+    }
+
+    // Morphs \\
+
+    // Every morph delta that moves its vertex, grouped vertex by vertex as (dx, dy, dz, morph); starts receives each
+    // vertex's first entry, with one more slot closing the last vertex's run
+    private static void resolveMorphEntries(RiggedMeshStruct mesh, IntArrayList starts, FloatArrayList morphEntries) {
+
+        int vertexCount = mesh.getVertexCount();
+        int morphCount = mesh.getMorphCount();
+
+        starts.clear();
+        starts.size(vertexCount + 1);
+
+        for (int m = 0; m < morphCount; m++)
+            for (int e = 0; e < mesh.getMorphEntryCount(m); e++)
+                if (movesVertex(mesh, m, e)) {
+                    int vertexIndex = mesh.getMorphVertex(m, e);
+                    starts.set(vertexIndex + 1, starts.getInt(vertexIndex + 1) + 1);
+                }
+
+        for (int v = 0; v < vertexCount; v++)
+            starts.set(v + 1, starts.getInt(v + 1) + starts.getInt(v));
+
+        morphEntries.clear();
+        morphEntries.size(starts.getInt(vertexCount) * EngineSetting.RIGGED_MESH_MORPH_ENTRY_FLOATS);
+
+        float[] entries = morphEntries.elements();
+
+        for (int m = 0; m < morphCount; m++)
+            for (int e = 0; e < mesh.getMorphEntryCount(m); e++) {
+
+                if (!movesVertex(mesh, m, e))
+                    continue;
+
+                int vertexIndex = mesh.getMorphVertex(m, e);
+                int slot = starts.getInt(vertexIndex);
+                int base = slot * EngineSetting.RIGGED_MESH_MORPH_ENTRY_FLOATS;
+
+                entries[base] = mesh.getMorphDelta(m, e, 0);
+                entries[base + 1] = mesh.getMorphDelta(m, e, 1);
+                entries[base + 2] = mesh.getMorphDelta(m, e, 2);
+                entries[base + 3] = m;
+                starts.set(vertexIndex, slot + 1);
+            }
+
+        for (int v = vertexCount; v > 0; v--)
+            starts.set(v, starts.getInt(v - 1));
+
+        starts.set(0, 0);
+    }
+
+    private static boolean movesVertex(RiggedMeshStruct mesh, int morphIndex, int entry) {
+        return Math.abs(mesh.getMorphDelta(morphIndex, entry, 0)) > EngineSetting.RIGGED_MESH_MORPH_DELTA_EPSILON
+                || Math.abs(mesh.getMorphDelta(morphIndex, entry, 1)) > EngineSetting.RIGGED_MESH_MORPH_DELTA_EPSILON
+                || Math.abs(mesh.getMorphDelta(morphIndex, entry, 2)) > EngineSetting.RIGGED_MESH_MORPH_DELTA_EPSILON;
     }
 
     // Normals \\

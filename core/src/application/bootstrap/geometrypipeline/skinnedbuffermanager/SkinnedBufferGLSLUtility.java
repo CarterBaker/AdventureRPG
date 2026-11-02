@@ -12,18 +12,18 @@ class SkinnedBufferGLSLUtility extends EngineUtility {
 
     /*
      * GL creation, upload, and disposal operations for SkinnedBufferManager.
-     * Package-private — only SkinnedBufferManager may call these. The bone
-     * palette is an RGBA32F 2D texture — width is boneCapacity *
-     * SKINNED_BONE_TEXELS_PER_BONE texels (3 texels encode one mat4x3
-     * skinning matrix, dropping the implicit [0,0,0,1] last row), height is
-     * one row per instance. Sampled with texelFetch in the vertex shader —
-     * never filtered, since this is data, not an image. Uploads reuse one
-     * growable direct buffer each for instances and bone matrices.
+     * Package-private — only SkinnedBufferManager may call these. The
+     * palette is an RGBA32F 2D texture, one row per instance and as wide as
+     * the buffer's row: its bones first (3 texels encode one mat4x3 skinning
+     * matrix, dropping the implicit [0,0,0,1] last row), then the appearance
+     * texels and the morph weights. Sampled with texelFetch — never filtered,
+     * since this is data, not an image. Uploads reuse one growable direct
+     * buffer each for instances and palette rows.
      */
 
     // Scratch
     private static FloatBuffer instanceScratch;
-    private static FloatBuffer boneScratch;
+    private static FloatBuffer paletteScratch;
 
     // Instance VBO \\
 
@@ -52,12 +52,11 @@ class SkinnedBufferGLSLUtility extends EngineUtility {
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
     }
 
-    // Bone Palette Texture \\
+    // Palette Texture \\
 
-    static int createBonePaletteTexture(int boneCapacity, int maxInstances) {
+    static int createPaletteTexture(int width, int maxInstances) {
 
         GL20 gl20 = EngineContext.gl20;
-        int width = boneCapacity * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE;
 
         int texture = gl20.glGenTexture();
         gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, texture);
@@ -78,20 +77,19 @@ class SkinnedBufferGLSLUtility extends EngineUtility {
         return texture;
     }
 
-    static void uploadBonePalette(int texture, float[] boneMatrixData, int boneCapacity, int instanceCount) {
+    static void uploadPalette(int texture, float[] paletteData, int width, int instanceCount) {
 
         GL20 gl20 = EngineContext.gl20;
-        int width = boneCapacity * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE;
         int floatCount = width * instanceCount * EngineSetting.COLOR_CHANNEL_COUNT;
 
-        boneScratch = BufferUtility.ensureCapacity(boneScratch, floatCount);
-        boneScratch.put(boneMatrixData, 0, floatCount).flip();
+        paletteScratch = BufferUtility.ensureCapacity(paletteScratch, floatCount);
+        paletteScratch.put(paletteData, 0, floatCount).flip();
 
         gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, texture);
         gl20.glTexSubImage2D(
                 EngineSetting.GL_TEXTURE_2D, 0,
                 0, 0, width, instanceCount,
-                EngineSetting.GL_RGBA, EngineSetting.GL_FLOAT, boneScratch);
+                EngineSetting.GL_RGBA, EngineSetting.GL_FLOAT, paletteScratch);
         gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
     }
 

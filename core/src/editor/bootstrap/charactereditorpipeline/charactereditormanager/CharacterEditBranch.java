@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
@@ -98,8 +99,8 @@ class CharacterEditBranch extends BranchPackage {
 
     void setColorChannel(CharacterDocumentInstance document, CharacterEditorColor color, int channel, float value) {
         editAppearance(document, appearance -> CharacterViewUtility.setArrayComponent(
-                appearance,
-                color.getColorField(),
+                CharacterViewUtility.requireObject(appearance, EditorSetting.CHARACTER_EDITOR_FIELD_COLORS),
+                color.getField(),
                 channel,
                 value,
                 EditorSetting.CHARACTER_EDITOR_COLOR_DEFAULT));
@@ -112,7 +113,9 @@ class CharacterEditBranch extends BranchPackage {
             int channel,
             float value) {
 
-        editAppearance(document, appearance -> appearance.getAsArray(color.getPaletteField())
+        editAppearance(document, appearance -> appearance
+                .getAsObject(EditorSetting.CHARACTER_EDITOR_FIELD_PALETTES)
+                .getAsArray(color.getField())
                 .get(toneIndex)
                 .getAsArray()
                 .set(channel, new ArpgValueStruct(CharacterViewUtility.round(value))));
@@ -120,19 +123,33 @@ class CharacterEditBranch extends BranchPackage {
 
     void addTone(CharacterDocumentInstance document, CharacterEditorColor color, float r, float g, float b) {
         editAppearance(document, appearance -> CharacterViewUtility
-                .requireArray(appearance, color.getPaletteField())
+                .requireArray(
+                        CharacterViewUtility.requireObject(appearance, EditorSetting.CHARACTER_EDITOR_FIELD_PALETTES),
+                        color.getField())
                 .add(CharacterViewUtility.toArray(r, g, b)));
     }
 
     void removeTone(CharacterDocumentInstance document, CharacterEditorColor color, int toneIndex) {
         editAppearance(document, appearance -> {
 
-            ArpgArrayStruct palette = appearance.getAsArray(color.getPaletteField());
+            ArpgObjectStruct palettes = appearance.getAsObject(EditorSetting.CHARACTER_EDITOR_FIELD_PALETTES);
+            ArpgArrayStruct palette = palettes.getAsArray(color.getField());
             palette.remove(toneIndex);
 
             if (palette.isEmpty())
-                appearance.remove(color.getPaletteField());
+                palettes.remove(color.getField());
+
+            if (palettes.size() == 0)
+                appearance.remove(EditorSetting.CHARACTER_EDITOR_FIELD_PALETTES);
         });
+    }
+
+    // Details \\
+
+    void setDetail(CharacterDocumentInstance document, SkinnedDetail skinnedDetail, float value) {
+        editAppearance(document, appearance -> CharacterViewUtility
+                .requireObject(appearance, EditorSetting.CHARACTER_EDITOR_FIELD_DETAILS)
+                .addProperty(ArpgUtility.toEnumName(skinnedDetail), CharacterViewUtility.round(value)));
     }
 
     // Build \\

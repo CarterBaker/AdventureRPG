@@ -39,7 +39,8 @@ public class MeshManager extends ManagerPackage {
      * loaded one. Rigged meshes pass through RiggedMeshStruct: parsed from
      * and written to ARPG, built into skinned vertex data with one reusable
      * scratch, and rebuilt in place on their registered handle when an editor
-     * changes one, so every view drawing it shows the change at once.
+     * changes one, so every view drawing it shows the change at once; their
+     * morph targets ride along in a texture on the handle.
      */
 
     // Internal
@@ -53,6 +54,7 @@ public class MeshManager extends ManagerPackage {
     private RiggedMeshScratchStruct riggedScratch;
     private FloatArrayList riggedVertices;
     private ShortArrayList riggedIndices;
+    private FloatArrayList riggedMorphEntries;
 
     // Palette
     private Object2IntOpenHashMap<String> meshName2MeshID;
@@ -71,6 +73,7 @@ public class MeshManager extends ManagerPackage {
         this.riggedScratch = new RiggedMeshScratchStruct();
         this.riggedVertices = new FloatArrayList();
         this.riggedIndices = new ShortArrayList();
+        this.riggedMorphEntries = new FloatArrayList();
         create(MeshLoader.class);
     }
 
@@ -224,12 +227,30 @@ public class MeshManager extends ManagerPackage {
         return RiggedMeshArpgUtility.write(mesh, sourceArpg);
     }
 
+    // Every corner is its own vertex, indexed by an unsigned short
     public boolean fitsRiggedMeshLimit(RiggedMeshStruct mesh) {
-        return mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT <= EngineSetting.MESH_VERT_LIMIT;
+        return mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT <= EngineSetting.RIGGED_MESH_VERT_LIMIT;
     }
 
-    void buildRiggedGeometry(RiggedMeshStruct mesh, FloatArrayList vertices, ShortArrayList indices) {
-        RiggedMeshGeometryUtility.build(mesh, resolveTextureTiles(mesh), riggedScratch, vertices, indices);
+    void buildRiggedGeometry(
+            RiggedMeshStruct mesh,
+            FloatArrayList vertices,
+            ShortArrayList indices,
+            FloatArrayList morphEntries) {
+        RiggedMeshGeometryUtility.build(
+                mesh, resolveTextureTiles(mesh), riggedScratch, vertices, indices, morphEntries);
+    }
+
+    // Gives a rigged mesh's handle the morph texture built from its entries, releasing the one it held
+    void applyMorphTargets(MeshHandle meshHandle, RiggedMeshStruct mesh, FloatArrayList morphEntries) {
+
+        String[] morphNames = new String[mesh.getMorphCount()];
+
+        for (int m = 0; m < morphNames.length; m++)
+            morphNames[m] = mesh.getMorphName(m);
+
+        RiggedMeshGLSLUtility.deleteTexture(meshHandle.getMorphTexture());
+        meshHandle.setMorphTargets(RiggedMeshGLSLUtility.createMorphTexture(morphEntries), morphNames);
     }
 
     // Rebuilds a registered rigged mesh from a struct, its buffers respecified in place on the same handles
@@ -238,7 +259,7 @@ public class MeshManager extends ManagerPackage {
         if (meshHandle.getRigHandle() != mesh.getRigHandle())
             throwException("Mesh \"" + meshHandle.getMeshName() + "\" cannot be rebuilt on a different rig.");
 
-        buildRiggedGeometry(mesh, riggedVertices, riggedIndices);
+        buildRiggedGeometry(mesh, riggedVertices, riggedIndices, riggedMorphEntries);
 
         VAOInstance vaoInstance = meshHandle.getVAOInstance();
         VBOHandle vboHandle = vboManager.updateVBOHandle(vaoInstance, meshHandle.getVBOHandle(), riggedVertices);
@@ -255,6 +276,7 @@ public class MeshManager extends ManagerPackage {
                 meshHandle.getRigHandle(),
                 boundsMin,
                 boundsMax);
+        applyMorphTargets(meshHandle, mesh, riggedMorphEntries);
     }
 
     // Each palette texture's tile as u0, u1, v0, v1, width and height, in the scratch's reusable array
@@ -293,6 +315,7 @@ public class MeshManager extends ManagerPackage {
     }
 
     public void removeMesh(MeshHandle meshHandle) {
+        RiggedMeshGLSLUtility.deleteTexture(meshHandle.getMorphTexture());
         removeMesh(meshHandle.getMeshData());
     }
 

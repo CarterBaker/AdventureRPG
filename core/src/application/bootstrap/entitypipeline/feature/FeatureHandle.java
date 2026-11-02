@@ -1,7 +1,6 @@
 package application.bootstrap.entitypipeline.feature;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import engine.root.HandlePackage;
 
 public class FeatureHandle extends HandlePackage {
@@ -43,13 +42,5 @@ public class FeatureHandle extends HandlePackage {
 
     public MeshHandle getMeshHandle() {
         return featureData.getMeshHandle();
-    }
-
-    public TextureHandle getTextureHandle() {
-        return featureData.getTextureHandle();
-    }
-
-    public TextureHandle getFaceTextureHandle() {
-        return featureData.getFaceTextureHandle();
     }
 }

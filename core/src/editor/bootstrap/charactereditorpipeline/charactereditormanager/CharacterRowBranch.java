@@ -1,7 +1,9 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
@@ -170,6 +172,31 @@ class CharacterRowBranch extends BranchPackage {
                         color.getRemoveToneKey(),
                         EditorSetting.CHARACTER_EDITOR_LABEL_REMOVE_TONE));
         }
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_DETAILS));
+
+        for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
+            addNumber(document, rows,
+                    CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_DETAIL, skinnedDetail.ordinal()),
+                    EditorSetting.CHARACTER_EDITOR_DETAIL_LABELS[skinnedDetail.ordinal()]);
+
+        addShapeRows(document, rows);
+    }
+
+    // The preview's slider values, one per shape the template lists, and how far its eyes are closed
+    private void addShapeRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (!document.getPreviewData().hasAppearance())
+            return;
+
+        AppearanceData appearanceData = document.getPreviewData().getAppearanceData();
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_SHAPES));
+        addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_BLINK, EditorSetting.CHARACTER_EDITOR_LABEL_BLINK);
+
+        for (int i = 0; i < appearanceData.getShapeCount(); i++)
+            addNumber(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE, i),
+                    appearanceData.getShape(i).getMorphName());
     }
 
     private void addChannels(

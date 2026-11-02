@@ -7,6 +7,7 @@ import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 public class CharacterMeshUtility extends EngineUtility {
 
@@ -80,6 +81,54 @@ public class CharacterMeshUtility extends EngineUtility {
     // Bones \\
 
     // A left bone's right twin or a right bone's left twin by name; any other bone mirrors onto itself
+    // Moves a morph into the positions, holding the base positions in base and leaving the morph empty
+    public static void liftShapeKey(RiggedMeshStruct mesh, int morphIndex, FloatArrayList base) {
+
+        base.clear();
+
+        for (int v = 0; v < mesh.getVertexCount(); v++) {
+            base.add(mesh.getX(v));
+            base.add(mesh.getY(v));
+            base.add(mesh.getZ(v));
+        }
+
+        for (int e = 0; e < mesh.getMorphEntryCount(morphIndex); e++) {
+
+            int vertexIndex = mesh.getMorphVertex(morphIndex, e);
+
+            mesh.setPosition(
+                    vertexIndex,
+                    mesh.getX(vertexIndex) + mesh.getMorphDelta(morphIndex, e, 0),
+                    mesh.getY(vertexIndex) + mesh.getMorphDelta(morphIndex, e, 1),
+                    mesh.getZ(vertexIndex) + mesh.getMorphDelta(morphIndex, e, 2));
+        }
+
+        mesh.clearMorph(morphIndex);
+    }
+
+    // Moves the positions back into a morph as their offsets from base, and the positions back onto base
+    public static void bakeShapeKey(RiggedMeshStruct mesh, int morphIndex, FloatArrayList base) {
+
+        int vertexCount = Math.min(mesh.getVertexCount(), base.size() / EngineSetting.RIGGED_MESH_POSITION_FLOATS);
+
+        mesh.clearMorph(morphIndex);
+
+        for (int v = 0; v < vertexCount; v++) {
+
+            int i = v * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+            float dx = mesh.getX(v) - base.getFloat(i);
+            float dy = mesh.getY(v) - base.getFloat(i + 1);
+            float dz = mesh.getZ(v) - base.getFloat(i + 2);
+
+            if (Math.abs(dx) > EngineSetting.RIGGED_MESH_MORPH_DELTA_EPSILON
+                    || Math.abs(dy) > EngineSetting.RIGGED_MESH_MORPH_DELTA_EPSILON
+                    || Math.abs(dz) > EngineSetting.RIGGED_MESH_MORPH_DELTA_EPSILON)
+                mesh.setMorphDelta(morphIndex, v, dx, dy, dz);
+
+            mesh.setPosition(v, base.getFloat(i), base.getFloat(i + 1), base.getFloat(i + 2));
+        }
+    }
+
     public static String toMirrorBoneName(String boneName) {
 
         if (boneName.endsWith(EditorSetting.CHARACTER_MESH_BONE_SUFFIX_LEFT))

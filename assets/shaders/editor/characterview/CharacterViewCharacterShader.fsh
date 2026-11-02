@@ -1,19 +1,17 @@
 #version 330 core
 
-in vec2 v_uv;
+in vec4 v_uv;
 in vec3 v_viewPosition;
 in vec3 v_viewNormal;
+in vec3 v_surfacePosition;
+in vec4 v_masks;
 in float v_hiddenWeight;
-flat in vec3 v_tint;
-flat in vec3 v_detailTint;
-flat in vec4 v_faceRegion;
-flat in vec4 v_eyesRegion;
-flat in vec4 v_browsRegion;
-flat in vec4 v_mouthRegion;
+flat in int v_zone;
+flat in int v_instance;
 
 #include "includes/CameraData.glsl"
 #include "characters/includes/CharactersStandard.glsl"
-#include "characters/includes/CharacterFace.glsl"
+#include "characters/includes/CharacterSurface.glsl"
 #include "characters/includes/CharacterHidden.glsl"
 #include "characters/includes/CharacterNormal.glsl"
 
@@ -24,25 +22,25 @@ uniform float u_ambient;
 out vec4 FragColor;
 
 // An editor viewport has no deferred lighting pass, so the character is lit here by one fixed light over an ambient
-// floor, on the same smooth normals the game shades with, with the same tint and face overlays the game draws.
+// floor, on the same smooth normals and zone shading the game draws with, plus a highlight for the specular.
 void main() {
     if (isHiddenFragment(v_hiddenWeight))
     discard;
 
-    vec4 base = texture(u_texture, vec3(v_uv, float(u_layer_albedo)));
+    vec4 base = texture(u_texture, vec3(v_uv.xy, float(u_layer_albedo)));
 
     if (base.a < 0.01)
     discard;
 
-    vec3 albedo = resolveCharacterAlbedo(
-        u_texture, u_layer_albedo, v_uv, base.rgb, v_tint, v_detailTint,
-        v_faceRegion, v_eyesRegion, v_browsRegion, v_mouthRegion);
-
     vec3 normalView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
-    vec3 lightView  = normalize(mat3(u_view) * -u_lightDirection);
+    CharacterSurface surface = resolveCharacterSurface(
+        v_instance, v_zone, base.rgb, v_uv.zw, v_masks, v_surfacePosition, normalView);
 
-    float diffuse  = max(dot(normalView, lightView), 0.0);
-    float lighting = u_ambient + (1.0 - u_ambient) * diffuse;
+    vec3  lightView = normalize(mat3(u_view) * -u_lightDirection);
+    vec3  halfway   = normalize(lightView + normalize(-v_viewPosition));
+    float diffuse   = max(dot(normalView, lightView), 0.0);
+    float lighting  = u_ambient + (1.0 - u_ambient) * diffuse;
+    float highlight = surface.specular * pow(max(dot(normalView, halfway), 0.0), 32.0);
 
-    FragColor = vec4(albedo * lighting, 1.0);
+    FragColor = vec4(surface.albedo * lighting + vec3(highlight), 1.0);
 }

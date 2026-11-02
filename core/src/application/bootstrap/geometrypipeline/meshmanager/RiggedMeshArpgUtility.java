@@ -1,5 +1,8 @@
 package application.bootstrap.geometrypipeline.meshmanager;
 
+import java.util.Arrays;
+
+import application.bootstrap.geometrypipeline.mesh.MeshZone;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.EngineSetting;
@@ -17,8 +20,12 @@ class RiggedMeshArpgUtility extends EngineUtility {
      * its "rig" whose "vbo" lists textured quad entries, each with four
      * "quad" corners, the "bones" weighting it — once for the quad or once
      * per corner, a lone bone weighing in full without a "weight" — its
-     * "texture" and optionally its own corner "uvs". Corners standing on one
-     * position with the same influences parse into one shared vertex. Writing
+     * "texture", optionally its own corner "uvs" and the "zone" it is made of.
+     * Corners standing on one position with the same influences parse into one
+     * shared vertex, numbered in the order they first appear; "masks" and
+     * "morphs" name vertices by that number, each mask channel and morph
+     * target listing the "vertices" it touches beside their "values" or
+     * three "deltas" each. Writing
      * keeps every other field of the source file in place and names a quad's
      * bones once wherever its corners agree, so a mesh read and written
      * unchanged comes back exactly as it was. MeshBuilder parses through here
@@ -59,6 +66,9 @@ class RiggedMeshArpgUtility extends EngineUtility {
 
             parseQuad(mesh, element.getAsObject(), corner2Vertex, cornerKey, cornerVertices, sourceName);
         }
+
+        parseMasks(mesh, meshArpg, sourceName);
+        parseMorphs(mesh, meshArpg, sourceName);
 
         return mesh;
     }
@@ -104,6 +114,8 @@ class RiggedMeshArpgUtility extends EngineUtility {
 
         int faceIndex = mesh.addFace(
                 cornerVertices[0], cornerVertices[1], cornerVertices[2], cornerVertices[3], textureIndex);
+
+        mesh.setFaceZone(faceIndex, ArpgUtility.getEnum(quadArpg, "zone", MeshZone.class, MeshZone.SKIN));
 
         if (cornerUVs == null)
             return;
@@ -211,20 +223,214 @@ class RiggedMeshArpgUtility extends EngineUtility {
                     + " in file: " + sourceName);
     }
 
+    // Masks \\
+
+    private static void parseMasks(RiggedMeshStruct mesh, ArpgObjectStruct meshArpg, String sourceName) {
+
+        if (!ArpgUtility.hasObject(meshArpg, "masks"))
+            return;
+
+        ArpgObjectStruct masksArpg = meshArpg.getAsObject("masks");
+
+        for (String channelName : masksArpg.keySet()) {
+
+            int channel = findMaskChannel(channelName);
+
+            if (channel == EngineSetting.INDEX_NOT_FOUND)
+                throwException("Rigged mesh declares unknown mask channel \"" + channelName + "\". File: "
+                        + sourceName);
+
+            ArpgObjectStruct channelArpg = masksArpg.getAsObject(channelName);
+            ArpgArrayStruct vertices = ArpgUtility.validateArray(channelArpg, "vertices");
+            ArpgArrayStruct values = ArpgUtility.validateArray(channelArpg, "values");
+
+            if (values.size() != vertices.size())
+                throwException("Mask channel \"" + channelName + "\" lists " + vertices.size() + " vertices but "
+                        + values.size() + " values. File: " + sourceName);
+
+            for (int i = 0; i < vertices.size(); i++)
+                mesh.setMask(validateVertex(mesh, vertices.get(i).getAsInt(), sourceName), channel,
+                        values.get(i).getAsFloat());
+        }
+    }
+
+    private static int findMaskChannel(String channelName) {
+
+        for (int i = 0; i < EngineSetting.RIGGED_MESH_MASK_CHANNELS.length; i++)
+            if (EngineSetting.RIGGED_MESH_MASK_CHANNELS[i].equals(channelName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Morphs \\
+
+    private static void parseMorphs(RiggedMeshStruct mesh, ArpgObjectStruct meshArpg, String sourceName) {
+
+        if (!ArpgUtility.hasObject(meshArpg, "morphs"))
+            return;
+
+        ArpgObjectStruct morphsArpg = meshArpg.getAsObject("morphs");
+
+        for (String morphName : morphsArpg.keySet()) {
+
+            ArpgObjectStruct morphArpg = morphsArpg.getAsObject(morphName);
+            ArpgArrayStruct vertices = ArpgUtility.validateArray(morphArpg, "vertices");
+            ArpgArrayStruct deltas = ArpgUtility.validateArray(morphArpg, "deltas");
+            int morphIndex = mesh.resolveMorph(morphName);
+
+            if (deltas.size() != vertices.size() * EngineSetting.RIGGED_MESH_POSITION_FLOATS)
+                throwException("Morph \"" + morphName + "\" lists " + vertices.size() + " vertices but "
+                        + deltas.size() + " delta floats, expected three per vertex. File: " + sourceName);
+
+            for (int i = 0; i < vertices.size(); i++) {
+
+                int vertexIndex = validateVertex(mesh, vertices.get(i).getAsInt(), sourceName);
+                int base = i * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+
+                if (mesh.findMorphEntry(morphIndex, vertexIndex) != EngineSetting.INDEX_NOT_FOUND)
+                    throwException("Morph \"" + morphName + "\" lists vertex " + vertexIndex + " twice. File: "
+                            + sourceName);
+
+                mesh.setMorphDelta(
+                        morphIndex,
+                        vertexIndex,
+                        deltas.get(base).getAsFloat(),
+                        deltas.get(base + 1).getAsFloat(),
+                        deltas.get(base + 2).getAsFloat());
+            }
+        }
+    }
+
+    private static int validateVertex(RiggedMeshStruct mesh, int vertexIndex, String sourceName) {
+
+        if (vertexIndex < 0 || vertexIndex >= mesh.getVertexCount())
+            throwException("Rigged mesh names vertex " + vertexIndex + " but holds " + mesh.getVertexCount()
+                    + " vertices. File: " + sourceName);
+
+        return vertexIndex;
+    }
+
     // Write \\
 
-    // The source file's fields in their order, its quad entries replaced by the mesh's faces
+    // The source file's fields in their order, its quads, masks and morphs replaced by the mesh's own
     static ArpgObjectStruct write(RiggedMeshStruct mesh, ArpgObjectStruct sourceArpg) {
 
         ArpgObjectStruct meshArpg = new ArpgObjectStruct();
+        int[] fileVertices = resolveFileVertices(mesh);
 
         for (String key : sourceArpg.keySet())
-            meshArpg.add(key, key.equals("vbo") ? writeQuads(mesh) : sourceArpg.get(key).deepCopy());
+            if (!key.equals("masks") && !key.equals("morphs"))
+                meshArpg.add(key, key.equals("vbo") ? writeQuads(mesh) : sourceArpg.get(key).deepCopy());
 
         if (!meshArpg.has("vbo"))
             meshArpg.add("vbo", writeQuads(mesh));
 
+        ArpgObjectStruct masksArpg = writeMasks(mesh, fileVertices);
+        ArpgObjectStruct morphsArpg = writeMorphs(mesh, fileVertices);
+
+        if (masksArpg.size() > 0)
+            meshArpg.add("masks", masksArpg);
+
+        if (morphsArpg.size() > 0)
+            meshArpg.add("morphs", morphsArpg);
+
         return meshArpg;
+    }
+
+    // The number each vertex takes when the written file is parsed back — corners sharing a position and influences
+    // become one vertex, in the order they first appear — or INDEX_NOT_FOUND for a vertex no face uses, or one
+    // folded into an earlier vertex
+    private static int[] resolveFileVertices(RiggedMeshStruct mesh) {
+
+        int[] fileVertices = new int[mesh.getVertexCount()];
+        Object2IntOpenHashMap<String> key2File = new Object2IntOpenHashMap<>();
+        StringBuilder key = new StringBuilder();
+
+        key2File.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        Arrays.fill(fileVertices, EngineSetting.INDEX_NOT_FOUND);
+
+        for (int f = 0; f < mesh.getFaceCount(); f++)
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+                int vertexIndex = mesh.getFaceVertex(f, c);
+
+                key.setLength(0);
+                appendVertexKey(mesh, vertexIndex, key);
+
+                String vertexKey = key.toString();
+
+                if (key2File.getInt(vertexKey) != EngineSetting.INDEX_NOT_FOUND)
+                    continue;
+
+                key2File.put(vertexKey, key2File.size());
+                fileVertices[vertexIndex] = key2File.size() - 1;
+            }
+
+        return fileVertices;
+    }
+
+    private static ArpgObjectStruct writeMasks(RiggedMeshStruct mesh, int[] fileVertices) {
+
+        ArpgObjectStruct masksArpg = new ArpgObjectStruct();
+
+        for (int channel = 0; channel < EngineSetting.RIGGED_MESH_MASK_CHANNELS.length; channel++) {
+
+            ArpgArrayStruct vertices = new ArpgArrayStruct();
+            ArpgArrayStruct values = new ArpgArrayStruct();
+
+            for (int v = 0; v < mesh.getVertexCount(); v++) {
+
+                float value = mesh.getMask(v, channel);
+
+                if (fileVertices[v] == EngineSetting.INDEX_NOT_FOUND || value <= 0f)
+                    continue;
+
+                vertices.add(fileVertices[v]);
+                values.add(value);
+            }
+
+            if (vertices.size() == 0)
+                continue;
+
+            ArpgObjectStruct channelArpg = new ArpgObjectStruct();
+            channelArpg.add("vertices", vertices);
+            channelArpg.add("values", values);
+            masksArpg.add(EngineSetting.RIGGED_MESH_MASK_CHANNELS[channel], channelArpg);
+        }
+
+        return masksArpg;
+    }
+
+    private static ArpgObjectStruct writeMorphs(RiggedMeshStruct mesh, int[] fileVertices) {
+
+        ArpgObjectStruct morphsArpg = new ArpgObjectStruct();
+
+        for (int m = 0; m < mesh.getMorphCount(); m++) {
+
+            ArpgArrayStruct vertices = new ArpgArrayStruct();
+            ArpgArrayStruct deltas = new ArpgArrayStruct();
+
+            for (int e = 0; e < mesh.getMorphEntryCount(m); e++) {
+
+                int fileVertex = fileVertices[mesh.getMorphVertex(m, e)];
+
+                if (fileVertex == EngineSetting.INDEX_NOT_FOUND)
+                    continue;
+
+                vertices.add(fileVertex);
+
+                for (int a = 0; a < EngineSetting.RIGGED_MESH_POSITION_FLOATS; a++)
+                    deltas.add(mesh.getMorphDelta(m, e, a));
+            }
+
+            ArpgObjectStruct morphArpg = new ArpgObjectStruct();
+            morphArpg.add("vertices", vertices);
+            morphArpg.add("deltas", deltas);
+            morphsArpg.add(mesh.getMorphName(m), morphArpg);
+        }
+
+        return morphsArpg;
     }
 
     private static ArpgArrayStruct writeQuads(RiggedMeshStruct mesh) {
@@ -259,6 +465,9 @@ class RiggedMeshArpgUtility extends EngineUtility {
 
         if (mesh.hasAuthoredUVs(faceIndex))
             quadArpg.add("uvs", writeUVs(mesh, faceIndex));
+
+        if (mesh.getFaceZone(faceIndex) != MeshZone.SKIN)
+            quadArpg.addProperty("zone", ArpgUtility.toEnumName(mesh.getFaceZone(faceIndex)));
 
         return quadArpg;
     }

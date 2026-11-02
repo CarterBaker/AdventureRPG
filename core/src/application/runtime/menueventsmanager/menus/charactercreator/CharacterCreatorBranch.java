@@ -246,7 +246,7 @@ public class CharacterCreatorBranch extends BranchPackage {
         clearEntryPoint(session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_OPTIONS);
 
         switch (session.getActiveTab()) {
-            case APPEARANCE -> creatorAppearanceBranch.populateFeatures(session);
+            case APPEARANCE -> creatorAppearanceBranch.populateAppearance(session);
             case HAIR -> creatorAppearanceBranch.populateHair(session);
             case BODY -> creatorBodyBranch.populateBody(session);
             case ATTRIBUTES -> creatorProgressionBranch.populateAttributes(session);

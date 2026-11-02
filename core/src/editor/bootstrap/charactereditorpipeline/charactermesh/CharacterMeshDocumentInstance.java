@@ -6,6 +6,7 @@ import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -15,7 +16,8 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
      * One rigged mesh file open in the character editor: the registered mesh
      * it rebuilds in place, the file's own fields as last read or written,
      * the mesh being edited, its vertex selection and active vertex, the
-     * vertex each mirrors across x, and its undo history. The revision moves
+     * vertex each mirrors across x, its undo history, and the shape key being
+     * sculpted with the base positions it was lifted from. The revision moves
      * on every change of geometry or selection so viewports know to redraw;
      * dirty marks changes not yet saved.
      */
@@ -35,6 +37,10 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
     // Mirror
     private IntArrayList mirrorVertices;
     private boolean mirrorStale;
+
+    // Shape
+    private int editShape;
+    private FloatArrayList shapeBase;
 
     // History
     private ObjectArrayList<CharacterMeshHistoryStruct> undoSteps;
@@ -59,6 +65,9 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         // Mirror
         this.mirrorVertices = new IntArrayList();
 
+        // Shape
+        this.shapeBase = new FloatArrayList();
+
         // History
         this.undoSteps = new ObjectArrayList<>();
         this.redoSteps = new ObjectArrayList<>();
@@ -76,8 +85,10 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         this.activeVertex = EngineSetting.INDEX_NOT_FOUND;
         this.mirrorStale = true;
         this.dirty = false;
+        this.editShape = EngineSetting.INDEX_NOT_FOUND;
         this.revision++;
 
+        shapeBase.clear();
         selection.clear();
         selection.size(mesh.getVertexCount());
     }
@@ -134,6 +145,12 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         this.mirrorStale = false;
     }
 
+    // The shape key being sculpted changed; its base positions are held in getShapeBase()
+    public void setEditShape(int editShape) {
+        this.editShape = editShape;
+        this.revision++;
+    }
+
     // Accessible \\
 
     public String getMeshName() {
@@ -186,6 +203,18 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
     public boolean hasOpenStep() {
         return openStep != null;
+    }
+
+    public int getEditShape() {
+        return editShape;
+    }
+
+    public boolean isEditingShape() {
+        return editShape != EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    public FloatArrayList getShapeBase() {
+        return shapeBase;
     }
 
     public boolean isDirty() {

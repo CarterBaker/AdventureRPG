@@ -1,56 +1,56 @@
 package editor.bootstrap.charactereditorpipeline.util;
 
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import editor.runtime.EditorSetting;
+import engine.util.arpg.ArpgUtility;
 
 public enum CharacterEditorColor {
 
     /*
-     * The two colors a character's appearance carries, skin and hair. Each
-     * has a default color field and a palette of tones in the template, and
-     * its own row keys in the character editor's panel.
+     * The colors a character's appearance carries, one per SkinnedColor in
+     * the same order. Each has a default color in the template's "colors"
+     * block and a palette of tones in its "palettes" block, both under the
+     * color's own name, and its own row keys in the character editor's panel.
      */
 
-    SKIN(
-            EditorSetting.CHARACTER_EDITOR_HEADER_SKIN,
-            EditorSetting.CHARACTER_EDITOR_FIELD_SKIN_COLOR,
-            EditorSetting.CHARACTER_EDITOR_FIELD_SKIN_PALETTE,
-            EditorSetting.CHARACTER_EDITOR_KEY_SKIN),
-    HAIR(
-            EditorSetting.CHARACTER_EDITOR_HEADER_HAIR,
-            EditorSetting.CHARACTER_EDITOR_FIELD_HAIR_COLOR,
-            EditorSetting.CHARACTER_EDITOR_FIELD_HAIR_PALETTE,
-            EditorSetting.CHARACTER_EDITOR_KEY_HAIR);
+    SKIN(SkinnedColor.SKIN),
+    EYES(SkinnedColor.EYES),
+    HAIR(SkinnedColor.HAIR),
+    BROWS(SkinnedColor.BROWS),
+    LIPS(SkinnedColor.LIPS),
+    BLUSH(SkinnedColor.BLUSH),
+    FRECKLES(SkinnedColor.FRECKLES),
+    CLOTH(SkinnedColor.CLOTH);
 
     // Values
     public static final CharacterEditorColor[] VALUES = values();
 
     // Internal
-    private final String label;
-    private final String colorField;
-    private final String paletteField;
+    private final SkinnedColor skinnedColor;
+    private final String field;
     private final String keyPrefix;
 
     // Constructor \\
 
-    CharacterEditorColor(String label, String colorField, String paletteField, String keyPrefix) {
-        this.label = label;
-        this.colorField = colorField;
-        this.paletteField = paletteField;
-        this.keyPrefix = keyPrefix;
+    CharacterEditorColor(SkinnedColor skinnedColor) {
+        this.skinnedColor = skinnedColor;
+        this.field = ArpgUtility.toEnumName(skinnedColor);
+        this.keyPrefix = EditorSetting.CHARACTER_EDITOR_KEY_COLOR_PREFIX + field;
     }
 
     // Accessible \\
 
+    public SkinnedColor getSkinnedColor() {
+        return skinnedColor;
+    }
+
     public String getLabel() {
-        return label;
+        return EditorSetting.CHARACTER_EDITOR_COLOR_HEADERS[skinnedColor.ordinal()];
     }
 
-    public String getColorField() {
-        return colorField;
-    }
-
-    public String getPaletteField() {
-        return paletteField;
+    // The color's key in the template's "colors" and "palettes" blocks
+    public String getField() {
+        return field;
     }
 
     // The default color's channels
@@ -79,7 +79,7 @@ public enum CharacterEditorColor {
     public static CharacterEditorColor fromKeyName(String keyName) {
 
         for (CharacterEditorColor color : VALUES)
-            if (keyName.startsWith(color.keyPrefix))
+            if (keyName.startsWith(color.keyPrefix + EditorSetting.CHARACTER_EDITOR_WORD_SEPARATOR))
                 return color;
 
         return null;

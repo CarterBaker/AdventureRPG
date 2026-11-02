@@ -11,8 +11,8 @@ public class SkinnedBufferInstance extends InstancePackage {
     /*
      * One instanced skinned draw per rigged mesh. Cleared at the start of each
      * frame's gather, then addInstance() adds each visible entity's model
-     * matrix, appearance row and skinning matrices. Nothing persists across
-     * frames.
+     * matrix and its palette row — skinning matrices, appearance and morph
+     * weights. Nothing persists across frames.
      */
 
     // Internal
@@ -44,8 +44,16 @@ public class SkinnedBufferInstance extends InstancePackage {
         return skinnedBufferData.getInstanceVBO();
     }
 
-    public int getBonePaletteTexture() {
-        return skinnedBufferData.getBonePaletteTexture();
+    public int getPaletteTexture() {
+        return skinnedBufferData.getPaletteTexture();
+    }
+
+    public int getAppearanceBase() {
+        return skinnedBufferData.getAppearanceBase();
+    }
+
+    public int getMorphBase() {
+        return skinnedBufferData.getMorphBase();
     }
 
     public int getInstanceCount() {
@@ -70,8 +78,13 @@ public class SkinnedBufferInstance extends InstancePackage {
 
     // Frame Lifecycle \\
 
+    // Empties the draw for a new frame, laying its palette row out again if its mesh's morphs changed
     public void clear() {
+
         skinnedBufferData.setInstanceCount(0);
+
+        if (!skinnedBufferData.matchesMesh())
+            skinnedBufferData.relayout();
     }
 
     public int addInstance(
@@ -84,8 +97,11 @@ public class SkinnedBufferInstance extends InstancePackage {
         if (index >= skinnedBufferData.getMaxInstances())
             grow();
 
-        writeInstanceRow(index, modelMatrix, appearance);
-        writeBoneMatrices(index, skinningMatrices);
+        System.arraycopy(
+                modelMatrix.val, 0,
+                skinnedBufferData.getInstanceData(), index * EngineSetting.SKINNED_INSTANCE_FLOATS,
+                EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS);
+        writePaletteRow(index, appearance, skinningMatrices);
 
         skinnedBufferData.setInstanceCount(index + 1);
 
@@ -94,45 +110,40 @@ public class SkinnedBufferInstance extends InstancePackage {
 
     // Write \\
 
-    private void writeInstanceRow(int index, Matrix4 modelMatrix, SkinnedAppearanceStruct appearance) {
+    // The instance's bones, then its appearance, then its morph weights
+    private void writePaletteRow(int index, SkinnedAppearanceStruct appearance, Matrix4[] skinningMatrices) {
 
-        float[] instanceData = skinnedBufferData.getInstanceData();
-        int base = index * EngineSetting.SKINNED_INSTANCE_FLOATS;
-
-        System.arraycopy(modelMatrix.val, 0, instanceData, base, EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS);
-        appearance.write(instanceData, base + EngineSetting.SKINNED_INSTANCE_MODEL_FLOATS);
-    }
-
-    private void writeBoneMatrices(int index, Matrix4[] skinningMatrices) {
-
-        float[] boneMatrixData = skinnedBufferData.getBoneMatrixData();
-        int floatsPerInstance = skinnedBufferData.getBoneCapacity()
-                * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE * 4;
-        int base = index * floatsPerInstance;
+        float[] paletteData = skinnedBufferData.getPaletteData();
+        int base = index * skinnedBufferData.getRowFloats();
         int boneCount = skinningMatrices.length;
+
+        appearance.write(paletteData, base
+                + skinnedBufferData.getAppearanceBase() * EngineSetting.COLOR_CHANNEL_COUNT);
+        appearance.writeMorphWeights(getMeshHandle(), paletteData, base
+                + skinnedBufferData.getMorphBase() * EngineSetting.COLOR_CHANNEL_COUNT);
 
         for (int bone = 0; bone < boneCount; bone++) {
 
             Matrix4 m = skinningMatrices[bone];
-            int boneBase = base + bone * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE * 4;
+            int boneBase = base + bone * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE * EngineSetting.COLOR_CHANNEL_COUNT;
 
             // Row 0
-            boneMatrixData[boneBase] = m.getM00();
-            boneMatrixData[boneBase + 1] = m.getM01();
-            boneMatrixData[boneBase + 2] = m.getM02();
-            boneMatrixData[boneBase + 3] = m.getM03();
+            paletteData[boneBase] = m.getM00();
+            paletteData[boneBase + 1] = m.getM01();
+            paletteData[boneBase + 2] = m.getM02();
+            paletteData[boneBase + 3] = m.getM03();
 
             // Row 1
-            boneMatrixData[boneBase + 4] = m.getM10();
-            boneMatrixData[boneBase + 5] = m.getM11();
-            boneMatrixData[boneBase + 6] = m.getM12();
-            boneMatrixData[boneBase + 7] = m.getM13();
+            paletteData[boneBase + 4] = m.getM10();
+            paletteData[boneBase + 5] = m.getM11();
+            paletteData[boneBase + 6] = m.getM12();
+            paletteData[boneBase + 7] = m.getM13();
 
             // Row 2
-            boneMatrixData[boneBase + 8] = m.getM20();
-            boneMatrixData[boneBase + 9] = m.getM21();
-            boneMatrixData[boneBase + 10] = m.getM22();
-            boneMatrixData[boneBase + 11] = m.getM23();
+            paletteData[boneBase + 8] = m.getM20();
+            paletteData[boneBase + 9] = m.getM21();
+            paletteData[boneBase + 10] = m.getM22();
+            paletteData[boneBase + 11] = m.getM23();
         }
     }
 
@@ -148,17 +159,15 @@ public class SkinnedBufferInstance extends InstancePackage {
                 grownInstances, 0,
                 skinnedBufferData.getInstanceData().length);
 
-        int boneFloatsPerInstance = skinnedBufferData.getBoneCapacity()
-                * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE * 4;
-        float[] grownBones = new float[newMax * boneFloatsPerInstance];
+        float[] grownPalette = new float[newMax * skinnedBufferData.getRowFloats()];
         System.arraycopy(
-                skinnedBufferData.getBoneMatrixData(), 0,
-                grownBones, 0,
-                skinnedBufferData.getBoneMatrixData().length);
+                skinnedBufferData.getPaletteData(), 0,
+                grownPalette, 0,
+                skinnedBufferData.getPaletteData().length);
 
         skinnedBufferData.setMaxInstances(newMax);
         skinnedBufferData.setInstanceData(grownInstances);
-        skinnedBufferData.setBoneMatrixData(grownBones);
+        skinnedBufferData.setPaletteData(grownPalette);
         skinnedBufferData.setNeedsGpuRealloc(true);
     }
 

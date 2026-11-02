@@ -7,6 +7,7 @@ import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
+import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
@@ -15,6 +16,7 @@ import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.npc.NpcHandle;
 import application.bootstrap.entitypipeline.npc.NpcInstance;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
@@ -323,7 +325,8 @@ public class NpcManager extends ManagerPackage {
         progressionManager.raiseBeing(entity, level, npcHandle.getProfessionID());
     }
 
-    // Skin and hair drawn from the race's palettes, so no two residents look quite alike
+    // Every color drawn from the race's palettes and every shape nudged off its default, so no two residents look
+    // quite alike
     private void varyAppearance(EntityInstance entity) {
 
         if (!entity.hasAppearance())
@@ -331,11 +334,20 @@ public class NpcManager extends ManagerPackage {
 
         AppearanceData appearanceData = entity.getEntityData().getAppearanceData();
         AppearanceHandle appearanceHandle = entity.getAppearanceHandle();
-        Color skin = drawColor(appearanceData.getSkinPalette());
-        Color hair = drawColor(appearanceData.getHairPalette());
 
-        appearanceHandle.setSkinColor(skin.r, skin.g, skin.b);
-        appearanceHandle.setHairColor(hair.r, hair.g, hair.b);
+        for (SkinnedColor skinnedColor : SkinnedColor.VALUES) {
+            Color color = drawColor(appearanceData.getPalette(skinnedColor));
+            appearanceHandle.setColor(skinnedColor, color.r, color.g, color.b);
+        }
+
+        for (int i = 0; i < appearanceData.getShapeCount(); i++) {
+
+            AppearanceShapeStruct shape = appearanceData.getShape(i);
+            float spread = (shape.getMax() - shape.getMin()) * EngineSetting.NPC_SHAPE_VARIATION;
+            float offset = (ThreadLocalRandom.current().nextFloat() * 2f - 1f) * spread;
+
+            appearanceHandle.setShapeValue(i, shape.getDefaultValue() + offset);
+        }
     }
 
     private Color drawColor(Color[] palette) {

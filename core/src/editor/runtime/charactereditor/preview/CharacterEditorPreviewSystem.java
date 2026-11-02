@@ -111,18 +111,23 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         AppearanceHandle appearance = characterViewPoseSystem.getAppearanceHandle();
         AppearanceData appearanceData = characterViewPoseSystem.getEntityData().getAppearanceData();
         Vector3 headProportion = characterEditorManager.getHeadProportion();
+        boolean meshMode = characterEditorManager.getMode().isMeshMode();
 
-        Color skin = resolveTone(
-                appearanceData.getSkinPalette(),
-                appearanceData.getSkinColor(),
-                characterEditorManager.getToneIndex(CharacterEditorColor.SKIN));
-        Color hair = resolveTone(
-                appearanceData.getHairPalette(),
-                appearanceData.getHairColor(),
-                characterEditorManager.getToneIndex(CharacterEditorColor.HAIR));
+        for (CharacterEditorColor color : CharacterEditorColor.VALUES) {
 
-        appearance.setSkinColor(skin.r, skin.g, skin.b);
-        appearance.setHairColor(hair.r, hair.g, hair.b);
+            Color tone = resolveTone(
+                    appearanceData.getPalette(color.getSkinnedColor()),
+                    appearanceData.getColor(color.getSkinnedColor()),
+                    characterEditorManager.getToneIndex(color));
+
+            appearance.setColor(color.getSkinnedColor(), tone.r, tone.g, tone.b);
+        }
+
+        for (int i = 0; i < appearanceData.getShapeCount(); i++)
+            appearance.setShapeValue(i, meshMode ? 0f : characterEditorManager.getShapeValue(i));
+
+        appearance.setFaceAnimated(!meshMode && characterEditorManager.getBlink() <= 0f);
+        appearance.setBlink(meshMode ? 0f : characterEditorManager.getBlink());
         appearance.setWeightRatio(characterEditorManager.getWeightRatio());
         appearance.setHeadProportion(headProportion.x, headProportion.y, headProportion.z);
     }

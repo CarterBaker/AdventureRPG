@@ -71,10 +71,21 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/EditorWindow.arpg` (the five new windows in the Content menu), `shortcuts/Tools.arpg` (Inflate,
   Pinch, Flatten, Nudge), `shortcuts/CharacterEditor.arpg` (undo routed by mode, Ctrl inverts a sculpt stroke) and
   `shortcuts/AnimationEditor.arpg` (undo, redo, pose snap).
+- 2026-11-02: Modelled characters. Regenerated `mesh/characters/humanoid/HumanoidBodyMesh.arpg` (one mesh with the
+  whole anime-style head modelled in: eyeballs, lids, lashes, brows, lips, teeth, ears; zones, freckle/blush/lip/liner
+  masks and 48 morph targets for the face and body sliders, blinks and expressions), `BobHairMesh`, `PonytailHairMesh`
+  and `ShortHairMesh`, and the features `BobHair`, `PonytailHair` and `ShortHair`; added `LongWavyHairMesh`,
+  `LongStraightHairMesh` and their features, the shader includes `CharacterAppearance.glsl`, `CharacterSurface.glsl`
+  and `CharacterZone.glsl`; rewrote `StandardcharacterShader.vsh`/`.fsh`, `CharacterViewCharacterShader.fsh`,
+  `entities/HumanoidEntity.arpg` (colors, palettes, details, shape sliders, expressions) and the `Entities` and
+  `Features` schemas. Removed, as replaced by the modelled face: the head and nose meshes and features, the eye, brow
+  and mouth features, the face overlay textures (`Face`, every eye, brow and mouth set), `Hair_A.png`,
+  `CharacterFace.glsl`, and the hair styles `BunHair`, `BuzzHair`, `LongHair`, `MohawkHair`, `SpikyHair` and
+  `SweptHair` (meshes and features), built for the old split head.
 
 ---
 
-## Textures and Sprites (2199 files)
+## Textures and Sprites (2174 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -167,32 +178,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/textures/characters/standard/`
 
-- `AlmondEyes`: A
-- `AngryBrows`: A
-- `ArchedBrows`: A
-- `BrightEyes`: A
-- `BushyBrows`: A
-- `ClosedEyes`: A
-- `DeterminedEyes`: A
-- `Face`: A
-- `FlatMouth`: A
-- `FrownMouth`: A
-- `GrinMouth`: A
-- `Hair`: A
-- `NarrowEyes`: A
-- `OpenMouth`: A
-- `PoutMouth`: A
-- `RaisedBrows`: A
-- `RoundEyes`: A
 - `Skin`: A
-- `SleepyEyes`: A
-- `SmileMouth`: A
-- `SmirkMouth`: A
-- `ThickBrows`: A
-- `ThinBrows`: A
-- `Unibrow`: A
-- `WideEyes`: A
-- `WideSmileMouth`: A
 
 ### `assets/textures/items/standard/`
 
@@ -989,11 +975,12 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (177 files)
+## Shaders (179 files)
 
 ### `assets/shaders/characters/includes/`
 
-`CharacterFace.glsl`, `CharacterHidden.glsl`, `CharacterNormal.glsl`, `CharactersStandard.glsl`
+`CharacterAppearance.glsl`, `CharacterHidden.glsl`, `CharacterNormal.glsl`, `CharacterSurface.glsl`,
+`CharacterZone.glsl`, `CharactersStandard.glsl`
 
 ### `assets/shaders/characters/standard/`
 
@@ -1304,7 +1291,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1743 files)
+## Data Files (1688 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -1913,33 +1900,9 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 `HumanoidEntity.arpg`
 
-### `assets/features/humanoid/brows/`
-
-`AngryBrows.arpg`, `ArchedBrows.arpg`, `BushyBrows.arpg`, `RaisedBrows.arpg`, `ThickBrows.arpg`, `ThinBrows.arpg`,
-`Unibrow.arpg`
-
-### `assets/features/humanoid/eyes/`
-
-`AlmondEyes.arpg`, `BrightEyes.arpg`, `ClosedEyes.arpg`, `DeterminedEyes.arpg`, `NarrowEyes.arpg`, `RoundEyes.arpg`,
-`SleepyEyes.arpg`, `WideEyes.arpg`
-
 ### `assets/features/humanoid/hair/`
 
-`BobHair.arpg`, `BunHair.arpg`, `BuzzHair.arpg`, `LongHair.arpg`, `MohawkHair.arpg`, `PonytailHair.arpg`,
-`ShortHair.arpg`, `SpikyHair.arpg`, `SweptHair.arpg`
-
-### `assets/features/humanoid/heads/`
-
-`BroadHead.arpg`, `HeartHead.arpg`, `OvalHead.arpg`, `RoundHead.arpg`, `SquareHead.arpg`, `TaperedHead.arpg`
-
-### `assets/features/humanoid/mouths/`
-
-`FlatMouth.arpg`, `FrownMouth.arpg`, `GrinMouth.arpg`, `OpenMouth.arpg`, `PoutMouth.arpg`, `SmileMouth.arpg`,
-`SmirkMouth.arpg`, `WideSmileMouth.arpg`
-
-### `assets/features/humanoid/noses/`
-
-`BroadNose.arpg`, `ButtonNose.arpg`, `HookedNose.arpg`, `PointedNose.arpg`, `SnubNose.arpg`, `StraightNose.arpg`
+`BobHair.arpg`, `LongStraightHair.arpg`, `LongWavyHair.arpg`, `PonytailHair.arpg`, `ShortHair.arpg`
 
 ### `assets/furnishings/farm/`
 
@@ -2122,18 +2085,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/mesh/characters/humanoid/hair/`
 
-`BobHairMesh.arpg`, `BunHairMesh.arpg`, `BuzzHairMesh.arpg`, `LongHairMesh.arpg`, `MohawkHairMesh.arpg`,
-`PonytailHairMesh.arpg`, `ShortHairMesh.arpg`, `SpikyHairMesh.arpg`, `SweptHairMesh.arpg`
-
-### `assets/mesh/characters/humanoid/heads/`
-
-`BroadHeadMesh.arpg`, `HeartHeadMesh.arpg`, `OvalHeadMesh.arpg`, `RoundHeadMesh.arpg`, `SquareHeadMesh.arpg`,
-`TaperedHeadMesh.arpg`
-
-### `assets/mesh/characters/humanoid/noses/`
-
-`BroadNoseMesh.arpg`, `ButtonNoseMesh.arpg`, `HookedNoseMesh.arpg`, `PointedNoseMesh.arpg`, `SnubNoseMesh.arpg`,
-`StraightNoseMesh.arpg`
+`BobHairMesh.arpg`, `LongStraightHairMesh.arpg`, `LongWavyHairMesh.arpg`, `PonytailHairMesh.arpg`,
+`ShortHairMesh.arpg`
 
 ### `assets/mesh/editor/`
 

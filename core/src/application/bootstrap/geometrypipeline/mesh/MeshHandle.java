@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
+import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -15,7 +16,9 @@ public class MeshHandle extends HandlePackage {
      * built from its MeshData. A non-null rig marks meshes that carry bone
      * attributes, whose raw extent scales them onto an entity's size. A
      * rigged mesh can be rebuilt in place through MeshManager, keeping its
-     * handles, so everything drawing it shows the change.
+     * handles, so everything drawing it shows the change. A rigged mesh also
+     * holds its morph targets: their names, by index, and the texture their
+     * deltas live in on the GPU.
      */
 
     // Identity
@@ -29,6 +32,10 @@ public class MeshHandle extends HandlePackage {
 
     // Rig
     private RigHandle rigHandle;
+
+    // Morphs
+    private int morphTexture;
+    private String[] morphNames;
 
     // Constructor \\
 
@@ -57,6 +64,39 @@ public class MeshHandle extends HandlePackage {
 
         // Rig
         this.rigHandle = rigHandle;
+
+        // Morphs
+        if (morphNames == null)
+            this.morphNames = EngineSetting.RIGGED_MESH_NO_MORPHS;
+    }
+
+    // Morphs \\
+
+    public void setMorphTargets(int morphTexture, String[] morphNames) {
+        this.morphTexture = morphTexture;
+        this.morphNames = morphNames;
+    }
+
+    public int getMorphTexture() {
+        return morphTexture;
+    }
+
+    public int getMorphCount() {
+        return morphNames.length;
+    }
+
+    public String getMorphName(int morphIndex) {
+        return morphNames[morphIndex];
+    }
+
+    // The index of a morph target by name, INDEX_NOT_FOUND when the mesh has none of that name
+    public int getMorphIndex(String morphName) {
+
+        for (int i = 0; i < morphNames.length; i++)
+            if (morphNames[i].equals(morphName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Accessible \\

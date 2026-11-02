@@ -7,8 +7,6 @@ import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
-import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.BuilderPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
@@ -17,17 +15,14 @@ class FeatureBuilder extends BuilderPackage {
 
     /*
      * Parses one feature ARPG file into a FeatureData and wraps it in a
-     * FeatureHandle. "slot" decides what the file must declare: mesh slots
-     * a rigged "mesh", texture slots a "texture" tile, and the head also a
-     * "face" tile its front face is mapped to. Compatibility with any one
-     * character's rig and texture array is checked later, by AppearanceData,
-     * when a feature is actually worn. Bootstrap-only.
+     * FeatureHandle: the "slot" it is worn in and the rigged "mesh" drawn for
+     * it. Whether it fits any one character's rig is checked later, by
+     * AppearanceData, when a feature is actually worn. Bootstrap-only.
      */
 
     // Internal
     private FeatureManager featureManager;
     private MeshManager meshManager;
-    private TextureManager textureManager;
 
     // Base \\
 
@@ -35,7 +30,6 @@ class FeatureBuilder extends BuilderPackage {
     protected void get() {
         this.featureManager = get(FeatureManager.class);
         this.meshManager = get(MeshManager.class);
-        this.textureManager = get(TextureManager.class);
     }
 
     // Build \\
@@ -46,17 +40,11 @@ class FeatureBuilder extends BuilderPackage {
         short featureID = featureManager.registerFeatureName(featureName);
         FeatureSlot featureSlot = parseSlot(arpg, file);
 
-        MeshHandle meshHandle = featureSlot.isMeshSlot() ? parseMesh(arpg, file) : null;
-        TextureHandle textureHandle = featureSlot.isMeshSlot() ? null : parseTexture(arpg, "texture");
-        TextureHandle faceTextureHandle = featureSlot.isFaceSlot() ? parseTexture(arpg, "face") : null;
-
         FeatureData featureData = new FeatureData(
                 featureName,
                 featureID,
                 featureSlot,
-                meshHandle,
-                textureHandle,
-                faceTextureHandle);
+                parseMesh(arpg, file));
 
         FeatureHandle handle = create(FeatureHandle.class);
         handle.constructor(featureData);
@@ -87,9 +75,5 @@ class FeatureBuilder extends BuilderPackage {
                     + "\" has no rig — mesh features are skinned onto the character's rig. File: " + file.getName());
 
         return meshHandle;
-    }
-
-    private TextureHandle parseTexture(ArpgObjectStruct arpg, String key) {
-        return textureManager.getTextureHandleFromTextureName(ArpgUtility.validateString(arpg, key));
     }
 }

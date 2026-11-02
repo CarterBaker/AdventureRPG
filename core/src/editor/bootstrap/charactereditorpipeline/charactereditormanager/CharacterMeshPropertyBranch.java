@@ -84,7 +84,8 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL,
                     EditorSetting.CHARACTER_EDITOR_KEY_PART_SHAPE,
                     EditorSetting.CHARACTER_EDITOR_KEY_PART_TEXTURE,
-                    EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE -> true;
+                    EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_EDIT_SHAPE -> true;
             default -> false;
         };
     }
@@ -110,6 +111,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_POSITIVE,
                     EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_NEGATIVE,
                     EditorSetting.CHARACTER_EDITOR_KEY_ADD_PART,
+                    EditorSetting.CHARACTER_EDITOR_KEY_ADD_SHAPE,
                     EditorSetting.CHARACTER_EDITOR_KEY_SAVE_MESH,
                     EditorSetting.CHARACTER_EDITOR_KEY_REVERT_MESH,
                     EditorSetting.CHARACTER_EDITOR_KEY_UNDO,
@@ -279,6 +281,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                             CharacterEditorShape.VALUES.length)]);
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_TEXTURE -> cyclePartTexture(direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE -> cycleFaceTexture(direction);
+            case EditorSetting.CHARACTER_EDITOR_KEY_EDIT_SHAPE -> cycleShape(direction);
             default -> {
             }
         }
@@ -295,8 +298,31 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE -> toTextureText(resolveDocument() != null
                     ? characterSculptBranch.findSelectedFaceTexture(resolveDocument())
                     : null);
+            case EditorSetting.CHARACTER_EDITOR_KEY_EDIT_SHAPE -> toShapeText(resolveDocument());
             default -> "";
         };
+    }
+
+    // Shape Keys \\
+
+    // Steps from the base through every morph of the mesh and back
+    private void cycleShape(int direction) {
+
+        CharacterMeshDocumentInstance document = resolveDocument();
+
+        if (document == null)
+            return;
+
+        int count = document.getMesh().getMorphCount();
+        int next = Math.floorMod(document.getEditShape() + 1 + direction, count + 1) - 1;
+
+        characterMeshBranch.editShape(document, next);
+    }
+
+    private String toShapeText(CharacterMeshDocumentInstance document) {
+        return document != null && document.isEditingShape()
+                ? document.getMesh().getMorphName(document.getEditShape())
+                : EditorSetting.CHARACTER_EDITOR_SHAPE_BASE;
     }
 
     private String toYesNo(boolean value) {
@@ -376,6 +402,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_REDO -> characterEditorManager.redo();
             case EditorSetting.CHARACTER_EDITOR_KEY_SAVE_MESH -> characterEditorManager.saveMesh(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_REVERT_MESH -> characterEditorManager.revertMesh(document);
+            case EditorSetting.CHARACTER_EDITOR_KEY_ADD_SHAPE -> characterMeshBranch.addShape(document);
             default -> {
                 if (isSelectionAction(keyName))
                     actSelection(document, keyName);

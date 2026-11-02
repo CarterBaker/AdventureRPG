@@ -2,11 +2,14 @@ package application.bootstrap.savepipeline.savemanager;
 
 import java.io.File;
 
+import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
@@ -63,19 +66,52 @@ class PlayerSaveBranch extends BranchPackage {
         characterArpg.addProperty("weight", player.getWeight());
 
         if (player.hasAppearance())
-            characterArpg.add("appearance", buildAppearance(player.getAppearanceHandle()));
+            characterArpg.add("appearance", buildAppearance(
+                    player.getAppearanceHandle(), player.getEntityData().getAppearanceData()));
 
         return characterArpg;
     }
 
-    private ArpgObjectStruct buildAppearance(AppearanceHandle appearanceHandle) {
+    private ArpgObjectStruct buildAppearance(AppearanceHandle appearanceHandle, AppearanceData appearanceData) {
 
         ArpgObjectStruct appearanceArpg = new ArpgObjectStruct();
-        appearanceArpg.add("skin_color", buildColor(appearanceHandle.getSkinColor()));
-        appearanceArpg.add("hair_color", buildColor(appearanceHandle.getHairColor()));
+        appearanceArpg.add("colors", buildColors(appearanceHandle));
+        appearanceArpg.add("details", buildDetails(appearanceHandle));
+        appearanceArpg.add("shapes", buildShapes(appearanceHandle, appearanceData));
         appearanceArpg.add("head_proportion", buildVector(appearanceHandle.getHeadProportion()));
         appearanceArpg.add("features", buildFeatures(appearanceHandle));
         return appearanceArpg;
+    }
+
+    private ArpgObjectStruct buildColors(AppearanceHandle appearanceHandle) {
+
+        ArpgObjectStruct colorsArpg = new ArpgObjectStruct();
+
+        for (SkinnedColor skinnedColor : SkinnedColor.VALUES)
+            colorsArpg.add(ArpgUtility.toEnumName(skinnedColor), buildColor(appearanceHandle.getColor(skinnedColor)));
+
+        return colorsArpg;
+    }
+
+    private ArpgObjectStruct buildDetails(AppearanceHandle appearanceHandle) {
+
+        ArpgObjectStruct detailsArpg = new ArpgObjectStruct();
+
+        for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
+            detailsArpg.addProperty(ArpgUtility.toEnumName(skinnedDetail), appearanceHandle.getDetail(skinnedDetail));
+
+        return detailsArpg;
+    }
+
+    // Shapes by the morph each weighs, so a save survives sliders being added to or reordered in the template
+    private ArpgObjectStruct buildShapes(AppearanceHandle appearanceHandle, AppearanceData appearanceData) {
+
+        ArpgObjectStruct shapesArpg = new ArpgObjectStruct();
+
+        for (int i = 0; i < appearanceData.getShapeCount(); i++)
+            shapesArpg.addProperty(appearanceData.getShape(i).getMorphName(), appearanceHandle.getShapeValue(i));
+
+        return shapesArpg;
     }
 
     private ArpgObjectStruct buildFeatures(AppearanceHandle appearanceHandle) {
@@ -85,7 +121,7 @@ class PlayerSaveBranch extends BranchPackage {
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (appearanceHandle.hasFeature(featureSlot))
                 featuresArpg.addProperty(
-                        featureSlot.name().toLowerCase(),
+                        ArpgUtility.toEnumName(featureSlot),
                         appearanceHandle.getFeature(featureSlot).getFeatureName());
 
         return featuresArpg;

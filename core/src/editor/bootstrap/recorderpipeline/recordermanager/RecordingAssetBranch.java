@@ -243,8 +243,6 @@ class RecordingAssetBranch extends BranchPackage {
             FeatureHandle featureHandle = featureManager.getFeatureHandleFromFeatureName(featureName);
 
             add(RecorderAssetKind.MODELS, featureHandle.getMeshHandle(), featureName);
-            add(RecorderAssetKind.TEXTURES, featureHandle.getTextureHandle(), featureName);
-            add(RecorderAssetKind.TEXTURES, featureHandle.getFaceTextureHandle(), featureName);
         } catch (InternalException e) {
             feature.setMissing(true);
         }

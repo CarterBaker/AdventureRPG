@@ -1,46 +1,35 @@
 package application.bootstrap.geometrypipeline.skinnedbuffer;
 
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
-import engine.util.mathematics.vectors.Vector4;
 
 public class SkinnedAppearanceStruct extends StructPackage {
 
     /*
-     * Per-instance appearance row written beside the model matrix of every
-     * skinned draw — SKINNED_INSTANCE_APPEARANCE_FLOATS floats, six vec4
-     * attributes in this exact order: tint (rgb, w = hidden bone index),
-     * detail tint (rgb, w unused), face region, eyes region, brows region,
-     * mouth region. Regions are atlas-space tile rects (u0, v0, u1, v1); an
-     * all-zero region disables that overlay in the shader. Reused as a
-     * mutable scratch by whoever submits skinned draws — never stored.
+     * The appearance one skinned draw writes into its instance's palette row
+     * after the bones: a header texel (x = hidden bone index), one texel per
+     * SkinnedColor and the SkinnedDetail amounts four to a texel, followed by
+     * the morph weights of the mesh they were resolved for — any other mesh
+     * drawn with this appearance, hair worn on the body, gets zero weights.
+     * Reused as a mutable scratch by whoever submits skinned draws, holding
+     * the weights array it is lent, never a copy.
      */
 
-    // Tint
-    private final Vector4 tint;
-    private final Vector4 detailTint;
+    // Texels
+    private final float[] texels;
 
-    // Regions
-    private final Vector4 faceRegion;
-    private final Vector4 eyesRegion;
-    private final Vector4 browsRegion;
-    private final Vector4 mouthRegion;
+    // Morphs
+    private MeshHandle morphMesh;
+    private float[] morphWeights;
 
     // Constructor \\
 
     public SkinnedAppearanceStruct() {
 
-        // Tint
-        this.tint = new Vector4();
-        this.detailTint = new Vector4();
-
-        // Regions
-        this.faceRegion = new Vector4();
-        this.eyesRegion = new Vector4();
-        this.browsRegion = new Vector4();
-        this.mouthRegion = new Vector4();
+        // Texels
+        this.texels = new float[getTexelCount() * EngineSetting.COLOR_CHANNEL_COUNT];
 
         reset();
     }
@@ -49,76 +38,67 @@ public class SkinnedAppearanceStruct extends StructPackage {
 
     public void reset() {
 
-        tint.set(Color.WHITE.r, Color.WHITE.g, Color.WHITE.b, EngineSetting.SKINNED_HIDDEN_BONE_NONE);
-        detailTint.set(Color.WHITE.r, Color.WHITE.g, Color.WHITE.b, Color.WHITE.a);
+        texels[0] = EngineSetting.SKINNED_HIDDEN_BONE_NONE;
+        texels[1] = 0f;
+        texels[2] = 0f;
+        texels[3] = 0f;
 
-        faceRegion.set(0f);
-        eyesRegion.set(0f);
-        browsRegion.set(0f);
-        mouthRegion.set(0f);
-    }
+        for (SkinnedColor skinnedColor : SkinnedColor.VALUES)
+            setColor(skinnedColor, Color.WHITE);
 
-    public void setTint(Color color) {
-        tint.set(color.r, color.g, color.b, tint.w);
+        for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
+            setDetail(skinnedDetail, 0f);
+
+        morphMesh = null;
+        morphWeights = null;
     }
 
     public void setHiddenBone(float hiddenBone) {
-        tint.w = hiddenBone;
+        texels[0] = hiddenBone;
     }
 
-    public void setDetailTint(Color color) {
-        detailTint.set(color.r, color.g, color.b, color.a);
+    public void setColor(SkinnedColor skinnedColor, Color color) {
+
+        int base = (EngineSetting.SKINNED_APPEARANCE_HEADER_TEXELS + skinnedColor.ordinal())
+                * EngineSetting.COLOR_CHANNEL_COUNT;
+
+        texels[base] = color.r;
+        texels[base + 1] = color.g;
+        texels[base + 2] = color.b;
+        texels[base + 3] = color.a;
     }
 
-    public void setFaceRegion(TextureHandle textureHandle) {
-        setRegion(faceRegion, textureHandle);
+    public void setDetail(SkinnedDetail skinnedDetail, float amount) {
+        texels[(EngineSetting.SKINNED_APPEARANCE_HEADER_TEXELS + SkinnedColor.VALUES.length)
+                * EngineSetting.COLOR_CHANNEL_COUNT + skinnedDetail.ordinal()] = amount;
     }
 
-    public void setEyesRegion(TextureHandle textureHandle) {
-        setRegion(eyesRegion, textureHandle);
-    }
-
-    public void setBrowsRegion(TextureHandle textureHandle) {
-        setRegion(browsRegion, textureHandle);
-    }
-
-    public void setMouthRegion(TextureHandle textureHandle) {
-        setRegion(mouthRegion, textureHandle);
+    // Lends the morph weights resolved for one mesh, by that mesh's morph index
+    public void setMorphWeights(MeshHandle meshHandle, float[] weights) {
+        this.morphMesh = meshHandle;
+        this.morphWeights = weights;
     }
 
     // Write \\
 
     public void write(float[] out, int offset) {
-
-        int cursor = offset;
-
-        cursor = writeVector(out, cursor, tint);
-        cursor = writeVector(out, cursor, detailTint);
-        cursor = writeVector(out, cursor, faceRegion);
-        cursor = writeVector(out, cursor, eyesRegion);
-        cursor = writeVector(out, cursor, browsRegion);
-        writeVector(out, cursor, mouthRegion);
+        System.arraycopy(texels, 0, out, offset, texels.length);
     }
 
-    // Utility \\
+    // The weights of a mesh's morphs, in order; zero for a mesh the weights were not resolved for
+    public void writeMorphWeights(MeshHandle meshHandle, float[] out, int offset) {
 
-    private void setRegion(Vector4 region, TextureHandle textureHandle) {
+        int morphCount = meshHandle.getMorphCount();
+        boolean resolved = meshHandle == morphMesh && morphWeights != null;
 
-        if (textureHandle == null) {
-            region.set(0f);
-            return;
-        }
-
-        region.set(textureHandle.getU0(), textureHandle.getV0(), textureHandle.getU1(), textureHandle.getV1());
+        for (int m = 0; m < morphCount; m++)
+            out[offset + m] = resolved && m < morphWeights.length ? morphWeights[m] : 0f;
     }
 
-    private int writeVector(float[] out, int cursor, Vector4 vector) {
+    // Accessible \\
 
-        out[cursor++] = vector.x;
-        out[cursor++] = vector.y;
-        out[cursor++] = vector.z;
-        out[cursor++] = vector.w;
-
-        return cursor;
+    public static int getTexelCount() {
+        return EngineSetting.SKINNED_APPEARANCE_HEADER_TEXELS + SkinnedColor.VALUES.length
+                + EngineSetting.SKINNED_APPEARANCE_DETAIL_TEXELS;
     }
 }

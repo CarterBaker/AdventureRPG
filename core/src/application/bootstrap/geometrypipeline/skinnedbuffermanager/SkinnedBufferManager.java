@@ -13,9 +13,10 @@ public class SkinnedBufferManager extends ManagerPackage {
 
     /*
      * Creates, grows, uploads and disposes SkinnedBufferInstances, one per
-     * rigged mesh and material pair. Appearance rides in each instance row, so
-     * characters of one template share a material and batch together. The
-     * shareable instance VBO and bone palette texture live here; the
+     * rigged mesh and material pair. Appearance and morph weights ride in each
+     * instance's palette row, so characters of one template share a material
+     * and batch together. The shareable instance VBO and palette texture live
+     * here; the
      * context-local VAO is cached per window by RenderSystem.
      */
 
@@ -86,6 +87,9 @@ public class SkinnedBufferManager extends ManagerPackage {
             reallocateGpuObjects(instance);
 
         SkinnedBufferData data = instance.getSkinnedBufferData();
+
+        if (data.isNeedsPaletteRealloc())
+            reallocatePalette(data);
         int instanceCount = data.getInstanceCount();
 
         SkinnedBufferGLSLUtility.uploadInstanceVBO(
@@ -93,10 +97,10 @@ public class SkinnedBufferManager extends ManagerPackage {
                 data.getInstanceData(),
                 instanceCount * EngineSetting.SKINNED_INSTANCE_FLOATS);
 
-        SkinnedBufferGLSLUtility.uploadBonePalette(
-                data.getBonePaletteTexture(),
-                data.getBoneMatrixData(),
-                data.getBoneCapacity(),
+        SkinnedBufferGLSLUtility.uploadPalette(
+                data.getPaletteTexture(),
+                data.getPaletteData(),
+                data.getRowTexels(),
                 instanceCount);
     }
 
@@ -107,10 +111,10 @@ public class SkinnedBufferManager extends ManagerPackage {
         SkinnedBufferData data = instance.getSkinnedBufferData();
 
         int vbo = SkinnedBufferGLSLUtility.createDynamicInstanceVBO(data.getMaxInstances());
-        int texture = SkinnedBufferGLSLUtility.createBonePaletteTexture(data.getBoneCapacity(), data.getMaxInstances());
+        int texture = SkinnedBufferGLSLUtility.createPaletteTexture(data.getRowTexels(), data.getMaxInstances());
 
         data.setInstanceVBO(vbo);
-        data.setBonePaletteTexture(texture);
+        data.setPaletteTexture(texture);
     }
 
     private void reallocateGpuObjects(SkinnedBufferInstance instance) {
@@ -118,15 +122,25 @@ public class SkinnedBufferManager extends ManagerPackage {
         SkinnedBufferData data = instance.getSkinnedBufferData();
 
         SkinnedBufferGLSLUtility.deleteBuffer(data.getInstanceVBO());
-        SkinnedBufferGLSLUtility.deleteTexture(data.getBonePaletteTexture());
+        SkinnedBufferGLSLUtility.deleteTexture(data.getPaletteTexture());
 
         int vbo = SkinnedBufferGLSLUtility.createDynamicInstanceVBO(data.getMaxInstances());
-        int texture = SkinnedBufferGLSLUtility.createBonePaletteTexture(data.getBoneCapacity(), data.getMaxInstances());
+        int texture = SkinnedBufferGLSLUtility.createPaletteTexture(data.getRowTexels(), data.getMaxInstances());
 
         data.setInstanceVBO(vbo);
-        data.setBonePaletteTexture(texture);
+        data.setPaletteTexture(texture);
+        data.setNeedsPaletteRealloc(false);
 
         instance.clearNeedsGpuRealloc();
+    }
+
+    // A palette row laid out again for its mesh's morphs needs a texture of the new width
+    private void reallocatePalette(SkinnedBufferData data) {
+
+        SkinnedBufferGLSLUtility.deleteTexture(data.getPaletteTexture());
+        data.setPaletteTexture(
+                SkinnedBufferGLSLUtility.createPaletteTexture(data.getRowTexels(), data.getMaxInstances()));
+        data.setNeedsPaletteRealloc(false);
     }
 
     // Disposal \\
@@ -140,7 +154,7 @@ public class SkinnedBufferManager extends ManagerPackage {
         for (int i = 0; i < count; i++) {
             SkinnedBufferData data = ((SkinnedBufferInstance) elements[i]).getSkinnedBufferData();
             SkinnedBufferGLSLUtility.deleteBuffer(data.getInstanceVBO());
-            SkinnedBufferGLSLUtility.deleteTexture(data.getBonePaletteTexture());
+            SkinnedBufferGLSLUtility.deleteTexture(data.getPaletteTexture());
         }
 
         mesh2Material2SkinnedBuffer.clear();

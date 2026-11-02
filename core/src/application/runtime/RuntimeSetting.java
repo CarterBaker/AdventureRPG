@@ -220,10 +220,14 @@ public class RuntimeSetting {
     public static final String CREATOR_TAB_PROFESSION = "Profession";
 
     // Character Creator Sections
-    public static final String CREATOR_SECTION_FEATURES = "Features";
     public static final String CREATOR_SECTION_SKIN = "Skin Tone";
+    public static final String CREATOR_SECTION_EYE_COLOR = "Eye Color";
+    public static final String CREATOR_SECTION_LIP_COLOR = "Lip Color";
+    public static final String CREATOR_SECTION_DETAILS = "Skin & Makeup";
     public static final String CREATOR_SECTION_HAIRSTYLE = "Hairstyle";
     public static final String CREATOR_SECTION_HAIR_COLOR = "Hair Color";
+    public static final String CREATOR_SECTION_BROW_COLOR = "Brow & Lash Color";
+    public static final String CREATOR_SECTION_HAIR_DETAILS = "Hair Finish";
     public static final String CREATOR_SECTION_BUILD = "Build";
     public static final String CREATOR_SECTION_HEAD_SHAPE = "Head Shape";
     public static final String CREATOR_SECTION_GENDER = "Gender";
@@ -251,6 +255,18 @@ public class RuntimeSetting {
     public static final String CREATOR_FORMAT_PERCENT = "%.0f%%";
     public static final float CREATOR_HEAD_PROPORTION_MIN = 0.85f;
     public static final float CREATOR_HEAD_PROPORTION_MAX = 1.15f;
+
+    // Character Creator — shapes and details: shapes in the body group are listed on the Body tab, every other group on
+    // the Appearance tab under its own name; each detail's label and range follow SkinnedDetail order, and the
+    // Appearance and Hair tabs list the details named by ordinal
+    public static final String CREATOR_SHAPE_GROUP_BODY = "body";
+    public static final String CREATOR_SHAPE_NAME_SEPARATOR = "_";
+    public static final String[] CREATOR_DETAIL_LABELS = {
+            "Iris Size", "Pupil Size", "Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes" };
+    public static final float[] CREATOR_DETAIL_MIN = { 0.75f, 0.6f, 0f, 0f, 0f, 0f, 0f, 0f };
+    public static final float[] CREATOR_DETAIL_MAX = { 1.3f, 1.4f, 1f, 1f, 1f, 1f, 1f, 1f };
+    public static final int[] CREATOR_APPEARANCE_DETAILS = { 0, 1, 3, 4, 5, 6, 7 };
+    public static final int[] CREATOR_HAIR_DETAILS = { 2 };
     public static final float CREATOR_PERCENT_SCALE = 100f;
 
     // Character Creator Name

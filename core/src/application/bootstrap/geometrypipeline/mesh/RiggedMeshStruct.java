@@ -16,7 +16,10 @@ public class RiggedMeshStruct extends StructPackage {
      * with up to MAX_BONE_INFLUENCES weighted bones, shared by every quad
      * corner standing on it with the same influences; a face is four vertices
      * in winding order, a texture from the mesh's palette and, when authored,
-     * its own corner UVs. MeshBuilder builds the game's meshes from it and the
+     * its own corner UVs and the zone it is made of. Each vertex also carries
+     * its mask channels, and named morph targets move vertices by sparse
+     * deltas, so one mesh holds every face shape and expression a character
+     * slides between. MeshBuilder builds the game's meshes from it and the
      * character editor changes it in place.
      */
 
@@ -30,12 +33,19 @@ public class RiggedMeshStruct extends StructPackage {
     private final FloatArrayList positions;
     private final IntArrayList influenceBones;
     private final FloatArrayList influenceWeights;
+    private final FloatArrayList masks;
 
     // Faces — four vertices, a texture and eight corner UV floats each
     private final IntArrayList faceVertices;
     private final IntArrayList faceTextures;
     private final FloatArrayList faceUVs;
     private final BooleanArrayList faceAuthoredUVs;
+    private final IntArrayList faceZones;
+
+    // Morphs — per target its name, the vertices it moves and three delta floats per vertex
+    private final ObjectArrayList<String> morphNames;
+    private final ObjectArrayList<IntArrayList> morphVertices;
+    private final ObjectArrayList<FloatArrayList> morphDeltas;
 
     // Constructor \\
 
@@ -51,12 +61,19 @@ public class RiggedMeshStruct extends StructPackage {
         this.positions = new FloatArrayList();
         this.influenceBones = new IntArrayList();
         this.influenceWeights = new FloatArrayList();
+        this.masks = new FloatArrayList();
 
         // Faces
         this.faceVertices = new IntArrayList();
         this.faceTextures = new IntArrayList();
         this.faceUVs = new FloatArrayList();
         this.faceAuthoredUVs = new BooleanArrayList();
+        this.faceZones = new IntArrayList();
+
+        // Morphs
+        this.morphNames = new ObjectArrayList<>();
+        this.morphVertices = new ObjectArrayList<>();
+        this.morphDeltas = new ObjectArrayList<>();
     }
 
     public RiggedMeshStruct(RiggedMeshStruct source) {
@@ -80,6 +97,8 @@ public class RiggedMeshStruct extends StructPackage {
         influenceBones.addAll(source.influenceBones);
         influenceWeights.clear();
         influenceWeights.addAll(source.influenceWeights);
+        masks.clear();
+        masks.addAll(source.masks);
         faceVertices.clear();
         faceVertices.addAll(source.faceVertices);
         faceTextures.clear();
@@ -88,6 +107,31 @@ public class RiggedMeshStruct extends StructPackage {
         faceUVs.addAll(source.faceUVs);
         faceAuthoredUVs.clear();
         faceAuthoredUVs.addAll(source.faceAuthoredUVs);
+        faceZones.clear();
+        faceZones.addAll(source.faceZones);
+        setMorphs(source);
+    }
+
+    // Takes every morph target of a mesh, reusing this mesh's lists where it already has them
+    private void setMorphs(RiggedMeshStruct source) {
+
+        morphNames.clear();
+        morphNames.addAll(source.morphNames);
+
+        while (morphVertices.size() < morphNames.size()) {
+            morphVertices.add(new IntArrayList());
+            morphDeltas.add(new FloatArrayList());
+        }
+
+        morphVertices.size(morphNames.size());
+        morphDeltas.size(morphNames.size());
+
+        for (int m = 0; m < morphNames.size(); m++) {
+            morphVertices.get(m).clear();
+            morphVertices.get(m).addAll(source.morphVertices.get(m));
+            morphDeltas.get(m).clear();
+            morphDeltas.get(m).addAll(source.morphDeltas.get(m));
+        }
     }
 
     // Textures \\
@@ -125,6 +169,9 @@ public class RiggedMeshStruct extends StructPackage {
             influenceWeights.add(0f);
         }
 
+        for (int i = 0; i < EngineSetting.RIGGED_MESH_MASK_FLOATS; i++)
+            masks.add(0f);
+
         return getVertexCount() - 1;
     }
 
@@ -133,6 +180,7 @@ public class RiggedMeshStruct extends StructPackage {
 
         int copy = addVertex(getX(vertexIndex), getY(vertexIndex), getZ(vertexIndex));
         copyInfluences(vertexIndex, copy);
+        copyMasks(vertexIndex, copy);
 
         return copy;
     }
@@ -191,6 +239,8 @@ public class RiggedMeshStruct extends StructPackage {
         positions.size(kept * EngineSetting.RIGGED_MESH_POSITION_FLOATS);
         influenceBones.size(kept * EngineSetting.MAX_BONE_INFLUENCES);
         influenceWeights.size(kept * EngineSetting.MAX_BONE_INFLUENCES);
+        masks.size(kept * EngineSetting.RIGGED_MESH_MASK_FLOATS);
+        remapMorphs(remap);
 
         for (int i = 0; i < faceVertices.size(); i++) {
 
@@ -211,12 +261,136 @@ public class RiggedMeshStruct extends StructPackage {
         positions.size(vertexCount * EngineSetting.RIGGED_MESH_POSITION_FLOATS);
         influenceBones.size(vertexCount * EngineSetting.MAX_BONE_INFLUENCES);
         influenceWeights.size(vertexCount * EngineSetting.MAX_BONE_INFLUENCES);
+        masks.size(vertexCount * EngineSetting.RIGGED_MESH_MASK_FLOATS);
     }
 
     private void moveVertex(int from, int to) {
 
         setPosition(to, getX(from), getY(from), getZ(from));
         copyInfluences(from, to);
+        copyMasks(from, to);
+    }
+
+    // Masks \
+
+    public float getMask(int vertexIndex, int channel) {
+        return masks.getFloat(vertexIndex * EngineSetting.RIGGED_MESH_MASK_FLOATS + channel);
+    }
+
+    public void setMask(int vertexIndex, int channel, float value) {
+        masks.set(vertexIndex * EngineSetting.RIGGED_MESH_MASK_FLOATS + channel, value);
+    }
+
+    public void copyMasks(int fromVertex, int toVertex) {
+
+        int from = fromVertex * EngineSetting.RIGGED_MESH_MASK_FLOATS;
+        int to = toVertex * EngineSetting.RIGGED_MESH_MASK_FLOATS;
+
+        for (int i = 0; i < EngineSetting.RIGGED_MESH_MASK_FLOATS; i++)
+            masks.set(to + i, masks.getFloat(from + i));
+    }
+
+    // Morphs \
+
+    // The index of a morph target, added empty the first time it is named
+    public int resolveMorph(String morphName) {
+
+        int morphIndex = getMorphIndex(morphName);
+
+        if (morphIndex != EngineSetting.INDEX_NOT_FOUND)
+            return morphIndex;
+
+        morphNames.add(morphName);
+        morphVertices.add(new IntArrayList());
+        morphDeltas.add(new FloatArrayList());
+
+        return morphNames.size() - 1;
+    }
+
+    public int getMorphIndex(String morphName) {
+        return morphNames.indexOf(morphName);
+    }
+
+    public int getMorphCount() {
+        return morphNames.size();
+    }
+
+    public String getMorphName(int morphIndex) {
+        return morphNames.get(morphIndex);
+    }
+
+    public int getMorphEntryCount(int morphIndex) {
+        return morphVertices.get(morphIndex).size();
+    }
+
+    public int getMorphVertex(int morphIndex, int entry) {
+        return morphVertices.get(morphIndex).getInt(entry);
+    }
+
+    public float getMorphDelta(int morphIndex, int entry, int axis) {
+        return morphDeltas.get(morphIndex).getFloat(entry * EngineSetting.RIGGED_MESH_POSITION_FLOATS + axis);
+    }
+
+    // The entry a morph holds for a vertex, INDEX_NOT_FOUND when it does not move it
+    public int findMorphEntry(int morphIndex, int vertexIndex) {
+        return morphVertices.get(morphIndex).indexOf(vertexIndex);
+    }
+
+    // Sets how far a morph moves a vertex, adding the vertex to the morph the first time it moves
+    public void setMorphDelta(int morphIndex, int vertexIndex, float dx, float dy, float dz) {
+
+        int entry = findMorphEntry(morphIndex, vertexIndex);
+        FloatArrayList deltas = morphDeltas.get(morphIndex);
+
+        if (entry == EngineSetting.INDEX_NOT_FOUND) {
+            morphVertices.get(morphIndex).add(vertexIndex);
+            deltas.add(dx);
+            deltas.add(dy);
+            deltas.add(dz);
+            return;
+        }
+
+        int base = entry * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+
+        deltas.set(base, dx);
+        deltas.set(base + 1, dy);
+        deltas.set(base + 2, dz);
+    }
+
+    // Empties a morph, keeping its name and index
+    public void clearMorph(int morphIndex) {
+        morphVertices.get(morphIndex).clear();
+        morphDeltas.get(morphIndex).clear();
+    }
+
+    // Renumbers every morph's vertices after a removal, dropping the entries of vertices removed
+    private void remapMorphs(IntArrayList remap) {
+
+        for (int m = 0; m < morphNames.size(); m++) {
+
+            IntArrayList vertices = morphVertices.get(m);
+            FloatArrayList deltas = morphDeltas.get(m);
+            int kept = 0;
+
+            for (int e = 0; e < vertices.size(); e++) {
+
+                int vertexIndex = remap.getInt(vertices.getInt(e));
+
+                if (vertexIndex == EngineSetting.INDEX_NOT_FOUND)
+                    continue;
+
+                vertices.set(kept, vertexIndex);
+
+                for (int a = 0; a < EngineSetting.RIGGED_MESH_POSITION_FLOATS; a++)
+                    deltas.set(kept * EngineSetting.RIGGED_MESH_POSITION_FLOATS + a,
+                            deltas.getFloat(e * EngineSetting.RIGGED_MESH_POSITION_FLOATS + a));
+
+                kept++;
+            }
+
+            vertices.size(kept);
+            deltas.size(kept * EngineSetting.RIGGED_MESH_POSITION_FLOATS);
+        }
     }
 
     // Influences \\
@@ -324,6 +498,7 @@ public class RiggedMeshStruct extends StructPackage {
         faceTextures.add(textureIndex);
         faceUVs.addElements(faceUVs.size(), EngineSetting.MESH_QUAD_DEFAULT_UVS);
         faceAuthoredUVs.add(false);
+        faceZones.add(MeshZone.SKIN.ordinal());
 
         return getFaceCount() - 1;
     }
@@ -339,6 +514,7 @@ public class RiggedMeshStruct extends StructPackage {
                 getFaceTexture(faceIndex));
 
         copyFaceUVs(faceIndex, copy);
+        setFaceZone(copy, getFaceZone(faceIndex));
         return copy;
     }
 
@@ -360,6 +536,14 @@ public class RiggedMeshStruct extends StructPackage {
 
     public void setFaceTexture(int faceIndex, int textureIndex) {
         faceTextures.set(faceIndex, textureIndex);
+    }
+
+    public MeshZone getFaceZone(int faceIndex) {
+        return MeshZone.VALUES[faceZones.getInt(faceIndex)];
+    }
+
+    public void setFaceZone(int faceIndex, MeshZone zone) {
+        faceZones.set(faceIndex, zone.ordinal());
     }
 
     public boolean hasAuthoredUVs(int faceIndex) {
@@ -419,6 +603,7 @@ public class RiggedMeshStruct extends StructPackage {
         faceTextures.size(kept);
         faceUVs.size(kept * EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.RIGGED_MESH_UV_FLOATS);
         faceAuthoredUVs.size(kept);
+        faceZones.size(kept);
     }
 
     private void moveFace(int from, int to) {
@@ -427,6 +612,7 @@ public class RiggedMeshStruct extends StructPackage {
             setFaceVertex(to, c, getFaceVertex(from, c));
 
         faceTextures.set(to, faceTextures.getInt(from));
+        faceZones.set(to, faceZones.getInt(from));
         copyFaceUVs(from, to);
     }
 

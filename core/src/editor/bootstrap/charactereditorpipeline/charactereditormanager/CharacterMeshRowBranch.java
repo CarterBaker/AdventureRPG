@@ -167,6 +167,10 @@ class CharacterMeshRowBranch extends BranchPackage {
         if (!addDocumentHeader(characterEditorManager.getActiveMeshDocument(), rows))
             return;
 
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_SHAPE_KEYS));
+        addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_EDIT_SHAPE, EditorSetting.CHARACTER_EDITOR_LABEL_EDIT_SHAPE);
+        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_ADD_SHAPE, EditorSetting.CHARACTER_EDITOR_LABEL_ADD_SHAPE);
+
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_OPTIONS));
         addViewOptions(rows);
         addFileRows(rows);

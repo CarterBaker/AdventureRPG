@@ -88,6 +88,8 @@ public class CharacterEditorManager extends ManagerPackage {
     private float weightRatio;
     private Vector3 headProportion;
     private int[] toneIndices;
+    private float[] shapeValues;
+    private float blink;
 
     // Mesh
     private String activePartKey;
@@ -153,6 +155,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.headProportion = new Vector3(1f, 1f, 1f);
         this.toneIndices = new int[CharacterEditorColor.VALUES.length];
         Arrays.fill(toneIndices, EngineSetting.INDEX_NOT_FOUND);
+        this.shapeValues = new float[0];
 
         // Mesh
         this.activePartKey = EditorSetting.CHARACTER_EDITOR_PART_BODY;
@@ -239,7 +242,9 @@ public class CharacterEditorManager extends ManagerPackage {
         this.activePartKey = EditorSetting.CHARACTER_EDITOR_PART_BODY;
         this.requestedTransform = null;
         this.statusMessage = null;
+        this.blink = 0f;
         Arrays.fill(toneIndices, EngineSetting.INDEX_NOT_FOUND);
+        Arrays.fill(shapeValues, 0f);
         notifyChanged();
     }
 
@@ -338,6 +343,9 @@ public class CharacterEditorManager extends ManagerPackage {
 
         characterSculptBranch.cancelTransform();
 
+        if (mode != this.mode)
+            characterMeshBranch.endShapeEdits();
+
         this.mode = mode;
         this.requestedTransform = null;
         notifyChanged();
@@ -400,6 +408,7 @@ public class CharacterEditorManager extends ManagerPackage {
     void selectPart(String partKey) {
 
         characterSculptBranch.cancelTransform();
+        characterMeshBranch.endShapeEdits();
 
         this.activePartKey = partKey;
         this.requestedTransform = null;
@@ -870,6 +879,22 @@ public class CharacterEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
+    // A preview slider's value, the array grown to hold every slider the template lists
+    void setShapeValue(int shapeIndex, float value) {
+
+        if (shapeIndex >= shapeValues.length)
+            this.shapeValues = Arrays.copyOf(shapeValues, shapeIndex + 1);
+
+        shapeValues[shapeIndex] = value;
+        notifyChanged();
+    }
+
+    void setBlink(float blink) {
+
+        this.blink = blink;
+        notifyChanged();
+    }
+
     // Status \\
 
     void notifyChanged() {
@@ -929,6 +954,14 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public int getToneIndex(CharacterEditorColor color) {
         return toneIndices[color.ordinal()];
+    }
+
+    public float getShapeValue(int shapeIndex) {
+        return shapeIndex < shapeValues.length ? shapeValues[shapeIndex] : 0f;
+    }
+
+    public float getBlink() {
+        return blink;
     }
 
     public String getSelectedBoneName() {

@@ -6,6 +6,7 @@ import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.projectile.ProjectileInstance;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileRenderSystem;
+import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
@@ -17,6 +18,7 @@ import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.npc.NpcInstance;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
@@ -1085,15 +1087,22 @@ public class DevRecorderSystem extends SystemPackage {
         track.addSample(time, entity);
     }
 
-    // Changes whenever anything the look holds visibly changes — weight, skin, hair, or any worn or hidden item
+    // Changes whenever anything the look holds visibly changes — weight, any color or shape, or any worn or hidden item
     private int resolveLookSignature(EntityInstance entity) {
 
         InventoryHandle inventory = entity.getInventoryHandle();
         int signature = Float.floatToIntBits(entity.getWeight());
 
         if (entity.hasAppearance()) {
-            signature = mixColor(signature, entity.getAppearanceHandle().getSkinColor());
-            signature = mixColor(signature, entity.getAppearanceHandle().getHairColor());
+
+            AppearanceHandle appearance = entity.getAppearanceHandle();
+
+            for (SkinnedColor skinnedColor : SkinnedColor.VALUES)
+                signature = mixColor(signature, appearance.getColor(skinnedColor));
+
+            for (int i = 0; i < entity.getEntityData().getAppearanceData().getShapeCount(); i++)
+                signature = signature * EditorSetting.RECORDER_LOOK_HASH_PRIME
+                        + Float.floatToIntBits(appearance.getShapeValue(i));
         }
 
         for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {

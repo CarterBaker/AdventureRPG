@@ -526,7 +526,10 @@ class RenderSystem extends SystemPackage {
             skinnedBufferManager.upload(skinnedBuffer);
 
             MaterialInstance material = batch.getMaterial();
-            material.setUniform(EngineSetting.UNIFORM_BONE_PALETTE, skinnedBuffer.getBonePaletteTexture());
+            material.setUniform(EngineSetting.UNIFORM_BONE_PALETTE, skinnedBuffer.getPaletteTexture());
+            material.setUniform(EngineSetting.UNIFORM_MORPH_TARGETS, skinnedBuffer.getMeshHandle().getMorphTexture());
+            material.setUniform(EngineSetting.UNIFORM_APPEARANCE_BASE, skinnedBuffer.getAppearanceBase());
+            material.setUniform(EngineSetting.UNIFORM_MORPH_BASE, skinnedBuffer.getMorphBase());
 
             profilerManager.beginGpuBatch(window, material.getShaderHandle().getShaderName());
             bindSkinnedMaterial(batch, material);

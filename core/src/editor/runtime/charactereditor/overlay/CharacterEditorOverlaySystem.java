@@ -446,7 +446,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         int base = target.size() / CharacterEditorSetting.OVERLAY_VERTEX_FLOATS;
 
-        if (base + EngineSetting.QUAD_VERTEX_COUNT > EngineSetting.MESH_VERT_LIMIT)
+        if (base + EngineSetting.QUAD_VERTEX_COUNT > EngineSetting.RIGGED_MESH_VERT_LIMIT)
             return;
 
         putVertex(target, x, y, z, x, y, z, -half, -half);
@@ -471,7 +471,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         int base = target.size() / CharacterEditorSetting.OVERLAY_VERTEX_FLOATS;
 
-        if (base + EngineSetting.QUAD_VERTEX_COUNT > EngineSetting.MESH_VERT_LIMIT)
+        if (base + EngineSetting.QUAD_VERTEX_COUNT > EngineSetting.RIGGED_MESH_VERT_LIMIT)
             return false;
 
         putVertex(target, ax, ay, az, bx, by, bz, half, 0f);

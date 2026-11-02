@@ -2,31 +2,44 @@ package application.bootstrap.entitypipeline.appearance;
 
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import engine.graphics.color.Color;
 import engine.root.DataPackage;
+import engine.root.EngineSetting;
 
 public class AppearanceData extends DataPackage {
 
     /*
-     * Immutable appearance template for one entity type: default colors and
-     * palettes, default feature per slot, the head-shape bone and the build
-     * curve. isCompatible() is the one rule for whether a feature can be worn
-     * on this rig and texture array.
+     * Immutable appearance template for one entity type: the character mesh
+     * whose morph targets its sliders weigh, the default color and palette of
+     * every SkinnedColor, the default amount of every SkinnedDetail, the
+     * shape sliders, the morphs each AppearanceExpression plays, the default
+     * feature per slot, the head-shape bone and the build curve.
+     * isCompatible() is the one rule for whether a feature can be worn.
      */
 
     // Rig
     private final RigHandle rigHandle;
     private final int headBoneIndex;
-    private final int textureArrayID;
 
-    // Colors
-    private final Color skinColor;
-    private final Color hairColor;
+    // Mesh
+    private final MeshHandle characterMesh;
 
-    // Palettes
-    private final Color[] skinPalette;
-    private final Color[] hairPalette;
+    // Colors — indexed by SkinnedColor ordinal
+    private final Color[] colors;
+    private final Color[][] palettes;
+
+    // Details — indexed by SkinnedDetail ordinal
+    private final float[] details;
+
+    // Shapes
+    private final AppearanceShapeStruct[] shapes;
+
+    // Expressions — morph index per AppearanceExpression ordinal, INDEX_NOT_FOUND when the mesh has none
+    private final int[] expressionMorphs;
 
     // Features — indexed by FeatureSlot ordinal
     private final FeatureHandle[] defaultFeatures;
@@ -41,10 +54,12 @@ public class AppearanceData extends DataPackage {
     public AppearanceData(
             RigHandle rigHandle,
             int headBoneIndex,
-            Color skinColor,
-            Color hairColor,
-            Color[] skinPalette,
-            Color[] hairPalette,
+            MeshHandle characterMesh,
+            Color[] colors,
+            Color[][] palettes,
+            float[] details,
+            AppearanceShapeStruct[] shapes,
+            int[] expressionMorphs,
             FeatureHandle[] defaultFeatures,
             float thinBuildFactor,
             float heavyBuildFactor,
@@ -53,15 +68,22 @@ public class AppearanceData extends DataPackage {
         // Rig
         this.rigHandle = rigHandle;
         this.headBoneIndex = headBoneIndex;
-        this.textureArrayID = defaultFeatures[FeatureSlot.HEAD.ordinal()].getFaceTextureHandle().getArrayID();
+
+        // Mesh
+        this.characterMesh = characterMesh;
 
         // Colors
-        this.skinColor = skinColor;
-        this.hairColor = hairColor;
+        this.colors = colors;
+        this.palettes = palettes;
 
-        // Palettes
-        this.skinPalette = skinPalette;
-        this.hairPalette = hairPalette;
+        // Details
+        this.details = details;
+
+        // Shapes
+        this.shapes = shapes;
+
+        // Expressions
+        this.expressionMorphs = expressionMorphs;
 
         // Features
         this.defaultFeatures = defaultFeatures;
@@ -75,22 +97,33 @@ public class AppearanceData extends DataPackage {
     // Compatibility \\
 
     public boolean isCompatible(FeatureHandle featureHandle) {
-
-        FeatureSlot featureSlot = featureHandle.getFeatureSlot();
-
-        if (featureSlot.isMeshSlot() && featureHandle.getMeshHandle().getRigHandle() != rigHandle)
-            return false;
-
-        if (featureSlot.isFaceSlot() && featureHandle.getFaceTextureHandle().getArrayID() != textureArrayID)
-            return false;
-
-        return featureSlot.isMeshSlot() || featureHandle.getTextureHandle().getArrayID() == textureArrayID;
+        return featureHandle.getMeshHandle().getRigHandle() == rigHandle;
     }
 
     // Build \\
 
     public float getBuildFactor(float weightRatio) {
         return thinBuildFactor + (heavyBuildFactor - thinBuildFactor) * weightRatio;
+    }
+
+    // Shapes \\
+
+    public int getShapeCount() {
+        return shapes.length;
+    }
+
+    public AppearanceShapeStruct getShape(int shapeIndex) {
+        return shapes[shapeIndex];
+    }
+
+    // The index of the slider weighing a morph, INDEX_NOT_FOUND when no slider does
+    public int findShape(String morphName) {
+
+        for (int i = 0; i < shapes.length; i++)
+            if (shapes[i].getMorphName().equals(morphName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Accessible \\
@@ -103,24 +136,24 @@ public class AppearanceData extends DataPackage {
         return headBoneIndex;
     }
 
-    public int getTextureArrayID() {
-        return textureArrayID;
+    public MeshHandle getCharacterMesh() {
+        return characterMesh;
     }
 
-    public Color getSkinColor() {
-        return skinColor;
+    public Color getColor(SkinnedColor skinnedColor) {
+        return colors[skinnedColor.ordinal()];
     }
 
-    public Color getHairColor() {
-        return hairColor;
+    public Color[] getPalette(SkinnedColor skinnedColor) {
+        return palettes[skinnedColor.ordinal()];
     }
 
-    public Color[] getSkinPalette() {
-        return skinPalette;
+    public float getDetail(SkinnedDetail skinnedDetail) {
+        return details[skinnedDetail.ordinal()];
     }
 
-    public Color[] getHairPalette() {
-        return hairPalette;
+    public int getExpressionMorph(AppearanceExpression expression) {
+        return expressionMorphs[expression.ordinal()];
     }
 
     public FeatureHandle getDefaultFeature(FeatureSlot featureSlot) {
