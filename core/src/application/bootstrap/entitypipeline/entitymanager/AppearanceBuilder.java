@@ -2,6 +2,7 @@ package application.bootstrap.entitypipeline.entitymanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceExpression;
+import application.bootstrap.entitypipeline.appearance.AppearanceGenderStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
@@ -10,12 +11,14 @@ import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 class AppearanceBuilder extends BuilderPackage {
 
@@ -25,7 +28,8 @@ class AppearanceBuilder extends BuilderPackage {
      * "colors", "palettes" and "details" are keyed by the lower-case
      * SkinnedColor and SkinnedDetail names; "shapes" lists the sliders, each
      * naming a morph of the character mesh with its group and range;
-     * "expressions" names the morph each AppearanceExpression plays. Every
+     * "expressions" names the morph each AppearanceExpression plays;
+     * "genders" gives each gender its starting shapes and features. Every
      * default feature must sit in the slot it is declared under and fit the
      * rig. A color left out is white, a palette left out holds only its
      * default color, a detail left out is EngineSetting's default, and the
@@ -34,12 +38,14 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Internal
     private FeatureManager featureManager;
+    private GenderManager genderManager;
 
     // Base \\
 
     @Override
     protected void get() {
         this.featureManager = get(FeatureManager.class);
+        this.genderManager = get(GenderManager.class);
     }
 
     // Build \\
@@ -58,6 +64,7 @@ class AppearanceBuilder extends BuilderPackage {
                 ? appearanceArpg.getAsObject("build")
                 : new ArpgObjectStruct();
 
+        AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, characterMesh, sourceName);
         AppearanceData appearanceData = new AppearanceData(
                 rigHandle,
                 rigHandle.getBoneIndex(headBoneName),
@@ -65,9 +72,10 @@ class AppearanceBuilder extends BuilderPackage {
                 colors,
                 parsePalettes(appearanceArpg, colors, sourceName),
                 parseDetails(appearanceArpg, sourceName),
-                parseShapes(appearanceArpg, characterMesh, sourceName),
+                shapes,
                 parseExpressions(appearanceArpg, characterMesh, sourceName),
                 parseFeatures(appearanceArpg, sourceName),
+                parseGenders(appearanceArpg, shapes, sourceName),
                 ArpgUtility.getFloat(buildArpg, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
                 ArpgUtility.getFloat(buildArpg, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
                 parseGirthInfluence(buildArpg, rigHandle, sourceName));
@@ -255,16 +263,64 @@ class AppearanceBuilder extends BuilderPackage {
         return morphIndex;
     }
 
+    // Genders \\
+
+    // "genders" maps a gender's name to the "shapes" (by morph) and "features" it starts with
+    private Int2ObjectOpenHashMap<AppearanceGenderStruct> parseGenders(
+            ArpgObjectStruct appearanceArpg,
+            AppearanceShapeStruct[] shapes,
+            String sourceName) {
+
+        Int2ObjectOpenHashMap<AppearanceGenderStruct> genderID2Preset = new Int2ObjectOpenHashMap<>();
+
+        if (!ArpgUtility.hasObject(appearanceArpg, "genders"))
+            return genderID2Preset;
+
+        ArpgObjectStruct gendersArpg = appearanceArpg.getAsObject("genders");
+
+        for (String genderName : gendersArpg.keySet()) {
+
+            ArpgObjectStruct presetArpg = gendersArpg.getAsObject(genderName);
+            float[] shapeValues = new float[shapes.length];
+            ArpgObjectStruct shapesArpg = ArpgUtility.hasObject(presetArpg, "shapes")
+                    ? presetArpg.getAsObject("shapes")
+                    : new ArpgObjectStruct();
+
+            for (int i = 0; i < shapes.length; i++)
+                shapeValues[i] = ArpgUtility.getFloat(shapesArpg, shapes[i].getMorphName(), Float.NaN);
+
+            for (String morphName : shapesArpg.keySet())
+                if (!hasShape(shapes, morphName))
+                    throwException("Appearance gender \"" + genderName + "\" sets \"" + morphName
+                            + "\", which is not a shape slider. Source: " + sourceName);
+
+            genderID2Preset.put(
+                    genderManager.getGenderIDFromGenderName(genderName),
+                    new AppearanceGenderStruct(shapeValues, parseFeatures(presetArpg, sourceName)));
+        }
+
+        return genderID2Preset;
+    }
+
+    private boolean hasShape(AppearanceShapeStruct[] shapes, String morphName) {
+
+        for (AppearanceShapeStruct shape : shapes)
+            if (shape.getMorphName().equals(morphName))
+                return true;
+
+        return false;
+    }
+
     // Features \\
 
-    private FeatureHandle[] parseFeatures(ArpgObjectStruct appearanceArpg, String sourceName) {
+    private FeatureHandle[] parseFeatures(ArpgObjectStruct arpg, String sourceName) {
 
         FeatureHandle[] features = new FeatureHandle[FeatureSlot.VALUES.length];
 
-        if (!ArpgUtility.hasObject(appearanceArpg, "features"))
+        if (!ArpgUtility.hasObject(arpg, "features"))
             return features;
 
-        ArpgObjectStruct featuresArpg = appearanceArpg.getAsObject("features");
+        ArpgObjectStruct featuresArpg = arpg.getAsObject("features");
 
         validateKeys(featuresArpg, FeatureSlot.class, "features", sourceName);
 

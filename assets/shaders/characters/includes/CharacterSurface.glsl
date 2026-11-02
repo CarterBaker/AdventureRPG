@@ -8,7 +8,7 @@
 // Skin takes its tile tinted by the skin color, then blemishes, blush, freckles, lip color and eyeliner where the
 // mesh's masks paint them; freckles and blemishes are cells fixed to the bind-pose surface, so they stay put as the
 // face moves. The eye is drawn from its raw corner UVs: a lid-shadowed sclera around an iris graded dark to light
-// with a darker rim, a pupil and two highlights. Hair carries a root-to-tip grade, strand streaks across its locks and
+// with a darker rim, a pupil and two highlights, tall and tucked under the upper lid as an anime eye is drawn. Hair carries a root-to-tip grade, strand streaks across its locks and
 // a broken band of shine where it faces up toward the light. Specular rises for the wet eye and the shining hair.
 
 struct CharacterSurface {
@@ -26,12 +26,13 @@ const float CHARACTER_BLEMISH_CELLS  = 160.0;
 const vec3  CHARACTER_BLEMISH_TINT   = vec3(0.86, 0.68, 0.64);
 const float CHARACTER_LINER_SHADE    = 0.45;
 
-const float CHARACTER_IRIS_RADIUS    = 0.235;
+const vec2  CHARACTER_IRIS_RADIUS    = vec2(0.255, 0.30);
+const vec2  CHARACTER_IRIS_CENTRE    = vec2(0.5, 0.47);
 const float CHARACTER_PUPIL_RATIO    = 0.42;
 const vec3  CHARACTER_SCLERA         = vec3(0.97, 0.96, 0.95);
 const vec3  CHARACTER_PUPIL          = vec3(0.03, 0.03, 0.05);
-const vec2  CHARACTER_HIGHLIGHT_MAIN = vec2(-0.26, -0.30);
-const vec2  CHARACTER_HIGHLIGHT_SIDE = vec2(0.22, 0.26);
+const vec2  CHARACTER_HIGHLIGHT_MAIN = vec2(-0.30, -0.38);
+const vec2  CHARACTER_HIGHLIGHT_SIDE = vec2(0.28, 0.30);
 
 const vec3  CHARACTER_TEETH          = vec3(0.95, 0.94, 0.90);
 const float CHARACTER_MOUTH_SHADE    = 0.35;
@@ -100,27 +101,26 @@ float characterDisc(vec2 point, vec2 centre, float radius) {
     return 1.0 - smoothstep(radius - edge, radius + edge, distanceToCentre);
 }
 
+// A tall iris filling the opening and tucked under the upper lid, the way an anime eye is drawn; v grows downward
 vec3 shadeEye(int instance, vec2 eyeUV) {
-    vec2  offset = eyeUV - 0.5;
-    float radius = length(offset);
-    float edge   = fwidth(radius) + 0.0001;
-    float irisRadius  = CHARACTER_IRIS_RADIUS * fetchCharacterDetail(instance, CHARACTER_DETAIL_IRIS_SIZE);
-    float pupilRadius = irisRadius * CHARACTER_PUPIL_RATIO * fetchCharacterDetail(instance, CHARACTER_DETAIL_PUPIL_SIZE);
+    vec2  offset = eyeUV - CHARACTER_IRIS_CENTRE;
+    vec2  radius = CHARACTER_IRIS_RADIUS * fetchCharacterDetail(instance, CHARACTER_DETAIL_IRIS_SIZE);
+    float e      = length(offset / radius);
+    float edge   = fwidth(e) + 0.0001;
+    float pupil  = CHARACTER_PUPIL_RATIO * fetchCharacterDetail(instance, CHARACTER_DETAIL_PUPIL_SIZE);
 
-    // The upper lid shades the top of the eye; v grows downward across the eye
-    float lidShadow = mix(0.72, 1.0, smoothstep(-0.32, -0.08, offset.y));
+    float lidShadow = mix(0.72, 1.0, smoothstep(0.15, 0.35, eyeUV.y));
     vec3  color     = CHARACTER_SCLERA * lidShadow;
 
-    float t    = clamp(radius / max(irisRadius, 0.0001), 0.0, 1.0);
-    vec3  iris = fetchCharacterColor(instance, CHARACTER_COLOR_EYES);
-    vec3  shaded = iris * (0.55 + 0.45 * (1.0 - t)) * mix(0.62, 1.2, smoothstep(-irisRadius, irisRadius, offset.y));
-    shaded = mix(shaded, shaded * 0.45, smoothstep(0.78, 0.98, t));
-    shaded *= lidShadow;
+    vec3 iris   = fetchCharacterColor(instance, CHARACTER_COLOR_EYES);
+    vec3 shaded = iris * (0.55 + 0.45 * (1.0 - clamp(e, 0.0, 1.0)))
+        * mix(0.62, 1.2, smoothstep(-radius.y, radius.y, offset.y));
+    shaded = mix(shaded, shaded * 0.55, smoothstep(0.78, 0.9, e)) * lidShadow;
 
-    color = mix(color, shaded, 1.0 - smoothstep(irisRadius - edge, irisRadius + edge, radius));
-    color = mix(color, CHARACTER_PUPIL, 1.0 - smoothstep(pupilRadius - edge, pupilRadius + edge, radius));
-    color = mix(color, vec3(1.0), characterDisc(offset, CHARACTER_HIGHLIGHT_MAIN * irisRadius, irisRadius * 0.17));
-    color = mix(color, vec3(1.0), 0.8 * characterDisc(offset, CHARACTER_HIGHLIGHT_SIDE * irisRadius, irisRadius * 0.08));
+    color = mix(color, shaded, 1.0 - smoothstep(1.0 - edge, 1.0 + edge, e));
+    color = mix(color, CHARACTER_PUPIL, 1.0 - smoothstep(pupil - edge, pupil + edge, e));
+    color = mix(color, vec3(1.0), characterDisc(offset, CHARACTER_HIGHLIGHT_MAIN * radius, radius.x * 0.17));
+    color = mix(color, vec3(1.0), 0.8 * characterDisc(offset, CHARACTER_HIGHLIGHT_SIDE * radius, radius.x * 0.08));
 
     return color;
 }

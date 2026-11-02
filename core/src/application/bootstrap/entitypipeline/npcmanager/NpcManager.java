@@ -325,7 +325,7 @@ public class NpcManager extends ManagerPackage {
         progressionManager.raiseBeing(entity, level, npcHandle.getProfessionID());
     }
 
-    // Every color drawn from the race's palettes and every shape nudged off its default, so no two residents look
+    // Every color drawn from the race's palettes and every shape nudged off its gender's start, so no two residents look
     // quite alike
     private void varyAppearance(EntityInstance entity) {
 
@@ -346,7 +346,7 @@ public class NpcManager extends ManagerPackage {
             float spread = (shape.getMax() - shape.getMin()) * EngineSetting.NPC_SHAPE_VARIATION;
             float offset = (ThreadLocalRandom.current().nextFloat() * 2f - 1f) * spread;
 
-            appearanceHandle.setShapeValue(i, shape.getDefaultValue() + offset);
+            appearanceHandle.setShapeValue(i, appearanceHandle.getShapeValue(i) + offset);
         }
     }
 

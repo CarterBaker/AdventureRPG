@@ -9,6 +9,7 @@ import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import engine.graphics.color.Color;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class AppearanceData extends DataPackage {
 
@@ -17,7 +18,7 @@ public class AppearanceData extends DataPackage {
      * whose morph targets its sliders weigh, the default color and palette of
      * every SkinnedColor, the default amount of every SkinnedDetail, the
      * shape sliders, the morphs each AppearanceExpression plays, the default
-     * feature per slot, the head-shape bone and the build curve.
+     * feature per slot, each gender's starting preset, the head-shape bone and the build curve.
      * isCompatible() is the one rule for whether a feature can be worn.
      */
 
@@ -44,6 +45,9 @@ public class AppearanceData extends DataPackage {
     // Features — indexed by FeatureSlot ordinal
     private final FeatureHandle[] defaultFeatures;
 
+    // Genders — the look each gender starts with, by gender ID
+    private final Int2ObjectOpenHashMap<AppearanceGenderStruct> genderID2Preset;
+
     // Build
     private final float thinBuildFactor;
     private final float heavyBuildFactor;
@@ -61,6 +65,7 @@ public class AppearanceData extends DataPackage {
             AppearanceShapeStruct[] shapes,
             int[] expressionMorphs,
             FeatureHandle[] defaultFeatures,
+            Int2ObjectOpenHashMap<AppearanceGenderStruct> genderID2Preset,
             float thinBuildFactor,
             float heavyBuildFactor,
             float[] girthInfluence) {
@@ -87,6 +92,9 @@ public class AppearanceData extends DataPackage {
 
         // Features
         this.defaultFeatures = defaultFeatures;
+
+        // Genders
+        this.genderID2Preset = genderID2Preset;
 
         // Build
         this.thinBuildFactor = thinBuildFactor;
@@ -158,6 +166,11 @@ public class AppearanceData extends DataPackage {
 
     public FeatureHandle getDefaultFeature(FeatureSlot featureSlot) {
         return defaultFeatures[featureSlot.ordinal()];
+    }
+
+    // The preset of a gender, null when the template gives it none
+    public AppearanceGenderStruct getGenderPreset(short genderID) {
+        return genderID2Preset.get(genderID);
     }
 
     public float getGirthInfluence(int boneIndex) {

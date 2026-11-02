@@ -40,6 +40,9 @@ public class AppearanceHandle extends HandlePackage {
     private float[] shapeValues;
     private float[] morphWeights;
 
+    // Gender
+    private short genderID;
+
     // Face
     private float blinkSeed;
     private boolean faceAnimated;
@@ -105,9 +108,34 @@ public class AppearanceHandle extends HandlePackage {
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             features[featureSlot.ordinal()] = appearanceData.getDefaultFeature(featureSlot);
 
+        applyGenderPreset();
         headProportion.set(1f, 1f, 1f);
 
         applyProportions();
+    }
+
+    // Gender \\
+
+    // Takes on a gender and resets to the look it starts with
+    public void setGender(short genderID) {
+        this.genderID = genderID;
+        resetToDefaults();
+    }
+
+    private void applyGenderPreset() {
+
+        AppearanceGenderStruct preset = appearanceData.getGenderPreset(genderID);
+
+        if (preset == null)
+            return;
+
+        for (int i = 0; i < shapeValues.length; i++)
+            if (!Float.isNaN(preset.getShapeValue(i)))
+                setShapeValue(i, preset.getShapeValue(i));
+
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+            if (preset.getFeature(featureSlot.ordinal()) != null)
+                features[featureSlot.ordinal()] = preset.getFeature(featureSlot.ordinal());
     }
 
     // Colors \\

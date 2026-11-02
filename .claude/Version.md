@@ -4,9 +4,9 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 18
-Task: EditorMenus
-Applied: 2026-11-01
+Delivery: 19
+Task: BasicWomanAndMan
+Applied: 2026-11-02
 
 ## Log
 
@@ -28,3 +28,4 @@ Applied: 2026-11-01
 - 16, 2026-11-01, CharacterToolSuite
 - 17, 2026-11-01, ModelledCharacters
 - 18, 2026-11-01, EditorMenus
+- 19, 2026-11-02, BasicWomanAndMan

@@ -86,6 +86,12 @@ One line per session that changed this file: the date, what was added or removed
   Characters, World, Media and Debug dropdowns, each sectioned under headers; the Testing dropdown folded into Media
   and Debug).
 
+- 2026-11-02: Basic woman and man. Regenerated `mesh/characters/humanoid/HumanoidBodyMesh.arpg` (anime proportions about
+  seven heads tall, body rebuilt on anatomical forms, anime eyes with a full iris and a solid lash line, a
+  `masculine` morph turning the woman into a man), the five hair meshes (refitted to the larger head),
+  `rigs/HumanoidRig.arpg` (shoulders at ±0.175, arms in a slight A-pose), `entities/HumanoidEntity.arpg` (plain
+  default colors, gender presets, arm anchors moved) and `schemas/Entities.arpg` (`genders`), and rewrote
+  `CharacterSurface.glsl` (anime eye).
 ---
 
 ## Textures and Sprites (2174 files)

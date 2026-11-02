@@ -61,6 +61,8 @@ worn feature meshes (`FeatureSlot`: hair). Nothing is a texture swap.
   (`CharacterMeshBranch.editShape`): the morph is lifted into the positions so every tool works unchanged, and baked
   back into deltas when sculpting returns to the base, the mode or part changes, or the mesh is saved. Mesh modes
   preview with every slider at zero and the face still.
+- **Genders.** One mesh holds both: the `masculine` morph turns the woman into a man. The template's `genders`
+  presets set each gender's starting shapes and hair; `EntityInstance.setGenderID` resets the appearance to them.
 - **Assets.** The base body, its 48 morphs and the hair styles are generated (catalogued); a rigged mesh may hold at
   most `RIGGED_MESH_VERT_LIMIT` corners.
 

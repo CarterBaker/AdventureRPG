@@ -139,6 +139,7 @@ public class EntityInstance extends InstancePackage {
                     entityData.getAppearanceData(),
                     animationStateHandle,
                     entityData.getWeightRatio(weight));
+            this.appearanceHandle.setGender(genderID);
         }
     }
 
@@ -298,6 +299,9 @@ public class EntityInstance extends InstancePackage {
             throwException("This race does not allow gender ID " + genderID + ".");
 
         this.genderID = genderID;
+
+        if (appearanceHandle != null)
+            appearanceHandle.setGender(genderID);
     }
 
     public float getEyeHeight() {
