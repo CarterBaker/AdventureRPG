@@ -75,6 +75,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openShipwright(window.getGLWindow());
     }
 
+    public void openShipViewer(WindowInstance window) {
+        tabManager.openShipViewer(window.getGLWindow());
+    }
+
     // Characters Dropdown \\
 
     public void openCharacterEditor(WindowInstance window) {

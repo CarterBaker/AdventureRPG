@@ -335,6 +335,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_SOUND_LIBRARY = "Sound Library";
     public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
+    public static final String TAB_TITLE_SHIP_VIEWER = "Ship Viewer";
     public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
     public static final String TAB_TITLE_TOOLS = "Tools";
     public static final String TAB_TITLE_TRANSITIONS = "Transitions";

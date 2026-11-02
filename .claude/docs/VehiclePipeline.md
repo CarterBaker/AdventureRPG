@@ -53,7 +53,10 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
   templates; `ShipwrightManager.getOptionSection` / `getOptionItem` feed it), `ShipwrightDialogSystem` (the ship
   list, the unsaved-changes question through `requestLeave` / `ShipwrightLeave`, the save notice, the close action),
   `ShipwrightRenderSystem`, `menus/shipwright/ShipwrightBranch` (menu events), and in the editor
-  `editor/runtime/shipwright/ShipwrightTabSystem` (writes through `InfoManager` with the `Vehicles` schema).
+  `editor/runtime/shipwright/ShipwrightTabSystem` (writes through `InfoManager` with the `Vehicles` schema), and the
+  editor's Ship Viewer, `editor/runtime/shipviewer/` (draws a palette type's own meshes at rest; `ShipViewerSystem`
+  follows `VehicleManager.getPaletteRevision` / `getLatestVehicleHandle`, so each save shows at once, and looks the
+  shown type up again by name whenever the palette changes, as a replaced type frees its meshes).
 
 ---
 

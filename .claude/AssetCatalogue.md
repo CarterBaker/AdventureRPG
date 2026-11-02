@@ -92,6 +92,10 @@ One line per session that changed this file: the date, what was added or removed
   `rigs/HumanoidRig.arpg` (shoulders at ±0.175, arms in a slight A-pose), `entities/HumanoidEntity.arpg` (plain
   default colors, gender presets, arm anchors moved) and `schemas/Entities.arpg` (`genders`), and rewrote
   `CharacterSurface.glsl` (anime eye).
+- 2026-11-02: Ship Viewer. Added the menu `menus/editor/ShipViewer.arpg`, the shader
+  `editor/shipviewer/ShipViewerShader` (`.arpg` and `.fsh`) and the material `ShipViewerMaterial.arpg`, for the editor
+  tab that shows each ship as it is saved at the Shipwright; regenerated `EditorWindow.arpg` (Ship Viewer button under
+  Vehicles in the Assets dropdown).
 ---
 
 ## Textures and Sprites (2174 files)
@@ -984,7 +988,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (179 files)
+## Shaders (180 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1021,6 +1025,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/editor/recorder/`
 
 `TransitionShader.fsh`
+
+### `assets/shaders/editor/shipviewer/`
+
+`ShipViewerShader.fsh`
 
 ### `assets/shaders/editor/textureviewer/`
 
@@ -1300,7 +1308,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1688 files)
+## Data Files (1691 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2016,9 +2024,9 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `CharacterViewMarkerMaterial.arpg`, `CharacterViewMarkerSelectedMaterial.arpg`, `ItemEditorCursorEraseMaterial.arpg`,
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
 `ItemEditorModelMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
-`TextureViewerAtlasMaterial.arpg`, `TreeViewerBarkMaterial.arpg`, `TreeViewerLeafMaterial.arpg`,
-`WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`, `WorldEditorImageMaterial.arpg`,
-`WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
+`ShipViewerMaterial.arpg`, `TextureViewerAtlasMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
+`TreeViewerLeafMaterial.arpg`, `WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
+`WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
 
 ### `assets/materials/fonts/`
 
@@ -2080,9 +2088,9 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePlanner.arpg`,
 `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Palette.arpg`,
-`Profiler.arpg`, `Recorder.arpg`, `Recordings.arpg`, `SettlementPlanner.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`,
-`TextureViewer.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`,
-`WorldMap.arpg`
+`Profiler.arpg`, `Recorder.arpg`, `Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`,
+`TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`,
+`WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
 
@@ -2267,6 +2275,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/shaders/editor/recorder/`
 
 `TransitionShader.arpg`
+
+### `assets/shaders/editor/shipviewer/`
+
+`ShipViewerShader.arpg`
 
 ### `assets/shaders/editor/textureviewer/`
 

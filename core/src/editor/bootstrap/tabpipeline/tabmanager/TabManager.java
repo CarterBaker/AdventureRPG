@@ -37,6 +37,7 @@ import editor.runtime.recordings.RecordingsContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
 import editor.runtime.settlementplanner.SettlementPlannerContext;
+import editor.runtime.shipviewer.ShipViewerContext;
 import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.soundlibrary.SoundLibraryContext;
 import editor.runtime.textureviewer.TextureViewerContext;
@@ -187,6 +188,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openShipwright(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_SHIPWRIGHT, ShipwrightContext.class, osWindow);
+    }
+
+    public TabHandle openShipViewer(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_SHIP_VIEWER, ShipViewerContext.class, osWindow);
     }
 
     public TabHandle openTextureViewer(WindowInstance osWindow) {

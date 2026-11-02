@@ -70,6 +70,10 @@ public class VehicleManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<String, VehicleHandle> vehicleName2VehicleHandle;
     private ObjectArrayList<VehicleHandle> vehicleHandles;
 
+    // Revision — counted up whenever a type enters or leaves the palette, and the type that entered last
+    private int paletteRevision;
+    private VehicleHandle latestVehicleHandle;
+
     // Retired — types replaced or removed while vehicles of them may still float
     private ObjectArrayList<VehicleHandle> retiredHandles;
 
@@ -204,6 +208,9 @@ public class VehicleManager extends ManagerPackage {
         VehicleHandle vehicleHandle = vehicleAssemblyBranch.assemble(design);
         VehicleHandle replaced = vehicleName2VehicleHandle.put(vehicleHandle.getVehicleName(), vehicleHandle);
 
+        paletteRevision++;
+        latestVehicleHandle = vehicleHandle;
+
         if (replaced == null) {
             vehicleHandles.add(vehicleHandle);
             return vehicleHandle;
@@ -223,6 +230,7 @@ public class VehicleManager extends ManagerPackage {
         if (removed == null)
             return;
 
+        paletteRevision++;
         vehicleHandles.remove(removed);
         retire(removed);
     }
@@ -541,6 +549,18 @@ public class VehicleManager extends ManagerPackage {
 
     public ObjectArrayList<VehicleHandle> getVehicleHandles() {
         return vehicleHandles;
+    }
+
+    public int getPaletteRevision() {
+        return paletteRevision;
+    }
+
+    // The type registered last, kept while it stands in the palette, null once it leaves it or before any enters
+    public VehicleHandle getLatestVehicleHandle() {
+        return latestVehicleHandle != null
+                && vehicleName2VehicleHandle.get(latestVehicleHandle.getVehicleName()) == latestVehicleHandle
+                        ? latestVehicleHandle
+                        : null;
     }
 
     public boolean hasVehicle(String vehicleName) {
