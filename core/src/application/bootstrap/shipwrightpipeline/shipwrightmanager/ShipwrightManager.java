@@ -563,7 +563,7 @@ public class ShipwrightManager extends ManagerPackage {
             case STAIRS -> ShipClimb.VALUES[option].getTitle();
             case FURNITURE -> getItemName(option);
             case MASTS -> getMastName(session, option);
-            default -> tool.getTitle();
+            default -> tool.getTitle(option);
         };
     }
 

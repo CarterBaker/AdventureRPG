@@ -27,8 +27,8 @@ How vehicles are made, stored, sailed, ridden and broken, and what is still open
 | The editor | `assets/vehicles/<Name>.arpg`, through the Info Panel | `<Name>`, its path below `vehicles/` |
 | The player | `Documents/My Games/AdventureRPG/Saves/Vehicles/<Name>.arpg` | `saved/<Name>` |
 
-- The file is the `Vehicles` schema: `display_name`, `category`, `decks` (each `start`, `outline`, `waists`,
-  `walls`, `half_walls`, `railings`, `lips`, `doors`, `windows`, `hatches`, `grates`, `glass_floors`, `gun_platforms`,
+- The file is the `Vehicles` schema: `display_name`, `category`, `decks` (each `start`, `outline`, an optional
+  `port_outline` written only where the sides differ, `waists`, `roofs`, `walls`, `half_walls`, `railings`, `lips`, `doors`, `windows`, `hatches`, `grates`, `glass_floors`, `gun_platforms`,
   `stairs`, `ladders`, `boarding_ladders`, `furniture`), `helm`, `capstan`,
   `masts` (each only its `x`; older files' `height`, `crows_nest` and `rigging` are ignored).
 - `assets/vehicles/` is optional; the game boots with no vehicle of its own. A saved vehicle that cannot be read or
@@ -58,15 +58,16 @@ The catalogue has four tabs; each lists the options of several tools, and every 
 
 | Tab | Options (by section) |
 |---|---|
-| Hull | Deck, Waist |
+| Hull | Deck, Porch, Waist, Side waist, Roof, Side roof |
 | Fittings | Walls: Full wall, Half wall, Railing, Lip · Doors & Windows: Door, Window · Floors: Hatch, Grate, Glass floor · Gunnery: Gun platform · Helm & Capstan · Stairs & Ladders: Staircase, Ladder, Boarding ladder |
 | Masts | Every mast stepped (none picked steps a new one) |
 | Furniture | Every furnishing in the game, cannons included, by the folder it is kept in |
 
 | Tool | Does |
 |---|---|
-| Deck | Draws the deck's outline out to the cursor, **mirrored** port and starboard |
-| Waist | Cuts the deck's floor open, **mirrored**, railed round; through the bottom deck too |
+| Deck | Draws the deck's outline out to the cursor, **mirrored** port and starboard; **Porch** draws it on the cursor's side alone |
+| Waist | Cuts the deck's floor open, **mirrored**, railed round; through the bottom deck too; **Side waist** one side alone |
+| Roof | Lays a low stepped shingle roof over open floor with no deck above, **mirrored**; **Side roof** one side alone |
 | Walls | Paints walls on open floor, **not mirrored**; railings and lips also in place of the side or a bulwark |
 | Openings | Door or window **on the wall it is cut through**; hatch, grate or glass floor in a floor; gun platform facing the side |
 | Stairs & Ladders | Staircase climbing one deck the way it faces; ladder; boarding ladder over the side |
@@ -76,28 +77,34 @@ The catalogue has four tabs; each lists the options of several tools, and every 
 **Working the table.** The catalogue under the sheet is one scrolling list of every option of the tab open, grouped
 under section headings, each a tile pictured by its item's model, the helm and the capstan by the very fittings a ship
 builds, and every option no item stands for by a little model built the way a ship builds it (a deck a square of
-floor, the waist a railed hole, each wall on a strip of floor, the lip a sill between posts of planking, a window, a
+floor, a porch a strip reaching out to one side, the waist a railed hole, a roof over railed floor, each wall on a strip of floor, the lip a sill between posts of planking, a window, a
 hatch, grate and glass floor, a gun platform facing its port, a staircase, the ladders and a mast with its yard and
 sail; `ShipwrightPreviewBranch`), the one picked lit; a click or Previous / Next Option picks one,
 and an option picked by the bindings is scrolled into view. A tab opened again takes up the option it last held. Under the cursor the thing in hand is drawn whole, as it
 would be set down, red where it could not stand, and the line under the sheet says why. Draw sets it down. Draw over
 anything already set down **picks it up** (the tool, option and facing that set it down go into the hand) so the
 next draw moves it; Erase **takes away** whatever is under the cursor, found over its whole footprint. Whatever is
-under the cursor is outlined and named, with what Draw and Erase will do to it. Deck, Waist, every wall and windows
-are painted: Draw and Erase paint and unpaint as the cursor is dragged, and the waist, walls and windows are built
+under the cursor is outlined and named, with what Draw and Erase will do to it. Deck, Waist, Roof (and their
+one-side options), every wall and windows are painted: Draw and Erase paint and unpaint as the cursor is dragged, and
+the waist, roofs, walls and windows are built
 again at every octant the stroke changes, so the sheet shows them as they are painted and erased.
 
 Rules the compile enforces (the change is refused with the reason shown when it breaks one):
 
-- **Mirroring.** Only the outline is mirrored. Walls, openings, stairs, ladders, masts' fittings and furniture stand
-  only where they are set.
+- **Mirroring.** The outline, the waist and roofs are mirrored, or worked on one side alone with Porch, Side waist and
+  Side roof; a deck drawn as a porch keeps a `port_outline` apart from its starboard `outline`, and the hull, its
+  side and its shrouds follow each side's own outline. Walls, openings, stairs, ladders, masts' fittings and furniture
+  stand only where they are set.
 - **Doors and windows** are set on a wall, bulwark or the hull's side, found **across the side** from the octant
   pointed at (that octant, else the nearest outboard, else inboard, within `SHIP_OPENING_REACH`), so one set on a
   deck's rim finds a side that curves out or in over the deck. Each is cut as a **tunnel**: through the wall and, in a
   curved side, outboard through the open octants to the planking beyond, to one depth across the whole opening, and
   every open octant beside, over or under the tunnel at the hull is closed with the same wall, so an opening never
   leaves a gap. They turn themselves across the wall; Rotate flips the side. Taking a wall down takes its doors and
-  windows with it. A window is glazed with a solid, see-through pane, and windows are painted along a wall like walls.
+  windows with it. A window turns the wall into **panes** of glass, a thin sheet (`SHIP_PANE_SUB_VOXELS`) up the middle
+  of each octant that reaches out to every wall, side and pane beside it, bending round corners as it goes, so a
+  window at a corner meets the wall on both faces and leaves no stray block; windows are painted along a wall like
+  walls.
 - **Stairs** always climb exactly one deck (`SHIP_DECK_HEIGHT` octants), one octant per octant along their facing,
   two octants wide, set down whole: the foot must be floor, the run clear of the hull, bulwarks and anything built
   under the deck above, and the octant past the last tread the next deck's floor. The floor above is opened over the
@@ -113,6 +120,11 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   cuts (or uncovers) gets a glass floor over it. Take the glass floor away and that stretch is left open as a
   **diving bay** to drop through into the sea; the hull's buoyancy is unchanged (it is worked out layer by layer, so a
   hole in the bottom does not flood it).
+- **Roofs** are laid over a deck's open floor where no deck stands above (`findRoofProblem`): shingles
+  (`SHIP_TEXTURE_ROOF`) whose eaves sit `SHIP_ROOF_EAVES_HEIGHT` octants over the floor, on top of the railings, half
+  walls and bulwarks round the edge and flush with them, stepping up `SHIP_ROOF_RISE_SUB_VOXELS` for every octant in
+  from the roof's edge to a ridge along its middle, a slab `SHIP_ROOF_THICKNESS_SUB_VOXELS` thick; a full wall under
+  it rises through it. A roof over a porch covers it without a deck above.
 - **Walls, half walls, railings and lips are one tool under one rule** (`findWallProblem`). Any of them is painted on
   open floor anywhere, a diving bay's rim or any waist included, replacing the waist's rail or a bulwark standing
   there; every kind but a full wall can also be painted **in place of the ship's side** (the planking between a deck
@@ -129,7 +141,9 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   flares the side and a little narrower draws it in; a deck drawn more than `SHIP_TUMBLEHOME_OCTANTS` inside the deck
   below instead **rises from it with straight sides**, leaving the lower deck's floor round it open (with its own
   bulwark at the outer edge), so a narrow deckhouse or walkway can be drawn on a deck and stairs set beside it on the
-  open floor, climbing sideways onto it.
+  open floor, climbing sideways onto it. Those straight sides are the ship's side under the wall rule, so the inner wall a
+  porch or a narrower deck leaves standing on the deck below is taken out by painting a lip, railing or half wall in
+  its place.
 - **Grates** are an opening laid over a hole in a deck's floor (a waist, or any opening a stair or ladder leaves),
   covering the whole run of it up to `SHIP_GRATE_MAX_OCTANTS` with a fixed grate flush with the deck: thin slats
   (`SHIP_GRATE_SLAT_SUB_VOXELS`) with wide gaps (`SHIP_GRATE_GAP_SUB_VOXELS`), walked on, seen through, never opened.

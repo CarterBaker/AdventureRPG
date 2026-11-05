@@ -165,6 +165,7 @@ class ShipwrightDraftBranch extends BranchPackage {
         int deck = session.getDeck();
 
         drawCells(session, blueprint.getWaists(), deck, EngineSetting.SHIPWRIGHT_INK_WAIST);
+        drawCells(session, blueprint.getRoofs(), deck, EngineSetting.SHIPWRIGHT_INK_ROOF);
         drawCells(session, blueprint.getWalls(), deck, EngineSetting.SHIPWRIGHT_INK_WALL);
         drawCells(session, blueprint.getHalfWalls(), deck, EngineSetting.SHIPWRIGHT_INK_HALF_WALL);
         drawCells(session, blueprint.getRailings(), deck, EngineSetting.SHIPWRIGHT_INK_RAILING);

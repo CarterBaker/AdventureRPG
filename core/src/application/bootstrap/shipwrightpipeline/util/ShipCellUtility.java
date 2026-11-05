@@ -55,6 +55,13 @@ public class ShipCellUtility extends EngineUtility {
         return z >= halfBreadth ? z - halfBreadth : halfBreadth - 1 - z;
     }
 
+    // The side of the centre line an octant across the sheet's full breadth lies on, SHIP_SIDE_STARBOARD or
+    // SHIP_SIDE_PORT
+    public static int toSide(int z) {
+        return z >= EngineSetting.SHIP_SHEET_HALF_BREADTH ? EngineSetting.SHIP_SIDE_STARBOARD
+                : EngineSetting.SHIP_SIDE_PORT;
+    }
+
     public static int toStarboard(int halfZ) {
         return EngineSetting.SHIP_SHEET_HALF_BREADTH + halfZ;
     }

@@ -22,8 +22,10 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
      * keeps its display name, the "category" it is built as and its "decks"
      * from the bottom up. Each deck keeps its
      * "outline": the octants it reaches out from the centre line at every
-     * octant along the sheet from its "start", aft to fore; the "waists" cut
-     * through its floor; and everything standing on it, each at [x, z]
+     * octant along the sheet from its "start", aft to fore, to starboard and
+     * to port alike unless a "port_outline" of the same length gives the port
+     * side apart; the "waists" cut through its floor and the "roofs" laid
+     * over it; and everything standing on it, each at [x, z]
      * across the full breadth, or [x, z, spin] where it faces a way: "walls",
      * "half_walls", "railings", "lips", "doors", "windows", "hatches",
      * "grates", "glass_floors", "gun_platforms", "stairs", "ladders",
@@ -96,12 +98,16 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         if (start < 0 || start + outlineArpg.size() > EngineSetting.SHIP_SHEET_LENGTH)
             return "a deck's outline runs off its sheet";
 
-        for (ArpgElementStruct halfBeam : outlineArpg)
-            if (!halfBeam.isValue() || !halfBeam.getAsValue().isNumber()
-                    || !isWithin(halfBeam.getAsInt(), 0, EngineSetting.SHIP_SHEET_HALF_BREADTH))
-                return "a deck's outline reaches wider than its sheet";
+        if (!isOutlineSound(outlineArpg))
+            return "a deck's outline reaches wider than its sheet";
+
+        if (ArpgUtility.hasArray(deckArpg, "port_outline")
+                && (deckArpg.getAsArray("port_outline").size() != outlineArpg.size()
+                        || !isOutlineSound(deckArpg.getAsArray("port_outline"))))
+            return "a deck's port outline does not match its outline or reaches wider than its sheet";
 
         if (!areCellsSound(deckArpg, "waists", EngineSetting.SHIP_PLACE_FIELDS)
+                || !areCellsSound(deckArpg, "roofs", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "walls", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "half_walls", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "railings", EngineSetting.SHIP_PLACE_FIELDS)
@@ -128,6 +134,17 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
                     return "a piece of its furniture names no furnishing or stands off its sheet";
 
         return EngineSetting.SHIP_PROBLEM_NONE;
+    }
+
+    // Every half-beam of an outline a number from none to the sheet's half breadth
+    private static boolean isOutlineSound(ArpgArrayStruct outlineArpg) {
+
+        for (ArpgElementStruct halfBeam : outlineArpg)
+            if (!halfBeam.isValue() || !halfBeam.getAsValue().isNumber()
+                    || !isWithin(halfBeam.getAsInt(), 0, EngineSetting.SHIP_SHEET_HALF_BREADTH))
+                return false;
+
+        return true;
     }
 
     private static boolean areCellsSound(ArpgObjectStruct deckArpg, String key, int fields) {
@@ -224,11 +241,17 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
 
         int start = deckArpg.get("start").getAsInt();
         ArpgArrayStruct outlineArpg = deckArpg.getAsArray("outline");
+        ArpgArrayStruct portArpg = ArpgUtility.hasArray(deckArpg, "port_outline")
+                ? deckArpg.getAsArray("port_outline")
+                : outlineArpg;
 
-        for (int i = 0; i < outlineArpg.size(); i++)
-            blueprint.setOutline(deck, start + i, outlineArpg.get(i).getAsInt());
+        for (int i = 0; i < outlineArpg.size(); i++) {
+            blueprint.setOutline(deck, start + i, EngineSetting.SHIP_SIDE_STARBOARD, outlineArpg.get(i).getAsInt());
+            blueprint.setOutline(deck, start + i, EngineSetting.SHIP_SIDE_PORT, portArpg.get(i).getAsInt());
+        }
 
-        parseWaists(deckArpg, deck, blueprint);
+        parseCells(deckArpg, "waists", deck, blueprint.getWaists());
+        parseCells(deckArpg, "roofs", deck, blueprint.getRoofs());
         parseWalls(deckArpg, "walls", deck, ShipWall.FULL, blueprint);
         parseWalls(deckArpg, "half_walls", deck, ShipWall.HALF, blueprint);
         parseWalls(deckArpg, "railings", deck, ShipWall.RAILING, blueprint);
@@ -262,14 +285,17 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         IntArrays.quickSort(blueprint.getGunPlatforms().elements(), 0, blueprint.getGunPlatforms().size());
     }
 
-    private static void parseWaists(ArpgObjectStruct deckArpg, int deck, ShipBlueprintStruct blueprint) {
+    // Every [x, z] place of a deck kept in a sorted list of cells, the waist cut or the roof laid there
+    private static void parseCells(ArpgObjectStruct deckArpg, String key, int deck, IntArrayList cells) {
 
-        if (!ArpgUtility.hasArray(deckArpg, "waists"))
+        if (!ArpgUtility.hasArray(deckArpg, key))
             return;
 
-        for (ArpgElementStruct placeArpg : deckArpg.getAsArray("waists"))
-            blueprint.setWaist(deck, placeArpg.getAsArray().get(0).getAsInt(),
-                    placeArpg.getAsArray().get(1).getAsInt(), true);
+        for (ArpgElementStruct placeArpg : deckArpg.getAsArray(key))
+            cells.add(ShipCellUtility.pack(deck, placeArpg.getAsArray().get(0).getAsInt(),
+                    placeArpg.getAsArray().get(1).getAsInt(), 0));
+
+        IntArrays.quickSort(cells.elements(), 0, cells.size());
     }
 
     private static void parseWalls(
@@ -335,8 +361,10 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
 
         ArpgObjectStruct deckArpg = new ArpgObjectStruct();
         ArpgArrayStruct outlineArpg = new ArpgArrayStruct();
+        ArpgArrayStruct portArpg = new ArpgArrayStruct();
         int start = 0;
         int end = 0;
+        boolean mirrored = true;
 
         for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
             if (blueprint.getOutline(deck, x) > 0) {
@@ -344,12 +372,24 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
                 end = x + 1;
             }
 
-        for (int x = start; x < end; x++)
-            outlineArpg.add(blueprint.getOutline(deck, x));
+        for (int x = start; x < end; x++) {
+
+            int starboard = blueprint.getOutline(deck, x, EngineSetting.SHIP_SIDE_STARBOARD);
+            int port = blueprint.getOutline(deck, x, EngineSetting.SHIP_SIDE_PORT);
+
+            outlineArpg.add(starboard);
+            portArpg.add(port);
+            mirrored &= starboard == port;
+        }
 
         deckArpg.addProperty("start", start);
         deckArpg.add("outline", outlineArpg);
+
+        if (!mirrored)
+            deckArpg.add("port_outline", portArpg);
+
         deckArpg.add("waists", writePlaces(blueprint.getWaists(), deck, false));
+        deckArpg.add("roofs", writePlaces(blueprint.getRoofs(), deck, false));
         deckArpg.add("walls", writePlaces(blueprint.getWalls(), deck, false));
         deckArpg.add("half_walls", writePlaces(blueprint.getHalfWalls(), deck, false));
         deckArpg.add("railings", writePlaces(blueprint.getRailings(), deck, false));

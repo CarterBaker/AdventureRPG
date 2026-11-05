@@ -5,6 +5,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipMastStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
+import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
 import application.bootstrap.shipwrightpipeline.util.ShipRopeUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartRole;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
@@ -347,7 +348,7 @@ class ShipwrightRigBranch extends BranchPackage {
     // Either side, netting stepping down and out from the crow's nest's rim, level with its floor so a climber walks
     // onto it, or from the mast's head where it has none, within reach of every yard below it: close in under its
     // head and spreading wider toward its foot, which lands on the outer edge of a channel standing out from the hull
-    // at the deck's edge
+    // at the deck's edge on its own side, however far either side reaches
     private VehiclePartStruct buildShrouds(
             ShipLayoutStruct layout,
             ShipMastStruct mast,
@@ -362,27 +363,49 @@ class ShipwrightRigBranch extends BranchPackage {
                 mastName + EngineSetting.SHIP_PART_SHROUDS_SUFFIX, VehiclePartRole.LADDER,
                 EngineSetting.SHIP_TEXTURE_RATLINES);
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
-        int deckHalf = layout.getSection(mast.getX(), deck);
-        int inner = nest ? 1 + EngineSetting.SHIP_CROWS_NEST_REACH : 1;
-        int edge = shipwrightHullBranch.findColumnTop(layout, mast.getX(), center + Math.max(1, deckHalf) - 1);
         int top = nest
                 ? resolveNestFloor(height, deck, tiers) + octant
                 : resolveMastTop(height, deck) - EngineSetting.SHIP_MAST_HEAD * octant;
-        int bottom = (edge + 1 + EngineSetting.SHIP_BULWARK_HEIGHT) * octant;
-        int run = Math.max(0, deckHalf - inner);
-        int steps = Math.max(1, run);
-
-        if (top <= bottom)
-            return shrouds;
-
         int middleX = resolveShroudMiddle(layout, mast);
+
+        for (int side = 0; side < EngineSetting.SHIP_SIDE_COUNT; side++)
+            addShroudSide(layout, mast, deck, nest, top, middleX, side, shrouds, channels);
+
+        return shrouds;
+    }
+
+    // One side's netting from its head down and out to the deck's edge on that side, and the channel under its foot
+    private void addShroudSide(
+            ShipLayoutStruct layout,
+            ShipMastStruct mast,
+            int deck,
+            boolean nest,
+            int top,
+            int middleX,
+            int side,
+            VehiclePartStruct shrouds,
+            VehiclePartStruct channels) {
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        boolean starboard = side == EngineSetting.SHIP_SIDE_STARBOARD;
+        int deckHalf = layout.getSection(mast.getX(), deck, side);
+        int edgeHalf = Math.max(1, deckHalf) - 1;
+        int edge = shipwrightHullBranch.findColumnTop(layout, mast.getX(),
+                starboard ? ShipCellUtility.toStarboard(edgeHalf) : ShipCellUtility.toPort(edgeHalf));
+        int bottom = (edge + 1 + EngineSetting.SHIP_BULWARK_HEIGHT) * octant;
+
+        if (deckHalf == 0 || top <= bottom)
+            return;
+
+        int inner = nest ? 1 + EngineSetting.SHIP_CROWS_NEST_REACH : 1;
+        int steps = Math.max(1, deckHalf - inner);
         int minX = middleX - EngineSetting.SHIP_SHROUD_HALF_SPAN;
         int maxX = middleX + EngineSetting.SHIP_SHROUD_HALF_SPAN;
         int innerReach = inner * octant;
         int outerReach = deckHalf * octant + EngineSetting.SHIP_CHANNEL_REACH_SUB_VOXELS;
         int sheet = EngineSetting.SHIP_SHEET_BREADTH * octant;
-        int middleZ = center * octant;
+        int middleZ = EngineSetting.SHIP_SHEET_HALF_BREADTH * octant;
+        int outward = starboard ? 1 : -1;
 
         for (int step = 0; step < steps; step++) {
 
@@ -391,14 +414,15 @@ class ShipwrightRigBranch extends BranchPackage {
             int near = resolveShroudReach(innerReach, outerReach, step, steps);
             int far = resolveShroudReach(innerReach, outerReach, step + 1, steps);
 
-            addRatline(shrouds, minX, maxX, low, high, middleZ + near, Math.min(sheet, middleZ + far));
-            addRatline(shrouds, minX, maxX, low, high, middleZ - near, Math.max(0, middleZ - far));
+            addRatline(shrouds, minX, maxX, low, high, middleZ + near * outward,
+                    Math.clamp(middleZ + far * outward, 0, sheet));
         }
 
-        addChannel(channels, minX, maxX, bottom, middleZ + deckHalf * octant, Math.min(sheet, middleZ + outerReach));
-        addChannel(channels, minX, maxX, bottom, Math.max(0, middleZ - outerReach), middleZ - deckHalf * octant);
-
-        return shrouds;
+        if (starboard)
+            addChannel(channels, minX, maxX, bottom, middleZ + deckHalf * octant,
+                    Math.min(sheet, middleZ + outerReach));
+        else
+            addChannel(channels, minX, maxX, bottom, Math.max(0, middleZ - outerReach), middleZ - deckHalf * octant);
     }
 
     // How far from the centre line a shroud reaches a step down from its head, in sub-voxels: little at first and

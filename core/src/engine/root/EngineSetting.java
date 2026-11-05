@@ -2788,6 +2788,9 @@ public class EngineSetting {
     public static final int SHIP_SHEET_HALF_BREADTH = 16;
     public static final int SHIP_SHEET_BREADTH = SHIP_SHEET_HALF_BREADTH * 2;
     public static final int SHIP_SHEET_LENGTH = 120;
+    public static final int SHIP_SIDE_COUNT = 2;
+    public static final int SHIP_SIDE_PORT = 1;
+    public static final int SHIP_SIDE_STARBOARD = 0;
 
     // Ship Cells — deck, length, breadth and quarter turn packed into one int
     public static final int SHIP_CELL_LEVEL_MASK = 0xFF;
@@ -2812,12 +2815,16 @@ public class EngineSetting {
     public static final int SHIP_GRATE_MAX_OCTANTS = 64;
     public static final int SHIP_HATCH_OCTANTS = 2;
     public static final int SHIP_LADDER_HANDHOLD = 2;
-    public static final int SHIP_LIP_SUB_VOXELS = 3;
+    public static final int SHIP_LIP_SUB_VOXELS = 1;
     public static final int SHIP_OPENING_REACH = 3;
     public static final int SHIP_RAILING_CAP_SUB_VOXELS = 2;
     public static final int SHIP_RAILING_CAP_WIDTH_SUB_VOXELS = 4;
     public static final int SHIP_RAILING_HEIGHT = 2;
     public static final int SHIP_RAILING_POST_SUB_VOXELS = 2;
+    public static final int SHIP_ROOF_CELL_STRIDE = 3;
+    public static final int SHIP_ROOF_EAVES_HEIGHT = 1 + SHIP_HALF_WALL_HEIGHT;
+    public static final int SHIP_ROOF_RISE_SUB_VOXELS = 2;
+    public static final int SHIP_ROOF_THICKNESS_SUB_VOXELS = 2;
     public static final int SHIP_STAIR_HEADROOM = 2;
     public static final int SHIP_STAIR_MAX_RISE = 12;
     public static final int SHIP_STAIR_WIDTH = 2;
@@ -2909,6 +2916,7 @@ public class EngineSetting {
     public static final int SHIP_LID_SLAT_SUB_VOXELS = 2;
     public static final int SHIP_LID_THICKNESS_SUB_VOXELS = 3;
     public static final int SHIP_MAX_ANCHORS = 4;
+    public static final int SHIP_PANE_SUB_VOXELS = 2;
     public static final int SHIP_PORTHOLE_FILLET_SUB_VOXELS = 2;
     public static final int SHIP_PORTHOLE_FRAME_SUB_VOXELS = 1;
     public static final float SHIP_PORT_OPEN_DEGREES = 80f;
@@ -2946,6 +2954,7 @@ public class EngineSetting {
     public static final String SHIP_PART_PORTHOLES = "Portholes";
     public static final String SHIP_PART_PORT_LID = "PortLid";
     public static final String SHIP_PART_RAILS = "Rails";
+    public static final String SHIP_PART_ROOFS = "Roofs";
     public static final String SHIP_PART_RUDDER = "Rudder";
     public static final String SHIP_PART_SHROUDS_SUFFIX = "Shrouds";
     public static final String SHIP_PART_STAIRS = "Stairs";
@@ -2964,6 +2973,7 @@ public class EngineSetting {
     public static final String SHIP_TEXTURE_HULL = "items/standard/Oak";
     public static final String SHIP_TEXTURE_IRON = "items/standard/Iron";
     public static final String SHIP_TEXTURE_RATLINES = "items/standard/Ratlines";
+    public static final String SHIP_TEXTURE_ROOF = "items/standard/Shingle";
     public static final String SHIP_TEXTURE_ROPE = "items/standard/Rope";
     public static final String SHIP_TEXTURE_RUNGS = "items/standard/Rungs";
     public static final String SHIP_TEXTURE_SAIL = "items/standard/Canvas";
@@ -2983,6 +2993,10 @@ public class EngineSetting {
     public static final float SHIPWRIGHT_SURVEY_DELAY = 0.35f;
     public static final float SHIPWRIGHT_TENDER_DEGREES = 30f;
     public static final int SHIPWRIGHT_UNDO_DEPTH = 64;
+
+    // Shipwright Options — a sided tool's two options: mirrored either side of the centre line, or one side alone
+    public static final int SHIPWRIGHT_OPTION_MIRRORED = 0;
+    public static final int SHIPWRIGHT_OPTION_ONE_SIDE = 1;
 
     // Shipwright Items — the furniture tool's list: the helm, the capstan, then every furnishing table
     public static final int SHIPWRIGHT_ITEM_CAPSTAN = 1;
@@ -3050,6 +3064,7 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_INK_PLATFORM = 0x5E4630FF;
     public static final int SHIPWRIGHT_INK_RAIL = 0x4A3020FF;
     public static final int SHIPWRIGHT_INK_RAILING = 0x7A5230FF;
+    public static final int SHIPWRIGHT_INK_ROOF = 0x5B6170C0;
     public static final int SHIPWRIGHT_INK_RUNG = 0x2E3A1EFF;
     public static final int SHIPWRIGHT_INK_SHELL = 0x2A2018FF;
     public static final int SHIPWRIGHT_INK_STAIRS = 0x3E7A3AFF;
@@ -3089,6 +3104,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TOOL_MASTS = "Masts";
     public static final String SHIPWRIGHT_TOOL_OPENINGS = "Openings";
     public static final String SHIPWRIGHT_TOOL_STAIRS = "Stairs & Ladders";
+    public static final String SHIPWRIGHT_TOOL_ROOF = "Roof";
     public static final String SHIPWRIGHT_TOOL_WAIST = "Waist";
     public static final String SHIPWRIGHT_TOOL_WALLS = "Walls";
 
@@ -3121,6 +3137,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_PLATFORM_FLOOR = "A gun platform must stand on open floor";
     public static final String SHIPWRIGHT_PROBLEM_PLATFORM_PORT = "A gun platform must face the planking of the side";
     public static final String SHIPWRIGHT_PROBLEM_PLATFORM_SHARED = "Gun platforms stand too close to cut a port each";
+    public static final String SHIPWRIGHT_PROBLEM_ROOF_COVERED = "A roof is laid over open floor with no deck above";
     public static final String SHIPWRIGHT_PROBLEM_RAILING_WATER = "A railing, half wall or lip in the side must stand above the waterline";
     public static final String SHIPWRIGHT_PROBLEM_SINKS = "Too heavy: the sea would come over her side";
     public static final String SHIPWRIGHT_PROBLEM_STAIRS_BLOCKED = "A stair runs into something already built";
@@ -3230,7 +3247,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_FORMAT_WATER = "Waterline %.1f up, %.1f to spare";
     public static final String SHIPWRIGHT_FORMAT_WEIGHT = "Weighs %.0f t";
     public static final String[] SHIPWRIGHT_HINTS = {
-            "Draw decks and cut the waist, mirrored; glass floors the bottom waist, take it up for a diving bay",
+            "Decks, waists and roofs both sides or one; glass floors the bottom waist, take it up for a diving bay",
             "Walls, railings and lips on any floor or in the side; doors, windows, floors, guns, helm, stairs",
             "Step a mast on the centre line; its height, sails and rigging follow from the hull",
             "Pick an item below and set it down; a cannon stands on a gun platform set in Fittings" };
@@ -3270,7 +3287,10 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TEXT_OTHER_FURNITURE = "Other";
     public static final String SHIPWRIGHT_TEXT_PAINTS = " paints";
     public static final String SHIPWRIGHT_TEXT_PICKS_UP = " picks it up";
+    public static final String SHIPWRIGHT_TEXT_PORCH = "Porch";
     public static final String SHIPWRIGHT_TEXT_RAILING = "Railing";
+    public static final String SHIPWRIGHT_TEXT_SIDE_ROOF = "Side roof";
+    public static final String SHIPWRIGHT_TEXT_SIDE_WAIST = "Side waist";
     public static final String SHIPWRIGHT_TEXT_RIGHT_CLICK = " / right click";
     public static final String SHIPWRIGHT_TEXT_SAILS = " sails";
     public static final String SHIPWRIGHT_TEXT_SEPARATOR = "  |  ";

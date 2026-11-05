@@ -123,8 +123,8 @@ class ShipwrightEditBranch extends BranchPackage {
     }
 
     // Works the octant under the cursor, once per octant for a painted hand and only the first for any other; walls,
-    // the waist and windows are built again at every octant they change, so the sheet shows them as they are painted
-    // and erased
+    // the waist, roofs and windows are built again at every octant they change, so the sheet shows them as they are
+    // painted and erased
     void strokeAt(ShipwrightSessionInstance session, int u, int v) {
 
         if (!session.isStroking() || !session.moveStroke(u, v))
@@ -142,8 +142,8 @@ class ShipwrightEditBranch extends BranchPackage {
             shipwrightManager.compileSession(session);
     }
 
-    // True when the thing in hand is painted octant by octant as the cursor is dragged: the deck, the waist, every
-    // wall and windows
+    // True when the thing in hand is painted octant by octant as the cursor is dragged: the deck, the waist, the
+    // roof, every wall and windows
     boolean isPaintedHand(ShipwrightSessionInstance session) {
         return session.getTool().isPainted()
                 || session.getTool() == ShipwrightTool.OPENINGS && session.getOpening() == ShipOpening.WINDOW;
@@ -185,8 +185,9 @@ class ShipwrightEditBranch extends BranchPackage {
             return false;
 
         return switch (session.getTool()) {
-            case DECK -> drawOutline(session.getBlueprint(), session.getDeck(), x, z, erasing);
+            case DECK -> drawOutline(session, x, z, erasing);
             case WAIST -> paintWaist(session, x, z, erasing);
+            case ROOF -> paintRoof(session, x, z, erasing);
             case WALLS -> paintWall(session, x, z, erasing);
             case OPENINGS -> session.getOpening() == ShipOpening.WINDOW
                     ? paintWindow(session, x, z, erasing)
@@ -234,12 +235,28 @@ class ShipwrightEditBranch extends BranchPackage {
         return true;
     }
 
-    // The deck's outline drawn out to the cursor at its octant along the sheet, or taken back to nothing there
-    private boolean drawOutline(ShipBlueprintStruct blueprint, int deck, int x, int z, boolean erasing) {
+    // The deck's outline drawn out to the cursor at its octant along the sheet, or taken back to nothing there: on
+    // both sides mirrored, or as a porch on the cursor's side alone
+    private boolean drawOutline(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
 
+        ShipBlueprintStruct blueprint = session.getBlueprint();
+        int deck = session.getDeck();
         int halfBeam = erasing ? 0 : ShipCellUtility.toHalfBreadth(z) + 1;
 
-        if (blueprint.getOutline(deck, x) == halfBeam)
+        if (!session.isMirroring()) {
+
+            int side = ShipCellUtility.toSide(z);
+
+            if (blueprint.getOutline(deck, x, side) == halfBeam)
+                return false;
+
+            blueprint.setOutline(deck, x, side, halfBeam);
+
+            return true;
+        }
+
+        if (blueprint.getOutline(deck, x, EngineSetting.SHIP_SIDE_STARBOARD) == halfBeam
+                && blueprint.getOutline(deck, x, EngineSetting.SHIP_SIDE_PORT) == halfBeam)
             return false;
 
         blueprint.setOutline(deck, x, halfBeam);
@@ -247,13 +264,14 @@ class ShipwrightEditBranch extends BranchPackage {
         return true;
     }
 
-    // Cuts the waist through the deck picked at an octant and its mirror, or fills both back in with any cover set at
-    // either; only open floor with open room or the sea below it is cut, so a stroke dragged across the deck stops at
-    // whatever stands on it
+    // Cuts the waist through the deck picked at an octant and, mirrored, its mirror, or fills them back in with any
+    // cover set there; only open floor with open room or the sea below it is cut, so a stroke dragged across the deck
+    // stops at whatever stands on it
     private boolean paintWaist(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
         int deck = session.getDeck();
+        boolean mirrored = session.isMirroring();
         int mirrorZ = EngineSetting.SHIP_SHEET_BREADTH - 1 - z;
 
         if (erasing) {
@@ -261,21 +279,70 @@ class ShipwrightEditBranch extends BranchPackage {
             if (!blueprint.hasWaist(deck, x, z))
                 return false;
 
-            blueprint.setWaist(deck, x, z, false);
+            blueprint.setWaist(deck, x, z, false, mirrored);
             removeCovers(blueprint, ShipCellUtility.pack(deck, x, z, 0));
-            removeCovers(blueprint, ShipCellUtility.pack(deck, x, mirrorZ, 0));
+
+            if (mirrored)
+                removeCovers(blueprint, ShipCellUtility.pack(deck, x, mirrorZ, 0));
 
             return true;
         }
 
-
         if (blueprint.hasWaist(deck, x, z) || !isCuttableFloor(session, x, z)
-                || !isCuttableFloor(session, x, mirrorZ))
+                || mirrored && !isCuttableFloor(session, x, mirrorZ))
             return false;
 
-        blueprint.setWaist(deck, x, z, true);
+        blueprint.setWaist(deck, x, z, true, mirrored);
 
         return true;
+    }
+
+    // Lays a roof over the deck picked at an octant and, mirrored, its mirror, or takes it up; only floor open to the
+    // sky with no deck above takes a roof, the refusal shown where a stroke begins
+    private boolean paintRoof(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
+
+        ShipBlueprintStruct blueprint = session.getBlueprint();
+        int deck = session.getDeck();
+        boolean mirrored = session.isMirroring();
+
+        if (erasing) {
+
+            if (!blueprint.hasRoof(deck, x, z))
+                return false;
+
+            blueprint.setRoof(deck, x, z, false, mirrored);
+
+            return true;
+        }
+
+        if (blueprint.hasRoof(deck, x, z))
+            return false;
+
+        String problem = findRoofProblem(session, x, z);
+
+        if (problem.isEmpty() && mirrored)
+            problem = findRoofProblem(session, x, EngineSetting.SHIP_SHEET_BREADTH - 1 - z);
+
+        if (!problem.isEmpty()) {
+
+            if (session.isStrokeStart())
+                refuse(session, problem);
+
+            return false;
+        }
+
+        blueprint.setRoof(deck, x, z, true, mirrored);
+
+        return true;
+    }
+
+    // Why a roof cannot be laid over an octant of the deck picked, SHIP_PROBLEM_NONE when it can
+    private String findRoofProblem(ShipwrightSessionInstance session, int x, int z) {
+
+        if (!session.getBlueprint().isOnDeck(session.getDeck(), x, z))
+            return EngineSetting.SHIPWRIGHT_PROBLEM_OFF_DECK;
+
+        return shipwrightHullBranch.findRoofProblem(session.getLayout(), session.getDeck(), x, z);
     }
 
     // True when the deck picked is drawn and was built with open floor at an octant, nothing standing on it but the
@@ -811,9 +878,11 @@ class ShipwrightEditBranch extends BranchPackage {
         return tab.getEntryCount() + option - tab.getFollowingOffset();
     }
 
-    // The option of the tool in hand held, INDEX_NOT_FOUND for no mast picked; the deck and the waist have one
+    // The option of the tool in hand held, INDEX_NOT_FOUND for no mast picked; the deck, the waist and the roof are
+    // mirrored or one side alone
     int getHeldOption(ShipwrightSessionInstance session) {
         return switch (session.getTool()) {
+            case DECK, WAIST, ROOF -> session.getSideOption();
             case WALLS -> session.getWall().ordinal();
             case OPENINGS -> session.getOpening().ordinal();
             case STAIRS -> session.getClimb().ordinal();
@@ -858,6 +927,7 @@ class ShipwrightEditBranch extends BranchPackage {
         session.setTool(tab, tool);
 
         switch (tool) {
+            case DECK, WAIST, ROOF -> session.setSideOption(option);
             case WALLS -> session.setWall(ShipWall.VALUES[option]);
             case OPENINGS -> session.setOpening(ShipOpening.VALUES[option]);
             case STAIRS -> session.setClimb(ShipClimb.VALUES[option]);

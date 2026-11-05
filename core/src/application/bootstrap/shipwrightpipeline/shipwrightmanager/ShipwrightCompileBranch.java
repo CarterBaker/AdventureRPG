@@ -23,7 +23,7 @@ class ShipwrightCompileBranch extends BranchPackage {
      * the sheet with room aft for the rudder and headroom for deckhouses and
      * bulwarks; the hull, its decks, bulwarks, waist, walls, railings and
      * lips, stairs, ladders, boarding ladders, hatches, grates, glass floors,
-     * doors, windows, gun platforms and their ports are laid into it through
+     * roofs, doors, windows, gun platforms and their ports are laid into it through
      * ShipwrightHullBranch and ShipwrightFittingBranch, and every piece merged
      * into its part, every rail built as posts under a handrail. The bowsprit,
      * helm, capstan, rudder, anchors, lids, covers, ladders, boarding ladders,
@@ -87,6 +87,7 @@ class ShipwrightCompileBranch extends BranchPackage {
         shipwrightHullBranch.layBoardingLadders(blueprint, layout);
         shipwrightHullBranch.layHatches(blueprint, layout);
         shipwrightHullBranch.layCovers(blueprint, layout);
+        shipwrightHullBranch.layRoofs(blueprint, layout);
         shipwrightFittingBranch.cutOpenings(blueprint, layout);
 
         mergePieces(layout);
@@ -145,8 +146,8 @@ class ShipwrightCompileBranch extends BranchPackage {
 
     // Pieces \\
 
-    // Every piece laid in the grid merged into boxes, rails built as posts under a handrail, one part per piece that
-    // has any
+    // Every piece laid in the grid merged into boxes, rails built as posts under a handrail and window glass as
+    // panes, one part per piece that has any
     void mergePieces(ShipLayoutStruct layout) {
 
         for (int i = 0; i < ShipPiece.VALUES.length; i++) {
@@ -161,9 +162,11 @@ class ShipwrightCompileBranch extends BranchPackage {
                     EngineSetting.AXIS_Y,
                     0f);
 
-            boolean built = piece.isRailed()
-                    ? shipwrightHullBranch.addRailings(layout.getGrid(), part)
-                    : layout.getGrid().mergeInto(piece, part);
+            boolean built = switch (piece.getShape()) {
+                case RAILING -> shipwrightHullBranch.addRailings(layout.getGrid(), part);
+                case PANE -> shipwrightHullBranch.addPanes(layout.getGrid(), part);
+                default -> layout.getGrid().mergeInto(piece, part);
+            };
 
             if (built)
                 layout.addPart(part);
@@ -260,7 +263,8 @@ class ShipwrightCompileBranch extends BranchPackage {
         float area = 0f;
 
         for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
-            area += blueprint.getOutline(0, x) * 2 * octantArea;
+            for (int side = 0; side < EngineSetting.SHIP_SIDE_COUNT; side++)
+                area += blueprint.getOutline(0, x, side) * octantArea;
 
         float depth = ballast / EngineSetting.SHIP_BALLAST_DENSITY / Math.max(area, octantArea);
 

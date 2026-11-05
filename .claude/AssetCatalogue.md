@@ -111,6 +111,8 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-05: Ship Viewer scene gizmo. Rewrote `editor/shipviewer/ShipViewerShader.fsh` (water tint removed, the cutaway
   a float `u_cutawayHeight`), regenerated `materials/editor/ShipViewerMaterial.arpg` and `menus/editor/ShipViewer.arpg`
   (only the deck − and + buttons; the gizmo's arms, cones and centre).
+- 2026-11-05: Shipwright porches and roofs. Regenerated `schemas/Vehicles.arpg` (`roofs` in the deck default) for the
+  Roof tool, and `menus/editor/ShipViewer.arpg` (the gizmo pinned inside the window's top-right corner).
 ---
 
 ## Textures and Sprites (2174 files)

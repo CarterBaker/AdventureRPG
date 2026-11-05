@@ -12,8 +12,9 @@ public class ShipLayoutStruct extends StructPackage {
 
     /*
      * A ship blueprint compiled into what it is built of. Its sections are the
-     * hull's half-beam at every layer and octant along the sheet, every layer
-     * between two decks blended from the one below to the one above; its
+     * hull's half-beam on each side at every layer and octant along the
+     * sheet, every layer between two decks blended from the one below to the
+     * one above; its
      * octant grid holds every piece laid out in model octants, the sheet
      * standing originX octants in from the grid's aft edge so a rudder fits
      * behind it; its vehicle parts are those pieces merged into
@@ -35,7 +36,7 @@ public class ShipLayoutStruct extends StructPackage {
      * refilled in place each time.
      */
 
-    // Sections — half-beams in octants, a layer of SHIP_SHEET_LENGTH after another
+    // Sections — half-beams in octants, a layer of SHIP_SHEET_LENGTH after another, starboard then port
     private final byte[] sections;
     private int sectionLayers;
 
@@ -58,6 +59,9 @@ public class ShipLayoutStruct extends StructPackage {
     private final IntArrayList boardingLadderBoxes;
     private final IntArrayList portBoxes;
     private final IntArrayList paneBoxes;
+
+    // Roofs — every roofed octant as its model octant along the grid, the layer of the floor it roofs and across
+    private final IntArrayList roofCells;
 
     // Anchors — model blocks
     private float anchorDrop;
@@ -95,8 +99,8 @@ public class ShipLayoutStruct extends StructPackage {
     public ShipLayoutStruct(ShipOctantGridStruct grid) {
 
         // Sections
-        this.sections = new byte[EngineSetting.SHIP_MAX_DECKS * EngineSetting.SHIP_DECK_HEIGHT
-                * EngineSetting.SHIP_SHEET_LENGTH];
+        this.sections = new byte[EngineSetting.SHIP_SIDE_COUNT * EngineSetting.SHIP_MAX_DECKS
+                * EngineSetting.SHIP_DECK_HEIGHT * EngineSetting.SHIP_SHEET_LENGTH];
 
         // Grid
         this.grid = grid;
@@ -116,6 +120,9 @@ public class ShipLayoutStruct extends StructPackage {
         this.boardingLadderBoxes = new IntArrayList();
         this.portBoxes = new IntArrayList();
         this.paneBoxes = new IntArrayList();
+
+        // Roofs
+        this.roofCells = new IntArrayList();
 
         // Rig
         this.mastHeights = new IntArrayList();
@@ -143,6 +150,7 @@ public class ShipLayoutStruct extends StructPackage {
         boardingLadderBoxes.clear();
         portBoxes.clear();
         paneBoxes.clear();
+        roofCells.clear();
         this.anchorDrop = EngineSetting.DEFAULT_VEHICLE_ANCHOR_DROP;
         mastHeights.clear();
         mastSailCounts.clear();
@@ -168,17 +176,29 @@ public class ShipLayoutStruct extends StructPackage {
         this.sectionLayers = sectionLayers;
     }
 
-    public void setSection(int x, int y, int halfBeam) {
-        sections[y * EngineSetting.SHIP_SHEET_LENGTH + x] = (byte) halfBeam;
+    public void setSection(int x, int y, int side, int halfBeam) {
+        sections[toSectionIndex(x, y, side)] = (byte) halfBeam;
     }
 
-    // How many octants the hull reaches out from the centre line at a layer and an octant along the sheet
+    // How many octants the hull reaches out from the centre line at a layer and an octant along the sheet, on its
+    // wider side
     public int getSection(int x, int y) {
+        return Math.max(getSection(x, y, EngineSetting.SHIP_SIDE_STARBOARD),
+                getSection(x, y, EngineSetting.SHIP_SIDE_PORT));
+    }
+
+    // How many octants the hull reaches out from the centre line on one side at a layer and an octant along the sheet
+    public int getSection(int x, int y, int side) {
 
         if (x < 0 || y < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH || y >= sectionLayers)
             return 0;
 
-        return sections[y * EngineSetting.SHIP_SHEET_LENGTH + x];
+        return sections[toSectionIndex(x, y, side)];
+    }
+
+    private static int toSectionIndex(int x, int y, int side) {
+        return (side * EngineSetting.SHIP_MAX_DECKS * EngineSetting.SHIP_DECK_HEIGHT + y)
+                * EngineSetting.SHIP_SHEET_LENGTH + x;
     }
 
     // The hull's half-beam where the water meets it at a layer: the section there, or inside the bulwarks of an open
@@ -204,7 +224,8 @@ public class ShipLayoutStruct extends StructPackage {
         if (z < 0 || z >= halfBreadth * 2)
             return false;
 
-        return (z >= halfBreadth ? z - halfBreadth : halfBreadth - 1 - z) < getSection(x, y);
+        return (z >= halfBreadth ? z - halfBreadth : halfBreadth - 1 - z)
+                < getSection(x, y, z >= halfBreadth ? EngineSetting.SHIP_SIDE_STARBOARD : EngineSetting.SHIP_SIDE_PORT);
     }
 
     // Parts \\
@@ -253,6 +274,13 @@ public class ShipLayoutStruct extends StructPackage {
     // A window cut through a wall or the side, glazed across the octants cut
     public void addPane(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int spin) {
         addFittingBox(paneBoxes, minX, minY, minZ, maxX, maxY, maxZ, spin);
+    }
+
+    // An octant of a deck's open floor roofed over, at the octant along the grid, the floor's layer and across
+    public void addRoof(int gridX, int floor, int z) {
+        roofCells.add(gridX);
+        roofCells.add(floor);
+        roofCells.add(z);
     }
 
     private static void addFittingBox(
@@ -399,6 +427,11 @@ public class ShipLayoutStruct extends StructPackage {
 
     public IntArrayList getPaneBoxes() {
         return paneBoxes;
+    }
+
+    // Every roofed octant, three ints each: the octant along the grid, the floor's layer and the octant across
+    public IntArrayList getRoofCells() {
+        return roofCells;
     }
 
     // How many fittings a list of fitting boxes holds

@@ -15,18 +15,21 @@ public class ShipBlueprintStruct extends StructPackage {
     /*
      * A vehicle as it is drawn at the drafting table, everything its file
      * keeps, and the category it is drawn and built as. A ship is a stack of
-     * decks from the bottom up, each drawn as its
-     * outline: how many octants it reaches out from the centre line at every
-     * octant along the sheet, mirrored to the other side. The waist is cut
-     * through a deck's floor octant by octant, kept sorted, every octant and
-     * its mirror together. Walls, half walls, railings, lips, doors, windows,
+     * decks from the bottom up, each drawn as its outline: how many octants it
+     * reaches out from the centre line at every octant along the sheet, on
+     * each side, drawn mirrored to both sides or, as a porch, to one. The
+     * waist is cut through a deck's floor octant by octant and a roof laid
+     * over its open floor the same way, each kept sorted, every octant with
+     * its mirror or alone. Walls, half walls, railings, lips, doors, windows,
      * hatches, grates, glass floors, gun platforms, stairs, ladders, boarding
      * ladders and furniture stand on a deck at an octant along the length and
      * across the full breadth, never mirrored, each packed through
      * ShipCellUtility with its deck as its level; walls, half walls, railings
-     * and lips are kept sorted and a place holds at most one of them. The helm and the capstan are one placement each,
-     * and masts stand on the centre line kept from the stern forward. Copied whole for undo; every list writes in a fixed
-     * order, so saving an unchanged blueprint writes the same bytes.
+     * and lips are kept sorted and a place holds at most one of them. The helm
+     * and the capstan are one placement each, and masts stand on the centre
+     * line kept from the stern forward. Copied whole for undo; every list
+     * writes in a fixed order, so saving an unchanged blueprint writes the
+     * same bytes.
      */
 
     // Identity
@@ -34,12 +37,15 @@ public class ShipBlueprintStruct extends StructPackage {
     private String displayName;
     private VehicleCategory category;
 
-    // Decks — the half-beam of every deck at every octant along the sheet, deck after deck
+    // Decks — the half-beam of every deck at every octant along the sheet, deck after deck, starboard then port
     private final byte[] outlines;
     private int deckCount;
 
     // Waist — packed cells cut out of a deck's floor, their level the deck they are cut through
     private final IntArrayList waists;
+
+    // Roofs — packed cells roofed over a deck's open floor, their level the deck they roof
+    private final IntArrayList roofs;
 
     // Rooms — packed cells, their level the deck they stand on
     private final IntArrayList walls;
@@ -76,11 +82,15 @@ public class ShipBlueprintStruct extends StructPackage {
         this.category = VehicleCategory.SHIP;
 
         // Decks
-        this.outlines = new byte[EngineSetting.SHIP_MAX_DECKS * EngineSetting.SHIP_SHEET_LENGTH];
+        this.outlines = new byte[EngineSetting.SHIP_SIDE_COUNT * EngineSetting.SHIP_MAX_DECKS
+                * EngineSetting.SHIP_SHEET_LENGTH];
         this.deckCount = 1;
 
         // Waist
         this.waists = new IntArrayList();
+
+        // Roofs
+        this.roofs = new IntArrayList();
 
         // Rooms
         this.walls = new IntArrayList();
@@ -131,6 +141,9 @@ public class ShipBlueprintStruct extends StructPackage {
         // Waist
         copyCells(other.waists, waists);
 
+        // Roofs
+        copyCells(other.roofs, roofs);
+
         // Rooms
         copyCells(other.walls, walls);
         copyCells(other.halfWalls, halfWalls);
@@ -168,28 +181,46 @@ public class ShipBlueprintStruct extends StructPackage {
 
     // Decks \\
 
-    // How many octants a deck reaches out from the centre line at an octant along the sheet, 0 where it is not drawn
+    // How many octants a deck reaches out from the centre line at an octant along the sheet on its wider side, 0
+    // where it is not drawn
     public int getOutline(int deck, int x) {
+        return Math.max(getOutline(deck, x, EngineSetting.SHIP_SIDE_STARBOARD),
+                getOutline(deck, x, EngineSetting.SHIP_SIDE_PORT));
+    }
+
+    // How many octants a deck reaches out from the centre line on one side at an octant along the sheet
+    public int getOutline(int deck, int x, int side) {
 
         if (deck < 0 || deck >= deckCount || x < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH)
             return 0;
 
-        return outlines[deck * EngineSetting.SHIP_SHEET_LENGTH + x];
+        return outlines[toOutlineIndex(deck, x, side)];
     }
 
+    // A deck drawn out to a half-beam at an octant along the sheet on both sides, mirrored
     public void setOutline(int deck, int x, int halfBeam) {
+        setOutline(deck, x, EngineSetting.SHIP_SIDE_STARBOARD, halfBeam);
+        setOutline(deck, x, EngineSetting.SHIP_SIDE_PORT, halfBeam);
+    }
+
+    // A deck drawn out to a half-beam at an octant along the sheet on one side alone
+    public void setOutline(int deck, int x, int side, int halfBeam) {
 
         if (deck < 0 || deck >= deckCount || x < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH)
             return;
 
-        outlines[deck * EngineSetting.SHIP_SHEET_LENGTH + x] = (byte) Math.max(0,
+        outlines[toOutlineIndex(deck, x, side)] = (byte) Math.max(0,
                 Math.min(EngineSetting.SHIP_SHEET_HALF_BREADTH, halfBeam));
     }
 
-    // True when a deck's floor covers an octant across the full breadth
+    private static int toOutlineIndex(int deck, int x, int side) {
+        return (side * EngineSetting.SHIP_MAX_DECKS + deck) * EngineSetting.SHIP_SHEET_LENGTH + x;
+    }
+
+    // True when a deck's floor covers an octant across the full breadth, on the side of the centre line it lies
     public boolean isOnDeck(int deck, int x, int z) {
         return z >= 0 && z < EngineSetting.SHIP_SHEET_BREADTH
-                && ShipCellUtility.toHalfBreadth(z) < getOutline(deck, x);
+                && ShipCellUtility.toHalfBreadth(z) < getOutline(deck, x, ShipCellUtility.toSide(z));
     }
 
     public boolean isDeckDrawn(int deck) {
@@ -207,8 +238,10 @@ public class ShipBlueprintStruct extends StructPackage {
         if (deckCount >= EngineSetting.SHIP_MAX_DECKS)
             return false;
 
-        System.arraycopy(outlines, (deckCount - 1) * EngineSetting.SHIP_SHEET_LENGTH,
-                outlines, deckCount * EngineSetting.SHIP_SHEET_LENGTH, EngineSetting.SHIP_SHEET_LENGTH);
+        for (int side = 0; side < EngineSetting.SHIP_SIDE_COUNT; side++)
+            System.arraycopy(outlines, toOutlineIndex(deckCount - 1, 0, side),
+                    outlines, toOutlineIndex(deckCount, 0, side), EngineSetting.SHIP_SHEET_LENGTH);
+
         deckCount++;
 
         return true;
@@ -222,11 +255,17 @@ public class ShipBlueprintStruct extends StructPackage {
 
         int length = EngineSetting.SHIP_SHEET_LENGTH;
 
-        System.arraycopy(outlines, (deck + 1) * length, outlines, deck * length, (deckCount - deck - 1) * length);
-        Arrays.fill(outlines, (deckCount - 1) * length, deckCount * length, (byte) 0);
+        for (int side = 0; side < EngineSetting.SHIP_SIDE_COUNT; side++) {
+            System.arraycopy(outlines, toOutlineIndex(deck + 1, 0, side), outlines, toOutlineIndex(deck, 0, side),
+                    (deckCount - deck - 1) * length);
+            Arrays.fill(outlines, toOutlineIndex(deckCount - 1, 0, side), toOutlineIndex(deckCount, 0, side),
+                    (byte) 0);
+        }
+
         deckCount--;
 
         removeDeckCells(waists, deck);
+        removeDeckCells(roofs, deck);
         removeDeckCells(walls, deck);
         removeDeckCells(halfWalls, deck);
         removeDeckCells(railings, deck);
@@ -292,6 +331,7 @@ public class ShipBlueprintStruct extends StructPackage {
     public void prunePlacements() {
 
         pruneCells(waists);
+        pruneCells(roofs);
         pruneCells(walls);
         pruneCells(halfWalls);
         pruneCells(railings);
@@ -375,13 +415,36 @@ public class ShipBlueprintStruct extends StructPackage {
         return findSorted(waists, ShipCellUtility.pack(level, x, z, 0)) >= 0;
     }
 
-    // Cuts the waist through a deck's floor at a place and its mirror across the centre line, or fills both back in
-    public void setWaist(int level, int x, int z, boolean cut) {
+    // Cuts the waist through a deck's floor at a place and, mirrored, its mirror across the centre line, or fills
+    // them back in
+    public void setWaist(int level, int x, int z, boolean cut, boolean mirrored) {
+        setMirroredCell(waists, level, x, z, cut, mirrored);
+    }
+
+    // Roofs \\
+
+    // True when a roof is laid over a deck's floor at a place
+    public boolean hasRoof(int level, int x, int z) {
+        return findSorted(roofs, ShipCellUtility.pack(level, x, z, 0)) >= 0;
+    }
+
+    // Lays a roof over a deck's floor at a place and, mirrored, its mirror across the centre line, or takes them up
+    public void setRoof(int level, int x, int z, boolean laid, boolean mirrored) {
+        setMirroredCell(roofs, level, x, z, laid, mirrored);
+    }
+
+    // Keeps a place in a sorted list, with its mirror across the centre line when mirrored, or takes them out
+    private static void setMirroredCell(IntArrayList cells, int level, int x, int z, boolean kept, boolean mirrored) {
 
         int halfZ = ShipCellUtility.toHalfBreadth(z);
 
-        setSorted(waists, ShipCellUtility.pack(level, x, ShipCellUtility.toStarboard(halfZ), 0), cut);
-        setSorted(waists, ShipCellUtility.pack(level, x, ShipCellUtility.toPort(halfZ), 0), cut);
+        if (!mirrored) {
+            setSorted(cells, ShipCellUtility.pack(level, x, z, 0), kept);
+            return;
+        }
+
+        setSorted(cells, ShipCellUtility.pack(level, x, ShipCellUtility.toStarboard(halfZ), 0), kept);
+        setSorted(cells, ShipCellUtility.pack(level, x, ShipCellUtility.toPort(halfZ), 0), kept);
     }
 
     // Walls \\
@@ -584,6 +647,10 @@ public class ShipBlueprintStruct extends StructPackage {
 
     public IntArrayList getWaists() {
         return waists;
+    }
+
+    public IntArrayList getRoofs() {
+        return roofs;
     }
 
     public IntArrayList getWalls() {

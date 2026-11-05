@@ -6,21 +6,29 @@ public enum ShipwrightTab {
 
     /*
      * The four tabs of a drafting table's catalogue, each the options of one
-     * part of the work: the hull — the deck's outline and the waist cut
-     * through it; the fittings — walls, railings and lips, doors and windows,
-     * the floors laid over openings, the gun platforms cannons stand on, the
-     * helm and the capstan, stairs and ladders; the masts; and every piece of
-     * furniture. A tab
-     * lists its fixed options first, each the tool that works it, the option
-     * of that tool and the section it is listed under, then the options of
-     * one tool whose count follows the ship or the game: every mast stepped,
-     * or every furnishing past the helm and the capstan.
+     * part of the work: the hull — the deck's outline, the waist cut through
+     * it and the roof laid over it, each mirrored or one side alone; the
+     * fittings — walls, railings and lips, doors and windows, the floors laid
+     * over openings, the gun platforms cannons stand on, the helm and the
+     * capstan, stairs and ladders; the masts; and every piece of furniture. A
+     * tab lists its fixed options first, each the tool that works it, the
+     * option of that tool and the section it is listed under, then the options
+     * of one tool whose count follows the ship or the game: every mast
+     * stepped, or every furnishing past the helm and the capstan.
      */
 
     HULL(EngineSetting.SHIPWRIGHT_TAB_HULL,
-            new ShipwrightTool[] { ShipwrightTool.DECK, ShipwrightTool.WAIST },
-            new int[] { 0, 0 },
-            new String[] { EngineSetting.SHIPWRIGHT_SECTION_HULL, EngineSetting.SHIPWRIGHT_SECTION_HULL },
+            new ShipwrightTool[] {
+                    ShipwrightTool.DECK, ShipwrightTool.DECK, ShipwrightTool.WAIST, ShipwrightTool.WAIST,
+                    ShipwrightTool.ROOF, ShipwrightTool.ROOF },
+            new int[] {
+                    EngineSetting.SHIPWRIGHT_OPTION_MIRRORED, EngineSetting.SHIPWRIGHT_OPTION_ONE_SIDE,
+                    EngineSetting.SHIPWRIGHT_OPTION_MIRRORED, EngineSetting.SHIPWRIGHT_OPTION_ONE_SIDE,
+                    EngineSetting.SHIPWRIGHT_OPTION_MIRRORED, EngineSetting.SHIPWRIGHT_OPTION_ONE_SIDE },
+            new String[] {
+                    EngineSetting.SHIPWRIGHT_SECTION_HULL, EngineSetting.SHIPWRIGHT_SECTION_HULL,
+                    EngineSetting.SHIPWRIGHT_SECTION_HULL, EngineSetting.SHIPWRIGHT_SECTION_HULL,
+                    EngineSetting.SHIPWRIGHT_SECTION_HULL, EngineSetting.SHIPWRIGHT_SECTION_HULL },
             null,
             0),
     FITTINGS(EngineSetting.SHIPWRIGHT_TAB_FITTINGS,

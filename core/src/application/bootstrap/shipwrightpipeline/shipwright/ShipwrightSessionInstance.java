@@ -12,22 +12,22 @@ public class ShipwrightSessionInstance extends InstancePackage {
      * One drafting table in use: where the ships drawn at it are kept, the
      * blueprint on the sheet and the name it was last saved under, and the
      * history every change can be undone and redone through, one stroke or
-     * press at a time. It holds the catalogue's tab open, the option each
-     * tab last held, the tool in hand and what it works on — the deck picked,
-     * the wall, half wall, railing or lip painted, which opening, cover or
-     * gun platform is set down, whether a climb is a stair, a
-     * ladder or a boarding ladder, the mast picked, the furniture item and
-     * the quarter turn something is set down at — and the cursor, the octant
-     * of the sheet the pointer or the movement bindings last put it on, with
-     * whatever stands under it and why the thing in hand could not be set
-     * down there, worked out again whenever either changes. The
-     * blueprint compiles into this session's own layout whenever it changes,
-     * and is surveyed once it has rested, and the sheet and the top and side
-     * views are drawn into its own pixels: the sheet whenever anything shown
-     * changes, the views whenever it compiles, each with a revision its viewer
-     * uploads by; the cursor is laid over the sheet as it is drawn on screen.
-     * A name being typed is kept apart from the blueprint until it is
-     * confirmed.
+     * press at a time. It holds the catalogue's tab open, the option each tab
+     * last held, the tool in hand and what it works on — the deck picked,
+     * whether the deck, waist or roof tool works both sides or one, the wall,
+     * half wall, railing or lip painted, which opening, cover or gun platform
+     * is set down, whether a climb is a stair, a ladder or a boarding ladder,
+     * the mast picked, the furniture item and the quarter turn something is
+     * set down at — and the cursor, the octant of the sheet the pointer or the
+     * movement bindings last put it on, with whatever stands under it and why
+     * the thing in hand could not be set down there, worked out again whenever
+     * either changes. The blueprint compiles into this session's own layout
+     * whenever it changes, and is surveyed once it has rested, and the sheet
+     * and the top and side views are drawn into its own pixels: the sheet
+     * whenever anything shown changes, the views whenever it compiles, each
+     * with a revision its viewer uploads by; the cursor is laid over the sheet
+     * as it is drawn on screen. A name being typed is kept apart from the
+     * blueprint until it is confirmed.
      */
 
     // Storage
@@ -56,6 +56,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
     private int[] tabEntries;
     private ShipwrightTool tool;
     private int deck;
+    private int sideOption;
     private ShipWall wall;
     private ShipOpening opening;
     private ShipClimb climb;
@@ -147,6 +148,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
         Arrays.fill(tabEntries, EngineSetting.INDEX_NOT_FOUND);
         this.tab = ShipwrightTab.HULL;
         this.tool = ShipwrightTool.DECK;
+        this.sideOption = EngineSetting.SHIPWRIGHT_OPTION_MIRRORED;
         this.wall = ShipWall.FULL;
         this.opening = ShipOpening.DOOR;
         this.climb = ShipClimb.STAIR;
@@ -328,6 +330,12 @@ public class ShipwrightSessionInstance extends InstancePackage {
         markChanged();
     }
 
+    // Whether the deck, waist and roof tools work both sides of the centre line or one alone
+    public void setSideOption(int sideOption) {
+        this.sideOption = sideOption;
+        markChanged();
+    }
+
     public void setWall(ShipWall wall) {
         this.wall = wall;
         markChanged();
@@ -496,6 +504,16 @@ public class ShipwrightSessionInstance extends InstancePackage {
     // The deck every tool works on, always one of the blueprint's
     public int getDeck() {
         return Math.min(deck, blueprint.getDeckCount() - 1);
+    }
+
+    // SHIPWRIGHT_OPTION_MIRRORED or SHIPWRIGHT_OPTION_ONE_SIDE, for the deck, waist and roof tools
+    public int getSideOption() {
+        return sideOption;
+    }
+
+    // True while the tool in hand draws every stroke on both sides of the centre line at once
+    public boolean isMirroring() {
+        return tool.isSided() && sideOption == EngineSetting.SHIPWRIGHT_OPTION_MIRRORED;
     }
 
     // The wall the walls tool paints: full or half height, or a railing

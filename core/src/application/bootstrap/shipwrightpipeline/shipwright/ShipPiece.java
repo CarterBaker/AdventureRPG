@@ -15,31 +15,34 @@ public enum ShipPiece {
      * however its decks flare or narrow; floors, walls, stairs, rails and
      * railings are what is walked on and built against. A lip and a gun
      * platform fill only the bottom of their octant, a sill stepped over and a
-     * bed a cannon stands on; rails are built as posts under a handrail rather
-     * than merged whole. Spars, canvas, rope and fittings rise above the
-     * hull's grid and are built as boxes of their own.
+     * bed a cannon stands on; rails are built as posts under a handrail and
+     * window glass as panes reaching to every wall beside them, rather than
+     * merged whole (ShipPieceShape). Spars, canvas, rope and fittings rise
+     * above the hull's grid and are built as boxes of their own.
      */
 
     HULL(EngineSetting.SHIP_PART_HULL, VehiclePartRole.HULL, EngineSetting.SHIP_TEXTURE_HULL, false,
-            EngineSetting.SHIP_OCTANT_SUB_VOXELS, false),
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     BOTTOM(EngineSetting.SHIP_PART_BOTTOM, VehiclePartRole.HULL, EngineSetting.SHIP_TEXTURE_DECK, true,
-            EngineSetting.SHIP_OCTANT_SUB_VOXELS, false),
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     WEATHER_DECK(EngineSetting.SHIP_PART_WEATHER_DECK, VehiclePartRole.HULL, EngineSetting.SHIP_TEXTURE_DECK, true,
-            EngineSetting.SHIP_OCTANT_SUB_VOXELS, false),
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     BULWARK(EngineSetting.SHIP_PART_BULWARK, VehiclePartRole.HULL, EngineSetting.SHIP_TEXTURE_HULL, false,
-            EngineSetting.SHIP_OCTANT_SUB_VOXELS, false),
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     DECKS(EngineSetting.SHIP_PART_DECKS, VehiclePartRole.DECK, EngineSetting.SHIP_TEXTURE_DECK, true,
-            EngineSetting.SHIP_OCTANT_SUB_VOXELS, false),
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     WALLS(EngineSetting.SHIP_PART_WALLS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_WALL, false,
-            EngineSetting.SHIP_OCTANT_SUB_VOXELS, false),
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     STAIRS(EngineSetting.SHIP_PART_STAIRS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_DECK, false,
-            EngineSetting.SHIP_OCTANT_SUB_VOXELS, false),
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     RAILS(EngineSetting.SHIP_PART_RAILS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_HULL, false,
-            EngineSetting.SHIP_OCTANT_SUB_VOXELS, true),
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.RAILING),
     LIPS(EngineSetting.SHIP_PART_LIPS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_HULL, false,
-            EngineSetting.SHIP_LIP_SUB_VOXELS, false),
+            EngineSetting.SHIP_LIP_SUB_VOXELS, ShipPieceShape.BLOCKS),
     PLATFORMS(EngineSetting.SHIP_PART_GUN_PLATFORMS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_WALL,
-            false, EngineSetting.SHIP_GUN_PLATFORM_SUB_VOXELS, false);
+            false, EngineSetting.SHIP_GUN_PLATFORM_SUB_VOXELS, ShipPieceShape.BLOCKS),
+    PANES(EngineSetting.SHIP_PART_GLASS, VehiclePartRole.HULL, EngineSetting.SHIP_TEXTURE_GLASS, false,
+            EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.PANE);
 
     // Values
     public static final ShipPiece[] VALUES = values();
@@ -50,13 +53,19 @@ public enum ShipPiece {
     private final String textureName;
     private final boolean floor;
 
-    // Shape — the sub-voxels of its top octant a piece fills from the bottom up, and whether it is built as a railing
+    // Shape — the sub-voxels of its top octant a piece fills from the bottom up, and how its octants are built
     private final int height;
-    private final boolean railed;
+    private final ShipPieceShape shape;
 
     // Constructor \\
 
-    ShipPiece(String partName, VehiclePartRole role, String textureName, boolean floor, int height, boolean railed) {
+    ShipPiece(
+            String partName,
+            VehiclePartRole role,
+            String textureName,
+            boolean floor,
+            int height,
+            ShipPieceShape shape) {
 
         // Identity
         this.partName = partName;
@@ -66,7 +75,7 @@ public enum ShipPiece {
 
         // Shape
         this.height = height;
-        this.railed = railed;
+        this.shape = shape;
     }
 
     // The value this piece is stored as in an octant grid, zero being empty
@@ -102,9 +111,9 @@ public enum ShipPiece {
         return height;
     }
 
-    // True for a piece built as posts under a handrail instead of merged whole
-    public boolean isRailed() {
-        return railed;
+    // How the piece's octants are built into its part
+    public ShipPieceShape getShape() {
+        return shape;
     }
 
     // True for a piece a door or a window may be cut through

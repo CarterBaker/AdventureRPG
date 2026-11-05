@@ -75,19 +75,20 @@ class ShipwrightHullBranch extends BranchPackage {
 
         layout.setSectionLayers(layers);
 
-        for (int y = 0; y < layers; y++)
-            for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
-                layout.setSection(x, y, resolveSection(blueprint, x, y / height, y % height));
+        for (int side = 0; side < EngineSetting.SHIP_SIDE_COUNT; side++)
+            for (int y = 0; y < layers; y++)
+                for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++)
+                    layout.setSection(x, y, side, resolveSection(blueprint, x, y / height, y % height, side));
     }
 
-    private int resolveSection(ShipBlueprintStruct blueprint, int x, int deck, int rise) {
+    private int resolveSection(ShipBlueprintStruct blueprint, int x, int deck, int rise, int side) {
 
-        int below = blueprint.getOutline(deck, x);
+        int below = blueprint.getOutline(deck, x, side);
 
         if (rise == 0)
             return below;
 
-        int above = blueprint.getOutline(deck + 1, x);
+        int above = blueprint.getOutline(deck + 1, x, side);
 
         if (above == 0)
             return 0;
@@ -292,7 +293,7 @@ class ShipwrightHullBranch extends BranchPackage {
             layout.lowerOpeningSill((floor + 1) * EngineSetting.SUB_BLOCK_SIZE);
 
         if (isSide(layout, floor, x, z))
-            openSide(grid, gridX, floor, z);
+            openSide(layout, gridX, floor, z);
         else
             clearLanding(grid, gridX, floor, z);
 
@@ -336,10 +337,15 @@ class ShipwrightHullBranch extends BranchPackage {
         return EngineSetting.SHIP_PROBLEM_NONE;
     }
 
-    // True where a deck's floor meets the ship's side, its planking standing over it
+    // True where a deck's floor meets the ship's side, its planking standing over it: the deck's rim, or a floor a
+    // narrower deck above rises from with straight sides
     private boolean isSide(ShipLayoutStruct layout, int floor, int x, int z) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int gridX = layout.getOriginX() + x;
+
         return layout.isVolume(x, floor, z)
-                && layout.getGrid().get(layout.getOriginX() + x, floor, z) == ShipPiece.HULL;
+                && (grid.get(gridX, floor, z) == ShipPiece.HULL || grid.get(gridX, floor + 1, z) == ShipPiece.HULL);
     }
 
     // True when a wall over an octant would open the ship to the sea there: any kind but a full wall in place of the
@@ -356,14 +362,28 @@ class ShipwrightHullBranch extends BranchPackage {
     }
 
     // The side over a deck's edge octant opened up to the deck above: at every layer the planking, bulwark or rail
-    // there and outboard of it cleared, walking out from the centre line as far as the side flares, so the hole goes
-    // right through
-    private void openSide(ShipOctantGridStruct grid, int gridX, int floor, int z) {
+    // there and outboard of it cleared, walking toward the outside of the hull at that layer as far as the side
+    // flares, so the hole goes right through
+    private void openSide(ShipLayoutStruct layout, int gridX, int floor, int z) {
 
-        int step = z >= EngineSetting.SHIP_SHEET_HALF_BREADTH ? 1 : -1;
+        ShipOctantGridStruct grid = layout.getGrid();
+        int x = gridX - layout.getOriginX();
+        int across = z >= EngineSetting.SHIP_SHEET_HALF_BREADTH ? 1 : -1;
 
-        for (int y = floor + 1; y < floor + EngineSetting.SHIP_DECK_HEIGHT; y++)
-            clearOutboard(grid, gridX, y, z, 0, step);
+        for (int y = floor + 1; y < floor + EngineSetting.SHIP_DECK_HEIGHT; y++) {
+
+            int stepX = 0;
+            int stepZ = across;
+
+            for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++)
+                if (!layout.isVolume(x + ShipCellUtility.stepX(spin), y, z + ShipCellUtility.stepZ(spin))) {
+                    stepX = ShipCellUtility.stepX(spin);
+                    stepZ = ShipCellUtility.stepZ(spin);
+                    break;
+                }
+
+            clearOutboard(grid, gridX, y, z, stepX, stepZ);
+        }
     }
 
     // The planking, bulwark or rail met walking outboard from an octant along a step cleared, the empty octants inside
@@ -685,6 +705,7 @@ class ShipwrightHullBranch extends BranchPackage {
         int z = ShipCellUtility.unpackZ(cell);
         int gridX = layout.getOriginX() + x;
         boolean starboard = z >= EngineSetting.SHIP_SHEET_HALF_BREADTH;
+        int side = ShipCellUtility.toSide(z);
         int keel = floor;
         int widest = ShipCellUtility.toHalfBreadth(z) + 1;
 
@@ -694,7 +715,7 @@ class ShipwrightHullBranch extends BranchPackage {
             keel = Math.min(keel, findKeel(layout, x + along, EngineSetting.SHIP_SHEET_HALF_BREADTH));
 
             for (int y = 0; y <= floor; y++)
-                widest = Math.max(widest, layout.getSection(x + along, y));
+                widest = Math.max(widest, layout.getSection(x + along, y, side));
         }
 
         int outer = starboard ? ShipCellUtility.toStarboard(widest - 1) : ShipCellUtility.toPort(widest - 1);
@@ -714,7 +735,7 @@ class ShipwrightHullBranch extends BranchPackage {
         int halfZ = ShipCellUtility.toHalfBreadth(z);
 
         for (int along = 0; along < EngineSetting.SHIP_STAIR_WIDTH; along++)
-            if (layout.getSection(x + along, floor) != halfZ + 1
+            if (layout.getSection(x + along, floor, ShipCellUtility.toSide(z)) != halfZ + 1
                     || layout.getGrid().get(layout.getOriginX() + x + along, floor, z) != ShipPiece.WEATHER_DECK)
                 return EngineSetting.SHIPWRIGHT_PROBLEM_BOARDING_EDGE;
 
@@ -981,42 +1002,110 @@ class ShipwrightHullBranch extends BranchPackage {
                     part.addBox(minX + capInset, maxY - cap, minZ + capInset, minX + capInset + capWidth, maxY,
                             minZ + capInset + capWidth);
 
-                    for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++)
-                        addHandrailArm(grid, part, x, y, z, spin, maxY - cap, capInset, capWidth);
+                    for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++) {
+
+                        int stepX = ShipCellUtility.stepX(spin);
+                        int stepZ = ShipCellUtility.stepZ(spin);
+
+                        if (grid.get(x + stepX, y, z + stepZ) == ShipPiece.RAILS
+                                && grid.get(x + stepX, y + 1, z + stepZ) != ShipPiece.RAILS)
+                            addArm(part, x, z, spin, maxY - cap, maxY, capInset, capWidth);
+                    }
                 }
 
         return any;
     }
 
-    // The handrail run from the middle of a rail octant to its side facing a quarter turn, where the rail beside it
-    // tops out at the same height
-    private void addHandrailArm(
-            ShipOctantGridStruct grid,
-            VehiclePartStruct part,
-            int x,
-            int y,
-            int z,
-            int spin,
-            int capY,
-            int capInset,
-            int capWidth) {
-
-        int stepX = ShipCellUtility.stepX(spin);
-        int stepZ = ShipCellUtility.stepZ(spin);
-
-        if (grid.get(x + stepX, y, z + stepZ) != ShipPiece.RAILS
-                || grid.get(x + stepX, y + 1, z + stepZ) == ShipPiece.RAILS)
-            return;
+    // Every pane octant built into its part as window glass: a sheet through the middle of the octant its whole height,
+    // reaching out to the octant's side toward every wall, bulwark, planking or pane beside it, so the glass runs
+    // straight along a wall, bends round its corners and meets whatever it is set in at every edge; true when there
+    // was any
+    boolean addPanes(ShipOctantGridStruct grid, VehiclePartStruct part) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int pane = EngineSetting.SHIP_PANE_SUB_VOXELS;
+        int inset = (octant - pane) / 2;
+        boolean any = false;
+
+        for (int y = 0; y < grid.getSizeY(); y++)
+            for (int z = 0; z < grid.getSizeZ(); z++)
+                for (int x = 0; x < grid.getSizeX(); x++) {
+
+                    if (grid.get(x, y, z) != ShipPiece.PANES)
+                        continue;
+
+                    int minX = x * octant;
+                    int minY = y * octant;
+                    int minZ = z * octant;
+
+                    part.addBox(minX + inset, minY, minZ + inset, minX + inset + pane, minY + octant,
+                            minZ + inset + pane);
+                    any = true;
+
+                    for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++)
+                        if (joinsPane(grid.get(x + ShipCellUtility.stepX(spin), y, z + ShipCellUtility.stepZ(spin))))
+                            addArm(part, x, z, spin, minY, minY + octant, inset, pane);
+                }
+
+        return any;
+    }
+
+    // True for a piece a pane beside it reaches out to: another pane, or a wall, bulwark or planking it is set in
+    private static boolean joinsPane(ShipPiece piece) {
+        return piece == ShipPiece.PANES || piece == ShipPiece.HULL || piece == ShipPiece.BULWARK
+                || piece == ShipPiece.WALLS;
+    }
+
+    // A bar from the middle of an octant out to its side facing a quarter turn, inset and wide in sub-voxels as the
+    // bar standing in the middle is, between two heights: a handrail run to the rail beside it, or a pane to the wall
+    private void addArm(VehiclePartStruct part, int x, int z, int spin, int minY, int maxY, int inset, int width) {
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int stepX = ShipCellUtility.stepX(spin);
+        int stepZ = ShipCellUtility.stepZ(spin);
         int minX = x * octant;
         int minZ = z * octant;
-        int fromX = stepX > 0 ? minX + capInset + capWidth : stepX < 0 ? minX : minX + capInset;
-        int toX = stepX > 0 ? minX + octant : stepX < 0 ? minX + capInset : minX + capInset + capWidth;
-        int fromZ = stepZ > 0 ? minZ + capInset + capWidth : stepZ < 0 ? minZ : minZ + capInset;
-        int toZ = stepZ > 0 ? minZ + octant : stepZ < 0 ? minZ + capInset : minZ + capInset + capWidth;
+        int fromX = stepX > 0 ? minX + inset + width : stepX < 0 ? minX : minX + inset;
+        int toX = stepX > 0 ? minX + octant : stepX < 0 ? minX + inset : minX + inset + width;
+        int fromZ = stepZ > 0 ? minZ + inset + width : stepZ < 0 ? minZ : minZ + inset;
+        int toZ = stepZ > 0 ? minZ + octant : stepZ < 0 ? minZ + inset : minZ + inset + width;
 
-        part.addBox(fromX, capY, fromZ, toX, capY + EngineSetting.SHIP_RAILING_CAP_SUB_VOXELS, toZ);
+        part.addBox(fromX, minY, fromZ, toX, maxY, toZ);
+    }
+
+    // Roofs \\
+
+    // Every roof laid over the open floor it is drawn on, kept for the roof built over it once the hull is merged
+    void layRoofs(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+
+        IntArrayList roofs = blueprint.getRoofs();
+
+        for (int i = 0; i < roofs.size(); i++) {
+
+            int cell = roofs.getInt(i);
+            int deck = ShipCellUtility.unpackLevel(cell);
+            int x = ShipCellUtility.unpackX(cell);
+            int z = ShipCellUtility.unpackZ(cell);
+            String problem = findRoofProblem(layout, deck, x, z);
+
+            if (!problem.isEmpty()) {
+                layout.reportBuildProblem(problem);
+                continue;
+            }
+
+            layout.addRoof(layout.getOriginX() + x, deck * EngineSetting.SHIP_DECK_HEIGHT, z);
+        }
+    }
+
+    // Why a roof cannot be laid over an octant of a deck, SHIP_PROBLEM_NONE when it can: the deck drawn there, open to
+    // the sky with no deck above
+    String findRoofProblem(ShipLayoutStruct layout, int deck, int x, int z) {
+
+        int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
+
+        return layout.isVolume(x, floor, z) && !layout.isVolume(x, floor + 1, z)
+                ? EngineSetting.SHIP_PROBLEM_NONE
+                : EngineSetting.SHIPWRIGHT_PROBLEM_ROOF_COVERED;
     }
 
     // Queries \\
@@ -1066,13 +1155,21 @@ class ShipwrightHullBranch extends BranchPackage {
         return EngineSetting.SHIP_LEVEL_NONE;
     }
 
-    // How many octants the hull reaches out from the centre line at an octant along the sheet, at any layer
+    // How many octants the hull reaches out from the centre line at an octant along the sheet, at any layer, on its
+    // wider side
     int findWidestSection(ShipLayoutStruct layout, int x) {
+        return Math.max(findWidestSection(layout, x, EngineSetting.SHIP_SIDE_STARBOARD),
+                findWidestSection(layout, x, EngineSetting.SHIP_SIDE_PORT));
+    }
+
+    // How many octants the hull reaches out from the centre line on one side at an octant along the sheet, at any
+    // layer
+    int findWidestSection(ShipLayoutStruct layout, int x, int side) {
 
         int widest = 0;
 
         for (int y = 0; y < layout.getSectionLayers(); y++)
-            widest = Math.max(widest, layout.getSection(x, y));
+            widest = Math.max(widest, layout.getSection(x, y, side));
 
         return widest;
     }

@@ -1,5 +1,7 @@
 package application.bootstrap.shipwrightpipeline.shipwrightmanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.furnishingpipeline.furnishing.FurnishingHandle;
 import application.bootstrap.furnishingpipeline.furnishing.FurnishingSlotStruct;
 import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
@@ -33,34 +35,35 @@ class ShipwrightFittingBranch extends BranchPackage {
      * Fits a blueprint out. The rudder hangs off the stern post from the keel
      * up the stern, hinged at the post. The helm is a wheel turning across the
      * length on a two-posted stand at its place, and the capstan a drum, cap
-     * and bars at its place, both standing on their deck's floor. A door or a
-     * window is cut through the first wall, bulwark or planking it faces,
-     * searching a little outward from where it was set down, a door full
-     * height and a window at chest height; a door cut through the hull's side
-     * lowers the sill the sea comes aboard over, a glazed window does not, and
-     * one the sea reaches is framed in iron as a porthole once the ship is
-     * floated. Every gun platform is a low bed laid on open floor facing the
-     * side, part of the ship, and cuts a lidded port of its own through the
-     * planking right before it at the height a cannon's barrel stands on it,
-     * never over a bulwark and never touching another platform's port; a
-     * cannon stands only on a platform, set down where the platform is and
-     * facing its way, so its barrel lies in the port. Every hatch lid and port
-     * lid is a framed panel battened on its inner face: a hatch lid lies flush
-     * in its hatchway, slats with gaps between them, and swings up about its
-     * longer side; a port lid closes the port from outside, one board set in
-     * from its frame, and swings out and up about its top edge; both open and
-     * shut with Activate. A grate is laid the same way, fixed, its slats thin
-     * and far apart to see through; a glass floor is panes of glass between
-     * iron bars. Every
-     * boarding ladder is rope and rungs hung clear of the side from the keel
-     * to past the deck's edge, a step bridging it to the deck. Doors
-     * and furniture are cargo, real items drawn from furnishing tables to be
-     * taken up, set down and used like any other: each is turned the way it
-     * faces, sized to the octants its largest item takes up and centred in
-     * them, standing on open floor. Once every part is built, every item each
-     * place could be furnished with must fit clear of every solid sub-voxel
-     * and of every other place, exactly as a vehicle stows its cargo, so a
-     * ship that compiles always furnishes.
+     * and bars at its place, both standing on their deck's floor. A door is
+     * cut as a tunnel through the wall, bulwark or planking found across the
+     * side from where it was set down, full height, and lowers the sill the
+     * sea comes aboard over where it opens the side; a window at chest height
+     * turns that wall into watertight panes of glass that reach out to the
+     * walls and panes beside them, and one the sea reaches is framed in iron
+     * as a porthole once the ship is floated. Every roof is shingles stepped
+     * up from eaves on the top of its railings and half walls to a ridge over
+     * the open floor it is laid on. Every gun platform is a low bed laid on
+     * open floor facing the side, part of the ship, and cuts a lidded port of
+     * its own through the planking right before it at the height a cannon's
+     * barrel stands on it, never over a bulwark and never touching another
+     * platform's port; a cannon stands only on a platform, set down where the
+     * platform is and facing its way, so its barrel lies in the port. Every
+     * hatch lid and port lid is a framed panel battened on its inner face: a
+     * hatch lid lies flush in its hatchway, slats with gaps between them, and
+     * swings up about its longer side; a port lid closes the port from
+     * outside, one board set in from its frame, and swings out and up about
+     * its top edge; both open and shut with Activate. A grate is laid the same
+     * way, fixed, its slats thin and far apart to see through; a glass floor
+     * is panes of glass between iron bars. Every boarding ladder is rope and
+     * rungs hung clear of the side from the keel to past the deck's edge, a
+     * step bridging it to the deck. Doors and furniture are cargo, real items
+     * drawn from furnishing tables to be taken up, set down and used like any
+     * other: each is turned the way it faces, sized to the octants its largest
+     * item takes up and centred in them, standing on open floor. Once every
+     * part is built, every item each place could be furnished with must fit
+     * clear of every solid sub-voxel and of every other place, exactly as a
+     * vehicle stows its cargo, so a ship that compiles always furnishes.
      */
 
     // Internal
@@ -78,6 +81,7 @@ class ShipwrightFittingBranch extends BranchPackage {
     private int[] boxMin;
     private int[] boxMax;
     private int[] tunnelBox;
+    private int[] roofDistances;
 
     // Base \\
 
@@ -92,6 +96,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         this.boxMin = new int[EngineSetting.AXIS_COUNT];
         this.boxMax = new int[EngineSetting.AXIS_COUNT];
         this.tunnelBox = new int[EngineSetting.BOX_INT_STRIDE];
+        this.roofDistances = new int[0];
     }
 
     @Override
@@ -118,27 +123,18 @@ class ShipwrightFittingBranch extends BranchPackage {
 
             resolveFootprint(EngineSetting.SHIP_DOOR_FURNISHING, ShipCellUtility.unpackSpin(cell));
             cutOpening(layout, cell, 1, footprint[EngineSetting.AXIS_Y], footprint[EngineSetting.AXIS_X],
-                    footprint[EngineSetting.AXIS_Z], false);
+                    footprint[EngineSetting.AXIS_Z]);
         }
 
         for (int i = 0; i < windows.size(); i++)
-            cutOpening(layout, windows.getInt(i), EngineSetting.SHIP_WINDOW_SILL, EngineSetting.SHIP_WINDOW_HEIGHT,
-                    1, 1, true);
+            glazeWindow(layout, windows.getInt(i));
 
         cutPorts(blueprint, layout);
     }
 
-    // An opening a footprint across, rising from a height over its deck's floor, cut as a tunnel through the wall or
-    // planking found across the side from where it was set, however the side curves there; a window is glazed across
-    // the octants it was set on, its glass keeping the sea out where it is cut through the side
-    private void cutOpening(
-            ShipLayoutStruct layout,
-            int cell,
-            int sill,
-            int height,
-            int sizeX,
-            int sizeZ,
-            boolean glazed) {
+    // A door a footprint across, rising from a height over its deck's floor, cut as a tunnel through the wall or
+    // planking found across the side from where it was set, however the side curves there
+    private void cutOpening(ShipLayoutStruct layout, int cell, int sill, int height, int sizeX, int sizeZ) {
 
         ShipOctantGridStruct grid = layout.getGrid();
         int deck = ShipCellUtility.unpackLevel(cell);
@@ -166,20 +162,60 @@ class ShipwrightFittingBranch extends BranchPackage {
         int outboard = resolveOutboard(layout, startX, floor + sill, startZ, alongX ? 1 : 0, alongX ? 0 : 1);
 
         cutTunnel(layout, startX, floor + sill, startZ, startX + sizeX, floor + sill + height, startZ + sizeZ,
-                alongX ? outboard : 0, alongX ? 0 : outboard, wall, !glazed);
+                alongX ? outboard : 0, alongX ? 0 : outboard, wall, true);
+    }
 
-        if (glazed)
-            layout.addPane(startX, floor + sill, startZ, startX + sizeX, floor + sill + height, startZ + sizeZ, spin);
+    // A window glazed into the wall, bulwark or planking it is set on: at every layer of its height the wall found
+    // across the side there, however the side curves, made a pane, which reaches out to the walls and panes beside
+    // it, so a row of windows reads as one sheet of glass and bends round a corner; the window's octant box at its
+    // sill kept for the porthole a window under the waterline is framed with
+    private void glazeWindow(ShipLayoutStruct layout, int cell) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int sill = floor + EngineSetting.SHIP_WINDOW_SILL;
+        int gridX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
+        int z = ShipCellUtility.unpackZ(cell);
+        int boxZ = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int y = sill; y < sill + EngineSetting.SHIP_WINDOW_HEIGHT; y++) {
+
+            int wallZ = resolveWallZ(grid, gridX, y, z);
+
+            if (wallZ == EngineSetting.INDEX_NOT_FOUND)
+                continue;
+
+            if (shipwrightHullBranch.isFloor(grid, gridX, y, wallZ)) {
+                layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_OPENING_HEIGHT);
+                return;
+            }
+
+            grid.set(gridX, y, wallZ, ShipPiece.PANES);
+
+            if (boxZ == EngineSetting.INDEX_NOT_FOUND)
+                boxZ = wallZ;
+        }
+
+        if (boxZ == EngineSetting.INDEX_NOT_FOUND) {
+            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_OPENING_WALL);
+            return;
+        }
+
+        layout.addPane(gridX, sill, boxZ, gridX + 1, sill + EngineSetting.SHIP_WINDOW_HEIGHT, boxZ + 1,
+                ShipCellUtility.unpackSpin(cell));
     }
 
     // The octant across the side from an octant of a deck where a door or window set there meets a wall, bulwark or
     // planking at its height: the octant itself, else the nearest outboard, else inboard, within reach, so one set on
     // the deck's rim finds the side however far it curves out or in over the deck; INDEX_NOT_FOUND when none is
     int resolveOpeningZ(ShipLayoutStruct layout, int deck, int x, int z, int sill) {
+        return resolveWallZ(layout.getGrid(), layout.getOriginX() + x, deck * EngineSetting.SHIP_DECK_HEIGHT + sill, z);
+    }
 
-        ShipOctantGridStruct grid = layout.getGrid();
-        int gridX = layout.getOriginX() + x;
-        int y = deck * EngineSetting.SHIP_DECK_HEIGHT + sill;
+    // The octant across the side from an octant at a layer where a wall, bulwark or planking stands: the octant
+    // itself, else the nearest outboard, else inboard, within reach; INDEX_NOT_FOUND when none is
+    private int resolveWallZ(ShipOctantGridStruct grid, int gridX, int y, int z) {
+
         int outboard = z >= EngineSetting.SHIP_SHEET_HALF_BREADTH ? 1 : -1;
 
         for (int reach = 0; reach <= EngineSetting.SHIP_OPENING_REACH; reach++)
@@ -546,12 +582,12 @@ class ShipwrightFittingBranch extends BranchPackage {
         addRudder(layout);
         addAnchors(layout);
         addHatchLids(layout);
+        addRoofs(layout);
         addGrates(layout);
         addGlassFloors(layout);
         addPortLids(layout);
         addLadders(layout);
         addBoardingLadders(layout);
-        addPanes(layout);
     }
 
     // Lids \\
@@ -953,6 +989,119 @@ class ShipwrightFittingBranch extends BranchPackage {
         ShipRopeUtility.addRope(ropes, maxX - inset, minY, face, maxX - inset, maxY, face);
     }
 
+    // Roofs \\
+
+    // Every roof built over the open floor it is laid on as stepped shingles: its eaves SHIP_ROOF_EAVES_HEIGHT over
+    // the floor, on the top of the railings, half walls and bulwarks round its edge, which meet it flush while a full
+    // wall rises through it, each octant SHIP_ROOF_RISE_SUB_VOXELS higher the farther it lies
+    // in from the roof's edge, so a roof of any outline rises in steps to a ridge along its middle; a slab
+    // SHIP_ROOF_THICKNESS_SUB_VOXELS thick, the octants of one height merged along the length
+    void addRoofs(ShipLayoutStruct layout) {
+
+        IntArrayList cells = layout.getRoofCells();
+
+        if (cells.isEmpty())
+            return;
+
+        int sizeX = layout.getGrid().getSizeX();
+        int area = sizeX * EngineSetting.SHIP_SHEET_BREADTH;
+        VehiclePartStruct roofs = new VehiclePartStruct(
+                EngineSetting.SHIP_PART_ROOFS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_ROOF,
+                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
+
+        if (roofDistances.length < area)
+            this.roofDistances = new int[area];
+
+        for (int start = 0; start < cells.size(); ) {
+
+            int floor = cells.getInt(start + 1);
+            int end = start;
+
+            Arrays.fill(roofDistances, 0, area, 0);
+
+            while (end < cells.size() && cells.getInt(end + 1) == floor) {
+                roofDistances[cells.getInt(end) + cells.getInt(end + 2) * sizeX] = Integer.MAX_VALUE / 2;
+                end += EngineSetting.SHIP_ROOF_CELL_STRIDE;
+            }
+
+            resolveRoofDistances(sizeX);
+            addRoof(roofs, sizeX, floor);
+            start = end;
+        }
+
+        layout.addPart(roofs);
+    }
+
+    // Every roofed octant's distance in octants from the nearest octant the roof does not cover, counting diagonals
+    // as one, worked out in a pass forward and a pass back over the sheet
+    private void resolveRoofDistances(int sizeX) {
+
+        int breadth = EngineSetting.SHIP_SHEET_BREADTH;
+
+        for (int z = 0; z < breadth; z++)
+            for (int x = 0; x < sizeX; x++)
+                relaxRoofDistance(sizeX, x, z, -1, -1);
+
+        for (int z = breadth - 1; z >= 0; z--)
+            for (int x = sizeX - 1; x >= 0; x--)
+                relaxRoofDistance(sizeX, x, z, 1, 1);
+    }
+
+    // A roofed octant's distance lowered through the four octants already passed on its row and the row before
+    private void relaxRoofDistance(int sizeX, int x, int z, int stepX, int stepZ) {
+
+        int index = x + z * sizeX;
+
+        if (roofDistances[index] == 0)
+            return;
+
+        int distance = roofDistances[index];
+
+        distance = Math.min(distance, readRoofDistance(sizeX, x + stepX, z) + 1);
+        distance = Math.min(distance, readRoofDistance(sizeX, x, z + stepZ) + 1);
+        distance = Math.min(distance, readRoofDistance(sizeX, x + stepX, z + stepZ) + 1);
+        distance = Math.min(distance, readRoofDistance(sizeX, x - stepX, z + stepZ) + 1);
+
+        roofDistances[index] = distance;
+    }
+
+    private int readRoofDistance(int sizeX, int x, int z) {
+
+        if (x < 0 || z < 0 || x >= sizeX || z >= EngineSetting.SHIP_SHEET_BREADTH)
+            return 0;
+
+        return roofDistances[x + z * sizeX];
+    }
+
+    // One roof's slab over a floor, row by row across, every run of octants at one distance in from its edge one box
+    private void addRoof(VehiclePartStruct roofs, int sizeX, int floor) {
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int eaves = (floor + EngineSetting.SHIP_ROOF_EAVES_HEIGHT) * octant;
+
+        for (int z = 0; z < EngineSetting.SHIP_SHEET_BREADTH; z++)
+            for (int x = 0; x < sizeX; ) {
+
+                int distance = roofDistances[x + z * sizeX];
+
+                if (distance == 0) {
+                    x++;
+                    continue;
+                }
+
+                int end = x + 1;
+
+                while (end < sizeX && roofDistances[end + z * sizeX] == distance)
+                    end++;
+
+                int bottom = eaves + (distance - 1) * EngineSetting.SHIP_ROOF_RISE_SUB_VOXELS;
+
+                roofs.addBox(x * octant, bottom, z * octant, end * octant,
+                        bottom + EngineSetting.SHIP_ROOF_THICKNESS_SUB_VOXELS, (z + 1) * octant);
+                x = end;
+            }
+    }
+
     // Glass \\
 
     // Every window in the hull's side the sea reaches framed in iron as a porthole once the ship is floated: a rim
@@ -1033,40 +1182,6 @@ class ShipwrightFittingBranch extends BranchPackage {
         }
     }
 
-    // A pane of glass a sub-voxel thick across the middle of every window, solid to whoever leans on it
-    void addPanes(ShipLayoutStruct layout) {
-
-        IntArrayList boxes = layout.getPaneBoxes();
-
-        if (ShipLayoutStruct.countFittings(boxes) == 0)
-            return;
-
-        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int half = octant / 2;
-        VehiclePartStruct glass = new VehiclePartStruct(
-                EngineSetting.SHIP_PART_GLASS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_GLASS,
-                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
-
-        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
-
-            boolean acrossX = ShipCellUtility.stepX(
-                    ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.SHIP_FITTING_SPIN)) != 0;
-            int minX = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_X) * octant;
-            int minY = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Y) * octant;
-            int minZ = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Z) * octant;
-            int maxX = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_X) * octant;
-            int maxY = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Y) * octant;
-            int maxZ = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Z) * octant;
-
-            if (acrossX)
-                glass.addBox(minX + half, minY, minZ, minX + half + 1, maxY, maxZ);
-            else
-                glass.addBox(minX, minY, minZ + half, maxX, maxY, minZ + half + 1);
-        }
-
-        layout.addPart(glass);
-    }
-
     // Anchors \\
 
     // As many anchors as the hull's length carries, each hung at a cathead outboard of the side near the bow, then
@@ -1099,7 +1214,8 @@ class ShipwrightFittingBranch extends BranchPackage {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
-        int halfBeam = shipwrightHullBranch.findWidestSection(layout, x);
+        int halfBeam = shipwrightHullBranch.findWidestSection(layout, x,
+                starboard ? EngineSetting.SHIP_SIDE_STARBOARD : EngineSetting.SHIP_SIDE_PORT);
         int sideZ = starboard ? ShipCellUtility.toStarboard(halfBeam - 1) : ShipCellUtility.toPort(halfBeam - 1);
         int top = shipwrightHullBranch.findColumnTop(layout, x, sideZ);
 

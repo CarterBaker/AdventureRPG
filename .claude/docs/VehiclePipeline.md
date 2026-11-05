@@ -37,8 +37,8 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 | `ShipwrightEditBranch` | Every change: strokes, pick up / take away / place, `findPlacementProblem`, the tabs' entries (`getOptionCount` / `getOptionIndex` / `pickOption` / `hold` / `selectTab`), the bottom waist's glazing, cannon mounting, decks, undo, commit/refuse |
 | `ShipwrightInspectBranch` | What stands at an octant over its whole footprint (`pick`), and the footprint any tool's option covers (`resolveFootprint`) |
 | `ShipwrightCompileBranch` | `compile(blueprint, layout)` order, weighing, floating, `toDesign` |
-| `ShipwrightHullBranch` | Sections, shell, bulwarks, waist and its rails, walls, railings and lips, stairs, ladders, boarding ladders, hatches, grates and glass floors (`layCovers`), the railings' posts and handrails (`addRailings`); their `find...Problem` rules |
-| `ShipwrightFittingBranch` | Doors, windows, gun platforms and their ports (`findPlatformProblem`), cannons (`findCannonProblem`), helm, capstan, rudder, anchors, hatch and port lids (`addPanel`, `resolveHingeSpin`), grates, glass floors, ladders, boarding ladders, glass, portholes (`addPortholes`), cargo |
+| `ShipwrightHullBranch` | Sections (per side, `laySections` / `resolveSection`), shell, bulwarks, waist and its rails, walls, railings and lips, stairs, ladders, boarding ladders, hatches, grates and glass floors (`layCovers`), roofs (`layRoofs`, `findRoofProblem`), the railings' posts and handrails (`addRailings`) and window panes (`addPanes`, both through `addArm`); their `find...Problem` rules |
+| `ShipwrightFittingBranch` | Doors, windows, gun platforms and their ports (`findPlatformProblem`), cannons (`findCannonProblem`), helm, capstan, rudder, anchors, hatch and port lids (`addPanel`, `resolveHingeSpin`), grates, glass floors, ladders, boarding ladders, windows glazed into `PANES` (`glazeWindow`), roofs (`addRoofs`), portholes (`addPortholes`), cargo |
 | `ShipwrightRigBranch` | Bowsprit, masts (foot, height, sails and nest worked out), crow's nests, shrouds, the ladder up each mast over its nest, stays |
 | `ShipwrightPreviewBranch` | The catalogue's little models of every option no item stands for, the helm and the capstan among them |
 | `ShipwrightDraftBranch` | Sheet glyphs at `SHIPWRIGHT_INK_SCALE`, the thing in hand, the hover outline, the water gauge, side and top views |
@@ -46,10 +46,11 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 
 - **Data:** `ShipBlueprintStruct` (the file's content, `category` included), `ShipLayoutStruct` (one compile),
   `ShipOctantGridStruct` (octant grid and box merge), `ShipwrightSessionInstance` (one table in use: tab, the entry
-  each tab last held, tool, option, facing, cursor, `hover` and `placementProblem`), `ShipPickStruct` (what stands
-  somewhere, and its footprint), `ShipPiece` (with the height a slab piece keeps and whether it is railed),
+  each tab last held, tool, option, the side option of Deck, Waist and Roof (`getSideOption`, `isMirroring`), facing,
+  cursor, `hover` and `placementProblem`), `ShipPickStruct` (what stands somewhere, and its footprint), `ShipPiece`
+  (with the height a slab piece keeps and its `ShipPieceShape`: merged blocks, a railing or a pane),
   `ShipwrightTab` (the catalogue's four tabs: fixed entries of tool, option and section, then a following tool's
-  options), `ShipwrightTool`, `ShipWall`, `ShipOpening`, `ShipClimb`. **Utilities:** `ShipBlueprintArpgUtility` (the one file reader/writer),
+  options), `ShipwrightTool` (a sided tool's one-side title, `getTitle(option)`), `ShipWall`, `ShipOpening`, `ShipClimb`. **Utilities:** `ShipBlueprintArpgUtility` (the one file reader/writer),
   `ShipCellUtility` (cell packing, mirroring, steps), `ShipRopeUtility` (the one rope layer).
 - **Runtime glue:** `application/runtime/shipwright/ShipwrightSystem` (input, bindings, labels, the lit tool),
   `ShipwrightCatalogueSystem` (the scrolling, sectioned tile list injected from the `shipwright_catalogue_*`
@@ -75,9 +76,10 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 ## Compile order
 
 `ShipwrightCompileBranch.compile`: sections → shell → bulwarks → waist → walls, railings and lips → stairs → ladders →
-boarding ladders → hatches → grates and glass floors → openings (doors, windows, gun platforms and their ports) → merge
-pieces into parts (rails as posts and handrails) → bowsprit → fittings (helm, capstan, rudder, anchors, hatch lids,
-grates, glass floors, port lids, ladders, glass) → rig → cargo → float → portholes (and float again when any were
+boarding ladders → hatches → grates and glass floors → roofs (cells recorded) → openings (doors, windows glazed as
+panes, gun platforms and their ports) → merge pieces into parts (rails as posts and handrails, panes as sheets reaching
+to their neighbours) → bowsprit → fittings (helm, capstan, rudder, anchors, hatch lids, grates, glass floors, port lids,
+ladders, roofs) → rig → cargo → float → portholes (and float again when any were
 framed) → waterline. Everything that cuts the grid runs before
 the merge; everything built as its own part runs after. Hatches run after stairs and ladders so they can close the
 openings those cut. The waist runs before walls, stairs and furniture so they see its cut floor; it cuts every octant
@@ -130,6 +132,12 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   `isEmpty()` counts both.
 - **Fitting boxes are in grid octants** (the sheet's x plus `originX`); blueprint cells are in sheet octants.
 - **Edit-time checks read the last compiled layout**, so they see the ship as it stood before the change.
+- **Outlines and sections are per side.** `getOutline(deck, x)` and `getSection(x, y)` give the wider side; anything
+  built on one side (shrouds, channels, anchors, the boarding ladder, `isVolume`, `isOnDeck`) reads that side's own
+  value (`getOutline(deck, x, side)`, `getSection(x, y, side)`, `findWidestSection(layout, x, side)`), the side from
+  `ShipCellUtility.toSide(z)`. A mirrored stroke writes both sides; `port_outline` is written only when they differ.
+- **Roof cells are grouped by floor.** `addRoofs` reads `ShipLayoutStruct.getRoofCells` in runs of one floor, which
+  holds because `layRoofs` walks the blueprint's sorted `roofs`, whose level is the packed cell's top bits.
 - **The vehicle shader's alpha is a dither share.** Any vehicle texture with partial alpha is drawn see-through.
 - **Stairs always rise `SHIP_DECK_HEIGHT`.** A stair that cannot land a deck up is refused, never shortened;
   `SHIP_STAIR_MAX_RISE` is only the tallest a ladder climbs.

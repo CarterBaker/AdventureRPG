@@ -23,9 +23,11 @@ class ShipwrightPreviewBranch extends BranchPackage {
      * stands for, so each catalogue tile shows what it sets down: a little
      * model laid in an octant grid of its own and built by the very builders
      * a ship is, then meshed at rest as a vehicle meshes it. A deck is a
-     * square of floor; the waist a floor cut open and railed round; each
+     * square of floor, a porch a strip of floor reaching out to one side; the
+     * waist a floor cut open and railed round, in its middle or to one side;
+     * a roof stepped shingles over railed floor, whole or to one side; each
      * wall stands on a strip of floor, the lip a sill between two posts of
-     * planking; a window a pane in a wall; a hatch, grate and glass floor lie
+     * planking; a window panes in a wall; a hatch, grate and glass floor lie
      * in a floor; a gun platform faces its lidded port in the side; a
      * staircase climbs a deck; a ladder and a boarding ladder stand at their
      * height; a mast carries a yard and a sail; the helm and the capstan are
@@ -38,9 +40,11 @@ class ShipwrightPreviewBranch extends BranchPackage {
     private ShipwrightCompileBranch shipwrightCompileBranch;
     private VehicleManager vehicleManager;
 
-    // Previews — by the option of each tool they picture, null for one an item pictures
-    private ShipPreviewStruct deckPreview;
-    private ShipPreviewStruct waistPreview;
+    // Previews — by the option of each tool they picture, null for one an item pictures; the deck, waist and roof
+    // mirrored then one side
+    private ShipPreviewStruct[] deckPreviews;
+    private ShipPreviewStruct[] waistPreviews;
+    private ShipPreviewStruct[] roofPreviews;
     private ShipPreviewStruct mastPreview;
     private ShipPreviewStruct helmPreview;
     private ShipPreviewStruct capstanPreview;
@@ -57,6 +61,9 @@ class ShipwrightPreviewBranch extends BranchPackage {
     protected void create() {
 
         // Previews
+        this.deckPreviews = new ShipPreviewStruct[EngineSetting.SHIP_SIDE_COUNT];
+        this.waistPreviews = new ShipPreviewStruct[EngineSetting.SHIP_SIDE_COUNT];
+        this.roofPreviews = new ShipPreviewStruct[EngineSetting.SHIP_SIDE_COUNT];
         this.wallPreviews = new ShipPreviewStruct[ShipWall.VALUES.length];
         this.openingPreviews = new ShipPreviewStruct[ShipOpening.VALUES.length];
         this.climbPreviews = new ShipPreviewStruct[ShipClimb.VALUES.length];
@@ -78,8 +85,16 @@ class ShipwrightPreviewBranch extends BranchPackage {
     // Every picture built and meshed, apart from any ship
     void buildPreviews() {
 
-        this.deckPreview = buildDeck();
-        this.waistPreview = buildWaist();
+        int span = EngineSetting.SHIPWRIGHT_PREVIEW_SPAN_OCTANTS;
+        int mirrored = EngineSetting.SHIPWRIGHT_OPTION_MIRRORED;
+        int oneSide = EngineSetting.SHIPWRIGHT_OPTION_ONE_SIDE;
+
+        deckPreviews[mirrored] = buildDeck();
+        deckPreviews[oneSide] = buildPorch();
+        waistPreviews[mirrored] = buildWaist(span);
+        waistPreviews[oneSide] = buildWaist(span / 2);
+        roofPreviews[mirrored] = buildRoof(span);
+        roofPreviews[oneSide] = buildRoof(span / 2);
         this.mastPreview = buildMast();
         this.helmPreview = buildHelm();
         this.capstanPreview = buildCapstan();
@@ -108,15 +123,27 @@ class ShipwrightPreviewBranch extends BranchPackage {
         return finish();
     }
 
-    // A square of floor cut open in the middle, a rail round the hole
-    private ShipPreviewStruct buildWaist() {
+    // A strip of floor along the tile with a square of it reaching out to one side in the middle
+    private ShipPreviewStruct buildPorch() {
+
+        int span = EngineSetting.SHIPWRIGHT_PREVIEW_SPAN_OCTANTS;
+
+        begin();
+        fill(ShipPiece.DECKS, 0, 0, 0, span, 1, span / 2);
+        fill(ShipPiece.DECKS, 1, 0, span / 2, span - 1, 1, span);
+
+        return finish();
+    }
+
+    // A square of floor cut open, a rail round the hole, across the breadth given: the whole square, or one side of it
+    private ShipPreviewStruct buildWaist(int breadth) {
 
         int span = EngineSetting.SHIPWRIGHT_PREVIEW_SPAN_OCTANTS;
 
         begin();
         fill(ShipPiece.DECKS, 0, 0, 0, span, 1, span);
-        fill(ShipPiece.RAILS, 0, 1, 0, span, 1 + EngineSetting.SHIP_WAIST_RAIL_HEIGHT, span);
-        clear(1, 0, 1, span - 1, 1 + EngineSetting.SHIP_WAIST_RAIL_HEIGHT, span - 1);
+        fill(ShipPiece.RAILS, 0, 1, 0, span, 1 + EngineSetting.SHIP_WAIST_RAIL_HEIGHT, breadth);
+        clear(1, 0, 1, span - 1, 1 + EngineSetting.SHIP_WAIST_RAIL_HEIGHT, breadth - 1);
 
         return finish();
     }
@@ -139,19 +166,37 @@ class ShipwrightPreviewBranch extends BranchPackage {
         return finish();
     }
 
-    // A pane glazed across an opening cut in a wall
+    // Panes glazed across the middle of a wall, reaching out to the wall either side
     private ShipPreviewStruct buildWindow() {
 
         int span = EngineSetting.SHIPWRIGHT_PREVIEW_SPAN_OCTANTS;
         int sill = EngineSetting.SHIP_WINDOW_SILL;
-        int middle = span / 2;
 
         begin();
         fill(ShipPiece.DECKS, 0, 0, 0, span, 1, 1);
         fill(ShipPiece.WALLS, 0, 1, 0, span, EngineSetting.SHIP_DECK_HEIGHT, 1);
-        clear(middle, sill, 0, middle + 1, sill + EngineSetting.SHIP_WINDOW_HEIGHT, 1);
-        layout.addPane(middle, sill, 0, middle + 1, sill + EngineSetting.SHIP_WINDOW_HEIGHT, 1, 1);
-        shipwrightFittingBranch.addPanes(layout);
+        fill(ShipPiece.PANES, 1, sill, 0, span - 1, sill + EngineSetting.SHIP_WINDOW_HEIGHT, 1);
+
+        return finish();
+    }
+
+    // A square of floor railed round, a roof laid over it across the breadth given: the whole square, or one side of
+    // it
+    private ShipPreviewStruct buildRoof(int breadth) {
+
+        int span = EngineSetting.SHIPWRIGHT_PREVIEW_SPAN_OCTANTS;
+        int top = 1 + EngineSetting.SHIP_RAILING_HEIGHT;
+
+        begin();
+        fill(ShipPiece.DECKS, 0, 0, 0, span, 1, span);
+        fill(ShipPiece.RAILS, 0, 1, 0, span, top, span);
+        clear(1, 1, 1, span - 1, top, span - 1);
+
+        for (int z = 0; z < breadth; z++)
+            for (int x = 0; x < span; x++)
+                layout.addRoof(x, 0, z);
+
+        shipwrightFittingBranch.addRoofs(layout);
 
         return finish();
     }
@@ -336,8 +381,9 @@ class ShipwrightPreviewBranch extends BranchPackage {
     // The picture of a tool's option, null for one an item pictures
     ShipPreviewStruct getPreview(ShipwrightTool tool, int option) {
         return switch (tool) {
-            case DECK -> deckPreview;
-            case WAIST -> waistPreview;
+            case DECK -> deckPreviews[option];
+            case WAIST -> waistPreviews[option];
+            case ROOF -> roofPreviews[option];
             case WALLS -> wallPreviews[option];
             case OPENINGS -> openingPreviews[option];
             case STAIRS -> climbPreviews[option];

@@ -7,8 +7,9 @@ public enum ShipwrightTool {
     /*
      * What the drafting table's cursor does, always on the plan of the deck
      * picked. A deck's outline is drawn mirrored either side of the centre
-     * line, and the waist is cut through a deck's floor the same way; walls,
-     * full or half height, are painted where they stand; a door
+     * line or, as a porch, out to one side alone, and the waist is cut
+     * through a deck's floor and a roof laid over its open floor the same two
+     * ways; walls, full or half height, are painted where they stand; a door
      * or a window is set on the wall or side it is cut through, and a hatch
      * in a floor; a staircase is set at its foot facing the way it climbs, a
      * ladder at its foot and a boarding ladder over the side of an open deck;
@@ -20,13 +21,14 @@ public enum ShipwrightTool {
      * the catalogue's tabs list, ShipwrightTab.
      */
 
-    DECK(EngineSetting.SHIPWRIGHT_TOOL_DECK, true, true),
-    WAIST(EngineSetting.SHIPWRIGHT_TOOL_WAIST, true, true),
-    WALLS(EngineSetting.SHIPWRIGHT_TOOL_WALLS, true, false),
-    OPENINGS(EngineSetting.SHIPWRIGHT_TOOL_OPENINGS, false, false),
-    STAIRS(EngineSetting.SHIPWRIGHT_TOOL_STAIRS, false, false),
-    MASTS(EngineSetting.SHIPWRIGHT_TOOL_MASTS, false, false),
-    FURNITURE(EngineSetting.SHIPWRIGHT_TOOL_FURNITURE, false, false);
+    DECK(EngineSetting.SHIPWRIGHT_TOOL_DECK, true, EngineSetting.SHIPWRIGHT_TEXT_PORCH),
+    WAIST(EngineSetting.SHIPWRIGHT_TOOL_WAIST, true, EngineSetting.SHIPWRIGHT_TEXT_SIDE_WAIST),
+    ROOF(EngineSetting.SHIPWRIGHT_TOOL_ROOF, true, EngineSetting.SHIPWRIGHT_TEXT_SIDE_ROOF),
+    WALLS(EngineSetting.SHIPWRIGHT_TOOL_WALLS, true, null),
+    OPENINGS(EngineSetting.SHIPWRIGHT_TOOL_OPENINGS, false, null),
+    STAIRS(EngineSetting.SHIPWRIGHT_TOOL_STAIRS, false, null),
+    MASTS(EngineSetting.SHIPWRIGHT_TOOL_MASTS, false, null),
+    FURNITURE(EngineSetting.SHIPWRIGHT_TOOL_FURNITURE, false, null);
 
     // Values
     public static final ShipwrightTool[] VALUES = values();
@@ -34,16 +36,20 @@ public enum ShipwrightTool {
     // Identity
     private final String title;
     private final boolean painted;
-    private final boolean mirrored;
+
+    // Sides — the title of the option that works one side alone, null for a tool with no such option
+    private final String sideTitle;
 
     // Constructor \\
 
-    ShipwrightTool(String title, boolean painted, boolean mirrored) {
+    ShipwrightTool(String title, boolean painted, String sideTitle) {
 
         // Identity
         this.title = title;
         this.painted = painted;
-        this.mirrored = mirrored;
+
+        // Sides
+        this.sideTitle = sideTitle;
     }
 
     // Accessible \\
@@ -57,8 +63,14 @@ public enum ShipwrightTool {
         return painted;
     }
 
-    // True for a tool whose every stroke is drawn on both sides of the centre line at once
-    public boolean isMirrored() {
-        return mirrored;
+    // True for a tool whose strokes are drawn on both sides of the centre line at once or on one alone, as its
+    // options SHIPWRIGHT_OPTION_MIRRORED and SHIPWRIGHT_OPTION_ONE_SIDE pick
+    public boolean isSided() {
+        return sideTitle != null;
+    }
+
+    // The title of one of a sided tool's options: mirrored, the tool's own, or one side alone
+    public String getTitle(int option) {
+        return option == EngineSetting.SHIPWRIGHT_OPTION_ONE_SIDE && sideTitle != null ? sideTitle : title;
     }
 }

@@ -300,7 +300,7 @@ public class ShipwrightRenderSystem extends SystemPackage {
 
         cursorRect.set(session.getCursorU(), session.getCursorV(),
                 session.getCursorU() + 1f, session.getCursorV() + 1f);
-        mirror.set(session.getTool().isMirrored() ? 1f : 0f, session.getSheetHeight() * 0.5f);
+        mirror.set(session.isMirroring() ? 1f : 0f, session.getSheetHeight() * 0.5f);
 
         material.setUniform(EngineSetting.SHIPWRIGHT_UNIFORM_VIEW_RECT, viewRect);
         material.setUniform(EngineSetting.SHIPWRIGHT_UNIFORM_CONTENT_RECT, contentRect);
