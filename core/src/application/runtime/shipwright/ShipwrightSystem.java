@@ -518,7 +518,7 @@ public class ShipwrightSystem extends SystemPackage {
 
         boolean turned = tool == ShipwrightTool.FURNITURE
                 || tool == ShipwrightTool.STAIRS && option != ShipClimb.BOARDING.ordinal()
-                || tool == ShipwrightTool.OPENINGS && option == ShipOpening.HATCH.ordinal();
+                || tool == ShipwrightTool.OPENINGS && ShipOpening.VALUES[option].isFloor();
 
         if (turned)
             out.append(EngineSetting.SHIPWRIGHT_TEXT_COMMA).append(EngineSetting.SHIPWRIGHT_FACINGS[spin]);

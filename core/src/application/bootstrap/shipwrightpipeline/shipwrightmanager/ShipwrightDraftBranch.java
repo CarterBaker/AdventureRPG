@@ -174,7 +174,10 @@ class ShipwrightDraftBranch extends BranchPackage {
         drawCells(session, blueprint.getWalls(), deck, EngineSetting.SHIPWRIGHT_INK_WALL);
         drawCells(session, blueprint.getHalfWalls(), deck, EngineSetting.SHIPWRIGHT_INK_HALF_WALL);
         drawCells(session, blueprint.getRailings(), deck, EngineSetting.SHIPWRIGHT_INK_RAILING);
-        drawHatches(session, layout, deck * EngineSetting.SHIP_DECK_HEIGHT);
+        drawHatches(session, layout.getHatchBoxes(), layout, deck * EngineSetting.SHIP_DECK_HEIGHT,
+                EngineSetting.SHIPWRIGHT_INK_HATCH);
+        drawHatches(session, layout.getGrateBoxes(), layout, deck * EngineSetting.SHIP_DECK_HEIGHT,
+                EngineSetting.SHIPWRIGHT_INK_GRATE);
         drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.STAIR.ordinal(), blueprint.getStairs(), deck);
         drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.LADDER.ordinal(), blueprint.getLadders(), deck);
         drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.BOARDING.ordinal(), blueprint.getBoardingLadders(),
@@ -230,10 +233,13 @@ class ShipwrightDraftBranch extends BranchPackage {
         }
     }
 
-    // Every hatch lid lying in a floor, where it was built: a grating, its hinge drawn heavy
-    private void drawHatches(ShipwrightSessionInstance session, ShipLayoutStruct layout, int floor) {
-
-        IntArrayList boxes = layout.getHatchBoxes();
+    // Every hatch lid or grate lying in a floor, where it was built: a grating, its hinge drawn heavy
+    private void drawHatches(
+            ShipwrightSessionInstance session,
+            IntArrayList boxes,
+            ShipLayoutStruct layout,
+            int floor,
+            int color) {
 
         for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
 
@@ -245,8 +251,7 @@ class ShipwrightDraftBranch extends BranchPackage {
                     ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Z),
                     ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_X) - layout.getOriginX(),
                     ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Z));
-            drawGrating(session, footprint, shipwrightFittingBranch.resolveHingeSpin(boxes, i),
-                    EngineSetting.SHIPWRIGHT_INK_HATCH);
+            drawGrating(session, footprint, shipwrightFittingBranch.resolveHingeSpin(boxes, i), color);
         }
     }
 
@@ -361,8 +366,9 @@ class ShipwrightDraftBranch extends BranchPackage {
             return;
         }
 
-        if (tool == ShipwrightTool.OPENINGS && option == ShipOpening.HATCH.ordinal()) {
-            drawGrating(session, footprint, spin, ghost ? ghostColor : EngineSetting.SHIPWRIGHT_INK_HATCH);
+        if (tool == ShipwrightTool.OPENINGS && ShipOpening.VALUES[option].isFloor()) {
+            drawGrating(session, footprint, spin, ghost ? ghostColor : option == ShipOpening.GRATE.ordinal()
+                    ? EngineSetting.SHIPWRIGHT_INK_GRATE : EngineSetting.SHIPWRIGHT_INK_HATCH);
             return;
         }
 

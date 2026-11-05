@@ -2807,6 +2807,7 @@ public class EngineSetting {
     public static final int SHIP_GUN_PORT_HEIGHT = 2;
     public static final int SHIP_HALF_WALL_HEIGHT = 2;
     public static final int SHIP_HATCH_MAX_OCTANTS = 16;
+    public static final int SHIP_GRATE_MAX_OCTANTS = 64;
     public static final int SHIP_HATCH_OCTANTS = 2;
     public static final int SHIP_LADDER_HANDHOLD = 2;
     public static final int SHIP_OPENING_REACH = 3;
@@ -2914,6 +2915,7 @@ public class EngineSetting {
     public static final String SHIP_PART_CAPSTAN = "Capstan";
     public static final String SHIP_PART_DECKS = "Decks";
     public static final String SHIP_PART_GLASS = "Glass";
+    public static final String SHIP_PART_GRATE = "Grate";
     public static final String SHIP_PART_HATCH = "Hatch";
     public static final String SHIP_PART_HULL = "Hull";
     public static final String SHIP_PART_LADDERS = "Ladders";
@@ -3002,6 +3004,7 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_INK_GHOST_BLOCKED = 0xD03030A0;
     public static final int SHIPWRIGHT_INK_GRATING = 0x4A3220FF;
     public static final int SHIPWRIGHT_INK_HALF_WALL = 0xA07A50FF;
+    public static final int SHIPWRIGHT_INK_GRATE = 0x6B5233FF;
     public static final int SHIPWRIGHT_INK_HATCH = 0x8C6A3EFF;
     public static final int SHIPWRIGHT_INK_HIGHLIGHT = 0xFF7A1AFF;
     public static final int SHIPWRIGHT_INK_HINGE = 0x1A1008FF;
@@ -3054,6 +3057,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_DECK_FLOATING = " has a piece not resting on the deck below it";
     public static final String SHIPWRIGHT_PROBLEM_FURNISHING_UNKNOWN = "No furnishing is named ";
     public static final String SHIPWRIGHT_PROBLEM_FURNITURE_FLOOR = "Furniture must stand on open floor";
+    public static final String SHIPWRIGHT_PROBLEM_GRATE_OPENING = "A grate must lie over an opening in a deck's floor";
     public static final String SHIPWRIGHT_PROBLEM_HATCH_BOTTOM = "A hatch cannot lie in the bottom deck";
     public static final String SHIPWRIGHT_PROBLEM_HATCH_FLOOR = "A hatch must lie in open floor over open room below";
     public static final String SHIPWRIGHT_PROBLEM_HELM_FLOOR = "The helm must stand on open floor";
@@ -3069,8 +3073,8 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_OPENING_HEIGHT = "A door is taller than the room it opens from";
     public static final String SHIPWRIGHT_PROBLEM_OPENING_SUBMERGED = "A door or window lies under the waterline";
     public static final String SHIPWRIGHT_PROBLEM_OPENING_WALL = "A door or window must face a wall or the side";
-    public static final String SHIPWRIGHT_PROBLEM_RAILING_PLACE = "A railing stands on open floor or in the deck's side";
-    public static final String SHIPWRIGHT_PROBLEM_RAILING_WATER = "A railing must stand above the waterline";
+    public static final String SHIPWRIGHT_PROBLEM_RAILING_PLACE = "A railing or half wall stands on open floor or in the deck's side";
+    public static final String SHIPWRIGHT_PROBLEM_RAILING_WATER = "A railing or half wall in the side must stand above the waterline";
     public static final String SHIPWRIGHT_PROBLEM_SINKS = "Too heavy: the sea would come over her side";
     public static final String SHIPWRIGHT_PROBLEM_STAIRS_BLOCKED = "A stair runs into something already built";
     public static final String SHIPWRIGHT_PROBLEM_STAIRS_FLOOR = "A stair must stand on open floor";
@@ -3204,6 +3208,7 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_TEXT_FITTINGS = "Helm & Capstan";
     public static final String SHIPWRIGHT_TEXT_FULL_WALL = "Full walls";
     public static final String SHIPWRIGHT_TEXT_HALF_WALL = "Half walls";
+    public static final String SHIPWRIGHT_TEXT_GRATE = "Grate";
     public static final String SHIPWRIGHT_TEXT_HATCH = "Hatch";
     public static final String SHIPWRIGHT_TEXT_HELM = "Helm";
     public static final String SHIPWRIGHT_TEXT_LADDER = "Ladder";

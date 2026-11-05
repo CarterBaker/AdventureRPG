@@ -48,6 +48,7 @@ public class ShipBlueprintStruct extends StructPackage {
     private final IntArrayList doors;
     private final IntArrayList windows;
     private final IntArrayList hatches;
+    private final IntArrayList grates;
     private final IntArrayList stairs;
     private final IntArrayList ladders;
     private final IntArrayList boardingLadders;
@@ -85,6 +86,7 @@ public class ShipBlueprintStruct extends StructPackage {
         this.doors = new IntArrayList();
         this.windows = new IntArrayList();
         this.hatches = new IntArrayList();
+        this.grates = new IntArrayList();
         this.stairs = new IntArrayList();
         this.ladders = new IntArrayList();
         this.boardingLadders = new IntArrayList();
@@ -130,6 +132,7 @@ public class ShipBlueprintStruct extends StructPackage {
         copyCells(other.doors, doors);
         copyCells(other.windows, windows);
         copyCells(other.hatches, hatches);
+        copyCells(other.grates, grates);
         copyCells(other.stairs, stairs);
         copyCells(other.ladders, ladders);
         copyCells(other.boardingLadders, boardingLadders);
@@ -221,6 +224,7 @@ public class ShipBlueprintStruct extends StructPackage {
         removeDeckCells(doors, deck);
         removeDeckCells(windows, deck);
         removeDeckCells(hatches, deck);
+        removeDeckCells(grates, deck);
         removeDeckCells(stairs, deck);
         removeDeckCells(ladders, deck);
         removeDeckCells(boardingLadders, deck);
@@ -282,6 +286,7 @@ public class ShipBlueprintStruct extends StructPackage {
         pruneCells(doors);
         pruneCells(windows);
         pruneCells(hatches);
+        pruneCells(grates);
         pruneCells(stairs);
         pruneCells(ladders);
         pruneCells(boardingLadders);
@@ -594,6 +599,10 @@ public class ShipBlueprintStruct extends StructPackage {
         return hatches;
     }
 
+    public IntArrayList getGrates() {
+        return grates;
+    }
+
     public IntArrayList getStairs() {
         return stairs;
     }
@@ -628,6 +637,7 @@ public class ShipBlueprintStruct extends StructPackage {
             case DOOR -> doors;
             case WINDOW -> windows;
             case HATCH -> hatches;
+            case GRATE -> grates;
         };
     }
 

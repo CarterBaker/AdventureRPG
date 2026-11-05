@@ -98,6 +98,8 @@ One line per session that changed this file: the date, what was added or removed
   Vehicles in the Assets dropdown).
 - 2026-11-02: Ship Viewer follows the choice. Regenerated `menus/editor/ShipViewer.arpg` (Previous and Next toolbar
   removed; the viewer shows the ship chosen in the hierarchy or at the Shipwright).
+- 2026-11-05: Grates. Regenerated `schemas/Vehicles.arpg` (`grates` in the deck default) for the Grate opening that
+  covers a waist or other floor hole with a fixed walkable grate.
 ---
 
 ## Textures and Sprites (2174 files)

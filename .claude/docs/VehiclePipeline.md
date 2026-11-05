@@ -130,10 +130,13 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   the table lets the waist widen into a rim that carries only its own rail.
 - **Gun ports are one per cannon.** `cutPort` refuses a cannon that cuts no planking and one whose port touches a port
   already cut; never reintroduce open ports over a bulwark.
-- **Railings replace the edge.** `layRailing` clears the side, bulwark or rail standing over its octant up to the deck
+- **Railings replace the edge.** `layEdge` lays railings and half walls off open floor; it clears the side, bulwark or rail standing over its octant up to the deck
   above before laying the rail, so walls run after bulwarks and the waist; `findRailingProblem` is the one rule (above
   the last waterline, open floor or the deck's own side or bulwark). There is no porch: never add an overhanging
   floor; a porch is a railed stretch of deck.
+- **Grates are fixed covers.** `layGrates` runs after hatches; `layOpeningCover` is the one extent rule for hatch
+  lids and grates, and a grate takes down the waist rail along its sides (`unrailCover`). `addGrates` builds every
+  grate as one fixed slatted part; never give it a hinge.
 - **Dialogs hide the table.** A label draws over every menu's sprites, so the table's menus are hidden
   (`ShipwrightSystem.setMenusShown`) while a dialog is open, as the Settings menu hides its parent; the catalogue's
   icons are skipped then too.

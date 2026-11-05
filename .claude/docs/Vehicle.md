@@ -28,7 +28,7 @@ How vehicles are made, stored, sailed, ridden and broken, and what is still open
 | The player | `Documents/My Games/AdventureRPG/Saves/Vehicles/<Name>.arpg` | `saved/<Name>` |
 
 - The file is the `Vehicles` schema: `display_name`, `category`, `decks` (each `start`, `outline`, `waists`,
-  `walls`, `half_walls`, `railings`, `doors`, `windows`, `hatches`, `stairs`, `ladders`, `boarding_ladders`,
+  `walls`, `half_walls`, `railings`, `doors`, `windows`, `hatches`, `grates`, `stairs`, `ladders`, `boarding_ladders`,
   `furniture`), `helm`, `capstan`,
   `masts` (each only its `x`; older files' `height`, `crows_nest` and `rigging` are ignored).
 - `assets/vehicles/` is optional; the game boots with no vehicle of its own. A saved vehicle that cannot be read or
@@ -95,6 +95,11 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   instead of walled. A railing must stand **above the waterline** (refused at the table; one in the side lowers the
   sill to its deck, so the compile calls it a shape problem if the sea would reach it). Erasing a railing puts the
   side or bulwark back. Painting a full or half wall over a railing, or a railing over a wall, replaces it.
+- **Half walls** stand `SHIP_HALF_WALL_HEIGHT` high on open floor, or in place of the side, a bulwark or a rail at a
+  deck's edge under the same rule as a railing (above the waterline; the side is taken down to the deck above).
+- **Grates** are an opening laid over a hole in a deck's floor (a waist, or any opening a stair or ladder leaves),
+  covering the whole run of it up to `SHIP_GRATE_MAX_OCTANTS` with a fixed slatted grate flush with the deck: walked
+  on, seen through, never opened. The waist rail along each side it covers is taken down so it is walked onto.
 - **Hatches** lie in a deck's floor over a deck below (never on the bottom deck). Set on a stair, ladder or waist
   opening, the lid closes the whole opening; anywhere else it cuts a 2×2 hole. Every lid is built as a hatch: a plank
   frame flush with the deck, slats set a sub-voxel down between it with gaps you can see through, two battens under

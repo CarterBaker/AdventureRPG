@@ -52,6 +52,7 @@ public class ShipLayoutStruct extends StructPackage {
 
     // Fittings — an octant box of six ints and a quarter turn for each, in model octants
     private final IntArrayList hatchBoxes;
+    private final IntArrayList grateBoxes;
     private final IntArrayList ladderBoxes;
     private final IntArrayList boardingLadderBoxes;
     private final IntArrayList portBoxes;
@@ -108,6 +109,7 @@ public class ShipLayoutStruct extends StructPackage {
 
         // Fittings
         this.hatchBoxes = new IntArrayList();
+        this.grateBoxes = new IntArrayList();
         this.ladderBoxes = new IntArrayList();
         this.boardingLadderBoxes = new IntArrayList();
         this.portBoxes = new IntArrayList();
@@ -133,6 +135,7 @@ public class ShipLayoutStruct extends StructPackage {
         cargoSlots.clear();
         cargoBoxes.clear();
         hatchBoxes.clear();
+        grateBoxes.clear();
         ladderBoxes.clear();
         boardingLadderBoxes.clear();
         portBoxes.clear();
@@ -221,6 +224,11 @@ public class ShipLayoutStruct extends StructPackage {
     // A hatch lid lying in a floor, the octants it closes
     public void addHatch(int minX, int y, int minZ, int maxX, int maxZ, int spin) {
         addFittingBox(hatchBoxes, minX, y, minZ, maxX, y + 1, maxZ, spin);
+    }
+
+    // A fixed grate lying in a floor, the octants of the opening it covers
+    public void addGrate(int minX, int y, int minZ, int maxX, int maxZ, int spin) {
+        addFittingBox(grateBoxes, minX, y, minZ, maxX, y + 1, maxZ, spin);
     }
 
     // A ladder's octants from the floor it stands on up past the floor it climbs to
@@ -355,6 +363,15 @@ public class ShipLayoutStruct extends StructPackage {
 
     public IntArrayList getHatchBoxes() {
         return hatchBoxes;
+    }
+
+    public IntArrayList getGrateBoxes() {
+        return grateBoxes;
+    }
+
+    // The boxes a floor opening was built with
+    public IntArrayList getFloorBoxes(ShipOpening opening) {
+        return opening == ShipOpening.GRATE ? grateBoxes : hatchBoxes;
     }
 
     public IntArrayList getLadderBoxes() {

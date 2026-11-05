@@ -78,6 +78,8 @@ class ShipwrightInspectBranch extends BranchPackage {
                 || pickCells(session, ShipwrightTool.STAIRS, ShipClimb.STAIR.ordinal(), blueprint.getStairs(), deck,
                         x, z, pick)
                 || pickCells(session, ShipwrightTool.OPENINGS, ShipOpening.HATCH.ordinal(), blueprint.getHatches(),
+                        deck, x, z, pick)
+                || pickCells(session, ShipwrightTool.OPENINGS, ShipOpening.GRATE.ordinal(), blueprint.getGrates(),
                         deck, x, z, pick))
             return;
 
@@ -235,7 +237,7 @@ class ShipwrightInspectBranch extends BranchPackage {
                 z + shipwrightFittingBranch.getFootprint(EngineSetting.AXIS_Z));
     }
 
-    // A door its door's footprint, a window its octant, a hatch the lid it was built with or the square it cuts
+    // A door its door's footprint, a window its octant, a hatch or grate what it was built with or the square it cuts
     private void resolveOpeningFootprint(ShipLayoutStruct layout, int option, int cell, ShipPickStruct out) {
 
         int x = ShipCellUtility.unpackX(cell);
@@ -249,11 +251,11 @@ class ShipwrightInspectBranch extends BranchPackage {
             return;
         }
 
-        if (option != ShipOpening.HATCH.ordinal())
+        if (!ShipOpening.VALUES[option].isFloor())
             return;
 
         int size = EngineSetting.SHIP_HATCH_OCTANTS;
-        IntArrayList boxes = layout.getHatchBoxes();
+        IntArrayList boxes = layout.getFloorBoxes(ShipOpening.VALUES[option]);
         int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
         int gridX = layout.getOriginX() + x;
 

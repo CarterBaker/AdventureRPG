@@ -85,6 +85,7 @@ class ShipwrightCompileBranch extends BranchPackage {
         shipwrightHullBranch.layLadders(blueprint, layout);
         shipwrightHullBranch.layBoardingLadders(blueprint, layout);
         shipwrightHullBranch.layHatches(blueprint, layout);
+        shipwrightHullBranch.layGrates(blueprint, layout);
         shipwrightFittingBranch.cutOpenings(blueprint, layout);
 
         mergePieces(layout);

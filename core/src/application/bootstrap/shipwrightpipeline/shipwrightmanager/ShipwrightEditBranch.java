@@ -219,7 +219,7 @@ class ShipwrightEditBranch extends BranchPackage {
                 && layout.getGrid().isEmpty(gridX, floor - 1, z);
     }
 
-    // Paints the wall picked on open floor, a railing also in place of the side or a bulwark at the deck's edge;
+    // Paints the wall picked on open floor, a half wall or a railing also in place of the side or a bulwark at the deck's edge;
     // erase takes a wall down with its doors and windows, putting back whatever it stood in place of
     private boolean paintWall(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
 
@@ -255,7 +255,8 @@ class ShipwrightEditBranch extends BranchPackage {
 
                 return false;
             }
-        } else if (!isOpenFloor(session, x, z))
+        } else if (!isOpenFloor(session, x, z) && (wall != ShipWall.HALF
+                || !shipwrightHullBranch.findRailingProblem(session.getLayout(), deck, x, z).isEmpty()))
             return false;
 
         blueprint.setWall(deck, x, z, wall);
@@ -384,11 +385,14 @@ class ShipwrightEditBranch extends BranchPackage {
         };
     }
 
-    // A hatch where a hatch may lie; a door or window only on a wall or the side
+    // A hatch where a hatch may lie, a grate over an opening; a door or window only on a wall or the side
     private String findOpeningProblem(ShipwrightSessionInstance session, int x, int z, int cell) {
 
         if (session.getOpening() == ShipOpening.HATCH)
             return shipwrightHullBranch.findHatchProblem(session.getLayout(), cell);
+
+        if (session.getOpening() == ShipOpening.GRATE)
+            return shipwrightHullBranch.findGrateProblem(session.getLayout(), cell);
 
         return shipwrightFittingBranch.isOpeningWall(session.getLayout(), session.getDeck(), x, z,
                 resolveOpeningSill(session.getOpening()))
@@ -439,7 +443,7 @@ class ShipwrightEditBranch extends BranchPackage {
         int spin = session.getSpin();
 
         return switch (session.getTool()) {
-            case OPENINGS -> session.getOpening() == ShipOpening.HATCH
+            case OPENINGS -> session.getOpening().isFloor()
                     ? ShipCellUtility.pack(deck, x, z, spin)
                     : ShipCellUtility.pack(deck, x, z, shipwrightFittingBranch.resolveOpeningSpin(
                             session.getLayout(), deck, x, z, resolveOpeningSill(session.getOpening()), spin));

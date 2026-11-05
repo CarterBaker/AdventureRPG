@@ -338,6 +338,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         addRudder(layout);
         addAnchors(layout);
         addHatchLids(layout);
+        addGrates(layout);
         addPortLids(layout);
         addLadders(layout);
         addBoardingLadders(layout);
@@ -370,6 +371,34 @@ class ShipwrightFittingBranch extends BranchPackage {
             addPanel(lid, EngineSetting.AXIS_Y, true, acrossX ? EngineSetting.AXIS_X : EngineSetting.AXIS_Z, true);
             layout.addPart(lid);
         }
+    }
+
+    // One fixed part of every grate lying flush over an opening, slats with gaps between them to walk on and see
+    // through
+    private void addGrates(ShipLayoutStruct layout) {
+
+        IntArrayList boxes = layout.getGrateBoxes();
+
+        if (ShipLayoutStruct.countFittings(boxes) == 0)
+            return;
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        VehiclePartStruct grate = new VehiclePartStruct(
+                EngineSetting.SHIP_PART_GRATE, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_DECK,
+                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
+
+        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
+
+            boolean acrossX = ShipCellUtility.stepX(resolveHingeSpin(boxes, i)) != 0;
+            int top = ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MAX_Y) * octant;
+
+            readFittingBox(boxes, i);
+            panelMin[EngineSetting.AXIS_Y] = top - EngineSetting.SHIP_LID_THICKNESS_SUB_VOXELS;
+            panelMax[EngineSetting.AXIS_Y] = top;
+            addPanel(grate, EngineSetting.AXIS_Y, true, acrossX ? EngineSetting.AXIS_X : EngineSetting.AXIS_Z, true);
+        }
+
+        layout.addPart(grate);
     }
 
     // The side of a hatch's box its lid is hinged along: one of its two longer sides, the one its quarter turn

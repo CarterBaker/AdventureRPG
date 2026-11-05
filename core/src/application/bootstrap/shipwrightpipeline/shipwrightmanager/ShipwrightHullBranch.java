@@ -3,6 +3,7 @@ package application.bootstrap.shipwrightpipeline.shipwrightmanager;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipPiece;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipWall;
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
@@ -262,14 +263,19 @@ class ShipwrightHullBranch extends BranchPackage {
     }
 
     // A wall rises from its floor to the floor above it under cover, or a deckhouse high in the open; a half wall
-    // stands waist high either way; a railing is laid by layRailing
+    // stands waist high either way; a railing, and a half wall anywhere but on open floor, is laid by layEdge
     private void layWall(ShipLayoutStruct layout, int floor, int x, int z, ShipWall wall) {
 
         ShipOctantGridStruct grid = layout.getGrid();
         int gridX = layout.getOriginX() + x;
 
         if (wall == ShipWall.RAILING) {
-            layRailing(layout, floor, x, z);
+            layEdge(layout, floor, x, z, ShipPiece.RAILS, EngineSetting.SHIP_RAILING_HEIGHT);
+            return;
+        }
+
+        if (wall == ShipWall.HALF && !isOpenFloor(grid, gridX, floor, z, 1, 1)) {
+            layEdge(layout, floor, x, z, ShipPiece.WALLS, EngineSetting.SHIP_HALF_WALL_HEIGHT);
             return;
         }
 
@@ -291,9 +297,9 @@ class ShipwrightHullBranch extends BranchPackage {
         }
     }
 
-    // A railing rail high over a deck's octant, the side, bulwark or rail standing there up to the deck above taken
+    // A railing or half wall over a deck's octant, the side, bulwark or rail standing there up to the deck above taken
     // down first; opening the side lowers the sill to the deck, so one under the water is a shape problem
-    private void layRailing(ShipLayoutStruct layout, int floor, int x, int z) {
+    private void layEdge(ShipLayoutStruct layout, int floor, int x, int z, ShipPiece piece, int height) {
 
         String problem = findRailingProblem(layout, floor / EngineSetting.SHIP_DECK_HEIGHT, x, z);
 
@@ -307,22 +313,22 @@ class ShipwrightHullBranch extends BranchPackage {
 
         for (int y = floor + 1; y < floor + EngineSetting.SHIP_DECK_HEIGHT; y++) {
 
-            ShipPiece piece = grid.get(gridX, y, z);
+            ShipPiece standing = grid.get(gridX, y, z);
 
-            if (piece == ShipPiece.HULL || piece == ShipPiece.BULWARK)
+            if (standing == ShipPiece.HULL || standing == ShipPiece.BULWARK)
                 layout.lowerOpeningSill((floor + 1) * EngineSetting.SUB_BLOCK_SIZE);
 
-            if (piece != ShipPiece.HULL && piece != ShipPiece.BULWARK && piece != ShipPiece.RAILS)
+            if (standing != ShipPiece.HULL && standing != ShipPiece.BULWARK && standing != ShipPiece.RAILS)
                 break;
 
             grid.clear(gridX, y, z);
         }
 
-        for (int y = floor + 1; y <= floor + EngineSetting.SHIP_RAILING_HEIGHT; y++)
-            grid.setIfEmpty(gridX, y, z, ShipPiece.RAILS);
+        for (int y = floor + 1; y <= floor + height; y++)
+            grid.setIfEmpty(gridX, y, z, piece);
     }
 
-    // Why a railing cannot stand over a deck's octant, SHIP_PROBLEM_NONE when it can: above the waterline the ship
+    // Why a railing or half wall cannot stand over a deck's octant, SHIP_PROBLEM_NONE when it can: above the waterline the ship
     // last floated at, on open floor or in place of the side, a bulwark or a rail at the deck's edge
     String findRailingProblem(ShipLayoutStruct layout, int deck, int x, int z) {
 
@@ -702,7 +708,7 @@ class ShipwrightHullBranch extends BranchPackage {
         int size = EngineSetting.SHIP_HATCH_OCTANTS;
 
         if (isOpening(layout, x, floor, z)) {
-            layOpeningLid(layout, x, floor, z, spin);
+            layOpeningCover(layout, x, floor, z, spin, ShipOpening.HATCH);
             return;
         }
 
@@ -734,11 +740,13 @@ class ShipwrightHullBranch extends BranchPackage {
         return EngineSetting.SHIP_PROBLEM_NONE;
     }
 
-    // The whole opening a hatch is set on closed by its lid: the run of opening along the length through the cell,
-    // widened across while every octant of that run stays open, no larger than the largest lid
-    private void layOpeningLid(ShipLayoutStruct layout, int x, int floor, int z, int spin) {
+    // The whole opening a hatch or grate is set on covered by it: the run of opening along the length through the
+    // cell, widened across while every octant of that run stays open, no larger than the largest lid or grate
+    private void layOpeningCover(ShipLayoutStruct layout, int x, int floor, int z, int spin, ShipOpening opening) {
 
-        int limit = EngineSetting.SHIP_HATCH_MAX_OCTANTS;
+        int limit = opening == ShipOpening.GRATE
+                ? EngineSetting.SHIP_GRATE_MAX_OCTANTS
+                : EngineSetting.SHIP_HATCH_MAX_OCTANTS;
         int minX = x;
         int maxX = x + 1;
 
@@ -757,7 +765,79 @@ class ShipwrightHullBranch extends BranchPackage {
         while (maxZ - minZ < limit && isOpeningRun(layout, minX, maxX, floor, maxZ))
             maxZ++;
 
-        layout.addHatch(layout.getOriginX() + minX, floor, minZ, layout.getOriginX() + maxX, maxZ, spin);
+        int gridMinX = layout.getOriginX() + minX;
+        int gridMaxX = layout.getOriginX() + maxX;
+
+        if (opening != ShipOpening.GRATE) {
+            layout.addHatch(gridMinX, floor, minZ, gridMaxX, maxZ, spin);
+            return;
+        }
+
+        layout.addGrate(gridMinX, floor, minZ, gridMaxX, maxZ, spin);
+        unrailCover(layout.getGrid(), gridMinX, floor, minZ, gridMaxX, maxZ);
+    }
+
+    // The waist rail standing on the floor along each side of a grate taken down, so the grate is walked onto
+    private void unrailCover(ShipOctantGridStruct grid, int minX, int floor, int minZ, int maxX, int maxZ) {
+
+        for (int x = minX; x < maxX; x++) {
+            unrailRim(grid, x, floor, minZ - 1);
+            unrailRim(grid, x, floor, maxZ);
+        }
+
+        for (int z = minZ; z < maxZ; z++) {
+            unrailRim(grid, minX - 1, floor, z);
+            unrailRim(grid, maxX, floor, z);
+        }
+    }
+
+    private void unrailRim(ShipOctantGridStruct grid, int x, int floor, int z) {
+
+        if (!isFloor(grid, x, floor, z))
+            return;
+
+        for (int rise = 1; rise <= EngineSetting.SHIP_WAIST_RAIL_HEIGHT; rise++)
+            if (grid.get(x, floor + rise, z) == ShipPiece.RAILS)
+                grid.clear(x, floor + rise, z);
+    }
+
+    // Grates \\
+
+    void layGrates(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
+
+        IntArrayList grates = blueprint.getGrates();
+
+        for (int i = 0; i < grates.size(); i++)
+            layGrate(layout, grates.getInt(i));
+    }
+
+    // A fixed grate over the whole opening it is set on, a waist or any other hole in a deck's floor
+    private void layGrate(ShipLayoutStruct layout, int cell) {
+
+        String problem = findGrateProblem(layout, cell);
+
+        if (!problem.isEmpty()) {
+            layout.reportBuildProblem(problem);
+            return;
+        }
+
+        layOpeningCover(
+                layout,
+                ShipCellUtility.unpackX(cell),
+                ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT,
+                ShipCellUtility.unpackZ(cell),
+                ShipCellUtility.unpackSpin(cell),
+                ShipOpening.GRATE);
+    }
+
+    // Why a grate cannot lie at a cell, SHIP_PROBLEM_NONE when it can: only over an opening in a deck's floor
+    String findGrateProblem(ShipLayoutStruct layout, int cell) {
+
+        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+
+        return isOpening(layout, ShipCellUtility.unpackX(cell), floor, ShipCellUtility.unpackZ(cell))
+                ? EngineSetting.SHIP_PROBLEM_NONE
+                : EngineSetting.SHIPWRIGHT_PROBLEM_GRATE_OPENING;
     }
 
     private boolean isOpeningRun(ShipLayoutStruct layout, int minX, int maxX, int floor, int z) {

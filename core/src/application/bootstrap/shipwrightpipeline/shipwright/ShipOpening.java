@@ -14,7 +14,8 @@ public enum ShipOpening {
 
     DOOR(EngineSetting.SHIPWRIGHT_TEXT_DOOR),
     WINDOW(EngineSetting.SHIPWRIGHT_TEXT_WINDOW),
-    HATCH(EngineSetting.SHIPWRIGHT_TEXT_HATCH);
+    HATCH(EngineSetting.SHIPWRIGHT_TEXT_HATCH),
+    GRATE(EngineSetting.SHIPWRIGHT_TEXT_GRATE);
 
     // Values
     public static final ShipOpening[] VALUES = values();
@@ -34,5 +35,10 @@ public enum ShipOpening {
 
     public String getTitle() {
         return title;
+    }
+
+    // True for an opening that lies in a deck's floor and turns freely, not set on a wall
+    public boolean isFloor() {
+        return this == HATCH || this == GRATE;
     }
 }
