@@ -41,11 +41,11 @@ class ShipwrightFittingBranch extends BranchPackage {
      * sea comes aboard over where it opens the side; a window at chest height
      * turns that wall into watertight panes of glass that reach out to the
      * walls and panes beside them, and one the sea reaches is framed in iron
-     * as a porthole once the ship is floated. Every roof is shingles stepped
-     * up from eaves flush with the deck where it meets open air to the top of
-     * a half wall where it meets the deck it stands on. Every gun platform is
-     * a low bed laid on open floor facing the side, part of the ship, and cuts
-     * a lidded port of its own through the planking right before it at the
+     * as a porthole once the ship is floated. Every roof is shingles resting
+     * on its floor, low on every side where it meets open air and stepping up
+     * to a half wall's top where it lies farthest in. Every gun platform is a
+     * low bed laid on open floor facing the side, part of the ship, and cuts a
+     * lidded port of its own through the planking right before it at the
      * height a cannon's barrel stands on it, never over a bulwark and never
      * touching another platform's port; a cannon stands only on a platform,
      * set down where the platform is and facing its way, so its barrel lies in
@@ -83,8 +83,9 @@ class ShipwrightFittingBranch extends BranchPackage {
     private int[] boxMax;
     private int[] tunnelBox;
     private int[] roofTops;
-    private boolean[] roofGathered;
+    private int[] roofRegions;
     private IntArrayList roofMembers;
+    private IntArrayList roofFront;
 
     // Base \\
 
@@ -100,8 +101,9 @@ class ShipwrightFittingBranch extends BranchPackage {
         this.boxMax = new int[EngineSetting.AXIS_COUNT];
         this.tunnelBox = new int[EngineSetting.BOX_INT_STRIDE];
         this.roofTops = new int[0];
-        this.roofGathered = new boolean[0];
+        this.roofRegions = new int[0];
         this.roofMembers = new IntArrayList();
+        this.roofFront = new IntArrayList();
     }
 
     @Override
@@ -996,13 +998,14 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // Roofs \\
 
-    // Every roof built over the octants it is laid on as stepped shingles, one roof to each run of octants touching
-    // along a side, resting on the floor it is laid on. A roof slopes the way it meets the deck it stands on: every
-    // line of it across that way climbs evenly from a slab lying flush on the floor where it meets open air to a half
-    // wall's top, SHIP_ROOF_RIDGE_HEIGHT over the floor, where it meets the deck, so a half wall standing there meets
-    // it flush; a roof meeting the deck nowhere
-    // slopes across its narrower way to a ridge along its length. Each step is a slab SHIP_ROOF_THICKNESS_SUB_VOXELS
-    // thick that reaches down to the steps beside it, the octants of one step merged along the length
+    // Every roof built over the octants it is laid on as stepped shingles, resting on the floor, one roof to each run
+    // of octants touching along a side. A roof slopes down on every side to a slab lying flush on the floor wherever
+    // it meets open air, and climbs evenly in steps to a half wall's top, SHIP_ROOF_RIDGE_HEIGHT over the floor,
+    // where it lies farthest in from open air, counting diagonals as one: along the side where it meets the deck it
+    // stands on, so a half wall standing there meets it flush, or with open air all round along the middle of its
+    // longer way. A roof meeting open air nowhere rises from every edge the same way. Each step is a slab
+    // SHIP_ROOF_THICKNESS_SUB_VOXELS thick that reaches down to the steps beside it, the octants of one step merged
+    // along the length
     void addRoofs(ShipLayoutStruct layout) {
 
         IntArrayList cells = layout.getRoofCells();
@@ -1019,16 +1022,17 @@ class ShipwrightFittingBranch extends BranchPackage {
 
         if (roofTops.length < area) {
             this.roofTops = new int[area];
-            this.roofGathered = new boolean[area];
+            this.roofRegions = new int[area];
         }
 
         for (int start = 0; start < cells.size(); ) {
 
             int floor = cells.getInt(start + 1);
             int end = start;
+            int region = 0;
 
             Arrays.fill(roofTops, 0, area, 0);
-            Arrays.fill(roofGathered, 0, area, false);
+            Arrays.fill(roofRegions, 0, area, 0);
 
             while (end < cells.size() && cells.getInt(end + 1) == floor) {
                 roofTops[cells.getInt(end) + cells.getInt(end + 2) * sizeX] = EngineSetting.SHIP_ROOF_LAID;
@@ -1036,8 +1040,8 @@ class ShipwrightFittingBranch extends BranchPackage {
             }
 
             for (int seed = 0; seed < area; seed++)
-                if (roofTops[seed] == EngineSetting.SHIP_ROOF_LAID && !roofGathered[seed])
-                    raiseRoof(grid, sizeX, floor, seed);
+                if (roofTops[seed] == EngineSetting.SHIP_ROOF_LAID && roofRegions[seed] == 0)
+                    raiseRoof(grid, sizeX, floor, seed, ++region);
 
             addRoof(roofs, sizeX);
             start = end;
@@ -1046,49 +1050,75 @@ class ShipwrightFittingBranch extends BranchPackage {
         layout.addPart(roofs);
     }
 
-    // One roof gathered from an octant of it, the way it slopes worked out, and every line of it raised that way
-    private void raiseRoof(ShipOctantGridStruct grid, int sizeX, int floor, int seed) {
+    // One roof gathered from an octant of it, every octant's steps in from its edge counted outward from the octants
+    // on its edge, and each raised to its step's height
+    private void raiseRoof(ShipOctantGridStruct grid, int sizeX, int floor, int seed, int region) {
 
-        int axis = gatherRoof(grid, sizeX, floor, seed);
-        int stepX = axis == EngineSetting.AXIS_X ? 1 : 0;
-        int stepZ = 1 - stepX;
+        boolean drains = gatherRoof(grid, sizeX, floor, seed, region);
+        int peak = 1;
+
+        roofFront.clear();
 
         for (int i = 0; i < roofMembers.size(); i++) {
 
             int index = roofMembers.getInt(i);
+
+            if (isRoofEdge(grid, sizeX, floor, index % sizeX, index / sizeX, drains)) {
+                roofTops[index] = 1;
+                roofFront.add(index);
+            }
+        }
+
+        for (int i = 0; i < roofFront.size(); i++) {
+
+            int index = roofFront.getInt(i);
+            int step = roofTops[index] + 1;
             int x = index % sizeX;
             int z = index / sizeX;
 
-            if (!isRoofed(sizeX, x - stepX, z - stepZ))
-                raiseRoofLine(grid, sizeX, floor, x, z, stepX, stepZ);
+            for (int nextZ = z - 1; nextZ <= z + 1; nextZ++)
+                for (int nextX = x - 1; nextX <= x + 1; nextX++) {
+
+                    if (!isRoofed(sizeX, nextX, nextZ))
+                        continue;
+
+                    int next = nextX + nextZ * sizeX;
+
+                    if (roofRegions[next] == region && roofTops[next] == EngineSetting.SHIP_ROOF_LAID) {
+                        roofTops[next] = step;
+                        roofFront.add(next);
+                        peak = step;
+                    }
+                }
+        }
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int eaves = (floor + 1) * octant + EngineSetting.SHIP_ROOF_THICKNESS_SUB_VOXELS;
+        int rise = (floor + EngineSetting.SHIP_ROOF_RIDGE_HEIGHT) * octant - eaves;
+
+        for (int i = 0; i < roofMembers.size(); i++) {
+
+            int index = roofMembers.getInt(i);
+
+            roofTops[index] = eaves + rise * (roofTops[index] - 1) / Math.max(1, peak - 1);
         }
     }
 
-    // Every octant of the roof an octant belongs to gathered into roofMembers, returning the axis it slopes along:
-    // the one it meets the deck across most, or where it meets the deck nowhere the narrower of its two
-    private int gatherRoof(ShipOctantGridStruct grid, int sizeX, int floor, int seed) {
+    // Every octant of the roof an octant belongs to gathered into roofMembers and numbered with its region, true when
+    // any of them meets open air beside it
+    private boolean gatherRoof(ShipOctantGridStruct grid, int sizeX, int floor, int seed, int region) {
 
-        int metX = 0;
-        int metZ = 0;
-        int minX = Integer.MAX_VALUE;
-        int minZ = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int maxZ = Integer.MIN_VALUE;
+        boolean drains = false;
 
         roofMembers.clear();
         roofMembers.add(seed);
-        roofGathered[seed] = true;
+        roofRegions[seed] = region;
 
         for (int i = 0; i < roofMembers.size(); i++) {
 
             int index = roofMembers.getInt(i);
             int x = index % sizeX;
             int z = index / sizeX;
-
-            minX = Math.min(minX, x);
-            minZ = Math.min(minZ, z);
-            maxX = Math.max(maxX, x);
-            maxZ = Math.max(maxZ, z);
 
             for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++) {
 
@@ -1096,52 +1126,32 @@ class ShipwrightFittingBranch extends BranchPackage {
                 int nextZ = z + ShipCellUtility.stepZ(spin);
 
                 if (!isRoofed(sizeX, nextX, nextZ)) {
-
-                    if (!isRoofDrain(grid, sizeX, floor, nextX, nextZ)) {
-                        metX += ShipCellUtility.stepX(spin) != 0 ? 1 : 0;
-                        metZ += ShipCellUtility.stepZ(spin) != 0 ? 1 : 0;
-                    }
-
+                    drains |= isRoofDrain(grid, sizeX, floor, nextX, nextZ);
                     continue;
                 }
 
                 int next = nextX + nextZ * sizeX;
 
-                if (!roofGathered[next]) {
-                    roofGathered[next] = true;
+                if (roofRegions[next] == 0) {
+                    roofRegions[next] = region;
                     roofMembers.add(next);
                 }
             }
         }
 
-        if (metX + metZ > 0)
-            return metZ >= metX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X;
-
-        return maxZ - minZ <= maxX - minX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X;
+        return drains;
     }
 
-    // One line of a roof along the way it slopes, from its first octant: low where it meets open air and high where
-    // it meets the deck, a ridge in its middle with open air either end, level at a half wall's top between two decks
-    private void raiseRoofLine(ShipOctantGridStruct grid, int sizeX, int floor, int x, int z, int stepX, int stepZ) {
+    // True when a roofed octant lies on its roof's edge: beside open air, diagonals included, or for a roof meeting
+    // open air nowhere beside anything it does not cover
+    private boolean isRoofEdge(ShipOctantGridStruct grid, int sizeX, int floor, int x, int z, boolean drains) {
 
-        int length = 0;
+        for (int nextZ = z - 1; nextZ <= z + 1; nextZ++)
+            for (int nextX = x - 1; nextX <= x + 1; nextX++)
+                if (!isRoofed(sizeX, nextX, nextZ) && (!drains || isRoofDrain(grid, sizeX, floor, nextX, nextZ)))
+                    return true;
 
-        while (isRoofed(sizeX, x + stepX * length, z + stepZ * length))
-            length++;
-
-        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int eaves = (floor + 1) * octant + EngineSetting.SHIP_ROOF_THICKNESS_SUB_VOXELS;
-        int rise = (floor + EngineSetting.SHIP_ROOF_RIDGE_HEIGHT) * octant - eaves;
-        boolean lowStart = isRoofDrain(grid, sizeX, floor, x - stepX, z - stepZ);
-        boolean lowEnd = isRoofDrain(grid, sizeX, floor, x + stepX * length, z + stepZ * length);
-        int peak = lowStart && lowEnd ? (length - 1) / 2 : lowStart || lowEnd ? length - 1 : 1;
-
-        for (int i = 0; i < length; i++) {
-
-            int climb = lowStart && lowEnd ? Math.min(i, length - 1 - i) : lowStart ? i : lowEnd ? length - 1 - i : 1;
-
-            roofTops[x + stepX * i + (z + stepZ * i) * sizeX] = eaves + rise * climb / Math.max(1, peak);
-        }
+        return false;
     }
 
     private boolean isRoofed(int sizeX, int x, int z) {

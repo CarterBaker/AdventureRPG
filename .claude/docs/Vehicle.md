@@ -122,12 +122,13 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   hole in the bottom does not flood it).
 - **Roofs** are laid over a deck's open floor where no deck stands above (`findRoofProblem`) and rest on it,
   taking down any bulwark, railing or lip in their octants; a wall stays and rises through. Each run of roofed octants
-  touching along a side is one roof of shingles (`SHIP_TEXTURE_ROOF`) that slopes the way it meets the deck it stands
-  on: every line of it that way climbs evenly from a slab lying flush on the floor where it meets open air to a half
-  wall's top (`SHIP_ROOF_RIDGE_HEIGHT` octants over the floor) where it meets the deck, so a half wall standing there
-  meets it flush. A roof that meets the deck nowhere slopes across its narrower way to a ridge along its length. Each
-  step is `SHIP_ROOF_THICKNESS_SUB_VOXELS` thick and reaches down to the steps beside it. Drawing the deck above a
-  porch and roofing it there covers the porch.
+  touching along a side is one roof of shingles (`SHIP_TEXTURE_ROOF`) that slopes down on every side to a slab lying
+  flush on the floor wherever it meets open air, and climbs evenly in steps to a half wall's top
+  (`SHIP_ROOF_RIDGE_HEIGHT` octants over the floor) where it lies farthest in from open air, diagonals counting as
+  one: along the side where it meets the deck it stands on, so a porch roof rises toward the deck and a half wall
+  there, or along the middle of its longer way with open air all round. Each step is
+  `SHIP_ROOF_THICKNESS_SUB_VOXELS` thick and reaches down to the steps beside it, so nothing shows under it. Drawing
+  the deck above a porch and roofing it there covers the porch.
 - **Walls, half walls, railings and lips are one tool under one rule** (`findWallProblem`). Any of them is painted on
   open floor anywhere, a diving bay's rim or any waist included, replacing the waist's rail or a bulwark standing there;
   every kind but a full wall can also be painted **in place of the ship's side** (the planking between a deck and the
