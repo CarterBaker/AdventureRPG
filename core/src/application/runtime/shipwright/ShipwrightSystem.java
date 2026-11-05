@@ -470,12 +470,13 @@ public class ShipwrightSystem extends SystemPackage {
         text.setLength(0);
         ShipPickStruct hover = session.getHover();
         ShipwrightTool tool = session.getTool();
+        boolean painted = shipwrightManager.isPaintedHand(session);
 
         if (!hover.isEmpty()) {
 
             appendThing(text, hover.getTool(), hover.getOption(), ShipCellUtility.unpackSpin(hover.getCell()));
 
-            if (tool.isPainted())
+            if (painted)
                 return text.toString();
 
             appendKeys(text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH), KeyBindings.JUMP,
@@ -486,7 +487,7 @@ public class ShipwrightSystem extends SystemPackage {
                     .append(EngineSetting.SHIPWRIGHT_TEXT_TAKES_AWAY).toString();
         }
 
-        if (tool.isPainted()) {
+        if (painted) {
 
             appendKeys(text, KeyBindings.JUMP, EngineSetting.SHIPWRIGHT_TEXT_LEFT_CLICK)
                     .append(EngineSetting.SHIPWRIGHT_TEXT_PAINTS).append(EngineSetting.SHIPWRIGHT_TEXT_COMMA);

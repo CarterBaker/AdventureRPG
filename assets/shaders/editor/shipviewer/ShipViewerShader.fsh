@@ -11,13 +11,17 @@ flat in int vFace;
 
 uniform sampler2DArray u_textureArray;
 
+// The model height everything above is cut away at, in model blocks
+uniform float u_cutawayHeight;
+
 out vec4 FragColor;
 
 /*
  * A vehicle in the Ship Viewer: its texture repeated once per block of the model
  * grid and its glass and rope screened through the same ordered dither as the
  * game's vehicle pass, then lit here by the viewer's one fixed light, as an
- * editor viewport has no deferred lighting pass.
+ * editor viewport has no deferred lighting pass. Everything above the cutaway is
+ * left out, so the deck shown and those under it can be seen into.
  */
 const float VEHICLE_DITHER[16] = float[16](
     0.0, 8.0, 2.0, 10.0,
@@ -31,6 +35,9 @@ float resolveDitherThreshold() {
 }
 
 void main() {
+    if (vModelPosition.y > u_cutawayHeight)
+    discard;
+
     vec2 uv     = resolveRepeatedUV(vUVOrigin, vModelPosition, vFace, u_uvPerBlock);
     vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
 

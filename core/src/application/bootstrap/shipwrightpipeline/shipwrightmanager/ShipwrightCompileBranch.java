@@ -147,7 +147,7 @@ class ShipwrightCompileBranch extends BranchPackage {
 
     // Every piece laid in the grid merged into boxes, rails built as posts under a handrail, one part per piece that
     // has any
-    private void mergePieces(ShipLayoutStruct layout) {
+    void mergePieces(ShipLayoutStruct layout) {
 
         for (int i = 0; i < ShipPiece.VALUES.length; i++) {
 

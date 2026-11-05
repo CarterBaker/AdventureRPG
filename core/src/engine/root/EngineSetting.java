@@ -2821,6 +2821,7 @@ public class EngineSetting {
     public static final int SHIP_STAIR_HEADROOM = 2;
     public static final int SHIP_STAIR_MAX_RISE = 12;
     public static final int SHIP_STAIR_WIDTH = 2;
+    public static final int SHIP_TUMBLEHOME_OCTANTS = 2;
     public static final int SHIP_WAIST_RAIL_HEIGHT = 2;
     public static final int SHIP_WINDOW_HEIGHT = 2;
     public static final int SHIP_WINDOW_SILL = 2;
@@ -2846,7 +2847,7 @@ public class EngineSetting {
     public static final int SHIP_BOWSPRIT_MIN_LENGTH = 8;
     public static final int SHIP_BOWSPRIT_RUN = 3;
     public static final int SHIP_CROWS_NEST_GAP = 2;
-    public static final int SHIP_CROWS_NEST_MIN_SAILS = 2;
+    public static final int SHIP_CROWS_NEST_TIERS = 3;
     public static final int SHIP_CROWS_NEST_RAIL = 8;
     public static final int SHIP_CROWS_NEST_REACH = 2;
     public static final float SHIP_MAST_BEAM_SHARE = 1.8f;
@@ -2869,6 +2870,7 @@ public class EngineSetting {
     public static final float SHIP_SAIL_TAPER = 0.8f;
     public static final String[] SHIP_SAIL_TIER_NAMES = { "Course", "Topsail", "Topgallant", "Royal" };
     public static final int SHIP_SAIL_TIER_PITCH = 10;
+    public static final float SHIP_SHROUD_CURVE = 2f;
     public static final int SHIP_SHROUD_HALF_SPAN = 12;
     public static final int SHIP_STAY_FOOT = 2;
     public static final int SHIP_YARD_OVERHANG = 4;
@@ -2885,6 +2887,8 @@ public class EngineSetting {
     public static final int SHIP_BOARDING_STEP_SUB_VOXELS = 4;
     public static final String SHIP_CANNON_FURNISHING = "ship/Cannon";
     public static final int SHIP_CAPSTAN_BAR_REACH = 14;
+    public static final int SHIP_CHANNEL_REACH_SUB_VOXELS = 4;
+    public static final int SHIP_CHANNEL_THICKNESS_SUB_VOXELS = 2;
     public static final int SHIP_CAPSTAN_DRUM_HEIGHT = 12;
     public static final int SHIP_DOOR_FACING_TURN = 1;
     public static final String SHIP_DOOR_FURNISHING = "ship/Door";
@@ -2925,6 +2929,7 @@ public class EngineSetting {
     public static final String SHIP_PART_BULWARK = "Bulwark";
     public static final String SHIP_PART_CABLE = "AnchorCable";
     public static final String SHIP_PART_CAPSTAN = "Capstan";
+    public static final String SHIP_PART_CHANNELS = "Channels";
     public static final String SHIP_PART_DECKS = "Decks";
     public static final String SHIP_PART_GLASS = "Glass";
     public static final String SHIP_PART_GLASS_FLOOR = "GlassFloor";
@@ -2934,6 +2939,8 @@ public class EngineSetting {
     public static final String SHIP_PART_HATCH = "Hatch";
     public static final String SHIP_PART_HULL = "Hull";
     public static final String SHIP_PART_LADDERS = "Ladders";
+    public static final String SHIP_PART_MAST_LADDER_RAILS_SUFFIX = "LadderRails";
+    public static final String SHIP_PART_MAST_LADDER_SUFFIX = "Ladder";
     public static final String SHIP_PART_LADDER_RAILS = "LadderRails";
     public static final String SHIP_PART_LIPS = "Lips";
     public static final String SHIP_PART_PORTHOLES = "Portholes";
@@ -2943,7 +2950,6 @@ public class EngineSetting {
     public static final String SHIP_PART_SHROUDS_SUFFIX = "Shrouds";
     public static final String SHIP_PART_STAIRS = "Stairs";
     public static final String SHIP_PART_STAYS = "Stays";
-    public static final String SHIP_PART_TOPMAST_SHROUDS_SUFFIX = "TopmastShrouds";
     public static final String SHIP_PART_TOPS = "Tops";
     public static final String SHIP_PART_WALLS = "Walls";
     public static final String SHIP_PART_WEATHER_DECK = "WeatherDeck";
@@ -2983,12 +2989,15 @@ public class EngineSetting {
     public static final int SHIPWRIGHT_ITEM_FURNISHINGS = 2;
     public static final int SHIPWRIGHT_ITEM_HELM = 0;
 
-    // Shipwright Catalogue — the options of the tool in hand as tiles in rows under section headings, each picture
+    // Shipwright Catalogue — the options of the tab open as tiles in rows under section headings, each picture
     // drawn this much larger than an inventory slot draws it, the fittings pictured from a corner this far out in
-    // sub-voxels
+    // sub-voxels, every option no item stands for built in a little model this many octants across and a mast this
+    // many high
     public static final int SHIPWRIGHT_CATALOGUE_COLUMNS = 8;
     public static final float SHIPWRIGHT_ICON_ZOOM = 1.3f;
+    public static final int SHIPWRIGHT_PREVIEW_MAST_OCTANTS = 12;
     public static final int SHIPWRIGHT_PREVIEW_ORIGIN_SUB_VOXELS = 16;
+    public static final int SHIPWRIGHT_PREVIEW_SPAN_OCTANTS = 4;
 
     // Shipwright Cursor — seconds a held movement binding waits before it repeats, then between steps
     public static final float SHIPWRIGHT_CURSOR_REPEAT_DELAY = 0.3f;
@@ -3069,10 +3078,10 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_SECTION_MASTS = "Masts";
     public static final String SHIPWRIGHT_SECTION_OPENINGS = "Doors & Windows";
     public static final String SHIPWRIGHT_SECTION_WALLS = "Walls";
+    public static final String SHIPWRIGHT_TAB_FITTINGS = "Fittings";
     public static final String SHIPWRIGHT_TAB_FURNITURE = "Furniture";
+    public static final String SHIPWRIGHT_TAB_HULL = "Hull";
     public static final String SHIPWRIGHT_TAB_MASTS = "Masts";
-    public static final String SHIPWRIGHT_TAB_STRUCTURE = "Structure";
-    public static final String SHIPWRIGHT_TAB_STYLE = "Style";
 
     // Shipwright Tools
     public static final String SHIPWRIGHT_TOOL_DECK = "Deck";
@@ -3112,7 +3121,6 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_PLATFORM_FLOOR = "A gun platform must stand on open floor";
     public static final String SHIPWRIGHT_PROBLEM_PLATFORM_PORT = "A gun platform must face the planking of the side";
     public static final String SHIPWRIGHT_PROBLEM_PLATFORM_SHARED = "Gun platforms stand too close to cut a port each";
-    public static final String SHIPWRIGHT_PROBLEM_RAILING_PLACE = "A railing, half wall or lip stands on open floor or in the deck's side";
     public static final String SHIPWRIGHT_PROBLEM_RAILING_WATER = "A railing, half wall or lip in the side must stand above the waterline";
     public static final String SHIPWRIGHT_PROBLEM_SINKS = "Too heavy: the sea would come over her side";
     public static final String SHIPWRIGHT_PROBLEM_STAIRS_BLOCKED = "A stair runs into something already built";
@@ -3123,7 +3131,8 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_PROBLEM_TOO_ROUND = "Too round to sail: make her twice as long as broad";
     public static final String SHIPWRIGHT_PROBLEM_TOO_SHORT = "Too short to sail: draw her longer";
     public static final String SHIPWRIGHT_PROBLEM_WAIST_FLOOR = "The waist must be cut through open floor";
-    public static final String SHIPWRIGHT_PROBLEM_WALL_FLOOR = "A wall must stand on open floor";
+    public static final String SHIPWRIGHT_PROBLEM_WALL_FLOOR = "A wall stands on open floor or in the deck's side";
+    public static final String SHIPWRIGHT_PROBLEM_WALL_SIDE = "The side is a full wall already";
 
     // Shipwright Refusals — why a change, a save or a launch was not made
     public static final String SHIPWRIGHT_REFUSAL_CAPSTAN = "Set a capstan down before saving";
@@ -3222,9 +3231,9 @@ public class EngineSetting {
     public static final String SHIPWRIGHT_FORMAT_WEIGHT = "Weighs %.0f t";
     public static final String[] SHIPWRIGHT_HINTS = {
             "Draw decks and cut the waist, mirrored; glass floors the bottom waist, take it up for a diving bay",
-            "Paint walls, railings or a lip that opens the side; doors, windows, the helm, capstan, stairs",
+            "Walls, railings and lips on any floor or in the side; doors, windows, floors, guns, helm, stairs",
             "Step a mast on the centre line; its height, sails and rigging follow from the hull",
-            "Pick an item below and set it down; a cannon stands on a gun platform set in Structure" };
+            "Pick an item below and set it down; a cannon stands on a gun platform set in Fittings" };
     public static final String SHIPWRIGHT_NAME_CARET = "|";
     public static final String SHIPWRIGHT_NAME_DIRTY = " *";
     public static final String SHIPWRIGHT_NAME_UNNAMED = "Unnamed ship - click to name";

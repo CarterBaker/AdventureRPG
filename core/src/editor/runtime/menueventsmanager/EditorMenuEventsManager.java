@@ -21,6 +21,7 @@ import editor.runtime.menueventsmanager.menus.TabBranch;
 import editor.runtime.menueventsmanager.menus.ToolBranch;
 import editor.runtime.menueventsmanager.menus.TransitionsBranch;
 import editor.runtime.menueventsmanager.menus.TreePlannerBranch;
+import editor.runtime.menueventsmanager.menus.ShipViewerBranch;
 import editor.runtime.menueventsmanager.menus.TreeViewerBranch;
 import editor.runtime.menueventsmanager.menus.SettlementPlannerBranch;
 import editor.runtime.menueventsmanager.menus.SoundLibraryBranch;
@@ -65,6 +66,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(BiomeViewerBranch.class);
         create(TreePlannerBranch.class);
         create(TreeViewerBranch.class);
+        create(ShipViewerBranch.class);
         create(CharacterEditorBranch.class);
         create(AnimationEditorBranch.class);
         create(AnimationTreeEditorBranch.class);

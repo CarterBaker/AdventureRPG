@@ -11,6 +11,7 @@ import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class ShipwrightRigBranch extends BranchPackage {
@@ -31,13 +32,16 @@ class ShipwrightRigBranch extends BranchPackage {
      * height and each sail above stands a fixed pitch over the last under its
      * own yard, as many as fit under the mast's head, each narrower than the
      * one below, the course as wide as the hull is there. A mast tall enough
-     * to carry two sails over one gets a crow's nest, a railed platform at
-     * the head of the lower mast that lifts every sail above it clear. Every
-     * mast is rigged so each sail and the nest can be reached: its shrouds
-     * step down to the deck edge either side as ratlines the crew climb, from
-     * the nest's rim level with its floor, where its rail is left open, or
-     * from the mast's head where it has none, and over a nest the topmast
-     * shrouds climb on from its rim in to the mast's head; a stay runs
+     * to carry its course, topsail and topgallant gets a crow's nest, a
+     * railed platform over the topgallant that lifts every sail above it
+     * clear. Every mast is rigged so each sail and the nest can be reached:
+     * its shrouds step down and out either side as ratlines the crew climb,
+     * close in under the nest's rim, level with its floor, where its rail is
+     * left open, or under the mast's head where it has none, and spreading
+     * wider toward the foot, which lands on a channel standing out from the
+     * hull at the deck's edge; over a nest a
+     * ladder runs up the after face of the mast from the nest to the head,
+     * past every yard above it; a stay runs
      * forward and down from its head to the foot of the next mast forward, or
      * to the bowsprit's tip. Masts are named from the bow aft. Spars and
      * canvas are laid as boxes of their own in sub-voxels, canvas a single
@@ -49,12 +53,24 @@ class ShipwrightRigBranch extends BranchPackage {
 
     // Internal
     private ShipwrightHullBranch shipwrightHullBranch;
+    private ShipwrightFittingBranch shipwrightFittingBranch;
+
+    // Scratch — main thread only
+    private IntArrayList ladderScratch;
 
     // Base \\
 
     @Override
+    protected void create() {
+
+        // Scratch
+        this.ladderScratch = new IntArrayList();
+    }
+
+    @Override
     protected void get() {
         this.shipwrightHullBranch = get(ShipwrightHullBranch.class);
+        this.shipwrightFittingBranch = get(ShipwrightFittingBranch.class);
     }
 
     // Bowsprit \\
@@ -141,6 +157,8 @@ class ShipwrightRigBranch extends BranchPackage {
                 EngineSetting.SHIP_PART_TOPS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_DECK);
         VehiclePartStruct stays = createPart(
                 EngineSetting.SHIP_PART_STAYS, VehiclePartRole.RIGGING, EngineSetting.SHIP_TEXTURE_ROPE);
+        VehiclePartStruct channels = createPart(
+                EngineSetting.SHIP_PART_CHANNELS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_HULL);
         ObjectArrayList<VehiclePartStruct> canvas = new ObjectArrayList<>();
 
         int base = resolveHeadBase(layout, masts);
@@ -169,11 +187,11 @@ class ShipwrightRigBranch extends BranchPackage {
             layout.addMast(height, tiers, nest);
             layout.addPart(buildMast(layout, mast, mastName, foot, deck, height));
             addCanvas(layout, mast, mastName, deck, tiers, nest, canvas);
-            canvas.add(buildShrouds(layout, mast, mastName, deck, height, tiers, nest));
+            canvas.add(buildShrouds(layout, mast, mastName, deck, height, tiers, nest, channels));
 
             if (nest) {
                 addTop(layout, mast, deck, height, tiers, tops);
-                canvas.add(buildTopmastShrouds(layout, mast, mastName, deck, height, tiers));
+                addMastLadder(layout, mast, mastName, deck, height, tiers, canvas);
             }
 
             addStay(blueprint, layout, i, deck, height, stays);
@@ -188,6 +206,9 @@ class ShipwrightRigBranch extends BranchPackage {
 
         if (!stays.isEmpty())
             layout.addPart(stays);
+
+        if (!channels.isEmpty())
+            layout.addPart(channels);
     }
 
     // A mast from its step on the floor of its foot to its head, pivoting about its centre at its step
@@ -288,8 +309,8 @@ class ShipwrightRigBranch extends BranchPackage {
         }
     }
 
-    // A railed platform round the mast at the head of the lower mast, its rail left open either side where the
-    // shrouds come up to it
+    // A railed platform round the mast over the topsail, its rail left open either side where the shrouds come up to
+    // it
     private void addTop(
             ShipLayoutStruct layout,
             ShipMastStruct mast,
@@ -323,8 +344,10 @@ class ShipwrightRigBranch extends BranchPackage {
 
     // Shrouds \\
 
-    // Either side, netting stepping down and out to the deck edge from the crow's nest's rim, level with its floor so
-    // a climber walks onto it, or from the mast's head where it has none, within reach of every yard below it
+    // Either side, netting stepping down and out from the crow's nest's rim, level with its floor so a climber walks
+    // onto it, or from the mast's head where it has none, within reach of every yard below it: close in under its
+    // head and spreading wider toward its foot, which lands on the outer edge of a channel standing out from the hull
+    // at the deck's edge
     private VehiclePartStruct buildShrouds(
             ShipLayoutStruct layout,
             ShipMastStruct mast,
@@ -332,7 +355,8 @@ class ShipwrightRigBranch extends BranchPackage {
             int deck,
             int height,
             int tiers,
-            boolean nest) {
+            boolean nest,
+            VehiclePartStruct channels) {
 
         VehiclePartStruct shrouds = createPart(
                 mastName + EngineSetting.SHIP_PART_SHROUDS_SUFFIX, VehiclePartRole.LADDER,
@@ -355,59 +379,83 @@ class ShipwrightRigBranch extends BranchPackage {
         int middleX = resolveShroudMiddle(layout, mast);
         int minX = middleX - EngineSetting.SHIP_SHROUD_HALF_SPAN;
         int maxX = middleX + EngineSetting.SHIP_SHROUD_HALF_SPAN;
+        int innerReach = inner * octant;
+        int outerReach = deckHalf * octant + EngineSetting.SHIP_CHANNEL_REACH_SUB_VOXELS;
+        int sheet = EngineSetting.SHIP_SHEET_BREADTH * octant;
+        int middleZ = center * octant;
 
         for (int step = 0; step < steps; step++) {
 
             int high = top - (top - bottom) * step / steps;
             int low = top - (top - bottom) * (step + 1) / steps;
-            int near = inner + run * step / steps;
-            int far = inner + run * (step + 1) / steps;
+            int near = resolveShroudReach(innerReach, outerReach, step, steps);
+            int far = resolveShroudReach(innerReach, outerReach, step + 1, steps);
 
-            addRatline(shrouds, minX, maxX, low, high, (center + near) * octant, (center + far) * octant);
-            addRatline(shrouds, minX, maxX, low, high, (center - near) * octant, (center - far) * octant);
+            addRatline(shrouds, minX, maxX, low, high, middleZ + near, Math.min(sheet, middleZ + far));
+            addRatline(shrouds, minX, maxX, low, high, middleZ - near, Math.max(0, middleZ - far));
         }
+
+        addChannel(channels, minX, maxX, bottom, middleZ + deckHalf * octant, Math.min(sheet, middleZ + outerReach));
+        addChannel(channels, minX, maxX, bottom, Math.max(0, middleZ - outerReach), middleZ - deckHalf * octant);
 
         return shrouds;
     }
 
-    // Either side, netting rising from the crow's nest's rim in to the mast's head, within reach of every yard over
-    // the nest
-    private VehiclePartStruct buildTopmastShrouds(
+    // How far from the centre line a shroud reaches a step down from its head, in sub-voxels: little at first and
+    // more with every step, so the netting hangs close in under its head and spreads toward its foot
+    private int resolveShroudReach(int innerReach, int outerReach, int step, int steps) {
+
+        float share = (float) Math.pow((float) step / steps, EngineSetting.SHIP_SHROUD_CURVE);
+
+        return innerReach + Math.round((outerReach - innerReach) * share);
+    }
+
+    // A plank standing out from the hull's side under a shroud's foot, its top level with the foot
+    private void addChannel(VehiclePartStruct channels, int minX, int maxX, int top, int minZ, int maxZ) {
+
+        if (maxZ > minZ)
+            channels.addBox(minX, top - EngineSetting.SHIP_CHANNEL_THICKNESS_SUB_VOXELS, minZ, maxX, top, maxZ);
+    }
+
+    // A ladder up the after face of the mast from the crow's nest's floor to the mast's head, facing the mast so a
+    // climber steps onto it from the nest and reaches every yard over it
+    private void addMastLadder(
             ShipLayoutStruct layout,
             ShipMastStruct mast,
             String mastName,
             int deck,
             int height,
-            int tiers) {
+            int tiers,
+            ObjectArrayList<VehiclePartStruct> canvas) {
 
-        VehiclePartStruct shrouds = createPart(
-                mastName + EngineSetting.SHIP_PART_TOPMAST_SHROUDS_SUFFIX, VehiclePartRole.LADDER,
-                EngineSetting.SHIP_TEXTURE_RATLINES);
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
-        int reach = EngineSetting.SHIP_CROWS_NEST_REACH;
-        int bottom = resolveNestFloor(height, deck, tiers) + octant;
-        int top = resolveMastTop(height, deck) - EngineSetting.SHIP_MAST_HEAD * octant;
+        int x = layout.getOriginX() + mast.getX();
+        int bottom = resolveNestFloor(height, deck, tiers) / octant + 1;
+        int top = resolveMastTop(height, deck) / octant - EngineSetting.SHIP_MAST_HEAD;
 
         if (top <= bottom)
-            return shrouds;
+            return;
 
-        int middleX = resolveShroudMiddle(layout, mast);
-        int minX = middleX - EngineSetting.SHIP_SHROUD_HALF_SPAN;
-        int maxX = middleX + EngineSetting.SHIP_SHROUD_HALF_SPAN;
+        VehiclePartStruct ladder = createPart(
+                mastName + EngineSetting.SHIP_PART_MAST_LADDER_SUFFIX, VehiclePartRole.LADDER,
+                EngineSetting.SHIP_TEXTURE_RUNGS);
+        VehiclePartStruct rails = createPart(
+                mastName + EngineSetting.SHIP_PART_MAST_LADDER_RAILS_SUFFIX, VehiclePartRole.LADDER,
+                EngineSetting.SHIP_TEXTURE_SPAR);
 
-        for (int step = 0; step < reach; step++) {
+        ladderScratch.clear();
+        ladderScratch.add(x - 1);
+        ladderScratch.add(bottom);
+        ladderScratch.add(center - 1);
+        ladderScratch.add(x);
+        ladderScratch.add(top);
+        ladderScratch.add(center + 1);
+        ladderScratch.add(0);
+        shipwrightFittingBranch.addLadder(ladderScratch, 0, ladder, rails);
 
-            int low = bottom + (top - bottom) * step / reach;
-            int high = bottom + (top - bottom) * (step + 1) / reach;
-            int far = 1 + reach - step;
-            int near = far - 1;
-
-            addRatline(shrouds, minX, maxX, low, high, (center + near) * octant, (center + far) * octant);
-            addRatline(shrouds, minX, maxX, low, high, (center - near) * octant, (center - far) * octant);
-        }
-
-        return shrouds;
+        canvas.add(rails);
+        canvas.add(ladder);
     }
 
     // One step of a shroud's netting: a sheet falling from the inboard edge at its head to the outboard edge at its
@@ -525,14 +573,14 @@ class ShipwrightRigBranch extends BranchPackage {
                 Math.min(EngineSetting.SHIP_MAST_MAX_HEIGHT, base + Math.round(tallest * share) - deck));
     }
 
-    // True when a mast stands tall enough to carry SHIP_CROWS_NEST_MIN_SAILS sails over a crow's nest, the nest the
-    // crew climbs to for every sail above the course
+    // True when a mast stands tall enough to carry the SHIP_CROWS_NEST_TIERS sails under a crow's nest, the nest the
+    // crew climbs to for every sail above it
     private boolean hasCrowsNest(int height) {
-        return resolveTierCount(height, true) >= EngineSetting.SHIP_CROWS_NEST_MIN_SAILS;
+        return resolveTierCount(height, true) >= EngineSetting.SHIP_CROWS_NEST_TIERS;
     }
 
     // How many sails a mast carries: every tier that fits between the deck clearance and its head, a crow's nest
-    // lifting every tier above the course
+    // lifting every tier above it
     private int resolveTierCount(int height, boolean nest) {
 
         int room = height - EngineSetting.SHIP_SAIL_CLEARANCE - EngineSetting.SHIP_MAST_HEAD
@@ -542,21 +590,21 @@ class ShipwrightRigBranch extends BranchPackage {
                 Math.max(0, room / EngineSetting.SHIP_SAIL_TIER_PITCH));
     }
 
-    // The sub-voxel height a tier's sail hangs down to, a crow's nest lifting every tier above the course
+    // The sub-voxel height a tier's sail hangs down to, a crow's nest lifting every tier above it
     private int resolveTierBase(boolean nest, int deck, int tier) {
 
-        int gap = nest && tier > 0 ? EngineSetting.SHIP_CROWS_NEST_GAP : 0;
+        int gap = nest && tier >= EngineSetting.SHIP_CROWS_NEST_TIERS ? EngineSetting.SHIP_CROWS_NEST_GAP : 0;
 
         return (deck + 1 + EngineSetting.SHIP_SAIL_CLEARANCE + tier * EngineSetting.SHIP_SAIL_TIER_PITCH + gap)
                 * EngineSetting.SHIP_OCTANT_SUB_VOXELS;
     }
 
-    // The sub-voxel height of the crow's nest floor, over the course yard, below the mast's head however short
+    // The sub-voxel height of the crow's nest floor, over the topgallant's yard, below the mast's head however short
     private int resolveNestFloor(int height, int deck, int tiers) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int floor = (deck + 1 + EngineSetting.SHIP_SAIL_CLEARANCE
-                + Math.min(tiers, 1) * EngineSetting.SHIP_SAIL_TIER_PITCH) * octant;
+                + Math.min(tiers, EngineSetting.SHIP_CROWS_NEST_TIERS) * EngineSetting.SHIP_SAIL_TIER_PITCH) * octant;
 
         return Math.min(floor, resolveMastTop(height, deck) - (EngineSetting.SHIP_MAST_HEAD + 1) * octant);
     }

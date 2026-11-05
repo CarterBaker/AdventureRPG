@@ -103,6 +103,14 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-05: Shipwright tabs. Regenerated `menus/Shipwright.arpg` (the seven tool buttons replaced by the Structure,
   Style, Masts and Furniture tabs) and `schemas/Vehicles.arpg` (`lips`, `glass_floors` and `gun_platforms` in the
   deck default) for the tabbed catalogue, lips, glass floors and gun platforms.
+- 2026-11-05: Shipwright Hull and Fittings tabs. Regenerated `menus/Shipwright.arpg` (the Structure and Style tabs
+  renamed Hull and Fittings, the floors and gun platform moved into Fittings).
+- 2026-11-05: Ship Viewer views and cutaway. Rewrote `editor/shipviewer/ShipViewerShader.fsh` (the cutaway above the
+  deck shown, the sea tint under the waterline), regenerated `materials/editor/ShipViewerMaterial.arpg` (`u_cutaway`)
+  and `menus/editor/ShipViewer.arpg` (view, centre and deck toolbar, axis gizmo).
+- 2026-11-05: Ship Viewer scene gizmo. Rewrote `editor/shipviewer/ShipViewerShader.fsh` (water tint removed, the cutaway
+  a float `u_cutawayHeight`), regenerated `materials/editor/ShipViewerMaterial.arpg` and `menus/editor/ShipViewer.arpg`
+  (only the deck − and + buttons; the gizmo's arms, cones and centre).
 ---
 
 ## Textures and Sprites (2174 files)

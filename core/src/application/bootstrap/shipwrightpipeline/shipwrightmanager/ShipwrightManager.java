@@ -2,9 +2,12 @@ package application.bootstrap.shipwrightpipeline.shipwrightmanager;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
+import application.bootstrap.geometrypipeline.mesh.MeshInstance;
+import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipBlueprintStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipClimb;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipDraftStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipLayoutStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOctantGridStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipOpening;
@@ -15,6 +18,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTab;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
+import application.bootstrap.vehiclepipeline.util.VehicleSpaceUtility;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
@@ -61,6 +65,7 @@ public class ShipwrightManager extends ManagerPackage {
 
     // Internal
     private VehicleManager vehicleManager;
+    private MeshManager meshManager;
     private FurnishingManager furnishingManager;
     private SoundCueManager soundCueManager;
 
@@ -75,16 +80,12 @@ public class ShipwrightManager extends ManagerPackage {
     private ShipwrightEditBranch shipwrightEditBranch;
     private ShipwrightRigBranch shipwrightRigBranch;
     private ShipwrightInspectBranch shipwrightInspectBranch;
-    private ShipwrightFittingBranch shipwrightFittingBranch;
+    private ShipwrightPreviewBranch shipwrightPreviewBranch;
 
     // Furnishings — every furnishing table in the game, by section then by the name of the item it furnishes, and the
     // section each is listed under
     private ObjectArrayList<String> furnishingNames;
     private ObjectArrayList<String> furnishingSections;
-
-    // Previews — the helm and the capstan as the catalogue pictures them
-    private ShipPreviewStruct helmPreview;
-    private ShipPreviewStruct capstanPreview;
 
     // Scratch — main thread only
     private ShipLayoutStruct contentLayout;
@@ -97,13 +98,14 @@ public class ShipwrightManager extends ManagerPackage {
         // Branches
         create(ShipwrightHullBranch.class);
         this.shipwrightRigBranch = create(ShipwrightRigBranch.class);
-        this.shipwrightFittingBranch = create(ShipwrightFittingBranch.class);
+        create(ShipwrightFittingBranch.class);
         this.shipwrightInspectBranch = create(ShipwrightInspectBranch.class);
         this.shipwrightCompileBranch = create(ShipwrightCompileBranch.class);
         this.shipwrightSurveyBranch = create(ShipwrightSurveyBranch.class);
         this.shipwrightDraftBranch = create(ShipwrightDraftBranch.class);
         this.shipwrightLibraryBranch = create(ShipwrightLibraryBranch.class);
         this.shipwrightEditBranch = create(ShipwrightEditBranch.class);
+        this.shipwrightPreviewBranch = create(ShipwrightPreviewBranch.class);
         create(ShipwrightLoader.class);
 
         // Furnishings
@@ -117,6 +119,7 @@ public class ShipwrightManager extends ManagerPackage {
     @Override
     protected void get() {
         this.vehicleManager = get(VehicleManager.class);
+        this.meshManager = get(MeshManager.class);
         this.furnishingManager = get(FurnishingManager.class);
         this.soundCueManager = get(SoundCueManager.class);
     }
@@ -128,7 +131,7 @@ public class ShipwrightManager extends ManagerPackage {
         this.launchCueID = soundCueManager.getCueIDFromCueName(EngineSetting.SOUND_CUE_SHIP_LAUNCH);
 
         collectFurnishings();
-        buildPreviews();
+        shipwrightPreviewBranch.buildPreviews();
         internalLoader.requestAll();
         registerSavedShips();
     }
@@ -144,20 +147,6 @@ public class ShipwrightManager extends ManagerPackage {
 
         for (int i = 0; i < furnishingNames.size(); i++)
             furnishingSections.add(resolveSection(furnishingNames.get(i)));
-    }
-
-    // The helm and the capstan built and meshed apart from any ship, each from the origin the previews stand at
-    private void buildPreviews() {
-
-        int origin = EngineSetting.SHIPWRIGHT_PREVIEW_ORIGIN_SUB_VOXELS;
-        ObjectArrayList<VehiclePartStruct> helmParts = new ObjectArrayList<>();
-        ObjectArrayList<VehiclePartStruct> capstanParts = new ObjectArrayList<>();
-
-        shipwrightFittingBranch.buildHelm(helmParts, origin, 0, origin);
-        shipwrightFittingBranch.buildCapstan(capstanParts, origin, 0, origin);
-
-        this.helmPreview = new ShipPreviewStruct(helmParts, vehicleManager.buildRestingMeshes(helmParts));
-        this.capstanPreview = new ShipPreviewStruct(capstanParts, vehicleManager.buildRestingMeshes(capstanParts));
     }
 
     // The section a furnishing table is listed under: the folder it is kept in, capitalised
@@ -421,6 +410,38 @@ public class ShipwrightManager extends ManagerPackage {
         return true;
     }
 
+    // Draft \\
+
+    // The ship on a session's sheet built into a draft for a viewer as a ship of it would be built, every part but the
+    // anchor cables meshed at rest, the meshes of the draft's last build freed first; called once the sheet has
+    // rested, as its survey is
+    public void buildDraft(ShipwrightSessionInstance session, ShipDraftStruct draft) {
+
+        releaseDraft(draft);
+        shipwrightCompileBranch.compile(session.getBlueprint(), draft.getLayout());
+
+        ObjectArrayList<VehiclePartStruct> parts = draft.getLayout().getParts();
+        ObjectArrayList<VehiclePartStruct> shown = new ObjectArrayList<>(parts.size());
+
+        for (int i = 0; i < parts.size(); i++)
+            if (VehicleSpaceUtility.isPartShownUnderWay(parts.get(i)))
+                shown.add(parts.get(i));
+
+        draft.getMeshes().addAll(vehicleManager.buildRestingMeshes(shown));
+        draft.setIdentity(session.getBlueprint().getDisplayName(), session.getBlueprint().getDeckCount());
+    }
+
+    // Every mesh a draft was built with freed
+    public void releaseDraft(ShipDraftStruct draft) {
+
+        ObjectArrayList<MeshInstance> meshes = draft.getMeshes();
+
+        for (int i = 0; i < meshes.size(); i++)
+            meshManager.removeMesh(meshes.get(i));
+
+        meshes.clear();
+    }
+
     // Edit \\
 
     public void selectTab(ShipwrightSessionInstance session, ShipwrightTab tab) {
@@ -495,6 +516,11 @@ public class ShipwrightManager extends ManagerPackage {
         return shipwrightEditBranch.getOptionIndex(session);
     }
 
+    // True when the thing in hand is painted octant by octant as the cursor is dragged
+    public boolean isPaintedHand(ShipwrightSessionInstance session) {
+        return shipwrightEditBranch.isPaintedHand(session);
+    }
+
     // The option of its tool in hand, INDEX_NOT_FOUND for no mast picked
     public int getHeldOption(ShipwrightSessionInstance session) {
         return shipwrightEditBranch.getHeldOption(session);
@@ -556,14 +582,10 @@ public class ShipwrightManager extends ManagerPackage {
         return resolveDisplayName(getItemFurnishingName(item));
     }
 
-    // The built fitting an option of a tool's catalogue is pictured by where no item stands for it, null for none
+    // The little model an option of a tool's catalogue is pictured by where no item stands for it, null for one an
+    // item pictures
     public ShipPreviewStruct getOptionPreview(ShipwrightTool tool, int option) {
-
-        if (tool != ShipwrightTool.FURNITURE)
-            return null;
-
-        return option == EngineSetting.SHIPWRIGHT_ITEM_HELM ? helmPreview
-                : option == EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN ? capstanPreview : null;
+        return shipwrightPreviewBranch.getPreview(tool, option);
     }
 
     // The item an option of a tool's catalogue is pictured by, null for one no item stands for

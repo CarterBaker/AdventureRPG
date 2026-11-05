@@ -2,7 +2,6 @@ package editor.runtime.shipwright;
 
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
-import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
 import application.bootstrap.shipwrightpipeline.shipwrightmanager.ShipwrightManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -25,8 +24,9 @@ public class ShipwrightTabSystem extends SystemPackage {
      * ship files into the game's assets — each through InfoManager, so a ship
      * is checked and recorded as every content file is, and the Info Panel
      * shows what was written. Closing the tab over unsaved work asks first
-     * through the table's dialog, and closing the table closes the tab. Each
-     * ship opened or saved at the table is chosen for the Ship Viewer.
+     * through the table's dialog, and closing the table closes the tab. The
+     * table is chosen for the Ship Viewer once it opens and again whenever a
+     * ship is written from it, so the viewer shows the ship as it is drawn.
      */
 
     // Internal
@@ -39,10 +39,15 @@ public class ShipwrightTabSystem extends SystemPackage {
     private TabManager tabManager;
     private ShipViewerManager shipViewerManager;
 
-    // Ship Viewer — the saved name of the ship last chosen from the table
-    private String chosenName;
+    // Ship Viewer — the choice's revision when the table was last chosen, INDEX_NOT_FOUND before it ever was
+    private int chosenRevision;
 
     // Base \\
+
+    @Override
+    protected void create() {
+        this.chosenRevision = EngineSetting.INDEX_NOT_FOUND;
+    }
 
     @Override
     protected void get() {
@@ -70,17 +75,17 @@ public class ShipwrightTabSystem extends SystemPackage {
 
     // Update \\
 
-    // The ship on the table chosen for the Ship Viewer once it is opened
+    // The table chosen for the Ship Viewer once it is open
     @Override
     protected void update() {
 
-        ShipwrightSessionInstance session = shipwrightSystem.getSession();
+        if (shipwrightSystem.isOpen() && shipViewerManager.getSession() == null && !isChosenElsewhere())
+            chooseTable();
+    }
 
-        if (!shipwrightSystem.isOpen() || !session.isSaved() || session.getSavedName().equals(chosenName))
-            return;
-
-        chosenName = session.getSavedName();
-        chooseShip(chosenName);
+    // True when a vehicle has been chosen in the hierarchy since the table was last chosen
+    private boolean isChosenElsewhere() {
+        return chosenRevision != EngineSetting.INDEX_NOT_FOUND && shipViewerManager.getRevision() != chosenRevision;
     }
 
     // Write \\
@@ -91,12 +96,13 @@ public class ShipwrightTabSystem extends SystemPackage {
         if (!infoManager.writeDocument(EditorSetting.INFO_SCHEMA_VEHICLES, shipName, shipArpg))
             return infoManager.getRefusal();
 
-        chooseShip(shipName);
+        chooseTable();
 
         return EngineSetting.SHIPWRIGHT_STATUS_NONE;
     }
 
-    private void chooseShip(String shipName) {
-        shipViewerManager.choose(shipwrightManager.toVehicleName(ShipwrightStorage.ASSETS, shipName));
+    private void chooseTable() {
+        shipViewerManager.chooseSession(shipwrightSystem.getSession());
+        this.chosenRevision = shipViewerManager.getRevision();
     }
 }

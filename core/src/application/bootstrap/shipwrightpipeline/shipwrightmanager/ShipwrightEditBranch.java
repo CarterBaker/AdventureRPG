@@ -29,11 +29,12 @@ class ShipwrightEditBranch extends BranchPackage {
      * it back in and taking up any cover laid there, and every octant of the
      * bottom deck's waist a stroke cuts, or uncovers, is glazed over with a
      * glass floor so the sea shows below — one taken up afterwards leaves a
-     * diving bay open to the sea; and walls and half walls are painted on
-     * the open floor it passes over, in place of the waist's rail or a
-     * bulwark standing there, railings and lips on open floor or in place of
-     * the ship's side or bulwark at the deck's edge above the waterline,
-     * erase taking any of them down and so putting the side or bulwark back.
+     * diving bay open to the sea; and walls, half walls, railings and lips
+     * are painted alike on the open floor it passes over, in place of the
+     * waist's rail or a bulwark standing there, and all but a full wall in
+     * place of the ship's side, opening it right through, above the
+     * waterline wherever they open the ship to the sea; erase takes any of
+     * them down and so puts the side or bulwark back.
      * Every other tool works the
      * octant the stroke began on once, the same way for everything: erase
      * takes away whatever stands there, found over its whole footprint;
@@ -114,21 +115,43 @@ class ShipwrightEditBranch extends BranchPackage {
         if (session.isStroking())
             return;
 
-        session.beginStroke(erasing);
+        session.beginStroke(erasing, session.getLayout().hasBuildProblem());
         session.setStatus(EngineSetting.SHIPWRIGHT_STATUS_NONE);
+
+        if (isGlazing(session))
+            collectGlazed(session, session.getBlueprint());
     }
 
-    // Works the octant under the cursor, once per octant for a painted tool and only the first for any other
+    // Works the octant under the cursor, once per octant for a painted hand and only the first for any other; walls,
+    // the waist and windows are built again at every octant they change, so the sheet shows them as they are painted
+    // and erased
     void strokeAt(ShipwrightSessionInstance session, int u, int v) {
 
         if (!session.isStroking() || !session.moveStroke(u, v))
             return;
 
-        if (!session.isStrokeStart() && !session.getTool().isPainted())
+        if (!session.isStrokeStart() && !isPaintedHand(session))
             return;
 
-        if (apply(session, u, v, session.isStrokeErasing()))
-            session.markStrokeChanged();
+        if (!apply(session, u, v, session.isStrokeErasing()))
+            return;
+
+        session.markStrokeChanged();
+
+        if (session.getTool() != ShipwrightTool.DECK && isPaintedHand(session))
+            shipwrightManager.compileSession(session);
+    }
+
+    // True when the thing in hand is painted octant by octant as the cursor is dragged: the deck, the waist, every
+    // wall and windows
+    boolean isPaintedHand(ShipwrightSessionInstance session) {
+        return session.getTool().isPainted()
+                || session.getTool() == ShipwrightTool.OPENINGS && session.getOpening() == ShipOpening.WINDOW;
+    }
+
+    // True when a stroke cuts the bottom deck's waist, whose octants are glazed once it ends
+    private boolean isGlazing(ShipwrightSessionInstance session) {
+        return session.getTool() == ShipwrightTool.WAIST && session.getDeck() == 0;
     }
 
     void endStroke(ShipwrightSessionInstance session) {
@@ -144,16 +167,11 @@ class ShipwrightEditBranch extends BranchPackage {
 
         if (session.getTool() == ShipwrightTool.DECK) {
             session.getBlueprint().prunePlacements();
-            commit(session, before, false, session.getStatus());
+            commit(session, before, false, session.getStatus(), session.hadStrokeBuildProblem());
             return;
         }
 
-        boolean glazing = session.getTool() == ShipwrightTool.WAIST && session.getDeck() == 0;
-
-        if (glazing)
-            collectGlazed(session, before);
-
-        if (commit(session, before, true, session.getStatus()) && glazing)
+        if (commit(session, before, true, session.getStatus(), session.hadStrokeBuildProblem()) && isGlazing(session))
             glazeWaist(session, before);
     }
 
@@ -170,8 +188,50 @@ class ShipwrightEditBranch extends BranchPackage {
             case DECK -> drawOutline(session.getBlueprint(), session.getDeck(), x, z, erasing);
             case WAIST -> paintWaist(session, x, z, erasing);
             case WALLS -> paintWall(session, x, z, erasing);
+            case OPENINGS -> session.getOpening() == ShipOpening.WINDOW
+                    ? paintWindow(session, x, z, erasing)
+                    : pickOrPlace(session, x, z, erasing);
             default -> pickOrPlace(session, x, z, erasing);
         };
+    }
+
+    // Paints a window on the wall or side at an octant, found across the side however it curves, or with erase takes
+    // the window there away, as walls are painted: a stroke dragged along a wall glazes every octant it crosses
+    private boolean paintWindow(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
+
+        IntArrayList windows = session.getBlueprint().getWindows();
+        int cell = resolveWallCell(session, ShipOpening.WINDOW, x, z);
+        int index = ShipBlueprintStruct.findPlacement(windows, cell);
+
+        if (index == EngineSetting.INDEX_NOT_FOUND)
+            index = ShipBlueprintStruct.findPlacement(windows, ShipCellUtility.pack(session.getDeck(), x, z, 0));
+
+        if (erasing) {
+
+            if (index == EngineSetting.INDEX_NOT_FOUND)
+                return false;
+
+            windows.removeInt(index);
+
+            return true;
+        }
+
+        if (index != EngineSetting.INDEX_NOT_FOUND)
+            return false;
+
+        String problem = findOpeningProblem(session, x, z, cell);
+
+        if (!problem.isEmpty()) {
+
+            if (session.isStrokeStart())
+                refuse(session, problem);
+
+            return false;
+        }
+
+        ShipBlueprintStruct.togglePlacement(windows, cell);
+
+        return true;
     }
 
     // The deck's outline drawn out to the cursor at its octant along the sheet, or taken back to nothing there
@@ -229,11 +289,12 @@ class ShipwrightEditBranch extends BranchPackage {
 
         return session.getBlueprint().isOnDeck(session.getDeck(), x, z) && isOpenFloor(session, x, z)
                 && (standing == null || standing == ShipPiece.RAILS)
-                && layout.getGrid().isEmpty(gridX, floor - 1, z);
+                && shipwrightHullBranch.isOpenBelow(layout, x, floor, z);
     }
 
-    // Paints the wall picked on open floor, a half wall, railing or lip also in place of the side or a bulwark at the
-    // deck's edge; erase takes a wall down with its doors and windows, putting back whatever it stood in place of
+    // Paints the wall picked, any kind under the one rule: on open floor, in place of the waist's rail or a bulwark,
+    // and every kind but a full wall in place of the side; erase takes a wall down with its doors and windows, putting
+    // back whatever it stood in place of
     private boolean paintWall(ShipwrightSessionInstance session, int x, int z, boolean erasing) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
@@ -257,20 +318,16 @@ class ShipwrightEditBranch extends BranchPackage {
         if (blueprint.getWall(deck, x, z) == wall)
             return false;
 
-        if (wall.isEdge()) {
+        String problem = shipwrightHullBranch.findWallProblem(session.getLayout(), deck, x, z, wall,
+                blueprint.hasWall(deck, x, z));
 
-            String problem = shipwrightHullBranch.findRailingProblem(session.getLayout(), deck, x, z);
+        if (!problem.isEmpty()) {
 
-            if (!problem.isEmpty()) {
+            if (session.isStrokeStart())
+                refuse(session, problem);
 
-                if (session.isStrokeStart())
-                    refuse(session, problem);
-
-                return false;
-            }
-        } else if (!isOpenFloor(session, x, z) && (wall != ShipWall.HALF
-                || !shipwrightHullBranch.findRailingProblem(session.getLayout(), deck, x, z).isEmpty()))
             return false;
+        }
 
         blueprint.setWall(deck, x, z, wall);
 
@@ -547,8 +604,7 @@ class ShipwrightEditBranch extends BranchPackage {
         return switch (session.getTool()) {
             case OPENINGS -> session.getOpening().isTurned()
                     ? ShipCellUtility.pack(deck, x, z, spin)
-                    : ShipCellUtility.pack(deck, x, z, shipwrightFittingBranch.resolveOpeningSpin(
-                            session.getLayout(), deck, x, z, resolveOpeningSill(session.getOpening()), spin));
+                    : resolveWallCell(session, session.getOpening(), x, z);
             case STAIRS -> ShipCellUtility.pack(deck, x, z, session.getClimb() == ShipClimb.BOARDING
                     ? resolveOutboardSpin(z) : spin);
             case MASTS -> ShipCellUtility.pack(0, Math.max(0, x - EngineSetting.SHIP_MAST_OCTANTS / 2),
@@ -558,6 +614,20 @@ class ShipwrightEditBranch extends BranchPackage {
                     : ShipCellUtility.pack(deck, x, z, spin);
             default -> ShipCellUtility.pack(deck, x, z, spin);
         };
+    }
+
+    // The cell a door or window set at an octant of the deck picked is kept at: the wall, bulwark or planking found
+    // across the side from it at the opening's height, however the side curves, facing across that wall
+    private int resolveWallCell(ShipwrightSessionInstance session, ShipOpening opening, int x, int z) {
+
+        ShipLayoutStruct layout = session.getLayout();
+        int deck = session.getDeck();
+        int sill = resolveOpeningSill(opening);
+        int wallZ = shipwrightFittingBranch.resolveOpeningZ(layout, deck, x, z, sill);
+        int cellZ = wallZ == EngineSetting.INDEX_NOT_FOUND ? z : wallZ;
+
+        return ShipCellUtility.pack(deck, x, cellZ,
+                shipwrightFittingBranch.resolveOpeningSpin(layout, deck, x, cellZ, sill, session.getSpin()));
     }
 
     // The cell of the gun platform whose footprint covers an octant of the deck picked, the cell given when none does
@@ -677,7 +747,7 @@ class ShipwrightEditBranch extends BranchPackage {
         }
 
         session.setDeck(blueprint.getDeckCount() - 1);
-        commit(session, before, false, EngineSetting.SHIPWRIGHT_STATUS_NONE);
+        commit(session, before, false, EngineSetting.SHIPWRIGHT_STATUS_NONE, session.getLayout().hasBuildProblem());
     }
 
     // The deck picked taken out with everything standing on it, the decks above lowered into its place
@@ -693,7 +763,7 @@ class ShipwrightEditBranch extends BranchPackage {
 
         blueprint.prunePlacements();
         session.setDeck(Math.min(session.getDeck(), blueprint.getDeckCount() - 1));
-        commit(session, before, false, EngineSetting.SHIPWRIGHT_STATUS_NONE);
+        commit(session, before, false, EngineSetting.SHIPWRIGHT_STATUS_NONE, session.getLayout().hasBuildProblem());
     }
 
     // Options \\
@@ -848,7 +918,7 @@ class ShipwrightEditBranch extends BranchPackage {
         ShipBlueprintStruct before = session.getBlueprint().copy();
 
         session.getBlueprint().setDisplayName(displayName);
-        commit(session, before, false, EngineSetting.SHIPWRIGHT_STATUS_NONE);
+        commit(session, before, false, EngineSetting.SHIPWRIGHT_STATUS_NONE, session.getLayout().hasBuildProblem());
     }
 
     // History \\
@@ -874,10 +944,14 @@ class ShipwrightEditBranch extends BranchPackage {
     // Commit \\
 
     // Keeps a change once compiled, showing what was done or the problem it left, true when it was kept; a strict
-    // change that leaves something built with no room to stand when nothing was is taken back with the reason
-    private boolean commit(ShipwrightSessionInstance session, ShipBlueprintStruct before, boolean strict, String done) {
-
-        boolean hadBuildProblem = session.getLayout().hasBuildProblem();
+    // change that leaves something built with no room to stand when nothing was before it is taken back with the
+    // reason
+    private boolean commit(
+            ShipwrightSessionInstance session,
+            ShipBlueprintStruct before,
+            boolean strict,
+            String done,
+            boolean hadBuildProblem) {
 
         session.pushUndo(before);
         shipwrightManager.compileSession(session);

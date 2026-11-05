@@ -49,6 +49,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
     private int strokeU;
     private int strokeV;
     private int strokeSteps;
+    private boolean strokeBuildProblem;
 
     // Tool — the tab open, the entry each tab last held by the tab's ordinal, and the tool in hand
     private ShipwrightTab tab;
@@ -78,6 +79,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
     // Survey — due once the blueprint has rested since it last compiled
     private boolean surveyDue;
     private float surveyCountdown;
+    private int surveyRevision;
 
     // Status
     private String status;
@@ -143,7 +145,7 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
         // Tool
         Arrays.fill(tabEntries, EngineSetting.INDEX_NOT_FOUND);
-        this.tab = ShipwrightTab.STRUCTURE;
+        this.tab = ShipwrightTab.HULL;
         this.tool = ShipwrightTool.DECK;
         this.wall = ShipWall.FULL;
         this.opening = ShipOpening.DOOR;
@@ -241,9 +243,11 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     // Stroke \\
 
-    public void beginStroke(boolean erasing) {
+    // A stroke begun, the blueprint kept as it stood and whether what was built had a problem before it
+    public void beginStroke(boolean erasing, boolean buildProblem) {
 
         this.strokeSnapshot = blueprint.copy();
+        this.strokeBuildProblem = buildProblem;
         this.strokeErasing = erasing;
         this.strokeChanged = false;
         this.strokeU = EngineSetting.INDEX_NOT_FOUND;
@@ -280,6 +284,11 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     public boolean isStroking() {
         return strokeSnapshot != null;
+    }
+
+    // True when what was built had a problem before the stroke under way began
+    public boolean hadStrokeBuildProblem() {
+        return strokeBuildProblem;
     }
 
     public boolean isStrokeErasing() {
@@ -411,8 +420,15 @@ public class ShipwrightSessionInstance extends InstancePackage {
         return surveyCountdown <= 0f;
     }
 
+    // The survey made, its revision moved on for whatever builds from the rested sheet
     public void clearSurvey() {
         this.surveyDue = false;
+        this.surveyRevision++;
+    }
+
+    // Counted up whenever the sheet is surveyed after resting
+    public int getSurveyRevision() {
+        return surveyRevision;
     }
 
     public boolean isSurveyDue() {

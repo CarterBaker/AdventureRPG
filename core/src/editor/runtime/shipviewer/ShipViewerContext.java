@@ -10,11 +10,14 @@ import engine.root.ContextPackage;
 public class ShipViewerContext extends ContextPackage {
 
     /*
-     * Editor tab showing the ship chosen in the hierarchy or at the
-     * Shipwright as the game draws it, at rest with its sails set and its
-     * anchors aboard, lit by one fixed light. A ship saved at the Shipwright
-     * is registered again at once and shows here the moment it is. The orbit
-     * button turns the view and scrolling zooms.
+     * Editor tab showing the ship chosen in the hierarchy, or the one on the
+     * Shipwright's table as it is drawn, as the game draws it, at rest with
+     * its sails set, its anchors aboard and its furniture in place, lit by one
+     * fixed light. The orbit button turns the view, the pan button slides it
+     * with the pointer and scrolling zooms; clicking an axis of the gizmo
+     * looks back at the ship along it, centred, and its middle centres the
+     * view; the toolbar's minus and plus step the cutaway down through the
+     * decks and back up to them all.
      */
 
     // Internal
@@ -38,5 +41,24 @@ public class ShipViewerContext extends ContextPackage {
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Accessible \\
+
+    // Looks back at the ship along an axis named as in VIEW_AXES
+    public void view(String axisName) {
+
+        for (int i = 0; i < ShipViewerSetting.VIEW_AXES.length; i++)
+            if (ShipViewerSetting.VIEW_AXES[i].equals(axisName))
+                shipViewerCameraSystem.snap(i);
+    }
+
+    public void centre() {
+        shipViewerCameraSystem.centre();
+    }
+
+    // Steps the cutaway a deck down or up
+    public void stepDeck(int step) {
+        shipViewerSystem.stepDeck(step);
     }
 }

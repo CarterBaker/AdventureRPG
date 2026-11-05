@@ -19,9 +19,11 @@ class ShipwrightHullBranch extends BranchPackage {
      * grid. Every deck's floor lies a deck's height over the one below; the
      * hull's side between two decks is blended layer by layer from the
      * outline of the deck below to the outline of the deck above, so decks
-     * drawn wider flare the side out and decks drawn narrower draw it in, and
-     * a deck drawn past the end of the one below rakes its stem or its stern
-     * up to it. Wherever no deck lies above, the deck below is open to the sky.
+     * drawn wider flare the side out and decks drawn a little narrower draw
+     * it in, while a deck drawn more than SHIP_TUMBLEHOME_OCTANTS inside the
+     * one below rises from it with straight sides, a raised deck standing on
+     * the open floor round it; a deck drawn past the end of the one below
+     * rakes its stem or its stern up to it. Wherever no deck lies above, the deck below is open to the sky.
      * The hull is shelled one octant thick wherever it meets the outside, its
      * open decks capping it, so the hollow inside is sealed and every raised
      * deck's open end is closed by a bulkhead; interior decks floor the inside
@@ -64,7 +66,8 @@ class ShipwrightHullBranch extends BranchPackage {
     // Sections \\
 
     // The hull's half-beam at every layer and octant along the sheet, each layer between two decks blended from the
-    // outline of the deck below to the outline of the deck above, nothing over a deck with none above it
+    // outline of the deck below to the outline of the deck above, or the deck above's own where it is drawn well inside
+    // the one below, nothing over a deck with none above it
     void laySections(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
         int height = EngineSetting.SHIP_DECK_HEIGHT;
@@ -88,6 +91,9 @@ class ShipwrightHullBranch extends BranchPackage {
 
         if (above == 0)
             return 0;
+
+        if (below - above > EngineSetting.SHIP_TUMBLEHOME_OCTANTS)
+            return above;
 
         return Math.max(1, Math.round(below + (above - below) * (float) rise / EngineSetting.SHIP_DECK_HEIGHT));
     }
@@ -211,7 +217,7 @@ class ShipwrightHullBranch extends BranchPackage {
         int z = ShipCellUtility.unpackZ(cell);
 
         if (!layout.isVolume(x, floor, z) || !isFloor(grid, gridX, floor, z) || !grid.isEmpty(gridX, floor + 1, z)
-                || !grid.isEmpty(gridX, floor - 1, z)) {
+                || !isOpenBelow(layout, x, floor, z)) {
             layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_WAIST_FLOOR);
             return;
         }
@@ -264,52 +270,15 @@ class ShipwrightHullBranch extends BranchPackage {
         }
     }
 
-    // A wall rises from its floor to the floor above it under cover, or a deckhouse high in the open, in place of
-    // the waist's rail or a bulwark standing there; a half wall stands waist high either way; a railing or a lip, and
-    // a half wall anywhere but on open floor, is laid by layEdge
+    // A wall of any kind over a deck's octant: on open floor in place of the waist's rail or a bulwark standing there,
+    // or in place of the ship's side, which is opened up to the deck above and out through all its planking however
+    // far the side flares; a full wall rises to the deck above under cover or a deckhouse high in the open, every
+    // other kind its own height. Opening the side or a bulwark lowers the sill to the deck, so one the sea reaches is
+    // a shape problem
     private void layWall(ShipLayoutStruct layout, int floor, int x, int z, ShipWall wall) {
 
-        ShipOctantGridStruct grid = layout.getGrid();
-        int gridX = layout.getOriginX() + x;
-
-        if (wall.isEdge() || wall == ShipWall.HALF && !isOpenFloor(grid, gridX, floor, z, 1, 1)
-                && !isRailed(grid, gridX, floor, z)) {
-            layEdge(layout, floor, x, z, wall.getPiece(), wall.getHeight());
-            return;
-        }
-
-        if (!isFloor(grid, gridX, floor, z)) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_WALL_FLOOR);
-            return;
-        }
-
-        clearLanding(grid, gridX, floor, z);
-
-        boolean covered = layout.isVolume(x, floor + 1, z);
-        int height = wall == ShipWall.HALF || covered ? wall.getHeight() : EngineSetting.SHIP_DECKHOUSE_HEIGHT;
-
-        for (int y = floor + 1; y <= floor + height; y++) {
-
-            if (!grid.isEmpty(gridX, y, z))
-                return;
-
-            grid.set(gridX, y, z, ShipPiece.WALLS);
-        }
-    }
-
-    // True when nothing but the waist's rail or a bulwark stands on a floor octant, which a wall replaces
-    private boolean isRailed(ShipOctantGridStruct grid, int x, int floor, int z) {
-
-        ShipPiece standing = grid.get(x, floor + 1, z);
-
-        return isFloor(grid, x, floor, z) && (standing == ShipPiece.RAILS || standing == ShipPiece.BULWARK);
-    }
-
-    // A railing, lip or half wall over a deck's octant, the side, bulwark or rail standing there up to the deck above
-    // taken down first; opening the side lowers the sill to the deck, so one under the water is a shape problem
-    private void layEdge(ShipLayoutStruct layout, int floor, int x, int z, ShipPiece piece, int height) {
-
-        String problem = findRailingProblem(layout, floor / EngineSetting.SHIP_DECK_HEIGHT, x, z);
+        int deck = floor / EngineSetting.SHIP_DECK_HEIGHT;
+        String problem = findWallProblem(layout, deck, x, z, wall, false);
 
         if (!problem.isEmpty()) {
             layout.reportBuildProblem(problem);
@@ -319,43 +288,107 @@ class ShipwrightHullBranch extends BranchPackage {
         ShipOctantGridStruct grid = layout.getGrid();
         int gridX = layout.getOriginX() + x;
 
-        for (int y = floor + 1; y < floor + EngineSetting.SHIP_DECK_HEIGHT; y++) {
+        if (opensSide(layout, deck, x, z, wall))
+            layout.lowerOpeningSill((floor + 1) * EngineSetting.SUB_BLOCK_SIZE);
 
-            ShipPiece standing = grid.get(gridX, y, z);
+        if (isSide(layout, floor, x, z))
+            openSide(grid, gridX, floor, z);
+        else
+            clearLanding(grid, gridX, floor, z);
 
-            if (standing == ShipPiece.HULL || standing == ShipPiece.BULWARK)
-                layout.lowerOpeningSill((floor + 1) * EngineSetting.SUB_BLOCK_SIZE);
+        int height = wall != ShipWall.FULL || layout.isVolume(x, floor + 1, z)
+                ? wall.getHeight()
+                : EngineSetting.SHIP_DECKHOUSE_HEIGHT;
 
-            if (standing != ShipPiece.HULL && standing != ShipPiece.BULWARK && standing != ShipPiece.RAILS)
-                break;
+        for (int y = floor + 1; y <= floor + height; y++) {
 
-            grid.clear(gridX, y, z);
+            if (!grid.isEmpty(gridX, y, z))
+                return;
+
+            grid.set(gridX, y, z, wall.getPiece());
         }
-
-        for (int y = floor + 1; y <= floor + height; y++)
-            grid.setIfEmpty(gridX, y, z, piece);
     }
 
-    // Why a railing, lip or half wall cannot stand over a deck's octant, SHIP_PROBLEM_NONE when it can: above the
-    // waterline the ship last floated at, on open floor or in place of the side, a bulwark or a rail at the deck's edge
-    String findRailingProblem(ShipLayoutStruct layout, int deck, int x, int z) {
+    // Why a wall of a kind cannot stand over a deck's octant, SHIP_PROBLEM_NONE when it can: on open floor with nothing
+    // on it but the waist's rail or a bulwark, or in place of the ship's side, which every kind but a full wall takes
+    // down; one that opens the side or a bulwark only above the waterline the ship last floated at. A wall already
+    // painted there, which this one replaces, is passed over
+    String findWallProblem(ShipLayoutStruct layout, int deck, int x, int z, ShipWall wall, boolean replacing) {
 
         ShipOctantGridStruct grid = layout.getGrid();
         int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
         int gridX = layout.getOriginX() + x;
         ShipPiece standing = grid.get(gridX, floor + 1, z);
 
-        if (layout.isAfloat() && (floor + 1) * EngineSetting.SUB_BLOCK_SIZE <= layout.getDraft())
+        if (isSide(layout, floor, x, z)) {
+
+            if (wall == ShipWall.FULL)
+                return EngineSetting.SHIPWRIGHT_PROBLEM_WALL_SIDE;
+
+        } else if (!isFloor(grid, gridX, floor, z) || !replacing && standing != null && standing != ShipPiece.RAILS
+                && standing != ShipPiece.BULWARK)
+            return EngineSetting.SHIPWRIGHT_PROBLEM_WALL_FLOOR;
+
+        if (opensSide(layout, deck, x, z, wall) && layout.isAfloat()
+                && (floor + 1) * EngineSetting.SUB_BLOCK_SIZE <= layout.getDraft())
             return EngineSetting.SHIPWRIGHT_PROBLEM_RAILING_WATER;
 
-        if (isFloor(grid, gridX, floor, z)
-                && (standing == null || standing == ShipPiece.BULWARK || standing == ShipPiece.RAILS))
-            return EngineSetting.SHIP_PROBLEM_NONE;
+        return EngineSetting.SHIP_PROBLEM_NONE;
+    }
 
-        if (standing == ShipPiece.HULL && layout.isVolume(x, floor, z) && grid.get(gridX, floor, z) != null)
-            return EngineSetting.SHIP_PROBLEM_NONE;
+    // True where a deck's floor meets the ship's side, its planking standing over it
+    private boolean isSide(ShipLayoutStruct layout, int floor, int x, int z) {
+        return layout.isVolume(x, floor, z)
+                && layout.getGrid().get(layout.getOriginX() + x, floor, z) == ShipPiece.HULL;
+    }
 
-        return EngineSetting.SHIPWRIGHT_PROBLEM_RAILING_PLACE;
+    // True when a wall over an octant would open the ship to the sea there: any kind but a full wall in place of the
+    // side, or a railing or lip in place of a bulwark
+    private boolean opensSide(ShipLayoutStruct layout, int deck, int x, int z, ShipWall wall) {
+
+        int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
+
+        if (isSide(layout, floor, x, z))
+            return wall != ShipWall.FULL;
+
+        return wall.isEdge()
+                && layout.getGrid().get(layout.getOriginX() + x, floor + 1, z) == ShipPiece.BULWARK;
+    }
+
+    // The side over a deck's edge octant opened up to the deck above: at every layer the planking, bulwark or rail
+    // there and outboard of it cleared, walking out from the centre line as far as the side flares, so the hole goes
+    // right through
+    private void openSide(ShipOctantGridStruct grid, int gridX, int floor, int z) {
+
+        int step = z >= EngineSetting.SHIP_SHEET_HALF_BREADTH ? 1 : -1;
+
+        for (int y = floor + 1; y < floor + EngineSetting.SHIP_DECK_HEIGHT; y++)
+            clearOutboard(grid, gridX, y, z, 0, step);
+    }
+
+    // The planking, bulwark or rail met walking outboard from an octant along a step cleared, the empty octants inside
+    // a flared side passed over until it is reached; true when any was
+    private boolean clearOutboard(ShipOctantGridStruct grid, int x, int y, int z, int stepX, int stepZ) {
+
+        boolean cut = false;
+
+        for (int reach = 0; reach <= EngineSetting.SHIP_OPENING_REACH; reach++) {
+
+            int atX = x + stepX * reach;
+            int atZ = z + stepZ * reach;
+            ShipPiece piece = grid.get(atX, y, atZ);
+
+            if (piece == ShipPiece.HULL || piece == ShipPiece.BULWARK || piece == ShipPiece.RAILS) {
+                grid.clear(atX, y, atZ);
+                cut = true;
+                continue;
+            }
+
+            if (piece != null || cut)
+                break;
+        }
+
+        return cut;
     }
 
     // Stairs \\
@@ -401,7 +434,7 @@ class ShipwrightHullBranch extends BranchPackage {
                     footZ + stepZ * rise + acrossZ * across);
 
             for (int back = 1; back <= EngineSetting.SHIP_STAIR_HEADROOM; back++)
-                clearHeadroom(grid, footX - stepX * back + acrossX * across, level + rise,
+                clearHeadroom(layout, footX - stepX * back + acrossX * across, level + rise,
                         footZ - stepZ * back + acrossZ * across);
         }
     }
@@ -452,10 +485,10 @@ class ShipwrightHullBranch extends BranchPackage {
 
     // The floor over the approach to a stair's foot opened, so a climber's head clears it from the first step; a
     // floor in the open over nothing is left
-    private void clearHeadroom(ShipOctantGridStruct grid, int x, int floor, int z) {
+    private void clearHeadroom(ShipLayoutStruct layout, int x, int floor, int z) {
 
-        if (isFloor(grid, x, floor, z) && grid.isEmpty(x, floor - 1, z))
-            grid.clear(x, floor, z);
+        if (isFloor(layout.getGrid(), x, floor, z) && isOpenBelow(layout, x - layout.getOriginX(), floor, z))
+            layout.getGrid().clear(x, floor, z);
     }
 
     // The bulwark along a deck's edge, or a rail or railing, opened where a stair or ladder climbs onto it or a wall
@@ -742,7 +775,7 @@ class ShipwrightHullBranch extends BranchPackage {
         if (isOpening(layout, x, floor, z))
             return EngineSetting.SHIP_PROBLEM_NONE;
 
-        if (!isOpenFloor(grid, gridX, floor, z, size, size) || !isClearBelow(grid, gridX, floor, z, size))
+        if (!isOpenFloor(grid, gridX, floor, z, size, size) || !isClearBelow(layout, x, floor, z, size))
             return EngineSetting.SHIPWRIGHT_PROBLEM_HATCH_FLOOR;
 
         return EngineSetting.SHIP_PROBLEM_NONE;
@@ -874,15 +907,22 @@ class ShipwrightHullBranch extends BranchPackage {
         return layout.isVolume(x, floor, z) && layout.getGrid().isEmpty(layout.getOriginX() + x, floor, z);
     }
 
-    // True when nothing is built in the octants right under a square of floor, so a hatch opens onto a deck
-    private boolean isClearBelow(ShipOctantGridStruct grid, int minX, int floor, int minZ, int size) {
+    // True when every octant right under a square of floor is open room inside the hull, so a hatch opens onto a deck
+    // and never onto the outside where the side curves in under it
+    private boolean isClearBelow(ShipLayoutStruct layout, int minX, int floor, int minZ, int size) {
 
         for (int z = minZ; z < minZ + size; z++)
             for (int x = minX; x < minX + size; x++)
-                if (!grid.isEmpty(x, floor - 1, z))
+                if (!isOpenBelow(layout, x, floor, z))
                     return false;
 
         return true;
+    }
+
+    // True when the octant right under a deck's floor is open room inside the hull, or the sea under the bottom deck
+    boolean isOpenBelow(ShipLayoutStruct layout, int x, int floor, int z) {
+        return floor == 0 || layout.isVolume(x, floor - 1, z)
+                && layout.getGrid().isEmpty(layout.getOriginX() + x, floor - 1, z);
     }
 
     // True when a cover already lies over an octant of a deck's floor along the sheet and across it

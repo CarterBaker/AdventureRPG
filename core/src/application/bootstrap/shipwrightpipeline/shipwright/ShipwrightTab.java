@@ -6,47 +6,45 @@ public enum ShipwrightTab {
 
     /*
      * The four tabs of a drafting table's catalogue, each the options of one
-     * part of the work: the structure — the deck's outline, the waist, the
-     * floors laid in it and the gun platforms cannons stand on; the style —
-     * walls, railings and lips, doors and windows, the helm and the capstan,
-     * stairs and ladders; the masts; and every piece of furniture. A tab
+     * part of the work: the hull — the deck's outline and the waist cut
+     * through it; the fittings — walls, railings and lips, doors and windows,
+     * the floors laid over openings, the gun platforms cannons stand on, the
+     * helm and the capstan, stairs and ladders; the masts; and every piece of
+     * furniture. A tab
      * lists its fixed options first, each the tool that works it, the option
      * of that tool and the section it is listed under, then the options of
      * one tool whose count follows the ship or the game: every mast stepped,
      * or every furnishing past the helm and the capstan.
      */
 
-    STRUCTURE(EngineSetting.SHIPWRIGHT_TAB_STRUCTURE,
-            new ShipwrightTool[] {
-                    ShipwrightTool.DECK, ShipwrightTool.WAIST,
-                    ShipwrightTool.OPENINGS, ShipwrightTool.OPENINGS, ShipwrightTool.OPENINGS,
-                    ShipwrightTool.OPENINGS },
-            new int[] {
-                    0, 0,
-                    ShipOpening.HATCH.ordinal(), ShipOpening.GRATE.ordinal(), ShipOpening.GLASS.ordinal(),
-                    ShipOpening.PLATFORM.ordinal() },
-            new String[] {
-                    EngineSetting.SHIPWRIGHT_SECTION_HULL, EngineSetting.SHIPWRIGHT_SECTION_HULL,
-                    EngineSetting.SHIPWRIGHT_SECTION_FLOORS, EngineSetting.SHIPWRIGHT_SECTION_FLOORS,
-                    EngineSetting.SHIPWRIGHT_SECTION_FLOORS, EngineSetting.SHIPWRIGHT_SECTION_GUNS },
+    HULL(EngineSetting.SHIPWRIGHT_TAB_HULL,
+            new ShipwrightTool[] { ShipwrightTool.DECK, ShipwrightTool.WAIST },
+            new int[] { 0, 0 },
+            new String[] { EngineSetting.SHIPWRIGHT_SECTION_HULL, EngineSetting.SHIPWRIGHT_SECTION_HULL },
             null,
             0),
-    STYLE(EngineSetting.SHIPWRIGHT_TAB_STYLE,
+    FITTINGS(EngineSetting.SHIPWRIGHT_TAB_FITTINGS,
             new ShipwrightTool[] {
                     ShipwrightTool.WALLS, ShipwrightTool.WALLS, ShipwrightTool.WALLS, ShipwrightTool.WALLS,
                     ShipwrightTool.OPENINGS, ShipwrightTool.OPENINGS,
+                    ShipwrightTool.OPENINGS, ShipwrightTool.OPENINGS, ShipwrightTool.OPENINGS,
+                    ShipwrightTool.OPENINGS,
                     ShipwrightTool.FURNITURE, ShipwrightTool.FURNITURE,
                     ShipwrightTool.STAIRS, ShipwrightTool.STAIRS, ShipwrightTool.STAIRS },
             new int[] {
                     ShipWall.FULL.ordinal(), ShipWall.HALF.ordinal(), ShipWall.RAILING.ordinal(),
                     ShipWall.LIP.ordinal(),
                     ShipOpening.DOOR.ordinal(), ShipOpening.WINDOW.ordinal(),
+                    ShipOpening.HATCH.ordinal(), ShipOpening.GRATE.ordinal(), ShipOpening.GLASS.ordinal(),
+                    ShipOpening.PLATFORM.ordinal(),
                     EngineSetting.SHIPWRIGHT_ITEM_HELM, EngineSetting.SHIPWRIGHT_ITEM_CAPSTAN,
                     ShipClimb.STAIR.ordinal(), ShipClimb.LADDER.ordinal(), ShipClimb.BOARDING.ordinal() },
             new String[] {
                     EngineSetting.SHIPWRIGHT_SECTION_WALLS, EngineSetting.SHIPWRIGHT_SECTION_WALLS,
                     EngineSetting.SHIPWRIGHT_SECTION_WALLS, EngineSetting.SHIPWRIGHT_SECTION_WALLS,
                     EngineSetting.SHIPWRIGHT_SECTION_OPENINGS, EngineSetting.SHIPWRIGHT_SECTION_OPENINGS,
+                    EngineSetting.SHIPWRIGHT_SECTION_FLOORS, EngineSetting.SHIPWRIGHT_SECTION_FLOORS,
+                    EngineSetting.SHIPWRIGHT_SECTION_FLOORS, EngineSetting.SHIPWRIGHT_SECTION_GUNS,
                     EngineSetting.SHIPWRIGHT_TEXT_FITTINGS, EngineSetting.SHIPWRIGHT_TEXT_FITTINGS,
                     EngineSetting.SHIPWRIGHT_SECTION_CLIMBS, EngineSetting.SHIPWRIGHT_SECTION_CLIMBS,
                     EngineSetting.SHIPWRIGHT_SECTION_CLIMBS },
@@ -131,7 +129,7 @@ public enum ShipwrightTab {
             if (VALUES[i].followingTool == tool)
                 return VALUES[i];
 
-        return STRUCTURE;
+        return HULL;
     }
 
     // The tab after this one, round to the first

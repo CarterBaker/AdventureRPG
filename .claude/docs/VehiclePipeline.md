@@ -39,7 +39,8 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 | `ShipwrightCompileBranch` | `compile(blueprint, layout)` order, weighing, floating, `toDesign` |
 | `ShipwrightHullBranch` | Sections, shell, bulwarks, waist and its rails, walls, railings and lips, stairs, ladders, boarding ladders, hatches, grates and glass floors (`layCovers`), the railings' posts and handrails (`addRailings`); their `find...Problem` rules |
 | `ShipwrightFittingBranch` | Doors, windows, gun platforms and their ports (`findPlatformProblem`), cannons (`findCannonProblem`), helm, capstan, rudder, anchors, hatch and port lids (`addPanel`, `resolveHingeSpin`), grates, glass floors, ladders, boarding ladders, glass, portholes (`addPortholes`), cargo |
-| `ShipwrightRigBranch` | Bowsprit, masts (foot, height, sails and nest worked out), crow's nests, shrouds, stays |
+| `ShipwrightRigBranch` | Bowsprit, masts (foot, height, sails and nest worked out), crow's nests, shrouds, the ladder up each mast over its nest, stays |
+| `ShipwrightPreviewBranch` | The catalogue's little models of every option no item stands for, the helm and the capstan among them |
 | `ShipwrightDraftBranch` | Sheet glyphs at `SHIPWRIGHT_INK_SCALE`, the thing in hand, the hover outline, the water gauge, side and top views |
 | `ShipwrightSurveyBranch` | Stability, speed, triangle survey |
 
@@ -56,10 +57,18 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
   list, the unsaved-changes question through `requestLeave` / `ShipwrightLeave`, the save notice, the close action),
   `ShipwrightRenderSystem`, `menus/shipwright/ShipwrightBranch` (menu events), and in the editor
   `editor/runtime/shipwright/ShipwrightTabSystem` (writes through `InfoManager` with the `Vehicles` schema), and the
-  editor's Ship Viewer, `editor/runtime/shipviewer/` (draws a palette type's own meshes at rest). The ship it shows is
-  `ShipViewerManager`'s choice, set by the hierarchy's Vehicles selection and by `ShipwrightTabSystem` when a ship is
-  opened or saved at the table; `ShipViewerSystem` looks it up again by name whenever the choice or
-  `VehicleManager.getPaletteRevision` moves, as a ship saved again replaces its type and frees the old meshes.
+  editor's Ship Viewer, `editor/runtime/shipviewer/`. The ship it shows is `ShipViewerManager`'s choice: a vehicle by
+  name, set by the hierarchy's Vehicles selection, or the table's session, set by `ShipwrightTabSystem` when the table
+  opens and whenever a ship is written from it. For a vehicle `ShipViewerSystem` looks it up again whenever the choice
+  or `VehicleManager.getPaletteRevision` moves; for the session it calls `ShipwrightManager.buildDraft` into a
+  `ShipDraftStruct` of its own (its own compiled layout and resting meshes) whenever
+  `ShipwrightSessionInstance.getSurveyRevision` moves, freeing the last draft's meshes first (`releaseDraft`).
+  `ShipViewerRenderSystem` draws its meshes, and every cargo slot's first item, with the viewer's one material and its
+  `u_cutawayHeight` uniform (items never cut; a slot above the cut is skipped); `ShipViewerCameraSystem` orbits, pans
+  with the pointer, snaps (centred) and centres, and keeps the camera's right and up for the gizmo
+  `ShipViewerMenuSystem` places from positions made once; buttons route through `ShipViewerBranch`. The game's own
+  vehicle and item materials write the deferred G-buffer, which an editor viewport never lights, so the viewer keeps a
+  material of its own on the game's vehicle vertex shader.
 
 ---
 
@@ -91,8 +100,8 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   the ghost, the hover outline, the sheet's glyphs and the furniture overlap check all read it.
 - **New option.** Add it to its tool's enum or list, list it in its `ShipwrightTab` (tool, option, section), handle it
   in `ShipwrightEditBranch.getHeldOption` / `hold` when it is a new tool, `ShipwrightManager.getOptionName`, its
-  footprint, its `find...Problem`, its glyph in `ShipwrightDraftBranch.drawGlyph` and its `pick` order in
-  `ShipwrightInspectBranch`.
+  footprint, its `find...Problem`, its glyph in `ShipwrightDraftBranch.drawGlyph`, its picture in
+  `ShipwrightPreviewBranch` and its `pick` order in `ShipwrightInspectBranch`.
 - **Catalogue indices are entries.** `getOptionIndex`, `pickOption` and the tiles' action argument are the tab's entry
   index, not the tool's option; read the tool's own option through `getHeldOption` / `getEntryOption`.
 - **New fitting.** Lay what it cuts into the grid before the merge, record its octant box in `ShipLayoutStruct`
@@ -141,23 +150,39 @@ first and rails the rim after, so a waist painted wide never rails its own octan
 - **Rails are posts.** `ShipPiece.RAILS` is still one octant in the grid for every rule and collision check, but is
   built by `ShipwrightHullBranch.addRailings` as posts and handrails, never merged whole. Lips and gun platforms are
   slab pieces: `ShipOctantGridStruct.mergeInto` keeps only `getHeight()` sub-voxels of their top layer.
+- **Every opening through a wall is a tunnel.** Doors, windows and gun ports go through
+  `ShipwrightFittingBranch.cutTunnel`: one depth for the whole opening, outboard through a curved side's open octants
+  (`resolveTunnelReach`), and every open octant around it at the hull closed with the same wall (`frameTunnel`). A door
+  or window finds its wall across the side with `resolveOpeningZ`, and the table keeps it at the octant found
+  (`resolveWallCell`), so the compile, the cargo and the glyph agree.
+- **Strokes compile as they go.** Walls, the waist and windows (`isPaintedHand`, all but the deck) are compiled at
+  every octant a stroke changes; the stroke keeps whether a build problem stood before it began
+  (`hadStrokeBuildProblem`), so the strict refusal at its end still compares with the ship before the stroke.
 - **Glazed windows keep the sea out.** Only an open cut through the side lowers the opening sill; a window does not.
   `addPortholes` runs after the first float (it needs the draft) and the hull is floated again when it framed any.
 - **The bottom deck's waist is glazed by the edit branch,** not the compile: `glazeWaist` adds a glass floor placement
   over each octant a waist stroke cut or uncovered, compiling after each, inside the same undo step.
-- **Railings replace the edge.** `layEdge` lays railings and half walls off open floor; it clears the side, bulwark or rail standing over its octant up to the deck
-  above before laying the rail, so walls run after bulwarks and the waist; `findRailingProblem` is the one rule (above
-  the last waterline, open floor or the deck's own side or bulwark). There is no porch: never add an overhanging
-  floor; a porch is a railed stretch of deck.
+- **Every wall kind shares one rule and one layer.** `findWallProblem` is the one rule for full walls, half walls,
+  railings and lips (open floor, the waist's rail or a bulwark, or in place of the side for all but a full wall; the
+  waterline only where `opensSide`), and `layWall` the one layer: in place of the side it calls `openSide`, which
+  clears every layer up to the deck above walking outboard through a flared side (`clearOutboard`), otherwise
+  `clearLanding` takes down a rail or bulwark; walls run after bulwarks and the waist. There is no porch: never add an
+  overhanging floor; a porch is a railed stretch of deck.
+- **Straight sides over a narrow deck.** `resolveSection` blends the side between two decks unless the deck above is
+  drawn more than `SHIP_TUMBLEHOME_OCTANTS` inside the one below; then its own outline rises straight from the lower
+  floor.
+- **Every catalogue picture is built, not drawn.** `ShipwrightPreviewBranch` lays each option no item stands for in a
+  scratch layout and builds it with the hull, fitting and compile branches' own builders (`mergePieces`,
+  `addRailings`, `addHatchLids`, `addGrates`, `addGlassFloors`, `addPortLids`, `addLadders`, `addBoardingLadders`,
+  `addPanes`, `buildHelm`, `buildCapstan`); a new option gets its picture there.
 - **Grates and glass floors are fixed covers.** `layCovers` runs after hatches; `layOpeningCover` is the one extent
   rule for hatch lids and covers, `findCoverProblem` the one placement rule, and a cover takes down the waist rail
   along its sides (`unrailCover`). `addGrates` and `addGlassFloors` build every cover of a kind as fixed parts; never
   give one a hinge.
-- **Walls replace automatic edges.** A full wall (or a half wall over a rail or bulwark) clears the waist's rail or the
-  bulwark in its column through `clearLanding` before it rises; railings, lips and other half walls go through
-  `layEdge`.
 - **Masts step on decks, not the keel.** `resolveFootLayer` is the lowest deck drawn under both octants; heads are
-  measured from `resolveHeadBase` and ranked from the middle mast of the line.
+  measured from `resolveHeadBase` and ranked from the middle mast of the line. The crow's nest stands over
+  `SHIP_CROWS_NEST_TIERS` tiers, and `addMastLadder` builds the ladder up the mast's after face from the nest through
+  `ShipwrightFittingBranch.addLadder`, the one ladder builder.
 - **Dialogs hide the table.** A label draws over every menu's sprites, so the table's menus are hidden
   (`ShipwrightSystem.setMenusShown`) while a dialog is open, as the Settings menu hides its parent; the catalogue's
   icons are skipped then too.

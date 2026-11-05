@@ -77,6 +77,7 @@ class ShipwrightFittingBranch extends BranchPackage {
     private int[] panelMax;
     private int[] boxMin;
     private int[] boxMax;
+    private int[] tunnelBox;
 
     // Base \\
 
@@ -90,6 +91,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         this.panelMax = new int[EngineSetting.AXIS_COUNT];
         this.boxMin = new int[EngineSetting.AXIS_COUNT];
         this.boxMax = new int[EngineSetting.AXIS_COUNT];
+        this.tunnelBox = new int[EngineSetting.BOX_INT_STRIDE];
     }
 
     @Override
@@ -126,9 +128,9 @@ class ShipwrightFittingBranch extends BranchPackage {
         cutPorts(blueprint, layout);
     }
 
-    // An opening a footprint across, rising from a height over its deck's floor, cut through the wall or planking
-    // it is set on and only through that, in every column of its footprint the wall runs through; a window is
-    // glazed across the octants it cut, its glass keeping the sea out where it is cut through the side
+    // An opening a footprint across, rising from a height over its deck's floor, cut as a tunnel through the wall or
+    // planking found across the side from where it was set, however the side curves there; a window is glazed across
+    // the octants it was set on, its glass keeping the sea out where it is cut through the side
     private void cutOpening(
             ShipLayoutStruct layout,
             int cell,
@@ -139,38 +141,140 @@ class ShipwrightFittingBranch extends BranchPackage {
             boolean glazed) {
 
         ShipOctantGridStruct grid = layout.getGrid();
-        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int deck = ShipCellUtility.unpackLevel(cell);
+        int floor = deck * EngineSetting.SHIP_DECK_HEIGHT;
         int spin = ShipCellUtility.unpackSpin(cell);
         int startX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
-        int startZ = ShipCellUtility.unpackZ(cell);
-        ShipPiece wall = grid.get(startX, floor + sill, startZ);
+        int startZ = resolveOpeningZ(layout, deck, ShipCellUtility.unpackX(cell), ShipCellUtility.unpackZ(cell), sill);
 
-        if (wall == null || !wall.isCuttable()) {
+        if (startZ == EngineSetting.INDEX_NOT_FOUND) {
             layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_OPENING_WALL);
             return;
         }
 
+        ShipPiece wall = grid.get(startX, floor + sill, startZ);
+
         for (int y = floor + sill; y < floor + sill + height; y++)
             for (int z = startZ; z < startZ + sizeZ; z++)
-                for (int x = startX; x < startX + sizeX; x++) {
-
+                for (int x = startX; x < startX + sizeX; x++)
                     if (shipwrightHullBranch.isFloor(grid, x, y, z)) {
                         layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_OPENING_HEIGHT);
                         return;
                     }
 
-                    cutThrough(layout, x, y, z, ShipCellUtility.stepX(spin), ShipCellUtility.stepZ(spin), wall,
-                            !glazed);
-                }
+        boolean alongX = ShipCellUtility.stepX(spin) != 0;
+        int outboard = resolveOutboard(layout, startX, floor + sill, startZ, alongX ? 1 : 0, alongX ? 0 : 1);
+
+        cutTunnel(layout, startX, floor + sill, startZ, startX + sizeX, floor + sill + height, startZ + sizeZ,
+                alongX ? outboard : 0, alongX ? 0 : outboard, wall, !glazed);
 
         if (glazed)
             layout.addPane(startX, floor + sill, startZ, startX + sizeX, floor + sill + height, startZ + sizeZ, spin);
     }
 
-    // Walks across a wall from an octant along a step, clearing it for as long as it stays the piece the opening
-    // was set on, so an opening never reaches past the wall it is cut through; an open one through the side lowers
-    // the sill the sea comes aboard over
-    private void cutThrough(
+    // The octant across the side from an octant of a deck where a door or window set there meets a wall, bulwark or
+    // planking at its height: the octant itself, else the nearest outboard, else inboard, within reach, so one set on
+    // the deck's rim finds the side however far it curves out or in over the deck; INDEX_NOT_FOUND when none is
+    int resolveOpeningZ(ShipLayoutStruct layout, int deck, int x, int z, int sill) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int gridX = layout.getOriginX() + x;
+        int y = deck * EngineSetting.SHIP_DECK_HEIGHT + sill;
+        int outboard = z >= EngineSetting.SHIP_SHEET_HALF_BREADTH ? 1 : -1;
+
+        for (int reach = 0; reach <= EngineSetting.SHIP_OPENING_REACH; reach++)
+            if (isCuttable(grid.get(gridX, y, z + outboard * reach)))
+                return z + outboard * reach;
+
+        for (int reach = 1; reach <= EngineSetting.SHIP_OPENING_REACH; reach++)
+            if (isCuttable(grid.get(gridX, y, z - outboard * reach)))
+                return z - outboard * reach;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private static boolean isCuttable(ShipPiece piece) {
+        return piece != null && piece.isCuttable();
+    }
+
+    // An opening's box of start octants cut as a tunnel through the wall or planking it is set in: carried along the
+    // axis it faces either way as far as that wall reaches from any of its octants — outboard past the open octants
+    // inside a curved side to the planking beyond — cleared of it, and every octant left open beside, over or under
+    // the tunnel at the hull closed with the same wall, so the opening leaves no gap however the side curves; an open
+    // one through the side lowers the sill the sea comes aboard over. The outboard step is a unit along the axis the
+    // opening faces, and the tunnel's box is left in tunnelBox
+    private void cutTunnel(
+            ShipLayoutStruct layout,
+            int minX,
+            int minY,
+            int minZ,
+            int maxX,
+            int maxY,
+            int maxZ,
+            int outX,
+            int outZ,
+            ShipPiece wall,
+            boolean open) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int ahead = 0;
+        int behind = 0;
+
+        for (int y = minY; y < maxY; y++)
+            for (int z = minZ; z < maxZ; z++)
+                for (int x = minX; x < maxX; x++) {
+                    ahead = Math.max(ahead, resolveTunnelReach(layout, x, y, z, outX, outZ, wall, true));
+                    behind = Math.max(behind, resolveTunnelReach(layout, x, y, z, -outX, -outZ, wall, false));
+                }
+
+        int lowX = Math.min(minX - outX * behind, minX + outX * ahead);
+        int lowZ = Math.min(minZ - outZ * behind, minZ + outZ * ahead);
+        int highX = Math.max(maxX - outX * behind, maxX + outX * ahead);
+        int highZ = Math.max(maxZ - outZ * behind, maxZ + outZ * ahead);
+
+        for (int y = minY; y < maxY; y++)
+            for (int z = lowZ; z < highZ; z++)
+                for (int x = lowX; x < highX; x++) {
+
+                    ShipPiece piece = grid.get(x, y, z);
+
+                    if (!isTunnelWall(piece, wall))
+                        continue;
+
+                    if (open && piece != ShipPiece.WALLS)
+                        layout.lowerOpeningSill(y * EngineSetting.SUB_BLOCK_SIZE);
+
+                    grid.clear(x, y, z);
+                }
+
+        frameTunnel(layout, lowX, minY, lowZ, highX, maxY, highZ, outX, outZ, wall);
+
+        tunnelBox[EngineSetting.BOX_MIN_X] = lowX;
+        tunnelBox[EngineSetting.BOX_MIN_Y] = minY;
+        tunnelBox[EngineSetting.BOX_MIN_Z] = lowZ;
+        tunnelBox[EngineSetting.BOX_MAX_X] = highX;
+        tunnelBox[EngineSetting.BOX_MAX_Y] = maxY;
+        tunnelBox[EngineSetting.BOX_MAX_Z] = highZ;
+    }
+
+    // The way along an axis that leads out of the hull from an octant: toward the side it lies outside of, else away
+    // from the centre line, else forward
+    private int resolveOutboard(ShipLayoutStruct layout, int gridX, int y, int z, int stepX, int stepZ) {
+
+        int x = gridX - layout.getOriginX();
+
+        if (!layout.isVolume(x + stepX, y, z + stepZ))
+            return 1;
+
+        if (!layout.isVolume(x - stepX, y, z - stepZ))
+            return -1;
+
+        return stepZ != 0 && z < EngineSetting.SHIP_SHEET_HALF_BREADTH ? -1 : 1;
+    }
+
+    // How many octants past an opening's octant along a step its wall still reaches: through the wall itself, and
+    // outboard through the open octants inside a curved side as far as the planking beyond
+    private int resolveTunnelReach(
             ShipLayoutStruct layout,
             int x,
             int y,
@@ -178,23 +282,67 @@ class ShipwrightFittingBranch extends BranchPackage {
             int stepX,
             int stepZ,
             ShipPiece wall,
-            boolean open) {
+            boolean outboard) {
 
         ShipOctantGridStruct grid = layout.getGrid();
+        boolean side = wall != ShipPiece.WALLS && outboard;
+        int reach = 0;
 
-        for (int reach = 0; reach <= EngineSetting.SHIP_OPENING_REACH; reach++) {
+        for (int step = 1; step <= EngineSetting.SHIP_OPENING_REACH; step++) {
 
-            int atX = x + stepX * reach;
-            int atZ = z + stepZ * reach;
+            int atX = x + stepX * step;
+            int atZ = z + stepZ * step;
+            ShipPiece piece = grid.get(atX, y, atZ);
 
-            if (grid.get(atX, y, atZ) != wall)
-                return;
+            if (isTunnelWall(piece, wall)) {
+                reach = step;
+                continue;
+            }
 
-            if (open && wall != ShipPiece.WALLS)
-                layout.lowerOpeningSill(y * EngineSetting.SUB_BLOCK_SIZE);
-
-            grid.clear(atX, y, atZ);
+            if (piece != null || !side || !layout.isVolume(atX - layout.getOriginX(), y, atZ))
+                break;
         }
+
+        return reach;
+    }
+
+    // Every open octant beside, over or under a tunnel at the hull closed with the wall it was cut through: inside the
+    // hull, or right outboard of it along the tunnel's axis, so nothing opens past the tunnel's sides
+    private void frameTunnel(
+            ShipLayoutStruct layout,
+            int minX,
+            int minY,
+            int minZ,
+            int maxX,
+            int maxY,
+            int maxZ,
+            int stepX,
+            int stepZ,
+            ShipPiece wall) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int acrossX = stepX == 0 ? 1 : 0;
+        int acrossZ = stepZ == 0 ? 1 : 0;
+
+        for (int y = minY - 1; y <= maxY; y++)
+            for (int z = minZ - acrossZ; z < maxZ + acrossZ; z++)
+                for (int x = minX - acrossX; x < maxX + acrossX; x++) {
+
+                    boolean inside = y >= minY && y < maxY && x >= minX && x < maxX && z >= minZ && z < maxZ;
+                    int sheetX = x - layout.getOriginX();
+
+                    if (inside || !grid.isEmpty(x, y, z) || !grid.contains(x, y, z))
+                        continue;
+
+                    if (layout.isVolume(sheetX, y, z) || layout.isVolume(sheetX - stepX, y, z - stepZ))
+                        grid.set(x, y, z, wall);
+                }
+    }
+
+    // True for a piece a tunnel through a wall clears: the wall itself, or any of the side's planking and bulwarks
+    // for one through the side
+    private static boolean isTunnelWall(ShipPiece piece, ShipPiece wall) {
+        return piece == wall || wall != ShipPiece.WALLS && (piece == ShipPiece.HULL || piece == ShipPiece.BULWARK);
     }
 
     // Every gun platform laid on its floor, the lidded port the cannon set on it fires through cut right before it
@@ -206,8 +354,9 @@ class ShipwrightFittingBranch extends BranchPackage {
             cutPort(layout, platforms.getInt(i));
     }
 
-    // A platform's bed over a cannon's footprint, and its port through the planking of the row right before it, as
-    // high as the barrel of a cannon standing on the bed
+    // A platform's bed over a cannon's footprint, and its port through the planking before it, as high as the barrel
+    // of a cannon standing on the bed, cut as a tunnel right through however the side curves there, its lid on the
+    // tunnel's outer end
     private void cutPort(ShipLayoutStruct layout, int cell) {
 
         String problem = findPlatformProblem(layout, cell);
@@ -231,40 +380,27 @@ class ShipwrightFittingBranch extends BranchPackage {
             for (int x = startX; x < startX + sizeX; x++)
                 grid.set(x, floor + 1, z, ShipPiece.PLATFORMS);
 
-        int minX = Integer.MAX_VALUE;
-        int minZ = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int maxZ = Integer.MIN_VALUE;
-
-        for (int along = 0; along < span; along++) {
-
-            int x = resolveMuzzleX(startX, sizeX, spin, along);
-            int z = resolveMuzzleZ(startZ, sizeZ, spin, along);
-
-            for (int y = sill; y < sill + EngineSetting.SHIP_GUN_PORT_HEIGHT; y++) {
-
-                ShipPiece side = grid.get(x, y, z);
-
-                if (side != ShipPiece.HULL && side != ShipPiece.BULWARK)
-                    continue;
-
-                if (side == ShipPiece.HULL)
-                    layout.lowerOpeningSill(y * EngineSetting.SUB_BLOCK_SIZE);
-
-                grid.clear(x, y, z);
-                minX = Math.min(minX, x);
-                minZ = Math.min(minZ, z);
-                maxX = Math.max(maxX, x + 1);
-                maxZ = Math.max(maxZ, z + 1);
-            }
-        }
-
-        layout.addPort(minX, sill, minZ, maxX, sill + EngineSetting.SHIP_GUN_PORT_HEIGHT, maxZ, spin);
+        cutTunnel(
+                layout,
+                resolveMuzzleX(startX, sizeX, spin, 0),
+                sill,
+                resolveMuzzleZ(startZ, sizeZ, spin, 0),
+                resolveMuzzleX(startX, sizeX, spin, span - 1) + 1,
+                sill + EngineSetting.SHIP_GUN_PORT_HEIGHT,
+                resolveMuzzleZ(startZ, sizeZ, spin, span - 1) + 1,
+                ShipCellUtility.stepX(spin),
+                ShipCellUtility.stepZ(spin),
+                ShipPiece.HULL,
+                true);
+        layout.addPort(
+                tunnelBox[EngineSetting.BOX_MIN_X], tunnelBox[EngineSetting.BOX_MIN_Y],
+                tunnelBox[EngineSetting.BOX_MIN_Z], tunnelBox[EngineSetting.BOX_MAX_X],
+                tunnelBox[EngineSetting.BOX_MAX_Y], tunnelBox[EngineSetting.BOX_MAX_Z], spin);
     }
 
     // Why a gun platform cannot stand at a cell, SHIP_PROBLEM_NONE when it can: a cannon's footprint of open floor,
-    // facing planking it cuts a port through at the barrel's height, the port touching no other; the footprint is
-    // left resolved
+    // facing planking within reach that it cuts a port through at the barrel's height, the port touching no other;
+    // the footprint is left resolved
     String findPlatformProblem(ShipLayoutStruct layout, int cell) {
 
         if (!furnishingManager.hasFurnishing(EngineSetting.SHIP_CANNON_FURNISHING))
@@ -292,9 +428,18 @@ class ShipwrightFittingBranch extends BranchPackage {
 
         for (int along = 0; along < span; along++)
             for (int y = sill; y < sill + EngineSetting.SHIP_GUN_PORT_HEIGHT; y++)
-                if (grid.get(resolveMuzzleX(startX, sizeX, spin, along), y,
-                        resolveMuzzleZ(startZ, sizeZ, spin, along)) == ShipPiece.HULL)
-                    return EngineSetting.SHIP_PROBLEM_NONE;
+                for (int reach = 0; reach <= EngineSetting.SHIP_OPENING_REACH; reach++) {
+
+                    ShipPiece side = grid.get(
+                            resolveMuzzleX(startX, sizeX, spin, along) + ShipCellUtility.stepX(spin) * reach, y,
+                            resolveMuzzleZ(startZ, sizeZ, spin, along) + ShipCellUtility.stepZ(spin) * reach);
+
+                    if (side == ShipPiece.HULL)
+                        return EngineSetting.SHIP_PROBLEM_NONE;
+
+                    if (side != null && side != ShipPiece.BULWARK)
+                        break;
+                }
 
         return EngineSetting.SHIPWRIGHT_PROBLEM_PLATFORM_PORT;
     }
@@ -362,6 +507,11 @@ class ShipwrightFittingBranch extends BranchPackage {
     int resolveOpeningSpin(ShipLayoutStruct layout, int deck, int x, int z, int sill, int spin) {
 
         ShipOctantGridStruct grid = layout.getGrid();
+        int wallZ = resolveOpeningZ(layout, deck, x, z, sill);
+
+        if (wallZ != EngineSetting.INDEX_NOT_FOUND)
+            z = wallZ;
+
         int gridX = layout.getOriginX() + x;
         int y = deck * EngineSetting.SHIP_DECK_HEIGHT + sill;
         ShipPiece wall = grid.get(gridX, y, z);
@@ -377,13 +527,10 @@ class ShipwrightFittingBranch extends BranchPackage {
         return z >= EngineSetting.SHIP_SHEET_HALF_BREADTH ? 1 : EngineSetting.ENCODED_FACE_SPIN_COUNT - 1;
     }
 
-    // True when a door or window could be set at an octant: on a wall, bulwark or planking at its height
+    // True when a door or window could be set at an octant: on a wall, bulwark or planking at its height there or
+    // across the side within reach
     boolean isOpeningWall(ShipLayoutStruct layout, int deck, int x, int z, int sill) {
-
-        ShipPiece piece = layout.getGrid().get(
-                layout.getOriginX() + x, deck * EngineSetting.SHIP_DECK_HEIGHT + sill, z);
-
-        return piece != null && piece.isCuttable();
+        return resolveOpeningZ(layout, deck, x, z, sill) != EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Fittings \\
@@ -410,7 +557,7 @@ class ShipwrightFittingBranch extends BranchPackage {
     // Lids \\
 
     // A lid lying flush in every hatchway, hinged along its longer side, swinging up and over
-    private void addHatchLids(ShipLayoutStruct layout) {
+    void addHatchLids(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getHatchBoxes();
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
@@ -438,7 +585,7 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // One fixed part of every grate lying flush over an opening, thin slats with wide gaps between them to walk on and
     // see through
-    private void addGrates(ShipLayoutStruct layout) {
+    void addGrates(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getGrateBoxes();
 
@@ -467,7 +614,7 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // Every glass floor lying flush over its opening: glass set a sub-voxel below an iron frame round its rim and a
     // bar across it every few octants either way, walked on and seen through to the deck or the sea below
-    private void addGlassFloors(ShipLayoutStruct layout) {
+    void addGlassFloors(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getGlassFloorBoxes();
 
@@ -534,7 +681,7 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // A lid over every gun port cut through the planking, closing it from outside, hinged along its top outer edge,
     // swinging out and up
-    private void addPortLids(ShipLayoutStruct layout) {
+    void addPortLids(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getPortBoxes();
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
@@ -681,7 +828,7 @@ class ShipwrightFittingBranch extends BranchPackage {
     // Ladders \\
 
     // Every ladder a pair of rails at its sides and a sheet of rungs across the edge it faces, all one climbable part
-    private void addLadders(ShipLayoutStruct layout) {
+    void addLadders(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getLadderBoxes();
 
@@ -702,7 +849,8 @@ class ShipwrightFittingBranch extends BranchPackage {
         layout.addPart(ladders);
     }
 
-    private void addLadder(IntArrayList boxes, int ladderIndex, VehiclePartStruct ladders, VehiclePartStruct rails) {
+    // One ladder of a list of fitting boxes, its rails and its sheet of rungs added to the parts given
+    void addLadder(IntArrayList boxes, int ladderIndex, VehiclePartStruct ladders, VehiclePartStruct rails) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int rail = EngineSetting.SHIP_LADDER_RAIL_SUB_VOXELS;
@@ -744,7 +892,7 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // Every boarding ladder rungs between two ropes hung clear of the side from the keel up past the deck's edge, and a
     // step bridging its head to the deck, its rungs and ropes climbable
-    private void addBoardingLadders(ShipLayoutStruct layout) {
+    void addBoardingLadders(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getBoardingLadderBoxes();
 
@@ -886,7 +1034,7 @@ class ShipwrightFittingBranch extends BranchPackage {
     }
 
     // A pane of glass a sub-voxel thick across the middle of every window, solid to whoever leans on it
-    private void addPanes(ShipLayoutStruct layout) {
+    void addPanes(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getPaneBoxes();
 
