@@ -13,6 +13,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipPickStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipSurveyStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTab;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.shipwrightpipeline.shipwrightmanager.ShipwrightManager;
 import application.bootstrap.shipwrightpipeline.util.ShipCellUtility;
@@ -41,10 +42,10 @@ public class ShipwrightSystem extends SystemPackage {
      * while held, and the pointer moves it whenever it passes over the sheet.
      * The jump binding or the left button draws with the tool in hand while
      * held and the sprint binding or the right button erases, a stroke at a
-     * time; the activate binding takes up the next tool, the turn bindings
-     * turn what is set down next either way and the rotate binding turns it
-     * on, the cycle bindings step through the catalogue of the tool in hand
-     * and the level bindings or the wheel step the deck, so every change the
+     * time; the activate binding opens the next tab of the catalogue, the turn
+     * bindings turn what is set down next either way and the rotate binding
+     * turns it on, the cycle bindings step through the tab open and the level
+     * bindings or the wheel step the deck, so every change the
      * menu makes can also be made from the bindings alone, a controller's
      * among them. Undo, redo and save work as everywhere else, a save that
      * cannot be made saying why through ShipwrightDialogSystem; the pause
@@ -53,11 +54,11 @@ public class ShipwrightSystem extends SystemPackage {
      * own. While the name is typed
      * the keys type it, Enter keeps it and the pause binding drops it.
      * Whenever the session changes, what stands under the cursor is looked
-     * at again and the labels are rewritten: the tool in hand lit among the
-     * tools, the line under the sheet naming what stands under the cursor and
-     * what draw and erase will do there, or why the thing in hand cannot
-     * stand there, and every measure of the ship. The catalogue of the tool
-     * in hand is ShipwrightCatalogueSystem's.
+     * at again and the labels are rewritten: the tab open lit among the tabs,
+     * the line under the sheet naming what stands under the cursor and what
+     * draw and erase will do there, or why the thing in hand cannot stand
+     * there, and every measure of the ship. The catalogue of the tab open is
+     * ShipwrightCatalogueSystem's.
      */
 
     // Internal
@@ -98,7 +99,7 @@ public class ShipwrightSystem extends SystemPackage {
     private StringBuilder text;
 
     // Colors
-    private MenuColorStruct pickedToolColor;
+    private MenuColorStruct pickedTabColor;
 
     // Base \\
 
@@ -110,7 +111,7 @@ public class ShipwrightSystem extends SystemPackage {
         this.text = new StringBuilder();
 
         // Colors
-        this.pickedToolColor = new MenuColorStruct(EngineSetting.SHIPWRIGHT_PICKED_TOOL_COLOR);
+        this.pickedTabColor = new MenuColorStruct(EngineSetting.SHIPWRIGHT_PICKED_TOOL_COLOR);
     }
 
     @Override
@@ -228,7 +229,7 @@ public class ShipwrightSystem extends SystemPackage {
 
         if (inputManager.bindingClicked(KeyBindings.ACTIVATE, window)) {
             shipwrightManager.endStroke(session);
-            shipwrightManager.nextTool(session);
+            shipwrightManager.nextTab(session);
         }
 
         if (inputManager.bindingClicked(KeyBindings.ROTATE_ITEM, window)
@@ -412,7 +413,7 @@ public class ShipwrightSystem extends SystemPackage {
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_DECK, resolveDeck());
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_INSPECT, resolveInspection());
         setLabel(EngineSetting.SHIPWRIGHT_ENTRY_CATALOGUE_TITLE, resolveCatalogueTitle());
-        refreshTools();
+        refreshTabs();
         writeSurvey();
     }
 
@@ -437,8 +438,8 @@ public class ShipwrightSystem extends SystemPackage {
 
         text.setLength(0);
 
-        return text.append(session.getTool().getTitle()).append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
-                .append(EngineSetting.SHIPWRIGHT_HINTS[session.getTool().ordinal()]).toString();
+        return text.append(session.getTab().getTitle()).append(EngineSetting.SHIPWRIGHT_TEXT_SEPARATOR)
+                .append(EngineSetting.SHIPWRIGHT_HINTS[session.getTab().ordinal()]).toString();
     }
 
     // The deck picked, of how many, and whether its floor lies above or below the water
@@ -494,7 +495,7 @@ public class ShipwrightSystem extends SystemPackage {
                     .append(EngineSetting.SHIPWRIGHT_TEXT_ERASES).toString();
         }
 
-        int option = shipwrightManager.getOptionIndex(session);
+        int option = shipwrightManager.getHeldOption(session);
 
         if (option == EngineSetting.INDEX_NOT_FOUND && tool != ShipwrightTool.MASTS)
             return text.append(EngineSetting.SHIPWRIGHT_TEXT_NOTHING_IN_HAND).toString();
@@ -518,7 +519,7 @@ public class ShipwrightSystem extends SystemPackage {
 
         boolean turned = tool == ShipwrightTool.FURNITURE
                 || tool == ShipwrightTool.STAIRS && option != ShipClimb.BOARDING.ordinal()
-                || tool == ShipwrightTool.OPENINGS && ShipOpening.VALUES[option].isFloor();
+                || tool == ShipwrightTool.OPENINGS && ShipOpening.VALUES[option].isTurned();
 
         if (turned)
             out.append(EngineSetting.SHIPWRIGHT_TEXT_COMMA).append(EngineSetting.SHIPWRIGHT_FACINGS[spin]);
@@ -554,17 +555,17 @@ public class ShipwrightSystem extends SystemPackage {
         return out.append(InputNameUtility.getName(binding)).append(pointer);
     }
 
-    // The tool in hand's catalogue, how many it offers and the bindings that choose and turn
+    // The tab open, how many options it lists and the bindings that choose and turn
     private String resolveCatalogueTitle() {
 
         text.setLength(0);
         int count = shipwrightManager.getOptionCount(session);
 
-        text.append(session.getTool().getTitle());
+        text.append(session.getTab().getTitle());
 
         if (count == 0)
             return text.append(EngineSetting.SHIPWRIGHT_TEXT_DASH)
-                    .append(session.getTool() == ShipwrightTool.MASTS
+                    .append(session.getTab() == ShipwrightTab.MASTS
                             ? EngineSetting.SHIPWRIGHT_TEXT_NO_MASTS
                             : EngineSetting.SHIPWRIGHT_TEXT_NO_CATALOGUE).toString();
 
@@ -579,15 +580,15 @@ public class ShipwrightSystem extends SystemPackage {
                 .toString();
     }
 
-    // The tool in hand lit among the tools
-    private void refreshTools() {
+    // The tab open lit among the tabs
+    private void refreshTabs() {
 
-        for (int i = 0; i < ShipwrightTool.VALUES.length; i++) {
+        for (int i = 0; i < ShipwrightTab.VALUES.length; i++) {
 
-            ElementInstance button = tableMenu.getEntryPoint(EngineSetting.SHIPWRIGHT_ENTRY_TOOLS + i);
+            ElementInstance button = tableMenu.getEntryPoint(EngineSetting.SHIPWRIGHT_ENTRY_TABS + i);
 
             if (button != null)
-                button.setColorOverride(ShipwrightTool.VALUES[i] == session.getTool() ? pickedToolColor : null);
+                button.setColorOverride(ShipwrightTab.VALUES[i] == session.getTab() ? pickedTabColor : null);
         }
     }
 

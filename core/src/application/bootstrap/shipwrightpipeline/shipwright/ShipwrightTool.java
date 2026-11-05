@@ -16,7 +16,8 @@ public enum ShipwrightTool {
      * the capstan are set down. A painted tool works every octant the cursor
      * crosses while held; any other works the octant it was pressed on once,
      * setting the thing in hand down there or picking up or taking away
-     * whatever already stands there.
+     * whatever already stands there. Tools are taken up through the options
+     * the catalogue's tabs list, ShipwrightTab.
      */
 
     DECK(EngineSetting.SHIPWRIGHT_TOOL_DECK, true, true),
@@ -59,10 +60,5 @@ public enum ShipwrightTool {
     // True for a tool whose every stroke is drawn on both sides of the centre line at once
     public boolean isMirrored() {
         return mirrored;
-    }
-
-    // The tool after this one, round to the first
-    public ShipwrightTool next() {
-        return VALUES[(ordinal() + 1) % VALUES.length];
     }
 }

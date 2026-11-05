@@ -13,7 +13,8 @@ public class ShipOctantGridStruct extends StructPackage {
      * grid holds the piece it is built as, or nothing. Pieces are laid,
      * overwritten and cut here, then each is merged into the fewest boxes its
      * octants allow — runs along the length first, then across the breadth,
-     * then up — and written into its vehicle part in sub-voxels, so the
+     * then up — and written into its vehicle part in sub-voxels, a piece
+     * shorter than an octant keeping only the bottom of its top layer, so the
      * greedy mesher downstream starts from large flat faces. Kept by its
      * owner and resized in place, so recompiling a ship allocates only when it
      * outgrows every ship compiled before it.
@@ -104,6 +105,7 @@ public class ShipOctantGridStruct extends StructPackage {
 
         int count = sizeX * sizeY * sizeZ;
         int scale = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        int trim = scale - piece.getHeight();
         byte target = piece.toCell();
         boolean any = false;
 
@@ -134,7 +136,7 @@ public class ShipOctantGridStruct extends StructPackage {
                         endY++;
 
                     markMerged(x, endX, y, endY, z, endZ);
-                    part.addBox(x * scale, y * scale, z * scale, endX * scale, endY * scale, endZ * scale);
+                    part.addBox(x * scale, y * scale, z * scale, endX * scale, endY * scale - trim, endZ * scale);
                     any = true;
                 }
 

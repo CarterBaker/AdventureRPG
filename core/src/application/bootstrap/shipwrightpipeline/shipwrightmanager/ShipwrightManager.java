@@ -12,6 +12,7 @@ import application.bootstrap.shipwrightpipeline.shipwright.ShipPreviewStruct;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipWall;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTab;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
 import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
@@ -295,6 +296,10 @@ public class ShipwrightManager extends ManagerPackage {
         int z = ShipwrightEditBranch.toSheetZ(session.getCursorV());
 
         shipwrightInspectBranch.pick(session, x, z, session.getHover());
+
+        if (shipwrightEditBranch.isMounting(session, session.getHover()))
+            session.getHover().clear();
+
         session.setPlacementProblem(session.getHover().isEmpty()
                 ? shipwrightEditBranch.findPlacementProblem(session, x, z)
                 : EngineSetting.SHIP_PROBLEM_NONE);
@@ -418,8 +423,8 @@ public class ShipwrightManager extends ManagerPackage {
 
     // Edit \\
 
-    public void setTool(ShipwrightSessionInstance session, ShipwrightTool tool) {
-        session.setTool(tool);
+    public void selectTab(ShipwrightSessionInstance session, ShipwrightTab tab) {
+        shipwrightEditBranch.selectTab(session, tab);
     }
 
     public void beginStroke(ShipwrightSessionInstance session, boolean erasing) {
@@ -458,8 +463,8 @@ public class ShipwrightManager extends ManagerPackage {
         shipwrightEditBranch.pickOption(session, index);
     }
 
-    public void nextTool(ShipwrightSessionInstance session) {
-        session.setTool(session.getTool().next());
+    public void nextTab(ShipwrightSessionInstance session) {
+        shipwrightEditBranch.selectTab(session, session.getTab().next());
     }
 
     public void undo(ShipwrightSessionInstance session) {
@@ -480,14 +485,44 @@ public class ShipwrightManager extends ManagerPackage {
         return furnishingNames.size();
     }
 
-    // How many options the tool in hand offers in its catalogue
+    // How many options the tab open lists in its catalogue
     public int getOptionCount(ShipwrightSessionInstance session) {
         return shipwrightEditBranch.getOptionCount(session);
     }
 
-    // The option of the tool in hand picked, INDEX_NOT_FOUND when none is
+    // The entry of the tab open the option in hand is listed as, INDEX_NOT_FOUND when none is
     public int getOptionIndex(ShipwrightSessionInstance session) {
         return shipwrightEditBranch.getOptionIndex(session);
+    }
+
+    // The option of its tool in hand, INDEX_NOT_FOUND for no mast picked
+    public int getHeldOption(ShipwrightSessionInstance session) {
+        return shipwrightEditBranch.getHeldOption(session);
+    }
+
+    // The tool an entry of the tab open works
+    public ShipwrightTool getEntryTool(ShipwrightSessionInstance session, int entry) {
+        return shipwrightEditBranch.getEntryTool(session, entry);
+    }
+
+    // The option of its tool an entry of the tab open stands for
+    public int getEntryOption(ShipwrightSessionInstance session, int entry) {
+        return shipwrightEditBranch.getEntryOption(session, entry);
+    }
+
+    // The section of the tab open an entry is listed under: the tab's own for its fixed entries and masts, furniture
+    // by the folder its table is kept in
+    public String getEntrySection(ShipwrightSessionInstance session, int entry) {
+
+        ShipwrightTab tab = session.getTab();
+
+        if (entry < tab.getEntryCount())
+            return tab.getEntrySection(entry);
+
+        if (tab.getFollowingTool() == ShipwrightTool.MASTS)
+            return EngineSetting.SHIPWRIGHT_SECTION_MASTS;
+
+        return furnishingSections.get(getEntryOption(session, entry) - EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS);
     }
 
     // The name an option of a tool's catalogue is shown by
@@ -519,19 +554,6 @@ public class ShipwrightManager extends ManagerPackage {
             return EngineSetting.SHIPWRIGHT_TEXT_CAPSTAN;
 
         return resolveDisplayName(getItemFurnishingName(item));
-    }
-
-    // The section of a tool's catalogue an option is listed under: furniture by the folder its table is kept in, the
-    // helm and the capstan first, every other tool's options under the tool
-    public String getOptionSection(ShipwrightTool tool, int option) {
-
-        if (tool != ShipwrightTool.FURNITURE)
-            return tool.getTitle();
-
-        if (option < EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS)
-            return EngineSetting.SHIPWRIGHT_TEXT_FITTINGS;
-
-        return furnishingSections.get(option - EngineSetting.SHIPWRIGHT_ITEM_FURNISHINGS);
     }
 
     // The built fitting an option of a tool's catalogue is pictured by where no item stands for it, null for none

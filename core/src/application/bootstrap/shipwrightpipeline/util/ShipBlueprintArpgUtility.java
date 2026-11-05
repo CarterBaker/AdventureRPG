@@ -12,6 +12,7 @@ import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 
 public class ShipBlueprintArpgUtility extends EngineUtility {
 
@@ -24,9 +25,11 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
      * octant along the sheet from its "start", aft to fore; the "waists" cut
      * through its floor; and everything standing on it, each at [x, z]
      * across the full breadth, or [x, z, spin] where it faces a way: "walls",
-     * "half_walls", "railings", "doors", "windows", "hatches", "grates", "stairs",
-     * "ladders", "boarding_ladders" and every piece of "furniture" naming its
-     * furnishing table and its "cell". The "helm" and "capstan" are one
+     * "half_walls", "railings", "lips", "doors", "windows", "hatches",
+     * "grates", "glass_floors", "gun_platforms", "stairs", "ladders",
+     * "boarding_ladders" and every piece of "furniture" naming its furnishing
+     * table and its "cell". A deck kept before gun platforms were drawn gets
+     * one under every cannon standing on it. The "helm" and "capstan" are one
      * [deck, x, z] each, empty for none, and every mast keeps only its "x",
      * everything else about it following from the hull. findProblem() says
      * what keeps a file from
@@ -102,14 +105,18 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
                 || !areCellsSound(deckArpg, "walls", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "half_walls", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "railings", EngineSetting.SHIP_PLACE_FIELDS)
+                || !areCellsSound(deckArpg, "lips", EngineSetting.SHIP_PLACE_FIELDS)
                 || !areCellsSound(deckArpg, "doors", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "windows", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "hatches", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "grates", EngineSetting.SHIP_PLACE_FIELDS + 1)
+                || !areCellsSound(deckArpg, "glass_floors", EngineSetting.SHIP_PLACE_FIELDS + 1)
+                || !areCellsSound(deckArpg, "gun_platforms", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "stairs", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "ladders", EngineSetting.SHIP_PLACE_FIELDS + 1)
                 || !areCellsSound(deckArpg, "boarding_ladders", EngineSetting.SHIP_PLACE_FIELDS + 1))
-            return "its waist, a wall, railing, door, window, hatch, stair or ladder stands off its sheet";
+            return "its waist, a wall, railing, lip, door, window, hatch, floor, gun platform, stair or ladder stands"
+                    + " off its sheet";
 
         if (ArpgUtility.hasArray(deckArpg, "furniture"))
             for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
@@ -225,19 +232,34 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         parseWalls(deckArpg, "walls", deck, ShipWall.FULL, blueprint);
         parseWalls(deckArpg, "half_walls", deck, ShipWall.HALF, blueprint);
         parseWalls(deckArpg, "railings", deck, ShipWall.RAILING, blueprint);
+        parseWalls(deckArpg, "lips", deck, ShipWall.LIP, blueprint);
         parsePlaces(deckArpg, "doors", deck, blueprint.getDoors());
         parsePlaces(deckArpg, "windows", deck, blueprint.getWindows());
         parsePlaces(deckArpg, "hatches", deck, blueprint.getHatches());
         parsePlaces(deckArpg, "grates", deck, blueprint.getGrates());
+        parsePlaces(deckArpg, "glass_floors", deck, blueprint.getGlassFloors());
+        parsePlaces(deckArpg, "gun_platforms", deck, blueprint.getGunPlatforms());
         parsePlaces(deckArpg, "stairs", deck, blueprint.getStairs());
         parsePlaces(deckArpg, "ladders", deck, blueprint.getLadders());
         parsePlaces(deckArpg, "boarding_ladders", deck, blueprint.getBoardingLadders());
 
-        if (ArpgUtility.hasArray(deckArpg, "furniture"))
-            for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture"))
-                blueprint.getFurniture().add(new ShipFurnitureStruct(
-                        pieceArpg.getAsObject().get("furnishing").getAsString(),
-                        parsePlace(pieceArpg.getAsObject().getAsArray("cell"), deck)));
+        if (!ArpgUtility.hasArray(deckArpg, "furniture"))
+            return;
+
+        boolean platformed = ArpgUtility.hasArray(deckArpg, "gun_platforms");
+
+        for (ArpgElementStruct pieceArpg : deckArpg.getAsArray("furniture")) {
+
+            String furnishingName = pieceArpg.getAsObject().get("furnishing").getAsString();
+            int cell = parsePlace(pieceArpg.getAsObject().getAsArray("cell"), deck);
+
+            blueprint.getFurniture().add(new ShipFurnitureStruct(furnishingName, cell));
+
+            if (!platformed && furnishingName.equals(EngineSetting.SHIP_CANNON_FURNISHING))
+                blueprint.getGunPlatforms().add(cell);
+        }
+
+        IntArrays.quickSort(blueprint.getGunPlatforms().elements(), 0, blueprint.getGunPlatforms().size());
     }
 
     private static void parseWaists(ArpgObjectStruct deckArpg, int deck, ShipBlueprintStruct blueprint) {
@@ -331,10 +353,13 @@ public class ShipBlueprintArpgUtility extends EngineUtility {
         deckArpg.add("walls", writePlaces(blueprint.getWalls(), deck, false));
         deckArpg.add("half_walls", writePlaces(blueprint.getHalfWalls(), deck, false));
         deckArpg.add("railings", writePlaces(blueprint.getRailings(), deck, false));
+        deckArpg.add("lips", writePlaces(blueprint.getLips(), deck, false));
         deckArpg.add("doors", writePlaces(blueprint.getDoors(), deck, true));
         deckArpg.add("windows", writePlaces(blueprint.getWindows(), deck, true));
         deckArpg.add("hatches", writePlaces(blueprint.getHatches(), deck, true));
         deckArpg.add("grates", writePlaces(blueprint.getGrates(), deck, true));
+        deckArpg.add("glass_floors", writePlaces(blueprint.getGlassFloors(), deck, true));
+        deckArpg.add("gun_platforms", writePlaces(blueprint.getGunPlatforms(), deck, true));
         deckArpg.add("stairs", writePlaces(blueprint.getStairs(), deck, true));
         deckArpg.add("ladders", writePlaces(blueprint.getLadders(), deck, true));
         deckArpg.add("boarding_ladders", writePlaces(blueprint.getBoardingLadders(), deck, true));

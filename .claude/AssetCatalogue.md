@@ -100,6 +100,9 @@ One line per session that changed this file: the date, what was added or removed
   removed; the viewer shows the ship chosen in the hierarchy or at the Shipwright).
 - 2026-11-05: Grates. Regenerated `schemas/Vehicles.arpg` (`grates` in the deck default) for the Grate opening that
   covers a waist or other floor hole with a fixed walkable grate.
+- 2026-11-05: Shipwright tabs. Regenerated `menus/Shipwright.arpg` (the seven tool buttons replaced by the Structure,
+  Style, Masts and Furniture tabs) and `schemas/Vehicles.arpg` (`lips`, `glass_floors` and `gun_platforms` in the
+  deck default) for the tabbed catalogue, lips, glass floors and gun platforms.
 ---
 
 ## Textures and Sprites (2174 files)

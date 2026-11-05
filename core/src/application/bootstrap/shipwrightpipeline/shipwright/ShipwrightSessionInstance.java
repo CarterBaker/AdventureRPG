@@ -1,5 +1,7 @@
 package application.bootstrap.shipwrightpipeline.shipwright;
 
+import java.util.Arrays;
+
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -10,9 +12,10 @@ public class ShipwrightSessionInstance extends InstancePackage {
      * One drafting table in use: where the ships drawn at it are kept, the
      * blueprint on the sheet and the name it was last saved under, and the
      * history every change can be undone and redone through, one stroke or
-     * press at a time. It holds the tool in hand and what it works on — the
-     * deck picked, the wall, half wall or railing painted, whether an
-     * opening is a door, a window or a hatch, whether a climb is a stair, a
+     * press at a time. It holds the catalogue's tab open, the option each
+     * tab last held, the tool in hand and what it works on — the deck picked,
+     * the wall, half wall, railing or lip painted, which opening, cover or
+     * gun platform is set down, whether a climb is a stair, a
      * ladder or a boarding ladder, the mast picked, the furniture item and
      * the quarter turn something is set down at — and the cursor, the octant
      * of the sheet the pointer or the movement bindings last put it on, with
@@ -47,7 +50,9 @@ public class ShipwrightSessionInstance extends InstancePackage {
     private int strokeV;
     private int strokeSteps;
 
-    // Tool
+    // Tool — the tab open, the entry each tab last held by the tab's ordinal, and the tool in hand
+    private ShipwrightTab tab;
+    private int[] tabEntries;
     private ShipwrightTool tool;
     private int deck;
     private ShipWall wall;
@@ -110,6 +115,9 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
         // Inspect
         this.hover = new ShipPickStruct();
+
+        // Tool
+        this.tabEntries = new int[ShipwrightTab.VALUES.length];
         this.placementProblem = EngineSetting.SHIP_PROBLEM_NONE;
 
         // Naming
@@ -134,6 +142,8 @@ public class ShipwrightSessionInstance extends InstancePackage {
         this.storage = storage;
 
         // Tool
+        Arrays.fill(tabEntries, EngineSetting.INDEX_NOT_FOUND);
+        this.tab = ShipwrightTab.STRUCTURE;
         this.tool = ShipwrightTool.DECK;
         this.wall = ShipWall.FULL;
         this.opening = ShipOpening.DOOR;
@@ -287,9 +297,21 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     // Tool \\
 
-    public void setTool(ShipwrightTool tool) {
+    // Takes up a tool, its tab open
+    public void setTool(ShipwrightTab tab, ShipwrightTool tool) {
+        this.tab = tab;
         this.tool = tool;
         markChanged();
+    }
+
+    public void setTab(ShipwrightTab tab) {
+        this.tab = tab;
+        markChanged();
+    }
+
+    // Keeps the entry a tab held, to take up again when the tab is opened
+    public void setTabEntry(ShipwrightTab tab, int entry) {
+        tabEntries[tab.ordinal()] = entry;
     }
 
     public void setDeck(int deck) {
@@ -440,6 +462,15 @@ public class ShipwrightSessionInstance extends InstancePackage {
 
     public boolean canRedo() {
         return !redoStack.isEmpty();
+    }
+
+    public ShipwrightTab getTab() {
+        return tab;
+    }
+
+    // The entry a tab last held, INDEX_NOT_FOUND before it held any
+    public int getTabEntry(ShipwrightTab tab) {
+        return tabEntries[tab.ordinal()];
     }
 
     public ShipwrightTool getTool() {

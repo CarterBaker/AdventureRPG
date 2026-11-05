@@ -21,10 +21,12 @@ class ShipwrightInspectBranch extends BranchPackage {
      * and the sheet's highlight all share. Everything set down is found over
      * its whole footprint, not only the octant it was set at: furniture, the
      * helm and the capstan first, then doors and windows, ladders, boarding
-     * ladders, stairs, hatches and last the masts. The footprint any tool's
-     * option covers when set at a cell is worked out here too, so the ghost
-     * of the thing in hand and the thing once set down cover the same
-     * octants: a stair its whole run, a hatch the lid it was built with.
+     * ladders, stairs, hatches, grates, glass floors, gun platforms and last
+     * the masts, so a cannon is found before the platform it stands on. The
+     * footprint any tool's option covers when set at a cell is worked out
+     * here too, so the ghost of the thing in hand and the thing once set down
+     * cover the same octants: a stair its whole run, a hatch or a cover what
+     * it was built over, a gun platform the cannon it carries.
      */
 
     // Internal
@@ -80,7 +82,11 @@ class ShipwrightInspectBranch extends BranchPackage {
                 || pickCells(session, ShipwrightTool.OPENINGS, ShipOpening.HATCH.ordinal(), blueprint.getHatches(),
                         deck, x, z, pick)
                 || pickCells(session, ShipwrightTool.OPENINGS, ShipOpening.GRATE.ordinal(), blueprint.getGrates(),
-                        deck, x, z, pick))
+                        deck, x, z, pick)
+                || pickCells(session, ShipwrightTool.OPENINGS, ShipOpening.GLASS.ordinal(),
+                        blueprint.getGlassFloors(), deck, x, z, pick)
+                || pickCells(session, ShipwrightTool.OPENINGS, ShipOpening.PLATFORM.ordinal(),
+                        blueprint.getGunPlatforms(), deck, x, z, pick))
             return;
 
         pickMast(session, blueprint, x, z, pick);
@@ -237,15 +243,17 @@ class ShipwrightInspectBranch extends BranchPackage {
                 z + shipwrightFittingBranch.getFootprint(EngineSetting.AXIS_Z));
     }
 
-    // A door its door's footprint, a window its octant, a hatch or grate what it was built with or the square it cuts
+    // A door its door's footprint, a gun platform its cannon's, a window its octant, a hatch or cover what it was built
+    // over or the square it cuts
     private void resolveOpeningFootprint(ShipLayoutStruct layout, int option, int cell, ShipPickStruct out) {
 
         int x = ShipCellUtility.unpackX(cell);
         int z = ShipCellUtility.unpackZ(cell);
 
-        if (option == ShipOpening.DOOR.ordinal()) {
-            shipwrightFittingBranch.resolveFootprint(EngineSetting.SHIP_DOOR_FURNISHING,
-                    ShipCellUtility.unpackSpin(cell));
+        if (option == ShipOpening.DOOR.ordinal() || option == ShipOpening.PLATFORM.ordinal()) {
+            shipwrightFittingBranch.resolveFootprint(option == ShipOpening.DOOR.ordinal()
+                    ? EngineSetting.SHIP_DOOR_FURNISHING
+                    : EngineSetting.SHIP_CANNON_FURNISHING, ShipCellUtility.unpackSpin(cell));
             out.setFootprint(x, z, x + shipwrightFittingBranch.getFootprint(EngineSetting.AXIS_X),
                     z + shipwrightFittingBranch.getFootprint(EngineSetting.AXIS_Z));
             return;

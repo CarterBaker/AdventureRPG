@@ -19,12 +19,12 @@ public class ShipBlueprintStruct extends StructPackage {
      * outline: how many octants it reaches out from the centre line at every
      * octant along the sheet, mirrored to the other side. The waist is cut
      * through a deck's floor octant by octant, kept sorted, every octant and
-     * its mirror together. Walls, half walls, railings, doors, windows,
-     * hatches, stairs, ladders, boarding ladders and furniture stand on a
-     * deck at an octant along the length and across the full breadth, never
-     * mirrored, each packed through ShipCellUtility with its deck as its
-     * level; walls, half walls and railings are kept sorted and a place holds
-     * at most one of them. The helm and the capstan are one placement each,
+     * its mirror together. Walls, half walls, railings, lips, doors, windows,
+     * hatches, grates, glass floors, gun platforms, stairs, ladders, boarding
+     * ladders and furniture stand on a deck at an octant along the length and
+     * across the full breadth, never mirrored, each packed through
+     * ShipCellUtility with its deck as its level; walls, half walls, railings
+     * and lips are kept sorted and a place holds at most one of them. The helm and the capstan are one placement each,
      * and masts stand on the centre line kept from the stern forward. Copied whole for undo; every list writes in a fixed
      * order, so saving an unchanged blueprint writes the same bytes.
      */
@@ -45,10 +45,13 @@ public class ShipBlueprintStruct extends StructPackage {
     private final IntArrayList walls;
     private final IntArrayList halfWalls;
     private final IntArrayList railings;
+    private final IntArrayList lips;
     private final IntArrayList doors;
     private final IntArrayList windows;
     private final IntArrayList hatches;
     private final IntArrayList grates;
+    private final IntArrayList glassFloors;
+    private final IntArrayList gunPlatforms;
     private final IntArrayList stairs;
     private final IntArrayList ladders;
     private final IntArrayList boardingLadders;
@@ -83,10 +86,13 @@ public class ShipBlueprintStruct extends StructPackage {
         this.walls = new IntArrayList();
         this.halfWalls = new IntArrayList();
         this.railings = new IntArrayList();
+        this.lips = new IntArrayList();
         this.doors = new IntArrayList();
         this.windows = new IntArrayList();
         this.hatches = new IntArrayList();
         this.grates = new IntArrayList();
+        this.glassFloors = new IntArrayList();
+        this.gunPlatforms = new IntArrayList();
         this.stairs = new IntArrayList();
         this.ladders = new IntArrayList();
         this.boardingLadders = new IntArrayList();
@@ -129,10 +135,13 @@ public class ShipBlueprintStruct extends StructPackage {
         copyCells(other.walls, walls);
         copyCells(other.halfWalls, halfWalls);
         copyCells(other.railings, railings);
+        copyCells(other.lips, lips);
         copyCells(other.doors, doors);
         copyCells(other.windows, windows);
         copyCells(other.hatches, hatches);
         copyCells(other.grates, grates);
+        copyCells(other.glassFloors, glassFloors);
+        copyCells(other.gunPlatforms, gunPlatforms);
         copyCells(other.stairs, stairs);
         copyCells(other.ladders, ladders);
         copyCells(other.boardingLadders, boardingLadders);
@@ -221,10 +230,13 @@ public class ShipBlueprintStruct extends StructPackage {
         removeDeckCells(walls, deck);
         removeDeckCells(halfWalls, deck);
         removeDeckCells(railings, deck);
+        removeDeckCells(lips, deck);
         removeDeckCells(doors, deck);
         removeDeckCells(windows, deck);
         removeDeckCells(hatches, deck);
         removeDeckCells(grates, deck);
+        removeDeckCells(glassFloors, deck);
+        removeDeckCells(gunPlatforms, deck);
         removeDeckCells(stairs, deck);
         removeDeckCells(ladders, deck);
         removeDeckCells(boardingLadders, deck);
@@ -283,10 +295,13 @@ public class ShipBlueprintStruct extends StructPackage {
         pruneCells(walls);
         pruneCells(halfWalls);
         pruneCells(railings);
+        pruneCells(lips);
         pruneCells(doors);
         pruneCells(windows);
         pruneCells(hatches);
         pruneCells(grates);
+        pruneCells(glassFloors);
+        pruneCells(gunPlatforms);
         pruneCells(stairs);
         pruneCells(ladders);
         pruneCells(boardingLadders);
@@ -382,14 +397,18 @@ public class ShipBlueprintStruct extends StructPackage {
         if (findSorted(halfWalls, place) >= 0)
             return ShipWall.HALF;
 
-        return findSorted(railings, place) >= 0 ? ShipWall.RAILING : null;
+        if (findSorted(railings, place) >= 0)
+            return ShipWall.RAILING;
+
+        return findSorted(lips, place) >= 0 ? ShipWall.LIP : null;
     }
 
     public boolean hasWall(int level, int x, int z) {
         return getWall(level, x, z) != null;
     }
 
-    // Stands a full wall, half wall or railing at a place, replacing whichever stood there, or with null takes it down
+    // Stands a full wall, half wall, railing or lip at a place, replacing whichever stood there, or with null takes it
+    // down
     public void setWall(int level, int x, int z, ShipWall wall) {
 
         int place = ShipCellUtility.pack(level, x, z, 0);
@@ -397,6 +416,7 @@ public class ShipBlueprintStruct extends StructPackage {
         removeSorted(walls, place);
         removeSorted(halfWalls, place);
         removeSorted(railings, place);
+        removeSorted(lips, place);
 
         if (wall != null)
             setSorted(getWalls(wall), place, true);
@@ -578,11 +598,16 @@ public class ShipBlueprintStruct extends StructPackage {
         return railings;
     }
 
+    public IntArrayList getLips() {
+        return lips;
+    }
+
     // The placements of one kind of standing wall
     public IntArrayList getWalls(ShipWall wall) {
         return switch (wall) {
             case HALF -> halfWalls;
             case RAILING -> railings;
+            case LIP -> lips;
             default -> walls;
         };
     }
@@ -601,6 +626,14 @@ public class ShipBlueprintStruct extends StructPackage {
 
     public IntArrayList getGrates() {
         return grates;
+    }
+
+    public IntArrayList getGlassFloors() {
+        return glassFloors;
+    }
+
+    public IntArrayList getGunPlatforms() {
+        return gunPlatforms;
     }
 
     public IntArrayList getStairs() {
@@ -638,6 +671,8 @@ public class ShipBlueprintStruct extends StructPackage {
             case WINDOW -> windows;
             case HATCH -> hatches;
             case GRATE -> grates;
+            case GLASS -> glassFloors;
+            case PLATFORM -> gunPlatforms;
         };
     }
 

@@ -36,15 +36,22 @@ class ShipwrightFittingBranch extends BranchPackage {
      * and bars at its place, both standing on their deck's floor. A door or a
      * window is cut through the first wall, bulwark or planking it faces,
      * searching a little outward from where it was set down, a door full
-     * height and a window at chest height; one cut through the hull's side
-     * lowers the sill the sea comes aboard over. Every cannon fires through a
-     * port of its own cut through the planking right before its muzzle, lidded,
-     * never over a bulwark and never through a port another cannon shares.
-     * Every hatch lid and port lid is a framed panel battened on its inner
-     * face: a hatch lid lies flush in its hatchway, slats with gaps between
-     * them, and swings up about its longer side; a port lid closes the port
-     * from outside, one board set in from its frame, and swings out and up
-     * about its top edge; both open and shut with Activate. Every
+     * height and a window at chest height; a door cut through the hull's side
+     * lowers the sill the sea comes aboard over, a glazed window does not, and
+     * one the sea reaches is framed in iron as a porthole once the ship is
+     * floated. Every gun platform is a low bed laid on open floor facing the
+     * side, part of the ship, and cuts a lidded port of its own through the
+     * planking right before it at the height a cannon's barrel stands on it,
+     * never over a bulwark and never touching another platform's port; a
+     * cannon stands only on a platform, set down where the platform is and
+     * facing its way, so its barrel lies in the port. Every hatch lid and port
+     * lid is a framed panel battened on its inner face: a hatch lid lies flush
+     * in its hatchway, slats with gaps between them, and swings up about its
+     * longer side; a port lid closes the port from outside, one board set in
+     * from its frame, and swings out and up about its top edge; both open and
+     * shut with Activate. A grate is laid the same way, fixed, its slats thin
+     * and far apart to see through; a glass floor is panes of glass between
+     * iron bars. Every
      * boarding ladder is rope and rungs hung clear of the side from the keel
      * to past the deck's edge, a step bridging it to the deck. Doors
      * and furniture are cargo, real items drawn from furnishing tables to be
@@ -96,8 +103,8 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // Openings \\
 
-    // Every door and window cut through the wall or side it is set on, and every cannon's port, before the hull is
-    // merged
+    // Every door and window cut through the wall or side it is set on, and every gun platform laid with its port,
+    // before the hull is merged
     void cutOpenings(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
         IntArrayList doors = blueprint.getDoors();
@@ -121,7 +128,7 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // An opening a footprint across, rising from a height over its deck's floor, cut through the wall or planking
     // it is set on and only through that, in every column of its footprint the wall runs through; a window is
-    // glazed across the octants it cut
+    // glazed across the octants it cut, its glass keeping the sea out where it is cut through the side
     private void cutOpening(
             ShipLayoutStruct layout,
             int cell,
@@ -152,7 +159,8 @@ class ShipwrightFittingBranch extends BranchPackage {
                         return;
                     }
 
-                    cutThrough(layout, x, y, z, ShipCellUtility.stepX(spin), ShipCellUtility.stepZ(spin), wall);
+                    cutThrough(layout, x, y, z, ShipCellUtility.stepX(spin), ShipCellUtility.stepZ(spin), wall,
+                            !glazed);
                 }
 
         if (glazed)
@@ -160,8 +168,17 @@ class ShipwrightFittingBranch extends BranchPackage {
     }
 
     // Walks across a wall from an octant along a step, clearing it for as long as it stays the piece the opening
-    // was set on, so an opening never reaches past the wall it is cut through
-    private void cutThrough(ShipLayoutStruct layout, int x, int y, int z, int stepX, int stepZ, ShipPiece wall) {
+    // was set on, so an opening never reaches past the wall it is cut through; an open one through the side lowers
+    // the sill the sea comes aboard over
+    private void cutThrough(
+            ShipLayoutStruct layout,
+            int x,
+            int y,
+            int z,
+            int stepX,
+            int stepZ,
+            ShipPiece wall,
+            boolean open) {
 
         ShipOctantGridStruct grid = layout.getGrid();
 
@@ -173,73 +190,66 @@ class ShipwrightFittingBranch extends BranchPackage {
             if (grid.get(atX, y, atZ) != wall)
                 return;
 
-            if (wall != ShipPiece.WALLS)
+            if (open && wall != ShipPiece.WALLS)
                 layout.lowerOpeningSill(y * EngineSetting.SUB_BLOCK_SIZE);
 
             grid.clear(atX, y, atZ);
         }
     }
 
-    // Every cannon cuts a lidded port of its own through the planking right before its muzzle
+    // Every gun platform laid on its floor, the lidded port the cannon set on it fires through cut right before it
     private void cutPorts(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
-        for (int i = 0; i < blueprint.getFurniture().size(); i++) {
+        IntArrayList platforms = blueprint.getGunPlatforms();
 
-            ShipFurnitureStruct piece = blueprint.getFurniture().get(i);
-
-            if (!piece.getFurnishingName().equals(EngineSetting.SHIP_CANNON_FURNISHING)
-                    || !furnishingManager.hasFurnishing(piece.getFurnishingName()))
-                continue;
-
-            cutPort(layout, piece.getCell());
-        }
+        for (int i = 0; i < platforms.size(); i++)
+            cutPort(layout, platforms.getInt(i));
     }
 
+    // A platform's bed over a cannon's footprint, and its port through the planking of the row right before it, as
+    // high as the barrel of a cannon standing on the bed
     private void cutPort(ShipLayoutStruct layout, int cell) {
+
+        String problem = findPlatformProblem(layout, cell);
+
+        if (!problem.isEmpty()) {
+            layout.reportBuildProblem(problem);
+            return;
+        }
 
         ShipOctantGridStruct grid = layout.getGrid();
         int spin = ShipCellUtility.unpackSpin(cell);
         int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int sill = floor + EngineSetting.SHIP_GUN_PORT_SILL;
         int startX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
         int startZ = ShipCellUtility.unpackZ(cell);
-
-        resolveFootprint(EngineSetting.SHIP_CANNON_FURNISHING, spin);
-
         int sizeX = footprint[EngineSetting.AXIS_X];
         int sizeZ = footprint[EngineSetting.AXIS_Z];
         int span = ShipCellUtility.stepX(spin) != 0 ? sizeZ : sizeX;
-        int rowMinX = resolveMuzzleX(startX, sizeX, spin, 0);
-        int rowMinZ = resolveMuzzleZ(startZ, sizeZ, spin, 0);
-        int rowMaxX = resolveMuzzleX(startX, sizeX, spin, span - 1) + 1;
-        int rowMaxZ = resolveMuzzleZ(startZ, sizeZ, spin, span - 1) + 1;
 
-        if (touchesPort(layout, rowMinX, floor + 1, rowMinZ, rowMaxX, rowMaxZ)) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_CANNON_SHARED);
-            return;
-        }
+        for (int z = startZ; z < startZ + sizeZ; z++)
+            for (int x = startX; x < startX + sizeX; x++)
+                grid.set(x, floor + 1, z, ShipPiece.PLATFORMS);
 
         int minX = Integer.MAX_VALUE;
         int minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE;
         int maxZ = Integer.MIN_VALUE;
-        boolean planking = false;
 
         for (int along = 0; along < span; along++) {
 
             int x = resolveMuzzleX(startX, sizeX, spin, along);
             int z = resolveMuzzleZ(startZ, sizeZ, spin, along);
 
-            for (int y = floor + 1; y <= floor + EngineSetting.SHIP_GUN_PORT_HEIGHT; y++) {
+            for (int y = sill; y < sill + EngineSetting.SHIP_GUN_PORT_HEIGHT; y++) {
 
                 ShipPiece side = grid.get(x, y, z);
 
                 if (side != ShipPiece.HULL && side != ShipPiece.BULWARK)
                     continue;
 
-                if (side == ShipPiece.HULL) {
-                    planking = true;
+                if (side == ShipPiece.HULL)
                     layout.lowerOpeningSill(y * EngineSetting.SUB_BLOCK_SIZE);
-                }
 
                 grid.clear(x, y, z);
                 minX = Math.min(minX, x);
@@ -249,12 +259,63 @@ class ShipwrightFittingBranch extends BranchPackage {
             }
         }
 
-        if (!planking) {
-            layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_CANNON_PORT);
-            return;
+        layout.addPort(minX, sill, minZ, maxX, sill + EngineSetting.SHIP_GUN_PORT_HEIGHT, maxZ, spin);
+    }
+
+    // Why a gun platform cannot stand at a cell, SHIP_PROBLEM_NONE when it can: a cannon's footprint of open floor,
+    // facing planking it cuts a port through at the barrel's height, the port touching no other; the footprint is
+    // left resolved
+    String findPlatformProblem(ShipLayoutStruct layout, int cell) {
+
+        if (!furnishingManager.hasFurnishing(EngineSetting.SHIP_CANNON_FURNISHING))
+            return EngineSetting.SHIPWRIGHT_PROBLEM_FURNISHING_UNKNOWN + EngineSetting.SHIP_CANNON_FURNISHING;
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int spin = ShipCellUtility.unpackSpin(cell);
+        int floor = ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT;
+        int sill = floor + EngineSetting.SHIP_GUN_PORT_SILL;
+        int startX = layout.getOriginX() + ShipCellUtility.unpackX(cell);
+        int startZ = ShipCellUtility.unpackZ(cell);
+
+        resolveFootprint(EngineSetting.SHIP_CANNON_FURNISHING, spin);
+
+        int sizeX = footprint[EngineSetting.AXIS_X];
+        int sizeZ = footprint[EngineSetting.AXIS_Z];
+        int span = ShipCellUtility.stepX(spin) != 0 ? sizeZ : sizeX;
+
+        if (!shipwrightHullBranch.isOpenFloor(grid, startX, floor, startZ, sizeX, sizeZ))
+            return EngineSetting.SHIPWRIGHT_PROBLEM_PLATFORM_FLOOR;
+
+        if (touchesPort(layout, resolveMuzzleX(startX, sizeX, spin, 0), sill, resolveMuzzleZ(startZ, sizeZ, spin, 0),
+                resolveMuzzleX(startX, sizeX, spin, span - 1) + 1, resolveMuzzleZ(startZ, sizeZ, spin, span - 1) + 1))
+            return EngineSetting.SHIPWRIGHT_PROBLEM_PLATFORM_SHARED;
+
+        for (int along = 0; along < span; along++)
+            for (int y = sill; y < sill + EngineSetting.SHIP_GUN_PORT_HEIGHT; y++)
+                if (grid.get(resolveMuzzleX(startX, sizeX, spin, along), y,
+                        resolveMuzzleZ(startZ, sizeZ, spin, along)) == ShipPiece.HULL)
+                    return EngineSetting.SHIP_PROBLEM_NONE;
+
+        return EngineSetting.SHIPWRIGHT_PROBLEM_PLATFORM_PORT;
+    }
+
+    // Why a cannon cannot stand at a cell, SHIP_PROBLEM_NONE when it can: on a gun platform set down at that place
+    // facing the same way, with no other cannon on it; the piece of furniture given is passed over
+    String findCannonProblem(ShipBlueprintStruct blueprint, int cell, int furnitureIndex) {
+
+        if (!blueprint.getGunPlatforms().contains(cell))
+            return EngineSetting.SHIPWRIGHT_PROBLEM_CANNON_PLATFORM;
+
+        for (int i = 0; i < blueprint.getFurniture().size(); i++) {
+
+            ShipFurnitureStruct piece = blueprint.getFurniture().get(i);
+
+            if (i != furnitureIndex && piece.getCell() == cell
+                    && piece.getFurnishingName().equals(EngineSetting.SHIP_CANNON_FURNISHING))
+                return EngineSetting.SHIPWRIGHT_PROBLEM_CANNON_MOUNTED;
         }
 
-        layout.addPort(minX, floor + 1, minZ, maxX, floor + 1 + EngineSetting.SHIP_GUN_PORT_HEIGHT, maxZ, spin);
+        return EngineSetting.SHIP_PROBLEM_NONE;
     }
 
     // True when the row before a muzzle, at a port's sill, overlaps or touches a port already cut, so two cannons would
@@ -339,6 +400,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         addAnchors(layout);
         addHatchLids(layout);
         addGrates(layout);
+        addGlassFloors(layout);
         addPortLids(layout);
         addLadders(layout);
         addBoardingLadders(layout);
@@ -368,13 +430,14 @@ class ShipwrightFittingBranch extends BranchPackage {
                     hinge, top, acrossX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X,
                     (hinge == 1 || hinge == 2 ? 1f : -1f) * angle);
 
-            addPanel(lid, EngineSetting.AXIS_Y, true, acrossX ? EngineSetting.AXIS_X : EngineSetting.AXIS_Z, true);
+            addPanel(lid, EngineSetting.AXIS_Y, true, acrossX ? EngineSetting.AXIS_X : EngineSetting.AXIS_Z,
+                    EngineSetting.SHIP_LID_SLAT_SUB_VOXELS, EngineSetting.SHIP_LID_GAP_SUB_VOXELS);
             layout.addPart(lid);
         }
     }
 
-    // One fixed part of every grate lying flush over an opening, slats with gaps between them to walk on and see
-    // through
+    // One fixed part of every grate lying flush over an opening, thin slats with wide gaps between them to walk on and
+    // see through
     private void addGrates(ShipLayoutStruct layout) {
 
         IntArrayList boxes = layout.getGrateBoxes();
@@ -395,10 +458,59 @@ class ShipwrightFittingBranch extends BranchPackage {
             readFittingBox(boxes, i);
             panelMin[EngineSetting.AXIS_Y] = top - EngineSetting.SHIP_LID_THICKNESS_SUB_VOXELS;
             panelMax[EngineSetting.AXIS_Y] = top;
-            addPanel(grate, EngineSetting.AXIS_Y, true, acrossX ? EngineSetting.AXIS_X : EngineSetting.AXIS_Z, true);
+            addPanel(grate, EngineSetting.AXIS_Y, true, acrossX ? EngineSetting.AXIS_X : EngineSetting.AXIS_Z,
+                    EngineSetting.SHIP_GRATE_SLAT_SUB_VOXELS, EngineSetting.SHIP_GRATE_GAP_SUB_VOXELS);
         }
 
         layout.addPart(grate);
+    }
+
+    // Every glass floor lying flush over its opening: glass set a sub-voxel below an iron frame round its rim and a
+    // bar across it every few octants either way, walked on and seen through to the deck or the sea below
+    private void addGlassFloors(ShipLayoutStruct layout) {
+
+        IntArrayList boxes = layout.getGlassFloorBoxes();
+
+        if (ShipLayoutStruct.countFittings(boxes) == 0)
+            return;
+
+        int bar = EngineSetting.SHIP_GLASS_FLOOR_BAR_SUB_VOXELS;
+        int pitch = EngineSetting.SHIP_GLASS_FLOOR_PANE_OCTANTS * EngineSetting.SHIP_OCTANT_SUB_VOXELS;
+        VehiclePartStruct glass = new VehiclePartStruct(
+                EngineSetting.SHIP_PART_GLASS_FLOOR, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_GLASS,
+                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
+        VehiclePartStruct frame = new VehiclePartStruct(
+                EngineSetting.SHIP_PART_GLASS_FLOOR_FRAME, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_IRON,
+                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
+
+        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
+
+            readFittingBox(boxes, i);
+            panelMin[EngineSetting.AXIS_Y] = panelMax[EngineSetting.AXIS_Y]
+                    - EngineSetting.SHIP_LID_THICKNESS_SUB_VOXELS;
+
+            int minX = panelMin[EngineSetting.AXIS_X];
+            int minZ = panelMin[EngineSetting.AXIS_Z];
+            int maxX = panelMax[EngineSetting.AXIS_X];
+            int maxZ = panelMax[EngineSetting.AXIS_Z];
+            int bottom = panelMin[EngineSetting.AXIS_Y];
+            int top = panelMax[EngineSetting.AXIS_Y];
+
+            glass.addBox(minX, bottom, minZ, maxX, top - EngineSetting.SHIP_LID_RECESS_SUB_VOXELS, maxZ);
+            addPanelBox(frame, EngineSetting.AXIS_X, minX, minX + bar, EngineSetting.AXIS_Z, 0, 0);
+            addPanelBox(frame, EngineSetting.AXIS_X, maxX - bar, maxX, EngineSetting.AXIS_Z, 0, 0);
+            addPanelBox(frame, EngineSetting.AXIS_Z, minZ, minZ + bar, EngineSetting.AXIS_X, bar, bar);
+            addPanelBox(frame, EngineSetting.AXIS_Z, maxZ - bar, maxZ, EngineSetting.AXIS_X, bar, bar);
+
+            for (int x = minX + pitch; x < maxX - bar; x += pitch)
+                addPanelBox(frame, EngineSetting.AXIS_X, x - bar / 2, x + bar / 2, EngineSetting.AXIS_Z, bar, bar);
+
+            for (int z = minZ + pitch; z < maxZ - bar; z += pitch)
+                addPanelBox(frame, EngineSetting.AXIS_Z, z - bar / 2, z + bar / 2, EngineSetting.AXIS_X, bar, bar);
+        }
+
+        layout.addPart(glass);
+        layout.addPart(frame);
     }
 
     // The side of a hatch's box its lid is hinged along: one of its two longer sides, the one its quarter turn
@@ -448,7 +560,7 @@ class ShipwrightFittingBranch extends BranchPackage {
                     EngineSetting.SHIP_TEXTURE_WALL, spin, top, alongX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X,
                     (spin == 0 || spin == EngineSetting.ENCODED_FACE_SPIN_COUNT - 1 ? 1f : -1f) * angle);
 
-            addPanel(lid, normal, outward, EngineSetting.AXIS_Y, false);
+            addPanel(lid, normal, outward, EngineSetting.AXIS_Y, 0, 0);
             layout.addPart(lid);
         }
     }
@@ -491,17 +603,15 @@ class ShipwrightFittingBranch extends BranchPackage {
     }
 
     // The panel scratch built as a lid a thickness along its normal: a frame round its rim, set in from the outer face
-    // between it either slats running along an axis and parted by gaps or one board, and two battens across them on
-    // the inner face
-    private void addPanel(VehiclePartStruct part, int normal, boolean outerPositive, int runAxis, boolean slatted) {
+    // between it either slats a width wide running along an axis and parted by gaps, or with no slat width one board,
+    // and two battens across them on the inner face
+    private void addPanel(VehiclePartStruct part, int normal, boolean outerPositive, int runAxis, int slat, int gap) {
 
         int across = EngineSetting.AXIS_COUNT * (EngineSetting.AXIS_COUNT - 1) / 2 - normal - runAxis;
         int frame = EngineSetting.SHIP_LID_FRAME_SUB_VOXELS;
         int recess = EngineSetting.SHIP_LID_RECESS_SUB_VOXELS;
         int batten = EngineSetting.SHIP_LID_BATTEN_SUB_VOXELS;
-        int pitch = slatted
-                ? EngineSetting.SHIP_LID_SLAT_SUB_VOXELS + EngineSetting.SHIP_LID_GAP_SUB_VOXELS
-                : panelMax[across] - panelMin[across];
+        int pitch = slat > 0 ? slat + gap : panelMax[across] - panelMin[across];
         int runLength = panelMax[runAxis] - panelMin[runAxis];
 
         addPanelBox(part, across, panelMin[across], panelMin[across] + frame, normal, 0, 0);
@@ -509,12 +619,12 @@ class ShipwrightFittingBranch extends BranchPackage {
         addPanelBox(part, runAxis, panelMin[runAxis], panelMin[runAxis] + frame, across, frame, frame);
         addPanelBox(part, runAxis, panelMax[runAxis] - frame, panelMax[runAxis], across, frame, frame);
 
-        for (int slat = panelMin[across] + frame; slat < panelMax[across] - frame; slat += pitch) {
+        for (int edge = panelMin[across] + frame; edge < panelMax[across] - frame; edge += pitch) {
 
             resetPanelBox();
-            boxMin[across] = slat;
-            boxMax[across] = slatted
-                    ? Math.min(slat + EngineSetting.SHIP_LID_SLAT_SUB_VOXELS, panelMax[across] - frame)
+            boxMin[across] = edge;
+            boxMax[across] = slat > 0
+                    ? Math.min(edge + slat, panelMax[across] - frame)
                     : panelMax[across] - frame;
             boxMin[runAxis] += frame;
             boxMax[runAxis] -= frame;
@@ -696,6 +806,84 @@ class ShipwrightFittingBranch extends BranchPackage {
     }
 
     // Glass \\
+
+    // Every window in the hull's side the sea reaches framed in iron as a porthole once the ship is floated: a rim
+    // round the opening the planking's depth through, its corners filled in round, true when any was framed
+    boolean addPortholes(ShipLayoutStruct layout) {
+
+        if (!layout.isAfloat())
+            return false;
+
+        IntArrayList boxes = layout.getPaneBoxes();
+        VehiclePartStruct frames = new VehiclePartStruct(
+                EngineSetting.SHIP_PART_PORTHOLES, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_IRON,
+                EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
+
+        for (int i = 0; i < ShipLayoutStruct.countFittings(boxes); i++) {
+
+            if (ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.BOX_MIN_Y) * EngineSetting.SUB_BLOCK_SIZE
+                    >= layout.getDraft() || !isOutboard(layout, boxes, i))
+                continue;
+
+            boolean acrossX = ShipCellUtility.stepX(
+                    ShipLayoutStruct.getFittingBound(boxes, i, EngineSetting.SHIP_FITTING_SPIN)) != 0;
+
+            readFittingBox(boxes, i);
+            addPortholeFrame(frames, acrossX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X);
+        }
+
+        if (frames.isEmpty())
+            return false;
+
+        layout.addPart(frames);
+
+        return true;
+    }
+
+    // True when a window's pane looks out of the hull, the octant before or behind it across its wall outside it
+    private boolean isOutboard(ShipLayoutStruct layout, IntArrayList boxes, int fittingIndex) {
+
+        int spin = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.SHIP_FITTING_SPIN);
+        int x = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MIN_X) - layout.getOriginX();
+        int y = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MIN_Y);
+        int z = ShipLayoutStruct.getFittingBound(boxes, fittingIndex, EngineSetting.BOX_MIN_Z);
+        int stepX = ShipCellUtility.stepX(spin);
+        int stepZ = ShipCellUtility.stepZ(spin);
+
+        return !layout.isVolume(x + stepX, y, z + stepZ) || !layout.isVolume(x - stepX, y, z - stepZ);
+    }
+
+    // The panel scratch framed round its rim on the face along an axis and up, the frame's corners filled in
+    private void addPortholeFrame(VehiclePartStruct part, int alongAxis) {
+
+        int frame = EngineSetting.SHIP_PORTHOLE_FRAME_SUB_VOXELS;
+        int fillet = EngineSetting.SHIP_PORTHOLE_FILLET_SUB_VOXELS;
+
+        addPanelBox(part, EngineSetting.AXIS_Y, panelMin[EngineSetting.AXIS_Y], panelMin[EngineSetting.AXIS_Y] + frame,
+                alongAxis, 0, 0);
+        addPanelBox(part, EngineSetting.AXIS_Y, panelMax[EngineSetting.AXIS_Y] - frame, panelMax[EngineSetting.AXIS_Y],
+                alongAxis, 0, 0);
+        addPanelBox(part, alongAxis, panelMin[alongAxis], panelMin[alongAxis] + frame, EngineSetting.AXIS_Y, frame,
+                frame);
+        addPanelBox(part, alongAxis, panelMax[alongAxis] - frame, panelMax[alongAxis], EngineSetting.AXIS_Y, frame,
+                frame);
+
+        for (int corner = 0; corner < EngineSetting.QUAD_VERTEX_COUNT; corner++) {
+
+            boolean high = corner >= EngineSetting.QUAD_VERTEX_COUNT / 2;
+            boolean far = corner % 2 == 1;
+
+            resetPanelBox();
+            boxMin[alongAxis] = far ? panelMax[alongAxis] - frame - fillet : panelMin[alongAxis] + frame;
+            boxMax[alongAxis] = boxMin[alongAxis] + fillet;
+            boxMin[EngineSetting.AXIS_Y] = high
+                    ? panelMax[EngineSetting.AXIS_Y] - frame - fillet
+                    : panelMin[EngineSetting.AXIS_Y] + frame;
+            boxMax[EngineSetting.AXIS_Y] = boxMin[EngineSetting.AXIS_Y] + fillet;
+
+            part.addBox(boxMin[0], boxMin[1], boxMin[2], boxMax[0], boxMax[1], boxMax[2]);
+        }
+    }
 
     // A pane of glass a sub-voxel thick across the middle of every window, solid to whoever leans on it
     private void addPanes(ShipLayoutStruct layout) {
@@ -974,14 +1162,14 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // Cargo \\
 
-    // Every door and piece of furniture as a furnished place, every piece on open floor, then every place checked to
-    // fit
+    // Every door and piece of furniture as a furnished place, every piece on open floor and every cannon on its gun
+    // platform, then every place checked to fit
     void addCargo(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
         IntArrayList doors = blueprint.getDoors();
 
         for (int i = 0; i < doors.size(); i++)
-            addPlace(blueprint, layout, EngineSetting.SHIP_DOOR_FURNISHING, doors.getInt(i));
+            addPlace(blueprint, layout, EngineSetting.SHIP_DOOR_FURNISHING, doors.getInt(i), 0);
 
         for (int i = 0; i < blueprint.getFurniture().size(); i++) {
 
@@ -993,6 +1181,11 @@ class ShipwrightFittingBranch extends BranchPackage {
                 continue;
             }
 
+            if (piece.getFurnishingName().equals(EngineSetting.SHIP_CANNON_FURNISHING)) {
+                addCannon(blueprint, layout, piece.getCell(), i);
+                continue;
+            }
+
             resolveFootprint(piece.getFurnishingName(), ShipCellUtility.unpackSpin(piece.getCell()));
 
             if (!isOnFloor(layout, piece.getCell(), footprint[EngineSetting.AXIS_X],
@@ -1001,14 +1194,35 @@ class ShipwrightFittingBranch extends BranchPackage {
                 continue;
             }
 
-            addPlace(blueprint, layout, piece.getFurnishingName(), piece.getCell());
+            addPlace(blueprint, layout, piece.getFurnishingName(), piece.getCell(), 0);
         }
 
         verifyCargo(layout);
     }
 
-    // A furnished place standing on its deck's floor, centred in the octants its largest item takes up
-    private void addPlace(ShipBlueprintStruct blueprint, ShipLayoutStruct layout, String furnishingName, int cell) {
+    // A cannon as a furnished place standing on the bed of the gun platform it is set on, so its barrel lies in the
+    // platform's port
+    private void addCannon(ShipBlueprintStruct blueprint, ShipLayoutStruct layout, int cell, int furnitureIndex) {
+
+        String problem = findCannonProblem(blueprint, cell, furnitureIndex);
+
+        if (!problem.isEmpty()) {
+            layout.reportBuildProblem(problem);
+            return;
+        }
+
+        addPlace(blueprint, layout, EngineSetting.SHIP_CANNON_FURNISHING, cell,
+                EngineSetting.SHIP_GUN_PLATFORM_SUB_VOXELS);
+    }
+
+    // A furnished place standing a lift in sub-voxels over its deck's floor, centred in the octants its largest item
+    // takes up
+    private void addPlace(
+            ShipBlueprintStruct blueprint,
+            ShipLayoutStruct layout,
+            String furnishingName,
+            int cell,
+            int lift) {
 
         int spin = ShipCellUtility.unpackSpin(cell);
         int itemSpin = resolveItemSpin(furnishingName, spin);
@@ -1020,7 +1234,7 @@ class ShipwrightFittingBranch extends BranchPackage {
         resolveFootprint(furnishingName, spin);
 
         int minX = (layout.getOriginX() + ShipCellUtility.unpackX(cell)) * octant;
-        int minY = (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant;
+        int minY = (ShipCellUtility.unpackLevel(cell) * EngineSetting.SHIP_DECK_HEIGHT + 1) * octant + lift;
         int minZ = ShipCellUtility.unpackZ(cell) * octant;
         int maxX = minX + footprint[EngineSetting.AXIS_X] * octant;
         int maxY = minY + footprint[EngineSetting.AXIS_Y] * octant;

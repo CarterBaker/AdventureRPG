@@ -28,8 +28,8 @@ How vehicles are made, stored, sailed, ridden and broken, and what is still open
 | The player | `Documents/My Games/AdventureRPG/Saves/Vehicles/<Name>.arpg` | `saved/<Name>` |
 
 - The file is the `Vehicles` schema: `display_name`, `category`, `decks` (each `start`, `outline`, `waists`,
-  `walls`, `half_walls`, `railings`, `doors`, `windows`, `hatches`, `grates`, `stairs`, `ladders`, `boarding_ladders`,
-  `furniture`), `helm`, `capstan`,
+  `walls`, `half_walls`, `railings`, `lips`, `doors`, `windows`, `hatches`, `grates`, `glass_floors`, `gun_platforms`,
+  `stairs`, `ladders`, `boarding_ladders`, `furniture`), `helm`, `capstan`,
   `masts` (each only its `x`; older files' `height`, `crows_nest` and `rigging` are ignored).
 - `assets/vehicles/` is optional; the game boots with no vehicle of its own. A saved vehicle that cannot be read or
   built is logged and skipped; one in the assets stops the game.
@@ -47,24 +47,36 @@ How vehicles are made, stored, sailed, ridden and broken, and what is still open
 
 The sheet is the plan of the deck picked, bow to the right, starboard down, in octants (half blocks), inked at
 `SHIPWRIGHT_INK_SCALE` texels to the octant so everything set down is drawn as what it is: a staircase as treads
-climbing darker, a ladder as rails and rungs, a hatch as a grating with its hinge drawn heavy, a window as panes, a
-cannon in iron, every piece of furniture over its whole footprint with its front edge marked in gold.
+climbing darker, a ladder as rails and rungs, a hatch, grate or glass floor as a grating with its hinge drawn heavy, a
+window as panes, a gun platform, a cannon in iron, every piece of furniture over its whole footprint with its front
+edge marked in gold. The sea is never drawn on the sheet: a deck being drawn is inked as floor inside its planking,
+like everything else. The **water gauge** in the sheet's aft margin shows where the water sits in the deck picked:
+empty when the deck stands clear of the water, full when the whole deck lies under it, and filled as far up as the
+waterline crosses it.
 
-| Tool | Does | Catalogue |
-|---|---|---|
-| Deck | Draws the deck's outline out to the cursor, **mirrored** port and starboard | — |
-| Waist | Cuts the deck's floor open, **mirrored**, railed round | — |
-| Walls | Paints walls on open floor, **not mirrored**; railings also in place of the side or a bulwark | Full wall / Half wall / Railing |
-| Openings | Door or window **on the wall it is cut through**; hatch in a floor | Door / Window / Hatch |
-| Stairs & Ladders | Staircase climbing one deck the way it faces; ladder; boarding ladder over the side | Staircase / Ladder / Boarding ladder |
-| Masts | Steps a mast on the centre line; the rest is worked out | Every mast stepped |
-| Furniture | Sets the helm, the capstan or any furnishing in the game (cannons included) down | Every item, pictured, by section |
+The catalogue has four tabs; each lists the options of several tools, and every tool works as described below.
 
-**Working the table.** The catalogue under the sheet is one scrolling list of every option of the tool in hand,
-grouped under section headings (furniture by the folder its furnishing table is kept in, the helm and capstan
-first), each a tile pictured by its item's model, the helm and the capstan by the very fittings a ship builds, an
-option with no picture a tile of its name, the one picked lit; a click or Previous / Next Option picks one, and an
-option picked by the bindings is scrolled into view. Under the cursor the thing in hand is drawn whole, as it
+| Tab | Options (by section) |
+|---|---|
+| Structure | Hull: Deck, Waist · Floors: Hatch, Grate, Glass floor · Gunnery: Gun platform |
+| Style | Walls: Full wall, Half wall, Railing, Lip · Doors & Windows: Door, Window · Helm & Capstan · Stairs & Ladders: Staircase, Ladder, Boarding ladder |
+| Masts | Every mast stepped (none picked steps a new one) |
+| Furniture | Every furnishing in the game, cannons included, by the folder it is kept in |
+
+| Tool | Does |
+|---|---|
+| Deck | Draws the deck's outline out to the cursor, **mirrored** port and starboard |
+| Waist | Cuts the deck's floor open, **mirrored**, railed round; through the bottom deck too |
+| Walls | Paints walls on open floor, **not mirrored**; railings and lips also in place of the side or a bulwark |
+| Openings | Door or window **on the wall it is cut through**; hatch, grate or glass floor in a floor; gun platform facing the side |
+| Stairs & Ladders | Staircase climbing one deck the way it faces; ladder; boarding ladder over the side |
+| Masts | Steps a mast on the centre line; the rest is worked out |
+| Furniture | Sets the helm, the capstan or any furnishing in the game down |
+
+**Working the table.** The catalogue under the sheet is one scrolling list of every option of the tab open, grouped
+under section headings, each a tile pictured by its item's model, the helm and the capstan by the very fittings a ship
+builds, an option with no picture a tile of its name, the one picked lit; a click or Previous / Next Option picks one,
+and an option picked by the bindings is scrolled into view. A tab opened again takes up the option it last held. Under the cursor the thing in hand is drawn whole, as it
 would be set down, red where it could not stand, and the line under the sheet says why. Draw sets it down. Draw over
 anything already set down **picks it up** (the tool, option and facing that set it down go into the hand) so the
 next draw moves it; Erase **takes away** whatever is under the cursor, found over its whole footprint. Whatever is
@@ -84,22 +96,34 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   whole run **and two octants back past the foot**, so a climber's head clears the deck above from the first step.
 - **Ladders** stand on 2×2 octants of open floor and climb to the floor right over them, cutting a hatchway there, or
   in the open up the face of the raised deck they face. Rails and a rung sheet; climbable.
-- **The waist** is cut out of a deck's floor (never the bottom deck), mirrored, only where the floor is open with open
-  room below. Every floor octant left beside it gets a rail `SHIP_WAIST_RAIL_HEIGHT` high, so a main deck cut through
-  its middle is left as railed gangways either side looking down onto the deck below, which is open to the sky. Cut
-  the decks below as well and the pit runs as many decks deep. A stair or ladder climbing out of it opens the rail
-  where it lands; a hatch set on it closes as much of it as the largest lid covers.
+- **The waist** is cut out of a deck's floor, mirrored, only where the floor is open with open room below. Every floor
+  octant left beside it gets a rail `SHIP_WAIST_RAIL_HEIGHT` high, so a main deck cut through its middle is left as
+  railed gangways either side looking down onto the deck below, which is open to the sky. Cut the decks below as well
+  and the pit runs as many decks deep. A stair or ladder climbing out of it opens the rail where it lands; a hatch set
+  on it closes as much of it as the largest lid covers. Erasing the waist takes up any grate or glass floor set there.
+- **The bottom deck's waist** opens the hull to the sea below and is **glazed automatically**: every octant a stroke
+  cuts (or uncovers) gets a glass floor over it. Take the glass floor away and that stretch is left open as a
+  **diving bay** to drop through into the sea; the hull's buoyancy is unchanged (it is worked out layer by layer, so a
+  hole in the bottom does not flood it).
+- **Walls** painted over the waist's rail or a bulwark replace them; erasing the wall puts them back.
 - **Railings** stand rail high (`SHIP_RAILING_HEIGHT`) on open floor, or **in place of the ship's own side** (the
   planking between a deck and the one above) or of a **bulwark** at a deck's edge, which they replace up to the deck
   above. There is no porch of its own: a porch, a balcony or a stern gallery is a stretch of deck railed round
   instead of walled. A railing must stand **above the waterline** (refused at the table; one in the side lowers the
   sill to its deck, so the compile calls it a shape problem if the sea would reach it). Erasing a railing puts the
-  side or bulwark back. Painting a full or half wall over a railing, or a railing over a wall, replaces it.
+  side or bulwark back. Painting a full or half wall over a railing, or a railing over a wall, replaces it. Every
+  rail, the waist's included, is built as a post up the middle of each octant under a handrail that runs on to the
+  rails beside it (`SHIP_RAILING_POST_SUB_VOXELS`, `SHIP_RAILING_CAP_SUB_VOXELS`, `SHIP_RAILING_CAP_WIDTH_SUB_VOXELS`).
+- **Lips** take the side (or a bulwark) down to the deck above under the railing's rule and leave only a low sill
+  `SHIP_LIP_SUB_VOXELS` high, stepped over, so a lower deck can open its side as a way in.
 - **Half walls** stand `SHIP_HALF_WALL_HEIGHT` high on open floor, or in place of the side, a bulwark or a rail at a
   deck's edge under the same rule as a railing (above the waterline; the side is taken down to the deck above).
 - **Grates** are an opening laid over a hole in a deck's floor (a waist, or any opening a stair or ladder leaves),
-  covering the whole run of it up to `SHIP_GRATE_MAX_OCTANTS` with a fixed slatted grate flush with the deck: walked
-  on, seen through, never opened. The waist rail along each side it covers is taken down so it is walked onto.
+  covering the whole run of it up to `SHIP_GRATE_MAX_OCTANTS` with a fixed grate flush with the deck: thin slats
+  (`SHIP_GRATE_SLAT_SUB_VOXELS`) with wide gaps (`SHIP_GRATE_GAP_SUB_VOXELS`), walked on, seen through, never opened.
+  The waist rail along each side it covers is taken down so it is walked onto.
+- **Glass floors** are laid the same way, the bottom deck's waist included: glass set a sub-voxel below an iron frame
+  and a bar every `SHIP_GLASS_FLOOR_PANE_OCTANTS` octants either way.
 - **Hatches** lie in a deck's floor over a deck below (never on the bottom deck). Set on a stair, ladder or waist
   opening, the lid closes the whole opening; anywhere else it cuts a 2×2 hole. Every lid is built as a hatch: a plank
   frame flush with the deck, slats set a sub-voxel down between it with gaps you can see through, two battens under
@@ -109,19 +133,29 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   over them) down the outside of the hull to the keel, rungs between two ropes, clear of the widest the side reaches
   below, with a step bridging the ladder's head to the deck. The bulwark is opened where it comes aboard. They face
   outboard by themselves and are climbed from the water or the deck like any ladder.
-- **Cannons** (`ship/Cannon`) each fire through a **port of their own** cut through the planking right before the
-  muzzle, closed from outside by a framed lid, its board set in from the frame and battened inside, that swings out
-  and up about its top edge with Activate. A cannon facing a bulwark or nothing (one on an open deck) and two
-  cannons whose ports would touch are refused, so guns stand on covered decks or down in the waist. A port lowers the
-  opening sill, so one under the waterline is a shape problem.
-- **Masts** are placed by hand; **everything else about them is worked out**. A mast rises as tall as the hull's
-  length (`SHIP_MAST_HEIGHT_SHARE`) and beam (`SHIP_MAST_BEAM_SHARE`) let it, shorter by up to `SHIP_MAST_END_TAPER`
-  the farther from the middle of the hull it stands. Its sails are every tier that fits under its head. A mast that
+- **Gun platforms** (Structure tab) are part of the ship: a low bed (`SHIP_GUN_PLATFORM_SUB_VOXELS`) over a cannon's
+  footprint on open floor, facing the side. Each cuts a **port of its own** through the planking of the row right
+  before it, `SHIP_GUN_PORT_SILL` octants over the floor, the height of the barrel of a cannon standing on the bed,
+  closed from outside by a framed lid, its board set in from the frame and battened inside, that swings out and up
+  about its top edge with Activate. A platform facing a bulwark or nothing (one on an open deck) and two platforms
+  whose ports would touch are refused. A port lowers the opening sill, so one under the waterline is a shape problem.
+- **Cannons** (`ship/Cannon`) stand only on a gun platform: drawn over an empty platform the cannon is set down where
+  the platform stands, facing its way, its barrel in the port. A cannon is cargo and can be taken away; the platform
+  and its port stay. Files kept before gun platforms get one under every cannon when read.
+- **Masts** are placed by hand; **everything else about them is worked out**. A mast is stepped on the lowest deck
+  drawn under both its octants, so it never pokes through a deck drawn shorter than the rest. Every mast's head is
+  measured from the lowest deck any mast rises from, as high as the hull's length (`SHIP_MAST_HEIGHT_SHARE`) and beam
+  (`SHIP_MAST_BEAM_SHARE`) let it: the middle mast of the line is the tallest and each is shorter by up to
+  `SHIP_MAST_END_TAPER` the farther along the line it stands, so a mast stepped through a raised deck is no taller for
+  it. Its sails are every tier that fits under its head. A mast that
   can carry `SHIP_CROWS_NEST_MIN_SAILS` sails over a crow's nest gets one. Every mast is rigged so **every sail and
   the nest can be reached**: the shrouds climb from the deck edge to the nest's rim, level with its floor, where its
   rail is left open, or to the mast's head where it has none; over a nest the topmast shrouds climb on from the rim to
   the head, past every upper yard. The **bowsprit is automatic** on every hull at least
   `SHIP_BOWSPRIT_MIN_HULL_LENGTH` long, sized to the hull.
+- **Windows** under water are fine: glass keeps the sea out, so a window does not lower the opening sill. Every
+  window in the side the waterline reaches is framed in iron as a **porthole** (a rim through the planking with its
+  corners filled in) and the ship is floated again with the frames aboard.
 - **Furniture** must stand on open floor. Every door and piece of furniture is cargo: a real item, taken up, set down
   and used like the same item in the world. Chests, barrels and cargo crates open (`ship/Chest`, `ship/Stores`).
 - **Anchors are automatic**: one per `SHIP_ANCHOR_LENGTH_PER_ANCHOR` blocks of hull, up to `SHIP_MAX_ANCHORS`, bow
@@ -145,10 +179,10 @@ Rules the compile enforces (the change is refused with the reason shown when it 
 |---|---|---|
 | Move | WASD | Moves the cursor an octant, repeating while held |
 | Jump / Sprint | Space / Shift (left / right click) | Draws, sets down or picks up / erases or takes away |
-| Activate | E | Next tool |
+| Activate | E | Next tab |
 | Turn Left / Turn Right | , / . (`<` / `>`) | Turns what is set down next a quarter turn either way |
 | Rotate Item | R | Turns what is set down next, as Turn Right |
-| Previous / Next Option | Q / F | Steps through the tool's catalogue |
+| Previous / Next Option | Q / F | Steps through the tab open |
 | Level Up / Down | Page Up / Page Down (and the wheel) | Steps the deck |
 | Save, Undo, Redo | Ctrl+S, Ctrl+Z, Ctrl+Y | As everywhere |
 | Pause | Escape | Leaves a table in the game (asking over unsaved work); answers any open dialog as Cancel |
@@ -223,7 +257,10 @@ All are rebindable on the Controls tab. The engine has no gamepad input yet; a c
 - **Untested in play:** the lid hinge directions of the new hatch and port lids, climbing boarding ladders from the
   water, ladder climbing, climbing onto a crow's nest and up the topmast
   shrouds, the waist's rails, anchor placement, the unstick lift, washed riders, the free rudder gain and storm
-  strength were built and compiled but not yet sailed. Tune them from a test ship.
+  strength were built and compiled but not yet sailed. Tune them from a test ship. So were the post-and-rail railings,
+  lips, glass floors, portholes, gun platforms with a cannon's barrel in its port, and dropping through a diving bay.
+- **Diving bay:** the sea surface is masked out of the whole hull, so the water does not show inside the bay, and
+  nothing yet climbs back up into it from the sea; a ladder that hangs into a bay is still to come.
 - **Furniture use:** cargo is taken up, set down, opened and acted on as in the world, but the engine has no sitting
   or sleeping yet, and a container's model must span one block, so beds, tables, desks, sideboards and bookshelves
   cannot hold anything.

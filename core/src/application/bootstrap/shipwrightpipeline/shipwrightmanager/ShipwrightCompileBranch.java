@@ -21,21 +21,22 @@ class ShipwrightCompileBranch extends BranchPackage {
      * every piece of a deck above the bottom — a forecastle and a poop are two
      * pieces of one deck — must rest on the deck below. The octant grid is laid out round
      * the sheet with room aft for the rudder and headroom for deckhouses and
-     * bulwarks; the hull, its decks, bulwarks, waist, walls and railings,
-     * stairs, ladders, boarding ladders, hatches, doors, windows and gun ports
-     * are laid into it
-     * through ShipwrightHullBranch and ShipwrightFittingBranch, and every piece
-     * merged into its part. The bowsprit, helm, capstan, rudder, anchors,
-     * lids, ladders, boarding ladders, glass and the whole rig are then built
-     * as parts of their
-     * own, and the cargo is placed and checked against
-     * everything solid. Last the ship is weighed, every box by what it is
+     * bulwarks; the hull, its decks, bulwarks, waist, walls, railings and
+     * lips, stairs, ladders, boarding ladders, hatches, grates, glass floors,
+     * doors, windows, gun platforms and their ports are laid into it through
+     * ShipwrightHullBranch and ShipwrightFittingBranch, and every piece merged
+     * into its part, every rail built as posts under a handrail. The bowsprit,
+     * helm, capstan, rudder, anchors, lids, covers, ladders, boarding ladders,
+     * glass and the whole rig are then built as parts of their own, and the
+     * cargo is placed and checked against everything solid. Last the ship is weighed, every box by what it is
      * made of, and floated: stone ballast is laid along its bottom until it
      * sinks to its share of the height the sea may rise to before it comes
      * aboard, no deeper than its share of its beam, or none when it is heavy
      * enough already, and the draft it floats
      * at follows from what it then weighs, so where the water sits is worked
-     * out, never drawn. A hull too short, too round or too blunt at its
+     * out, never drawn. Every window in the side the sea then reaches is
+     * framed in iron as a porthole, and the ship is floated again with its
+     * frames aboard. A hull too short, too round or too blunt at its
      * waterline to sail, or one that would sink, is a problem in its shape. A
      * compiled layout becomes a VehicleDesignStruct, named for the vehicle it
      * is registered as, with every handling value at its default but the
@@ -85,7 +86,7 @@ class ShipwrightCompileBranch extends BranchPackage {
         shipwrightHullBranch.layLadders(blueprint, layout);
         shipwrightHullBranch.layBoardingLadders(blueprint, layout);
         shipwrightHullBranch.layHatches(blueprint, layout);
-        shipwrightHullBranch.layGrates(blueprint, layout);
+        shipwrightHullBranch.layCovers(blueprint, layout);
         shipwrightFittingBranch.cutOpenings(blueprint, layout);
 
         mergePieces(layout);
@@ -96,6 +97,10 @@ class ShipwrightCompileBranch extends BranchPackage {
         shipwrightFittingBranch.addCargo(blueprint, layout);
 
         floatHull(blueprint, layout);
+
+        if (shipwrightFittingBranch.addPortholes(layout))
+            floatHull(blueprint, layout);
+
         verifyWaterline(layout);
     }
 
@@ -140,7 +145,8 @@ class ShipwrightCompileBranch extends BranchPackage {
 
     // Pieces \\
 
-    // Every piece laid in the grid merged into boxes, one part per piece that has any
+    // Every piece laid in the grid merged into boxes, rails built as posts under a handrail, one part per piece that
+    // has any
     private void mergePieces(ShipLayoutStruct layout) {
 
         for (int i = 0; i < ShipPiece.VALUES.length; i++) {
@@ -155,7 +161,11 @@ class ShipwrightCompileBranch extends BranchPackage {
                     EngineSetting.AXIS_Y,
                     0f);
 
-            if (layout.getGrid().mergeInto(piece, part))
+            boolean built = piece.isRailed()
+                    ? shipwrightHullBranch.addRailings(layout.getGrid(), part)
+                    : layout.getGrid().mergeInto(piece, part);
+
+            if (built)
                 layout.addPart(part);
         }
     }

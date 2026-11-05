@@ -21,9 +21,12 @@ class ShipwrightRigBranch extends BranchPackage {
      * forward from just inboard of the stem over the deck there, rising an
      * octant every few, as long as the hull's length sets. The player only
      * steps a mast at its place on the centre line; everything else about it
-     * follows from the hull. It stands on the keel and rises above the
-     * highest deck it passes through as tall as the hull's length and beam
-     * let it, shorter the farther from the middle of the hull it stands. Its
+     * follows from the hull. It is stepped on the lowest deck drawn under
+     * both its octants, never below a deck drawn shorter than the rest, and
+     * its head stands over the lowest deck any mast rises from as high as the
+     * hull's length and beam let it, the middle mast tallest and each a share
+     * lower the farther along the line of masts it stands, so a mast stepped
+     * through a raised deck is no taller for it. Its
      * sails follow from that height: the course clears the deck by a man's
      * height and each sail above stands a fixed pitch over the last under its
      * own yard, as many as fit under the mast's head, each narrower than the
@@ -140,6 +143,8 @@ class ShipwrightRigBranch extends BranchPackage {
                 EngineSetting.SHIP_PART_STAYS, VehiclePartRole.RIGGING, EngineSetting.SHIP_TEXTURE_ROPE);
         ObjectArrayList<VehiclePartStruct> canvas = new ObjectArrayList<>();
 
+        int base = resolveHeadBase(layout, masts);
+
         for (int i = 0; i < masts.size(); i++) {
 
             ShipMastStruct mast = masts.get(i);
@@ -151,16 +156,18 @@ class ShipwrightRigBranch extends BranchPackage {
                 continue;
             }
 
-            if (isBlocked(layout, mast, deck))
+            int foot = resolveFootLayer(blueprint, mast);
+
+            if (isBlocked(layout, mast, foot, deck))
                 layout.reportBuildProblem(EngineSetting.SHIPWRIGHT_PROBLEM_MAST_BLOCKED);
 
             String mastName = resolveMastName(masts.size(), i);
-            int height = resolveMastHeight(layout, mast);
+            int height = resolveMastHeight(layout, i, masts.size(), deck, base);
             boolean nest = hasCrowsNest(height);
             int tiers = resolveTierCount(height, nest);
 
             layout.addMast(height, tiers, nest);
-            layout.addPart(buildMast(layout, mast, mastName, deck, height));
+            layout.addPart(buildMast(layout, mast, mastName, foot, deck, height));
             addCanvas(layout, mast, mastName, deck, tiers, nest, canvas);
             canvas.add(buildShrouds(layout, mast, mastName, deck, height, tiers, nest));
 
@@ -183,17 +190,17 @@ class ShipwrightRigBranch extends BranchPackage {
             layout.addPart(stays);
     }
 
-    // A mast from its step on the keel to its head, pivoting about its centre on the deck it rises from
+    // A mast from its step on the floor of its foot to its head, pivoting about its centre at its step
     private VehiclePartStruct buildMast(
             ShipLayoutStruct layout,
             ShipMastStruct mast,
             String mastName,
+            int foot,
             int deck,
             int height) {
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
         int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
-        int keel = shipwrightHullBranch.findKeel(layout, mast.getX(), center);
         int x = layout.getOriginX() + mast.getX();
         float scale = 1f / EngineSetting.SUB_VOXEL_RESOLUTION;
         VehiclePartStruct part = new VehiclePartStruct(
@@ -203,14 +210,14 @@ class ShipwrightRigBranch extends BranchPackage {
                 EngineSetting.SHIP_LINK_NONE,
                 new Vector3(
                         (x + EngineSetting.SHIP_MAST_OCTANTS * 0.5f) * octant * scale,
-                        (keel + 1) * octant * scale,
+                        (foot + 1) * octant * scale,
                         center * octant * scale),
                 EngineSetting.AXIS_Y,
                 0f);
 
         part.addBox(
                 x * octant,
-                (keel + 1) * octant,
+                (foot + 1) * octant,
                 (center - 1) * octant,
                 (x + EngineSetting.SHIP_MAST_OCTANTS) * octant,
                 resolveMastTop(height, deck),
@@ -219,14 +226,14 @@ class ShipwrightRigBranch extends BranchPackage {
         return part;
     }
 
-    // True when a stair or a wall stands anywhere a mast rises through, from its keel to its deck
-    private boolean isBlocked(ShipLayoutStruct layout, ShipMastStruct mast, int deck) {
+    // True when a stair or a wall stands anywhere a mast rises through, from its foot to its deck
+    private boolean isBlocked(ShipLayoutStruct layout, ShipMastStruct mast, int foot, int deck) {
 
         ShipOctantGridStruct grid = layout.getGrid();
         int center = EngineSetting.SHIP_SHEET_HALF_BREADTH;
         int startX = layout.getOriginX() + mast.getX();
 
-        for (int y = 0; y <= deck + EngineSetting.SHIP_DECKHOUSE_HEIGHT; y++)
+        for (int y = foot + 1; y <= deck + EngineSetting.SHIP_DECKHOUSE_HEIGHT; y++)
             for (int z = center - 1; z <= center; z++)
                 for (int x = startX; x < startX + EngineSetting.SHIP_MAST_OCTANTS; x++) {
 
@@ -472,11 +479,36 @@ class ShipwrightRigBranch extends BranchPackage {
         return shipwrightHullBranch.findColumnTop(layout, mast.getX(), EngineSetting.SHIP_SHEET_HALF_BREADTH);
     }
 
-    // How many octants a mast rises above its deck: as tall as the hull's length and its beam let it stand, and
-    // shorter the farther from the middle of the hull it is stepped
-    private int resolveMastHeight(ShipLayoutStruct layout, ShipMastStruct mast) {
+    // The layer of the floor a mast is stepped on: the lowest deck drawn under both its octants
+    private int resolveFootLayer(ShipBlueprintStruct blueprint, ShipMastStruct mast) {
 
-        int stern = findStern(layout);
+        int deck = Math.max(blueprint.findLowestDeck(mast.getX()),
+                blueprint.findLowestDeck(mast.getX() + EngineSetting.SHIP_MAST_OCTANTS - 1));
+
+        return Math.max(0, deck) * EngineSetting.SHIP_DECK_HEIGHT;
+    }
+
+    // The layer every mast's head is measured up from: the lowest deck any mast rises from
+    private int resolveHeadBase(ShipLayoutStruct layout, ObjectArrayList<ShipMastStruct> masts) {
+
+        int base = Integer.MAX_VALUE;
+
+        for (int i = 0; i < masts.size(); i++) {
+
+            int deck = resolveDeckLayer(layout, masts.get(i));
+
+            if (deck != EngineSetting.SHIP_LEVEL_NONE)
+                base = Math.min(base, deck);
+        }
+
+        return base == Integer.MAX_VALUE ? 0 : base;
+    }
+
+    // How many octants a mast rises above its deck: its head as high over the base as the hull's length and its beam
+    // let a mast stand, the middle of the masts from the stern forward the tallest and each a share lower the
+    // farther along the line from it, never shorter than a mast may be over its own deck
+    private int resolveMastHeight(ShipLayoutStruct layout, int mastIndex, int mastCount, int deck, int base) {
+
         int length = resolveHullLength(layout);
         int beam = 0;
 
@@ -485,13 +517,12 @@ class ShipwrightRigBranch extends BranchPackage {
 
         float tallest = Math.min(length * EngineSetting.SHIP_MAST_HEIGHT_SHARE,
                 beam * EngineSetting.SHIP_MAST_BEAM_SHARE);
-        float middle = stern + length * 0.5f;
-        float offset = Math.abs(mast.getX() + EngineSetting.SHIP_MAST_OCTANTS * 0.5f - middle)
-                / Math.max(1f, length * 0.5f);
+        float middle = (mastCount - 1) * 0.5f;
+        float offset = Math.abs(mastIndex - middle) / Math.max(1f, mastCount * 0.5f);
         float share = 1f - EngineSetting.SHIP_MAST_END_TAPER * Math.min(1f, offset);
 
         return Math.max(EngineSetting.SHIP_MAST_MIN_HEIGHT,
-                Math.min(EngineSetting.SHIP_MAST_MAX_HEIGHT, Math.round(tallest * share)));
+                Math.min(EngineSetting.SHIP_MAST_MAX_HEIGHT, base + Math.round(tallest * share) - deck));
     }
 
     // True when a mast stands tall enough to carry SHIP_CROWS_NEST_MIN_SAILS sails over a crow's nest, the nest the

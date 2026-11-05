@@ -9,13 +9,19 @@ public enum ShipOpening {
      * is set on the wall, bulwark or planking it is cut through and turns to
      * face across it; a hatch lies in a deck's floor, closing the opening a
      * stair or ladder climbs through when it is set on one, or cutting one of
-     * its own. Each is kept in the blueprint list of its own kind.
+     * its own; a grate or a glass floor lies fixed over an opening, the glass
+     * even over the bottom deck's waist so the sea shows below; a gun platform
+     * stands on the floor facing the side and cuts the lidded port a cannon
+     * set on it fires through. Each is kept in the blueprint list of its own
+     * kind.
      */
 
     DOOR(EngineSetting.SHIPWRIGHT_TEXT_DOOR),
     WINDOW(EngineSetting.SHIPWRIGHT_TEXT_WINDOW),
     HATCH(EngineSetting.SHIPWRIGHT_TEXT_HATCH),
-    GRATE(EngineSetting.SHIPWRIGHT_TEXT_GRATE);
+    GRATE(EngineSetting.SHIPWRIGHT_TEXT_GRATE),
+    GLASS(EngineSetting.SHIPWRIGHT_TEXT_GLASS_FLOOR),
+    PLATFORM(EngineSetting.SHIPWRIGHT_TEXT_GUN_PLATFORM);
 
     // Values
     public static final ShipOpening[] VALUES = values();
@@ -39,6 +45,16 @@ public enum ShipOpening {
 
     // True for an opening that lies in a deck's floor and turns freely, not set on a wall
     public boolean isFloor() {
-        return this == HATCH || this == GRATE;
+        return this == HATCH || this == GRATE || this == GLASS;
+    }
+
+    // True for a fixed cover laid over an opening already in a deck's floor
+    public boolean isCover() {
+        return this == GRATE || this == GLASS;
+    }
+
+    // True for an opening that faces the way it is turned as it is set down, not across a wall
+    public boolean isTurned() {
+        return isFloor() || this == PLATFORM;
     }
 }

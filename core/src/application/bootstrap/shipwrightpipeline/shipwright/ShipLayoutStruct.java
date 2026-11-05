@@ -19,8 +19,8 @@ public class ShipLayoutStruct extends StructPackage {
      * behind it; its vehicle parts are those pieces merged into
      * boxes and every spar, sail, rope and fitting, in the order they fill the
      * model grid; its cargo is every door and piece of furniture, each with
-     * the sub-voxel box it stands in. Every hatch, ladder, boarding ladder,
-     * gun-port lid and window pane is
+     * the sub-voxel box it stands in. Every hatch, grate, glass floor, ladder,
+     * boarding ladder, gun-port lid and window pane is
      * kept as the octant box it fills and the quarter turn it faces, laid by
      * the hull and the openings before the grid is merged and built as a
      * part of its own after. It knows how far its anchors drop, how tall each
@@ -53,6 +53,7 @@ public class ShipLayoutStruct extends StructPackage {
     // Fittings — an octant box of six ints and a quarter turn for each, in model octants
     private final IntArrayList hatchBoxes;
     private final IntArrayList grateBoxes;
+    private final IntArrayList glassFloorBoxes;
     private final IntArrayList ladderBoxes;
     private final IntArrayList boardingLadderBoxes;
     private final IntArrayList portBoxes;
@@ -110,6 +111,7 @@ public class ShipLayoutStruct extends StructPackage {
         // Fittings
         this.hatchBoxes = new IntArrayList();
         this.grateBoxes = new IntArrayList();
+        this.glassFloorBoxes = new IntArrayList();
         this.ladderBoxes = new IntArrayList();
         this.boardingLadderBoxes = new IntArrayList();
         this.portBoxes = new IntArrayList();
@@ -136,6 +138,7 @@ public class ShipLayoutStruct extends StructPackage {
         cargoBoxes.clear();
         hatchBoxes.clear();
         grateBoxes.clear();
+        glassFloorBoxes.clear();
         ladderBoxes.clear();
         boardingLadderBoxes.clear();
         portBoxes.clear();
@@ -226,9 +229,9 @@ public class ShipLayoutStruct extends StructPackage {
         addFittingBox(hatchBoxes, minX, y, minZ, maxX, y + 1, maxZ, spin);
     }
 
-    // A fixed grate lying in a floor, the octants of the opening it covers
-    public void addGrate(int minX, int y, int minZ, int maxX, int maxZ, int spin) {
-        addFittingBox(grateBoxes, minX, y, minZ, maxX, y + 1, maxZ, spin);
+    // A fixed grate or glass floor lying in a floor, the octants of the opening it covers
+    public void addCover(ShipOpening opening, int minX, int y, int minZ, int maxX, int maxZ, int spin) {
+        addFittingBox(getFloorBoxes(opening), minX, y, minZ, maxX, y + 1, maxZ, spin);
     }
 
     // A ladder's octants from the floor it stands on up past the floor it climbs to
@@ -369,9 +372,17 @@ public class ShipLayoutStruct extends StructPackage {
         return grateBoxes;
     }
 
+    public IntArrayList getGlassFloorBoxes() {
+        return glassFloorBoxes;
+    }
+
     // The boxes a floor opening was built with
     public IntArrayList getFloorBoxes(ShipOpening opening) {
-        return opening == ShipOpening.GRATE ? grateBoxes : hatchBoxes;
+        return switch (opening) {
+            case GRATE -> grateBoxes;
+            case GLASS -> glassFloorBoxes;
+            default -> hatchBoxes;
+        };
     }
 
     public IntArrayList getLadderBoxes() {

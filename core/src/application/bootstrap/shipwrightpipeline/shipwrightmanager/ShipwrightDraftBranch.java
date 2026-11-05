@@ -27,18 +27,21 @@ class ShipwrightDraftBranch extends BranchPackage {
      * Draws a drafting table's sheet and its top and side views into the
      * session's own pixels, SHIPWRIGHT_INK_SCALE texels a side to every
      * octant on the sheet, the paper and its ruling left to the sheet's
-     * shader. The sheet is always the plan of the deck picked. While a deck is
-     * drawn its outline is inked, blue where it lies under the waterline, the
-     * decks under and over it faint, and the hull's outline where the water
-     * meets it ruled across; with any other tool it is the deck as it was
-     * built — floor, planking, bulwarks, rails and the wells left open in it —
-     * with the waist cut through it and every wall, half wall and railing, and
-     * over it
+     * shader. The sheet is always the plan of the deck picked, the sea never
+     * drawn on it. While a deck is drawn its outline is inked as floor inside
+     * planking, the decks under and over it faint; with any other tool it is
+     * the deck as it was built — floor, planking, bulwarks, rails, lips, gun
+     * platforms and the wells and bays left open in it; either way the waist
+     * cut through it and every wall, half wall, railing and lip, and over it
      * everything set down drawn whole as what it is: a stair's run in treads
-     * climbing darker, a ladder's rails and rungs, a hatch's grating with its
-     * hinge, a window's panes, a door, a cannon, the helm, the capstan and
-     * every piece of furniture over its footprint, its front edge marked the
-     * way it faces. Whatever stands under the cursor is outlined; with
+     * climbing darker, a ladder's rails and rungs, a hatch's, grate's or glass
+     * floor's grating with its hinge, a window's panes, a door, a gun
+     * platform, a cannon, the helm, the capstan and every piece of furniture
+     * over its footprint, its front edge marked the way it faces. In the
+     * sheet's aft margin a gauge shows where the water sits in the deck
+     * picked: full when the whole deck lies under it, empty when the deck
+     * stands clear of it, and filled as far up the deck as the waterline
+     * crosses it. Whatever stands under the cursor is outlined; with
      * nothing there, the thing in hand is drawn whole at the cursor as it
      * would be set down, red where it could not stand. Every mast is marked,
      * the picked one brighter. Plans run bow to the right and starboard down. The
@@ -101,20 +104,19 @@ class ShipwrightDraftBranch extends BranchPackage {
         else
             drawDeck(session);
 
+        drawStanding(session);
         drawMasts(session);
+        drawGauge(session);
 
         if (!session.getTool().isPainted())
             drawHand(session);
     }
 
-    // The deck picked inked, blue under the waterline, the decks under and over it faint, the waterline ruled
+    // The deck picked inked as floor inside its planking, the decks under and over it faint
     private void drawOutlines(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
-        ShipLayoutStruct layout = session.getLayout();
         int deck = session.getDeck();
-        boolean submerged = layout.isAfloat()
-                && (deck * EngineSetting.SHIP_DECK_HEIGHT + 1) * EngineSetting.SUB_BLOCK_SIZE <= layout.getDraft();
 
         for (int z = 0; z < EngineSetting.SHIP_SHEET_BREADTH; z++)
             for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++) {
@@ -122,7 +124,9 @@ class ShipwrightDraftBranch extends BranchPackage {
                 int color;
 
                 if (blueprint.isOnDeck(deck, x, z))
-                    color = submerged ? EngineSetting.SHIPWRIGHT_INK_SUBMERGED : EngineSetting.SHIPWRIGHT_INK_HULL;
+                    color = isOutlineRim(blueprint, deck, x, z)
+                            ? EngineSetting.SHIPWRIGHT_INK_SHELL
+                            : EngineSetting.SHIPWRIGHT_INK_FLOOR;
                 else if (blueprint.isOnDeck(deck - 1, x, z))
                     color = EngineSetting.SHIPWRIGHT_INK_BELOW;
                 else if (blueprint.isOnDeck(deck + 1, x, z))
@@ -132,52 +136,47 @@ class ShipwrightDraftBranch extends BranchPackage {
 
                 fillOctant(session, EngineSetting.SHIP_AFT_MARGIN + x, z, color);
             }
-
-        drawWaterline(session, layout);
     }
 
-    // The ring where the water meets the hull at the waterline the ship floats at
-    private void drawWaterline(ShipwrightSessionInstance session, ShipLayoutStruct layout) {
+    // True when an octant of a deck's outline lies at its edge, some octant beside it off the deck
+    private boolean isOutlineRim(ShipBlueprintStruct blueprint, int deck, int x, int z) {
 
-        if (!layout.isAfloat())
-            return;
+        for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++)
+            if (!blueprint.isOnDeck(deck, x + ShipCellUtility.stepX(spin), z + ShipCellUtility.stepZ(spin)))
+                return true;
 
-        int layer = Math.max(0, (int) Math.ceil(layout.getDraft() / EngineSetting.SUB_BLOCK_SIZE) - 1);
-
-        for (int x = 0; x < EngineSetting.SHIP_SHEET_LENGTH; x++) {
-
-            int halfBeam = layout.getWaterlineSection(x, layer);
-            int sternward = layout.getWaterlineSection(x - 1, layer);
-            int bowward = layout.getWaterlineSection(x + 1, layer);
-
-            for (int halfZ = 0; halfZ < halfBeam; halfZ++)
-                if (halfZ == halfBeam - 1 || halfZ >= sternward || halfZ >= bowward) {
-                    fillOctant(session, EngineSetting.SHIP_AFT_MARGIN + x, ShipCellUtility.toStarboard(halfZ),
-                            EngineSetting.SHIPWRIGHT_INK_WATERLINE);
-                    fillOctant(session, EngineSetting.SHIP_AFT_MARGIN + x, ShipCellUtility.toPort(halfZ),
-                            EngineSetting.SHIPWRIGHT_INK_WATERLINE);
-                }
-        }
+        return false;
     }
 
-    // The deck picked as it was built, and everything set down on it drawn as what it is
+    // The deck picked as it was built
     private void drawDeck(ShipwrightSessionInstance session) {
+
+        ShipLayoutStruct layout = session.getLayout();
+
+        if (layout.getSectionLayers() > 0)
+            drawFloor(session, layout, session.getDeck() * EngineSetting.SHIP_DECK_HEIGHT);
+    }
+
+    // Everything set down on the deck picked drawn as what it is
+    private void drawStanding(ShipwrightSessionInstance session) {
 
         ShipBlueprintStruct blueprint = session.getBlueprint();
         ShipLayoutStruct layout = session.getLayout();
         int deck = session.getDeck();
 
-        if (layout.getSectionLayers() > 0)
-            drawFloor(session, layout, deck * EngineSetting.SHIP_DECK_HEIGHT);
-
         drawCells(session, blueprint.getWaists(), deck, EngineSetting.SHIPWRIGHT_INK_WAIST);
         drawCells(session, blueprint.getWalls(), deck, EngineSetting.SHIPWRIGHT_INK_WALL);
         drawCells(session, blueprint.getHalfWalls(), deck, EngineSetting.SHIPWRIGHT_INK_HALF_WALL);
         drawCells(session, blueprint.getRailings(), deck, EngineSetting.SHIPWRIGHT_INK_RAILING);
+        drawCells(session, blueprint.getLips(), deck, EngineSetting.SHIPWRIGHT_INK_LIP);
         drawHatches(session, layout.getHatchBoxes(), layout, deck * EngineSetting.SHIP_DECK_HEIGHT,
                 EngineSetting.SHIPWRIGHT_INK_HATCH);
         drawHatches(session, layout.getGrateBoxes(), layout, deck * EngineSetting.SHIP_DECK_HEIGHT,
                 EngineSetting.SHIPWRIGHT_INK_GRATE);
+        drawHatches(session, layout.getGlassFloorBoxes(), layout, deck * EngineSetting.SHIP_DECK_HEIGHT,
+                EngineSetting.SHIPWRIGHT_INK_GLASS_FLOOR);
+        drawPlacements(session, ShipwrightTool.OPENINGS, ShipOpening.PLATFORM.ordinal(), blueprint.getGunPlatforms(),
+                deck);
         drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.STAIR.ordinal(), blueprint.getStairs(), deck);
         drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.LADDER.ordinal(), blueprint.getLadders(), deck);
         drawPlacements(session, ShipwrightTool.STAIRS, ShipClimb.BOARDING.ordinal(), blueprint.getBoardingLadders(),
@@ -206,13 +205,17 @@ class ShipwrightDraftBranch extends BranchPackage {
                     color = EngineSetting.SHIPWRIGHT_INK_RAIL;
                 else if (standing == ShipPiece.WALLS)
                     color = EngineSetting.SHIPWRIGHT_INK_WALL;
+                else if (standing == ShipPiece.LIPS)
+                    color = EngineSetting.SHIPWRIGHT_INK_LIP;
+                else if (standing == ShipPiece.PLATFORMS)
+                    color = EngineSetting.SHIPWRIGHT_INK_PLATFORM;
                 else if (standing != null)
                     color = EngineSetting.SHIPWRIGHT_INK_SHELL;
                 else if (piece != null && piece.isFloor())
                     color = EngineSetting.SHIPWRIGHT_INK_FLOOR;
                 else if (piece != null)
                     color = EngineSetting.SHIPWRIGHT_INK_SHELL;
-                else if (floor > 0 && layout.isVolume(x - layout.getOriginX(), floor, z))
+                else if (layout.isVolume(x - layout.getOriginX(), floor, z))
                     color = EngineSetting.SHIPWRIGHT_INK_WELL;
                 else
                     continue;
@@ -311,6 +314,30 @@ class ShipwrightDraftBranch extends BranchPackage {
         }
     }
 
+    // Gauge \\
+
+    // The water gauge in the sheet's aft margin, the deck picked from its floor at the bottom to the floor above at the
+    // top, filled as far up as the waterline the ship floats at crosses it
+    private void drawGauge(ShipwrightSessionInstance session) {
+
+        int scale = EngineSetting.SHIPWRIGHT_INK_SCALE;
+        ShipLayoutStruct layout = session.getLayout();
+        int minX = EngineSetting.SHIPWRIGHT_GAUGE_X * scale;
+        int maxX = minX + EngineSetting.SHIPWRIGHT_GAUGE_WIDTH * scale;
+        int minZ = EngineSetting.SHIPWRIGHT_GAUGE_MARGIN * scale;
+        int maxZ = (EngineSetting.SHIP_SHEET_BREADTH - EngineSetting.SHIPWRIGHT_GAUGE_MARGIN) * scale;
+        float deckBottom = session.getDeck() * EngineSetting.SHIP_DECK_HEIGHT * EngineSetting.SUB_BLOCK_SIZE;
+        float deckHeight = EngineSetting.SHIP_DECK_HEIGHT * EngineSetting.SUB_BLOCK_SIZE;
+        float share = layout.isAfloat()
+                ? Math.max(0f, Math.min(1f, (layout.getDraft() - deckBottom) / deckHeight))
+                : 0f;
+        int waterZ = minZ + 1 + Math.round((maxZ - minZ - 2) * share);
+
+        fillPlan(session, minX, minZ, maxX, maxZ, EngineSetting.SHIPWRIGHT_INK_GAUGE_FRAME);
+        fillPlan(session, minX + 1, minZ + 1, maxX - 1, maxZ - 1, EngineSetting.SHIPWRIGHT_INK_GAUGE_EMPTY);
+        fillPlan(session, minX + 1, minZ + 1, maxX - 1, waterZ, EngineSetting.SHIPWRIGHT_INK_GAUGE_WATER);
+    }
+
     // Hand \\
 
     // Whatever stands under the cursor outlined, to be picked up or taken away; with nothing there, the thing in
@@ -326,7 +353,7 @@ class ShipwrightDraftBranch extends BranchPackage {
 
         int x = ShipwrightEditBranch.toSheetX(session.getCursorU());
         int z = ShipwrightEditBranch.toSheetZ(session.getCursorV());
-        int option = shipwrightManager.getOptionIndex(session);
+        int option = shipwrightEditBranch.getHeldOption(session);
 
         if (x < 0 || x >= EngineSetting.SHIP_SHEET_LENGTH || z < 0 || z >= EngineSetting.SHIP_SHEET_BREADTH
                 || option == EngineSetting.INDEX_NOT_FOUND && session.getTool() != ShipwrightTool.MASTS)
@@ -367,8 +394,7 @@ class ShipwrightDraftBranch extends BranchPackage {
         }
 
         if (tool == ShipwrightTool.OPENINGS && ShipOpening.VALUES[option].isFloor()) {
-            drawGrating(session, footprint, spin, ghost ? ghostColor : option == ShipOpening.GRATE.ordinal()
-                    ? EngineSetting.SHIPWRIGHT_INK_GRATE : EngineSetting.SHIPWRIGHT_INK_HATCH);
+            drawGrating(session, footprint, spin, ghost ? ghostColor : resolveFloorInk(ShipOpening.VALUES[option]));
             return;
         }
 
@@ -385,10 +411,20 @@ class ShipwrightDraftBranch extends BranchPackage {
             edgeFootprint(session, footprint, spin, EngineSetting.SHIPWRIGHT_INK_FACING);
     }
 
+    private static int resolveFloorInk(ShipOpening opening) {
+        return switch (opening) {
+            case GRATE -> EngineSetting.SHIPWRIGHT_INK_GRATE;
+            case GLASS -> EngineSetting.SHIPWRIGHT_INK_GLASS_FLOOR;
+            default -> EngineSetting.SHIPWRIGHT_INK_HATCH;
+        };
+    }
+
     private int resolveItemInk(ShipwrightTool tool, int option) {
 
         if (tool == ShipwrightTool.OPENINGS)
-            return EngineSetting.SHIPWRIGHT_INK_DOOR;
+            return option == ShipOpening.PLATFORM.ordinal()
+                    ? EngineSetting.SHIPWRIGHT_INK_PLATFORM
+                    : EngineSetting.SHIPWRIGHT_INK_DOOR;
 
         if (tool == ShipwrightTool.MASTS)
             return EngineSetting.SHIPWRIGHT_INK_MAST;

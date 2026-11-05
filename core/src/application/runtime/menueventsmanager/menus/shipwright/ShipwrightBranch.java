@@ -5,7 +5,7 @@ import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.itempipeline.itemdefinition.ItemStation;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
-import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTool;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightTab;
 import application.bootstrap.shipwrightpipeline.shipwrightmanager.ShipwrightManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -141,10 +141,10 @@ public class ShipwrightBranch extends BranchPackage {
         shipwrightManager.redo(session());
     }
 
-    // Tools \\
+    // Tabs \\
 
-    public void selectTool(String toolName) {
-        shipwrightManager.setTool(session(), ArpgUtility.toEnum(toolName, ShipwrightTool.class));
+    public void selectTab(String tabName) {
+        shipwrightManager.selectTab(session(), ArpgUtility.toEnum(tabName, ShipwrightTab.class));
     }
 
     public void turnLeft() {
@@ -183,7 +183,7 @@ public class ShipwrightBranch extends BranchPackage {
         shipwrightManager.stepOption(session(), -1);
     }
 
-    // Picks an option of the tool in hand by its index in the catalogue, as a catalogue entry clicked does
+    // Picks an option of the tab open by its entry in the catalogue, as a catalogue tile clicked does
     public void pickOption(String index) {
         shipwrightManager.pickOption(session(), Integer.parseInt(index));
     }

@@ -34,19 +34,21 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 | `ShipwrightManager` | Sessions, `compileSession`, save, open, launch, `toVehicleName`, registration at boot |
 | `ShipwrightLoader` / `ShipwrightBuilder` | The one vehicle loader: scans `assets/vehicles/` |
 | `ShipwrightLibraryBranch` | Reading and writing files in the assets or `Saves/Vehicles` |
-| `ShipwrightEditBranch` | Every change: strokes, pick up / take away / place, `findPlacementProblem`, catalogue options, decks, undo, commit/refuse |
+| `ShipwrightEditBranch` | Every change: strokes, pick up / take away / place, `findPlacementProblem`, the tabs' entries (`getOptionCount` / `getOptionIndex` / `pickOption` / `hold` / `selectTab`), the bottom waist's glazing, cannon mounting, decks, undo, commit/refuse |
 | `ShipwrightInspectBranch` | What stands at an octant over its whole footprint (`pick`), and the footprint any tool's option covers (`resolveFootprint`) |
 | `ShipwrightCompileBranch` | `compile(blueprint, layout)` order, weighing, floating, `toDesign` |
-| `ShipwrightHullBranch` | Sections, shell, bulwarks, waist and its rails, walls and railings, stairs, ladders, boarding ladders, hatches; their `find...Problem` rules |
-| `ShipwrightFittingBranch` | Doors, windows, gun ports, helm, capstan, rudder, anchors, hatch and port lids (`addPanel`, `resolveHingeSpin`), ladders, boarding ladders, glass, cargo |
-| `ShipwrightRigBranch` | Bowsprit, masts (height, sails and nest worked out), crow's nests, shrouds, stays |
-| `ShipwrightDraftBranch` | Sheet glyphs at `SHIPWRIGHT_INK_SCALE`, the thing in hand, the hover outline, side and top views |
+| `ShipwrightHullBranch` | Sections, shell, bulwarks, waist and its rails, walls, railings and lips, stairs, ladders, boarding ladders, hatches, grates and glass floors (`layCovers`), the railings' posts and handrails (`addRailings`); their `find...Problem` rules |
+| `ShipwrightFittingBranch` | Doors, windows, gun platforms and their ports (`findPlatformProblem`), cannons (`findCannonProblem`), helm, capstan, rudder, anchors, hatch and port lids (`addPanel`, `resolveHingeSpin`), grates, glass floors, ladders, boarding ladders, glass, portholes (`addPortholes`), cargo |
+| `ShipwrightRigBranch` | Bowsprit, masts (foot, height, sails and nest worked out), crow's nests, shrouds, stays |
+| `ShipwrightDraftBranch` | Sheet glyphs at `SHIPWRIGHT_INK_SCALE`, the thing in hand, the hover outline, the water gauge, side and top views |
 | `ShipwrightSurveyBranch` | Stability, speed, triangle survey |
 
 - **Data:** `ShipBlueprintStruct` (the file's content, `category` included), `ShipLayoutStruct` (one compile),
-  `ShipOctantGridStruct` (octant grid and box merge), `ShipwrightSessionInstance` (one table in use: tool, option,
-  facing, cursor, `hover` and `placementProblem`), `ShipPickStruct` (what stands somewhere, and its footprint),
-  `ShipPiece`, `ShipwrightTool`, `ShipOpening`, `ShipClimb`. **Utilities:** `ShipBlueprintArpgUtility` (the one file reader/writer),
+  `ShipOctantGridStruct` (octant grid and box merge), `ShipwrightSessionInstance` (one table in use: tab, the entry
+  each tab last held, tool, option, facing, cursor, `hover` and `placementProblem`), `ShipPickStruct` (what stands
+  somewhere, and its footprint), `ShipPiece` (with the height a slab piece keeps and whether it is railed),
+  `ShipwrightTab` (the catalogue's four tabs: fixed entries of tool, option and section, then a following tool's
+  options), `ShipwrightTool`, `ShipWall`, `ShipOpening`, `ShipClimb`. **Utilities:** `ShipBlueprintArpgUtility` (the one file reader/writer),
   `ShipCellUtility` (cell packing, mirroring, steps), `ShipRopeUtility` (the one rope layer).
 - **Runtime glue:** `application/runtime/shipwright/ShipwrightSystem` (input, bindings, labels, the lit tool),
   `ShipwrightCatalogueSystem` (the scrolling, sectioned tile list injected from the `shipwright_catalogue_*`
@@ -63,10 +65,11 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
 
 ## Compile order
 
-`ShipwrightCompileBranch.compile`: sections → shell → bulwarks → waist → walls and railings → stairs → ladders → boarding
-ladders → hatches →
-openings (doors, windows, gun ports) → merge pieces into parts → bowsprit → fittings (helm, capstan, rudder, anchors,
-hatch lids, port lids, ladders, glass) → rig → cargo → float → waterline. Everything that cuts the grid runs before
+`ShipwrightCompileBranch.compile`: sections → shell → bulwarks → waist → walls, railings and lips → stairs → ladders →
+boarding ladders → hatches → grates and glass floors → openings (doors, windows, gun platforms and their ports) → merge
+pieces into parts (rails as posts and handrails) → bowsprit → fittings (helm, capstan, rudder, anchors, hatch lids,
+grates, glass floors, port lids, ladders, glass) → rig → cargo → float → portholes (and float again when any were
+framed) → waterline. Everything that cuts the grid runs before
 the merge; everything built as its own part runs after. Hatches run after stairs and ladders so they can close the
 openings those cut. The waist runs before walls, stairs and furniture so they see its cut floor; it cuts every octant
 first and rails the rim after, so a waist painted wide never rails its own octants.
@@ -86,9 +89,12 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   laying (`reportBuildProblem`), so the ghost, the table and a loaded file never disagree.
 - **One footprint each.** What an option covers once set down is `ShipwrightInspectBranch.resolveFootprint`; picking,
   the ghost, the hover outline, the sheet's glyphs and the furniture overlap check all read it.
-- **New option.** Add it to its tool's enum or list, `getOptionCount` / `getOptionIndex` / `pickOption` in
-  `ShipwrightEditBranch`, `ShipwrightManager.getOptionName`, its footprint, its `find...Problem`, its glyph in
-  `ShipwrightDraftBranch.drawGlyph` and its `pick` order in `ShipwrightInspectBranch`.
+- **New option.** Add it to its tool's enum or list, list it in its `ShipwrightTab` (tool, option, section), handle it
+  in `ShipwrightEditBranch.getHeldOption` / `hold` when it is a new tool, `ShipwrightManager.getOptionName`, its
+  footprint, its `find...Problem`, its glyph in `ShipwrightDraftBranch.drawGlyph` and its `pick` order in
+  `ShipwrightInspectBranch`.
+- **Catalogue indices are entries.** `getOptionIndex`, `pickOption` and the tiles' action argument are the tab's entry
+  index, not the tool's option; read the tool's own option through `getHeldOption` / `getEntryOption`.
 - **New fitting.** Lay what it cuts into the grid before the merge, record its octant box in `ShipLayoutStruct`
   (`addHatch`/`addLadder`/`addBoardingLadder`/`addPort`/`addPane` pattern), build its part in `ShipwrightFittingBranch.addFittings`, draw
   it in `ShipwrightDraftBranch`.
@@ -128,15 +134,30 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   `hasCrowsNest`). Read them from the layout, never from the blueprint.
 - **Rails are landings.** `clearLanding` opens a bulwark, rail or railing where a stair or ladder lands;
   the table lets the waist widen into a rim that carries only its own rail.
-- **Gun ports are one per cannon.** `cutPort` refuses a cannon that cuts no planking and one whose port touches a port
-  already cut; never reintroduce open ports over a bulwark.
+- **Gun ports are one per gun platform.** Ports belong to the platform, never to the cannon (cargo can be taken away);
+  `findPlatformProblem` refuses a platform that cuts no planking and one whose port touches a port already cut; never
+  reintroduce open ports over a bulwark. A cannon's cell must equal a platform's cell (`findCannonProblem`), and the
+  table snaps a cannon in hand to the platform under the cursor (`resolveMountCell`, `isMounting`).
+- **Rails are posts.** `ShipPiece.RAILS` is still one octant in the grid for every rule and collision check, but is
+  built by `ShipwrightHullBranch.addRailings` as posts and handrails, never merged whole. Lips and gun platforms are
+  slab pieces: `ShipOctantGridStruct.mergeInto` keeps only `getHeight()` sub-voxels of their top layer.
+- **Glazed windows keep the sea out.** Only an open cut through the side lowers the opening sill; a window does not.
+  `addPortholes` runs after the first float (it needs the draft) and the hull is floated again when it framed any.
+- **The bottom deck's waist is glazed by the edit branch,** not the compile: `glazeWaist` adds a glass floor placement
+  over each octant a waist stroke cut or uncovered, compiling after each, inside the same undo step.
 - **Railings replace the edge.** `layEdge` lays railings and half walls off open floor; it clears the side, bulwark or rail standing over its octant up to the deck
   above before laying the rail, so walls run after bulwarks and the waist; `findRailingProblem` is the one rule (above
   the last waterline, open floor or the deck's own side or bulwark). There is no porch: never add an overhanging
   floor; a porch is a railed stretch of deck.
-- **Grates are fixed covers.** `layGrates` runs after hatches; `layOpeningCover` is the one extent rule for hatch
-  lids and grates, and a grate takes down the waist rail along its sides (`unrailCover`). `addGrates` builds every
-  grate as one fixed slatted part; never give it a hinge.
+- **Grates and glass floors are fixed covers.** `layCovers` runs after hatches; `layOpeningCover` is the one extent
+  rule for hatch lids and covers, `findCoverProblem` the one placement rule, and a cover takes down the waist rail
+  along its sides (`unrailCover`). `addGrates` and `addGlassFloors` build every cover of a kind as fixed parts; never
+  give one a hinge.
+- **Walls replace automatic edges.** A full wall (or a half wall over a rail or bulwark) clears the waist's rail or the
+  bulwark in its column through `clearLanding` before it rises; railings, lips and other half walls go through
+  `layEdge`.
+- **Masts step on decks, not the keel.** `resolveFootLayer` is the lowest deck drawn under both octants; heads are
+  measured from `resolveHeadBase` and ranked from the middle mast of the line.
 - **Dialogs hide the table.** A label draws over every menu's sprites, so the table's menus are hidden
   (`ShipwrightSystem.setMenusShown`) while a dialog is open, as the Settings menu hides its parent; the catalogue's
   icons are skipped then too.
