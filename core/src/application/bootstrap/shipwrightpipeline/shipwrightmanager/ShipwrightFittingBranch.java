@@ -42,28 +42,29 @@ class ShipwrightFittingBranch extends BranchPackage {
      * turns that wall into watertight panes of glass that reach out to the
      * walls and panes beside them, and one the sea reaches is framed in iron
      * as a porthole once the ship is floated. Every roof is shingles stepped
-     * up from eaves on the top of its railings and half walls to a ridge over
-     * the open floor it is laid on. Every gun platform is a low bed laid on
-     * open floor facing the side, part of the ship, and cuts a lidded port of
-     * its own through the planking right before it at the height a cannon's
-     * barrel stands on it, never over a bulwark and never touching another
-     * platform's port; a cannon stands only on a platform, set down where the
-     * platform is and facing its way, so its barrel lies in the port. Every
-     * hatch lid and port lid is a framed panel battened on its inner face: a
-     * hatch lid lies flush in its hatchway, slats with gaps between them, and
-     * swings up about its longer side; a port lid closes the port from
-     * outside, one board set in from its frame, and swings out and up about
-     * its top edge; both open and shut with Activate. A grate is laid the same
-     * way, fixed, its slats thin and far apart to see through; a glass floor
-     * is panes of glass between iron bars. Every boarding ladder is rope and
-     * rungs hung clear of the side from the keel to past the deck's edge, a
-     * step bridging it to the deck. Doors and furniture are cargo, real items
-     * drawn from furnishing tables to be taken up, set down and used like any
-     * other: each is turned the way it faces, sized to the octants its largest
-     * item takes up and centred in them, standing on open floor. Once every
-     * part is built, every item each place could be furnished with must fit
-     * clear of every solid sub-voxel and of every other place, exactly as a
-     * vehicle stows its cargo, so a ship that compiles always furnishes.
+     * up from eaves flush with the deck where it meets open air to the top of
+     * a half wall where it meets the deck it stands on. Every gun platform is
+     * a low bed laid on open floor facing the side, part of the ship, and cuts
+     * a lidded port of its own through the planking right before it at the
+     * height a cannon's barrel stands on it, never over a bulwark and never
+     * touching another platform's port; a cannon stands only on a platform,
+     * set down where the platform is and facing its way, so its barrel lies in
+     * the port. Every hatch lid and port lid is a framed panel battened on its
+     * inner face: a hatch lid lies flush in its hatchway, slats with gaps
+     * between them, and swings up about its longer side; a port lid closes the
+     * port from outside, one board set in from its frame, and swings out and
+     * up about its top edge; both open and shut with Activate. A grate is laid
+     * the same way, fixed, its slats thin and far apart to see through; a
+     * glass floor is panes of glass between iron bars. Every boarding ladder
+     * is rope and rungs hung clear of the side from the keel to past the
+     * deck's edge, a step bridging it to the deck. Doors and furniture are
+     * cargo, real items drawn from furnishing tables to be taken up, set down
+     * and used like any other: each is turned the way it faces, sized to the
+     * octants its largest item takes up and centred in them, standing on open
+     * floor. Once every part is built, every item each place could be
+     * furnished with must fit clear of every solid sub-voxel and of every
+     * other place, exactly as a vehicle stows its cargo, so a ship that
+     * compiles always furnishes.
      */
 
     // Internal
@@ -81,7 +82,9 @@ class ShipwrightFittingBranch extends BranchPackage {
     private int[] boxMin;
     private int[] boxMax;
     private int[] tunnelBox;
-    private int[] roofDistances;
+    private int[] roofTops;
+    private boolean[] roofGathered;
+    private IntArrayList roofMembers;
 
     // Base \\
 
@@ -96,7 +99,9 @@ class ShipwrightFittingBranch extends BranchPackage {
         this.boxMin = new int[EngineSetting.AXIS_COUNT];
         this.boxMax = new int[EngineSetting.AXIS_COUNT];
         this.tunnelBox = new int[EngineSetting.BOX_INT_STRIDE];
-        this.roofDistances = new int[0];
+        this.roofTops = new int[0];
+        this.roofGathered = new boolean[0];
+        this.roofMembers = new IntArrayList();
     }
 
     @Override
@@ -991,11 +996,13 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // Roofs \\
 
-    // Every roof built over the open floor it is laid on as stepped shingles: its eaves SHIP_ROOF_EAVES_HEIGHT over
-    // the floor, on the top of the railings, half walls and bulwarks round its edge, which meet it flush while a full
-    // wall rises through it, each octant SHIP_ROOF_RISE_SUB_VOXELS higher the farther it lies
-    // in from the roof's edge, so a roof of any outline rises in steps to a ridge along its middle; a slab
-    // SHIP_ROOF_THICKNESS_SUB_VOXELS thick, the octants of one height merged along the length
+    // Every roof built over the octants it is laid on as stepped shingles, one roof to each run of octants touching
+    // along a side, resting on the floor it is laid on. A roof slopes the way it meets the deck it stands on: every
+    // line of it across that way climbs evenly from a slab lying flush on the floor where it meets open air to a half
+    // wall's top, SHIP_ROOF_RIDGE_HEIGHT over the floor, where it meets the deck, so a half wall standing there meets
+    // it flush; a roof meeting the deck nowhere
+    // slopes across its narrower way to a ridge along its length. Each step is a slab SHIP_ROOF_THICKNESS_SUB_VOXELS
+    // thick that reaches down to the steps beside it, the octants of one step merged along the length
     void addRoofs(ShipLayoutStruct layout) {
 
         IntArrayList cells = layout.getRoofCells();
@@ -1003,103 +1010,193 @@ class ShipwrightFittingBranch extends BranchPackage {
         if (cells.isEmpty())
             return;
 
-        int sizeX = layout.getGrid().getSizeX();
+        ShipOctantGridStruct grid = layout.getGrid();
+        int sizeX = grid.getSizeX();
         int area = sizeX * EngineSetting.SHIP_SHEET_BREADTH;
         VehiclePartStruct roofs = new VehiclePartStruct(
                 EngineSetting.SHIP_PART_ROOFS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_ROOF,
                 EngineSetting.SHIP_LINK_NONE, new Vector3(), EngineSetting.AXIS_Y, 0f);
 
-        if (roofDistances.length < area)
-            this.roofDistances = new int[area];
+        if (roofTops.length < area) {
+            this.roofTops = new int[area];
+            this.roofGathered = new boolean[area];
+        }
 
         for (int start = 0; start < cells.size(); ) {
 
             int floor = cells.getInt(start + 1);
             int end = start;
 
-            Arrays.fill(roofDistances, 0, area, 0);
+            Arrays.fill(roofTops, 0, area, 0);
+            Arrays.fill(roofGathered, 0, area, false);
 
             while (end < cells.size() && cells.getInt(end + 1) == floor) {
-                roofDistances[cells.getInt(end) + cells.getInt(end + 2) * sizeX] = Integer.MAX_VALUE / 2;
+                roofTops[cells.getInt(end) + cells.getInt(end + 2) * sizeX] = EngineSetting.SHIP_ROOF_LAID;
                 end += EngineSetting.SHIP_ROOF_CELL_STRIDE;
             }
 
-            resolveRoofDistances(sizeX);
-            addRoof(roofs, sizeX, floor);
+            for (int seed = 0; seed < area; seed++)
+                if (roofTops[seed] == EngineSetting.SHIP_ROOF_LAID && !roofGathered[seed])
+                    raiseRoof(grid, sizeX, floor, seed);
+
+            addRoof(roofs, sizeX);
             start = end;
         }
 
         layout.addPart(roofs);
     }
 
-    // Every roofed octant's distance in octants from the nearest octant the roof does not cover, counting diagonals
-    // as one, worked out in a pass forward and a pass back over the sheet
-    private void resolveRoofDistances(int sizeX) {
+    // One roof gathered from an octant of it, the way it slopes worked out, and every line of it raised that way
+    private void raiseRoof(ShipOctantGridStruct grid, int sizeX, int floor, int seed) {
 
-        int breadth = EngineSetting.SHIP_SHEET_BREADTH;
+        int axis = gatherRoof(grid, sizeX, floor, seed);
+        int stepX = axis == EngineSetting.AXIS_X ? 1 : 0;
+        int stepZ = 1 - stepX;
 
-        for (int z = 0; z < breadth; z++)
-            for (int x = 0; x < sizeX; x++)
-                relaxRoofDistance(sizeX, x, z, -1, -1);
+        for (int i = 0; i < roofMembers.size(); i++) {
 
-        for (int z = breadth - 1; z >= 0; z--)
-            for (int x = sizeX - 1; x >= 0; x--)
-                relaxRoofDistance(sizeX, x, z, 1, 1);
+            int index = roofMembers.getInt(i);
+            int x = index % sizeX;
+            int z = index / sizeX;
+
+            if (!isRoofed(sizeX, x - stepX, z - stepZ))
+                raiseRoofLine(grid, sizeX, floor, x, z, stepX, stepZ);
+        }
     }
 
-    // A roofed octant's distance lowered through the four octants already passed on its row and the row before
-    private void relaxRoofDistance(int sizeX, int x, int z, int stepX, int stepZ) {
+    // Every octant of the roof an octant belongs to gathered into roofMembers, returning the axis it slopes along:
+    // the one it meets the deck across most, or where it meets the deck nowhere the narrower of its two
+    private int gatherRoof(ShipOctantGridStruct grid, int sizeX, int floor, int seed) {
 
-        int index = x + z * sizeX;
+        int metX = 0;
+        int metZ = 0;
+        int minX = Integer.MAX_VALUE;
+        int minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxZ = Integer.MIN_VALUE;
 
-        if (roofDistances[index] == 0)
-            return;
+        roofMembers.clear();
+        roofMembers.add(seed);
+        roofGathered[seed] = true;
 
-        int distance = roofDistances[index];
+        for (int i = 0; i < roofMembers.size(); i++) {
 
-        distance = Math.min(distance, readRoofDistance(sizeX, x + stepX, z) + 1);
-        distance = Math.min(distance, readRoofDistance(sizeX, x, z + stepZ) + 1);
-        distance = Math.min(distance, readRoofDistance(sizeX, x + stepX, z + stepZ) + 1);
-        distance = Math.min(distance, readRoofDistance(sizeX, x - stepX, z + stepZ) + 1);
+            int index = roofMembers.getInt(i);
+            int x = index % sizeX;
+            int z = index / sizeX;
 
-        roofDistances[index] = distance;
+            minX = Math.min(minX, x);
+            minZ = Math.min(minZ, z);
+            maxX = Math.max(maxX, x);
+            maxZ = Math.max(maxZ, z);
+
+            for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++) {
+
+                int nextX = x + ShipCellUtility.stepX(spin);
+                int nextZ = z + ShipCellUtility.stepZ(spin);
+
+                if (!isRoofed(sizeX, nextX, nextZ)) {
+
+                    if (!isRoofDrain(grid, sizeX, floor, nextX, nextZ)) {
+                        metX += ShipCellUtility.stepX(spin) != 0 ? 1 : 0;
+                        metZ += ShipCellUtility.stepZ(spin) != 0 ? 1 : 0;
+                    }
+
+                    continue;
+                }
+
+                int next = nextX + nextZ * sizeX;
+
+                if (!roofGathered[next]) {
+                    roofGathered[next] = true;
+                    roofMembers.add(next);
+                }
+            }
+        }
+
+        if (metX + metZ > 0)
+            return metZ >= metX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X;
+
+        return maxZ - minZ <= maxX - minX ? EngineSetting.AXIS_Z : EngineSetting.AXIS_X;
     }
 
-    private int readRoofDistance(int sizeX, int x, int z) {
+    // One line of a roof along the way it slopes, from its first octant: low where it meets open air and high where
+    // it meets the deck, a ridge in its middle with open air either end, level at a half wall's top between two decks
+    private void raiseRoofLine(ShipOctantGridStruct grid, int sizeX, int floor, int x, int z, int stepX, int stepZ) {
 
-        if (x < 0 || z < 0 || x >= sizeX || z >= EngineSetting.SHIP_SHEET_BREADTH)
-            return 0;
+        int length = 0;
 
-        return roofDistances[x + z * sizeX];
-    }
-
-    // One roof's slab over a floor, row by row across, every run of octants at one distance in from its edge one box
-    private void addRoof(VehiclePartStruct roofs, int sizeX, int floor) {
+        while (isRoofed(sizeX, x + stepX * length, z + stepZ * length))
+            length++;
 
         int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
-        int eaves = (floor + EngineSetting.SHIP_ROOF_EAVES_HEIGHT) * octant;
+        int eaves = (floor + 1) * octant + EngineSetting.SHIP_ROOF_THICKNESS_SUB_VOXELS;
+        int rise = (floor + EngineSetting.SHIP_ROOF_RIDGE_HEIGHT) * octant - eaves;
+        boolean lowStart = isRoofDrain(grid, sizeX, floor, x - stepX, z - stepZ);
+        boolean lowEnd = isRoofDrain(grid, sizeX, floor, x + stepX * length, z + stepZ * length);
+        int peak = lowStart && lowEnd ? (length - 1) / 2 : lowStart || lowEnd ? length - 1 : 1;
+
+        for (int i = 0; i < length; i++) {
+
+            int climb = lowStart && lowEnd ? Math.min(i, length - 1 - i) : lowStart ? i : lowEnd ? length - 1 - i : 1;
+
+            roofTops[x + stepX * i + (z + stepZ * i) * sizeX] = eaves + rise * climb / Math.max(1, peak);
+        }
+    }
+
+    private boolean isRoofed(int sizeX, int x, int z) {
+        return x >= 0 && z >= 0 && x < sizeX && z < EngineSetting.SHIP_SHEET_BREADTH
+                && roofTops[x + z * sizeX] != 0;
+    }
+
+    // True where nothing stands at the roof's floor beside it: off the deck, over a waist or past the sheet
+    private boolean isRoofDrain(ShipOctantGridStruct grid, int sizeX, int floor, int x, int z) {
+        return x < 0 || z < 0 || x >= sizeX || z >= grid.getSizeZ() || grid.isEmpty(x, floor, z);
+    }
+
+    // One floor's roofs, row by row across, every run of octants at one step a box from the step's top down to the
+    // lowest step beside it
+    private void addRoof(VehiclePartStruct roofs, int sizeX) {
+
+        int octant = EngineSetting.SHIP_OCTANT_SUB_VOXELS;
 
         for (int z = 0; z < EngineSetting.SHIP_SHEET_BREADTH; z++)
             for (int x = 0; x < sizeX; ) {
 
-                int distance = roofDistances[x + z * sizeX];
+                int top = roofTops[x + z * sizeX];
 
-                if (distance == 0) {
+                if (top == 0) {
                     x++;
                     continue;
                 }
 
+                int bottom = resolveRoofBottom(sizeX, x, z);
                 int end = x + 1;
 
-                while (end < sizeX && roofDistances[end + z * sizeX] == distance)
+                while (end < sizeX && roofTops[end + z * sizeX] == top && resolveRoofBottom(sizeX, end, z) == bottom)
                     end++;
 
-                int bottom = eaves + (distance - 1) * EngineSetting.SHIP_ROOF_RISE_SUB_VOXELS;
-
-                roofs.addBox(x * octant, bottom, z * octant, end * octant,
-                        bottom + EngineSetting.SHIP_ROOF_THICKNESS_SUB_VOXELS, (z + 1) * octant);
+                roofs.addBox(x * octant, bottom, z * octant, end * octant, top, (z + 1) * octant);
                 x = end;
             }
+    }
+
+    // The bottom of a roofed octant's step: its slab's thickness under its top, or down to the top of a lower step
+    // beside it so no gap shows between them
+    private int resolveRoofBottom(int sizeX, int x, int z) {
+
+        int bottom = roofTops[x + z * sizeX] - EngineSetting.SHIP_ROOF_THICKNESS_SUB_VOXELS;
+
+        for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++) {
+
+            int nextX = x + ShipCellUtility.stepX(spin);
+            int nextZ = z + ShipCellUtility.stepZ(spin);
+
+            if (isRoofed(sizeX, nextX, nextZ))
+                bottom = Math.min(bottom, roofTops[nextX + nextZ * sizeX]);
+        }
+
+        return bottom;
     }
 
     // Glass \\

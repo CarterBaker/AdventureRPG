@@ -1075,7 +1075,8 @@ class ShipwrightHullBranch extends BranchPackage {
 
     // Roofs \\
 
-    // Every roof laid over the open floor it is drawn on, kept for the roof built over it once the hull is merged
+    // Every roof laid over the open floor it is drawn on in place of any bulwark, rail or lip standing on it, kept for
+    // the roof built on the floor once the hull is merged
     void layRoofs(ShipBlueprintStruct blueprint, ShipLayoutStruct layout) {
 
         IntArrayList roofs = blueprint.getRoofs();
@@ -1093,7 +1094,20 @@ class ShipwrightHullBranch extends BranchPackage {
                 continue;
             }
 
+            clearUnderRoof(layout.getGrid(), layout.getOriginX() + x, deck * EngineSetting.SHIP_DECK_HEIGHT, z);
             layout.addRoof(layout.getOriginX() + x, deck * EngineSetting.SHIP_DECK_HEIGHT, z);
+        }
+    }
+
+    // The bulwark, rail or lip standing on a roofed octant's floor below a half wall's height taken down; the floor and
+    // a wall stay, the wall rising through the roof
+    private void clearUnderRoof(ShipOctantGridStruct grid, int gridX, int floor, int z) {
+        for (int y = floor + 1; y < floor + EngineSetting.SHIP_ROOF_RIDGE_HEIGHT; y++) {
+
+            ShipPiece piece = grid.get(gridX, y, z);
+
+            if (piece == ShipPiece.BULWARK || piece == ShipPiece.RAILS || piece == ShipPiece.LIPS)
+                grid.clear(gridX, y, z);
         }
     }
 

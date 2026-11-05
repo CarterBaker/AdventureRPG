@@ -2822,9 +2822,9 @@ public class EngineSetting {
     public static final int SHIP_RAILING_HEIGHT = 2;
     public static final int SHIP_RAILING_POST_SUB_VOXELS = 2;
     public static final int SHIP_ROOF_CELL_STRIDE = 3;
-    public static final int SHIP_ROOF_EAVES_HEIGHT = 1 + SHIP_HALF_WALL_HEIGHT;
-    public static final int SHIP_ROOF_RISE_SUB_VOXELS = 2;
+    public static final int SHIP_ROOF_RIDGE_HEIGHT = 1 + SHIP_HALF_WALL_HEIGHT;
     public static final int SHIP_ROOF_THICKNESS_SUB_VOXELS = 2;
+    public static final int SHIP_ROOF_LAID = -1;
     public static final int SHIP_STAIR_HEADROOM = 2;
     public static final int SHIP_STAIR_MAX_RISE = 12;
     public static final int SHIP_STAIR_WIDTH = 2;

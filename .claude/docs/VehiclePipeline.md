@@ -137,7 +137,9 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   value (`getOutline(deck, x, side)`, `getSection(x, y, side)`, `findWidestSection(layout, x, side)`), the side from
   `ShipCellUtility.toSide(z)`. A mirrored stroke writes both sides; `port_outline` is written only when they differ.
 - **Roof cells are grouped by floor.** `addRoofs` reads `ShipLayoutStruct.getRoofCells` in runs of one floor, which
-  holds because `layRoofs` walks the blueprint's sorted `roofs`, whose level is the packed cell's top bits.
+  holds because `layRoofs` walks the blueprint's sorted `roofs`, whose level is the packed cell's top bits. It tells
+  where a roof meets open air from the merged grid's floor beside it, so the grid must still hold its pieces after
+  `mergePieces`.
 - **The vehicle shader's alpha is a dither share.** Any vehicle texture with partial alpha is drawn see-through.
 - **Stairs always rise `SHIP_DECK_HEIGHT`.** A stair that cannot land a deck up is refused, never shortened;
   `SHIP_STAIR_MAX_RISE` is only the tallest a ladder climbs.

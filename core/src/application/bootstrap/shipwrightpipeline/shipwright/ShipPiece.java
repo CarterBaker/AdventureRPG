@@ -31,7 +31,7 @@ public enum ShipPiece {
             EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     DECKS(EngineSetting.SHIP_PART_DECKS, VehiclePartRole.DECK, EngineSetting.SHIP_TEXTURE_DECK, true,
             EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
-    WALLS(EngineSetting.SHIP_PART_WALLS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_WALL, false,
+    WALLS(EngineSetting.SHIP_PART_WALLS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_HULL, false,
             EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),
     STAIRS(EngineSetting.SHIP_PART_STAIRS, VehiclePartRole.STRUCTURE, EngineSetting.SHIP_TEXTURE_DECK, false,
             EngineSetting.SHIP_OCTANT_SUB_VOXELS, ShipPieceShape.BLOCKS),

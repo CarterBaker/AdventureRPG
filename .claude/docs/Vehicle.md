@@ -120,22 +120,25 @@ Rules the compile enforces (the change is refused with the reason shown when it 
   cuts (or uncovers) gets a glass floor over it. Take the glass floor away and that stretch is left open as a
   **diving bay** to drop through into the sea; the hull's buoyancy is unchanged (it is worked out layer by layer, so a
   hole in the bottom does not flood it).
-- **Roofs** are laid over a deck's open floor where no deck stands above (`findRoofProblem`): shingles
-  (`SHIP_TEXTURE_ROOF`) whose eaves sit `SHIP_ROOF_EAVES_HEIGHT` octants over the floor, on top of the railings, half
-  walls and bulwarks round the edge and flush with them, stepping up `SHIP_ROOF_RISE_SUB_VOXELS` for every octant in
-  from the roof's edge to a ridge along its middle, a slab `SHIP_ROOF_THICKNESS_SUB_VOXELS` thick; a full wall under
-  it rises through it. A roof over a porch covers it without a deck above.
+- **Roofs** are laid over a deck's open floor where no deck stands above (`findRoofProblem`) and rest on it,
+  taking down any bulwark, railing or lip in their octants; a wall stays and rises through. Each run of roofed octants
+  touching along a side is one roof of shingles (`SHIP_TEXTURE_ROOF`) that slopes the way it meets the deck it stands
+  on: every line of it that way climbs evenly from a slab lying flush on the floor where it meets open air to a half
+  wall's top (`SHIP_ROOF_RIDGE_HEIGHT` octants over the floor) where it meets the deck, so a half wall standing there
+  meets it flush. A roof that meets the deck nowhere slopes across its narrower way to a ridge along its length. Each
+  step is `SHIP_ROOF_THICKNESS_SUB_VOXELS` thick and reaches down to the steps beside it. Drawing the deck above a
+  porch and roofing it there covers the porch.
 - **Walls, half walls, railings and lips are one tool under one rule** (`findWallProblem`). Any of them is painted on
-  open floor anywhere, a diving bay's rim or any waist included, replacing the waist's rail or a bulwark standing
-  there; every kind but a full wall can also be painted **in place of the ship's side** (the planking between a deck
-  and the one above), which is then opened up to the deck above **right through**, however far the side flares out
-  over those layers, so a lip there is a doorway in the side and a railing a porch or a stern gallery. Only a wall
-  that opens the ship to the sea (any kind in the side, a railing or lip in place of a bulwark) must stand **above the
-  waterline**; it lowers the sill to its deck. A full wall rises to the deck above under cover or `SHIP_DECKHOUSE_HEIGHT`
-  in the open; a half wall `SHIP_HALF_WALL_HEIGHT`, a railing `SHIP_RAILING_HEIGHT`, a lip a sill
-  `SHIP_LIP_SUB_VOXELS` high, stepped over. Painting one kind over another replaces it; erasing puts the side, rail or
-  bulwark back. Every rail, the waist's included, is built as a post up the middle of each octant under a handrail
-  that runs on to the rails beside it (`SHIP_RAILING_POST_SUB_VOXELS`, `SHIP_RAILING_CAP_SUB_VOXELS`,
+  open floor anywhere, a diving bay's rim or any waist included, replacing the waist's rail or a bulwark standing there;
+  every kind but a full wall can also be painted **in place of the ship's side** (the planking between a deck and the
+  one above), which is then opened up to the deck above **right through**, however far the side flares out over those
+  layers, so a lip there is a doorway in the side and a railing a porch or a stern gallery. Only a wall that opens the
+  ship to the sea (any kind in the side, a railing or lip in place of a bulwark) must stand **above the waterline**; it
+  lowers the sill to its deck. Full and half walls are planked like the hull. A full wall rises to the deck above under
+  cover or `SHIP_DECKHOUSE_HEIGHT` in the open; a half wall `SHIP_HALF_WALL_HEIGHT`, a railing `SHIP_RAILING_HEIGHT`, a
+  lip a sill `SHIP_LIP_SUB_VOXELS` high, stepped over. Painting one kind over another replaces it; erasing puts the
+  side, rail or bulwark back. Every rail, the waist's included, is built as a post up the middle of each octant under a
+  handrail that runs on to the rails beside it (`SHIP_RAILING_POST_SUB_VOXELS`, `SHIP_RAILING_CAP_SUB_VOXELS`,
   `SHIP_RAILING_CAP_WIDTH_SUB_VOXELS`).
 - **Raised decks.** The side between two decks blends from one outline to the next, so a deck drawn a little wider
   flares the side and a little narrower draws it in; a deck drawn more than `SHIP_TUMBLEHOME_OCTANTS` inside the deck

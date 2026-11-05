@@ -25,7 +25,7 @@ class ShipwrightPreviewBranch extends BranchPackage {
      * a ship is, then meshed at rest as a vehicle meshes it. A deck is a
      * square of floor, a porch a strip of floor reaching out to one side; the
      * waist a floor cut open and railed round, in its middle or to one side;
-     * a roof stepped shingles over railed floor, whole or to one side; each
+     * a roof stepped shingles, whole or leaning up to a half wall; each
      * wall stands on a strip of floor, the lip a sill between two posts of
      * planking; a window panes in a wall; a hatch, grate and glass floor lie
      * in a floor; a gun platform faces its lidded port in the side; a
@@ -94,7 +94,7 @@ class ShipwrightPreviewBranch extends BranchPackage {
         waistPreviews[mirrored] = buildWaist(span);
         waistPreviews[oneSide] = buildWaist(span / 2);
         roofPreviews[mirrored] = buildRoof(span);
-        roofPreviews[oneSide] = buildRoof(span / 2);
+        roofPreviews[oneSide] = buildRoof(span - 1);
         this.mastPreview = buildMast();
         this.helmPreview = buildHelm();
         this.capstanPreview = buildCapstan();
@@ -180,17 +180,16 @@ class ShipwrightPreviewBranch extends BranchPackage {
         return finish();
     }
 
-    // A square of floor railed round, a roof laid over it across the breadth given: the whole square, or one side of
-    // it
+    // A roof across the breadth given: the whole square rising from every edge, or one side of it leaning up to a
+    // strip of deck with a half wall standing on it
     private ShipPreviewStruct buildRoof(int breadth) {
 
         int span = EngineSetting.SHIPWRIGHT_PREVIEW_SPAN_OCTANTS;
-        int top = 1 + EngineSetting.SHIP_RAILING_HEIGHT;
 
         begin();
-        fill(ShipPiece.DECKS, 0, 0, 0, span, 1, span);
-        fill(ShipPiece.RAILS, 0, 1, 0, span, top, span);
-        clear(1, 1, 1, span - 1, top, span - 1);
+        fill(ShipPiece.DECKS, 0, 0, breadth, span, 1, span);
+        fill(ShipPiece.WALLS, 0, 1, breadth, span, 1 + EngineSetting.SHIP_HALF_WALL_HEIGHT,
+                Math.min(span, breadth + 1));
 
         for (int z = 0; z < breadth; z++)
             for (int x = 0; x < span; x++)
