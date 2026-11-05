@@ -113,6 +113,8 @@ One line per session that changed this file: the date, what was added or removed
   (only the deck − and + buttons; the gizmo's arms, cones and centre).
 - 2026-11-05: Shipwright porches and roofs. Regenerated `schemas/Vehicles.arpg` (`roofs` in the deck default) for the
   Roof tool, and `menus/editor/ShipViewer.arpg` (the gizmo pinned inside the window's top-right corner).
+- 2026-11-05: Shared view camera and tool actions. Regenerated `menus/editor/Tools.arpg` (action group and action row
+  templates for the actions a canvas lists under its tools; the tools panel taller than the options panel).
 ---
 
 ## Textures and Sprites (2174 files)

@@ -14,12 +14,14 @@ class CharacterMeshRowBranch extends BranchPackage {
     /*
      * Lists the rows of the Mesh, Sculpt and Weights panels. The left panel
      * names every part the character wears a mesh for, the active one
-     * selected; the right panel holds the active part's options, selection,
-     * geometry tools, new parts and file in Mesh mode, its mirror, x-ray and
-     * file in Sculpt mode, whose tools are the Tools panel's, and the selected
-     * bone's weight tools and the active vertex's weights in Weights mode. Every value
-     * shown is read through CharacterMeshPropertyBranch, the same path that
-     * edits it.
+     * selected; the right panel holds the active part's options, the
+     * selection's numbers, the selected faces' texture, new parts and file in
+     * Mesh mode, its shape keys, mirror, x-ray and file in Sculpt mode, and
+     * the selected bone's weight target, options, the active vertex's weights
+     * and file in Weights mode. Every tool and action — transform, geometry,
+     * weight and selection — is the Tools panel's, listed by the mode's tool
+     * canvas. Every value shown is read through CharacterMeshPropertyBranch,
+     * the same path that edits it.
      */
 
     // Internal
@@ -107,20 +109,13 @@ class CharacterMeshRowBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_LABEL_RADIUS);
 
         addNumber(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_SNAP, EditorSetting.CHARACTER_EDITOR_LABEL_SNAP);
-        addSelectionRows(rows);
 
         if (selected) {
+            rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_SELECTION));
             addAxes(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_CENTER, EditorSetting.CHARACTER_EDITOR_LABEL_CENTER);
             addAxes(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_SIZE, EditorSetting.CHARACTER_EDITOR_LABEL_SIZE);
             addAxes(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_ROTATE, EditorSetting.CHARACTER_EDITOR_LABEL_TURN);
         }
-
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_TRANSFORM));
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_GRAB, EditorSetting.CHARACTER_EDITOR_LABEL_GRAB);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_ROTATE, EditorSetting.CHARACTER_EDITOR_LABEL_ROTATE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SCALE, EditorSetting.CHARACTER_EDITOR_LABEL_SCALE);
-
-        addGeometryRows(rows);
 
         if (characterSculptBranch.findSelectedFaceTexture(document) != null) {
             rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_FACES));
@@ -130,24 +125,6 @@ class CharacterMeshRowBranch extends BranchPackage {
 
         addPartToolRows(rows);
         addFileRows(rows);
-    }
-
-    private void addGeometryRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_GEOMETRY));
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_EXTRUDE, EditorSetting.CHARACTER_EDITOR_LABEL_EXTRUDE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_DUPLICATE, EditorSetting.CHARACTER_EDITOR_LABEL_DUPLICATE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_MAKE_FACE, EditorSetting.CHARACTER_EDITOR_LABEL_MAKE_FACE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_MERGE, EditorSetting.CHARACTER_EDITOR_LABEL_MERGE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE, EditorSetting.CHARACTER_EDITOR_LABEL_SUBDIVIDE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_DELETE_VERTICES,
-                EditorSetting.CHARACTER_EDITOR_LABEL_DELETE_VERTICES);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_DELETE_FACES,
-                EditorSetting.CHARACTER_EDITOR_LABEL_DELETE_FACES);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_POSITIVE,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SYMMETRIZE_POSITIVE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_NEGATIVE,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SYMMETRIZE_NEGATIVE);
     }
 
     private void addPartToolRows(ObjectArrayList<CharacterViewRowStruct> rows) {
@@ -187,25 +164,9 @@ class CharacterMeshRowBranch extends BranchPackage {
 
         rows.add(CharacterViewRowStruct.header(characterEditorManager.getSelectedBoneName()));
         addNumber(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET, EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_ASSIGN,
-                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_ASSIGN);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_ADD, EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_ADD);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_SUBTRACT,
-                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_SUBTRACT);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_REMOVE,
-                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_REMOVE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_NORMALIZE,
-                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_NORMALIZE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_SMOOTH,
-                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_SMOOTH);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_POSITIVE,
-                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_POSITIVE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_NEGATIVE,
-                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_NEGATIVE);
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_OPTIONS));
         addViewOptions(rows);
-        addSelectionRows(rows);
         addInfluenceRows(document, rows);
         addFileRows(rows);
     }
@@ -250,22 +211,6 @@ class CharacterMeshRowBranch extends BranchPackage {
     private void addViewOptions(ObjectArrayList<CharacterViewRowStruct> rows) {
         addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_MIRROR, EditorSetting.CHARACTER_EDITOR_LABEL_MIRROR);
         addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_XRAY, EditorSetting.CHARACTER_EDITOR_LABEL_XRAY);
-    }
-
-    private void addSelectionRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_SELECTION));
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SELECT_ALL, EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_ALL);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SELECT_NONE,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_NONE);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SELECT_INVERT,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_INVERT);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_LINKED);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_MIRROR);
-        addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_BONE + characterEditorManager.getSelectedBoneName());
     }
 
     private void addFileRows(ObjectArrayList<CharacterViewRowStruct> rows) {

@@ -9,6 +9,7 @@ import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -24,13 +25,15 @@ public class CharacterEditorRigSystem extends SystemPackage {
      * its children following, Scale grows or shrinks the bone's size by how
      * far the pointer travels from the joint, Place stands a new child of
      * the selected bone where it clicks, level with that bone's joint, and
-     * Erase removes the bone clicked. A drag is one undo step: letting go
+     * Erase removes the bone clicked. A press that does none of these is
+     * left to the view camera. A drag is one undo step: letting go
      * keeps it, a right click or Escape puts the rig back, and Ctrl snaps it.
      * Edits are written only on frames the pointer moves.
      */
 
     // Internal
     private EditorInputSystem editorInputSystem;
+    private ViewCameraSystem viewCameraSystem;
     private CharacterEditorManager characterEditorManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private ShortcutManager shortcutManager;
@@ -73,6 +76,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
     @Override
     protected void get() {
         this.editorInputSystem = get(EditorInputSystem.class);
+        this.viewCameraSystem = get(ViewCameraSystem.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
@@ -101,7 +105,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
             return;
         }
 
-        if (!editorInputSystem.isPointerActive() || rawInput.isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_ORBIT))
+        if (!editorInputSystem.isPointerActive() || viewCameraSystem.isDragging())
             return;
 
         if (editorInputSystem.isClicked(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT))
@@ -119,31 +123,31 @@ public class CharacterEditorRigSystem extends SystemPackage {
 
     // Press \\
 
+    // Every tool works on the joint pressed, Place on the space beside one
     private void press(float mouseX, float mouseY) {
 
         EditorTool tool = characterEditorManager.getRigTool();
         int picked = pickJoint(mouseX, mouseY);
 
-        if (tool == EditorTool.ERASE) {
+        if (picked == EngineSetting.INDEX_NOT_FOUND) {
 
-            if (picked != EngineSetting.INDEX_NOT_FOUND)
-                characterEditorManager.removeRigBone(picked);
+            if (tool == EditorTool.PLACE)
+                placeBone(mouseX, mouseY);
 
             return;
         }
 
-        if (picked != EngineSetting.INDEX_NOT_FOUND)
-            characterEditorManager.selectRigBone(picked);
+        editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
 
-        switch (tool) {
-            case MOVE, SCALE -> startDrag(tool, mouseX, mouseY);
-            case PLACE -> {
-                if (picked == EngineSetting.INDEX_NOT_FOUND)
-                    placeBone(mouseX, mouseY);
-            }
-            default -> {
-            }
+        if (tool == EditorTool.ERASE) {
+            characterEditorManager.removeRigBone(picked);
+            return;
         }
+
+        characterEditorManager.selectRigBone(picked);
+
+        if (tool == EditorTool.MOVE || tool == EditorTool.SCALE)
+            startDrag(tool, mouseX, mouseY);
     }
 
     // The bone whose joint lies nearest the pointer within the pick radius, or none
@@ -181,6 +185,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
         if (selected == EngineSetting.INDEX_NOT_FOUND)
             return;
 
+        editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
         CharacterPoseUtility.getTranslation(characterEditorManager.getRigBoneWorldMatrix(selected), joint);
         resolveHit(mouseX, mouseY, hitScratch);
         characterEditorManager.addRigBone(hitScratch);
@@ -215,6 +220,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)
                 || rawInput.isButtonClicked(EditorSetting.CHARACTER_VIEW_BUTTON_CANCEL)) {
+            editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_CANCEL);
             characterEditorManager.cancelRigGesture();
             this.dragTool = null;
             return;

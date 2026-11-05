@@ -12,6 +12,7 @@ import editor.runtime.animationeditor.AnimationEditorSetting;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -24,8 +25,9 @@ public class AnimationEditorPoseSystem extends SystemPackage {
     /*
      * Turns this tab's pointer into keys while a clip plays on a character,
      * by the pose tool in use. A click on a joint picks its bone with every
-     * tool; Rotate, Move and Scale then drag the selected bone from wherever
-     * the press lands, keying it at the playhead as the pointer moves. A turn
+     * tool; Rotate, Move and Scale then drag it, keying it at the playhead as
+     * the pointer moves. A press beside every joint is left to the view
+     * camera. A turn
      * follows the pointer about the joint on screen, about the line of sight
      * or the world axis X, Y or Z holds it to, and is carried into the bone's
      * own Euler rotation exactly, the nearest form to the one it replaces; a
@@ -38,6 +40,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
 
     // Internal
     private EditorInputSystem editorInputSystem;
+    private ViewCameraSystem viewCameraSystem;
     private AnimationEditorManager animationEditorManager;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private ShortcutManager shortcutManager;
@@ -108,6 +111,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
     @Override
     protected void get() {
         this.editorInputSystem = get(EditorInputSystem.class);
+        this.viewCameraSystem = get(ViewCameraSystem.class);
         this.animationEditorManager = get(AnimationEditorManager.class);
         this.characterViewPoseSystem = get(CharacterViewPoseSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
@@ -135,7 +139,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
             return;
         }
 
-        if (!editorInputSystem.isPointerActive() || rawInput.isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_ORBIT))
+        if (!editorInputSystem.isPointerActive() || viewCameraSystem.isDragging())
             return;
 
         if (editorInputSystem.isClicked(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT))
@@ -158,8 +162,11 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         EditorTool tool = animationEditorManager.getPoseTool();
         int picked = pickJoint(mouseX, mouseY);
 
-        if (picked != EngineSetting.INDEX_NOT_FOUND)
-            animationEditorManager.selectBone(picked);
+        if (picked == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
+        animationEditorManager.selectBone(picked);
 
         if (tool != EditorTool.SELECT)
             startDrag(tool, mouseX, mouseY);
@@ -255,6 +262,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)
                 || rawInput.isButtonClicked(EditorSetting.CHARACTER_VIEW_BUTTON_CANCEL)) {
+            editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_CANCEL);
             animationEditorManager.cancelPose();
             this.dragTool = null;
             return;

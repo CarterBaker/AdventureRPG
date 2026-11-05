@@ -4,6 +4,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.tool.ToolOptionStruct;
 import editor.bootstrap.toolpipeline.util.EditorTool;
@@ -19,7 +20,8 @@ public class ToolManager extends ManagerPackage {
      * Owns the editor's tools the way a paint program's toolbox does: every
      * canvas keeps the tool chosen for it and its own value of every option
      * it honours, size included, and the Tools panel, the tool keys and the
-     * brush size keys all work on the target, the canvas window focused last.
+     * brush size keys all work on the target, the canvas window focused last;
+     * an action the target's canvas lists runs on that window.
      * Focusing a panel keeps the target, so a tool chosen there reaches the
      * canvas it was chosen for. Every window the shared tool keys work in
      * opens itself here, a canvas with what supplies its canvas, a panel
@@ -182,6 +184,18 @@ public class ToolManager extends ManagerPackage {
 
         canvas2Tool[canvas.ordinal()] = tool;
         notifyStateChanged();
+    }
+
+    // Actions \\
+
+    // One of the target canvas's actions run by its window, when the canvas lists it
+    public void runAction(String actionKey) {
+
+        ToolCanvasProvider provider = targetWindow != null ? window2Provider.get(targetWindow) : null;
+        ToolCanvas canvas = provider != null ? provider.getToolCanvas() : null;
+
+        if (canvas != null && canvas.hasAction(actionKey) && provider instanceof ToolActionProvider actionProvider)
+            actionProvider.runToolAction(actionKey);
     }
 
     // Options \\

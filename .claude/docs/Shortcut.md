@@ -89,6 +89,7 @@ Every tool that selects many things follows one gesture set, each modifier a hel
 - **Shift** adds: a click toggles the thing in or out, a drag on nothing draws a box whose contents join.
 - **Ctrl** removes: a click takes the thing out, a drag on nothing draws a box whose contents leave.
 - Dragging anything selected moves everything selected together.
+- A plain drag on nothing belongs to the view camera in a 3D viewport: left turns the view, right pans it.
 - **Delete** removes everything selected as one edit.
 
 The Recorder's Keys pane (keys on a curve's row or graph), the Character Editor's mesh modes (vertices) and the World

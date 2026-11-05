@@ -1,13 +1,15 @@
 package editor.runtime.shipviewer;
 
 import editor.runtime.input.EditorInputSystem;
-import editor.runtime.shipviewer.camera.ShipViewerCameraSystem;
 import editor.runtime.shipviewer.menu.ShipViewerMenuSystem;
 import editor.runtime.shipviewer.render.ShipViewerRenderSystem;
 import editor.runtime.shipviewer.view.ShipViewerSystem;
+import editor.runtime.viewcamera.ViewCameraProvider;
+import editor.runtime.viewcamera.ViewCameraSubject;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
-public class ShipViewerContext extends ContextPackage {
+public class ShipViewerContext extends ContextPackage implements ViewCameraProvider {
 
     /*
      * Editor tab showing the ship chosen in the hierarchy, or the one on the
@@ -23,7 +25,7 @@ public class ShipViewerContext extends ContextPackage {
     // Internal
     private EditorInputSystem editorInputSystem;
     private ShipViewerSystem shipViewerSystem;
-    private ShipViewerCameraSystem shipViewerCameraSystem;
+    private ViewCameraSystem viewCameraSystem;
     private ShipViewerRenderSystem shipViewerRenderSystem;
     private ShipViewerMenuSystem shipViewerMenuSystem;
 
@@ -33,7 +35,7 @@ public class ShipViewerContext extends ContextPackage {
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
         this.shipViewerSystem = create(ShipViewerSystem.class);
-        this.shipViewerCameraSystem = create(ShipViewerCameraSystem.class);
+        this.viewCameraSystem = create(ViewCameraSystem.class);
         this.shipViewerRenderSystem = create(ShipViewerRenderSystem.class);
         this.shipViewerMenuSystem = create(ShipViewerMenuSystem.class);
     }
@@ -43,6 +45,13 @@ public class ShipViewerContext extends ContextPackage {
         getWindow().setCaptureEligible(false);
     }
 
+    // Camera \\
+
+    @Override
+    public ViewCameraSubject getViewCameraSubject() {
+        return shipViewerSystem;
+    }
+
     // Accessible \\
 
     // Looks back at the ship along an axis named as in VIEW_AXES
@@ -50,11 +59,11 @@ public class ShipViewerContext extends ContextPackage {
 
         for (int i = 0; i < ShipViewerSetting.VIEW_AXES.length; i++)
             if (ShipViewerSetting.VIEW_AXES[i].equals(axisName))
-                shipViewerCameraSystem.snap(i);
+                viewCameraSystem.snap(ShipViewerSetting.VIEW_AXIS_VECTORS[i]);
     }
 
     public void centre() {
-        shipViewerCameraSystem.centre();
+        viewCameraSystem.centre();
     }
 
     // Steps the cutaway a deck down or up

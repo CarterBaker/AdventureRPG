@@ -15,7 +15,9 @@ public class EditorInputSystem extends SystemPackage {
      * pointer counts only while it is over this window, the window holds
      * focus, and none of the window's own menu elements are under it; clicks
      * count only once the window was already focused last frame, so the click
-     * that focuses a tab never acts inside it.
+     * that focuses a tab never acts inside it. A tool that acts on a click
+     * claims its button for that frame, so the view camera, which reads input
+     * late, leaves that press to the tool; claims clear every frame.
      */
 
     // Internal
@@ -29,6 +31,9 @@ public class EditorInputSystem extends SystemPackage {
     // Focus
     private boolean focused;
     private boolean focusedLastFrame;
+
+    // Claim — one bit per mouse button a tool took this frame
+    private int claimedButtons;
 
     // Base \\
 
@@ -54,6 +59,29 @@ public class EditorInputSystem extends SystemPackage {
         inputManager.writeRawInput(rawInputHandle, window);
         focusedLastFrame = focused;
         focused = windowManager.getFocusedWindow() == window;
+        claimedButtons = 0;
+    }
+
+    // Claim \\
+
+    // A press a tool acts on this frame, kept from the view camera
+    public void claim(int button) {
+        claimedButtons |= 1 << button;
+    }
+
+    public boolean isClaimed(int button) {
+        return (claimedButtons & 1 << button) != 0;
+    }
+
+    // A click over the view that a tool takes, claimed in the same call
+    public boolean takeClick(int button) {
+
+        if (!isClicked(button))
+            return false;
+
+        claim(button);
+
+        return true;
     }
 
     // Accessible \\

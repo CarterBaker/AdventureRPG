@@ -11,8 +11,8 @@ import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.runtime.shipviewer.ShipViewerSetting;
-import editor.runtime.shipviewer.camera.ShipViewerCameraSystem;
 import editor.runtime.shipviewer.view.ShipViewerSystem;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -37,7 +37,7 @@ public class ShipViewerMenuSystem extends SystemPackage {
     private MenuManager menuManager;
     private FBOManager fboManager;
     private ShipViewerSystem shipViewerSystem;
-    private ShipViewerCameraSystem shipViewerCameraSystem;
+    private ViewCameraSystem viewCameraSystem;
 
     // Menus
     private MenuInstance viewerMenu;
@@ -82,7 +82,7 @@ public class ShipViewerMenuSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
         this.shipViewerSystem = get(ShipViewerSystem.class);
-        this.shipViewerCameraSystem = get(ShipViewerCameraSystem.class);
+        this.viewCameraSystem = get(ViewCameraSystem.class);
     }
 
     @Override
@@ -146,8 +146,8 @@ public class ShipViewerMenuSystem extends SystemPackage {
     // Every axis's cone moved to where that axis points on screen and its arm's dots spaced out to it
     private void placeGizmo() {
 
-        Vector3 right = shipViewerCameraSystem.getRight();
-        Vector3 up = shipViewerCameraSystem.getUp();
+        Vector3 right = viewCameraSystem.getRight();
+        Vector3 up = viewCameraSystem.getUp();
         int dots = ShipViewerSetting.GIZMO_ARM_DOTS;
 
         for (int i = 0; i < ShipViewerSetting.VIEW_AXES.length; i++) {

@@ -9,9 +9,11 @@ import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import editor.runtime.EditorSetting;
+import editor.runtime.viewcamera.ViewCameraSubject;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
-public class CharacterViewPoseSystem extends SystemPackage {
+public class CharacterViewPoseSystem extends SystemPackage implements ViewCameraSubject {
 
     /*
      * Holds the character one character viewport shows: the template it is
@@ -19,7 +21,8 @@ public class CharacterViewPoseSystem extends SystemPackage {
      * template's defaults. bind() puts a template's character on a tree; the
      * tool driving the viewport strikes the pose every frame — at rest, in
      * the exact bind pose a mesh is authored in, from one clip at a time, or
-     * played through the tree.
+     * played through the tree. It is what the viewport's camera frames: a
+     * sphere about a share of the model's height, reaching down to its feet.
      */
 
     // Subject
@@ -125,5 +128,22 @@ public class CharacterViewPoseSystem extends SystemPackage {
 
     public boolean hasAppearance() {
         return appearanceHandle != null;
+    }
+
+    // Frame \\
+
+    @Override
+    public boolean isShown() {
+        return entityData != null && entityData.getModelHeight() > 0f;
+    }
+
+    @Override
+    public float getCenter(int axis) {
+        return axis == EngineSetting.AXIS_Y ? getBoundingRadius() : 0f;
+    }
+
+    @Override
+    public float getBoundingRadius() {
+        return entityData.getModelHeight() * EditorSetting.CHARACTER_VIEW_FRAME_HEIGHT_SHARE;
     }
 }

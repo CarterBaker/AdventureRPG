@@ -12,9 +12,10 @@ public class ToolBranch extends BranchPackage {
     /*
      * Menu event handlers for the Tools and Brushes panels, and the shared
      * tool keys. Tools and their options work on the canvas the tools
-     * target; the brush chosen is the tip every canvas strokes with. Tool
-     * rows carry their tool's name, option buttons their option's and brush
-     * rows their brush's.
+     * target, and an action runs on the target's window; the brush chosen is
+     * the tip every canvas strokes with. Tool rows carry their tool's name,
+     * action rows their action's key, option buttons their option's name and
+     * brush rows their brush's.
      */
 
     // Internal
@@ -33,6 +34,12 @@ public class ToolBranch extends BranchPackage {
 
     public void selectTool(String toolName) {
         toolManager.selectTool(ArpgUtility.toEnum(toolName, EditorTool.class));
+    }
+
+    // Actions \\
+
+    public void runAction(String actionKey) {
+        toolManager.runAction(actionKey);
     }
 
     // Options \\

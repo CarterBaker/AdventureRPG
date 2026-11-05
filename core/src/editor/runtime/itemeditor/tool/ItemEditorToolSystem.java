@@ -7,6 +7,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
 import editor.runtime.itemeditor.ItemEditorSetting;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -14,15 +15,17 @@ public class ItemEditorToolSystem extends SystemPackage {
 
     /*
      * Casts the pointer into the active item each frame and applies the tool
-     * chosen for the item on click. Nothing is cast while the pointer is off
-     * the viewport or the orbit button is held. The last hit is kept for the
-     * cursor.
+     * chosen for the item on a click that lands on it, claiming the click
+     * from the view camera; a click on nothing is the camera's. Nothing is
+     * cast while the pointer is off the viewport or the camera holds a drag.
+     * The last hit is kept for the cursor.
      */
 
     // Internal
     private ItemEditorManager itemEditorManager;
     private SubVoxelManager subVoxelManager;
     private EditorInputSystem editorInputSystem;
+    private ViewCameraSystem viewCameraSystem;
 
     // Pointer
     private SubVoxelHitStruct hit;
@@ -45,6 +48,7 @@ public class ItemEditorToolSystem extends SystemPackage {
         this.itemEditorManager = get(ItemEditorManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
         this.editorInputSystem = get(EditorInputSystem.class);
+        this.viewCameraSystem = get(ViewCameraSystem.class);
     }
 
     // Update \\
@@ -58,12 +62,12 @@ public class ItemEditorToolSystem extends SystemPackage {
 
         if (!editorInputSystem.isPointerActive()
                 || !itemEditorManager.hasActiveDocument()
-                || rawInput.isButtonHeld(ItemEditorSetting.BUTTON_ORBIT))
+                || viewCameraSystem.isDragging())
             return;
 
         castPointer(context.getWindow(), rawInput);
 
-        if (editorInputSystem.isClicked(ItemEditorSetting.BUTTON_APPLY))
+        if (hit.hasHit() && editorInputSystem.takeClick(ItemEditorSetting.BUTTON_APPLY))
             itemEditorManager.applyTool(hit);
     }
 

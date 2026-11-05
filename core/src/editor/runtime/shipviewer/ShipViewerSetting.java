@@ -1,14 +1,11 @@
 package editor.runtime.shipviewer;
 
-import engine.input.Buttons;
-
 public class ShipViewerSetting {
 
     /*
      * Constants used only by ShipViewerContext — its material and render
-     * order, its cutaway, its orbit and pan camera and the views it snaps to,
-     * its mouse bindings, its menu and axis gizmo, and the text of its status
-     * line and deck label.
+     * order, its cutaway, the views its camera snaps to, its menu and axis
+     * gizmo, and the text of its status line and deck label.
      */
 
     // Materials
@@ -23,25 +20,11 @@ public class ShipViewerSetting {
     public static final float CUTAWAY_EPSILON = 0.01f;
     public static final int DECK_ALL = -1;
 
-    // Camera — the frame's centre the middle of the ship's bounds moved by the pan, the distances in its bounding
-    // radius; a pan moves the ship with the pointer
-    public static final float ORBIT_DISTANCE_DEFAULT = 2.2f;
-    public static final float ORBIT_DISTANCE_MIN = 0.3f;
-    public static final float ORBIT_DISTANCE_MAX = 8f;
-    public static final float ORBIT_ZOOM_STEP = 0.1f;
-    public static final float ORBIT_INITIAL_YAW_DEGREES = 35f;
-    public static final float ORBIT_INITIAL_PITCH_DEGREES = 18f;
-
     // Views — each axis a view is snapped along, looking back at the ship from it: forward (bow), aft, up, down,
-    // starboard and port; a view straight up or down leans this far toward the bow so the camera keeps its heading
+    // starboard and port
     public static final String[] VIEW_AXES = { "x", "-x", "y", "-y", "z", "-z" };
     public static final float[][] VIEW_AXIS_VECTORS = {
             { 1f, 0f, 0f }, { -1f, 0f, 0f }, { 0f, 1f, 0f }, { 0f, -1f, 0f }, { 0f, 0f, 1f }, { 0f, 0f, -1f } };
-    public static final float VIEW_VERTICAL_LEAN = 0.02f;
-
-    // Mouse
-    public static final int BUTTON_ORBIT = Buttons.LEFT;
-    public static final int BUTTON_PAN = Buttons.RIGHT;
 
     // Gizmo — every axis's arm drawn from the middle to where the axis points on screen, out to a radius in pixels,
     // as dots up to the cone at its tip, placed in steps across the gizmo

@@ -13,11 +13,12 @@ import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import editor.bootstrap.shipviewerpipeline.shipviewermanager.ShipViewerManager;
 import editor.runtime.shipviewer.ShipViewerSetting;
+import editor.runtime.viewcamera.ViewCameraSubject;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ShipViewerSystem extends SystemPackage {
+public class ShipViewerSystem extends SystemPackage implements ViewCameraSubject {
 
     /*
      * Finds the ship the Ship Viewer shows and lays out what is drawn of it:
@@ -261,6 +262,7 @@ public class ShipViewerSystem extends SystemPackage {
     // Accessible \\
 
     // True while a ship is shown
+    @Override
     public boolean isShown() {
         return shown;
     }
@@ -294,6 +296,7 @@ public class ShipViewerSystem extends SystemPackage {
     }
 
     // The middle of the ship's bounds on an axis, in model blocks
+    @Override
     public float getCenter(int axis) {
 
         float scale = 0.5f / EngineSetting.SUB_VOXEL_RESOLUTION;
@@ -306,6 +309,7 @@ public class ShipViewerSystem extends SystemPackage {
     }
 
     // Half the diagonal of the ship's bounds, in model blocks
+    @Override
     public float getBoundingRadius() {
 
         float scale = 0.5f / EngineSetting.SUB_VOXEL_RESOLUTION;

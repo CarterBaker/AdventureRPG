@@ -29,7 +29,14 @@ layouts like any other.
   tool's branch. A tool without a text row template must never list a `TEXT` row.
 - Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_SCULPT`, `CHARACTER_WEIGHTS`,
   `CHARACTER_RIG`, `ANIMATION_POSE`); brushes the Brushes window's. Add a tool to a canvas in `ToolCanvas`, never as a
-  panel button.
+  panel button. The mesh's one-off operations (transform, geometry, weights, selection) are the canvas's action groups
+  (`ToolActionGroupStruct`), shown in the Tools window under the tools and run by `CharacterEditorContext.runToolAction`
+  through `CharacterEditorManager.act`, the same key their shortcuts carry. Properties keeps values only.
+- Every viewport (Character, Animation, Animation Tree Editor) looks through the editor's `ViewCameraSystem`, framing
+  `CharacterViewPoseSystem`. A viewport system takes a click only when it acts on something (a vertex, a joint, the
+  mesh under the brush) and claims it with `EditorInputSystem.claim`; any other left press orbits and a right press
+  pans. Cancel clicks (`CHARACTER_VIEW_BUTTON_CANCEL`) are claimed too. Test `ViewCameraSystem.isDragging`, never a
+  held button, to stay out of a camera drag.
 
 ## Modes
 

@@ -2,14 +2,16 @@ package editor.runtime.animationtreeeditor;
 
 import editor.runtime.animationtreeeditor.menu.AnimationTreeEditorMenuSystem;
 import editor.runtime.animationtreeeditor.preview.AnimationTreeEditorPreviewSystem;
-import editor.runtime.characterview.camera.CharacterViewCameraSystem;
 import editor.runtime.characterview.panel.CharacterViewPanelSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.viewcamera.ViewCameraProvider;
+import editor.runtime.viewcamera.ViewCameraSubject;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
-public class AnimationTreeEditorContext extends ContextPackage {
+public class AnimationTreeEditorContext extends ContextPackage implements ViewCameraProvider {
 
     /*
      * Editor tab for building animation trees: layers and their blend and
@@ -25,7 +27,7 @@ public class AnimationTreeEditorContext extends ContextPackage {
     // Internal
     private EditorInputSystem editorInputSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
-    private CharacterViewCameraSystem characterViewCameraSystem;
+    private ViewCameraSystem viewCameraSystem;
     private AnimationTreeEditorPreviewSystem animationTreeEditorPreviewSystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
     private CharacterViewPanelSystem characterViewPanelSystem;
@@ -37,7 +39,7 @@ public class AnimationTreeEditorContext extends ContextPackage {
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
         this.characterViewPoseSystem = create(CharacterViewPoseSystem.class);
-        this.characterViewCameraSystem = create(CharacterViewCameraSystem.class);
+        this.viewCameraSystem = create(ViewCameraSystem.class);
         this.animationTreeEditorPreviewSystem = create(AnimationTreeEditorPreviewSystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
@@ -47,5 +49,12 @@ public class AnimationTreeEditorContext extends ContextPackage {
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Camera \\
+
+    @Override
+    public ViewCameraSubject getViewCameraSubject() {
+        return characterViewPoseSystem;
     }
 }

@@ -43,5 +43,13 @@ writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
 - **Errors use `throwException(...)`** with a clear, specific message. Logging uses the `UtilityPackage` helpers.
 - **Collections** use fastutil (`Object2ObjectOpenHashMap`, `ObjectArrayList`, `Int2ObjectOpenHashMap`, etc.),
   matching surrounding code. Name maps `key2Value` (e.g. `calendarName2CalendarHandle`).
+- **Editor viewports share one camera.** Every 3D editor viewport creates `ViewCameraSystem`
+  (`editor.runtime.viewcamera`), and its context implements `ViewCameraProvider`, naming the `ViewCameraSubject` it
+  frames (shown, centre, bounding radius). Left drag orbits, right drag pans, the wheel zooms. A tool takes a click
+  only when it acts on something and claims it (`EditorInputSystem.claim` / `takeClick`); the camera reads input in
+  `lateUpdate` and drags only on unclaimed presses. Never write a viewport camera of its own.
+- **Editor tools live in the Tools panel.** A tool is an `EditorTool` on the window's `ToolCanvas`; a one-off
+  operation is a `ToolActionStruct` in the canvas's action groups, run by its context through `ToolActionProvider`
+  with the same key its shortcut uses. Never add a tool or tool action as a panel button.
 - **Visibility is deliberate.** Keep package-private whatever only the pipeline needs (e.g. loaders, builders,
   `addXHandle`). Public only for what other systems consume.

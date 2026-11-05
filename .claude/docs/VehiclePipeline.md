@@ -65,9 +65,9 @@ where things live, which method owns each operation, and the traps. `.claude/CLA
   `ShipDraftStruct` of its own (its own compiled layout and resting meshes) whenever
   `ShipwrightSessionInstance.getSurveyRevision` moves, freeing the last draft's meshes first (`releaseDraft`).
   `ShipViewerRenderSystem` draws its meshes, and every cargo slot's first item, with the viewer's one material and its
-  `u_cutawayHeight` uniform (items never cut; a slot above the cut is skipped); `ShipViewerCameraSystem` orbits, pans
-  with the pointer, snaps (centred) and centres, and keeps the camera's right and up for the gizmo
-  `ShipViewerMenuSystem` places from positions made once; buttons route through `ShipViewerBranch`. The game's own
+  `u_cutawayHeight` uniform (items never cut; a slot above the cut is skipped); the editor's shared `ViewCameraSystem`
+  frames `ShipViewerSystem` (its `ViewCameraSubject`), orbits, pans with the pointer, snaps (centred) and centres, and
+  keeps the camera's right and up for the gizmo `ShipViewerMenuSystem` places from positions made once; buttons route through `ShipViewerBranch`. The game's own
   vehicle and item materials write the deferred G-buffer, which an editor viewport never lights, so the viewer keeps a
   material of its own on the game's vehicle vertex shader.
 

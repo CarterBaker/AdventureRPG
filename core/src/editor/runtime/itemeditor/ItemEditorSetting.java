@@ -6,8 +6,7 @@ public class ItemEditorSetting {
 
     /*
      * Constants used only by ItemEditorContext — its viewport meshes and
-     * materials, orbit camera, mouse bindings, and toolbar menu with its
-     * parts panel.
+     * materials, mouse binding, and toolbar menu with its parts panel.
      */
 
     // Meshes
@@ -32,20 +31,8 @@ public class ItemEditorSetting {
     public static final int DEPTH_GRID = 1;
     public static final int DEPTH_CURSOR = 2;
 
-    // Camera — the target is a share of the model's size, the distances are per block of its largest side
-    public static final float ORBIT_TARGET_X = 0.5f;
-    public static final float ORBIT_TARGET_Y = 0.5f;
-    public static final float ORBIT_TARGET_Z = 0.5f;
-    public static final float ORBIT_DISTANCE_DEFAULT = 2f;
-    public static final float ORBIT_DISTANCE_MIN = 0.6f;
-    public static final float ORBIT_DISTANCE_MAX = 6f;
-    public static final float ORBIT_ZOOM_STEP = 0.2f;
-    public static final float ORBIT_INITIAL_YAW_DEGREES = 35f;
-    public static final float ORBIT_INITIAL_PITCH_DEGREES = 25f;
-
     // Mouse
     public static final int BUTTON_APPLY = Buttons.LEFT;
-    public static final int BUTTON_ORBIT = Buttons.RIGHT;
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/ItemEditor/Toolbar";

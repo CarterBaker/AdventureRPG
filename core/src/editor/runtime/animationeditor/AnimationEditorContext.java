@@ -6,14 +6,16 @@ import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.animationeditor.menu.AnimationEditorMenuSystem;
 import editor.runtime.animationeditor.pose.AnimationEditorPoseSystem;
 import editor.runtime.animationeditor.preview.AnimationEditorPreviewSystem;
-import editor.runtime.characterview.camera.CharacterViewCameraSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
+import editor.runtime.viewcamera.ViewCameraProvider;
+import editor.runtime.viewcamera.ViewCameraSubject;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
-public class AnimationEditorContext extends ContextPackage implements ToolCanvasProvider {
+public class AnimationEditorContext extends ContextPackage implements ToolCanvasProvider, ViewCameraProvider {
 
     /*
      * Editor tab for keyframing animation clips on a character: the
@@ -31,7 +33,7 @@ public class AnimationEditorContext extends ContextPackage implements ToolCanvas
     // Internal
     private EditorInputSystem editorInputSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
-    private CharacterViewCameraSystem characterViewCameraSystem;
+    private ViewCameraSystem viewCameraSystem;
     private AnimationEditorManager animationEditorManager;
     private AnimationEditorPreviewSystem animationEditorPreviewSystem;
     private AnimationEditorPoseSystem animationEditorPoseSystem;
@@ -45,7 +47,7 @@ public class AnimationEditorContext extends ContextPackage implements ToolCanvas
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
         this.characterViewPoseSystem = create(CharacterViewPoseSystem.class);
-        this.characterViewCameraSystem = create(CharacterViewCameraSystem.class);
+        this.viewCameraSystem = create(ViewCameraSystem.class);
         this.animationEditorPreviewSystem = create(AnimationEditorPreviewSystem.class);
         this.animationEditorPoseSystem = create(AnimationEditorPoseSystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
@@ -68,5 +70,12 @@ public class AnimationEditorContext extends ContextPackage implements ToolCanvas
     @Override
     public ToolCanvas getToolCanvas() {
         return animationEditorManager.getToolCanvas();
+    }
+
+    // Camera \\
+
+    @Override
+    public ViewCameraSubject getViewCameraSubject() {
+        return characterViewPoseSystem;
     }
 }

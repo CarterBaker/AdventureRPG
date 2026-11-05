@@ -1,6 +1,7 @@
 package editor.runtime.charactereditor;
 
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.charactereditor.menu.CharacterEditorMenuSystem;
@@ -9,14 +10,17 @@ import editor.runtime.charactereditor.overlay.CharacterEditorOverlaySystem;
 import editor.runtime.charactereditor.preview.CharacterEditorPreviewSystem;
 import editor.runtime.charactereditor.rig.CharacterEditorRigSystem;
 import editor.runtime.charactereditor.sculpt.CharacterEditorSculptSystem;
-import editor.runtime.characterview.camera.CharacterViewCameraSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
+import editor.runtime.viewcamera.ViewCameraProvider;
+import editor.runtime.viewcamera.ViewCameraSubject;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
-public class CharacterEditorContext extends ContextPackage implements ToolCanvasProvider {
+public class CharacterEditorContext extends ContextPackage
+        implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider {
 
     /*
      * Editor tab for shaping a character: its default features, skin and
@@ -31,14 +35,15 @@ public class CharacterEditorContext extends ContextPackage implements ToolCanvas
      * the preview with its overlay, and shows the toolbar and status. Its
      * panels are the Character Outliner and Character Properties windows and
      * its tools the Tools window's: while Mesh, Sculpt, Weights or Rig is
-     * open the tab is a tool canvas.
+     * open the tab is a tool canvas, and the mesh's transform, geometry,
+     * weight and selection actions are listed there under its tools.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private EditorInputSystem editorInputSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
-    private CharacterViewCameraSystem characterViewCameraSystem;
+    private ViewCameraSystem viewCameraSystem;
     private CharacterEditorPreviewSystem characterEditorPreviewSystem;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private CharacterEditorSculptSystem characterEditorSculptSystem;
@@ -54,7 +59,7 @@ public class CharacterEditorContext extends ContextPackage implements ToolCanvas
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
         this.characterViewPoseSystem = create(CharacterViewPoseSystem.class);
-        this.characterViewCameraSystem = create(CharacterViewCameraSystem.class);
+        this.viewCameraSystem = create(ViewCameraSystem.class);
         this.characterEditorPreviewSystem = create(CharacterEditorPreviewSystem.class);
         this.characterEditorMeshViewSystem = create(CharacterEditorMeshViewSystem.class);
         this.characterEditorSculptSystem = create(CharacterEditorSculptSystem.class);
@@ -80,5 +85,18 @@ public class CharacterEditorContext extends ContextPackage implements ToolCanvas
     @Override
     public ToolCanvas getToolCanvas() {
         return characterEditorManager.getToolCanvas();
+    }
+
+    // The mesh's actions run exactly as their keys and panel rows run them
+    @Override
+    public void runToolAction(String actionKey) {
+        characterEditorManager.act(actionKey);
+    }
+
+    // Camera \\
+
+    @Override
+    public ViewCameraSubject getViewCameraSubject() {
+        return characterViewPoseSystem;
     }
 }

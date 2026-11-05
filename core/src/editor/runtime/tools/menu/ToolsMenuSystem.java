@@ -7,6 +7,8 @@ import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
+import editor.bootstrap.toolpipeline.tool.ToolActionGroupStruct;
+import editor.bootstrap.toolpipeline.tool.ToolActionStruct;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
@@ -23,7 +25,9 @@ public class ToolsMenuSystem extends SystemPackage {
     /*
      * Opens the Tools menu: under the name of what the tools target works on,
      * one row per tool it takes, the tool in use highlighted and every row
-     * carrying its tool's name; and under that tool's name, one row per
+     * carrying its tool's name, then each group of actions it lists under its
+     * title, every action row carrying the action's key; and under that
+     * tool's name, one row per
      * option both it and the canvas have, its value between buttons carrying
      * the option's name, then, for a tool that strokes, the brush it strokes
      * with between the buttons that step through the brushes. Everything is
@@ -116,6 +120,8 @@ public class ToolsMenuSystem extends SystemPackage {
 
         for (int i = 0; i < tools.length; i++)
             toolElements.add(injectTool(tools[i], tools[i] == selected));
+
+        refreshActions(canvas.getActionGroups());
     }
 
     private ElementInstance injectTool(EditorTool tool, boolean selected) {
@@ -129,6 +135,33 @@ public class ToolsMenuSystem extends SystemPackage {
                 element -> {
                     element.setActionArgOverride(ArpgUtility.toEnumName(tool));
                     setChildText(element, ToolsSetting.ELEMENT_TOOL_LABEL, tool.getLabel());
+                });
+    }
+
+    // Actions \\
+
+    private void refreshActions(ToolActionGroupStruct[] groups) {
+
+        for (int i = 0; i < groups.length; i++) {
+
+            ToolActionGroupStruct group = groups[i];
+            ToolActionStruct[] actions = group.getActions();
+
+            toolElements.add(menuManager.inject(
+                    toolsMenu, ToolsSetting.ENTRY_TOOLS, ToolsSetting.TEMPLATE_ACTION_GROUP_ROW,
+                    element -> setChildText(element, ToolsSetting.ELEMENT_ACTION_GROUP_LABEL, group.getTitle())));
+
+            for (int j = 0; j < actions.length; j++)
+                toolElements.add(injectAction(actions[j]));
+        }
+    }
+
+    private ElementInstance injectAction(ToolActionStruct action) {
+        return menuManager.inject(
+                toolsMenu, ToolsSetting.ENTRY_TOOLS, ToolsSetting.TEMPLATE_ACTION_ROW,
+                element -> {
+                    element.setActionArgOverride(action.getKey());
+                    setChildText(element, ToolsSetting.ELEMENT_ACTION_LABEL, action.getLabel());
                 });
     }
 

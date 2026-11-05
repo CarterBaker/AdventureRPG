@@ -465,6 +465,19 @@ public class EditorSetting {
     public static final String FBO_EDITOR_SCENE = "EditorScene";
     public static final String FBO_EDITOR_OVERLAY = "EditorOverlay";
 
+    // View Camera — the one camera of every 3D viewport: the orbit button turns it and the pan button slides it, a
+    // drag begun on a press no tool claimed; each notch of the wheel zooms by a factor; distances are in the bounding
+    // radius of what is framed; a view snapped straight up or down leans this far so the camera keeps its heading
+    public static final int VIEW_CAMERA_BUTTON_ORBIT = Buttons.LEFT;
+    public static final int VIEW_CAMERA_BUTTON_PAN = Buttons.RIGHT;
+    public static final float VIEW_CAMERA_DISTANCE_DEFAULT = 2.2f;
+    public static final float VIEW_CAMERA_DISTANCE_MIN = 0.3f;
+    public static final float VIEW_CAMERA_DISTANCE_MAX = 8f;
+    public static final float VIEW_CAMERA_ZOOM_FACTOR = 1.12f;
+    public static final float VIEW_CAMERA_INITIAL_YAW_DEGREES = 35f;
+    public static final float VIEW_CAMERA_INITIAL_PITCH_DEGREES = 18f;
+    public static final float VIEW_CAMERA_VERTICAL_LEAN = 0.02f;
+
     // Character View — meshes, materials and draw order
     public static final String CHARACTER_VIEW_MESH_GRID = "editor/CharacterViewGrid";
     public static final String CHARACTER_VIEW_MESH_MARKER = "editor/CharacterViewMarker";
@@ -485,15 +498,8 @@ public class EditorSetting {
     // Character View — the preview's build between thin (0) and heavy (1)
     public static final float CHARACTER_VIEW_WEIGHT_RATIO = 0.5f;
 
-    // Character View — camera, the target a share of the model's height and the distances per block of it
-    public static final float CHARACTER_VIEW_ORBIT_TARGET_HEIGHT = 0.55f;
-    public static final float CHARACTER_VIEW_ORBIT_DISTANCE_DEFAULT = 1.6f;
-    public static final float CHARACTER_VIEW_ORBIT_DISTANCE_MIN = 0.35f;
-    public static final float CHARACTER_VIEW_ORBIT_DISTANCE_MAX = 5f;
-    public static final float CHARACTER_VIEW_ORBIT_ZOOM_STEP = 0.1f;
-    public static final float CHARACTER_VIEW_ORBIT_INITIAL_YAW_DEGREES = 25f;
-    public static final float CHARACTER_VIEW_ORBIT_INITIAL_PITCH_DEGREES = 15f;
-    public static final int CHARACTER_VIEW_BUTTON_ORBIT = Buttons.RIGHT;
+    // Character View — the frame, its middle a share of the model's height up and its radius reaching the feet
+    public static final float CHARACTER_VIEW_FRAME_HEIGHT_SHARE = 0.55f;
 
     // Character View — panel keys, numbers and text
     public static final String CHARACTER_VIEW_KEY_SEPARATOR = ":";
@@ -800,6 +806,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_HEADER_SELECTION = "Selection";
     public static final String CHARACTER_EDITOR_HEADER_TRANSFORM = "Transform";
     public static final String CHARACTER_EDITOR_HEADER_GEOMETRY = "Geometry";
+    public static final String CHARACTER_EDITOR_HEADER_WEIGHTS = "Weights";
     public static final String CHARACTER_EDITOR_HEADER_FACES = "Selected Faces";
     public static final String CHARACTER_EDITOR_HEADER_NEW_PART = "New Part";
     public static final String CHARACTER_EDITOR_HEADER_MESH_FILE = "Mesh File";
@@ -819,7 +826,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_SELECT_INVERT = "Invert Selection";
     public static final String CHARACTER_EDITOR_LABEL_SELECT_LINKED = "Select Linked  (L)";
     public static final String CHARACTER_EDITOR_LABEL_SELECT_MIRROR = "Select Mirror";
-    public static final String CHARACTER_EDITOR_LABEL_SELECT_BONE = "Select Weighted to ";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_BONE = "Select Weighted to Bone";
     public static final String CHARACTER_EDITOR_LABEL_GRAB = "Grab  (G)";
     public static final String CHARACTER_EDITOR_LABEL_ROTATE = "Rotate  (R)";
     public static final String CHARACTER_EDITOR_LABEL_SCALE = "Scale  (S)";
@@ -849,11 +856,12 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_NEGATIVE = "Mirror Weights  -X to +X";
 
     // Character Editor — mesh status text
-    public static final String CHARACTER_EDITOR_STATUS_MESH_HINT = "Click or drag to select, Shift adds, Ctrl removes";
-    public static final String CHARACTER_EDITOR_STATUS_SCULPT_HINT = "Drag to sculpt with the tool in use,"
-            + " Ctrl inverts the stroke";
+    public static final String CHARACTER_EDITOR_STATUS_MESH_HINT = "Click a vertex or drag from one to select, Shift"
+            + " adds, Ctrl removes; drag off the mesh to orbit, right-drag to pan";
+    public static final String CHARACTER_EDITOR_STATUS_SCULPT_HINT = "Drag on the mesh to sculpt with the tool in use,"
+            + " Ctrl inverts the stroke; drag off it to orbit, right-drag to pan";
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
-            + " Scale sizes it, Place adds a child, Erase removes one";
+            + " Scale sizes it, Place adds a child, Erase removes one; drag off the joints to orbit";
     public static final String CHARACTER_EDITOR_STATUS_TRANSFORM_HINT = "X Y Z hold to an axis, Ctrl snaps, click or "
             + "Enter confirms, right click or Esc cancels";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_EMPTY = "A mesh needs at least one face";
@@ -1013,8 +1021,8 @@ public class EditorSetting {
     public static final String ANIMATION_EDITOR_MESSAGE_REDONE = "Redone";
     public static final String ANIMATION_EDITOR_MESSAGE_NOTHING_TO_UNDO = "Nothing to undo";
     public static final String ANIMATION_EDITOR_MESSAGE_NOTHING_TO_REDO = "Nothing to redo";
-    public static final String ANIMATION_EDITOR_STATUS_POSE_HINT = "Click a joint to pick its bone; drag to pose it,"
-            + " keyed at the playhead; X Y Z hold a turn to an axis, Ctrl snaps";
+    public static final String ANIMATION_EDITOR_STATUS_POSE_HINT = "Drag a joint to pose its bone, keyed at the"
+            + " playhead; X Y Z hold a turn to an axis, Ctrl snaps; drag off the joints to orbit";
 
     // Animation Tree Editor — tree fields
     public static final String ANIMATION_TREE_EDITOR_FIELD_RIG = "rig";
