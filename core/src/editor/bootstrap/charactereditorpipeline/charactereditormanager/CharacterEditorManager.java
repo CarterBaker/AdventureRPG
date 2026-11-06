@@ -325,6 +325,18 @@ public class CharacterEditorManager extends ManagerPackage {
         setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_COPIED + localName);
     }
 
+    // A copy of a race, every field in order, under a new name; it opens as the race the character tabs show
+    public void copyRace(String sourceRaceName, String raceName) {
+
+        InfoEntryStruct sourceEntry = infoManager.findEntry(
+                EditorSetting.INFO_SCHEMA_RACES,
+                sourceRaceName,
+                sourceRaceName);
+
+        if (sourceEntry != null)
+            characterEditBranch.copyTemplate(sourceEntry.getArpg(), raceName);
+    }
+
     public void deleteActiveTemplate() {
 
         if (activeDocument == null)

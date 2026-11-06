@@ -597,13 +597,13 @@ public class EditorSetting {
             "editor/EntityEditor/entity_editor_item_row_selected",
             null,
             null,
-            null,
-            null,
+            "editor/EntityEditor/entity_editor_choice_row",
+            "editor/EntityEditor/entity_editor_action_row",
             "entity_editor_row_label",
-            null,
-            null,
-            null,
-            null,
+            "entity_editor_row_value",
+            "entity_editor_row_value_button",
+            "entity_editor_row_decrease",
+            "entity_editor_row_increase",
             null,
             null);
 
@@ -1081,17 +1081,65 @@ public class EditorSetting {
     public static final String[] FACE_EDITOR_CHANNEL_LABELS = { "Move", "Turn", "Scale" };
     public static final String FACE_EDITOR_HEADER_ACTIONS = "Face";
 
-    // Entity Editor — panel keys, the separator between a key and the entry it names, and panel text
+    // Entity Editor — panel keys, the separator between a key and the entry it names, and the fields it writes
     public static final String ENTITY_EDITOR_KEY_ENTITY = "entity";
-    public static final String ENTITY_EDITOR_KEY_RACE = "race";
     public static final String ENTITY_EDITOR_KEY_GENDER = "gender";
     public static final String ENTITY_EDITOR_KEY_SEPARATOR = ":";
+    public static final String ENTITY_EDITOR_KEY_NEW_ENTITY = "new_entity";
+    public static final String ENTITY_EDITOR_KEY_DELETE_ENTITY = "delete_entity";
+    public static final String ENTITY_EDITOR_KEY_COPY_RACE = "copy_race";
+    public static final String ENTITY_EDITOR_KEY_DELETE_RACE = "delete_race";
+    public static final String ENTITY_EDITOR_KEY_ADD_GENDER = "add_gender";
+    public static final String ENTITY_EDITOR_KEY_REMOVE_GENDER = "remove_gender";
+    public static final String ENTITY_EDITOR_KEY_SAVE = "save";
+    public static final String ENTITY_EDITOR_KEY_REVERT = "revert";
+    public static final String ENTITY_EDITOR_FIELD_GENDERS = "genders";
+    public static final String ENTITY_EDITOR_FIELD_MESH = "mesh";
+    public static final String ENTITY_EDITOR_FIELD_RIG = "rig";
+    public static final String ENTITY_EDITOR_FIELD_MATERIAL = "material";
+    public static final String ENTITY_EDITOR_FIELD_ANIMATION_TREE = "animation_tree";
+    public static final String[] ENTITY_EDITOR_MODEL_FIELDS = {
+        ENTITY_EDITOR_FIELD_MESH,
+        ENTITY_EDITOR_FIELD_RIG,
+        ENTITY_EDITOR_FIELD_MATERIAL,
+        ENTITY_EDITOR_FIELD_ANIMATION_TREE };
+
+    // Entity Editor — panel text
     public static final String ENTITY_EDITOR_HEADER_ENTITIES = "Entities";
+    public static final String ENTITY_EDITOR_HEADER_ENTITY = "Entity";
     public static final String ENTITY_EDITOR_HEADER_RACE = "Race";
     public static final String ENTITY_EDITOR_HEADER_GENDERS = "Genders";
+    public static final String ENTITY_EDITOR_HEADER_MODEL = "Model";
     public static final String ENTITY_EDITOR_HEADER_NO_ENTITIES = "No entities";
-    public static final String ENTITY_EDITOR_HEADER_NO_RACE = "Its race is missing or not built";
+    public static final String ENTITY_EDITOR_HEADER_NO_RACE = "Its race has no file";
     public static final String ENTITY_EDITOR_LABEL_SEPARATOR = ": ";
+    public static final String ENTITY_EDITOR_LABEL_RACE = "Race";
+    public static final String ENTITY_EDITOR_LABEL_RIG = "Rig";
+    public static final String ENTITY_EDITOR_LABEL_MESH = "Mesh";
+    public static final String ENTITY_EDITOR_LABEL_MATERIAL = "Material";
+    public static final String ENTITY_EDITOR_LABEL_ANIMATION_TREE = "Animation Tree";
+    public static final String ENTITY_EDITOR_LABEL_NEW_ENTITY = "New Entity";
+    public static final String ENTITY_EDITOR_LABEL_DELETE_ENTITY = "Delete Entity";
+    public static final String ENTITY_EDITOR_LABEL_COPY_RACE = "Copy Race";
+    public static final String ENTITY_EDITOR_LABEL_DELETE_RACE = "Delete Race";
+    public static final String ENTITY_EDITOR_LABEL_ADD_GENDER = "Add Gender";
+    public static final String ENTITY_EDITOR_LABEL_REMOVE_GENDER = "Remove Gender";
+    public static final String ENTITY_EDITOR_LABEL_SAVE = "Save Entity and Race";
+    public static final String ENTITY_EDITOR_LABEL_REVERT = "Revert Entity and Race";
+    public static final String ENTITY_EDITOR_VALUE_NONE = "None";
+
+    // Entity Editor — dialog titles and status text
+    public static final String ENTITY_EDITOR_DIALOG_NEW_ENTITY = "New Entity";
+    public static final String ENTITY_EDITOR_DIALOG_COPY_RACE = "Copy Race As";
+    public static final String ENTITY_EDITOR_MESSAGE_CREATED = "Created ";
+    public static final String ENTITY_EDITOR_MESSAGE_DELETED = "Deleted ";
+    public static final String ENTITY_EDITOR_MESSAGE_COPIED = "Copied the race as ";
+    public static final String ENTITY_EDITOR_MESSAGE_SAVED = "Saved ";
+    public static final String ENTITY_EDITOR_MESSAGE_REVERTED = "Reverted ";
+    public static final String ENTITY_EDITOR_MESSAGE_ADDED_GENDER = "Added the gender ";
+    public static final String ENTITY_EDITOR_MESSAGE_REMOVED_GENDER = "Removed the gender ";
+    public static final String ENTITY_EDITOR_MESSAGE_LAST_GENDER = "A race keeps at least one gender";
+    public static final String ENTITY_EDITOR_MESSAGE_ALL_GENDERS = "The race already has every gender";
 
     // Face Editor — status text
     public static final String FACE_EDITOR_STATUS_NO_TEMPLATE =
@@ -1646,6 +1694,8 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_TREES = "Trees";
     public static final String INFO_SCHEMA_ENTITIES = "Entities";
     public static final String INFO_SCHEMA_RACES = "Races";
+    public static final String INFO_SCHEMA_GENDERS = "Genders";
+    public static final String INFO_SCHEMA_MATERIALS = "Materials";
     public static final String INFO_SCHEMA_ANIMATIONS = "Animations";
     public static final String INFO_SCHEMA_ANIMATION_TREES = "AnimationTrees";
     public static final String INFO_SCHEMA_RIGS = "Rigs";

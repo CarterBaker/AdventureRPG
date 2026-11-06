@@ -16,12 +16,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class EntityEditorContext extends ContextPackage implements CharacterViewRowSource, PropertiesProvider {
 
     /*
-     * Docker window listing every entity, the race the picked one is made of
-     * and every gender that race may be made as, with the model each
-     * requires. Picking an entity selects it for every window: the Properties
-     * tab shows and edits its fields, and the character tabs open its race;
-     * picking a gender previews it there, wearing its own model. The state
-     * lives in EntityEditorManager.
+     * Docker window that makes, deletes and picks entities, chooses the race
+     * each is made of, copies and deletes races, adds and removes a race's
+     * genders and chooses each gender's model — mesh, material and animation
+     * tree on the race's rig — and saves the entity and its race together.
+     * Picking an entity selects it for every window: the Properties tab shows
+     * its other fields, and the character tabs open its race; picking a
+     * gender previews it there, wearing its own model. The state lives in
+     * EntityEditorManager.
      */
 
     // Internal

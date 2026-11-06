@@ -15,8 +15,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Name a tab for what it holds.** A palette of biomes is the Biome Palette; a window that paints heights is the
   Height Editor. Never a generic name that hides what the tab is for.
 - **Split so far:** the World Editor paints biomes and places settlements and cameras; the Height Editor raises and
-  lowers the ground; the Entity Editor lists the entities and the race and genders of the one picked, its fields in
-  the Properties tab; Character Appearance, Character Build and Character Equipment each shape one part of how a
+  lowers the ground; the Entity Editor makes, deletes and picks entities, chooses each one's race, copies and deletes
+  races, adds and removes a race's genders and chooses each gender's model (the entity's other fields in the
+  Properties tab); Character Appearance, Character Build and Character Equipment each shape one part of how a
   race looks, and the Character Mesh Editor models its meshes and rig with the Tools and Brushes tabs; the Recorder
   is its timeline, with Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside it, each opening its
   own menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes
