@@ -3,10 +3,10 @@ package editor.runtime.charactereditor;
 public class CharacterEditorSetting {
 
     /*
-     * Constants used only by CharacterEditorContext and the viewport systems
+     * Constants used only by CharacterLookContext and the viewport systems
      * it owns, which the Character Mesh Editor's tab creates as well — the
-     * Character Editor's toolbar menu and the status entry both toolbars
-     * share, the size of the box shown for a held anchor, and the mesh modes'
+     * toolbar menu the Character Appearance, Build and Equipment tabs share
+     * and the status entry both toolbars share, the size of the box shown for a held anchor, and the mesh modes'
      * box selection, held shortcuts and the overlay their vertices and edges
      * are drawn with. Its panels' rows are the docker windows'.
      */

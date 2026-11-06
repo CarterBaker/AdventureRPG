@@ -1,6 +1,9 @@
 package editor.runtime.treeviewer;
 
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.treeviewer.frame.TreeViewerFrameSystem;
 import editor.runtime.treeviewer.menu.TreeViewerMenuSystem;
 import editor.runtime.treeviewer.render.TreeViewerRenderSystem;
@@ -9,7 +12,7 @@ import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
-public class TreeViewerContext extends ContextPackage implements ViewCameraProvider {
+public class TreeViewerContext extends ContextPackage implements ViewCameraProvider, PropertiesProvider {
 
     /*
      * Editor tab showing the Tree Planner's species as the world draws it, at
@@ -26,6 +29,7 @@ public class TreeViewerContext extends ContextPackage implements ViewCameraProvi
     private ViewCameraSystem viewCameraSystem;
     private TreeViewerRenderSystem treeViewerRenderSystem;
     private TreeViewerMenuSystem treeViewerMenuSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
@@ -36,6 +40,7 @@ public class TreeViewerContext extends ContextPackage implements ViewCameraProvi
         this.viewCameraSystem = create(ViewCameraSystem.class);
         this.treeViewerRenderSystem = create(TreeViewerRenderSystem.class);
         this.treeViewerMenuSystem = create(TreeViewerMenuSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
@@ -56,5 +61,13 @@ public class TreeViewerContext extends ContextPackage implements ViewCameraProvi
     public void frame(int tier) {
         treeViewerFrameSystem.frame(tier);
         viewCameraSystem.centre();
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

@@ -1,9 +1,12 @@
 package editor.runtime.treeplanner;
 
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.treeplanner.menu.TreePlannerMenuSystem;
 import engine.root.ContextPackage;
 
-public class TreePlannerContext extends ContextPackage {
+public class TreePlannerContext extends ContextPackage implements PropertiesProvider {
 
     /*
      * Editor tab for making trees, the way the Biome Planner is for biomes:
@@ -18,16 +21,26 @@ public class TreePlannerContext extends ContextPackage {
 
     // Internal
     private TreePlannerMenuSystem treePlannerMenuSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
         this.treePlannerMenuSystem = create(TreePlannerMenuSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

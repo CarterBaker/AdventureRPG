@@ -15,11 +15,11 @@ import engine.root.SystemPackage;
 public class CharacterEditorMenuSystem extends SystemPackage {
 
     /*
-     * Opens the toolbar its tab names, the Character Editor's or the
-     * Character Mesh Editor's, and its status bar over the viewport, and
-     * rewrites the status line when the editor's revision moves. The
-     * editor's panels are the Character Outliner and Character Properties
-     * docker windows.
+     * Opens the toolbar its tab names, the one the Character Appearance,
+     * Build and Equipment tabs share or the Character Mesh Editor's, and its
+     * status bar over the viewport, and rewrites the status line when the
+     * editor's revision moves. The editor's panels are the Character
+     * Outliner docker window and the Properties tab.
      */
 
     // Internal

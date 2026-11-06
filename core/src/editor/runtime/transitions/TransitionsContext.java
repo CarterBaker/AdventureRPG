@@ -1,9 +1,12 @@
 package editor.runtime.transitions;
 
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.transitions.panel.TransitionsPanelSystem;
 import engine.root.ContextPackage;
 
-public class TransitionsContext extends ContextPackage {
+public class TransitionsContext extends ContextPackage implements PropertiesProvider {
 
     /*
      * Editor tab for the transitions, the way a paint program's brush docker
@@ -19,16 +22,26 @@ public class TransitionsContext extends ContextPackage {
 
     // Internal
     private TransitionsPanelSystem transitionsPanelSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
         this.transitionsPanelSystem = create(TransitionsPanelSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

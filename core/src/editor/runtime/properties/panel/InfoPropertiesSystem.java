@@ -1,4 +1,4 @@
-package editor.runtime.infopanel.panel;
+package editor.runtime.properties.panel;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
@@ -7,35 +7,31 @@ import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.ThemeColor;
-import application.bootstrap.renderpipeline.fbomanager.FBOManager;
-import application.kernel.windowpipeline.window.WindowInstance;
-import application.runtime.RuntimeSetting;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.infopipeline.inforow.InfoRowStruct;
-import editor.runtime.infopanel.InfoPanelSetting;
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.runtime.properties.PropertiesSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class InfoPanelSystem extends SystemPackage {
+public class InfoPropertiesSystem extends SystemPackage implements PropertiesView {
 
     /*
-     * Binds this window to a UI render target and shows the selected entry in
-     * the info panel menu. Whenever InfoManager's revision moves it rewrites
-     * the title and status lines and injects one row per value, group, and
-     * missing optional field, indented by depth, with every button carrying
-     * its row's path and the add and remove buttons kept only where allowed.
-     * A row holding an error, and a status line reporting one, are drawn in
-     * the danger color; a row the game ignores is drawn muted.
+     * The Properties tab's view of the content entry selected in the
+     * Hierarchy, the editor's Info Panel. Whenever InfoManager's revision
+     * moves while it shows, it injects one row per value, group, and missing
+     * optional field, indented by depth, with every button carrying its
+     * row's path and the add and remove buttons kept only where allowed. A
+     * row holding an error is drawn in the danger color; a row the game
+     * ignores is drawn muted. The title is the entry's; the toolbar and
+     * status line are the tab's own.
      */
 
     // Internal
     private MenuManager menuManager;
-    private FBOManager fboManager;
     private InfoManager infoManager;
-
-    // Menus
-    private MenuInstance panelMenu;
+    private PropertiesSystem propertiesSystem;
 
     // Colors
     private MenuColorStruct problemColor;
@@ -64,46 +60,43 @@ public class InfoPanelSystem extends SystemPackage {
     @Override
     protected void get() {
         this.menuManager = get(MenuManager.class);
-        this.fboManager = get(FBOManager.class);
         this.infoManager = get(InfoManager.class);
+        this.propertiesSystem = get(PropertiesSystem.class);
     }
 
-    @Override
-    protected void awake() {
-
-        WindowInstance window = context.getWindow();
-
-        menuManager.setMenuTargetFbo(window, fboManager.cloneFbo(RuntimeSetting.FBO_UI, window));
-        this.panelMenu = menuManager.openMenu(InfoPanelSetting.MENU_INFO_PANEL, window);
-    }
-
-    // Update \\
+    // View \\
 
     @Override
-    protected void update() {
+    public boolean refresh(PropertiesProvider provider, boolean force) {
 
-        if (infoManager.getRevision() == shownRevision)
-            return;
+        if (!force && infoManager.getRevision() == shownRevision)
+            return false;
 
         this.shownRevision = infoManager.getRevision();
-
-        setEntryText(InfoPanelSetting.ENTRY_TITLE, infoManager.getTitleText());
-        setEntryText(InfoPanelSetting.ENTRY_STATUS, infoManager.getStatusText());
-        setEntryColor(InfoPanelSetting.ENTRY_STATUS, infoManager.hasStatusProblem() ? problemColor : null);
-        refreshRows();
-    }
-
-    private void refreshRows() {
-
-        for (int i = 0; i < rowElements.size(); i++)
-            menuManager.eject(panelMenu, InfoPanelSetting.ENTRY_ROWS, rowElements.get(i));
-
-        rowElements.clear();
-        rows.clear();
+        clear();
         infoManager.buildRows(rows);
 
         for (int i = 0; i < rows.size(); i++)
             rowElements.add(injectRow(rows.get(i)));
+
+        return true;
+    }
+
+    @Override
+    public String getTitle(PropertiesProvider provider) {
+        return infoManager.getTitleText();
+    }
+
+    @Override
+    public void clear() {
+
+        MenuInstance menu = propertiesSystem.getMenu();
+
+        for (int i = 0; i < rowElements.size(); i++)
+            menuManager.eject(menu, PropertiesSetting.ENTRY_ROWS, rowElements.get(i));
+
+        rowElements.clear();
+        rows.clear();
     }
 
     // Rows \\
@@ -112,13 +105,13 @@ public class InfoPanelSystem extends SystemPackage {
 
         return switch (row.getKind()) {
             case VALUE -> menuManager.inject(
-                    panelMenu, InfoPanelSetting.ENTRY_ROWS, InfoPanelSetting.TEMPLATE_VALUE_ROW,
+                    propertiesSystem.getMenu(), PropertiesSetting.ENTRY_ROWS, PropertiesSetting.TEMPLATE_VALUE_ROW,
                     element -> fillValueRow(element, row));
             case GROUP -> menuManager.inject(
-                    panelMenu, InfoPanelSetting.ENTRY_ROWS, InfoPanelSetting.TEMPLATE_GROUP_ROW,
+                    propertiesSystem.getMenu(), PropertiesSetting.ENTRY_ROWS, PropertiesSetting.TEMPLATE_GROUP_ROW,
                     element -> fillGroupRow(element, row));
             case MISSING -> menuManager.inject(
-                    panelMenu, InfoPanelSetting.ENTRY_ROWS, InfoPanelSetting.TEMPLATE_MISSING_ROW,
+                    propertiesSystem.getMenu(), PropertiesSetting.ENTRY_ROWS, PropertiesSetting.TEMPLATE_MISSING_ROW,
                     element -> fillMissingRow(element, row));
         };
     }
@@ -126,20 +119,20 @@ public class InfoPanelSystem extends SystemPackage {
     private void fillValueRow(ElementInstance element, InfoRowStruct row) {
 
         fillKeyLabel(element, row);
-        bindChild(element, InfoPanelSetting.ELEMENT_VALUE_BUTTON, row.getPath(), true);
-        bindChild(element, InfoPanelSetting.ELEMENT_REMOVE_BUTTON, row.getPath(), row.isRemovable());
-        setChildText(element, InfoPanelSetting.ELEMENT_VALUE_LABEL, row.getValueText());
-        markIssue(element, InfoPanelSetting.ELEMENT_VALUE_LABEL, row);
+        bindChild(element, PropertiesSetting.ELEMENT_VALUE_BUTTON, row.getPath(), true);
+        bindChild(element, PropertiesSetting.ELEMENT_REMOVE_BUTTON, row.getPath(), row.isRemovable());
+        setChildText(element, PropertiesSetting.ELEMENT_VALUE_LABEL, row.getValueText());
+        markIssue(element, PropertiesSetting.ELEMENT_VALUE_LABEL, row);
     }
 
     private void fillGroupRow(ElementInstance element, InfoRowStruct row) {
 
         element.setActionArgOverride(row.getPath());
         fillKeyLabel(element, row);
-        bindChild(element, InfoPanelSetting.ELEMENT_ADD_BUTTON, row.getPath(), row.isAddable());
-        bindChild(element, InfoPanelSetting.ELEMENT_REMOVE_BUTTON, row.getPath(), row.isRemovable());
+        bindChild(element, PropertiesSetting.ELEMENT_ADD_BUTTON, row.getPath(), row.isAddable());
+        bindChild(element, PropertiesSetting.ELEMENT_REMOVE_BUTTON, row.getPath(), row.isRemovable());
 
-        ElementInstance toggleLabel = element.findChildById(InfoPanelSetting.ELEMENT_TOGGLE_LABEL);
+        ElementInstance toggleLabel = element.findChildById(PropertiesSetting.ELEMENT_TOGGLE_LABEL);
 
         if (toggleLabel == null)
             return;
@@ -153,19 +146,19 @@ public class InfoPanelSystem extends SystemPackage {
     private void fillMissingRow(ElementInstance element, InfoRowStruct row) {
 
         fillKeyLabel(element, row);
-        bindChild(element, InfoPanelSetting.ELEMENT_ADD_BUTTON, row.getPath(), true);
+        bindChild(element, PropertiesSetting.ELEMENT_ADD_BUTTON, row.getPath(), true);
     }
 
     private void fillKeyLabel(ElementInstance element, InfoRowStruct row) {
 
-        ElementInstance keyLabel = element.findChildById(InfoPanelSetting.ELEMENT_KEY_LABEL);
+        ElementInstance keyLabel = element.findChildById(PropertiesSetting.ELEMENT_KEY_LABEL);
 
         if (keyLabel == null)
             return;
 
-        keyLabel.setPositionOverride(toOffset(toIndent(row) + InfoPanelSetting.TOGGLE_WIDTH_PIXELS));
+        keyLabel.setPositionOverride(toOffset(toIndent(row) + PropertiesSetting.TOGGLE_WIDTH_PIXELS));
         keyLabel.setFontText(row.getLabel());
-        markIssue(element, InfoPanelSetting.ELEMENT_KEY_LABEL, row);
+        markIssue(element, PropertiesSetting.ELEMENT_KEY_LABEL, row);
     }
 
     // Utility \\
@@ -204,24 +197,10 @@ public class InfoPanelSystem extends SystemPackage {
             child.setColorOverride(ignoredColor);
     }
 
-    private void setEntryText(int entryPoint, String text) {
 
-        ElementInstance label = panelMenu.getEntryPoint(entryPoint);
-
-        if (label != null)
-            label.setFontText(text);
-    }
-
-    private void setEntryColor(int entryPoint, MenuColorStruct color) {
-
-        ElementInstance label = panelMenu.getEntryPoint(entryPoint);
-
-        if (label != null)
-            label.setColorOverride(color);
-    }
 
     private float toIndent(InfoRowStruct row) {
-        return InfoPanelSetting.ROW_OFFSET_PIXELS + row.getDepth() * InfoPanelSetting.INDENT_PIXELS;
+        return PropertiesSetting.ROW_OFFSET_PIXELS + row.getDepth() * PropertiesSetting.INDENT_PIXELS;
     }
 
     private DimensionVector2Struct toOffset(float x) {

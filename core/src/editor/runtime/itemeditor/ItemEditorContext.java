@@ -1,19 +1,23 @@
 package editor.runtime.itemeditor;
 
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
+import editor.runtime.input.EditorInputSystem;
 import editor.runtime.itemeditor.frame.ItemEditorFrameSystem;
 import editor.runtime.itemeditor.menu.ItemEditorMenuSystem;
 import editor.runtime.itemeditor.render.ItemEditorRenderSystem;
 import editor.runtime.itemeditor.tool.ItemEditorToolSystem;
-import editor.runtime.input.EditorInputSystem;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
-public class ItemEditorContext extends ContextPackage implements ToolCanvasProvider, ViewCameraProvider {
+public class ItemEditorContext extends ContextPackage
+        implements ToolCanvasProvider, ViewCameraProvider, PropertiesProvider {
 
     /*
      * Editor tab for building items from sub-voxel cubes. Reads input, orbits
@@ -30,6 +34,7 @@ public class ItemEditorContext extends ContextPackage implements ToolCanvasProvi
     private ItemEditorRenderSystem itemEditorRenderSystem;
     private ItemEditorMenuSystem itemEditorMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
@@ -42,6 +47,7 @@ public class ItemEditorContext extends ContextPackage implements ToolCanvasProvi
         this.itemEditorRenderSystem = create(ItemEditorRenderSystem.class);
         this.itemEditorMenuSystem = create(ItemEditorMenuSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
@@ -61,5 +67,13 @@ public class ItemEditorContext extends ContextPackage implements ToolCanvasProvi
     @Override
     public ViewCameraSubject getViewCameraSubject() {
         return itemEditorFrameSystem;
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

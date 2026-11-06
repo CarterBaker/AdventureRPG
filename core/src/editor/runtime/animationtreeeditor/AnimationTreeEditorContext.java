@@ -1,6 +1,8 @@
 package editor.runtime.animationtreeeditor;
 
 import editor.bootstrap.animationtreeeditorpipeline.animationtreeeditormanager.AnimationTreeEditorManager;
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.animationtreeeditor.menu.AnimationTreeEditorMenuSystem;
 import editor.runtime.animationtreeeditor.preview.AnimationTreeEditorPreviewSystem;
 import editor.runtime.characterview.panel.CharacterViewPanelSystem;
@@ -8,12 +10,14 @@ import editor.runtime.characterview.panel.CharacterViewStepTarget;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
-public class AnimationTreeEditorContext extends ContextPackage implements ViewCameraProvider, CharacterViewStepTarget {
+public class AnimationTreeEditorContext extends ContextPackage
+        implements ViewCameraProvider, CharacterViewStepTarget, PropertiesProvider {
 
     /*
      * Editor tab for building animation trees: layers and their blend and
@@ -36,6 +40,7 @@ public class AnimationTreeEditorContext extends ContextPackage implements ViewCa
     private CharacterViewRenderSystem characterViewRenderSystem;
     private CharacterViewPanelSystem characterViewPanelSystem;
     private AnimationTreeEditorMenuSystem animationTreeEditorMenuSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
@@ -48,6 +53,7 @@ public class AnimationTreeEditorContext extends ContextPackage implements ViewCa
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
         this.animationTreeEditorMenuSystem = create(AnimationTreeEditorMenuSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
@@ -72,5 +78,13 @@ public class AnimationTreeEditorContext extends ContextPackage implements ViewCa
     @Override
     public ViewCameraSubject getViewCameraSubject() {
         return characterViewPoseSystem;
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

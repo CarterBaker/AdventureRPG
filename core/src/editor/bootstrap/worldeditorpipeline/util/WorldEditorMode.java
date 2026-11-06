@@ -8,7 +8,7 @@ public enum WorldEditorMode {
 
     /*
      * What the World Editor's canvas is working on: Paint, the biome image,
-     * painted with the Biome Palette's biome, Settlements, the
+     * painted with the biome palette's biome, Settlements, the
      * settlements and structures placed by hand on the world, chosen in the
      * Settlement Planner, or Cameras, the views the main menu looks out
      * from, designed in the Camera Planner. A placing mode is its own tool

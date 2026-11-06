@@ -1,9 +1,12 @@
 package editor.runtime.biomeplanner;
 
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.biomeplanner.menu.BiomePlannerMenuSystem;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import engine.root.ContextPackage;
 
-public class BiomePlannerContext extends ContextPackage {
+public class BiomePlannerContext extends ContextPackage implements PropertiesProvider {
 
     /*
      * Editor tab for making biomes, the way the Settlement Planner is for
@@ -17,16 +20,26 @@ public class BiomePlannerContext extends ContextPackage {
 
     // Internal
     private BiomePlannerMenuSystem biomePlannerMenuSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
         this.biomePlannerMenuSystem = create(BiomePlannerMenuSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

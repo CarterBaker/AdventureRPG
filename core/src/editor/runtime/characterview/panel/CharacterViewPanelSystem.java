@@ -84,6 +84,13 @@ public class CharacterViewPanelSystem extends SystemPackage {
             panel.add(rows.get(i), injectRow(menu, entryPoint, rows.get(i), templates));
     }
 
+    // A panel emptied and forgotten, as when another view takes its entry point over
+    public void clear(MenuInstance menu, int entryPoint) {
+
+        menuManager.ejectAll(menu, entryPoint);
+        resolvePanel(menu, entryPoint).clear(null);
+    }
+
     private CharacterViewPanelStruct resolvePanel(MenuInstance menu, int entryPoint) {
 
         for (int i = 0; i < panels.size(); i++)

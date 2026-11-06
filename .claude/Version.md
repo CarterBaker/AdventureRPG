@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 38
-Task: RecorderTabs
+Delivery: 39
+Task: SharedProperties
 Applied: 2026-11-06
 
 ## Log
@@ -48,3 +48,4 @@ Applied: 2026-11-06
 - 36, 2026-11-06, InfoPanelSelection
 - 37, 2026-11-06, CharacterEditorSplit
 - 38, 2026-11-06, RecorderTabs
+- 39, 2026-11-06, SharedProperties

@@ -1,9 +1,12 @@
 package editor.runtime.settlementplanner;
 
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.settlementplanner.menu.SettlementPlannerMenuSystem;
 import engine.root.ContextPackage;
 
-public class SettlementPlannerContext extends ContextPackage {
+public class SettlementPlannerContext extends ContextPackage implements PropertiesProvider {
 
     /*
      * Editor tab for choosing what the World Editor places, the way a brush
@@ -18,16 +21,26 @@ public class SettlementPlannerContext extends ContextPackage {
 
     // Internal
     private SettlementPlannerMenuSystem settlementPlannerMenuSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
         this.settlementPlannerMenuSystem = create(SettlementPlannerMenuSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

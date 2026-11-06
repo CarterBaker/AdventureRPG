@@ -30,9 +30,9 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * mesh or rig is edited — and given the markers of the mode: the joints in
      * Build, Mesh and Weights, the rig's bones as they are being edited in
      * Rig, every equipment anchor in Equipment, the selected one highlighted.
-     * The tab's own mode decides all of it, so the Character Editor and the
-     * Character Mesh Editor each show the character their own way side by
-     * side.
+     * The tab's own mode decides all of it, so the Character Appearance,
+     * Build, Equipment and Mesh Editor tabs each show the character their own
+     * way side by side.
      */
 
     // Internal

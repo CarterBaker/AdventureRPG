@@ -6,11 +6,9 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeContext;
 import editor.runtime.animationeditor.AnimationEditorContext;
 import editor.runtime.animationoutliner.AnimationOutlinerContext;
-import editor.runtime.animationproperties.AnimationPropertiesContext;
 import editor.runtime.animationtimeline.AnimationTimelineContext;
 import editor.runtime.animationtreeeditor.AnimationTreeEditorContext;
 import editor.runtime.arpgviewer.ArpgViewerContext;
-import editor.runtime.biomepalette.BiomePaletteContext;
 import editor.runtime.biomeplanner.BiomePlannerContext;
 import editor.runtime.biomeviewer.BiomeViewerContext;
 import editor.runtime.brushes.BrushesContext;
@@ -22,21 +20,21 @@ import editor.bootstrap.tabpipeline.tab.TabContext;
 import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
-import editor.runtime.charactereditor.CharacterEditorContext;
+import editor.runtime.characterappearance.CharacterAppearanceContext;
+import editor.runtime.characterbuild.CharacterBuildContext;
+import editor.runtime.characterequipment.CharacterEquipmentContext;
 import editor.runtime.charactermesheditor.CharacterMeshEditorContext;
 import editor.runtime.characteroutliner.CharacterOutlinerContext;
-import editor.runtime.characterproperties.CharacterPropertiesContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
 import editor.runtime.faceeditor.FaceEditorContext;
 import editor.runtime.faceoutliner.FaceOutlinerContext;
-import editor.runtime.faceproperties.FacePropertiesContext;
 import editor.runtime.heighteditor.HeightEditorContext;
 import editor.runtime.hierarchy.HierarchyContext;
-import editor.runtime.infopanel.InfoPanelContext;
 import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.profiler.ProfilerContext;
+import editor.runtime.properties.PropertiesContext;
 import editor.runtime.recorder.RecorderContext;
 import editor.runtime.recorderassets.RecorderAssetsContext;
 import editor.runtime.recorderbin.RecorderBinContext;
@@ -152,16 +150,24 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_HIERARCHY, HierarchyContext.class, osWindow);
     }
 
-    public TabHandle openInfoPanel(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_INFO_PANEL, InfoPanelContext.class, osWindow);
+    public TabHandle openProperties(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_PROPERTIES, PropertiesContext.class, osWindow);
     }
 
     public TabHandle openItemEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ITEM_EDITOR, ItemEditorContext.class, osWindow);
     }
 
-    public TabHandle openCharacterEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_EDITOR, CharacterEditorContext.class, osWindow);
+    public TabHandle openCharacterAppearance(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_APPEARANCE, CharacterAppearanceContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterBuild(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_BUILD, CharacterBuildContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterEquipment(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_EQUIPMENT, CharacterEquipmentContext.class, osWindow);
     }
 
     public TabHandle openCharacterMeshEditor(WindowInstance osWindow) {
@@ -172,10 +178,6 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_OUTLINER, CharacterOutlinerContext.class, osWindow);
     }
 
-    public TabHandle openCharacterProperties(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_PROPERTIES, CharacterPropertiesContext.class, osWindow);
-    }
-
     public TabHandle openFaceEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_FACE_EDITOR, FaceEditorContext.class, osWindow);
     }
@@ -184,20 +186,12 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_FACE_OUTLINER, FaceOutlinerContext.class, osWindow);
     }
 
-    public TabHandle openFaceProperties(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_FACE_PROPERTIES, FacePropertiesContext.class, osWindow);
-    }
-
     public TabHandle openAnimationEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ANIMATION_EDITOR, AnimationEditorContext.class, osWindow);
     }
 
     public TabHandle openAnimationOutliner(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ANIMATION_OUTLINER, AnimationOutlinerContext.class, osWindow);
-    }
-
-    public TabHandle openAnimationProperties(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_ANIMATION_PROPERTIES, AnimationPropertiesContext.class, osWindow);
     }
 
     public TabHandle openAnimationTimeline(WindowInstance osWindow) {
@@ -268,10 +262,6 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openTreeViewer(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_TREE_VIEWER, TreeViewerContext.class, osWindow);
-    }
-
-    public TabHandle openBiomePalette(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_BIOME_PALETTE, BiomePaletteContext.class, osWindow);
     }
 
     public TabHandle openConsole(WindowInstance osWindow) {

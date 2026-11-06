@@ -12,12 +12,12 @@ public class CharacterEditorModeSystem extends SystemPackage {
 
     /*
      * Keeps the mode one character viewport tab works in. Each tab keeps to
-     * its own modes — the Character Editor to those that shape how the
-     * character looks, the Character Mesh Editor to those that take tools —
-     * and remembers the last of them it was in. While the tab is focused,
+     * its own modes — the Character Appearance, Build and Equipment tabs to
+     * one each, the Character Mesh Editor to those that take tools — and
+     * remembers the last of them it was in. While the tab is focused,
      * its window or its chrome, a mode of its own chosen on the editor is
      * taken up here, and any other is handed back for this tab's, so the
-     * Character Outliner and Character Properties always follow the tab
+     * Character Outliner and the Properties tab always follow the tab
      * worked in last. The tab draws its preview in its own mode whatever the
      * editor's is.
      */
@@ -26,6 +26,9 @@ public class CharacterEditorModeSystem extends SystemPackage {
     private WindowManager windowManager;
     private TabManager tabManager;
     private CharacterEditorManager characterEditorManager;
+
+    // Window
+    private CharacterEditorWindowProvider windowProvider;
 
     // Mode
     private CharacterEditorMode mode;
@@ -45,7 +48,8 @@ public class CharacterEditorModeSystem extends SystemPackage {
         if (!(context instanceof CharacterEditorWindowProvider))
             throwException("A character viewport tab's context must name the mode it opens in.");
 
-        this.mode = ((CharacterEditorWindowProvider) context).getStartingMode();
+        this.windowProvider = (CharacterEditorWindowProvider) context;
+        this.mode = windowProvider.getStartingMode();
     }
 
     // Update \\
@@ -61,7 +65,7 @@ public class CharacterEditorModeSystem extends SystemPackage {
 
         CharacterEditorMode shared = characterEditorManager.getMode();
 
-        if (shared.isModeling() == mode.isModeling())
+        if (windowProvider.holdsMode(shared))
             this.mode = shared;
         else
             characterEditorManager.setMode(mode);

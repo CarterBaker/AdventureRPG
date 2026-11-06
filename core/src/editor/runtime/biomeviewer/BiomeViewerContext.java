@@ -11,13 +11,16 @@ import application.runtime.water.WaterSystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.biomeviewer.menu.BiomeViewerMenuSystem;
 import editor.runtime.biomeviewer.minimap.BiomeViewerMinimapSystem;
 import editor.runtime.biomeviewer.pause.BiomeViewerPauseSystem;
 import editor.runtime.biomeviewer.view.BiomeViewerSystem;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import engine.root.ContextPackage;
 
-public class BiomeViewerContext extends ContextPackage {
+public class BiomeViewerContext extends ContextPackage implements PropertiesProvider {
 
     /*
      * Editor tab flying a free camera over the biome planner's world, so the
@@ -52,6 +55,7 @@ public class BiomeViewerContext extends ContextPackage {
     private BiomeViewerMenuSystem biomeViewerMenuSystem;
     private BiomeViewerMinimapSystem biomeViewerMinimapSystem;
     private BiomeViewerPauseSystem biomeViewerPauseSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
@@ -78,11 +82,20 @@ public class BiomeViewerContext extends ContextPackage {
         this.biomeViewerMenuSystem = create(BiomeViewerMenuSystem.class);
         this.biomeViewerMinimapSystem = create(BiomeViewerMinimapSystem.class);
         this.biomeViewerPauseSystem = create(BiomeViewerPauseSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     // Management \
 
     public void resume() {
         biomeViewerPauseSystem.resume();
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

@@ -1,9 +1,12 @@
 package editor.runtime.soundlibrary;
 
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.soundlibrary.panel.SoundLibraryPanelSystem;
 import engine.root.ContextPackage;
 
-public class SoundLibraryContext extends ContextPackage {
+public class SoundLibraryContext extends ContextPackage implements PropertiesProvider {
 
     /*
      * Editor tab for the sound library: every sound the game loads, folder by
@@ -17,16 +20,26 @@ public class SoundLibraryContext extends ContextPackage {
 
     // Internal
     private SoundLibraryPanelSystem soundLibraryPanelSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
         this.soundLibraryPanelSystem = create(SoundLibraryPanelSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

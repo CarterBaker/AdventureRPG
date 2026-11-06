@@ -15,10 +15,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Name a tab for what it holds.** A palette of biomes is the Biome Palette; a window that paints heights is the
   Height Editor. Never a generic name that hides what the tab is for.
 - **Split so far:** the World Editor paints biomes and places settlements and cameras; the Height Editor raises and
-  lowers the ground; the Biome Palette lists biomes only; the Character Editor shapes how a character looks and the
-  Character Mesh Editor models its meshes and rig with the Tools and Brushes tabs; the Recorder is its timeline, with
-  Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside it, each opening its own menu through a
-  shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act on.
+  lowers the ground; Character Appearance, Character Build and Character Equipment each shape one part of how a
+  character looks, and the Character Mesh Editor models its meshes and rig with the Tools and Brushes tabs; the Recorder
+  is its timeline, with Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside it, each opening its
+  own menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes
+  act on.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 
 ## Tools and brushes
@@ -46,9 +47,16 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   listed, through the tool's own step, so the tool's clamps still hold. Either way a typed value can go anywhere the
   setter allows.
 
-## The Info Panel
+## The Properties tab
 
-- **The Info Panel shows whatever was last selected, in any window**: a brush, a biome, a tree, a ship, a settlement,
-  a character, an animation. A window that selects content routes the choice through `InfoManager.selectEntry`, and
-  content picked in the Hierarchy becomes the window's choice through a selection listener, so both directions stay
-  in step.
+- **One shared Properties tab, never a properties window per tool.** It shows what the window worked in last
+  provides (`editor.bootstrap.propertiespipeline`): a window implements `PropertiesProvider`, names its
+  `PropertiesContent` and creates a `PropertiesSourceSystem`. `ROWS` are a character, face or animation tab's value
+  rows (the window is also a `CharacterViewRowSource`), `BIOMES` the World Editor's biome palette while it paints, and
+  `INFO` the content entry selected in the Hierarchy, the editor's Info Panel, which the Hierarchy and every content
+  tool show. A new kind of content is a new `PropertiesContent` and a `PropertiesView` system in the Properties tab,
+  never a new window. Its toolbar and status line always work on the Hierarchy's selection.
+- **The Info entry follows whatever was last selected, in any window**: a brush, a biome, a tree, a ship, a
+  settlement, a character, an animation. A window that selects content routes the choice through
+  `InfoManager.selectEntry`, and content picked in the Hierarchy becomes the window's choice through a selection
+  listener, so both directions stay in step.

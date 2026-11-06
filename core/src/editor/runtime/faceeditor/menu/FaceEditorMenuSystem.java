@@ -16,7 +16,7 @@ public class FaceEditorMenuSystem extends SystemPackage {
     /*
      * Opens the Face Editor toolbar and its status bar over the viewport, and
      * rewrites the status line when the editor's revision moves. The editor's
-     * panels are the Face Outliner and Face Properties docker windows.
+     * panels are the Face Outliner docker window and the Properties tab.
      */
 
     // Internal

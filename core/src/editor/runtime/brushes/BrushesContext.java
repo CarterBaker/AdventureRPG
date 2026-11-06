@@ -1,10 +1,13 @@
 package editor.runtime.brushes;
 
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.brushes.menu.BrushesMenuSystem;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import engine.root.ContextPackage;
 
-public class BrushesContext extends ContextPackage {
+public class BrushesContext extends ContextPackage implements PropertiesProvider {
 
     /*
      * Editor tab holding the brushes, the way a paint program's brush docker
@@ -20,6 +23,7 @@ public class BrushesContext extends ContextPackage {
     // Internal
     private BrushesMenuSystem brushesMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
@@ -27,10 +31,19 @@ public class BrushesContext extends ContextPackage {
     protected void create() {
         this.brushesMenuSystem = create(BrushesMenuSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Properties \\
+
+    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.INFO;
     }
 }

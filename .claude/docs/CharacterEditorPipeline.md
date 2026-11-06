@@ -14,34 +14,39 @@ layouts like any other.
 
 | Window | Context | Shows |
 |---|---|---|
-| Character Editor | `CharacterEditorContext` | how the character looks: the preview and the Appearance, Build and Equipment toolbar |
+| Character Appearance | `CharacterAppearanceContext` | the live preview in the Appearance mode |
+| Character Build | `CharacterBuildContext` | the live preview in the Build mode, its joints marked |
+| Character Equipment | `CharacterEquipmentContext` | the live preview in the Equipment mode, its anchors marked |
 | Character Mesh Editor | `CharacterMeshEditorContext` | modelling: the bind-pose preview, its overlay and the Mesh, Sculpt, Weights and Rig toolbar; a tool canvas |
 | Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
-| Character Properties | `CharacterPropertiesContext` | `CharacterEditorManager.buildPropertyRows` |
 | Face Editor | `FaceEditorContext` | the open character framed on its head, its face bones marked; the Character Face tool canvas |
 | Face Outliner | `FaceOutlinerContext` | `FaceEditorManager.buildListRows` |
-| Face Properties | `FacePropertiesContext` | `FaceEditorManager.buildPropertyRows` |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
 | Animation Outliner | `AnimationOutlinerContext` | `AnimationEditorManager.buildListRows` |
-| Animation Properties | `AnimationPropertiesContext` | `AnimationEditorManager.buildPropertyRows` |
 | Animation Timeline | `AnimationTimelineContext` | transport, summary track and a dope sheet lane per bone |
+| Properties | `PropertiesContext` | the value rows of the character, face or animation tab worked in last |
 
-- **Two viewport tabs, one manager.** The Character Editor keeps to the modes that take no tools and the Character
-  Mesh Editor to those that do (`CharacterEditorMode.isModeling`). Each tab's `CharacterEditorModeSystem` remembers
-  its own mode and draws its preview in it (`CharacterEditorPreviewSystem` reads the tab's mode, never the manager's);
-  while a tab is focused it hands its mode to `CharacterEditorManager.setMode`, so the docker windows follow the tab
-  worked in last. The viewport systems live in `editor.runtime.charactereditor` and both tabs create them; only the
-  mesh tab creates the mesh view, sculpt, rig and overlay systems and a `ToolCanvasSystem`, and its
-  `runToolAction` adopts its mode first. Each tab names its starting mode and toolbar through
-  `CharacterEditorWindowProvider`; their keys are `shortcuts/CharacterEditor.arpg` and
-  `shortcuts/CharacterMeshEditor.arpg`.
+- **One mode per look tab, one manager.** Character Appearance, Build and Equipment each keep to their one mode
+  and share `CharacterLookContext` (abstract; each subclass only names its mode); the Character Mesh Editor keeps to
+  the modes that take tools (`CharacterEditorMode.isModeling`). Each tab's `CharacterEditorModeSystem` remembers its
+  own mode and draws its preview in it (`CharacterEditorPreviewSystem` reads the tab's mode, never the manager's);
+  while a tab is focused it hands its mode to `CharacterEditorManager.setMode`, so the Outliner and the Properties
+  tab follow the tab worked in last. The viewport systems live in `editor.runtime.charactereditor` and every such tab
+  creates them; only the mesh tab creates the mesh view, sculpt, rig and overlay systems and a `ToolCanvasSystem`,
+  and its `runToolAction` adopts its mode first. Each tab names its starting mode, the modes it holds and its toolbar
+  through `CharacterEditorWindowProvider`; their keys are `shortcuts/CharacterAppearance.arpg`,
+  `CharacterBuild.arpg`, `CharacterEquipment.arpg` and `CharacterMeshEditor.arpg`.
+- **Values live in the shared Properties tab.** The character, face and animation viewport contexts implement
+  `PropertiesProvider` (content `ROWS`) and `CharacterViewRowSource` (their manager's `buildPropertyRows`) and create a
+  `PropertiesSourceSystem`; the Properties tab (`RowPropertiesSystem`) shows the rows of the one focused last and hands
+  its sliders' steps back to it. There are no per-tool Properties windows.
 - **Number rows have a slider.** `CharacterViewPanelSystem` refills a panel only when its rows change by kind, key,
   label or selection; otherwise it sets the moved values in place, so a dragged slider keeps its row. A slider spans
   `EditorSetting.CHARACTER_VIEW_SLIDER_STEPS` of the value's own steps centred where the value stood when the row was
   listed, and hands the tool the steps it moves through the context's `CharacterViewStepTarget.stepRow`, the path the
   step buttons take; the value box still opens for typing. A number row template carries the track and knob ids in
   its `CharacterViewTemplateStruct`.
-- A docker context implements `CharacterViewRowSource` and creates `CharacterViewPanelSystem`,
+- An outliner docker context implements `CharacterViewRowSource` and creates `CharacterViewPanelSystem`,
   `CharacterViewDockSystem` and `ToolCanvasSystem`; the dock system opens `menus/editor/CharacterDock.arpg` and
   refills it only when the source's revision moves. Row templates stay in the tool's own menu
   (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `FACE_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so

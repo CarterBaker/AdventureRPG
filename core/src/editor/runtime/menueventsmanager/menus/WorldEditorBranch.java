@@ -11,10 +11,10 @@ public class WorldEditorBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the World Editor's and Height Editor's toolbars
-     * and keys and the Biome Palette tab. Saving and reloading work on both
-     * of the world's layers together; undo and redo work on the layer of the
-     * tab they were pressed in, and the player marker toggle on the editor
-     * its button was clicked in. Biome rows carry their biome's name.
+     * and keys and the Properties tab's biome palette. Saving and reloading
+     * work on both of the world's layers together; undo and redo work on the
+     * layer of the tab they were pressed in, and the player marker toggle on
+     * the editor its button was clicked in. Biome rows carry their biome's name.
      * Choosing and turning what is placed works on the Settlement Planner's
      * shared design. The tools themselves are chosen through ToolBranch, as
      * every editor's are.

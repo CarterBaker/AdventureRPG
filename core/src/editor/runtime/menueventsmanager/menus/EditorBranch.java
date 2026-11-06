@@ -46,8 +46,8 @@ public class EditorBranch extends BranchPackage {
         tabManager.openHierarchy(window.getGLWindow());
     }
 
-    public void openInfoPanel(WindowInstance window) {
-        tabManager.openInfoPanel(window.getGLWindow());
+    public void openProperties(WindowInstance window) {
+        tabManager.openProperties(window.getGLWindow());
     }
 
     public void openArpgViewer(WindowInstance window) {
@@ -82,8 +82,16 @@ public class EditorBranch extends BranchPackage {
 
     // Characters Dropdown \\
 
-    public void openCharacterEditor(WindowInstance window) {
-        tabManager.openCharacterEditor(window.getGLWindow());
+    public void openCharacterAppearance(WindowInstance window) {
+        tabManager.openCharacterAppearance(window.getGLWindow());
+    }
+
+    public void openCharacterBuild(WindowInstance window) {
+        tabManager.openCharacterBuild(window.getGLWindow());
+    }
+
+    public void openCharacterEquipment(WindowInstance window) {
+        tabManager.openCharacterEquipment(window.getGLWindow());
     }
 
     public void openCharacterMeshEditor(WindowInstance window) {
@@ -94,10 +102,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterOutliner(window.getGLWindow());
     }
 
-    public void openCharacterProperties(WindowInstance window) {
-        tabManager.openCharacterProperties(window.getGLWindow());
-    }
-
     public void openFaceEditor(WindowInstance window) {
         tabManager.openFaceEditor(window.getGLWindow());
     }
@@ -106,20 +110,12 @@ public class EditorBranch extends BranchPackage {
         tabManager.openFaceOutliner(window.getGLWindow());
     }
 
-    public void openFaceProperties(WindowInstance window) {
-        tabManager.openFaceProperties(window.getGLWindow());
-    }
-
     public void openAnimationEditor(WindowInstance window) {
         tabManager.openAnimationEditor(window.getGLWindow());
     }
 
     public void openAnimationOutliner(WindowInstance window) {
         tabManager.openAnimationOutliner(window.getGLWindow());
-    }
-
-    public void openAnimationProperties(WindowInstance window) {
-        tabManager.openAnimationProperties(window.getGLWindow());
     }
 
     public void openAnimationTimeline(WindowInstance window) {
@@ -142,10 +138,6 @@ public class EditorBranch extends BranchPackage {
 
     public void openHeightEditor(WindowInstance window) {
         tabManager.openHeightEditor(window.getGLWindow());
-    }
-
-    public void openBiomePalette(WindowInstance window) {
-        tabManager.openBiomePalette(window.getGLWindow());
     }
 
     public void openSettlementPlanner(WindowInstance window) {
