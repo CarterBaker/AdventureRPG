@@ -12,6 +12,7 @@ layout(location = 8) in mat4 a_instanceModel;
 
 #include "includes/CameraData.glsl"
 #include "characters/includes/CharacterAppearance.glsl"
+#include "characters/includes/CharacterHair.glsl"
 
 uniform sampler2D u_morphTargets;
 uniform int u_morphBase;
@@ -87,6 +88,9 @@ void main() {
 
     vec3 morphedPosition = applyMorphs(a_position);
     vec4 worldPosition   = a_instanceModel * (skin * vec4(morphedPosition, 1.0));
+    int  zone            = int(a_detail.x + 0.5);
+
+    worldPosition.xyz += resolveHairSway(zone, a_detail.z, worldPosition.xyz);
 
     v_uv              = vec4(a_uv, a_detail.yz);
     v_viewPosition    = (u_view * worldPosition).xyz;
@@ -94,7 +98,7 @@ void main() {
     v_surfacePosition = morphedPosition;
     v_masks           = a_masks;
     v_hiddenWeight    = resolveHiddenWeight();
-    v_zone            = int(a_detail.x + 0.5);
+    v_zone            = zone;
     v_instance        = gl_InstanceID;
 
     gl_Position = u_viewProjection * worldPosition;

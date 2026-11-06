@@ -120,9 +120,19 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/EditorWindow.arpg` (the Face Editor, Face Outliner and Face Properties windows in the Characters menu)
   and `schemas/Entities.arpg` (a shape's `name` and `bones` targets, a gender's body `mesh`) for face controls and a
   body per gender.
+- 2026-11-06: Male and female base characters. Deleted `mesh/characters/humanoid/HumanoidBodyMesh.arpg`, the hair
+  meshes `BobHairMesh`, `LongStraightHairMesh`, `LongWavyHairMesh`, `PonytailHairMesh` and `ShortHairMesh` and their
+  features (scrapped for new models). Added `HumanoidMaleMesh.arpg` and `HumanoidFemaleMesh.arpg` (clothes-free,
+  realistic proportions, weighted to the rig and its face bones, blink, body and ear morphs, skin masks, eye, brow and
+  lash zones), the hair-card meshes `MaleShortHairMesh`, `MaleMediumHairMesh`, `FemaleMediumHairMesh` and
+  `FemaleLongHairMesh` with their features, the strand texture `textures/characters/standard/Hair_A.png` and the
+  includes `CharacterHair.glsl` (hair sways in the wind) and `ToonLighting.glsl` (toon tones and rim light);
+  regenerated `rigs/HumanoidRig.arpg` (15 face bones) and `entities/HumanoidEntity.arpg` (a body per gender, face
+  controls on the face bones); rewrote `StandardcharacterShader.vsh`, `CharacterSurface.glsl` (card hair),
+  `CharacterViewCharacterShader.fsh` and `LightingShader.fsh` (toon lighting for characters).
 ---
 
-## Textures and Sprites (2174 files)
+## Textures and Sprites (2175 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -215,6 +225,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/textures/characters/standard/`
 
+- `Hair`: A
 - `Skin`: A
 
 ### `assets/textures/items/standard/`
@@ -1012,12 +1023,12 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (180 files)
+## Shaders (182 files)
 
 ### `assets/shaders/characters/includes/`
 
-`CharacterAppearance.glsl`, `CharacterHidden.glsl`, `CharacterNormal.glsl`, `CharacterSurface.glsl`,
-`CharacterZone.glsl`, `CharactersStandard.glsl`
+`CharacterAppearance.glsl`, `CharacterHair.glsl`, `CharacterHidden.glsl`, `CharacterNormal.glsl`,
+`CharacterSurface.glsl`, `CharacterZone.glsl`, `CharactersStandard.glsl`
 
 ### `assets/shaders/characters/standard/`
 
@@ -1135,7 +1146,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/postprocessing/lighting/includes/`
 
-`AtmosphericFog.glsl`, `Outline.glsl`
+`AtmosphericFog.glsl`, `Outline.glsl`, `ToonLighting.glsl`
 
 ### `assets/shaders/postprocessing/ssao/`
 
@@ -1332,7 +1343,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1693 files)
+## Data Files (1692 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -1943,7 +1954,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/features/humanoid/hair/`
 
-`BobHair.arpg`, `LongStraightHair.arpg`, `LongWavyHair.arpg`, `PonytailHair.arpg`, `ShortHair.arpg`
+`FemaleLongHair.arpg`, `FemaleMediumHair.arpg`, `MaleMediumHair.arpg`, `MaleShortHair.arpg`
 
 ### `assets/furnishings/farm/`
 
@@ -2122,12 +2133,11 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/mesh/characters/humanoid/`
 
-`HumanoidBodyMesh.arpg`
+`HumanoidFemaleMesh.arpg`, `HumanoidMaleMesh.arpg`
 
 ### `assets/mesh/characters/humanoid/hair/`
 
-`BobHairMesh.arpg`, `LongStraightHairMesh.arpg`, `LongWavyHairMesh.arpg`, `PonytailHairMesh.arpg`,
-`ShortHairMesh.arpg`
+`FemaleLongHairMesh.arpg`, `FemaleMediumHairMesh.arpg`, `MaleMediumHairMesh.arpg`, `MaleShortHairMesh.arpg`
 
 ### `assets/mesh/editor/`
 

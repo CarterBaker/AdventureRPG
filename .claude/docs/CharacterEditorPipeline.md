@@ -83,8 +83,16 @@ hair). Nothing is a texture swap.
   `EntityInstance.setGenderID` resets the appearance to the preset, and `EntityRenderSystem` draws
   `AppearanceHandle.getBodyMesh`. The Character Editor previews one gender at a time (the Gender row): its body and
   features are the parts the mesh modes edit, and untouched preview sliders sit where that gender starts them.
-- **Assets.** Generated bodies and hair styles are catalogued; a rigged mesh may hold at most `RIGGED_MESH_VERT_LIMIT`
-  corners.
+- **Assets.** `HumanoidMaleMesh` (the model's own, the default gender) and `HumanoidFemaleMesh` share the rig with its
+  15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes, brows, ears), carry the same morphs (blinks, body
+  sliders, `ear_point`) and draw their eyes from the eye zone's raw UVs, brows and lash line as their own strips.
+  They are generated (catalogued); a rigged mesh may hold at most `RIGGED_MESH_VERT_LIMIT` corners.
+- **Hair is cards.** A hair mesh is a scalp cap and layered cards two quads wide, textured with the strand tile
+  `characters/standard/Hair` (its alpha cuts the locks out); each card's raw UV runs across it in u and from root
+  (0) to tip (1) in v. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`),
+  so keep v running root to tip on any card you add, and keep the root at the scalp.
+- **Toon lighting.** Characters write a smooth normal (`GBufferNormal.glsl`); the lighting pass lights those pixels
+  in toon tones with a rim (`ToonLighting.glsl`), and the editor viewport's character shader uses the same function.
 
 ## Who owns what
 

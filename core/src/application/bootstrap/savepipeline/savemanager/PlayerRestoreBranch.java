@@ -155,17 +155,22 @@ class PlayerRestoreBranch extends BranchPackage {
         return ArpgUtility.hasObject(arpg, key) ? arpg.getAsObject(key) : new ArpgObjectStruct();
     }
 
+    // A feature a save names that no longer exists leaves the slot as the gender starts it
     private void restoreFeatures(ArpgObjectStruct featuresArpg, AppearanceHandle appearanceHandle) {
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
             String key = ArpgUtility.toEnumName(featureSlot);
 
-            if (featuresArpg.has(key))
-                appearanceHandle.setFeature(featureManager.getFeatureHandleFromFeatureName(
-                        ArpgUtility.validateString(featuresArpg, key)));
-            else
+            if (!featuresArpg.has(key)) {
                 appearanceHandle.clearFeature(featureSlot);
+                continue;
+            }
+
+            String featureName = ArpgUtility.validateString(featuresArpg, key);
+
+            if (featureManager.isFeatureAvailable(featureName))
+                appearanceHandle.setFeature(featureManager.getFeatureHandleFromFeatureName(featureName));
         }
     }
 

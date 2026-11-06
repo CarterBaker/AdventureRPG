@@ -5,12 +5,14 @@ out vec4 fragColor;
 
 #include "includes/CameraData.glsl"
 #include "includes/GBufferData.glsl"
+#include "includes/GBufferNormal.glsl"
 #include "includes/SunLightData.glsl"
 #include "includes/MoonLightData.glsl"
 #include "includes/SkyColorData.glsl"
 #include "postprocessing/includes/ViewPosReconstruct.glsl"
 #include "postprocessing/lighting/includes/AtmosphericFog.glsl"
 #include "postprocessing/lighting/includes/Outline.glsl"
+#include "postprocessing/lighting/includes/ToonLighting.glsl"
 #include "weather/includes/CloudComposite.glsl"
 
 // The weather pass's cloud color and distance targets (CloudComposite).
@@ -28,7 +30,8 @@ void main() {
 
     vec3 albedo = texture(u_gAlbedo, v_texCoord).rgb;
 
-    vec3 normalView = normalize(texture(u_gNormal, v_texCoord).rgb);
+    vec3 storedNormal = texture(u_gNormal, v_texCoord).rgb;
+    vec3 normalView   = normalize(storedNormal);
     vec3 normal     = normalize(mat3(u_inverseView) * normalView);
 
     vec4  material      = texture(u_gMaterial, v_texCoord);
@@ -71,7 +74,11 @@ void main() {
     vec3 moonContrib = u_moonColor * moonTint * moonInt
     * (albedo * moonDiff + specColor * moonSpec);
 
-    vec3 lit = albedo * skyAmbient + sunContrib + moonContrib;
+    // A character, marked by its smooth normal, is lit in toon tones with a rim; everything else as before
+    vec3 lit = isSmoothNormal(storedNormal)
+        ? resolveToonLight(albedo, normalView, viewDir, sunDiff, sunVisibility, sunSpec, moonDiff, skyAmbient,
+                           u_sunColor * u_sunIntensity, u_moonColor * moonTint * moonInt)
+        : albedo * skyAmbient + sunContrib + moonContrib;
 
     vec3  toFragment   = fragPosWorld - u_cameraPosition;
     float fragDistance = length(toFragment);

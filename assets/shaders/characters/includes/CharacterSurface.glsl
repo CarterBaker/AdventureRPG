@@ -8,8 +8,9 @@
 // Skin takes its tile tinted by the skin color, then blemishes, blush, freckles, lip color and eyeliner where the
 // mesh's masks paint them; freckles and blemishes are cells fixed to the bind-pose surface, so they stay put as the
 // face moves. The eye is drawn from its raw corner UVs: a lid-shadowed sclera around an iris graded dark to light
-// with a darker rim, a pupil and two highlights, tall and tucked under the upper lid as an anime eye is drawn. Hair carries a root-to-tip grade, strand streaks across its locks and
-// a broken band of shine where it faces up toward the light. Specular rises for the wet eye and the shining hair.
+// with a darker rim, a pupil and two highlights, tall and tucked under the upper lid as an anime eye is drawn. Hair is
+// its cards' strand texture with a root-to-tip grade and a broken band of shine where it faces up toward the light.
+// Specular rises for the wet eye and the shining hair.
 
 struct CharacterSurface {
     vec3  albedo;
@@ -19,6 +20,8 @@ struct CharacterSurface {
 const float CHARACTER_SKIN_SPECULAR  = 0.08;
 const float CHARACTER_EYE_SPECULAR   = 0.6;
 const float CHARACTER_HAIR_SPECULAR  = 0.3;
+const float CHARACTER_HAIR_ROOT_SHADE = 0.7;
+const float CHARACTER_HAIR_TIP_LIGHT  = 1.1;
 const float CHARACTER_TWO_PI         = 6.28318530718;
 
 const float CHARACTER_FRECKLE_CELLS  = 420.0;
@@ -125,18 +128,21 @@ vec3 shadeEye(int instance, vec2 eyeUV) {
     return color;
 }
 
+// Hair as anime hair is painted: the strand texture tinted by the hair color, darker at the roots and catching the
+// light at the tips, with one crisp band of shine around the head where it faces up toward the light, its edge
+// broken into the locks' points and dimmed where the strands are dark
 vec3 shadeHair(int instance, vec3 base, vec2 strandUV, vec3 viewNormal) {
-    vec3  hair    = base * fetchCharacterColor(instance, CHARACTER_COLOR_HAIR);
-    float root    = mix(0.72, 1.0, smoothstep(0.0, 0.3, strandUV.y));
-    float streaks = 0.9 + 0.1 * sin(strandUV.x * CHARACTER_TWO_PI * 3.0 + strandUV.y * 9.0);
-    hair *= root * streaks;
+    vec3  hair = base * fetchCharacterColor(instance, CHARACTER_COLOR_HAIR);
+    float root = mix(CHARACTER_HAIR_ROOT_SHADE, 1.0, smoothstep(0.0, 0.35, strandUV.y));
+    float tip  = mix(1.0, CHARACTER_HAIR_TIP_LIGHT, smoothstep(0.65, 1.0, strandUV.y));
+    hair *= root * tip;
 
-    // A shine band where the hair faces up toward the light, broken into strands along its edge
-    float jag  = 0.06 * sin(strandUV.x * CHARACTER_TWO_PI * 2.0);
-    float band = smoothstep(0.22 + jag, 0.38 + jag, viewNormal.y) * (1.0 - smoothstep(0.6 + jag, 0.82 + jag, viewNormal.y));
-    float shine = fetchCharacterDetail(instance, CHARACTER_DETAIL_HAIR_SHINE) * band;
+    float jag   = 0.07 * sin(strandUV.x * CHARACTER_TWO_PI * 3.0) + 0.04 * sin(strandUV.x * CHARACTER_TWO_PI * 7.0);
+    float band  = smoothstep(0.30 + jag, 0.36 + jag, viewNormal.y)
+                * (1.0 - smoothstep(0.62 + jag, 0.68 + jag, viewNormal.y));
+    float shine = fetchCharacterDetail(instance, CHARACTER_DETAIL_HAIR_SHINE) * band * mix(0.5, 1.0, base.r);
 
-    return hair + (hair * 0.6 + vec3(0.12)) * shine;
+    return hair + (hair * 0.7 + vec3(0.10)) * shine;
 }
 
 CharacterSurface resolveCharacterSurface(
