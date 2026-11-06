@@ -6,14 +6,14 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
-import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.toolpipeline.tool.ToolActionGroupStruct;
 import editor.bootstrap.toolpipeline.tool.ToolActionStruct;
+import editor.bootstrap.toolpipeline.tool.ToolOptionStruct;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.bootstrap.toolpipeline.util.ToolOption;
-import editor.runtime.EditorSetting;
+import editor.runtime.slider.SliderUtility;
 import editor.runtime.tools.ToolsSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -27,18 +27,18 @@ public class ToolsMenuSystem extends SystemPackage {
      * one row per tool it takes, the tool in use highlighted and every row
      * carrying its tool's name, then each group of actions it lists under its
      * title, every action row carrying the action's key; and under that
-     * tool's name, one row per
-     * option both it and the canvas have, its value between buttons carrying
-     * the option's name, then, for a tool that strokes, the brush it strokes
-     * with between the buttons that step through the brushes. Everything is
-     * rebuilt only when the tools or the brushes move.
+     * tool's name, one row per option both it and the canvas have, its value
+     * on a slider between step buttons and in a box that opens for typing,
+     * every part carrying the option's name. The brush a tool strokes with is
+     * chosen in the Brushes tab, never here. The rows are rebuilt only when
+     * the target or its tool changes; a value that moves, as under a dragged
+     * slider, is set on its row in place.
      */
 
     // Internal
     private MenuManager menuManager;
     private FBOManager fboManager;
     private ToolManager toolManager;
-    private BrushManager brushManager;
 
     // Menus
     private MenuInstance toolsMenu;
@@ -46,10 +46,11 @@ public class ToolsMenuSystem extends SystemPackage {
     // Rows
     private ObjectArrayList<ElementInstance> toolElements;
     private ObjectArrayList<ElementInstance> optionElements;
+    private ObjectArrayList<ToolOption> shownOptions;
 
     // Status
     private int shownToolRevision;
-    private int shownBrushRevision;
+    private int shownOptionRevision;
 
     // Base \\
 
@@ -59,10 +60,11 @@ public class ToolsMenuSystem extends SystemPackage {
         // Rows
         this.toolElements = new ObjectArrayList<>();
         this.optionElements = new ObjectArrayList<>();
+        this.shownOptions = new ObjectArrayList<>();
 
         // Status
         this.shownToolRevision = EngineSetting.INDEX_NOT_FOUND;
-        this.shownBrushRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.shownOptionRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
     @Override
@@ -70,7 +72,6 @@ public class ToolsMenuSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
         this.toolManager = get(ToolManager.class);
-        this.brushManager = get(BrushManager.class);
     }
 
     @Override
@@ -87,17 +88,26 @@ public class ToolsMenuSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        if (toolManager.getRevision() == shownToolRevision && brushManager.getRevision() == shownBrushRevision)
+        if (toolManager.getRevision() != shownToolRevision) {
+            refreshRows();
             return;
+        }
+
+        if (toolManager.getOptionRevision() != shownOptionRevision)
+            refreshValues();
+    }
+
+    private void refreshRows() {
 
         shownToolRevision = toolManager.getRevision();
-        shownBrushRevision = brushManager.getRevision();
+        shownOptionRevision = toolManager.getOptionRevision();
 
         ToolCanvas canvas = toolManager.getCanvas();
         EditorTool tool = canvas != null ? toolManager.getTool(canvas) : null;
 
         clear(toolElements, ToolsSetting.ENTRY_TOOLS);
         clear(optionElements, ToolsSetting.ENTRY_OPTIONS);
+        shownOptions.clear();
         setEntryText(
                 ToolsSetting.ENTRY_CANVAS_TITLE,
                 canvas != null ? canvas.getLabel() : ToolsSetting.TITLE_NO_CANVAS);
@@ -167,25 +177,27 @@ public class ToolsMenuSystem extends SystemPackage {
 
     // Options \\
 
-    // Every option both the tool and the canvas have, then the brush for a tool that strokes with one
+    // Every option both the tool and the canvas have
     private void refreshOptions(ToolCanvas canvas, EditorTool tool) {
 
         ToolOption[] options = tool.getOptions();
 
-        for (int i = 0; i < options.length; i++)
-            if (canvas.findOption(options[i]) != null)
-                optionElements.add(injectOption(options[i], toolManager.getOption(canvas, options[i])));
+        for (int i = 0; i < options.length; i++) {
 
-        if (tool.isStroke() && canvas.takesBrush())
-            optionElements.add(menuManager.inject(
-                    toolsMenu, ToolsSetting.ENTRY_OPTIONS, ToolsSetting.TEMPLATE_BRUSH_ROW,
-                    element -> setChildText(
-                            element,
-                            ToolsSetting.ELEMENT_BRUSH_LABEL,
-                            brushManager.getActiveBrush().getDisplayName())));
+            ToolOptionStruct range = canvas.findOption(options[i]);
+
+            if (range == null)
+                continue;
+
+            ElementInstance row = injectOption(options[i]);
+
+            optionElements.add(row);
+            shownOptions.add(options[i]);
+            fillValue(row, range, toolManager.getOption(canvas, options[i]));
+        }
     }
 
-    private ElementInstance injectOption(ToolOption option, float value) {
+    private ElementInstance injectOption(ToolOption option) {
 
         String arg = ArpgUtility.toEnumName(option);
 
@@ -193,20 +205,48 @@ public class ToolsMenuSystem extends SystemPackage {
                 toolsMenu, ToolsSetting.ENTRY_OPTIONS, ToolsSetting.TEMPLATE_OPTION_ROW,
                 element -> {
                     setChildText(element, ToolsSetting.ELEMENT_OPTION_LABEL, option.getLabel());
-                    setChildText(element, ToolsSetting.ELEMENT_OPTION_VALUE, formatValue(value));
                     setChildArg(element, ToolsSetting.ELEMENT_OPTION_LOWER, arg);
                     setChildArg(element, ToolsSetting.ELEMENT_OPTION_RAISE, arg);
+                    setChildArg(element, ToolsSetting.ELEMENT_OPTION_VALUE_BUTTON, arg);
+
+                    ElementInstance track = element.findChildById(ToolsSetting.ELEMENT_OPTION_TRACK);
+
+                    if (track != null)
+                        track.setOnDragArgOverride(arg);
                 });
     }
 
-    // Whole numbers as they are, fractions to the precision their steps move them by
-    private String formatValue(float value) {
+    // Every option row's value and knob set where its option now stands, nothing listed again
+    private void refreshValues() {
 
-        float precision = EditorSetting.TOOL_OPTION_PRECISION;
+        shownOptionRevision = toolManager.getOptionRevision();
 
-        return value == Math.round(value)
-                ? Integer.toString(Math.round(value))
-                : Float.toString(Math.round(value * precision) / precision);
+        ToolCanvas canvas = toolManager.getCanvas();
+
+        if (canvas == null)
+            return;
+
+        for (int i = 0; i < optionElements.size(); i++) {
+
+            ToolOption option = shownOptions.get(i);
+            ToolOptionStruct range = canvas.findOption(option);
+
+            if (range != null)
+                fillValue(optionElements.get(i), range, toolManager.getOption(canvas, option));
+        }
+    }
+
+    private void fillValue(ElementInstance row, ToolOptionStruct range, float value) {
+
+        setChildText(row, ToolsSetting.ELEMENT_OPTION_VALUE, range.format(value));
+
+        ElementInstance track = row.findChildById(ToolsSetting.ELEMENT_OPTION_TRACK);
+
+        if (track != null)
+            SliderUtility.placeKnob(
+                    track,
+                    ToolsSetting.ELEMENT_OPTION_KNOB,
+                    SliderUtility.resolveStep(range.toFraction(value)));
     }
 
     // Utility \\

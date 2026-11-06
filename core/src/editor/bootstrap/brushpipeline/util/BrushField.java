@@ -9,13 +9,18 @@ public enum BrushField {
      * the range it is held to and the value it takes when the file leaves it
      * out. Hardness is the share of the radius stamped at full strength
      * before the edge fades, Density the share of covered pixels each stamp
-     * touches, and Spacing the gap between stamps as a share of the tip's
-     * width. How strongly and how widely a tip strokes is the tool's.
+     * touches, Spacing the gap between stamps as a share of the tip's width,
+     * Ratio how far the tip is squashed across its length, one keeping its
+     * whole shape and less flattening it toward a chisel, and Angle how far
+     * in degrees that length is turned counterclockwise. How strongly and
+     * how widely a tip strokes is the tool's.
      */
 
     HARDNESS(EditorSetting.BRUSH_KEY_HARDNESS, 0f, 1f, EditorSetting.BRUSH_HARDNESS_DEFAULT),
     DENSITY(EditorSetting.BRUSH_KEY_DENSITY, EditorSetting.BRUSH_FIELD_MIN, 1f, EditorSetting.BRUSH_DENSITY_DEFAULT),
-    SPACING(EditorSetting.BRUSH_KEY_SPACING, EditorSetting.BRUSH_FIELD_MIN, 1f, EditorSetting.BRUSH_SPACING_DEFAULT);
+    SPACING(EditorSetting.BRUSH_KEY_SPACING, EditorSetting.BRUSH_FIELD_MIN, 1f, EditorSetting.BRUSH_SPACING_DEFAULT),
+    RATIO(EditorSetting.BRUSH_KEY_RATIO, EditorSetting.BRUSH_FIELD_MIN, 1f, EditorSetting.BRUSH_RATIO_DEFAULT),
+    ANGLE(EditorSetting.BRUSH_KEY_ANGLE, 0f, EditorSetting.BRUSH_ANGLE_MAX, EditorSetting.BRUSH_ANGLE_DEFAULT);
 
     // Values
     public static final BrushField[] VALUES = values();

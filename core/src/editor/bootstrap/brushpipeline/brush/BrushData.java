@@ -8,8 +8,10 @@ public class BrushData extends DataPackage {
 
     /*
      * Immutable definition of one brush: its name, which is its file's path,
-     * and its registry ID; the name it is listed by; the shape of its tip; and
-     * one value per BrushField, indexed by the field's ordinal.
+     * and its registry ID; the name it is listed by; the shape of its tip;
+     * one value per BrushField, indexed by the field's ordinal; and the turn
+     * and squash its angle and ratio make, worked out once so a stamp only
+     * multiplies.
      */
 
     // Identity
@@ -20,6 +22,9 @@ public class BrushData extends DataPackage {
     // Tip
     private final BrushShape shape;
     private final float[] values;
+    private final float angleCos;
+    private final float angleSin;
+    private final float inverseRatio;
 
     // Constructor \\
 
@@ -36,8 +41,13 @@ public class BrushData extends DataPackage {
         this.displayName = displayName;
 
         // Tip
+        double angle = Math.toRadians(values[BrushField.ANGLE.ordinal()]);
+
         this.shape = shape;
         this.values = values;
+        this.angleCos = (float) Math.cos(angle);
+        this.angleSin = (float) Math.sin(angle);
+        this.inverseRatio = 1f / values[BrushField.RATIO.ordinal()];
     }
 
     // Accessible \\
@@ -60,5 +70,17 @@ public class BrushData extends DataPackage {
 
     public float getValue(BrushField field) {
         return values[field.ordinal()];
+    }
+
+    public float getAngleCos() {
+        return angleCos;
+    }
+
+    public float getAngleSin() {
+        return angleSin;
+    }
+
+    public float getInverseRatio() {
+        return inverseRatio;
     }
 }

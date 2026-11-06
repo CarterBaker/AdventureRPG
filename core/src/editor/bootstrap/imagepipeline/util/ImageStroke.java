@@ -10,13 +10,18 @@ public enum ImageStroke {
      * Swirl turns the pixels under the brush about its centre and Scatter
      * shuffles them, both moving only what is already there, so neither ever
      * writes a color the image could not hold; only these two read the tip's
-     * pixels as they stood before the stamp.
+     * pixels as they stood before the stamp. Raise brightens every channel
+     * under the brush and Lower darkens it, a little more with each stamp, so
+     * on a height layer they build the ground up and wear it down; they only
+     * work where the image blends.
      */
 
     PAINT(false),
     SMOOTH(false),
     SWIRL(true),
-    SCATTER(true);
+    SCATTER(true),
+    RAISE(false),
+    LOWER(false);
 
     // Internal
     private final boolean moving;

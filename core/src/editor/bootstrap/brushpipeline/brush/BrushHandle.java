@@ -45,4 +45,16 @@ public class BrushHandle extends HandlePackage {
     public float getValue(BrushField field) {
         return brushData.getValue(field);
     }
+
+    public float getAngleCos() {
+        return brushData.getAngleCos();
+    }
+
+    public float getAngleSin() {
+        return brushData.getAngleSin();
+    }
+
+    public float getInverseRatio() {
+        return brushData.getInverseRatio();
+    }
 }

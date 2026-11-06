@@ -19,7 +19,9 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
+import editor.bootstrap.brushpipeline.brush.BrushHandle;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
+import editor.bootstrap.brushpipeline.util.BrushField;
 import editor.bootstrap.brushpipeline.util.BrushShape;
 import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
@@ -41,18 +43,19 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
     /*
      * Draws the world image into this window's scene target where the view
-     * places it, from the GPU texture ImageManager keeps current, then, while
-     * the height layer is painted, that layer over it pixel for pixel as the
-     * black and white heightmap it is, partly see-through so every level lines
-     * up with the land beneath. Then comes the brush preset's outline, in its
-     * own shape, over the pixels a stroke at the pointer would cover, or,
-     * while placing or carrying a design from the Settlement Planner, a ring
-     * as wide as its design around the column it would stand on, the box the
-     * Select tool is dragging, an icon for every hand-placed settlement,
-     * structure and camera through PlacementIconSystem, those being moved
-     * drawn where they would stand, and, while shown, an arrow for every
-     * player at their place and facing. Marker quads are pooled with their
-     * own materials.
+     * places it, from the GPU texture ImageManager keeps current, then, in a
+     * tab whose layer lies over the biomes, the height layer over it pixel
+     * for pixel as the black and white heightmap it is, partly see-through so
+     * every level lines up with the land beneath. Then comes the brush
+     * preset's outline, in its own shape, turned and squashed as its tip is,
+     * over the pixels a stroke at the pointer would cover, or, while placing
+     * or carrying a design from the Settlement Planner, a ring as wide as its
+     * design around the column it would stand on, the box the Select tool is
+     * dragging and, in the tab that places, an icon for every hand-placed
+     * settlement, structure and camera through PlacementIconSystem, those
+     * being moved drawn where they would stand, and, while shown, an arrow
+     * for every player at their place and facing. Marker quads are pooled
+     * with their own materials.
      */
 
     // Internal
@@ -198,7 +201,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
     // Laid over the whole image with the view rectangle the image was just drawn with
     private void renderHeights(WindowInstance window) {
 
-        if (worldEditorManager.getLayer() != WorldEditorLayer.HEIGHTS)
+        if (!worldEditorToolSystem.getLayer().isOverlay())
             return;
 
         int texture = imageManager.useTexture(worldEditorManager.getHeightImage());
@@ -216,23 +219,28 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
     // Brush \\
 
-    // Drawn in the preset's own shape, so the outline is exactly the tip a stroke stamps
+    // Drawn in the preset's own shape, turn and squash, so the outline is exactly the tip a stroke stamps
     private void renderBrush(WindowInstance window) {
 
+        WorldEditorLayer layer = worldEditorToolSystem.getLayer();
+
         if (!worldEditorToolSystem.isHovering() || worldEditorToolSystem.isDropping()
-                || worldEditorManager.getMode() != WorldEditorMode.PAINT || !worldEditorManager.getTool().isStroke())
+                || !worldEditorManager.isPainting(layer) || !worldEditorManager.getTool(layer).isStroke())
             return;
 
-        int radius = worldEditorManager.getBrushRadius();
+        int radius = worldEditorManager.getBrushRadius(layer);
         int pixelX = worldEditorToolSystem.getHoveredX();
         int pixelY = worldEditorToolSystem.getHoveredY();
+        BrushHandle brush = brushManager.getActiveBrush();
         MaterialInstance material = brushModel.getMaterial();
 
         setViewRect(window, pixelX - radius, pixelY - radius, pixelX + radius + 1, pixelY + radius + 1);
         material.setUniform(WorldEditorSetting.UNIFORM_VIEW_RECT, viewRect);
+        material.setUniform(WorldEditorSetting.UNIFORM_BRUSH_SHAPE, (float) brush.getShape().ordinal());
+        material.setUniform(WorldEditorSetting.UNIFORM_BRUSH_RATIO, brush.getValue(BrushField.RATIO));
         material.setUniform(
-                WorldEditorSetting.UNIFORM_BRUSH_SHAPE,
-                (float) brushManager.getActiveBrush().getShape().ordinal());
+                WorldEditorSetting.UNIFORM_BRUSH_ANGLE,
+                (float) Math.toRadians(brush.getValue(BrushField.ANGLE)));
 
         renderManager.pushRenderCall(brushModel, sceneFbo, WorldEditorSetting.DEPTH_BRUSH, window);
     }
@@ -287,14 +295,21 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
     // True while a click or a drop would stand the design under the pointer
     private boolean isStanding() {
+
+        WorldEditorLayer layer = worldEditorToolSystem.getLayer();
+
         return worldEditorToolSystem.isDropping()
-                || worldEditorManager.getMode() == WorldEditorMode.SETTLEMENTS
-                        && worldEditorManager.getTool() == EditorTool.PLACE;
+                || layer.isPlacing()
+                        && worldEditorManager.getMode() == WorldEditorMode.SETTLEMENTS
+                        && worldEditorManager.getTool(layer) == EditorTool.PLACE;
     }
 
     // Markers \\
 
     private void renderMarkers(WindowInstance window) {
+
+        if (!worldEditorToolSystem.getLayer().isPlacing())
+            return;
 
         WorldHandle worldHandle = worldEditorManager.getWorldHandle();
 

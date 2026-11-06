@@ -42,6 +42,8 @@ Version). Paths in these instructions are relative to the project root.
   - `.claude/docs/ARPG.md`: the `.arpg` format, `ArpgUtility`, the text form, content types, the ARPG tool and
     producing assets.
   - `.claude/docs/Build.md`: compiling and running tools directly when Gradle cannot start.
+  - `.claude/docs/Editor.md`: the owner's editor workflow: one task per tab, tools and brushes kept apart, a slider
+    and a typed value on every number, and the Info Panel showing whatever any window selects.
 - **On demand.** `.claude/docs/Shortcut.md`: editor keyboard shortcuts. Read it before adding, changing or reading
   a key or a modifier in any editor tool.
 - **Pipelines.** Each pipeline has a design file named after it without the suffix (`ProgressionPipeline` is
@@ -64,6 +66,8 @@ Version). Paths in these instructions are relative to the project root.
 @docs/ARPG.md
 
 @docs/Build.md
+
+@docs/Editor.md
 
 ---
 

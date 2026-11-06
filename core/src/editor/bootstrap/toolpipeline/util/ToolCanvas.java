@@ -17,9 +17,11 @@ public enum ToolCanvas {
      * pixels on a character. A tool shows only the options both it and the
      * canvas have, and a canvas without Size takes no brush. Biome colors
      * name biomes, so they never blend; heights, bone weights and a sculpted
-     * surface do. A character's rig, its face and an animation's pose take
-     * the tools that pick and drag its joints; the face drags a bone into
-     * the face control selected.
+     * surface do. The world's heights are their own canvas, raised, lowered,
+     * smoothed, flattened and erased back to level with the brush, never
+     * painted from a palette. A character's rig, its face and an animation's
+     * pose take the tools that pick and drag its joints; the face drags a
+     * bone into the face control selected.
      */
 
     BIOMES(
@@ -34,12 +36,10 @@ public enum ToolCanvas {
     HEIGHTS(
             EditorSetting.TOOL_CANVAS_HEIGHTS,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.SWIRL, EditorTool.SCATTER,
-                    EditorTool.FILL, EditorTool.PICK },
+                    EditorTool.RAISE, EditorTool.LOWER, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE },
             true,
             imageSize(),
-            strength(EditorSetting.TOOL_STRENGTH_DEFAULT),
-            twist()),
+            strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
     SETTLEMENTS(
             EditorSetting.TOOL_CANVAS_SETTLEMENTS,
             new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE },

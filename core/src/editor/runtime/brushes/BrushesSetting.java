@@ -4,8 +4,8 @@ public class BrushesSetting {
 
     /*
      * Constants used only by BrushesContext — its menu, its brush row
-     * templates and their elements, and the entry point the brushes are
-     * listed in. The brushes are the editor's.
+     * templates and their elements, the thumbnail among them, and the entry
+     * point the brushes are listed in. The brushes are the editor's.
      */
 
     // Menus
@@ -17,4 +17,5 @@ public class BrushesSetting {
     // Elements
     public static final String ELEMENT_BRUSH_LABEL = "brushes_preset_label";
     public static final String ELEMENT_BRUSH_DETAIL = "brushes_preset_detail";
+    public static final String ELEMENT_BRUSH_THUMBNAIL = "brushes_preset_thumbnail";
 }

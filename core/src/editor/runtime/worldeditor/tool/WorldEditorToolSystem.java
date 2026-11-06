@@ -9,8 +9,10 @@ import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.worldeditor.WorldEditorLayerProvider;
 import editor.runtime.worldeditor.WorldEditorSetting;
 import editor.runtime.worldeditor.view.WorldEditorViewSystem;
 import engine.root.SystemPackage;
@@ -19,16 +21,17 @@ public class WorldEditorToolSystem extends SystemPackage {
 
     /*
      * Turns the pointer into the image pixel under it each frame and drives
-     * the tool ToolManager keeps for what the World Editor works on. A click
-     * on the image
-     * begins a stroke, dragging carries it on wherever the pointer goes, and
-     * releasing ends it as one undo step. While placing, Place and Erase act
+     * the tool ToolManager keeps for what its tab's layer works on, the layer
+     * named by the tab. A click on the image begins a stroke, dragging
+     * carries it on wherever the pointer goes, and releasing ends it as one
+     * undo step. While the biome tab places, Place and Erase act
      * once per click on the exact position under the pointer, and Select
      * follows the editor's selection conventions: a click picks the placement
      * nearest the pointer, Shift and Ctrl adding and taking away, a drag from
      * a placement moves everything selected with it once released, and a
      * drag from nothing draws a box. Nothing begins while the view is being
-     * panned. While the Settlement Planner carries a design over this window,
+     * panned. While the Settlement Planner carries a design over a tab that
+     * places,
      * focused or not, the pointer is followed for the drop instead, the
      * design previewed on every map at the column under it, and a drop
      * stands it there. The hovered pixel is kept for the brush outline and
@@ -44,6 +47,9 @@ public class WorldEditorToolSystem extends SystemPackage {
     private WorldEditorManager worldEditorManager;
     private SettlementPlannerManager settlementPlannerManager;
     private WorldEditorViewSystem worldEditorViewSystem;
+
+    // Layer
+    private WorldEditorLayer layer;
 
     // Shortcuts
     private int addSelectionShortcutID;
@@ -86,6 +92,15 @@ public class WorldEditorToolSystem extends SystemPackage {
     }
 
     @Override
+    protected void awake() {
+
+        if (!(context instanceof WorldEditorLayerProvider))
+            throwException("A world canvas tab's context must name the layer it works on.");
+
+        this.layer = ((WorldEditorLayerProvider) context).getWorldEditorLayer();
+    }
+
+    @Override
     protected void start() {
 
         // Shortcuts
@@ -108,7 +123,9 @@ public class WorldEditorToolSystem extends SystemPackage {
         WindowInstance window = context.getWindow();
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
 
-        dropping = settlementPlannerManager.isDragging() && windowManager.getHoveredWindows().contains(window);
+        dropping = layer.isPlacing()
+                && settlementPlannerManager.isDragging()
+                && windowManager.getHoveredWindows().contains(window);
 
         if (dropping) {
             hover(inputManager.getHoverMouseX(window), inputManager.getHoverMouseY(window), true);
@@ -122,7 +139,7 @@ public class WorldEditorToolSystem extends SystemPackage {
             endStroke();
 
         if (stroking) {
-            worldEditorManager.continueStroke(hoveredX, hoveredY);
+            worldEditorManager.continueStroke(layer, hoveredX, hoveredY);
             return;
         }
 
@@ -135,17 +152,17 @@ public class WorldEditorToolSystem extends SystemPackage {
                 || !editorInputSystem.isClicked(WorldEditorSetting.BUTTON_APPLY))
             return;
 
-        if (worldEditorManager.getTool() == EditorTool.SELECT) {
+        if (worldEditorManager.getTool(layer) == EditorTool.SELECT) {
             press();
             return;
         }
 
-        if (worldEditorManager.getMode().isPlacing()) {
+        if (!worldEditorManager.isPainting(layer)) {
             worldEditorManager.applyPlacement(hoveredImageX, hoveredImageY);
             return;
         }
 
-        worldEditorManager.beginStroke(hoveredX, hoveredY);
+        worldEditorManager.beginStroke(layer, hoveredX, hoveredY);
         stroking = true;
     }
 
@@ -169,7 +186,7 @@ public class WorldEditorToolSystem extends SystemPackage {
         if (!stroking)
             return;
 
-        worldEditorManager.endStroke();
+        worldEditorManager.endStroke(layer);
         stroking = false;
     }
 
@@ -257,10 +274,14 @@ public class WorldEditorToolSystem extends SystemPackage {
                     worldEditorManager.toBlock(hoveredImageY));
     }
 
-    // The carried design stood under the pointer and this window focused, nothing done off the image
+    // The carried design stood under the pointer and this window focused, nothing done off the image or where the
+    // tab does not place
     public void drop() {
 
         WindowInstance window = context.getWindow();
+
+        if (!layer.isPlacing())
+            return;
 
         hover(inputManager.getHoverMouseX(window), inputManager.getHoverMouseY(window), true);
 
@@ -272,6 +293,10 @@ public class WorldEditorToolSystem extends SystemPackage {
     }
 
     // Accessible \\
+
+    public WorldEditorLayer getLayer() {
+        return layer;
+    }
 
     public boolean isHovering() {
         return hovering;

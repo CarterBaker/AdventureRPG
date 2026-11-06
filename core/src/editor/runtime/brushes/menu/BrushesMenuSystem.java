@@ -16,7 +16,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class BrushesMenuSystem extends SystemPackage {
 
     /*
-     * Opens the Brushes menu: one row per brush with its name and the shape
+     * Opens the Brushes menu: one row per brush, a paint program's preset
+     * list, with the thumbnail of the stroke it makes, its name and the shape
      * of its tip, the one in use highlighted and every row carrying its
      * brush's name, rebuilt only when the brushes move.
      */
@@ -103,6 +104,11 @@ public class BrushesMenuSystem extends SystemPackage {
                     element.setActionArgOverride(brush.getBrushName());
                     setChildText(element, BrushesSetting.ELEMENT_BRUSH_LABEL, brush.getDisplayName());
                     setChildText(element, BrushesSetting.ELEMENT_BRUSH_DETAIL, brush.getShape().getLabel());
+
+                    ElementInstance thumbnail = element.findChildById(BrushesSetting.ELEMENT_BRUSH_THUMBNAIL);
+
+                    if (thumbnail != null && thumbnail.hasSprite())
+                        thumbnail.getSpriteInstance().setTexture(brushManager.getThumbnail(brush));
                 });
     }
 

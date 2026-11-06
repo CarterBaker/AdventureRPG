@@ -5,8 +5,6 @@ import java.util.function.Consumer;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValueStruct;
-import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.ThemeColor;
 import application.bootstrap.settingspipeline.settingssystem.SettingsSystem;
@@ -14,6 +12,7 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.runtime.EditorSetting;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
+import editor.runtime.slider.SliderUtility;
 import engine.input.Input;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -46,7 +45,6 @@ public class EditorSettingsBranch extends BranchPackage {
     private MenuColorStruct activeTabMarkerColor;
 
     // Sliders
-    private DimensionVector2Struct[] knobPositions;
     private ElementInstance placedTrack;
     private int placedStep;
 
@@ -64,14 +62,6 @@ public class EditorSettingsBranch extends BranchPackage {
         // Colors
         this.activeTabColor = new MenuColorStruct(ThemeColor.ACCENT, EditorSetting.SETTINGS_TAB_ACTIVE_ALPHA);
         this.activeTabMarkerColor = new MenuColorStruct(ThemeColor.ACCENT, EngineSetting.MENU_THEME_ALPHA_DEFAULT);
-
-        // Sliders
-        this.knobPositions = new DimensionVector2Struct[EditorSetting.SETTINGS_SLIDER_STEPS + 1];
-
-        for (int i = 0; i < knobPositions.length; i++)
-            knobPositions[i] = new DimensionVector2Struct(
-                    DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX * i / EditorSetting.SETTINGS_SLIDER_STEPS),
-                    DimensionValueStruct.ofAbsolute(0f));
     }
 
     @Override
@@ -281,23 +271,20 @@ public class EditorSettingsBranch extends BranchPackage {
 
     // The share of the track the pointer is over, held to the track's ends
     float resolveTrackFraction(WindowInstance window, ElementInstance track) {
-        return Math.clamp(
-                (inputManager.getHoverMouseX(window) - track.getComputedLeft()) / track.getComputedW(),
-                0f,
-                1f);
+        return SliderUtility.resolveFraction(inputManager.getHoverMouseX(window), track);
     }
 
     // Moves the knob to the step nearest the share; false when it already sits there, so its value text still stands
     boolean placeKnob(ElementInstance track, float fraction) {
 
-        int step = Math.round(Math.clamp(fraction, 0f, 1f) * EditorSetting.SETTINGS_SLIDER_STEPS);
+        int step = SliderUtility.resolveStep(fraction);
 
         if (track == placedTrack && step == placedStep)
             return false;
 
         this.placedTrack = track;
         this.placedStep = step;
-        track.findChildById(EditorSetting.ELEMENT_SETTINGS_SLIDER_KNOB).setPositionOverride(knobPositions[step]);
+        SliderUtility.placeKnob(track, EditorSetting.ELEMENT_SETTINGS_SLIDER_KNOB, step);
 
         return true;
     }

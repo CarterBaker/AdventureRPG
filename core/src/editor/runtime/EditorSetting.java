@@ -259,11 +259,12 @@ public class EditorSetting {
             "Click a shortcut, then press its new keys; it saves to its tool's file";
     public static final String SETTINGS_NOTE_COLORS = "Click a color to edit it; the editor follows as you change it";
 
-    // Settings Dialog — the active tab and a row waiting for keys are tinted with the accent; a slider's knob moves
-    // in fixed steps
+    // Settings Dialog — the active tab and a row waiting for keys are tinted with the accent
     public static final float SETTINGS_TAB_ACTIVE_ALPHA = 0.32f;
     public static final float SETTINGS_CAPTURE_ALPHA = 0.45f;
-    public static final int SETTINGS_SLIDER_STEPS = 200;
+
+    // Sliders — every slider in the editor sets its value at one of this many steps along its track
+    public static final int SLIDER_STEPS = 200;
 
     // Settings Dialog — status text
     public static final String SETTINGS_STATUS_NONE = "";
@@ -319,6 +320,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_ANIMATION_OUTLINER = "Animation Outliner";
     public static final String TAB_TITLE_ANIMATION_PROPERTIES = "Animation Properties";
     public static final String TAB_TITLE_ANIMATION_TIMELINE = "Animation Timeline";
+    public static final String TAB_TITLE_BIOME_PALETTE = "Biome Palette";
     public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
     public static final String TAB_TITLE_BRUSHES = "Brushes";
@@ -327,13 +329,13 @@ public class EditorSetting {
     public static final String TAB_TITLE_FACE_EDITOR = "Face Editor";
     public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
     public static final String TAB_TITLE_FACE_PROPERTIES = "Face Properties";
+    public static final String TAB_TITLE_HEIGHT_EDITOR = "Height Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
     public static final String TAB_TITLE_CHARACTER_PROPERTIES = "Character Properties";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_INFO_PANEL = "Info Panel";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
-    public static final String TAB_TITLE_PALETTE = "Palette";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
     public static final String TAB_TITLE_RECORDINGS = "Recordings";
@@ -1391,6 +1393,8 @@ public class EditorSetting {
     public static final float IMAGE_BRUSH_EDGE_PIXELS = 0.5f;
     public static final int IMAGE_BRUSH_RANDOM_SEED = 0x2545F491;
     public static final float IMAGE_BRUSH_RANDOM_SCALE = 1f / (1 << 24);
+    // Levels a raise or lower stamp moves a channel by at full strength, its fraction dithered so light strokes build
+    public static final float IMAGE_RAISE_LEVELS = 6f;
 
     // Brushes — loaded from this directory, the default one standing in for any deleted
     public static final String BRUSH_PATH = "brushes";
@@ -1402,6 +1406,8 @@ public class EditorSetting {
     public static final String BRUSH_KEY_HARDNESS = "hardness";
     public static final String BRUSH_KEY_DENSITY = "density";
     public static final String BRUSH_KEY_SPACING = "spacing";
+    public static final String BRUSH_KEY_RATIO = "ratio";
+    public static final String BRUSH_KEY_ANGLE = "angle";
 
     // Transitions — loaded from this directory, the default one standing in for any deleted or no longer found; a
     // transition runs at least and at most this long, and unless it says otherwise is first laid this long with an
@@ -1430,6 +1436,18 @@ public class EditorSetting {
     public static final float BRUSH_HARDNESS_DEFAULT = 1f;
     public static final float BRUSH_DENSITY_DEFAULT = 1f;
     public static final float BRUSH_SPACING_DEFAULT = 0.1f;
+    public static final float BRUSH_RATIO_DEFAULT = 1f;
+    public static final float BRUSH_ANGLE_DEFAULT = 0f;
+    public static final float BRUSH_ANGLE_MAX = 180f;
+
+    // Brush Thumbnails — a stroke of the tip along one wave across a strip this many texels, stamped at this radius,
+    // its path walked in steps this many texels long
+    public static final int BRUSH_THUMBNAIL_WIDTH = 96;
+    public static final int BRUSH_THUMBNAIL_HEIGHT = 32;
+    public static final float BRUSH_THUMBNAIL_RADIUS = 9f;
+    public static final float BRUSH_THUMBNAIL_WAVE = 0.22f;
+    public static final float BRUSH_THUMBNAIL_PATH_STEP = 0.25f;
+    public static final int BRUSH_THUMBNAIL_SEED = 0x3C6EF372;
 
     // Tools — sizes are brush radii, in image pixels on the world's layers and window pixels on a character
     public static final String TOOL_SELECT = "Select";
@@ -1450,6 +1468,8 @@ public class EditorSetting {
     public static final String TOOL_PINCH = "Pinch";
     public static final String TOOL_FLATTEN = "Flatten";
     public static final String TOOL_NUDGE = "Nudge";
+    public static final String TOOL_RAISE = "Raise";
+    public static final String TOOL_LOWER = "Lower";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
@@ -1496,7 +1516,6 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_MODE_CAMERAS = "Cameras";
     public static final String WORLD_EDITOR_LAYER_BIOMES = "Biomes";
     public static final String WORLD_EDITOR_LAYER_HEIGHTS = "Heights";
-    public static final int WORLD_EDITOR_HEIGHT_LEVEL_STEP = 16;
     public static final float WORLD_EDITOR_HEIGHT_PERCENT_SCALE = 100f;
     public static final String WORLD_EDITOR_HEIGHT_RAISE = "Raise ";
     public static final String WORLD_EDITOR_HEIGHT_LOWER = "Lower ";

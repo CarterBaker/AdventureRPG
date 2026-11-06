@@ -4,18 +4,20 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.settlementplannerpipeline.settlementplannermanager.SettlementPlannerManager;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.worldeditor.WorldEditorContext;
+import editor.runtime.worldeditor.WorldEditorLayerProvider;
 import engine.root.BranchPackage;
 
 public class WorldEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the World Editor toolbar and keys and the
-     * Palette tab. Every action works on the shared world images and their
-     * hand placements, except the player marker toggle, which targets the
-     * editor its button was clicked in; biome rows carry their biome's name
-     * and height rows their level. Choosing and turning what is placed works
-     * on the Settlement Planner's shared design. The tools themselves are
-     * chosen through ToolBranch, as every editor's are.
+     * Menu event handlers for the World Editor's and Height Editor's toolbars
+     * and keys and the Biome Palette tab. Saving and reloading work on both
+     * of the world's layers together; undo and redo work on the layer of the
+     * tab they were pressed in, and the player marker toggle on the editor
+     * its button was clicked in. Biome rows carry their biome's name.
+     * Choosing and turning what is placed works on the Settlement Planner's
+     * shared design. The tools themselves are chosen through ToolBranch, as
+     * every editor's are.
      */
 
     // Internal
@@ -40,16 +42,14 @@ public class WorldEditorBranch extends BranchPackage {
         worldEditorManager.reloadWorldImage();
     }
 
-    public void undo() {
-        worldEditorManager.undo();
+    public void undo(WindowInstance window) {
+        if (window.getContext() instanceof WorldEditorLayerProvider layerProvider)
+            worldEditorManager.undo(layerProvider.getWorldEditorLayer());
     }
 
-    public void redo() {
-        worldEditorManager.redo();
-    }
-
-    public void toggleLayer() {
-        worldEditorManager.toggleLayer();
+    public void redo(WindowInstance window) {
+        if (window.getContext() instanceof WorldEditorLayerProvider layerProvider)
+            worldEditorManager.redo(layerProvider.getWorldEditorLayer());
     }
 
     // Placement \\
@@ -79,9 +79,5 @@ public class WorldEditorBranch extends BranchPackage {
 
     public void selectBiome(String biomeName) {
         worldEditorManager.selectBiome(biomeName);
-    }
-
-    public void selectHeight(String level) {
-        worldEditorManager.selectHeightLevel(Integer.parseInt(level));
     }
 }

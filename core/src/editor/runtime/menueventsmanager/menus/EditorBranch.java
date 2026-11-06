@@ -136,8 +136,12 @@ public class EditorBranch extends BranchPackage {
         tabManager.openWorldEditor(window.getGLWindow());
     }
 
-    public void openPalette(WindowInstance window) {
-        tabManager.openPalette(window.getGLWindow());
+    public void openHeightEditor(WindowInstance window) {
+        tabManager.openHeightEditor(window.getGLWindow());
+    }
+
+    public void openBiomePalette(WindowInstance window) {
+        tabManager.openBiomePalette(window.getGLWindow());
     }
 
     public void openSettlementPlanner(WindowInstance window) {

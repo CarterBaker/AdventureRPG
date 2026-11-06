@@ -23,11 +23,15 @@ public class BrushManager extends ManagerPackage {
      * content like any other: the Hierarchy and Info Panel edit, create, copy
      * and delete them, and every change reaches here live, rebuilding the
      * brush in place under its ID, so a stroke under way takes the edit at
-     * once. The brush in use falls back to the default when it is deleted.
+     * once. A brush picked in the Hierarchy becomes the brush in use, and one
+     * chosen in the Brushes tab is shown in the Info Panel. Every brush has a
+     * thumbnail of its stroke, kept through BrushThumbnailBranch. The brush in
+     * use falls back to the default when it is deleted.
      */
 
     // Internal
     private InfoManager infoManager;
+    private BrushThumbnailBranch brushThumbnailBranch;
 
     // Palette
     private Object2IntOpenHashMap<String> brushName2BrushID;
@@ -49,6 +53,7 @@ public class BrushManager extends ManagerPackage {
         this.brushName2BrushID = RegistryUtility.createNameIndex();
         this.brushID2BrushHandle = RegistryUtility.createPalette();
         this.brushes = new ObjectArrayList<>();
+        this.brushThumbnailBranch = create(BrushThumbnailBranch.class);
         create(BrushLoader.class);
     }
 
@@ -65,6 +70,7 @@ public class BrushManager extends ManagerPackage {
 
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_BRUSHES, this::rebuildBrush);
         infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_BRUSHES, this::retireBrush);
+        infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_BRUSHES, entry -> selectBrush(entry.getEntryName()));
     }
 
     // Management \\
@@ -85,6 +91,7 @@ public class BrushManager extends ManagerPackage {
         }
 
         brushHandle.constructor(brushData);
+        brushThumbnailBranch.invalidate(brushData.getBrushID());
 
         if (!brushes.contains(brushHandle))
             brushes.add(brushHandle);
@@ -112,6 +119,8 @@ public class BrushManager extends ManagerPackage {
 
         if (brushHandle == null || !brushes.remove(brushHandle))
             return;
+
+        brushThumbnailBranch.release(brushHandle.getBrushID());
 
         if (brushHandle == activeBrush)
             this.activeBrush = getBrushHandleFromBrushName(EditorSetting.BRUSH_DEFAULT);
@@ -143,6 +152,14 @@ public class BrushManager extends ManagerPackage {
             selectBrush(brushes.get(Math.floorMod(index + step, brushes.size())).getBrushName());
     }
 
+    // The brush in use picked in the Hierarchy, so the Info Panel shows it
+    public void showActiveBrush() {
+
+        String brushName = activeBrush.getBrushName();
+
+        infoManager.selectEntry(EditorSetting.INFO_SCHEMA_BRUSHES, brushName, brushName);
+    }
+
     // Status \\
 
     private void notifyChanged() {
@@ -167,6 +184,11 @@ public class BrushManager extends ManagerPackage {
         BrushHandle brushHandle = RegistryUtility.getHandle(brushName2BrushID, brushID2BrushHandle, brushName);
 
         return brushHandle != null && brushes.contains(brushHandle);
+    }
+
+    // Main thread — the brush's thumbnail texture, drawn first when it is missing or the brush was rebuilt
+    public int getThumbnail(BrushHandle brushHandle) {
+        return brushThumbnailBranch.getThumbnail(brushHandle);
     }
 
     public ObjectArrayList<BrushHandle> getBrushes() {

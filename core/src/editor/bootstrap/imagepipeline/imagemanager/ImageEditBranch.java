@@ -22,8 +22,11 @@ class ImageEditBranch extends BranchPackage {
      * them touched, stamping along its path once every spacing and keeping the
      * gap from one drag to the next. Paint lays the stroke's color down, Smooth
      * softens toward the pixel's square, Swirl turns the tip's pixels about its
-     * centre by the stroke's twist and Scatter shuffles them. Where the image
-     * blends, strength fades a pixel toward what it takes; where it does not,
+     * centre by the stroke's twist and Scatter shuffles them; Raise and Lower
+     * move every channel up or down by the strength's share of a few levels,
+     * the fraction of a level dithered so light strokes still build. Where
+     * the image blends, strength fades a pixel toward what it takes; where it
+     * does not,
      * strength is the chance the pixel takes it whole, Smooth takes the
      * commonest color around and Scatter only moves colors, so no color the
      * image could not hold is ever written. A fill floods the four-connected
@@ -107,7 +110,7 @@ class ImageEditBranch extends BranchPackage {
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
 
-                float strength = BrushUtility.resolveCoverage(tip, dx, dy, reach) * brush.getStrength();
+                float strength = BrushUtility.resolveCoverage(tip, dx, -dy, reach) * brush.getStrength();
 
                 if (strength <= 0f || nextRandom() >= density)
                     continue;
@@ -150,7 +153,28 @@ class ImageEditBranch extends BranchPackage {
                     blending);
             case SWIRL -> swirlPixel(document, brush, x - dx, y - dy, dx, dy, strength);
             case SCATTER -> blend(before, tipPixels.getInt(randomIndex(tipPixels.size())), strength, false);
+            case RAISE -> shiftPixel(before, strength, blending);
+            case LOWER -> shiftPixel(before, -strength, blending);
         };
+    }
+
+    // Every channel moved by a share of the raise levels and held to its range, the fraction of a level taken with
+    // that chance; the alpha kept, and an image that cannot blend left as it is
+    private int shiftPixel(int before, float share, boolean blending) {
+
+        if (!blending)
+            return before;
+
+        float levels = share * EditorSetting.IMAGE_RAISE_LEVELS;
+        int whole = (int) Math.floor(levels);
+        int shift = whole + (nextRandom() < levels - whole ? 1 : 0);
+        int color = before >>> Byte.SIZE;
+
+        return (PackedColorUtility.pack(
+                PackedColorUtility.red(color) + shift,
+                PackedColorUtility.green(color) + shift,
+                PackedColorUtility.blue(color) + shift) << Byte.SIZE)
+                | (before & EngineSetting.PACKED_COLOR_CHANNEL_MASK);
     }
 
     // Faded by strength where the image blends, otherwise taken whole with strength as its chance

@@ -7,8 +7,8 @@ import editor.runtime.EditorSetting;
 public enum WorldEditorMode {
 
     /*
-     * What the world editor's canvas is working on: Paint, the world's
-     * images, painted with the biome and height palette, Settlements, the
+     * What the World Editor's canvas is working on: Paint, the biome image,
+     * painted with the Biome Palette's biome, Settlements, the
      * settlements and structures placed by hand on the world, chosen in the
      * Settlement Planner, or Cameras, the views the main menu looks out
      * from, designed in the Camera Planner. A placing mode is its own tool
@@ -48,7 +48,7 @@ public enum WorldEditorMode {
         return label;
     }
 
-    // The canvas a placing mode works on, null while painting, which works on the layer painted
+    // The canvas a placing mode works on, null while painting, which works on the biome layer
     public ToolCanvas getToolCanvas() {
         return toolCanvas;
     }

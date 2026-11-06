@@ -6,7 +6,6 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
-import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorMode;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.EditorSetting;
@@ -21,9 +20,9 @@ public class WorldEditorMenuSystem extends SystemPackage {
      * Opens the World Editor toolbar and status line over the canvas. The
      * status line names the image, mode, tool and what it paints or places,
      * with the pixel, biome and height under the pointer, and rewrites only
-     * on change, as do the mode the editor follows and the layer and player
-     * marker buttons' labels. The tools, the brushes and the palette are
-     * shown in their own tabs.
+     * on change, as do the mode the editor follows and the player marker
+     * button's label. The tools, the brushes and the biome palette are shown
+     * in their own tabs, and the heights are worked in the Height Editor.
      */
 
     // Internal
@@ -39,7 +38,6 @@ public class WorldEditorMenuSystem extends SystemPackage {
     // Status
     private String shownStatus;
     private String shownPlayers;
-    private WorldEditorLayer shownLayer;
     private WorldEditorMode shownMode;
 
     // Base \\
@@ -69,7 +67,6 @@ public class WorldEditorMenuSystem extends SystemPackage {
 
         refreshStatus();
         refreshPlayers();
-        refreshLayer();
         refreshMode();
     }
 
@@ -77,11 +74,11 @@ public class WorldEditorMenuSystem extends SystemPackage {
 
     private void refreshStatus() {
 
-        String status = worldEditorToolSystem.isHovering()
-                ? worldEditorManager.getStatusText() + EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR
-                        + worldEditorManager.describePixel(
-                                worldEditorToolSystem.getHoveredX(), worldEditorToolSystem.getHoveredY())
-                : worldEditorManager.getStatusText();
+        String status = worldEditorManager.getStatusText(
+                worldEditorToolSystem.getLayer(),
+                worldEditorToolSystem.isHovering(),
+                worldEditorToolSystem.getHoveredX(),
+                worldEditorToolSystem.getHoveredY());
 
         if (status.equals(shownStatus))
             return;
@@ -101,17 +98,6 @@ public class WorldEditorMenuSystem extends SystemPackage {
 
         shownPlayers = players;
         setEntryText(WorldEditorSetting.ENTRY_PLAYERS_LABEL, players);
-    }
-
-    private void refreshLayer() {
-
-        WorldEditorLayer layer = worldEditorManager.getLayer();
-
-        if (layer == shownLayer)
-            return;
-
-        shownLayer = layer;
-        setEntryText(WorldEditorSetting.ENTRY_LAYER_LABEL, layer.getLabel());
     }
 
     private void refreshMode() {

@@ -10,6 +10,7 @@ import editor.runtime.animationproperties.AnimationPropertiesContext;
 import editor.runtime.animationtimeline.AnimationTimelineContext;
 import editor.runtime.animationtreeeditor.AnimationTreeEditorContext;
 import editor.runtime.arpgviewer.ArpgViewerContext;
+import editor.runtime.biomepalette.BiomePaletteContext;
 import editor.runtime.biomeplanner.BiomePlannerContext;
 import editor.runtime.biomeviewer.BiomeViewerContext;
 import editor.runtime.brushes.BrushesContext;
@@ -30,10 +31,10 @@ import editor.runtime.dev.DevContext;
 import editor.runtime.faceeditor.FaceEditorContext;
 import editor.runtime.faceoutliner.FaceOutlinerContext;
 import editor.runtime.faceproperties.FacePropertiesContext;
+import editor.runtime.heighteditor.HeightEditorContext;
 import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.infopanel.InfoPanelContext;
 import editor.runtime.itemeditor.ItemEditorContext;
-import editor.runtime.palette.PaletteContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.recorder.RecorderContext;
 import editor.runtime.recordings.RecordingsContext;
@@ -224,6 +225,10 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_WORLD_EDITOR, WorldEditorContext.class, osWindow);
     }
 
+    public TabHandle openHeightEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_HEIGHT_EDITOR, HeightEditorContext.class, osWindow);
+    }
+
     public TabHandle openSettlementPlanner(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_SETTLEMENT_PLANNER, SettlementPlannerContext.class, osWindow);
     }
@@ -256,8 +261,8 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_TREE_VIEWER, TreeViewerContext.class, osWindow);
     }
 
-    public TabHandle openPalette(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_PALETTE, PaletteContext.class, osWindow);
+    public TabHandle openBiomePalette(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_BIOME_PALETTE, BiomePaletteContext.class, osWindow);
     }
 
     public TabHandle openConsole(WindowInstance osWindow) {

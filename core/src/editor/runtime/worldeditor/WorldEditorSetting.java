@@ -5,10 +5,12 @@ import engine.input.Buttons;
 public class WorldEditorSetting {
 
     /*
-     * Constants used only by WorldEditorContext — its viewport mesh and
-     * materials, the height overlay's opacity, zoom limits, mouse bindings and
-     * selection reach, the held shortcuts its selection reads, and toolbar
-     * menu. The images, their brush and their palettes are the editor's.
+     * Constants used only by WorldEditorContext and the view, tool and
+     * render systems it owns, which the Height Editor's tab creates as well —
+     * their viewport mesh and materials, the height overlay's opacity, zoom
+     * limits, mouse bindings and selection reach, the held shortcuts the
+     * selection reads, and the World Editor's toolbar menu. The images, their
+     * brush and the biome palette are the editor's.
      */
 
     // Meshes
@@ -29,6 +31,8 @@ public class WorldEditorSetting {
     public static final String UNIFORM_MARKER_DIRECTION = "u_markerDirection";
     public static final String UNIFORM_MARKER_SCALE = "u_markerScale";
     public static final String UNIFORM_BRUSH_SHAPE = "u_shape";
+    public static final String UNIFORM_BRUSH_RATIO = "u_ratio";
+    public static final String UNIFORM_BRUSH_ANGLE = "u_angle";
 
     // Render Order
     public static final int DEPTH_IMAGE = 0;
@@ -63,6 +67,5 @@ public class WorldEditorSetting {
     public static final String MENU_TOOLBAR = "editor/WorldEditor/Toolbar";
     public static final int ENTRY_STATUS = 0;
     public static final int ENTRY_PLAYERS_LABEL = 1;
-    public static final int ENTRY_LAYER_LABEL = 2;
-    public static final int ENTRY_MODE_LABEL = 3;
+    public static final int ENTRY_MODE_LABEL = 2;
 }

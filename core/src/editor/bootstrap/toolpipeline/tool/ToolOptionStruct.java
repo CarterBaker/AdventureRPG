@@ -1,6 +1,7 @@
 package editor.bootstrap.toolpipeline.tool;
 
 import editor.bootstrap.toolpipeline.util.ToolOption;
+import editor.runtime.EditorSetting;
 import engine.root.StructPackage;
 
 public class ToolOptionStruct extends StructPackage {
@@ -8,7 +9,8 @@ public class ToolOptionStruct extends StructPackage {
     /*
      * One option a canvas honours, with the range it is held to there, the
      * step the Tools panel and the brush size keys move it by, and the value
-     * it starts at.
+     * it starts at. A slider sets it by its share of the range, landing on
+     * the nearest step.
      */
 
     // Option
@@ -39,6 +41,28 @@ public class ToolOptionStruct extends StructPackage {
 
     public float clamp(float value) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    // The value a share of the range stands for, on the step nearest it
+    public float fromFraction(float fraction) {
+        return clamp(min + Math.round(Math.clamp(fraction, 0f, 1f) * (max - min) / step) * step);
+    }
+
+    // The share of the range a value lies at
+    public float toFraction(float value) {
+        return max > min ? (clamp(value) - min) / (max - min) : 0f;
+    }
+
+    // Text \\
+
+    // Whole numbers as they are, fractions to the precision the Tools panel shows and keeps
+    public String format(float value) {
+
+        float precision = EditorSetting.TOOL_OPTION_PRECISION;
+
+        return value == Math.round(value)
+                ? Integer.toString(Math.round(value))
+                : Float.toString(Math.round(value * precision) / precision);
     }
 
     // Accessible \\

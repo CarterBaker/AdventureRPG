@@ -13,7 +13,9 @@ public class SpriteInstance extends InstancePackage {
      * Wraps a SpriteData built with its own ModelInstance and UBOInstance.
      * Shares the GPU texture handle with the source SpriteHandle — never
      * owns or disposes it. setColor() tints the sprite through its own
-     * material, so white artwork takes on whatever color it is given.
+     * material, so white artwork takes on whatever color it is given, and
+     * setTexture() shows another GPU texture through that material instead,
+     * one its caller owns and keeps alive while the sprite shows it.
      */
 
     // Internal
@@ -29,6 +31,12 @@ public class SpriteInstance extends InstancePackage {
 
     public void setColor(Vector4 color) {
         spriteData.getModelInstance().getMaterial().setUniform(EngineSetting.SPRITE_COLOR_UNIFORM, color);
+    }
+
+    // Texture \
+
+    public void setTexture(int gpuHandle) {
+        spriteData.getModelInstance().getMaterial().setUniform(EngineSetting.UNIFORM_SPRITE, gpuHandle);
     }
 
     // Accessible \\

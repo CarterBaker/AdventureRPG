@@ -130,6 +130,16 @@ One line per session that changed this file: the date, what was added or removed
   regenerated `rigs/HumanoidRig.arpg` (15 face bones) and `entities/HumanoidEntity.arpg` (a body per gender, face
   controls on the face bones); rewrote `StandardcharacterShader.vsh`, `CharacterSurface.glsl` (card hair),
   `CharacterViewCharacterShader.fsh` and `LightingShader.fsh` (toon lighting for characters).
+- 2026-11-06: World painting tools. Added `menus/editor/HeightEditor.arpg` (Height Editor toolbar),
+  `menus/editor/BiomePalette.arpg` (biomes only) and `shortcuts/HeightEditor.arpg`, and 20 brushes (`Airbrush`,
+  `Blender`, `Calligraphy`, `CalligraphyBack`, `Chalk`, `Chisel`, `CoarseSpray`, `Dashed`, `Dotted`, `Feather`,
+  `FineSpray`, `FlatSoft`, `Grain`, `Ink`, `Leaf`, `Marker`, `Pencil`, `SoftDiamond`, `Sponge`, `Stipple`); deleted
+  `menus/editor/Palette.arpg` (replaced by the Biome Palette); regenerated `menus/editor/Tools.arpg` (no brush row,
+  option sliders and typed values), `menus/editor/Brushes.arpg` (thumbnail rows), `menus/editor/WorldEditor.arpg` (no
+  layer toggle), `menus/editor/EditorWindow.arpg` (Height Editor and Biome Palette in the World menu),
+  `shortcuts/Tools.arpg` (Raise and Lower), `shortcuts/WorldEditor.arpg` (no layer toggle), `schemas/Brushes.arpg`
+  (ratio and angle) and `materials/editor/WorldEditorBrushMaterial.arpg`, and rewrote `WorldEditorBrushShader.fsh`
+  (turned and squashed tips).
 ---
 
 ## Textures and Sprites (2175 files)
@@ -1343,7 +1353,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1692 files)
+## Data Files (1714 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -1867,7 +1877,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/brushes/`
 
-`Basic.arpg`, `Diamond.arpg`, `Soft.arpg`, `SoftSquare.arpg`, `Speckle.arpg`, `Spray.arpg`, `Square.arpg`
+`Airbrush.arpg`, `Basic.arpg`, `Blender.arpg`, `Calligraphy.arpg`, `CalligraphyBack.arpg`, `Chalk.arpg`,
+`Chisel.arpg`, `CoarseSpray.arpg`, `Dashed.arpg`, `Diamond.arpg`, `Dotted.arpg`, `Feather.arpg`, `FineSpray.arpg`,
+`FlatSoft.arpg`, `Grain.arpg`, `Ink.arpg`, `Leaf.arpg`, `Marker.arpg`, `Pencil.arpg`, `Soft.arpg`, `SoftDiamond.arpg`,
+`SoftSquare.arpg`, `Speckle.arpg`, `Sponge.arpg`, `Spray.arpg`, `Square.arpg`, `Stipple.arpg`
 
 ### `assets/calendars/`
 
@@ -2120,12 +2133,12 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/menus/editor/`
 
-`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePlanner.arpg`,
-`BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
-`CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`,
-`Palette.arpg`, `Profiler.arpg`, `Recorder.arpg`, `Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`,
-`SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`,
-`TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
+`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePalette.arpg`,
+`BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`,
+`CharacterEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
+`HeightEditor.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Recorder.arpg`, `Recordings.arpg`,
+`SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`,
+`Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
 
@@ -2421,8 +2434,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/shortcuts/`
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`,
-`FaceEditor.arpg`, `Hierarchy.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Recorder.arpg`,
-`SettlementPlanner.arpg`, `Tools.arpg`, `WorldEditor.arpg`
+`FaceEditor.arpg`, `HeightEditor.arpg`, `Hierarchy.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Profiler.arpg`,
+`Recorder.arpg`, `SettlementPlanner.arpg`, `Tools.arpg`, `WorldEditor.arpg`
 
 ### `assets/skills/`
 

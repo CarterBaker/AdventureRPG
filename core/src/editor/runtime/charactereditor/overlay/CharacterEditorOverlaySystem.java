@@ -12,7 +12,8 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
-import editor.bootstrap.brushpipeline.util.BrushShape;
+import editor.bootstrap.brushpipeline.brush.BrushHandle;
+import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
@@ -368,11 +369,12 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         appendScreenLine(pressX, mouseY, pressX, pressY);
     }
 
-    // The edge of the preset's tip, each point of the circle pulled in to where its shape measures one radius
+    // The edge of the preset's tip, each point of the circle pulled in to where its turned, squashed shape measures
+    // one radius
     private void appendBrushGuide(float mouseX, float mouseY) {
 
         float radius = characterEditorManager.getBrushRadius();
-        BrushShape shape = brushManager.getActiveBrush().getShape();
+        BrushHandle brush = brushManager.getActiveBrush();
         int segments = CharacterEditorSetting.BRUSH_GUIDE_SEGMENTS;
 
         setColor(CharacterEditorSetting.COLOR_GUIDE);
@@ -383,8 +385,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
             float fromY = (float) Math.sin(Math.PI * 2.0 * i / segments);
             float toX = (float) Math.cos(Math.PI * 2.0 * (i + 1) / segments);
             float toY = (float) Math.sin(Math.PI * 2.0 * (i + 1) / segments);
-            float fromReach = radius / shape.measure(fromX, fromY);
-            float toReach = radius / shape.measure(toX, toY);
+            float fromReach = radius / BrushUtility.measure(brush, fromX, fromY);
+            float toReach = radius / BrushUtility.measure(brush, toX, toY);
 
             appendScreenLine(
                     mouseX + fromX * fromReach,

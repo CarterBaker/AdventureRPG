@@ -25,7 +25,6 @@ import editor.bootstrap.toolpipeline.util.ToolOption;
 import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
-import editor.bootstrap.worldeditorpipeline.worldheight.WorldHeightEntryStruct;
 import editor.runtime.EditorSetting;
 import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
@@ -39,24 +38,27 @@ public class WorldEditorManager extends ManagerPackage {
      * Owns the world editor's shared state: the active world's two layers,
      * its biome image and its height layer, each opened through ImageManager
      * on the world's own pixels so generation reads every stroke at once, the
-     * layer being painted, the palette of biomes the image can paint, the
-     * selected biome, the mode, Paint, Settlements or Cameras, and the status
-     * line. The mode follows what is being worked on: selecting a biome or a
-     * height paints, selecting a settlement or structure in the Hierarchy or
+     * palette of biomes the image can paint, the selected biome, the World
+     * Editor's mode, Paint, Settlements or Cameras, and the status line. Each
+     * layer is worked in its own tab, the biomes in the World Editor and the
+     * heights in the Height Editor, and every call that paints names the
+     * layer it paints. The mode follows what is being worked on: selecting a
+     * biome paints, selecting a settlement or structure in the Hierarchy or
      * the Settlement Planner places those, and working in the Camera Planner
-     * places cameras. Every World Editor works on one tool canvas, its tool
-     * and options kept by ToolManager for the layer painted or for the mode
-     * placing, and every stroke is made with BrushManager's brush in use and
-     * the tool's own strength and twist, dithered on the biome image, whose
-     * colors name biomes, and blended on the height layer. The height
-     * layer's palette and selected level are kept through WorldHeightBranch,
-     * and the placements the Select tool holds through WorldSelectionBranch.
+     * places cameras. Each layer's windows work on one tool canvas, its tool
+     * and options kept by ToolManager for the layer or, on the biomes, for the
+     * mode placing, and every stroke is made with BrushManager's brush in use
+     * and the tool's own strength and twist, dithered on the biome image,
+     * whose colors name biomes, and blended on the height layer, which is
+     * raised, lowered, smoothed, flattened and erased and never painted from a
+     * palette. Height levels are described through WorldHeightBranch, and the
+     * placements the Select tool holds through WorldSelectionBranch.
      * Each edited region of either layer is handed to MapManager, which
      * regenerates only the map tiles it reaches, and to WorldStreamManager,
      * which restreams only the preview and Dev terrain it reaches once the
-     * edits settle; the palette follows every live biome rebuild. Tools paint
-     * the active layer and history undoes it, while saving and reloading take
-     * both layers together. Biome edits from the Info Panel reach the engine,
+     * edits settle; the palette follows every live biome rebuild. History
+     * undoes each layer on its own, while saving and reloading take both
+     * layers together. Biome edits from the Info Panel reach the engine,
      * and biome selection stays in step with the hierarchy, through
      * WorldBiomeBranch, and tree species edits reach it through
      * WorldTreeBranch. Settlements, structures and cameras hand-picked onto
@@ -86,7 +88,6 @@ public class WorldEditorManager extends ManagerPackage {
     private WorldHandle worldHandle;
     private ImageDocumentInstance worldImage;
     private ImageDocumentInstance heightImage;
-    private WorldEditorLayer activeLayer;
 
     // Palette
     private ObjectArrayList<WorldBiomeEntryStruct> palette;
@@ -119,9 +120,6 @@ public class WorldEditorManager extends ManagerPackage {
         this.worldPlacementBranch = create(WorldPlacementBranch.class);
         this.worldSelectionBranch = create(WorldSelectionBranch.class);
 
-        // World
-        this.activeLayer = WorldEditorLayer.BIOMES;
-
         // Palette
         this.palette = new ObjectArrayList<>();
         this.paintedNames = new ObjectArrayList<>();
@@ -139,6 +137,9 @@ public class WorldEditorManager extends ManagerPackage {
         this.tool2Stroke[EditorTool.SMOOTH.ordinal()] = ImageStroke.SMOOTH;
         this.tool2Stroke[EditorTool.SWIRL.ordinal()] = ImageStroke.SWIRL;
         this.tool2Stroke[EditorTool.SCATTER.ordinal()] = ImageStroke.SCATTER;
+        this.tool2Stroke[EditorTool.FLATTEN.ordinal()] = ImageStroke.PAINT;
+        this.tool2Stroke[EditorTool.RAISE.ordinal()] = ImageStroke.RAISE;
+        this.tool2Stroke[EditorTool.LOWER.ordinal()] = ImageStroke.LOWER;
     }
 
     @Override
@@ -179,9 +180,9 @@ public class WorldEditorManager extends ManagerPackage {
         return heightImage;
     }
 
-    // The image the active layer paints
-    public ImageDocumentInstance getActiveImage() {
-        return activeLayer == WorldEditorLayer.HEIGHTS ? getHeightImage() : getWorldImage();
+    // The image a layer paints
+    public ImageDocumentInstance getImage(WorldEditorLayer layer) {
+        return layer == WorldEditorLayer.HEIGHTS ? getHeightImage() : getWorldImage();
     }
 
     private void syncWorld() {
@@ -241,12 +242,6 @@ public class WorldEditorManager extends ManagerPackage {
         restreamPixels(editedWorldHandle, 0, 0, world.getWidth() - 1, world.getHeight() - 1);
     }
 
-    // Layers \\
-
-    public void toggleLayer() {
-        show(WorldEditorMode.PAINT, activeLayer.toggle());
-    }
-
     // Palette \\
 
     private void syncPalette() {
@@ -304,7 +299,7 @@ public class WorldEditorManager extends ManagerPackage {
         if (findEntry(biomeName) == null)
             return false;
 
-        show(WorldEditorMode.PAINT, WorldEditorLayer.BIOMES);
+        show(WorldEditorMode.PAINT);
 
         if (!biomeName.equals(selectedBiomeName)) {
             this.selectedBiomeName = biomeName;
@@ -318,96 +313,78 @@ public class WorldEditorManager extends ManagerPackage {
         worldBiomeBranch.selectBiomeAt(biomeWorldHandle, worldX, worldZ);
     }
 
-    public void selectHeightLevel(int level) {
-
-        show(WorldEditorMode.PAINT, WorldEditorLayer.HEIGHTS);
-
-        if (worldHeightBranch.select(level))
-            notifyPaletteChanged();
-    }
-
     // Modes \\
 
     // Placing settlements and structures, as selecting one in the Hierarchy or the Settlement Planner asks for
     public void showPlacements() {
-        show(WorldEditorMode.SETTLEMENTS, activeLayer);
+        show(WorldEditorMode.SETTLEMENTS);
     }
 
     // Placing cameras, as working in the Camera Planner asks for
     public void showCameras() {
-        show(WorldEditorMode.CAMERAS, activeLayer);
+        show(WorldEditorMode.CAMERAS);
     }
 
-    // The single call site of every mode and layer change, ending any stroke under way first; a selection belongs
-    // to the mode it was made in
-    private void show(WorldEditorMode mode, WorldEditorLayer layer) {
+    // The single call site of every mode change, ending the biome stroke under way first; a selection belongs to
+    // the mode it was made in
+    private void show(WorldEditorMode mode) {
 
-        if (mode == activeMode && layer == activeLayer)
+        if (mode == activeMode)
             return;
 
-        endStrokes();
-
-        if (mode != activeMode)
-            worldSelectionBranch.clear();
-
-        boolean layerChanged = layer != activeLayer;
+        endStroke(WorldEditorLayer.BIOMES);
+        worldSelectionBranch.clear();
 
         this.activeMode = mode;
-        this.activeLayer = layer;
-
-        if (layerChanged)
-            notifyPaletteChanged();
-        else
-            notifyChanged();
+        notifyChanged();
     }
 
     // Tools \\
 
-    // What every World Editor works on: the layer painted, or the placements the mode places
-    public ToolCanvas getToolCanvas() {
-        return activeMode.isPlacing() ? activeMode.getToolCanvas() : activeLayer.getToolCanvas();
+    // What a layer's windows work on: the layer itself, or on the biomes the placements the mode places
+    public ToolCanvas getToolCanvas(WorldEditorLayer layer) {
+        return isPainting(layer) ? layer.getToolCanvas() : activeMode.getToolCanvas();
     }
 
-    public void beginStroke(int pixelX, int pixelY) {
+    // True while a layer's windows paint it rather than place what the mode places
+    public boolean isPainting(WorldEditorLayer layer) {
+        return !layer.isPlacing() || !activeMode.isPlacing();
+    }
 
-        ImageDocumentInstance image = getActiveImage();
+    public void beginStroke(WorldEditorLayer layer, int pixelX, int pixelY) {
 
-        EditorTool tool = getTool();
+        ImageDocumentInstance image = getImage(layer);
+        EditorTool tool = getTool(layer);
 
         switch (tool) {
 
             case FILL -> {
                 if (hasPaintColor(tool))
-                    imageManager.fill(image, pixelX, pixelY, resolvePaintColor(tool));
+                    imageManager.fill(image, pixelX, pixelY, resolvePaintColor(image, tool, pixelX, pixelY));
             }
 
-            case PICK -> {
-                if (activeLayer == WorldEditorLayer.HEIGHTS)
-                    pickHeight(image, pixelX, pixelY);
-                else
-                    pickBiome(image, pixelX, pixelY);
-            }
+            case PICK -> pickBiome(image, pixelX, pixelY);
 
-            default -> beginBrush(image, pixelX, pixelY, tool);
+            default -> beginBrush(layer, image, pixelX, pixelY, tool);
         }
     }
 
-    public void continueStroke(int pixelX, int pixelY) {
-        if (getTool().isStroke())
-            imageManager.continueStroke(getActiveImage(), pixelX, pixelY, brush);
+    public void continueStroke(WorldEditorLayer layer, int pixelX, int pixelY) {
+        if (getTool(layer).isStroke())
+            imageManager.continueStroke(getImage(layer), pixelX, pixelY, brush);
     }
 
-    public void endStroke() {
-        imageManager.endStroke(getActiveImage());
-    }
-
-    private void endStrokes() {
-        imageManager.endStroke(getWorldImage());
-        imageManager.endStroke(getHeightImage());
+    public void endStroke(WorldEditorLayer layer) {
+        imageManager.endStroke(getImage(layer));
     }
 
     // A stroke of the tool's own kind begun with the brush in use and the tool's options; only painting takes a color
-    private void beginBrush(ImageDocumentInstance image, int pixelX, int pixelY, EditorTool tool) {
+    private void beginBrush(
+            WorldEditorLayer layer,
+            ImageDocumentInstance image,
+            int pixelX,
+            int pixelY,
+            EditorTool tool) {
 
         ImageStroke stroke = tool2Stroke[tool.ordinal()];
 
@@ -419,41 +396,39 @@ public class WorldEditorManager extends ManagerPackage {
             if (!hasPaintColor(tool))
                 return;
 
-            brush.setColor(resolvePaintColor(tool));
+            brush.setColor(resolvePaintColor(image, tool, pixelX, pixelY));
         }
 
-        ToolCanvas canvas = getToolCanvas();
+        ToolCanvas canvas = getToolCanvas(layer);
 
         brush.set(
                 brushManager.getActiveBrush(),
                 stroke,
-                getBrushRadius(),
+                getBrushRadius(layer),
                 toolManager.getOption(canvas, ToolOption.STRENGTH),
                 toolManager.getOption(canvas, ToolOption.TWIST),
                 canvas.isBlending());
         imageManager.beginStroke(image, pixelX, pixelY, brush);
     }
 
-    // True when the tool has a value to lay down: Erase always does, the biome image needs a biome selected
+    // True when the tool has a value to lay down: only the biome brush and fill need a biome selected
     private boolean hasPaintColor(EditorTool tool) {
 
-        if (tool == EditorTool.ERASE || activeLayer == WorldEditorLayer.HEIGHTS || findEntry(selectedBiomeName) != null)
+        if (tool == EditorTool.ERASE || tool == EditorTool.FLATTEN || findEntry(selectedBiomeName) != null)
             return true;
 
         setStatusMessage(EditorSetting.WORLD_EDITOR_STATUS_NO_BIOME);
         return false;
     }
 
-    // Erase lays the neutral level down; anything else the selected level, or on the biome image the selected biome
-    private int resolvePaintColor(EditorTool tool) {
-
-        if (tool == EditorTool.ERASE)
-            return WorldElevationUtility.toLayerColor(EngineSetting.WORLD_HEIGHT_LAYER_NEUTRAL_LEVEL);
-
-        if (activeLayer == WorldEditorLayer.HEIGHTS)
-            return WorldElevationUtility.toLayerColor(worldHeightBranch.getSelectedLevel());
-
-        return toImageColor(findEntry(selectedBiomeName).getMapColor());
+    // Erase lays the neutral level down, Flatten the value where the stroke begins, and the brush and fill the
+    // selected biome
+    private int resolvePaintColor(ImageDocumentInstance image, EditorTool tool, int pixelX, int pixelY) {
+        return switch (tool) {
+            case ERASE -> WorldElevationUtility.toLayerColor(EngineSetting.WORLD_HEIGHT_LAYER_NEUTRAL_LEVEL);
+            case FLATTEN -> imageManager.pickColor(image, pixelX, pixelY);
+            default -> toImageColor(findEntry(selectedBiomeName).getMapColor());
+        };
     }
 
     private void pickBiome(ImageDocumentInstance image, int pixelX, int pixelY) {
@@ -467,14 +442,6 @@ public class WorldEditorManager extends ManagerPackage {
 
         selectBiome(entry.getBiomeName());
         setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_PICKED + entry.getDisplayName());
-    }
-
-    private void pickHeight(ImageDocumentInstance image, int pixelX, int pixelY) {
-
-        int level = WorldElevationUtility.toLevel(imageManager.pickColor(image, pixelX, pixelY));
-
-        selectHeightLevel(level);
-        setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_PICKED + worldHeightBranch.describeLevel(level));
     }
 
     // World image pixels are RGBA8888 and always opaque; map colors are 0xRRGGBB
@@ -493,7 +460,7 @@ public class WorldEditorManager extends ManagerPackage {
 
         WorldHandle world = getWorldHandle();
 
-        switch (getTool()) {
+        switch (getTool(WorldEditorLayer.BIOMES)) {
             case PLACE -> worldPlacementBranch.place(world, imageX, imageY);
             case ERASE -> worldPlacementBranch.clear(world, imageX, imageY);
             default -> {
@@ -608,13 +575,13 @@ public class WorldEditorManager extends ManagerPackage {
 
     // History \\
 
-    public void undo() {
-        if (!imageManager.undo(getActiveImage()))
+    public void undo(WorldEditorLayer layer) {
+        if (!imageManager.undo(getImage(layer)))
             setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_TO_UNDO);
     }
 
-    public void redo() {
-        if (!imageManager.redo(getActiveImage()))
+    public void redo(WorldEditorLayer layer) {
+        if (!imageManager.redo(getImage(layer)))
             setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_TO_REDO);
     }
 
@@ -678,7 +645,9 @@ public class WorldEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
-    public String getStatusText() {
+    // The image, what a layer's windows are doing with which tool, brush and size, and on the biomes the biome
+    // painted, then the last message and, while the pointer is over the image, the pixel under it
+    public String getStatusText(WorldEditorLayer layer, boolean hovering, int pixelX, int pixelY) {
 
         ImageDocumentInstance image = getWorldImage();
         StringBuilder status = new StringBuilder(image.getImageName());
@@ -686,30 +655,36 @@ public class WorldEditorManager extends ManagerPackage {
         if (image.isDirty() || getHeightImage().isDirty())
             status.append(EditorSetting.WORLD_EDITOR_DIRTY_MARKER);
 
-        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeMode.getLabel());
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
+                .append(layer.isPlacing() ? activeMode.getLabel() : layer.getLabel());
 
-        if (activeMode.isPlacing())
-            appendPlacementStatus(status);
+        if (isPainting(layer))
+            appendPaintStatus(status, layer);
         else
-            status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(activeLayer.getLabel())
-                    .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(getTool().getLabel())
-                    .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
-                    .append(brushManager.getActiveBrush().getDisplayName())
-                    .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
-                    .append(EditorSetting.TOOL_STATUS_SIZE).append(getBrushRadius())
-                    .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
-                    .append(describeSelection());
+            appendPlacementStatus(status);
 
         if (statusMessage != null)
             status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(statusMessage);
 
+        if (hovering)
+            status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(describePixel(pixelX, pixelY));
+
         return status.toString();
     }
 
-    private String describeSelection() {
+    private void appendPaintStatus(StringBuilder status, WorldEditorLayer layer) {
 
-        if (activeLayer == WorldEditorLayer.HEIGHTS)
-            return worldHeightBranch.describeLevel(worldHeightBranch.getSelectedLevel());
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(getTool(layer).getLabel())
+                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
+                .append(brushManager.getActiveBrush().getDisplayName())
+                .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
+                .append(EditorSetting.TOOL_STATUS_SIZE).append(getBrushRadius(layer));
+
+        if (layer.isPlacing())
+            status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(describeSelection());
+    }
+
+    private String describeSelection() {
 
         WorldBiomeEntryStruct entry = findEntry(selectedBiomeName);
 
@@ -717,14 +692,14 @@ public class WorldEditorManager extends ManagerPackage {
     }
 
     private void appendPlacementStatus(StringBuilder status) {
-        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(getTool().getLabel())
+        status.append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR).append(getTool(WorldEditorLayer.BIOMES).getLabel())
                 .append(EditorSetting.WORLD_EDITOR_STATUS_SEPARATOR)
                 .append(activeMode == WorldEditorMode.CAMERAS
                         ? cameraPlannerManager.describeDesign()
                         : settlementPlannerManager.describeDesign());
     }
 
-    public String describePixel(int pixelX, int pixelY) {
+    private String describePixel(int pixelX, int pixelY) {
 
         WorldBiomeEntryStruct entry = findEntryForColor(
                 toMapColor(imageManager.pickColor(getWorldImage(), pixelX, pixelY)));
@@ -745,18 +720,6 @@ public class WorldEditorManager extends ManagerPackage {
 
         syncWorld();
         return worldHandle;
-    }
-
-    public WorldEditorLayer getLayer() {
-        return activeLayer;
-    }
-
-    public ObjectArrayList<WorldHeightEntryStruct> getHeightPalette() {
-        return worldHeightBranch.getPalette();
-    }
-
-    public int getSelectedHeightLevel() {
-        return worldHeightBranch.getSelectedLevel();
     }
 
     public ObjectArrayList<WorldBiomeEntryStruct> getPalette() {
@@ -786,14 +749,14 @@ public class WorldEditorManager extends ManagerPackage {
         return activeMode;
     }
 
-    // The tool chosen for what every World Editor works on
-    public EditorTool getTool() {
-        return toolManager.getTool(getToolCanvas());
+    // The tool chosen for what a layer's windows work on
+    public EditorTool getTool(WorldEditorLayer layer) {
+        return toolManager.getTool(getToolCanvas(layer));
     }
 
-    // The radius a stroke stamps, in image pixels
-    public int getBrushRadius() {
-        return Math.round(toolManager.getOption(getToolCanvas(), ToolOption.SIZE));
+    // The radius a stroke on a layer stamps, in image pixels
+    public int getBrushRadius(WorldEditorLayer layer) {
+        return Math.round(toolManager.getOption(getToolCanvas(layer), ToolOption.SIZE));
     }
 
     public int getRevision() {

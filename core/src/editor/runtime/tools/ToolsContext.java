@@ -11,10 +11,11 @@ public class ToolsContext extends ContextPackage {
      * was worked in last, under the name of what that window works on, the
      * one in use highlighted, then the actions that canvas lists in their
      * groups, and below them that tool's options — its size, strength and
-     * whatever else it takes — with the brush it strokes with. Choosing a
-     * tool, running an action or changing an option here does so for that
-     * window's canvas, and the shared tool keys are this tab's shortcuts; the
-     * tools themselves live in the editor.
+     * whatever else it takes — each on a slider with a value to type. The
+     * brush it strokes with is chosen in the Brushes tab. Choosing a tool,
+     * running an action or changing an option here does so for that window's
+     * canvas, and the shared tool keys are this tab's shortcuts; the tools
+     * themselves live in the editor.
      */
 
     // Internal

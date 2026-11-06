@@ -26,8 +26,10 @@ public class ToolManager extends ManagerPackage {
      * canvas it was chosen for. Every window the shared tool keys work in
      * opens itself here, a canvas with what supplies its canvas, a panel
      * without, through openWindow() and closeWindow(), the one pair that
-     * owns them. A tool the target's canvas does not take is refused. The
-     * tools, their options and the brush in use are kept between sessions
+     * owns them. A tool the target's canvas does not take is refused. A
+     * change of option moves its own revision, so the panel sets its values
+     * in place while a slider drags. The tools, their options and the brush
+     * in use are kept between sessions
      * through ToolStateBranch, written once on the frame after they change.
      */
 
@@ -51,6 +53,7 @@ public class ToolManager extends ManagerPackage {
 
     // Status
     private int revision;
+    private int optionRevision;
     private int stateRevision;
     private int savedStateRevision;
     private int savedBrushRevision;
@@ -210,7 +213,16 @@ public class ToolManager extends ManagerPackage {
             setOption(canvas, option, range.step(getOption(canvas, option), direction));
     }
 
-    // An option of a canvas set, held to the canvas's range for it
+    // One of the target canvas's options set outright, by a slider or a typed value, when the canvas honours it
+    public void setTargetOption(ToolOption option, float value) {
+
+        ToolCanvas canvas = getCanvas();
+
+        if (canvas != null)
+            setOption(canvas, option, value);
+    }
+
+    // An option of a canvas set, held to the canvas's range for it; only a value that moves counts as a change
     void setOption(ToolCanvas canvas, ToolOption option, float value) {
 
         ToolOptionStruct range = canvas.findOption(option);
@@ -218,8 +230,14 @@ public class ToolManager extends ManagerPackage {
         if (range == null)
             return;
 
-        canvas2OptionValues[canvas.ordinal()][option.ordinal()] = range.clamp(value);
-        notifyStateChanged();
+        float clamped = range.clamp(value);
+        float[] optionValues = canvas2OptionValues[canvas.ordinal()];
+
+        if (optionValues[option.ordinal()] == clamped)
+            return;
+
+        optionValues[option.ordinal()] = clamped;
+        notifyOptionChanged();
     }
 
     // Status \\
@@ -231,6 +249,12 @@ public class ToolManager extends ManagerPackage {
     private void notifyStateChanged() {
         stateRevision++;
         notifyChanged();
+    }
+
+    // An option's value moves without changing what the Tools panel lists, so its rows update in place
+    private void notifyOptionChanged() {
+        stateRevision++;
+        optionRevision++;
     }
 
     // Accessible \\
@@ -251,7 +275,21 @@ public class ToolManager extends ManagerPackage {
         return canvas2OptionValues[canvas.ordinal()][option.ordinal()];
     }
 
+    // The target canvas's range for an option, null while there is no canvas or it does not honour the option
+    public ToolOptionStruct findTargetOption(ToolOption option) {
+
+        ToolCanvas canvas = getCanvas();
+
+        return canvas != null ? canvas.findOption(option) : null;
+    }
+
+    // Moves whenever what the Tools panel lists changes: the target's canvas, or the tool chosen on it
     public int getRevision() {
         return revision;
+    }
+
+    // Moves whenever an option's value changes, which the Tools panel shows without listing anything again
+    public int getOptionRevision() {
+        return optionRevision;
     }
 }
