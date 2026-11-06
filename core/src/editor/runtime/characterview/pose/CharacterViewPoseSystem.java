@@ -72,15 +72,17 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
             animationStateHandle.poseRest();
     }
 
-    // The bind pose at unit proportions, so every skinned vertex stands exactly where its mesh file puts it; the next
-    // appearance change applies the build and head shape again
+    // The bind pose at unit proportions and unshaped, so every skinned vertex stands exactly where its mesh file puts
+    // it; the next appearance change applies the build, the head shape and the sliders' bones again
     public void poseBind() {
 
         if (animationStateHandle == null)
             return;
 
-        for (int i = 0; i < entityData.getRigHandle().getBoneCount(); i++)
+        for (int i = 0; i < entityData.getRigHandle().getBoneCount(); i++) {
             animationStateHandle.setBoneProportion(i, 1f, 1f, 1f);
+            animationStateHandle.clearBoneShape(i);
+        }
 
         animationStateHandle.poseRest();
     }

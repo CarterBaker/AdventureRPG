@@ -2,6 +2,9 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import java.util.Arrays;
 
+import application.bootstrap.entitypipeline.appearance.AppearanceData;
+import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
+import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
@@ -60,6 +63,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private ToolManager toolManager;
     private CharacterEditBranch characterEditBranch;
     private CharacterPreviewBranch characterPreviewBranch;
+    private CharacterLookBranch characterLookBranch;
     private CharacterPropertyBranch characterPropertyBranch;
     private CharacterRowBranch characterRowBranch;
     private CharacterHistoryBranch characterHistoryBranch;
@@ -85,6 +89,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Preview
     private CharacterEditorPose pose;
+    private int genderIndex;
     private float weightRatio;
     private Vector3 headProportion;
     private int[] toneIndices;
@@ -128,6 +133,7 @@ public class CharacterEditorManager extends ManagerPackage {
         // Internal
         this.characterEditBranch = create(CharacterEditBranch.class);
         this.characterPreviewBranch = create(CharacterPreviewBranch.class);
+        this.characterLookBranch = create(CharacterLookBranch.class);
         this.characterPropertyBranch = create(CharacterPropertyBranch.class);
         this.characterRowBranch = create(CharacterRowBranch.class);
         this.characterHistoryBranch = create(CharacterHistoryBranch.class);
@@ -240,11 +246,12 @@ public class CharacterEditorManager extends ManagerPackage {
         this.selectedBoneIndex = 0;
         this.selectedAnchorIndex = EngineSetting.INDEX_NOT_FOUND;
         this.activePartKey = EditorSetting.CHARACTER_EDITOR_PART_BODY;
+        this.genderIndex = 0;
         this.requestedTransform = null;
         this.statusMessage = null;
         this.blink = 0f;
         Arrays.fill(toneIndices, EngineSetting.INDEX_NOT_FOUND);
-        Arrays.fill(shapeValues, 0f);
+        Arrays.fill(shapeValues, Float.NaN);
         notifyChanged();
     }
 
@@ -858,6 +865,19 @@ public class CharacterEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
+    // The gender the preview is made as, by its place in the template's genders; it wears that gender's body, so the
+    // mesh modes edit that body and its features from then on
+    void setGenderIndex(int genderIndex) {
+
+        characterSculptBranch.cancelTransform();
+        characterMeshBranch.endShapeEdits();
+
+        this.genderIndex = genderIndex;
+        this.requestedTransform = null;
+        Arrays.fill(shapeValues, Float.NaN);
+        notifyChanged();
+    }
+
     void setWeightRatio(float weightRatio) {
 
         this.weightRatio = weightRatio;
@@ -879,13 +899,34 @@ public class CharacterEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
-    // A preview slider's value, the array grown to hold every slider the template lists
-    void setShapeValue(int shapeIndex, float value) {
+    // A preview slider's value, the array grown to hold every slider the template lists, untouched sliders left NaN
+    public void setShapeValue(int shapeIndex, float value) {
 
-        if (shapeIndex >= shapeValues.length)
+        if (shapeIndex >= shapeValues.length) {
+
+            int length = shapeValues.length;
+
             this.shapeValues = Arrays.copyOf(shapeValues, shapeIndex + 1);
+            Arrays.fill(shapeValues, length, shapeValues.length, Float.NaN);
+        }
 
         shapeValues[shapeIndex] = value;
+        notifyChanged();
+    }
+
+    // The preview look put on a viewport's appearance: neutral as the mesh is authored, a still face never blinking
+    public void applyLook(
+            AppearanceHandle appearance,
+            AppearanceData appearanceData,
+            boolean neutral,
+            boolean stillFace) {
+        characterLookBranch.apply(appearance, appearanceData, neutral, stillFace);
+    }
+
+    // Every preview slider back where the preview's gender starts it
+    public void resetShapeValues() {
+
+        Arrays.fill(shapeValues, Float.NaN);
         notifyChanged();
     }
 
@@ -944,6 +985,23 @@ public class CharacterEditorManager extends ManagerPackage {
         return pose;
     }
 
+    public int getGenderIndex() {
+        return genderIndex;
+    }
+
+    // The gender the preview is made as, held to the genders the active template allows
+    public short getPreviewGenderID() {
+
+        if (activeDocument == null || !activeDocument.hasPreview())
+            return 0;
+
+        EntityData entityData = activeDocument.getPreviewData();
+
+        return entityData.getGenderCount() > 0
+                ? entityData.getGenderID(Math.min(genderIndex, entityData.getGenderCount() - 1))
+                : 0;
+    }
+
     public float getWeightRatio() {
         return weightRatio;
     }
@@ -956,8 +1014,20 @@ public class CharacterEditorManager extends ManagerPackage {
         return toneIndices[color.ordinal()];
     }
 
+    // A preview slider's value: the one set on it, else where the preview's gender starts it; 0 without a preview
     public float getShapeValue(int shapeIndex) {
-        return shapeIndex < shapeValues.length ? shapeValues[shapeIndex] : 0f;
+
+        if (shapeIndex < shapeValues.length && !Float.isNaN(shapeValues[shapeIndex]))
+            return shapeValues[shapeIndex];
+
+        if (activeDocument == null || !activeDocument.hasPreview() || !activeDocument.getPreviewData().hasAppearance())
+            return 0f;
+
+        AppearanceData appearanceData = activeDocument.getPreviewData().getAppearanceData();
+
+        return shapeIndex < appearanceData.getShapeCount()
+                ? appearanceData.getStartingShapeValue(getPreviewGenderID(), shapeIndex)
+                : 0f;
     }
 
     public float getBlink() {

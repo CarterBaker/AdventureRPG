@@ -1,20 +1,16 @@
 package editor.runtime.charactereditor.preview;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
-import application.bootstrap.entitypipeline.appearance.AppearanceData;
-import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
-import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -25,7 +21,8 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     /*
      * Drives this tab's character viewport from the character editor. A new
      * preview of the active template is put on its own animation tree; the
-     * tone worn, the build and the head shape are applied whenever the
+     * gender it is made as — the body and features it wears — the sliders,
+     * the tone worn, the build and the head shape are applied whenever the
      * editor's state moves; and each frame the preview is posed — at rest or
      * played in the chosen movement, or held in the exact bind pose while its
      * mesh or rig is edited — and given the markers of the mode: the joints in
@@ -105,36 +102,12 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         this.lookRevision = characterEditorManager.getRevision();
 
-        if (!characterViewPoseSystem.hasAppearance())
-            return;
-
-        AppearanceHandle appearance = characterViewPoseSystem.getAppearanceHandle();
-        AppearanceData appearanceData = characterViewPoseSystem.getEntityData().getAppearanceData();
-        Vector3 headProportion = characterEditorManager.getHeadProportion();
-        boolean meshMode = characterEditorManager.getMode().isMeshMode();
-
-        for (CharacterEditorColor color : CharacterEditorColor.VALUES) {
-
-            Color tone = resolveTone(
-                    appearanceData.getPalette(color.getSkinnedColor()),
-                    appearanceData.getColor(color.getSkinnedColor()),
-                    characterEditorManager.getToneIndex(color));
-
-            appearance.setColor(color.getSkinnedColor(), tone.r, tone.g, tone.b);
-        }
-
-        for (int i = 0; i < appearanceData.getShapeCount(); i++)
-            appearance.setShapeValue(i, meshMode ? 0f : characterEditorManager.getShapeValue(i));
-
-        appearance.setFaceAnimated(!meshMode && characterEditorManager.getBlink() <= 0f);
-        appearance.setBlink(meshMode ? 0f : characterEditorManager.getBlink());
-        appearance.setWeightRatio(characterEditorManager.getWeightRatio());
-        appearance.setHeadProportion(headProportion.x, headProportion.y, headProportion.z);
-    }
-
-    // The tone worn, or the default color while none is or the palette has not caught up with the edit
-    private Color resolveTone(Color[] palette, Color defaultColor, int toneIndex) {
-        return toneIndex >= 0 && toneIndex < palette.length ? palette[toneIndex] : defaultColor;
+        if (characterViewPoseSystem.hasAppearance())
+            characterEditorManager.applyLook(
+                    characterViewPoseSystem.getAppearanceHandle(),
+                    characterViewPoseSystem.getEntityData().getAppearanceData(),
+                    characterEditorManager.getMode().isMeshMode(),
+                    false);
     }
 
     // Pose \\

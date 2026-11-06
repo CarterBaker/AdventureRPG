@@ -138,12 +138,12 @@ class PlayerRestoreBranch extends BranchPackage {
                 appearanceHandle.setDetail(skinnedDetail, ArpgUtility.validateFloat(detailsArpg, key));
         }
 
-        for (String morphName : shapesArpg.keySet()) {
+        for (String shapeName : shapesArpg.keySet()) {
 
-            int shapeIndex = appearanceData.findShape(morphName);
+            int shapeIndex = appearanceData.findShape(shapeName);
 
             if (shapeIndex != EngineSetting.INDEX_NOT_FOUND)
-                appearanceHandle.setShapeValue(shapeIndex, ArpgUtility.validateFloat(shapesArpg, morphName));
+                appearanceHandle.setShapeValue(shapeIndex, ArpgUtility.validateFloat(shapesArpg, shapeName));
         }
 
         appearanceHandle.setHeadProportion(headProportion.x, headProportion.y, headProportion.z);

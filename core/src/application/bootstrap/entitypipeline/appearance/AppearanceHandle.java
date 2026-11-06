@@ -1,8 +1,11 @@
 package application.bootstrap.entitypipeline.appearance;
 
+import java.util.Arrays;
+
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
@@ -14,16 +17,18 @@ import engine.util.mathematics.vectors.Vector3;
 public class AppearanceHandle extends HandlePackage {
 
     /*
-     * Per-entity appearance: its colors, detail amounts, shape slider values,
-     * worn features, body build and head shape. Seeded from the template and
-     * edited in place. Slider values are kept as the weights of the character
-     * mesh's morphs, beside the expression weights the face plays — a blink
-     * at an interval of its own, passing through the half-closed shape, while
-     * the face is animated.
-     * applyProportions() is the one path that writes bone proportions and
-     * re-poses the entity, writeAppearance() the one path that hands the lot
-     * to a skinned draw, and resetToDefaults() returns everything to the
-     * template. Lives on EntityInstance.
+     * Per-entity appearance: the body its gender wears, its colors, detail
+     * amounts, shape slider values, worn features, body build and head shape.
+     * Seeded from the template and edited in place. Slider values are kept as
+     * the weights of the body's morphs, beside the expression weights the
+     * face plays — a blink at an interval of its own, passing through the
+     * half-closed shape, while the face is animated — and as the moves, turns
+     * and scales of the bones they drive. applyProportions() is the one path
+     * that writes bone proportions and shaping and re-poses the entity,
+     * writeAppearance() the one path that hands the lot to a skinned draw,
+     * and resetToDefaults() returns everything to the template and the
+     * gender's preset. Every array is allocated once in constructor(). Lives
+     * on EntityInstance.
      */
 
     // Internal
@@ -36,12 +41,13 @@ public class AppearanceHandle extends HandlePackage {
     // Details — indexed by SkinnedDetail ordinal
     private float[] details;
 
-    // Shapes — slider values, and the weight of every morph of the character mesh
+    // Shapes — slider values, and the weight of every morph of the body worn
     private float[] shapeValues;
     private float[] morphWeights;
 
     // Gender
     private short genderID;
+    private int bodyIndex;
 
     // Face
     private float blinkSeed;
@@ -53,6 +59,11 @@ public class AppearanceHandle extends HandlePackage {
     // Proportions
     private float weightRatio;
     private Vector3 headProportion;
+
+    // Bone Shaping — per bone, what the sliders driving it add up to
+    private Vector3[] boneMoves;
+    private Vector3[] boneTurns;
+    private Vector3[] boneScales;
 
     // Constructor \\
 
@@ -76,7 +87,7 @@ public class AppearanceHandle extends HandlePackage {
 
         // Shapes
         this.shapeValues = new float[appearanceData.getShapeCount()];
-        this.morphWeights = new float[appearanceData.getCharacterMesh().getMorphCount()];
+        this.morphWeights = new float[appearanceData.getMaxMorphCount()];
 
         // Face
         this.blinkSeed = (float) Math.random();
@@ -88,6 +99,19 @@ public class AppearanceHandle extends HandlePackage {
         // Proportions
         this.weightRatio = weightRatio;
         this.headProportion = new Vector3();
+
+        // Bone Shaping
+        int boneCount = appearanceData.getRigHandle().getBoneCount();
+
+        this.boneMoves = new Vector3[boneCount];
+        this.boneTurns = new Vector3[boneCount];
+        this.boneScales = new Vector3[boneCount];
+
+        for (int i = 0; i < boneCount; i++) {
+            boneMoves[i] = new Vector3();
+            boneTurns[i] = new Vector3();
+            boneScales[i] = new Vector3(1f, 1f, 1f);
+        }
 
         resetToDefaults();
     }
@@ -102,8 +126,10 @@ public class AppearanceHandle extends HandlePackage {
         for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
             details[skinnedDetail.ordinal()] = appearanceData.getDetail(skinnedDetail);
 
+        Arrays.fill(morphWeights, 0f);
+
         for (int i = 0; i < shapeValues.length; i++)
-            setShapeValue(i, appearanceData.getShape(i).getDefaultValue());
+            writeShapeValue(i, appearanceData.getShape(i).getDefaultValue());
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             features[featureSlot.ordinal()] = appearanceData.getDefaultFeature(featureSlot);
@@ -116,10 +142,20 @@ public class AppearanceHandle extends HandlePackage {
 
     // Gender \\
 
-    // Takes on a gender and resets to the look it starts with
+    // Takes on a gender, wearing its body, and resets to the look it starts with
     public void setGender(short genderID) {
         this.genderID = genderID;
+        this.bodyIndex = appearanceData.getBodyIndex(genderID);
         resetToDefaults();
+    }
+
+    public short getGenderID() {
+        return genderID;
+    }
+
+    // The mesh of the body worn, the one the sliders' morphs weigh
+    public MeshHandle getBodyMesh() {
+        return appearanceData.getBodyMesh(bodyIndex);
     }
 
     private void applyGenderPreset() {
@@ -131,7 +167,7 @@ public class AppearanceHandle extends HandlePackage {
 
         for (int i = 0; i < shapeValues.length; i++)
             if (!Float.isNaN(preset.getShapeValue(i)))
-                setShapeValue(i, preset.getShapeValue(i));
+                writeShapeValue(i, preset.getShapeValue(i));
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (preset.getFeature(featureSlot.ordinal()) != null)
@@ -164,14 +200,30 @@ public class AppearanceHandle extends HandlePackage {
         return shapeValues[shapeIndex];
     }
 
-    // Sets a slider within its range, weighing its morph by the value
+    // Sets a slider within its range, weighing its morph by the value and re-posing the bones it drives
     public void setShapeValue(int shapeIndex, float value) {
 
-        AppearanceShapeStruct shape = appearanceData.getShape(shapeIndex);
-        float clamped = shape.clamp(value);
+        writeShapeValue(shapeIndex, value);
+
+        if (appearanceData.getShape(shapeIndex).hasBoneTargets())
+            applyProportions();
+    }
+
+    // Sets a slider without re-posing, for a caller setting many at once; the bones it drives take it up at the next
+    // proportions pass, the next build or head shape set
+    public void stageShapeValue(int shapeIndex, float value) {
+        writeShapeValue(shapeIndex, value);
+    }
+
+    private void writeShapeValue(int shapeIndex, float value) {
+
+        float clamped = appearanceData.getShape(shapeIndex).clamp(value);
+        int morphIndex = appearanceData.getShapeMorph(bodyIndex, shapeIndex);
 
         shapeValues[shapeIndex] = clamped;
-        morphWeights[shape.getMorphIndex()] = clamped;
+
+        if (morphIndex != EngineSetting.INDEX_NOT_FOUND)
+            morphWeights[morphIndex] = clamped;
     }
 
     // Face \\
@@ -218,7 +270,7 @@ public class AppearanceHandle extends HandlePackage {
 
     private void setExpression(AppearanceExpression expression, float weight) {
 
-        int morphIndex = appearanceData.getExpressionMorph(expression);
+        int morphIndex = appearanceData.getExpressionMorph(bodyIndex, expression);
 
         if (morphIndex != EngineSetting.INDEX_NOT_FOUND)
             morphWeights[morphIndex] = weight;
@@ -264,7 +316,7 @@ public class AppearanceHandle extends HandlePackage {
         for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
             appearance.setDetail(skinnedDetail, details[skinnedDetail.ordinal()]);
 
-        appearance.setMorphWeights(appearanceData.getCharacterMesh(), morphWeights);
+        appearance.setMorphWeights(getBodyMesh(), morphWeights);
     }
 
     // Proportions \\
@@ -287,26 +339,71 @@ public class AppearanceHandle extends HandlePackage {
         applyProportions();
     }
 
+    // Every bone's proportion from the build, the head shape and the sliders scaling it, and its shaping from the
+    // sliders moving and turning it, then the pose struck again
     private void applyProportions() {
 
         float buildFactor = appearanceData.getBuildFactor(weightRatio);
         int headBoneIndex = appearanceData.getHeadBoneIndex();
         int boneCount = appearanceData.getRigHandle().getBoneCount();
 
+        accumulateBoneShaping();
+
         for (int i = 0; i < boneCount; i++) {
 
             float girth = 1f + (buildFactor - 1f) * appearanceData.getGirthInfluence(i);
+            Vector3 scale = boneScales[i];
 
             if (i == headBoneIndex)
                 animationStateHandle.setBoneProportion(
                         i,
-                        girth * headProportion.x,
-                        headProportion.y,
-                        girth * headProportion.z);
+                        girth * headProportion.x * scale.x,
+                        headProportion.y * scale.y,
+                        girth * headProportion.z * scale.z);
             else
-                animationStateHandle.setBoneProportion(i, girth, 1f, girth);
+                animationStateHandle.setBoneProportion(i, girth * scale.x, scale.y, girth * scale.z);
+
+            animationStateHandle.setBoneShape(i, boneMoves[i], boneTurns[i]);
         }
 
         animationStateHandle.refreshPose();
+    }
+
+    // Each bone's move, turn and scale summed over the sliders driving it, each at its value; a scale is held above
+    // the least a bone may shrink to
+    private void accumulateBoneShaping() {
+
+        for (int i = 0; i < boneMoves.length; i++) {
+            boneMoves[i].set(0f, 0f, 0f);
+            boneTurns[i].set(0f, 0f, 0f);
+            boneScales[i].set(1f, 1f, 1f);
+        }
+
+        for (int s = 0; s < shapeValues.length; s++) {
+
+            AppearanceShapeStruct shape = appearanceData.getShape(s);
+            float value = shapeValues[s];
+
+            for (int t = 0; t < shape.getBoneTargetCount(); t++) {
+
+                AppearanceBoneTargetStruct target = shape.getBoneTarget(t);
+                Vector3 move = target.getMove();
+                Vector3 turn = target.getTurn();
+                Vector3 scale = target.getScale();
+                int boneIndex = target.getBoneIndex();
+
+                boneMoves[boneIndex].add(move.x * value, move.y * value, move.z * value);
+                boneTurns[boneIndex].add(turn.x * value, turn.y * value, turn.z * value);
+                boneScales[boneIndex].add(scale.x * value, scale.y * value, scale.z * value);
+            }
+        }
+
+        float least = EngineSetting.APPEARANCE_BONE_SCALE_MIN;
+
+        for (int i = 0; i < boneScales.length; i++)
+            boneScales[i].set(
+                    Math.max(least, boneScales[i].x),
+                    Math.max(least, boneScales[i].y),
+                    Math.max(least, boneScales[i].z));
     }
 }

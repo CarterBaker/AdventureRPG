@@ -116,7 +116,7 @@ public class EntityRenderSystem extends SystemPackage {
         composeModelMatrix(entity, viewerChunkCoordinate);
         resolveAppearance(entityData, entity.getAppearanceHandle(), hideHead);
         pushBody(
-                entityData.getCharacterMesh(),
+                entityData,
                 entity.getAppearanceHandle(),
                 entityData.getCharacterMaterial(),
                 skinningMatrices,
@@ -138,21 +138,24 @@ public class EntityRenderSystem extends SystemPackage {
 
         modelMatrixScratch.set(modelMatrix);
         resolveAppearance(entityData, appearance, false);
-        pushBody(entityData.getCharacterMesh(), appearance, material, skinningMatrices, targetFbo, window);
+        pushBody(entityData, appearance, material, skinningMatrices, targetFbo, window);
     }
 
+    // The body the appearance's gender wears, the template's mesh without an appearance, then every feature worn
     private void pushBody(
-            MeshHandle characterMesh,
+            EntityData entityData,
             AppearanceHandle appearance,
             MaterialInstance material,
             Matrix4[] skinningMatrices,
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        pushCharacterPart(characterMesh, material, skinningMatrices, targetFbo, window);
-
-        if (appearance == null)
+        if (appearance == null) {
+            pushCharacterPart(entityData.getCharacterMesh(), material, skinningMatrices, targetFbo, window);
             return;
+        }
+
+        pushCharacterPart(appearance.getBodyMesh(), material, skinningMatrices, targetFbo, window);
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (appearance.hasFeature(featureSlot))

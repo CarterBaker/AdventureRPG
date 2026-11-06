@@ -2361,6 +2361,9 @@ public class EngineSetting {
     public static final float APPEARANCE_SHAPE_MAX = 1f;
     public static final float APPEARANCE_SHAPE_DEFAULT = 0f;
     public static final String APPEARANCE_SHAPE_GROUP_DEFAULT = "face";
+
+    // Appearance Bones — the least a face slider's scale may leave a bone at, so a bone never turns inside out
+    public static final float APPEARANCE_BONE_SCALE_MIN = 0.1f;
     public static final float NPC_SHAPE_VARIATION = 0.18f;
 
     // Progression Text

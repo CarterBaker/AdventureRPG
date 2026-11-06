@@ -170,6 +170,10 @@ class RecordingAssetBranch extends BranchPackage {
             if (entityData.hasCharacterModel())
                 add(RecorderAssetKind.MODELS, entityData.getCharacterMesh(), template.getName());
 
+            if (entityData.hasAppearance())
+                for (int i = 1; i < entityData.getAppearanceData().getBodyCount(); i++)
+                    add(RecorderAssetKind.MODELS, entityData.getAppearanceData().getBodyMesh(i), template.getName());
+
             if (entityData.getCharacterMaterial() != null)
                 add(RecorderAssetKind.MATERIALS,
                         entityData.getCharacterMaterial().getMaterialName(), template.getName());

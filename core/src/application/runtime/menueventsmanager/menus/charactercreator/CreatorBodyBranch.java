@@ -276,7 +276,7 @@ public class CreatorBodyBranch extends BranchPackage {
 
     private String resolveLabel(CreatorSlider slider, int index, EntityInstance player) {
         return switch (slider) {
-            case SHAPE -> toTitle(player.getEntityData().getAppearanceData().getShape(index).getMorphName());
+            case SHAPE -> toTitle(player.getEntityData().getAppearanceData().getShape(index).getShapeName());
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_LABELS[index];
             default -> slider.getLabel();
         };

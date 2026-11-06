@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
+import application.bootstrap.entitypipeline.appearance.AppearanceBoneTargetStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceExpression;
 import application.bootstrap.entitypipeline.appearance.AppearanceGenderStruct;
@@ -8,6 +9,7 @@ import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
@@ -18,7 +20,9 @@ import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class AppearanceBuilder extends BuilderPackage {
 
@@ -27,18 +31,24 @@ class AppearanceBuilder extends BuilderPackage {
      * AppearanceData, resolved against the character mesh and its rig.
      * "colors", "palettes" and "details" are keyed by the lower-case
      * SkinnedColor and SkinnedDetail names; "shapes" lists the sliders, each
-     * naming a morph of the character mesh with its group and range;
-     * "expressions" names the morph each AppearanceExpression plays;
-     * "genders" gives each gender its starting shapes and features. Every
-     * default feature must sit in the slot it is declared under and fit the
-     * rig. A color left out is white, a palette left out holds only its
-     * default color, a detail left out is EngineSetting's default, and the
-     * build curve defaults to a flat 1.0. Bootstrap-only.
+     * known by its "name" (its morph's name when it gives none) and driving a
+     * "morph", the "bones" it moves, turns and scales per unit of its value,
+     * or both, with its group and range; "expressions" names the morph each
+     * AppearanceExpression plays; "genders" gives each gender the body
+     * "mesh" it wears (the model's own when it names none) and its starting
+     * shapes, by name, and features. Every body must be on the model's rig
+     * and carry every morph the sliders and expressions name. Every default
+     * feature must sit in the slot it is declared under and fit the rig. A
+     * color left out is white, a palette left out holds only its default
+     * color, a detail left out is EngineSetting's default, and the build
+     * curve defaults to a flat 1.0. Bootstrap-only, apart from an editor's
+     * preview builds.
      */
 
     // Internal
     private FeatureManager featureManager;
     private GenderManager genderManager;
+    private MeshManager meshManager;
 
     // Base \\
 
@@ -46,6 +56,7 @@ class AppearanceBuilder extends BuilderPackage {
     protected void get() {
         this.featureManager = get(FeatureManager.class);
         this.genderManager = get(GenderManager.class);
+        this.meshManager = get(MeshManager.class);
     }
 
     // Build \\
@@ -64,18 +75,20 @@ class AppearanceBuilder extends BuilderPackage {
                 ? appearanceArpg.getAsObject("build")
                 : new ArpgObjectStruct();
 
-        AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, characterMesh, sourceName);
+        MeshHandle[] bodyMeshes = parseBodies(appearanceArpg, characterMesh, sourceName);
+        AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, rigHandle, sourceName);
         AppearanceData appearanceData = new AppearanceData(
                 rigHandle,
                 rigHandle.getBoneIndex(headBoneName),
-                characterMesh,
+                bodyMeshes,
                 colors,
                 parsePalettes(appearanceArpg, colors, sourceName),
                 parseDetails(appearanceArpg, sourceName),
                 shapes,
-                parseExpressions(appearanceArpg, characterMesh, sourceName),
+                resolveShapeMorphs(bodyMeshes, shapes, sourceName),
+                parseExpressions(appearanceArpg, bodyMeshes, sourceName),
                 parseFeatures(appearanceArpg, sourceName),
-                parseGenders(appearanceArpg, shapes, sourceName),
+                parseGenders(appearanceArpg, bodyMeshes, shapes, sourceName),
                 ArpgUtility.getFloat(buildArpg, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
                 ArpgUtility.getFloat(buildArpg, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
                 parseGirthInfluence(buildArpg, rigHandle, sourceName));
@@ -188,11 +201,44 @@ class AppearanceBuilder extends BuilderPackage {
         return details;
     }
 
+    // Bodies \\
+
+    // The model's mesh, then every other mesh a gender wears, each once; all on the model's rig
+    private MeshHandle[] parseBodies(ArpgObjectStruct appearanceArpg, MeshHandle characterMesh, String sourceName) {
+
+        ObjectArrayList<MeshHandle> bodies = new ObjectArrayList<>();
+        bodies.add(characterMesh);
+
+        if (!ArpgUtility.hasObject(appearanceArpg, "genders"))
+            return bodies.toArray(new MeshHandle[0]);
+
+        ArpgObjectStruct gendersArpg = appearanceArpg.getAsObject("genders");
+
+        for (String genderName : gendersArpg.keySet()) {
+
+            ArpgObjectStruct presetArpg = gendersArpg.getAsObject(genderName);
+
+            if (!ArpgUtility.hasString(presetArpg, "mesh"))
+                continue;
+
+            MeshHandle bodyMesh = meshManager.getMeshHandleFromMeshName(presetArpg.get("mesh").getAsString());
+
+            if (!bodyMesh.hasRig() || bodyMesh.getRigHandle() != characterMesh.getRigHandle())
+                throwException("Appearance gender \"" + genderName + "\" wears mesh \"" + bodyMesh.getMeshName()
+                        + "\", which is not rigged on the model's rig. Source: " + sourceName);
+
+            if (!bodies.contains(bodyMesh))
+                bodies.add(bodyMesh);
+        }
+
+        return bodies.toArray(new MeshHandle[0]);
+    }
+
     // Shapes \\
 
     private AppearanceShapeStruct[] parseShapes(
             ArpgObjectStruct appearanceArpg,
-            MeshHandle characterMesh,
+            RigHandle rigHandle,
             String sourceName) {
 
         if (!ArpgUtility.hasArray(appearanceArpg, "shapes"))
@@ -204,23 +250,35 @@ class AppearanceBuilder extends BuilderPackage {
         for (int i = 0; i < shapes.length; i++) {
 
             ArpgObjectStruct shapeArpg = shapesArpg.get(i).getAsObject();
-            String morphName = ArpgUtility.validateString(shapeArpg, "morph");
+            String morphName = ArpgUtility.hasString(shapeArpg, "morph") ? shapeArpg.get("morph").getAsString() : null;
+            String shapeName = ArpgUtility.getString(shapeArpg, "name", morphName);
             float min = ArpgUtility.getFloat(shapeArpg, "min", EngineSetting.APPEARANCE_SHAPE_MIN);
             float max = ArpgUtility.getFloat(shapeArpg, "max", EngineSetting.APPEARANCE_SHAPE_MAX);
             float defaultValue = ArpgUtility.getFloat(shapeArpg, "default", EngineSetting.APPEARANCE_SHAPE_DEFAULT);
 
+            if (shapeName == null || shapeName.isEmpty())
+                throwException("Appearance shape " + i + " has neither a \"name\" nor a \"morph\" to be known by. "
+                        + "Source: " + sourceName);
+
             if (max <= min || defaultValue < min || defaultValue > max)
-                throwException("Appearance shape \"" + morphName + "\" must have min below max and its default "
+                throwException("Appearance shape \"" + shapeName + "\" must have min below max and its default "
                         + "between them. Source: " + sourceName);
 
             for (int j = 0; j < i; j++)
-                if (shapes[j].getMorphName().equals(morphName))
-                    throwException("Appearance shape \"" + morphName + "\" is listed twice. Source: " + sourceName);
+                if (shapes[j].getShapeName().equals(shapeName))
+                    throwException("Appearance shape \"" + shapeName + "\" is listed twice. Source: " + sourceName);
+
+            AppearanceBoneTargetStruct[] boneTargets = parseBoneTargets(shapeArpg, rigHandle, shapeName, sourceName);
+
+            if (morphName == null && boneTargets.length == 0)
+                throwException("Appearance shape \"" + shapeName + "\" drives nothing — give it a \"morph\" or "
+                        + "\"bones\". Source: " + sourceName);
 
             shapes[i] = new AppearanceShapeStruct(
-                    morphName,
+                    shapeName,
                     ArpgUtility.getString(shapeArpg, "group", EngineSetting.APPEARANCE_SHAPE_GROUP_DEFAULT),
-                    resolveMorph(characterMesh, morphName, sourceName),
+                    morphName,
+                    boneTargets,
                     min,
                     max,
                     defaultValue);
@@ -229,45 +287,112 @@ class AppearanceBuilder extends BuilderPackage {
         return shapes;
     }
 
+    // "bones" lists what one unit of the slider does to each bone it drives, every bone at most once
+    private AppearanceBoneTargetStruct[] parseBoneTargets(
+            ArpgObjectStruct shapeArpg,
+            RigHandle rigHandle,
+            String shapeName,
+            String sourceName) {
+
+        if (!ArpgUtility.hasArray(shapeArpg, "bones"))
+            return new AppearanceBoneTargetStruct[0];
+
+        ArpgArrayStruct bonesArpg = shapeArpg.getAsArray("bones");
+        AppearanceBoneTargetStruct[] targets = new AppearanceBoneTargetStruct[bonesArpg.size()];
+
+        for (int i = 0; i < targets.length; i++) {
+
+            ArpgObjectStruct targetArpg = bonesArpg.get(i).getAsObject();
+            String boneName = ArpgUtility.validateString(targetArpg, "bone");
+
+            if (!rigHandle.hasBone(boneName))
+                throwException("Appearance shape \"" + shapeName + "\" drives unknown bone \"" + boneName
+                        + "\". Source: " + sourceName);
+
+            int boneIndex = rigHandle.getBoneIndex(boneName);
+
+            for (int j = 0; j < i; j++)
+                if (targets[j].getBoneIndex() == boneIndex)
+                    throwException("Appearance shape \"" + shapeName + "\" drives bone \"" + boneName
+                            + "\" twice. Source: " + sourceName);
+
+            targets[i] = new AppearanceBoneTargetStruct(
+                    boneIndex,
+                    parseAmount(targetArpg, "move"),
+                    parseAmount(targetArpg, "turn"),
+                    parseAmount(targetArpg, "scale"));
+        }
+
+        return targets;
+    }
+
+    private Vector3 parseAmount(ArpgObjectStruct targetArpg, String key) {
+
+        if (!ArpgUtility.hasArray(targetArpg, key))
+            return new Vector3();
+
+        ArpgArrayStruct amount = ArpgUtility.validateArray(targetArpg, key, 3);
+
+        return new Vector3(amount.get(0).getAsFloat(), amount.get(1).getAsFloat(), amount.get(2).getAsFloat());
+    }
+
+    // The morph each slider weighs on every body, INDEX_NOT_FOUND for a slider that drives only bones
+    private int[][] resolveShapeMorphs(MeshHandle[] bodyMeshes, AppearanceShapeStruct[] shapes, String sourceName) {
+
+        int[][] shapeMorphs = new int[bodyMeshes.length][shapes.length];
+
+        for (int b = 0; b < bodyMeshes.length; b++)
+            for (int i = 0; i < shapes.length; i++)
+                shapeMorphs[b][i] = shapes[i].hasMorph()
+                        ? resolveMorph(bodyMeshes[b], shapes[i].getMorphName(), sourceName)
+                        : EngineSetting.INDEX_NOT_FOUND;
+
+        return shapeMorphs;
+    }
+
     // Expressions \\
 
-    private int[] parseExpressions(ArpgObjectStruct appearanceArpg, MeshHandle characterMesh, String sourceName) {
+    private int[][] parseExpressions(ArpgObjectStruct appearanceArpg, MeshHandle[] bodyMeshes, String sourceName) {
 
-        int[] expressionMorphs = new int[AppearanceExpression.VALUES.length];
+        int[][] expressionMorphs = new int[bodyMeshes.length][AppearanceExpression.VALUES.length];
         ArpgObjectStruct expressionsArpg = ArpgUtility.hasObject(appearanceArpg, "expressions")
                 ? appearanceArpg.getAsObject("expressions")
                 : new ArpgObjectStruct();
 
         validateKeys(expressionsArpg, AppearanceExpression.class, "expressions", sourceName);
 
-        for (AppearanceExpression expression : AppearanceExpression.VALUES) {
+        for (int b = 0; b < bodyMeshes.length; b++)
+            for (AppearanceExpression expression : AppearanceExpression.VALUES) {
 
-            String key = ArpgUtility.toEnumName(expression);
+                String key = ArpgUtility.toEnumName(expression);
 
-            expressionMorphs[expression.ordinal()] = ArpgUtility.hasString(expressionsArpg, key)
-                    ? resolveMorph(characterMesh, expressionsArpg.get(key).getAsString(), sourceName)
-                    : EngineSetting.INDEX_NOT_FOUND;
-        }
+                expressionMorphs[b][expression.ordinal()] = ArpgUtility.hasString(expressionsArpg, key)
+                        ? resolveMorph(bodyMeshes[b], expressionsArpg.get(key).getAsString(), sourceName)
+                        : EngineSetting.INDEX_NOT_FOUND;
+            }
 
         return expressionMorphs;
     }
 
-    private int resolveMorph(MeshHandle characterMesh, String morphName, String sourceName) {
+    private int resolveMorph(MeshHandle bodyMesh, String morphName, String sourceName) {
 
-        int morphIndex = characterMesh.getMorphIndex(morphName);
+        int morphIndex = bodyMesh.getMorphIndex(morphName);
 
         if (morphIndex == EngineSetting.INDEX_NOT_FOUND)
-            throwException("Appearance names morph \"" + morphName + "\" but the character mesh \""
-                    + characterMesh.getMeshName() + "\" has no morph of that name. Source: " + sourceName);
+            throwException("Appearance names morph \"" + morphName + "\" but the body mesh \""
+                    + bodyMesh.getMeshName() + "\" has no morph of that name — every body must carry every morph "
+                    + "the sliders and expressions name. Source: " + sourceName);
 
         return morphIndex;
     }
 
     // Genders \\
 
-    // "genders" maps a gender's name to the "shapes" (by morph) and "features" it starts with
+    // "genders" maps a gender's name to the body "mesh" it wears and the "shapes" (by name) and "features" it starts
+    // with
     private Int2ObjectOpenHashMap<AppearanceGenderStruct> parseGenders(
             ArpgObjectStruct appearanceArpg,
+            MeshHandle[] bodyMeshes,
             AppearanceShapeStruct[] shapes,
             String sourceName) {
 
@@ -287,25 +412,43 @@ class AppearanceBuilder extends BuilderPackage {
                     : new ArpgObjectStruct();
 
             for (int i = 0; i < shapes.length; i++)
-                shapeValues[i] = ArpgUtility.getFloat(shapesArpg, shapes[i].getMorphName(), Float.NaN);
+                shapeValues[i] = ArpgUtility.getFloat(shapesArpg, shapes[i].getShapeName(), Float.NaN);
 
-            for (String morphName : shapesArpg.keySet())
-                if (!hasShape(shapes, morphName))
-                    throwException("Appearance gender \"" + genderName + "\" sets \"" + morphName
+            for (String shapeName : shapesArpg.keySet())
+                if (!hasShape(shapes, shapeName))
+                    throwException("Appearance gender \"" + genderName + "\" sets \"" + shapeName
                             + "\", which is not a shape slider. Source: " + sourceName);
 
             genderID2Preset.put(
                     genderManager.getGenderIDFromGenderName(genderName),
-                    new AppearanceGenderStruct(shapeValues, parseFeatures(presetArpg, sourceName)));
+                    new AppearanceGenderStruct(
+                            resolveBodyIndex(presetArpg, bodyMeshes),
+                            shapeValues,
+                            parseFeatures(presetArpg, sourceName)));
         }
 
         return genderID2Preset;
     }
 
-    private boolean hasShape(AppearanceShapeStruct[] shapes, String morphName) {
+    // The body a preset wears among the bodies parsed, the model's own when it names none
+    private int resolveBodyIndex(ArpgObjectStruct presetArpg, MeshHandle[] bodyMeshes) {
+
+        if (!ArpgUtility.hasString(presetArpg, "mesh"))
+            return 0;
+
+        MeshHandle bodyMesh = meshManager.getMeshHandleFromMeshName(presetArpg.get("mesh").getAsString());
+
+        for (int i = 0; i < bodyMeshes.length; i++)
+            if (bodyMeshes[i] == bodyMesh)
+                return i;
+
+        return 0;
+    }
+
+    private boolean hasShape(AppearanceShapeStruct[] shapes, String shapeName) {
 
         for (AppearanceShapeStruct shape : shapes)
-            if (shape.getMorphName().equals(morphName))
+            if (shape.getShapeName().equals(shapeName))
                 return true;
 
         return false;

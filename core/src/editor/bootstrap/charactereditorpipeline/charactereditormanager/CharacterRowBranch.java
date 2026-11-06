@@ -28,7 +28,8 @@ class CharacterRowBranch extends BranchPackage {
      * the mode and of what is picked, the mesh modes' from
      * CharacterMeshRowBranch and the rig's from CharacterRigRowBranch. Every
      * value shown is read through CharacterPropertyBranch, the same path that
-     * edits it. A mode that holds the bind pose lists no pose.
+     * edits it. A mode that holds the bind pose lists no pose; a template
+     * of more than one gender lists the gender the preview is made as.
      */
 
     // Internal
@@ -52,12 +53,18 @@ class CharacterRowBranch extends BranchPackage {
     void buildListRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         CharacterEditorMode mode = characterEditorManager.getMode();
+        boolean genders = document.hasPreview() && document.getPreviewData().getGenderCount() > 1;
 
-        if (!mode.holdsBindPose()) {
+        if (!mode.holdsBindPose() || genders)
             rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
+
+        if (genders)
+            addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_GENDER,
+                    EditorSetting.CHARACTER_EDITOR_LABEL_GENDER);
+
+        if (!mode.holdsBindPose())
             addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_POSE,
                     EditorSetting.CHARACTER_EDITOR_LABEL_POSE);
-        }
 
         RigHandle rigHandle = characterPropertyBranch.resolveRig(document);
 
@@ -196,7 +203,7 @@ class CharacterRowBranch extends BranchPackage {
 
         for (int i = 0; i < appearanceData.getShapeCount(); i++)
             addNumber(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE, i),
-                    appearanceData.getShape(i).getMorphName());
+                    appearanceData.getShape(i).getShapeName());
     }
 
     private void addChannels(

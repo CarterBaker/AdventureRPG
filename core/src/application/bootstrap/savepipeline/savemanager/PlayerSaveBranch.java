@@ -103,13 +103,13 @@ class PlayerSaveBranch extends BranchPackage {
         return detailsArpg;
     }
 
-    // Shapes by the morph each weighs, so a save survives sliders being added to or reordered in the template
+    // Shapes by their names, so a save survives sliders being added to or reordered in the template
     private ArpgObjectStruct buildShapes(AppearanceHandle appearanceHandle, AppearanceData appearanceData) {
 
         ArpgObjectStruct shapesArpg = new ArpgObjectStruct();
 
         for (int i = 0; i < appearanceData.getShapeCount(); i++)
-            shapesArpg.addProperty(appearanceData.getShape(i).getMorphName(), appearanceHandle.getShapeValue(i));
+            shapesArpg.addProperty(appearanceData.getShape(i).getShapeName(), appearanceHandle.getShapeValue(i));
 
         return shapesArpg;
     }

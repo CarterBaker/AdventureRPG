@@ -1,8 +1,8 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the
-Character Editor, the Animation Editor, their docker windows, or a character's appearance (morphs, zones, masks,
-shaders). `.claude/CLAUDE.md` still applies in full.
+Character Editor, the Face Editor, the Animation Editor, their docker windows, or a character's appearance (morphs,
+face controls, zones, masks, shaders). `.claude/CLAUDE.md` still applies in full.
 
 ---
 
@@ -17,6 +17,9 @@ layouts like any other.
 | Character Editor | `CharacterEditorContext` | the preview, its overlay and the mode toolbar; a tool canvas in Mesh, Sculpt, Weights and Rig |
 | Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
 | Character Properties | `CharacterPropertiesContext` | `CharacterEditorManager.buildPropertyRows` |
+| Face Editor | `FaceEditorContext` | the open character framed on its head, its face bones marked; the Character Face tool canvas |
+| Face Outliner | `FaceOutlinerContext` | `FaceEditorManager.buildListRows` |
+| Face Properties | `FacePropertiesContext` | `FaceEditorManager.buildPropertyRows` |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
 | Animation Outliner | `AnimationOutlinerContext` | `AnimationEditorManager.buildListRows` |
 | Animation Properties | `AnimationPropertiesContext` | `AnimationEditorManager.buildPropertyRows` |
@@ -25,18 +28,21 @@ layouts like any other.
 - A docker context implements `CharacterViewRowSource` and creates `CharacterViewPanelSystem`,
   `CharacterViewDockSystem` and `ToolCanvasSystem`; the dock system opens `menus/editor/CharacterDock.arpg` and
   refills it only when the source's revision moves. Row templates stay in the tool's own menu
-  (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so their buttons route to the
-  tool's branch. A tool without a text row template must never list a `TEXT` row.
+  (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `FACE_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
+  their buttons route to the tool's branch. A tool without a text row template must never list a `TEXT` row.
 - Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_SCULPT`, `CHARACTER_WEIGHTS`,
-  `CHARACTER_RIG`, `ANIMATION_POSE`); brushes the Brushes window's. Add a tool to a canvas in `ToolCanvas`, never as a
-  panel button. The mesh's one-off operations (transform, geometry, weights, selection) are the canvas's action groups
-  (`ToolActionGroupStruct`), shown in the Tools window under the tools and run by `CharacterEditorContext.runToolAction`
-  through `CharacterEditorManager.act`, the same key their shortcuts carry. Properties keeps values only.
-- Every viewport (Character, Animation, Animation Tree Editor) looks through the editor's `ViewCameraSystem`, framing
-  `CharacterViewPoseSystem`. A viewport system takes a click only when it acts on something (a vertex, a joint, the
-  mesh under the brush) and claims it with `EditorInputSystem.claim`; any other left press orbits and a right press
-  pans. Cancel clicks (`CHARACTER_VIEW_BUTTON_CANCEL`) are claimed too. Test `ViewCameraSystem.isDragging`, never a
-  held button, to stay out of a camera drag.
+  `CHARACTER_RIG`, `CHARACTER_FACE`, `ANIMATION_POSE`); brushes the Brushes window's. Add a tool to a canvas in
+  `ToolCanvas`, never as a panel button. The mesh's one-off operations (transform, geometry, weights, selection) are
+  the canvas's action groups (`ToolActionGroupStruct`), shown in the Tools window under the tools and run by
+  `CharacterEditorContext.runToolAction` through `CharacterEditorManager.act`, the same key their shortcuts carry; a
+  face control's operations (add, duplicate, remove, drive the picked bone, mirror, reset the preview) are the face
+  canvas's, run by `FaceEditorContext.runToolAction` through `FaceEditorManager.act`. Properties keeps values only.
+- Every viewport (Character, Face, Animation, Animation Tree Editor) looks through the editor's `ViewCameraSystem`,
+  framing `CharacterViewPoseSystem` (the Face Editor frames the head through `FaceEditorPreviewSystem`). A viewport
+  system takes a click only when it acts on something (a vertex, a joint, the mesh under the brush) and claims it with
+  `EditorInputSystem.claim`; any other left press orbits and a right press pans. Cancel clicks
+  (`CHARACTER_VIEW_BUTTON_CANCEL`) are claimed too. Test `ViewCameraSystem.isDragging`, never a held button, to stay
+  out of a camera drag.
 
 ## Modes
 
@@ -46,8 +52,8 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
 
 ## Characters
 
-A character is one rigged body mesh with its whole head modelled in (`mesh/characters/humanoid/HumanoidBodyMesh`) plus
-worn feature meshes (`FeatureSlot`: hair). Nothing is a texture swap.
+A character is a rigged body mesh per gender with its whole head modelled in, plus worn feature meshes (`FeatureSlot`:
+hair). Nothing is a texture swap.
 
 - **Mesh format** (`RiggedMeshArpgUtility`): every quad may name its `zone` (`MeshZone`: skin, eye, brow, lash, hair,
   cloth, mouth, teeth); `masks` (channels `EngineSetting.RIGGED_MESH_MASK_CHANNELS`) and `morphs` name vertices by the
@@ -59,19 +65,26 @@ worn feature meshes (`FeatureSlot`: hair). Nothing is a texture swap.
   appearance texels (`SkinnedAppearanceStruct`: hidden bone, one texel per `SkinnedColor`, `SkinnedDetail` amounts),
   then its morph weights. The shaders read them through `characters/includes/CharacterAppearance.glsl` and shade by
   zone in `CharacterSurface.glsl`; keep the GLSL constants in step with the enums.
-- **Appearance.** `AppearanceData` holds the template's colors, palettes, details, shape sliders (`shapes`, each a
-  morph with a group and range) and the morphs each `AppearanceExpression` plays. `AppearanceHandle` keeps slider
-  values as morph weights, plays the blink (`updateFace`, through the half shape) and hands everything to a draw in
-  `writeAppearance`. The creator lists shapes by group (the body group on the Body tab); saves store shapes by morph
-  name.
+- **Appearance.** `AppearanceData` holds the template's body meshes (the model's `mesh` first, then each gender's),
+  colors, palettes, details, shape sliders and the morphs each `AppearanceExpression` plays, the morphs resolved on
+  every body (`getShapeMorph`, `getExpressionMorph`). A slider (`AppearanceShapeStruct`) is known by its `name` (its
+  morph's when it gives none) and drives a `morph`, the `bones` it moves, turns and scales per unit of its value
+  (`AppearanceBoneTargetStruct`), or both: that is a face control. `AppearanceHandle` keeps slider values as morph
+  weights of the body worn and sums the bone targets into each bone's shaping (`AnimationStateHandle.setBoneShape`,
+  laid on the bind pose under every pose) and proportion in `applyProportions`, plays the blink (`updateFace`, through
+  the half shape) and hands everything to a draw in `writeAppearance`. The creator lists shapes by group (the body
+  group on the Body tab); saves and gender presets store shapes by name.
 - **Shape keys in the editor.** Sculpt mode's Shape Keys rows pick the morph being sculpted
   (`CharacterMeshBranch.editShape`): the morph is lifted into the positions so every tool works unchanged, and baked
   back into deltas when sculpting returns to the base, the mode or part changes, or the mesh is saved. Mesh modes
   preview with every slider at zero and the face still.
-- **Genders.** One mesh holds both: the `masculine` morph turns the woman into a man. The template's `genders`
-  presets set each gender's starting shapes and hair; `EntityInstance.setGenderID` resets the appearance to them.
-- **Assets.** The base body, its 48 morphs and the hair styles are generated (catalogued); a rigged mesh may hold at
-  most `RIGGED_MESH_VERT_LIMIT` corners.
+- **Genders.** The template's `genders` presets give each gender the body `mesh` it wears, its starting shapes and its
+  hair; every body is on the model's rig and carries every morph the sliders and expressions name.
+  `EntityInstance.setGenderID` resets the appearance to the preset, and `EntityRenderSystem` draws
+  `AppearanceHandle.getBodyMesh`. The Character Editor previews one gender at a time (the Gender row): its body and
+  features are the parts the mesh modes edit, and untouched preview sliders sit where that gender starts them.
+- **Assets.** Generated bodies and hair styles are catalogued; a rigged mesh may hold at most `RIGGED_MESH_VERT_LIMIT`
+  corners.
 
 ## Who owns what
 
@@ -83,6 +96,13 @@ worn feature meshes (`FeatureSlot`: hair). Nothing is a texture swap.
 - Clip edits: `AnimationEditBranch.edit` records every edit in the clip's `CharacterViewHistoryStruct`; pose drags
   go through `AnimationEditorManager.beginPose / writePose / endPose / cancelPose`; viewport:
   `AnimationEditorPoseSystem`.
+- Face controls: `FaceEditBranch` performs every edit of the template's shapes through InfoManager, recorded in the
+  template's face history (`FaceEditorManager.getHistory`); values and actions: `FacePropertyBranch`; rows:
+  `FaceRowBranch`. Bone drags go through `FaceEditorManager.beginGesture / writeGesture / endGesture / cancelGesture`;
+  viewport: `FaceEditorGestureSystem`. The Face Editor always works on the Character Editor's active template, saves
+  and reverts through it, and takes its preview gender and slider values from it.
+- The preview look (gender, tones, sliders, blink, build, head) is put on any viewport's appearance by
+  `CharacterEditorManager.applyLook` (`CharacterLookBranch`); never set it piece by piece in a viewport.
 - Rotation and projection math shared by every viewport gesture: `CharacterPoseUtility`.
 
 ## Traps
@@ -103,5 +123,9 @@ worn feature meshes (`FeatureSlot`: hair). Nothing is a texture swap.
   `SkinnedBufferInstance.clear` lays the row out again. Never size anything per instance from a morph count read once.
 - **Sculpt works on an unrounded copy.** Positions are written rounded to the editor's precision; a stroke keeps its
   own float copy so small stamps accumulate. Topology and mirror pairs are fixed for the stroke's length.
+- **A face drag shapes per unit.** A control's bone target is what one unit of its value does, so a drag divides the
+  move, turn or growth it makes by the control's preview value; a control previewed near nothing is first taken to the
+  far end of its range. A control must always drive a morph or a bone, or the builder refuses the template: its last
+  bone is let go only while it has a morph, and its morph cleared only while it drives a bone.
 - **Euler angles.** Bones compose `Rz * Ry * Rx` from degrees and a clip's rotation is added to the bind rotation.
   Read a turn back with `CharacterPoseUtility.toEuler` against the angle it replaces, so keys never spin the long way.

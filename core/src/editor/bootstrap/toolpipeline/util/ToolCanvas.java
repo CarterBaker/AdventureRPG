@@ -17,8 +17,9 @@ public enum ToolCanvas {
      * pixels on a character. A tool shows only the options both it and the
      * canvas have, and a canvas without Size takes no brush. Biome colors
      * name biomes, so they never blend; heights, bone weights and a sculpted
-     * surface do. A character's rig and an animation's pose take the tools
-     * that pick and drag its joints.
+     * surface do. A character's rig, its face and an animation's pose take
+     * the tools that pick and drag its joints; the face drags a bone into
+     * the face control selected.
      */
 
     BIOMES(
@@ -71,6 +72,11 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.PLACE, EditorTool.ERASE },
+            false),
+    CHARACTER_FACE(
+            EditorSetting.TOOL_CANVAS_CHARACTER_FACE,
+            new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
+            new ToolActionGroupStruct[] { faceControls() },
             false),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
@@ -192,6 +198,19 @@ public enum ToolCanvas {
                 action(
                         EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_BONE,
                         EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE));
+    }
+
+    private static ToolActionGroupStruct faceControls() {
+        return new ToolActionGroupStruct(
+                EditorSetting.FACE_EDITOR_HEADER_ACTIONS,
+                action(EditorSetting.FACE_EDITOR_LABEL_ADD_CONTROL, EditorSetting.FACE_EDITOR_KEY_ADD_CONTROL),
+                action(
+                        EditorSetting.FACE_EDITOR_LABEL_DUPLICATE_CONTROL,
+                        EditorSetting.FACE_EDITOR_KEY_DUPLICATE_CONTROL),
+                action(EditorSetting.FACE_EDITOR_LABEL_REMOVE_CONTROL, EditorSetting.FACE_EDITOR_KEY_REMOVE_CONTROL),
+                action(EditorSetting.FACE_EDITOR_LABEL_ADD_TARGET, EditorSetting.FACE_EDITOR_KEY_ADD_TARGET),
+                action(EditorSetting.FACE_EDITOR_LABEL_MIRROR_TARGETS, EditorSetting.FACE_EDITOR_KEY_MIRROR_TARGETS),
+                action(EditorSetting.FACE_EDITOR_LABEL_RESET_PREVIEW, EditorSetting.FACE_EDITOR_KEY_RESET_PREVIEW));
     }
 
     private static ToolActionStruct action(String label, String key) {

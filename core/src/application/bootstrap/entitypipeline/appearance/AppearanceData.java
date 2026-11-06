@@ -14,11 +14,13 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 public class AppearanceData extends DataPackage {
 
     /*
-     * Immutable appearance template for one entity type: the character mesh
-     * whose morph targets its sliders weigh, the default color and palette of
-     * every SkinnedColor, the default amount of every SkinnedDetail, the
-     * shape sliders, the morphs each AppearanceExpression plays, the default
-     * feature per slot, each gender's starting preset, the head-shape bone and the build curve.
+     * Immutable appearance template for one entity type: the body meshes its
+     * genders wear — the template's own mesh first, every one on the same rig
+     * and carrying the same morphs — with the morph each slider weighs and
+     * each AppearanceExpression plays resolved on every body, the default
+     * color and palette of every SkinnedColor, the default amount of every
+     * SkinnedDetail, the shape sliders, the default feature per slot, each
+     * gender's starting preset, the head-shape bone and the build curve.
      * isCompatible() is the one rule for whether a feature can be worn.
      */
 
@@ -26,8 +28,9 @@ public class AppearanceData extends DataPackage {
     private final RigHandle rigHandle;
     private final int headBoneIndex;
 
-    // Mesh
-    private final MeshHandle characterMesh;
+    // Bodies — the template's mesh first
+    private final MeshHandle[] bodyMeshes;
+    private final int maxMorphCount;
 
     // Colors — indexed by SkinnedColor ordinal
     private final Color[] colors;
@@ -36,11 +39,12 @@ public class AppearanceData extends DataPackage {
     // Details — indexed by SkinnedDetail ordinal
     private final float[] details;
 
-    // Shapes
+    // Shapes — the sliders, and the morph each weighs per body, INDEX_NOT_FOUND for one that drives only bones
     private final AppearanceShapeStruct[] shapes;
+    private final int[][] shapeMorphs;
 
-    // Expressions — morph index per AppearanceExpression ordinal, INDEX_NOT_FOUND when the mesh has none
-    private final int[] expressionMorphs;
+    // Expressions — morph index per body and AppearanceExpression ordinal, INDEX_NOT_FOUND when the body has none
+    private final int[][] expressionMorphs;
 
     // Features — indexed by FeatureSlot ordinal
     private final FeatureHandle[] defaultFeatures;
@@ -58,12 +62,13 @@ public class AppearanceData extends DataPackage {
     public AppearanceData(
             RigHandle rigHandle,
             int headBoneIndex,
-            MeshHandle characterMesh,
+            MeshHandle[] bodyMeshes,
             Color[] colors,
             Color[][] palettes,
             float[] details,
             AppearanceShapeStruct[] shapes,
-            int[] expressionMorphs,
+            int[][] shapeMorphs,
+            int[][] expressionMorphs,
             FeatureHandle[] defaultFeatures,
             Int2ObjectOpenHashMap<AppearanceGenderStruct> genderID2Preset,
             float thinBuildFactor,
@@ -74,8 +79,9 @@ public class AppearanceData extends DataPackage {
         this.rigHandle = rigHandle;
         this.headBoneIndex = headBoneIndex;
 
-        // Mesh
-        this.characterMesh = characterMesh;
+        // Bodies
+        this.bodyMeshes = bodyMeshes;
+        this.maxMorphCount = resolveMaxMorphCount(bodyMeshes);
 
         // Colors
         this.colors = colors;
@@ -86,6 +92,7 @@ public class AppearanceData extends DataPackage {
 
         // Shapes
         this.shapes = shapes;
+        this.shapeMorphs = shapeMorphs;
 
         // Expressions
         this.expressionMorphs = expressionMorphs;
@@ -102,6 +109,16 @@ public class AppearanceData extends DataPackage {
         this.girthInfluence = girthInfluence;
     }
 
+    private static int resolveMaxMorphCount(MeshHandle[] bodyMeshes) {
+
+        int count = 0;
+
+        for (int i = 0; i < bodyMeshes.length; i++)
+            count = Math.max(count, bodyMeshes[i].getMorphCount());
+
+        return count;
+    }
+
     // Compatibility \\
 
     public boolean isCompatible(FeatureHandle featureHandle) {
@@ -114,6 +131,28 @@ public class AppearanceData extends DataPackage {
         return thinBuildFactor + (heavyBuildFactor - thinBuildFactor) * weightRatio;
     }
 
+    // Bodies \\
+
+    public int getBodyCount() {
+        return bodyMeshes.length;
+    }
+
+    public MeshHandle getBodyMesh(int bodyIndex) {
+        return bodyMeshes[bodyIndex];
+    }
+
+    // The body a gender wears, the template's own mesh for a gender with no preset or no mesh of its own
+    public int getBodyIndex(short genderID) {
+
+        AppearanceGenderStruct preset = genderID2Preset.get(genderID);
+        return preset != null ? preset.getBodyIndex() : 0;
+    }
+
+    // The most morphs any body carries, so one weight array serves every body
+    public int getMaxMorphCount() {
+        return maxMorphCount;
+    }
+
     // Shapes \\
 
     public int getShapeCount() {
@@ -124,14 +163,39 @@ public class AppearanceData extends DataPackage {
         return shapes[shapeIndex];
     }
 
-    // The index of the slider weighing a morph, INDEX_NOT_FOUND when no slider does
-    public int findShape(String morphName) {
+    // The morph a slider weighs on a body, INDEX_NOT_FOUND for a slider that drives only bones
+    public int getShapeMorph(int bodyIndex, int shapeIndex) {
+        return shapeMorphs[bodyIndex][shapeIndex];
+    }
+
+    // The value a slider starts at for a gender: its preset's, else the slider's default
+    public float getStartingShapeValue(short genderID, int shapeIndex) {
+
+        AppearanceGenderStruct preset = genderID2Preset.get(genderID);
+        float value = preset != null ? preset.getShapeValue(shapeIndex) : Float.NaN;
+
+        return Float.isNaN(value) ? shapes[shapeIndex].getDefaultValue() : shapes[shapeIndex].clamp(value);
+    }
+
+    // The index of the slider of a name, INDEX_NOT_FOUND when no slider has it
+    public int findShape(String shapeName) {
 
         for (int i = 0; i < shapes.length; i++)
-            if (shapes[i].getMorphName().equals(morphName))
+            if (shapes[i].getShapeName().equals(shapeName))
                 return i;
 
         return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Features \\
+
+    // The feature a gender starts with in a slot: its preset's, else the template's default
+    public FeatureHandle getStartingFeature(short genderID, FeatureSlot featureSlot) {
+
+        AppearanceGenderStruct preset = genderID2Preset.get(genderID);
+        FeatureHandle featureHandle = preset != null ? preset.getFeature(featureSlot.ordinal()) : null;
+
+        return featureHandle != null ? featureHandle : defaultFeatures[featureSlot.ordinal()];
     }
 
     // Accessible \\
@@ -142,10 +206,6 @@ public class AppearanceData extends DataPackage {
 
     public int getHeadBoneIndex() {
         return headBoneIndex;
-    }
-
-    public MeshHandle getCharacterMesh() {
-        return characterMesh;
     }
 
     public Color getColor(SkinnedColor skinnedColor) {
@@ -160,8 +220,8 @@ public class AppearanceData extends DataPackage {
         return details[skinnedDetail.ordinal()];
     }
 
-    public int getExpressionMorph(AppearanceExpression expression) {
-        return expressionMorphs[expression.ordinal()];
+    public int getExpressionMorph(int bodyIndex, AppearanceExpression expression) {
+        return expressionMorphs[bodyIndex][expression.ordinal()];
     }
 
     public FeatureHandle getDefaultFeature(FeatureSlot featureSlot) {

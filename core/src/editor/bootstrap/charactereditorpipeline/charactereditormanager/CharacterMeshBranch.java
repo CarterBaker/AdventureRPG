@@ -70,7 +70,7 @@ class CharacterMeshBranch extends BranchPackage {
 
     // Parts \\
 
-    // The keys of every part the character wears a mesh for: the body, then each mesh slot's default feature
+    // The keys of every part the preview's gender wears a mesh for: the body, then each slot's starting feature
     void collectPartKeys(CharacterDocumentInstance document, ObjectArrayList<String> partKeys) {
 
         if (!document.hasPreview())
@@ -82,8 +82,10 @@ class CharacterMeshBranch extends BranchPackage {
         if (!entityData.hasAppearance())
             return;
 
+        short genderID = characterEditorManager.getPreviewGenderID();
+
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
-            if (entityData.getAppearanceData().getDefaultFeature(featureSlot) != null)
+            if (entityData.getAppearanceData().getStartingFeature(genderID, featureSlot) != null)
                 partKeys.add(ArpgUtility.toEnumName(featureSlot));
     }
 
@@ -94,15 +96,19 @@ class CharacterMeshBranch extends BranchPackage {
 
         EntityData entityData = document.getPreviewData();
 
+        short genderID = characterEditorManager.getPreviewGenderID();
+
         if (partKey.equals(EditorSetting.CHARACTER_EDITOR_PART_BODY))
-            return entityData.getCharacterMesh();
+            return entityData.hasAppearance()
+                    ? entityData.getAppearanceData().getBodyMesh(entityData.getAppearanceData().getBodyIndex(genderID))
+                    : entityData.getCharacterMesh();
 
         FeatureSlot featureSlot = CharacterViewUtility.toEnumOrDefault(partKey, FeatureSlot.class, null);
 
         if (featureSlot == null || !entityData.hasAppearance())
             return null;
 
-        FeatureHandle featureHandle = entityData.getAppearanceData().getDefaultFeature(featureSlot);
+        FeatureHandle featureHandle = entityData.getAppearanceData().getStartingFeature(genderID, featureSlot);
         return featureHandle != null ? featureHandle.getMeshHandle() : null;
     }
 

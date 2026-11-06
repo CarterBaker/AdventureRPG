@@ -6,11 +6,16 @@ import engine.root.StructPackage;
 public class AppearanceGenderStruct extends StructPackage {
 
     /*
-     * The look one gender starts with: a value per shape slider (NaN keeps the
-     * template's default) and a feature per slot (null keeps the template's).
-     * A woman and a man are one mesh; their presets set the masculine shape
-     * and the hair each starts with.
+     * The look one gender starts with: the body it wears, by its index among
+     * the template's body meshes (0 is the template's own mesh), a value per
+     * shape slider (NaN keeps the template's default) and a feature per slot
+     * (null keeps the template's). Each gender may be its own mesh, so a man
+     * and a woman are modelled apart and share the rig, the sliders and the
+     * features.
      */
+
+    // Body
+    private final int bodyIndex;
 
     // Shapes — indexed like the template's shape sliders
     private final float[] shapeValues;
@@ -20,12 +25,23 @@ public class AppearanceGenderStruct extends StructPackage {
 
     // Constructor \\
 
-    public AppearanceGenderStruct(float[] shapeValues, FeatureHandle[] features) {
+    public AppearanceGenderStruct(int bodyIndex, float[] shapeValues, FeatureHandle[] features) {
+
+        // Body
+        this.bodyIndex = bodyIndex;
+
+        // Shapes
         this.shapeValues = shapeValues;
+
+        // Features
         this.features = features;
     }
 
     // Accessible \\
+
+    public int getBodyIndex() {
+        return bodyIndex;
+    }
 
     public float getShapeValue(int shapeIndex) {
         return shapeValues[shapeIndex];

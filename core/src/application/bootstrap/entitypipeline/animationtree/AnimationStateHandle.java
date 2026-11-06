@@ -28,7 +28,9 @@ public class AnimationStateHandle extends HandlePackage {
      * brings its own moves to any tree that maps the action. A posture —
      * rotations set per bone by whoever poses the body by hand, as the first
      * person view bends and twists the chest after the look — is laid over
-     * the blended tree and stays until it is set again. poseClip() and
+     * the blended tree and stays until it is set again. The appearance's
+     * shaping — a move and a turn per bone, as face sliders drive a face rig
+     * — sits on the bind pose under all of it. poseClip() and
      * poseRest() pose the rig outside the tree for editors. All arrays are
      * allocated once in constructor(), so updates never allocate.
      */
@@ -70,6 +72,10 @@ public class AnimationStateHandle extends HandlePackage {
 
     // Proportions — per bone, non-inherited
     private Vector3[] boneProportions;
+
+    // Shaping — per bone, the move in blocks and the turn in degrees the appearance lays on the bind pose
+    private Vector3[] boneShapePositions;
+    private Vector3[] boneShapeRotations;
 
     // Posture — per bone, rotation in degrees laid over the tree's pose
     private Vector3[] bonePostures;
@@ -155,12 +161,16 @@ public class AnimationStateHandle extends HandlePackage {
 
         // Output
         this.boneProportions = new Vector3[boneCount];
+        this.boneShapePositions = new Vector3[boneCount];
+        this.boneShapeRotations = new Vector3[boneCount];
         this.bonePostures = new Vector3[boneCount];
         this.skinningMatrices = new Matrix4[boneCount];
         this.currentWorldMatrices = new Matrix4[boneCount];
 
         for (int i = 0; i < boneCount; i++) {
             boneProportions[i] = new Vector3(1f, 1f, 1f);
+            boneShapePositions[i] = new Vector3();
+            boneShapeRotations[i] = new Vector3();
             bonePostures[i] = new Vector3();
             skinningMatrices[i] = new Matrix4();
             currentWorldMatrices[i] = new Matrix4();
@@ -215,6 +225,27 @@ public class AnimationStateHandle extends HandlePackage {
 
     public Vector3 getBoneProportion(int boneIndex) {
         return boneProportions[boneIndex];
+    }
+
+    // Shaping \\
+
+    // How the appearance shapes a bone's bind pose under every pose: its joint moved and its turn added to
+    public void setBoneShape(int boneIndex, Vector3 position, Vector3 rotation) {
+        boneShapePositions[boneIndex].set(position);
+        boneShapeRotations[boneIndex].set(rotation);
+    }
+
+    public void clearBoneShape(int boneIndex) {
+        boneShapePositions[boneIndex].set(0f, 0f, 0f);
+        boneShapeRotations[boneIndex].set(0f, 0f, 0f);
+    }
+
+    public Vector3 getBoneShapePosition(int boneIndex) {
+        return boneShapePositions[boneIndex];
+    }
+
+    public Vector3 getBoneShapeRotation(int boneIndex) {
+        return boneShapeRotations[boneIndex];
     }
 
     // Posture \\
@@ -537,13 +568,14 @@ public class AnimationStateHandle extends HandlePackage {
         }
     }
 
-    // Composes one bone from the offsets in the pose scratch over its bind pose, parent before child
+    // Composes one bone from the offsets in the pose scratch over its bind pose as the appearance shapes it, parent
+    // before child
     private void composeBone(int boneIndex) {
 
         RigBoneStruct bone = rigHandle.getBone(boneIndex);
 
-        positionScratch.add(bone.getPosition());
-        rotationScratch.add(bone.getRotation());
+        positionScratch.add(bone.getPosition()).add(boneShapePositions[boneIndex]);
+        rotationScratch.add(bone.getRotation()).add(boneShapeRotations[boneIndex]);
 
         if (!bone.isRoot())
             positionScratch.multiply(boneProportions[bone.getParentIndex()]);

@@ -322,6 +322,9 @@ public class EditorSetting {
     public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
     public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
+    public static final String TAB_TITLE_FACE_EDITOR = "Face Editor";
+    public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
+    public static final String TAB_TITLE_FACE_PROPERTIES = "Face Properties";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
     public static final String TAB_TITLE_CHARACTER_PROPERTIES = "Character Properties";
     public static final String TAB_TITLE_CONSOLE = "Console";
@@ -526,6 +529,8 @@ public class EditorSetting {
     public static final String CHARACTER_PROPERTIES_TITLE = "Properties";
     public static final String ANIMATION_OUTLINER_TITLE = "Clip";
     public static final String ANIMATION_PROPERTIES_TITLE = "Key";
+    public static final String FACE_OUTLINER_TITLE = "Face";
+    public static final String FACE_PROPERTIES_TITLE = "Control";
 
     // Character View — the row templates of each tool's menu its docker windows fill with
     public static final CharacterViewTemplateStruct CHARACTER_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
@@ -554,6 +559,19 @@ public class EditorSetting {
             "animation_editor_row_value_button",
             "animation_editor_row_decrease",
             "animation_editor_row_increase");
+    public static final CharacterViewTemplateStruct FACE_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            "editor/FaceEditor/face_editor_header_row",
+            "editor/FaceEditor/face_editor_item_row",
+            "editor/FaceEditor/face_editor_item_row_selected",
+            "editor/FaceEditor/face_editor_number_row",
+            "editor/FaceEditor/face_editor_text_row",
+            "editor/FaceEditor/face_editor_choice_row",
+            "editor/FaceEditor/face_editor_action_row",
+            "face_editor_row_label",
+            "face_editor_row_value",
+            "face_editor_row_value_button",
+            "face_editor_row_decrease",
+            "face_editor_row_increase");
 
     // Character View — viewport gestures: the buttons, the GLFW keys a transform locks its axis with, pointer
     // distances in pixels, snapping, and the undo history they record
@@ -590,6 +608,7 @@ public class EditorSetting {
 
     // Character Editor — panel keys
     public static final String CHARACTER_EDITOR_KEY_POSE = "pose";
+    public static final String CHARACTER_EDITOR_KEY_GENDER = "gender";
     public static final String CHARACTER_EDITOR_KEY_FEATURE = "feature";
     public static final String CHARACTER_EDITOR_KEY_COLOR_PREFIX = "color_";
     public static final String CHARACTER_EDITOR_KEY_DETAIL = "detail";
@@ -680,6 +699,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_HEADER_ANCHORS = "Anchors";
     public static final String CHARACTER_EDITOR_HEADER_ANCHOR = "Anchor";
     public static final String CHARACTER_EDITOR_LABEL_POSE = "Pose";
+    public static final String CHARACTER_EDITOR_LABEL_GENDER = "Gender";
     public static final String CHARACTER_EDITOR_LABEL_TONE = "Tone Worn";
     public static final String CHARACTER_EDITOR_LABEL_TONE_PREFIX = "Tone ";
     public static final String CHARACTER_EDITOR_LABEL_ADD_TONE = "Add Tone";
@@ -941,6 +961,106 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_MESSAGE_NO_SIDE = "Every bone to mirror must end in _l or _r";
     public static final String CHARACTER_RIG_MESSAGE_REFUSED = "Rig not applied: ";
     public static final String CHARACTER_RIG_MESSAGE_RESTART = "Bone changes take hold when the editor next starts";
+
+    // Face Editor — template fields of a face control and of each bone it drives
+    public static final String FACE_EDITOR_FIELD_SHAPES = "shapes";
+    public static final String FACE_EDITOR_FIELD_NAME = "name";
+    public static final String FACE_EDITOR_FIELD_GROUP = "group";
+    public static final String FACE_EDITOR_FIELD_MORPH = "morph";
+    public static final String FACE_EDITOR_FIELD_BONES = "bones";
+    public static final String FACE_EDITOR_FIELD_BONE = "bone";
+    public static final String FACE_EDITOR_FIELD_MIN = "min";
+    public static final String FACE_EDITOR_FIELD_MAX = "max";
+    public static final String FACE_EDITOR_FIELD_DEFAULT = "default";
+    public static final String FACE_EDITOR_FIELD_GENDERS = "genders";
+    public static final String[] FACE_EDITOR_CHANNEL_FIELDS = { "move", "turn", "scale" };
+
+    // Face Editor — a bone target's values in one key index: target * stride + channel * axes + axis
+    public static final int FACE_EDITOR_CHANNEL_MOVE = 0;
+    public static final int FACE_EDITOR_CHANNEL_TURN = 1;
+    public static final int FACE_EDITOR_CHANNEL_SCALE = 2;
+    public static final int FACE_EDITOR_AXES = 3;
+    public static final int FACE_EDITOR_TARGET_STRIDE = 9;
+
+    // Face Editor — panel keys, and the tool actions the Tools window lists under the face's tools
+    public static final String FACE_EDITOR_KEY_CONTROL = "face_control";
+    public static final String FACE_EDITOR_KEY_BONE = "face_bone";
+    public static final String FACE_EDITOR_KEY_MIRROR = "face_mirror";
+    public static final String FACE_EDITOR_KEY_NAME = "face_name";
+    public static final String FACE_EDITOR_KEY_GROUP = "face_group";
+    public static final String FACE_EDITOR_KEY_MORPH = "face_morph";
+    public static final String FACE_EDITOR_KEY_MIN = "face_min";
+    public static final String FACE_EDITOR_KEY_MAX = "face_max";
+    public static final String FACE_EDITOR_KEY_DEFAULT = "face_default";
+    public static final String FACE_EDITOR_KEY_PREVIEW = "face_preview";
+    public static final String FACE_EDITOR_KEY_START = "face_start";
+    public static final String FACE_EDITOR_KEY_TARGET = "face_target";
+    public static final String FACE_EDITOR_KEY_ADD_CONTROL = "face_add_control";
+    public static final String FACE_EDITOR_KEY_DUPLICATE_CONTROL = "face_duplicate_control";
+    public static final String FACE_EDITOR_KEY_REMOVE_CONTROL = "face_remove_control";
+    public static final String FACE_EDITOR_KEY_ADD_TARGET = "face_add_target";
+    public static final String FACE_EDITOR_KEY_REMOVE_TARGET = "face_remove_target";
+    public static final String FACE_EDITOR_KEY_MIRROR_TARGETS = "face_mirror_targets";
+    public static final String FACE_EDITOR_KEY_RESET_PREVIEW = "face_reset_preview";
+
+    // Face Editor — steps, in slider units, blocks, degrees and scale fractions
+    public static final float FACE_EDITOR_RANGE_STEP = 0.05f;
+    public static final float FACE_EDITOR_MOVE_STEP = 0.001f;
+    public static final float FACE_EDITOR_TURN_STEP = 1f;
+    public static final float FACE_EDITOR_SCALE_STEP = 0.01f;
+
+    // Face Editor — the groups a control is listed under in a creator, and a new control's name and group
+    public static final String[] FACE_EDITOR_GROUPS = {
+            "face", "eyes", "brows", "nose", "mouth", "jaw", "cheeks", "ears", "body" };
+    public static final String FACE_EDITOR_NEW_CONTROL_NAME = "control_";
+    public static final String FACE_EDITOR_COPY_SUFFIX = "_copy";
+
+    // Face Editor — the frame about the head, its middle a share of the head bone's height above its joint and its
+    // radius a share of the head bone's largest side; a drag below this preview value first takes the control to its
+    // end
+    public static final float FACE_EDITOR_FRAME_CENTRE_SHARE = 0.5f;
+    public static final float FACE_EDITOR_FRAME_RADIUS_SHARE = 1.1f;
+    public static final float FACE_EDITOR_DRAG_VALUE_MIN = 0.05f;
+
+    // Face Editor — panel text
+    public static final String FACE_EDITOR_HEADER_PREVIEW = "Preview";
+    public static final String FACE_EDITOR_HEADER_FACE_BONES = "Face Bones";
+    public static final String FACE_EDITOR_HEADER_CONTROL = "Control";
+    public static final String FACE_EDITOR_HEADER_RANGE = "Range";
+    public static final String FACE_EDITOR_HEADER_STARTS = "Gender Starts";
+    public static final String FACE_EDITOR_HEADER_TARGETS = "Bones Driven";
+    public static final String FACE_EDITOR_HEADER_NO_CONTROL = "No control selected";
+    public static final String FACE_EDITOR_LABEL_MIRROR = "Mirror";
+    public static final String FACE_EDITOR_LABEL_NAME = "Name";
+    public static final String FACE_EDITOR_LABEL_GROUP = "Group";
+    public static final String FACE_EDITOR_LABEL_MORPH = "Morph";
+    public static final String FACE_EDITOR_LABEL_MIN = "Min";
+    public static final String FACE_EDITOR_LABEL_MAX = "Max";
+    public static final String FACE_EDITOR_LABEL_DEFAULT = "Default";
+    public static final String FACE_EDITOR_LABEL_PREVIEW = "Preview";
+    public static final String FACE_EDITOR_LABEL_ADD_CONTROL = "Add Control";
+    public static final String FACE_EDITOR_LABEL_DUPLICATE_CONTROL = "Duplicate Control";
+    public static final String FACE_EDITOR_LABEL_REMOVE_CONTROL = "Remove Control";
+    public static final String FACE_EDITOR_LABEL_ADD_TARGET = "Drive Selected Bone";
+    public static final String FACE_EDITOR_LABEL_REMOVE_TARGET = "Stop Driving";
+    public static final String FACE_EDITOR_LABEL_MIRROR_TARGETS = "Mirror Bones Across";
+    public static final String FACE_EDITOR_LABEL_RESET_PREVIEW = "Reset Preview";
+    public static final String[] FACE_EDITOR_CHANNEL_LABELS = { "Move", "Turn", "Scale" };
+    public static final String FACE_EDITOR_HEADER_ACTIONS = "Face";
+
+    // Face Editor — status text
+    public static final String FACE_EDITOR_STATUS_NO_TEMPLATE =
+            "Open a character in the Character Editor to shape its face";
+    public static final String FACE_EDITOR_STATUS_HINT =
+            "Click a joint to pick its bone  |  Move, Rotate and Scale drag it into the selected control";
+    public static final String FACE_EDITOR_MESSAGE_ADDED = "Added ";
+    public static final String FACE_EDITOR_MESSAGE_REMOVED = "Removed ";
+    public static final String FACE_EDITOR_MESSAGE_DRIVES = "Now drives ";
+    public static final String FACE_EDITOR_MESSAGE_MIRRORED = "Mirrored the bones across in ";
+    public static final String FACE_EDITOR_MESSAGE_NO_CONTROL = "Pick a control to shape first";
+    public static final String FACE_EDITOR_MESSAGE_NOT_FACE_BONE = "Pick a face bone first";
+    public static final String FACE_EDITOR_MESSAGE_NOTHING_TO_COPY =
+            "A control that drives only a morph has nothing a copy could drive";
 
     // Animation Editor — clip fields
     public static final String ANIMATION_EDITOR_FIELD_RIG = "rig";
@@ -1336,6 +1456,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_WEIGHTS = "Character Weights";
     public static final String TOOL_CANVAS_CHARACTER_SCULPT = "Character Sculpt";
     public static final String TOOL_CANVAS_CHARACTER_RIG = "Character Rig";
+    public static final String TOOL_CANVAS_CHARACTER_FACE = "Character Face";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Recorder Timeline";

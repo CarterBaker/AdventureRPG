@@ -9,6 +9,7 @@ import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
@@ -31,9 +32,9 @@ class CharacterPropertyBranch extends BranchPackage {
      * stepped, typed, cycled or acted on, by the key its row carries. Template
      * values are read from the live ARPG and written through
      * CharacterEditBranch, clamped to the range the game reads them in;
-     * preview values — the pose, the tone worn, the build and head shape —
-     * live on the manager and never touch the template. The keys of the
-     * Mesh, Sculpt and Weights panels pass straight to
+     * preview values — the pose, the gender, the tone worn, the build and
+     * head shape — live on the manager and never touch the template. The
+     * keys of the Mesh, Sculpt and Weights panels pass straight to
      * CharacterMeshPropertyBranch, and those of the Rig panels to
      * CharacterRigPropertyBranch.
      */
@@ -44,6 +45,7 @@ class CharacterPropertyBranch extends BranchPackage {
     private CharacterMeshPropertyBranch characterMeshPropertyBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
     private FeatureManager featureManager;
+    private GenderManager genderManager;
 
     // Base \\
 
@@ -54,6 +56,7 @@ class CharacterPropertyBranch extends BranchPackage {
         this.characterMeshPropertyBranch = get(CharacterMeshPropertyBranch.class);
         this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
         this.featureManager = get(FeatureManager.class);
+        this.genderManager = get(GenderManager.class);
     }
 
     // Selection \\
@@ -390,6 +393,7 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_POSE -> characterEditorManager.setPose(CharacterEditorPose.VALUES[
                     Math.floorMod(characterEditorManager.getPose().ordinal() + direction,
                             CharacterEditorPose.VALUES.length)]);
+            case EditorSetting.CHARACTER_EDITOR_KEY_GENDER -> cycleGender(document, direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE -> cycleFeature(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class),
                     direction);
@@ -413,6 +417,9 @@ class CharacterPropertyBranch extends BranchPackage {
 
         return switch (keyName) {
             case EditorSetting.CHARACTER_EDITOR_KEY_POSE -> characterEditorManager.getPose().getLabel();
+            case EditorSetting.CHARACTER_EDITOR_KEY_GENDER -> genderManager
+                    .getGenderHandleFromGenderID(characterEditorManager.getPreviewGenderID())
+                    .getDisplayName();
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE -> getFeatureText(CharacterViewUtility.getKeyArgument(key));
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_SLOT -> anchor != null
                     ? ArpgUtility.getString(anchor, EditorSetting.CHARACTER_EDITOR_FIELD_SLOT, "")
@@ -425,6 +432,17 @@ class CharacterPropertyBranch extends BranchPackage {
                     : EditorSetting.CHARACTER_VIEW_NO;
             default -> "";
         };
+    }
+
+    // Genders \\
+
+    private void cycleGender(CharacterDocumentInstance document, int direction) {
+
+        int count = document.hasPreview() ? document.getPreviewData().getGenderCount() : 0;
+
+        if (count > 0)
+            characterEditorManager.setGenderIndex(Math.floorMod(characterEditorManager.getGenderIndex() + direction,
+                    count));
     }
 
     // Tones \\

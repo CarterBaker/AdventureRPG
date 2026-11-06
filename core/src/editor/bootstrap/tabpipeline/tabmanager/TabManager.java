@@ -27,6 +27,9 @@ import editor.runtime.characterproperties.CharacterPropertiesContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
+import editor.runtime.faceeditor.FaceEditorContext;
+import editor.runtime.faceoutliner.FaceOutlinerContext;
+import editor.runtime.faceproperties.FacePropertiesContext;
 import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.infopanel.InfoPanelContext;
 import editor.runtime.itemeditor.ItemEditorContext;
@@ -161,6 +164,18 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openCharacterProperties(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_PROPERTIES, CharacterPropertiesContext.class, osWindow);
+    }
+
+    public TabHandle openFaceEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_FACE_EDITOR, FaceEditorContext.class, osWindow);
+    }
+
+    public TabHandle openFaceOutliner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_FACE_OUTLINER, FaceOutlinerContext.class, osWindow);
+    }
+
+    public TabHandle openFaceProperties(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_FACE_PROPERTIES, FacePropertiesContext.class, osWindow);
     }
 
     public TabHandle openAnimationEditor(WindowInstance osWindow) {
