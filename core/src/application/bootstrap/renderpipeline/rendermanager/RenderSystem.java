@@ -74,6 +74,8 @@ class RenderSystem extends SystemPackage {
 
     void drawToMappedTargets(WindowInstance window) {
 
+        compositeRenderSystem.deleteRetiredVAOs(window);
+
         RenderQueueHandle queue = window.getRenderQueueHandle();
 
         if (queue == null)
@@ -417,8 +419,12 @@ class RenderSystem extends SystemPackage {
         compositeRenderSystem.submit(material, buffer, mask, fbo, window);
     }
 
+    void releaseCompositeBuffer(CompositeBufferInstance buffer) {
+        compositeRenderSystem.releaseBuffer(buffer);
+    }
+
     void removeWindowResources(WindowInstance window) {
-        compositeRenderSystem.removeWindow(window.getWindowID());
+        compositeRenderSystem.removeWindow(window);
         removeSkinnedVAOs(window);
     }
 

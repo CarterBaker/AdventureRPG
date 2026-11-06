@@ -3,6 +3,7 @@ package application.bootstrap.renderpipeline.rendermanager;
 import application.bootstrap.shaderpipeline.shader.ShaderHandle;
 import engine.util.memory.BufferUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.FloatBuffer;
@@ -27,15 +28,21 @@ public class CompositeRenderSystem extends SystemPackage {
      * data, and draws every batch after the depth-sorted pass. Into targets
      * with depth it depth-tests like scene geometry; elsewhere it draws on top
      * with blending, scissored to any mask. Iteration is index-based over
-     * reused arrays. Each batch is a profiler GPU scope.
+     * reused arrays. Each batch is a profiler GPU scope. A released buffer
+     * gives back its GPU objects in every window that drew it: its instance
+     * data at once, and its vertex arrays, which belong to one window's
+     * context, on that window's next draw or when the window closes.
      */
 
     // Internal
     private ProfilerManager profilerManager;
 
     // Per Window GPU Cache
-    private Int2ObjectOpenHashMap<Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState>> //
-            windowID2BufferGpuState;
+    private Object2ObjectOpenHashMap<WindowInstance, //
+            Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState>> window2BufferGpuState;
+
+    // Retired — vertex arrays of released buffers, awaiting their own window's context
+    private Object2ObjectOpenHashMap<WindowInstance, IntArrayList> window2RetiredVAOs;
 
     // Upload Scratch
     private FloatBuffer uploadBuffer;
@@ -44,7 +51,8 @@ public class CompositeRenderSystem extends SystemPackage {
 
     @Override
     protected void create() {
-        this.windowID2BufferGpuState = new Int2ObjectOpenHashMap<>();
+        this.window2BufferGpuState = new Object2ObjectOpenHashMap<>();
+        this.window2RetiredVAOs = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -187,7 +195,7 @@ public class CompositeRenderSystem extends SystemPackage {
         if (buffer.isEmpty())
             return;
 
-        WindowBufferGpuState gpuState = getOrCreateGpuState(buffer, window.getWindowID());
+        WindowBufferGpuState gpuState = getOrCreateGpuState(buffer, window);
 
         if (gpuState.maxInstances < buffer.getMaxInstances()) {
             CompositeRenderGLSLUtility.deleteBuffer(gpuState.instanceVBO);
@@ -285,14 +293,14 @@ public class CompositeRenderSystem extends SystemPackage {
         gpuState.maxInstances = buffer.getMaxInstances();
     }
 
-    private WindowBufferGpuState getOrCreateGpuState(CompositeBufferInstance buffer, int windowID) {
+    private WindowBufferGpuState getOrCreateGpuState(CompositeBufferInstance buffer, WindowInstance window) {
 
-        Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState> buffer2State = windowID2BufferGpuState
-                .get(windowID);
+        Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState> buffer2State = window2BufferGpuState
+                .get(window);
 
         if (buffer2State == null) {
             buffer2State = new Object2ObjectOpenHashMap<>();
-            windowID2BufferGpuState.put(windowID, buffer2State);
+            window2BufferGpuState.put(window, buffer2State);
         }
 
         WindowBufferGpuState gpuState = buffer2State.get(buffer);
@@ -305,9 +313,63 @@ public class CompositeRenderSystem extends SystemPackage {
         return gpuState;
     }
 
-    public void removeWindow(int windowID) {
-        Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState> buffer2State = windowID2BufferGpuState
-                .remove(windowID);
+    // Release \\
+
+    // The buffer's instance data goes at once; each vertex array waits for the context of the window that drew it
+    public void releaseBuffer(CompositeBufferInstance buffer) {
+
+        var iterator = window2BufferGpuState.object2ObjectEntrySet().fastIterator();
+
+        while (iterator.hasNext()) {
+
+            var entry = iterator.next();
+            WindowBufferGpuState gpuState = entry.getValue().remove(buffer);
+
+            if (gpuState == null)
+                continue;
+
+            CompositeRenderGLSLUtility.deleteBuffer(gpuState.instanceVBO);
+            retireVAO(entry.getKey(), gpuState.compositeVAO);
+        }
+    }
+
+    private void retireVAO(WindowInstance window, int vao) {
+
+        if (vao == EngineSetting.GL_HANDLE_NONE)
+            return;
+
+        IntArrayList retiredVAOs = window2RetiredVAOs.get(window);
+
+        if (retiredVAOs == null) {
+            retiredVAOs = new IntArrayList();
+            window2RetiredVAOs.put(window, retiredVAOs);
+        }
+
+        retiredVAOs.add(vao);
+    }
+
+    // Called with the window's context current
+    public void deleteRetiredVAOs(WindowInstance window) {
+
+        IntArrayList retiredVAOs = window2RetiredVAOs.get(window);
+
+        if (retiredVAOs == null || retiredVAOs.isEmpty())
+            return;
+
+        for (int i = 0; i < retiredVAOs.size(); i++)
+            CompositeRenderGLSLUtility.deleteVAO(retiredVAOs.getInt(i));
+
+        retiredVAOs.clear();
+    }
+
+    // Called with the window's context current, as it leaves the engine
+    public void removeWindow(WindowInstance window) {
+
+        deleteRetiredVAOs(window);
+        window2RetiredVAOs.remove(window);
+
+        Object2ObjectOpenHashMap<CompositeBufferInstance, WindowBufferGpuState> buffer2State = window2BufferGpuState
+                .remove(window);
 
         if (buffer2State == null)
             return;

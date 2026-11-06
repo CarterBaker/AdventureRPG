@@ -12,6 +12,7 @@ import application.bootstrap.menupipeline.element.ElementStateStruct;
 import application.bootstrap.menupipeline.element.ElementType;
 import application.bootstrap.menupipeline.font.FontInstance;
 import application.bootstrap.menupipeline.fontmanager.FontManager;
+import application.bootstrap.menupipeline.fontmanager.FontRenderSystem;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menu.MenuNodeStruct;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
@@ -26,11 +27,14 @@ public class ElementSystem extends SystemPackage {
      * Owns the master element registry and builds runtime element instances,
      * cloning sprite instances for each state and building state children and
      * overlay roots. Master IDs are assigned in registration order. Colors are
-     * resolved later, each frame, by MenuRenderSystem.
+     * resolved later, each frame, by MenuRenderSystem. releaseInstances() is
+     * the one teardown: it gives back every sprite and font an instance
+     * cloned, its children and state children included.
      */
 
     private SpriteManager spriteManager;
     private FontManager fontManager;
+    private FontRenderSystem fontRenderSystem;
 
     private Object2IntOpenHashMap<String> masterKey2MasterID;
     private ObjectArrayList<ElementHandle> masterID2MasterHandle;
@@ -47,6 +51,7 @@ public class ElementSystem extends SystemPackage {
     protected void get() {
         this.spriteManager = get(SpriteManager.class);
         this.fontManager = get(FontManager.class);
+        this.fontRenderSystem = get(FontRenderSystem.class);
     }
 
     // Master Registry \\
@@ -267,5 +272,53 @@ public class ElementSystem extends SystemPackage {
 
     public ElementInstance createDetachedInstance(MenuNodeStruct node) {
         return createInstance(node, () -> null);
+    }
+
+    // Release \\
+
+    public void releaseInstances(ObjectArrayList<ElementInstance> instances) {
+        for (int i = 0; i < instances.size(); i++)
+            releaseInstance(instances.get(i));
+    }
+
+    // A state root holds its state's children, so only the root's own sprite and font are released through it
+    public void releaseInstance(ElementInstance instance) {
+
+        releaseOwned(instance);
+
+        if (instance.hasChildren())
+            releaseInstances(instance.getChildren());
+        if (instance.hasHoverEnterStateChildren())
+            releaseInstances(instance.getHoverEnterStateChildren());
+        if (instance.hasHoverStateChildren())
+            releaseInstances(instance.getHoverStateChildren());
+        if (instance.hasHoverExitStateChildren())
+            releaseInstances(instance.getHoverExitStateChildren());
+        if (instance.hasClickStateChildren())
+            releaseInstances(instance.getClickStateChildren());
+
+        if (instance.hasHoverEnterStateRoot())
+            releaseOwned(instance.getHoverEnterStateRoot());
+        if (instance.hasHoverStateRoot())
+            releaseOwned(instance.getHoverStateRoot());
+        if (instance.hasHoverExitStateRoot())
+            releaseOwned(instance.getHoverExitStateRoot());
+    }
+
+    private void releaseOwned(ElementInstance instance) {
+
+        releaseSprite(instance.getSpriteInstance());
+        releaseSprite(instance.getHoverEnterSpriteInstance());
+        releaseSprite(instance.getHoverSpriteInstance());
+        releaseSprite(instance.getHoverExitSpriteInstance());
+        releaseSprite(instance.getClickSpriteInstance());
+
+        if (instance.hasFont())
+            fontRenderSystem.release(instance.getFontInstance());
+    }
+
+    private void releaseSprite(SpriteInstance spriteInstance) {
+        if (spriteInstance != null)
+            spriteManager.releaseSprite(spriteInstance);
     }
 }

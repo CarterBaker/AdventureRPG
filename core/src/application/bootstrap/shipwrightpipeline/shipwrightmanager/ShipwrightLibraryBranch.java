@@ -120,6 +120,12 @@ class ShipwrightLibraryBranch extends BranchPackage {
         this.assetWriter = assetWriter;
     }
 
+    // Only the writer still set is cleared, so a table closing never takes away another's
+    void clearAssetWriter(ShipwrightManager.ShipwrightAssetWriter clearedWriter) {
+        if (assetWriter == clearedWriter)
+            this.assetWriter = null;
+    }
+
     // Why the ship could not be written to its storage under its resource name, empty once it is
     String save(ShipwrightStorage storage, ShipBlueprintStruct blueprint) {
 

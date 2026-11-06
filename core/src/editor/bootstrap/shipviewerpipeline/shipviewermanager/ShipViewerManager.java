@@ -12,8 +12,9 @@ public class ShipViewerManager extends ManagerPackage {
      * Vehicles in the hierarchy, or the ship on the Shipwright's table as it
      * is being drawn, whichever was chosen last. A vehicle is chosen by its
      * name, looked up in the palette by each viewer; the table by its
-     * session, built afresh by each viewer whenever its sheet rests. The
-     * revision moves only when the choice does.
+     * session, built afresh by each viewer whenever its sheet rests. A table
+     * closing lets its session go, and the viewers fall back to the vehicle.
+     * The revision moves only when the choice does.
      */
 
     // Internal
@@ -56,6 +57,16 @@ public class ShipViewerManager extends ManagerPackage {
             return;
 
         this.session = chosenSession;
+        this.revision++;
+    }
+
+    // A drafting table closing takes its ship off every Ship Viewer that shows it
+    public void releaseSession(ShipwrightSessionInstance releasedSession) {
+
+        if (releasedSession == null || releasedSession != session)
+            return;
+
+        this.session = null;
         this.revision++;
     }
 

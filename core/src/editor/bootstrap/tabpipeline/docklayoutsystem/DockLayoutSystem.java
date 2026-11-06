@@ -15,9 +15,9 @@ public class DockLayoutSystem extends SystemPackage {
      * Keeps one BSP dock tree per OS window, each leaf a stack of tabs with
      * one of them shown. Adds, splits, stacks and removes leaves and tabs,
      * propagates dock bounds into leaf rects each frame, and resolves dividers
-     * and leaves for window-local coordinates. Split ratios are clamped,
-     * collapse() is the one rule for a split that lost a child, and a stack
-     * losing its shown tab shows the neighbour that took its place.
+     * and leaves for window-local coordinates. Split ratios are finite and
+     * clamped, collapse() is the one rule for a split that lost a child, and
+     * a stack losing its shown tab shows the neighbour that took its place.
      */
 
     // Per-OS-window BSP roots — null root means window is registered but empty.
@@ -145,8 +145,11 @@ public class DockLayoutSystem extends SystemPackage {
         return null;
     }
 
+    // A ratio that is not a number, as a drag across a collapsed split gives, falls back to the default
     public void setSplitRatio(DockNodeStruct node, float ratio) {
-        node.setRatio(Math.max(EditorSetting.RATIO_MIN, Math.min(EditorSetting.RATIO_MAX, ratio)));
+
+        float finiteRatio = Float.isFinite(ratio) ? ratio : EditorSetting.RATIO_DEFAULT;
+        node.setRatio(Math.max(EditorSetting.RATIO_MIN, Math.min(EditorSetting.RATIO_MAX, finiteRatio)));
     }
 
     // Leaf At Screen Point — window-scoped \\

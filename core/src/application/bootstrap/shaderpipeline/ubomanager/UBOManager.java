@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.nio.ByteBuffer;
 
 import application.bootstrap.shaderpipeline.ubo.UBOData;
@@ -24,7 +25,8 @@ public class UBOManager extends ManagerPackage {
      * operations. Owns all UBOHandles permanently. External callers receive a
      * UBOInstance via createUBOInstance() and push updates via push(). Handle
      * and Instance never touch GL directly. UBO IDs are assigned in
-     * registration order.
+     * registration order. destroyInstance() frees an instance's buffer once,
+     * however many times it is called.
      */
 
     // Internal
@@ -34,7 +36,7 @@ public class UBOManager extends ManagerPackage {
     // Palette
     private Object2IntOpenHashMap<String> uboName2UBOID;
     private ObjectArrayList<UBOHandle> uboID2UBOHandle;
-    private ObjectArrayList<UBOInstance> activeInstances;
+    private ReferenceOpenHashSet<UBOInstance> activeInstances;
 
     // Base \\
 
@@ -45,7 +47,7 @@ public class UBOManager extends ManagerPackage {
         this.usedBindings = new IntOpenHashSet();
         this.uboName2UBOID = RegistryUtility.createNameIndex();
         this.uboID2UBOHandle = RegistryUtility.createPalette();
-        this.activeInstances = new ObjectArrayList<>();
+        this.activeInstances = new ReferenceOpenHashSet<>();
 
         create(UBOLoader.class);
     }
@@ -61,8 +63,8 @@ public class UBOManager extends ManagerPackage {
                 UBOGLSLUtility.deleteUniformBuffer(handle.getGpuHandle());
         }
 
-        for (int i = 0; i < activeInstances.size(); i++)
-            UBOGLSLUtility.deleteUniformBuffer(activeInstances.get(i).getGpuHandle());
+        for (UBOInstance instance : activeInstances)
+            UBOGLSLUtility.deleteUniformBuffer(instance.getGpuHandle());
 
         RegistryUtility.clearPalette(uboName2UBOID, uboID2UBOHandle);
         activeInstances.clear();
@@ -122,8 +124,8 @@ public class UBOManager extends ManagerPackage {
     }
 
     public void destroyInstance(UBOInstance instance) {
-        activeInstances.remove(instance);
-        UBOGLSLUtility.deleteUniformBuffer(instance.getGpuHandle());
+        if (activeInstances.remove(instance))
+            UBOGLSLUtility.deleteUniformBuffer(instance.getGpuHandle());
     }
 
     public void push(UBOHandle handle) {

@@ -23,7 +23,8 @@ public class SpriteManager extends ManagerPackage {
     /*
      * Owns all loaded SpriteHandles, with IDs assigned in registration order.
      * Drives loading via SpriteLoader and exposes cloneSprite() for runtime
-     * instance creation. On palette miss, triggers an immediate on-demand
+     * instance creation, paired with releaseSprite() for the slice data each
+     * clone holds on the GPU. On palette miss, triggers an immediate on-demand
      * load. GPU textures are released on dispose.
      */
 
@@ -154,5 +155,9 @@ public class SpriteManager extends ManagerPackage {
         instance.constructor(clonedData);
 
         return instance;
+    }
+
+    public void releaseSprite(SpriteInstance spriteInstance) {
+        uboManager.destroyInstance(spriteInstance.getSliceData());
     }
 }

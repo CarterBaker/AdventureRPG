@@ -22,7 +22,8 @@ public class LayoutSaveBranch extends BranchPackage {
      * disk. Every open tab is listed once by id, every OS window records its
      * dock tree with each leaf listing its stack by those ids and naming the
      * one shown, and secondary windows also record their screen position and
-     * size.
+     * size. The file is written whole or not at all, and a write that fails
+     * is logged and leaves the file on disk as it was.
      */
 
     // Internal
@@ -41,13 +42,13 @@ public class LayoutSaveBranch extends BranchPackage {
 
     // Management \\
 
-    void save(File layoutFile) {
+    boolean save(File layoutFile) {
 
         ArpgObjectStruct layoutArpg = new ArpgObjectStruct();
         layoutArpg.add("tabs", buildTabs());
         layoutArpg.add("windows", buildWindows());
 
-        ArpgUtility.writeObject(layoutFile, layoutArpg);
+        return ArpgUtility.tryWriteObject(layoutFile, layoutArpg);
     }
 
     // Build \\

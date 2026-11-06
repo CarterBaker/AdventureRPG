@@ -519,25 +519,7 @@ public class MenuRenderSystem extends SystemPackage {
 
     // Cleanup \\
 
-    public void releaseFontModels(ObjectArrayList<ElementInstance> elements) {
-
-        for (int i = 0; i < elements.size(); i++) {
-
-            ElementInstance el = elements.get(i);
-
-            if (el.hasFont())
-                fontRenderSystem.release(el.getFontInstance());
-
-            if (el.hasChildren())
-                releaseFontModels(el.getChildren());
-            if (el.hasHoverEnterStateChildren())
-                releaseFontModels(el.getHoverEnterStateChildren());
-            if (el.hasHoverStateChildren())
-                releaseFontModels(el.getHoverStateChildren());
-            if (el.hasHoverExitStateChildren())
-                releaseFontModels(el.getHoverExitStateChildren());
-            if (el.hasClickStateChildren())
-                releaseFontModels(el.getClickStateChildren());
-        }
+    public void releaseWindow(WindowInstance window) {
+        fontRenderSystem.removeWindow(window.getWindowID());
     }
 }

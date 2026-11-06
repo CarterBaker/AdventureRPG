@@ -180,7 +180,7 @@ public class InfoPanelSystem extends SystemPackage {
         if (kept)
             child.setActionArgOverride(path);
         else
-            element.removeChild(child);
+            menuManager.eject(element, child);
     }
 
     private void setChildText(ElementInstance element, String childId, String text) {

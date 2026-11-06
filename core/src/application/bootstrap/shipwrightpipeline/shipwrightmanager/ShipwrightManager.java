@@ -170,6 +170,11 @@ public class ShipwrightManager extends ManagerPackage {
         shipwrightLibraryBranch.setAssetWriter(assetWriter);
     }
 
+    // The writer given stops being used, unless another has been set since
+    public void clearAssetWriter(ShipwrightAssetWriter assetWriter) {
+        shipwrightLibraryBranch.clearAssetWriter(assetWriter);
+    }
+
     // Registration \\
 
     // A ship in the assets compiled and registered as a vehicle, stopping the game when it cannot be built

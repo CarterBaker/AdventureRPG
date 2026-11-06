@@ -13,12 +13,15 @@ import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 public class LayoutRestoreBranch extends BranchPackage {
 
     /*
      * Rebuilds a saved layout. The whole file is validated before anything
-     * closes, so a malformed layout leaves the editor untouched. Every tab and
+     * closes, so a malformed layout leaves the editor untouched: every tab id
+     * is declared once, every stacked id once across all windows, and at most
+     * one window is the main one. Every tab and
      * secondary window then closes, each saved window reopens at its saved
      * bounds with its tabs opened directly on it, and its dock tree is rebuilt
      * from their ids, each leaf restacked in order and showing the tab it
@@ -204,7 +207,7 @@ public class LayoutRestoreBranch extends BranchPackage {
 
         TabHandle activeTab = tabId2TabHandle.get(ArpgUtility.validateInt(nodeArpg, "tab"));
 
-        if (activeTab != null)
+        if (activeTab != null && leaf.getTabs().contains(activeTab))
             dockLayoutSystem.activateTab(leaf, activeTab);
 
         return leaf;
@@ -229,63 +232,80 @@ public class LayoutRestoreBranch extends BranchPackage {
         if (!ArpgUtility.hasArray(layoutArpg, "tabs") || !ArpgUtility.hasArray(layoutArpg, "windows"))
             return false;
 
+        IntOpenHashSet tabIds = new IntOpenHashSet();
+
         for (ArpgElementStruct tabElement : layoutArpg.getAsArray("tabs"))
-            if (!tabElement.isObject() || !isTabValid(tabElement.getAsObject()))
+            if (!tabElement.isObject() || !isTabValid(tabElement.getAsObject(), tabIds))
                 return false;
 
-        for (ArpgElementStruct windowElement : layoutArpg.getAsArray("windows"))
-            if (!windowElement.isObject() || !isWindowValid(windowElement.getAsObject()))
+        IntOpenHashSet stackedTabIds = new IntOpenHashSet();
+        boolean hasMain = false;
+
+        for (ArpgElementStruct windowElement : layoutArpg.getAsArray("windows")) {
+
+            if (!windowElement.isObject() || !isWindowValid(windowElement.getAsObject(), stackedTabIds))
                 return false;
+
+            boolean isMain = windowElement.getAsObject().get("isMain").getAsBoolean();
+
+            if (isMain && hasMain)
+                return false;
+
+            hasMain |= isMain;
+        }
 
         return true;
     }
 
-    private boolean isTabValid(ArpgObjectStruct tabArpg) {
-        return ArpgUtility.hasNumber(tabArpg, "id")
+    // Each tab declares a whole id no other tab declares
+    private boolean isTabValid(ArpgObjectStruct tabArpg, IntOpenHashSet tabIds) {
+        return isWholeNumber(tabArpg, "id")
                 && ArpgUtility.hasString(tabArpg, "baseTitle")
-                && ArpgUtility.hasString(tabArpg, "contentClass");
+                && ArpgUtility.hasString(tabArpg, "contentClass")
+                && tabIds.add(tabArpg.get("id").getAsInt());
     }
 
-    private boolean isWindowValid(ArpgObjectStruct windowArpg) {
+    private boolean isWindowValid(ArpgObjectStruct windowArpg, IntOpenHashSet stackedTabIds) {
 
         if (!ArpgUtility.hasBoolean(windowArpg, "isMain") || !ArpgUtility.hasObject(windowArpg, "node"))
             return false;
 
         boolean hasBounds = windowArpg.get("isMain").getAsBoolean()
-                || (ArpgUtility.hasNumber(windowArpg, "screenX")
-                        && ArpgUtility.hasNumber(windowArpg, "screenY")
-                        && ArpgUtility.hasNumber(windowArpg, "width")
-                        && ArpgUtility.hasNumber(windowArpg, "height"));
+                || (isWholeNumber(windowArpg, "screenX")
+                        && isWholeNumber(windowArpg, "screenY")
+                        && isWholeNumber(windowArpg, "width")
+                        && isWholeNumber(windowArpg, "height"));
 
-        return hasBounds && isNodeValid(windowArpg.getAsObject("node"));
+        return hasBounds && isNodeValid(windowArpg.getAsObject("node"), stackedTabIds);
     }
 
-    private boolean isNodeValid(ArpgObjectStruct nodeArpg) {
+    private boolean isNodeValid(ArpgObjectStruct nodeArpg, IntOpenHashSet stackedTabIds) {
 
         if (!ArpgUtility.hasBoolean(nodeArpg, "split"))
             return false;
 
         if (!nodeArpg.get("split").getAsBoolean())
-            return ArpgUtility.hasNumber(nodeArpg, "tab") && isStackValid(nodeArpg);
+            return isWholeNumber(nodeArpg, "tab") && isStackValid(nodeArpg, stackedTabIds);
 
         return ArpgUtility.hasBoolean(nodeArpg, "splitHorizontal")
                 && ArpgUtility.hasNumber(nodeArpg, "ratio")
                 && ArpgUtility.hasObject(nodeArpg, "first")
                 && ArpgUtility.hasObject(nodeArpg, "second")
-                && isNodeValid(nodeArpg.getAsObject("first"))
-                && isNodeValid(nodeArpg.getAsObject("second"));
+                && isNodeValid(nodeArpg.getAsObject("first"), stackedTabIds)
+                && isNodeValid(nodeArpg.getAsObject("second"), stackedTabIds);
     }
 
-    // A stack lists whole tab ids, the shown tab among them
-    private boolean isStackValid(ArpgObjectStruct nodeArpg) {
+    // A stack lists whole tab ids, the shown tab among them, and no id stacks twice in the layout
+    private boolean isStackValid(ArpgObjectStruct nodeArpg, IntOpenHashSet stackedTabIds) {
+
+        int tabId = nodeArpg.get("tab").getAsInt();
 
         if (!nodeArpg.has("tabs"))
-            return true;
+            return stackedTabIds.add(tabId);
 
         if (!ArpgUtility.hasArray(nodeArpg, "tabs"))
             return false;
 
-        int tabId = nodeArpg.get("tab").getAsInt();
         boolean holdsTab = false;
 
         for (ArpgElementStruct tabElement : nodeArpg.getAsArray("tabs")) {
@@ -293,9 +313,16 @@ public class LayoutRestoreBranch extends BranchPackage {
             if (!tabElement.isValue() || !tabElement.getAsValue().isInteger())
                 return false;
 
+            if (!stackedTabIds.add(tabElement.getAsInt()))
+                return false;
+
             holdsTab |= tabElement.getAsInt() == tabId;
         }
 
         return holdsTab;
+    }
+
+    private boolean isWholeNumber(ArpgObjectStruct arpg, String key) {
+        return ArpgUtility.hasNumber(arpg, key) && arpg.get(key).getAsValue().isInteger();
     }
 }

@@ -2,6 +2,7 @@ package editor.runtime.shipwright;
 
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightSessionInstance;
 import application.bootstrap.shipwrightpipeline.shipwright.ShipwrightStorage;
 import application.bootstrap.shipwrightpipeline.shipwrightmanager.ShipwrightManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -27,6 +28,7 @@ public class ShipwrightTabSystem extends SystemPackage {
      * through the table's dialog, and closing the table closes the tab. The
      * table is chosen for the Ship Viewer once it opens and again whenever a
      * ship is written from it, so the viewer shows the ship as it is drawn.
+     * Closing the tab takes back its asset writer and the session it chose.
      */
 
     // Internal
@@ -39,13 +41,18 @@ public class ShipwrightTabSystem extends SystemPackage {
     private TabManager tabManager;
     private ShipViewerManager shipViewerManager;
 
+    // Writer
+    private ShipwrightManager.ShipwrightAssetWriter assetWriter;
+
     // Ship Viewer — the choice's revision when the table was last chosen, INDEX_NOT_FOUND before it ever was
     private int chosenRevision;
+    private ShipwrightSessionInstance chosenSession;
 
     // Base \\
 
     @Override
     protected void create() {
+        this.assetWriter = this::writeShip;
         this.chosenRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
@@ -67,10 +74,16 @@ public class ShipwrightTabSystem extends SystemPackage {
         WindowInstance window = context.getWindow();
 
         menuManager.setMenuTargetFbo(window, fboManager.cloneFbo(RuntimeSetting.FBO_UI, window));
-        shipwrightManager.setAssetWriter(this::writeShip);
+        shipwrightManager.setAssetWriter(assetWriter);
         shipwrightDialogSystem.setCloseAction(() -> tabManager.closeTabOf(window));
         tabManager.setCloseGuard(window, shipwrightDialogSystem::allowClose);
         shipwrightSystem.open(ShipwrightStorage.ASSETS);
+    }
+
+    @Override
+    protected void dispose() {
+        shipwrightManager.clearAssetWriter(assetWriter);
+        shipViewerManager.releaseSession(chosenSession);
     }
 
     // Update \\
@@ -102,7 +115,8 @@ public class ShipwrightTabSystem extends SystemPackage {
     }
 
     private void chooseTable() {
-        shipViewerManager.chooseSession(shipwrightSystem.getSession());
+        this.chosenSession = shipwrightSystem.getSession();
+        shipViewerManager.chooseSession(chosenSession);
         this.chosenRevision = shipViewerManager.getRevision();
     }
 }

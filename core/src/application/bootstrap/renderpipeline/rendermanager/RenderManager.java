@@ -227,6 +227,10 @@ public class RenderManager extends ManagerPackage {
         renderSystem.pushCompositeCall(material, buffer, mask, fbo, window);
     }
 
+    public void releaseCompositeBuffer(CompositeBufferInstance buffer) {
+        renderSystem.releaseCompositeBuffer(buffer);
+    }
+
     public void ensureFboRendered(FBOInstance fbo, WindowInstance window) {
         renderSystem.ensureTargetQueued(fbo, window);
     }

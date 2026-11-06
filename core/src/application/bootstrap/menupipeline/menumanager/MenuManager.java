@@ -121,7 +121,7 @@ public class MenuManager extends ManagerPackage {
         for (int i = 0; i < pendingCloseMenus.size(); i++) {
             MenuInstance instance = pendingCloseMenus.get(i);
             WindowInstance window = instance.getWindow();
-            renderSystem.releaseFontModels(instance.getElements());
+            elementSystem.releaseInstances(instance.getElements());
             window.getMenuListHandle().remove(instance);
 
             if (!window.getMenuListHandle().isInputLocked()
@@ -178,19 +178,13 @@ public class MenuManager extends ManagerPackage {
     }
 
     public void eject(MenuInstance menu, int entryPoint, ElementInstance instance) {
-        releaseFontModels(instance);
+        elementSystem.releaseInstance(instance);
         menu.removeFromEntryPoint(entryPoint, instance);
     }
 
     public void eject(ElementInstance container, ElementInstance instance) {
-        releaseFontModels(instance);
+        elementSystem.releaseInstance(instance);
         container.removeChild(instance);
-    }
-
-    private void releaseFontModels(ElementInstance instance) {
-        ObjectArrayList<ElementInstance> single = new ObjectArrayList<>(1);
-        single.add(instance);
-        renderSystem.releaseFontModels(single);
     }
 
     public void ejectAll(MenuInstance menu, int entryPoint) {
@@ -308,6 +302,7 @@ public class MenuManager extends ManagerPackage {
         for (int i = 0; i < menus.size(); i++)
             closeMenu(menus.get(i));
 
+        renderSystem.releaseWindow(window);
         setMenuTargetFbo(window, null);
     }
 

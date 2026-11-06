@@ -179,6 +179,8 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_EDIT_PREFIX = "Edit ";
     public static final String DIALOG_TITLE_DELETE_PREFIX = "Type ";
     public static final String DIALOG_TITLE_DELETE_SUFFIX = " to delete it";
+    public static final String DIALOG_TITLE_SAVE_OVER_PREFIX = "Save over ";
+    public static final String DIALOG_TITLE_SAVE_OVER_SUFFIX = "?";
     public static final String DIALOG_TITLE_COPY_PREFIX = "Copy ";
     public static final String DIALOG_TITLE_COPY_SUFFIX = " as";
     public static final String DIALOG_TITLE_UNIQUE_PREFIX = "Unique ";

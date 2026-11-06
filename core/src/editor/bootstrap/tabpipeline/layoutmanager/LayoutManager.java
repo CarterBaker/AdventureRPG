@@ -16,9 +16,11 @@ public class LayoutManager extends ManagerPackage {
      * Owns editor layout persistence. The live arrangement is written to the
      * session layout at most once per frame after any structural change and
      * restored on startup; named layouts are created, saved over, loaded and
-     * deleted on request. LayoutSaveBranch captures windows and dock trees, LayoutRestoreBranch
-     * rebuilds them, and a layout that cannot be read is logged and skipped
-     * without touching the open editor.
+     * deleted on request. A requested load is rebuilt in this manager's own
+     * update, never inside the menu event that asked for it, and the last
+     * request in a frame wins. LayoutSaveBranch captures windows and dock
+     * trees, LayoutRestoreBranch rebuilds them, and a layout that cannot be
+     * read is logged and skipped without touching the open editor.
      */
 
     // Internal
@@ -30,6 +32,9 @@ public class LayoutManager extends ManagerPackage {
 
     // Session
     private boolean sessionChanged;
+
+    // Load
+    private File pendingLayoutFile;
 
     // Base \\
 
@@ -60,9 +65,23 @@ public class LayoutManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        if (!sessionChanged)
-            return;
+        if (pendingLayoutFile != null)
+            restorePendingLayout();
 
+        if (sessionChanged)
+            saveSession();
+    }
+
+    private void restorePendingLayout() {
+
+        File layoutFile = pendingLayoutFile;
+        pendingLayoutFile = null;
+
+        if (restore(layoutFile))
+            notifyLayoutChanged();
+    }
+
+    private void saveSession() {
         sessionChanged = false;
         layoutSaveBranch.save(getLayoutFile(EditorSetting.LAYOUT_SESSION_NAME));
     }
@@ -93,8 +112,8 @@ public class LayoutManager extends ManagerPackage {
 
         File layoutFile = getSavedLayoutFile(layoutName);
 
-        if (layoutFile != null && restore(layoutFile))
-            notifyLayoutChanged();
+        if (layoutFile != null)
+            pendingLayoutFile = layoutFile;
     }
 
     public void deleteLayout(String layoutName) {

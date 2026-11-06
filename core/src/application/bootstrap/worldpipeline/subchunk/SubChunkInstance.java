@@ -25,7 +25,8 @@ public class SubChunkInstance extends WorldRenderInstance {
     /*
      * One vertical slice of a chunk. Pure air and single-block regions stay
      * virtual; per-block palettes are only realized when an edit or a geometry
-     * build needs them, and released again on reset(). Tracks the geometry
+     * build needs them, and released again on reset() with the quad records,
+     * so a pooled subchunk keeps no storage. Tracks the geometry
      * types its last build contained, and setSubBlocks() is the single write
      * path for sub-block cells. Coverage lives in a palette of its own, written
      * only through setCoverage(), and a cell loses its coverage the moment its
@@ -140,7 +141,7 @@ public class SubChunkInstance extends WorldRenderInstance {
 
         worldItemPaletteHandle.clear();
         clearWorldSpawns();
-        getQuadPacket().clear();
+        getQuadPacket().release();
         containedBlockTypes.clear();
         Arrays.fill(blockTypeCounts, 0);
         containedLiquidBlockIDs.clear();

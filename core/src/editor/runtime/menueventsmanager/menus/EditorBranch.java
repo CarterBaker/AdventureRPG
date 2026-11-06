@@ -17,7 +17,8 @@ public class EditorBranch extends BranchPackage {
      * open their tool's tab in the clicked OS window; layout operations list
      * saved layouts and create, load, save over, and delete them, listing
      * them again the moment one is created or deleted so the dropdown never
-     * shows a layout that is not on disk.
+     * shows a layout that is not on disk. Saving over a layout asks first,
+     * its name already filled in, so a stray click never replaces it.
      */
 
     // Internal
@@ -250,8 +251,13 @@ public class EditorBranch extends BranchPackage {
         layoutManager.loadLayout(layoutName);
     }
 
-    public void saveLayout(String layoutName) {
-        layoutManager.saveLayout(layoutName);
+    public void saveLayout(String layoutName, WindowInstance window) {
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.DIALOG_TITLE_SAVE_OVER_PREFIX + layoutName + EditorSetting.DIALOG_TITLE_SAVE_OVER_SUFFIX,
+                layoutName,
+                layoutName::equals,
+                layoutManager::saveLayout);
     }
 
     public void deleteLayout(String layoutName, WindowInstance window) {

@@ -3,6 +3,7 @@ package application.bootstrap.geometrypipeline.compositebuffermanager;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferData;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import engine.root.ManagerPackage;
 
 public class CompositeBufferManager extends ManagerPackage {
@@ -10,7 +11,20 @@ public class CompositeBufferManager extends ManagerPackage {
     /*
      * Creates, grows, and disposes CompositeBufferInstances.
      * Upload and draw are the responsibility of CompositeRenderSystem.
+     * dispose() is the one teardown: it empties the buffer, so a draw queued
+     * before its release passes it over, and frees its own GPU objects and
+     * every copy the renderer made of it for a window.
      */
+
+    // Internal
+    private RenderManager renderManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.renderManager = get(RenderManager.class);
+    }
 
     // Constructor \\
 
@@ -56,7 +70,9 @@ public class CompositeBufferManager extends ManagerPackage {
     // Dispose \\
 
     public void dispose(CompositeBufferInstance buffer) {
+        buffer.clear();
         CompositeBufferGLSLUtility.deleteBuffer(buffer.getInstanceVBO());
         CompositeBufferGLSLUtility.deleteVAO(buffer.getCompositeVAO());
+        renderManager.releaseCompositeBuffer(buffer);
     }
 }
