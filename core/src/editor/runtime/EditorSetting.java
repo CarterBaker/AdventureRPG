@@ -326,6 +326,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
     public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
+    public static final String TAB_TITLE_CHARACTER_MESH_EDITOR = "Character Mesh Editor";
     public static final String TAB_TITLE_FACE_EDITOR = "Face Editor";
     public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
     public static final String TAB_TITLE_FACE_PROPERTIES = "Face Properties";
@@ -338,6 +339,10 @@ public class EditorSetting {
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
+    public static final String TAB_TITLE_RECORDER_KEYS = "Recorder Keys";
+    public static final String TAB_TITLE_RECORDER_BIN = "Recorder Bin";
+    public static final String TAB_TITLE_RECORDER_ASSETS = "Recorder Assets";
+    public static final String TAB_TITLE_RECORDER_SETTINGS = "Recorder Settings";
     public static final String TAB_TITLE_RECORDINGS = "Recordings";
     public static final String TAB_TITLE_SOUND_LIBRARY = "Sound Library";
     public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
@@ -508,6 +513,10 @@ public class EditorSetting {
     // Character View — the frame, its middle a share of the model's height up and its radius reaching the feet
     public static final float CHARACTER_VIEW_FRAME_HEIGHT_SHARE = 0.55f;
 
+    // Character View — a number row's slider spans this many of its value's steps, centred where the value stood
+    // when the row was listed
+    public static final int CHARACTER_VIEW_SLIDER_STEPS = 40;
+
     // Character View — panel keys, numbers and text
     public static final String CHARACTER_VIEW_KEY_SEPARATOR = ":";
     public static final float CHARACTER_VIEW_DECIMAL_SCALE = 10000f;
@@ -549,7 +558,9 @@ public class EditorSetting {
             "character_editor_row_value",
             "character_editor_row_value_button",
             "character_editor_row_decrease",
-            "character_editor_row_increase");
+            "character_editor_row_increase",
+            "character_editor_row_track",
+            "character_editor_row_knob");
     public static final CharacterViewTemplateStruct ANIMATION_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/AnimationEditor/animation_editor_header_row",
             "editor/AnimationEditor/animation_editor_item_row",
@@ -562,7 +573,9 @@ public class EditorSetting {
             "animation_editor_row_value",
             "animation_editor_row_value_button",
             "animation_editor_row_decrease",
-            "animation_editor_row_increase");
+            "animation_editor_row_increase",
+            "animation_editor_row_track",
+            "animation_editor_row_knob");
     public static final CharacterViewTemplateStruct FACE_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/FaceEditor/face_editor_header_row",
             "editor/FaceEditor/face_editor_item_row",
@@ -575,7 +588,9 @@ public class EditorSetting {
             "face_editor_row_value",
             "face_editor_row_value_button",
             "face_editor_row_decrease",
-            "face_editor_row_increase");
+            "face_editor_row_increase",
+            "face_editor_row_track",
+            "face_editor_row_knob");
 
     // Character View — viewport gestures: the buttons, the GLFW keys a transform locks its axis with, pointer
     // distances in pixels, snapping, and the undo history they record
@@ -1797,9 +1812,10 @@ public class EditorSetting {
     public static final String RECORDER_TRANSITION_UNIFORM_SIDE_PARAMS = "u_sideParams";
     public static final String RECORDER_TRANSITION_UNIFORM_COLOR = "u_color";
 
-    // Recorder — the tab's menu and those of the tools beside it, and the lanes its drags land on and the ruler and
-    // graph its wheel zooms, which every Recorder tab shares
+    // Recorder — the timeline's menu and the Keys', those of the tools beside them, and the lanes the drags land on
+    // and the ruler and graph the wheel zooms, which every Recorder tab shares
     public static final String RECORDER_MENU = "editor/Recorder/Recorder";
+    public static final String RECORDER_KEYS_MENU = "editor/Recorder/RecorderKeys";
     public static final String SOUND_LIBRARY_MENU = "editor/SoundLibrary/SoundLibrary";
     public static final String TRANSITIONS_MENU = "editor/Transitions/Transitions";
     public static final String RECORDINGS_MENU = "editor/Recordings/Recordings";
@@ -1813,10 +1829,10 @@ public class EditorSetting {
     public static final String SOUND_LIBRARY_STATUS_NO_SOUND = "Select a sound first";
     public static final String SOUND_LIBRARY_STATUS_SILENT = "No audio device is open, so nothing can play";
     public static final String SOUND_LIBRARY_STATUS_ADDED = "Laid on the Recorder's timeline: ";
-    public static final int RECORDER_ENTRY_CLIP_LANES = 4;
-    public static final int RECORDER_ENTRY_RULER = 5;
-    public static final int RECORDER_ENTRY_KEY_ROWS = 15;
-    public static final int RECORDER_ENTRY_KEY_GRAPH = 16;
+    public static final int RECORDER_ENTRY_CLIP_LANES = 2;
+    public static final int RECORDER_ENTRY_RULER = 3;
+    public static final int RECORDER_ENTRY_KEY_ROWS = 1;
+    public static final int RECORDER_ENTRY_KEY_GRAPH = 2;
 
     // Recorder — channels
     public static final String RECORDER_CHANNEL_LABEL_CAMERA = "Camera";

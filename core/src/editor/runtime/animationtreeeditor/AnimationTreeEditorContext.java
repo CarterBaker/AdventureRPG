@@ -1,8 +1,10 @@
 package editor.runtime.animationtreeeditor;
 
+import editor.bootstrap.animationtreeeditorpipeline.animationtreeeditormanager.AnimationTreeEditorManager;
 import editor.runtime.animationtreeeditor.menu.AnimationTreeEditorMenuSystem;
 import editor.runtime.animationtreeeditor.preview.AnimationTreeEditorPreviewSystem;
 import editor.runtime.characterview.panel.CharacterViewPanelSystem;
+import editor.runtime.characterview.panel.CharacterViewStepTarget;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import editor.runtime.input.EditorInputSystem;
@@ -11,7 +13,7 @@ import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
-public class AnimationTreeEditorContext extends ContextPackage implements ViewCameraProvider {
+public class AnimationTreeEditorContext extends ContextPackage implements ViewCameraProvider, CharacterViewStepTarget {
 
     /*
      * Editor tab for building animation trees: layers and their blend and
@@ -21,10 +23,12 @@ public class AnimationTreeEditorContext extends ContextPackage implements ViewCa
      * parameter, through any action. All state lives in
      * AnimationTreeEditorManager and every edit in InfoManager; this tab
      * reads input, orbits the camera, plays and draws the character, and
-     * shows the toolbar and panels.
+     * shows the toolbar and panels, whose number sliders step the tree's
+     * values through the manager.
      */
 
     // Internal
+    private AnimationTreeEditorManager animationTreeEditorManager;
     private EditorInputSystem editorInputSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private ViewCameraSystem viewCameraSystem;
@@ -47,8 +51,20 @@ public class AnimationTreeEditorContext extends ContextPackage implements ViewCa
     }
 
     @Override
+    protected void get() {
+        this.animationTreeEditorManager = get(AnimationTreeEditorManager.class);
+    }
+
+    @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Rows \\
+
+    @Override
+    public void stepRow(String key, int steps) {
+        animationTreeEditorManager.step(key, steps);
     }
 
     // Camera \\

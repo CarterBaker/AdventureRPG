@@ -14,7 +14,8 @@ layouts like any other.
 
 | Window | Context | Shows |
 |---|---|---|
-| Character Editor | `CharacterEditorContext` | the preview, its overlay and the mode toolbar; a tool canvas in Mesh, Sculpt, Weights and Rig |
+| Character Editor | `CharacterEditorContext` | how the character looks: the preview and the Appearance, Build and Equipment toolbar |
+| Character Mesh Editor | `CharacterMeshEditorContext` | modelling: the bind-pose preview, its overlay and the Mesh, Sculpt, Weights and Rig toolbar; a tool canvas |
 | Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
 | Character Properties | `CharacterPropertiesContext` | `CharacterEditorManager.buildPropertyRows` |
 | Face Editor | `FaceEditorContext` | the open character framed on its head, its face bones marked; the Character Face tool canvas |
@@ -25,6 +26,21 @@ layouts like any other.
 | Animation Properties | `AnimationPropertiesContext` | `AnimationEditorManager.buildPropertyRows` |
 | Animation Timeline | `AnimationTimelineContext` | transport, summary track and a dope sheet lane per bone |
 
+- **Two viewport tabs, one manager.** The Character Editor keeps to the modes that take no tools and the Character
+  Mesh Editor to those that do (`CharacterEditorMode.isModeling`). Each tab's `CharacterEditorModeSystem` remembers
+  its own mode and draws its preview in it (`CharacterEditorPreviewSystem` reads the tab's mode, never the manager's);
+  while a tab is focused it hands its mode to `CharacterEditorManager.setMode`, so the docker windows follow the tab
+  worked in last. The viewport systems live in `editor.runtime.charactereditor` and both tabs create them; only the
+  mesh tab creates the mesh view, sculpt, rig and overlay systems and a `ToolCanvasSystem`, and its
+  `runToolAction` adopts its mode first. Each tab names its starting mode and toolbar through
+  `CharacterEditorWindowProvider`; their keys are `shortcuts/CharacterEditor.arpg` and
+  `shortcuts/CharacterMeshEditor.arpg`.
+- **Number rows have a slider.** `CharacterViewPanelSystem` refills a panel only when its rows change by kind, key,
+  label or selection; otherwise it sets the moved values in place, so a dragged slider keeps its row. A slider spans
+  `EditorSetting.CHARACTER_VIEW_SLIDER_STEPS` of the value's own steps centred where the value stood when the row was
+  listed, and hands the tool the steps it moves through the context's `CharacterViewStepTarget.stepRow`, the path the
+  step buttons take; the value box still opens for typing. A number row template carries the track and knob ids in
+  its `CharacterViewTemplateStruct`.
 - A docker context implements `CharacterViewRowSource` and creates `CharacterViewPanelSystem`,
   `CharacterViewDockSystem` and `ToolCanvasSystem`; the dock system opens `menus/editor/CharacterDock.arpg` and
   refills it only when the source's revision moves. Row templates stay in the tool's own menu

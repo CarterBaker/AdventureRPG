@@ -1,53 +1,63 @@
 package editor.runtime.recorder;
 
+import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
-import editor.runtime.recorder.panel.RecorderAssetsSystem;
-import editor.runtime.recorder.panel.RecorderKeysSystem;
-import editor.runtime.recorder.panel.RecorderPanelSystem;
+import editor.runtime.EditorSetting;
+import editor.runtime.recorder.panel.RecorderRowSystem;
+import editor.runtime.recorder.panel.RecorderTimelineSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import engine.root.ContextPackage;
 
-public class RecorderContext extends ContextPackage implements ToolCanvasProvider {
+public class RecorderContext extends ContextPackage implements ToolCanvasProvider, RecorderTabProvider {
 
     /*
-     * Editor tab for the recorder: the transport that records, plays and
-     * stops in the Dev window, the timeline's lanes of clips to move, split,
-     * trim, stamp, mute and strip of channels, zoomed and scrolled, sounds
-     * dropped onto them from the sound library and transitions dropped on
-     * their edges from the transitions tool, each clip showing the nodes
-     * of what the player does along it, the channels armed for the next take,
-     * the export settings, and below the timeline one of three panes: the
-     * Keys, where every value the selected clip's take recorded is a curve of
-     * keys to retime, move and bend on a graph, and every character's
-     * movements and gestures are nodes; the Bin of takes to drag onto the
-     * timeline beside the selected clip's edits; and the Assets the whole
-     * recording uses, section by section. The recordings themselves are made
-     * and opened in the Recordings tool. All state lives in RecorderManager;
-     * this tab only shows it and hands clicks, drags and the wheel to
-     * RecorderBranch. The tab is a tool canvas, the timeline, for as long as
-     * it is open.
+     * Editor tab for the recorder's timeline: the transport that records,
+     * plays and stops in the Dev window, and the timeline's lanes of clips to
+     * move, split, trim, stamp, mute and strip of channels, zoomed and
+     * scrolled, sounds dropped onto them from the sound library, takes from
+     * the Recorder Bin and transitions on their edges from the transitions
+     * tool, each clip showing the nodes of what the player does along it.
+     * Its other work is in the tabs beside it: the Recorder Keys, where every
+     * value a take recorded is a curve of keys; the Recorder Bin of takes
+     * beside the selected clip's edits; the Recorder Assets the recording
+     * uses; and the Recorder Settings, the channels armed and the export.
+     * The recordings themselves are made and opened in the Recordings tool.
+     * All state lives in RecorderManager; this tab only shows it and hands
+     * clicks, drags and the wheel to RecorderBranch. The tab is a tool
+     * canvas, the timeline, for as long as it is open.
      */
 
     // Internal
-    private RecorderPanelSystem recorderPanelSystem;
-    private RecorderKeysSystem recorderKeysSystem;
-    private RecorderAssetsSystem recorderAssetsSystem;
+    private RecorderRowSystem recorderRowSystem;
+    private RecorderTimelineSystem recorderTimelineSystem;
     private ToolCanvasSystem toolCanvasSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
-        this.recorderPanelSystem = create(RecorderPanelSystem.class);
-        this.recorderKeysSystem = create(RecorderKeysSystem.class);
-        this.recorderAssetsSystem = create(RecorderAssetsSystem.class);
+        this.recorderRowSystem = create(RecorderRowSystem.class);
+        this.recorderTimelineSystem = create(RecorderTimelineSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // Tab \\
+
+    @Override
+    public String getRecorderMenu() {
+        return EditorSetting.RECORDER_MENU;
+    }
+
+    // The timeline is no pane, so working in it leaves the pane the keys act on as it is
+    @Override
+    public RecorderPane getRecorderPane() {
+        return null;
     }
 
     // Tools \\

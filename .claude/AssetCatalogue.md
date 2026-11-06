@@ -140,6 +140,16 @@ One line per session that changed this file: the date, what was added or removed
   `shortcuts/Tools.arpg` (Raise and Lower), `shortcuts/WorldEditor.arpg` (no layer toggle), `schemas/Brushes.arpg`
   (ratio and angle) and `materials/editor/WorldEditorBrushMaterial.arpg`, and rewrote `WorldEditorBrushShader.fsh`
   (turned and squashed tips).
+- 2026-11-06: Character Editor split and value sliders. Added `menus/editor/CharacterMeshEditor.arpg` (Mesh,
+  Sculpt, Weights and Rig toolbar) and `shortcuts/CharacterMeshEditor.arpg` (the mesh keys and held modifiers);
+  regenerated `menus/editor/CharacterEditor.arpg` (Appearance, Build and Equipment toolbar, number rows with a
+  slider), `menus/editor/FaceEditor.arpg`, `menus/editor/AnimationEditor.arpg` and
+  `menus/editor/AnimationTreeEditor.arpg` (number rows with a slider), `menus/editor/EditorWindow.arpg` (Character
+  Mesh Editor in the Characters menu) and `shortcuts/CharacterEditor.arpg` (undo, redo and save only).
+- 2026-11-06: Recorder split into tabs. Added `shortcuts/RecorderKeys.arpg` and `shortcuts/RecorderBin.arpg`;
+  regenerated `menus/editor/Recorder.arpg` (the timeline, Keys, Bin, Assets and Settings menus, one per tab),
+  `menus/editor/EditorWindow.arpg` (the four new Recorder tabs in the Media menu) and `shortcuts/Recorder.arpg` (no
+  pane keys; the key actions moved to the Keys tab).
 ---
 
 ## Textures and Sprites (2175 files)
@@ -1353,7 +1363,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1714 files)
+## Data Files (1718 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2135,7 +2145,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePalette.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`,
-`CharacterEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
+`CharacterEditor.arpg`, `CharacterMeshEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
+`FaceEditor.arpg`,
 `HeightEditor.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Recorder.arpg`, `Recordings.arpg`,
 `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`,
 `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
@@ -2434,8 +2445,9 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/shortcuts/`
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`,
-`FaceEditor.arpg`, `HeightEditor.arpg`, `Hierarchy.arpg`, `InfoPanel.arpg`, `ItemEditor.arpg`, `Profiler.arpg`,
-`Recorder.arpg`, `SettlementPlanner.arpg`, `Tools.arpg`, `WorldEditor.arpg`
+`CharacterMeshEditor.arpg`, `FaceEditor.arpg`, `HeightEditor.arpg`, `Hierarchy.arpg`, `InfoPanel.arpg`,
+`ItemEditor.arpg`, `Profiler.arpg`, `Recorder.arpg`, `RecorderBin.arpg`, `RecorderKeys.arpg`, `SettlementPlanner.arpg`,
+`Tools.arpg`, `WorldEditor.arpg`
 
 ### `assets/skills/`
 

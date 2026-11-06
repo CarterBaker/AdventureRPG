@@ -9,7 +9,6 @@ import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
-import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
@@ -28,7 +27,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecorderKeysSystem extends SystemPackage {
 
     /*
-     * Fills the Keys pane below the timeline while it shows. Its outliner
+     * Fills the Recorder Keys tab, beside the Recorder's timeline. Its outliner
      * lists the selected clip's take track by track, each opened to a row for
      * every value it holds and, for a character, a row of its movement and one
      * of its gestures; every row's strip shows its keys or nodes across the
@@ -43,7 +42,7 @@ public class RecorderKeysSystem extends SystemPackage {
      * from marks made once and placed again, so a mark that has not moved is
      * left alone. Its inspector shows the selected sound, else the selected
      * transition, else the selected curve, key or node, and what can be done
-     * to it. The whole pane is drawn
+     * to it. The whole tab is drawn
      * again when the recorder's revision, its keys or its view move; keys or a
      * handle being dragged move only the selected marks on their strip, the
      * graph's marks that changed and the inspector's key, a sound carried only
@@ -53,7 +52,7 @@ public class RecorderKeysSystem extends SystemPackage {
     // Internal
     private MenuManager menuManager;
     private RecorderManager recorderManager;
-    private RecorderPanelSystem recorderPanelSystem;
+    private RecorderRowSystem recorderRowSystem;
 
     // Menus
     private MenuInstance recorderMenu;
@@ -88,7 +87,6 @@ public class RecorderKeysSystem extends SystemPackage {
     private RecorderMarkPoolStruct[] pools;
 
     // State
-    private boolean shown;
     private int shownRevision;
     private int shownKeysRevision;
     private int shownViewRevision;
@@ -135,26 +133,26 @@ public class RecorderKeysSystem extends SystemPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.recorderManager = get(RecorderManager.class);
-        this.recorderPanelSystem = get(RecorderPanelSystem.class);
+        this.recorderRowSystem = get(RecorderRowSystem.class);
     }
 
     @Override
     protected void awake() {
 
-        this.recorderMenu = recorderPanelSystem.getRecorderMenu();
-        this.keysTitle = requireEntryPoint(RecorderSetting.ENTRY_KEYS_TITLE);
-        this.keyGraph = requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
-        this.keysPlayhead = requireEntryPoint(RecorderSetting.ENTRY_KEYS_PLAYHEAD);
-        this.graphTop = requireEntryPoint(RecorderSetting.ENTRY_GRAPH_TOP);
-        this.graphBottom = requireEntryPoint(RecorderSetting.ENTRY_GRAPH_BOTTOM);
+        this.recorderMenu = recorderRowSystem.getMenu();
+        this.keysTitle = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_KEYS_TITLE);
+        this.keyGraph = recorderRowSystem.requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
+        this.keysPlayhead = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_KEYS_PLAYHEAD);
+        this.graphTop = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_GRAPH_TOP);
+        this.graphBottom = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_GRAPH_BOTTOM);
 
-        requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
-        requireEntryPoint(RecorderSetting.ENTRY_KEY_INSPECTOR);
+        recorderRowSystem.requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
+        recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_KEY_INSPECTOR);
 
         // Graph — lines lie under points
-        ElementInstance graphMarks = requireEntryPoint(RecorderSetting.ENTRY_GRAPH_MARKS);
-        ElementInstance graphLines = requireChild(graphMarks, RecorderSetting.ELEMENT_GRAPH_LINES);
-        ElementInstance graphPoints = requireChild(graphMarks, RecorderSetting.ELEMENT_GRAPH_POINTS);
+        ElementInstance graphMarks = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_GRAPH_MARKS);
+        ElementInstance graphLines = recorderRowSystem.requireChild(graphMarks, RecorderSetting.ELEMENT_GRAPH_LINES);
+        ElementInstance graphPoints = recorderRowSystem.requireChild(graphMarks, RecorderSetting.ELEMENT_GRAPH_POINTS);
 
         this.segmentPool = new RecorderMarkPoolStruct(RecorderSetting.TEMPLATE_GRAPH_SEGMENT, graphLines);
         this.handleLinePool = new RecorderMarkPoolStruct(RecorderSetting.TEMPLATE_GRAPH_HANDLE_LINE, graphLines);
@@ -166,41 +164,12 @@ public class RecorderKeysSystem extends SystemPackage {
                 segmentPool, handleLinePool, keyPool, selectedKeyPool, handlePool, boxPool };
     }
 
-    private ElementInstance requireEntryPoint(int entryPoint) {
 
-        ElementInstance element = recorderMenu.getEntryPoint(entryPoint);
-
-        if (element == null)
-            throwException("Recorder menu '" + EditorSetting.RECORDER_MENU + "' has no entry point "
-                    + entryPoint + ".");
-
-        return element;
-    }
-
-    private ElementInstance requireChild(ElementInstance parent, String childId) {
-
-        ElementInstance element = parent.findChildById(childId);
-
-        if (element == null)
-            throwException("Recorder menu '" + EditorSetting.RECORDER_MENU + "' has no element '" + childId + "'.");
-
-        return element;
-    }
 
     // Update \\
 
     @Override
     protected void update() {
-
-        boolean keys = recorderManager.getPane() == RecorderPane.KEYS;
-
-        if (keys != shown) {
-            this.shown = keys;
-            this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
-        }
-
-        if (!keys)
-            return;
 
         if (isStale())
             refreshKeys();
@@ -282,7 +251,7 @@ public class RecorderKeysSystem extends SystemPackage {
         this.selectedSoundBar = null;
 
         if (clip == null) {
-            recorderPanelSystem.injectText(EditorSetting.RECORDER_ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_CLIP);
+            recorderRowSystem.injectText(EditorSetting.RECORDER_ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_CLIP);
             return;
         }
 
@@ -290,7 +259,7 @@ public class RecorderKeysSystem extends SystemPackage {
         RecordingSoundTrackStruct soundTrack = recorderManager.getKeySoundTrack();
 
         if (tracks.isEmpty() && soundTrack == null)
-            recorderPanelSystem.injectText(EditorSetting.RECORDER_ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_TRACKS);
+            recorderRowSystem.injectText(EditorSetting.RECORDER_ENTRY_KEY_ROWS, RecorderSetting.TEXT_KEYS_NO_TRACKS);
 
         for (int i = 0; i < tracks.size(); i++)
             injectTrack(tracks.get(i), i, clip);
@@ -824,70 +793,70 @@ public class RecorderKeysSystem extends SystemPackage {
         RecordingCurveStruct curve = recorderManager.getSelectedCurve();
 
         if (clip == null) {
-            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_NO_CLIP);
+            recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_NO_CLIP);
             return;
         }
 
         if (recorderManager.getSelectedSound() != EngineSetting.INDEX_NOT_FOUND) {
-            recorderPanelSystem.refreshSound(entryPoint);
+            recorderRowSystem.injectSound(entryPoint);
             return;
         }
 
         if (recorderManager.getSelectedTransitionClip() != null) {
-            recorderPanelSystem.refreshTransition(entryPoint);
+            recorderRowSystem.injectTransition(entryPoint);
             return;
         }
 
         if (track == null || recorderManager.getSelectedSlot() < 0) {
-            recorderPanelSystem.refreshNode(entryPoint);
-            recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_KEYS);
-            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_OPEN);
-            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_SELECT);
-            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_VIEW);
-            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_VALUES);
+            recorderRowSystem.injectNode(entryPoint);
+            recorderRowSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_KEYS);
+            recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_OPEN);
+            recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_SELECT);
+            recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_VIEW);
+            recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_VALUES);
             refreshSoundHints(entryPoint);
             return;
         }
 
-        recorderPanelSystem.injectHeader(entryPoint, String.format(RecorderSetting.FORMAT_CURVE_HEADER,
+        recorderRowSystem.injectHeader(entryPoint, String.format(RecorderSetting.FORMAT_CURVE_HEADER,
                 track.getTrackLabel(), track.getCurveLabel(recorderManager.getSelectedSlot())));
 
         if (curve == null) {
-            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_CURVE_UNLAID);
+            recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_CURVE_UNLAID);
             return;
         }
 
-        this.nowLabel = recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_EMPTY);
+        this.nowLabel = recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_EMPTY);
         refreshNow();
-        recorderPanelSystem.injectText(entryPoint, String.format(RecorderSetting.FORMAT_CURVE_KEYS, curve.size()));
+        recorderRowSystem.injectText(entryPoint, String.format(RecorderSetting.FORMAT_CURVE_KEYS, curve.size()));
 
         int selectedCount = recorderManager.getSelectedKeys().size();
 
         if (selectedCount > 1)
-            recorderPanelSystem.injectText(entryPoint,
+            recorderRowSystem.injectText(entryPoint,
                     String.format(RecorderSetting.FORMAT_KEYS_SELECTED, selectedCount));
-        recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_KEY_ADD, EditorSetting.RECORDER_KEY_KEY_ADD);
+        recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_KEY_ADD, EditorSetting.RECORDER_KEY_KEY_ADD);
 
         int key = recorderManager.getSelectedKey();
 
         if (key >= 0 && key < curve.size()) {
-            this.keyTimeLabel = recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_EMPTY);
-            this.keyValueLabel = recorderPanelSystem.injectSetting(entryPoint, RecorderSetting.TEXT_KEY_VALUE,
+            this.keyTimeLabel = recorderRowSystem.injectHeader(entryPoint, RecorderSetting.TEXT_EMPTY);
+            this.keyValueLabel = recorderRowSystem.injectSetting(entryPoint, RecorderSetting.TEXT_KEY_VALUE,
                     RecorderSetting.TEXT_EMPTY, EditorSetting.RECORDER_KEY_KEY_VALUE);
             refreshKey(clip);
-            recorderPanelSystem.injectSetting(entryPoint, RecorderSetting.TEXT_KEY_MODE,
+            recorderRowSystem.injectSetting(entryPoint, RecorderSetting.TEXT_KEY_MODE,
                     curve.getMode(key).getLabel(), EditorSetting.RECORDER_KEY_KEY_MODE);
-            recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_KEY_DELETE,
+            recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_KEY_DELETE,
                     EditorSetting.RECORDER_KEY_KEY_DELETE);
         } else
-            recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_KEY);
+            recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_KEYS_HINT_KEY);
 
-        recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_CURVE);
-        recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_CURVE_REFIT,
+        recorderRowSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_CURVE);
+        recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_CURVE_REFIT,
                 EditorSetting.RECORDER_KEY_CURVE_REFIT);
-        recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_TAKE_REFIT,
+        recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_TAKE_REFIT,
                 EditorSetting.RECORDER_KEY_TAKE_REFIT);
-        recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_CURVE_SHARED);
+        recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_CURVE_SHARED);
         refreshSoundHints(entryPoint);
     }
 
@@ -897,10 +866,10 @@ public class RecorderKeysSystem extends SystemPackage {
         if (recorderManager.getKeySoundTrack() == null)
             return;
 
-        recorderPanelSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_SOUNDS);
-        recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_SOUNDS_HINT_SELECT);
-        recorderPanelSystem.injectText(entryPoint, RecorderSetting.TEXT_SOUNDS_HINT_DROP);
-        recorderPanelSystem.injectAction(entryPoint, RecorderSetting.TEXT_SOUNDS_ADD,
+        recorderRowSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_SOUNDS);
+        recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_SOUNDS_HINT_SELECT);
+        recorderRowSystem.injectText(entryPoint, RecorderSetting.TEXT_SOUNDS_HINT_DROP);
+        recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_SOUNDS_ADD,
                 EditorSetting.RECORDER_KEY_SOUND_ADD);
     }
 
@@ -914,7 +883,7 @@ public class RecorderKeysSystem extends SystemPackage {
             return;
 
         keyTimeLabel.setFontText(String.format(RecorderSetting.FORMAT_KEY_HEADER,
-                recorderPanelSystem.formatTime(clip.toTimelineTime(curve.getTime(key)))));
+                recorderRowSystem.formatTime(clip.toTimelineTime(curve.getTime(key)))));
         keyValueLabel.setFontText(recorderManager.formatValue(curve.getProperty().getKind(), curve.getValue(key)));
     }
 

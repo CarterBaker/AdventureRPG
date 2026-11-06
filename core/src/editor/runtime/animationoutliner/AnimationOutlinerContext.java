@@ -67,4 +67,9 @@ public class AnimationOutlinerContext extends ContextPackage implements Characte
     public CharacterViewTemplateStruct getRowTemplates() {
         return EditorSetting.ANIMATION_EDITOR_ROW_TEMPLATES;
     }
+
+    @Override
+    public void stepRow(String key, int steps) {
+        animationEditorManager.step(key, steps);
+    }
 }

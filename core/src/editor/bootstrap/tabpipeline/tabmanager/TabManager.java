@@ -23,6 +23,7 @@ import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.runtime.charactereditor.CharacterEditorContext;
+import editor.runtime.charactermesheditor.CharacterMeshEditorContext;
 import editor.runtime.characteroutliner.CharacterOutlinerContext;
 import editor.runtime.characterproperties.CharacterPropertiesContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
@@ -37,6 +38,10 @@ import editor.runtime.infopanel.InfoPanelContext;
 import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.recorder.RecorderContext;
+import editor.runtime.recorderassets.RecorderAssetsContext;
+import editor.runtime.recorderbin.RecorderBinContext;
+import editor.runtime.recorderkeys.RecorderKeysContext;
+import editor.runtime.recordersettings.RecorderSettingsContext;
 import editor.runtime.recordings.RecordingsContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
@@ -157,6 +162,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openCharacterEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_EDITOR, CharacterEditorContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterMeshEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_MESH_EDITOR, CharacterMeshEditorContext.class, osWindow);
     }
 
     public TabHandle openCharacterOutliner(WindowInstance osWindow) {
@@ -286,6 +295,22 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openRecorder(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_RECORDER, RecorderContext.class, osWindow);
+    }
+
+    public TabHandle openRecorderKeys(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_RECORDER_KEYS, RecorderKeysContext.class, osWindow);
+    }
+
+    public TabHandle openRecorderBin(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_RECORDER_BIN, RecorderBinContext.class, osWindow);
+    }
+
+    public TabHandle openRecorderAssets(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_RECORDER_ASSETS, RecorderAssetsContext.class, osWindow);
+    }
+
+    public TabHandle openRecorderSettings(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_RECORDER_SETTINGS, RecorderSettingsContext.class, osWindow);
     }
 
     public TabHandle openRecordings(WindowInstance osWindow) {

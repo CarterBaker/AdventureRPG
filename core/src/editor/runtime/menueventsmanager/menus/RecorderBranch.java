@@ -9,7 +9,6 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
-import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.soundlibrarypipeline.soundlibrarymanager.SoundLibraryManager;
@@ -24,7 +23,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecorderBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Recorder tab. Every action works on the one
+     * Menu event handlers for the Recorder tabs — the timeline, the Keys, the
+     * Bin, the Assets and the Settings. Every action works on the one
      * recorder all tabs share; the recordings themselves are made, opened,
      * renamed, copied and deleted from the Recordings tool. Takes are named
      * through the text dialog, and deleting a take asks for its name to be
@@ -33,8 +33,8 @@ public class RecorderBranch extends BranchPackage {
      * the bin picks it up, and letting go over the lanes lays it there; a
      * sound pressed in the sound library is picked up the same way and laid
      * as a take of its own over the lanes of whichever Recorder tab the
-     * cursor is let go above, in any window, or let go over the rows of its
-     * Keys pane is added to the take shown there at the moment under the
+     * cursor is let go above, in any window, or let go over the rows of a
+     * Recorder Keys tab is added to the take shown there at the moment under the
      * cursor; a transition pressed in the transitions tool is picked up the
      * same way and laid on the clip edge of whichever Recorder tab's lanes it
      * is let go over. A
@@ -152,7 +152,7 @@ public class RecorderBranch extends BranchPackage {
             return;
 
         WindowInstance window = windowManager.getHoveredWindow();
-        MenuInstance menu = window != null ? findRecorderMenu(window) : null;
+        MenuInstance menu = window != null ? findMenu(window, EditorSetting.RECORDER_MENU) : null;
         ElementInstance lanes = menu != null ? menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_CLIP_LANES) : null;
 
         if (recorderManager.getDrag().isActive() || !recorderManager.hasRecording() || lanes == null
@@ -185,18 +185,18 @@ public class RecorderBranch extends BranchPackage {
         if (wheel == 0f && sideways == 0f)
             return;
 
-        MenuInstance menu = findRecorderMenu(window);
+        MenuInstance timelineMenu = findMenu(window, EditorSetting.RECORDER_MENU);
+        MenuInstance keysMenu = findMenu(window, EditorSetting.RECORDER_KEYS_MENU);
 
-        if (menu == null)
+        if (timelineMenu == null && keysMenu == null)
             return;
 
-        ElementInstance lanes = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_CLIP_LANES);
-        ElementInstance ruler = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_RULER);
-        ElementInstance graph = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
-        ElementInstance keyRows = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
-        boolean keys = recorderManager.getPane() == RecorderPane.KEYS;
-        boolean overGraph = keys && isUnderCursor(window, graph);
-        boolean overRows = keys && isUnderCursor(window, keyRows);
+        ElementInstance lanes = findEntry(timelineMenu, EditorSetting.RECORDER_ENTRY_CLIP_LANES);
+        ElementInstance ruler = findEntry(timelineMenu, EditorSetting.RECORDER_ENTRY_RULER);
+        ElementInstance graph = findEntry(keysMenu, EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
+        ElementInstance keyRows = findEntry(keysMenu, EditorSetting.RECORDER_ENTRY_KEY_ROWS);
+        boolean overGraph = isUnderCursor(window, graph);
+        boolean overRows = isUnderCursor(window, keyRows);
 
         if (overRows && inputManager.getHoverMouseX(window) < graph.getComputedLeft()) {
             keyRows.setScrollY(keyRows.getScrollY() - wheel * EngineSetting.MENU_SCROLL_PIXELS);
@@ -280,20 +280,6 @@ public class RecorderBranch extends BranchPackage {
 
     public void zoomFit() {
         recorderManager.fitView();
-    }
-
-    // Panes \\
-
-    public void showKeys() {
-        recorderManager.showPane(RecorderPane.KEYS);
-    }
-
-    public void showBin() {
-        recorderManager.showPane(RecorderPane.BIN);
-    }
-
-    public void showAssets() {
-        recorderManager.showPane(RecorderPane.ASSETS);
     }
 
     // Keys \\
@@ -534,9 +520,9 @@ public class RecorderBranch extends BranchPackage {
     // otherwise
     private ElementInstance findKeyStrips(WindowInstance window) {
 
-        MenuInstance menu = findRecorderMenu(window);
+        MenuInstance menu = findMenu(window, EditorSetting.RECORDER_KEYS_MENU);
 
-        if (menu == null || recorderManager.getPane() != RecorderPane.KEYS)
+        if (menu == null)
             return null;
 
         ElementInstance keyRows = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
@@ -683,20 +669,23 @@ public class RecorderBranch extends BranchPackage {
     // The lanes of the Recorder tab open in the window, null when it shows none
     private ElementInstance findLanes(WindowInstance window) {
 
-        MenuInstance menu = findRecorderMenu(window);
-
-        return menu != null ? menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_CLIP_LANES) : null;
+        return findEntry(findMenu(window, EditorSetting.RECORDER_MENU), EditorSetting.RECORDER_ENTRY_CLIP_LANES);
     }
 
-    private MenuInstance findRecorderMenu(WindowInstance window) {
+    // The Recorder tab menu of a name open in the window, null when the window shows none
+    private MenuInstance findMenu(WindowInstance window, String menuName) {
 
         ObjectArrayList<MenuInstance> menus = window.getMenuListHandle().getMenus();
 
         for (int i = 0; i < menus.size(); i++)
-            if (menus.get(i).getMenuData().getName().equals(EditorSetting.RECORDER_MENU))
+            if (menus.get(i).getMenuData().getName().equals(menuName))
                 return menus.get(i);
 
         return null;
+    }
+
+    private ElementInstance findEntry(MenuInstance menu, int entryPoint) {
+        return menu != null ? menu.getEntryPoint(entryPoint) : null;
     }
 
     // Assets \\

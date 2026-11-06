@@ -15,11 +15,12 @@ public class CharacterPropertiesContext extends ContextPackage implements Charac
 
     /*
      * Docker window holding the values of what the character editor's mode
-     * and selection work on: colors and palettes, the build, an anchor, the
-     * mesh, sculpt and weight tools, or the selected bone of the rig. Every
-     * edit goes through CharacterEditorManager, so every Character Editor
-     * tab shows it at once. The shared tool keys work while this window is
-     * focused.
+     * and selection work on — colors and palettes, the build, an anchor, the
+     * mesh, sculpt and weight tools, or the selected bone of the rig — each
+     * number on a slider and typed into its box, for whichever of the
+     * Character Editor and Character Mesh Editor was worked in last. Every
+     * edit goes through CharacterEditorManager, so every such tab shows it
+     * at once. The shared tool keys work while this window is focused.
      */
 
     // Internal
@@ -68,5 +69,10 @@ public class CharacterPropertiesContext extends ContextPackage implements Charac
     @Override
     public CharacterViewTemplateStruct getRowTemplates() {
         return EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES;
+    }
+
+    @Override
+    public void stepRow(String key, int steps) {
+        characterEditorManager.step(key, steps);
     }
 }

@@ -7,8 +7,9 @@ public class CharacterViewTemplateStruct extends StructPackage {
     /*
      * The row templates one character tool's menu declares, one per row kind
      * and a second for a selected item, and the ids of the label, the value
-     * and the button it sits on, and the step buttons inside them. A tool
-     * that lists no text rows declares no text template. Each tool's
+     * and the button it sits on, the step buttons inside them, and a number
+     * row's slider track and knob. A tool that lists no text rows declares
+     * no text template. Each tool's
      * templates call its own menu branch, so the panels it fills route back
      * to it.
      */
@@ -28,6 +29,8 @@ public class CharacterViewTemplateStruct extends StructPackage {
     private final String valueButtonElement;
     private final String decreaseElement;
     private final String increaseElement;
+    private final String trackElement;
+    private final String knobElement;
 
     // Constructor \\
 
@@ -43,7 +46,9 @@ public class CharacterViewTemplateStruct extends StructPackage {
             String valueElement,
             String valueButtonElement,
             String decreaseElement,
-            String increaseElement) {
+            String increaseElement,
+            String trackElement,
+            String knobElement) {
 
         // Templates
         this.headerTemplate = headerTemplate;
@@ -60,6 +65,8 @@ public class CharacterViewTemplateStruct extends StructPackage {
         this.valueButtonElement = valueButtonElement;
         this.decreaseElement = decreaseElement;
         this.increaseElement = increaseElement;
+        this.trackElement = trackElement;
+        this.knobElement = knobElement;
     }
 
     // Accessible \\
@@ -111,5 +118,13 @@ public class CharacterViewTemplateStruct extends StructPackage {
 
     public String getIncreaseElement() {
         return increaseElement;
+    }
+
+    public String getTrackElement() {
+        return trackElement;
+    }
+
+    public String getKnobElement() {
+        return knobElement;
     }
 }

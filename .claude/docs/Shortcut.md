@@ -26,11 +26,11 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut, `O` Inflate, `K` Pinch, `Shift+F`
   Flatten, `N` Nudge, `R` Raise, `L` Lower), resize the brush (`[` and `]`) and step through the brushes (`-` and `=`).
   Besides the Tools tab, they work in every window `ToolManager` counts as a tool window — each canvas (World Editor,
-  Height Editor, Item Editor, Character Editor, Face Editor, Animation Editor, Recorder), the Brushes tab and the
+  Height Editor, Item Editor, Character Mesh Editor, Face Editor, Animation Editor, Recorder), the Brushes tab and the
   character, face and animation docker windows (Outliner, Properties, Timeline), each opened there by its
   `ToolCanvasSystem` — after that window's own keys, so a window's own shortcut wins where both use a key (the Character
-  Editor's `E` extrudes and `S` scales; the Recorder's `F`, `B` and `T` keep their own actions). A tool a canvas does
-  not take is ignored there. Rebinding one on the Settings dialog's Shortcuts page rebinds it in every editor at once.
+  Mesh Editor's `E` extrudes and `S` scales; the Recorder's `B` keeps its own action). A tool a canvas does not take is
+  ignored there. Rebinding one on the Settings dialog's Shortcuts page rebinds it in every editor at once.
 
 ---
 
@@ -91,5 +91,5 @@ Every tool that selects many things follows one gesture set, each modifier a hel
 - A plain drag on nothing belongs to the view camera in a 3D viewport: left turns the view, right pans it.
 - **Delete** removes everything selected as one edit.
 
-The Recorder's Keys pane (keys on a curve's row or graph), the Character Editor's mesh modes (vertices) and the World
+The Recorder Keys tab (keys on a curve's row or graph), the Character Mesh Editor's mesh modes (vertices) and the World
 Editor's Select tool (hand-placed settlements and structures) follow it.

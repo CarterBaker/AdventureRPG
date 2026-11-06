@@ -6,8 +6,10 @@ import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
 import editor.runtime.charactereditor.CharacterEditorSetting;
+import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
@@ -28,10 +30,14 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * mesh or rig is edited — and given the markers of the mode: the joints in
      * Build, Mesh and Weights, the rig's bones as they are being edited in
      * Rig, every equipment anchor in Equipment, the selected one highlighted.
+     * The tab's own mode decides all of it, so the Character Editor and the
+     * Character Mesh Editor each show the character their own way side by
+     * side.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
+    private CharacterEditorModeSystem characterEditorModeSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
 
@@ -39,6 +45,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     private CharacterDocumentInstance boundDocument;
     private int boundRevision;
     private int lookRevision;
+    private CharacterEditorMode lookMode;
 
     // Scratch
     private Vector3 heldSize;
@@ -59,6 +66,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     @Override
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
+        this.characterEditorModeSystem = get(CharacterEditorModeSystem.class);
         this.characterViewPoseSystem = get(CharacterViewPoseSystem.class);
         this.characterViewRenderSystem = get(CharacterViewRenderSystem.class);
     }
@@ -79,7 +87,8 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         if (document != boundDocument || document.getPreviewRevision() != boundRevision)
             bind(document);
 
-        if (characterEditorManager.getRevision() != lookRevision)
+        if (characterEditorManager.getRevision() != lookRevision
+                || characterEditorModeSystem.getMode() != lookMode)
             applyLook();
 
         strikePose();
@@ -101,12 +110,13 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     private void applyLook() {
 
         this.lookRevision = characterEditorManager.getRevision();
+        this.lookMode = characterEditorModeSystem.getMode();
 
         if (characterViewPoseSystem.hasAppearance())
             characterEditorManager.applyLook(
                     characterViewPoseSystem.getAppearanceHandle(),
                     characterViewPoseSystem.getEntityData().getAppearanceData(),
-                    characterEditorManager.getMode().isMeshMode(),
+                    lookMode.isMeshMode(),
                     false);
     }
 
@@ -116,7 +126,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         CharacterEditorPose pose = characterEditorManager.getPose();
 
-        if (characterEditorManager.getMode().holdsBindPose()) {
+        if (characterEditorModeSystem.getMode().holdsBindPose()) {
             characterViewPoseSystem.poseBind();
             return;
         }
@@ -134,7 +144,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     private void pushMarkers() {
 
-        switch (characterEditorManager.getMode()) {
+        switch (characterEditorModeSystem.getMode()) {
             case BUILD, MESH, WEIGHTS -> pushJointMarkers();
             case RIG -> pushRigMarkers();
             case EQUIPMENT -> pushAnchorMarkers();

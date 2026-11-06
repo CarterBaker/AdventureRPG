@@ -84,7 +84,7 @@ public class RecorderManager extends ManagerPackage {
      * records is laid on a curve of keys as soon as the take is stopped, and
      * every take of a recording opened that has none yet, one track a frame so
      * nothing stalls, and the curves play from then on: a recording is made of
-     * keys. The Keys pane below the timeline shows the selected clip's take
+     * keys. The Recorder Keys tab shows the selected clip's take
      * track by track — the camera, the player, every resident, item and
      * vehicle, the weather and the clock — with the graph of the value
      * selected, and beneath them the take's Sounds layer, a row for each sound
@@ -101,8 +101,9 @@ public class RecorderManager extends ManagerPackage {
      * keys are selected at once — picked one by one or boxed on the graph or
      * a row, added to or taken away from — and move and delete together; the
      * last picked is the one the inspector shows and whose handles are drawn.
-     * What is selected is deleted as one: the keys, else the sound, else the
-     * node, else the clip. The Assets pane lists
+     * What is selected is deleted as one: the keys while the Keys were worked
+     * in last, else the sound, else the node, else the clip. The Assets tab
+     * lists
      * every asset the whole recording uses, section by section, each section
      * opened or closed here. A sound dragged in from the sound library, or
      * added at the playhead, is laid as a take of its own holding that sound

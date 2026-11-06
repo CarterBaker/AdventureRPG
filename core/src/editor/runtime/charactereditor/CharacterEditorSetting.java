@@ -3,10 +3,12 @@ package editor.runtime.charactereditor;
 public class CharacterEditorSetting {
 
     /*
-     * Constants used only by CharacterEditorContext — its toolbar menu, the
-     * size of the box shown for a held anchor, and the mesh modes' box
-     * selection, held shortcuts and the overlay their vertices and edges are
-     * drawn with. Its panels' rows are the docker windows'.
+     * Constants used only by CharacterEditorContext and the viewport systems
+     * it owns, which the Character Mesh Editor's tab creates as well — the
+     * Character Editor's toolbar menu and the status entry both toolbars
+     * share, the size of the box shown for a held anchor, and the mesh modes'
+     * box selection, held shortcuts and the overlay their vertices and edges
+     * are drawn with. Its panels' rows are the docker windows'.
      */
 
     // Menus
@@ -16,11 +18,12 @@ public class CharacterEditorSetting {
     // Markers — the box shown for a held anchor, in blocks
     public static final float HELD_ANCHOR_MARKER_SIZE = 0.06f;
 
-    // Mesh Input — the held shortcuts a selection, a transform and a stroke read, named in shortcuts/CharacterEditor
-    public static final String SHORTCUT_ADD_SELECTION = "CharacterEditor/AddSelection";
-    public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterEditor/SubtractSelection";
-    public static final String SHORTCUT_SNAP = "CharacterEditor/Snap";
-    public static final String SHORTCUT_INVERT_STROKE = "CharacterEditor/InvertStroke";
+    // Mesh Input — the held shortcuts a selection, a transform and a stroke read, named in
+    // shortcuts/CharacterMeshEditor
+    public static final String SHORTCUT_ADD_SELECTION = "CharacterMeshEditor/AddSelection";
+    public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterMeshEditor/SubtractSelection";
+    public static final String SHORTCUT_SNAP = "CharacterMeshEditor/Snap";
+    public static final String SHORTCUT_INVERT_STROKE = "CharacterMeshEditor/InvertStroke";
 
     // Mesh Input — the pointer distance in pixels a press travels before it draws a box
     public static final float DRAG_PIXELS = 4f;

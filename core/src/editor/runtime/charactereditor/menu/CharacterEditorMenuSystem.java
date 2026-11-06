@@ -8,16 +8,18 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.runtime.charactereditor.CharacterEditorSetting;
+import editor.runtime.charactereditor.CharacterEditorWindowProvider;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
 public class CharacterEditorMenuSystem extends SystemPackage {
 
     /*
-     * Opens the Character Editor toolbar and its status bar over the
-     * viewport, and rewrites the status line when the editor's revision
-     * moves. The editor's panels are the Character Outliner and Character
-     * Properties docker windows.
+     * Opens the toolbar its tab names, the Character Editor's or the
+     * Character Mesh Editor's, and its status bar over the viewport, and
+     * rewrites the status line when the editor's revision moves. The
+     * editor's panels are the Character Outliner and Character Properties
+     * docker windows.
      */
 
     // Internal
@@ -53,7 +55,7 @@ public class CharacterEditorMenuSystem extends SystemPackage {
         WindowInstance window = context.getWindow();
 
         menuManager.setMenuTargetFbo(window, fboManager.cloneFbo(RuntimeSetting.FBO_UI, window));
-        this.toolbarMenu = menuManager.openMenu(CharacterEditorSetting.MENU_TOOLBAR, window);
+        this.toolbarMenu = menuManager.openMenu(((CharacterEditorWindowProvider) context).getToolbarMenu(), window);
     }
 
     // Update \\

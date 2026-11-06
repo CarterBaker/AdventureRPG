@@ -4,10 +4,8 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
-import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingAssetSectionStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingAssetStruct;
-import editor.runtime.EditorSetting;
 import editor.runtime.recorder.RecorderSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -15,26 +13,26 @@ import engine.root.SystemPackage;
 public class RecorderAssetsSystem extends SystemPackage {
 
     /*
-     * Fills the Assets pane below the timeline while it shows: every asset the
-     * open recording uses across all its takes, one section for each kind
-     * that has any, each headed by its name and how many it holds and pressed
-     * to open or close it. An opened section lists its assets by name, each
-     * beside what brings it in, or marked missing when the game can no longer
-     * find it. The pane is drawn again whenever the recorder gathers the
-     * assets again or a section is opened or closed.
+     * Fills the Recorder Assets tab: every asset the open recording uses
+     * across all its takes, one section for each kind that has any, each
+     * headed by its name and how many it holds and pressed to open or close
+     * it. An opened section lists its assets by name, each beside what brings
+     * it in, or marked missing when the game can no longer find it. The tab
+     * is drawn again whenever the recorder gathers the assets again, which it
+     * does while this is the pane worked in, or a section is opened or
+     * closed.
      */
 
     // Internal
     private MenuManager menuManager;
     private RecorderManager recorderManager;
-    private RecorderPanelSystem recorderPanelSystem;
+    private RecorderRowSystem recorderRowSystem;
 
     // Menus
     private MenuInstance recorderMenu;
     private ElementInstance assetsTitle;
 
     // State
-    private boolean shown;
     private int shownAssetsRevision;
 
     // Base \\
@@ -50,42 +48,25 @@ public class RecorderAssetsSystem extends SystemPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.recorderManager = get(RecorderManager.class);
-        this.recorderPanelSystem = get(RecorderPanelSystem.class);
+        this.recorderRowSystem = get(RecorderRowSystem.class);
     }
 
     @Override
     protected void awake() {
 
-        this.recorderMenu = recorderPanelSystem.getRecorderMenu();
-        this.assetsTitle = requireEntryPoint(RecorderSetting.ENTRY_ASSETS_TITLE);
+        this.recorderMenu = recorderRowSystem.getMenu();
+        this.assetsTitle = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_ASSETS_TITLE);
 
-        requireEntryPoint(RecorderSetting.ENTRY_ASSET_ROWS);
+        recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_ASSET_ROWS);
     }
 
-    private ElementInstance requireEntryPoint(int entryPoint) {
-
-        ElementInstance element = recorderMenu.getEntryPoint(entryPoint);
-
-        if (element == null)
-            throwException("Recorder menu '" + EditorSetting.RECORDER_MENU + "' has no entry point "
-                    + entryPoint + ".");
-
-        return element;
-    }
 
     // Update \\
 
     @Override
     protected void update() {
 
-        boolean assets = recorderManager.getPane() == RecorderPane.ASSETS;
-
-        if (assets != shown) {
-            this.shown = assets;
-            this.shownAssetsRevision = EngineSetting.INDEX_NOT_FOUND;
-        }
-
-        if (assets && recorderManager.getAssetsRevision() != shownAssetsRevision)
+        if (recorderManager.getAssetsRevision() != shownAssetsRevision)
             refreshAssets();
     }
 
@@ -99,7 +80,7 @@ public class RecorderAssetsSystem extends SystemPackage {
 
         if (!recorderManager.hasRecording()) {
             assetsTitle.setFontText(RecorderSetting.TEXT_ASSETS_TITLE);
-            recorderPanelSystem.injectText(RecorderSetting.ENTRY_ASSET_ROWS, RecorderSetting.TEXT_NO_RECORDING);
+            recorderRowSystem.injectText(RecorderSetting.ENTRY_ASSET_ROWS, RecorderSetting.TEXT_NO_RECORDING);
             return;
         }
 

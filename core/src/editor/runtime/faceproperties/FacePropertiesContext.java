@@ -68,4 +68,9 @@ public class FacePropertiesContext extends ContextPackage implements CharacterVi
     public CharacterViewTemplateStruct getRowTemplates() {
         return EditorSetting.FACE_EDITOR_ROW_TEMPLATES;
     }
+
+    @Override
+    public void stepRow(String key, int steps) {
+        faceEditorManager.step(key, steps);
+    }
 }

@@ -15,7 +15,9 @@ public enum CharacterEditorMode {
      * canvas; the mesh modes edit the part's mesh file, the ones that hold
      * the bind pose show the character exactly as its mesh and rig are
      * authored, and those that show the vertices draw them over the body.
-     * Each carries the hint the status bar shows while it is open.
+     * Each carries the hint the status bar shows while it is open. The modes
+     * that take tools are worked in the Character Mesh Editor, the rest in
+     * the Character Editor, each window keeping to its own.
      */
 
     APPEARANCE(EditorSetting.CHARACTER_EDITOR_MODE_APPEARANCE, null, false, false, false, null),
@@ -91,6 +93,11 @@ public enum CharacterEditorMode {
     // The tool canvas the viewport is while this mode is open, null for a mode that takes no tools
     public ToolCanvas getToolCanvas() {
         return toolCanvas;
+    }
+
+    // True for a mode worked in the Character Mesh Editor, the modes that take tools
+    public boolean isModeling() {
+        return toolCanvas != null;
     }
 
     // What the status bar tells the pointer to do in this mode, null for a mode with nothing to say

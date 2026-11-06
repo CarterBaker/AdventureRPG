@@ -57,7 +57,9 @@ public class AnimationTreeEditorMenuSystem extends SystemPackage {
                 AnimationTreeEditorSetting.ELEMENT_ROW_VALUE,
                 AnimationTreeEditorSetting.ELEMENT_ROW_VALUE_BUTTON,
                 AnimationTreeEditorSetting.ELEMENT_ROW_DECREASE,
-                AnimationTreeEditorSetting.ELEMENT_ROW_INCREASE);
+                AnimationTreeEditorSetting.ELEMENT_ROW_INCREASE,
+                AnimationTreeEditorSetting.ELEMENT_ROW_TRACK,
+                AnimationTreeEditorSetting.ELEMENT_ROW_KNOB);
 
         // Rows
         this.rows = new ObjectArrayList<>();

@@ -28,4 +28,6 @@ public class AnimationTreeEditorSetting {
     public static final String ELEMENT_ROW_VALUE_BUTTON = "animation_tree_editor_row_value_button";
     public static final String ELEMENT_ROW_DECREASE = "animation_tree_editor_row_decrease";
     public static final String ELEMENT_ROW_INCREASE = "animation_tree_editor_row_increase";
+    public static final String ELEMENT_ROW_TRACK = "animation_tree_editor_row_track";
+    public static final String ELEMENT_ROW_KNOB = "animation_tree_editor_row_knob";
 }

@@ -86,6 +86,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterEditor(window.getGLWindow());
     }
 
+    public void openCharacterMeshEditor(WindowInstance window) {
+        tabManager.openCharacterMeshEditor(window.getGLWindow());
+    }
+
     public void openCharacterOutliner(WindowInstance window) {
         tabManager.openCharacterOutliner(window.getGLWindow());
     }
@@ -172,6 +176,22 @@ public class EditorBranch extends BranchPackage {
 
     public void openRecorder(WindowInstance window) {
         tabManager.openRecorder(window.getGLWindow());
+    }
+
+    public void openRecorderKeys(WindowInstance window) {
+        tabManager.openRecorderKeys(window.getGLWindow());
+    }
+
+    public void openRecorderBin(WindowInstance window) {
+        tabManager.openRecorderBin(window.getGLWindow());
+    }
+
+    public void openRecorderAssets(WindowInstance window) {
+        tabManager.openRecorderAssets(window.getGLWindow());
+    }
+
+    public void openRecorderSettings(WindowInstance window) {
+        tabManager.openRecorderSettings(window.getGLWindow());
     }
 
     public void openRecordings(WindowInstance window) {

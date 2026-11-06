@@ -3,11 +3,13 @@ package editor.runtime.recorder;
 public class RecorderSetting {
 
     /*
-     * Constants used only by RecorderContext — the row, clip, transition,
-     * node, timeline, Keys and Assets templates its panels are filled from and their elements,
-     * its entry points, the timeline's fixed steps, its ruler's ticks, the
-     * sizes the timeline and the Keys tab draw at, how often the clock and
-     * export progress refresh, and every word the tab shows.
+     * Constants used only by RecorderContext and the Recorder tabs beside it
+     * — Keys, Bin, Assets and Settings, which share its systems — the menus
+     * each opens, the row, clip, transition, node, timeline, Keys and Assets
+     * templates their panels are filled from and their elements, each menu's
+     * entry points, the timeline's fixed steps, its ruler's ticks, the sizes
+     * the timeline and the Keys tab draw at, how often the clock and export
+     * progress refresh, and every word the tabs show.
      */
 
     // Templates
@@ -65,32 +67,38 @@ public class RecorderSetting {
     public static final String ELEMENT_GRAPH_LINES = "recorder_key_graph_lines";
     public static final String ELEMENT_GRAPH_POINTS = "recorder_key_graph_points";
 
-    // Entry Points — the clip lanes, the ruler, the Keys rows and the Keys graph are EditorSetting
-    // RECORDER_ENTRY_CLIP_LANES, RECORDER_ENTRY_RULER, RECORDER_ENTRY_KEY_ROWS and RECORDER_ENTRY_KEY_GRAPH, which the
-    // drags and the wheel share
+    // Menus — the timeline's and the Keys' are EditorSetting RECORDER_MENU and RECORDER_KEYS_MENU, which the drags
+    // and the wheel look for
+    public static final String MENU_BIN = "editor/Recorder/RecorderBin";
+    public static final String MENU_ASSETS = "editor/Recorder/RecorderAssets";
+    public static final String MENU_SETTINGS = "editor/Recorder/RecorderSettings";
+
+    // Entry Points — the timeline's menu; the clip lanes and the ruler are EditorSetting RECORDER_ENTRY_CLIP_LANES and
+    // RECORDER_ENTRY_RULER, which the drags and the wheel share
     public static final int ENTRY_STATUS = 0;
     public static final int ENTRY_CLOCK = 1;
-    public static final int ENTRY_SETTINGS = 2;
-    public static final int ENTRY_TAKES = 3;
-    public static final int ENTRY_PLAYHEAD = 6;
-    public static final int ENTRY_RANGE_START = 7;
-    public static final int ENTRY_RANGE_END = 8;
-    public static final int ENTRY_CLIP = 9;
-    public static final int ENTRY_DRAG_GHOST = 10;
-    public static final int ENTRY_LANE_PLAYHEAD = 11;
-    public static final int ENTRY_VIEW = 12;
-    public static final int ENTRY_KEYS_PANEL = 13;
-    public static final int ENTRY_KEYS_TITLE = 14;
-    public static final int ENTRY_GRAPH_MARKS = 17;
-    public static final int ENTRY_KEYS_PLAYHEAD = 18;
-    public static final int ENTRY_GRAPH_TOP = 19;
-    public static final int ENTRY_GRAPH_BOTTOM = 20;
-    public static final int ENTRY_KEY_INSPECTOR = 21;
-    public static final int ENTRY_TAKES_PANEL = 22;
-    public static final int ENTRY_CLIP_PANEL = 23;
-    public static final int ENTRY_ASSETS_PANEL = 24;
-    public static final int ENTRY_ASSETS_TITLE = 25;
-    public static final int ENTRY_ASSET_ROWS = 26;
+    public static final int ENTRY_PLAYHEAD = 4;
+    public static final int ENTRY_RANGE_START = 5;
+    public static final int ENTRY_RANGE_END = 6;
+    public static final int ENTRY_DRAG_GHOST = 7;
+    public static final int ENTRY_LANE_PLAYHEAD = 8;
+    public static final int ENTRY_VIEW = 9;
+
+    // Entry Points — the Keys' menu; its rows and graph are EditorSetting RECORDER_ENTRY_KEY_ROWS and
+    // RECORDER_ENTRY_KEY_GRAPH, which the drags and the wheel share
+    public static final int ENTRY_KEYS_TITLE = 0;
+    public static final int ENTRY_GRAPH_MARKS = 3;
+    public static final int ENTRY_KEYS_PLAYHEAD = 4;
+    public static final int ENTRY_GRAPH_TOP = 5;
+    public static final int ENTRY_GRAPH_BOTTOM = 6;
+    public static final int ENTRY_KEY_INSPECTOR = 7;
+
+    // Entry Points — the Bin's, the Assets' and the Settings' menus
+    public static final int ENTRY_TAKES = 0;
+    public static final int ENTRY_CLIP = 1;
+    public static final int ENTRY_ASSETS_TITLE = 0;
+    public static final int ENTRY_ASSET_ROWS = 1;
+    public static final int ENTRY_SETTINGS = 0;
 
     // Timeline — positions across the view as a percentage of it; a drag's ghost may reach a view's width past
     // either side, where the lanes' mask hides it
@@ -105,7 +113,7 @@ public class RecorderSetting {
     public static final float RANGE_MARKER_WIDTH_PIXELS = 2f;
     public static final float RANGE_MARKER_HEIGHT_PIXELS = 30f;
 
-    // Keys — a panel set aside is moved this far off the window; a key's diamond is a square turned on its corner,
+    // Keys — a mark set aside is moved this far off the window; a key's diamond is a square turned on its corner,
     // the graph's line is sampled every few pixels, its lines are drawn this thick, and keys closer than this on
     // it are drawn once
     public static final float HIDDEN_PANEL_PIXELS = -100000f;

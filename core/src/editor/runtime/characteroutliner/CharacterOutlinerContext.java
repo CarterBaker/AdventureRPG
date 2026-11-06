@@ -16,9 +16,11 @@ public class CharacterOutlinerContext extends ContextPackage implements Characte
     /*
      * Docker window listing what the character editor works on in its mode:
      * how the preview stands and the features, bones, anchors or worn parts
-     * to pick, the rig's bones in Rig mode. Picking a row picks it for every
-     * Character Editor tab; the state lives in CharacterEditorManager. The
-     * shared tool keys work while this window is focused.
+     * to pick, the rig's bones in Rig mode, for whichever of the Character
+     * Editor and Character Mesh Editor was worked in last. Picking a row
+     * picks it for every such tab; the state lives in
+     * CharacterEditorManager. The shared tool keys work while this window is
+     * focused.
      */
 
     // Internal
@@ -67,5 +69,10 @@ public class CharacterOutlinerContext extends ContextPackage implements Characte
     @Override
     public CharacterViewTemplateStruct getRowTemplates() {
         return EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES;
+    }
+
+    @Override
+    public void stepRow(String key, int steps) {
+        characterEditorManager.step(key, steps);
     }
 }
