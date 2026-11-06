@@ -2,6 +2,7 @@ package editor.bootstrap.soundlibrarypipeline.soundlibrarymanager;
 
 import application.bootstrap.soundpipeline.sound.SoundHandle;
 import application.bootstrap.soundpipeline.soundmanager.SoundManager;
+import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
@@ -23,12 +24,14 @@ public class SoundLibraryManager extends ManagerPackage {
      * The selected sound is added to the recorder's timeline at its playhead
      * here; dragging it there goes through the recorder itself. A preview
      * that runs out returns its cue to the start. Each change moves the
-     * revision the tab redraws on.
+     * revision the tab redraws on. A sound picked in the Hierarchy becomes
+     * the selection, and a new selection is shown in the Info Panel.
      */
 
     // Internal
     private SoundManager soundManager;
     private RecorderManager recorderManager;
+    private InfoManager infoManager;
 
     // Library
     private ObjectArrayList<SoundHandle> sounds;
@@ -73,6 +76,12 @@ public class SoundLibraryManager extends ManagerPackage {
     protected void get() {
         this.soundManager = get(SoundManager.class);
         this.recorderManager = get(RecorderManager.class);
+        this.infoManager = get(InfoManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_SOUNDS, entry -> selectSound(entry.getEntryName()));
     }
 
     // Update \\
@@ -130,6 +139,7 @@ public class SoundLibraryManager extends ManagerPackage {
 
         stop();
         this.selectedSoundID = soundID;
+        infoManager.selectEntry(EditorSetting.INFO_SCHEMA_SOUNDS, soundName, soundName);
         setStatus(EditorSetting.SOUND_LIBRARY_STATUS_SELECTED + soundName);
     }
 

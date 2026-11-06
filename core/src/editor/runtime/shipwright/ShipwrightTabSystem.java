@@ -103,12 +103,14 @@ public class ShipwrightTabSystem extends SystemPackage {
 
     // Write \\
 
-    // A ship written into the assets through InfoManager, chosen for the Ship Viewer once written
+    // A ship written into the assets through InfoManager, shown in the Info Panel and chosen for the Ship Viewer
+    // once written
     private String writeShip(String shipName, ArpgObjectStruct shipArpg) {
 
         if (!infoManager.writeDocument(EditorSetting.INFO_SCHEMA_VEHICLES, shipName, shipArpg))
             return infoManager.getRefusal();
 
+        infoManager.selectEntry(EditorSetting.INFO_SCHEMA_VEHICLES, shipName, shipName);
         chooseTable();
 
         return EngineSetting.SHIPWRIGHT_STATUS_NONE;

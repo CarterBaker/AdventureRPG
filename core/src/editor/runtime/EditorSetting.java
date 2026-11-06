@@ -1614,6 +1614,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_STRUCTURES = "Structures";
     public static final String INFO_SCHEMA_BRUSHES = "Brushes";
     public static final String INFO_SCHEMA_TRANSITIONS = "Transitions";
+    public static final String INFO_SCHEMA_SOUNDS = "Sounds";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";

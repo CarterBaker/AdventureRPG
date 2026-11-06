@@ -26,7 +26,9 @@ public class TransitionManager extends ManagerPackage {
      * them, and every change reaches here live, rebuilding the transition in
      * place under its ID, so a clip playing it takes the edit at once. A name
      * no transition answers to any longer plays as the default, and the
-     * selection falls back to the default when its transition is deleted.
+     * selection falls back to the default when its transition is deleted. A
+     * transition picked in the Hierarchy becomes the selection, and a new
+     * selection is shown in the Info Panel.
      */
 
     // Internal
@@ -70,6 +72,9 @@ public class TransitionManager extends ManagerPackage {
 
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_TRANSITIONS, this::rebuildTransition);
         infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_TRANSITIONS, this::retireTransition);
+        infoManager.addSelectionListener(
+                EditorSetting.INFO_SCHEMA_TRANSITIONS,
+                entry -> selectTransition(entry.getEntryName()));
     }
 
     // Management \\
@@ -141,6 +146,7 @@ public class TransitionManager extends ManagerPackage {
             return;
 
         this.selectedTransition = transitionHandle;
+        infoManager.selectEntry(EditorSetting.INFO_SCHEMA_TRANSITIONS, transitionName, transitionName);
         notifyChanged();
     }
 
