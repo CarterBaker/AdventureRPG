@@ -136,7 +136,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
         ObjectArrayList<FeatureHandle> options = resolveOptions(
-                session.getPlayer().getEntityData().getAppearanceData(), featureSlot, true);
+                session.getPlayer().getEntityData().getRaceData().getAppearanceData(), featureSlot, true);
         int index = Math.floorMod(options.indexOf(appearance.getFeature(featureSlot)) + step, options.size());
 
         applyFeature(appearance, featureSlot, options.get(index));
@@ -175,7 +175,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
     private void injectSwatches(CreatorSessionStruct session, SkinnedColor skinnedColor, Color currentColor) {
 
-        Color[] colors = session.getPlayer().getEntityData().getAppearanceData().getPalette(skinnedColor);
+        Color[] colors = session.getPlayer().getEntityData().getRaceData().getAppearanceData().getPalette(skinnedColor);
         ElementInstance row = null;
 
         for (int i = 0; i < colors.length; i++) {
@@ -206,8 +206,8 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         String[] parts = argument.split(RuntimeSetting.CREATOR_ARGUMENT_SEPARATOR);
         SkinnedColor skinnedColor = SkinnedColor.valueOf(parts[0]);
-        Color color = session.getPlayer().getEntityData().getAppearanceData().getPalette(skinnedColor)[Integer
-                .parseInt(parts[1])];
+        Color color = session.getPlayer().getEntityData().getRaceData().getAppearanceData()
+                .getPalette(skinnedColor)[Integer.parseInt(parts[1])];
 
         session.getPlayer().getAppearanceHandle().setColor(skinnedColor, color.r, color.g, color.b);
         characterCreatorBranch.refreshOptions(session);
@@ -227,7 +227,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
             return;
 
         AppearanceHandle appearance = player.getAppearanceHandle();
-        AppearanceData appearanceData = player.getEntityData().getAppearanceData();
+        AppearanceData appearanceData = player.getEntityData().getRaceData().getAppearanceData();
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 

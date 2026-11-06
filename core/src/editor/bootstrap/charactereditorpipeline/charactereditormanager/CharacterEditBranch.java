@@ -20,11 +20,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class CharacterEditBranch extends BranchPackage {
 
     /*
-     * Performs every change the character editor makes to a template, each
+     * Performs every change the character editor makes to a race, each
      * through InfoManager so the Info Panel, the preview and every tab see
      * it at once. Edits write only the fields they change and keep every
      * other field and its order. A palette emptied of its last tone is
-     * removed, so the template falls back to its default color.
+     * removed, so the race falls back to its default color.
      */
 
     // Internal
@@ -37,36 +37,31 @@ class CharacterEditBranch extends BranchPackage {
         this.infoManager = get(InfoManager.class);
     }
 
-    // Template \\
+    // Race \\
 
     private void edit(CharacterDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
         infoManager.editEntry(
-                EditorSetting.INFO_SCHEMA_ENTITIES,
-                document.getTemplateName(),
-                document.getTemplateName(),
+                EditorSetting.INFO_SCHEMA_RACES,
+                document.getRaceName(),
+                document.getRaceName(),
                 editor);
     }
 
-    private void editModel(CharacterDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
-        edit(document, arpg -> editor.accept(
-                CharacterViewUtility.requireObject(arpg, EditorSetting.CHARACTER_EDITOR_FIELD_MODEL)));
-    }
-
     private void editAppearance(CharacterDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
-        editModel(document, model -> editor.accept(
-                CharacterViewUtility.requireObject(model, EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE)));
+        edit(document, race -> editor.accept(
+                CharacterViewUtility.requireObject(race, EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE)));
     }
 
     private void editAnchor(CharacterDocumentInstance document, int anchorIndex, Consumer<ArpgObjectStruct> editor) {
-        editModel(document, model -> editor.accept(CharacterViewUtility
-                .requireArray(model, EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
+        edit(document, race -> editor.accept(CharacterViewUtility
+                .requireArray(race, EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
                 .get(anchorIndex)
                 .getAsObject()));
     }
 
-    // A copy of every field, in order, as a new template beside the source
-    void copyTemplate(ArpgObjectStruct sourceArpg, String templateName) {
-        infoManager.createDocument(EditorSetting.INFO_SCHEMA_ENTITIES, templateName, root -> {
+    // A copy of every field, in order, as a new race beside the source
+    void copyTemplate(ArpgObjectStruct sourceArpg, String raceName) {
+        infoManager.createDocument(EditorSetting.INFO_SCHEMA_RACES, raceName, root -> {
 
             ObjectArrayList<String> defaultKeys = new ObjectArrayList<>(root.keySet());
 
@@ -206,14 +201,14 @@ class CharacterEditBranch extends BranchPackage {
     }
 
     void addAnchor(CharacterDocumentInstance document, ArpgObjectStruct anchorArpg) {
-        editModel(document, model -> CharacterViewUtility
-                .requireArray(model, EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
+        edit(document, race -> CharacterViewUtility
+                .requireArray(race, EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
                 .add(anchorArpg));
     }
 
     void removeAnchor(CharacterDocumentInstance document, int anchorIndex) {
-        editModel(document, model -> CharacterViewUtility
-                .requireArray(model, EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
+        edit(document, race -> CharacterViewUtility
+                .requireArray(race, EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
                 .remove(anchorIndex));
     }
 }

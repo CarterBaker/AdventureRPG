@@ -232,6 +232,7 @@ public class EngineSetting {
     public static final String NPC_PATH = "npcs";
     public static final String PASS_PATH = "processingpasses";
     public static final String PROFESSION_PATH = "professions";
+    public static final String RACE_PATH = "races";
     public static final String RIG_PATH = "rigs";
     public static final String ROAD_PATH = "roads";
     public static final String SEASON_PATH = "seasons";
@@ -2458,8 +2459,7 @@ public class EngineSetting {
     public static final float KILL_MORALITY_SHARE = 0.05f;
     public static final float MORALITY_MAX = 1000f;
 
-    // Professions and Genders
-    public static final String DEFAULT_RACE_GENDER = "asexual";
+    // Professions
     public static final int PROFESSION_DEFAULT_DEED_COUNT = 1;
     public static final float NPC_TRADE_GROWTH_PER_LEVEL = 0.05f;
 

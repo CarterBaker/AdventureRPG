@@ -14,9 +14,9 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 public class AppearanceData extends DataPackage {
 
     /*
-     * Immutable appearance template for one entity type: the body meshes its
-     * genders wear — the template's own mesh first, every one on the same rig
-     * and carrying the same morphs — with the morph each slider weighs and
+     * Immutable appearance of one race: the body meshes its genders wear —
+     * in the order the race lists them, every one on the race's rig and
+     * carrying the same morphs — with the morph each slider weighs and
      * each AppearanceExpression plays resolved on every body, the default
      * color and palette of every SkinnedColor, the default amount of every
      * SkinnedDetail, the shape sliders, the default feature per slot, each
@@ -28,7 +28,7 @@ public class AppearanceData extends DataPackage {
     private final RigHandle rigHandle;
     private final int headBoneIndex;
 
-    // Bodies — the template's mesh first
+    // Bodies — in the order the race's genders wear them
     private final MeshHandle[] bodyMeshes;
     private final int maxMorphCount;
 
@@ -141,7 +141,7 @@ public class AppearanceData extends DataPackage {
         return bodyMeshes[bodyIndex];
     }
 
-    // The body a gender wears, the template's own mesh for a gender with no preset or no mesh of its own
+    // The body a gender wears, the first body for a gender the race does not allow
     public int getBodyIndex(short genderID) {
 
         AppearanceGenderStruct preset = genderID2Preset.get(genderID);
@@ -189,7 +189,7 @@ public class AppearanceData extends DataPackage {
 
     // Features \\
 
-    // The feature a gender starts with in a slot: its preset's, else the template's default
+    // The feature a gender starts with in a slot: its preset's, else the race's default
     public FeatureHandle getStartingFeature(short genderID, FeatureSlot featureSlot) {
 
         AppearanceGenderStruct preset = genderID2Preset.get(genderID);
@@ -228,7 +228,7 @@ public class AppearanceData extends DataPackage {
         return defaultFeatures[featureSlot.ordinal()];
     }
 
-    // The preset of a gender, null when the template gives it none
+    // The preset of a gender, null when the race gives it none
     public AppearanceGenderStruct getGenderPreset(short genderID) {
         return genderID2Preset.get(genderID);
     }

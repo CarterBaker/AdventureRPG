@@ -3,47 +3,30 @@ package application.bootstrap.entitypipeline.entitymanager;
 import java.io.File;
 
 import application.bootstrap.combatpipeline.weaponmanager.WeaponManager;
-import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
-import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeManager;
-import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityHandle;
-import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
-import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
-import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
-import application.bootstrap.geometrypipeline.rig.RigHandle;
-import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
-import application.bootstrap.progressionpipeline.util.ProgressionArpgUtility;
-import application.bootstrap.shaderpipeline.material.MaterialInstance;
-import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.entitypipeline.race.RaceHandle;
+import application.bootstrap.entitypipeline.racemanager.RaceManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector3;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class EntityBuilder extends BuilderPackage {
 
     /*
      * Parses entity template ARPG into EntityData wrapped in an EntityHandle,
-     * defaulting size, weight and eye level. The optional model block resolves
-     * mesh, shared material, rig and animation tree, plus appearance and
-     * equipment anchors, and the genders the entity may be made as. "weapon"
-     * names what its own body fights with, bare hands unless it names another,
-     * and must be made for the model's rig. Bootstrap only, apart from the
-     * unregistered preview builds an editor makes of a template it is
-     * changing.
+     * defaulting size, weight and eye level. "race" is required and names the
+     * race the entity is made of, which holds the genders it may be made as
+     * and the character model each requires. "weapon" names what its own body
+     * fights with, bare hands unless it names another, and must be made for
+     * the race's rig. Bootstrap only, apart from the unregistered preview
+     * builds an editor makes of a template it is changing.
      */
 
     // Internal
-    private MeshManager meshManager;
-    private MaterialManager materialManager;
-    private AnimationTreeManager animationTreeManager;
-    private AppearanceBuilder appearanceBuilder;
-    private GenderManager genderManager;
+    private RaceManager raceManager;
     private WeaponManager weaponManager;
 
     // Base \\
@@ -52,11 +35,7 @@ class EntityBuilder extends BuilderPackage {
     protected void get() {
 
         // Internal
-        this.meshManager = get(MeshManager.class);
-        this.materialManager = get(MaterialManager.class);
-        this.animationTreeManager = get(AnimationTreeManager.class);
-        this.appearanceBuilder = get(AppearanceBuilder.class);
-        this.genderManager = get(GenderManager.class);
+        this.raceManager = get(RaceManager.class);
         this.weaponManager = get(WeaponManager.class);
     }
 
@@ -68,58 +47,16 @@ class EntityBuilder extends BuilderPackage {
 
     EntityHandle build(ArpgObjectStruct arpg, String sourceName) {
 
-        Vector3 sizeMin = parseSizeMin(arpg);
-        Vector3 sizeMax = parseSizeMax(arpg);
-        float weightMin = parseWeightMin(arpg);
-        float weightMax = parseWeightMax(arpg);
-        float eyeLevel = parseEyeLevel(arpg);
-        String behaviorName = parseBehaviorName(arpg, sourceName);
-        short[] genderIDs = parseGenders(arpg);
-
-        MeshHandle characterMesh = null;
-        MaterialInstance characterMaterial = null;
-        AnimationTreeHandle animationTreeHandle = null;
-        float modelHeight = 0f;
-        AppearanceData appearanceData = null;
-        ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors = new ObjectArrayList<>();
-
-        if (arpg.has("model") && !arpg.get("model").isNull()) {
-
-            ArpgObjectStruct modelArpg = arpg.getAsObject("model");
-            String meshName = ArpgUtility.validateString(modelArpg, "mesh");
-            String materialName = ArpgUtility.validateString(modelArpg, "material");
-
-            characterMesh = meshManager.getMeshHandleFromMeshName(meshName);
-
-            if (!characterMesh.hasRig())
-                throwException("Entity model mesh \"" + meshName
-                        + "\" has no rig — cannot be used as a character model. Source: " + sourceName);
-
-            characterMaterial = materialManager.cloneMaterial(materialName);
-            animationTreeHandle = parseAnimationTree(modelArpg, characterMesh, sourceName);
-
-            if (ArpgUtility.hasObject(modelArpg, "appearance"))
-                appearanceData = appearanceBuilder.build(
-                        modelArpg.getAsObject("appearance"),
-                        characterMesh,
-                        sourceName);
-
-            modelHeight = characterMesh.getHeight();
-
-            if (ArpgUtility.hasArray(modelArpg, "equipment"))
-                parseEquipmentAnchors(
-                        modelArpg.getAsArray("equipment"),
-                        characterMesh.getRigHandle(),
-                        equipmentAnchors,
-                        sourceName);
-        }
-
-        short weaponID = parseWeapon(arpg, characterMesh, sourceName);
-
+        RaceHandle raceHandle = raceManager.getRaceHandleFromRaceName(ArpgUtility.validateString(arpg, "race"));
         EntityData entityData = new EntityData(
-                sizeMin, sizeMax, weightMin, weightMax, eyeLevel, behaviorName, genderIDs, weaponID,
-                characterMesh, characterMaterial, animationTreeHandle, modelHeight, appearanceData,
-                equipmentAnchors);
+                parseSizeMin(arpg),
+                parseSizeMax(arpg),
+                parseWeightMin(arpg),
+                parseWeightMax(arpg),
+                parseEyeLevel(arpg),
+                parseBehaviorName(arpg, sourceName),
+                parseWeapon(arpg, raceHandle, sourceName),
+                raceHandle);
 
         EntityHandle entityHandle = create(EntityHandle.class);
         entityHandle.constructor(entityData);
@@ -127,91 +64,20 @@ class EntityBuilder extends BuilderPackage {
         return entityHandle;
     }
 
-    // Gender Parsing \\
-
-    // The genders the race allows, the race default's alone when it names none
-    private short[] parseGenders(ArpgObjectStruct arpg) {
-
-        short[] genderIDs = ProgressionArpgUtility.parseNames(
-                arpg, "genders", genderManager::getGenderIDFromGenderName);
-
-        if (genderIDs.length > 0)
-            return genderIDs;
-
-        return new short[] { genderManager.getGenderIDFromGenderName(EngineSetting.DEFAULT_RACE_GENDER) };
-    }
-
     // Combat Parsing \\
 
-    // The weapon the entity's own body fights with — made for its model's rig when it has one
-    private short parseWeapon(ArpgObjectStruct arpg, MeshHandle characterMesh, String sourceName) {
+    // The weapon the entity's own body fights with — made for its race's rig
+    private short parseWeapon(ArpgObjectStruct arpg, RaceHandle raceHandle, String sourceName) {
 
         String weaponName = ArpgUtility.getString(arpg, "weapon", EngineSetting.DEFAULT_ENTITY_WEAPON);
         short weaponID = weaponManager.getWeaponIDFromWeaponName(weaponName);
 
-        if (characterMesh != null
-                && !weaponManager.getWeaponHandleFromWeaponID(weaponID).hasRig(characterMesh.getRigHandle()))
+        if (!weaponManager.getWeaponHandleFromWeaponID(weaponID).hasRig(raceHandle.getRaceData().getRigHandle()))
             throwException("Entity weapon \"" + weaponName
-                    + "\" has no animation for the entity's rig. Source: " + sourceName);
+                    + "\" has no animation for the rig of race \"" + raceHandle.getRaceName() + "\". Source: "
+                    + sourceName);
 
         return weaponID;
-    }
-
-    // Model Parsing \\
-
-    private AnimationTreeHandle parseAnimationTree(
-            ArpgObjectStruct modelArpg,
-            MeshHandle characterMesh,
-            String sourceName) {
-
-        String treeName = ArpgUtility.validateString(modelArpg, "animation_tree");
-        AnimationTreeHandle animationTreeHandle = animationTreeManager.getAnimationTreeHandleFromTreeName(treeName);
-
-        if (animationTreeHandle.getRigHandle() != characterMesh.getRigHandle())
-            throwException("Entity animation tree \"" + treeName
-                    + "\" targets a different rig than its model mesh. Source: " + sourceName);
-
-        return animationTreeHandle;
-    }
-
-    private void parseEquipmentAnchors(
-            ArpgArrayStruct anchorsArpg,
-            RigHandle rigHandle,
-            ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors,
-            String sourceName) {
-
-        for (int i = 0; i < anchorsArpg.size(); i++) {
-
-            ArpgObjectStruct anchorArpg = anchorsArpg.get(i).getAsObject();
-            EquipmentSlot equipmentSlot = ArpgUtility.toEnum(
-                    ArpgUtility.validateString(anchorArpg, "slot"), EquipmentSlot.class);
-            String boneName = ArpgUtility.validateString(anchorArpg, "bone");
-
-            if (!rigHandle.hasBone(boneName))
-                throwException("Entity equipment anchor for slot \"" + equipmentSlot
-                        + "\" names bone \"" + boneName + "\", which its rig does not have. Source: " + sourceName);
-
-            equipmentAnchors.add(new EquipmentAnchorStruct(
-                    equipmentSlot,
-                    rigHandle.getBoneIndex(boneName),
-                    parseAnchorVector(anchorArpg, "position", 0f),
-                    parseAnchorVector(anchorArpg, "rotation", 0f),
-                    parseAnchorVector(anchorArpg, "size", EngineSetting.DEFAULT_ENTITY_SIZE),
-                    ArpgUtility.getBoolean(anchorArpg, "hold", false)));
-        }
-    }
-
-    private Vector3 parseAnchorVector(ArpgObjectStruct anchorArpg, String key, float defaultValue) {
-
-        if (!ArpgUtility.hasArray(anchorArpg, key))
-            return new Vector3(defaultValue);
-
-        ArpgArrayStruct vectorArpg = ArpgUtility.validateArray(anchorArpg, key, 3);
-
-        return new Vector3(
-                vectorArpg.get(0).getAsFloat(),
-                vectorArpg.get(1).getAsFloat(),
-                vectorArpg.get(2).getAsFloat());
     }
 
     // Parse \\

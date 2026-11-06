@@ -246,9 +246,10 @@ Code fires a deed by name. The data decides what it is worth.
 
 ## 10. Genders
 
-`assets/genders/Genders.arpg` lists the genders: male, female and asexual. Each entity template lists the genders
-its race may be made as. Humanoids may be male or female. A race with none listed (an ent, say) is asexual. The
-creator steps through the race's genders, and an NPC's gender is drawn from its spawn.
+`assets/genders/Genders.arpg` lists the genders: male, female and asexual. Every entity template names its race
+(`assets/races/`), and every race lists the genders it may be made as, at least one, each with the character model
+it requires. Humans may be male or female; a race that is neither (an ent, say) lists `asexual`. The creator steps
+through the race's genders, and an NPC's gender is drawn from its spawn.
 
 ---
 
@@ -362,7 +363,7 @@ Existing types gained fields:
 - **weapons:** each attack's `damage_type`;
 - **NPCs:** `profession`, `level_min`, `level_max`;
 - **loot tables:** `level_min`, `level_max`, `tier_bias`;
-- **entities:** `genders`.
+- **entities:** `race`, which holds the genders.
 
 ### Adding content
 

@@ -13,7 +13,6 @@ import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -31,8 +30,8 @@ public class EntityManager extends ManagerPackage {
      * at the first level, and despawnEntity(), its mirror, which takes the
      * entity out of both and off every vehicle. rerollEntity() rolls an
      * existing instance again in place — a new random chunk, size, weight,
-     * progression started over, an empty inventory, and the template's
-     * default gender and appearance — for anything that holds the instance by
+     * progression started over, an empty inventory, and its race's default
+     * gender and appearance — for anything that holds the instance by
      * reference and cannot swap in a new one. createPuppet() makes an entity
      * that is only ever drawn — a recording's actor — and never enters combat
      * or progression. Owns EntityRenderSystem, the one way characters are
@@ -117,7 +116,7 @@ public class EntityManager extends ManagerPackage {
         return null;
     }
 
-    // Every registered template whose character is posed on a rig, by name
+    // Every registered template whose race is posed on a rig, by name
     public ObjectArrayList<String> getTemplateNamesForRig(RigHandle rigHandle) {
 
         ObjectArrayList<String> templateNames = new ObjectArrayList<>();
@@ -126,7 +125,7 @@ public class EntityManager extends ManagerPackage {
 
             EntityData entityData = getEntityHandleFromTemplateName(templateName).getEntityData();
 
-            if (entityData.hasCharacterModel() && entityData.getRigHandle() == rigHandle)
+            if (entityData.getRaceData().getRigHandle() == rigHandle)
                 templateNames.add(templateName);
         }
 
@@ -208,19 +207,12 @@ public class EntityManager extends ManagerPackage {
         entityInstance.setSize(entityData.getRandomSize());
         entityInstance.setWeight(entityData.getRandomWeight());
 
-        entityInstance.setGenderID(entityData.getDefaultGenderID());
+        entityInstance.setGenderID(entityData.getRaceData().getDefaultGenderID());
         entityInstance.getInventoryHandle().clear();
         entityInstance.getEntityActionHandle().release();
         progressionManager.resetBeing(entityInstance, EngineSetting.IDENTITY_NONE);
 
         if (entityInstance.hasAppearance())
             entityInstance.getAppearanceHandle().resetToDefaults();
-    }
-
-    // Preview \\
-
-    // Builds a template from an ARPG tree without registering it, so an editor can show an edit before it is saved
-    public EntityHandle buildPreviewTemplate(String templateName, ArpgObjectStruct templateArpg) {
-        return ((EntityLoader) internalLoader).buildPreview(templateName, templateArpg);
     }
 }

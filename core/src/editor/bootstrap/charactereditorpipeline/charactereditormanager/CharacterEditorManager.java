@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
-import application.bootstrap.entitypipeline.entity.EntityData;
+import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
@@ -27,6 +27,7 @@ import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
@@ -38,11 +39,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CharacterEditorManager extends ManagerPackage {
 
     /*
-     * Owns the character editor's shared state — the open entity templates, the
-     * active one, the panel mode and selection, and how the preview stands, is
-     * built and is colored. Templates are ARPG entries owned by InfoManager:
-     * selecting one there opens it here, every edit goes back through it, and
-     * every change to an open template, made here or in the Info Panel,
+     * Owns the character editor's shared state — the open races, the active
+     * one, the panel mode and selection, and how the preview stands, is built
+     * and is colored, made as one of the race's genders at a time in the
+     * model that gender requires. Races are ARPG entries owned by InfoManager:
+     * selecting one there opens it here, as does selecting an entity, which
+     * opens the race it is made of; every edit goes back through it, and
+     * every change to an open race, made here or in the Info Panel,
      * rebuilds its preview live. The Mesh, Sculpt and Weights modes edit the
      * rigged mesh of the part picked — the body or a default feature — with the
      * tool options and the transform asked for held here, and the Rig mode the
@@ -53,7 +56,7 @@ public class CharacterEditorManager extends ManagerPackage {
      * the target weight, Erase toward none and Smooth blending between
      * neighbours, and on the rig the tools pick, drag, size, add and remove
      * bones. Save and Revert carry every open mesh's changes and the rig's with
-     * the template's. Edits, previews, mesh files, selection, geometry,
+     * the race's. Edits, previews, mesh files, selection, geometry,
      * sculpting, weights, the rig, history, panel values and panel rows each
      * live in their own branch.
      */
@@ -79,7 +82,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterMeshRowBranch characterMeshRowBranch;
 
     // Palette
-    private Object2ObjectOpenHashMap<String, CharacterDocumentInstance> templateName2CharacterDocument;
+    private Object2ObjectOpenHashMap<String, CharacterDocumentInstance> raceName2CharacterDocument;
 
     // Active
     private CharacterDocumentInstance activeDocument;
@@ -149,7 +152,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterMeshRowBranch = create(CharacterMeshRowBranch.class);
 
         // Palette
-        this.templateName2CharacterDocument = new Object2ObjectOpenHashMap<>();
+        this.raceName2CharacterDocument = new Object2ObjectOpenHashMap<>();
 
         // Active
         this.mode = CharacterEditorMode.APPEARANCE;
@@ -192,22 +195,41 @@ public class CharacterEditorManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::openEntry);
-        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::refreshEntry);
-        infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::closeEntry);
+        infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_RACES, this::openEntry);
+        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_RACES, this::refreshEntry);
+        infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_RACES, this::closeEntry);
+        infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::openEntityRace);
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_RIGS, characterRigBranch::refreshEntry);
     }
 
-    // Templates \\
+    // Races \\
+
+    // An entity picked anywhere opens the race it is made of, with every gender's model
+    private void openEntityRace(InfoEntryStruct entityEntry) {
+
+        ArpgObjectStruct entityArpg = entityEntry.getArpg();
+
+        if (ArpgUtility.hasString(entityArpg, EditorSetting.CHARACTER_EDITOR_FIELD_RACE))
+            openRace(entityArpg.get(EditorSetting.CHARACTER_EDITOR_FIELD_RACE).getAsString());
+    }
+
+    // Opens a race by name in every character tab, without changing what the Hierarchy has selected
+    public void openRace(String raceName) {
+
+        InfoEntryStruct raceEntry = infoManager.findEntry(EditorSetting.INFO_SCHEMA_RACES, raceName, raceName);
+
+        if (raceEntry != null)
+            openEntry(raceEntry);
+    }
 
     private void openEntry(InfoEntryStruct entry) {
 
-        CharacterDocumentInstance document = templateName2CharacterDocument.get(entry.getEntryName());
+        CharacterDocumentInstance document = raceName2CharacterDocument.get(entry.getEntryName());
 
         if (document == null) {
             document = create(CharacterDocumentInstance.class);
             document.constructor(entry.getEntryName());
-            templateName2CharacterDocument.put(entry.getEntryName(), document);
+            raceName2CharacterDocument.put(entry.getEntryName(), document);
             characterPreviewBranch.rebuild(document, entry.getArpg());
         }
 
@@ -217,7 +239,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     private void refreshEntry(InfoEntryStruct entry) {
 
-        CharacterDocumentInstance document = templateName2CharacterDocument.get(entry.getEntryName());
+        CharacterDocumentInstance document = raceName2CharacterDocument.get(entry.getEntryName());
 
         if (document == null)
             return;
@@ -232,7 +254,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     private void closeEntry(InfoEntryStruct entry) {
 
-        CharacterDocumentInstance document = templateName2CharacterDocument.remove(entry.getEntryName());
+        CharacterDocumentInstance document = raceName2CharacterDocument.remove(entry.getEntryName());
 
         if (document != null && document == activeDocument)
             activate(null);
@@ -278,8 +300,8 @@ public class CharacterEditorManager extends ManagerPackage {
         if (!saveRigFile())
             return;
 
-        setStatusMessage(infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ENTITIES, activeDocument.getTemplateName())
-                ? EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + activeDocument.getTemplateName()
+        setStatusMessage(infoManager.saveDocument(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName())
+                ? EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + activeDocument.getRaceName()
                 : infoManager.getRefusal());
     }
 
@@ -288,10 +310,10 @@ public class CharacterEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
-        infoManager.revertDocument(EditorSetting.INFO_SCHEMA_ENTITIES, activeDocument.getTemplateName());
+        infoManager.revertDocument(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName());
         revertDirtyMeshes();
         revertRigFile();
-        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + activeDocument.getTemplateName());
+        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + activeDocument.getRaceName());
     }
 
     public void copyActiveTemplate(String localName) {
@@ -308,40 +330,40 @@ public class CharacterEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
-        String templateName = activeDocument.getTemplateName();
+        String raceName = activeDocument.getRaceName();
 
-        setStatusMessage(infoManager.deleteDocument(EditorSetting.INFO_SCHEMA_ENTITIES, templateName)
-                ? EditorSetting.CHARACTER_EDITOR_MESSAGE_DELETED + templateName
+        setStatusMessage(infoManager.deleteDocument(EditorSetting.INFO_SCHEMA_RACES, raceName)
+                ? EditorSetting.CHARACTER_EDITOR_MESSAGE_DELETED + raceName
                 : infoManager.getRefusal());
     }
 
     public boolean isTemplateNameAvailable(String localName) {
         return activeDocument != null
                 && FileUtility.isValidFileName(localName, EditorSetting.NAME_INPUT_MAX_LENGTH)
-                && !infoManager.hasDocument(EditorSetting.INFO_SCHEMA_ENTITIES, toSiblingName(localName));
+                && !infoManager.hasDocument(EditorSetting.INFO_SCHEMA_RACES, toSiblingName(localName));
     }
 
     public boolean isActiveTemplateName(String localName) {
-        return activeDocument != null && toLocalName(activeDocument.getTemplateName()).equals(localName);
+        return activeDocument != null && toLocalName(activeDocument.getRaceName()).equals(localName);
     }
 
     public String getActiveLocalName() {
-        return activeDocument != null ? toLocalName(activeDocument.getTemplateName()) : "";
+        return activeDocument != null ? toLocalName(activeDocument.getRaceName()) : "";
     }
 
-    // A new template beside the active one, in the same folder
+    // A new race beside the active one, in the same folder
     private String toSiblingName(String localName) {
 
-        String templateName = activeDocument.getTemplateName();
-        int separator = templateName.lastIndexOf(EditorSetting.INFO_FOLDER_SEPARATOR);
+        String raceName = activeDocument.getRaceName();
+        int separator = raceName.lastIndexOf(EditorSetting.INFO_FOLDER_SEPARATOR);
 
         return separator == EngineSetting.INDEX_NOT_FOUND
                 ? localName
-                : templateName.substring(0, separator + EditorSetting.INFO_FOLDER_SEPARATOR.length()) + localName;
+                : raceName.substring(0, separator + EditorSetting.INFO_FOLDER_SEPARATOR.length()) + localName;
     }
 
-    private String toLocalName(String templateName) {
-        return templateName.substring(templateName.lastIndexOf(EditorSetting.INFO_FOLDER_SEPARATOR) + 1);
+    private String toLocalName(String raceName) {
+        return raceName.substring(raceName.lastIndexOf(EditorSetting.INFO_FOLDER_SEPARATOR) + 1);
     }
 
     // Modes \\
@@ -865,7 +887,7 @@ public class CharacterEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
-    // The gender the preview is made as, by its place in the template's genders; it wears that gender's body, so the
+    // The gender the preview is made as, by its place in the race's genders; it wears that gender's model, so the
     // mesh modes edit that body and its features from then on
     void setGenderIndex(int genderIndex) {
 
@@ -899,7 +921,7 @@ public class CharacterEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
-    // A preview slider's value, the array grown to hold every slider the template lists, untouched sliders left NaN
+    // A preview slider's value, the array grown to hold every slider the race lists, untouched sliders left NaN
     public void setShapeValue(int shapeIndex, float value) {
 
         if (shapeIndex >= shapeValues.length) {
@@ -958,13 +980,13 @@ public class CharacterEditorManager extends ManagerPackage {
         return activeDocument != null;
     }
 
-    // The active template's live ARPG, as InfoManager holds it
+    // The active race's live ARPG, as InfoManager holds it
     ArpgObjectStruct getTemplateArpg() {
 
         InfoEntryStruct entry = infoManager.findEntry(
-                EditorSetting.INFO_SCHEMA_ENTITIES,
-                activeDocument.getTemplateName(),
-                activeDocument.getTemplateName());
+                EditorSetting.INFO_SCHEMA_RACES,
+                activeDocument.getRaceName(),
+                activeDocument.getRaceName());
 
         return entry != null ? entry.getArpg() : null;
     }
@@ -989,17 +1011,27 @@ public class CharacterEditorManager extends ManagerPackage {
         return genderIndex;
     }
 
-    // The gender the preview is made as, held to the genders the active template allows
+    // The gender the preview is made as, held to the genders the active race allows
     public short getPreviewGenderID() {
 
         if (activeDocument == null || !activeDocument.hasPreview())
             return 0;
 
-        EntityData entityData = activeDocument.getPreviewData();
+        RaceData raceData = activeDocument.getPreviewData();
+        return raceData.getGenderID(Math.min(genderIndex, raceData.getGenderCount() - 1));
+    }
 
-        return entityData.getGenderCount() > 0
-                ? entityData.getGenderID(Math.min(genderIndex, entityData.getGenderCount() - 1))
-                : 0;
+    // Makes the preview the gender given when the active race allows it, the path every other tab takes to pick one
+    public void selectPreviewGender(short genderID) {
+
+        if (activeDocument == null || !activeDocument.hasPreview())
+            return;
+
+        RaceData raceData = activeDocument.getPreviewData();
+
+        for (int i = 0; i < raceData.getGenderCount(); i++)
+            if (raceData.getGenderID(i) == genderID && i != genderIndex)
+                setGenderIndex(i);
     }
 
     public float getWeightRatio() {
@@ -1190,9 +1222,9 @@ public class CharacterEditorManager extends ManagerPackage {
 
     private void appendDocumentStatus(StringBuilder status) {
 
-        status.append(activeDocument.getTemplateName());
+        status.append(activeDocument.getRaceName());
 
-        if (infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_ENTITIES, activeDocument.getTemplateName())
+        if (infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName())
                 || hasDirtyWornMesh()
                 || syncRig() && characterRigBranch.isDirty())
             status.append(EditorSetting.CHARACTER_VIEW_DIRTY_MARKER);

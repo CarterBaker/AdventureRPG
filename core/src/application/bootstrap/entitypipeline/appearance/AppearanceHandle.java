@@ -19,14 +19,14 @@ public class AppearanceHandle extends HandlePackage {
     /*
      * Per-entity appearance: the body its gender wears, its colors, detail
      * amounts, shape slider values, worn features, body build and head shape.
-     * Seeded from the template and edited in place. Slider values are kept as
+     * Seeded from the race and edited in place. Slider values are kept as
      * the weights of the body's morphs, beside the expression weights the
      * face plays — a blink at an interval of its own, passing through the
      * half-closed shape, while the face is animated — and as the moves, turns
      * and scales of the bones they drive. applyProportions() is the one path
      * that writes bone proportions and shaping and re-poses the entity,
      * writeAppearance() the one path that hands the lot to a skinned draw,
-     * and resetToDefaults() returns everything to the template and the
+     * and resetToDefaults() returns everything to the race and the
      * gender's preset. Every array is allocated once in constructor(). Lives
      * on EntityInstance.
      */

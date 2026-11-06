@@ -5,8 +5,8 @@ import java.util.Objects;
 import application.bootstrap.entitypipeline.animationtree.AnimationLayerStruct;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
-import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
+import application.bootstrap.entitypipeline.race.RaceData;
 import editor.bootstrap.animationtreeeditorpipeline.animationtreeeditormanager.AnimationTreeEditorManager;
 import editor.bootstrap.animationtreeeditorpipeline.treedocument.TreeDocumentInstance;
 import editor.bootstrap.animationtreeeditorpipeline.util.AnimationTreeEditorView;
@@ -81,9 +81,9 @@ public class AnimationTreeEditorPreviewSystem extends SystemPackage {
 
     private void bind(TreeDocumentInstance document, String characterName) {
 
-        EntityData entityData = entityManager.getEntityHandleFromTemplateName(characterName).getEntityData();
+        RaceData raceData = entityManager.getEntityHandleFromTemplateName(characterName).getEntityData().getRaceData();
 
-        characterViewPoseSystem.bind(entityData, document.getPreviewTree());
+        characterViewPoseSystem.bind(raceData, raceData.getDefaultGenderID(), document.getPreviewTree());
         this.boundDocument = document;
         this.boundRevision = document.getPreviewRevision();
         this.boundCharacterName = characterName;

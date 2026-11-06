@@ -49,7 +49,7 @@ class GuardBranch extends BranchPackage {
                 EntityAction.BLOCK,
                 side,
                 weaponID,
-                weaponHandle.getGuardClip(entity.getEntityData().getRigHandle(), side),
+                weaponHandle.getGuardClip(entity.getEntityData().getRaceData().getRigHandle(), side),
                 weaponHandle.getGuardRaise());
     }
 
@@ -70,7 +70,7 @@ class GuardBranch extends BranchPackage {
 
         actionHandle.shift(
                 side,
-                weaponHandle.getGuardClip(entity.getEntityData().getRigHandle(), side),
+                weaponHandle.getGuardClip(entity.getEntityData().getRaceData().getRigHandle(), side),
                 weaponHandle.getGuardShift());
     }
 

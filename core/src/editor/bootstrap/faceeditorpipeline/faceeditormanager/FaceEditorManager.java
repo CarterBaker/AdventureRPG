@@ -1,7 +1,7 @@
 package editor.bootstrap.faceeditorpipeline.faceeditormanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
-import application.bootstrap.entitypipeline.entity.EntityData;
+import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
@@ -25,16 +25,16 @@ public class FaceEditorManager extends ManagerPackage {
 
     /*
      * Owns the face editor's shared state: the face control picked — one of
-     * the template's shape sliders, the way a face rig's controls are its
+     * the race's shape sliders, the way a face rig's controls are its
      * sliders — the face bone picked, whether edits mirror across the face,
-     * and each template's undo history. It always works on the character the
+     * and each race's undo history. It always works on the race the
      * Character Editor has open, at the gender and slider values the Character
      * Editor previews it with, so both tools show one face. Face bones are the
      * appearance's head bone and every bone below it. Every edit goes through
-     * InfoManager on the template, so the Info Panel, the Character Editor and
+     * InfoManager on the race, so the Info Panel, the Character Editor and
      * the game read it at once; a drag of a bone in the viewport shapes the
      * control's target on that bone at the control's preview value and undoes
-     * at once. Save and Revert are the Character Editor's, so a template's
+     * at once. Save and Revert are the Character Editor's, so a race's
      * meshes, rig and face are kept together. Edits, panel values and panel
      * rows each live in their own branch.
      */
@@ -48,7 +48,7 @@ public class FaceEditorManager extends ManagerPackage {
     private FaceRowBranch faceRowBranch;
 
     // Palette
-    private Object2ObjectOpenHashMap<String, CharacterViewHistoryStruct> templateName2History;
+    private Object2ObjectOpenHashMap<String, CharacterViewHistoryStruct> raceName2History;
 
     // Selection
     private int selectedShapeIndex;
@@ -75,7 +75,7 @@ public class FaceEditorManager extends ManagerPackage {
         this.faceRowBranch = create(FaceRowBranch.class);
 
         // Palette
-        this.templateName2History = new Object2ObjectOpenHashMap<>();
+        this.raceName2History = new Object2ObjectOpenHashMap<>();
 
         // Selection
         this.selectedShapeIndex = EngineSetting.INDEX_NOT_FOUND;
@@ -97,18 +97,18 @@ public class FaceEditorManager extends ManagerPackage {
 
     @Override
     protected void awake() {
-        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::refreshEntry);
-        infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::closeEntry);
+        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_RACES, this::refreshEntry);
+        infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_RACES, this::closeEntry);
     }
 
-    // Templates \\
+    // Races \\
 
-    // Any change to the open template, here or anywhere else, keeps the picks on what it still holds
+    // Any change to the open race, here or anywhere else, keeps the picks on what it still holds
     private void refreshEntry(InfoEntryStruct entry) {
 
         CharacterDocumentInstance document = getActiveDocument();
 
-        if (document == null || !document.getTemplateName().equals(entry.getEntryName()))
+        if (document == null || !document.getRaceName().equals(entry.getEntryName()))
             return;
 
         resolveSelection();
@@ -116,7 +116,7 @@ public class FaceEditorManager extends ManagerPackage {
     }
 
     private void closeEntry(InfoEntryStruct entry) {
-        templateName2History.remove(entry.getEntryName());
+        raceName2History.remove(entry.getEntryName());
     }
 
     private void resolveSelection() {
@@ -334,14 +334,14 @@ public class FaceEditorManager extends ManagerPackage {
                 : EditorSetting.CHARACTER_EDITOR_MESSAGE_NOTHING_TO_REDO);
     }
 
-    // The undo history of a template's face, made the first time it is edited here
+    // The undo history of a race's face, made the first time it is edited here
     CharacterViewHistoryStruct getHistory(CharacterDocumentInstance document) {
 
-        CharacterViewHistoryStruct history = templateName2History.get(document.getTemplateName());
+        CharacterViewHistoryStruct history = raceName2History.get(document.getRaceName());
 
         if (history == null) {
             history = new CharacterViewHistoryStruct();
-            templateName2History.put(document.getTemplateName(), history);
+            raceName2History.put(document.getRaceName(), history);
         }
 
         return history;
@@ -412,7 +412,7 @@ public class FaceEditorManager extends ManagerPackage {
         return document != null && document.hasPreview() && document.getPreviewData().hasAppearance();
     }
 
-    public EntityData getPreviewData() {
+    public RaceData getPreviewData() {
         return getActiveDocument().getPreviewData();
     }
 
@@ -424,7 +424,7 @@ public class FaceEditorManager extends ManagerPackage {
         return hasFace() ? getPreviewData().getRigHandle() : null;
     }
 
-    // The open template's live ARPG, as InfoManager holds it
+    // The open race's live ARPG, as InfoManager holds it
     ArpgObjectStruct getTemplateArpg() {
 
         CharacterDocumentInstance document = getActiveDocument();
@@ -433,9 +433,9 @@ public class FaceEditorManager extends ManagerPackage {
             return null;
 
         InfoEntryStruct entry = infoManager.findEntry(
-                EditorSetting.INFO_SCHEMA_ENTITIES,
-                document.getTemplateName(),
-                document.getTemplateName());
+                EditorSetting.INFO_SCHEMA_RACES,
+                document.getRaceName(),
+                document.getRaceName());
 
         return entry != null ? entry.getArpg() : null;
     }
@@ -480,9 +480,9 @@ public class FaceEditorManager extends ManagerPackage {
         if (document == null)
             return EditorSetting.FACE_EDITOR_STATUS_NO_TEMPLATE;
 
-        StringBuilder status = new StringBuilder(document.getTemplateName());
+        StringBuilder status = new StringBuilder(document.getRaceName());
 
-        if (infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_ENTITIES, document.getTemplateName()))
+        if (infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_RACES, document.getRaceName()))
             status.append(EditorSetting.CHARACTER_VIEW_DIRTY_MARKER);
 
         if (faceEditBranch.hasShape(document, selectedShapeIndex))

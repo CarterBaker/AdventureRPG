@@ -10,6 +10,8 @@ import application.bootstrap.entitypipeline.progression.CareerHandle;
 import application.bootstrap.entitypipeline.progression.ConductHandle;
 import application.bootstrap.entitypipeline.progression.ProficiencyHandle;
 import application.bootstrap.entitypipeline.progression.ProgressionHandle;
+import application.bootstrap.entitypipeline.race.RaceData;
+import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
@@ -30,7 +32,8 @@ public class EntityInstance extends InstancePackage {
      * from — is placed, and getModelPoint() sets a point of its body in the
      * world just where it is drawn. Its level, attributes, trades, skills, conduct
      * and professions live in their own handles, the same for a player as for
-     * any NPC, and it carries one of the genders its race allows.
+     * any NPC, and it carries one of the genders its race allows, wearing the
+     * model that gender requires and moving by its animation tree.
      */
 
     // Internal
@@ -54,10 +57,10 @@ public class EntityInstance extends InstancePackage {
     // Input
     private EntityInputHandle EntityInputHandle;
 
-    // Animation — created only if entityData.hasCharacterModel()
+    // Animation — on the animation tree of the gender worn
     private AnimationStateHandle animationStateHandle;
 
-    // Appearance — created only if entityData.hasAppearance()
+    // Appearance — created only if the race has one
     private AppearanceHandle appearanceHandle;
 
     // Physics
@@ -67,6 +70,7 @@ public class EntityInstance extends InstancePackage {
     private Vector3 size;
     private float weight;
     private short genderID;
+    private RaceGenderStruct raceGender;
 
     // Internal \\
 
@@ -119,24 +123,25 @@ public class EntityInstance extends InstancePackage {
         this.worldPositionStruct.setPosition(position);
         this.worldPositionStruct.setChunkCoordinate(chunkCoordinate);
 
+        RaceData raceData = entityData.getRaceData();
+
         // Runtime
         this.size = size;
         this.weight = weight;
-        this.genderID = entityData.getDefaultGenderID();
+        this.genderID = raceData.getDefaultGenderID();
+        this.raceGender = raceData.getGender(genderID);
 
         // Animation
-        if (entityData.hasCharacterModel()) {
-            this.animationStateHandle = create(AnimationStateHandle.class);
-            this.animationStateHandle.constructor(
-                    entityData.getAnimationTreeHandle(),
-                    entityStateHandle.getMovementState());
-        }
+        this.animationStateHandle = create(AnimationStateHandle.class);
+        this.animationStateHandle.constructor(
+                raceGender.getAnimationTreeHandle(),
+                entityStateHandle.getMovementState());
 
         // Appearance
-        if (entityData.hasAppearance()) {
+        if (raceData.hasAppearance()) {
             this.appearanceHandle = create(AppearanceHandle.class);
             this.appearanceHandle.constructor(
-                    entityData.getAppearanceData(),
+                    raceData.getAppearanceData(),
                     animationStateHandle,
                     entityData.getWeightRatio(weight));
             this.appearanceHandle.setGender(genderID);
@@ -161,9 +166,6 @@ public class EntityInstance extends InstancePackage {
             float phase,
             int sequence,
             float deltaTime) {
-
-        if (animationStateHandle == null)
-            return;
 
         animationStateHandle.setParameter(AnimationParameter.SPEED, entityStateHandle.getHorizontalSpeed());
         animationStateHandle.setParameter(AnimationParameter.VERTICAL_SPEED, entityStateHandle.getVerticalSpeed());
@@ -243,10 +245,6 @@ public class EntityInstance extends InstancePackage {
         return EntityInputHandle;
     }
 
-    public boolean hasAnimationState() {
-        return animationStateHandle != null;
-    }
-
     public AnimationStateHandle getAnimationStateHandle() {
         return animationStateHandle;
     }
@@ -293,15 +291,30 @@ public class EntityInstance extends InstancePackage {
         return genderID;
     }
 
+    // The one way a being changes gender — it takes on the gender's model, moving by its tree from where it stands
     public void setGenderID(short genderID) {
 
-        if (!entityData.allowsGender(genderID))
-            throwException("This race does not allow gender ID " + genderID + ".");
+        RaceData raceData = entityData.getRaceData();
+
+        if (!raceData.allowsGender(genderID))
+            throwException("Race \"" + raceData.getRaceName() + "\" does not allow gender ID " + genderID + ".");
+
+        RaceGenderStruct previousGender = raceGender;
 
         this.genderID = genderID;
+        this.raceGender = raceData.getGender(genderID);
+
+        if (raceGender.getAnimationTreeHandle() != previousGender.getAnimationTreeHandle())
+            animationStateHandle.constructor(
+                    raceGender.getAnimationTreeHandle(),
+                    entityStateHandle.getMovementState());
 
         if (appearanceHandle != null)
             appearanceHandle.setGender(genderID);
+    }
+
+    public RaceGenderStruct getRaceGender() {
+        return raceGender;
     }
 
     public float getEyeHeight() {
@@ -325,7 +338,7 @@ public class EntityInstance extends InstancePackage {
     public Vector3 getModelPoint(float modelX, float modelY, float modelZ, Vector3 out) {
 
         Vector3 position = worldPositionStruct.getPosition();
-        float scale = size.y / entityData.getModelHeight();
+        float scale = size.y / entityData.getRaceData().getModelHeight();
         double yaw = Math.toRadians(entityStateHandle.getBodyYaw());
         float cos = (float) Math.cos(yaw);
         float sin = (float) Math.sin(yaw);

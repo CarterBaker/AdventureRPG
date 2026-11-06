@@ -1,6 +1,5 @@
 package editor.bootstrap.faceeditorpipeline.faceeditormanager;
 
-import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
@@ -20,7 +19,7 @@ class FacePropertyBranch extends BranchPackage {
      * The one place every value in the face editor's panels is read,
      * stepped, typed, cycled or acted on, by the key its row carries. A
      * control's name, group, morph, range, gender starts and bone targets are
-     * read from the template's live ARPG and written through FaceEditBranch;
+     * read from the race's live ARPG and written through FaceEditBranch;
      * its preview value is the Character Editor's own slider, and the gender
      * row is the Character Editor's, so both tools preview one face. A range
      * always keeps its min below its max and its default between them, and a
@@ -137,7 +136,7 @@ class FacePropertyBranch extends BranchPackage {
             writeNumber(keyName, index, getNumber(keyName, index) + direction * getStep(keyName, index));
     }
 
-    // A name no other control of the template has, and one a file could carry
+    // A name no other control of the race has, and one a file could carry
     private boolean isNameAvailable(String shapeName) {
 
         CharacterDocumentInstance document = faceEditorManager.getActiveDocument();
@@ -340,9 +339,9 @@ class FacePropertyBranch extends BranchPackage {
 
         morphOptions.clear();
 
-        AppearanceData appearanceData = faceEditorManager.getAppearanceData();
-        MeshHandle bodyMesh = appearanceData.getBodyMesh(
-                appearanceData.getBodyIndex(characterEditorManager.getPreviewGenderID()));
+        MeshHandle bodyMesh = faceEditorManager.getPreviewData()
+                .getGender(characterEditorManager.getPreviewGenderID())
+                .getMeshHandle();
 
         for (int m = 0; m < bodyMesh.getMorphCount(); m++)
             morphOptions.add(bodyMesh.getMorphName(m));

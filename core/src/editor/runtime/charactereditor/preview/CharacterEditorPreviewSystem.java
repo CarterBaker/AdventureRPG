@@ -2,7 +2,6 @@ package editor.runtime.charactereditor.preview;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.entity.EntityAction;
-import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
@@ -22,8 +21,9 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     /*
      * Drives this tab's character viewport from the character editor. A new
-     * preview of the active template is put on its own animation tree; the
-     * gender it is made as — the body and features it wears — the sliders,
+     * preview of the active race is put on the animation tree of the gender
+     * it is made as; that gender — the model it requires, moving by its own
+     * tree, and the features it wears — the sliders,
      * the tone worn, the build and the head shape are applied whenever the
      * editor's state moves; and each frame the preview is posed — at rest or
      * played in the chosen movement, or held in the exact bind pose while its
@@ -97,9 +97,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     private void bind(CharacterDocumentInstance document) {
 
-        EntityData entityData = document.getPreviewData();
-
-        characterViewPoseSystem.bind(entityData, entityData.getAnimationTreeHandle());
+        characterViewPoseSystem.bind(document.getPreviewData(), characterEditorManager.getPreviewGenderID());
         this.boundDocument = document;
         this.boundRevision = document.getPreviewRevision();
         this.lookRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -111,11 +109,12 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         this.lookRevision = characterEditorManager.getRevision();
         this.lookMode = characterEditorModeSystem.getMode();
+        characterViewPoseSystem.setGender(characterEditorManager.getPreviewGenderID());
 
         if (characterViewPoseSystem.hasAppearance())
             characterEditorManager.applyLook(
                     characterViewPoseSystem.getAppearanceHandle(),
-                    characterViewPoseSystem.getEntityData().getAppearanceData(),
+                    characterViewPoseSystem.getRaceData().getAppearanceData(),
                     lookMode.isMeshMode(),
                     false);
     }
@@ -155,7 +154,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     private void pushJointMarkers() {
 
-        int boneCount = characterViewPoseSystem.getEntityData().getRigHandle().getBoneCount();
+        int boneCount = characterViewPoseSystem.getRaceData().getRigHandle().getBoneCount();
 
         for (int i = 0; i < boneCount; i++)
             characterViewRenderSystem.addJointMarker(i, i == characterEditorManager.getSelectedBoneIndex());
@@ -182,7 +181,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     private void pushAnchorMarkers() {
 
-        ObjectArrayList<EquipmentAnchorStruct> anchors = characterViewPoseSystem.getEntityData().getEquipmentAnchors();
+        ObjectArrayList<EquipmentAnchorStruct> anchors = characterViewPoseSystem.getRaceData().getEquipmentAnchors();
 
         for (int i = 0; i < anchors.size(); i++) {
 

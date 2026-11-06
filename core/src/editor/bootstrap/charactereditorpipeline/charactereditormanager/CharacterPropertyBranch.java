@@ -2,7 +2,7 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
-import application.bootstrap.entitypipeline.entity.EntityData;
+import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
@@ -33,7 +33,7 @@ class CharacterPropertyBranch extends BranchPackage {
      * values are read from the live ARPG and written through
      * CharacterEditBranch, clamped to the range the game reads them in;
      * preview values — the pose, the gender, the tone worn, the build and
-     * head shape — live on the manager and never touch the template. The
+     * head shape — live on the manager and never touch the race. The
      * keys of the Mesh, Sculpt and Weights panels pass straight to
      * CharacterMeshPropertyBranch, and those of the Rig panels to
      * CharacterRigPropertyBranch.
@@ -342,7 +342,7 @@ class CharacterPropertyBranch extends BranchPackage {
                 : defaultValue;
     }
 
-    // The slider a shape key names, null when the preview's template has none at that index
+    // The slider a shape key names, null when the preview's race has none at that index
     private AppearanceShapeStruct resolveShape(String key) {
 
         AppearanceData appearanceData = resolveAppearanceData();
@@ -732,18 +732,20 @@ class CharacterPropertyBranch extends BranchPackage {
         }
     }
 
-    // Template \\
+    // Race \\
 
     ArpgObjectStruct getAppearanceArpg() {
-        return CharacterViewUtility.findObject(getModelArpg(), EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE);
+        return CharacterViewUtility.findObject(
+                characterEditorManager.getTemplateArpg(),
+                EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE);
     }
 
     ArpgArrayStruct getAnchorsArpg() {
 
-        ArpgObjectStruct model = getModelArpg();
+        ArpgObjectStruct race = characterEditorManager.getTemplateArpg();
 
-        return model != null && ArpgUtility.hasArray(model, EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
-                ? model.getAsArray(EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
+        return race != null && ArpgUtility.hasArray(race, EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
+                ? race.getAsArray(EditorSetting.CHARACTER_EDITOR_FIELD_EQUIPMENT)
                 : null;
     }
 
@@ -762,12 +764,6 @@ class CharacterPropertyBranch extends BranchPackage {
                 : null;
     }
 
-    private ArpgObjectStruct getModelArpg() {
-        return CharacterViewUtility.findObject(
-                characterEditorManager.getTemplateArpg(),
-                EditorSetting.CHARACTER_EDITOR_FIELD_MODEL);
-    }
-
     // Preview \\
 
     RigHandle resolveRig(CharacterDocumentInstance document) {
@@ -781,7 +777,7 @@ class CharacterPropertyBranch extends BranchPackage {
         if (document == null || !document.hasPreview())
             return null;
 
-        EntityData entityData = document.getPreviewData();
-        return entityData.hasAppearance() ? entityData.getAppearanceData() : null;
+        RaceData raceData = document.getPreviewData();
+        return raceData.hasAppearance() ? raceData.getAppearanceData() : null;
     }
 }

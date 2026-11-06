@@ -157,6 +157,11 @@ One line per session that changed this file: the date, what was added or removed
   `shortcuts/CharacterEditor.arpg` (replaced by those); regenerated `menus/editor/CharacterEditor.arpg` (toolbar
   without mode buttons) and `menus/editor/EditorWindow.arpg` (Properties, the three character tabs, no per-tool
   properties windows or Biome Palette).
+- 2026-11-06: Races. Added `races/Human.arpg` (the male and female genders, each with its mesh, rig, material and
+  animation tree, with the equipment anchors and appearance moved from the entity), `schemas/Races.arpg` and
+  `menus/editor/EntityEditor.arpg` (the Entity Editor's row templates); regenerated `entities/HumanoidEntity.arpg`
+  (names its race; genders and model moved to the race), `schemas/Entities.arpg` (a required `race`, no `genders` or
+  `model`) and `menus/editor/EditorWindow.arpg` (the Entity Editor in the Characters menu).
 ---
 
 ## Textures and Sprites (2175 files)
@@ -1370,7 +1375,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1719 files)
+## Data Files (1722 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2152,10 +2157,11 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePlanner.arpg`,
 `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
-`CharacterMeshEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
-`HeightEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`, `Recordings.arpg`,
-`SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`,
-`Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
+`CharacterMeshEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `EntityEditor.arpg`,
+`FaceEditor.arpg`, `HeightEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`,
+`TextureViewer.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`,
+`WorldMap.arpg`
 
 ### `assets/menus/util/`
 
@@ -2284,6 +2290,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 `Professions.arpg`
 
+### `assets/races/`
+
+`Human.arpg`
+
 ### `assets/rigs/`
 
 `HumanoidRig.arpg`
@@ -2297,11 +2307,11 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `Animations.arpg`, `AnimationTrees.arpg`, `Architectures.arpg`, `Attributes.arpg`, `Behaviors.arpg`, `Biomes.arpg`,
 `Blocks.arpg`, `Brushes.arpg`, `Calendars.arpg`, `CaveBiomes.arpg`, `Clouds.arpg`, `Contents.arpg`, `Coverings.arpg`,
 `DamageTypes.arpg`, `Deeds.arpg`, `Entities.arpg`, `FBOs.arpg`, `Features.arpg`, `Furnishings.arpg`, `Genders.arpg`,
-`Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Npcs.arpg`, `Passes.arpg`, `Professions.arpg`, `Rigs.arpg`,
-`Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Shortcuts.arpg`, `Skills.arpg`, `SoundCues.arpg`,
-`Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`, `TextureAliases.arpg`,
-`Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Transitions.arpg`, `Trees.arpg`, `UBOs.arpg`,
-`Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
+`Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Npcs.arpg`, `Passes.arpg`, `Professions.arpg`, `Races.arpg`,
+`Rigs.arpg`, `Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Shortcuts.arpg`, `Skills.arpg`,
+`SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`,
+`TextureAliases.arpg`, `Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Transitions.arpg`, `Trees.arpg`,
+`UBOs.arpg`, `Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
 
 ### `assets/seasons/`
 

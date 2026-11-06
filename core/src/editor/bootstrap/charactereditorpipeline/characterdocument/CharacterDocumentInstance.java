@@ -1,38 +1,38 @@
 package editor.bootstrap.charactereditorpipeline.characterdocument;
 
-import application.bootstrap.entitypipeline.entity.EntityData;
-import application.bootstrap.entitypipeline.entity.EntityHandle;
+import application.bootstrap.entitypipeline.race.RaceData;
+import application.bootstrap.entitypipeline.race.RaceHandle;
 import engine.root.InstancePackage;
 
 public class CharacterDocumentInstance extends InstancePackage {
 
     /*
-     * One entity template open in the character editor: its name and the
-     * last preview built from its ARPG, which InfoManager owns. The preview
+     * One race open in the character editor: its name and the last preview
+     * built from its ARPG, which InfoManager owns. The preview
      * revision moves every time a new preview is built so viewports know to
      * pose it again; a refused rebuild keeps the last good preview and
      * remembers why it was refused.
      */
 
     // Identity
-    private String templateName;
+    private String raceName;
 
     // Preview
-    private EntityHandle previewHandle;
+    private RaceHandle previewHandle;
     private String previewError;
     private int previewRevision;
 
     // Constructor \\
 
-    public void constructor(String templateName) {
+    public void constructor(String raceName) {
 
         // Identity
-        this.templateName = templateName;
+        this.raceName = raceName;
     }
 
     // Management \\
 
-    public void setPreview(EntityHandle previewHandle) {
+    public void setPreview(RaceHandle previewHandle) {
 
         this.previewHandle = previewHandle;
         this.previewError = null;
@@ -45,16 +45,16 @@ public class CharacterDocumentInstance extends InstancePackage {
 
     // Accessible \\
 
-    public String getTemplateName() {
-        return templateName;
+    public String getRaceName() {
+        return raceName;
     }
 
     public boolean hasPreview() {
         return previewHandle != null;
     }
 
-    public EntityData getPreviewData() {
-        return previewHandle.getEntityData();
+    public RaceData getPreviewData() {
+        return previewHandle.getRaceData();
     }
 
     public boolean hasPreviewError() {

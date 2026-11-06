@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
@@ -69,10 +70,10 @@ public class CreatorBodyBranch extends BranchPackage {
     }
 
     // Every shape slider of the body group, or of every other group, under a header per group in the order the
-    // template first lists each
+    // race first lists each
     void injectShapeGroups(CreatorSessionStruct session, boolean bodyGroup) {
 
-        AppearanceData appearanceData = session.getPlayer().getEntityData().getAppearanceData();
+        AppearanceData appearanceData = session.getPlayer().getEntityData().getRaceData().getAppearanceData();
 
         for (int i = 0; i < appearanceData.getShapeCount(); i++) {
 
@@ -146,14 +147,14 @@ public class CreatorBodyBranch extends BranchPackage {
             return;
 
         EntityInstance player = session.getPlayer();
-        EntityData entityData = player.getEntityData();
+        RaceData raceData = player.getEntityData().getRaceData();
         int index = 0;
 
-        for (int i = 0; i < entityData.getGenderCount(); i++)
-            if (entityData.getGenderID(i) == player.getGenderID())
+        for (int i = 0; i < raceData.getGenderCount(); i++)
+            if (raceData.getGenderID(i) == player.getGenderID())
                 index = i;
 
-        player.setGenderID(entityData.getGenderID(Math.floorMod(index + step, entityData.getGenderCount())));
+        player.setGenderID(raceData.getGenderID(Math.floorMod(index + step, raceData.getGenderCount())));
         characterCreatorBranch.refreshOptions(session);
     }
 
@@ -245,7 +246,7 @@ public class CreatorBodyBranch extends BranchPackage {
             case HEIGHT -> player.getEntityData().getSizeMin().y;
             case WEIGHT -> player.getEntityData().getWeightMin();
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> RuntimeSetting.CREATOR_HEAD_PROPORTION_MIN;
-            case SHAPE -> player.getEntityData().getAppearanceData().getShape(index).getMin();
+            case SHAPE -> player.getEntityData().getRaceData().getAppearanceData().getShape(index).getMin();
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_MIN[index];
         };
     }
@@ -255,7 +256,7 @@ public class CreatorBodyBranch extends BranchPackage {
             case HEIGHT -> player.getEntityData().getSizeMax().y;
             case WEIGHT -> player.getEntityData().getWeightMax();
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> RuntimeSetting.CREATOR_HEAD_PROPORTION_MAX;
-            case SHAPE -> player.getEntityData().getAppearanceData().getShape(index).getMax();
+            case SHAPE -> player.getEntityData().getRaceData().getAppearanceData().getShape(index).getMax();
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_MAX[index];
         };
     }
@@ -276,7 +277,8 @@ public class CreatorBodyBranch extends BranchPackage {
 
     private String resolveLabel(CreatorSlider slider, int index, EntityInstance player) {
         return switch (slider) {
-            case SHAPE -> toTitle(player.getEntityData().getAppearanceData().getShape(index).getShapeName());
+            case SHAPE -> toTitle(
+                    player.getEntityData().getRaceData().getAppearanceData().getShape(index).getShapeName());
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_LABELS[index];
             default -> slider.getLabel();
         };
@@ -299,8 +301,9 @@ public class CreatorBodyBranch extends BranchPackage {
     void randomizeBody(EntityInstance player) {
 
         EntityData entityData = player.getEntityData();
+        RaceData raceData = entityData.getRaceData();
 
-        player.setGenderID(entityData.getGenderID((int) (Math.random() * entityData.getGenderCount())));
+        player.setGenderID(raceData.getGenderID((int) (Math.random() * raceData.getGenderCount())));
         player.setSize(entityData.getRandomSize());
         player.setWeight(entityData.getRandomWeight());
 
@@ -312,7 +315,7 @@ public class CreatorBodyBranch extends BranchPackage {
                 randomBetween(RuntimeSetting.CREATOR_HEAD_PROPORTION_MIN, RuntimeSetting.CREATOR_HEAD_PROPORTION_MAX),
                 randomBetween(RuntimeSetting.CREATOR_HEAD_PROPORTION_MIN, RuntimeSetting.CREATOR_HEAD_PROPORTION_MAX));
 
-        AppearanceData appearanceData = entityData.getAppearanceData();
+        AppearanceData appearanceData = raceData.getAppearanceData();
 
         for (int i = 0; i < appearanceData.getShapeCount(); i++)
             player.getAppearanceHandle().setShapeValue(

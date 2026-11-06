@@ -2,8 +2,8 @@ package editor.runtime.animationeditor.preview;
 
 import java.util.Objects;
 
-import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
+import application.bootstrap.entitypipeline.race.RaceData;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
@@ -71,9 +71,9 @@ public class AnimationEditorPreviewSystem extends SystemPackage {
 
     private void bind(AnimationDocumentInstance document, String characterName) {
 
-        EntityData entityData = entityManager.getEntityHandleFromTemplateName(characterName).getEntityData();
+        RaceData raceData = entityManager.getEntityHandleFromTemplateName(characterName).getEntityData().getRaceData();
 
-        characterViewPoseSystem.bind(entityData, entityData.getAnimationTreeHandle());
+        characterViewPoseSystem.bind(raceData, raceData.getDefaultGenderID());
         this.boundDocument = document;
         this.boundRevision = document.getPreviewRevision();
         this.boundCharacterName = characterName;
@@ -83,7 +83,7 @@ public class AnimationEditorPreviewSystem extends SystemPackage {
 
     private void pushMarkers() {
 
-        int boneCount = characterViewPoseSystem.getEntityData().getRigHandle().getBoneCount();
+        int boneCount = characterViewPoseSystem.getRaceData().getRigHandle().getBoneCount();
 
         for (int i = 0; i < boneCount; i++)
             characterViewRenderSystem.addJointMarker(i, i == animationEditorManager.getSelectedBoneIndex());

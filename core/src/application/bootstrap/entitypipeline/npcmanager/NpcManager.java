@@ -8,7 +8,6 @@ import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
-import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
@@ -16,6 +15,7 @@ import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.npc.NpcHandle;
 import application.bootstrap.entitypipeline.npc.NpcInstance;
+import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
@@ -310,18 +310,18 @@ public class NpcManager extends ManagerPackage {
     // Known by its spawn's identity, its gender and level drawn by that identity, and raised in its profession
     private void raise(EntityInstance entity, NpcHandle npcHandle, long identity) {
 
-        EntityData entityData = entity.getEntityData();
+        RaceData raceData = entity.getEntityData().getRaceData();
         int levelSpan = npcHandle.getLevelMax() - npcHandle.getLevelMin() + 1;
         int level = npcHandle.getLevelMin()
                 + Math.min(levelSpan - 1, (int) (BiomeFieldUtility.hash01(identity ^ EngineSetting.NPC_LEVEL_SALT)
                         * levelSpan));
         int genderIndex = Math.min(
-                entityData.getGenderCount() - 1,
+                raceData.getGenderCount() - 1,
                 (int) (BiomeFieldUtility.hash01(identity ^ EngineSetting.NPC_GENDER_SALT)
-                        * entityData.getGenderCount()));
+                        * raceData.getGenderCount()));
 
         progressionManager.identify(entity, identity);
-        entity.setGenderID(entityData.getGenderID(genderIndex));
+        entity.setGenderID(raceData.getGenderID(genderIndex));
         progressionManager.raiseBeing(entity, level, npcHandle.getProfessionID());
     }
 
@@ -332,7 +332,7 @@ public class NpcManager extends ManagerPackage {
         if (!entity.hasAppearance())
             return;
 
-        AppearanceData appearanceData = entity.getEntityData().getAppearanceData();
+        AppearanceData appearanceData = entity.getEntityData().getRaceData().getAppearanceData();
         AppearanceHandle appearanceHandle = entity.getAppearanceHandle();
 
         for (SkinnedColor skinnedColor : SkinnedColor.VALUES) {

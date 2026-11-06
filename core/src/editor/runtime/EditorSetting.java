@@ -331,6 +331,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
     public static final String TAB_TITLE_HEIGHT_EDITOR = "Height Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
+    public static final String TAB_TITLE_ENTITY_EDITOR = "Entity Editor";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_PROPERTIES = "Properties";
@@ -542,6 +543,7 @@ public class EditorSetting {
     public static final String ANIMATION_PROPERTIES_TITLE = "Key";
     public static final String FACE_OUTLINER_TITLE = "Face";
     public static final String FACE_PROPERTIES_TITLE = "Control";
+    public static final String ENTITY_EDITOR_TITLE = "Entity";
 
     // Character View — the row templates of each tool's menu its docker windows fill with
     public static final CharacterViewTemplateStruct CHARACTER_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
@@ -589,6 +591,21 @@ public class EditorSetting {
             "face_editor_row_increase",
             "face_editor_row_track",
             "face_editor_row_knob");
+    public static final CharacterViewTemplateStruct ENTITY_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            "editor/EntityEditor/entity_editor_header_row",
+            "editor/EntityEditor/entity_editor_item_row",
+            "editor/EntityEditor/entity_editor_item_row_selected",
+            null,
+            null,
+            null,
+            null,
+            "entity_editor_row_label",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
 
     // Character View — viewport gestures: the buttons, the GLFW keys a transform locks its axis with, pointer
     // distances in pixels, snapping, and the undo history they record
@@ -604,8 +621,8 @@ public class EditorSetting {
     public static final float CHARACTER_VIEW_HALF_TURN_DEGREES = 180f;
     public static final int CHARACTER_VIEW_HISTORY_MAX_STEPS = 64;
 
-    // Character Editor — template fields
-    public static final String CHARACTER_EDITOR_FIELD_MODEL = "model";
+    // Character Editor — race fields, and the field naming an entity's race
+    public static final String CHARACTER_EDITOR_FIELD_RACE = "race";
     public static final String CHARACTER_EDITOR_FIELD_APPEARANCE = "appearance";
     public static final String CHARACTER_EDITOR_FIELD_FEATURES = "features";
     public static final String CHARACTER_EDITOR_FIELD_COLORS = "colors";
@@ -739,12 +756,11 @@ public class EditorSetting {
 
     // Character Editor — status text
     public static final String CHARACTER_EDITOR_STATUS_NO_TEMPLATE = "No character open."
-            + " Pick an entity in the Hierarchy.";
+            + " Pick an entity or a race in the Hierarchy or the Entity Editor.";
     public static final String CHARACTER_EDITOR_MESSAGE_SAVED = "Saved ";
     public static final String CHARACTER_EDITOR_MESSAGE_REVERTED = "Reverted ";
     public static final String CHARACTER_EDITOR_MESSAGE_COPIED = "Copied as ";
     public static final String CHARACTER_EDITOR_MESSAGE_DELETED = "Deleted ";
-    public static final String CHARACTER_EDITOR_MESSAGE_NO_MODEL = "This entity has no character model to show";
 
     // Character Editor — mesh parts; a feature part is keyed by its slot's name
     public static final String CHARACTER_EDITOR_PART_BODY = "body";
@@ -1064,6 +1080,18 @@ public class EditorSetting {
     public static final String FACE_EDITOR_LABEL_RESET_PREVIEW = "Reset Preview";
     public static final String[] FACE_EDITOR_CHANNEL_LABELS = { "Move", "Turn", "Scale" };
     public static final String FACE_EDITOR_HEADER_ACTIONS = "Face";
+
+    // Entity Editor — panel keys, the separator between a key and the entry it names, and panel text
+    public static final String ENTITY_EDITOR_KEY_ENTITY = "entity";
+    public static final String ENTITY_EDITOR_KEY_RACE = "race";
+    public static final String ENTITY_EDITOR_KEY_GENDER = "gender";
+    public static final String ENTITY_EDITOR_KEY_SEPARATOR = ":";
+    public static final String ENTITY_EDITOR_HEADER_ENTITIES = "Entities";
+    public static final String ENTITY_EDITOR_HEADER_RACE = "Race";
+    public static final String ENTITY_EDITOR_HEADER_GENDERS = "Genders";
+    public static final String ENTITY_EDITOR_HEADER_NO_ENTITIES = "No entities";
+    public static final String ENTITY_EDITOR_HEADER_NO_RACE = "Its race is missing or not built";
+    public static final String ENTITY_EDITOR_LABEL_SEPARATOR = ": ";
 
     // Face Editor — status text
     public static final String FACE_EDITOR_STATUS_NO_TEMPLATE =
@@ -1617,6 +1645,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_ITEMS = "Items";
     public static final String INFO_SCHEMA_TREES = "Trees";
     public static final String INFO_SCHEMA_ENTITIES = "Entities";
+    public static final String INFO_SCHEMA_RACES = "Races";
     public static final String INFO_SCHEMA_ANIMATIONS = "Animations";
     public static final String INFO_SCHEMA_ANIMATION_TREES = "AnimationTrees";
     public static final String INFO_SCHEMA_RIGS = "Rigs";

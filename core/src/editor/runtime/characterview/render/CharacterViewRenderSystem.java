@@ -188,7 +188,8 @@ public class CharacterViewRenderSystem extends SystemPackage {
 
         if (characterViewPoseSystem.hasSubject())
             entityRenderSystem.pushPreview(
-                    characterViewPoseSystem.getEntityData(),
+                    characterViewPoseSystem.getRaceData(),
+                    characterViewPoseSystem.getRaceGender(),
                     characterViewPoseSystem.getAppearanceHandle(),
                     characterViewPoseSystem.getAnimationStateHandle().getSkinningMatrices(),
                     modelMatrix,

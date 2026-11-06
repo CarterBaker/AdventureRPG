@@ -99,7 +99,7 @@ class PlayerRestoreBranch extends BranchPackage {
             restoreAppearance(
                     ArpgUtility.validateObject(characterArpg, "appearance"),
                     player.getAppearanceHandle(),
-                    player.getEntityData().getAppearanceData());
+                    player.getEntityData().getRaceData().getAppearanceData());
     }
 
     // Every color, amount and shape the save holds; anything it leaves out keeps the template's default
@@ -345,7 +345,7 @@ class PlayerRestoreBranch extends BranchPackage {
         return ArpgUtility.hasObject(characterArpg, "appearance")
                 && isAppearanceValid(
                         characterArpg.getAsObject("appearance"),
-                        player.getEntityData().getAppearanceData());
+                        player.getEntityData().getRaceData().getAppearanceData());
     }
 
     // A save's appearance block is valid when every entry it holds is well formed; entries it leaves out, or names the

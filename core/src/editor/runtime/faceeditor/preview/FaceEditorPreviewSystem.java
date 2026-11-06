@@ -1,6 +1,5 @@
 package editor.runtime.faceeditor.preview;
 
-import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
@@ -87,9 +86,7 @@ public class FaceEditorPreviewSystem extends SystemPackage implements ViewCamera
 
     private void bind(CharacterDocumentInstance document) {
 
-        EntityData entityData = document.getPreviewData();
-
-        characterViewPoseSystem.bind(entityData, entityData.getAnimationTreeHandle());
+        characterViewPoseSystem.bind(document.getPreviewData(), characterEditorManager.getPreviewGenderID());
         this.boundDocument = document;
         this.boundRevision = document.getPreviewRevision();
         this.lookRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -98,10 +95,11 @@ public class FaceEditorPreviewSystem extends SystemPackage implements ViewCamera
     private void applyLook() {
 
         this.lookRevision = faceEditorManager.getRevision();
+        characterViewPoseSystem.setGender(characterEditorManager.getPreviewGenderID());
 
         characterEditorManager.applyLook(
                 characterViewPoseSystem.getAppearanceHandle(),
-                characterViewPoseSystem.getEntityData().getAppearanceData(),
+                characterViewPoseSystem.getRaceData().getAppearanceData(),
                 false,
                 true);
     }
@@ -110,7 +108,7 @@ public class FaceEditorPreviewSystem extends SystemPackage implements ViewCamera
 
     private void pushMarkers() {
 
-        int boneCount = characterViewPoseSystem.getEntityData().getRigHandle().getBoneCount();
+        int boneCount = characterViewPoseSystem.getRaceData().getRigHandle().getBoneCount();
 
         for (int i = 0; i < boneCount; i++)
             if (faceEditorManager.isFaceBone(i))
@@ -127,8 +125,8 @@ public class FaceEditorPreviewSystem extends SystemPackage implements ViewCamera
     @Override
     public float getCenter(int axis) {
 
-        int headBoneIndex = characterViewPoseSystem.getEntityData().getAppearanceData().getHeadBoneIndex();
-        RigBoneStruct headBone = characterViewPoseSystem.getEntityData().getRigHandle().getBone(headBoneIndex);
+        int headBoneIndex = characterViewPoseSystem.getRaceData().getAppearanceData().getHeadBoneIndex();
+        RigBoneStruct headBone = characterViewPoseSystem.getRaceData().getRigHandle().getBone(headBoneIndex);
 
         CharacterPoseUtility.getTranslation(
                 characterViewPoseSystem.getAnimationStateHandle().getWorldMatrix(headBoneIndex),
@@ -145,8 +143,8 @@ public class FaceEditorPreviewSystem extends SystemPackage implements ViewCamera
     @Override
     public float getBoundingRadius() {
 
-        int headBoneIndex = characterViewPoseSystem.getEntityData().getAppearanceData().getHeadBoneIndex();
-        Vector3 size = characterViewPoseSystem.getEntityData().getRigHandle().getBone(headBoneIndex).getSize();
+        int headBoneIndex = characterViewPoseSystem.getRaceData().getAppearanceData().getHeadBoneIndex();
+        Vector3 size = characterViewPoseSystem.getRaceData().getRigHandle().getBone(headBoneIndex).getSize();
 
         return Math.max(size.x, Math.max(size.y, size.z)) * EditorSetting.FACE_EDITOR_FRAME_RADIUS_SHARE;
     }

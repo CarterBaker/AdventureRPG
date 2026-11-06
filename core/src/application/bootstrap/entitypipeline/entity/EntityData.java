@@ -1,26 +1,21 @@
 package application.bootstrap.entitypipeline.entity;
 
-import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
-import application.bootstrap.entitypipeline.appearance.AppearanceData;
-import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
-import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.bootstrap.geometrypipeline.rig.RigHandle;
-import application.bootstrap.shaderpipeline.material.MaterialInstance;
+import application.bootstrap.entitypipeline.race.RaceData;
+import application.bootstrap.entitypipeline.race.RaceHandle;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EntityData extends DataPackage {
 
     /*
      * Immutable entity template loaded from ARPG: size, weight and eye level
      * ranges, behavior, the weapon its own body fights with when its hands
-     * hold nothing it can wield, and the optional character model with its
-     * material, animation tree, appearance, authored height and equipment
-     * anchors. The material is resolved once per template and shared by every
-     * instance so characters batch together. A race allows one or more
-     * genders; the first is the one a new being of it starts with.
+     * hold nothing it can wield, and the race it is made of, which it
+     * requires. The race holds the genders a being of it may be made as and
+     * the character model each requires — mesh, rig, material and animation
+     * tree — with its appearance, equipment anchors and model height, so
+     * every template of one race shares them.
      */
 
     // Size
@@ -35,24 +30,11 @@ public class EntityData extends DataPackage {
     // Behavior
     private final String behaviorName;
 
-    // Genders
-    private final short[] genderIDs;
-
     // Combat
     private final short weaponID;
 
-    // Model — optional
-    private final MeshHandle characterMesh;
-    private final MaterialInstance characterMaterial;
-    private final RigHandle rigHandle;
-    private final AnimationTreeHandle animationTreeHandle;
-    private final float modelHeight;
-
-    // Appearance — optional
-    private final AppearanceData appearanceData;
-
-    // Equipment
-    private final ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors;
+    // Race
+    private final RaceHandle raceHandle;
 
     // Constructor \\
 
@@ -63,14 +45,8 @@ public class EntityData extends DataPackage {
             float weightMax,
             float eyeLevel,
             String behaviorName,
-            short[] genderIDs,
             short weaponID,
-            MeshHandle characterMesh,
-            MaterialInstance characterMaterial,
-            AnimationTreeHandle animationTreeHandle,
-            float modelHeight,
-            AppearanceData appearanceData,
-            ObjectArrayList<EquipmentAnchorStruct> equipmentAnchors) {
+            RaceHandle raceHandle) {
 
         // Size
         this.sizeMin = sizeMin;
@@ -84,24 +60,11 @@ public class EntityData extends DataPackage {
         // Behavior
         this.behaviorName = behaviorName;
 
-        // Genders
-        this.genderIDs = genderIDs;
-
         // Combat
         this.weaponID = weaponID;
 
-        // Model
-        this.characterMesh = characterMesh;
-        this.characterMaterial = characterMaterial;
-        this.rigHandle = characterMesh != null ? characterMesh.getRigHandle() : null;
-        this.animationTreeHandle = animationTreeHandle;
-        this.modelHeight = modelHeight;
-
-        // Appearance
-        this.appearanceData = appearanceData;
-
-        // Equipment
-        this.equipmentAnchors = equipmentAnchors;
+        // Race
+        this.raceHandle = raceHandle;
     }
 
     // Accessible \\
@@ -130,65 +93,16 @@ public class EntityData extends DataPackage {
         return behaviorName;
     }
 
-    public int getGenderCount() {
-        return genderIDs.length;
-    }
-
-    public short getGenderID(int index) {
-        return genderIDs[index];
-    }
-
-    public short getDefaultGenderID() {
-        return genderIDs[0];
-    }
-
-    public boolean allowsGender(short genderID) {
-
-        for (int i = 0; i < genderIDs.length; i++)
-            if (genderIDs[i] == genderID)
-                return true;
-
-        return false;
-    }
-
     public short getWeaponID() {
         return weaponID;
     }
 
-    public boolean hasCharacterModel() {
-        return characterMesh != null;
+    public RaceHandle getRaceHandle() {
+        return raceHandle;
     }
 
-    public MeshHandle getCharacterMesh() {
-        return characterMesh;
-    }
-
-    public MaterialInstance getCharacterMaterial() {
-        return characterMaterial;
-    }
-
-    public RigHandle getRigHandle() {
-        return rigHandle;
-    }
-
-    public AnimationTreeHandle getAnimationTreeHandle() {
-        return animationTreeHandle;
-    }
-
-    public float getModelHeight() {
-        return modelHeight;
-    }
-
-    public boolean hasAppearance() {
-        return appearanceData != null;
-    }
-
-    public AppearanceData getAppearanceData() {
-        return appearanceData;
-    }
-
-    public ObjectArrayList<EquipmentAnchorStruct> getEquipmentAnchors() {
-        return equipmentAnchors;
+    public RaceData getRaceData() {
+        return raceHandle.getRaceData();
     }
 
     // Utility \\

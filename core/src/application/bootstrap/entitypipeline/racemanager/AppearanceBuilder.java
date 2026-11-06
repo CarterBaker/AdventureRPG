@@ -1,4 +1,4 @@
-package application.bootstrap.entitypipeline.entitymanager;
+package application.bootstrap.entitypipeline.racemanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceBoneTargetStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
@@ -8,12 +8,11 @@ import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
+import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
-import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
-import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
@@ -27,43 +26,42 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class AppearanceBuilder extends BuilderPackage {
 
     /*
-     * Parses the "appearance" block of an entity template's "model" into an
-     * AppearanceData, resolved against the character mesh and its rig.
+     * Parses a race's "appearance" block into an AppearanceData, resolved
+     * against the race's rig and the body mesh each of its genders wears.
      * "colors", "palettes" and "details" are keyed by the lower-case
      * SkinnedColor and SkinnedDetail names; "shapes" lists the sliders, each
      * known by its "name" (its morph's name when it gives none) and driving a
      * "morph", the "bones" it moves, turns and scales per unit of its value,
      * or both, with its group and range; "expressions" names the morph each
-     * AppearanceExpression plays; "genders" gives each gender the body
-     * "mesh" it wears (the model's own when it names none) and its starting
-     * shapes, by name, and features. Every body must be on the model's rig
-     * and carry every morph the sliders and expressions name. Every default
-     * feature must sit in the slot it is declared under and fit the rig. A
-     * color left out is white, a palette left out holds only its default
-     * color, a detail left out is EngineSetting's default, and the build
-     * curve defaults to a flat 1.0. Bootstrap-only, apart from an editor's
-     * preview builds.
+     * AppearanceExpression plays. The race's "genders" give each gender its
+     * starting "shapes", by name, and "features", on the body it wears.
+     * Every body must carry every morph the sliders and expressions name.
+     * Every default feature must sit in the slot it is declared under and fit
+     * the rig. A color left out is white, a palette left out holds only its
+     * default color, a detail left out is EngineSetting's default, and the
+     * build curve defaults to a flat 1.0. Bootstrap-only, apart from an
+     * editor's preview builds.
      */
 
     // Internal
     private FeatureManager featureManager;
-    private GenderManager genderManager;
-    private MeshManager meshManager;
 
     // Base \\
 
     @Override
     protected void get() {
         this.featureManager = get(FeatureManager.class);
-        this.genderManager = get(GenderManager.class);
-        this.meshManager = get(MeshManager.class);
     }
 
     // Build \\
 
-    AppearanceData build(ArpgObjectStruct appearanceArpg, MeshHandle characterMesh, String sourceName) {
+    AppearanceData build(
+            ArpgObjectStruct appearanceArpg,
+            ArpgObjectStruct gendersArpg,
+            RaceGenderStruct[] genders,
+            String sourceName) {
 
-        RigHandle rigHandle = characterMesh.getRigHandle();
+        RigHandle rigHandle = genders[0].getRigHandle();
         String headBoneName = ArpgUtility.validateString(appearanceArpg, "head_bone");
 
         if (!rigHandle.hasBone(headBoneName))
@@ -75,7 +73,7 @@ class AppearanceBuilder extends BuilderPackage {
                 ? appearanceArpg.getAsObject("build")
                 : new ArpgObjectStruct();
 
-        MeshHandle[] bodyMeshes = parseBodies(appearanceArpg, characterMesh, sourceName);
+        MeshHandle[] bodyMeshes = parseBodies(genders);
         AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, rigHandle, sourceName);
         AppearanceData appearanceData = new AppearanceData(
                 rigHandle,
@@ -88,7 +86,7 @@ class AppearanceBuilder extends BuilderPackage {
                 resolveShapeMorphs(bodyMeshes, shapes, sourceName),
                 parseExpressions(appearanceArpg, bodyMeshes, sourceName),
                 parseFeatures(appearanceArpg, sourceName),
-                parseGenders(appearanceArpg, bodyMeshes, shapes, sourceName),
+                parseGenders(gendersArpg, genders, bodyMeshes, shapes, sourceName),
                 ArpgUtility.getFloat(buildArpg, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
                 ArpgUtility.getFloat(buildArpg, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
                 parseGirthInfluence(buildArpg, rigHandle, sourceName));
@@ -203,33 +201,14 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Bodies \\
 
-    // The model's mesh, then every other mesh a gender wears, each once; all on the model's rig
-    private MeshHandle[] parseBodies(ArpgObjectStruct appearanceArpg, MeshHandle characterMesh, String sourceName) {
+    // Every mesh a gender wears, each once, in the order the genders are listed
+    private MeshHandle[] parseBodies(RaceGenderStruct[] genders) {
 
         ObjectArrayList<MeshHandle> bodies = new ObjectArrayList<>();
-        bodies.add(characterMesh);
 
-        if (!ArpgUtility.hasObject(appearanceArpg, "genders"))
-            return bodies.toArray(new MeshHandle[0]);
-
-        ArpgObjectStruct gendersArpg = appearanceArpg.getAsObject("genders");
-
-        for (String genderName : gendersArpg.keySet()) {
-
-            ArpgObjectStruct presetArpg = gendersArpg.getAsObject(genderName);
-
-            if (!ArpgUtility.hasString(presetArpg, "mesh"))
-                continue;
-
-            MeshHandle bodyMesh = meshManager.getMeshHandleFromMeshName(presetArpg.get("mesh").getAsString());
-
-            if (!bodyMesh.hasRig() || bodyMesh.getRigHandle() != characterMesh.getRigHandle())
-                throwException("Appearance gender \"" + genderName + "\" wears mesh \"" + bodyMesh.getMeshName()
-                        + "\", which is not rigged on the model's rig. Source: " + sourceName);
-
-            if (!bodies.contains(bodyMesh))
-                bodies.add(bodyMesh);
-        }
+        for (int i = 0; i < genders.length; i++)
+            if (!bodies.contains(genders[i].getMeshHandle()))
+                bodies.add(genders[i].getMeshHandle());
 
         return bodies.toArray(new MeshHandle[0]);
     }
@@ -388,24 +367,21 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Genders \\
 
-    // "genders" maps a gender's name to the body "mesh" it wears and the "shapes" (by name) and "features" it starts
-    // with
+    // Each gender's starting look: the body it wears and the "shapes" (by name) and "features" it starts with
     private Int2ObjectOpenHashMap<AppearanceGenderStruct> parseGenders(
-            ArpgObjectStruct appearanceArpg,
+            ArpgObjectStruct gendersArpg,
+            RaceGenderStruct[] genders,
             MeshHandle[] bodyMeshes,
             AppearanceShapeStruct[] shapes,
             String sourceName) {
 
         Int2ObjectOpenHashMap<AppearanceGenderStruct> genderID2Preset = new Int2ObjectOpenHashMap<>();
-
-        if (!ArpgUtility.hasObject(appearanceArpg, "genders"))
-            return genderID2Preset;
-
-        ArpgObjectStruct gendersArpg = appearanceArpg.getAsObject("genders");
+        int index = 0;
 
         for (String genderName : gendersArpg.keySet()) {
 
             ArpgObjectStruct presetArpg = gendersArpg.getAsObject(genderName);
+            RaceGenderStruct gender = genders[index++];
             float[] shapeValues = new float[shapes.length];
             ArpgObjectStruct shapesArpg = ArpgUtility.hasObject(presetArpg, "shapes")
                     ? presetArpg.getAsObject("shapes")
@@ -416,13 +392,13 @@ class AppearanceBuilder extends BuilderPackage {
 
             for (String shapeName : shapesArpg.keySet())
                 if (!hasShape(shapes, shapeName))
-                    throwException("Appearance gender \"" + genderName + "\" sets \"" + shapeName
+                    throwException("Race gender \"" + genderName + "\" sets \"" + shapeName
                             + "\", which is not a shape slider. Source: " + sourceName);
 
             genderID2Preset.put(
-                    genderManager.getGenderIDFromGenderName(genderName),
+                    gender.getGenderID(),
                     new AppearanceGenderStruct(
-                            resolveBodyIndex(presetArpg, bodyMeshes),
+                            resolveBodyIndex(gender.getMeshHandle(), bodyMeshes),
                             shapeValues,
                             parseFeatures(presetArpg, sourceName)));
         }
@@ -430,13 +406,8 @@ class AppearanceBuilder extends BuilderPackage {
         return genderID2Preset;
     }
 
-    // The body a preset wears among the bodies parsed, the model's own when it names none
-    private int resolveBodyIndex(ArpgObjectStruct presetArpg, MeshHandle[] bodyMeshes) {
-
-        if (!ArpgUtility.hasString(presetArpg, "mesh"))
-            return 0;
-
-        MeshHandle bodyMesh = meshManager.getMeshHandleFromMeshName(presetArpg.get("mesh").getAsString());
+    // The body a gender wears among the bodies parsed
+    private int resolveBodyIndex(MeshHandle bodyMesh, MeshHandle[] bodyMeshes) {
 
         for (int i = 0; i < bodyMeshes.length; i++)
             if (bodyMeshes[i] == bodyMesh)

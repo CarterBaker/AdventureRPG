@@ -1,8 +1,9 @@
 package editor.bootstrap.recorderpipeline.recordermanager;
 
 import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
-import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
+import application.bootstrap.entitypipeline.race.RaceData;
+import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
@@ -141,7 +142,8 @@ class RecordingAssetBranch extends BranchPackage {
 
     // Characters \\
 
-    // A character's template, gender and animations, and everything every look it wore names
+    // A character's template, gender and animations, every gender's model its race requires, and everything every
+    // look it wore names
     private void gatherBody(RecordingBodyTrackStruct track, String owner) {
 
         RecordingAssetSectionStruct section = sections[RecorderAssetKind.CHARACTERS.ordinal()];
@@ -165,22 +167,19 @@ class RecordingAssetBranch extends BranchPackage {
     private void resolveTemplate(RecordingAssetStruct template) {
 
         try {
-            EntityData entityData = entityManager.getEntityHandleFromTemplateName(template.getName()).getEntityData();
+            RaceData raceData = entityManager.getEntityHandleFromTemplateName(template.getName())
+                    .getEntityData()
+                    .getRaceData();
 
-            if (entityData.hasCharacterModel())
-                add(RecorderAssetKind.MODELS, entityData.getCharacterMesh(), template.getName());
+            for (int i = 0; i < raceData.getGenderCount(); i++) {
 
-            if (entityData.hasAppearance())
-                for (int i = 1; i < entityData.getAppearanceData().getBodyCount(); i++)
-                    add(RecorderAssetKind.MODELS, entityData.getAppearanceData().getBodyMesh(i), template.getName());
+                RaceGenderStruct gender = raceData.getGenderAt(i);
 
-            if (entityData.getCharacterMaterial() != null)
-                add(RecorderAssetKind.MATERIALS,
-                        entityData.getCharacterMaterial().getMaterialName(), template.getName());
-
-            if (entityData.getAnimationTreeHandle() != null)
-                add(RecorderAssetKind.ANIMATION_TREES,
-                        entityData.getAnimationTreeHandle().getTreeName(), template.getName());
+                add(RecorderAssetKind.MODELS, gender.getMeshHandle(), template.getName());
+                add(RecorderAssetKind.MATERIALS, gender.getMaterial().getMaterialName(), template.getName());
+                add(RecorderAssetKind.ANIMATION_TREES, gender.getAnimationTreeHandle().getTreeName(),
+                        template.getName());
+            }
         } catch (InternalException e) {
             template.setMissing(true);
         }

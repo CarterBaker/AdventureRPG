@@ -53,9 +53,9 @@ Version). Paths in these instructions are relative to the project root.
   gear, trades, skills, professions, morality or health, read `.claude/docs/ProgressionPipeline.md` (design:
   `.claude/docs/Progression.md`). Before touching vehicles, ships, the drafting table (Shipwright), riders or the sea's
   hold on a hull, read `.claude/docs/VehiclePipeline.md` (design: `.claude/docs/Vehicle.md`).
-  Before touching the Character Editor, Animation Editor, their docker windows, sculpting, rigging, posing, or a
-  character's appearance (morphs, shape sliders, zones, masks, the character shaders), read
-  `.claude/docs/CharacterEditorPipeline.md`.
+  Before touching the Character Editor, Animation Editor, Entity Editor, their docker windows, sculpting, rigging,
+  posing, races and their genders' models, or a character's appearance (morphs, shape sliders, zones, masks, the
+  character shaders), read `.claude/docs/CharacterEditorPipeline.md`.
 
 @docs/Engine.md
 

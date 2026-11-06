@@ -7,6 +7,7 @@ import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.entitypipeline.pathfindingmanager.PathfindingManager;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
+import application.bootstrap.entitypipeline.racemanager.RaceManager;
 import engine.root.PipelinePackage;
 
 public class EntityPipeline extends PipelinePackage {
@@ -14,15 +15,16 @@ public class EntityPipeline extends PipelinePackage {
     /*
      * Registers all entity pipeline managers in dependency order. BehaviorManager
      * and EntityManager are registered before PlayerManager since player spawn
-     * depends on both being available. FeatureManager is registered before
-     * EntityManager since entity templates resolve their default appearance
-     * features against it while they load, and AnimationTreeManager is
-     * registered before EntityManager for the same reason — every
-     * character template resolves its animation tree while it loads.
-     * PathfindingManager is registered before NpcManager, so the search
-     * budget it renews each frame is fresh before any resident asks for a
-     * way. NpcManager is registered last, since every NPC resolves its entity
-     * template against EntityManager while it loads.
+     * depends on both being available. FeatureManager and
+     * AnimationTreeManager are registered before RaceManager, since every
+     * race resolves its default appearance features and each of its genders'
+     * animation trees while it loads, and RaceManager is registered before
+     * EntityManager for the same reason — every entity template resolves
+     * its race while it loads. PathfindingManager is registered before
+     * NpcManager, so the search budget it renews each frame is fresh before
+     * any resident asks for a way. NpcManager is registered last, since
+     * every NPC resolves its entity template against EntityManager while it
+     * loads.
      */
 
     @Override
@@ -30,6 +32,7 @@ public class EntityPipeline extends PipelinePackage {
         create(BehaviorManager.class);
         create(FeatureManager.class);
         create(AnimationTreeManager.class);
+        create(RaceManager.class);
         create(EntityManager.class);
         create(PlayerManager.class);
         create(PathfindingManager.class);

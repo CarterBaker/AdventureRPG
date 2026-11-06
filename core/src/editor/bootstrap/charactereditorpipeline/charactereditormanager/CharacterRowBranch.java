@@ -28,7 +28,7 @@ class CharacterRowBranch extends BranchPackage {
      * the mode and of what is picked, the mesh modes' from
      * CharacterMeshRowBranch and the rig's from CharacterRigRowBranch. Every
      * value shown is read through CharacterPropertyBranch, the same path that
-     * edits it. A mode that holds the bind pose lists no pose; a template
+     * edits it. A mode that holds the bind pose lists no pose; a race
      * of more than one gender lists the gender the preview is made as.
      */
 
@@ -190,7 +190,7 @@ class CharacterRowBranch extends BranchPackage {
         addShapeRows(document, rows);
     }
 
-    // The preview's slider values, one per shape the template lists, and how far its eyes are closed
+    // The preview's slider values, one per shape the race lists, and how far its eyes are closed
     private void addShapeRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         if (!document.getPreviewData().hasAppearance())

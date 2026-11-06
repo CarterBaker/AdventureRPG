@@ -1,8 +1,9 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the
-Character Editor, the Face Editor, the Animation Editor, their docker windows, or a character's appearance (morphs,
-face controls, zones, masks, shaders). `.claude/CLAUDE.md` still applies in full.
+Character Editor, the Face Editor, the Animation Editor, the Entity Editor, their docker windows, races and their
+genders' models, or a character's appearance (morphs, face controls, zones, masks, shaders). `.claude/CLAUDE.md` still
+applies in full.
 
 ---
 
@@ -19,6 +20,7 @@ layouts like any other.
 | Character Equipment | `CharacterEquipmentContext` | the live preview in the Equipment mode, its anchors marked |
 | Character Mesh Editor | `CharacterMeshEditorContext` | modelling: the bind-pose preview, its overlay and the Mesh, Sculpt, Weights and Rig toolbar; a tool canvas |
 | Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
+| Entity Editor | `EntityEditorContext` | `EntityEditorManager.buildListRows`: every entity, the picked one's race and its genders with their models; the entity's fields in Properties (`INFO`) |
 | Face Editor | `FaceEditorContext` | the open character framed on its head, its face bones marked; the Character Face tool canvas |
 | Face Outliner | `FaceOutlinerContext` | `FaceEditorManager.buildListRows` |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
@@ -73,9 +75,21 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
 
 ## Characters
 
-A character is a rigged body mesh per gender with its whole head modelled in, plus worn feature meshes (`FeatureSlot`:
-hair). Nothing is a texture swap.
+Every entity template names its race (`race`, required), every race lists the genders it may be made as (`genders`, at
+least one, the first the default), and every gender names the character model it requires: its `mesh`, the `rig` that
+mesh is skinned to, its `material` and its `animation_tree`, with the `shapes` and `features` it starts with. The race
+also holds the `equipment` anchors and the optional `appearance` (sliders, colors, features, build). The game reads
+the race through `EntityData.getRaceData()`; `RaceManager` (`entitypipeline.racemanager`) loads races with
+`RaceBuilder` and `AppearanceBuilder`. A character is a race's rigged body mesh per gender with its whole head
+modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a texture swap.
 
+- **The character tools edit races.** A `CharacterDocumentInstance` is one race (`INFO_SCHEMA_RACES`), its preview a
+  `RaceHandle` from `RaceManager.buildPreviewRace`. Picking a race opens it; picking an entity, in the Hierarchy or the
+  Entity Editor, opens its race through `CharacterEditorManager.openRace`, the one path that opens a race by name.
+- **The Entity Editor** (`editor.bootstrap.entityeditorpipeline`) lists entities; picking one selects it through
+  `InfoManager.selectEntry`, so the Properties tab edits its fields and the character tabs open its race. Picking a
+  gender row calls `CharacterEditorManager.selectPreviewGender`, so every character tab wears that gender's model. A
+  changed `race` field on the picked entity opens the new race.
 - **Mesh format** (`RiggedMeshArpgUtility`): every quad may name its `zone` (`MeshZone`: skin, eye, brow, lash, hair,
   cloth, mouth, teeth); `masks` (channels `EngineSetting.RIGGED_MESH_MASK_CHANNELS`) and `morphs` name vertices by the
   number the parse gives them, corners merged by position and influences in the order they first appear. Writing
@@ -86,7 +100,7 @@ hair). Nothing is a texture swap.
   appearance texels (`SkinnedAppearanceStruct`: hidden bone, one texel per `SkinnedColor`, `SkinnedDetail` amounts),
   then its morph weights. The shaders read them through `characters/includes/CharacterAppearance.glsl` and shade by
   zone in `CharacterSurface.glsl`; keep the GLSL constants in step with the enums.
-- **Appearance.** `AppearanceData` holds the template's body meshes (the model's `mesh` first, then each gender's),
+- **Appearance.** `AppearanceData` holds the race's body meshes (each gender's `mesh`, in the race's order),
   colors, palettes, details, shape sliders and the morphs each `AppearanceExpression` plays, the morphs resolved on
   every body (`getShapeMorph`, `getExpressionMorph`). A slider (`AppearanceShapeStruct`) is known by its `name` (its
   morph's when it gives none) and drives a `morph`, the `bones` it moves, turns and scales per unit of its value
@@ -99,12 +113,15 @@ hair). Nothing is a texture swap.
   (`CharacterMeshBranch.editShape`): the morph is lifted into the positions so every tool works unchanged, and baked
   back into deltas when sculpting returns to the base, the mode or part changes, or the mesh is saved. Mesh modes
   preview with every slider at zero and the face still.
-- **Genders.** The template's `genders` presets give each gender the body `mesh` it wears, its starting shapes and its
-  hair; every body is on the model's rig and carries every morph the sliders and expressions name.
-  `EntityInstance.setGenderID` resets the appearance to the preset, and `EntityRenderSystem` draws
-  `AppearanceHandle.getBodyMesh`. The Character Editor previews one gender at a time (the Gender row): its body and
-  features are the parts the mesh modes edit, and untouched preview sliders sit where that gender starts them.
-- **Assets.** `HumanoidMaleMesh` (the model's own, the default gender) and `HumanoidFemaleMesh` share the rig with its
+- **Genders.** Each gender's model is a `RaceGenderStruct` (`RaceData.getGender`). `EntityInstance.setGenderID` is the
+  one way a being changes gender: it takes on the gender's model (`getRaceGender`), moves its animation state onto the
+  gender's tree when that tree differs, and resets the appearance to the gender's preset. `EntityRenderSystem` draws the
+  gender's mesh with its material. Every body is on the race's rig and carries every morph the sliders and
+  expressions name. The Character Editor previews one gender at a time (the Gender row, or a gender picked in the Entity
+  Editor): `CharacterViewPoseSystem.setGender` takes on its model and tree, its body and features are the parts the
+  mesh modes edit, and untouched preview sliders sit where that gender starts them.
+- **Assets.** The race `races/Human` (entity `HumanoidEntity`) is male, its default, or female. `HumanoidMaleMesh` and
+  `HumanoidFemaleMesh` share the rig with its
   15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes, brows, ears), carry the same morphs (blinks, body
   sliders, `ear_point`) and draw their eyes from the eye zone's raw UVs, brows and lash line as their own strips.
   They are generated (catalogued); a rigged mesh may hold at most `RIGGED_MESH_VERT_LIMIT` corners.
@@ -128,14 +145,19 @@ hair). Nothing is a texture swap.
 - Face controls: `FaceEditBranch` performs every edit of the template's shapes through InfoManager, recorded in the
   template's face history (`FaceEditorManager.getHistory`); values and actions: `FacePropertyBranch`; rows:
   `FaceRowBranch`. Bone drags go through `FaceEditorManager.beginGesture / writeGesture / endGesture / cancelGesture`;
-  viewport: `FaceEditorGestureSystem`. The Face Editor always works on the Character Editor's active template, saves
-  and reverts through it, and takes its preview gender and slider values from it.
+  viewport: `FaceEditorGestureSystem`. The Face Editor always works on the Character Editor's active race, saves
+  and reverts through it, and takes its preview gender and slider values from it. Gender starts live under the race's
+  `genders`, the controls under its `appearance`.
 - The preview look (gender, tones, sliders, blink, build, head) is put on any viewport's appearance by
   `CharacterEditorManager.applyLook` (`CharacterLookBranch`); never set it piece by piece in a viewport.
 - Rotation and projection math shared by every viewport gesture: `CharacterPoseUtility`.
 
 ## Traps
 
+- **One rig per race.** Every gender of a race must name the same rig (`RaceBuilder` refuses otherwise): its sliders,
+  anchors, clips and every skinned buffer are laid out by those bones. Genders may differ in mesh, material and tree.
+- **Model height is the default gender's.** `RaceData.getModelHeight` is the first gender's mesh height, the height
+  every gender is scaled against, so a smaller body stays smaller.
 - **Bones are structure.** Clips, masks, skinned buffers, appearances and live poses are all laid out by a rig's bones
   at load. `RigManager.updateRig` applies a rig in place only while its bone names, order and parents are unchanged
   (joint placement, bind rotation, size); adding, renaming, reparenting or mirroring bones is written to the rig and

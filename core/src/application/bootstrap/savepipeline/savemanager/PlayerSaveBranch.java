@@ -67,7 +67,7 @@ class PlayerSaveBranch extends BranchPackage {
 
         if (player.hasAppearance())
             characterArpg.add("appearance", buildAppearance(
-                    player.getAppearanceHandle(), player.getEntityData().getAppearanceData()));
+                    player.getAppearanceHandle(), player.getEntityData().getRaceData().getAppearanceData()));
 
         return characterArpg;
     }

@@ -2,7 +2,7 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import java.io.File;
 
-import application.bootstrap.entitypipeline.entity.EntityData;
+import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
@@ -76,16 +76,16 @@ class CharacterMeshBranch extends BranchPackage {
         if (!document.hasPreview())
             return;
 
-        EntityData entityData = document.getPreviewData();
+        RaceData raceData = document.getPreviewData();
         partKeys.add(EditorSetting.CHARACTER_EDITOR_PART_BODY);
 
-        if (!entityData.hasAppearance())
+        if (!raceData.hasAppearance())
             return;
 
         short genderID = characterEditorManager.getPreviewGenderID();
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
-            if (entityData.getAppearanceData().getStartingFeature(genderID, featureSlot) != null)
+            if (raceData.getAppearanceData().getStartingFeature(genderID, featureSlot) != null)
                 partKeys.add(ArpgUtility.toEnumName(featureSlot));
     }
 
@@ -94,21 +94,18 @@ class CharacterMeshBranch extends BranchPackage {
         if (!document.hasPreview())
             return null;
 
-        EntityData entityData = document.getPreviewData();
-
+        RaceData raceData = document.getPreviewData();
         short genderID = characterEditorManager.getPreviewGenderID();
 
         if (partKey.equals(EditorSetting.CHARACTER_EDITOR_PART_BODY))
-            return entityData.hasAppearance()
-                    ? entityData.getAppearanceData().getBodyMesh(entityData.getAppearanceData().getBodyIndex(genderID))
-                    : entityData.getCharacterMesh();
+            return raceData.getGender(genderID).getMeshHandle();
 
         FeatureSlot featureSlot = CharacterViewUtility.toEnumOrDefault(partKey, FeatureSlot.class, null);
 
-        if (featureSlot == null || !entityData.hasAppearance())
+        if (featureSlot == null || !raceData.hasAppearance())
             return null;
 
-        FeatureHandle featureHandle = entityData.getAppearanceData().getStartingFeature(genderID, featureSlot);
+        FeatureHandle featureHandle = raceData.getAppearanceData().getStartingFeature(genderID, featureSlot);
         return featureHandle != null ? featureHandle.getMeshHandle() : null;
     }
 

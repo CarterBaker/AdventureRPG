@@ -69,7 +69,7 @@ class AttackBranch extends BranchPackage {
         WeaponHandle weaponHandle = weaponManager.getWeaponHandleFromWeaponID(weaponID);
         CombatDirection side = weaponHandle.resolveAttackSide(direction);
         AttackStruct attack = weaponHandle.getAttack(side);
-        RigHandle rigHandle = entity.getEntityData().getRigHandle();
+        RigHandle rigHandle = entity.getEntityData().getRaceData().getRigHandle();
 
         entity.getEntityActionHandle().beginMove(
                 EntityAction.ATTACK,

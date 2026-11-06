@@ -10,6 +10,7 @@ import editor.runtime.menueventsmanager.menus.CommandConsoleBranch;
 import editor.runtime.menueventsmanager.menus.ConsoleBranch;
 import editor.runtime.menueventsmanager.menus.EditorBranch;
 import editor.runtime.menueventsmanager.menus.EditorFrameBranch;
+import editor.runtime.menueventsmanager.menus.EntityEditorBranch;
 import editor.runtime.menueventsmanager.menus.ExportDialogBranch;
 import editor.runtime.menueventsmanager.menus.FaceEditorBranch;
 import editor.runtime.menueventsmanager.menus.InfoPanelBranch;
@@ -70,6 +71,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(ShipViewerBranch.class);
         create(CharacterEditorBranch.class);
         create(FaceEditorBranch.class);
+        create(EntityEditorBranch.class);
         create(AnimationEditorBranch.class);
         create(AnimationTreeEditorBranch.class);
         create(RecorderBranch.class);

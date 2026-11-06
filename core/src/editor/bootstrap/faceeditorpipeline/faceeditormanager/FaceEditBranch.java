@@ -16,16 +16,17 @@ import engine.util.mathematics.vectors.Vector3;
 class FaceEditBranch extends BranchPackage {
 
     /*
-     * Reads and performs every change the face editor makes to a template's
+     * Reads and performs every change the face editor makes to a race's
      * face controls — its appearance's shape sliders and the bones each
      * drives — each through InfoManager so the Info Panel, both character
-     * tools and the game see it at once, and each recorded in the template's
+     * tools and the game see it at once, and each recorded in the race's
      * face history first unless a drag already holds it. A control is found
      * by its place in the shapes list, the order the builder reads it in; a
      * bone target by its bone. A target keeps only the channels that move
      * anything, and stays on its bone until it is removed, so a control
      * never ends up driving nothing. Renaming or
-     * removing a control renames or drops the start every gender gives it.
+     * removing a control renames or drops the start every gender of the race
+     * gives it.
      * Mirroring writes the partner bone's target across the face: its move
      * flipped on X, its turn on Y and Z, its scale as it is.
      */
@@ -60,20 +61,24 @@ class FaceEditBranch extends BranchPackage {
         this.faceEditorManager = get(FaceEditorManager.class);
     }
 
-    // Template \\
+    // Race \\
 
-    // One change to the template's appearance, recorded for undo first unless a gesture already holds the template
-    private void edit(CharacterDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
+    // One change to the race, recorded for undo first unless a gesture already holds the race
+    private void editRace(CharacterDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
 
-        ArpgObjectStruct templateArpg = faceEditorManager.getTemplateArpg();
+        ArpgObjectStruct raceArpg = faceEditorManager.getTemplateArpg();
 
-        if (templateArpg == null)
+        if (raceArpg == null)
             return;
 
-        faceEditorManager.getHistory(document).record(templateArpg);
-        apply(document, template -> editor.accept(CharacterViewUtility.requireObject(
-                CharacterViewUtility.requireObject(template, EditorSetting.CHARACTER_EDITOR_FIELD_MODEL),
-                EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE)));
+        faceEditorManager.getHistory(document).record(raceArpg);
+        apply(document, editor);
+    }
+
+    // One change to the race's appearance
+    private void edit(CharacterDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
+        editRace(document, race -> editor.accept(
+                CharacterViewUtility.requireObject(race, EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE)));
     }
 
     private void editShape(CharacterDocumentInstance document, int shapeIndex, Consumer<ArpgObjectStruct> editor) {
@@ -85,19 +90,19 @@ class FaceEditBranch extends BranchPackage {
 
     private void apply(CharacterDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
         infoManager.editEntry(
-                EditorSetting.INFO_SCHEMA_ENTITIES,
-                document.getTemplateName(),
-                document.getTemplateName(),
+                EditorSetting.INFO_SCHEMA_RACES,
+                document.getRaceName(),
+                document.getRaceName(),
                 editor);
     }
 
-    // Puts a recorded template back whole; false when there is none to put back
+    // Puts a recorded race back whole; false when there is none to put back
     boolean restore(CharacterDocumentInstance document, ArpgObjectStruct snapshot) {
 
         if (snapshot == null)
             return false;
 
-        apply(document, template -> CharacterViewUtility.replaceObject(template, snapshot));
+        apply(document, race -> CharacterViewUtility.replaceObject(race, snapshot));
         return true;
     }
 
@@ -105,9 +110,7 @@ class FaceEditBranch extends BranchPackage {
 
     ArpgObjectStruct getAppearanceArpg() {
         return CharacterViewUtility.findObject(
-                CharacterViewUtility.findObject(
-                        faceEditorManager.getTemplateArpg(),
-                        EditorSetting.CHARACTER_EDITOR_FIELD_MODEL),
+                faceEditorManager.getTemplateArpg(),
                 EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE);
     }
 
@@ -130,7 +133,7 @@ class FaceEditBranch extends BranchPackage {
         return shapeIndex >= 0 && shapeIndex < getShapeCount(document);
     }
 
-    // A control's ARPG, null when the template has none at the index
+    // A control's ARPG, null when the race has none at the index
     ArpgObjectStruct getShapeArpg(CharacterDocumentInstance document, int shapeIndex) {
         return hasShape(document, shapeIndex) ? getShapesArpg().get(shapeIndex).getAsObject() : null;
     }
@@ -182,12 +185,14 @@ class FaceEditBranch extends BranchPackage {
         return shape != null && ArpgUtility.hasString(shape, EditorSetting.FACE_EDITOR_FIELD_MORPH);
     }
 
-    // The value a gender starts a control at as the template writes it, NaN when the gender gives it none
+    // The value a gender starts a control at as the race writes it, NaN when the gender gives it none
     float getStart(String genderName, String shapeName) {
 
         ArpgObjectStruct shapes = CharacterViewUtility.findObject(
                 CharacterViewUtility.findObject(
-                        CharacterViewUtility.findObject(getAppearanceArpg(), EditorSetting.FACE_EDITOR_FIELD_GENDERS),
+                        CharacterViewUtility.findObject(
+                                faceEditorManager.getTemplateArpg(),
+                                EditorSetting.FACE_EDITOR_FIELD_GENDERS),
                         genderName),
                 EditorSetting.FACE_EDITOR_FIELD_SHAPES);
 
@@ -302,9 +307,11 @@ class FaceEditBranch extends BranchPackage {
 
         String shapeName = getShapeName(document, shapeIndex);
 
-        edit(document, appearance -> {
-            appearance.getAsArray(EditorSetting.FACE_EDITOR_FIELD_SHAPES).remove(shapeIndex);
-            renameStarts(appearance, shapeName, null);
+        editRace(document, race -> {
+            race.getAsObject(EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE)
+                    .getAsArray(EditorSetting.FACE_EDITOR_FIELD_SHAPES)
+                    .remove(shapeIndex);
+            renameStarts(race, shapeName, null);
         });
     }
 
@@ -313,17 +320,20 @@ class FaceEditBranch extends BranchPackage {
 
         String oldName = getShapeName(document, shapeIndex);
 
-        edit(document, appearance -> {
-            appearance.getAsArray(EditorSetting.FACE_EDITOR_FIELD_SHAPES).get(shapeIndex).getAsObject()
+        editRace(document, race -> {
+            race.getAsObject(EditorSetting.CHARACTER_EDITOR_FIELD_APPEARANCE)
+                    .getAsArray(EditorSetting.FACE_EDITOR_FIELD_SHAPES)
+                    .get(shapeIndex)
+                    .getAsObject()
                     .addProperty(EditorSetting.FACE_EDITOR_FIELD_NAME, shapeName);
-            renameStarts(appearance, oldName, shapeName);
+            renameStarts(race, oldName, shapeName);
         });
     }
 
     // Every gender's start for a control moved to a new name, or dropped for none
-    private void renameStarts(ArpgObjectStruct appearance, String oldName, String newName) {
+    private void renameStarts(ArpgObjectStruct race, String oldName, String newName) {
 
-        ArpgObjectStruct genders = CharacterViewUtility.findObject(appearance, EditorSetting.FACE_EDITOR_FIELD_GENDERS);
+        ArpgObjectStruct genders = CharacterViewUtility.findObject(race, EditorSetting.FACE_EDITOR_FIELD_GENDERS);
 
         if (genders == null)
             return;
@@ -367,11 +377,11 @@ class FaceEditBranch extends BranchPackage {
 
     // The value a gender starts a control at, or its start removed for NaN so the control's default holds
     void setStart(CharacterDocumentInstance document, String genderName, String shapeName, float value) {
-        edit(document, appearance -> {
+        editRace(document, race -> {
 
             ArpgObjectStruct shapes = CharacterViewUtility.requireObject(
                     CharacterViewUtility.requireObject(
-                            CharacterViewUtility.requireObject(appearance, EditorSetting.FACE_EDITOR_FIELD_GENDERS),
+                            CharacterViewUtility.requireObject(race, EditorSetting.FACE_EDITOR_FIELD_GENDERS),
                             genderName),
                     EditorSetting.FACE_EDITOR_FIELD_SHAPES);
 

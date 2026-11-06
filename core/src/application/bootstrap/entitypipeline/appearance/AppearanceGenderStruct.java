@@ -7,17 +7,16 @@ public class AppearanceGenderStruct extends StructPackage {
 
     /*
      * The look one gender starts with: the body it wears, by its index among
-     * the template's body meshes (0 is the template's own mesh), a value per
-     * shape slider (NaN keeps the template's default) and a feature per slot
-     * (null keeps the template's). Each gender may be its own mesh, so a man
-     * and a woman are modelled apart and share the rig, the sliders and the
-     * features.
+     * the race's body meshes, a value per shape slider (NaN keeps the race's
+     * default) and a feature per slot (null keeps the race's). Each gender
+     * may be its own mesh, so a man and a woman are modelled apart and share
+     * the rig, the sliders and the features.
      */
 
     // Body
     private final int bodyIndex;
 
-    // Shapes — indexed like the template's shape sliders
+    // Shapes — indexed like the race's shape sliders
     private final float[] shapeValues;
 
     // Features — indexed by FeatureSlot ordinal

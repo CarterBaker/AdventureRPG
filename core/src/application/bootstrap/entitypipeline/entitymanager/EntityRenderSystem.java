@@ -1,12 +1,13 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
-import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.entitypipeline.race.RaceData;
+import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
@@ -35,7 +36,8 @@ public class EntityRenderSystem extends SystemPackage {
      * model matrix from its footprint, yaw and size, placed relative to the
      * chunk the viewer stands in across the world's wrap, plays its face,
      * packs its appearance into its palette row, and submits its body, worn
-     * features and equipment as skinned and rigid draws. pushPreview() draws a posed
+     * features and equipment as skinned and rigid draws, the body and its
+     * material those of the gender it wears. pushPreview() draws a posed
      * character outside any world for editors. Runtime code never touches the
      * skinned buffers directly.
      */
@@ -107,18 +109,16 @@ public class EntityRenderSystem extends SystemPackage {
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        if (!entity.hasAnimationState())
-            return;
-
-        EntityData entityData = entity.getEntityData();
+        RaceData raceData = entity.getEntityData().getRaceData();
+        RaceGenderStruct raceGender = entity.getRaceGender();
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
         composeModelMatrix(entity, viewerChunkCoordinate);
-        resolveAppearance(entityData, entity.getAppearanceHandle(), hideHead);
+        resolveAppearance(raceData, entity.getAppearanceHandle(), hideHead);
         pushBody(
-                entityData,
+                raceGender.getMeshHandle(),
                 entity.getAppearanceHandle(),
-                entityData.getCharacterMaterial(),
+                raceGender.getMaterial(),
                 skinningMatrices,
                 targetFbo,
                 window);
@@ -126,9 +126,11 @@ public class EntityRenderSystem extends SystemPackage {
     }
 
     // A posed character outside any world — an editor's preview — at its own model matrix and without equipment,
-    // drawn with its own material so it never batches with the characters of a game view
+    // wearing the model of the gender given and drawn with its own material so it never batches with the
+    // characters of a game view
     public void pushPreview(
-            EntityData entityData,
+            RaceData raceData,
+            RaceGenderStruct raceGender,
             AppearanceHandle appearance,
             Matrix4[] skinningMatrices,
             Matrix4 modelMatrix,
@@ -137,25 +139,23 @@ public class EntityRenderSystem extends SystemPackage {
             WindowInstance window) {
 
         modelMatrixScratch.set(modelMatrix);
-        resolveAppearance(entityData, appearance, false);
-        pushBody(entityData, appearance, material, skinningMatrices, targetFbo, window);
+        resolveAppearance(raceData, appearance, false);
+        pushBody(raceGender.getMeshHandle(), appearance, material, skinningMatrices, targetFbo, window);
     }
 
-    // The body the appearance's gender wears, the template's mesh without an appearance, then every feature worn
+    // The body the gender wears, then every feature its appearance wears
     private void pushBody(
-            EntityData entityData,
+            MeshHandle bodyMesh,
             AppearanceHandle appearance,
             MaterialInstance material,
             Matrix4[] skinningMatrices,
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        if (appearance == null) {
-            pushCharacterPart(entityData.getCharacterMesh(), material, skinningMatrices, targetFbo, window);
-            return;
-        }
+        pushCharacterPart(bodyMesh, material, skinningMatrices, targetFbo, window);
 
-        pushCharacterPart(appearance.getBodyMesh(), material, skinningMatrices, targetFbo, window);
+        if (appearance == null)
+            return;
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (appearance.hasFeature(featureSlot))
@@ -193,10 +193,10 @@ public class EntityRenderSystem extends SystemPackage {
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        ObjectArrayList<EquipmentAnchorStruct> anchors = entity.getEntityData().getEquipmentAnchors();
+        ObjectArrayList<EquipmentAnchorStruct> anchors = entity.getEntityData().getRaceData().getEquipmentAnchors();
         InventoryHandle inventory = entity.getInventoryHandle();
         int hiddenBone = hideHead && entity.hasAppearance()
-                ? entity.getEntityData().getAppearanceData().getHeadBoneIndex()
+                ? entity.getEntityData().getRaceData().getAppearanceData().getHeadBoneIndex()
                 : EngineSetting.INDEX_NOT_FOUND;
 
         for (int i = 0; i < anchors.size(); i++) {
@@ -274,7 +274,7 @@ public class EntityRenderSystem extends SystemPackage {
         EntityStateHandle state = entity.getEntityStateHandle();
         Vector3 position = entity.getWorldPositionStruct().getPosition();
         Vector3 size = entity.getSize();
-        float scale = size.y / entity.getEntityData().getModelHeight();
+        float scale = size.y / entity.getEntityData().getRaceData().getModelHeight();
         long delta = WorldWrapUtility.unwrapToGridCoordinate(
                 entity.getWorldHandle(),
                 viewerChunkCoordinate,
@@ -297,11 +297,11 @@ public class EntityRenderSystem extends SystemPackage {
 
     // Appearance \\
 
-    private void resolveAppearance(EntityData entityData, AppearanceHandle appearance, boolean hideHead) {
+    private void resolveAppearance(RaceData raceData, AppearanceHandle appearance, boolean hideHead) {
 
         appearanceScratch.reset();
         appearanceScratch.setHiddenBone(hideHead && appearance != null
-                ? (float) entityData.getAppearanceData().getHeadBoneIndex()
+                ? (float) raceData.getAppearanceData().getHeadBoneIndex()
                 : EngineSetting.SKINNED_HIDDEN_BONE_NONE);
 
         if (appearance == null)
