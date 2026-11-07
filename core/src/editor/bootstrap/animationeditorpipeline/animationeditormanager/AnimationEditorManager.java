@@ -449,12 +449,18 @@ public class AnimationEditorManager extends ManagerPackage {
         return activeDocument.getRigHandle().getBone(boneIndex).getName();
     }
 
+    // Whether a clip keys a bone of its rig: every bone but those a spring chain simulates
+    public boolean isKeyedBone(int boneIndex) {
+        return !activeDocument.getRigHandle().isSpringBone(boneIndex);
+    }
+
     // Selection \\
 
     public void selectBone(int boneIndex) {
 
         if (activeDocument == null || !activeDocument.hasRig() || posing || boneIndex == selectedBoneIndex
-                || boneIndex < 0 || boneIndex >= activeDocument.getRigHandle().getBoneCount())
+                || boneIndex < 0 || boneIndex >= activeDocument.getRigHandle().getBoneCount()
+                || !isKeyedBone(boneIndex))
             return;
 
         this.selectedBoneIndex = boneIndex;

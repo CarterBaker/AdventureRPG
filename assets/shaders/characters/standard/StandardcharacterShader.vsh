@@ -90,7 +90,7 @@ void main() {
     vec4 worldPosition   = a_instanceModel * (skin * vec4(morphedPosition, 1.0));
     int  zone            = int(a_detail.x + 0.5);
 
-    worldPosition.xyz += resolveHairSway(zone, a_detail.z, worldPosition.xyz);
+    worldPosition.xyz += resolveHairSway(zone, a_detail.z, morphedPosition);
 
     v_uv              = vec4(a_uv, a_detail.yz);
     v_viewPosition    = (u_view * worldPosition).xyz;

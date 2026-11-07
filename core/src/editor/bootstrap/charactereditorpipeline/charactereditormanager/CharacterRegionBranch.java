@@ -22,7 +22,9 @@ class CharacterRegionBranch extends BranchPackage {
      * along its card the vertex stands, root to tip, so a stroke leaves the
      * roots on the scalp; every one of its vertices is picked. A mesh that is
      * not the part a region edits holds none of it (a negative share). Shares
-     * are kept per region and worked out again only once the mesh changes.
+     * are kept per region and worked out again only once the mesh changes. A
+     * region's bones are the ones below its roots, or the ones it names as
+     * its own, the hair's spring chains and the head they hang from.
      */
 
     // Internal
@@ -174,11 +176,15 @@ class CharacterRegionBranch extends BranchPackage {
         }
     }
 
-    // Whether a bone of a loaded rig is the region's or lies below one of its bones, read up its parents
+    // Whether a bone of a loaded rig is the region's: named as its own, or lying below one of its bones, read up its
+    // parents
     boolean holdsBone(CharacterEditorRegion region, RigHandle rigHandle, int boneIndex) {
 
+        if (region.isWhole() || region.namesBone(rigHandle.getBone(boneIndex).getName()))
+            return true;
+
         if (!region.isBound())
-            return region.isWhole();
+            return false;
 
         for (int bone = boneIndex;
                 bone != EngineSetting.INDEX_NOT_FOUND;
@@ -189,11 +195,14 @@ class CharacterRegionBranch extends BranchPackage {
         return false;
     }
 
-    // Whether a bone of the rig being edited is the region's or lies below one of its bones
+    // Whether a bone of the rig being edited is the region's: named as its own, or lying below one of its bones
     boolean holdsRigBone(CharacterEditorRegion region, int boneIndex) {
 
+        if (region.isWhole() || region.namesBone(characterRigBranch.getBoneName(boneIndex)))
+            return true;
+
         if (!region.isBound())
-            return region.isWhole();
+            return false;
 
         for (int bone = boneIndex; bone != EngineSetting.INDEX_NOT_FOUND; bone = characterRigBranch.getParent(bone))
             if (isRoot(region, characterRigBranch.getBoneName(bone)))

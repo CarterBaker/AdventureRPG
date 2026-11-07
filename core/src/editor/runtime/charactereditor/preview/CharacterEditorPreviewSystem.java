@@ -29,7 +29,8 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * the tone worn, the build and the head shape are applied whenever the
      * editor's state moves; and each frame the preview is posed — at rest or
      * played in the chosen movement, or held in the exact bind pose while its
-     * mesh or rig is edited — and given the markers of the mode: the joints in
+     * mesh or rig is edited unless Preview Springs plays the movement there
+     * with its springs simulated — and given the markers of the mode: the joints in
      * Build, Mesh and Weights, the rig's bones as they are being edited in
      * Rig, every equipment anchor in Equipment, the selected one highlighted.
      * The tab's own mode decides all of it, so the Character Appearance,
@@ -123,14 +124,20 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     // Pose \\
 
+    // The bind pose while a model is edited, unless the springs are previewed in the pose chosen, standing idle for
+    // one at rest; the pose chosen otherwise
     private void strikePose() {
 
         CharacterEditorPose pose = characterEditorManager.getPose();
+        boolean modelling = characterEditorModeSystem.getMode().holdsBindPose();
 
-        if (characterEditorModeSystem.getMode().holdsBindPose()) {
+        if (modelling && !characterEditorManager.isSpringPreview()) {
             characterViewPoseSystem.poseBind();
             return;
         }
+
+        if (modelling && !pose.isPlayed())
+            pose = CharacterEditorPose.IDLE;
 
         if (!pose.isPlayed()) {
             characterViewPoseSystem.poseRest();
@@ -138,7 +145,8 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         }
 
         characterViewPoseSystem.setParameter(AnimationParameter.SPEED, pose.getSpeed());
-        characterViewPoseSystem.play(pose.getMovementState(), EntityAction.NONE, 0f, 0, internal.getDeltaTime());
+        characterViewPoseSystem.play(
+                pose.getMovementState(), EntityAction.NONE, 0f, 0, pose.getSpeed(), internal.getDeltaTime());
     }
 
     // Markers \\

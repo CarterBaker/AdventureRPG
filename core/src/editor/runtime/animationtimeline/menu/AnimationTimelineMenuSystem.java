@@ -151,7 +151,7 @@ public class AnimationTimelineMenuSystem extends SystemPackage {
 
     // Lanes \\
 
-    // One lane per bone of the clip's rig, each carrying its bone's key and marking its keys
+    // One lane per bone of the clip's rig it keys, each carrying its bone's key and marking its keys
     private void refreshLanes() {
 
         menuManager.ejectAll(timelineMenu, AnimationTimelineSetting.ENTRY_LANES);
@@ -159,7 +159,8 @@ public class AnimationTimelineMenuSystem extends SystemPackage {
         int selected = animationEditorManager.getSelectedBoneIndex();
 
         for (int i = 0; i < animationEditorManager.getBoneCount(); i++)
-            injectLane(i, i == selected);
+            if (animationEditorManager.isKeyedBone(i))
+                injectLane(i, i == selected);
     }
 
     private void injectLane(int boneIndex, boolean selected) {

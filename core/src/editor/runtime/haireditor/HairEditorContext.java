@@ -11,8 +11,11 @@ public class HairEditorContext extends CharacterModelingContext {
      * the head: its cards picked, moved and sculpted with every tool, their
      * roots held to the scalp, so Nudge combs, Inflate puffs, Pinch clumps,
      * Smooth evens and Flatten lays the hair from the root out; Mesh shapes
-     * and adds cards and Weights sets what they follow. A gender wearing no
-     * hair has nothing to groom.
+     * and adds cards, Weights sets what they follow and weighs long hair onto
+     * its locks, and Rig lays spring chains on the locks found in the cards,
+     * picking only the hair's bones and the head they hang from, with
+     * Preview Springs playing them live. A gender wearing no hair has nothing
+     * to groom.
      */
 
     // Window \\

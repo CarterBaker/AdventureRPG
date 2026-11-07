@@ -69,4 +69,24 @@ public class RigHandle extends HandlePackage {
     public RigIkChainStruct findIkChainByEnd(int boneIndex) {
         return rigData.findIkChainByEnd(boneIndex);
     }
+
+    public int getSpringChainCount() {
+        return rigData.getSpringChainCount();
+    }
+
+    public RigSpringChainStruct getSpringChain(int chainIndex) {
+        return rigData.getSpringChain(chainIndex);
+    }
+
+    public int getSpringChainIndex(int boneIndex) {
+        return rigData.getSpringChainIndex(boneIndex);
+    }
+
+    public boolean isSpringBone(int boneIndex) {
+        return rigData.isSpringBone(boneIndex);
+    }
+
+    public int[] getSpringCarriedBones() {
+        return rigData.getSpringCarriedBones();
+    }
 }

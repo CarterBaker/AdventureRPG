@@ -18,7 +18,8 @@ public class MeshHandle extends HandlePackage {
      * rigged mesh can be rebuilt in place through MeshManager, keeping its
      * handles, so everything drawing it shows the change. A rigged mesh also
      * holds its morph targets: their names, by index, and the texture their
-     * deltas live in on the GPU.
+     * deltas live in on the GPU, and which of its rig's bones any vertex
+     * weighs onto, so a character simulates only the spring chains it wears.
      */
 
     // Identity
@@ -36,6 +37,9 @@ public class MeshHandle extends HandlePackage {
     // Morphs
     private int morphTexture;
     private String[] morphNames;
+
+    // Bones — by rig bone, whether any vertex weighs onto it
+    private boolean[] weighedBones;
 
     // Constructor \\
 
@@ -97,6 +101,17 @@ public class MeshHandle extends HandlePackage {
                 return i;
 
         return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Bones \\
+
+    public void setWeighedBones(boolean[] weighedBones) {
+        this.weighedBones = weighedBones;
+    }
+
+    // Whether any vertex of the mesh weighs onto a bone of its rig
+    public boolean weighsOnto(int boneIndex) {
+        return weighedBones != null && weighedBones[boneIndex];
     }
 
     // Accessible \\

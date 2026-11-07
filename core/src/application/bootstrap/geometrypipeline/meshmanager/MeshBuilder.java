@@ -124,7 +124,7 @@ class MeshBuilder extends BuilderPackage {
         meshHandle.constructor(resourceName, vaoInstance, vboHandle, iboHandle, rigHandle, boundsMin, boundsMax);
 
         if (riggedExpansion != null)
-            meshManager.applyMorphTargets(meshHandle, riggedExpansion.riggedMesh, riggedExpansion.morphEntries);
+            meshManager.applyRiggedMesh(meshHandle, riggedExpansion.riggedMesh, riggedExpansion.morphEntries);
 
         return meshHandle;
     }

@@ -6,6 +6,8 @@ import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.rig.RigSpringChainStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
@@ -27,8 +29,10 @@ public class AppearanceHandle extends HandlePackage {
      * that writes bone proportions and shaping and re-poses the entity,
      * writeAppearance() the one path that hands the lot to a skinned draw,
      * and resetToDefaults() returns everything to the race and the
-     * gender's preset. Every array is allocated once in constructor(). Lives
-     * on EntityInstance.
+     * gender's preset. resolveSprings() runs each of the rig's spring chains
+     * only while the body or a feature worn weighs onto it, so long hair
+     * swings and a bald head simulates nothing. Every array is allocated once
+     * in constructor(). Lives on EntityInstance.
      */
 
     // Internal
@@ -138,6 +142,7 @@ public class AppearanceHandle extends HandlePackage {
         headProportion.set(1f, 1f, 1f);
 
         applyProportions();
+        resolveSprings();
     }
 
     // Gender \\
@@ -299,10 +304,44 @@ public class AppearanceHandle extends HandlePackage {
                     + "\" does not fit this character — its mesh must use the character's rig.");
 
         features[featureHandle.getFeatureSlot().ordinal()] = featureHandle;
+        resolveSprings();
     }
 
     public void clearFeature(FeatureSlot featureSlot) {
         features[featureSlot.ordinal()] = null;
+        resolveSprings();
+    }
+
+    // Springs \\
+
+    // Each spring chain of the rig runs only while something worn weighs onto one of its bones
+    public void resolveSprings() {
+
+        RigHandle rigHandle = appearanceData.getRigHandle();
+
+        for (int c = 0; c < rigHandle.getSpringChainCount(); c++)
+            animationStateHandle.setSpringActive(c, isWorn(rigHandle.getSpringChain(c)));
+    }
+
+    private boolean isWorn(RigSpringChainStruct chain) {
+
+        for (int j = 0; j < chain.getBoneCount(); j++)
+            if (weighsOnto(chain.getBone(j)))
+                return true;
+
+        return false;
+    }
+
+    private boolean weighsOnto(int boneIndex) {
+
+        if (getBodyMesh().weighsOnto(boneIndex))
+            return true;
+
+        for (FeatureHandle feature : features)
+            if (feature != null && feature.getMeshHandle().weighsOnto(boneIndex))
+                return true;
+
+        return false;
     }
 
     // Draw \\

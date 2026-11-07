@@ -14,10 +14,12 @@ class CharacterRigPropertyBranch extends BranchPackage {
      * cycled or acted on, by the key its row carries, for
      * CharacterPropertyBranch to hand those keys to. The bone rows pick a
      * bone; the name, parent, position, rotation and size are the selected
-     * bone's; the actions add, remove and mirror bones, symmetrize the rig
-     * and step, save and revert its history and file, all through
-     * CharacterRigBranch. Nothing here acts while a joint is held in the
-     * viewport.
+     * bone's, and the stiffness, damping, gravity and drag those of the
+     * spring chain it belongs to; the actions add, remove and mirror bones,
+     * symmetrize the rig, rig digits and hair locks, add and remove IK
+     * handles and spring chains, switch the spring preview and step, save
+     * and revert its history and file, all through CharacterRigBranch.
+     * Nothing here acts while a joint is held in the viewport.
      */
 
     // Internal
@@ -38,6 +40,7 @@ class CharacterRigPropertyBranch extends BranchPackage {
         return keyName.equals(EditorSetting.CHARACTER_RIG_KEY_BONE)
                 || keyName.equals(EditorSetting.CHARACTER_RIG_KEY_NAME)
                 || keyName.equals(EditorSetting.CHARACTER_RIG_KEY_PARENT)
+                || keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SPRING)
                 || toField(keyName) != null
                 || isActionKey(keyName);
     }
@@ -65,7 +68,11 @@ class CharacterRigPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_RIG_KEY_REVERT,
                     EditorSetting.CHARACTER_RIG_KEY_DIGITS,
                     EditorSetting.CHARACTER_RIG_KEY_IK_ADD,
-                    EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE -> true;
+                    EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE,
+                    EditorSetting.CHARACTER_RIG_KEY_HAIR,
+                    EditorSetting.CHARACTER_RIG_KEY_SPRING_ADD,
+                    EditorSetting.CHARACTER_RIG_KEY_SPRING_REMOVE,
+                    EditorSetting.CHARACTER_RIG_KEY_SPRING_PREVIEW -> true;
             default -> false;
         };
     }
@@ -92,6 +99,12 @@ class CharacterRigPropertyBranch extends BranchPackage {
         if (field != null)
             return CharacterViewUtility.formatNumber(getNumber(field, CharacterViewUtility.getKeyIndex(key)));
 
+        if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SPRING))
+            return getSpringChain() != EngineSetting.INDEX_NOT_FOUND
+                    ? CharacterViewUtility.formatNumber(characterRigBranch.getSpringValue(
+                            getSpringChain(), CharacterViewUtility.getKeyIndex(key)))
+                    : "";
+
         return switch (keyName) {
             case EditorSetting.CHARACTER_RIG_KEY_NAME -> characterRigBranch.getBoneName(boneIndex);
             case EditorSetting.CHARACTER_RIG_KEY_PARENT -> characterRigBranch.getParent(boneIndex)
@@ -113,6 +126,9 @@ class CharacterRigPropertyBranch extends BranchPackage {
         if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_NAME))
             return characterRigBranch.isBoneNameValid(boneIndex, text);
 
+        if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SPRING))
+            return getSpringChain() != EngineSetting.INDEX_NOT_FOUND && CharacterViewUtility.isNumber(text);
+
         return toField(keyName) != null && CharacterViewUtility.isNumber(text);
     }
 
@@ -126,6 +142,9 @@ class CharacterRigPropertyBranch extends BranchPackage {
 
         if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_NAME))
             characterRigBranch.renameBone(boneIndex, text);
+        else if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SPRING))
+            characterRigBranch.setSpringValue(
+                    getSpringChain(), CharacterViewUtility.getKeyIndex(key), CharacterViewUtility.parseNumber(text));
         else
             characterRigBranch.setComponent(
                     boneIndex, toField(keyName), CharacterViewUtility.getKeyIndex(key),
@@ -136,6 +155,11 @@ class CharacterRigPropertyBranch extends BranchPackage {
 
         int boneIndex = characterRigBranch.getSelectedBone();
         String field = toField(CharacterViewUtility.getKeyName(key));
+
+        if (CharacterViewUtility.getKeyName(key).equals(EditorSetting.CHARACTER_RIG_KEY_SPRING)) {
+            stepSpring(CharacterViewUtility.getKeyIndex(key), direction);
+            return;
+        }
 
         if (field == null || boneIndex == EngineSetting.INDEX_NOT_FOUND || !isIdle())
             return;
@@ -165,6 +189,26 @@ class CharacterRigPropertyBranch extends BranchPackage {
         };
     }
 
+    // A spring setting of the selected bone's chain moved by its own step
+    private void stepSpring(int springField, int direction) {
+
+        int chainIndex = getSpringChain();
+
+        if (chainIndex == EngineSetting.INDEX_NOT_FOUND || !isIdle())
+            return;
+
+        characterRigBranch.setSpringValue(
+                chainIndex,
+                springField,
+                characterRigBranch.getSpringValue(chainIndex, springField)
+                        + direction * EditorSetting.CHARACTER_RIG_SPRING_STEPS[springField]);
+    }
+
+    // The spring chain the selected bone belongs to, INDEX_NOT_FOUND when none
+    int getSpringChain() {
+        return characterRigBranch.findSpringChain(characterRigBranch.getSelectedBone());
+    }
+
     // Choices \\
 
     void cycle(String key, int direction) {
@@ -182,6 +226,11 @@ class CharacterRigPropertyBranch extends BranchPackage {
 
         int boneIndex = characterRigBranch.getSelectedBone();
         String keyName = CharacterViewUtility.getKeyName(key);
+
+        if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SPRING_PREVIEW)) {
+            characterEditorManager.toggleSpringPreview();
+            return;
+        }
 
         if (!characterRigBranch.hasRig() || !isIdle())
             return;
@@ -201,6 +250,9 @@ class CharacterRigPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_RIG_KEY_DIGITS -> characterEditorManager.rigDigits();
             case EditorSetting.CHARACTER_RIG_KEY_IK_ADD -> characterRigBranch.addIkChain(boneIndex);
             case EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE -> characterRigBranch.removeIkChain(boneIndex);
+            case EditorSetting.CHARACTER_RIG_KEY_HAIR -> characterEditorManager.rigHairLocks();
+            case EditorSetting.CHARACTER_RIG_KEY_SPRING_ADD -> characterRigBranch.addSpringChain(boneIndex);
+            case EditorSetting.CHARACTER_RIG_KEY_SPRING_REMOVE -> characterRigBranch.removeSpringChain(boneIndex);
             default -> {
             }
         }

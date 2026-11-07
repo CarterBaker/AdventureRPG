@@ -30,9 +30,14 @@ public class AnimationStateHandle extends HandlePackage {
      * person view bends and twists the chest after the look — is laid over
      * the blended tree and stays until it is set again. The appearance's
      * shaping — a move and a turn per bone, as face sliders drive a face rig
-     * — sits on the bind pose under all of it. poseClip() and
-     * poseRest() pose the rig outside the tree for editors. All arrays are
-     * allocated once in constructor(), so updates never allocate.
+     * — sits on the bind pose under all of it. The rig's spring chains are
+     * simulated over the finished pose every update, in the frame the body
+     * last stood in (setSpringFrame), each chain running only while
+     * something worn weighs onto it, and laid over every pose the tree gives
+     * until the next update. poseClip() and poseRest() pose the rig outside
+     * the tree for editors, exactly as keyed, and the springs start again at
+     * the pose once the tree plays. All arrays are allocated once in
+     * constructor(), so updates never allocate.
      */
 
     // Rig
@@ -79,6 +84,10 @@ public class AnimationStateHandle extends HandlePackage {
 
     // Posture — per bone, rotation in degrees laid over the tree's pose
     private Vector3[] bonePostures;
+
+    // Springs — simulated over the pose, stepped by the time the update hands them
+    private AnimationSpringStruct springs;
+    private float springTime;
 
     // Output — consumed by rendering
     private Matrix4[] skinningMatrices;
@@ -176,6 +185,9 @@ public class AnimationStateHandle extends HandlePackage {
             currentWorldMatrices[i] = new Matrix4();
         }
 
+        // Springs
+        this.springs = new AnimationSpringStruct(rigHandle);
+
         // Scratch
         this.localScratch = new Matrix4();
         this.proportionScratch = new Matrix4();
@@ -254,6 +266,19 @@ public class AnimationStateHandle extends HandlePackage {
         bonePostures[boneIndex].set(x, y, z);
     }
 
+    // Springs \\
+
+    // How the body stands turned and sized in the world and how far it travelled since the last update, for the
+    // springs to keep their momentum through
+    public void setSpringFrame(Matrix4 bodyFrame, float travelX, float travelY, float travelZ) {
+        springs.setFrame(bodyFrame, travelX, travelY, travelZ);
+    }
+
+    // Whether a spring chain runs, off for one nothing worn weighs onto
+    public void setSpringActive(int chainIndex, boolean active) {
+        springs.setActive(chainIndex, active);
+    }
+
     // Update \\
 
     public void update(
@@ -280,6 +305,7 @@ public class AnimationStateHandle extends HandlePackage {
             advanceLayer(l, deltaTime);
         }
 
+        this.springTime = deltaTime;
         evaluatePose();
     }
 
@@ -538,6 +564,24 @@ public class AnimationStateHandle extends HandlePackage {
             rotationScratch.add(bonePostures[i]);
             composeBone(i);
         }
+
+        resolveSprings();
+    }
+
+    // The springs stepped by the time the update handed them over the pose just composed and laid on it, each bone
+    // they turn skinned again
+    private void resolveSprings() {
+
+        if (!springs.hasChains())
+            return;
+
+        springs.capture(currentWorldMatrices);
+        springs.step(springTime);
+        springs.apply(currentWorldMatrices);
+        this.springTime = 0f;
+
+        for (int bone : rigHandle.getSpringCarriedBones())
+            writeSkinning(bone);
     }
 
     // Poses the rig straight from one clip at a time in seconds, outside the tree — the still an editor scrubs
@@ -553,6 +597,8 @@ public class AnimationStateHandle extends HandlePackage {
             AnimationClipUtility.sampleClip(clip, phase, i, positionScratch, rotationScratch, scaleScratch);
             composeBone(i);
         }
+
+        springs.reset();
     }
 
     // Poses the rig in its bind pose, keeping its proportions
@@ -566,6 +612,8 @@ public class AnimationStateHandle extends HandlePackage {
 
             composeBone(i);
         }
+
+        springs.reset();
     }
 
     // Composes one bone from the offsets in the pose scratch over its bind pose as the appearance shapes it, parent
@@ -591,10 +639,15 @@ public class AnimationStateHandle extends HandlePackage {
         else
             currentWorld.set(currentWorldMatrices[bone.getParentIndex()]).multiply(localScratch);
 
+        writeSkinning(boneIndex);
+    }
+
+    private void writeSkinning(int boneIndex) {
+
         RigMathUtility.setScale(proportionScratch, boneProportions[boneIndex]);
 
         skinningMatrices[boneIndex]
-                .set(currentWorld)
+                .set(currentWorldMatrices[boneIndex])
                 .multiply(proportionScratch)
                 .multiply(rigHandle.getBindWorldInverseMatrix(boneIndex));
     }

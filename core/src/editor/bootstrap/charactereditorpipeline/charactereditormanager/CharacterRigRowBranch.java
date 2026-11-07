@@ -14,9 +14,10 @@ class CharacterRigRowBranch extends BranchPackage {
      * the rig as it is being edited, set in under its parent and marked when
      * it was added since the editor started, the selected one highlighted;
      * the right panel holds the selected bone's name while it can still take
-     * a new one, its parent, its bind position, rotation and size, the tools
-     * that add, remove and mirror bones and symmetrize the rig, and the rig's
-     * history and file. Every value shown is read through
+     * a new one, its parent, its bind position, rotation and size, the
+     * stiffness, damping, gravity and drag of the spring chain it belongs to,
+     * the tools that add, remove and mirror bones and symmetrize the rig, and
+     * the rig's history and file. Every value shown is read through
      * CharacterRigPropertyBranch, the same path that edits it.
      */
 
@@ -100,8 +101,31 @@ class CharacterRigRowBranch extends BranchPackage {
         addAxes(rows, EditorSetting.CHARACTER_RIG_KEY_POSITION, EditorSetting.CHARACTER_EDITOR_LABEL_POSITION);
         addAxes(rows, EditorSetting.CHARACTER_RIG_KEY_ROTATION, EditorSetting.CHARACTER_EDITOR_LABEL_ROTATION);
         addAxes(rows, EditorSetting.CHARACTER_RIG_KEY_SIZE, EditorSetting.CHARACTER_EDITOR_LABEL_SIZE);
+        addSpringRows(rows);
         addStructureRows(rows, boneIndex);
         addFileRows(rows);
+    }
+
+    // The settings of the spring chain the selected bone belongs to, none for a bone in no chain
+    private void addSpringRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        int chainIndex = characterRigPropertyBranch.getSpringChain();
+
+        if (chainIndex == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        rows.add(CharacterViewRowStruct.header(
+                EditorSetting.CHARACTER_RIG_HEADER_SPRING + characterRigBranch.getSpringName(chainIndex)));
+
+        for (int i = 0; i < EditorSetting.CHARACTER_RIG_SPRING_FIELDS.length; i++) {
+
+            String key = CharacterViewUtility.toKey(EditorSetting.CHARACTER_RIG_KEY_SPRING, i);
+
+            rows.add(CharacterViewRowStruct.number(
+                    key,
+                    EditorSetting.CHARACTER_RIG_SPRING_LABELS[i],
+                    characterRigPropertyBranch.getValueText(key)));
+        }
     }
 
     private void addStructureRows(ObjectArrayList<CharacterViewRowStruct> rows, int boneIndex) {

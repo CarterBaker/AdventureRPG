@@ -13,10 +13,15 @@ import application.bootstrap.entitypipeline.progression.ProgressionHandle;
 import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
+import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import engine.root.EngineSetting;
 import engine.root.InstancePackage;
+import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 
 public class EntityInstance extends InstancePackage {
@@ -30,7 +35,9 @@ public class EntityInstance extends InstancePackage {
      * resolved through ProgressionManager only once something it is built from
      * has changed, getEyePosition() is the one place its eye — where it aims
      * from — is placed, and getModelPoint() sets a point of its body in the
-     * world just where it is drawn. Its level, attributes, trades, skills, conduct
+     * world just where it is drawn; before each update its springs are told
+     * how it stands turned and sized and how far it travelled, across chunks
+     * as well, so its hair keeps its momentum. Its level, attributes, trades, skills, conduct
      * and professions live in their own handles, the same for a player as for
      * any NPC, and it carries one of the genders its race allows, wearing the
      * model that gender requires and moving by its animation tree.
@@ -66,6 +73,16 @@ public class EntityInstance extends InstancePackage {
     // Physics
     private WorldPositionStruct worldPositionStruct;
 
+    // Springs — where the body stood at the last update, and how it stands turned and sized now
+    private long springChunkCoordinate;
+    private Vector3 springPosition;
+    private Matrix4 springFrame;
+    private Vector3 springOrigin;
+    private Vector3 springTurn;
+    private Vector3 springScale;
+    private Matrix4 springScratchA;
+    private Matrix4 springScratchB;
+
     // Runtime
     private Vector3 size;
     private float weight;
@@ -94,6 +111,15 @@ public class EntityInstance extends InstancePackage {
 
         // Physics
         this.worldPositionStruct = new WorldPositionStruct();
+
+        // Springs
+        this.springPosition = new Vector3();
+        this.springFrame = new Matrix4();
+        this.springOrigin = new Vector3();
+        this.springTurn = new Vector3();
+        this.springScale = new Vector3();
+        this.springScratchA = new Matrix4();
+        this.springScratchB = new Matrix4();
     }
 
     @Override
@@ -122,6 +148,10 @@ public class EntityInstance extends InstancePackage {
         // Physics
         this.worldPositionStruct.setPosition(position);
         this.worldPositionStruct.setChunkCoordinate(chunkCoordinate);
+
+        // Springs
+        this.springChunkCoordinate = chunkCoordinate;
+        this.springPosition.set(position);
 
         RaceData raceData = entityData.getRaceData();
 
@@ -172,6 +202,7 @@ public class EntityInstance extends InstancePackage {
         animationStateHandle.setParameter(AnimationParameter.TURN_RATE, entityStateHandle.getBodyYawRate());
         animationStateHandle.setParameter(AnimationParameter.LOOK_PITCH, entityStateHandle.getLookPitch());
         animationStateHandle.setParameter(AnimationParameter.LOOK_YAW, entityStateHandle.getLookYaw());
+        moveSprings();
         animationStateHandle.update(
                 entityStateHandle.getMovementState(),
                 action,
@@ -179,6 +210,28 @@ public class EntityInstance extends InstancePackage {
                 phase,
                 sequence,
                 deltaTime);
+    }
+
+    // How the body stands turned and sized for its springs, and how far it moved since the last update, measured
+    // across chunk edges and the world's wrap
+    private void moveSprings() {
+
+        Vector3 position = worldPositionStruct.getPosition();
+        long chunkCoordinate = worldPositionStruct.getChunkCoordinate();
+        long delta = WorldWrapUtility.unwrapToGridCoordinate(worldHandle, springChunkCoordinate, chunkCoordinate);
+        float scale = size.y / entityData.getRaceData().getModelHeight();
+
+        springTurn.set(0f, entityStateHandle.getBodyYaw(), 0f);
+        springScale.set(scale, scale, scale);
+        RigMathUtility.composeLocal(springOrigin, springTurn, springScale, springFrame, springScratchA, springScratchB);
+        animationStateHandle.setSpringFrame(
+                springFrame,
+                Coordinate2Long.unpackX(delta) * EngineSetting.CHUNK_SIZE + position.x - springPosition.x,
+                position.y - springPosition.y,
+                Coordinate2Long.unpackY(delta) * EngineSetting.CHUNK_SIZE + position.z - springPosition.z);
+
+        this.springChunkCoordinate = chunkCoordinate;
+        springPosition.set(position);
     }
 
     // Statistics \\

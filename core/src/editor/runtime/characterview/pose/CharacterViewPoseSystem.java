@@ -13,6 +13,7 @@ import editor.runtime.EditorSetting;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix4;
 
 public class CharacterViewPoseSystem extends SystemPackage implements ViewCameraSubject {
 
@@ -25,8 +26,11 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
      * moving onto its tree when the tree follows the gender. The tool driving
      * the viewport strikes the pose every frame — at rest, in the exact bind
      * pose a mesh is authored in, from one clip at a time, or played through
-     * the tree. It is what the viewport's camera frames: a sphere about a
-     * share of the model's height, reaching down to its feet.
+     * the tree, travelling forward at the pace it is played at so its spring
+     * chains trail, bounce and settle as they would on the move while it
+     * stays where the camera frames it. It is what the viewport's camera
+     * frames: a sphere about a share of the model's height, reaching down to
+     * its feet.
      */
 
     // Subject
@@ -35,6 +39,18 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
     private AnimationTreeHandle fixedTreeHandle;
     private AnimationStateHandle animationStateHandle;
     private AppearanceHandle appearanceHandle;
+
+    // Springs — the preview stands unturned at its own size
+    private Matrix4 springFrame;
+
+    // Base \\
+
+    @Override
+    protected void create() {
+
+        // Springs
+        this.springFrame = new Matrix4(1f);
+    }
 
     // Subject \\
 
@@ -130,15 +146,20 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
             animationStateHandle.setParameter(parameter, value);
     }
 
+    // The tree played in a movement and an action, the body travelling forward at a speed for its springs
     public void play(
             EntityState movementState,
             EntityAction action,
             float actionPhase,
             int actionSequence,
+            float travelSpeed,
             float deltaTime) {
 
-        if (animationStateHandle != null)
-            animationStateHandle.update(movementState, action, null, actionPhase, actionSequence, deltaTime);
+        if (animationStateHandle == null)
+            return;
+
+        animationStateHandle.setSpringFrame(springFrame, 0f, 0f, travelSpeed * deltaTime);
+        animationStateHandle.update(movementState, action, null, actionPhase, actionSequence, deltaTime);
     }
 
     // Accessible \\

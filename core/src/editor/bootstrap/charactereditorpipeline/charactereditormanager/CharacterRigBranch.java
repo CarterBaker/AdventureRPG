@@ -7,6 +7,8 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterDigitStruct;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterHairCardStruct;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterHairLockStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
@@ -44,7 +46,11 @@ class CharacterRigBranch extends BranchPackage {
      * are written to the rig and take hold the next time the editor starts;
      * only bones added since it started can be renamed or removed, since
      * nothing loaded can name them yet. A bone moved under another keeps its
-     * joint where it stood, and the bones stay parent before child.
+     * joint where it stood, and the bones stay parent before child. Spring
+     * chains are rig data beside the bones: the hair's are laid on the locks
+     * found in its cards, any other on a bone and the single children below
+     * it, and their stiffness, damping, gravity and drag apply at once to
+     * every character simulating them.
      */
 
     // Internal
@@ -52,6 +58,7 @@ class CharacterRigBranch extends BranchPackage {
     private RigManager rigManager;
     private CharacterEditorManager characterEditorManager;
     private CharacterDigitBranch characterDigitBranch;
+    private CharacterHairBranch characterHairBranch;
 
     // Rig
     private RigHandle rigHandle;
@@ -123,6 +130,7 @@ class CharacterRigBranch extends BranchPackage {
         this.rigManager = get(RigManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterDigitBranch = get(CharacterDigitBranch.class);
+        this.characterHairBranch = get(CharacterHairBranch.class);
     }
 
     // Rig \\
@@ -480,6 +488,362 @@ class CharacterRigBranch extends BranchPackage {
         }
     }
 
+    // Hair \\
+
+    // A spring chain on every lock of long hair found in a hair mesh's cards, hung from the bone the hair grows on;
+    // a lock rooted within the lock radius of a hair chain already rigged takes that chain and is left as it is
+    void addHairLocks(RiggedMeshStruct mesh) {
+
+        ObjectArrayList<CharacterHairCardStruct> cards = new ObjectArrayList<>();
+        ObjectArrayList<CharacterHairLockStruct> locks = new ObjectArrayList<>();
+
+        characterHairBranch.detectCards(mesh, cards);
+        characterHairBranch.detectLocks(mesh, locks);
+
+        int anchorIndex = characterHairBranch.resolveAnchor(mesh, cards);
+        int anchor = anchorIndex != EngineSetting.INDEX_NOT_FOUND
+                ? findBone(mesh.getRigHandle().getBone(anchorIndex).getName())
+                : EngineSetting.INDEX_NOT_FOUND;
+
+        if (anchor == EngineSetting.INDEX_NOT_FOUND || locks.isEmpty()) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NO_HAIR);
+            return;
+        }
+
+        ObjectArrayList<Vector3> roots = new ObjectArrayList<>();
+        ObjectArrayList<ArpgObjectStruct> addedBones = new ObjectArrayList<>();
+        ObjectArrayList<ArpgObjectStruct> addedChains = new ObjectArrayList<>();
+        int number = 1;
+
+        collectHairRoots(roots);
+        matrixScratchA.set(worldMatrices.get(anchor)).inverse();
+
+        for (int l = 0; l < locks.size(); l++) {
+
+            CharacterHairLockStruct lock = locks.get(l);
+
+            if (isNearAny(lock.getRoot(), roots))
+                continue;
+
+            number = resolveLockNumber(number, addedBones);
+            layLock(lock, number, boneNames.get(anchor), addedBones, addedChains);
+            roots.add(lock.getRoot());
+        }
+
+        if (addedChains.isEmpty()) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NO_HAIR);
+            return;
+        }
+
+        editRig(rig -> {
+
+            ArpgArrayStruct bones = rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+            ArpgArrayStruct chains = CharacterViewUtility.requireArray(rig, EditorSetting.CHARACTER_RIG_FIELD_SPRINGS);
+
+            for (int i = 0; i < addedBones.size(); i++)
+                bones.add(addedBones.get(i));
+
+            for (int i = 0; i < addedChains.size(); i++)
+                chains.add(addedChains.get(i));
+        });
+        characterEditorManager.setStatusMessage(addedChains.size() + EditorSetting.CHARACTER_RIG_MESSAGE_HAIR);
+    }
+
+    // Where every hair chain already rigged takes root, its first joint in the draft
+    private void collectHairRoots(ObjectArrayList<Vector3> roots) {
+
+        ArpgArrayStruct chains = getSpringsArpg();
+
+        for (int c = 0; chains != null && c < chains.size(); c++) {
+
+            int root = findBone(readSpringBone(chains.get(c).getAsObject(), 0));
+
+            if (root == EngineSetting.INDEX_NOT_FOUND
+                    || !boneNames.get(root).startsWith(EditorSetting.CHARACTER_HAIR_LOCK_PREFIX))
+                continue;
+
+            Vector3 point = new Vector3();
+
+            CharacterPoseUtility.getTranslation(worldMatrices.get(root), point);
+            roots.add(point);
+        }
+    }
+
+    private boolean isNearAny(Vector3 point, ObjectArrayList<Vector3> roots) {
+
+        for (int i = 0; i < roots.size(); i++)
+            if (new Vector3(point).subtract(roots.get(i)).length() <= EditorSetting.CHARACTER_HAIR_LOCK_RADIUS)
+                return true;
+
+        return false;
+    }
+
+    // The first lock number from the one given whose first bone neither the rig nor this edit names yet
+    private int resolveLockNumber(int from, ObjectArrayList<ArpgObjectStruct> addedBones) {
+
+        for (int number = from;; number++) {
+
+            String boneName = toLockBoneName(number, 0);
+
+            if (findBone(boneName) == EngineSetting.INDEX_NOT_FOUND && findBoneArpg(addedBones, boneName) == null)
+                return number;
+        }
+    }
+
+    private String toLockBoneName(int number, int joint) {
+        return toLockName(number) + EditorSetting.CHARACTER_RIG_DIGIT_SEPARATOR + (joint + 1);
+    }
+
+    private String toLockName(int number) {
+        return EditorSetting.CHARACTER_HAIR_LOCK_PREFIX + number;
+    }
+
+    private ArpgObjectStruct findBoneArpg(ObjectArrayList<ArpgObjectStruct> bones, String boneName) {
+
+        for (int i = 0; i < bones.size(); i++)
+            if (boneName.equals(ArpgUtility.getString(bones.get(i), EditorSetting.CHARACTER_RIG_FIELD_NAME, "")))
+                return bones.get(i);
+
+        return null;
+    }
+
+    // One lock's bones, each placed from the last in the anchor's frame and sized to the segment it covers, and the
+    // spring chain they make with the settings a new chain starts with
+    private void layLock(
+            CharacterHairLockStruct lock,
+            int number,
+            String anchorName,
+            ObjectArrayList<ArpgObjectStruct> addedBones,
+            ObjectArrayList<ArpgObjectStruct> addedChains) {
+
+        Vector3 previous = new Vector3();
+        Vector3 local = new Vector3();
+        ArpgArrayStruct chainBones = new ArpgArrayStruct();
+        String parentName = anchorName;
+        float thickness = lock.getThickness();
+
+        for (int j = 0; j < lock.getJointCount(); j++) {
+
+            Vector3 joint = lock.getJoint(j);
+            String boneName = toLockBoneName(number, j);
+            float length = j + 1 < lock.getJointCount()
+                    ? new Vector3(lock.getJoint(j + 1)).subtract(joint).length()
+                    : thickness;
+
+            CharacterPoseUtility.transformPoint(matrixScratchA, joint.x, joint.y, joint.z, local);
+
+            ArpgObjectStruct boneArpg = new ArpgObjectStruct();
+
+            boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, boneName);
+            boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_PARENT, parentName);
+            writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, new Vector3(local).subtract(previous));
+            writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_SIZE, vectorScratch.set(
+                    thickness, Math.max(length, EditorSetting.CHARACTER_RIG_SIZE_MIN), thickness));
+            addedBones.add(boneArpg);
+            chainBones.add(boneName);
+
+            previous.set(local);
+            parentName = boneName;
+        }
+
+        addedChains.add(buildSpringChain(toLockName(number), chainBones));
+    }
+
+    // Springs \\
+
+    // A spring chain from a bone down the single children below it, and one from its twin across the body; none
+    // where the bone has no child, is the root or already belongs to a chain or an IK handle
+    void addSpringChain(int boneIndex) {
+
+        ObjectArrayList<ArpgObjectStruct> added = new ObjectArrayList<>();
+
+        laySpringChain(boneIndex, added);
+        laySpringChain(findTwin(boneIndex), added);
+
+        if (added.isEmpty()) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_SPRING_NONE);
+            return;
+        }
+
+        editRig(rig -> {
+
+            ArpgArrayStruct chains = CharacterViewUtility.requireArray(rig, EditorSetting.CHARACTER_RIG_FIELD_SPRINGS);
+
+            for (int i = 0; i < added.size(); i++)
+                chains.add(added.get(i));
+        });
+        characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_SPRING_ADDED
+                + ArpgUtility.getString(added.get(0), EditorSetting.CHARACTER_RIG_FIELD_NAME, ""));
+    }
+
+    // The spring chains holding a bone and its twin removed, their bones kept
+    void removeSpringChain(int boneIndex) {
+
+        int chain = findSpringChain(boneIndex);
+        int twinChain = findSpringChain(findTwin(boneIndex));
+
+        if (chain == EngineSetting.INDEX_NOT_FOUND && twinChain == EngineSetting.INDEX_NOT_FOUND) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_SPRING_FREE);
+            return;
+        }
+
+        String name = getSpringName(chain != EngineSetting.INDEX_NOT_FOUND ? chain : twinChain);
+
+        editRig(rig -> {
+
+            ArpgArrayStruct chains = rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_SPRINGS);
+
+            for (int i = chains.size() - 1; i >= 0; i--)
+                if (i == chain || i == twinChain)
+                    chains.remove(i);
+        });
+        characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_SPRING_REMOVED + name);
+    }
+
+    private void laySpringChain(int boneIndex, ObjectArrayList<ArpgObjectStruct> added) {
+
+        if (boneIndex <= 0 || isChained(boneIndex, added))
+            return;
+
+        ArpgArrayStruct chainBones = new ArpgArrayStruct();
+
+        for (int bone = boneIndex; bone != EngineSetting.INDEX_NOT_FOUND; bone = findOnlyChild(bone)) {
+
+            if (isChained(bone, added))
+                return;
+
+            chainBones.add(boneNames.get(bone));
+        }
+
+        if (chainBones.size() < EngineSetting.RIG_SPRING_MIN_BONES)
+            return;
+
+        added.add(buildSpringChain(boneNames.get(boneIndex) + EditorSetting.CHARACTER_RIG_SPRING_SUFFIX, chainBones));
+    }
+
+    // Whether a bone already belongs to a spring chain, one about to be added, or an IK handle
+    private boolean isChained(int boneIndex, ObjectArrayList<ArpgObjectStruct> added) {
+
+        if (findSpringChain(boneIndex) != EngineSetting.INDEX_NOT_FOUND || isIkBone(boneIndex))
+            return true;
+
+        for (int i = 0; i < added.size(); i++)
+            if (namesBone(added.get(i), boneNames.get(boneIndex)))
+                return true;
+
+        return false;
+    }
+
+    private boolean isIkBone(int boneIndex) {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        if (rigArpg == null || !ArpgUtility.hasArray(rigArpg, EditorSetting.CHARACTER_RIG_FIELD_IK))
+            return false;
+
+        ArpgArrayStruct chains = rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_IK);
+
+        for (int i = 0; i < chains.size(); i++)
+            if (namesBone(chains.get(i).getAsObject(), boneNames.get(boneIndex)))
+                return true;
+
+        return false;
+    }
+
+    // A bone's one child, or none when it has none or several
+    private int findOnlyChild(int boneIndex) {
+
+        int child = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int i = boneIndex + 1; i < boneCount; i++)
+            if (parents.getInt(i) == boneIndex) {
+
+                if (child != EngineSetting.INDEX_NOT_FOUND)
+                    return EngineSetting.INDEX_NOT_FOUND;
+
+                child = i;
+            }
+
+        return child;
+    }
+
+    private ArpgObjectStruct buildSpringChain(String name, ArpgArrayStruct chainBones) {
+
+        ArpgObjectStruct chainArpg = new ArpgObjectStruct();
+
+        chainArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, name);
+        chainArpg.add(EditorSetting.CHARACTER_RIG_FIELD_BONES, chainBones);
+
+        for (int i = 0; i < EditorSetting.CHARACTER_RIG_SPRING_FIELDS.length; i++)
+            chainArpg.addProperty(
+                    EditorSetting.CHARACTER_RIG_SPRING_FIELDS[i],
+                    EditorSetting.CHARACTER_RIG_SPRING_DEFAULTS[i]);
+
+        return chainArpg;
+    }
+
+    // The spring chain whose bones name a bone, by its place in the rig's springs; INDEX_NOT_FOUND when none does
+    int findSpringChain(int boneIndex) {
+
+        ArpgArrayStruct chains = getSpringsArpg();
+
+        if (boneIndex == EngineSetting.INDEX_NOT_FOUND || chains == null)
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        for (int i = 0; i < chains.size(); i++)
+            if (namesBone(chains.get(i).getAsObject(), boneNames.get(boneIndex)))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private boolean namesBone(ArpgObjectStruct chainArpg, String boneName) {
+
+        ArpgArrayStruct bones = chainArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+
+        for (int i = 0; i < bones.size(); i++)
+            if (bones.get(i).getAsString().equals(boneName))
+                return true;
+
+        return false;
+    }
+
+    private String readSpringBone(ArpgObjectStruct chainArpg, int joint) {
+        return chainArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES).get(joint).getAsString();
+    }
+
+    private ArpgArrayStruct getSpringsArpg() {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        return rigArpg != null && ArpgUtility.hasArray(rigArpg, EditorSetting.CHARACTER_RIG_FIELD_SPRINGS)
+                ? rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_SPRINGS)
+                : null;
+    }
+
+    String getSpringName(int chainIndex) {
+        return ArpgUtility.getString(
+                getSpringsArpg().get(chainIndex).getAsObject(), EditorSetting.CHARACTER_RIG_FIELD_NAME, "");
+    }
+
+    // One setting of a spring chain, by its place in CHARACTER_RIG_SPRING_FIELDS
+    float getSpringValue(int chainIndex, int field) {
+        return ArpgUtility.getFloat(
+                getSpringsArpg().get(chainIndex).getAsObject(),
+                EditorSetting.CHARACTER_RIG_SPRING_FIELDS[field],
+                EditorSetting.CHARACTER_RIG_SPRING_DEFAULTS[field]);
+    }
+
+    // One setting of a spring chain written, held to its range, and simulated so at once
+    void setSpringValue(int chainIndex, int field, float value) {
+
+        float written = CharacterViewUtility.round(
+                CharacterViewUtility.clamp(value, 0f, EditorSetting.CHARACTER_RIG_SPRING_MAXIMA[field]));
+
+        editRig(rig -> rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_SPRINGS).get(chainIndex).getAsObject()
+                .addProperty(EditorSetting.CHARACTER_RIG_SPRING_FIELDS[field], written));
+    }
+
     // IK \\
 
     // An IK handle ending at a bone, its root two bones up, and one ending at its twin across the body; none where
@@ -633,14 +997,17 @@ class CharacterRigBranch extends BranchPackage {
         return twin != boneIndex ? twin : EngineSetting.INDEX_NOT_FOUND;
     }
 
-    // The first free name of the editor's new bones, carrying the parent's side so the bone mirrors with it
+    // The first free name of the editor's new bones, named as the region worked in names its own, carrying the
+    // parent's side so the bone mirrors with it
     private String resolveNewName(String parentName) {
 
         String side = resolveSide(parentName);
+        CharacterEditorRegion region = characterEditorManager.getRegion();
+        String stem = region.hasBonePrefix() ? region.getBonePrefix() : EditorSetting.CHARACTER_RIG_NEW_BONE_NAME;
 
         for (int number = 1;; number++) {
 
-            String boneName = EditorSetting.CHARACTER_RIG_NEW_BONE_NAME + number + side;
+            String boneName = stem + number + side;
 
             if (findBone(boneName) == EngineSetting.INDEX_NOT_FOUND)
                 return boneName;

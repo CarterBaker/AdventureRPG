@@ -185,6 +185,11 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-07: IK handles and hair sway. Regenerated `rigs/HumanoidRig.arpg` (IK handles on both arms, legs, thumbs and
   fingers, added with the editor's Add IK Handle) and `schemas/Rigs.arpg` (the `ik` handles), and rewrote
   `CharacterHair.glsl` (gusting, per-lock, tip-trailing sway with flutter and lift).
+- 2026-11-07: Spring-bone hair. Regenerated `rigs/HumanoidRig.arpg` (14 hair spring chains of five joints, laid by the
+  editor's Rig Hair Locks), `mesh/characters/humanoid/hair/FemaleLongHairMesh.arpg` and `FemaleMediumHairMesh.arpg`
+  (long cards weighed onto the chains by Weigh Onto Locks) and `schemas/Rigs.arpg` (the `springs` chains and their
+  ranges), and rewrote `CharacterHair.glsl` and `StandardcharacterShader.vsh` (each lock's sway phase read from its
+  bind position, so it adds cleanly to the bones' motion).
 ---
 
 ## Textures and Sprites (2175 files)

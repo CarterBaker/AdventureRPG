@@ -21,7 +21,7 @@ layouts like any other.
 | Character Build | `CharacterBuildContext` | the live preview in the Build mode, its joints marked |
 | Character Equipment | `CharacterEquipmentContext` | the live preview in the Equipment mode, its anchors marked |
 | Character Mesh Editor | `CharacterMeshEditorContext` | modelling the whole character: the bind-pose preview, its overlay and the Mesh, Sculpt, Weights and Rig toolbar; a tool canvas |
-| Hair Editor | `HairEditorContext` | modelling the worn hair, framed on the head, its card roots pinned (no Rig mode) |
+| Hair Editor | `HairEditorContext` | modelling the worn hair, framed on the head, its card roots pinned; its Rig mode holds the hair's spring chains |
 | Hand Editor | `HandEditorContext` | modelling the hands and finger bones, framed on the left hand |
 | Foot Editor | `FootEditorContext` | modelling the feet and toe bones, framed on the left foot |
 | Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
@@ -86,7 +86,9 @@ layouts like any other.
 - **A region is data.** `CharacterEditorRegion` names the worn feature it edits (Hair: `FeatureSlot.HAIR`; the others
   keep the body), the bones it holds with every bone below them (`hand_l`, `hand_r`; `foot_l`, `foot_r`), the bone it
   frames (`CharacterRegionFrameSystem`: the box of every vertex that bone and those below it carry while the part is
-  open, its joints otherwise), whether its card roots are pinned and whether it takes the rig. A focused tab hands its
+  open, its joints otherwise), whether its card roots are pinned, whether it takes the rig, and the prefix naming its
+  own bones (Hair: `hair_`, every such bone and the head they hang from; new bones there take the prefix). Bone
+  membership is read only through `CharacterRegionBranch.holdsBone` / `holdsRigBone`. A focused tab hands its
   region to `CharacterEditorManager.setRegion`, which picks the region's part when the character wears it.
 - **One mask.** `CharacterRegionBranch` gives each vertex its share of the region (the weight it puts on the region's
   bones; for pinned hair how far along its card it stands, root 0 to tip 1), cached per region until the mesh changes.
@@ -185,8 +187,44 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Hair is cards.** A hair mesh is a scalp cap and layered cards two quads wide, textured with the strand tile
   `characters/standard/Hair` (its alpha cuts the locks out); each card's raw UV runs across it in u and from root
   (0) to tip (1) in v. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`:
-  slow gusts, a phase per lock read smoothly off where it hangs, the tip trailing its root, a flutter across the wind
-  and a lift on gusts), so keep v running root to tip on any card you add, and keep the root at the scalp.
+  slow gusts, a phase per lock read off where it grows in the bind pose, the tip trailing its root, a flutter across
+  the wind and a lift on gusts), after skinning and in the world, so it adds to whatever bones carry the lock; keep v
+  running root to tip on any card you add, and keep the root at the scalp.
+- **Long hair rides spring chains; short hair is the shader's.** A rig's `springs` (`RigSpringChainStruct`) each name
+  at least two `bones`, each the child of the one before, the first hung from a bone the body moves, none in another
+  chain or an IK handle, with `stiffness` (pull back to the pose, 1/s²), `damping` (settles a joint's swing against
+  the joint above it, 1/s), `gravity` (blocks/s²) and `drag` (the air holding it back, 1/s), each within the
+  `EngineSetting.RIG_SPRING_*_MAX` range (`RigBuilder` refuses anything else; the schema says the same). Nothing keys
+  them: `AnimationStateHandle` simulates them over the finished pose every `update` (`AnimationSpringStruct`: joints
+  kept in the body's frame, substeps no longer than `RIG_SPRING_STEP`, each bone held its length and within the swing
+  cone, an update longer than `RIG_SPRING_MAX_DELTA` ridden rigidly for the rest, a body moved farther than
+  `RIG_SPRING_RESET_DISTANCE` started afresh), then turns each bone about its joint onto its simulated point
+  (`RigMathUtility.setPivotTurn`) and skins again only the bones the chains carry. `EntityInstance.moveSprings` hands
+  it the body's turn, size and travel across chunks before each update; `CharacterViewPoseSystem.play` hands a
+  preview travelling forward at the pace it plays. `poseRest` and `poseClip` never simulate and start the springs
+  afresh. A chain runs only while something worn weighs onto it (`AppearanceHandle.resolveSprings`, reading
+  `MeshHandle.weighsOnto`, set for every rigged mesh in `MeshManager.applyRiggedMesh`), so a bald or short-haired
+  character simulates nothing. Settings apply live (`RigManager.updateRig` keeps a rig in place while its chains keep
+  their bones); a new or changed chain is structure and takes hold at the next start.
+- **Hair tools.** In the Hair Editor, Rig mode's **Rig Hair Locks** (`CharacterRigBranch.addHairLocks`) finds the
+  cards (`CharacterHairBranch.detectCards`: hair faces joined corner to corner whose v spans
+  `CHARACTER_HAIR_CARD_MIN_SPAN`), keeps those at least `CHARACTER_HAIR_LOCK_MIN_LENGTH` long (shorter hair stays
+  shader-only), joins cards rooted and hanging together into locks (`detectLocks`, matched point for point within
+  `CHARACTER_HAIR_LOCK_RADIUS`) and lays one chain per lock from the bone its card roots weigh onto, one bone per
+  `CHARACTER_HAIR_LOCK_SEGMENT` and a tip, named `hair_<lock>_<joint>`, its spring named `hair_<lock>` with
+  `CHARACTER_RIG_SPRING_DEFAULTS`; a lock rooted within the lock radius of a hair chain already rigged takes that
+  chain, so every style shares one set. **Add Spring Chain** / **Remove Spring Chain** make or drop a chain from the
+  selected bone down its single children (and its twin), for hand-built chains. Weights mode's **Weigh Onto Locks**
+  (`CharacterWeightBranch.weighLocks`) hands each long card to the hair chain whose joints lie nearest its line
+  (`CharacterHairBranch.findChain`, roots within `CHARACTER_HAIR_WEIGHT_REACH`), by how far down the card each vertex
+  grows: the head near the root, then each segment's bone, blended at joints; spring weights held before are let go
+  first. The chains are bones, so save the rig and restart between the two. The selected bone's chain lists its four
+  settings in the Properties tab (`CharacterRigRowBranch.addSpringRows`), stepped and typed live. **Preview Springs**
+  (Rig and Weights) makes every modelling tab play the pose chosen (Idle at rest) with the springs simulated, until
+  pressed again. The Animation Editor never lists, picks or keys a spring bone (`AnimationEditorManager.isKeyedBone`).
+- **Assets.** `HumanoidRig` carries 14 hair chains (`hair_1` to `hair_14`, five joints each) laid by Rig Hair Locks on
+  `FemaleLongHairMesh`; `FemaleLongHairMesh` and `FemaleMediumHairMesh` are weighed onto them by Weigh Onto Locks.
+  `MaleShortHairMesh` and `MaleMediumHairMesh` are short and stay on the head.
 - **Toon lighting.** Characters write a smooth normal (`GBufferNormal.glsl`); the lighting pass lights those pixels
   in toon tones with a rim (`ToonLighting.glsl`), and the editor viewport's character shader uses the same function.
 
@@ -215,6 +253,13 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - Rotation and projection math shared by every viewport gesture: `CharacterPoseUtility`.
 
 ## Traps
+
+- **Weighed meshes name the rig's bones.** A hair mesh weighed onto locks names `hair_*` bones; reverting or removing
+  them from the rig without the meshes weighed onto them stops every mesh load (and the editor) with an unknown bone.
+  Re-lay and re-weigh through the tools, rig first.
+- **Spring settings are tuned per real time.** The editor preview under a slow renderer hits the chains with the
+  pose's motion in large steps; judge them at the game's frame rate. A chain stepped longer than
+  `RIG_SPRING_MAX_DELTA` rides the rest rigidly, by design.
 
 - **One rig per race.** Every gender of a race must name the same rig (`RaceBuilder` refuses otherwise): its sliders,
   anchors, clips and every skinned buffer are laid out by those bones. Genders may differ in mesh, material and tree.

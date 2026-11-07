@@ -900,6 +900,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_POSITIVE = "weight_mirror_positive";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_NEGATIVE = "weight_mirror_negative";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_DIGITS = "weight_digits";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_LOCKS = "weight_locks";
 
     // Character Editor — mesh steps and ranges, in blocks unless named otherwise
     public static final float CHARACTER_EDITOR_MESH_RADIUS_DEFAULT = 0.1f;
@@ -994,6 +995,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_POSITIVE = "Mirror Weights  +X to -X";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_NEGATIVE = "Mirror Weights  -X to +X";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_DIGITS = "Weigh Onto Digits";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_LOCKS = "Weigh Onto Locks";
 
     // Character Editor — mesh status text
     public static final String CHARACTER_EDITOR_STATUS_MESH_HINT = "Select brushes over vertices, a soft brush selecting"
@@ -1034,6 +1036,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_FIELD_PARENT = "parent";
     public static final String CHARACTER_RIG_FIELD_IK = "ik";
     public static final String CHARACTER_RIG_FIELD_POLE = "pole";
+    public static final String CHARACTER_RIG_FIELD_SPRINGS = "springs";
 
     // Character Rig — new bones and sizes, in blocks; a new bone is named this and a number, then its parent's side
     public static final float CHARACTER_RIG_SIZE_MIN = 0.005f;
@@ -1065,6 +1068,43 @@ public class EditorSetting {
     public static final float CHARACTER_RIG_IK_POLE_MIN = 0.002f;
     public static final float CHARACTER_RIG_IK_POLE_SCALE = 1000f;
 
+    // Character Rig — spring chains: the settings a chain is simulated by, in the order their rows list them, each
+    // with its label, the step its row moves by, its largest value and what a new chain starts with
+    public static final String[] CHARACTER_RIG_SPRING_FIELDS = { "stiffness", "damping", "gravity", "drag" };
+    public static final String[] CHARACTER_RIG_SPRING_LABELS = { "Stiffness", "Damping", "Gravity", "Drag" };
+    public static final float[] CHARACTER_RIG_SPRING_STEPS = { 5f, 0.5f, 0.5f, 0.1f };
+    public static final float[] CHARACTER_RIG_SPRING_MAXIMA = {
+            EngineSetting.RIG_SPRING_STIFFNESS_MAX, EngineSetting.RIG_SPRING_DAMPING_MAX,
+            EngineSetting.RIG_SPRING_GRAVITY_MAX, EngineSetting.RIG_SPRING_DRAG_MAX };
+    public static final float[] CHARACTER_RIG_SPRING_DEFAULTS = { 80f, 6f, 9.8f, 0.8f };
+    public static final String CHARACTER_RIG_SPRING_SUFFIX = "_spring";
+
+    // Character Rig — hair locks: a card is a run of hair faces whose v spans at least this share root to tip, its
+    // centre line read row by row where v differs by more than the row gap; a card this long or longer is a lock
+    // for spring bones (shorter hair is left to the shader), cards rooted within the lock radius of one another and
+    // hanging alike join one lock, matched at this many points along their length; a lock's chain takes one bone per
+    // segment length, between the fewest and the most segments, plus its tip, and is this many times as thick as its
+    // cards lie from its line; a lock rooted within the lock radius of a chain already rigged takes that chain; its
+    // bones are named the prefix, the lock's number and the joint's
+    public static final float CHARACTER_HAIR_CARD_MIN_SPAN = 0.5f;
+    public static final float CHARACTER_HAIR_ROW_GAP = 0.001f;
+    public static final float CHARACTER_HAIR_LOCK_MIN_LENGTH = 0.15f;
+    public static final float CHARACTER_HAIR_LOCK_RADIUS = 0.045f;
+    public static final int CHARACTER_HAIR_LOCK_SAMPLES = 9;
+    public static final float CHARACTER_HAIR_LOCK_SEGMENT = 0.1f;
+    public static final int CHARACTER_HAIR_LOCK_MIN_SEGMENTS = 2;
+    public static final int CHARACTER_HAIR_LOCK_MAX_SEGMENTS = 4;
+    public static final float CHARACTER_HAIR_LOCK_THICKNESS_SHARE = 2f;
+    public static final String CHARACTER_HAIR_LOCK_PREFIX = "hair_";
+
+    // Character Rig — hair weights: a card weighs onto the chain whose joints lie nearest its own line, of those
+    // rooted within the reach of its root; along it each vertex is handed from the bone the hair grows on to the
+    // chain over this distance from the root, and from one bone of the chain to the next over this distance either
+    // side of each joint, in blocks
+    public static final float CHARACTER_HAIR_WEIGHT_REACH = 0.09f;
+    public static final float CHARACTER_HAIR_WEIGHT_ROOT = 0.03f;
+    public static final float CHARACTER_HAIR_WEIGHT_BLEND = 0.03f;
+
     // Character Rig — digit weights: a chain's joints blend over this share of its length to either side, a lone
     // toe's over this share; the palm follows a digit's root bone up to this share, fading out this far from its line
     public static final float CHARACTER_RIG_WEIGHT_BLEND = 0.05f;
@@ -1091,6 +1131,11 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_KEY_DIGITS = "rig_digits";
     public static final String CHARACTER_RIG_KEY_IK_ADD = "rig_ik_add";
     public static final String CHARACTER_RIG_KEY_IK_REMOVE = "rig_ik_remove";
+    public static final String CHARACTER_RIG_KEY_HAIR = "rig_hair";
+    public static final String CHARACTER_RIG_KEY_SPRING = "rig_spring";
+    public static final String CHARACTER_RIG_KEY_SPRING_ADD = "rig_spring_add";
+    public static final String CHARACTER_RIG_KEY_SPRING_REMOVE = "rig_spring_remove";
+    public static final String CHARACTER_RIG_KEY_SPRING_PREVIEW = "rig_spring_preview";
 
     // Character Rig — panel text
     public static final String CHARACTER_RIG_INDENT = "   ";
@@ -1109,6 +1154,12 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_LABEL_DIGITS = "Rig Digits";
     public static final String CHARACTER_RIG_LABEL_IK_ADD = "Add IK Handle";
     public static final String CHARACTER_RIG_LABEL_IK_REMOVE = "Remove IK Handle";
+    public static final String CHARACTER_RIG_LABEL_HAIR = "Rig Hair Locks";
+    public static final String CHARACTER_RIG_LABEL_SPRING_ADD = "Add Spring Chain";
+    public static final String CHARACTER_RIG_LABEL_SPRING_REMOVE = "Remove Spring Chain";
+    public static final String CHARACTER_RIG_LABEL_SPRING_PREVIEW = "Preview Springs";
+    public static final String CHARACTER_RIG_HEADER_HAIR = "Hair";
+    public static final String CHARACTER_RIG_HEADER_SPRING = "Spring Chain ";
     public static final String CHARACTER_RIG_HEADER_ACTIONS = "Rig";
     public static final String CHARACTER_RIG_LABEL_REVERT = "Revert Rig";
 
@@ -1122,6 +1173,20 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_MESSAGE_UNRIGGED = "Rig the digits, save the rig and restart first";
     public static final String CHARACTER_RIG_MESSAGE_IK_ADDED = " IK handles added";
     public static final String CHARACTER_RIG_MESSAGE_IK_REMOVED = " IK handles removed";
+    public static final String CHARACTER_RIG_MESSAGE_HAIR =
+            " hair locks rigged on spring chains; save the rig and restart to weigh onto them";
+    public static final String CHARACTER_RIG_MESSAGE_NO_HAIR = "No new hair locks long enough for spring bones";
+    public static final String CHARACTER_RIG_MESSAGE_HAIR_REGION = "Rig and weigh hair locks in the Hair Editor";
+    public static final String CHARACTER_RIG_MESSAGE_HAIR_WEIGHED = " hair vertices weighed onto the locks";
+    public static final String CHARACTER_RIG_MESSAGE_HAIR_UNRIGGED =
+            "Rig the hair locks, save the rig and restart first";
+    public static final String CHARACTER_RIG_MESSAGE_SPRING_ADDED = "Spring chain added: ";
+    public static final String CHARACTER_RIG_MESSAGE_SPRING_REMOVED = "Spring chain removed: ";
+    public static final String CHARACTER_RIG_MESSAGE_SPRING_NONE =
+            "Pick a bone with a chain of single children below it, in no spring chain or IK handle yet";
+    public static final String CHARACTER_RIG_MESSAGE_SPRING_FREE = "The selected bone is in no spring chain";
+    public static final String CHARACTER_RIG_MESSAGE_PREVIEW_ON = "Springs preview live in the pose chosen";
+    public static final String CHARACTER_RIG_MESSAGE_PREVIEW_OFF = "Spring preview off, the bind pose held";
     public static final String CHARACTER_RIG_MESSAGE_IK_NONE =
             "Pick the bone a handle drags, two bones below a limb's root, that has none yet";
     public static final String CHARACTER_RIG_MESSAGE_REMOVED = "Removed ";
@@ -1195,6 +1260,7 @@ public class EditorSetting {
     public static final String CHARACTER_REGION_HAND_FRAME = "hand_l";
     public static final String CHARACTER_REGION_FOOT_FRAME = "foot_l";
     public static final String CHARACTER_REGION_HAIR_FRAME = "head";
+    public static final String CHARACTER_REGION_NO_PREFIX = "";
     public static final float CHARACTER_REGION_PICK_SHARE = 0.5f;
     public static final float CHARACTER_REGION_FRAME_MARGIN = 1.35f;
     public static final float CHARACTER_REGION_FRAME_MIN_RADIUS = 0.08f;

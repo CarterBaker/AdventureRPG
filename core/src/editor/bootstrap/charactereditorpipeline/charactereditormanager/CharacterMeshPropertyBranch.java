@@ -124,7 +124,8 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_SMOOTH,
                     EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_POSITIVE,
                     EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_NEGATIVE,
-                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_DIGITS -> true;
+                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_DIGITS,
+                    EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_LOCKS -> true;
             default -> false;
         };
     }
@@ -448,6 +449,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
 
         switch (keyName) {
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_DIGITS -> characterEditorManager.weighDigits(document);
+            case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_LOCKS -> characterEditorManager.weighHairLocks(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_ASSIGN -> characterWeightBranch.assign(
                     document, boneIndex, characterEditorManager.getWeightTarget());
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_ADD -> characterWeightBranch.add(

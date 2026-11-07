@@ -52,6 +52,9 @@ class AnimationRowBranch extends BranchPackage {
 
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
+            if (rigHandle.isSpringBone(i))
+                continue;
+
             String boneName = rigHandle.getBone(i).getName();
             int keyCount = animationPropertyBranch.getKeyCount(boneName);
             String label = keyCount > 0

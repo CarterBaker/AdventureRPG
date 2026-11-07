@@ -60,9 +60,12 @@ public class CharacterEditorManager extends ManagerPackage {
      * target weight, Erase toward none and Smooth blending between
      * neighbours, and on the rig the tools pick, drag, size, add and remove
      * bones. Save and Revert carry every open mesh's changes and the rig's
-     * with the race's. Edits, previews, mesh files, selection, geometry,
-     * sculpting, weights, the rig, history, panel values and panel rows
-     * each live in their own branch.
+     * with the race's. The rig's spring chains — the hair's laid on the locks
+     * its cards are found in — are previewed live in the modelling tabs while
+     * Preview Springs is on, the preview then playing the pose chosen and
+     * travelling at its pace. Edits, previews, mesh files, selection,
+     * geometry, sculpting, weights, the rig, hair locks, history, panel
+     * values and panel rows each live in their own branch.
      */
 
     // Internal
@@ -86,6 +89,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterMeshRowBranch characterMeshRowBranch;
     private CharacterRegionBranch characterRegionBranch;
     private CharacterDigitBranch characterDigitBranch;
+    private CharacterHairBranch characterHairBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<String, CharacterDocumentInstance> raceName2CharacterDocument;
@@ -98,6 +102,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Preview
     private CharacterEditorPose pose;
+    private boolean springPreview;
     private int genderIndex;
     private float weightRatio;
     private Vector3 headProportion;
@@ -159,6 +164,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterMeshRowBranch = create(CharacterMeshRowBranch.class);
         this.characterRegionBranch = create(CharacterRegionBranch.class);
         this.characterDigitBranch = create(CharacterDigitBranch.class);
+        this.characterHairBranch = create(CharacterHairBranch.class);
 
         // Palette
         this.raceName2CharacterDocument = new Object2ObjectOpenHashMap<>();
@@ -878,6 +884,43 @@ public class CharacterEditorManager extends ManagerPackage {
             setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_UNRIGGED);
     }
 
+    // Hair \\
+
+    // Spring chains laid on every lock of long hair found in the cards of the hair the character wears
+    void rigHairLocks() {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (!region.isRootPinned() || document == null || !isRegionPart(document, region)) {
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_REGION);
+            return;
+        }
+
+        if (syncRig() && !characterRigBranch.isGesturing())
+            characterRigBranch.addHairLocks(document.getMesh());
+    }
+
+    // Every long hair card weighed onto the hair chain of the loaded rig it hangs nearest
+    void weighHairLocks(CharacterMeshDocumentInstance document) {
+
+        if (!region.isRootPinned() || !isRegionPart(document, region)) {
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_REGION);
+            return;
+        }
+
+        if (!characterWeightBranch.weighLocks(document))
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_UNRIGGED);
+    }
+
+    // The modelling tabs' preview leaves the bind pose to play the pose chosen with its springs simulated, or holds it
+    void toggleSpringPreview() {
+
+        this.springPreview = !springPreview;
+        setStatusMessage(springPreview
+                ? EditorSetting.CHARACTER_RIG_MESSAGE_PREVIEW_ON
+                : EditorSetting.CHARACTER_RIG_MESSAGE_PREVIEW_OFF);
+    }
+
     void saveRig() {
 
         if (saveRigFile())
@@ -1141,6 +1184,10 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public CharacterEditorPose getPose() {
         return pose;
+    }
+
+    public boolean isSpringPreview() {
+        return springPreview;
     }
 
     public int getGenderIndex() {

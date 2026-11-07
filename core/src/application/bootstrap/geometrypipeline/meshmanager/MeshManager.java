@@ -241,8 +241,9 @@ public class MeshManager extends ManagerPackage {
                 mesh, resolveTextureTiles(mesh), riggedScratch, vertices, indices, morphEntries);
     }
 
-    // Gives a rigged mesh's handle the morph texture built from its entries, releasing the one it held
-    void applyMorphTargets(MeshHandle meshHandle, RiggedMeshStruct mesh, FloatArrayList morphEntries) {
+    // Gives a rigged mesh's handle the morph texture built from its entries, releasing the one it held, and the bones
+    // its vertices weigh onto
+    void applyRiggedMesh(MeshHandle meshHandle, RiggedMeshStruct mesh, FloatArrayList morphEntries) {
 
         String[] morphNames = new String[mesh.getMorphCount()];
 
@@ -251,6 +252,19 @@ public class MeshManager extends ManagerPackage {
 
         RiggedMeshGLSLUtility.deleteTexture(meshHandle.getMorphTexture());
         meshHandle.setMorphTargets(RiggedMeshGLSLUtility.createMorphTexture(morphEntries), morphNames);
+        meshHandle.setWeighedBones(resolveWeighedBones(mesh));
+    }
+
+    private boolean[] resolveWeighedBones(RiggedMeshStruct mesh) {
+
+        boolean[] weighed = new boolean[mesh.getRigHandle().getBoneCount()];
+
+        for (int v = 0; v < mesh.getVertexCount(); v++)
+            for (int i = 0; i < mesh.getInfluenceCount(v); i++)
+                if (mesh.getInfluenceWeight(v, i) > 0f)
+                    weighed[mesh.getInfluenceBone(v, i)] = true;
+
+        return weighed;
     }
 
     // Rebuilds a registered rigged mesh from a struct, its buffers respecified in place on the same handles
@@ -276,7 +290,7 @@ public class MeshManager extends ManagerPackage {
                 meshHandle.getRigHandle(),
                 boundsMin,
                 boundsMax);
-        applyMorphTargets(meshHandle, mesh, riggedMorphEntries);
+        applyRiggedMesh(meshHandle, mesh, riggedMorphEntries);
     }
 
     // Each palette texture's tile as u0, u1, v0, v1, width and height, in the scratch's reusable array

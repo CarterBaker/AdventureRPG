@@ -2350,6 +2350,22 @@ public class EngineSetting {
     public static final String UNIFORM_APPEARANCE_BASE = "u_appearanceBase";
     public static final String UNIFORM_MORPH_BASE = "u_morphBase";
 
+    // Rig Springs — chains of bones a rig simulates instead of keying, stepped in substeps no longer than the step,
+    // at most the step count per update and no more time than the delta allows, reset when a body travels farther
+    // than the reset distance in one update; a joint swings at most the angle whose cosine is given from the way the
+    // pose holds its bone; their stiffness, damping, gravity and drag stay within these ranges
+    public static final int RIG_SPRING_MIN_BONES = 2;
+    public static final float RIG_SPRING_STEP = 1f / 120f;
+    public static final int RIG_SPRING_MAX_STEPS = 8;
+    public static final float RIG_SPRING_MAX_DELTA = 0.1f;
+    public static final float RIG_SPRING_RESET_DISTANCE = 4f;
+    public static final float RIG_SPRING_DIRECTION_EPSILON = 0.000001f;
+    public static final float RIG_SPRING_SWING_COSINE = (float) Math.cos(Math.toRadians(75.0));
+    public static final float RIG_SPRING_STIFFNESS_MAX = 2000f;
+    public static final float RIG_SPRING_DAMPING_MAX = 100f;
+    public static final float RIG_SPRING_GRAVITY_MAX = 50f;
+    public static final float RIG_SPRING_DRAG_MAX = 50f;
+
     // Face Animation — blinks fall at a pseudo-random interval per character, each closing and opening the lids
     public static final float FACE_BLINK_INTERVAL_MIN = 2.2f;
     public static final float FACE_BLINK_INTERVAL_MAX = 6.0f;

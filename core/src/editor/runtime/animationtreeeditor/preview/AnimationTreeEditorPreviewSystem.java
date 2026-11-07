@@ -73,6 +73,7 @@ public class AnimationTreeEditorPreviewSystem extends SystemPackage {
                 animationTreeEditorManager.getPlayingAction(),
                 animationTreeEditorManager.getActionPhase(),
                 animationTreeEditorManager.getActionSequence(),
+                animationTreeEditorManager.getParameter(AnimationParameter.SPEED),
                 internal.getDeltaTime());
 
         if (animationTreeEditorManager.getView() == AnimationTreeEditorView.MASK)

@@ -211,7 +211,8 @@ public class AnimationEditorPoseSystem extends SystemPackage {
             startDrag(tool, mouseX, mouseY);
     }
 
-    // The bone whose posed joint lies nearest the pointer within the pick radius, or none; only handle ends for IK
+    // The bone whose posed joint lies nearest the pointer within the pick radius, or none; never a bone its springs
+    // simulate, and only handle ends for IK
     private int pickJoint(float mouseX, float mouseY, boolean handleEnds) {
 
         AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
@@ -222,7 +223,8 @@ public class AnimationEditorPoseSystem extends SystemPackage {
 
         for (int i = 0; i < state.getRigHandle().getBoneCount(); i++) {
 
-            if (handleEnds && state.getRigHandle().findIkChainByEnd(i) == null)
+            if (state.getRigHandle().isSpringBone(i)
+                    || handleEnds && state.getRigHandle().findIkChainByEnd(i) == null)
                 continue;
 
             CharacterPoseUtility.getTranslation(state.getWorldMatrix(i), hitScratch);

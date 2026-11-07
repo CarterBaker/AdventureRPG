@@ -4,7 +4,9 @@ import java.util.Arrays;
 
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.rig.RigSpringChainStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterDigitStruct;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterHairCardStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
@@ -36,7 +38,11 @@ class CharacterWeightBranch extends BranchPackage {
      * hand or foot bone carries to the digit bones the rig tools laid on the
      * digits found below it: a digit's own vertices wholly, along its chain,
      * blended across each joint; the palm near a digit's root partly; a foot's
-     * vertices past the ball to its toe, all in one undo step.
+     * vertices past the ball to its toe, all in one undo step. Weighing onto
+     * locks hands every vertex of each long hair card to the spring chain it
+     * hangs nearest, by how far down the card it grows: from the bone the
+     * hair grows on near the root, then along the chain's bones, blended
+     * across each joint, any spring weights it held before let go first.
      */
 
     // Internal
@@ -45,6 +51,7 @@ class CharacterWeightBranch extends BranchPackage {
     private CharacterHistoryBranch characterHistoryBranch;
     private CharacterSelectionBranch characterSelectionBranch;
     private CharacterDigitBranch characterDigitBranch;
+    private CharacterHairBranch characterHairBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<RigHandle, int[]> rig2MirrorBones;
@@ -83,6 +90,7 @@ class CharacterWeightBranch extends BranchPackage {
         this.characterHistoryBranch = get(CharacterHistoryBranch.class);
         this.characterSelectionBranch = get(CharacterSelectionBranch.class);
         this.characterDigitBranch = get(CharacterDigitBranch.class);
+        this.characterHairBranch = get(CharacterHairBranch.class);
     }
 
     // Selection Edits \\
@@ -279,6 +287,120 @@ class CharacterWeightBranch extends BranchPackage {
         characterMeshBranch.finishEdit(document);
         characterEditorManager.setStatusMessage(weighed + EditorSetting.CHARACTER_RIG_MESSAGE_WEIGHED);
         return true;
+    }
+
+    // Locks \\
+
+    // Every vertex of each long hair card weighed onto the hair chain of the loaded rig it hangs nearest; false when
+    // no card reaches a chain
+    boolean weighLocks(CharacterMeshDocumentInstance document) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+        RigHandle rigHandle = mesh.getRigHandle();
+        ObjectArrayList<CharacterHairCardStruct> cards = new ObjectArrayList<>();
+        FloatArrayList reaches = new FloatArrayList();
+        int weighed = 0;
+        boolean begun = false;
+
+        characterHairBranch.detectCards(mesh, cards);
+
+        for (int c = 0; c < cards.size(); c++) {
+
+            CharacterHairCardStruct card = cards.get(c);
+
+            if (card.getLength() < EditorSetting.CHARACTER_HAIR_LOCK_MIN_LENGTH)
+                continue;
+
+            int chainIndex = characterHairBranch.findChain(rigHandle, card, reaches);
+
+            if (chainIndex == EngineSetting.INDEX_NOT_FOUND)
+                continue;
+
+            if (!begun) {
+                characterHistoryBranch.begin(document);
+                begun = true;
+            }
+
+            RigSpringChainStruct chain = rigHandle.getSpringChain(chainIndex);
+
+            characterHairBranch.resolveReaches(rigHandle, chain, reaches);
+
+            for (int i = 0; i < card.getVertices().size(); i++) {
+                weighHairVertex(mesh, card.getVertex(i), card.reachAt(card.getVertexV(i)), chain, reaches);
+                weighed++;
+            }
+        }
+
+        if (!begun)
+            return false;
+
+        characterMeshBranch.finishEdit(document);
+        characterEditorManager.setStatusMessage(weighed + EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_WEIGHED);
+        return true;
+    }
+
+    // A hair vertex's spring weights let go, the rest kept on the bone the hair grows on near its root, then handed
+    // along the chain's bones by how far down the card it grows, each bone carrying its segment, blended at joints
+    private void weighHairVertex(
+            RiggedMeshStruct mesh,
+            int vertexIndex,
+            float reach,
+            RigSpringChainStruct chain,
+            FloatArrayList reaches) {
+
+        RigHandle rigHandle = mesh.getRigHandle();
+        int count = gather(mesh, vertexIndex);
+
+        for (int i = count - 1; i >= 0; i--)
+            if (rigHandle.isSpringBone(boneScratch[i]))
+                count = removeSlot(i, count);
+
+        if (count == 0) {
+            boneScratch[0] = rigHandle.getBone(chain.getBone(0)).getParentIndex();
+            weightScratch[0] = 1f;
+            count = 1;
+        }
+
+        float kept = 0f;
+
+        for (int i = 0; i < count; i++)
+            kept += weightScratch[i];
+
+        float handed = smoothstep(0f, EditorSetting.CHARACTER_HAIR_WEIGHT_ROOT, reach);
+        int segments = chain.getBoneCount() - 1;
+        float total = 0f;
+
+        for (int i = 0; i < count; i++)
+            weightScratch[i] *= (1f - handed) / kept;
+
+        for (int j = 0; j < segments; j++)
+            total += resolveSegmentShare(reach, reaches, j, segments);
+
+        for (int j = 0; j < segments && total > 0f; j++) {
+
+            float share = handed * resolveSegmentShare(reach, reaches, j, segments) / total;
+
+            if (share <= EditorSetting.CHARACTER_MESH_WEIGHT_EPSILON || count == boneScratch.length)
+                continue;
+
+            boneScratch[count] = chain.getBone(j);
+            weightScratch[count++] = share;
+        }
+
+        writeVertex(mesh, vertexIndex, count);
+    }
+
+    // How much of a vertex the given distance down a chain one segment's bone carries, blended across the joints at
+    // its ends; the first takes everything above its end, the last everything below its start
+    private float resolveSegmentShare(float reach, FloatArrayList reaches, int segment, int segments) {
+
+        float blend = EditorSetting.CHARACTER_HAIR_WEIGHT_BLEND;
+        float start = reaches.getFloat(segment);
+        float end = reaches.getFloat(segment + 1);
+        float from = segment == 0 ? 1f : smoothstep(start - blend, start + blend, reach);
+        float to = segment == segments - 1 ? 1f : 1f - smoothstep(end - blend, end + blend, reach);
+
+        return from * to;
     }
 
     // Each digit's bones in the rig, root to tip; null while any is missing, the rig not yet laid on them
