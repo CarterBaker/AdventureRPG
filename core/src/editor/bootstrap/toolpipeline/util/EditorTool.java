@@ -20,7 +20,9 @@ public enum EditorTool {
      * Fill floods a run of one value and Pick takes up the value under the
      * pointer; Place stands a new thing where it clicks and Wall a thin
      * wall on the face it clicks; Move, Rotate and Scale drag what is
-     * selected; Cut cuts a clip in two where it clicks. The stroking tools
+     * selected; Cut cuts a clip in two where it clicks; IK Handle drags the
+     * end of a limb or digit the rig carries a handle for, and the joints
+     * above it bend the way the handle's pole says. The stroking tools
      * work along a drag with a brush and carry the options that shape their
      * strokes; the rest act once per press.
      */
@@ -44,7 +46,8 @@ public enum EditorTool {
     MOVE(EditorSetting.TOOL_MOVE, false),
     ROTATE(EditorSetting.TOOL_ROTATE, false),
     SCALE(EditorSetting.TOOL_SCALE, false),
-    CUT(EditorSetting.TOOL_CUT, false);
+    CUT(EditorSetting.TOOL_CUT, false),
+    IK(EditorSetting.TOOL_IK, false);
 
     // Values
     public static final EditorTool[] VALUES = values();

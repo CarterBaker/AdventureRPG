@@ -5,6 +5,7 @@ import java.io.File;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
@@ -21,7 +22,9 @@ class RigBuilder extends BuilderPackage {
      * its handle to take in place when its bind pose is edited. Bones must
      * appear in parent-before-child order — "parent" is resolved against
      * bones already processed earlier in the same rig, and the first bone
-     * must be the root ("parent" omitted).
+     * must be the root ("parent" omitted). Its optional "ik" handles each
+     * name three "bones", root, middle and end, each the parent of the next,
+     * and the "pole" their middle joint bends toward.
      */
 
     // Build \\
@@ -50,7 +53,7 @@ class RigBuilder extends BuilderPackage {
         for (int i = 0; i < bonesArray.size(); i++)
             bones[i] = parseBone(bonesArray.get(i).getAsObject(), i, boneName2Index, sourceName);
 
-        return new RigData(rigName, bones, boneName2Index);
+        return new RigData(rigName, bones, boneName2Index, parseIkChains(arpg, bones, boneName2Index, sourceName));
     }
 
     // Parse \\
@@ -106,6 +109,69 @@ class RigBuilder extends BuilderPackage {
                     + sourceName);
 
         return parentIndex;
+    }
+
+    // IK \\
+
+    private RigIkChainStruct[] parseIkChains(
+            ArpgObjectStruct arpg,
+            RigBoneStruct[] bones,
+            Object2IntOpenHashMap<String> boneName2Index,
+            String sourceName) {
+
+        if (!ArpgUtility.hasArray(arpg, "ik"))
+            return new RigIkChainStruct[0];
+
+        ArpgArrayStruct chainsArray = arpg.getAsArray("ik");
+        RigIkChainStruct[] chains = new RigIkChainStruct[chainsArray.size()];
+
+        for (int i = 0; i < chains.length; i++) {
+
+            chains[i] = parseIkChain(chainsArray.get(i).getAsObject(), bones, boneName2Index, sourceName);
+
+            for (int j = 0; j < i; j++)
+                if (chains[j].getName().equals(chains[i].getName()))
+                    throwException("Duplicate IK handle name \"" + chains[i].getName() + "\" in rig: " + sourceName);
+        }
+
+        return chains;
+    }
+
+    private RigIkChainStruct parseIkChain(
+            ArpgObjectStruct chainArpg,
+            RigBoneStruct[] bones,
+            Object2IntOpenHashMap<String> boneName2Index,
+            String sourceName) {
+
+        String name = ArpgUtility.validateString(chainArpg, "name");
+        ArpgArrayStruct bonesArray = ArpgUtility.validateArray(chainArpg, "bones");
+
+        if (bonesArray.size() != EngineSetting.RIG_IK_CHAIN_BONES)
+            throwException("IK handle \"" + name + "\" must name exactly " + EngineSetting.RIG_IK_CHAIN_BONES
+                    + " bones, root to end, in rig: " + sourceName);
+
+        int[] chain = new int[EngineSetting.RIG_IK_CHAIN_BONES];
+
+        for (int i = 0; i < chain.length; i++) {
+
+            String boneName = bonesArray.get(i).getAsString();
+            chain[i] = boneName2Index.getInt(boneName);
+
+            if (chain[i] == EngineSetting.INDEX_NOT_FOUND)
+                throwException("IK handle \"" + name + "\" names unknown bone \"" + boneName + "\" in rig: "
+                        + sourceName);
+
+            if (i > 0 && bones[chain[i]].getParentIndex() != chain[i - 1])
+                throwException("IK handle \"" + name + "\" bone \"" + boneName
+                        + "\" is not the child of the bone before it in rig: " + sourceName);
+        }
+
+        Vector3 pole = parseVector3(chainArpg, "pole", sourceName, true);
+
+        if (pole.length() <= 0f)
+            throwException("IK handle \"" + name + "\" has no pole direction in rig: " + sourceName);
+
+        return new RigIkChainStruct(name, chain[0], chain[1], chain[2], pole.divide(pole.length()));
     }
 
     // Vector Parsing \\

@@ -13,6 +13,7 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStru
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
@@ -83,6 +84,8 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterRigRowBranch characterRigRowBranch;
     private CharacterMeshPropertyBranch characterMeshPropertyBranch;
     private CharacterMeshRowBranch characterMeshRowBranch;
+    private CharacterRegionBranch characterRegionBranch;
+    private CharacterDigitBranch characterDigitBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<String, CharacterDocumentInstance> raceName2CharacterDocument;
@@ -104,6 +107,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Mesh
     private String activePartKey;
+    private CharacterEditorRegion region;
     private boolean mirror;
     private boolean xray;
     private boolean proportional;
@@ -153,6 +157,8 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterRigRowBranch = create(CharacterRigRowBranch.class);
         this.characterMeshPropertyBranch = create(CharacterMeshPropertyBranch.class);
         this.characterMeshRowBranch = create(CharacterMeshRowBranch.class);
+        this.characterRegionBranch = create(CharacterRegionBranch.class);
+        this.characterDigitBranch = create(CharacterDigitBranch.class);
 
         // Palette
         this.raceName2CharacterDocument = new Object2ObjectOpenHashMap<>();
@@ -171,6 +177,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
         // Mesh
         this.activePartKey = EditorSetting.CHARACTER_EDITOR_PART_BODY;
+        this.region = CharacterEditorRegion.WHOLE;
         this.mirror = true;
         this.proportionalRadius = EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_DEFAULT;
         this.snapStep = EditorSetting.CHARACTER_EDITOR_MESH_SNAP_DEFAULT;
@@ -458,6 +465,75 @@ public class CharacterEditorManager extends ManagerPackage {
         this.activePartKey = partKey;
         this.requestedTransform = null;
         notifyChanged();
+    }
+
+    // Regions \\
+
+    // The region of the modelling tab worked in last, its part picked whenever the character wears it
+    public void setRegion(CharacterEditorRegion region) {
+
+        if (region != this.region) {
+            this.region = region;
+            notifyChanged();
+        }
+
+        String partKey = resolveRegionPartKey(region);
+
+        if (!partKey.equals(activePartKey) && activeDocument != null && activeDocument.hasPreview()
+                && characterMeshBranch.resolvePartMesh(activeDocument, partKey) != null)
+            selectPart(partKey);
+    }
+
+    private String resolveRegionPartKey(CharacterEditorRegion region) {
+
+        if (region.isFeature())
+            return ArpgUtility.toEnumName(region.getFeatureSlot());
+
+        return region.isWhole() ? activePartKey : EditorSetting.CHARACTER_EDITOR_PART_BODY;
+    }
+
+    // Whether a mesh is the part a region edits, the active part when that is the region's own
+    boolean isRegionPart(CharacterMeshDocumentInstance document, CharacterEditorRegion region) {
+
+        if (region.isWhole())
+            return true;
+
+        CharacterMeshDocumentInstance active = getActiveMeshDocument();
+        return document == active && resolveRegionPartKey(region).equals(activePartKey);
+    }
+
+    // How far a vertex of a mesh belongs to a region, the share each stroke reaching it is held to
+    public float getRegionShare(CharacterMeshDocumentInstance document, CharacterEditorRegion region, int vertexIndex) {
+        return Math.max(characterRegionBranch.getShare(document, region, vertexIndex), 0f);
+    }
+
+    // Whether a vertex of a mesh is picked and selected in a region
+    public boolean isInRegion(CharacterMeshDocumentInstance document, CharacterEditorRegion region, int vertexIndex) {
+        return characterRegionBranch.holds(document, region, vertexIndex);
+    }
+
+    // Whether a vertex of a mesh is held by the region of the tab worked in last
+    public boolean isInRegion(CharacterMeshDocumentInstance document, int vertexIndex) {
+        return characterRegionBranch.holds(document, region, vertexIndex);
+    }
+
+    // Whether the region's part is the one open, so a tab of a part the character does not wear edits nothing
+    public boolean isRegionOpen(CharacterEditorRegion region) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+        return document != null && isRegionPart(document, region);
+    }
+
+    public boolean isBoneInRegion(CharacterEditorRegion region, RigHandle rigHandle, int boneIndex) {
+        return characterRegionBranch.holdsBone(region, rigHandle, boneIndex);
+    }
+
+    public boolean isRigBoneInRegion(CharacterEditorRegion region, int boneIndex) {
+        return syncRig() && characterRegionBranch.holdsRigBone(region, boneIndex);
+    }
+
+    public CharacterEditorRegion getRegion() {
+        return region;
     }
 
     // The open mesh of the part picked, falling back to the body once the character no longer wears it; null without
@@ -772,6 +848,34 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (syncRig() && !characterRigBranch.isGesturing())
             characterRigBranch.removeBone(boneIndex);
+    }
+
+    // Digits \\
+
+    // Bone chains laid on every digit found below the region's hand or foot bones in the body's mesh
+    void rigDigits() {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (!region.isBound() || document == null || !isRegionPart(document, region)) {
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NO_REGION);
+            return;
+        }
+
+        if (syncRig() && !characterRigBranch.isGesturing())
+            characterRigBranch.addDigits(document.getMesh(), region);
+    }
+
+    // Every vertex of the region's hand or foot bones weighed onto the digit bones the rig lays below them
+    void weighDigits(CharacterMeshDocumentInstance document) {
+
+        if (!region.isBound() || !isRegionPart(document, region)) {
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NO_REGION);
+            return;
+        }
+
+        if (!characterWeightBranch.weighDigits(document, region))
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_UNRIGGED);
     }
 
     void saveRig() {
@@ -1217,6 +1321,9 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (activeDocument == null)
             status.append(EditorSetting.CHARACTER_EDITOR_STATUS_NO_TEMPLATE);
+        else if (mode.isMeshMode() && region.isFeature() && !isRegionOpen(region))
+            status.append(EditorSetting.CHARACTER_REGION_STATUS_NO_PART)
+                    .append(ArpgUtility.toEnumName(region.getFeatureSlot()));
         else
             appendDocumentStatus(status);
 

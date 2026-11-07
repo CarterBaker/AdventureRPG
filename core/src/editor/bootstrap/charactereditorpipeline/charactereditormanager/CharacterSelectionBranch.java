@@ -269,7 +269,15 @@ class CharacterSelectionBranch extends BranchPackage {
         changed(document);
     }
 
+    // A changed selection kept to the region of the tab worked in last, then marked changed
     private void changed(CharacterMeshDocumentInstance document) {
+
+        BooleanArrayList selection = document.getSelection();
+
+        if (!characterEditorManager.getRegion().isWhole())
+            for (int i = 0; i < selection.size(); i++)
+                if (selection.getBoolean(i) && !characterEditorManager.isInRegion(document, i))
+                    selection.set(i, false);
 
         document.markSelectionChanged();
         characterEditorManager.notifyChanged();

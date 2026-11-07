@@ -102,6 +102,18 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterOutliner(window.getGLWindow());
     }
 
+    public void openHairEditor(WindowInstance window) {
+        tabManager.openHairEditor(window.getGLWindow());
+    }
+
+    public void openHandEditor(WindowInstance window) {
+        tabManager.openHandEditor(window.getGLWindow());
+    }
+
+    public void openFootEditor(WindowInstance window) {
+        tabManager.openFootEditor(window.getGLWindow());
+    }
+
     public void openFaceEditor(WindowInstance window) {
         tabManager.openFaceEditor(window.getGLWindow());
     }

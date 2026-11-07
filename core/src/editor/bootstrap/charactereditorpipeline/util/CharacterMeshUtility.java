@@ -129,6 +129,25 @@ public class CharacterMeshUtility extends EngineUtility {
         }
     }
 
+    // The side a bone's name carries, its left or right suffix, or none
+    public static String toSideSuffix(String boneName) {
+
+        if (boneName.endsWith(EditorSetting.CHARACTER_MESH_BONE_SUFFIX_LEFT))
+            return EditorSetting.CHARACTER_MESH_BONE_SUFFIX_LEFT;
+
+        if (boneName.endsWith(EditorSetting.CHARACTER_MESH_BONE_SUFFIX_RIGHT))
+            return EditorSetting.CHARACTER_MESH_BONE_SUFFIX_RIGHT;
+
+        return "";
+    }
+
+    // The bone a digit's joint takes: a lone joint by the digit's name, a chain's by its name and place from the root
+    public static String toDigitBoneName(String digitName, int joint, int jointCount, String side) {
+        return jointCount == 1
+                ? digitName + side
+                : digitName + EditorSetting.CHARACTER_RIG_DIGIT_SEPARATOR + (joint + 1) + side;
+    }
+
     public static String toMirrorBoneName(String boneName) {
 
         if (boneName.endsWith(EditorSetting.CHARACTER_MESH_BONE_SUFFIX_LEFT))

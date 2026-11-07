@@ -4,6 +4,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.charactereditor.CharacterEditorWindowProvider;
 import engine.root.SystemPackage;
@@ -18,8 +19,8 @@ public class CharacterEditorModeSystem extends SystemPackage {
      * its window or its chrome, a mode of its own chosen on the editor is
      * taken up here, and any other is handed back for this tab's, so the
      * Character Outliner and the Properties tab always follow the tab
-     * worked in last. The tab draws its preview in its own mode whatever the
-     * editor's is.
+     * worked in last; the tab's region is handed to the editor the same way.
+     * The tab draws its preview in its own mode whatever the editor's is.
      */
 
     // Internal
@@ -60,8 +61,10 @@ public class CharacterEditorModeSystem extends SystemPackage {
             adopt();
     }
 
-    // The editor's mode taken up when it is one of this tab's, and this tab's handed to it otherwise
+    // The editor's mode taken up when it is one of this tab's, and this tab's handed to it otherwise, with its region
     public void adopt() {
+
+        characterEditorManager.setRegion(windowProvider.getRegion());
 
         CharacterEditorMode shared = characterEditorManager.getMode();
 
@@ -82,5 +85,9 @@ public class CharacterEditorModeSystem extends SystemPackage {
 
     public CharacterEditorMode getMode() {
         return mode;
+    }
+
+    public CharacterEditorRegion getRegion() {
+        return windowProvider.getRegion();
     }
 }

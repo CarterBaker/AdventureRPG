@@ -17,7 +17,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Split so far:** the World Editor paints biomes and places settlements and cameras; the Height Editor raises and
   lowers the ground; entities and races, like all content, are picked in the Hierarchy and edited in the Properties
   tab; Character Appearance, Character Build and Character Equipment each shape one part of how a
-  race looks, and the Character Mesh Editor models its meshes and rig with the Tools and Brushes tabs; the Recorder
+  race looks, and the Character Mesh Editor models its meshes and rig with the Tools and Brushes tabs, the Hair, Hand and
+  Foot Editors the same kept to the hair, the hands with their fingers and the feet with their toes; the Recorder
   is its timeline, with Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside it, each opening its
   own menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes
   act on.

@@ -1,17 +1,23 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterDigitStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CharacterWeightBranch extends BranchPackage {
 
@@ -26,7 +32,11 @@ class CharacterWeightBranch extends BranchPackage {
      * precision with the remainder given to the heaviest. With mirror on,
      * every vertex changed hands its weights, left and right bones swapped,
      * to its mirror. Brush strokes change weights live and become one undo
-     * step when they end.
+     * step when they end. Weighing onto digits hands every vertex a region's
+     * hand or foot bone carries to the digit bones the rig tools laid on the
+     * digits found below it: a digit's own vertices wholly, along its chain,
+     * blended across each joint; the palm near a digit's root partly; a foot's
+     * vertices past the ball to its toe, all in one undo step.
      */
 
     // Internal
@@ -34,6 +44,7 @@ class CharacterWeightBranch extends BranchPackage {
     private CharacterMeshBranch characterMeshBranch;
     private CharacterHistoryBranch characterHistoryBranch;
     private CharacterSelectionBranch characterSelectionBranch;
+    private CharacterDigitBranch characterDigitBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<RigHandle, int[]> rig2MirrorBones;
@@ -56,8 +67,8 @@ class CharacterWeightBranch extends BranchPackage {
         this.rig2MirrorBones = new Object2ObjectOpenHashMap<>();
 
         // Scratch
-        this.boneScratch = new int[EngineSetting.MAX_BONE_INFLUENCES + 1];
-        this.weightScratch = new float[EngineSetting.MAX_BONE_INFLUENCES + 1];
+        this.boneScratch = new int[EngineSetting.MAX_BONE_INFLUENCES * 2];
+        this.weightScratch = new float[EngineSetting.MAX_BONE_INFLUENCES * 2];
         this.boneTotals = new float[0];
         this.touchedBones = new IntArrayList();
         this.blendBones = new IntArrayList();
@@ -71,6 +82,7 @@ class CharacterWeightBranch extends BranchPackage {
         this.characterMeshBranch = get(CharacterMeshBranch.class);
         this.characterHistoryBranch = get(CharacterHistoryBranch.class);
         this.characterSelectionBranch = get(CharacterSelectionBranch.class);
+        this.characterDigitBranch = get(CharacterDigitBranch.class);
     }
 
     // Selection Edits \\
@@ -221,6 +233,232 @@ class CharacterWeightBranch extends BranchPackage {
     }
 
     // Weights \\
+
+    // Digits \\
+
+    // Every vertex of the region's hand or foot bones weighed onto the digit bones laid below them; false when none are
+    boolean weighDigits(CharacterMeshDocumentInstance document, CharacterEditorRegion region) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+        RigHandle rigHandle = mesh.getRigHandle();
+        ObjectArrayList<CharacterDigitStruct> digits = new ObjectArrayList<>();
+        int[] owners = new int[mesh.getVertexCount()];
+        int weighed = 0;
+        boolean begun = false;
+
+        for (String rootName : region.getRootBones()) {
+
+            if (!rigHandle.hasBone(rootName))
+                continue;
+
+            int root = rigHandle.getBoneIndex(rootName);
+            String side = CharacterMeshUtility.toSideSuffix(rootName);
+
+            characterDigitBranch.detect(mesh, root, digits);
+
+            int[][] chains = resolveChains(rigHandle, digits, side);
+
+            if (chains == null)
+                continue;
+
+            if (!begun) {
+                characterHistoryBranch.begin(document);
+                begun = true;
+            }
+
+            resolveOwners(digits, owners);
+
+            for (int v = 0; v < mesh.getVertexCount(); v++)
+                if (mesh.getBoneWeight(v, root) > 0f && weighVertex(mesh, v, root, digits, chains, owners[v]))
+                    weighed++;
+        }
+
+        if (!begun)
+            return false;
+
+        characterMeshBranch.finishEdit(document);
+        characterEditorManager.setStatusMessage(weighed + EditorSetting.CHARACTER_RIG_MESSAGE_WEIGHED);
+        return true;
+    }
+
+    // Each digit's bones in the rig, root to tip; null while any is missing, the rig not yet laid on them
+    private int[][] resolveChains(RigHandle rigHandle, ObjectArrayList<CharacterDigitStruct> digits, String side) {
+
+        if (digits.isEmpty())
+            return null;
+
+        int[][] chains = new int[digits.size()][];
+
+        for (int d = 0; d < digits.size(); d++) {
+
+            CharacterDigitStruct digit = digits.get(d);
+            chains[d] = new int[digit.getJointCount()];
+
+            for (int j = 0; j < digit.getJointCount(); j++) {
+
+                String boneName = CharacterMeshUtility.toDigitBoneName(
+                        digit.getName(), j, digit.getJointCount(), side);
+
+                if (!rigHandle.hasBone(boneName))
+                    return null;
+
+                chains[d][j] = rigHandle.getBoneIndex(boneName);
+            }
+        }
+
+        return chains;
+    }
+
+    private void resolveOwners(ObjectArrayList<CharacterDigitStruct> digits, int[] owners) {
+
+        Arrays.fill(owners, EngineSetting.INDEX_NOT_FOUND);
+
+        for (int d = 0; d < digits.size(); d++)
+            if (digits.get(d).getJointCount() > 1)
+                for (int i = 0; i < digits.get(d).getVertices().size(); i++)
+                    owners[digits.get(d).getVertices().getInt(i)] = d;
+    }
+
+    // A vertex's share of its root bone handed along the chains reaching it: its own digit's wholly, others partly
+    private boolean weighVertex(
+            RiggedMeshStruct mesh,
+            int vertexIndex,
+            int root,
+            ObjectArrayList<CharacterDigitStruct> digits,
+            int[][] chains,
+            int owner) {
+
+        int count;
+
+        if (owner != EngineSetting.INDEX_NOT_FOUND) {
+            boneScratch[0] = root;
+            weightScratch[0] = 1f;
+            count = 1;
+        } else {
+            count = gather(mesh, vertexIndex);
+        }
+
+        int rootSlot = findSlot(root, count);
+        float rootWeight = weightScratch[rootSlot];
+        float handed = 0f;
+
+        for (int d = 0; d < digits.size(); d++) {
+
+            if (owner != EngineSetting.INDEX_NOT_FOUND && d != owner)
+                continue;
+
+            CharacterDigitStruct digit = digits.get(d);
+            boolean whole = d == owner || digit.getJointCount() == 1;
+
+            for (int j = 0; j < digit.getJointCount(); j++) {
+
+                float share = resolveJointShare(mesh, vertexIndex, digit, j, whole) * rootWeight;
+
+                if (share <= EditorSetting.CHARACTER_MESH_WEIGHT_EPSILON || count == boneScratch.length)
+                    continue;
+
+                boneScratch[count] = chains[d][j];
+                weightScratch[count++] = share;
+                handed += share;
+            }
+        }
+
+        if (handed <= 0f)
+            return false;
+
+        weightScratch[rootSlot] = Math.max(0f, rootWeight - handed);
+        writeVertex(mesh, vertexIndex, count);
+        return true;
+    }
+
+    // How much of a vertex a digit's joint carries: by where it lies along the chain, blended across each joint, and
+    // for a vertex the digit does not carry, faded by its distance from the chain
+    private float resolveJointShare(
+            RiggedMeshStruct mesh,
+            int vertexIndex,
+            CharacterDigitStruct digit,
+            int joint,
+            boolean whole) {
+
+        float x = mesh.getX(vertexIndex);
+        float y = mesh.getY(vertexIndex);
+        float z = mesh.getZ(vertexIndex);
+        float total = 0f;
+
+        for (int j = 0; j < digit.getJointCount(); j++)
+            total += distance(digit.getJoint(j), digit.getSegmentEnd(j));
+
+        if (total <= 0f)
+            return 0f;
+
+        float nearest = Float.MAX_VALUE;
+        float along = 0f;
+        float reached = 0f;
+
+        for (int j = 0; j < digit.getJointCount(); j++) {
+
+            Vector3 a = digit.getJoint(j);
+            Vector3 b = digit.getSegmentEnd(j);
+            float length = distance(a, b);
+            float t = Math.clamp(((x - a.x) * (b.x - a.x) + (y - a.y) * (b.y - a.y) + (z - a.z) * (b.z - a.z))
+                    / (length * length), -0.5f, 1.5f);
+            float held = Math.clamp(t, 0f, 1f);
+            float dx = x - (a.x + (b.x - a.x) * held);
+            float dy = y - (a.y + (b.y - a.y) * held);
+            float dz = z - (a.z + (b.z - a.z) * held);
+            float gap = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (gap < nearest) {
+                nearest = gap;
+                along = (reached + t * length) / total;
+            }
+
+            reached += length;
+        }
+
+        float blend = digit.getJointCount() == 1
+                ? EditorSetting.CHARACTER_RIG_WEIGHT_BALL_BLEND
+                : EditorSetting.CHARACTER_RIG_WEIGHT_BLEND;
+        float start = jointStart(digit, joint, total);
+        float share = smoothstep(start - blend, start + blend, along);
+
+        if (joint + 1 < digit.getJointCount()) {
+            float end = jointStart(digit, joint + 1, total);
+            share *= 1f - smoothstep(end - blend, end + blend, along);
+        }
+
+        if (whole)
+            return share;
+
+        float fade = Math.max(0f, 1f - nearest / EditorSetting.CHARACTER_RIG_WEIGHT_PALM_REACH);
+        return share * fade * fade * EditorSetting.CHARACTER_RIG_WEIGHT_PALM_SHARE;
+    }
+
+    // How far along the chain a joint stands, as a share of its whole length
+    private float jointStart(CharacterDigitStruct digit, int joint, float total) {
+
+        float reached = 0f;
+
+        for (int j = 0; j < joint; j++)
+            reached += distance(digit.getJoint(j), digit.getSegmentEnd(j));
+
+        return reached / total;
+    }
+
+    private float distance(Vector3 a, Vector3 b) {
+
+        float dx = b.x - a.x;
+        float dy = b.y - a.y;
+        float dz = b.z - a.z;
+
+        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    private float smoothstep(float low, float high, float value) {
+
+        float t = Math.clamp((value - low) / (high - low), 0f, 1f);
+        return t * t * (3f - 2f * t);
+    }
 
     // Sets one bone's weight on a vertex, scaling its others to fill the rest; false when nothing could change
     boolean setBoneWeight(RiggedMeshStruct mesh, int vertexIndex, int boneIndex, float weight) {
@@ -624,7 +862,7 @@ class CharacterWeightBranch extends BranchPackage {
             int mirror = mirrorVertices.getInt(i);
 
             if (changedVertices.getBoolean(i) && mirror != EngineSetting.INDEX_NOT_FOUND && mirror != i
-                    && !changedVertices.getBoolean(mirror))
+                    && !changedVertices.getBoolean(mirror) && characterEditorManager.isInRegion(document, mirror))
                 copyMirrored(mesh, i, mirror, mirrorBones);
         }
     }

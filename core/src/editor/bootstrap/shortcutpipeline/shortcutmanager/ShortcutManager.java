@@ -183,8 +183,7 @@ public class ShortcutManager extends ManagerPackage {
         Input input = inputManager.getRawInput(window);
         int heldModifiers = ShortcutModifier.resolveHeld(input);
 
-        ObjectArrayList<ShortcutHandle> ownShortcuts = contextClass2PressedShortcuts.get(
-                window.getContext().getClass());
+        ObjectArrayList<ShortcutHandle> ownShortcuts = findPressedShortcuts(window.getContext().getClass());
 
         if (runPressed(ownShortcuts, window, input, heldModifiers) || !toolManager.isToolWindow(window))
             return;
@@ -197,6 +196,21 @@ public class ShortcutManager extends ManagerPackage {
             if (runPressed(sharedShortcuts, window, input, heldModifiers))
                 return;
         }
+    }
+
+    // A tool's pressed shortcuts: its own context's, else the nearest context it extends that names some, so a file
+    // naming a shared base keys every tab built on it
+    private ObjectArrayList<ShortcutHandle> findPressedShortcuts(Class<?> contextClass) {
+
+        for (Class<?> type = contextClass; type != null; type = type.getSuperclass()) {
+
+            ObjectArrayList<ShortcutHandle> pressedShortcuts = contextClass2PressedShortcuts.get(type);
+
+            if (pressedShortcuts != null)
+                return pressedShortcuts;
+        }
+
+        return null;
     }
 
     // The first of the shortcuts pressed this frame run; false when none was

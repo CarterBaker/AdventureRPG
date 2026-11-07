@@ -41,6 +41,7 @@ class CharacterShapeBranch extends BranchPackage {
 
     // Stroke
     private RiggedMeshStruct mesh;
+    private CharacterMeshDocumentInstance strokeDocument;
     private FloatArrayList positions;
     private IntArrayList mirrors;
     private boolean mirrored;
@@ -108,6 +109,7 @@ class CharacterShapeBranch extends BranchPackage {
     void beginStroke(CharacterMeshDocumentInstance document) {
 
         this.mesh = document.getMesh();
+        this.strokeDocument = document;
 
         int vertexCount = mesh.getVertexCount();
         int floats = vertexCount * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
@@ -170,6 +172,7 @@ class CharacterShapeBranch extends BranchPackage {
             characterMeshBranch.finishEdit(document);
 
         this.mesh = null;
+        this.strokeDocument = null;
         positions.clear();
         mirrors.clear();
     }
@@ -225,7 +228,7 @@ class CharacterShapeBranch extends BranchPackage {
 
         int mirror = mirrors.getInt(vertexIndex);
 
-        if (mirror != EngineSetting.INDEX_NOT_FOUND)
+        if (mirror != EngineSetting.INDEX_NOT_FOUND && characterEditorManager.isInRegion(strokeDocument, mirror))
             accumulate(mirror, -dx, dy, dz);
     }
 

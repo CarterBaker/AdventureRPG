@@ -75,6 +75,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.PLACE, EditorTool.ERASE },
+            new ToolActionGroupStruct[] { rigActions() },
             false),
     CHARACTER_FACE(
             EditorSetting.TOOL_CANVAS_CHARACTER_FACE,
@@ -83,7 +84,7 @@ public enum ToolCanvas {
             false),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
-            new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE },
+            new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK },
             false),
     ITEM(
             EditorSetting.TOOL_CANVAS_ITEM,
@@ -179,7 +180,10 @@ public enum ToolCanvas {
                         EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_POSITIVE),
                 action(
                         EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_NEGATIVE,
-                        EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_NEGATIVE));
+                        EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_NEGATIVE),
+                action(
+                        EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT_DIGITS,
+                        EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_DIGITS));
     }
 
     private static ToolActionGroupStruct meshSelection() {
@@ -201,6 +205,14 @@ public enum ToolCanvas {
                 action(
                         EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_BONE,
                         EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE));
+    }
+
+    private static ToolActionGroupStruct rigActions() {
+        return new ToolActionGroupStruct(
+                EditorSetting.CHARACTER_RIG_HEADER_ACTIONS,
+                action(EditorSetting.CHARACTER_RIG_LABEL_DIGITS, EditorSetting.CHARACTER_RIG_KEY_DIGITS),
+                action(EditorSetting.CHARACTER_RIG_LABEL_IK_ADD, EditorSetting.CHARACTER_RIG_KEY_IK_ADD),
+                action(EditorSetting.CHARACTER_RIG_LABEL_IK_REMOVE, EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE));
     }
 
     private static ToolActionGroupStruct faceControls() {

@@ -6,6 +6,7 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocum
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.runtime.charactereditor.CharacterEditorSetting;
+import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import engine.assets.camera.CameraInstance;
@@ -28,7 +29,10 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
      * those positions it projects vertices onto the window, finds the active
      * part's vertex nearest the pointer, the ones inside a box or under the
      * brush preset's tip at the strength it has there, and — unless X-Ray is on
-     * — leaves out any a worn face hides from the camera. Positions are
+     * — leaves out any a worn face hides from the camera. Only the vertices of
+     * the tab's region are picked, and a brush reaches each by the share it
+     * belongs to the region; a tab whose region's part is not worn edits
+     * nothing. Positions are
      * refreshed each frame and again on demand after an edit; their storage
      * only ever grows.
      */
@@ -37,6 +41,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     private CharacterEditorManager characterEditorManager;
     private BrushManager brushManager;
     private CharacterViewPoseSystem characterViewPoseSystem;
+    private CharacterEditorModeSystem characterEditorModeSystem;
 
     // Parts
     private ObjectArrayList<CharacterMeshDocumentInstance> wornDocuments;
@@ -69,6 +74,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.brushManager = get(BrushManager.class);
         this.characterViewPoseSystem = get(CharacterViewPoseSystem.class);
+        this.characterEditorModeSystem = get(CharacterEditorModeSystem.class);
     }
 
     // Update \\
@@ -89,7 +95,8 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
             return;
 
         characterEditorManager.collectWornMeshDocuments(wornDocuments);
-        CharacterMeshDocumentInstance active = characterEditorManager.getActiveMeshDocument();
+        boolean regionOpen = characterEditorManager.isRegionOpen(characterEditorModeSystem.getRegion());
+        CharacterMeshDocumentInstance active = regionOpen ? characterEditorManager.getActiveMeshDocument() : null;
 
         while (wornPositions.size() < wornDocuments.size())
             wornPositions.add(new FloatArrayList());
@@ -181,7 +188,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
             float dy = screenScratch.y - pixelY;
             float distance = dx * dx + dy * dy;
 
-            if (distance <= nearest && isVisible(v)) {
+            if (distance <= nearest && isInRegion(v) && isVisible(v)) {
                 nearest = distance;
                 found = v;
             }
@@ -209,7 +216,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
                 continue;
 
             if (screenScratch.x >= minX && screenScratch.x <= maxX && screenScratch.y >= minY
-                    && screenScratch.y <= maxY && isVisible(v))
+                    && screenScratch.y <= maxY && isInRegion(v) && isVisible(v))
                 vertices.add(v);
         }
     }
@@ -235,13 +242,21 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
                 continue;
 
             float falloff = BrushUtility.resolveCoverage(
-                    brushManager.getActiveBrush(), screenScratch.x - pixelX, screenScratch.y - pixelY, radius);
+                    brushManager.getActiveBrush(), screenScratch.x - pixelX, screenScratch.y - pixelY, radius)
+                    * characterEditorManager.getRegionShare(activeDocument, characterEditorModeSystem.getRegion(), v);
 
             if (falloff > 0f && isVisible(v)) {
                 vertices.add(v);
                 strengths.add(falloff * strength);
             }
         }
+    }
+
+    // Region \\
+
+    // Whether a vertex of the active part is one the tab's region picks and selects
+    public boolean isInRegion(int vertexIndex) {
+        return characterEditorManager.isInRegion(activeDocument, characterEditorModeSystem.getRegion(), vertexIndex);
     }
 
     // Occlusion \\

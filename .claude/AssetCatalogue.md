@@ -177,6 +177,14 @@ One line per session that changed this file: the date, what was added or removed
   (number rows with a slider, choice rows, a Copy button on groups in lists and maps) and
   `menus/editor/EditorWindow.arpg` (no Entity Editor in the Characters menu); deleted `menus/editor/EntityEditor.arpg`
   (its tool was removed; entities and races are edited in the Properties tab).
+- 2026-11-07: Hair, Hand and Foot Editors and digit rigging. Regenerated `rigs/HumanoidRig.arpg` (three-joint thumb and
+  finger chains on both hands and a toe at each foot's ball, laid by the editor's Rig Digits) and
+  `mesh/characters/humanoid/HumanoidMaleMesh.arpg` and `HumanoidFemaleMesh.arpg` (hands and feet weighed onto them by
+  Weigh Onto Digits), `menus/editor/EditorWindow.arpg` (Hair, Hand and Foot Editors in the Characters menu) and
+  `shortcuts/CharacterMeshEditor.arpg` (keys every modelling tab shares).
+- 2026-11-07: IK handles and hair sway. Regenerated `rigs/HumanoidRig.arpg` (IK handles on both arms, legs, thumbs and
+  fingers, added with the editor's Add IK Handle) and `schemas/Rigs.arpg` (the `ik` handles), and rewrote
+  `CharacterHair.glsl` (gusting, per-lock, tip-trailing sway with flutter and lift).
 ---
 
 ## Textures and Sprites (2175 files)

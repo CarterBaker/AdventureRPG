@@ -425,6 +425,9 @@ public class EditorSetting {
     public static final String TAB_TITLE_CHARACTER_EQUIPMENT = "Character Equipment";
     public static final String TAB_TITLE_CHARACTER_MESH_EDITOR = "Character Mesh Editor";
     public static final String TAB_TITLE_FACE_EDITOR = "Face Editor";
+    public static final String TAB_TITLE_HAIR_EDITOR = "Hair Editor";
+    public static final String TAB_TITLE_HAND_EDITOR = "Hand Editor";
+    public static final String TAB_TITLE_FOOT_EDITOR = "Foot Editor";
     public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
     public static final String TAB_TITLE_HEIGHT_EDITOR = "Height Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
@@ -896,6 +899,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_SMOOTH = "weight_smooth";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_POSITIVE = "weight_mirror_positive";
     public static final String CHARACTER_EDITOR_KEY_WEIGHT_MIRROR_NEGATIVE = "weight_mirror_negative";
+    public static final String CHARACTER_EDITOR_KEY_WEIGHT_DIGITS = "weight_digits";
 
     // Character Editor — mesh steps and ranges, in blocks unless named otherwise
     public static final float CHARACTER_EDITOR_MESH_RADIUS_DEFAULT = 0.1f;
@@ -989,6 +993,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_SMOOTH = "Smooth Selected";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_POSITIVE = "Mirror Weights  +X to -X";
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_NEGATIVE = "Mirror Weights  -X to +X";
+    public static final String CHARACTER_EDITOR_LABEL_WEIGHT_DIGITS = "Weigh Onto Digits";
 
     // Character Editor — mesh status text
     public static final String CHARACTER_EDITOR_STATUS_MESH_HINT = "Select brushes over vertices, a soft brush selecting"
@@ -1027,12 +1032,45 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_FIELD_BONES = "bones";
     public static final String CHARACTER_RIG_FIELD_NAME = "name";
     public static final String CHARACTER_RIG_FIELD_PARENT = "parent";
+    public static final String CHARACTER_RIG_FIELD_IK = "ik";
+    public static final String CHARACTER_RIG_FIELD_POLE = "pole";
 
     // Character Rig — new bones and sizes, in blocks; a new bone is named this and a number, then its parent's side
     public static final float CHARACTER_RIG_SIZE_MIN = 0.005f;
     public static final float CHARACTER_RIG_NEW_BONE_OFFSET = 0.1f;
     public static final float CHARACTER_RIG_NEW_BONE_SIZE = 0.08f;
     public static final String CHARACTER_RIG_NEW_BONE_NAME = "bone_";
+
+    // Character Rig — digits: a branch reaching at least this far past where it meets another is a digit, its chain
+    // begun this far past its web, its joints at these shares of its length; five are named in this order, any other
+    // count by number; a region with no digits apart takes one toe at this share of its length, centred in the slab
+    // this deep about it; a digit's bones are this many times as thick as its vertices lie from its line on average;
+    // its line is found in this many steps
+    public static final float CHARACTER_RIG_DIGIT_MIN_LENGTH = 0.02f;
+    public static final float CHARACTER_RIG_DIGIT_ROOT_REACH = 0.025f;
+    public static final float[] CHARACTER_RIG_DIGIT_SHARES = { 0f, 0.49f, 0.78f };
+    public static final String[] CHARACTER_RIG_DIGIT_NAMES = { "thumb", "index", "middle", "ring", "pinky" };
+    public static final String CHARACTER_RIG_DIGIT_GENERIC = "digit";
+    public static final String CHARACTER_RIG_DIGIT_SEPARATOR = "_";
+    public static final String CHARACTER_RIG_TOE_NAME = "toe";
+    public static final float CHARACTER_RIG_BALL_SHARE = 0.72f;
+    public static final float CHARACTER_RIG_BALL_SLAB = 0.012f;
+    public static final float CHARACTER_RIG_DIGIT_THICKNESS_SHARE = 2f;
+    public static final int CHARACTER_RIG_AXIS_ITERATIONS = 32;
+
+    // Character Rig — IK handles: a handle is named after its end bone with this suffix; its middle joint bends the way
+    // it stands off the line from root to end when it stands at least this far off, otherwise forward across the
+    // chain, mirrored on the right; its pole is kept to the places this scale holds
+    public static final String CHARACTER_RIG_IK_SUFFIX = "_ik";
+    public static final float CHARACTER_RIG_IK_POLE_MIN = 0.002f;
+    public static final float CHARACTER_RIG_IK_POLE_SCALE = 1000f;
+
+    // Character Rig — digit weights: a chain's joints blend over this share of its length to either side, a lone
+    // toe's over this share; the palm follows a digit's root bone up to this share, fading out this far from its line
+    public static final float CHARACTER_RIG_WEIGHT_BLEND = 0.05f;
+    public static final float CHARACTER_RIG_WEIGHT_BALL_BLEND = 0.25f;
+    public static final float CHARACTER_RIG_WEIGHT_PALM_SHARE = 0.6f;
+    public static final float CHARACTER_RIG_WEIGHT_PALM_REACH = 0.022f;
 
     // Character Rig — panel keys
     public static final String CHARACTER_RIG_KEY_BONE = "rig_bone";
@@ -1050,6 +1088,9 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_KEY_REDO = "rig_redo";
     public static final String CHARACTER_RIG_KEY_SAVE = "rig_save";
     public static final String CHARACTER_RIG_KEY_REVERT = "rig_revert";
+    public static final String CHARACTER_RIG_KEY_DIGITS = "rig_digits";
+    public static final String CHARACTER_RIG_KEY_IK_ADD = "rig_ik_add";
+    public static final String CHARACTER_RIG_KEY_IK_REMOVE = "rig_ik_remove";
 
     // Character Rig — panel text
     public static final String CHARACTER_RIG_INDENT = "   ";
@@ -1065,10 +1106,24 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_LABEL_SYMMETRIZE_LEFT = "Symmetrize  Left to Right";
     public static final String CHARACTER_RIG_LABEL_SYMMETRIZE_RIGHT = "Symmetrize  Right to Left";
     public static final String CHARACTER_RIG_LABEL_SAVE = "Save Rig";
+    public static final String CHARACTER_RIG_LABEL_DIGITS = "Rig Digits";
+    public static final String CHARACTER_RIG_LABEL_IK_ADD = "Add IK Handle";
+    public static final String CHARACTER_RIG_LABEL_IK_REMOVE = "Remove IK Handle";
+    public static final String CHARACTER_RIG_HEADER_ACTIONS = "Rig";
     public static final String CHARACTER_RIG_LABEL_REVERT = "Revert Rig";
 
     // Character Rig — status text
     public static final String CHARACTER_RIG_MESSAGE_ADDED = "Added ";
+    public static final String CHARACTER_RIG_MESSAGE_DIGITS =
+            " digit bones added; save the rig and restart to weigh onto them";
+    public static final String CHARACTER_RIG_MESSAGE_NO_DIGITS = "No new digits found under this region's bones";
+    public static final String CHARACTER_RIG_MESSAGE_NO_REGION = "Rig and weigh digits in the Hand or Foot Editor";
+    public static final String CHARACTER_RIG_MESSAGE_WEIGHED = " vertices weighed onto the digits";
+    public static final String CHARACTER_RIG_MESSAGE_UNRIGGED = "Rig the digits, save the rig and restart first";
+    public static final String CHARACTER_RIG_MESSAGE_IK_ADDED = " IK handles added";
+    public static final String CHARACTER_RIG_MESSAGE_IK_REMOVED = " IK handles removed";
+    public static final String CHARACTER_RIG_MESSAGE_IK_NONE =
+            "Pick the bone a handle drags, two bones below a limb's root, that has none yet";
     public static final String CHARACTER_RIG_MESSAGE_REMOVED = "Removed ";
     public static final String CHARACTER_RIG_MESSAGE_MIRRORED = "Mirrored ";
     public static final String CHARACTER_RIG_MESSAGE_LOADED_BONE = "Only bones added since the editor started can be"
@@ -1129,6 +1184,22 @@ public class EditorSetting {
             "face", "eyes", "brows", "nose", "mouth", "jaw", "cheeks", "ears", "body" };
     public static final String FACE_EDITOR_NEW_CONTROL_NAME = "control_";
     public static final String FACE_EDITOR_COPY_SUFFIX = "_copy";
+
+    // Character Regions — the bones each focused modelling tab works on, with every bone below them, and the bone it
+    // frames with every bone below it; a vertex weighing on a region's bones at least this much is picked and
+    // selected there, a stroke reaching each in proportion; a framed region's sphere reaches this far past its
+    // farthest joint, or past this share of its frame bone's largest side, and at least this far
+    public static final String[] CHARACTER_REGION_HAND_BONES = { "hand_l", "hand_r" };
+    public static final String[] CHARACTER_REGION_FOOT_BONES = { "foot_l", "foot_r" };
+    public static final String[] CHARACTER_REGION_NO_BONES = {};
+    public static final String CHARACTER_REGION_HAND_FRAME = "hand_l";
+    public static final String CHARACTER_REGION_FOOT_FRAME = "foot_l";
+    public static final String CHARACTER_REGION_HAIR_FRAME = "head";
+    public static final float CHARACTER_REGION_PICK_SHARE = 0.5f;
+    public static final float CHARACTER_REGION_FRAME_MARGIN = 1.35f;
+    public static final float CHARACTER_REGION_FRAME_MIN_RADIUS = 0.08f;
+    public static final float CHARACTER_REGION_FRAME_SIZE_SHARE = 0.5f;
+    public static final String CHARACTER_REGION_STATUS_NO_PART = "This character wears no ";
 
     // Face Editor — the frame about the head, its middle a share of the head bone's height above its joint and its
     // radius a share of the head bone's largest side; a drag below this preview value first takes the control to its
@@ -1202,7 +1273,8 @@ public class EditorSetting {
     public static final String ANIMATION_EDITOR_KEY_PASTE_POSE = "paste_pose";
     public static final String ANIMATION_EDITOR_KEY_MIRROR_POSE = "mirror_pose";
 
-    // Animation Editor — timing, steps and mirroring
+    // Animation Editor — timing, steps and mirroring; an IK handle's end is held this far inside the chain's reach,
+    // and a bend or turn shorter than this is none
     public static final float ANIMATION_EDITOR_FRAME_RATE = 30f;
     public static final float ANIMATION_EDITOR_TIMELINE_MIN_SPAN = 1f;
     public static final float ANIMATION_EDITOR_KEY_EPSILON = 0.0005f;
@@ -1210,6 +1282,8 @@ public class EditorSetting {
     public static final float ANIMATION_EDITOR_POSITION_STEP = 0.005f;
     public static final float ANIMATION_EDITOR_SCALE_STEP = 0.05f;
     public static final float ANIMATION_EDITOR_SCALE_MIN = 0.01f;
+    public static final float ANIMATION_EDITOR_IK_REACH_MARGIN = 0.0005f;
+    public static final float ANIMATION_EDITOR_IK_POLE_EPSILON = 0.000001f;
     public static final String ANIMATION_EDITOR_LEFT_SUFFIX = "_l";
     public static final String ANIMATION_EDITOR_RIGHT_SUFFIX = "_r";
 
@@ -1575,6 +1649,7 @@ public class EditorSetting {
     public static final String TOOL_ROTATE = "Rotate";
     public static final String TOOL_SCALE = "Scale";
     public static final String TOOL_CUT = "Cut";
+    public static final String TOOL_IK = "IK Handle";
     public static final String TOOL_INFLATE = "Inflate";
     public static final String TOOL_PINCH = "Pinch";
     public static final String TOOL_FLATTEN = "Flatten";

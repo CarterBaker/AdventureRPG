@@ -3,16 +3,18 @@ package editor.runtime.charactereditor;
 public class CharacterEditorSetting {
 
     /*
-     * Constants used only by CharacterLookContext and the viewport systems
-     * it owns, which the Character Mesh Editor's tab creates as well — the
-     * toolbar menu the Character Appearance, Build and Equipment tabs share
-     * and the status entry both toolbars share, the size of the box shown for a held anchor, and the mesh modes'
-     * box selection, held shortcuts and the overlay their vertices and edges
-     * are drawn with. Its panels' rows are the docker windows'.
+     * Constants used only by CharacterLookContext, CharacterModelingContext
+     * and the viewport systems they own — the toolbar menu the Character
+     * Appearance, Build and Equipment tabs share, the one every modelling
+     * tab shares and the status entry both share, the size of the box shown
+     * for a held anchor, and the mesh modes' box selection, held shortcuts
+     * and the overlay their vertices and edges are drawn with. Its panels'
+     * rows are the docker windows'.
      */
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/CharacterEditor/Toolbar";
+    public static final String MENU_MODELING_TOOLBAR = "editor/CharacterMeshEditor/Toolbar";
     public static final int ENTRY_STATUS = 0;
 
     // Markers — the box shown for a held anchor, in blocks

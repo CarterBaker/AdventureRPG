@@ -2,6 +2,7 @@ package editor.runtime.charactereditor;
 
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
@@ -85,6 +86,11 @@ public abstract class CharacterLookContext extends ContextPackage
     @Override
     public boolean holdsMode(CharacterEditorMode mode) {
         return mode == getStartingMode();
+    }
+
+    @Override
+    public CharacterEditorRegion getRegion() {
+        return CharacterEditorRegion.WHOLE;
     }
 
     @Override

@@ -7,6 +7,7 @@ import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
+import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
@@ -36,6 +37,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
     private ViewCameraSystem viewCameraSystem;
     private CharacterEditorManager characterEditorManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
+    private CharacterEditorModeSystem characterEditorModeSystem;
     private ShortcutManager shortcutManager;
 
     // Shortcuts
@@ -79,6 +81,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
         this.viewCameraSystem = get(ViewCameraSystem.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
+        this.characterEditorModeSystem = get(CharacterEditorModeSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
     }
 
@@ -150,7 +153,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
             startDrag(tool, mouseX, mouseY);
     }
 
-    // The bone whose joint lies nearest the pointer within the pick radius, or none
+    // The tab region's bone whose joint lies nearest the pointer within the pick radius, or none
     private int pickJoint(float mouseX, float mouseY) {
 
         float radius = EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS;
@@ -158,6 +161,9 @@ public class CharacterEditorRigSystem extends SystemPackage {
         int picked = EngineSetting.INDEX_NOT_FOUND;
 
         for (int i = 0; i < characterEditorManager.getRigBoneCount(); i++) {
+
+            if (!characterEditorManager.isRigBoneInRegion(characterEditorModeSystem.getRegion(), i))
+                continue;
 
             CharacterPoseUtility.getTranslation(characterEditorManager.getRigBoneWorldMatrix(i), joint);
 

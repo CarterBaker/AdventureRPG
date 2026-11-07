@@ -2297,6 +2297,7 @@ public class EngineSetting {
     public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
     public static final float BONE_WEIGHT_SUM_EPSILON = 0.001f;
     public static final float DEFAULT_BONE_SIZE = 0.25f;
+    public static final int RIG_IK_CHAIN_BONES = 3;
     public static final float DEFAULT_ENTITY_SIZE = 1f;
     public static final float DEFAULT_ENTITY_WEIGHT = 1f;
     public static final float DEFAULT_EYE_LEVEL = 0.91f;

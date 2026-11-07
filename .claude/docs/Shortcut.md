@@ -18,7 +18,9 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   `ElementHitSystem.executeAction`, on the instance registered in the tool's context, inside its crash boundary. A
   shortcut and its button therefore always do the same thing.
 - **Scoped to the tool.** A file names the tool's context class. Its shortcuts work only while that tool's window —
-  or its tab's chrome — holds focus, and never while the name or export dialog is open.
+  or its tab's chrome — holds focus, and never while the name or export dialog is open. A file may name a base class
+  the tool extends (`CharacterMeshEditor.arpg` names `CharacterModelingContext`, so every modelling tab takes its
+  keys); a context's own file wins over its base's.
 - **Exact chords.** A pressed shortcut fires when its key goes down with exactly its modifiers held, so Ctrl+S never
   also runs S. Two pressed shortcuts of one tool on the same chord fail at load.
 - **Shared tool keys.** `assets/shortcuts/Tools.arpg` names `ToolsContext` and is marked `"shared": true`: its keys

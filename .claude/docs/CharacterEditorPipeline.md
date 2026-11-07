@@ -10,7 +10,7 @@ applies in full.
 ## Windows
 
 Every character tool is split into windows, the way Krita splits its dockers. A viewport tab holds the status bar and
-the viewport (the Character Mesh Editor also its mode toolbar); saving, reverting, copying, deleting, undoing and
+the viewport (the modelling tabs also their mode toolbar); saving, reverting, copying, deleting, undoing and
 redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`, `FILE_MENU_FACE`,
 `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened from the editor's Characters menu and restored by
 layouts like any other.
@@ -20,7 +20,10 @@ layouts like any other.
 | Character Appearance | `CharacterAppearanceContext` | the live preview in the Appearance mode |
 | Character Build | `CharacterBuildContext` | the live preview in the Build mode, its joints marked |
 | Character Equipment | `CharacterEquipmentContext` | the live preview in the Equipment mode, its anchors marked |
-| Character Mesh Editor | `CharacterMeshEditorContext` | modelling: the bind-pose preview, its overlay and the Mesh, Sculpt, Weights and Rig toolbar; a tool canvas |
+| Character Mesh Editor | `CharacterMeshEditorContext` | modelling the whole character: the bind-pose preview, its overlay and the Mesh, Sculpt, Weights and Rig toolbar; a tool canvas |
+| Hair Editor | `HairEditorContext` | modelling the worn hair, framed on the head, its card roots pinned (no Rig mode) |
+| Hand Editor | `HandEditorContext` | modelling the hands and finger bones, framed on the left hand |
+| Foot Editor | `FootEditorContext` | modelling the feet and toe bones, framed on the left foot |
 | Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
 | Face Editor | `FaceEditorContext` | the open character framed on its head, its face bones marked; the Character Face tool canvas |
 | Face Outliner | `FaceOutlinerContext` | `FaceEditorManager.buildListRows` |
@@ -72,6 +75,34 @@ layouts like any other.
   `EditorInputSystem.claim`; any other left press orbits and a right press pans. Cancel clicks
   (`CHARACTER_VIEW_BUTTON_CANCEL`) are claimed too. Test `ViewCameraSystem.isDragging`, never a held button, to stay
   out of a camera drag.
+
+## Modelling tabs and regions
+
+- **One modelling tab, four regions.** `CharacterModelingContext` (abstract) is every modelling tab; the Character Mesh
+  Editor, Hair Editor, Hand Editor and Foot Editor only name their `CharacterEditorRegion` (through
+  `CharacterEditorWindowProvider.getRegion`) and starting mode. Their keys are one file,
+  `shortcuts/CharacterMeshEditor.arpg`, naming the base class: `ShortcutManager` finds a context's pressed shortcuts on
+  its own class or the nearest class it extends.
+- **A region is data.** `CharacterEditorRegion` names the worn feature it edits (Hair: `FeatureSlot.HAIR`; the others
+  keep the body), the bones it holds with every bone below them (`hand_l`, `hand_r`; `foot_l`, `foot_r`), the bone it
+  frames (`CharacterRegionFrameSystem`: the box of every vertex that bone and those below it carry while the part is
+  open, its joints otherwise), whether its card roots are pinned and whether it takes the rig. A focused tab hands its
+  region to `CharacterEditorManager.setRegion`, which picks the region's part when the character wears it.
+- **One mask.** `CharacterRegionBranch` gives each vertex its share of the region (the weight it puts on the region's
+  bones; for pinned hair how far along its card it stands, root 0 to tip 1), cached per region until the mesh changes.
+  The mesh view's pick, box and brush (`isInRegion`, the brush's strength times the share), the overlay, the
+  proportional transform, sculpt mirroring, weight mirroring, the selection (`CharacterSelectionBranch.changed` drops
+  anything outside) and rig joint picking all read it; never test a region anywhere else. A tab whose region's part is
+  not worn edits nothing and says so.
+- **Digits are found, not placed by hand.** `CharacterDigitBranch.detect` sweeps the vertices a hand or foot bone
+  carries from the farthest in toward its joint, joining them face by face: every branch ending where it meets
+  another, two long ones (`CHARACTER_RIG_DIGIT_MIN_LENGTH`) meeting are both digits. Five are thumb (meeting the palm
+  nearest the joint), index, middle, ring and pinky by distance from it; a region with none apart takes one toe at
+  `CHARACTER_RIG_BALL_SHARE` of its length. Rig mode's **Rig Digits** lays a chain of `CHARACTER_RIG_DIGIT_SHARES`
+  joints on each (`CharacterRigBranch.addDigits`, named `<digit>_<n>_<side>`, a toe `toe_<side>`); Weights mode's
+  **Weigh Onto Digits** (`CharacterWeightBranch.weighDigits`) then hands each vertex of the hand or foot bone to them,
+  a digit's own vertices wholly, blended across each joint, the palm near each digit's root partly. Bones are
+  structure, so save the rig and restart between the two.
 
 ## Modes
 
@@ -128,7 +159,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   mesh modes edit, and untouched preview sliders sit where that gender starts them.
 - **Assets.** The race `races/Human` (entity `HumanoidEntity`) is male, its default, or female. `HumanoidMaleMesh` and
   `HumanoidFemaleMesh` share the rig with its
-  15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes, brows, ears), carry the same morphs (blinks, body
+  15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes, brows, ears), three joints on every finger and
+  the thumb of each hand and a toe at each foot's ball (laid and weighed by Rig Digits and Weigh Onto Digits), carry the same morphs (blinks, body
   sliders, `ear_point`) and draw their eyes from the eye zone's raw UVs, brows and lash line as their own strips.
   They are generated (catalogued); a rigged mesh may hold at most `RIGGED_MESH_VERT_LIMIT` corners. Each hand is
   one bone: hanging at the side its palm faces the thigh with the thumb forward (+z), so `hand_l` is a left hand at
@@ -140,10 +172,21 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   there, so it can go bald under a race whose default gives hair; offered only while the default wears something),
   then every feature that fits. `AppearanceGenderStruct.namesFeature` tells a slot named none from one left to the
   race; read a preset's feature only through it (`AppearanceData.getStartingFeature`).
+- **IK handles are rig data.** A rig's `ik` lists handles (`RigIkChainStruct`): three `bones`, root to end, each the
+  child of the one before, and the `pole` their middle joint bends toward in the character's space (`RigBuilder`
+  refuses anything else). Rig mode's **Add IK Handle** and **Remove IK Handle** (`CharacterRigBranch.addIkChain` /
+  `removeIkChain`) work on the selected bone as the end and on its twin across the body; a new handle's pole is the way
+  its middle joint stands off the line from root to end, or, for a straight chain, across it from the front (a
+  finger's knuckle away from the palm), mirrored on the right. Edit a pole in the Properties tab (Rigs). The Animation
+  Editor's **IK Handle** tool (`EditorTool.IK`, `AnimationEditorPoseSystem.applyIk`) picks only handle ends, carries
+  the end across the plane facing the camera and solves the two bones analytically, the middle joint bent on the
+  pole's side, keying root and middle together through `AnimationEditorManager.beginChainPose` /
+  `writeChainPose`, one undo step.
 - **Hair is cards.** A hair mesh is a scalp cap and layered cards two quads wide, textured with the strand tile
   `characters/standard/Hair` (its alpha cuts the locks out); each card's raw UV runs across it in u and from root
-  (0) to tip (1) in v. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`),
-  so keep v running root to tip on any card you add, and keep the root at the scalp.
+  (0) to tip (1) in v. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`:
+  slow gusts, a phase per lock read smoothly off where it hangs, the tip trailing its root, a flutter across the wind
+  and a lift on gusts), so keep v running root to tip on any card you add, and keep the root at the scalp.
 - **Toon lighting.** Characters write a smooth normal (`GBufferNormal.glsl`); the lighting pass lights those pixels
   in toon tones with a rim (`ToonLighting.glsl`), and the editor viewport's character shader uses the same function.
 

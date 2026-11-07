@@ -169,7 +169,8 @@ class CharacterSculptBranch extends BranchPackage {
                 nearest = Math.min(nearest, dx * dx + dy * dy + dz * dz);
             }
 
-            float factor = CharacterMeshUtility.falloff((float) Math.sqrt(nearest), radius);
+            float factor = CharacterMeshUtility.falloff((float) Math.sqrt(nearest), radius)
+                    * characterEditorManager.getRegionShare(document, characterEditorManager.getRegion(), i);
 
             if (factor > 0f)
                 holdVertex(mesh, i, factor);

@@ -121,6 +121,10 @@ public class Vector3 extends EngineUtility {
 
     // Normalization \\
 
+    public float dot(Vector3 other) {
+        return x * other.x + y * other.y + z * other.z;
+    }
+
     public float length() {
         return (float) Math.sqrt(x * x + y * y + z * z);
     }

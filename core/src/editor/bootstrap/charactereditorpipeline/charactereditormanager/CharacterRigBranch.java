@@ -2,9 +2,12 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import java.util.function.Consumer;
 
+import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterDigitStruct;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
@@ -48,6 +51,7 @@ class CharacterRigBranch extends BranchPackage {
     private InfoManager infoManager;
     private RigManager rigManager;
     private CharacterEditorManager characterEditorManager;
+    private CharacterDigitBranch characterDigitBranch;
 
     // Rig
     private RigHandle rigHandle;
@@ -118,6 +122,7 @@ class CharacterRigBranch extends BranchPackage {
         this.infoManager = get(InfoManager.class);
         this.rigManager = get(RigManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
+        this.characterDigitBranch = get(CharacterDigitBranch.class);
     }
 
     // Rig \\
@@ -258,6 +263,11 @@ class CharacterRigBranch extends BranchPackage {
 
     // One change to the rig's bones, recorded for undo first unless a gesture already holds the rig as it stood
     private void edit(Consumer<ArpgArrayStruct> editor) {
+        editRig(rig -> editor.accept(rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES)));
+    }
+
+    // One change to the rig as a whole, recorded for undo first
+    private void editRig(Consumer<ArpgObjectStruct> editor) {
 
         ArpgObjectStruct rigArpg = getRigArpg();
 
@@ -269,7 +279,7 @@ class CharacterRigBranch extends BranchPackage {
                 EditorSetting.INFO_SCHEMA_RIGS,
                 rigHandle.getRigName(),
                 rigHandle.getRigName(),
-                rig -> editor.accept(rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES)));
+                editor);
     }
 
     private void replace(ArpgObjectStruct snapshot) {
@@ -392,6 +402,235 @@ class CharacterRigBranch extends BranchPackage {
         edit(bones -> bones.add(boneArpg));
         this.selectedBone = findBone(boneName);
         characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_ADDED + boneName);
+    }
+
+    // A chain of bones on every digit found below each of a region's bones in a body mesh, the digits already rigged
+    // left as they are, all in one edit
+    void addDigits(RiggedMeshStruct mesh, CharacterEditorRegion region) {
+
+        ObjectArrayList<ArpgObjectStruct> added = new ObjectArrayList<>();
+        ObjectArrayList<CharacterDigitStruct> digits = new ObjectArrayList<>();
+
+        for (String rootName : region.getRootBones()) {
+
+            int root = findBone(rootName);
+
+            if (root == EngineSetting.INDEX_NOT_FOUND || !mesh.getRigHandle().hasBone(rootName))
+                continue;
+
+            characterDigitBranch.detect(mesh, mesh.getRigHandle().getBoneIndex(rootName), digits);
+            matrixScratchA.set(worldMatrices.get(root)).inverse();
+
+            String side = CharacterMeshUtility.toSideSuffix(rootName);
+
+            for (int d = 0; d < digits.size(); d++)
+                layChain(digits.get(d), rootName, side, added);
+        }
+
+        if (added.isEmpty()) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NO_DIGITS);
+            return;
+        }
+
+        edit(bones -> {
+            for (int i = 0; i < added.size(); i++)
+                bones.add(added.get(i));
+        });
+        characterEditorManager.setStatusMessage(added.size() + EditorSetting.CHARACTER_RIG_MESSAGE_DIGITS);
+    }
+
+    // One digit's bones, each placed from the last in the root's frame, sized to the segment it covers
+    private void layChain(
+            CharacterDigitStruct digit,
+            String rootName,
+            String side,
+            ObjectArrayList<ArpgObjectStruct> added) {
+
+        int jointCount = digit.getJointCount();
+
+        if (findBone(CharacterMeshUtility.toDigitBoneName(digit.getName(), 0, jointCount, side))
+                != EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        Vector3 previous = new Vector3();
+        Vector3 local = new Vector3();
+        String parentName = rootName;
+        float thickness = Math.max(digit.getThickness(), EditorSetting.CHARACTER_RIG_SIZE_MIN);
+
+        for (int j = 0; j < jointCount; j++) {
+
+            Vector3 joint = digit.getJoint(j);
+            Vector3 end = digit.getSegmentEnd(j);
+            String boneName = CharacterMeshUtility.toDigitBoneName(digit.getName(), j, jointCount, side);
+            float length = new Vector3(end).subtract(joint).length();
+
+            CharacterPoseUtility.transformPoint(matrixScratchA, joint.x, joint.y, joint.z, local);
+
+            ArpgObjectStruct boneArpg = new ArpgObjectStruct();
+
+            boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, boneName);
+            boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_PARENT, parentName);
+            writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, new Vector3(local).subtract(previous));
+            writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_SIZE, vectorScratch.set(
+                    thickness, Math.max(length, EditorSetting.CHARACTER_RIG_SIZE_MIN), thickness));
+            added.add(boneArpg);
+
+            previous.set(local);
+            parentName = boneName;
+        }
+    }
+
+    // IK \\
+
+    // An IK handle ending at a bone, its root two bones up, and one ending at its twin across the body; none where
+    // a bone already ends one or has no two bones above it
+    void addIkChain(int boneIndex) {
+
+        ObjectArrayList<ArpgObjectStruct> added = new ObjectArrayList<>();
+
+        layIkChain(boneIndex, added);
+        layIkChain(findTwin(boneIndex), added);
+
+        if (added.isEmpty()) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_IK_NONE);
+            return;
+        }
+
+        editRig(rig -> {
+
+            ArpgArrayStruct chains = CharacterViewUtility.requireArray(rig, EditorSetting.CHARACTER_RIG_FIELD_IK);
+
+            for (int i = 0; i < added.size(); i++)
+                chains.add(added.get(i));
+        });
+        characterEditorManager.setStatusMessage(added.size() + EditorSetting.CHARACTER_RIG_MESSAGE_IK_ADDED);
+    }
+
+    // The IK handles ending at a bone and at its twin removed
+    void removeIkChain(int boneIndex) {
+
+        int found = countIkChains(boneIndex) + countIkChains(findTwin(boneIndex));
+
+        if (found == 0) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_IK_NONE);
+            return;
+        }
+
+        String endName = boneNames.get(boneIndex);
+        int twin = findTwin(boneIndex);
+        String twinName = twin != EngineSetting.INDEX_NOT_FOUND ? boneNames.get(twin) : endName;
+
+        editRig(rig -> {
+
+            ArpgArrayStruct chains = rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_IK);
+
+            for (int i = chains.size() - 1; i >= 0; i--) {
+
+                String end = readIkEnd(chains.get(i).getAsObject());
+
+                if (end.equals(endName) || end.equals(twinName))
+                    chains.remove(i);
+            }
+        });
+        characterEditorManager.setStatusMessage(found + EditorSetting.CHARACTER_RIG_MESSAGE_IK_REMOVED);
+    }
+
+    private void layIkChain(int end, ObjectArrayList<ArpgObjectStruct> added) {
+
+        if (end == EngineSetting.INDEX_NOT_FOUND || countIkChains(end) > 0)
+            return;
+
+        int middle = parents.getInt(end);
+        int root = middle != EngineSetting.INDEX_NOT_FOUND ? parents.getInt(middle) : EngineSetting.INDEX_NOT_FOUND;
+
+        if (root == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        for (int i = 0; i < added.size(); i++)
+            if (readIkEnd(added.get(i)).equals(boneNames.get(end)))
+                return;
+
+        ArpgObjectStruct chainArpg = new ArpgObjectStruct();
+        ArpgArrayStruct bones = new ArpgArrayStruct();
+        Vector3 pole = resolvePole(root, middle, end);
+        float scale = EditorSetting.CHARACTER_RIG_IK_POLE_SCALE;
+
+        bones.add(boneNames.get(root));
+        bones.add(boneNames.get(middle));
+        bones.add(boneNames.get(end));
+        chainArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME,
+                boneNames.get(end) + EditorSetting.CHARACTER_RIG_IK_SUFFIX);
+        chainArpg.add(EditorSetting.CHARACTER_RIG_FIELD_BONES, bones);
+        writeVector(chainArpg, EditorSetting.CHARACTER_RIG_FIELD_POLE, pole.set(
+                Math.round(pole.x * scale) / scale,
+                Math.round(pole.y * scale) / scale,
+                Math.round(pole.z * scale) / scale));
+        added.add(chainArpg);
+    }
+
+    // The way a chain's middle joint stands off the line from its root to its end, or where it stands straight, out
+    // across the chain from the front, a finger's knuckle away from the palm, mirrored on the right
+    private Vector3 resolvePole(int root, int middle, int end) {
+
+        Vector3 a = new Vector3();
+        Vector3 b = new Vector3();
+        Vector3 c = new Vector3();
+
+        CharacterPoseUtility.getTranslation(worldMatrices.get(root), a);
+        CharacterPoseUtility.getTranslation(worldMatrices.get(middle), b);
+        CharacterPoseUtility.getTranslation(worldMatrices.get(end), c);
+
+        Vector3 line = new Vector3(c).subtract(a);
+        float lengthSquared = line.lengthSquared();
+        float along = lengthSquared > 0f ? new Vector3(b).subtract(a).dot(line) / lengthSquared : 0f;
+        Vector3 off = new Vector3(b).subtract(new Vector3(line).multiply(along).add(a));
+
+        if (off.length() >= EditorSetting.CHARACTER_RIG_IK_POLE_MIN)
+            return off.divide(off.length());
+
+        Vector3 axis = lengthSquared > 0f ? line.divide((float) Math.sqrt(lengthSquared)) : line.set(0f, -1f, 0f);
+        Vector3 pole = new Vector3(-axis.y, axis.x, 0f);
+
+        String side = CharacterMeshUtility.toSideSuffix(boneNames.get(end));
+
+        if (side.equals(EditorSetting.CHARACTER_MESH_BONE_SUFFIX_RIGHT))
+            pole.x = -pole.x;
+
+        float length = pole.length();
+        return length > 0f ? pole.divide(length) : pole.set(0f, 0f, 1f);
+    }
+
+    private int countIkChains(int end) {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        if (end == EngineSetting.INDEX_NOT_FOUND || rigArpg == null
+                || !ArpgUtility.hasArray(rigArpg, EditorSetting.CHARACTER_RIG_FIELD_IK))
+            return 0;
+
+        ArpgArrayStruct chains = rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_IK);
+        int count = 0;
+
+        for (int i = 0; i < chains.size(); i++)
+            if (readIkEnd(chains.get(i).getAsObject()).equals(boneNames.get(end)))
+                count++;
+
+        return count;
+    }
+
+    private String readIkEnd(ArpgObjectStruct chainArpg) {
+
+        ArpgArrayStruct bones = chainArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+        return bones.get(bones.size() - 1).getAsString();
+    }
+
+    private int findTwin(int boneIndex) {
+
+        if (boneIndex == EngineSetting.INDEX_NOT_FOUND)
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        int twin = findBone(CharacterMeshUtility.toMirrorBoneName(boneNames.get(boneIndex)));
+        return twin != boneIndex ? twin : EngineSetting.INDEX_NOT_FOUND;
     }
 
     // The first free name of the editor's new bones, carrying the parent's side so the bone mirrors with it

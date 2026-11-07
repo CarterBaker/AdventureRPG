@@ -62,7 +62,10 @@ class CharacterRigPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_RIG_KEY_UNDO,
                     EditorSetting.CHARACTER_RIG_KEY_REDO,
                     EditorSetting.CHARACTER_RIG_KEY_SAVE,
-                    EditorSetting.CHARACTER_RIG_KEY_REVERT -> true;
+                    EditorSetting.CHARACTER_RIG_KEY_REVERT,
+                    EditorSetting.CHARACTER_RIG_KEY_DIGITS,
+                    EditorSetting.CHARACTER_RIG_KEY_IK_ADD,
+                    EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE -> true;
             default -> false;
         };
     }
@@ -195,6 +198,9 @@ class CharacterRigPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_RIG_KEY_REDO -> characterEditorManager.redo();
             case EditorSetting.CHARACTER_RIG_KEY_SAVE -> characterEditorManager.saveRig();
             case EditorSetting.CHARACTER_RIG_KEY_REVERT -> characterEditorManager.revertRig();
+            case EditorSetting.CHARACTER_RIG_KEY_DIGITS -> characterEditorManager.rigDigits();
+            case EditorSetting.CHARACTER_RIG_KEY_IK_ADD -> characterRigBranch.addIkChain(boneIndex);
+            case EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE -> characterRigBranch.removeIkChain(boneIndex);
             default -> {
             }
         }

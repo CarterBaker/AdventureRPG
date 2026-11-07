@@ -57,4 +57,16 @@ public class RigHandle extends HandlePackage {
     public Matrix4 getBindWorldInverseMatrix(int boneIndex) {
         return rigData.getBindWorldInverseMatrix(boneIndex);
     }
+
+    public int getIkChainCount() {
+        return rigData.getIkChainCount();
+    }
+
+    public RigIkChainStruct getIkChain(int chainIndex) {
+        return rigData.getIkChain(chainIndex);
+    }
+
+    public RigIkChainStruct findIkChainByEnd(int boneIndex) {
+        return rigData.findIkChainByEnd(boneIndex);
+    }
 }

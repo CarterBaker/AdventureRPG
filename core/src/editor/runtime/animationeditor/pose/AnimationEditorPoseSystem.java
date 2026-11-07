@@ -2,6 +2,7 @@ package editor.runtime.animationeditor.pose;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
+import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
@@ -34,8 +35,11 @@ public class AnimationEditorPoseSystem extends SystemPackage {
      * move carries the joint across the plane facing the camera, or along a
      * held axis, into its parent's space; a scale grows the bone by how far
      * the pointer travels from the joint, on every axis or the one held.
-     * Ctrl snaps. A drag is one undo step: letting go keeps it, a right
-     * click or Escape puts the clip back.
+     * Ctrl snaps. With IK Handle only the ends of the rig's IK handles are
+     * picked: the end follows the pointer across the plane facing the camera
+     * and the root and middle bones turn to reach it, the middle joint bent
+     * toward the handle's pole, both keyed together. A drag is one undo
+     * step: letting go keeps it, a right click or Escape puts the clip back.
      */
 
     // Internal
@@ -67,6 +71,17 @@ public class AnimationEditorPoseSystem extends SystemPackage {
     private float lastMouseX;
     private float lastMouseY;
 
+    // IK — the handle dragged and its chain as it stood when the drag began
+    private RigIkChainStruct ikChain;
+    private float[] middlePose;
+    private Vector3 ikRoot;
+    private Vector3 ikMiddle;
+    private Vector3 ikEnd;
+    private Vector3 middleStartRotation;
+    private Vector3 middleBindRotation;
+    private Matrix4 rootWorldRotation;
+    private Matrix4 middleStartLocal;
+
     // Scratch
     private Vector2 screenScratch;
     private Vector3 rayOrigin;
@@ -77,6 +92,12 @@ public class AnimationEditorPoseSystem extends SystemPackage {
     private Matrix4 turn;
     private Matrix4 rotated;
     private Matrix4 matrixScratch;
+    private Matrix4 rootTurn;
+    private Matrix4 middleTurn;
+    private Vector3 reached;
+    private Vector3 bend;
+    private Vector3 vectorA;
+    private Vector3 vectorB;
 
     // Base \\
 
@@ -96,6 +117,16 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         this.parentInverse = new Matrix4();
         this.startLocal = new Matrix4();
 
+        // IK
+        this.middlePose = new float[AnimationEditorChannel.getPoseLength()];
+        this.ikRoot = new Vector3();
+        this.ikMiddle = new Vector3();
+        this.ikEnd = new Vector3();
+        this.middleStartRotation = new Vector3();
+        this.middleBindRotation = new Vector3();
+        this.rootWorldRotation = new Matrix4();
+        this.middleStartLocal = new Matrix4();
+
         // Scratch
         this.screenScratch = new Vector2();
         this.rayOrigin = new Vector3();
@@ -106,6 +137,12 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         this.turn = new Matrix4();
         this.rotated = new Matrix4();
         this.matrixScratch = new Matrix4();
+        this.rootTurn = new Matrix4();
+        this.middleTurn = new Matrix4();
+        this.reached = new Vector3();
+        this.bend = new Vector3();
+        this.vectorA = new Vector3();
+        this.vectorB = new Vector3();
     }
 
     @Override
@@ -160,7 +197,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
     private void press(float mouseX, float mouseY) {
 
         EditorTool tool = animationEditorManager.getPoseTool();
-        int picked = pickJoint(mouseX, mouseY);
+        int picked = pickJoint(mouseX, mouseY, tool == EditorTool.IK);
 
         if (picked == EngineSetting.INDEX_NOT_FOUND)
             return;
@@ -168,12 +205,14 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
         animationEditorManager.selectBone(picked);
 
-        if (tool != EditorTool.SELECT)
+        if (tool == EditorTool.IK)
+            startIkDrag(picked, mouseX, mouseY);
+        else if (tool != EditorTool.SELECT)
             startDrag(tool, mouseX, mouseY);
     }
 
-    // The bone whose posed joint lies nearest the pointer within the pick radius, or none
-    private int pickJoint(float mouseX, float mouseY) {
+    // The bone whose posed joint lies nearest the pointer within the pick radius, or none; only handle ends for IK
+    private int pickJoint(float mouseX, float mouseY, boolean handleEnds) {
 
         AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
         WindowInstance window = context.getWindow();
@@ -182,6 +221,9 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         int picked = EngineSetting.INDEX_NOT_FOUND;
 
         for (int i = 0; i < state.getRigHandle().getBoneCount(); i++) {
+
+            if (handleEnds && state.getRigHandle().findIkChainByEnd(i) == null)
+                continue;
 
             CharacterPoseUtility.getTranslation(state.getWorldMatrix(i), hitScratch);
 
@@ -289,6 +331,11 @@ public class AnimationEditorPoseSystem extends SystemPackage {
             case ROTATE -> applyRotate(mouseX, mouseY, snap);
             case MOVE -> applyMove(mouseX, mouseY, snap);
             case SCALE -> applyScale(mouseX, mouseY, snap);
+            case IK -> {
+                applyIk(mouseX, mouseY);
+                animationEditorManager.writeChainPose(ikChain, pose, middlePose);
+                return;
+            }
             default -> {
                 return;
             }
@@ -380,6 +427,132 @@ public class AnimationEditorPoseSystem extends SystemPackage {
 
             pose[index] = Math.max(EditorSetting.ANIMATION_EDITOR_SCALE_MIN, scaled);
         }
+    }
+
+    // IK \\
+
+    // Holds a handle's chain as it stands: its three joints, the root's frame and both turning bones' own turns
+    private void startIkDrag(int endBone, float mouseX, float mouseY) {
+
+        AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
+        RigIkChainStruct chain = state.getRigHandle().findIkChainByEnd(endBone);
+
+        if (chain == null || !animationEditorManager.beginChainPose(chain))
+            return;
+
+        RigBoneStruct root = state.getRigHandle().getBone(chain.getRootBone());
+        RigBoneStruct middle = state.getRigHandle().getBone(chain.getMiddleBone());
+
+        System.arraycopy(animationEditorManager.getChainPoseStart(0), 0, pose, 0, pose.length);
+        System.arraycopy(animationEditorManager.getChainPoseStart(1), 0, middlePose, 0, middlePose.length);
+        CharacterPoseUtility.getTranslation(state.getWorldMatrix(chain.getRootBone()), ikRoot);
+        CharacterPoseUtility.getTranslation(state.getWorldMatrix(chain.getMiddleBone()), ikMiddle);
+        CharacterPoseUtility.getTranslation(state.getWorldMatrix(chain.getEndBone()), ikEnd);
+        CharacterPoseUtility.extractRotation(state.getWorldMatrix(chain.getRootBone()), rootWorldRotation);
+        holdParent(state, root);
+
+        bindRotation.set(root.getRotation());
+        startRotation.set(bindRotation).add(readRotation(pose, eulerScratch));
+        CharacterPoseUtility.toRotation(startRotation, startLocal);
+        middleBindRotation.set(middle.getRotation());
+        middleStartRotation.set(middleBindRotation).add(readRotation(middlePose, eulerScratch));
+        CharacterPoseUtility.toRotation(middleStartRotation, middleStartLocal);
+
+        joint.set(ikEnd);
+        resolveHit(mouseX, mouseY, startHit);
+
+        this.ikChain = chain;
+        this.dragTool = EditorTool.IK;
+        this.axisLock = EngineSetting.INDEX_NOT_FOUND;
+        this.lastMouseX = mouseX;
+        this.lastMouseY = mouseY;
+    }
+
+    // The end carried to the pointer and the chain bent to reach it: the root turned so the middle joint stands where
+    // the two bones' lengths meet on the side the pole names, then the middle turned to point the end at the target
+    private void applyIk(float mouseX, float mouseY) {
+
+        resolveHit(mouseX, mouseY, hitScratch);
+        hitScratch.subtract(startHit).add(ikEnd);
+
+        float upper = vectorA.set(ikMiddle).subtract(ikRoot).length();
+        float lower = vectorB.set(ikEnd).subtract(ikMiddle).length();
+        Vector3 toTarget = reached.set(hitScratch).subtract(ikRoot);
+        float distance = toTarget.length();
+
+        if (upper <= 0f || lower <= 0f || distance <= 0f)
+            return;
+
+        toTarget.divide(distance);
+        distance = Math.clamp(distance,
+                Math.abs(upper - lower) + EditorSetting.ANIMATION_EDITOR_IK_REACH_MARGIN,
+                upper + lower - EditorSetting.ANIMATION_EDITOR_IK_REACH_MARGIN);
+
+        float cos = Math.clamp(
+                (upper * upper + distance * distance - lower * lower) / (2f * upper * distance), -1f, 1f);
+        float sin = (float) Math.sqrt(1f - cos * cos);
+        Vector3 pole = ikChain.getPole();
+
+        bend.set(pole).subtract(toTarget.x * pole.dot(toTarget), toTarget.y * pole.dot(toTarget),
+                toTarget.z * pole.dot(toTarget));
+
+        if (bend.length() <= EditorSetting.ANIMATION_EDITOR_IK_POLE_EPSILON)
+            bend.set(vectorA).subtract(toTarget.x * vectorA.dot(toTarget), toTarget.y * vectorA.dot(toTarget),
+                    toTarget.z * vectorA.dot(toTarget));
+
+        if (bend.length() <= EditorSetting.ANIMATION_EDITOR_IK_POLE_EPSILON)
+            return;
+
+        bend.divide(bend.length());
+
+        hitScratch.set(toTarget).multiply(upper * cos).add(bend.x * upper * sin, bend.y * upper * sin,
+                bend.z * upper * sin);
+        resolveTurn(vectorA, hitScratch, rootTurn);
+
+        CharacterPoseUtility.transformDirection(rootTurn, vectorB.x, vectorB.y, vectorB.z, eulerScratch);
+        reached.set(toTarget).multiply(distance).subtract(hitScratch);
+        resolveTurn(eulerScratch, reached, middleTurn);
+
+        CharacterPoseUtility.applyWorldTurn(parentRotation, rootTurn, startLocal, rotated, matrixScratch);
+        CharacterPoseUtility.toEuler(rotated, startRotation, eulerScratch);
+        eulerScratch.subtract(bindRotation);
+        writeChannel(AnimationEditorChannel.ROTATION, eulerScratch);
+
+        matrixScratch.set(rootTurn).inverse();
+        turn.set(matrixScratch).multiply(middleTurn).multiply(rootTurn);
+        CharacterPoseUtility.applyWorldTurn(rootWorldRotation, turn, middleStartLocal, rotated, matrixScratch);
+        CharacterPoseUtility.toEuler(rotated, middleStartRotation, eulerScratch);
+        eulerScratch.subtract(middleBindRotation);
+        middlePose[AnimationEditorChannel.ROTATION.toPoseIndex(0)] = eulerScratch.x;
+        middlePose[AnimationEditorChannel.ROTATION.toPoseIndex(1)] = eulerScratch.y;
+        middlePose[AnimationEditorChannel.ROTATION.toPoseIndex(2)] = eulerScratch.z;
+    }
+
+    // The least turn carrying one direction onto another
+    private void resolveTurn(Vector3 from, Vector3 to, Matrix4 out) {
+
+        float fromLength = from.length();
+        float toLength = to.length();
+
+        axis.set(from.y * to.z - from.z * to.y, from.z * to.x - from.x * to.z, from.x * to.y - from.y * to.x);
+
+        float sin = axis.length();
+
+        if (fromLength <= 0f || toLength <= 0f || sin <= EditorSetting.ANIMATION_EDITOR_IK_POLE_EPSILON) {
+            out.set(1f);
+            return;
+        }
+
+        float angle = (float) Math.atan2(sin, from.dot(to));
+
+        CharacterPoseUtility.toAxisRotation(axis.divide(sin), angle, out);
+    }
+
+    private Vector3 readRotation(float[] channels, Vector3 out) {
+        return out.set(
+                channels[AnimationEditorChannel.ROTATION.toPoseIndex(0)],
+                channels[AnimationEditorChannel.ROTATION.toPoseIndex(1)],
+                channels[AnimationEditorChannel.ROTATION.toPoseIndex(2)]);
     }
 
     // Utility \\

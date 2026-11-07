@@ -9,9 +9,9 @@ public class RigData extends DataPackage {
 
     /*
      * Immutable bone hierarchy for one rig under its registered name, stored
-     * parent before child so poses evaluate in one pass. Bind-pose world
-     * matrices and their inverses are baked once per rig whenever it is
-     * built.
+     * parent before child so poses evaluate in one pass, with the IK handles
+     * its tools pose limbs and digits through. Bind-pose world matrices and
+     * their inverses are baked once per rig whenever it is built.
      */
 
     // Identity
@@ -21,13 +21,20 @@ public class RigData extends DataPackage {
     private final RigBoneStruct[] bones;
     private final Object2IntOpenHashMap<String> boneName2Index;
 
+    // IK
+    private final RigIkChainStruct[] ikChains;
+
     // Bind Pose — baked
     private final Matrix4[] bindWorldMatrices;
     private final Matrix4[] bindWorldInverseMatrices;
 
     // Constructor \\
 
-    public RigData(String rigName, RigBoneStruct[] bones, Object2IntOpenHashMap<String> boneName2Index) {
+    public RigData(
+            String rigName,
+            RigBoneStruct[] bones,
+            Object2IntOpenHashMap<String> boneName2Index,
+            RigIkChainStruct[] ikChains) {
 
         // Identity
         this.rigName = rigName;
@@ -35,6 +42,9 @@ public class RigData extends DataPackage {
         // Bones
         this.bones = bones;
         this.boneName2Index = boneName2Index;
+
+        // IK
+        this.ikChains = ikChains;
 
         // Bind Pose — baked
         this.bindWorldMatrices = new Matrix4[bones.length];
@@ -117,5 +127,23 @@ public class RigData extends DataPackage {
 
     public Matrix4 getBindWorldInverseMatrix(int boneIndex) {
         return bindWorldInverseMatrices[boneIndex];
+    }
+
+    public int getIkChainCount() {
+        return ikChains.length;
+    }
+
+    public RigIkChainStruct getIkChain(int chainIndex) {
+        return ikChains[chainIndex];
+    }
+
+    // The IK handle whose end is a bone, null when none ends there
+    public RigIkChainStruct findIkChainByEnd(int boneIndex) {
+
+        for (RigIkChainStruct chain : ikChains)
+            if (chain.getEndBone() == boneIndex)
+                return chain;
+
+        return null;
     }
 }

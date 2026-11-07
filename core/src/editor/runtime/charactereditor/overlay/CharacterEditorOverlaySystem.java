@@ -242,7 +242,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                 * EngineSetting.QUAD_VERTEX_COUNT * CharacterEditorSetting.OVERLAY_VERTEX_FLOATS);
 
         for (int v = 0; v < mesh.getVertexCount(); v++)
-            appendVertexDot(document, v, weights);
+            if (characterEditorMeshViewSystem.isInRegion(v))
+                appendVertexDot(document, v, weights);
 
         appendEdges(document, weights);
     }
@@ -292,7 +293,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                 int a = mesh.getFaceVertex(f, c);
                 int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
 
-                if (a == b || !edges.add((long) Math.min(a, b) << Integer.SIZE | Math.max(a, b)))
+                if (a == b || !characterEditorMeshViewSystem.isInRegion(a)
+                        || !characterEditorMeshViewSystem.isInRegion(b)
+                        || !edges.add((long) Math.min(a, b) << Integer.SIZE | Math.max(a, b)))
                     continue;
 
                 setColor(!weights && document.isSelected(a) && document.isSelected(b)

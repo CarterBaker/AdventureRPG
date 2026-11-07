@@ -3,10 +3,12 @@ package editor.runtime.charactereditor.preview;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.EditorSetting;
@@ -154,10 +156,12 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     private void pushJointMarkers() {
 
-        int boneCount = characterViewPoseSystem.getRaceData().getRigHandle().getBoneCount();
+        RigHandle rigHandle = characterViewPoseSystem.getRaceData().getRigHandle();
+        CharacterEditorRegion region = characterEditorModeSystem.getRegion();
 
-        for (int i = 0; i < boneCount; i++)
-            characterViewRenderSystem.addJointMarker(i, i == characterEditorManager.getSelectedBoneIndex());
+        for (int i = 0; i < rigHandle.getBoneCount(); i++)
+            if (characterEditorManager.isBoneInRegion(region, rigHandle, i))
+                characterViewRenderSystem.addJointMarker(i, i == characterEditorManager.getSelectedBoneIndex());
     }
 
     // Every bone of the rig as it is being edited, at its bind joint, and the selected one's size about its joint
@@ -167,11 +171,12 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         int selected = characterEditorManager.getSelectedRigBoneIndex();
 
         for (int i = 0; i < boneCount; i++)
-            characterViewRenderSystem.addWorldMarker(
-                    characterEditorManager.getRigBoneWorldMatrix(i),
-                    i == selected ? EditorSetting.CHARACTER_VIEW_JOINT_SELECTED_SIZE
-                            : EditorSetting.CHARACTER_VIEW_JOINT_SIZE,
-                    i == selected);
+            if (characterEditorManager.isRigBoneInRegion(characterEditorModeSystem.getRegion(), i))
+                characterViewRenderSystem.addWorldMarker(
+                        characterEditorManager.getRigBoneWorldMatrix(i),
+                        i == selected ? EditorSetting.CHARACTER_VIEW_JOINT_SELECTED_SIZE
+                                : EditorSetting.CHARACTER_VIEW_JOINT_SIZE,
+                        i == selected);
 
         if (selected != EngineSetting.INDEX_NOT_FOUND)
             characterViewRenderSystem.addWorldBoxMarker(

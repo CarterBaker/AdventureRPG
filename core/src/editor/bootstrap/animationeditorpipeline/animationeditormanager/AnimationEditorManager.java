@@ -2,6 +2,7 @@ package editor.bootstrap.animationeditorpipeline.animationeditormanager;
 
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
@@ -64,6 +65,7 @@ public class AnimationEditorManager extends ManagerPackage {
 
     // Pose
     private float[] poseStart;
+    private float[][] chainPoseStarts;
     private boolean posing;
     private ObjectArrayList<String> poseBoneNames;
     private ObjectArrayList<float[]> posePoses;
@@ -92,6 +94,7 @@ public class AnimationEditorManager extends ManagerPackage {
         // Pose
         this.poseBoneNames = new ObjectArrayList<>();
         this.posePoses = new ObjectArrayList<>();
+        this.chainPoseStarts = new float[2][];
     }
 
     @Override
@@ -473,6 +476,42 @@ public class AnimationEditorManager extends ManagerPackage {
         this.posing = true;
 
         return true;
+    }
+
+    // Opens a drag posing an IK handle's root and middle bones at the playhead from how they stand there
+    public boolean beginChainPose(RigIkChainStruct chain) {
+
+        if (getToolCanvas() == null || posing)
+            return false;
+
+        pause();
+        animationEditBranch.beginGesture(activeDocument);
+
+        chainPoseStarts[0] = animationPropertyBranch.samplePose(activeDocument, chain.getRootBone());
+        chainPoseStarts[1] = animationPropertyBranch.samplePose(activeDocument, chain.getMiddleBone());
+        this.posing = true;
+
+        return true;
+    }
+
+    // An IK handle's root and middle bones keyed together at the playhead, one pose each
+    public void writeChainPose(RigIkChainStruct chain, float[] rootPose, float[] middlePose) {
+
+        if (!posing)
+            return;
+
+        poseBoneNames.clear();
+        poseBoneNames.add(activeDocument.getRigHandle().getBone(chain.getRootBone()).getName());
+        poseBoneNames.add(activeDocument.getRigHandle().getBone(chain.getMiddleBone()).getName());
+        posePoses.clear();
+        posePoses.add(rootPose);
+        posePoses.add(middlePose);
+        animationEditBranch.writeKeys(activeDocument, poseBoneNames, getTime(), posePoses);
+    }
+
+    // A handle's root (0) or middle (1) bone's pose at the playhead when its drag began
+    public float[] getChainPoseStart(int link) {
+        return chainPoseStarts[link];
     }
 
     // The selected bone keyed at the playhead holding a pose of every channel
