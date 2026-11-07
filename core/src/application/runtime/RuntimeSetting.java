@@ -332,6 +332,7 @@ public class RuntimeSetting {
 
     // Settings Sections
     public static final String SETTINGS_SECTION_WINDOW = "Window";
+    public static final String SETTINGS_SECTION_INTERFACE = "Interface";
     public static final String SETTINGS_SECTION_VIEW = "View";
     public static final String SETTINGS_SECTION_WORLD = "World";
     public static final String SETTINGS_SECTION_MENU_WORLD = "World Behind the Menu";
@@ -363,6 +364,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_OPTION_CHUNK_STREAMING = "Chunks";
     public static final String SETTINGS_OPTION_OUTLINES = "Outlines";
     public static final String SETTINGS_OPTION_OUTLINE_THICKNESS = "Thickness";
+    public static final String SETTINGS_OPTION_MIN_TEXT_SIZE = "Minimum Text Size";
     public static final String SETTINGS_OPTION_ANTI_ALIASING = "Anti-Aliasing";
     public static final String SETTINGS_OPTION_DEPTH_OF_FIELD = "Depth of Field";
     public static final String SETTINGS_OPTION_DEPTH_OF_FIELD_THIRD_PERSON = "Third Person";
@@ -397,6 +399,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_FORMAT_PIXELS = "%d px";
     public static final String SETTINGS_FORMAT_PERCENT = "%.0f%%";
     public static final int SETTINGS_OUTLINE_THICKNESS_STEP = 1;
+    public static final int SETTINGS_MIN_TEXT_SIZE_STEP = 1;
     public static final int SETTINGS_RENDER_DISTANCE_STEP = 8;
     public static final int SETTINGS_RENDER_DISTANCE_PER_RADIUS = 2;
     public static final int SETTINGS_TERRAIN_DETAIL_STEP = 8;

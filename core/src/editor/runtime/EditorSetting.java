@@ -399,6 +399,8 @@ public class EditorSetting {
     public static final String SETTINGS_COLOR_TEXT_ON_ACCENT = "Text on Accent";
     public static final String SETTINGS_COLOR_FRAME = "Title Bar";
     public static final String SETTINGS_COLOR_FRAME_OUTLINE = "Window Border";
+    public static final String SETTINGS_COLOR_WINDOW_ACTIVE = "Active Window";
+    public static final String SETTINGS_COLOR_WINDOW_HOVER = "Hovered Window";
     public static final String[] SETTINGS_COLOR_CHANNEL_LABELS = { "Red", "Green", "Blue", "Alpha" };
     public static final String SETTINGS_ACTION_ENTER_HEX = "Enter Hex Value";
     public static final String SETTINGS_ACTION_RESET_COLOR = "Reset to Default";
@@ -457,6 +459,11 @@ public class EditorSetting {
     // Shortcuts
     public static final String SHORTCUT_PATH = "shortcuts";
     public static final String SHORTCUT_NAME_SEPARATOR = "/";
+
+    // Hint Bar
+    public static final String HINT_BAR_ENTRY_SEPARATOR = "     ";
+    public static final int HINT_BAR_ENTRY_LABEL = 0;
+    public static final String HINT_BAR_KEY_SEPARATOR = ": ";
     public static final String SHORTCUT_MODIFIER_CONTROL = "Ctrl";
     public static final String SHORTCUT_MODIFIER_SHIFT = "Shift";
     public static final String SHORTCUT_MODIFIER_ALT = "Alt";
@@ -2557,9 +2564,12 @@ public class EditorSetting {
 
     // Tabs
     public static final float DIVIDER_HIT_TOLERANCE = 6f;
+    public static final float DOCK_PANEL_MIN_SIZE = 96f;
+    public static final String ELEMENT_TAB_OUTLINE = "tab_outline";
     public static final String ELEMENT_TAB_STRIP_ACCENT = "tab_strip_accent";
     public static final String ELEMENT_TAB_STRIP_CLOSE = "tab_strip_close";
     public static final String ELEMENT_TAB_STRIP_LABEL = "tab_strip_label";
+    public static final String ELEMENT_TAB_TOOLBAR = "tab_toolbar";
     public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
     public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
     public static final String MENU_TAB_STRIP_ENTRY = "editor/TabFrame/tab_strip_entry";
@@ -2571,6 +2581,8 @@ public class EditorSetting {
     public static final int TAB_DRAG_PREVIEW_W = 256;
     public static final float TAB_DRAG_THRESHOLD = 6f;
     public static final int TAB_ENTRY_STRIP = 0;
+    public static final float TAB_HEADER_ACTIVE_ALPHA = 0.24f;
+    public static final float TAB_HEADER_HOVER_ALPHA = 0.10f;
     public static final float TAB_STRIP_ACTIVE_ALPHA = 0.32f;
     public static final String TAB_TITLE_DEV = "Dev Mode";
     public static final String TAB_TITLE_PREVIEW = "Preview";

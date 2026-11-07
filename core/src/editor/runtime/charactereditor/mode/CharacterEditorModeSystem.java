@@ -1,11 +1,9 @@
 package editor.runtime.charactereditor.mode;
 
-import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
-import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.runtime.charactereditor.CharacterEditorWindowProvider;
 import engine.root.SystemPackage;
 
@@ -15,8 +13,8 @@ public class CharacterEditorModeSystem extends SystemPackage {
      * Keeps the mode one character viewport tab works in. Each tab keeps to
      * its own modes — the Character Appearance, Build and Equipment tabs to
      * one each, the Character Mesh Editor to those that take tools — and
-     * remembers the last of them it was in. While the tab is focused,
-     * its window or its chrome, a mode of its own chosen on the editor is
+     * remembers the last of them it was in. While the tab is the active
+     * window, a mode of its own chosen on the editor is
      * taken up here, and any other is handed back for this tab's, so the
      * Character Outliner and the Properties tab always follow the tab
      * worked in last; the tab's region is handed to the editor the same way.
@@ -24,8 +22,7 @@ public class CharacterEditorModeSystem extends SystemPackage {
      */
 
     // Internal
-    private WindowManager windowManager;
-    private TabManager tabManager;
+    private ActiveWindowManager activeWindowManager;
     private CharacterEditorManager characterEditorManager;
 
     // Window
@@ -38,8 +35,7 @@ public class CharacterEditorModeSystem extends SystemPackage {
 
     @Override
     protected void get() {
-        this.windowManager = get(WindowManager.class);
-        this.tabManager = get(TabManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
     }
 
@@ -57,7 +53,7 @@ public class CharacterEditorModeSystem extends SystemPackage {
 
     @Override
     protected void update() {
-        if (isFocused())
+        if (activeWindowManager.isActive(context.getWindow()))
             adopt();
     }
 
@@ -72,13 +68,6 @@ public class CharacterEditorModeSystem extends SystemPackage {
             this.mode = shared;
         else
             characterEditorManager.setMode(mode);
-    }
-
-    private boolean isFocused() {
-
-        WindowInstance focused = windowManager.getFocusedWindow();
-
-        return focused != null && tabManager.resolveContentWindow(focused) == context.getWindow();
     }
 
     // Accessible \\

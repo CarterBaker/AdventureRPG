@@ -3,12 +3,15 @@ package editor.bootstrap.shortcutpipeline.shortcutmanager;
 import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.shortcutpipeline.shortcut.ShortcutData;
 import editor.bootstrap.shortcutpipeline.shortcut.ShortcutHandle;
 import editor.bootstrap.shortcutpipeline.util.ShortcutModifier;
-import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.bootstrap.shortcutpipeline.util.ShortcutUtility;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
+import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
+import editor.runtime.EditorSetting;
 import editor.runtime.menueventsmanager.menus.ExportDialogBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsBranch;
@@ -26,9 +29,9 @@ public class ShortcutManager extends ManagerPackage {
     /*
      * Owns every editor shortcut and is the one route from a key to the tool
      * it belongs to. Shortcuts load from ARPG, one tool's to a file, and are
-     * registered by their qualified names. Each frame the focused window —
-     * or, for a tab's chrome, the content it frames — is matched to its
-     * context's shortcuts, and the first one pressed runs its action through
+     * registered by their qualified names. Each frame the active window, the
+     * one ActiveWindowManager names whether or not the pointer is over it, is
+     * matched to its context's shortcuts, and the first one pressed runs its action through
      * ElementHitSystem, exactly as a menu button would, inside that context's
      * crash boundary. A tool reads a held shortcut by the ID its name
      * resolves to once, so a gesture's modifiers are bound in data like
@@ -38,13 +41,14 @@ public class ShortcutManager extends ManagerPackage {
      * place, under the same ID, once its file is saved. A file marked shared
      * holds keys that also work in every window ToolManager opens, the shared
      * tool keys, after that window's own, so a window's own key wins where the
-     * two share one.
+     * two share one. The shortcuts that carry a hint are read out for the
+     * hint bar through appendHints(), the window's own first, and a rebind
+     * moves the revision so the bar reads them again.
      */
 
     // Internal
-    private WindowManager windowManager;
+    private ActiveWindowManager activeWindowManager;
     private InputManager inputManager;
-    private TabManager tabManager;
     private ToolManager toolManager;
     private ElementHitSystem elementHitSystem;
     private NameDialogBranch nameDialogBranch;
@@ -56,7 +60,12 @@ public class ShortcutManager extends ManagerPackage {
     private ObjectArrayList<ShortcutHandle> shortcutID2ShortcutHandle;
     private Object2ObjectOpenHashMap<Class<? extends ContextPackage>, ObjectArrayList<ShortcutHandle>>
             contextClass2PressedShortcuts;
+    private Object2ObjectOpenHashMap<Class<? extends ContextPackage>, ObjectArrayList<ShortcutHandle>>
+            contextClass2HintedShortcuts;
     private ObjectArrayList<Class<? extends ContextPackage>> sharedContextClasses;
+
+    // Status
+    private int revision;
 
     // Base \\
 
@@ -67,15 +76,15 @@ public class ShortcutManager extends ManagerPackage {
         this.shortcutName2ShortcutID = RegistryUtility.createNameIndex();
         this.shortcutID2ShortcutHandle = RegistryUtility.createPalette();
         this.contextClass2PressedShortcuts = new Object2ObjectOpenHashMap<>();
+        this.contextClass2HintedShortcuts = new Object2ObjectOpenHashMap<>();
         this.sharedContextClasses = new ObjectArrayList<>();
         create(ShortcutLoader.class);
     }
 
     @Override
     protected void get() {
-        this.windowManager = get(WindowManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
         this.inputManager = get(InputManager.class);
-        this.tabManager = get(TabManager.class);
         this.toolManager = get(ToolManager.class);
         this.elementHitSystem = get(ElementHitSystem.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
@@ -108,6 +117,9 @@ public class ShortcutManager extends ManagerPackage {
 
         if (shortcutHandle.hasAction())
             addPressedShortcut(shortcutHandle);
+
+        if (shortcutHandle.getHint() != null)
+            findOrCreateShortcuts(contextClass2HintedShortcuts, shortcutHandle.getContextClass()).add(shortcutHandle);
     }
 
     // A file's keys made to work in every window ToolManager opens as well as in its own tool
@@ -120,13 +132,8 @@ public class ShortcutManager extends ManagerPackage {
 
         elementHitSystem.verifyAction(shortcutHandle.getActionClass(), shortcutHandle.getActionMethod());
 
-        ObjectArrayList<ShortcutHandle> pressedShortcuts = contextClass2PressedShortcuts.get(
-                shortcutHandle.getContextClass());
-
-        if (pressedShortcuts == null) {
-            pressedShortcuts = new ObjectArrayList<>();
-            contextClass2PressedShortcuts.put(shortcutHandle.getContextClass(), pressedShortcuts);
-        }
+        ObjectArrayList<ShortcutHandle> pressedShortcuts = findOrCreateShortcuts(
+                contextClass2PressedShortcuts, shortcutHandle.getContextClass());
 
         ShortcutHandle clash = findPressedClash(
                 shortcutHandle,
@@ -138,6 +145,20 @@ public class ShortcutManager extends ManagerPackage {
                     + shortcutHandle.getShortcutName() + "' are both pressed with the same keys in one tool.");
 
         pressedShortcuts.add(shortcutHandle);
+    }
+
+    private ObjectArrayList<ShortcutHandle> findOrCreateShortcuts(
+            Object2ObjectOpenHashMap<Class<? extends ContextPackage>, ObjectArrayList<ShortcutHandle>> shortcuts,
+            Class<? extends ContextPackage> contextClass) {
+
+        ObjectArrayList<ShortcutHandle> contextShortcuts = shortcuts.get(contextClass);
+
+        if (contextShortcuts == null) {
+            contextShortcuts = new ObjectArrayList<>();
+            shortcuts.put(contextClass, contextShortcuts);
+        }
+
+        return contextShortcuts;
     }
 
     // Gives the shortcut new keys in place, under the same ID, so every tool reading it follows at once
@@ -167,7 +188,11 @@ public class ShortcutManager extends ManagerPackage {
                 modifiers,
                 shortcutData.getActionClass(),
                 shortcutData.getActionMethod(),
-                shortcutData.getActionArg()));
+                shortcutData.getActionArg(),
+                shortcutData.getHint(),
+                shortcutData.getCanvasMask(),
+                shortcutData.getToolMask()));
+        revision++;
     }
 
     // Update \\
@@ -175,15 +200,16 @@ public class ShortcutManager extends ManagerPackage {
     @Override
     protected void update() {
 
-        WindowInstance window = resolveShortcutWindow();
+        WindowInstance window = activeWindowManager.getActiveWindow();
 
-        if (window == null || isWithheld())
+        if (window == null || window.getContext() == null || isWithheld())
             return;
 
         Input input = inputManager.getRawInput(window);
         int heldModifiers = ShortcutModifier.resolveHeld(input);
 
-        ObjectArrayList<ShortcutHandle> ownShortcuts = findPressedShortcuts(window.getContext().getClass());
+        ObjectArrayList<ShortcutHandle> ownShortcuts = findShortcuts(
+                contextClass2PressedShortcuts, window.getContext().getClass());
 
         if (runPressed(ownShortcuts, window, input, heldModifiers) || !toolManager.isToolWindow(window))
             return;
@@ -198,16 +224,18 @@ public class ShortcutManager extends ManagerPackage {
         }
     }
 
-    // A tool's pressed shortcuts: its own context's, else the nearest context it extends that names some, so a file
-    // naming a shared base keys every tab built on it
-    private ObjectArrayList<ShortcutHandle> findPressedShortcuts(Class<?> contextClass) {
+    // A tool's shortcuts: its own context's, else the nearest context it extends that names some, so a file naming a
+    // shared base keys every tab built on it
+    private ObjectArrayList<ShortcutHandle> findShortcuts(
+            Object2ObjectOpenHashMap<Class<? extends ContextPackage>, ObjectArrayList<ShortcutHandle>> shortcuts,
+            Class<?> contextClass) {
 
         for (Class<?> type = contextClass; type != null; type = type.getSuperclass()) {
 
-            ObjectArrayList<ShortcutHandle> pressedShortcuts = contextClass2PressedShortcuts.get(type);
+            ObjectArrayList<ShortcutHandle> contextShortcuts = shortcuts.get(type);
 
-            if (pressedShortcuts != null)
-                return pressedShortcuts;
+            if (contextShortcuts != null)
+                return contextShortcuts;
         }
 
         return null;
@@ -241,22 +269,51 @@ public class ShortcutManager extends ManagerPackage {
         return false;
     }
 
-    // The window the keys belong to: the focused one, or the content of the tab whose chrome is focused
-    private WindowInstance resolveShortcutWindow() {
-
-        WindowInstance focused = windowManager.getFocusedWindow();
-
-        if (focused == null)
-            return null;
-
-        WindowInstance window = tabManager.resolveContentWindow(focused);
-
-        return window != null && window.getContext() != null ? window : null;
-    }
-
     // A dialog taking typed text, or the settings dialog, keeps every key to itself
     private boolean isWithheld() {
         return nameDialogBranch.isOpen() || exportDialogBranch.isOpen() || editorSettingsBranch.isOpen();
+    }
+
+    // Hints \\
+
+    // The hints of a window's keys on its canvas with its tool, its own then the shared tool keys where it takes them
+    public void appendHints(StringBuilder textBuilder, WindowInstance window, ToolCanvas canvas, EditorTool tool) {
+
+        if (window == null || window.getContext() == null)
+            return;
+
+        appendHints(textBuilder, findShortcuts(contextClass2HintedShortcuts, window.getContext().getClass()),
+                canvas, tool);
+
+        if (!toolManager.isToolWindow(window))
+            return;
+
+        for (int i = 0; i < sharedContextClasses.size(); i++)
+            appendHints(textBuilder, contextClass2HintedShortcuts.get(sharedContextClasses.get(i)), canvas, tool);
+    }
+
+    private void appendHints(
+            StringBuilder textBuilder,
+            ObjectArrayList<ShortcutHandle> hintedShortcuts,
+            ToolCanvas canvas,
+            EditorTool tool) {
+
+        if (hintedShortcuts == null)
+            return;
+
+        for (int i = 0; i < hintedShortcuts.size(); i++) {
+
+            ShortcutHandle shortcut = hintedShortcuts.get(i);
+
+            if (!shortcut.isHintShown(canvas, tool))
+                continue;
+
+            if (!textBuilder.isEmpty())
+                textBuilder.append(EditorSetting.HINT_BAR_ENTRY_SEPARATOR);
+
+            ShortcutUtility.appendChord(textBuilder, shortcut.getKey(), shortcut.getModifiers());
+            textBuilder.append(EditorSetting.HINT_BAR_KEY_SEPARATOR).append(shortcut.getHint());
+        }
     }
 
     // Accessible \\
@@ -282,6 +339,11 @@ public class ShortcutManager extends ManagerPackage {
         }
 
         return null;
+    }
+
+    // Moves whenever a shortcut takes new keys, which the hint bar reads out again
+    public int getRevision() {
+        return revision;
     }
 
     // Every shortcut ID lies below this, in the order their files declare them

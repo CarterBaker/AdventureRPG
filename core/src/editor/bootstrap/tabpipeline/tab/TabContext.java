@@ -1,5 +1,6 @@
 package editor.bootstrap.tabpipeline.tab;
 
+import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
@@ -9,6 +10,7 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
@@ -25,7 +27,11 @@ public class TabContext extends ContextPackage {
      * and the tab strip all go through here. The tab a stack shows is placed
      * on its leaf with a strip listing the whole stack, rebuilt only when the
      * stack changes; every other tab in it is withdrawn with its content.
-     * dispose() is the single teardown path however the tab closes.
+     * The chrome's header is tinted and its border drawn in the active
+     * window's color while its content is the active window, and its header
+     * tinted more faintly in the hovered window's while the pointer is over
+     * it, set only when that changes. dispose() is the single teardown path
+     * however the tab closes.
      */
 
     // Internal
@@ -35,9 +41,19 @@ public class TabContext extends ContextPackage {
     private InputManager inputManager;
     private DockLayoutSystem dockLayoutSystem;
     private TabManager tabManager;
+    private ActiveWindowManager activeWindowManager;
 
     // Chrome
     private MenuInstance chromeMenu;
+    private ElementInstance headerElement;
+    private ElementInstance outlineElement;
+
+    // Highlight — the colors the chrome shows, null for its own
+    private MenuColorStruct activeHeaderColor;
+    private MenuColorStruct hoverHeaderColor;
+    private MenuColorStruct activeOutlineColor;
+    private MenuColorStruct shownHeaderColor;
+    private MenuColorStruct shownOutlineColor;
 
     // Content — owned by this tab, positioned within this tab's canvas
     private ContextPackage contentContext;
@@ -63,6 +79,11 @@ public class TabContext extends ContextPackage {
         this.loneStrip = new ObjectArrayList<>(1);
         this.activeStripColor = new MenuColorStruct(ThemeColor.ACCENT, EditorSetting.TAB_STRIP_ACTIVE_ALPHA);
         this.activeStripAccentColor = new MenuColorStruct(ThemeColor.ACCENT, EngineSetting.MENU_THEME_ALPHA_DEFAULT);
+
+        // Highlight
+        this.activeHeaderColor = new MenuColorStruct(ThemeColor.WINDOW_ACTIVE, EditorSetting.TAB_HEADER_ACTIVE_ALPHA);
+        this.hoverHeaderColor = new MenuColorStruct(ThemeColor.WINDOW_HOVER, EditorSetting.TAB_HEADER_HOVER_ALPHA);
+        this.activeOutlineColor = new MenuColorStruct(ThemeColor.WINDOW_ACTIVE, EngineSetting.MENU_THEME_ALPHA_DEFAULT);
     }
 
     @Override
@@ -73,12 +94,31 @@ public class TabContext extends ContextPackage {
         inputManager = get(InputManager.class);
         dockLayoutSystem = get(DockLayoutSystem.class);
         tabManager = get(TabManager.class);
+        activeWindowManager = get(ActiveWindowManager.class);
     }
 
     @Override
     protected void awake() {
         menuManager.setMenuTargetFbo(getWindow(), fboManager.cloneFbo(RuntimeSetting.FBO_UI, getWindow()));
         chromeMenu = menuManager.openMenu(EditorSetting.MENU_TAB_SHELL, getWindow());
+        headerElement = findChromeElement(EditorSetting.ELEMENT_TAB_TOOLBAR);
+        outlineElement = findChromeElement(EditorSetting.ELEMENT_TAB_OUTLINE);
+    }
+
+    @Override
+    protected void update() {
+
+        if (contentContext == null)
+            return;
+
+        WindowInstance contentWindow = contentContext.getWindow();
+        WindowInstance hovered = windowManager.getHoveredWindow();
+        boolean active = activeWindowManager.isActive(contentWindow);
+        boolean hover = hovered != null && tabManager.resolveContentWindow(hovered) == contentWindow;
+
+        showHighlight(
+                active ? activeHeaderColor : hover ? hoverHeaderColor : null,
+                active ? activeOutlineColor : null);
     }
 
     // Dispose \\
@@ -179,6 +219,30 @@ public class TabContext extends ContextPackage {
     }
 
     // Utility \\
+
+    private void showHighlight(MenuColorStruct headerColor, MenuColorStruct outlineColor) {
+
+        if (headerColor == shownHeaderColor && outlineColor == shownOutlineColor)
+            return;
+
+        this.shownHeaderColor = headerColor;
+        this.shownOutlineColor = outlineColor;
+        headerElement.setColorOverride(headerColor);
+        outlineElement.setColorOverride(outlineColor);
+    }
+
+    private ElementInstance findChromeElement(String elementID) {
+
+        for (int i = 0; i < chromeMenu.getElements().size(); i++) {
+
+            ElementInstance element = chromeMenu.getElements().get(i);
+
+            if (element.getElementData().getId().equals(elementID))
+                return element;
+        }
+
+        return throwException("Tab chrome menu has no element '" + elementID + "'.");
+    }
 
     private void withdraw() {
 

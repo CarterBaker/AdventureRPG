@@ -6,7 +6,6 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.soundpipeline.soundmanager.SoundManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
@@ -16,7 +15,7 @@ import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
-import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.transitionpipeline.transition.TransitionHandle;
 import editor.bootstrap.transitionpipeline.transitionmanager.TransitionManager;
 import editor.runtime.EditorSetting;
@@ -33,7 +32,7 @@ public class RecorderRowSystem extends SystemPackage {
      * points, the times and channel lists they show, and the inspector of
      * what is selected on a clip — its node, its sound or its transition —
      * which the Bin's clip panel and the Keys' inspector both show. While a
-     * pane tab is focused, its window or its chrome, it is the pane the
+     * pane tab is the active window, it is the pane the
      * recorder's keys and deletes act on. Created first in every Recorder
      * tab, so the menu is open before any panel looks for it.
      */
@@ -41,8 +40,7 @@ public class RecorderRowSystem extends SystemPackage {
     // Internal
     private MenuManager menuManager;
     private FBOManager fboManager;
-    private WindowManager windowManager;
-    private TabManager tabManager;
+    private ActiveWindowManager activeWindowManager;
     private RecorderManager recorderManager;
     private SoundManager soundManager;
     private TransitionManager transitionManager;
@@ -70,8 +68,7 @@ public class RecorderRowSystem extends SystemPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
-        this.windowManager = get(WindowManager.class);
-        this.tabManager = get(TabManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
         this.recorderManager = get(RecorderManager.class);
         this.soundManager = get(SoundManager.class);
         this.transitionManager = get(TransitionManager.class);
@@ -97,15 +94,8 @@ public class RecorderRowSystem extends SystemPackage {
 
     @Override
     protected void update() {
-        if (pane != null && pane != recorderManager.getPane() && isFocused())
+        if (pane != null && pane != recorderManager.getPane() && activeWindowManager.isActive(context.getWindow()))
             recorderManager.showPane(pane);
-    }
-
-    private boolean isFocused() {
-
-        WindowInstance focused = windowManager.getFocusedWindow();
-
-        return focused != null && tabManager.resolveContentWindow(focused) == context.getWindow();
     }
 
     // Menu \\

@@ -99,7 +99,7 @@ public class ViewCameraSystem extends SystemPackage {
         else if (dragButton == EditorSetting.VIEW_CAMERA_BUTTON_PAN)
             slide(rawInput.getDeltaX(), rawInput.getDeltaY());
 
-        if (editorInputSystem.isPointerActive() && rawInput.getScrollY() != 0f)
+        if (editorInputSystem.isPointerOver() && rawInput.getScrollY() != 0f)
             distance = Math.clamp(
                     distance * (float) Math.pow(EditorSetting.VIEW_CAMERA_ZOOM_FACTOR, -rawInput.getScrollY()),
                     EditorSetting.VIEW_CAMERA_DISTANCE_MIN,

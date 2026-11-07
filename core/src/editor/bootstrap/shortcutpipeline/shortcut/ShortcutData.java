@@ -11,7 +11,9 @@ public class ShortcutData extends DataPackage {
      * it works in; the key it is pressed with, if any, and the mask of
      * modifiers held with it; and the class, method and argument it runs,
      * resolved as a menu button's action is. A held shortcut has no action;
-     * its tool reads it while a press or a drag is under way.
+     * its tool reads it while a press or a drag is under way. A shortcut with
+     * a hint is listed on the hint bar while its window is active, on the
+     * canvases and with the tools its masks name, every one for an empty mask.
      */
 
     // Identity
@@ -30,6 +32,11 @@ public class ShortcutData extends DataPackage {
     private final String actionMethod;
     private final String actionArg;
 
+    // Hint
+    private final String hint;
+    private final int canvasMask;
+    private final int toolMask;
+
     // Constructor \\
 
     public ShortcutData(
@@ -40,7 +47,10 @@ public class ShortcutData extends DataPackage {
             int modifiers,
             String actionClass,
             String actionMethod,
-            String actionArg) {
+            String actionArg,
+            String hint,
+            int canvasMask,
+            int toolMask) {
 
         // Identity
         this.shortcutName = shortcutName;
@@ -57,6 +67,11 @@ public class ShortcutData extends DataPackage {
         this.actionClass = actionClass;
         this.actionMethod = actionMethod;
         this.actionArg = actionArg;
+
+        // Hint
+        this.hint = hint;
+        this.canvasMask = canvasMask;
+        this.toolMask = toolMask;
     }
 
     // Accessible \\
@@ -91,5 +106,17 @@ public class ShortcutData extends DataPackage {
 
     public String getActionArg() {
         return actionArg;
+    }
+
+    public String getHint() {
+        return hint;
+    }
+
+    public int getCanvasMask() {
+        return canvasMask;
+    }
+
+    public int getToolMask() {
+        return toolMask;
     }
 }

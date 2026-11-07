@@ -17,8 +17,10 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
 - **One route.** A pressed shortcut runs a `class` and `method` exactly as a menu button does, through
   `ElementHitSystem.executeAction`, on the instance registered in the tool's context, inside its crash boundary. A
   shortcut and its button therefore always do the same thing.
-- **Scoped to the tool.** A file names the tool's context class. Its shortcuts work only while that tool's window —
-  or its tab's chrome — holds focus, and never while the name or export dialog is open. A file may name a base class
+- **Scoped to the active window.** A file names the tool's context class. Its shortcuts work only while that tool's
+  window is the editor's active window (`ActiveWindowManager`, see `.claude/docs/Editor.md`), whether or not the
+  pointer is over it, and never while the name, export or settings dialog is open. Every tab follows this one rule;
+  no tab reads its keys only while hovered. A file may name a base class
   the tool extends (`CharacterMeshEditor.arpg` names `CharacterModelingContext`, so every modelling tab takes its
   keys); a context's own file wins over its base's.
 - **Exact chords.** A pressed shortcut fires when its key goes down with exactly its modifiers held, so Ctrl+S never
@@ -61,6 +63,10 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
 - A pressed shortcut's method may take a `String` (the `arg`) and a `WindowInstance` (the tool's window). It gets no
   menu or element. A bad class or method fails at boot, naming the shortcut.
 - A held shortcut has no action and needs a key or at least one modifier.
+- `hint` is the words the hint bar shows beside the shortcut's keys (`"Ctrl: Invert stroke"`); a shortcut without one
+  is not listed. `canvases` (`ToolCanvas` names, `character_sculpt`) and `tools` (`EditorTool` names, `brush`) keep
+  the hint to the canvases and tools it applies to; each left out means every one. Pressed and held shortcuts both
+  take them, so a gesture's modifiers are listed like its keys.
 - `"shared": true` makes a file's pressed shortcuts also work in every window `ToolManager` opens, after that
   window's own. Only the tools' own file should be shared.
 - A shortcut's registered name is the file's name, a `/`, then its own: `Recorder/ExtendSelection`.
@@ -77,7 +83,9 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
    (`EditorSetting.RECORDER_SHORTCUT_*`, `CharacterEditorSetting.SHORTCUT_*`), resolve it once in `start()` with
    `ShortcutManager.getShortcutIDFromShortcutName`, and read it with `ShortcutManager.isHeld(id, window)`.
 3. **A new tool.** Add `assets/shortcuts/<Tool>.arpg` naming the tool's context class. Nothing else registers it.
-4. Seal the file with the ARPG tool (`.claude/docs/ARPG.md`) and boot the editor once: every action is resolved at
+4. **A hint.** Give the entry a `hint`, and `canvases` or `tools` when it applies to only some. The hint bar lists it
+   while its window is active; nothing else is needed.
+5. Seal the file with the ARPG tool (`.claude/docs/ARPG.md`) and boot the editor once: every action is resolved at
    load.
 
 ---

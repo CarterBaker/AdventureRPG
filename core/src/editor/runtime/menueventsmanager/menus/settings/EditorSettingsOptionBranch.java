@@ -62,6 +62,8 @@ public class EditorSettingsOptionBranch extends BranchPackage {
         injectOptionRow(SettingsOption.FULLSCREEN);
         injectOptionRow(SettingsOption.VSYNC);
         editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_WINDOW);
+        editorSettingsBranch.injectSectionHeader(RuntimeSetting.SETTINGS_SECTION_INTERFACE);
+        injectOptionRow(SettingsOption.MIN_TEXT_SIZE);
         editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_SAVED);
     }
 

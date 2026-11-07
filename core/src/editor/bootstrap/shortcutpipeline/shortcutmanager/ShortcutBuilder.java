@@ -5,6 +5,8 @@ import java.io.File;
 import editor.bootstrap.shortcutpipeline.shortcut.ShortcutData;
 import editor.bootstrap.shortcutpipeline.shortcut.ShortcutHandle;
 import editor.bootstrap.shortcutpipeline.util.ShortcutModifier;
+import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
 import engine.input.InputNameUtility;
 import engine.root.BuilderPackage;
@@ -26,7 +28,9 @@ class ShortcutBuilder extends BuilderPackage {
      * case, and "modifiers" the modifiers held with it. A pressed shortcut
      * needs a key and the "class" and "method" it runs, with "arg" as the
      * argument a menu button would hand over; a held one runs nothing and
-     * needs a key or a modifier to hold.
+     * needs a key or a modifier to hold. Either kind may carry a "hint", the
+     * words the hint bar shows beside its keys, kept to the "canvases" and
+     * "tools" it names when it names any.
      */
 
     // Internal
@@ -84,7 +88,8 @@ class ShortcutBuilder extends BuilderPackage {
                 parseModifiers(shortcutArpg),
                 ArpgUtility.validateString(shortcutArpg, "class"),
                 ArpgUtility.validateString(shortcutArpg, "method"),
-                ArpgUtility.getString(shortcutArpg, "arg", null));
+                ArpgUtility.getString(shortcutArpg, "arg", null),
+                shortcutArpg);
     }
 
     private ShortcutHandle buildHeld(
@@ -101,7 +106,7 @@ class ShortcutBuilder extends BuilderPackage {
         if (key == EngineSetting.INDEX_NOT_FOUND && modifiers == ShortcutModifier.NONE)
             throwException("Shortcut '" + shortcutName + "' is held, so it needs a key or a modifier to hold.");
 
-        return createShortcut(shortcutName, contextClass, key, modifiers, null, null, null);
+        return createShortcut(shortcutName, contextClass, key, modifiers, null, null, null, shortcutArpg);
     }
 
     private ShortcutHandle createShortcut(
@@ -111,7 +116,8 @@ class ShortcutBuilder extends BuilderPackage {
             int modifiers,
             String actionClass,
             String actionMethod,
-            String actionArg) {
+            String actionArg,
+            ArpgObjectStruct shortcutArpg) {
 
         ShortcutData shortcutData = new ShortcutData(
                 shortcutName,
@@ -121,7 +127,10 @@ class ShortcutBuilder extends BuilderPackage {
                 modifiers,
                 actionClass,
                 actionMethod,
-                actionArg);
+                actionArg,
+                parseHint(shortcutArpg),
+                parseMask(shortcutArpg, "canvases", ToolCanvas.class),
+                parseMask(shortcutArpg, "tools", EditorTool.class));
 
         ShortcutHandle shortcutHandle = create(ShortcutHandle.class);
         shortcutHandle.constructor(shortcutData);
@@ -173,5 +182,28 @@ class ShortcutBuilder extends BuilderPackage {
             modifiers |= ArpgUtility.toEnum(modifiersArpg.get(i).getAsString(), ShortcutModifier.class).getBit();
 
         return modifiers;
+    }
+
+    // The hint's words, null for none, an empty hint included
+    private String parseHint(ArpgObjectStruct shortcutArpg) {
+
+        String hint = ArpgUtility.getString(shortcutArpg, "hint", "");
+
+        return hint.isEmpty() ? null : hint;
+    }
+
+    // One bit per named constant, 0 when the array is absent so the hint shows with every one
+    private <T extends Enum<T>> int parseMask(ArpgObjectStruct shortcutArpg, String key, Class<T> type) {
+
+        if (!ArpgUtility.hasArray(shortcutArpg, key))
+            return 0;
+
+        ArpgArrayStruct namesArpg = ArpgUtility.validateArray(shortcutArpg, key);
+        int mask = 0;
+
+        for (int i = 0; i < namesArpg.size(); i++)
+            mask |= 1 << ArpgUtility.toEnum(namesArpg.get(i).getAsString(), type).ordinal();
+
+        return mask;
     }
 }

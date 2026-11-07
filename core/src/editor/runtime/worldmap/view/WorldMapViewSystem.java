@@ -171,7 +171,7 @@ public class WorldMapViewSystem extends SystemPackage {
 
     private void handleZoom() {
 
-        if (!editorInputSystem.isPointerActive())
+        if (!editorInputSystem.isPointerOver())
             return;
 
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();

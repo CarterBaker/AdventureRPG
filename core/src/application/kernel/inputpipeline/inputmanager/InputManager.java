@@ -24,6 +24,9 @@ public class InputManager extends ManagerPackage {
      * window leaving the engine hands its capture back through
      * releaseWindow(), so the cursor is never left caught by a window the
      * user has left or that is gone; clicking back into it captures again.
+     * A window hovered without the focus still reads the pointer and the
+     * wheel, never a key, a button or a drag, so it can be scrolled and
+     * zoomed without being made the focused one.
      */
 
     private CursorSystem cursorSystem;
@@ -45,6 +48,8 @@ public class InputManager extends ManagerPackage {
     private final boolean[] bc = new boolean[8];
     private final boolean[] bh = new boolean[8];
     private final boolean[] br = new boolean[8];
+    private final boolean[] noKeys = new boolean[512];
+    private final boolean[] noButtons = new boolean[8];
 
     @Override
     protected void create() {
@@ -193,10 +198,15 @@ public class InputManager extends ManagerPackage {
 
     public void writeRawInput(RawInputHandle handle, WindowInstance window) {
 
-        if (!isHovered(window)) {
+        if (isHovered(window))
+            writeFullInput(handle, window);
+        else if (isHoveredOnly(window))
+            writeHoverInput(handle, window);
+        else
             handle.clear();
-            return;
-        }
+    }
+
+    private void writeFullInput(RawInputHandle handle, WindowInstance window) {
 
         Input raw = getRawInput(window);
 
@@ -221,6 +231,26 @@ public class InputManager extends ManagerPackage {
                 raw.getDeltaY() * internal.settings.mouseSensitivity,
                 raw.getScrollX(),
                 raw.getScrollY());
+    }
+
+    // The pointer and the wheel alone, for a window under the cursor that does not hold the focus
+    private void writeHoverInput(RawInputHandle handle, WindowInstance window) {
+
+        Input raw = getRawInput(window);
+
+        handle.write(
+                noKeys, noKeys, noKeys,
+                noButtons, noButtons, noButtons,
+                localX(window, raw.getMouseX()),
+                localY(window, raw.getMouseY()),
+                0f,
+                0f,
+                raw.getScrollX(),
+                raw.getScrollY());
+    }
+
+    private boolean isHoveredOnly(WindowInstance window) {
+        return windowManager.getCapturedWindow() == null && window == windowManager.getHoveredWindow();
     }
 
     public boolean bindingHeld(Binding binding, WindowInstance window) {

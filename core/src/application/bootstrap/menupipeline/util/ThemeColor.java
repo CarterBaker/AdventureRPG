@@ -24,7 +24,9 @@ public enum ThemeColor {
     TEXT_ON_ACCENT,
     DANGER,
     FRAME,
-    FRAME_OUTLINE;
+    FRAME_OUTLINE,
+    WINDOW_ACTIVE,
+    WINDOW_HOVER;
 
     public static ThemeColor fromString(String s) {
         return switch (s.toLowerCase()) {
@@ -43,6 +45,8 @@ public enum ThemeColor {
             case "danger" -> DANGER;
             case "frame" -> FRAME;
             case "frame_outline" -> FRAME_OUTLINE;
+            case "window_active" -> WINDOW_ACTIVE;
+            case "window_hover" -> WINDOW_HOVER;
             default -> null;
         };
     }
@@ -64,6 +68,8 @@ public enum ThemeColor {
             case DANGER -> settings.uiColorDanger;
             case FRAME -> settings.uiColorFrame;
             case FRAME_OUTLINE -> settings.uiColorFrameOutline;
+            case WINDOW_ACTIVE -> settings.uiColorWindowActive;
+            case WINDOW_HOVER -> settings.uiColorWindowHover;
         };
     }
 }

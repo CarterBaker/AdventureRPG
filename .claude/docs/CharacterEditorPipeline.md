@@ -36,7 +36,7 @@ layouts like any other.
   and share `CharacterLookContext` (abstract; each subclass only names its mode); the Character Mesh Editor keeps to
   the modes that take tools (`CharacterEditorMode.isModeling`). Each tab's `CharacterEditorModeSystem` remembers its
   own mode and draws its preview in it (`CharacterEditorPreviewSystem` reads the tab's mode, never the manager's);
-  while a tab is focused it hands its mode to `CharacterEditorManager.setMode`, so the Outliner and the Properties
+  while a tab is the active window it hands its mode to `CharacterEditorManager.setMode`, so the Outliner and the Properties
   tab follow the tab worked in last. The viewport systems live in `editor.runtime.charactereditor` and every such tab
   creates them; only the mesh tab creates the mesh view, sculpt, rig and overlay systems and a `ToolCanvasSystem`,
   and its `runToolAction` adopts its mode first. Each tab names its starting mode, the modes it holds and its toolbar
@@ -88,7 +88,7 @@ layouts like any other.
   frames (`CharacterRegionFrameSystem`: the box of every vertex that bone and those below it carry while the part is
   open, its joints otherwise), whether its card roots are pinned, whether it takes the rig, and the prefix naming its
   own bones (Hair: `hair_`, every such bone and the head they hang from; new bones there take the prefix). Bone
-  membership is read only through `CharacterRegionBranch.holdsBone` / `holdsRigBone`. A focused tab hands its
+  membership is read only through `CharacterRegionBranch.holdsBone` / `holdsRigBone`. The active tab hands its
   region to `CharacterEditorManager.setRegion`, which picks the region's part when the character wears it.
 - **One mask.** `CharacterRegionBranch` gives each vertex its share of the region (the weight it puts on the region's
   bones; for pinned hair how far along its card it stands, root 0 to tip 1), cached per region until the mesh changes.

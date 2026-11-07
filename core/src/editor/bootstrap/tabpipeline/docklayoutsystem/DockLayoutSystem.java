@@ -129,13 +129,13 @@ public class DockLayoutSystem extends SystemPackage {
             return hit;
 
         if (node.isSplitHorizontal()) {
-            float dividerY = node.getY() + node.getH() * node.getRatio();
+            float dividerY = node.getFirst().getY() + node.getFirst().getH();
             if (sx >= node.getX() && sx <= node.getX() + node.getW()
                     && sy >= dividerY - EditorSetting.DIVIDER_HIT_TOLERANCE
                     && sy <= dividerY + EditorSetting.DIVIDER_HIT_TOLERANCE)
                 return node;
         } else {
-            float dividerX = node.getX() + node.getW() * node.getRatio();
+            float dividerX = node.getFirst().getX() + node.getFirst().getW();
             if (sy >= node.getY() && sy <= node.getY() + node.getH()
                     && sx >= dividerX - EditorSetting.DIVIDER_HIT_TOLERANCE
                     && sx <= dividerX + EditorSetting.DIVIDER_HIT_TOLERANCE)
@@ -220,17 +220,42 @@ public class DockLayoutSystem extends SystemPackage {
         if (!node.isSplit())
             return;
 
-        float ratio = node.getRatio();
+        boolean horizontal = node.isSplitHorizontal();
+        float split = resolveSplit(node, horizontal ? h : w, horizontal);
 
-        if (node.isSplitHorizontal()) {
-            float split = h * ratio;
+        if (horizontal) {
             propagateRect(node.getFirst(), x, y, w, split);
             propagateRect(node.getSecond(), x, y + split, w, h - split);
         } else {
-            float split = w * ratio;
             propagateRect(node.getFirst(), x, y, split, h);
             propagateRect(node.getSecond(), x + split, y, w - split, h);
         }
+    }
+
+    // Where a split falls along its length: at its ratio, held off either side so no panel docks smaller than the
+    // least each needs, and halved when the length is too short to give both theirs
+    private float resolveSplit(DockNodeStruct node, float length, boolean horizontal) {
+
+        float firstMin = resolveMinExtent(node.getFirst(), horizontal);
+        float secondMin = resolveMinExtent(node.getSecond(), horizontal);
+
+        if (length < firstMin + secondMin)
+            return length * firstMin / (firstMin + secondMin);
+
+        return Math.clamp(length * node.getRatio(), firstMin, length - secondMin);
+    }
+
+    // The least a node needs along one axis: a leaf one panel's least, a split along that axis both sides', a split
+    // across it the larger side's
+    private float resolveMinExtent(DockNodeStruct node, boolean horizontal) {
+
+        if (!node.isSplit())
+            return EditorSetting.DOCK_PANEL_MIN_SIZE;
+
+        float first = resolveMinExtent(node.getFirst(), horizontal);
+        float second = resolveMinExtent(node.getSecond(), horizontal);
+
+        return node.isSplitHorizontal() == horizontal ? first + second : Math.max(first, second);
     }
 
     // Split / Merge \\

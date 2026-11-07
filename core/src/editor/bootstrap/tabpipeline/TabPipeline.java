@@ -1,5 +1,6 @@
 package editor.bootstrap.tabpipeline;
 
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
 import editor.bootstrap.tabpipeline.tabdragmanager.TabDragManager;
@@ -9,8 +10,8 @@ import engine.root.PipelinePackage;
 public class TabPipeline extends PipelinePackage {
 
     /*
-     * Registers the editor tab managers: tabs, dock layout, dragging and saved
-     * layouts.
+     * Registers the editor tab managers: tabs, the one active window among
+     * them, dock layout, dragging and saved layouts.
      */
 
     // Internal \\
@@ -18,6 +19,7 @@ public class TabPipeline extends PipelinePackage {
     @Override
     protected void create() {
         create(TabManager.class);
+        create(ActiveWindowManager.class);
         create(TabDragManager.class);
         create(DockLayoutSystem.class);
         create(LayoutManager.class);

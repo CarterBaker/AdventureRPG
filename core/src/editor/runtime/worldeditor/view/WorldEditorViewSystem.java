@@ -83,7 +83,7 @@ public class WorldEditorViewSystem extends SystemPackage {
 
     private void handleZoom(ImageDocumentInstance image, WindowInstance window) {
 
-        if (!editorInputSystem.isPointerActive())
+        if (!editorInputSystem.isPointerOver())
             return;
 
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();

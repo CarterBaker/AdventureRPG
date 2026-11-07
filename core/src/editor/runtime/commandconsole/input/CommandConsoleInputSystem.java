@@ -2,8 +2,8 @@ package editor.runtime.commandconsole.input;
 
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.inputpipeline.inputmanager.InputManager;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.runtime.commandconsole.CommandConsoleSetting;
 import editor.runtime.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
 import editor.runtime.commandconsole.panel.CommandConsolePanelSystem;
@@ -29,12 +29,12 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
      * hands typing back to the line. Typed characters are read from whichever
      * OS window the console currently lives in, so the line keeps working
      * after its tab is moved, and a caret blinks at the end of whatever takes
-     * the typing while the window is focused.
+     * the typing while the window is the active one.
      */
 
     // Internal
     private InputManager inputManager;
-    private WindowManager windowManager;
+    private ActiveWindowManager activeWindowManager;
     private CommandManager commandManager;
     private EditorInputSystem editorInputSystem;
     private CommandConsolePanelSystem commandConsolePanelSystem;
@@ -68,7 +68,7 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
     @Override
     protected void get() {
         this.inputManager = get(InputManager.class);
-        this.windowManager = get(WindowManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
         this.commandManager = get(CommandManager.class);
         this.editorInputSystem = get(EditorInputSystem.class);
         this.commandConsolePanelSystem = get(CommandConsolePanelSystem.class);
@@ -128,7 +128,7 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
 
     private void updateCaret() {
 
-        boolean focused = isFocused();
+        boolean focused = isActive();
 
         this.caretElapsed = focused ? caretElapsed + internal.getDeltaTime() : 0f;
         boolean visible = focused && (int) (caretElapsed / CommandConsoleSetting.COMMAND_CARET_BLINK_SECONDS) % 2 == 0;
@@ -168,7 +168,7 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
     @Override
     public void onChar(char character) {
 
-        if (!isFocused() || EngineSetting.FONT_DEFAULT_CHARSET.indexOf(character) == EngineSetting.INDEX_NOT_FOUND)
+        if (!isActive() || EngineSetting.FONT_DEFAULT_CHARSET.indexOf(character) == EngineSetting.INDEX_NOT_FOUND)
             return;
 
         if (commandConsoleChunkFieldSystem.hasFocus()) {
@@ -313,13 +313,13 @@ public class CommandConsoleInputSystem extends SystemPackage implements InputLis
     public void restartCaret() {
 
         this.caretElapsed = 0f;
-        this.caretVisible = isFocused();
+        this.caretVisible = isActive();
         refreshCommandLabel();
     }
 
     // Utility \\
 
-    private boolean isFocused() {
-        return windowManager.getFocusedWindow() == context.getWindow();
+    private boolean isActive() {
+        return activeWindowManager.isActive(context.getWindow());
     }
 }

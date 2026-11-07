@@ -15,9 +15,15 @@ public class WindowManager extends ManagerPackage {
      * sorted by zOrder then area, locating logical windows through their OS
      * window's own input. An OS window is hovered only while the platform
      * reports it uppermost under the cursor, so OS windows stacked over one
-     * another never share it. Focus changes only through setFocusedWindow()
-     * from InputManager.
+     * another never share it. Focus changes only through setFocusedWindow(),
+     * which tells the focus listener, when one is set, of every window that
+     * takes the focus.
      */
+
+    @FunctionalInterface
+    public interface FocusListener {
+        void onWindowFocused(WindowInstance window);
+    }
 
     private ObjectArrayList<WindowInstance> windows;
     private final ObjectArrayList<WindowInstance> hoveredWindows = new ObjectArrayList<>();
@@ -26,6 +32,7 @@ public class WindowManager extends ManagerPackage {
     private WindowInstance renderWindow;
     private WindowInstance contextWindow;
     private WindowInstance capturedWindow;
+    private FocusListener focusListener;
 
     private int nextWindowID;
     private int nextZOrder = 1;
@@ -276,7 +283,18 @@ public class WindowManager extends ManagerPackage {
     }
 
     public void setFocusedWindow(WindowInstance window) {
+
+        if (focusedWindow == window)
+            return;
+
         this.focusedWindow = window;
+
+        if (focusListener != null && window != null)
+            focusListener.onWindowFocused(window);
+    }
+
+    public void setFocusListener(FocusListener listener) {
+        this.focusListener = listener;
     }
 
     public WindowInstance getHoveredWindow() {

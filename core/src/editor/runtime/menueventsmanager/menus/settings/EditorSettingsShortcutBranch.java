@@ -7,6 +7,7 @@ import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.shortcutpipeline.shortcut.ShortcutHandle;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.shortcutpipeline.util.ShortcutModifier;
+import editor.bootstrap.shortcutpipeline.util.ShortcutUtility;
 import editor.runtime.EditorSetting;
 import engine.input.Input;
 import engine.input.InputCode;
@@ -340,25 +341,7 @@ public class EditorSettingsShortcutBranch extends BranchPackage {
     private String formatChord(int key, int modifiers) {
 
         textBuilder.setLength(0);
-
-        for (ShortcutModifier modifier : ShortcutModifier.VALUES) {
-
-            if ((modifiers & modifier.getBit()) == 0)
-                continue;
-
-            if (!textBuilder.isEmpty())
-                textBuilder.append(EngineSetting.INPUT_NAME_COMBO_SEPARATOR);
-
-            textBuilder.append(modifier.getLabel());
-        }
-
-        if (key != EngineSetting.INDEX_NOT_FOUND) {
-
-            if (!textBuilder.isEmpty())
-                textBuilder.append(EngineSetting.INPUT_NAME_COMBO_SEPARATOR);
-
-            textBuilder.append(InputNameUtility.getName(InputCode.key(key)));
-        }
+        ShortcutUtility.appendChord(textBuilder, key, modifiers);
 
         return textBuilder.toString();
     }

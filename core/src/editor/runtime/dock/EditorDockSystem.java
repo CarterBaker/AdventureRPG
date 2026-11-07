@@ -62,6 +62,10 @@ public class EditorDockSystem extends SystemPackage {
 
     // Accessible \\
 
+    public MenuInstance getBaseMenu() {
+        return baseMenu;
+    }
+
     public float getDockTop() {
         CanvasInstance canvas = baseMenu.getCanvas();
         return canvas != null ? canvas.getY() + canvas.getH() : 0f;

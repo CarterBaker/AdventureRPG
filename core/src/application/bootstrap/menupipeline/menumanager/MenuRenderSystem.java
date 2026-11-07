@@ -417,6 +417,7 @@ public class MenuRenderSystem extends SystemPackage {
 
         float rasterPixelSize = font.getHandle().getRasterPixelSize();
         float scale = resolveTextScale(element, font, data, rasterPixelSize);
+        fitTextWidth(element, font, scale);
         font.setFontSize(scale * rasterPixelSize);
 
         if (!font.hasGlyphs())
@@ -446,6 +447,8 @@ public class MenuRenderSystem extends SystemPackage {
 
     // Text Fit \\
 
+    // Text shrinks to fit its element down to the smallest size Settings allows, so it is never drawn unreadable
+
     private float resolveTextScale(
             ElementInstance element,
             FontInstance font,
@@ -458,7 +461,7 @@ public class MenuRenderSystem extends SystemPackage {
         float targetFontSize = Math.max(1f, data.getFontSize().resolve(element.getComputedH()));
         float scale = targetFontSize / rasterPixelSize;
 
-        float availableW = element.getComputedW() - EngineSetting.FONT_FIT_PADDING_X_PIXELS * 2f;
+        float availableW = resolveTextWidth(element);
         float availableH = element.getComputedH() - EngineSetting.FONT_FIT_PADDING_Y_PIXELS * 2f;
 
         if (font.getTextWidth() > 0f && availableW > 0f)
@@ -467,7 +470,20 @@ public class MenuRenderSystem extends SystemPackage {
         if (font.getTextHeight() > 0f && availableH > 0f)
             scale = Math.min(scale, availableH / font.getTextHeight());
 
-        return scale;
+        return Math.max(scale, settings.minTextSize / rasterPixelSize);
+    }
+
+    // Text too wide at the smallest readable size is cut behind an ellipsis, never shrunk further
+    private void fitTextWidth(ElementInstance element, FontInstance font, float scale) {
+
+        float availableW = resolveTextWidth(element);
+
+        if (availableW > 0f && font.getTextWidth() * scale > availableW)
+            font.fitWidth(availableW / scale);
+    }
+
+    private float resolveTextWidth(ElementInstance element) {
+        return element.getComputedW() - EngineSetting.FONT_FIT_PADDING_X_PIXELS * 2f;
     }
 
     private float resolveTextX(ElementInstance element, TextAlign align, float scaledW) {

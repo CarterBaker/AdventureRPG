@@ -13,6 +13,7 @@ import editor.runtime.biomeplanner.BiomePlannerContext;
 import editor.runtime.biomeviewer.BiomeViewerContext;
 import editor.runtime.brushes.BrushesContext;
 import editor.runtime.cameraplanner.CameraPlannerContext;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.tabpipeline.docklayoutsystem.DockLayoutSystem;
 import editor.bootstrap.tabpipeline.docknode.DockNodeStruct;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
@@ -105,6 +106,7 @@ public class TabManager extends ManagerPackage {
     private DockLayoutSystem dockLayoutSystem;
     private InputManager inputManager;
     private LayoutManager layoutManager;
+    private ActiveWindowManager activeWindowManager;
 
     // Internal \\
     @Override
@@ -124,6 +126,7 @@ public class TabManager extends ManagerPackage {
         dockLayoutSystem = get(DockLayoutSystem.class);
         inputManager = get(InputManager.class);
         layoutManager = get(LayoutManager.class);
+        activeWindowManager = get(ActiveWindowManager.class);
         inputManager.setAuthorityResolver(this::resolveContentWindow);
     }
 
@@ -369,6 +372,7 @@ public class TabManager extends ManagerPackage {
         tabContext.setOwnerHandle(handle);
         tabID2TabHandle.set(tabID, handle);
         openTabs.add(handle);
+        activeWindowManager.openWindow(contentWindow);
         dockLayoutSystem.addTab(osWindow, handle);
         pushRects();
         notifyLayoutChanged();
@@ -430,6 +434,7 @@ public class TabManager extends ManagerPackage {
         tabName2TabID.removeInt(handle.getTabTitle());
         tabID2TabHandle.set(handle.getTabID(), null);
         openTabs.remove(handle);
+        activeWindowManager.closeWindow(handle.getWindow());
         handle.mount(null);
     }
 

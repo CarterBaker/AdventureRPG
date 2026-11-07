@@ -11,8 +11,9 @@ public class FontInstance extends InstancePackage {
 
     /*
      * Per-label font state: its color material, a glyph layout rebuilt by
-     * setText(), and screen-space instance data rebuilt by prepareComposite()
-     * only when scale or position change.
+     * setText() and cut back to a width behind an ellipsis by fitWidth(), and
+     * screen-space instance data rebuilt by prepareComposite() only when
+     * scale or position change.
      */
 
     static final int FLOATS_PER_GLYPH = 8; // screenX,Y,W,H, u0,v0,uw,vh
@@ -40,6 +41,7 @@ public class FontInstance extends InstancePackage {
     private float textWidth;
     private float textHeight;
     private float textBottom;
+    private float textTop;
 
     // Color
     private final Vector4 color = new Vector4(1f, 1f, 1f, 1f);
@@ -72,20 +74,68 @@ public class FontInstance extends InstancePackage {
         textWidth = 0f;
         textHeight = 0f;
         textBottom = 0f;
+        textTop = 0f;
 
         if (text == null || text.isEmpty()) {
             textDirty = true;
             return;
         }
 
-        int maxGlyphs = text.length();
+        int maxGlyphs = text.length() + EngineSetting.FONT_ELLIPSIS.length();
         if (glyphLayout.length < maxGlyphs * FLOATS_PER_GLYPH)
             glyphLayout = new float[maxGlyphs * FLOATS_PER_GLYPH];
 
-        float rasterPixelSize = handle.getRasterPixelSize();
-        float letterSpacing = rasterPixelSize * EngineSetting.FONT_LETTER_SPACING_RATIO;
+        float cursorX = appendText(text, 0f);
+
+        if (cursorX > 0f)
+            cursorX -= letterSpacing();
+        textWidth = cursorX;
+        textDirty = true;
+        lastScale = Float.NaN;
+    }
+
+    // Cuts the laid-out text back to the last glyph that leaves room for the ellipsis within the width, in atlas
+    // pixels, and lays the ellipsis after it; text that already fits is left whole
+    public void fitWidth(float maxWidth) {
+
+        if (textWidth <= maxWidth)
+            return;
+
+        float letterSpacing = letterSpacing();
+        float ellipsisWidth = measureText(EngineSetting.FONT_ELLIPSIS, letterSpacing);
+        int kept = glyphCount;
         float cursorX = 0f;
-        float textTop = 0f;
+
+        while (kept > 0) {
+
+            int base = (kept - 1) * FLOATS_PER_GLYPH;
+            cursorX = glyphLayout[base] + glyphLayout[base + 2] + letterSpacing;
+
+            if (cursorX + ellipsisWidth <= maxWidth)
+                break;
+
+            kept--;
+            cursorX = 0f;
+        }
+
+        glyphCount = kept;
+        textTop = 0f;
+        textBottom = 0f;
+
+        for (int i = 0; i < glyphCount; i++)
+            spanGlyph(i);
+
+        cursorX = appendText(EngineSetting.FONT_ELLIPSIS, cursorX);
+
+        textWidth = cursorX > 0f ? cursorX - letterSpacing : 0f;
+        textDirty = true;
+        lastScale = Float.NaN;
+    }
+
+    // Lays each glyph of the text out from the cursor and returns the cursor after it, one letter space past the last
+    private float appendText(String text, float cursorX) {
+
+        float letterSpacing = letterSpacing();
 
         for (int i = 0; i < text.length();) {
 
@@ -93,9 +143,7 @@ public class FontInstance extends InstancePackage {
             i += Character.charCount(codepoint);
 
             if (codepoint == ' ') {
-                GlyphMetricStruct space = handle.getGlyph(codepoint);
-                cursorX += (space != null ? space.advance : rasterPixelSize * EngineSetting.FONT_SPACE_ADVANCE_RATIO)
-                        + letterSpacing;
+                cursorX += spaceAdvance() + letterSpacing;
                 continue;
             }
 
@@ -115,25 +163,59 @@ public class FontInstance extends InstancePackage {
             glyphLayout[base + 6] = glyphHandle.getU1() - glyphHandle.getU0();
             glyphLayout[base + 7] = glyphHandle.getV1() - glyphHandle.getV0();
 
+            spanGlyph(glyphCount);
             cursorX += metric.advance + letterSpacing;
-
-            float glyphBottom = metric.bearingY - metric.height;
-
-            if (glyphCount == 0 || glyphBottom < textBottom)
-                textBottom = glyphBottom;
-            if (glyphCount == 0 || metric.bearingY > textTop)
-                textTop = metric.bearingY;
-
             glyphCount++;
         }
 
         textHeight = glyphCount > 0 ? textTop - textBottom : 0f;
 
-        if (cursorX > 0f)
-            cursorX -= letterSpacing;
-        textWidth = cursorX;
-        textDirty = true;
-        lastScale = Float.NaN;
+        return cursorX;
+    }
+
+    // The width the text takes laid out, in atlas pixels, one letter space past its last glyph
+    private float measureText(String text, float letterSpacing) {
+
+        float width = 0f;
+
+        for (int i = 0; i < text.length();) {
+
+            int codepoint = text.codePointAt(i);
+            i += Character.charCount(codepoint);
+
+            GlyphMetricStruct metric = handle.getGlyph(codepoint);
+
+            if (codepoint == ' ')
+                width += spaceAdvance() + letterSpacing;
+            else if (metric != null && handle.getGlyphHandle(codepoint) != null)
+                width += metric.advance + letterSpacing;
+        }
+
+        return width;
+    }
+
+    // The text's vertical span widened to take in one laid-out glyph
+    private void spanGlyph(int glyph) {
+
+        int base = glyph * FLOATS_PER_GLYPH;
+        float glyphBottom = glyphLayout[base + 1];
+        float glyphTop = glyphBottom + glyphLayout[base + 3];
+
+        if (glyph == 0 || glyphBottom < textBottom)
+            textBottom = glyphBottom;
+        if (glyph == 0 || glyphTop > textTop)
+            textTop = glyphTop;
+    }
+
+    private float letterSpacing() {
+        return handle.getRasterPixelSize() * EngineSetting.FONT_LETTER_SPACING_RATIO;
+    }
+
+    private float spaceAdvance() {
+
+        GlyphMetricStruct space = handle.getGlyph(' ');
+
+        return space != null ? space.advance : handle.getRasterPixelSize() * EngineSetting.FONT_SPACE_ADVANCE_RATIO;
     }
 
     // Composite Preparation \\

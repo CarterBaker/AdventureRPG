@@ -96,6 +96,10 @@ public class SettingsUtility extends EngineUtility {
         sanitizePostProcessing(settings);
         sanitizeAudio(settings);
         sanitizeColors(settings);
+        settings.minTextSize = Math.clamp(
+                settings.minTextSize,
+                EngineSetting.FONT_MIN_SIZE_MIN,
+                EngineSetting.FONT_MIN_SIZE_MAX);
     }
 
     private static void sanitizeAudio(Settings settings) {
@@ -180,6 +184,8 @@ public class SettingsUtility extends EngineUtility {
         settings.uiColorDanger = sanitizeColor(settings.uiColorDanger, defaults.uiColorDanger);
         settings.uiColorFrame = sanitizeColor(settings.uiColorFrame, defaults.uiColorFrame);
         settings.uiColorFrameOutline = sanitizeColor(settings.uiColorFrameOutline, defaults.uiColorFrameOutline);
+        settings.uiColorWindowActive = sanitizeColor(settings.uiColorWindowActive, defaults.uiColorWindowActive);
+        settings.uiColorWindowHover = sanitizeColor(settings.uiColorWindowHover, defaults.uiColorWindowHover);
     }
 
     private static float[] sanitizeColor(float[] color, float[] fallback) {

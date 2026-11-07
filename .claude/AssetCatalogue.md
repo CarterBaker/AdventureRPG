@@ -190,6 +190,10 @@ One line per session that changed this file: the date, what was added or removed
   (long cards weighed onto the chains by Weigh Onto Locks) and `schemas/Rigs.arpg` (the `springs` chains and their
   ranges), and rewrote `CharacterHair.glsl` and `StandardcharacterShader.vsh` (each lock's sway phase read from its
   bind position, so it adds cleanly to the bones' motion).
+- 2026-11-07: Active window and hint bar. Regenerated every `shortcuts/*.arpg` (a `hint` on each shortcut the hint bar
+  lists, kept to its `canvases` and `tools` where it applies to only some), `schemas/Shortcuts.arpg` (the `hint`,
+  `canvases` and `tools` fields) and `menus/editor/EditorWindow.arpg` (the hint bar along the foot of the main window,
+  the dock raised above it).
 ---
 
 ## Textures and Sprites (2175 files)

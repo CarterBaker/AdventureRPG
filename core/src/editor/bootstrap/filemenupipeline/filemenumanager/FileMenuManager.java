@@ -2,10 +2,10 @@ package editor.bootstrap.filemenupipeline.filemenumanager;
 
 import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.filemenupipeline.util.FileMenuAction;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.EditorSetting;
@@ -15,10 +15,11 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 public class FileMenuManager extends ManagerPackage {
 
     /*
-     * Keeps which window the editor's File and Edit menus act on: the tool
-     * focused last, its window or its tab's chrome. Focusing a window that
-     * takes no file actions, the menu bar among them, keeps the target, so a
-     * menu item always reaches the tool worked in. Each action runs the
+     * Resolves which window the editor's File and Edit menus act on: the tool
+     * ActiveWindowManager names worked in last among those that take file
+     * actions, so activating one that takes none, the Properties tab among
+     * them, keeps the target and a menu item always reaches the tool worked
+     * in. Each action runs the
      * method the tool's table names on the tool's own window, through the
      * route its shortcuts take, inside its crash boundary. Every tool opens
      * itself here for as long as it lives, through openWindow() and
@@ -27,15 +28,12 @@ public class FileMenuManager extends ManagerPackage {
      */
 
     // Internal
-    private WindowManager windowManager;
+    private ActiveWindowManager activeWindowManager;
     private TabManager tabManager;
     private ElementHitSystem elementHitSystem;
 
     // Windows
     private Object2ObjectOpenHashMap<WindowInstance, FileMenuProvider> window2Provider;
-
-    // Target
-    private WindowInstance targetWindow;
 
     // Base \\
 
@@ -48,21 +46,9 @@ public class FileMenuManager extends ManagerPackage {
 
     @Override
     protected void get() {
-        this.windowManager = get(WindowManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
         this.tabManager = get(TabManager.class);
         this.elementHitSystem = get(ElementHitSystem.class);
-    }
-
-    // Update \\
-
-    @Override
-    protected void update() {
-
-        WindowInstance focused = windowManager.getFocusedWindow();
-        WindowInstance window = focused != null ? tabManager.resolveContentWindow(focused) : null;
-
-        if (window != null && window2Provider.containsKey(window))
-            this.targetWindow = window;
     }
 
     // Windows \\
@@ -79,11 +65,7 @@ public class FileMenuManager extends ManagerPackage {
     }
 
     public void closeWindow(WindowInstance window) {
-
         window2Provider.remove(window);
-
-        if (targetWindow == window)
-            this.targetWindow = null;
     }
 
     // Actions \\
@@ -93,6 +75,7 @@ public class FileMenuManager extends ManagerPackage {
         if (!takes(action))
             return;
 
+        WindowInstance targetWindow = getTargetWindow();
         FileMenuTableStruct table = window2Provider.get(targetWindow).getFileMenuTable();
 
         elementHitSystem.executeAction(
@@ -102,15 +85,24 @@ public class FileMenuManager extends ManagerPackage {
                 targetWindow);
     }
 
+    // The tool worked in last among those that take file actions, null for none
+    private WindowInstance getTargetWindow() {
+        return activeWindowManager.findRecent(window2Provider);
+    }
+
     // Accessible \\
 
     public boolean takes(FileMenuAction action) {
+
+        WindowInstance targetWindow = getTargetWindow();
+
         return targetWindow != null && window2Provider.get(targetWindow).getFileMenuTable().takes(action);
     }
 
     // The name of the tab the menus act on, shown at their head
     public String getTargetTitle() {
 
+        WindowInstance targetWindow = getTargetWindow();
         TabHandle tab = targetWindow != null ? tabManager.getTabHandleForContentWindow(targetWindow) : null;
 
         return tab != null ? tab.getTabTitle() : EditorSetting.FILE_MENU_NO_TARGET;

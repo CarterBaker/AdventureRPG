@@ -88,6 +88,10 @@ public class SettingsValueUtility extends EngineUtility {
             }
             case CAMERA_SHAKE -> settings.cameraShake = !settings.cameraShake;
             case HEAD_BOB -> settings.headBob = !settings.headBob;
+            case MIN_TEXT_SIZE -> settings.minTextSize = Math.clamp(
+                    settings.minTextSize + step * RuntimeSetting.SETTINGS_MIN_TEXT_SIZE_STEP,
+                    EngineSetting.FONT_MIN_SIZE_MIN,
+                    EngineSetting.FONT_MIN_SIZE_MAX);
         }
     }
 
@@ -130,6 +134,7 @@ public class SettingsValueUtility extends EngineUtility {
             case BLOOM -> formatToggle(settings.bloom);
             case CAMERA_SHAKE -> formatToggle(settings.cameraShake);
             case HEAD_BOB -> formatToggle(settings.headBob);
+            case MIN_TEXT_SIZE -> String.format(RuntimeSetting.SETTINGS_FORMAT_PIXELS, settings.minTextSize);
         };
     }
 

@@ -30,7 +30,8 @@ public enum SettingsOption {
     ANTI_ALIASING(RuntimeSetting.SETTINGS_OPTION_ANTI_ALIASING, false),
     BLOOM(RuntimeSetting.SETTINGS_OPTION_BLOOM, false),
     CAMERA_SHAKE(RuntimeSetting.SETTINGS_OPTION_CAMERA_SHAKE, false),
-    HEAD_BOB(RuntimeSetting.SETTINGS_OPTION_HEAD_BOB, false);
+    HEAD_BOB(RuntimeSetting.SETTINGS_OPTION_HEAD_BOB, false),
+    MIN_TEXT_SIZE(RuntimeSetting.SETTINGS_OPTION_MIN_TEXT_SIZE, false);
 
     // Internal
     private final String label;

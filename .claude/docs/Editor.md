@@ -24,6 +24,25 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   act on.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 
+## The active window
+
+- **Exactly one editor window is active.** `ActiveWindowManager` (`editor.bootstrap.tabpipeline`) owns it: the tab
+  content window focused last, through its view or its tab's chrome. Pressing the mouse in a window makes it active
+  and performs the press in the same frame; the first click is never swallowed. Every consumer reads that owner (the
+  File and Edit menus, the Tools tab, the Properties tab, the shortcuts, the character mode and recorder pane systems)
+  and the ones that act only on some windows take the most recent of those through `findRecent`. Never keep a copy.
+- **Hover-only input stays hover-only.** The wheel scrolls and zooms whatever the pointer is over, active or not
+  (`EditorInputSystem.isPointerOver`); clicks, drags and keys need the active window (`isPointerActive`).
+- **The active window is marked.** Its tab header is tinted and its border drawn in the theme's Active Window color,
+  and a hovered inactive tab's header takes the fainter Hovered Window tint, both on the Settings dialog's Colors
+  page under Window Frame.
+- **The hint bar** along the foot of the main window lists the active window's shortcuts for its current canvas and
+  tool, read from the `hint`s in its `assets/shortcuts/` file (see `.claude/docs/Shortcut.md`), never hard-coded.
+  It is rebuilt only when the active window, its canvas, its tool or a shortcut's keys change.
+- **Text is never unreadable.** Text shrinks to fit its element no smaller than the Minimum Text Size on the Settings
+  dialog's General page; past that it is cut behind an ellipsis. Docked panels never split smaller than
+  `EditorSetting.DOCK_PANEL_MIN_SIZE`.
+
 ## Tools and brushes
 
 - **Every editor tool lives in the Tools tab**, chosen there or by the shared tool keys, for whatever canvas was

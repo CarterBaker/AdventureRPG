@@ -10,8 +10,9 @@ public enum EditorSettingsColor {
      * The editor's color scheme as the Colors page lists it: every theme
      * slot the editor's menus shade from, in the order listed and grouped
      * under its section, the frame every editor window draws in place of the
-     * OS one included. A slot's color lives in Settings, so an edit shows on
-     * every open menu from the next frame.
+     * OS one included, with the tint of the active and the hovered tab. A
+     * slot's color lives in Settings, so an edit shows on every open menu
+     * from the next frame.
      */
 
     BACKGROUND(EditorSetting.SETTINGS_SECTION_SURFACES, EditorSetting.SETTINGS_COLOR_BACKGROUND,
@@ -43,7 +44,11 @@ public enum EditorSettingsColor {
     FRAME(EditorSetting.SETTINGS_SECTION_FRAME, EditorSetting.SETTINGS_COLOR_FRAME,
             ThemeColor.FRAME),
     FRAME_OUTLINE(EditorSetting.SETTINGS_SECTION_FRAME, EditorSetting.SETTINGS_COLOR_FRAME_OUTLINE,
-            ThemeColor.FRAME_OUTLINE);
+            ThemeColor.FRAME_OUTLINE),
+    WINDOW_ACTIVE(EditorSetting.SETTINGS_SECTION_FRAME, EditorSetting.SETTINGS_COLOR_WINDOW_ACTIVE,
+            ThemeColor.WINDOW_ACTIVE),
+    WINDOW_HOVER(EditorSetting.SETTINGS_SECTION_FRAME, EditorSetting.SETTINGS_COLOR_WINDOW_HOVER,
+            ThemeColor.WINDOW_HOVER);
 
     // Values
     public static final EditorSettingsColor[] VALUES = values();

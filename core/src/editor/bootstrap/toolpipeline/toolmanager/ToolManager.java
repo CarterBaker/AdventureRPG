@@ -1,9 +1,8 @@
 package editor.bootstrap.toolpipeline.toolmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
-import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.tool.ToolOptionStruct;
@@ -20,10 +19,11 @@ public class ToolManager extends ManagerPackage {
      * Owns the editor's tools the way a paint program's toolbox does: every
      * canvas keeps the tool chosen for it and its own value of every option
      * it honours, size included, and the Tools panel, the tool keys and the
-     * brush size keys all work on the target, the canvas window focused last;
-     * an action the target's canvas lists runs on that window.
-     * Focusing a panel keeps the target, so a tool chosen there reaches the
-     * canvas it was chosen for. Every window the shared tool keys work in
+     * brush size keys all work on the target, the canvas window
+     * ActiveWindowManager names worked in last, else the first opened; an
+     * action the target's canvas lists runs on that window. Activating a
+     * panel keeps the target, so a tool chosen there reaches the canvas it
+     * was chosen for. Every window the shared tool keys work in
      * opens itself here, a canvas with what supplies its canvas, a panel
      * without, through openWindow() and closeWindow(), the one pair that
      * owns them. A tool the target's canvas does not take is refused. A
@@ -34,8 +34,7 @@ public class ToolManager extends ManagerPackage {
      */
 
     // Internal
-    private WindowManager windowManager;
-    private TabManager tabManager;
+    private ActiveWindowManager activeWindowManager;
     private BrushManager brushManager;
     private ToolStateBranch toolStateBranch;
 
@@ -44,7 +43,6 @@ public class ToolManager extends ManagerPackage {
     private ObjectOpenHashSet<WindowInstance> toolWindows;
 
     // Target
-    private WindowInstance targetWindow;
     private ToolCanvas shownCanvas;
 
     // Tools
@@ -90,8 +88,7 @@ public class ToolManager extends ManagerPackage {
 
     @Override
     protected void get() {
-        this.windowManager = get(WindowManager.class);
-        this.tabManager = get(TabManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
         this.brushManager = get(BrushManager.class);
     }
 
@@ -109,12 +106,6 @@ public class ToolManager extends ManagerPackage {
 
     @Override
     protected void update() {
-
-        WindowInstance focused = windowManager.getFocusedWindow();
-        WindowInstance window = focused != null ? tabManager.resolveContentWindow(focused) : null;
-
-        if (window != null && window2Provider.containsKey(window))
-            this.targetWindow = window;
 
         ToolCanvas canvas = getCanvas();
 
@@ -146,22 +137,14 @@ public class ToolManager extends ManagerPackage {
 
         toolWindows.add(window);
 
-        if (provider == null)
-            return;
-
-        window2Provider.put(window, provider);
-
-        if (targetWindow == null)
-            this.targetWindow = window;
+        if (provider != null)
+            window2Provider.put(window, provider);
     }
 
     public void closeWindow(WindowInstance window) {
 
         toolWindows.remove(window);
         window2Provider.remove(window);
-
-        if (targetWindow == window)
-            this.targetWindow = null;
     }
 
     // True for a window the shared tool keys work in
@@ -194,6 +177,7 @@ public class ToolManager extends ManagerPackage {
     // One of the target canvas's actions run by its window, when the canvas lists it
     public void runAction(String actionKey) {
 
+        WindowInstance targetWindow = activeWindowManager.findRecent(window2Provider);
         ToolCanvasProvider provider = targetWindow != null ? window2Provider.get(targetWindow) : null;
         ToolCanvas canvas = provider != null ? provider.getToolCanvas() : null;
 
@@ -261,8 +245,13 @@ public class ToolManager extends ManagerPackage {
 
     // What the target works on, null while there is no target or it takes no tools right now
     public ToolCanvas getCanvas() {
+        return getWindowCanvas(activeWindowManager.findRecent(window2Provider));
+    }
 
-        ToolCanvasProvider provider = targetWindow != null ? window2Provider.get(targetWindow) : null;
+    // What a window works on, null for a window that takes no tools or none right now
+    public ToolCanvas getWindowCanvas(WindowInstance window) {
+
+        ToolCanvasProvider provider = window != null ? window2Provider.get(window) : null;
 
         return provider != null ? provider.getToolCanvas() : null;
     }

@@ -82,6 +82,9 @@ public class Settings {
     public float interfaceVolume = 0.8f;
     public float voiceVolume = 1f;
 
+    // Interface
+    public int minTextSize = EngineSetting.FONT_MIN_SIZE_DEFAULT;
+
     // Editor — Interface Colors
     public float[] uiColorBackground = { 0.075f, 0.082f, 0.098f, 1.0f };
     public float[] uiColorPanel = { 0.118f, 0.129f, 0.153f, 1.0f };
@@ -98,6 +101,8 @@ public class Settings {
     public float[] uiColorDanger = { 0.898f, 0.302f, 0.302f, 1.0f };
     public float[] uiColorFrame = { 0.110f, 0.118f, 0.141f, 1.0f };
     public float[] uiColorFrameOutline = { 0.231f, 0.251f, 0.294f, 1.0f };
+    public float[] uiColorWindowActive = { 0.298f, 0.553f, 0.965f, 1.0f };
+    public float[] uiColorWindowHover = { 0.420f, 0.643f, 0.984f, 1.0f };
 
     // Bindings — Game Movement
     public int[] bindMoveForward = { Keys.W };
