@@ -102,10 +102,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterOutliner(window.getGLWindow());
     }
 
-    public void openEntityEditor(WindowInstance window) {
-        tabManager.openEntityEditor(window.getGLWindow());
-    }
-
     public void openFaceEditor(WindowInstance window) {
         tabManager.openFaceEditor(window.getGLWindow());
     }

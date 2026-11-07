@@ -202,12 +202,13 @@ public class CharacterEditorManager extends ManagerPackage {
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_RACES, this::refreshEntry);
         infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_RACES, this::closeEntry);
         infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::openEntityRace);
+        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::openEntityRace);
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_RIGS, characterRigBranch::refreshEntry);
     }
 
     // Races \\
 
-    // An entity picked anywhere opens the race it is made of, with every gender's model
+    // An entity picked or changed anywhere opens the race it is made of, with every gender's model
     private void openEntityRace(InfoEntryStruct entityEntry) {
 
         ArpgObjectStruct entityArpg = entityEntry.getArpg();

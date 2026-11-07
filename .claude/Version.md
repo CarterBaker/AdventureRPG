@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 43
-Task: BrushSelection
+Delivery: 44
+Task: PropertiesEditing
 Applied: 2026-11-07
 
 ## Log
@@ -53,3 +53,4 @@ Applied: 2026-11-07
 - 41, 2026-11-06, EntityEditorEditing
 - 42, 2026-11-06, FileMenuHandsHair
 - 43, 2026-11-07, BrushSelection
+- 44, 2026-11-07, PropertiesEditing

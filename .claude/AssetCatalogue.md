@@ -173,6 +173,10 @@ One line per session that changed this file: the date, what was added or removed
   undo and redo buttons moved to those menus).
 - 2026-11-07: Bald genders. Regenerated `schemas/Races.arpg` (`""` allowed for `hair` in a gender's and the race's
   `features`) so a gender can wear no hair under a race whose default gives some.
+- 2026-11-07: Properties tab laid out for editing; Entity Editor removed. Regenerated `menus/editor/Properties.arpg`
+  (number rows with a slider, choice rows, a Copy button on groups in lists and maps) and
+  `menus/editor/EditorWindow.arpg` (no Entity Editor in the Characters menu); deleted `menus/editor/EntityEditor.arpg`
+  (its tool was removed; entities and races are edited in the Properties tab).
 ---
 
 ## Textures and Sprites (2175 files)
@@ -2168,11 +2172,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePlanner.arpg`,
 `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
-`CharacterMeshEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `EntityEditor.arpg`,
-`FaceEditor.arpg`, `HeightEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
-`Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`,
-`TextureViewer.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`,
-`WorldMap.arpg`
+`CharacterMeshEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
+`HeightEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`, `Recordings.arpg`,
+`SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`,
+`Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
 

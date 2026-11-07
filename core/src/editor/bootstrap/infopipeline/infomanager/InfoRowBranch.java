@@ -16,10 +16,14 @@ class InfoRowBranch extends BranchPackage {
 
     /*
      * Flattens the selected entry into info panel rows. Every schema field of
-     * an object is listed in schema order, an absent optional one as a
-     * MISSING row, followed by any keys the schema does not name. Groups list
-     * their children beneath them while expanded; array elements are labelled
-     * by index and, for objects, by their first summary field. A row whose
+     * an object is listed under its key read as words, its plain values first
+     * and its groups after, each in schema order, an absent optional one as a
+     * MISSING row, followed by any keys the schema does not name. A number is
+     * a NUMBER row, a boolean, an enum or a name of other content a CHOICE
+     * row, anything else typed. Groups list their children beneath them while
+     * expanded, and one standing in a list or a map may be duplicated; array
+     * elements are labelled by index and, for objects, by their first summary
+     * field. A row whose
      * path holds an error, or lies above one, is marked as holding it, and a
      * row the game ignores is marked as ignored.
      */
@@ -27,6 +31,7 @@ class InfoRowBranch extends BranchPackage {
     // Internal
     private InfoManager infoManager;
     private InfoEditBranch infoEditBranch;
+    private InfoChoiceBranch infoChoiceBranch;
 
     // Rows — main thread only
     private ObjectOpenHashSet<String> errorPaths;
@@ -38,6 +43,7 @@ class InfoRowBranch extends BranchPackage {
     protected void get() {
         this.infoManager = get(InfoManager.class);
         this.infoEditBranch = get(InfoEditBranch.class);
+        this.infoChoiceBranch = get(InfoChoiceBranch.class);
     }
 
     // Rows \\
@@ -66,7 +72,12 @@ class InfoRowBranch extends BranchPackage {
         ObjectArrayList<InfoFieldStruct> fields = objectField.getFields();
 
         for (int i = 0; i < fields.size(); i++)
-            addFieldRows(arpg, objectField, fields.get(i), prefix, depth, rows);
+            if (!isGroup(fields.get(i), arpg.get(fields.get(i).getKey())))
+                addFieldRows(arpg, objectField, fields.get(i), prefix, depth, rows);
+
+        for (int i = 0; i < fields.size(); i++)
+            if (isGroup(fields.get(i), arpg.get(fields.get(i).getKey())))
+                addFieldRows(arpg, objectField, fields.get(i), prefix, depth, rows);
 
         for (String key : arpg.keySet())
             if (objectField.findField(key) == null)
@@ -86,12 +97,12 @@ class InfoRowBranch extends BranchPackage {
 
         if (value == null) {
             rows.add(new InfoRowStruct(
-                    path, field.getKey(), depth, InfoRowKind.MISSING, "", false, false, false,
-                    errorPaths.contains(path), false));
+                    path, toFieldLabel(field.getKey()), depth, InfoRowKind.MISSING, "", Float.NaN,
+                    false, false, false, false, errorPaths.contains(path), false));
             return;
         }
 
-        addValueRows(value, objectField, field, false, path, field.getKey(), depth, rows);
+        addValueRows(value, objectField, field, false, path, toFieldLabel(field.getKey()), depth, rows);
     }
 
     private void addValueRows(
@@ -108,18 +119,27 @@ class InfoRowBranch extends BranchPackage {
         boolean removable = infoEditBranch.isRemovable(containerField, field, inArray);
 
         if (!type.isGroup()) {
+
+            InfoRowKind kind = toValueKind(field, type);
+            float fraction = kind == InfoRowKind.NUMBER ? infoEditBranch.toFraction(field, value) : Float.NaN;
+
+            String preview = toPreview(value, type);
+
             rows.add(new InfoRowStruct(
-                    path, label, depth, InfoRowKind.VALUE, toPreview(value, type), false, false, removable,
-                    errorPaths.contains(path), ignoredPaths.contains(path)));
+                    path, label, depth, kind,
+                    kind == InfoRowKind.CHOICE && preview.isEmpty() ? EditorSetting.INFO_VALUE_NONE : preview,
+                    fraction, false, false, removable, false, errorPaths.contains(path), ignoredPaths.contains(path)));
             return;
         }
 
         boolean expanded = infoManager.isExpanded(path, depth);
         boolean addable = type == InfoFieldType.MAP || (type == InfoFieldType.ARRAY && !field.isFixedLength());
+        boolean duplicable = isElement(containerField, inArray)
+                && infoEditBranch.isDuplicable(containerField, inArray);
 
         rows.add(new InfoRowStruct(
-                path, label + toGroupSuffix(type, value), depth, InfoRowKind.GROUP, "",
-                expanded, addable, removable, errorPaths.contains(path), ignoredPaths.contains(path)));
+                path, label + toGroupSuffix(type, value), depth, InfoRowKind.GROUP, "", Float.NaN,
+                expanded, addable, removable, duplicable, errorPaths.contains(path), ignoredPaths.contains(path)));
 
         if (expanded)
             addGroupChildren(value, field, type, path, depth + 1, rows);
@@ -156,7 +176,49 @@ class InfoRowBranch extends BranchPackage {
             addValueRows(map.get(key), field, field.getElement(), false, joinPath(path, key), key, depth, rows);
     }
 
+    // Kinds \\
+
+    private InfoRowKind toValueKind(InfoFieldStruct field, InfoFieldType type) {
+
+        if (type == InfoFieldType.INT || type == InfoFieldType.FLOAT)
+            return InfoRowKind.NUMBER;
+
+        return type != InfoFieldType.RAW && infoChoiceBranch.isChoice(field) ? InfoRowKind.CHOICE : InfoRowKind.VALUE;
+    }
+
+    // A field listed with the groups: one holding a group, or an absent one that would
+    private boolean isGroup(InfoFieldStruct field, ArpgElementStruct value) {
+        return field.getType().isGroup() && (value == null || field.getType().accepts(value));
+    }
+
+    private boolean isElement(InfoFieldStruct containerField, boolean inArray) {
+        return inArray || (containerField != null && containerField.getType() == InfoFieldType.MAP);
+    }
+
     // Labels \\
+
+    // A field's key read as words, each begun in upper case: "animation_tree" reads "Animation Tree"
+    private String toFieldLabel(String key) {
+
+        StringBuilder label = new StringBuilder(key.length());
+        boolean wordStart = true;
+
+        for (int i = 0; i < key.length(); i++) {
+
+            char character = key.charAt(i);
+
+            if (character == EditorSetting.INFO_KEY_WORD_SEPARATOR) {
+                label.append(EditorSetting.INFO_LABEL_WORD_SEPARATOR);
+                wordStart = true;
+                continue;
+            }
+
+            label.append(wordStart ? Character.toUpperCase(character) : character);
+            wordStart = false;
+        }
+
+        return label.toString();
+    }
 
     private String toIndexLabel(int index, ArpgElementStruct element) {
 

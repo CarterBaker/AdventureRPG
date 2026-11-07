@@ -2,7 +2,6 @@ package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
-import editor.bootstrap.infopipeline.util.InfoFieldType;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -12,10 +11,11 @@ public class InfoPanelBranch extends BranchPackage {
     /*
      * Menu event handlers for the Info Panel. Every action works on the
      * shared selection in InfoManager; row buttons carry the path of the value
-     * they act on. Booleans toggle and enums cycle in place, every other value
-     * is typed into the text dialog, new entries, files, and map keys are
-     * named through the name dialog, and deleting asks for the selection's
-     * name to be typed back as confirmation. Copying asks for a new name,
+     * they act on. A number steps down and up, a choice steps back and forth
+     * through what it may name, and either is also typed into the text dialog
+     * like every other value; new entries, files, map keys and duplicated map
+     * entries are named through the name dialog, and deleting asks for the
+     * selection's name to be typed back as confirmation. Copying asks for a new name,
      * then a new value for each unique field, before anything is created.
      */
 
@@ -126,21 +126,37 @@ public class InfoPanelBranch extends BranchPackage {
 
     public void editValue(String path, WindowInstance window) {
 
-        InfoFieldType type = infoManager.getValueType(path);
-
-        if (type == null)
+        if (infoManager.getValueType(path) == null)
             return;
 
-        switch (type) {
-            case BOOLEAN -> infoManager.toggleValue(path);
-            case ENUM -> infoManager.cycleValue(path);
-            default -> nameDialogBranch.openText(
-                    window,
-                    EditorSetting.DIALOG_TITLE_EDIT_PREFIX + toFieldLabel(path),
-                    infoManager.getValueText(path),
-                    text -> infoManager.isValueValid(path, text),
-                    text -> infoManager.editValue(path, text));
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.DIALOG_TITLE_EDIT_PREFIX + toFieldLabel(path),
+                infoManager.getValueText(path),
+                text -> infoManager.isValueValid(path, text),
+                text -> infoManager.editValue(path, text));
+    }
+
+    public void decreaseValue(String path) {
+        infoManager.stepValue(path, -1);
+    }
+
+    public void increaseValue(String path) {
+        infoManager.stepValue(path, 1);
+    }
+
+    public void duplicateValue(String path, WindowInstance window) {
+
+        if (!infoManager.isMapEntry(path)) {
+            infoManager.duplicateValue(path);
+            return;
         }
+
+        nameDialogBranch.open(
+                window,
+                EditorSetting.DIALOG_TITLE_DUPLICATE_KEY,
+                key -> infoManager.isDuplicateKeyValid(path, key),
+                key -> infoManager.duplicateMapEntry(path, key));
     }
 
     public void addField(String path) {

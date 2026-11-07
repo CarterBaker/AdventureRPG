@@ -45,6 +45,10 @@ public final class ArpgArrayStruct extends ArpgElementStruct implements Iterable
         elements.add(element != null ? element : ArpgNullStruct.INSTANCE);
     }
 
+    public void add(int index, ArpgElementStruct element) {
+        elements.add(index, element != null ? element : ArpgNullStruct.INSTANCE);
+    }
+
     public void add(String value) {
         add(value != null ? new ArpgValueStruct(value) : ArpgNullStruct.INSTANCE);
     }

@@ -15,9 +15,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Name a tab for what it holds.** A palette of biomes is the Biome Palette; a window that paints heights is the
   Height Editor. Never a generic name that hides what the tab is for.
 - **Split so far:** the World Editor paints biomes and places settlements and cameras; the Height Editor raises and
-  lowers the ground; the Entity Editor makes, deletes and picks entities, chooses each one's race, copies and deletes
-  races, adds and removes a race's genders and chooses each gender's model (the entity's other fields in the
-  Properties tab); Character Appearance, Character Build and Character Equipment each shape one part of how a
+  lowers the ground; entities and races, like all content, are picked in the Hierarchy and edited in the Properties
+  tab; Character Appearance, Character Build and Character Equipment each shape one part of how a
   race looks, and the Character Mesh Editor models its meshes and rig with the Tools and Brushes tabs; the Recorder
   is its timeline, with Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside it, each opening its
   own menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes
@@ -72,7 +71,14 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   rows (the window is also a `CharacterViewRowSource`), `BIOMES` the World Editor's biome palette while it paints, and
   `INFO` the content entry selected in the Hierarchy, the editor's Info Panel, which the Hierarchy and every content
   tool show. A new kind of content is a new `PropertiesContent` and a `PropertiesView` system in the Properties tab,
-  never a new window. Its toolbar and status line always work on the Hierarchy's selection.
+  never a new window. Its status line always works on the Hierarchy's selection.
+- **Info rows are laid out for editing.** Every field reads as words (`animation_tree` is Animation Tree), plain values
+  before groups. A number has a slider (across its declared range when it has both ends, otherwise steps about its
+  value), step buttons and a typed value; a boolean, an enum, or a string naming other content or a file is a choice
+  stepped through every value it may take, `allow`ed values such as none first, and still typed. A group standing in a
+  list or a map has a Copy button that duplicates it beside itself. Rows refresh in place while their layout holds, so
+  a dragged slider keeps its row. Any schema gains all of this by declaring its types, ranges and references; never
+  write a tool window to edit one kind of content's fields.
 - **The Info entry follows whatever was last selected, in any window**: a brush, a biome, a tree, a ship, a
   settlement, a character, an animation. A window that selects content routes the choice through
   `InfoManager.selectEntry`, and content picked in the Hierarchy becomes the window's choice through a selection

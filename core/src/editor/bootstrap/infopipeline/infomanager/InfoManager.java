@@ -56,6 +56,7 @@ public class InfoManager extends ManagerPackage {
     private InfoLibraryBranch infoLibraryBranch;
     private InfoEditBranch infoEditBranch;
     private InfoRowBranch infoRowBranch;
+    private InfoChoiceBranch infoChoiceBranch;
     private InfoHierarchyBranch infoHierarchyBranch;
     private InfoReferenceBranch infoReferenceBranch;
     private InfoValidationBranch infoValidationBranch;
@@ -106,6 +107,7 @@ public class InfoManager extends ManagerPackage {
         this.infoLibraryBranch = create(InfoLibraryBranch.class);
         this.infoEditBranch = create(InfoEditBranch.class);
         this.infoRowBranch = create(InfoRowBranch.class);
+        this.infoChoiceBranch = create(InfoChoiceBranch.class);
         this.infoHierarchyBranch = create(InfoHierarchyBranch.class);
         this.infoReferenceBranch = create(InfoReferenceBranch.class);
         this.infoValidationBranch = create(InfoValidationBranch.class);
@@ -1044,25 +1046,81 @@ public class InfoManager extends ManagerPackage {
         commitSelection();
     }
 
-    public void toggleValue(String path) {
+    // A number moved a count of its steps, or a choice that many places along its choices
+    public void stepValue(String path, int steps) {
 
         InfoTargetStruct target = resolveSelected(path);
 
-        if (target == null || !target.hasValue() || target.resolveType() != InfoFieldType.BOOLEAN)
+        if (target == null || !target.hasValue() || steps == 0)
             return;
 
-        infoEditBranch.toggle(target);
+        InfoFieldType type = target.resolveType();
+        boolean changed = type == InfoFieldType.INT || type == InfoFieldType.FLOAT
+                ? infoEditBranch.step(target, steps)
+                : stepChoice(target, steps);
+
+        if (changed)
+            commitSelection();
+    }
+
+    private boolean stepChoice(InfoTargetStruct target, int steps) {
+
+        if (!infoChoiceBranch.isChoice(target.getField()))
+            return false;
+
+        infoChoiceBranch.cycle(target, steps);
+        return true;
+    }
+
+    // A number declaring both ends of its range set at a share of it, as its slider is dragged
+    public void setValueFraction(String path, float fraction) {
+
+        InfoTargetStruct target = resolveSelected(path);
+
+        if (target == null || !target.hasValue() || !infoEditBranch.hasRange(target.getField()))
+            return;
+
+        if (infoEditBranch.setFraction(target, fraction))
+            commitSelection();
+    }
+
+    public boolean isMapEntry(String path) {
+
+        InfoTargetStruct target = resolveSelected(path);
+        return target != null && target.hasValue() && infoEditBranch.isMapEntry(target);
+    }
+
+    // A copy of a list's element placed beside it
+    public void duplicateValue(String path) {
+
+        InfoTargetStruct target = resolveSelected(path);
+
+        if (target == null || !target.hasValue() || !target.isInArray() || !infoEditBranch.isDuplicable(target))
+            return;
+
+        infoEditBranch.duplicateElement(target);
+        setStatusMessage(EditorSetting.INFO_MESSAGE_DUPLICATED + path);
         commitSelection();
     }
 
-    public void cycleValue(String path) {
+    public boolean isDuplicateKeyValid(String path, String key) {
 
         InfoTargetStruct target = resolveSelected(path);
 
-        if (target == null || !target.hasValue() || target.resolveType() != InfoFieldType.ENUM)
+        return target != null
+                && target.hasValue()
+                && infoEditBranch.isMapEntry(target)
+                && infoEditBranch.isDuplicateKeyAvailable(target, key);
+    }
+
+    // A copy of a map's entry under a new key
+    public void duplicateMapEntry(String path, String key) {
+
+        if (!isDuplicateKeyValid(path, key))
             return;
 
-        infoEditBranch.cycle(target);
+        infoEditBranch.duplicateMapEntry(resolveSelected(path), key);
+        setStatusMessage(EditorSetting.INFO_MESSAGE_DUPLICATED + key);
         commitSelection();
     }
 

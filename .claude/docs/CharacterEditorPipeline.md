@@ -1,7 +1,7 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the
-Character Editor, the Face Editor, the Animation Editor, the Entity Editor, their docker windows, races and their
+Character Editor, the Face Editor, the Animation Editor, their docker windows, races and their
 genders' models, or a character's appearance (morphs, face controls, zones, masks, shaders). `.claude/CLAUDE.md` still
 applies in full.
 
@@ -22,7 +22,6 @@ layouts like any other.
 | Character Equipment | `CharacterEquipmentContext` | the live preview in the Equipment mode, its anchors marked |
 | Character Mesh Editor | `CharacterMeshEditorContext` | modelling: the bind-pose preview, its overlay and the Mesh, Sculpt, Weights and Rig toolbar; a tool canvas |
 | Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
-| Entity Editor | `EntityEditorContext` | `EntityEditorManager.buildListRows`: entities to make, delete and pick, the picked one's race, its rig and genders, the previewed gender's model, Save and Revert; the entity's other fields in Properties (`INFO`) |
 | Face Editor | `FaceEditorContext` | the open character framed on its head, its face bones marked; the Character Face tool canvas |
 | Face Outliner | `FaceOutlinerContext` | `FaceEditorManager.buildListRows` |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
@@ -91,16 +90,12 @@ the race through `EntityData.getRaceData()`; `RaceManager` (`entitypipeline.race
 modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a texture swap.
 
 - **The character tools edit races.** A `CharacterDocumentInstance` is one race (`INFO_SCHEMA_RACES`), its preview a
-  `RaceHandle` from `RaceManager.buildPreviewRace`. Picking a race opens it; picking an entity, in the Hierarchy or the
-  Entity Editor, opens its race through `CharacterEditorManager.openRace`, the one path that opens a race by name.
-- **The Entity Editor** (`editor.bootstrap.entityeditorpipeline`) makes, deletes and picks entities; picking one
-  selects it through `InfoManager.selectEntry`, so the Properties tab edits its other fields and the character tabs
-  open its race. Picking a gender row calls `CharacterEditorManager.selectPreviewGender`, so every character tab wears
-  that gender's model, and the model rows edit that gender. Every write goes through `EntityEditBranch` and
-  InfoManager; every choice is an `EntityEditorChoice` (its field, scope, schema or sibling folder, rig binding), so a
-  new one is a new constant, not new code. A race's rig is written on every gender at once; Add Gender copies the
-  previewed gender's model so the race still builds; Copy Race goes through `CharacterEditorManager.copyRace` and
-  makes the entity that race; Save writes the race before the entity. A changed `race` field opens the new race.
+  `RaceHandle` from `RaceManager.buildPreviewRace`. Picking a race opens it; picking an entity in the Hierarchy, or changing
+  the race it names, opens its race through `CharacterEditorManager.openRace`, the one path that opens a race by name.
+- **Entities and races are edited in the Properties tab.** Pick an entity or a race in the Hierarchy; its `race`,
+  each gender's `mesh`, `rig`, `material`, `animation_tree` and `features`, and every other reference are choice rows
+  stepping through what they may name. Make, duplicate, save, revert and delete them through the File menu; copy a
+  gender to add one (its Copy button names the new gender). Every gender of a race must still name the same rig.
 - **Mesh format** (`RiggedMeshArpgUtility`): every quad may name its `zone` (`MeshZone`: skin, eye, brow, lash, hair,
   cloth, mouth, teeth); `masks` (channels `EngineSetting.RIGGED_MESH_MASK_CHANNELS`) and `morphs` name vertices by the
   number the parse gives them, corners merged by position and influences in the order they first appear. Writing

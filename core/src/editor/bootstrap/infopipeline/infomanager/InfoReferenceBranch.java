@@ -121,6 +121,11 @@ class InfoReferenceBranch extends BranchPackage {
         return countName(schemaName, name) > 0;
     }
 
+    // Every name the game would find in a schema, for a field naming one of its entries to step through
+    void collectNames(String schemaName, ObjectArrayList<String> names) {
+        names.addAll(resolveNameCounts(schemaName).keySet());
+    }
+
     int countName(String schemaName, String name) {
         return resolveNameCounts(schemaName).getInt(name);
     }
@@ -226,6 +231,11 @@ class InfoReferenceBranch extends BranchPackage {
 
     boolean hasResource(String directory, InfoResourceNaming naming, String name) {
         return resolveResourceNames(directory, naming).contains(name);
+    }
+
+    // Every file name the game reads in a resource directory, for a field naming one to step through
+    void collectResources(String directory, InfoResourceNaming naming, ObjectArrayList<String> names) {
+        names.addAll(resolveResourceNames(directory, naming));
     }
 
     void forgetResources() {

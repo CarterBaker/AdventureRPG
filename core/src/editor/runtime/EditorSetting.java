@@ -255,12 +255,6 @@ public class EditorSetting {
             "editor.runtime.menueventsmanager.menus.BiomePlannerBranch")
             .with(FileMenuAction.NEW, "newBiome")
             .with(FileMenuAction.DUPLICATE, "duplicateBiome");
-    public static final FileMenuTableStruct FILE_MENU_ENTITY = new FileMenuTableStruct(
-            "editor.runtime.menueventsmanager.menus.EntityEditorBranch")
-            .with(FileMenuAction.NEW, "actRow", EditorSetting.ENTITY_EDITOR_KEY_NEW_ENTITY)
-            .with(FileMenuAction.SAVE, "actRow", EditorSetting.ENTITY_EDITOR_KEY_SAVE)
-            .with(FileMenuAction.REVERT, "actRow", EditorSetting.ENTITY_EDITOR_KEY_REVERT)
-            .with(FileMenuAction.DELETE, "actRow", EditorSetting.ENTITY_EDITOR_KEY_DELETE_ENTITY);
     public static final FileMenuTableStruct FILE_MENU_SHIPWRIGHT = new FileMenuTableStruct(
             "application.runtime.menueventsmanager.menus.shipwright.ShipwrightBranch")
             .with(FileMenuAction.NEW, "newShip")
@@ -278,6 +272,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_NEW_ENTRY = "New Entry";
     public static final String DIALOG_TITLE_NEW_FILE = "New File";
     public static final String DIALOG_TITLE_NEW_KEY = "New Key";
+    public static final String DIALOG_TITLE_DUPLICATE_KEY = "Duplicate As";
     public static final String DIALOG_TITLE_EDIT_PREFIX = "Edit ";
     public static final String DIALOG_TITLE_DELETE_PREFIX = "Type ";
     public static final String DIALOG_TITLE_DELETE_SUFFIX = " to delete it";
@@ -433,7 +428,6 @@ public class EditorSetting {
     public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
     public static final String TAB_TITLE_HEIGHT_EDITOR = "Height Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
-    public static final String TAB_TITLE_ENTITY_EDITOR = "Entity Editor";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_PROPERTIES = "Properties";
@@ -645,7 +639,6 @@ public class EditorSetting {
     public static final String ANIMATION_PROPERTIES_TITLE = "Key";
     public static final String FACE_OUTLINER_TITLE = "Face";
     public static final String FACE_PROPERTIES_TITLE = "Control";
-    public static final String ENTITY_EDITOR_TITLE = "Entity";
 
     // Character View — the row templates of each tool's menu its docker windows fill with
     public static final CharacterViewTemplateStruct CHARACTER_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
@@ -693,21 +686,6 @@ public class EditorSetting {
             "face_editor_row_increase",
             "face_editor_row_track",
             "face_editor_row_knob");
-    public static final CharacterViewTemplateStruct ENTITY_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
-            "editor/EntityEditor/entity_editor_header_row",
-            "editor/EntityEditor/entity_editor_item_row",
-            "editor/EntityEditor/entity_editor_item_row_selected",
-            null,
-            null,
-            "editor/EntityEditor/entity_editor_choice_row",
-            "editor/EntityEditor/entity_editor_action_row",
-            "entity_editor_row_label",
-            "entity_editor_row_value",
-            "entity_editor_row_value_button",
-            "entity_editor_row_decrease",
-            "entity_editor_row_increase",
-            null,
-            null);
 
     // Character View — viewport gestures: the buttons, the GLFW keys a transform locks its axis with, pointer
     // distances in pixels, snapping, and the undo history they record
@@ -860,7 +838,7 @@ public class EditorSetting {
 
     // Character Editor — status text
     public static final String CHARACTER_EDITOR_STATUS_NO_TEMPLATE = "No character open."
-            + " Pick an entity or a race in the Hierarchy or the Entity Editor.";
+            + " Pick an entity or a race in the Hierarchy.";
     public static final String CHARACTER_EDITOR_MESSAGE_SAVED = "Saved ";
     public static final String CHARACTER_EDITOR_MESSAGE_REVERTED = "Reverted ";
     public static final String CHARACTER_EDITOR_MESSAGE_COPIED = "Copied as ";
@@ -1184,66 +1162,6 @@ public class EditorSetting {
     public static final String FACE_EDITOR_LABEL_RESET_PREVIEW = "Reset Preview";
     public static final String[] FACE_EDITOR_CHANNEL_LABELS = { "Move", "Turn", "Scale" };
     public static final String FACE_EDITOR_HEADER_ACTIONS = "Face";
-
-    // Entity Editor — panel keys, the separator between a key and the entry it names, and the fields it writes
-    public static final String ENTITY_EDITOR_KEY_ENTITY = "entity";
-    public static final String ENTITY_EDITOR_KEY_GENDER = "gender";
-    public static final String ENTITY_EDITOR_KEY_SEPARATOR = ":";
-    public static final String ENTITY_EDITOR_KEY_NEW_ENTITY = "new_entity";
-    public static final String ENTITY_EDITOR_KEY_DELETE_ENTITY = "delete_entity";
-    public static final String ENTITY_EDITOR_KEY_COPY_RACE = "copy_race";
-    public static final String ENTITY_EDITOR_KEY_DELETE_RACE = "delete_race";
-    public static final String ENTITY_EDITOR_KEY_ADD_GENDER = "add_gender";
-    public static final String ENTITY_EDITOR_KEY_REMOVE_GENDER = "remove_gender";
-    public static final String ENTITY_EDITOR_KEY_SAVE = "save";
-    public static final String ENTITY_EDITOR_KEY_REVERT = "revert";
-    public static final String ENTITY_EDITOR_FIELD_GENDERS = "genders";
-    public static final String ENTITY_EDITOR_FIELD_MESH = "mesh";
-    public static final String ENTITY_EDITOR_FIELD_RIG = "rig";
-    public static final String ENTITY_EDITOR_FIELD_MATERIAL = "material";
-    public static final String ENTITY_EDITOR_FIELD_ANIMATION_TREE = "animation_tree";
-    public static final String[] ENTITY_EDITOR_MODEL_FIELDS = {
-        ENTITY_EDITOR_FIELD_MESH,
-        ENTITY_EDITOR_FIELD_RIG,
-        ENTITY_EDITOR_FIELD_MATERIAL,
-        ENTITY_EDITOR_FIELD_ANIMATION_TREE };
-
-    // Entity Editor — panel text
-    public static final String ENTITY_EDITOR_HEADER_ENTITIES = "Entities";
-    public static final String ENTITY_EDITOR_HEADER_ENTITY = "Entity";
-    public static final String ENTITY_EDITOR_HEADER_RACE = "Race";
-    public static final String ENTITY_EDITOR_HEADER_GENDERS = "Genders";
-    public static final String ENTITY_EDITOR_HEADER_MODEL = "Model";
-    public static final String ENTITY_EDITOR_HEADER_NO_ENTITIES = "No entities";
-    public static final String ENTITY_EDITOR_HEADER_NO_RACE = "Its race has no file";
-    public static final String ENTITY_EDITOR_LABEL_SEPARATOR = ": ";
-    public static final String ENTITY_EDITOR_LABEL_RACE = "Race";
-    public static final String ENTITY_EDITOR_LABEL_RIG = "Rig";
-    public static final String ENTITY_EDITOR_LABEL_MESH = "Mesh";
-    public static final String ENTITY_EDITOR_LABEL_MATERIAL = "Material";
-    public static final String ENTITY_EDITOR_LABEL_ANIMATION_TREE = "Animation Tree";
-    public static final String ENTITY_EDITOR_LABEL_NEW_ENTITY = "New Entity";
-    public static final String ENTITY_EDITOR_LABEL_DELETE_ENTITY = "Delete Entity";
-    public static final String ENTITY_EDITOR_LABEL_COPY_RACE = "Copy Race";
-    public static final String ENTITY_EDITOR_LABEL_DELETE_RACE = "Delete Race";
-    public static final String ENTITY_EDITOR_LABEL_ADD_GENDER = "Add Gender";
-    public static final String ENTITY_EDITOR_LABEL_REMOVE_GENDER = "Remove Gender";
-    public static final String ENTITY_EDITOR_LABEL_SAVE = "Save Entity and Race";
-    public static final String ENTITY_EDITOR_LABEL_REVERT = "Revert Entity and Race";
-    public static final String ENTITY_EDITOR_VALUE_NONE = "None";
-
-    // Entity Editor — dialog titles and status text
-    public static final String ENTITY_EDITOR_DIALOG_NEW_ENTITY = "New Entity";
-    public static final String ENTITY_EDITOR_DIALOG_COPY_RACE = "Copy Race As";
-    public static final String ENTITY_EDITOR_MESSAGE_CREATED = "Created ";
-    public static final String ENTITY_EDITOR_MESSAGE_DELETED = "Deleted ";
-    public static final String ENTITY_EDITOR_MESSAGE_COPIED = "Copied the race as ";
-    public static final String ENTITY_EDITOR_MESSAGE_SAVED = "Saved ";
-    public static final String ENTITY_EDITOR_MESSAGE_REVERTED = "Reverted ";
-    public static final String ENTITY_EDITOR_MESSAGE_ADDED_GENDER = "Added the gender ";
-    public static final String ENTITY_EDITOR_MESSAGE_REMOVED_GENDER = "Removed the gender ";
-    public static final String ENTITY_EDITOR_MESSAGE_LAST_GENDER = "A race keeps at least one gender";
-    public static final String ENTITY_EDITOR_MESSAGE_ALL_GENDERS = "The race already has every gender";
 
     // Face Editor — status text
     public static final String FACE_EDITOR_STATUS_NO_TEMPLATE =
@@ -1816,6 +1734,15 @@ public class EditorSetting {
     public static final String INFO_PATH_SEPARATOR = "|";
     public static final String[] INFO_SUMMARY_FIELDS = { "name", "block", "clip", "time" };
 
+    // Info Values — a whole number steps by one and a decimal by this much, kept to the places this scale holds; a
+    // number without both ends of its range slides across this many steps centred where it stood when listed; a
+    // field's key reads as words split at this mark
+    public static final double INFO_FLOAT_STEP = 0.01;
+    public static final double INFO_FLOAT_SCALE = 1000.0;
+    public static final int INFO_SLIDER_STEPS = 40;
+    public static final char INFO_KEY_WORD_SEPARATOR = '_';
+    public static final char INFO_LABEL_WORD_SEPARATOR = ' ';
+
     // Info Hierarchy
     public static final String HIERARCHY_FOLDER_KEY_PREFIX = "folder:";
     public static final String HIERARCHY_FILE_KEY_PREFIX = "file:";
@@ -1835,6 +1762,7 @@ public class EditorSetting {
     public static final String INFO_GROUP_MAP_CLOSE = "}";
     public static final int INFO_VALUE_PREVIEW_LENGTH = 48;
     public static final String INFO_VALUE_ELLIPSIS = "...";
+    public static final String INFO_VALUE_NONE = "(none)";
     public static final String INFO_STATUS_NO_SELECTION = "Select an entry in the Hierarchy, or pick a tab and New.";
     public static final String INFO_STATUS_FILE_SELECTED = "Select an entry in this file, or press New to add one.";
     public static final String INFO_STATUS_FOLDER_SELECTED = "New creates its file inside this folder.";
@@ -1845,6 +1773,7 @@ public class EditorSetting {
     public static final String INFO_MESSAGE_CREATED = "Created ";
     public static final String INFO_MESSAGE_DELETED = "Deleted ";
     public static final String INFO_MESSAGE_COPIED = "Copied ";
+    public static final String INFO_MESSAGE_DUPLICATED = "Duplicated ";
     public static final String INFO_MESSAGE_COPY_ABORTED = "Copy aborted: the source or a unique value changed";
     public static final String INFO_MESSAGE_REQUIRED = "Required fields cannot be removed";
     public static final String INFO_MESSAGE_FIXED_LENGTH = "This list has a fixed length";

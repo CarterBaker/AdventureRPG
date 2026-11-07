@@ -3,6 +3,7 @@ package editor.bootstrap.infopipeline.infomanager;
 import java.util.regex.Pattern;
 
 import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
+import editor.bootstrap.infopipeline.infoschema.InfoRuleStruct;
 import editor.bootstrap.infopipeline.infotarget.InfoTargetStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
 import editor.runtime.EditorSetting;
@@ -23,8 +24,12 @@ class InfoEditBranch extends BranchPackage {
      * parsed by the type the value actually holds, so anything that does not
      * match its schema is shown and edited as raw ARPG text. New values are
      * built from the schema: objects with their required fields, fixed-length
-     * arrays filled, and primitives from their default. The same removal rule
-     * decides both what the panel offers and what is allowed.
+     * arrays filled, and primitives from their default. A number steps by
+     * one whole or by a small decimal, kept inside the range its schema
+     * declares, and a number declaring both ends of its range is also set at a
+     * share of it. A group standing in an array or a map is duplicated beside
+     * itself. The same removal and duplication rules decide both what the
+     * panel offers and what is allowed.
      */
 
     // Internal
@@ -167,19 +172,6 @@ class InfoEditBranch extends BranchPackage {
 
     // Values \\
 
-    void toggle(InfoTargetStruct target) {
-        target.write(new ArpgValueStruct(!target.getValue().getAsBoolean()));
-    }
-
-    void cycle(InfoTargetStruct target) {
-
-        InfoFieldStruct field = target.getField();
-        int current = findEnumIndex(field, target.getValue().getAsString());
-        int next = (current + 1) % field.getValues().size();
-
-        target.write(new ArpgValueStruct(field.getValues().get(next)));
-    }
-
     private int findEnumIndex(InfoFieldStruct field, String value) {
 
         for (int i = 0; i < field.getValues().size(); i++)
@@ -187,6 +179,63 @@ class InfoEditBranch extends BranchPackage {
                 return i;
 
         return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Numbers \\
+
+    // A number moved a count of its steps; false when the move would leave its range
+    boolean step(InfoTargetStruct target, int steps) {
+
+        double stepSize = target.resolveType() == InfoFieldType.INT ? 1.0 : EditorSetting.INFO_FLOAT_STEP;
+        return writeNumber(target, target.getValue().getAsDouble() + steps * stepSize);
+    }
+
+    // A number declaring both ends of its range set at a share of it
+    boolean setFraction(InfoTargetStruct target, float fraction) {
+
+        InfoRuleStruct rule = target.getField().getRule();
+        return writeNumber(target, rule.getMin() + Math.clamp(fraction, 0f, 1f) * (rule.getMax() - rule.getMin()));
+    }
+
+    // Where a number lies across its declared range, NaN for a number that declares no two ends
+    float toFraction(InfoFieldStruct field, ArpgElementStruct value) {
+
+        if (!hasRange(field) || !value.isValue() || !value.getAsValue().isNumber())
+            return Float.NaN;
+
+        InfoRuleStruct rule = field.getRule();
+        return (float) Math.clamp((value.getAsDouble() - rule.getMin()) / (rule.getMax() - rule.getMin()), 0.0, 1.0);
+    }
+
+    boolean hasRange(InfoFieldStruct field) {
+
+        if (field == null || field.getRule() == null)
+            return false;
+
+        InfoRuleStruct rule = field.getRule();
+        return rule.hasMin() && rule.hasMax() && rule.getMax() > rule.getMin();
+    }
+
+    private boolean writeNumber(InfoTargetStruct target, double value) {
+
+        InfoRuleStruct rule = target.getField().getRule();
+        double held = rule != null ? holdInRange(rule, value) : value;
+        double scale = EditorSetting.INFO_FLOAT_SCALE;
+        ArpgValueStruct number = target.resolveType() == InfoFieldType.INT
+                ? new ArpgValueStruct(Math.round(held))
+                : new ArpgValueStruct(Math.round(held * scale) / scale);
+
+        if (rule != null && !rule.isWithinBounds(number.getAsDouble()))
+            return false;
+
+        target.write(number);
+        return true;
+    }
+
+    private double holdInRange(InfoRuleStruct rule, double value) {
+
+        double held = rule.hasMin() ? Math.max(value, rule.getMin()) : value;
+        return rule.hasMax() ? Math.min(held, rule.getMax()) : held;
     }
 
     String formatValue(ArpgElementStruct value, InfoFieldType type) {
@@ -259,6 +308,22 @@ class InfoEditBranch extends BranchPackage {
                 && !target.getValue().getAsObject().has(key);
     }
 
+    // A copy of an array's element placed just after it
+    void duplicateElement(InfoTargetStruct target) {
+        target.getContainer().getAsArray().add(target.getIndex() + 1, target.getValue().deepCopy());
+    }
+
+    // A copy of a map's entry under a new key
+    void duplicateMapEntry(InfoTargetStruct target, String key) {
+        target.getContainer().getAsObject().add(key, target.getValue().deepCopy());
+    }
+
+    boolean isDuplicateKeyAvailable(InfoTargetStruct target, String key) {
+        return !key.isEmpty()
+                && !key.contains(EditorSetting.INFO_PATH_SEPARATOR)
+                && !target.getContainer().getAsObject().has(key);
+    }
+
     // Rules \\
 
     boolean isAddable(InfoTargetStruct target) {
@@ -271,6 +336,25 @@ class InfoEditBranch extends BranchPackage {
 
     boolean isRemovable(InfoTargetStruct target) {
         return isRemovable(target.getContainerField(), target.getField(), target.getContainer().isArray());
+    }
+
+    boolean isDuplicable(InfoTargetStruct target) {
+        return isDuplicable(target.getContainerField(), target.getContainer().isArray());
+    }
+
+    // An element of a list that may grow, or an entry of a map
+    boolean isDuplicable(InfoFieldStruct containerField, boolean inArray) {
+
+        if (inArray)
+            return containerField == null || !containerField.isFixedLength();
+
+        return containerField != null && containerField.getType() == InfoFieldType.MAP;
+    }
+
+    boolean isMapEntry(InfoTargetStruct target) {
+        return !target.isInArray()
+                && target.getContainerField() != null
+                && target.getContainerField().getType() == InfoFieldType.MAP;
     }
 
     boolean isRemovable(InfoFieldStruct containerField, InfoFieldStruct field, boolean inArray) {
