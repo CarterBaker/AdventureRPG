@@ -242,10 +242,10 @@ class ShipwrightFittingBranch extends BranchPackage {
 
     // An opening's box of start octants cut as a tunnel through the wall or planking it is set in: carried along the
     // axis it faces either way as far as that wall reaches from any of its octants — outboard past the open octants
-    // inside a curved side to the planking beyond — cleared of it, and every octant left open beside, over or under
-    // the tunnel at the hull closed with the same wall, so the opening leaves no gap however the side curves; an open
-    // one through the side lowers the sill the sea comes aboard over. The outboard step is a unit along the axis the
-    // opening faces, and the tunnel's box is left in tunnelBox
+    // inside a curved side to the planking beyond — cleared of it, and the ring of columns round its opening left
+    // with no piece along its depth closed with one octant of the same wall, so the opening leaves no gap however the
+    // side curves and the side stays thin; an open one through the side lowers the sill the sea comes aboard over.
+    // The outboard step is a unit along the axis the opening faces, and the tunnel's box is left in tunnelBox
     private void cutTunnel(
             ShipLayoutStruct layout,
             int minX,
@@ -349,8 +349,10 @@ class ShipwrightFittingBranch extends BranchPackage {
         return reach;
     }
 
-    // Every open octant beside, over or under a tunnel at the hull closed with the wall it was cut through: inside the
-    // hull, or right outboard of it along the tunnel's axis, so nothing opens past the tunnel's sides
+    // Every column along the tunnel's axis in the ring round its opening, beside, over and under it and at its
+    // corners, holding no piece anywhere along the tunnel's depth closed with one octant of the wall it was cut
+    // through, seated where the hull's side stands in that column, so the opening's edge never gapes yet the side
+    // stays as thin as it was laid
     private void frameTunnel(
             ShipLayoutStruct layout,
             int minX,
@@ -363,23 +365,70 @@ class ShipwrightFittingBranch extends BranchPackage {
             int stepZ,
             ShipPiece wall) {
 
-        ShipOctantGridStruct grid = layout.getGrid();
         int acrossX = stepX == 0 ? 1 : 0;
         int acrossZ = stepZ == 0 ? 1 : 0;
+        int acrossLow = acrossX * minX + acrossZ * minZ;
+        int acrossHigh = acrossX * maxX + acrossZ * maxZ;
+        int depthLow = acrossX * minZ + acrossZ * minX;
+        int depthHigh = acrossX * maxZ + acrossZ * maxX;
 
         for (int y = minY - 1; y <= maxY; y++)
-            for (int z = minZ - acrossZ; z < maxZ + acrossZ; z++)
-                for (int x = minX - acrossX; x < maxX + acrossX; x++) {
+            for (int across = acrossLow - 1; across <= acrossHigh; across++) {
 
-                    boolean inside = y >= minY && y < maxY && x >= minX && x < maxX && z >= minZ && z < maxZ;
-                    int sheetX = x - layout.getOriginX();
+                if (y >= minY && y < maxY && across >= acrossLow && across < acrossHigh)
+                    continue;
 
-                    if (inside || !grid.isEmpty(x, y, z) || !grid.contains(x, y, z))
-                        continue;
+                if (isFramed(layout.getGrid(), across, y, depthLow - 1, depthHigh + 1, acrossX))
+                    continue;
 
-                    if (layout.isVolume(sheetX, y, z) || layout.isVolume(sheetX - stepX, y, z - stepZ))
-                        grid.set(x, y, z, wall);
-                }
+                frameColumn(layout, across, y, depthLow, depthHigh, stepX + stepZ, acrossX, wall);
+            }
+    }
+
+    // True when a column along a tunnel's axis holds any piece between two depths
+    private static boolean isFramed(
+            ShipOctantGridStruct grid,
+            int across,
+            int y,
+            int depthLow,
+            int depthHigh,
+            int acrossX) {
+
+        for (int depth = depthLow; depth < depthHigh; depth++)
+            if (!grid.isEmpty(acrossX * across + (1 - acrossX) * depth, y, acrossX * depth + (1 - acrossX) * across))
+                return true;
+
+        return false;
+    }
+
+    // One octant of a wall laid in a column along a tunnel's axis: at the first octant inside the hull met coming in
+    // from the tunnel's outboard end, where the side's planking stands in that column, else at the outboard end
+    private static void frameColumn(
+            ShipLayoutStruct layout,
+            int across,
+            int y,
+            int depthLow,
+            int depthHigh,
+            int outboard,
+            int acrossX,
+            ShipPiece wall) {
+
+        ShipOctantGridStruct grid = layout.getGrid();
+        int outer = outboard > 0 ? depthHigh - 1 : depthLow;
+        int seat = outer;
+
+        for (int depth = outer; depth >= depthLow && depth < depthHigh; depth -= outboard)
+            if (layout.isVolume(acrossX * across + (1 - acrossX) * depth - layout.getOriginX(), y,
+                    acrossX * depth + (1 - acrossX) * across)) {
+                seat = depth;
+                break;
+            }
+
+        int x = acrossX * across + (1 - acrossX) * seat;
+        int z = acrossX * seat + (1 - acrossX) * across;
+
+        if (grid.contains(x, y, z))
+            grid.set(x, y, z, wall);
     }
 
     // True for a piece a tunnel through a wall clears: the wall itself, or any of the side's planking and bulwarks

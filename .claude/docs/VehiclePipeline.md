@@ -162,7 +162,9 @@ first and rails the rim after, so a waist painted wide never rails its own octan
   slab pieces: `ShipOctantGridStruct.mergeInto` keeps only `getHeight()` sub-voxels of their top layer.
 - **Every opening through a wall is a tunnel.** Doors, windows and gun ports go through
   `ShipwrightFittingBranch.cutTunnel`: one depth for the whole opening, outboard through a curved side's open octants
-  (`resolveTunnelReach`), and every open octant around it at the hull closed with the same wall (`frameTunnel`). A door
+  (`resolveTunnelReach`), and each column of the ring round its opening (sides, top, bottom, corners) that holds no
+  piece along the tunnel's depth closed with one octant of the same wall, seated where the side's planking stands in
+  that column (`frameTunnel`). Never thicken the hull to close a tunnel: one octant per open ring column only. A door
   or window finds its wall across the side with `resolveOpeningZ`, and the table keeps it at the octant found
   (`resolveWallCell`), so the compile, the cargo and the glyph agree.
 - **Strokes compile as they go.** Walls, the waist and windows (`isPaintedHand`, all but the deck) are compiled at
