@@ -14,6 +14,7 @@ import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
+import editor.bootstrap.faceeditorpipeline.faceeditormanager.FaceEditorManager;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -33,7 +34,9 @@ class CharacterPropertyBranch extends BranchPackage {
      * values are read from the live ARPG and written through
      * CharacterEditBranch, clamped to the range the game reads them in;
      * preview values — the pose, the gender, the tone worn, the build and
-     * head shape — live on the manager and never touch the race. The
+     * head shape — live on the manager and never touch the race. A
+     * slider's range is the Face Editor's to write, through the same path its
+     * own range rows take, so both tools keep one rule for it. The
      * keys of the Mesh, Sculpt and Weights panels pass straight to
      * CharacterMeshPropertyBranch, and those of the Rig panels to
      * CharacterRigPropertyBranch.
@@ -44,6 +47,7 @@ class CharacterPropertyBranch extends BranchPackage {
     private CharacterEditBranch characterEditBranch;
     private CharacterMeshPropertyBranch characterMeshPropertyBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
+    private FaceEditorManager faceEditorManager;
     private FeatureManager featureManager;
     private GenderManager genderManager;
 
@@ -55,6 +59,7 @@ class CharacterPropertyBranch extends BranchPackage {
         this.characterEditBranch = get(CharacterEditBranch.class);
         this.characterMeshPropertyBranch = get(CharacterMeshPropertyBranch.class);
         this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
+        this.faceEditorManager = get(FaceEditorManager.class);
         this.featureManager = get(FeatureManager.class);
         this.genderManager = get(GenderManager.class);
     }
@@ -156,6 +161,8 @@ class CharacterPropertyBranch extends BranchPackage {
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_HEAVY)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_DETAIL)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE)
+                || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN)
+                || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BLINK)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT)
                 || keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_HEAD)
@@ -182,7 +189,9 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_THIN,
                     EditorSetting.CHARACTER_EDITOR_KEY_HEAVY,
                     EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> appearance;
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> resolveShape(key) != null;
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN,
+                    EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> resolveShape(key) != null;
             case EditorSetting.CHARACTER_EDITOR_KEY_GIRTH -> appearance && resolveRig(document) != null;
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT,
                     EditorSetting.CHARACTER_EDITOR_KEY_HEAD,
@@ -191,7 +200,7 @@ class CharacterPropertyBranch extends BranchPackage {
         };
     }
 
-    private float getNumber(CharacterDocumentInstance document, String key) {
+    float getNumber(CharacterDocumentInstance document, String key) {
 
         String keyName = CharacterViewUtility.getKeyName(key);
         int axis = CharacterViewUtility.getKeyIndex(key);
@@ -213,6 +222,8 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_HEAVY);
             case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> getDetail(SkinnedDetail.VALUES[axis]);
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> characterEditorManager.getShapeValue(axis);
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN -> resolveShape(key).getMin();
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> resolveShape(key).getMax();
             case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.getBlink();
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT -> characterEditorManager.getWeightRatio();
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAD -> getAxis(characterEditorManager.getHeadProportion(), axis);
@@ -259,6 +270,8 @@ class CharacterPropertyBranch extends BranchPackage {
                             EditorSetting.CHARACTER_EDITOR_DETAIL_MAX));
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> characterEditorManager.setShapeValue(
                     axis, CharacterViewUtility.round(resolveShape(key).clamp(value)));
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN -> faceEditorManager.setRangeEnd(axis, false, value);
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> faceEditorManager.setRangeEnd(axis, true, value);
             case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.setBlink(
                     CharacterViewUtility.round(channel));
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT -> characterEditorManager.setWeightRatio(
@@ -290,7 +303,7 @@ class CharacterPropertyBranch extends BranchPackage {
         }
     }
 
-    private float getStep(String key) {
+    float getStep(String key) {
 
         String keyName = CharacterViewUtility.getKeyName(key);
 
@@ -304,6 +317,8 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> EditorSetting.CHARACTER_EDITOR_DETAIL_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE,
                     EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> EditorSetting.CHARACTER_EDITOR_SHAPE_STEP;
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN,
+                    EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> EditorSetting.FACE_EDITOR_RANGE_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAD -> EditorSetting.CHARACTER_EDITOR_HEAD_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_GIRTH -> EditorSetting.CHARACTER_EDITOR_GIRTH_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_POSITION -> EditorSetting.CHARACTER_EDITOR_POSITION_STEP;

@@ -42,6 +42,15 @@ layouts like any other.
   and its `runToolAction` adopts its mode first. Each tab names its starting mode, the modes it holds and its toolbar
   through `CharacterEditorWindowProvider`; their keys are `shortcuts/CharacterAppearance.arpg`,
   `CharacterBuild.arpg`, `CharacterEquipment.arpg` and `CharacterMeshEditor.arpg`.
+- **The Appearance outliner is the player's creator.** In Appearance the Character Outliner lists what the game's
+  creator offers the player: the gender, the features worn (Hair: the race default, none, or any style that fits),
+  then every shape slider under its group in the order the race first lists each, each a ranged row
+  (`CharacterViewRowStruct.ranged`) sliding across the shape's own `min` to `max`, with its Min and Max rows beneath
+  it. Those ends are written through `FaceEditorManager.setRangeEnd`, the path the Face Editor's range rows take (a
+  step apart, the default carried inside, one face history step), so the slider follows a new range the moment the
+  preview rebuilds. Appearance lists no pose: a mode names the pose it stands in (`CharacterEditorMode.getStandingPose`,
+  Appearance idles as the creator shows the player) or lets its outliner pick one (`picksPose`: Build, Equipment,
+  Weights). Colors, tones, details and Blink stay in the Properties tab.
 - **Values live in the shared Properties tab.** The character, face and animation viewport contexts implement
   `PropertiesProvider` (content `ROWS`) and `CharacterViewRowSource` (their manager's `buildPropertyRows`) and create a
   `PropertiesSourceSystem`; the Properties tab (`RowPropertiesSystem`) shows the rows of the one focused last and hands
@@ -50,7 +59,8 @@ layouts like any other.
   label or selection; otherwise it sets the moved values in place, so a dragged slider keeps its row. A slider spans
   `EditorSetting.CHARACTER_VIEW_SLIDER_STEPS` of the value's own steps centred where the value stood when the row was
   listed, and hands the tool the steps it moves through the context's `CharacterViewStepTarget.stepRow`, the path the
-  step buttons take; the value box still opens for typing. A number row template carries the track and knob ids in
+  step buttons take; the value box still opens for typing. A ranged row spans its declared range instead, its knob set
+  where the value stands on every refill and refresh, a drag still handing over whole steps of the row's own step. A number row template carries the track and knob ids in
   its `CharacterViewTemplateStruct`.
 - An outliner docker context implements `CharacterViewRowSource` and creates `CharacterViewPanelSystem`,
   `CharacterViewDockSystem` and `ToolCanvasSystem`; the dock system opens `menus/editor/CharacterDock.arpg` and
@@ -231,7 +241,12 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 ## Who owns what
 
 - Sculpt strokes: `CharacterShapeBranch` (begin, stamp, end). The viewport fills one `CharacterStampStruct` per stamp
-  in `CharacterEditorSculptSystem.placeStamp`.
+  in `CharacterEditorSculptSystem.placeStamp`. Stamps and weight strokes only move the CPU mesh; the sculpt system calls
+  `CharacterEditorManager.showStroke` once its frame's stamps are laid, the one rebuild and upload of the part per
+  frame (never per stamp: a rebuild re-skins every corner and remakes the morph texture).
+- Occlusion: `CharacterEditorMeshViewSystem.isVisible` answers each vertex once a frame. The frame's first test bins
+  every worn face into `CharacterEditorSetting.OCCLUSION_CELL_PIXELS` window cells by its projected bounds, so a vertex
+  is ray-tested only against the faces over its cell; never test a point against every face.
 - Vertex selection and its weights: `CharacterSelectionBranch` (picks, boxes, select strokes, the weighted centre).
   The document keeps a weight beside each selection flag (`CharacterMeshDocumentInstance.getSelectionWeight`, 0 when
   unselected); `syncSelection` holds every unselected vertex whole, undo steps keep the weights, and `removeOrphans`

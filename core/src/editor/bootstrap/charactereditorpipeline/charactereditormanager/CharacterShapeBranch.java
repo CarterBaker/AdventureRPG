@@ -30,7 +30,8 @@ class CharacterShapeBranch extends BranchPackage {
      * with the pointer; an inverted stroke does the opposite. With mirror
      * on, every move is handed across x to the vertex's mirror and the two
      * share it where both lie under the brush. Positions are written rounded
-     * to the editor's precision and shown live.
+     * to the editor's precision; the manager shows them once a frame however
+     * many stamps the frame held.
      */
 
     // Internal
@@ -163,7 +164,6 @@ class CharacterShapeBranch extends BranchPackage {
             share(vertices.getInt(i), moves.getFloat(i * 3), moves.getFloat(i * 3 + 1), moves.getFloat(i * 3 + 2));
 
         apply();
-        characterMeshBranch.preview(document);
     }
 
     void endStroke(CharacterMeshDocumentInstance document) {

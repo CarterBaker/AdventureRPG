@@ -125,11 +125,14 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     // Pose \\
 
     // The bind pose while a model is edited, unless the springs are previewed in the pose chosen, standing idle for
-    // one at rest; the pose chosen otherwise
+    // one at rest; the pose the mode stands in, or the pose chosen, otherwise
     private void strikePose() {
 
-        CharacterEditorPose pose = characterEditorManager.getPose();
-        boolean modelling = characterEditorModeSystem.getMode().holdsBindPose();
+        CharacterEditorMode mode = characterEditorModeSystem.getMode();
+        CharacterEditorPose pose = mode.getStandingPose() != null
+                ? mode.getStandingPose()
+                : characterEditorManager.getPose();
+        boolean modelling = mode.holdsBindPose();
 
         if (modelling && !characterEditorManager.isSpringPreview()) {
             characterViewPoseSystem.poseBind();

@@ -204,18 +204,10 @@ class FacePropertyBranch extends BranchPackage {
         int shapeIndex = faceEditorManager.getSelectedShapeIndex();
         float min = faceEditBranch.getMin(document, shapeIndex);
         float max = faceEditBranch.getMax(document, shapeIndex);
-        float defaultValue = faceEditBranch.getDefault(document, shapeIndex);
-        float gap = EditorSetting.FACE_EDITOR_RANGE_STEP;
 
         switch (keyName) {
-            case EditorSetting.FACE_EDITOR_KEY_MIN -> {
-                float written = Math.min(value, max - gap);
-                faceEditBranch.setRange(document, shapeIndex, written, max, Math.max(defaultValue, written));
-            }
-            case EditorSetting.FACE_EDITOR_KEY_MAX -> {
-                float written = Math.max(value, min + gap);
-                faceEditBranch.setRange(document, shapeIndex, min, written, Math.min(defaultValue, written));
-            }
+            case EditorSetting.FACE_EDITOR_KEY_MIN -> setRangeEnd(document, shapeIndex, false, value);
+            case EditorSetting.FACE_EDITOR_KEY_MAX -> setRangeEnd(document, shapeIndex, true, value);
             case EditorSetting.FACE_EDITOR_KEY_DEFAULT -> faceEditBranch.setRange(
                     document, shapeIndex, min, max, CharacterViewUtility.clamp(value, min, max));
             case EditorSetting.FACE_EDITOR_KEY_PREVIEW -> characterEditorManager.setShapeValue(
@@ -233,6 +225,24 @@ class FacePropertyBranch extends BranchPackage {
                     index % EditorSetting.FACE_EDITOR_AXES,
                     value);
         }
+    }
+
+    // One end of a control's range moved, kept a step from the other end, its default carried along inside it
+    void setRangeEnd(CharacterDocumentInstance document, int shapeIndex, boolean upper, float value) {
+
+        float min = faceEditBranch.getMin(document, shapeIndex);
+        float max = faceEditBranch.getMax(document, shapeIndex);
+        float defaultValue = faceEditBranch.getDefault(document, shapeIndex);
+        float gap = EditorSetting.FACE_EDITOR_RANGE_STEP;
+
+        if (upper) {
+            float written = Math.max(value, min + gap);
+            faceEditBranch.setRange(document, shapeIndex, min, written, Math.min(defaultValue, written));
+            return;
+        }
+
+        float written = Math.min(value, max - gap);
+        faceEditBranch.setRange(document, shapeIndex, written, max, Math.max(defaultValue, written));
     }
 
     private float getStep(String keyName, int index) {

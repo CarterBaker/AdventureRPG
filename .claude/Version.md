@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 48
-Task: ActiveWindow
+Delivery: 49
+Task: CharacterAppearanceSculpt
 Applied: 2026-11-07
 
 ## Log
@@ -58,3 +58,4 @@ Applied: 2026-11-07
 - 46, 2026-11-07, IkHandlesHairSway
 - 47, 2026-11-07, SpringHair
 - 48, 2026-11-07, ActiveWindow
+- 49, 2026-11-07, CharacterAppearanceSculpt

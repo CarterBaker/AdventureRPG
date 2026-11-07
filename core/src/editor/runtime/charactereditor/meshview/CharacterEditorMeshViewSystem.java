@@ -16,6 +16,7 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.bytes.ByteArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -34,7 +35,11 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
      * belongs to the region; a tab whose region's part is not worn edits
      * nothing. Positions are
      * refreshed each frame and again on demand after an edit; their storage
-     * only ever grows.
+     * only ever grows. Occlusion is answered from the frame's own snapshot:
+     * the first test of a frame bins every worn face into the window cells
+     * its projection covers, so a vertex is tested only against the faces
+     * over its own cell, and each vertex's answer is kept for the rest of
+     * the frame, however many brush stamps ask again.
      */
 
     // Internal
@@ -49,8 +54,26 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     private CharacterMeshDocumentInstance activeDocument;
     private FloatArrayList activePositions;
 
+    // Occlusion — each worn vertex in window pixels, the faces over each cell packed one run per cell
+    private boolean occlusionBuilt;
+    private ObjectArrayList<FloatArrayList> wornScreens;
+    private int cellColumns;
+    private int cellRows;
+    private IntArrayList cellStarts;
+    private IntArrayList cellFill;
+    private IntArrayList cellDocuments;
+    private IntArrayList cellFaces;
+    private IntArrayList unbinnedDocuments;
+    private IntArrayList unbinnedFaces;
+    private ByteArrayList visibility;
+    private int faceMinColumn;
+    private int faceMaxColumn;
+    private int faceMinRow;
+    private int faceMaxRow;
+
     // Scratch
     private Vector2 screenScratch;
+    private Vector2 occlusionScratch;
     private Vector3 rayOrigin;
     private Vector3 rayDirection;
 
@@ -63,8 +86,19 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         this.wornDocuments = new ObjectArrayList<>();
         this.wornPositions = new ObjectArrayList<>();
 
+        // Occlusion
+        this.wornScreens = new ObjectArrayList<>();
+        this.cellStarts = new IntArrayList();
+        this.cellFill = new IntArrayList();
+        this.cellDocuments = new IntArrayList();
+        this.cellFaces = new IntArrayList();
+        this.unbinnedDocuments = new IntArrayList();
+        this.unbinnedFaces = new IntArrayList();
+        this.visibility = new ByteArrayList();
+
         // Scratch
         this.screenScratch = new Vector2();
+        this.occlusionScratch = new Vector2();
         this.rayOrigin = new Vector3();
         this.rayDirection = new Vector3();
     }
@@ -89,7 +123,9 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
         this.activeDocument = null;
         this.activePositions = null;
+        this.occlusionBuilt = false;
         wornDocuments.clear();
+        visibility.clear();
 
         if (!characterEditorManager.getMode().isMeshMode() || !characterViewPoseSystem.hasSubject())
             return;
@@ -110,6 +146,9 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
                 this.activePositions = wornPositions.get(i);
             }
         }
+
+        if (activePositions != null)
+            visibility.size(getVertexCount());
     }
 
     // Each vertex moved by its bones' skinning matrices in proportion to their weights
@@ -261,11 +300,27 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
     // Occlusion \\
 
+    // Whether a vertex of the active part shows, tested once a frame and kept for every later stamp
     private boolean isVisible(int vertexIndex) {
-        return characterEditorManager.isXray() || !isOccluded(getX(vertexIndex), getY(vertexIndex), getZ(vertexIndex));
+
+        if (characterEditorManager.isXray())
+            return true;
+
+        byte state = visibility.getByte(vertexIndex);
+
+        if (state != CharacterEditorSetting.VISIBILITY_UNKNOWN)
+            return state == CharacterEditorSetting.VISIBILITY_SHOWN;
+
+        boolean shown = !isOccluded(getX(vertexIndex), getY(vertexIndex), getZ(vertexIndex));
+
+        visibility.set(vertexIndex, shown
+                ? CharacterEditorSetting.VISIBILITY_SHOWN
+                : CharacterEditorSetting.VISIBILITY_HIDDEN);
+        return shown;
     }
 
-    // Whether any worn face stands between the camera and a point, short of the faces meeting at the point itself
+    // Whether any worn face stands between the camera and a point, short of the faces meeting at the point itself;
+    // only the faces over the point's cell are tested, every face for a point outside the window
     private boolean isOccluded(float x, float y, float z) {
 
         CameraInstance camera = context.getWindow().getActiveCamera();
@@ -281,29 +336,203 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         rayOrigin.set(eye);
         rayDirection.set(dx / distance, dy / distance, dz / distance);
 
-        float reach = distance - CharacterEditorSetting.OCCLUSION_BIAS;
+        buildOcclusion();
 
-        for (int d = 0; d < wornDocuments.size(); d++)
-            if (hitsMesh(wornDocuments.get(d).getMesh(), wornPositions.get(d), reach))
+        float reach = distance - CharacterEditorSetting.OCCLUSION_BIAS;
+        int cell = project(x, y, z, occlusionScratch)
+                ? toCell(occlusionScratch.x, occlusionScratch.y)
+                : EngineSetting.INDEX_NOT_FOUND;
+
+        if (cell == EngineSetting.INDEX_NOT_FOUND)
+            return hitsAnyMesh(reach);
+
+        for (int i = cellStarts.getInt(cell); i < cellStarts.getInt(cell + 1); i++)
+            if (hitsFace(cellDocuments.getInt(i), cellFaces.getInt(i), reach))
+                return true;
+
+        for (int i = 0; i < unbinnedFaces.size(); i++)
+            if (hitsFace(unbinnedDocuments.getInt(i), unbinnedFaces.getInt(i), reach))
                 return true;
 
         return false;
     }
 
-    private boolean hitsMesh(RiggedMeshStruct mesh, FloatArrayList positions, float reach) {
+    private boolean hitsAnyMesh(float reach) {
 
-        for (int f = 0; f < mesh.getFaceCount(); f++) {
-
-            int c0 = mesh.getFaceVertex(f, 0);
-            int c1 = mesh.getFaceVertex(f, 1);
-            int c2 = mesh.getFaceVertex(f, 2);
-            int c3 = mesh.getFaceVertex(f, 3);
-
-            if (hitsTriangle(positions, c0, c1, c2, reach) || hitsTriangle(positions, c2, c3, c0, reach))
-                return true;
-        }
+        for (int d = 0; d < wornDocuments.size(); d++)
+            for (int f = 0; f < wornDocuments.get(d).getMesh().getFaceCount(); f++)
+                if (hitsFace(d, f, reach))
+                    return true;
 
         return false;
+    }
+
+    private boolean hitsFace(int documentIndex, int faceIndex, float reach) {
+
+        RiggedMeshStruct mesh = wornDocuments.get(documentIndex).getMesh();
+        FloatArrayList positions = wornPositions.get(documentIndex);
+        int c0 = mesh.getFaceVertex(faceIndex, 0);
+        int c1 = mesh.getFaceVertex(faceIndex, 1);
+        int c2 = mesh.getFaceVertex(faceIndex, 2);
+        int c3 = mesh.getFaceVertex(faceIndex, 3);
+
+        return hitsTriangle(positions, c0, c1, c2, reach) || hitsTriangle(positions, c2, c3, c0, reach);
+    }
+
+    // Every worn face binned into the cells its projection's bounds cover, counted first then placed; a face with a
+    // corner behind the camera is kept apart and tested for every point
+    private void buildOcclusion() {
+
+        if (occlusionBuilt)
+            return;
+
+        this.occlusionBuilt = true;
+
+        int cellPixels = CharacterEditorSetting.OCCLUSION_CELL_PIXELS;
+
+        this.cellColumns = Math.max(1, (context.getWindow().getWidth() + cellPixels - 1) / cellPixels);
+        this.cellRows = Math.max(1, (context.getWindow().getHeight() + cellPixels - 1) / cellPixels);
+
+        int cellCount = cellColumns * cellRows;
+
+        fill(cellStarts, cellCount + 1);
+        fill(cellFill, cellCount);
+        unbinnedDocuments.clear();
+        unbinnedFaces.clear();
+        projectWorn();
+
+        for (int d = 0; d < wornDocuments.size(); d++) {
+
+            RiggedMeshStruct mesh = wornDocuments.get(d).getMesh();
+
+            for (int f = 0; f < mesh.getFaceCount(); f++) {
+
+                if (!resolveFaceCells(mesh, wornScreens.get(d), f)) {
+                    unbinnedDocuments.add(d);
+                    unbinnedFaces.add(f);
+                    continue;
+                }
+
+                for (int row = faceMinRow; row <= faceMaxRow; row++)
+                    for (int column = faceMinColumn; column <= faceMaxColumn; column++) {
+
+                        int slot = row * cellColumns + column + 1;
+
+                        cellStarts.set(slot, cellStarts.getInt(slot) + 1);
+                    }
+            }
+        }
+
+        for (int i = 1; i < cellStarts.size(); i++)
+            cellStarts.set(i, cellStarts.getInt(i) + cellStarts.getInt(i - 1));
+
+        fill(cellDocuments, cellStarts.getInt(cellCount));
+        fill(cellFaces, cellStarts.getInt(cellCount));
+
+        for (int d = 0; d < wornDocuments.size(); d++) {
+
+            RiggedMeshStruct mesh = wornDocuments.get(d).getMesh();
+
+            for (int f = 0; f < mesh.getFaceCount(); f++) {
+
+                if (!resolveFaceCells(mesh, wornScreens.get(d), f))
+                    continue;
+
+                for (int row = faceMinRow; row <= faceMaxRow; row++)
+                    for (int column = faceMinColumn; column <= faceMaxColumn; column++)
+                        placeFace(row * cellColumns + column, d, f);
+            }
+        }
+    }
+
+    // Every worn vertex in window pixels, NaN for one behind the camera
+    private void projectWorn() {
+
+        while (wornScreens.size() < wornDocuments.size())
+            wornScreens.add(new FloatArrayList());
+
+        for (int d = 0; d < wornDocuments.size(); d++) {
+
+            FloatArrayList positions = wornPositions.get(d);
+            FloatArrayList screens = wornScreens.get(d);
+            int vertexCount = positions.size() / EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+
+            screens.clear();
+            screens.ensureCapacity(vertexCount * 2);
+
+            for (int v = 0; v < vertexCount; v++) {
+
+                int base = v * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+                boolean shown = project(
+                        positions.getFloat(base),
+                        positions.getFloat(base + 1),
+                        positions.getFloat(base + 2),
+                        occlusionScratch);
+
+                screens.add(shown ? occlusionScratch.x : Float.NaN);
+                screens.add(shown ? occlusionScratch.y : Float.NaN);
+            }
+        }
+    }
+
+    // The cells a face's projected bounds cover, held to the window, empty when it lies wholly outside; false when
+    // a corner stands behind the camera
+    private boolean resolveFaceCells(RiggedMeshStruct mesh, FloatArrayList screens, int faceIndex) {
+
+        float minX = Float.POSITIVE_INFINITY;
+        float minY = Float.POSITIVE_INFINITY;
+        float maxX = Float.NEGATIVE_INFINITY;
+        float maxY = Float.NEGATIVE_INFINITY;
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+            int vertexIndex = mesh.getFaceVertex(faceIndex, c);
+            float x = screens.getFloat(vertexIndex * 2);
+            float y = screens.getFloat(vertexIndex * 2 + 1);
+
+            if (Float.isNaN(x))
+                return false;
+
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+        }
+
+        int cellPixels = CharacterEditorSetting.OCCLUSION_CELL_PIXELS;
+
+        this.faceMinColumn = Math.max(0, (int) Math.floor(minX / cellPixels));
+        this.faceMinRow = Math.max(0, (int) Math.floor(minY / cellPixels));
+        this.faceMaxColumn = Math.min(cellColumns - 1, (int) Math.floor(maxX / cellPixels));
+        this.faceMaxRow = Math.min(cellRows - 1, (int) Math.floor(maxY / cellPixels));
+
+        return true;
+    }
+
+    private void placeFace(int cell, int documentIndex, int faceIndex) {
+
+        int slot = cellStarts.getInt(cell) + cellFill.getInt(cell);
+
+        cellDocuments.set(slot, documentIndex);
+        cellFaces.set(slot, faceIndex);
+        cellFill.set(cell, cellFill.getInt(cell) + 1);
+    }
+
+    // The cell a window pixel lies in, or INDEX_NOT_FOUND outside the window
+    private int toCell(float pixelX, float pixelY) {
+
+        int column = (int) Math.floor(pixelX / CharacterEditorSetting.OCCLUSION_CELL_PIXELS);
+        int row = (int) Math.floor(pixelY / CharacterEditorSetting.OCCLUSION_CELL_PIXELS);
+
+        if (column < 0 || row < 0 || column >= cellColumns || row >= cellRows)
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        return row * cellColumns + column;
+    }
+
+    private void fill(IntArrayList list, int size) {
+        list.clear();
+        list.size(size);
     }
 
     // Moller-Trumbore: whether the ray meets a triangle closer than the reach

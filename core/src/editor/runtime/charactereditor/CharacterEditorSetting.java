@@ -34,6 +34,14 @@ public class CharacterEditorSetting {
     public static final float OCCLUSION_BIAS = 0.003f;
     public static final float OCCLUSION_EPSILON = 0.000001f;
 
+    // Mesh View — occluding faces are binned into square cells of the window this many pixels wide
+    public static final int OCCLUSION_CELL_PIXELS = 24;
+
+    // Mesh View — a vertex's visibility this frame: not yet tested, seen, or hidden behind a face
+    public static final byte VISIBILITY_UNKNOWN = 0;
+    public static final byte VISIBILITY_SHOWN = 1;
+    public static final byte VISIBILITY_HIDDEN = 2;
+
     // Overlay — a vertex holds its position, the other end of its line, its offset in pixels and its colour
     public static final String MESH_OVERLAY_VAO = "editor/CharacterMeshOverlayVAO";
     public static final String MATERIAL_OVERLAY = "editor/CharacterMeshOverlayMaterial";

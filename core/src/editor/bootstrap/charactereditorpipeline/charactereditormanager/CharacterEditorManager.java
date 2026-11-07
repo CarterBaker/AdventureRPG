@@ -132,6 +132,9 @@ public class CharacterEditorManager extends ManagerPackage {
     // Weights
     private float weightTarget;
 
+    // Strokes
+    private boolean strokeMoved;
+
     // Scratch
     private ObjectArrayList<String> partKeys;
     private ObjectArrayList<CharacterMeshDocumentInstance> meshDocuments;
@@ -709,6 +712,8 @@ public class CharacterEditorManager extends ManagerPackage {
 
         EditorTool tool = toolManager.getTool(mode.getToolCanvas());
 
+        this.strokeMoved = true;
+
         if (mode == CharacterEditorMode.SCULPT) {
             characterShapeBranch.stroke(document, tool, vertices, strengths, stamp);
             return;
@@ -723,9 +728,23 @@ public class CharacterEditorManager extends ManagerPackage {
                 document, selectedBoneIndex, vertices, strengths, tool == EditorTool.ERASE ? 0f : weightTarget);
     }
 
+    // Every stamp a frame's stroke laid shown in one rebuild of the part, once the frame's stamps are done
+    public void showStroke() {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (!strokeMoved || document == null)
+            return;
+
+        this.strokeMoved = false;
+        characterMeshBranch.preview(document);
+    }
+
     public void endStroke() {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        this.strokeMoved = false;
 
         if (characterSelectionBranch.isStroking()) {
             characterSelectionBranch.endStroke();
@@ -1427,7 +1446,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
         status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(mode.getLabel());
 
-        if (!mode.holdsBindPose())
+        if (mode.picksPose())
             status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(pose.getLabel());
 
         if (mode.isMeshMode())

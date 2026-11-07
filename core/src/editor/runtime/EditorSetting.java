@@ -738,6 +738,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_COLOR_PREFIX = "color_";
     public static final String CHARACTER_EDITOR_KEY_DETAIL = "detail";
     public static final String CHARACTER_EDITOR_KEY_SHAPE = "shape";
+    public static final String CHARACTER_EDITOR_KEY_SHAPE_MIN = "shape_min";
+    public static final String CHARACTER_EDITOR_KEY_SHAPE_MAX = "shape_max";
     public static final String CHARACTER_EDITOR_KEY_BLINK = "blink";
     public static final String CHARACTER_EDITOR_KEY_EDIT_SHAPE = "edit_shape";
     public static final String CHARACTER_EDITOR_KEY_ADD_SHAPE = "add_shape";
@@ -811,9 +813,10 @@ public class EditorSetting {
     public static final String[] CHARACTER_EDITOR_DETAIL_LABELS = {
             "Iris Size", "Pupil Size", "Hair Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes" };
     public static final String CHARACTER_EDITOR_HEADER_DETAILS = "Details";
-    public static final String CHARACTER_EDITOR_HEADER_SHAPES = "Preview Shapes";
     public static final String CHARACTER_EDITOR_HEADER_SHAPE_KEYS = "Shape Keys";
     public static final String CHARACTER_EDITOR_LABEL_BLINK = "Blink";
+    public static final String CHARACTER_EDITOR_LABEL_SHAPE_MIN = "Min";
+    public static final String CHARACTER_EDITOR_LABEL_SHAPE_MAX = "Max";
     public static final String CHARACTER_EDITOR_LABEL_EDIT_SHAPE = "Sculpting";
     public static final String CHARACTER_EDITOR_LABEL_ADD_SHAPE = "Add Shape Key";
     public static final String CHARACTER_EDITOR_SHAPE_BASE = "Base";

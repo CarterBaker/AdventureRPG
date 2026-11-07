@@ -197,6 +197,14 @@ public class FaceEditorManager extends ManagerPackage {
             facePropertyBranch.act(key);
     }
 
+    // One end of a control's range moved, as the Character Appearance outliner's range rows move it, the other end
+    // and its default kept in step through the same path the Face Editor's range rows take
+    public void setRangeEnd(int shapeIndex, boolean upper, float value) {
+
+        if (hasFace() && !isGesturing())
+            facePropertyBranch.setRangeEnd(getActiveDocument(), shapeIndex, upper, value);
+    }
+
     public String getValueText(String key) {
         return hasFace() ? facePropertyBranch.getValueText(key) : "";
     }

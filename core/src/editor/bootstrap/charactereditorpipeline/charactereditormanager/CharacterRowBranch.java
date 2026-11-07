@@ -1,6 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
+import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
@@ -21,14 +22,17 @@ class CharacterRowBranch extends BranchPackage {
 
     /*
      * Lists the rows of the character editor's two panels for its mode. The
-     * left panel holds how the preview stands and what can be picked — the
-     * features in Appearance, the bones in Build, the anchors in Equipment,
+     * left panel holds how the preview stands and what can be picked — in
+     * Appearance everything the player is offered in the game's creator, the
+     * features worn and every slider under its group, each sliding across
+     * its own range with that range's two ends beneath it, the bones in
+     * Build, the anchors in Equipment,
      * the worn parts and the bones in Mesh and Weights, the worn parts in
      * Sculpt and the rig's bones in Rig — and the right panel the values of
      * the mode and of what is picked, the mesh modes' from
      * CharacterMeshRowBranch and the rig's from CharacterRigRowBranch. Every
      * value shown is read through CharacterPropertyBranch, the same path that
-     * edits it. A mode that holds the bind pose lists no pose; a race
+     * edits it. Only a mode whose outliner picks the pose lists it; a race
      * of more than one gender lists the gender the preview is made as.
      */
 
@@ -55,14 +59,14 @@ class CharacterRowBranch extends BranchPackage {
         CharacterEditorMode mode = characterEditorManager.getMode();
         boolean genders = document.hasPreview() && document.getPreviewData().getGenderCount() > 1;
 
-        if (!mode.holdsBindPose() || genders)
+        if (mode.picksPose() || genders)
             rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
 
         if (genders)
             addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_GENDER,
                     EditorSetting.CHARACTER_EDITOR_LABEL_GENDER);
 
-        if (!mode.holdsBindPose())
+        if (mode.picksPose())
             addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_POSE,
                     EditorSetting.CHARACTER_EDITOR_LABEL_POSE);
 
@@ -72,7 +76,10 @@ class CharacterRowBranch extends BranchPackage {
             return;
 
         switch (mode) {
-            case APPEARANCE -> addFeatureRows(document, rows);
+            case APPEARANCE -> {
+                addFeatureRows(document, rows);
+                addShapeRows(document, rows);
+            }
             case BUILD -> addBoneRows(rigHandle, rows);
             case EQUIPMENT -> addAnchorRows(rows);
             case MESH, WEIGHTS -> {
@@ -100,6 +107,61 @@ class CharacterRowBranch extends BranchPackage {
             addChoice(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_FEATURE, slotName),
                     slotName);
         }
+    }
+
+    // Every slider the player is given, under its group in the order the race first lists each, as the creator shows
+    private void addShapeRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (!document.getPreviewData().hasAppearance())
+            return;
+
+        AppearanceData appearanceData = document.getPreviewData().getAppearanceData();
+
+        for (int i = 0; i < appearanceData.getShapeCount(); i++) {
+
+            String groupName = appearanceData.getShape(i).getGroupName();
+
+            if (isGroupListedBefore(appearanceData, groupName, i))
+                continue;
+
+            rows.add(CharacterViewRowStruct.header(groupName));
+
+            for (int j = i; j < appearanceData.getShapeCount(); j++)
+                if (appearanceData.getShape(j).getGroupName().equals(groupName))
+                    addShape(document, rows, appearanceData.getShape(j), j);
+        }
+    }
+
+    private boolean isGroupListedBefore(AppearanceData appearanceData, String groupName, int shapeIndex) {
+
+        for (int i = 0; i < shapeIndex; i++)
+            if (appearanceData.getShape(i).getGroupName().equals(groupName))
+                return true;
+
+        return false;
+    }
+
+    // A slider sliding across the range the player has, then the two ends of that range
+    private void addShape(
+            CharacterDocumentInstance document,
+            ObjectArrayList<CharacterViewRowStruct> rows,
+            AppearanceShapeStruct shape,
+            int shapeIndex) {
+
+        String key = CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE, shapeIndex);
+
+        rows.add(CharacterViewRowStruct.ranged(
+                key,
+                shape.getShapeName(),
+                characterPropertyBranch.getValueText(document, key),
+                characterPropertyBranch.getNumber(document, key),
+                shape.getMin(),
+                shape.getMax(),
+                characterPropertyBranch.getStep(key)));
+        addNumber(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN, shapeIndex),
+                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_MIN);
+        addNumber(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX, shapeIndex),
+                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_MAX);
     }
 
     private void addBoneRows(RigHandle rigHandle, ObjectArrayList<CharacterViewRowStruct> rows) {
@@ -187,23 +249,8 @@ class CharacterRowBranch extends BranchPackage {
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_DETAIL, skinnedDetail.ordinal()),
                     EditorSetting.CHARACTER_EDITOR_DETAIL_LABELS[skinnedDetail.ordinal()]);
 
-        addShapeRows(document, rows);
-    }
-
-    // The preview's slider values, one per shape the race lists, and how far its eyes are closed
-    private void addShapeRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        if (!document.getPreviewData().hasAppearance())
-            return;
-
-        AppearanceData appearanceData = document.getPreviewData().getAppearanceData();
-
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_SHAPES));
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
         addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_BLINK, EditorSetting.CHARACTER_EDITOR_LABEL_BLINK);
-
-        for (int i = 0; i < appearanceData.getShapeCount(); i++)
-            addNumber(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE, i),
-                    appearanceData.getShape(i).getShapeName());
     }
 
     private void addChannels(

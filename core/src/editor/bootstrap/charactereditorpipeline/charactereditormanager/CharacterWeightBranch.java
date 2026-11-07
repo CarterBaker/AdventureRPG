@@ -206,7 +206,6 @@ class CharacterWeightBranch extends BranchPackage {
         }
 
         mirrorChanged(document);
-        characterMeshBranch.preview(document);
     }
 
     // Blends each vertex's weights toward the average of its own and its neighbours' by the brush's strength there
@@ -231,7 +230,6 @@ class CharacterWeightBranch extends BranchPackage {
 
         applyBlend(mesh);
         mirrorChanged(document);
-        characterMeshBranch.preview(document);
     }
 
     void endStroke(CharacterMeshDocumentInstance document) {

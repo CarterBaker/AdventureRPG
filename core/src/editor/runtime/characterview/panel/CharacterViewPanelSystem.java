@@ -24,7 +24,9 @@ public class CharacterViewPanelSystem extends SystemPackage {
      * its value's steps centred where the value stood when the row was
      * listed: dragging it hands the tool the steps between where its knob
      * was and where it now is, through the context's step target, the path
-     * the step buttons take. Tools refill a panel only when their state has
+     * the step buttons take. A ranged row's slider spans the range it
+     * declares instead, its knob standing where its value does and following
+     * it whenever the value or the range moves. Tools refill a panel only when their state has
      * moved, never per frame.
      */
 
@@ -80,8 +82,10 @@ public class CharacterViewPanelSystem extends SystemPackage {
         menuManager.ejectAll(menu, entryPoint);
         panel.clear(templates);
 
-        for (int i = 0; i < rows.size(); i++)
+        for (int i = 0; i < rows.size(); i++) {
             panel.add(rows.get(i), injectRow(menu, entryPoint, rows.get(i), templates));
+            placeRangedKnob(panel, i);
+        }
     }
 
     // A panel emptied and forgotten, as when another view takes its entry point over
@@ -138,6 +142,7 @@ public class CharacterViewPanelSystem extends SystemPackage {
                 setText(panel.getElement(i), valueElement, row.getValue());
 
             panel.setRow(i, row);
+            placeRangedKnob(panel, i);
         }
     }
 
@@ -191,6 +196,11 @@ public class CharacterViewPanelSystem extends SystemPackage {
 
     private void slide(CharacterViewPanelStruct panel, int index, String key, float fraction) {
 
+        if (panel.getRow(index).hasRange()) {
+            slideRanged(panel, index, key, fraction);
+            return;
+        }
+
         int span = EditorSetting.CHARACTER_VIEW_SLIDER_STEPS;
         int steps = Math.round((fraction - 0.5f) * span);
         int moved = steps - panel.getSliderSteps(index);
@@ -204,6 +214,41 @@ public class CharacterViewPanelSystem extends SystemPackage {
                 panel.getTemplates().getKnobElement(),
                 SliderUtility.resolveStep(0.5f + steps / (float) span));
         stepTarget.stepRow(key, moved);
+    }
+
+    // A ranged value stepped to where the pointer stands across its range
+    private void slideRanged(CharacterViewPanelStruct panel, int index, String key, float fraction) {
+
+        CharacterViewRowStruct row = panel.getRow(index);
+        int steps = row.toRangeSteps(fraction);
+        int moved = steps - panel.getSliderSteps(index);
+
+        if (moved == 0)
+            return;
+
+        panel.setSliderSteps(index, steps);
+        SliderUtility.placeKnob(
+                panel.getElement(index).findChildById(panel.getTemplates().getTrackElement()),
+                panel.getTemplates().getKnobElement(),
+                SliderUtility.resolveStep(row.toRangeFraction(steps)));
+        stepTarget.stepRow(key, moved);
+    }
+
+    // A ranged row's knob set where its value stands, and the steps it stands at kept for the next drag
+    private void placeRangedKnob(CharacterViewPanelStruct panel, int index) {
+
+        CharacterViewRowStruct row = panel.getRow(index);
+
+        if (!row.hasRange())
+            return;
+
+        ElementInstance track = panel.getElement(index).findChildById(panel.getTemplates().getTrackElement());
+
+        panel.setSliderSteps(index, row.getAmountSteps());
+
+        if (track != null)
+            SliderUtility.placeKnob(track, panel.getTemplates().getKnobElement(), SliderUtility.resolveStep(
+                    row.getFraction()));
     }
 
     // Utility \\

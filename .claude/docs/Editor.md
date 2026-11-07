@@ -78,10 +78,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   and everything showing it live, in place, without rebuilding the panel.
 - **One slider path.** Sliders share `editor.runtime.slider.SliderUtility` (track share, step, knob); typed values go
   through the name dialog and the same setter the slider and step buttons use.
-- **Every slider has a range.** A value with a declared range (a tool option) slides across it; a character, face,
-  animation or tree value slides across a fixed count of its own steps centred where it stood when its row was
-  listed, through the tool's own step, so the tool's clamps still hold. Either way a typed value can go anywhere the
-  setter allows.
+- **Every slider has a range.** A value with a declared range (a tool option, a race's shape slider in the Character
+  Appearance outliner) slides across it; a character, face, animation or tree value slides across a fixed count of its
+  own steps centred where it stood when its row was listed, through the tool's own step, so the tool's clamps still
+  hold. Either way a typed value can go anywhere the setter allows.
 
 ## The Properties tab
 

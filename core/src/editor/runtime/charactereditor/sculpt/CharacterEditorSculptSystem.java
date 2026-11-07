@@ -40,7 +40,8 @@ public class CharacterEditorSculptSystem extends SystemPackage {
      * stroke the weights. Each stamp of a stroke is placed on the mesh at
      * the depth of the vertex nearest the brush's centre, which gives the
      * brush its radius there and the distance the pointer carried it since
-     * the last stamp. A transform asked for — by its Tools panel action or
+     * the last stamp; the frame's stamps are shown together once they are
+     * all laid. A transform asked for — by its Tools panel action or
      * its shortcut, G, R or S — holds the selection to the pointer: X, Y
      * and Z lock it to an axis, Ctrl snaps it, a click or Enter confirms
      * and a right click or Escape puts it back, each click claimed from the
@@ -362,6 +363,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.stampX = mouseX;
         this.stampY = mouseY;
         stamp(mouseX, mouseY);
+        characterEditorManager.showStroke();
 
         return true;
     }
@@ -375,6 +377,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         }
 
         continueStroke(rawInput.getMouseX(), rawInput.getMouseY());
+        characterEditorManager.showStroke();
     }
 
     // A stamp every spacing from the last toward the pointer, the stroke left on its last stamp, as an image stroke is
