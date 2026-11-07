@@ -1,13 +1,16 @@
 package editor.runtime.recorderkeys;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.recorder.RecorderTabProvider;
 import editor.runtime.recorder.panel.RecorderRowSystem;
 import editor.runtime.recorder.panel.RecorderKeysSystem;
 import engine.root.ContextPackage;
 
-public class RecorderKeysContext extends ContextPackage implements RecorderTabProvider {
+public class RecorderKeysContext extends ContextPackage implements RecorderTabProvider, FileMenuProvider {
 
     /*
      * Editor tab for the keys of the take the Recorder's selected clip
@@ -23,6 +26,7 @@ public class RecorderKeysContext extends ContextPackage implements RecorderTabPr
     // Internal
     private RecorderRowSystem recorderRowSystem;
     private RecorderKeysSystem recorderKeysSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -30,6 +34,7 @@ public class RecorderKeysContext extends ContextPackage implements RecorderTabPr
     protected void create() {
         this.recorderRowSystem = create(RecorderRowSystem.class);
         this.recorderKeysSystem = create(RecorderKeysSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -47,5 +52,12 @@ public class RecorderKeysContext extends ContextPackage implements RecorderTabPr
     @Override
     public RecorderPane getRecorderPane() {
         return RecorderPane.KEYS;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_RECORDER;
     }
 }

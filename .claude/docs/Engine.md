@@ -51,5 +51,7 @@ writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
 - **Editor tools live in the Tools panel.** A tool is an `EditorTool` on the window's `ToolCanvas`; a one-off
   operation is a `ToolActionStruct` in the canvas's action groups, run by its context through `ToolActionProvider`
   with the same key its shortcut uses. Never add a tool or tool action as a panel button.
+- **Editor file actions live in the File and Edit menus.** A tool that makes, saves, reverts, deletes or undoes
+  names the methods in a `FileMenuTableStruct` (see `.claude/docs/Editor.md`); never add those as toolbar buttons.
 - **Visibility is deliberate.** Keep package-private whatever only the pipeline needs (e.g. loaders, builders,
   `addXHandle`). Public only for what other systems consume.

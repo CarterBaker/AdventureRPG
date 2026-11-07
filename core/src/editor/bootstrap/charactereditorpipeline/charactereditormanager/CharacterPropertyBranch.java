@@ -542,16 +542,27 @@ class CharacterPropertyBranch extends BranchPackage {
         if (getAppearanceArpg() == null || options.isEmpty())
             return;
 
-        int current = options.indexOf(getFeatureName(featureSlot));
+        int current = options.indexOf(getGenderFeatureName(featureSlot));
         int next = Math.floorMod(current + direction, options.size());
 
-        characterEditBranch.setFeature(document, featureSlot, options.get(next));
+        characterEditBranch.setFeature(document, getPreviewGenderName(), featureSlot, options.get(next));
     }
 
-    private String getFeatureName(FeatureSlot featureSlot) {
+    // The feature the previewed gender names for itself in a slot, null when it wears the race's default
+    private String getGenderFeatureName(FeatureSlot featureSlot) {
+        return findFeatureName(
+                CharacterViewUtility.findObject(
+                        CharacterViewUtility.findObject(
+                                characterEditorManager.getTemplateArpg(),
+                                EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
+                        getPreviewGenderName()),
+                featureSlot);
+    }
+
+    private String findFeatureName(ArpgObjectStruct owner, FeatureSlot featureSlot) {
 
         ArpgObjectStruct features = CharacterViewUtility.findObject(
-                getAppearanceArpg(),
+                owner,
                 EditorSetting.CHARACTER_EDITOR_FIELD_FEATURES);
         String slotKey = ArpgUtility.toEnumName(featureSlot);
 
@@ -560,10 +571,24 @@ class CharacterPropertyBranch extends BranchPackage {
                 : null;
     }
 
+    private String getPreviewGenderName() {
+        return genderManager.getGenderHandleFromGenderID(characterEditorManager.getPreviewGenderID()).getGenderName();
+    }
+
+    // The previewed gender's own feature, else the race's default marked as such, else none
     private String getFeatureText(String slotKey) {
 
-        String featureName = getFeatureName(ArpgUtility.toEnum(slotKey, FeatureSlot.class));
-        return featureName != null ? featureName : EditorSetting.CHARACTER_VIEW_NONE;
+        FeatureSlot featureSlot = ArpgUtility.toEnum(slotKey, FeatureSlot.class);
+        String featureName = getGenderFeatureName(featureSlot);
+
+        if (featureName != null)
+            return featureName;
+
+        String defaultName = findFeatureName(getAppearanceArpg(), featureSlot);
+
+        return defaultName != null
+                ? defaultName + EditorSetting.CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX
+                : EditorSetting.CHARACTER_VIEW_NONE;
     }
 
     // Anchors \\

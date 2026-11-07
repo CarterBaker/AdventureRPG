@@ -374,11 +374,11 @@ public class TabManager extends ManagerPackage {
 
     // The tab whose content runs in a window closed without asking its guard
     public void closeTabOf(WindowInstance contentWindow) {
-        for (int i = 0; i < openTabs.size(); i++)
-            if (openTabs.get(i).getTabContext().getContentContext().getWindow() == contentWindow) {
-                closeTab(openTabs.get(i));
-                return;
-            }
+
+        TabHandle handle = getTabHandleForContentWindow(contentWindow);
+
+        if (handle != null)
+            closeTab(handle);
     }
 
     public void setCloseGuard(WindowInstance contentWindow, TabCloseGuard guard) {
@@ -568,6 +568,16 @@ public class TabManager extends ManagerPackage {
     }
 
     // The window a tab's content runs in for its chrome, else the window itself
+    // The tab whose content runs in a window, null for a window no tab holds
+    public TabHandle getTabHandleForContentWindow(WindowInstance contentWindow) {
+
+        for (int i = 0; i < openTabs.size(); i++)
+            if (openTabs.get(i).getTabContext().getContentContext().getWindow() == contentWindow)
+                return openTabs.get(i);
+
+        return null;
+    }
+
     public WindowInstance resolveContentWindow(WindowInstance window) {
         TabHandle tab = getTabHandleForWindow(window);
         return tab != null ? tab.getWindow() : window;

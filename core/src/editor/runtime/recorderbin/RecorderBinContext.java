@@ -1,13 +1,17 @@
 package editor.runtime.recorderbin;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
+import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.recorder.RecorderSetting;
 import editor.runtime.recorder.RecorderTabProvider;
 import editor.runtime.recorder.panel.RecorderRowSystem;
 import editor.runtime.recorder.panel.RecorderBinSystem;
 import engine.root.ContextPackage;
 
-public class RecorderBinContext extends ContextPackage implements RecorderTabProvider {
+public class RecorderBinContext extends ContextPackage implements RecorderTabProvider, FileMenuProvider {
 
     /*
      * Editor tab for the recorder's bin: every take recorded, to drag onto
@@ -21,6 +25,7 @@ public class RecorderBinContext extends ContextPackage implements RecorderTabPro
     // Internal
     private RecorderRowSystem recorderRowSystem;
     private RecorderBinSystem recorderBinSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -28,6 +33,7 @@ public class RecorderBinContext extends ContextPackage implements RecorderTabPro
     protected void create() {
         this.recorderRowSystem = create(RecorderRowSystem.class);
         this.recorderBinSystem = create(RecorderBinSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -45,5 +51,12 @@ public class RecorderBinContext extends ContextPackage implements RecorderTabPro
     @Override
     public RecorderPane getRecorderPane() {
         return RecorderPane.BIN;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_RECORDER;
     }
 }

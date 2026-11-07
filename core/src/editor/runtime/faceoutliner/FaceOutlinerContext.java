@@ -1,17 +1,20 @@
 package editor.runtime.faceoutliner;
 
 import editor.bootstrap.faceeditorpipeline.faceeditormanager.FaceEditorManager;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.runtime.characterview.panel.CharacterViewDockSystem;
 import editor.runtime.characterview.panel.CharacterViewPanelSystem;
 import editor.runtime.characterview.panel.CharacterViewRowSource;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class FaceOutlinerContext extends ContextPackage implements CharacterViewRowSource {
+public class FaceOutlinerContext extends ContextPackage implements CharacterViewRowSource, FileMenuProvider {
 
     /*
      * Docker window listing what the face editor works on: the gender the
@@ -26,6 +29,7 @@ public class FaceOutlinerContext extends ContextPackage implements CharacterView
     private CharacterViewPanelSystem characterViewPanelSystem;
     private CharacterViewDockSystem characterViewDockSystem;
     private ToolCanvasSystem toolCanvasSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -34,6 +38,7 @@ public class FaceOutlinerContext extends ContextPackage implements CharacterView
         this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
         this.characterViewDockSystem = create(CharacterViewDockSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -71,5 +76,12 @@ public class FaceOutlinerContext extends ContextPackage implements CharacterView
     @Override
     public void stepRow(String key, int steps) {
         faceEditorManager.step(key, steps);
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_FACE;
     }
 }

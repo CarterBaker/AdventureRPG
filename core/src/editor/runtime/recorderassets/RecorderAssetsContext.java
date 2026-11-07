@@ -1,13 +1,17 @@
 package editor.runtime.recorderassets;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
+import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.recorder.RecorderSetting;
 import editor.runtime.recorder.RecorderTabProvider;
 import editor.runtime.recorder.panel.RecorderRowSystem;
 import editor.runtime.recorder.panel.RecorderAssetsSystem;
 import engine.root.ContextPackage;
 
-public class RecorderAssetsContext extends ContextPackage implements RecorderTabProvider {
+public class RecorderAssetsContext extends ContextPackage implements RecorderTabProvider, FileMenuProvider {
 
     /*
      * Editor tab listing every asset the open recording uses across its
@@ -19,6 +23,7 @@ public class RecorderAssetsContext extends ContextPackage implements RecorderTab
     // Internal
     private RecorderRowSystem recorderRowSystem;
     private RecorderAssetsSystem recorderAssetsSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -26,6 +31,7 @@ public class RecorderAssetsContext extends ContextPackage implements RecorderTab
     protected void create() {
         this.recorderRowSystem = create(RecorderRowSystem.class);
         this.recorderAssetsSystem = create(RecorderAssetsSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -43,5 +49,12 @@ public class RecorderAssetsContext extends ContextPackage implements RecorderTab
     @Override
     public RecorderPane getRecorderPane() {
         return RecorderPane.ASSETS;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_RECORDER;
     }
 }

@@ -2,6 +2,8 @@ package editor.runtime.charactereditor;
 
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.EditorSetting;
@@ -13,6 +15,7 @@ import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
@@ -22,7 +25,8 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public abstract class CharacterLookContext extends ContextPackage
-        implements ViewCameraProvider, CharacterEditorWindowProvider, PropertiesProvider, CharacterViewRowSource {
+        implements ViewCameraProvider, CharacterEditorWindowProvider, PropertiesProvider, CharacterViewRowSource,
+        FileMenuProvider {
 
     /*
      * What every tab that shapes how a character looks shares — the
@@ -48,6 +52,7 @@ public abstract class CharacterLookContext extends ContextPackage
     private CharacterViewRenderSystem characterViewRenderSystem;
     private CharacterEditorMenuSystem characterEditorMenuSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -61,6 +66,7 @@ public abstract class CharacterLookContext extends ContextPackage
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterEditorMenuSystem = create(CharacterEditorMenuSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -124,5 +130,12 @@ public abstract class CharacterLookContext extends ContextPackage
     @Override
     public ViewCameraSubject getViewCameraSubject() {
         return characterViewPoseSystem;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_CHARACTER;
     }
 }

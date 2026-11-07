@@ -1,12 +1,16 @@
 package editor.runtime.treeplanner;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.treeplanner.menu.TreePlannerMenuSystem;
 import engine.root.ContextPackage;
 
-public class TreePlannerContext extends ContextPackage implements PropertiesProvider {
+public class TreePlannerContext extends ContextPackage implements PropertiesProvider, FileMenuProvider {
 
     /*
      * Editor tab for making trees, the way the Biome Planner is for biomes:
@@ -22,6 +26,7 @@ public class TreePlannerContext extends ContextPackage implements PropertiesProv
     // Internal
     private TreePlannerMenuSystem treePlannerMenuSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -29,6 +34,7 @@ public class TreePlannerContext extends ContextPackage implements PropertiesProv
     protected void create() {
         this.treePlannerMenuSystem = create(TreePlannerMenuSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -42,5 +48,12 @@ public class TreePlannerContext extends ContextPackage implements PropertiesProv
     @Override
     public PropertiesContent getPropertiesContent() {
         return PropertiesContent.INFO;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_TREE_PLANNER;
     }
 }

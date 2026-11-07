@@ -9,7 +9,8 @@ import engine.root.BranchPackage;
 public class AnimationTreeEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Animation Tree Editor toolbar and panels.
+     * Menu event handlers for the Animation Tree Editor toolbar, panels and
+     * File menu actions.
      * Every action works on the shared active tree. New trees, layers and
      * nodes, and their renames, are named through the name dialog; deleting
      * a tree asks for its name to be typed back as confirmation, and a

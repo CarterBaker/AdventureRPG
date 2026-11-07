@@ -10,8 +10,8 @@ import engine.root.BranchPackage;
 public class AnimationEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Animation Editor toolbar, timeline and
-     * panels. Every action works on the shared active clip. New clips are
+     * Menu event handlers for the Animation Editor's keys, timeline and
+     * panels, and its File and Edit menu actions. Every action works on the shared active clip. New clips are
      * named through the name dialog, deleting a clip asks for its name to be
      * typed back as confirmation, and a number's value opens in the text
      * dialog. Undo and redo step the clip's history. Dragging along the

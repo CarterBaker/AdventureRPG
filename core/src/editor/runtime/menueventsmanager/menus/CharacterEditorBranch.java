@@ -9,7 +9,8 @@ import engine.root.BranchPackage;
 public class CharacterEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Character Editor toolbar and panels. Every
+     * Menu event handlers for the character tabs' keys and panels, and their
+     * File and Edit menu actions. Every
      * action works on the shared active character. A copy is named through
      * the name dialog, deleting a character asks for its name to be typed
      * back as confirmation, and a number's or a name's value opens in the

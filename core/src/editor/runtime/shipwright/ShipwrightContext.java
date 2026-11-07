@@ -5,9 +5,13 @@ import application.runtime.shipwright.ShipwrightCatalogueSystem;
 import application.runtime.shipwright.ShipwrightDialogSystem;
 import application.runtime.shipwright.ShipwrightRenderSystem;
 import application.runtime.shipwright.ShipwrightSystem;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import engine.root.ContextPackage;
 
-public class ShipwrightContext extends ContextPackage {
+public class ShipwrightContext extends ContextPackage implements FileMenuProvider {
 
     /*
      * Editor tab holding the drafting table, the very table a player stands
@@ -24,6 +28,7 @@ public class ShipwrightContext extends ContextPackage {
     private ShipwrightRenderSystem shipwrightRenderSystem;
     private ShipwrightBranch shipwrightBranch;
     private ShipwrightTabSystem shipwrightTabSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -35,10 +40,18 @@ public class ShipwrightContext extends ContextPackage {
         this.shipwrightRenderSystem = create(ShipwrightRenderSystem.class);
         this.shipwrightBranch = create(ShipwrightBranch.class);
         this.shipwrightTabSystem = create(ShipwrightTabSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_SHIPWRIGHT;
     }
 }

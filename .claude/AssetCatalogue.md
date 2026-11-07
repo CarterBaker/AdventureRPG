@@ -164,6 +164,13 @@ One line per session that changed this file: the date, what was added or removed
   `model`) and `menus/editor/EditorWindow.arpg` (the Entity Editor in the Characters menu).
 - 2026-11-06: Entity Editor editing. Regenerated `menus/editor/EntityEditor.arpg` (choice rows that step and type a
   value, and action rows) so the Entity Editor makes, deletes and picks entities, races, genders and their models.
+- 2026-11-07: Hands and the File and Edit menus. Regenerated `mesh/characters/humanoid/HumanoidMaleMesh.arpg` and
+  `HumanoidFemaleMesh.arpg` (each hand mirrored across its forearm so the palms face the thighs with the thumbs
+  forward; they were modelled on the wrong sides), `menus/editor/EditorWindow.arpg` (File and Edit menus) and
+  `menus/editor/AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `BiomePlanner.arpg`, `CharacterEditor.arpg`,
+  `CharacterMeshEditor.arpg`, `FaceEditor.arpg`, `HeightEditor.arpg`, `ItemEditor.arpg`, `Properties.arpg`,
+  `Recorder.arpg`, `Recordings.arpg`, `TreePlanner.arpg` and `WorldEditor.arpg` (their new, save, revert, delete,
+  undo and redo buttons moved to those menus).
 ---
 
 ## Textures and Sprites (2175 files)

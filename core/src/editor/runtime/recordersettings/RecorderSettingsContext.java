@@ -1,13 +1,17 @@
 package editor.runtime.recordersettings;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
+import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.recorder.RecorderSetting;
 import editor.runtime.recorder.RecorderTabProvider;
 import editor.runtime.recorder.panel.RecorderRowSystem;
 import editor.runtime.recorder.panel.RecorderSettingsSystem;
 import engine.root.ContextPackage;
 
-public class RecorderSettingsContext extends ContextPackage implements RecorderTabProvider {
+public class RecorderSettingsContext extends ContextPackage implements RecorderTabProvider, FileMenuProvider {
 
     /*
      * Editor tab for the recorder's settings: the channels armed for the next
@@ -21,6 +25,7 @@ public class RecorderSettingsContext extends ContextPackage implements RecorderT
     // Internal
     private RecorderRowSystem recorderRowSystem;
     private RecorderSettingsSystem recorderSettingsSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -28,6 +33,7 @@ public class RecorderSettingsContext extends ContextPackage implements RecorderT
     protected void create() {
         this.recorderRowSystem = create(RecorderRowSystem.class);
         this.recorderSettingsSystem = create(RecorderSettingsSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -45,5 +51,12 @@ public class RecorderSettingsContext extends ContextPackage implements RecorderT
     @Override
     public RecorderPane getRecorderPane() {
         return null;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_RECORDER;
     }
 }

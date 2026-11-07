@@ -1,6 +1,8 @@
 package editor.runtime.entityeditor;
 
 import editor.bootstrap.entityeditorpipeline.entityeditormanager.EntityEditorManager;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.characterview.panel.CharacterViewDockSystem;
@@ -9,11 +11,13 @@ import editor.runtime.characterview.panel.CharacterViewRowSource;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class EntityEditorContext extends ContextPackage implements CharacterViewRowSource, PropertiesProvider {
+public class EntityEditorContext extends ContextPackage
+        implements CharacterViewRowSource, PropertiesProvider, FileMenuProvider {
 
     /*
      * Docker window that makes, deletes and picks entities, chooses the race
@@ -31,6 +35,7 @@ public class EntityEditorContext extends ContextPackage implements CharacterView
     private CharacterViewPanelSystem characterViewPanelSystem;
     private CharacterViewDockSystem characterViewDockSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -39,6 +44,7 @@ public class EntityEditorContext extends ContextPackage implements CharacterView
         this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
         this.characterViewDockSystem = create(CharacterViewDockSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -84,5 +90,12 @@ public class EntityEditorContext extends ContextPackage implements CharacterView
     @Override
     public PropertiesContent getPropertiesContent() {
         return PropertiesContent.INFO;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_ENTITY;
     }
 }

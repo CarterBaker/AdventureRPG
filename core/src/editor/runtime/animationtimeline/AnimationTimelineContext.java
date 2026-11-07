@@ -1,10 +1,14 @@
 package editor.runtime.animationtimeline;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import editor.runtime.EditorSetting;
 import editor.runtime.animationtimeline.menu.AnimationTimelineMenuSystem;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import engine.root.ContextPackage;
 
-public class AnimationTimelineContext extends ContextPackage {
+public class AnimationTimelineContext extends ContextPackage implements FileMenuProvider {
 
     /*
      * Docker window holding the animation editor's timeline, the way an
@@ -19,6 +23,7 @@ public class AnimationTimelineContext extends ContextPackage {
     // Internal
     private AnimationTimelineMenuSystem animationTimelineMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -26,10 +31,18 @@ public class AnimationTimelineContext extends ContextPackage {
     protected void create() {
         this.animationTimelineMenuSystem = create(AnimationTimelineMenuSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_ANIMATION;
     }
 }

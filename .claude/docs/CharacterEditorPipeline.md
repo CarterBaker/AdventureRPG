@@ -9,8 +9,10 @@ applies in full.
 
 ## Windows
 
-Every character tool is split into windows, the way Krita splits its dockers. A viewport tab holds the toolbar, the
-status bar and the viewport; everything else is its own tab, opened from the editor's Characters menu and restored by
+Every character tool is split into windows, the way Krita splits its dockers. A viewport tab holds the status bar and
+the viewport (the Character Mesh Editor also its mode toolbar); saving, reverting, copying, deleting, undoing and
+redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`, `FILE_MENU_FACE`,
+`FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened from the editor's Characters menu and restored by
 layouts like any other.
 
 | Window | Context | Shows |
@@ -128,7 +130,13 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `HumanoidFemaleMesh` share the rig with its
   15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes, brows, ears), carry the same morphs (blinks, body
   sliders, `ear_point`) and draw their eyes from the eye zone's raw UVs, brows and lash line as their own strips.
-  They are generated (catalogued); a rigged mesh may hold at most `RIGGED_MESH_VERT_LIMIT` corners.
+  They are generated (catalogued); a rigged mesh may hold at most `RIGGED_MESH_VERT_LIMIT` corners. Each hand is
+  one bone: hanging at the side its palm faces the thigh with the thumb forward (+z), so `hand_l` is a left hand at
+  +x; keep that chirality on any hand you model or mirror.
+- **Features are the gender's.** The Character Outliner's Features rows (Appearance mode) read and write the previewed
+  gender's `genders.<gender>.features`, the features it is made with; a gender naming none wears the race's
+  `appearance.features` default, shown with `CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX`, and None removes the gender's
+  own so the default returns.
 - **Hair is cards.** A hair mesh is a scalp cap and layered cards two quads wide, textured with the strand tile
   `characters/standard/Hair` (its alpha cuts the locks out); each card's raw UV runs across it in u and from root
   (0) to tip (1) in v. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`),

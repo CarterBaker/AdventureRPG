@@ -37,6 +37,19 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.
 
+## The File and Edit menus
+
+- **Every file action lives in the editor's File and Edit menus**, never as a tool's own button: New, New File,
+  Duplicate, Save, Save All, Revert and Delete under File, Undo and Redo under Edit. They act on the window worked in
+  last (`editor.bootstrap.filemenupipeline`, `FileMenuManager`), name it at their head and mute what it does not take.
+- **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
+  `FileMenuTableStruct` constant from `EditorSetting` (the branch and, per `FileMenuAction`, the method its own keys
+  already run) and creates a `FileMenuSourceSystem`. Every item runs through `ElementHitSystem.executeAction` on the
+  tool's window, the route its shortcuts take, so a menu item and its key always do the same thing. A new tool adds a
+  table; it never adds a Save, New, Revert, Undo or Redo button.
+- **The Shipwright keeps its own buttons** because the game shares its table; the File and Edit menus reach it all the
+  same through `EditorSetting.FILE_MENU_SHIPWRIGHT`.
+
 ## Values
 
 - **Every number has a slider and a typed value.** A value row shows its name, a slider across its range, a box

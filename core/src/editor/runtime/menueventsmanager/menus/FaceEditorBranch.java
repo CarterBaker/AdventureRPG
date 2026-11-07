@@ -8,8 +8,8 @@ import engine.root.BranchPackage;
 public class FaceEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Face Editor toolbar and the face rows of
-     * the Face Outliner and the Properties tab. Every action works on the
+     * Menu event handlers for the Face Editor's keys and File and Edit menu
+     * actions, and the face rows of the Face Outliner and the Properties tab. Every action works on the
      * face of the character the character tabs have open. Save and Revert keep the
      * template's face, meshes and rig together; undo and redo step the face's
      * history. Panel rows hand back the key of the value they show, and a

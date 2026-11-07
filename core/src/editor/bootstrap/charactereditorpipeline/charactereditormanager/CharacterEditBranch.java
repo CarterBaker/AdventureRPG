@@ -75,11 +75,19 @@ class CharacterEditBranch extends BranchPackage {
 
     // Features \\
 
-    void setFeature(CharacterDocumentInstance document, FeatureSlot featureSlot, String featureName) {
-        editAppearance(document, appearance -> {
+    // The feature a gender wears in a slot, or its own removed for null so it wears the race's default
+    void setFeature(
+            CharacterDocumentInstance document,
+            String genderName,
+            FeatureSlot featureSlot,
+            String featureName) {
+
+        edit(document, race -> {
 
             ArpgObjectStruct features = CharacterViewUtility.requireObject(
-                    appearance,
+                    CharacterViewUtility.requireObject(
+                            CharacterViewUtility.requireObject(race, EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
+                            genderName),
                     EditorSetting.CHARACTER_EDITOR_FIELD_FEATURES);
             String slotKey = ArpgUtility.toEnumName(featureSlot);
 

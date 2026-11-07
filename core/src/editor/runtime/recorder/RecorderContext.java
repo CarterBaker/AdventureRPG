@@ -1,15 +1,19 @@
 package editor.runtime.recorder;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.recorder.panel.RecorderRowSystem;
 import editor.runtime.recorder.panel.RecorderTimelineSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import engine.root.ContextPackage;
 
-public class RecorderContext extends ContextPackage implements ToolCanvasProvider, RecorderTabProvider {
+public class RecorderContext extends ContextPackage
+        implements ToolCanvasProvider, RecorderTabProvider, FileMenuProvider {
 
     /*
      * Editor tab for the recorder's timeline: the transport that records,
@@ -32,6 +36,7 @@ public class RecorderContext extends ContextPackage implements ToolCanvasProvide
     private RecorderRowSystem recorderRowSystem;
     private RecorderTimelineSystem recorderTimelineSystem;
     private ToolCanvasSystem toolCanvasSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -40,6 +45,7 @@ public class RecorderContext extends ContextPackage implements ToolCanvasProvide
         this.recorderRowSystem = create(RecorderRowSystem.class);
         this.recorderTimelineSystem = create(RecorderTimelineSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -65,5 +71,12 @@ public class RecorderContext extends ContextPackage implements ToolCanvasProvide
     @Override
     public ToolCanvas getToolCanvas() {
         return ToolCanvas.RECORDER;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_RECORDER;
     }
 }

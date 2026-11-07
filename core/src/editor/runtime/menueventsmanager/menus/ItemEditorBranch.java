@@ -8,7 +8,8 @@ import engine.root.BranchPackage;
 public class ItemEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Item Editor toolbar and parts panel. Every
+     * Menu event handlers for the Item Editor's parts panel and keys, and its
+     * File menu actions. Every
      * action works on the shared active item; new items and parts, and part
      * renames, are named through the name dialog, and deleting an item asks
      * for its name to be typed back as confirmation. Part rows carry their

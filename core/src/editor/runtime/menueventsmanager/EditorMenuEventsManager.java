@@ -13,6 +13,7 @@ import editor.runtime.menueventsmanager.menus.EditorFrameBranch;
 import editor.runtime.menueventsmanager.menus.EntityEditorBranch;
 import editor.runtime.menueventsmanager.menus.ExportDialogBranch;
 import editor.runtime.menueventsmanager.menus.FaceEditorBranch;
+import editor.runtime.menueventsmanager.menus.FileMenuBranch;
 import editor.runtime.menueventsmanager.menus.InfoPanelBranch;
 import editor.runtime.menueventsmanager.menus.ItemEditorBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
@@ -52,6 +53,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(NameDialogBranch.class);
         create(ExportDialogBranch.class);
         create(EditorBranch.class);
+        create(FileMenuBranch.class);
         create(EditorFrameBranch.class);
         create(TabBranch.class);
         create(ItemEditorBranch.class);

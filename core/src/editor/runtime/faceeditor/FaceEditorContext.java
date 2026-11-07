@@ -1,6 +1,8 @@
 package editor.runtime.faceeditor;
 
 import editor.bootstrap.faceeditorpipeline.faceeditormanager.FaceEditorManager;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
@@ -15,6 +17,7 @@ import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import editor.runtime.faceeditor.gesture.FaceEditorGestureSystem;
 import editor.runtime.faceeditor.menu.FaceEditorMenuSystem;
 import editor.runtime.faceeditor.preview.FaceEditorPreviewSystem;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
@@ -26,7 +29,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class FaceEditorContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, PropertiesProvider,
-        CharacterViewRowSource {
+        CharacterViewRowSource, FileMenuProvider {
 
     /*
      * Editor tab for shaping a character's face the way a face rig is set up:
@@ -55,6 +58,7 @@ public class FaceEditorContext extends ContextPackage
     private FaceEditorMenuSystem faceEditorMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -69,6 +73,7 @@ public class FaceEditorContext extends ContextPackage
         this.faceEditorMenuSystem = create(FaceEditorMenuSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -131,5 +136,12 @@ public class FaceEditorContext extends ContextPackage
     @Override
     public ViewCameraSubject getViewCameraSubject() {
         return faceEditorPreviewSystem;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_FACE;
     }
 }

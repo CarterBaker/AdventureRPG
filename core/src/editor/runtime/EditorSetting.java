@@ -1,6 +1,8 @@
 package editor.runtime;
 
 import application.runtime.RuntimeSetting;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import editor.bootstrap.filemenupipeline.util.FileMenuAction;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import engine.input.Buttons;
 import engine.root.EngineSetting;
@@ -9,8 +11,8 @@ public class EditorSetting {
 
     /*
      * Editor-only constants — chrome menus, the window frame, cursors, input
-     * keys, menu entry point indices, layout persistence, tool tabs, the name,
-     * export and
+     * keys, menu entry point indices, layout persistence, tool tabs, the File
+     * and Edit menus with every tool's actions in them, the name, export and
      * settings dialogs, console commands and the command drag between windows,
      * the Dev window's time units, editor shortcuts, the info pipeline's
      * schemas, hierarchy keys, and status text, the item editor's library and
@@ -153,6 +155,8 @@ public class EditorSetting {
 
     // Entry point indices
     public static final int ENTRY_LAYOUTS_LIST = 0;
+    public static final int ENTRY_FILE_MENU_LIST = 1;
+    public static final int ENTRY_EDIT_MENU_LIST = 2;
     public static final int ENTRY_NAME_DIALOG_LABEL = 0;
     public static final int ENTRY_NAME_DIALOG_TITLE = 1;
     public static final int ENTRY_EXPORT_DIALOG_TITLE = 0;
@@ -165,6 +169,104 @@ public class EditorSetting {
     public static final int ENTRY_SETTINGS_DIALOG_TABS = 0;
     public static final int ENTRY_SETTINGS_DIALOG_OPTIONS = 1;
     public static final int ENTRY_SETTINGS_DIALOG_STATUS = 2;
+
+    // File Menu — the head naming the tool the File and Edit menus act on, and each action's item label, by
+    // FileMenuAction's order
+    public static final String ELEMENT_FILE_MENU_TARGET = "file_target_label";
+    public static final String ELEMENT_EDIT_MENU_TARGET = "edit_target_label";
+    public static final String FILE_MENU_NO_TARGET = "No tool worked in yet";
+    public static final String[] FILE_MENU_LABELS = {
+            "file_new_label",
+            "file_new_file_label",
+            "file_duplicate_label",
+            "file_save_label",
+            "file_save_all_label",
+            "file_revert_label",
+            "file_delete_label",
+            "edit_undo_label",
+            "edit_redo_label" };
+
+    // File Menu — each tool's actions, the methods its own keys and buttons run
+    public static final FileMenuTableStruct FILE_MENU_CHARACTER = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.CharacterEditorBranch")
+            .with(FileMenuAction.DUPLICATE, "copyCharacter")
+            .with(FileMenuAction.SAVE, "saveCharacter")
+            .with(FileMenuAction.REVERT, "revertCharacter")
+            .with(FileMenuAction.DELETE, "deleteCharacter")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
+    public static final FileMenuTableStruct FILE_MENU_FACE = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.FaceEditorBranch")
+            .with(FileMenuAction.SAVE, "saveCharacter")
+            .with(FileMenuAction.REVERT, "revertCharacter")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
+    public static final FileMenuTableStruct FILE_MENU_ANIMATION = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.AnimationEditorBranch")
+            .with(FileMenuAction.NEW, "newClip")
+            .with(FileMenuAction.SAVE, "saveClip")
+            .with(FileMenuAction.REVERT, "revertClip")
+            .with(FileMenuAction.DELETE, "deleteClip")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
+    public static final FileMenuTableStruct FILE_MENU_ANIMATION_TREE = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.AnimationTreeEditorBranch")
+            .with(FileMenuAction.NEW, "newTree")
+            .with(FileMenuAction.SAVE, "saveTree")
+            .with(FileMenuAction.REVERT, "revertTree")
+            .with(FileMenuAction.DELETE, "deleteTree");
+    public static final FileMenuTableStruct FILE_MENU_WORLD = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.WorldEditorBranch")
+            .with(FileMenuAction.SAVE, "saveImage")
+            .with(FileMenuAction.REVERT, "reloadImage")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
+    public static final FileMenuTableStruct FILE_MENU_ITEM = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.ItemEditorBranch")
+            .with(FileMenuAction.NEW, "newItem")
+            .with(FileMenuAction.SAVE, "saveItem")
+            .with(FileMenuAction.REVERT, "reloadItem")
+            .with(FileMenuAction.DELETE, "deleteItem");
+    public static final FileMenuTableStruct FILE_MENU_INFO = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.InfoPanelBranch")
+            .with(FileMenuAction.NEW, "newEntry")
+            .with(FileMenuAction.NEW_FILE, "newFile")
+            .with(FileMenuAction.DUPLICATE, "copySelection")
+            .with(FileMenuAction.SAVE, "save")
+            .with(FileMenuAction.SAVE_ALL, "saveAll")
+            .with(FileMenuAction.REVERT, "revert")
+            .with(FileMenuAction.DELETE, "deleteSelection");
+    public static final FileMenuTableStruct FILE_MENU_RECORDER = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.RecorderBranch")
+            .with(FileMenuAction.SAVE, "saveRecording");
+    public static final FileMenuTableStruct FILE_MENU_RECORDINGS = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.RecordingsBranch")
+            .with(FileMenuAction.NEW, "newRecording")
+            .with(FileMenuAction.DUPLICATE, "duplicateRecording")
+            .with(FileMenuAction.SAVE, "saveRecording")
+            .with(FileMenuAction.DELETE, "deleteRecording");
+    public static final FileMenuTableStruct FILE_MENU_TREE_PLANNER = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.TreePlannerBranch")
+            .with(FileMenuAction.NEW, "newTree")
+            .with(FileMenuAction.DUPLICATE, "duplicateTree")
+            .with(FileMenuAction.SAVE, "save")
+            .with(FileMenuAction.REVERT, "revert");
+    public static final FileMenuTableStruct FILE_MENU_BIOME_PLANNER = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.BiomePlannerBranch")
+            .with(FileMenuAction.NEW, "newBiome")
+            .with(FileMenuAction.DUPLICATE, "duplicateBiome");
+    public static final FileMenuTableStruct FILE_MENU_ENTITY = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.EntityEditorBranch")
+            .with(FileMenuAction.NEW, "actRow", EditorSetting.ENTITY_EDITOR_KEY_NEW_ENTITY)
+            .with(FileMenuAction.SAVE, "actRow", EditorSetting.ENTITY_EDITOR_KEY_SAVE)
+            .with(FileMenuAction.REVERT, "actRow", EditorSetting.ENTITY_EDITOR_KEY_REVERT)
+            .with(FileMenuAction.DELETE, "actRow", EditorSetting.ENTITY_EDITOR_KEY_DELETE_ENTITY);
+    public static final FileMenuTableStruct FILE_MENU_SHIPWRIGHT = new FileMenuTableStruct(
+            "application.runtime.menueventsmanager.menus.shipwright.ShipwrightBranch")
+            .with(FileMenuAction.NEW, "newShip")
+            .with(FileMenuAction.SAVE, "saveShip")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
 
     // Name Dialog
     public static final int NAME_INPUT_MAX_LENGTH = 32;
@@ -625,6 +727,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_FIELD_RACE = "race";
     public static final String CHARACTER_EDITOR_FIELD_APPEARANCE = "appearance";
     public static final String CHARACTER_EDITOR_FIELD_FEATURES = "features";
+    public static final String CHARACTER_EDITOR_FIELD_GENDERS = "genders";
     public static final String CHARACTER_EDITOR_FIELD_COLORS = "colors";
     public static final String CHARACTER_EDITOR_FIELD_PALETTES = "palettes";
     public static final String CHARACTER_EDITOR_FIELD_DETAILS = "details";
@@ -712,7 +815,8 @@ public class EditorSetting {
 
     // Character Editor — panel text
     public static final String CHARACTER_EDITOR_HEADER_PREVIEW = "Preview";
-    public static final String CHARACTER_EDITOR_HEADER_FEATURES = "Default Features";
+    public static final String CHARACTER_EDITOR_HEADER_FEATURES = "Features";
+    public static final String CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX = " (race default)";
     public static final String CHARACTER_EDITOR_HEADER_NO_APPEARANCE = "No appearance block";
     public static final String[] CHARACTER_EDITOR_COLOR_HEADERS = {
             "Skin", "Eyes", "Hair", "Brows & Lashes", "Lips", "Blush", "Freckles", "Clothing" };

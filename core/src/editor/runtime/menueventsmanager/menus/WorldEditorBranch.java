@@ -10,8 +10,9 @@ import engine.root.BranchPackage;
 public class WorldEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the World Editor's and Height Editor's toolbars
-     * and keys and the Properties tab's biome palette. Saving and reloading
+     * Menu event handlers for the World Editor's and Height Editor's toolbars,
+     * keys and File and Edit menu actions, and the Properties tab's biome
+     * palette. Saving and reloading
      * work on both of the world's layers together; undo and redo work on the
      * layer of the tab they were pressed in, and the player marker toggle on
      * the editor its button was clicked in. Biome rows carry their biome's name.

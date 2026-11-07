@@ -14,8 +14,8 @@ import engine.root.SystemPackage;
 public class HeightEditorMenuSystem extends SystemPackage {
 
     /*
-     * Opens the Height Editor toolbar and status line over the canvas. The
-     * toolbar saves, reloads, undoes and redoes; the status line names the
+     * Opens the Height Editor status line over the canvas; saving, reverting,
+     * undoing and redoing are the editor's File and Edit menus'. It names the
      * image, the tool, brush and size the heights are shaped with, with the
      * pixel, biome and height under the pointer, and rewrites only on change.
      */

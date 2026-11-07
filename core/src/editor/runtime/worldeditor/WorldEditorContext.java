@@ -1,11 +1,15 @@
 package editor.runtime.worldeditor;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
+import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.placementicon.PlacementIconSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
@@ -17,7 +21,7 @@ import editor.runtime.worldeditor.view.WorldEditorViewSystem;
 import engine.root.ContextPackage;
 
 public class WorldEditorContext extends ContextPackage
-        implements ToolCanvasProvider, WorldEditorLayerProvider, PropertiesProvider {
+        implements ToolCanvasProvider, WorldEditorLayerProvider, PropertiesProvider, FileMenuProvider {
 
     /*
      * Editor tab for the world's biome canvas, one image pixel per biome cell
@@ -45,6 +49,7 @@ public class WorldEditorContext extends ContextPackage
     private WorldEditorMenuSystem worldEditorMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -58,6 +63,7 @@ public class WorldEditorContext extends ContextPackage
         this.worldEditorMenuSystem = create(WorldEditorMenuSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -102,5 +108,12 @@ public class WorldEditorContext extends ContextPackage
         return worldEditorManager.isPainting(WorldEditorLayer.BIOMES)
                 ? PropertiesContent.BIOMES
                 : PropertiesContent.INFO;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_WORLD;
     }
 }

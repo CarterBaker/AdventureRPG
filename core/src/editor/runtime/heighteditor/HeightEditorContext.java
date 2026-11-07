@@ -1,8 +1,12 @@
 package editor.runtime.heighteditor;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
+import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.heighteditor.menu.HeightEditorMenuSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.placementicon.PlacementIconSystem;
@@ -13,7 +17,8 @@ import editor.runtime.worldeditor.tool.WorldEditorToolSystem;
 import editor.runtime.worldeditor.view.WorldEditorViewSystem;
 import engine.root.ContextPackage;
 
-public class HeightEditorContext extends ContextPackage implements ToolCanvasProvider, WorldEditorLayerProvider {
+public class HeightEditorContext extends ContextPackage
+        implements ToolCanvasProvider, WorldEditorLayerProvider, FileMenuProvider {
 
     /*
      * Editor tab for the world's height layer, one image pixel per biome cell
@@ -36,6 +41,7 @@ public class HeightEditorContext extends ContextPackage implements ToolCanvasPro
     private WorldEditorRenderSystem worldEditorRenderSystem;
     private HeightEditorMenuSystem heightEditorMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -48,6 +54,7 @@ public class HeightEditorContext extends ContextPackage implements ToolCanvasPro
         this.worldEditorRenderSystem = create(WorldEditorRenderSystem.class);
         this.heightEditorMenuSystem = create(HeightEditorMenuSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -67,5 +74,12 @@ public class HeightEditorContext extends ContextPackage implements ToolCanvasPro
     @Override
     public WorldEditorLayer getWorldEditorLayer() {
         return WorldEditorLayer.HEIGHTS;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_WORLD;
     }
 }

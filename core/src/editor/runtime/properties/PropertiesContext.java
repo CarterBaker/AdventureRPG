@@ -1,7 +1,11 @@
 package editor.runtime.properties;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewPanelSystem;
 import editor.runtime.characterview.panel.CharacterViewStepTarget;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.properties.panel.BiomePropertiesSystem;
 import editor.runtime.properties.panel.InfoPropertiesSystem;
 import editor.runtime.properties.panel.PropertiesSystem;
@@ -9,7 +13,7 @@ import editor.runtime.properties.panel.RowPropertiesSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import engine.root.ContextPackage;
 
-public class PropertiesContext extends ContextPackage implements CharacterViewStepTarget {
+public class PropertiesContext extends ContextPackage implements CharacterViewStepTarget, FileMenuProvider {
 
     /*
      * The editor's one Properties tab, shared by every window: it shows what
@@ -30,6 +34,7 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
     private InfoPropertiesSystem infoPropertiesSystem;
     private BiomePropertiesSystem biomePropertiesSystem;
     private ToolCanvasSystem toolCanvasSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -41,6 +46,7 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
         this.infoPropertiesSystem = create(InfoPropertiesSystem.class);
         this.biomePropertiesSystem = create(BiomePropertiesSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -53,5 +59,12 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
     @Override
     public void stepRow(String key, int steps) {
         rowPropertiesSystem.stepRow(key, steps);
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_INFO;
     }
 }

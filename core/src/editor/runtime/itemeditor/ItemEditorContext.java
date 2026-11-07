@@ -1,9 +1,13 @@
 package editor.runtime.itemeditor;
 
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
+import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
+import editor.runtime.EditorSetting;
+import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.itemeditor.frame.ItemEditorFrameSystem;
 import editor.runtime.itemeditor.menu.ItemEditorMenuSystem;
@@ -17,7 +21,7 @@ import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 
 public class ItemEditorContext extends ContextPackage
-        implements ToolCanvasProvider, ViewCameraProvider, PropertiesProvider {
+        implements ToolCanvasProvider, ViewCameraProvider, PropertiesProvider, FileMenuProvider {
 
     /*
      * Editor tab for building items from sub-voxel cubes. Reads input, orbits
@@ -35,6 +39,7 @@ public class ItemEditorContext extends ContextPackage
     private ItemEditorMenuSystem itemEditorMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
+    private FileMenuSourceSystem fileMenuSourceSystem;
 
     // Internal \\
 
@@ -48,6 +53,7 @@ public class ItemEditorContext extends ContextPackage
         this.itemEditorMenuSystem = create(ItemEditorMenuSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
+        this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }
 
     @Override
@@ -75,5 +81,12 @@ public class ItemEditorContext extends ContextPackage
     @Override
     public PropertiesContent getPropertiesContent() {
         return PropertiesContent.INFO;
+    }
+
+    // File Menu \\
+
+    @Override
+    public FileMenuTableStruct getFileMenuTable() {
+        return EditorSetting.FILE_MENU_ITEM;
     }
 }
