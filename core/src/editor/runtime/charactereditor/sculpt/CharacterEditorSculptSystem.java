@@ -25,26 +25,29 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 public class CharacterEditorSculptSystem extends SystemPackage {
 
     /*
-     * Turns this tab's pointer and keys into mesh edits while a mesh mode is
-     * open. A press works the mesh only where it lands on it; a press beside
-     * it is left to the view camera, a click there still clearing the
-     * selection. A click picks the vertex under the pointer and a drag from a
-     * vertex selects a box, Shift adding and Ctrl taking away, either of them
-     * boxing from anywhere; in Mesh mode the Move, Rotate and Scale tools drag
-     * the selection from a vertex instead, picking it first when it is not
-     * selected, letting go to confirm; in Sculpt mode every tool strokes the
-     * surface the brush covers, Ctrl inverting the stroke, and in Weights mode
-     * the Brush, Erase and Smooth tools stroke the weights. Each stamp of a
-     * stroke is placed on the mesh at the depth of the vertex nearest the
-     * brush's centre, which gives the brush its radius there and the distance
-     * the pointer carried it since the last stamp. A transform asked for — by
-     * its Tools panel action or its shortcut, G, R or S — holds the selection
-     * to the pointer: X, Y and Z lock it to an axis, Ctrl snaps it, a click or
-     * Enter confirms and a right click or Escape puts it back, each click
-     * claimed from the camera. The tab's shortcuts run here only with the
-     * pointer over the view and nothing under way, each the action of the same
-     * key, so a key and its button do exactly the same thing; the modifiers a
-     * selection and a transform read are held shortcuts too.
+     * Turns this tab's pointer and keys into mesh edits while a mesh mode
+     * is open. A press works the mesh only where it lands on it; a press
+     * beside it is left to the view camera, a click there still clearing
+     * the selection. The Select tool sweeps the brush: a stroke selects
+     * each vertex under it as much as the tip covers it, replacing the
+     * selection, Shift adding and Ctrl taking away, and a press where the
+     * brush covers nothing still boxes with either of them held; in Mesh
+     * mode the Move, Rotate and Scale tools drag the selection from a
+     * vertex instead, picking it first when it is not selected, letting go
+     * to confirm, each vertex carried as far as it is selected; in Sculpt
+     * mode every tool strokes the surface the brush covers, Ctrl inverting
+     * the stroke, and in Weights mode the Brush, Erase and Smooth tools
+     * stroke the weights. Each stamp of a stroke is placed on the mesh at
+     * the depth of the vertex nearest the brush's centre, which gives the
+     * brush its radius there and the distance the pointer carried it since
+     * the last stamp. A transform asked for — by its Tools panel action or
+     * its shortcut, G, R or S — holds the selection to the pointer: X, Y
+     * and Z lock it to an axis, Ctrl snaps it, a click or Enter confirms
+     * and a right click or Escape puts it back, each click claimed from the
+     * camera. The tab's shortcuts run here only with the pointer over the
+     * view and nothing under way, each the action of the same key, so a key
+     * and its button do exactly the same thing; the modifiers a selection
+     * and a transform read are held shortcuts too.
      */
 
     // Internal
@@ -237,16 +240,20 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     // Selection \\
 
     // A brush strokes where it covers the mesh and a transform tool drags the selection from a vertex, picking the
-    // vertex first; any other press selects, claimed from the camera only on a vertex or with a modifier held
+    // vertex first; any other press selects, claimed from the camera only on a vertex or with a modifier held, and a
+    // selecting brush that covers nothing falls back to it so a click there still clears and a modifier still boxes
     private void press(float mouseX, float mouseY) {
 
-        if (characterEditorManager.isBrushTool()) {
-            beginStroke(mouseX, mouseY);
+        boolean shift = isShortcutHeld(addSelectionShortcutID);
+        boolean control = isShortcutHeld(subtractSelectionShortcutID);
+
+        if (characterEditorManager.isBrushTool()
+                && (beginStroke(mouseX, mouseY, resolveSelection(shift, control, CharacterEditorSelection.ADD))
+                        || !characterEditorManager.isSelectStroke()))
             return;
-        }
 
         int vertexIndex = characterEditorMeshViewSystem.pickVertex(mouseX, mouseY);
-        boolean modified = isShortcutHeld(addSelectionShortcutID) || isShortcutHeld(subtractSelectionShortcutID);
+        boolean modified = shift || control;
         CharacterEditorTransform toolTransform = characterEditorManager.getToolTransform();
 
         if (toolTransform != null && vertexIndex != EngineSetting.INDEX_NOT_FOUND && !modified) {
@@ -332,8 +339,9 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     // Stroke \\
 
-    // A stroke begins only where the brush covers the mesh, a press beside it left to the camera
-    private void beginStroke(float mouseX, float mouseY) {
+    // A stroke begins only where the brush covers the mesh, combining with the selection as asked when it selects;
+    // false for a press beside it
+    private boolean beginStroke(float mouseX, float mouseY, CharacterEditorSelection selection) {
 
         characterEditorMeshViewSystem.collectBrush(
                 mouseX,
@@ -344,16 +352,18 @@ public class CharacterEditorSculptSystem extends SystemPackage {
                 strengths);
 
         if (hits.isEmpty())
-            return;
+            return false;
 
         editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
-        characterEditorManager.beginStroke();
+        characterEditorManager.beginStroke(selection);
         this.stroking = true;
         this.strokeX = mouseX;
         this.strokeY = mouseY;
         this.stampX = mouseX;
         this.stampY = mouseY;
         stamp(mouseX, mouseY);
+
+        return true;
     }
 
     private void updateStroke(RawInputHandle rawInput) {

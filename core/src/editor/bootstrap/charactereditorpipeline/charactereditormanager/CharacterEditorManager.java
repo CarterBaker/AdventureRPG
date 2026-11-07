@@ -40,25 +40,28 @@ public class CharacterEditorManager extends ManagerPackage {
 
     /*
      * Owns the character editor's shared state — the open races, the active
-     * one, the panel mode and selection, and how the preview stands, is built
-     * and is colored, made as one of the race's genders at a time in the
-     * model that gender requires. Races are ARPG entries owned by InfoManager:
-     * selecting one there opens it here, as does selecting an entity, which
-     * opens the race it is made of; every edit goes back through it, and
-     * every change to an open race, made here or in the Info Panel,
-     * rebuilds its preview live. The Mesh, Sculpt and Weights modes edit the
-     * rigged mesh of the part picked — the body or a default feature — with the
-     * tool options and the transform asked for held here, and the Rig mode the
-     * rig the character is built on; each is a tool canvas whose tool and
-     * options are ToolManager's: on the mesh Move, Rotate and Scale drag the
-     * selection, on the sculpt every tool strokes the surface, on the weights
-     * the brush strokes with BrushManager's brush in use, Brush drawing toward
-     * the target weight, Erase toward none and Smooth blending between
+     * one, the panel mode and selection, and how the preview stands, is
+     * built and is colored, made as one of the race's genders at a time in
+     * the model that gender requires. Races are ARPG entries owned by
+     * InfoManager: selecting one there opens it here, as does selecting an
+     * entity, which opens the race it is made of; every edit goes back
+     * through it, and every change to an open race, made here or in the
+     * Info Panel, rebuilds its preview live. The Mesh, Sculpt and Weights
+     * modes edit the rigged mesh of the part picked — the body or a default
+     * feature — with the tool options and the transform asked for held
+     * here, and the Rig mode the rig the character is built on; each is a
+     * tool canvas whose tool and options are ToolManager's: on the mesh and
+     * the weights Select sweeps the brush over the vertices it selects,
+     * each as much as the tip covers it, and on the mesh Move, Rotate and
+     * Scale drag the selection, each vertex as far as it is selected; on
+     * the sculpt every tool strokes the surface, on the weights the brush
+     * strokes with BrushManager's brush in use, Brush drawing toward the
+     * target weight, Erase toward none and Smooth blending between
      * neighbours, and on the rig the tools pick, drag, size, add and remove
-     * bones. Save and Revert carry every open mesh's changes and the rig's with
-     * the race's. Edits, previews, mesh files, selection, geometry,
-     * sculpting, weights, the rig, history, panel values and panel rows each
-     * live in their own branch.
+     * bones. Save and Revert carry every open mesh's changes and the rig's
+     * with the race's. Edits, previews, mesh files, selection, geometry,
+     * sculpting, weights, the rig, history, panel values and panel rows
+     * each live in their own branch.
      */
 
     // Internal
@@ -588,15 +591,18 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Strokes \\
 
-    // A brush stroke on the active part, its shape in Sculpt mode and its weights otherwise
-    public void beginStroke() {
+    // A brush stroke on the active part: its selection with the Select tool, combined with it as asked, its shape in
+    // Sculpt mode and its weights otherwise
+    public void beginStroke(CharacterEditorSelection selection) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
         if (document == null)
             return;
 
-        if (mode == CharacterEditorMode.SCULPT)
+        if (isSelectStroke())
+            characterSelectionBranch.beginStroke(document, selection);
+        else if (mode == CharacterEditorMode.SCULPT)
             characterShapeBranch.beginStroke(document);
         else
             characterWeightBranch.beginStroke(document);
@@ -607,7 +613,15 @@ public class CharacterEditorManager extends ManagerPackage {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
-        if (document == null || !document.hasOpenStep())
+        if (document == null)
+            return;
+
+        if (characterSelectionBranch.isStroking()) {
+            characterSelectionBranch.stroke(document, vertices, strengths);
+            return;
+        }
+
+        if (!document.hasOpenStep())
             return;
 
         EditorTool tool = toolManager.getTool(mode.getToolCanvas());
@@ -629,6 +643,11 @@ public class CharacterEditorManager extends ManagerPackage {
     public void endStroke() {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (characterSelectionBranch.isStroking()) {
+            characterSelectionBranch.endStroke();
+            return;
+        }
 
         if (document == null)
             return;
@@ -1129,9 +1148,14 @@ public class CharacterEditorManager extends ManagerPackage {
         return weightTarget;
     }
 
-    // How strongly the brush strokes, the Strength option of the mode's tool in use
+    // How strongly the brush strokes, the Strength option of the mode's tool in use, in full for a tool without one
     public float getBrushStrength() {
-        return toolManager.getOption(mode.getToolCanvas(), ToolOption.STRENGTH);
+
+        ToolCanvas canvas = mode.getToolCanvas();
+
+        return toolManager.getTool(canvas).hasOption(ToolOption.STRENGTH)
+                ? toolManager.getOption(canvas, ToolOption.STRENGTH)
+                : 1f;
     }
 
     // What the viewport's tools work on: the mesh, its sculpt, its weights or the rig, nothing in the other modes
@@ -1139,9 +1163,14 @@ public class CharacterEditorManager extends ManagerPackage {
         return mode.getToolCanvas();
     }
 
-    // True while a mesh mode is open and the tool chosen for it strokes
+    // True while a mesh mode is open and the tool chosen for it strokes the brush there
     public boolean isBrushTool() {
-        return mode.isMeshMode() && toolManager.getTool(mode.getToolCanvas()).isStroke();
+        return mode.isMeshMode() && mode.getToolCanvas().strokes(toolManager.getTool(mode.getToolCanvas()));
+    }
+
+    // True while the brush selects rather than shaping or weighting
+    public boolean isSelectStroke() {
+        return isBrushTool() && toolManager.getTool(mode.getToolCanvas()) == EditorTool.SELECT;
     }
 
     // The brush's radius, in window pixels

@@ -29,7 +29,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Every editor tool lives in the Tools tab**, chosen there or by the shared tool keys, for whatever canvas was
   worked in last (see `.claude/docs/Engine.md` and `.claude/docs/Shortcut.md`). A tool is never a panel button.
 - **Brushes live in the Brushes tab, never in the Tools tab.** The Tools tab shows tools, their actions and their
-  options only. Every stroking tool on every canvas stamps with the one brush chosen in the Brushes tab.
+  options only. Every stroking tool on every canvas stamps with the one brush chosen in the Brushes tab, and so does
+  Select wherever the canvas sizes a brush (the Character Mesh Editor's vertices), selecting as much as the tip
+  covers so the tools that follow act through its falloff.
 - **Brushes work like Krita's presets:** soft or hard, round, square or diamond, turned and squashed, dense or
   speckled, and each listed with a thumbnail of the stroke it makes. Keep plenty of them; a new kind of tip is a new
   `assets/brushes/` file, not code.

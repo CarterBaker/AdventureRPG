@@ -90,6 +90,8 @@ Every tool that selects many things follows one gesture set, each modifier a hel
 - Dragging anything selected moves everything selected together.
 - A plain drag on nothing belongs to the view camera in a 3D viewport: left turns the view, right pans it.
 - **Delete** removes everything selected as one edit.
+- Where the canvas takes a brush, **Select strokes it**: a drag selects what the brush covers, replacing the selection,
+  Shift adding and Ctrl taking away, and a press where it covers nothing clears or boxes as above.
 
 The Recorder Keys tab (keys on a curve's row or graph), the Character Mesh Editor's mesh modes (vertices) and the World
 Editor's Select tool (hand-placed settlements and structures) follow it.

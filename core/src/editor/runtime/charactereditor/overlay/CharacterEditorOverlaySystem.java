@@ -33,16 +33,18 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
     /*
      * Draws the active part's vertices and edges over this tab's character
-     * while Mesh or Weights mode is open, as one mesh of dots and lines the overlay
-     * shader keeps a fixed number of pixels wide however far the camera
-     * orbits. In Mesh mode the selection and the active vertex stand out; in
-     * Weights mode each vertex is coloured by the selected bone's weight on
-     * it. With X-Ray off the overlay is depth tested against the character,
-     * nudged toward the camera, so hidden vertices stay hidden; with it on it
+     * while Mesh or Weights mode is open, as one mesh of dots and lines the
+     * overlay shader keeps a fixed number of pixels wide however far the
+     * camera orbits. In Mesh mode the selection and the active vertex stand
+     * out, each selected vertex shaded toward the selection's colour as far
+     * as it is selected, so a soft brush's falloff shows; in Weights mode
+     * each vertex is coloured by the selected bone's weight on it. With
+     * X-Ray off the overlay is depth tested against the character, nudged
+     * toward the camera, so hidden vertices stay hidden; with it on it
      * draws over everything. The box being dragged, the brush of any mesh
-     * mode, Sculpt's included, and the axis a transform is held to are drawn
-     * on top as guides. The overlay is
-     * rebuilt in place only when what it shows has moved.
+     * mode, Sculpt's included, and the axis a transform is held to are
+     * drawn on top as guides. The overlay is rebuilt in place only when
+     * what it shows has moved.
      */
 
     // Internal
@@ -256,9 +258,13 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                     ? CharacterEditorSetting.WEIGHT_SELECTED_HALF_PIXELS
                     : CharacterEditorSetting.WEIGHT_HALF_PIXELS;
         } else {
-            setColor(vertexIndex == document.getActiveVertex()
-                    ? CharacterEditorSetting.COLOR_ACTIVE
-                    : selected ? CharacterEditorSetting.COLOR_SELECTED : CharacterEditorSetting.COLOR_VERTEX);
+            if (vertexIndex == document.getActiveVertex())
+                setColor(CharacterEditorSetting.COLOR_ACTIVE);
+            else
+                mixColor(
+                        CharacterEditorSetting.COLOR_VERTEX,
+                        CharacterEditorSetting.COLOR_SELECTED,
+                        document.getSelectionWeight(vertexIndex));
             half = selected
                     ? CharacterEditorSetting.VERTEX_SELECTED_HALF_PIXELS
                     : CharacterEditorSetting.VERTEX_HALF_PIXELS;
@@ -314,8 +320,13 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         float[] high = weight < 0.5f ? CharacterEditorSetting.COLOR_HEAT_HALF : CharacterEditorSetting.COLOR_HEAT_FULL;
         float t = weight < 0.5f ? weight * 2f : (weight - 0.5f) * 2f;
 
+        mixColor(low, high, t);
+    }
+
+    private void mixColor(float[] from, float[] to, float t) {
+
         for (int i = 0; i < colorScratch.length; i++)
-            colorScratch[i] = low[i] + (high[i] - low[i]) * t;
+            colorScratch[i] = from[i] + (to[i] - from[i]) * t;
     }
 
     private void setColor(float[] color) {

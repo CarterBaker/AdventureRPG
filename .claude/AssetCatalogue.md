@@ -171,6 +171,8 @@ One line per session that changed this file: the date, what was added or removed
   `CharacterMeshEditor.arpg`, `FaceEditor.arpg`, `HeightEditor.arpg`, `ItemEditor.arpg`, `Properties.arpg`,
   `Recorder.arpg`, `Recordings.arpg`, `TreePlanner.arpg` and `WorldEditor.arpg` (their new, save, revert, delete,
   undo and redo buttons moved to those menus).
+- 2026-11-07: Bald genders. Regenerated `schemas/Races.arpg` (`""` allowed for `hair` in a gender's and the race's
+  `features`) so a gender can wear no hair under a race whose default gives some.
 ---
 
 ## Textures and Sprites (2175 files)

@@ -16,14 +16,17 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 class CharacterWeightBranch extends BranchPackage {
 
     /*
-     * Performs every change to the bones a character mesh's vertices follow.
-     * Setting one bone's weight scales the others to fill the rest, so a
-     * vertex's weights always sum to one; a vertex keeps at most
-     * MAX_BONE_INFLUENCES, the lightest dropped first, and never loses its
-     * last bone. Weights are rounded to the editor's precision with the
-     * remainder given to the heaviest. With mirror on, every vertex changed
-     * hands its weights, left and right bones swapped, to its mirror. Brush
-     * strokes change weights live and become one undo step when they end.
+     * Performs every change to the bones a character mesh's vertices
+     * follow. The selection's edits reach each vertex as far as it is
+     * selected, a vertex the brush's soft edge took in half moved half way
+     * to the weight asked. Setting one bone's weight scales the others to
+     * fill the rest, so a vertex's weights always sum to one; a vertex
+     * keeps at most MAX_BONE_INFLUENCES, the lightest dropped first, and
+     * never loses its last bone. Weights are rounded to the editor's
+     * precision with the remainder given to the heaviest. With mirror on,
+     * every vertex changed hands its weights, left and right bones swapped,
+     * to its mirror. Brush strokes change weights live and become one undo
+     * step when they end.
      */
 
     // Internal
@@ -74,11 +77,17 @@ class CharacterWeightBranch extends BranchPackage {
 
     void assign(CharacterMeshDocumentInstance document, int boneIndex, float weight) {
 
+        RiggedMeshStruct mesh = document.getMesh();
+
         beginChange(document);
 
         for (int i = 0; i < document.getSelection().size(); i++)
-            if (document.isSelected(i))
-                setBoneWeight(document.getMesh(), i, boneIndex, weight);
+            if (document.isSelected(i)) {
+
+                float current = mesh.getBoneWeight(i, boneIndex);
+
+                setBoneWeight(mesh, i, boneIndex, current + (weight - current) * document.getSelectionWeight(i));
+            }
 
         finishChange(document);
     }
@@ -91,7 +100,11 @@ class CharacterWeightBranch extends BranchPackage {
 
         for (int i = 0; i < document.getSelection().size(); i++)
             if (document.isSelected(i))
-                setBoneWeight(mesh, i, boneIndex, mesh.getBoneWeight(i, boneIndex) + delta);
+                setBoneWeight(
+                        mesh,
+                        i,
+                        boneIndex,
+                        mesh.getBoneWeight(i, boneIndex) + delta * document.getSelectionWeight(i));
 
         finishChange(document);
     }
@@ -116,7 +129,7 @@ class CharacterWeightBranch extends BranchPackage {
         blendWeights.clear();
 
         for (int i = 0; i < mesh.getVertexCount(); i++) {
-            resolveBlend(mesh, i, document.isSelected(i) ? 1f : 0f);
+            resolveBlend(mesh, i, document.getSelectionWeight(i));
             changedVertices.set(i, document.isSelected(i));
         }
 

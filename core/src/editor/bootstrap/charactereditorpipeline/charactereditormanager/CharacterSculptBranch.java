@@ -20,15 +20,17 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 class CharacterSculptBranch extends BranchPackage {
 
     /*
-     * Performs every change to the geometry of a character mesh. A transform
-     * holds the selection's start and moves, turns or scales it from there
-     * each time it is updated, easing unselected vertices within the
-     * proportional radius along by their distance; with mirror on, a vertex
-     * whose mirror moves too follows it from the negative side, an unmoved
-     * mirror is placed opposite, and a vertex on the centre plane stays on
-     * it. Topology edits — extrude, duplicate, delete, make face, merge,
-     * subdivide, symmetrize and new parts — each become one undo step, and
-     * with mirror on the first three take the selection's mirror along.
+     * Performs every change to the geometry of a character mesh. A
+     * transform holds the selection's start and moves, turns or scales it
+     * from there each time it is updated, each vertex as far as it is
+     * selected, so a soft brush's selection fades out at its edge, easing
+     * unselected vertices within the proportional radius along by their
+     * distance; with mirror on, a vertex whose mirror moves too follows it
+     * from the negative side, an unmoved mirror is placed opposite, and a
+     * vertex on the centre plane stays on it. Topology edits — extrude,
+     * duplicate, delete, make face, merge, subdivide, symmetrize and new
+     * parts — each become one undo step, and with mirror on the first three
+     * take the selection's mirror along.
      */
 
     // Internal
@@ -58,6 +60,7 @@ class CharacterSculptBranch extends BranchPackage {
     private BooleanArrayList faceFlags;
     private BooleanArrayList vertexFlags;
     private BooleanArrayList selectionScratch;
+    private FloatArrayList selectionWeightScratch;
     private Long2IntOpenHashMap edge2Value;
     private float[] cornerScratch;
 
@@ -85,6 +88,7 @@ class CharacterSculptBranch extends BranchPackage {
         this.faceFlags = new BooleanArrayList();
         this.vertexFlags = new BooleanArrayList();
         this.selectionScratch = new BooleanArrayList();
+        this.selectionWeightScratch = new FloatArrayList();
         this.edge2Value = new Long2IntOpenHashMap();
         this.edge2Value.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
         this.cornerScratch = new float[EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.RIGGED_MESH_POSITION_FLOATS];
@@ -120,7 +124,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         for (int i = 0; i < vertexCount; i++)
             if (document.isSelected(i))
-                holdVertex(mesh, i, 1f);
+                holdVertex(mesh, i, document.getSelectionWeight(i));
 
         if (characterEditorManager.isProportional())
             holdProportional(document);
@@ -716,6 +720,7 @@ class CharacterSculptBranch extends BranchPackage {
         for (int i = 0; i < document.getSelection().size(); i++)
             document.getSelection().set(i, i == target);
 
+        document.getSelectionWeights().set(target, 1f);
         document.setActiveVertex(target);
         removeOrphans(document);
         characterMeshBranch.finishEdit(document);
@@ -1113,11 +1118,13 @@ class CharacterSculptBranch extends BranchPackage {
                 selection.set(vertexRemap.getInt(i), true);
     }
 
-    // Removes every vertex no face stands on, carrying the selection and the active vertex over to the new numbering
+    // Removes every vertex no face stands on, carrying the selection, its weights and the active vertex over to the
+    // new numbering
     private void removeOrphans(CharacterMeshDocumentInstance document) {
 
         RiggedMeshStruct mesh = document.getMesh();
         BooleanArrayList selection = document.getSelection();
+        FloatArrayList weights = document.getSelectionWeights();
         int vertexCount = mesh.getVertexCount();
 
         vertexFlags.clear();
@@ -1134,10 +1141,14 @@ class CharacterSculptBranch extends BranchPackage {
         mesh.removeVertices(vertexFlags, vertexRemap);
         selectionScratch.clear();
         selectionScratch.size(mesh.getVertexCount());
+        selectionWeightScratch.clear();
+        selectionWeightScratch.size(mesh.getVertexCount());
 
         for (int i = 0; i < vertexCount; i++)
-            if (vertexRemap.getInt(i) != EngineSetting.INDEX_NOT_FOUND)
+            if (vertexRemap.getInt(i) != EngineSetting.INDEX_NOT_FOUND) {
                 selectionScratch.set(vertexRemap.getInt(i), selection.getBoolean(i));
+                selectionWeightScratch.set(vertexRemap.getInt(i), weights.getFloat(i));
+            }
 
         int activeVertex = document.getActiveVertex();
 
@@ -1146,6 +1157,8 @@ class CharacterSculptBranch extends BranchPackage {
                 : EngineSetting.INDEX_NOT_FOUND);
         selection.clear();
         selection.addAll(selectionScratch);
+        weights.clear();
+        weights.addAll(selectionWeightScratch);
     }
 
     private void collectSelected(CharacterMeshDocumentInstance document, IntArrayList vertices) {

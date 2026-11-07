@@ -7,24 +7,25 @@ public enum EditorTool {
     /*
      * The editor's tools, the same in every window that takes them; what
      * each does is the window's own, and each canvas takes only those that
-     * mean something there. Select picks things to work on; Brush strokes
-     * the brush over what it works on, laying the chosen value down, and
-     * Erase strokes it away; Smooth softens what lies under the brush,
-     * Swirl twists it about the brush's centre and Scatter shuffles it;
-     * Inflate swells a surface along its own normals, Pinch draws it in
+     * mean something there. Select picks things to work on, sweeping the
+     * brush's tip over them wherever the canvas sizes a brush; Brush
+     * strokes the brush over what it works on, laying the chosen value
+     * down, and Erase strokes it away; Smooth softens what lies under the
+     * brush, Swirl twists it about the brush's centre and Scatter shuffles
+     * it; Inflate swells a surface along its own normals, Pinch draws it in
      * toward the brush's centre, Flatten levels it, a surface onto its mean
-     * plane and an image to the value where the stroke began, and
-     * Nudge drags it along with the pointer; Raise and Lower build what lies
+     * plane and an image to the value where the stroke began, and Nudge
+     * drags it along with the pointer; Raise and Lower build what lies
      * under the brush up or wear it down a little more with every stamp;
      * Fill floods a run of one value and Pick takes up the value under the
-     * pointer; Place stands a new thing where it clicks and Wall a thin wall
-     * on the face it clicks; Move, Rotate and Scale drag what is selected;
-     * Cut cuts a clip in two where it clicks. The stroking tools work along
-     * a drag with a brush and carry the options that shape their strokes;
-     * the rest act once per press.
+     * pointer; Place stands a new thing where it clicks and Wall a thin
+     * wall on the face it clicks; Move, Rotate and Scale drag what is
+     * selected; Cut cuts a clip in two where it clicks. The stroking tools
+     * work along a drag with a brush and carry the options that shape their
+     * strokes; the rest act once per press.
      */
 
-    SELECT(EditorSetting.TOOL_SELECT, false),
+    SELECT(EditorSetting.TOOL_SELECT, false, ToolOption.SIZE),
     BRUSH(EditorSetting.TOOL_BRUSH, true, ToolOption.SIZE, ToolOption.STRENGTH),
     ERASE(EditorSetting.TOOL_ERASE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     SMOOTH(EditorSetting.TOOL_SMOOTH, true, ToolOption.SIZE, ToolOption.STRENGTH),
@@ -73,5 +74,14 @@ public enum EditorTool {
 
     public ToolOption[] getOptions() {
         return options;
+    }
+
+    public boolean hasOption(ToolOption option) {
+
+        for (int i = 0; i < options.length; i++)
+            if (options[i] == option)
+                return true;
+
+        return false;
     }
 }

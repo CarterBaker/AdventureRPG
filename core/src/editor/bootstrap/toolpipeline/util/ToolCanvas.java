@@ -8,20 +8,22 @@ import editor.runtime.EditorSetting;
 public enum ToolCanvas {
 
     /*
-     * What a window's tools work on right now, each with the tools it takes,
-     * the first being the one it starts with, the actions it lists under them
-     * in titled groups — one-off operations such as a mesh's selection and
-     * geometry edits, run by its window — whether what it holds can blend
-     * between values, and every tool option it honours with its range there:
-     * a brush is sized in image pixels on the world's layers and in window
-     * pixels on a character. A tool shows only the options both it and the
-     * canvas have, and a canvas without Size takes no brush. Biome colors
-     * name biomes, so they never blend; heights, bone weights and a sculpted
-     * surface do. The world's heights are their own canvas, raised, lowered,
-     * smoothed, flattened and erased back to level with the brush, never
-     * painted from a palette. A character's rig, its face and an animation's
-     * pose take the tools that pick and drag its joints; the face drags a
-     * bone into the face control selected.
+     * What a window's tools work on right now, each with the tools it
+     * takes, the first being the one it starts with, the actions it lists
+     * under them in titled groups — one-off operations such as a mesh's
+     * selection and geometry edits, run by its window — whether what it
+     * holds can blend between values, and every tool option it honours with
+     * its range there: a brush is sized in image pixels on the world's
+     * layers and in window pixels on a character. A tool shows only the
+     * options both it and the canvas have, and a canvas without Size takes
+     * no brush; on one with it, every tool that carries Size strokes with
+     * the brush, so a mesh's Select sweeps the brush over its vertices.
+     * Biome colors name biomes, so they never blend; heights, bone weights
+     * and a sculpted surface do. The world's heights are their own canvas,
+     * raised, lowered, smoothed, flattened and erased back to level with
+     * the brush, never painted from a palette. A character's rig, its face
+     * and an animation's pose take the tools that pick and drag its joints;
+     * the face drags a bone into the face control selected.
      */
 
     BIOMES(
@@ -52,7 +54,8 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_MESH,
             new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
             new ToolActionGroupStruct[] { meshTransform(), meshGeometry(), meshSelection() },
-            false),
+            false,
+            screenSize()),
     CHARACTER_SCULPT(
             EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
             new EditorTool[] {
@@ -316,5 +319,10 @@ public enum ToolCanvas {
     // A canvas strokes with the brush when its tools have a size to stroke at
     public boolean takesBrush() {
         return findOption(ToolOption.SIZE) != null;
+    }
+
+    // Whether a tool strokes the brush here: every tool sized by the brush on a canvas that takes one
+    public boolean strokes(EditorTool tool) {
+        return takesBrush() && tool.hasOption(ToolOption.SIZE);
     }
 }

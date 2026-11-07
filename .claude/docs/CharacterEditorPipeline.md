@@ -56,7 +56,12 @@ layouts like any other.
   (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `FACE_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
   their buttons route to the tool's branch. A tool without a text row template must never list a `TEXT` row.
 - Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_SCULPT`, `CHARACTER_WEIGHTS`,
-  `CHARACTER_RIG`, `CHARACTER_FACE`, `ANIMATION_POSE`); brushes the Brushes window's. Add a tool to a canvas in
+  `CHARACTER_RIG`, `CHARACTER_FACE`, `ANIMATION_POSE`); brushes the Brushes window's. A tool strokes the brush where
+  the canvas sizes one and the tool carries Size (`ToolCanvas.strokes`), so on the mesh and the weights Select sweeps
+  the brush over vertices, each selected as much as the tip covers it (a hard brush whole, a soft one fading at its
+  edge; Shift adds, Ctrl takes away, a press where the brush covers nothing still clears or boxes). Move, Rotate,
+  Scale and the numeric transforms carry each vertex as far as it is selected, and Assign, Add, Subtract and Smooth
+  weights reach it as far. Add a tool to a canvas in
   `ToolCanvas`, never as a panel button. The mesh's one-off operations (transform, geometry, weights, selection) are
   the canvas's action groups (`ToolActionGroupStruct`), shown in the Tools window under the tools and run by
   `CharacterEditorContext.runToolAction` through `CharacterEditorManager.act`, the same key their shortcuts carry; a
@@ -135,8 +140,11 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   +x; keep that chirality on any hand you model or mirror.
 - **Features are the gender's.** The Character Outliner's Features rows (Appearance mode) read and write the previewed
   gender's `genders.<gender>.features`, the features it is made with; a gender naming none wears the race's
-  `appearance.features` default, shown with `CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX`, and None removes the gender's
-  own so the default returns.
+  `appearance.features` default, shown with `CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX`. A row steps through the default
+  (the gender's own removed), then `none` (`EngineSetting.APPEARANCE_FEATURE_NONE`, `""`: the gender wears nothing
+  there, so it can go bald under a race whose default gives hair; offered only while the default wears something),
+  then every feature that fits. `AppearanceGenderStruct.namesFeature` tells a slot named none from one left to the
+  race; read a preset's feature only through it (`AppearanceData.getStartingFeature`).
 - **Hair is cards.** A hair mesh is a scalp cap and layered cards two quads wide, textured with the strand tile
   `characters/standard/Hair` (its alpha cuts the locks out); each card's raw UV runs across it in u and from root
   (0) to tip (1) in v. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`),
@@ -148,6 +156,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 
 - Sculpt strokes: `CharacterShapeBranch` (begin, stamp, end). The viewport fills one `CharacterStampStruct` per stamp
   in `CharacterEditorSculptSystem.placeStamp`.
+- Vertex selection and its weights: `CharacterSelectionBranch` (picks, boxes, select strokes, the weighted centre).
+  The document keeps a weight beside each selection flag (`CharacterMeshDocumentInstance.getSelectionWeight`, 0 when
+  unselected); `syncSelection` holds every unselected vertex whole, undo steps keep the weights, and `removeOrphans`
+  carries them over a renumbering.
 - Rig: `CharacterRigBranch` owns the draft read from the rig's InfoManager entry, every rig edit (`edit`), its
   history and the live apply (`RigManager.updateRig`). Values and actions: `CharacterRigPropertyBranch`; rows:
   `CharacterRigRowBranch`; viewport: `CharacterEditorRigSystem`.

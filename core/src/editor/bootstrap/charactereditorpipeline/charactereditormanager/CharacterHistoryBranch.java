@@ -88,7 +88,11 @@ class CharacterHistoryBranch extends BranchPackage {
     }
 
     private CharacterMeshHistoryStruct snapshot(CharacterMeshDocumentInstance document) {
-        return new CharacterMeshHistoryStruct(document.getMesh(), document.getSelection(), document.isDirty());
+        return new CharacterMeshHistoryStruct(
+                document.getMesh(),
+                document.getSelection(),
+                document.getSelectionWeights(),
+                document.isDirty());
     }
 
     // Accessible \\

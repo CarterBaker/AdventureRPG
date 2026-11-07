@@ -29,18 +29,20 @@ class AppearanceBuilder extends BuilderPackage {
      * Parses a race's "appearance" block into an AppearanceData, resolved
      * against the race's rig and the body mesh each of its genders wears.
      * "colors", "palettes" and "details" are keyed by the lower-case
-     * SkinnedColor and SkinnedDetail names; "shapes" lists the sliders, each
-     * known by its "name" (its morph's name when it gives none) and driving a
-     * "morph", the "bones" it moves, turns and scales per unit of its value,
-     * or both, with its group and range; "expressions" names the morph each
-     * AppearanceExpression plays. The race's "genders" give each gender its
-     * starting "shapes", by name, and "features", on the body it wears.
-     * Every body must carry every morph the sliders and expressions name.
-     * Every default feature must sit in the slot it is declared under and fit
-     * the rig. A color left out is white, a palette left out holds only its
-     * default color, a detail left out is EngineSetting's default, and the
-     * build curve defaults to a flat 1.0. Bootstrap-only, apart from an
-     * editor's preview builds.
+     * SkinnedColor and SkinnedDetail names; "shapes" lists the sliders,
+     * each known by its "name" (its morph's name when it gives none) and
+     * driving a "morph", the "bones" it moves, turns and scales per unit of
+     * its value, or both, with its group and range; "expressions" names the
+     * morph each AppearanceExpression plays. The race's "genders" give each
+     * gender its starting "shapes", by name, and "features", on the body it
+     * wears; a feature named "" wears nothing in its slot, so a gender can
+     * go bald under a race whose default gives hair. Every body must carry
+     * every morph the sliders and expressions name. Every default feature
+     * must sit in the slot it is declared under and fit the rig. A color
+     * left out is white, a palette left out holds only its default color, a
+     * detail left out is EngineSetting's default, and the build curve
+     * defaults to a flat 1.0. Bootstrap-only, apart from an editor's
+     * preview builds.
      */
 
     // Internal
@@ -400,7 +402,8 @@ class AppearanceBuilder extends BuilderPackage {
                     new AppearanceGenderStruct(
                             resolveBodyIndex(gender.getMeshHandle(), bodyMeshes),
                             shapeValues,
-                            parseFeatures(presetArpg, sourceName)));
+                            parseFeatures(presetArpg, sourceName),
+                            parseNamedFeatures(presetArpg)));
         }
 
         return genderID2Preset;
@@ -445,8 +448,12 @@ class AppearanceBuilder extends BuilderPackage {
             if (!ArpgUtility.hasString(featuresArpg, key))
                 continue;
 
-            FeatureHandle featureHandle = featureManager.getFeatureHandleFromFeatureName(
-                    featuresArpg.get(key).getAsString());
+            String featureName = featuresArpg.get(key).getAsString();
+
+            if (featureName.equals(EngineSetting.APPEARANCE_FEATURE_NONE))
+                continue;
+
+            FeatureHandle featureHandle = featureManager.getFeatureHandleFromFeatureName(featureName);
 
             if (featureHandle.getFeatureSlot() != featureSlot)
                 throwException("Feature \"" + featureHandle.getFeatureName() + "\" is a "
@@ -457,6 +464,24 @@ class AppearanceBuilder extends BuilderPackage {
         }
 
         return features;
+    }
+
+    // Which slots a look names for itself, a feature or none
+    private boolean[] parseNamedFeatures(ArpgObjectStruct arpg) {
+
+        boolean[] namedFeatures = new boolean[FeatureSlot.VALUES.length];
+
+        if (!ArpgUtility.hasObject(arpg, "features"))
+            return namedFeatures;
+
+        ArpgObjectStruct featuresArpg = arpg.getAsObject("features");
+
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+            namedFeatures[featureSlot.ordinal()] = ArpgUtility.hasString(
+                    featuresArpg,
+                    ArpgUtility.toEnumName(featureSlot));
+
+        return namedFeatures;
     }
 
     // Keys \\

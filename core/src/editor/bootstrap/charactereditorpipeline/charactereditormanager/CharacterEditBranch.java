@@ -75,7 +75,8 @@ class CharacterEditBranch extends BranchPackage {
 
     // Features \\
 
-    // The feature a gender wears in a slot, or its own removed for null so it wears the race's default
+    // The feature a gender wears in a slot, none for APPEARANCE_FEATURE_NONE, or its own removed for null so it wears
+    // the race's default
     void setFeature(
             CharacterDocumentInstance document,
             String genderName,

@@ -189,13 +189,16 @@ public class AppearanceData extends DataPackage {
 
     // Features \\
 
-    // The feature a gender starts with in a slot: its preset's, else the race's default
+    // The feature a gender starts with in a slot: the one its preset names, null where it names none, else the race's
+    // default
     public FeatureHandle getStartingFeature(short genderID, FeatureSlot featureSlot) {
 
         AppearanceGenderStruct preset = genderID2Preset.get(genderID);
-        FeatureHandle featureHandle = preset != null ? preset.getFeature(featureSlot.ordinal()) : null;
+        int slotIndex = featureSlot.ordinal();
 
-        return featureHandle != null ? featureHandle : defaultFeatures[featureSlot.ordinal()];
+        return preset != null && preset.namesFeature(slotIndex)
+                ? preset.getFeature(slotIndex)
+                : defaultFeatures[slotIndex];
     }
 
     // Accessible \\

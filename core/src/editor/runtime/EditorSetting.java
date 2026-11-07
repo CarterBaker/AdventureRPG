@@ -1013,8 +1013,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_WEIGHT_MIRROR_NEGATIVE = "Mirror Weights  -X to +X";
 
     // Character Editor — mesh status text
-    public static final String CHARACTER_EDITOR_STATUS_MESH_HINT = "Click a vertex or drag from one to select, Shift"
-            + " adds, Ctrl removes; drag off the mesh to orbit, right-drag to pan";
+    public static final String CHARACTER_EDITOR_STATUS_MESH_HINT = "Select brushes over vertices, a soft brush selecting"
+            + " part way, Shift adds, Ctrl removes; Move, Rotate and Scale follow it; drag off the mesh to orbit";
     public static final String CHARACTER_EDITOR_STATUS_SCULPT_HINT = "Drag on the mesh to sculpt with the tool in use,"
             + " Ctrl inverts the stroke; drag off it to orbit, right-drag to pan";
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"

@@ -2363,6 +2363,10 @@ public class EngineSetting {
     public static final float APPEARANCE_SHAPE_DEFAULT = 0f;
     public static final String APPEARANCE_SHAPE_GROUP_DEFAULT = "face";
 
+    // Appearance Features — the name a look gives a slot to wear nothing there, so a gender can go bald under a race
+    // that gives hair
+    public static final String APPEARANCE_FEATURE_NONE = "";
+
     // Appearance Bones — the least a face slider's scale may leave a bone at, so a bone never turns inside out
     public static final float APPEARANCE_BONE_SCALE_MIN = 0.1f;
     public static final float NPC_SHAPE_VARIATION = 0.18f;

@@ -13,13 +13,16 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CharacterMeshDocumentInstance extends InstancePackage {
 
     /*
-     * One rigged mesh file open in the character editor: the registered mesh
-     * it rebuilds in place, the file's own fields as last read or written,
-     * the mesh being edited, its vertex selection and active vertex, the
-     * vertex each mirrors across x, its undo history, and the shape key being
-     * sculpted with the base positions it was lifted from. The revision moves
-     * on every change of geometry or selection so viewports know to redraw;
-     * dirty marks changes not yet saved.
+     * One rigged mesh file open in the character editor: the registered
+     * mesh it rebuilds in place, the file's own fields as last read or
+     * written, the mesh being edited, its vertex selection with how much of
+     * each vertex it holds (a whole vertex 1, one the brush's soft edge
+     * took in less, every vertex outside it held whole so it joins whole)
+     * and its active vertex, the vertex each mirrors across x, its undo
+     * history, and the shape key being sculpted with the base positions it
+     * was lifted from. The revision moves on every change of geometry or
+     * selection so viewports know to redraw; dirty marks changes not yet
+     * saved.
      */
 
     // Identity
@@ -32,6 +35,7 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
     // Selection
     private BooleanArrayList selection;
+    private FloatArrayList selectionWeights;
     private int activeVertex;
 
     // Mirror
@@ -61,6 +65,7 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
         // Selection
         this.selection = new BooleanArrayList();
+        this.selectionWeights = new FloatArrayList();
 
         // Mirror
         this.mirrorVertices = new IntArrayList();
@@ -90,7 +95,8 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
         shapeBase.clear();
         selection.clear();
-        selection.size(mesh.getVertexCount());
+        selectionWeights.clear();
+        syncSelection();
     }
 
     public void markSaved(ArpgObjectStruct sourceArpg) {
@@ -112,6 +118,8 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         mesh.set(step.getMesh());
         selection.clear();
         selection.addAll(step.getSelection());
+        selectionWeights.clear();
+        selectionWeights.addAll(step.getSelectionWeights());
         syncSelection();
 
         this.dirty = step.isDirty();
@@ -124,12 +132,20 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         this.revision++;
     }
 
-    // Keeps one selection flag per vertex, new vertices unselected, after the vertex count changes
+    // Keeps one selection flag and weight per vertex, new vertices unselected, after the vertex count changes; every
+    // vertex outside the selection is held whole again
     public void syncSelection() {
 
-        selection.size(mesh.getVertexCount());
+        int vertexCount = mesh.getVertexCount();
 
-        if (activeVertex >= mesh.getVertexCount())
+        selection.size(vertexCount);
+        selectionWeights.size(vertexCount);
+
+        for (int i = 0; i < vertexCount; i++)
+            if (!selection.getBoolean(i))
+                selectionWeights.set(i, 1f);
+
+        if (activeVertex >= vertexCount)
             this.activeVertex = EngineSetting.INDEX_NOT_FOUND;
     }
 
@@ -175,6 +191,15 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
     public boolean isSelected(int vertexIndex) {
         return selection.getBoolean(vertexIndex);
+    }
+
+    public FloatArrayList getSelectionWeights() {
+        return selectionWeights;
+    }
+
+    // How much of a vertex the selection holds, none when it is not selected
+    public float getSelectionWeight(int vertexIndex) {
+        return selection.getBoolean(vertexIndex) ? selectionWeights.getFloat(vertexIndex) : 0f;
     }
 
     public int getActiveVertex() {

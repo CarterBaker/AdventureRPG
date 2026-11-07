@@ -518,7 +518,8 @@ class CharacterPropertyBranch extends BranchPackage {
 
     // Features \\
 
-    // The features the preview could wear in a slot, by name, with none first
+    // The features the preview could wear in a slot, by name: the race's default first, then none where the default
+    // wears something, so a gender can go bald, then every feature that fits
     private ObjectArrayList<String> getFeatureOptions(FeatureSlot featureSlot) {
 
         ObjectArrayList<String> options = new ObjectArrayList<>();
@@ -530,6 +531,10 @@ class CharacterPropertyBranch extends BranchPackage {
                 options.add(features.get(i).getFeatureName());
 
         options.sort(String.CASE_INSENSITIVE_ORDER);
+
+        if (isWorn(findFeatureName(getAppearanceArpg(), featureSlot)))
+            options.add(0, EngineSetting.APPEARANCE_FEATURE_NONE);
+
         options.add(0, null);
 
         return options;
@@ -580,15 +585,17 @@ class CharacterPropertyBranch extends BranchPackage {
 
         FeatureSlot featureSlot = ArpgUtility.toEnum(slotKey, FeatureSlot.class);
         String featureName = getGenderFeatureName(featureSlot);
-
-        if (featureName != null)
-            return featureName;
-
         String defaultName = findFeatureName(getAppearanceArpg(), featureSlot);
 
-        return defaultName != null
-                ? defaultName + EditorSetting.CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX
-                : EditorSetting.CHARACTER_VIEW_NONE;
+        if (featureName == null && isWorn(defaultName))
+            return defaultName + EditorSetting.CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX;
+
+        return isWorn(featureName) ? featureName : EditorSetting.CHARACTER_VIEW_NONE;
+    }
+
+    // Whether a slot's feature name wears something, neither left out nor named none
+    private boolean isWorn(String featureName) {
+        return featureName != null && !featureName.equals(EngineSetting.APPEARANCE_FEATURE_NONE);
     }
 
     // Anchors \\

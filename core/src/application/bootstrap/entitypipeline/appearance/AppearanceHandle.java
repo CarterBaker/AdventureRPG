@@ -170,7 +170,7 @@ public class AppearanceHandle extends HandlePackage {
                 writeShapeValue(i, preset.getShapeValue(i));
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
-            if (preset.getFeature(featureSlot.ordinal()) != null)
+            if (preset.namesFeature(featureSlot.ordinal()))
                 features[featureSlot.ordinal()] = preset.getFeature(featureSlot.ordinal());
     }
 
