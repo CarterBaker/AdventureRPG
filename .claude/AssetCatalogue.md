@@ -200,9 +200,17 @@ One line per session that changed this file: the date, what was added or removed
   regenerated `menus/editor/BiomePlanner.arpg` (no biome list, the grid across the tab), `menus/editor/Properties.arpg`
   (no biome palette rows: painting shows the selected biome's fields) and `menus/editor/EditorWindow.arpg` (Biome
   Outliner in the World menu).
+- 2026-11-08: One image per menu element. Every game menu element (main, pause, launcher, settings, character,
+  creator, inventory, HUD, Shipwright) now draws its own sprite, baked from the shared art at its size in a 1920x1080
+  window (the launcher at 860x800) so it looks as before but can be painted alone: added the `menus/character/`,
+  `menus/launcher/`, `menus/mainmenu/`, `menus/pausemenu/`, `menus/settings/` and `menus/shipwright/` sets and new
+  `menus/creator/` and `menus/inventory/` images with companions; rebaked `hud/KeyCap`, `creator/SliderTrack` and
+  `inventory/ViewFrame` (companion removed) at their element sizes; removed the shared `boards/`, `paper/`,
+  `wood/WoodPanel`, `wood/WoodPeg`, `inventory/Inset` and `inventory/Slot` images and companions; regenerated the
+  nine menus that reference them.
 ---
 
-## Textures and Sprites (2175 files)
+## Textures and Sprites (2273 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -237,18 +245,39 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Title`
 - `ToolBar`
 
-### `assets/sprites/menus/boards/`
+### `assets/sprites/menus/character/`
 
-- `BoardButtonA`
-- `BoardButtonB`
-- `BoardButtonC`
-- `BoardButtonD`
-- `BoardButtonWide`
+- `AttributeRow`
+- `Back`
+- `Clear`
+- `Confirm`
+- `ProfessionRow`
+- `SheetPanel`
+- `SheetTab`
+- `SheetTitle`
+- `SummaryPanel`
+- `SummaryTitle`
+- `ValueRow`
 
 ### `assets/sprites/menus/creator/`
 
+- `AttributeRow`
+- `Back`
+- `Create`
+- `CreatorPanel`
+- `CreatorTab`
+- `CreatorTitle`
+- `DetailsPanel`
+- `DetailsTitle`
+- `FeatureRow`
+- `GenderRow`
+- `NameField`
+- `ProfessionRow`
+- `Randomize`
+- `SliderKnob`
 - `SliderTrack`
 - `Swatch`
+- `SwatchGlow`
 - `SwatchRing`
 
 ### `assets/sprites/menus/hud/`
@@ -258,16 +287,107 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/sprites/menus/inventory/`
 
+- `BagBox`
+- `BagListTitle`
+- `BagListToggle`
+- `BagPanel`
+- `BagTitleNote`
+- `BagToggle`
+- `BoardBottom`
+- `BoardLeft`
+- `BoardRight`
+- `BoardTop`
+- `CharacterButton`
+- `ChestBox`
+- `ChestListTitle`
+- `ChestListToggle`
+- `ChestPanel`
+- `ChestTitleNote`
+- `ChestToggle`
+- `EquipmentSlot`
 - `Eye`
 - `EyeClosed`
-- `Inset`
-- `Slot`
+- `ListRow`
+- `RingSlot`
+- `StatsBox`
 - `ViewFrame`
 
-### `assets/sprites/menus/paper/`
+### `assets/sprites/menus/launcher/`
 
-- `PaperScrap`
-- `PaperStrip`
+- `Board`
+- `Launch`
+- `Options`
+- `Quit`
+
+### `assets/sprites/menus/mainmenu/`
+
+- `Back`
+- `CharacterSlot`
+- `Continue`
+- `Load`
+- `NewGame`
+- `Options`
+- `Panel`
+- `Quit`
+- `TitleNote`
+
+### `assets/sprites/menus/pausemenu/`
+
+- `Continue`
+- `Options`
+- `Quit`
+- `TitleNote`
+
+### `assets/sprites/menus/settings/`
+
+- `ActionRow`
+- `Back`
+- `BindingRow`
+- `OptionRow`
+- `PlaceholderNote`
+- `SettingsPanel`
+- `SettingsTab`
+- `SettingsTitle`
+- `SliderKnob`
+- `SliderTrack`
+
+### `assets/sprites/menus/shipwright/`
+
+- `AddDeck`
+- `CatalogueItem`
+- `CatalogueNext`
+- `CatalogueNote`
+- `CataloguePrevious`
+- `CatalogueText`
+- `Close`
+- `ConfirmCancel`
+- `ConfirmDiscard`
+- `ConfirmPanel`
+- `ConfirmSave`
+- `DeckDown`
+- `DeckNote`
+- `DeckUp`
+- `InspectNote`
+- `Launch`
+- `Name`
+- `New`
+- `NoticeOk`
+- `NoticePanel`
+- `Open`
+- `Redo`
+- `RemoveDeck`
+- `Save`
+- `ShipRow`
+- `ShipsCancel`
+- `ShipsPanel`
+- `StatsNote`
+- `TabFittings`
+- `TabFurniture`
+- `TabHull`
+- `TabMasts`
+- `TurnLeft`
+- `TurnRight`
+- `Undo`
 
 ### `assets/sprites/menus/title/`
 
@@ -278,8 +398,6 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/sprites/menus/wood/`
 
-- `WoodPanel`
-- `WoodPeg`
 - `WoodSlat`
 
 ### `assets/sprites/sky/`
@@ -1413,7 +1531,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1722 files)
+## Data Files (1781 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2733,8 +2851,15 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `FrameOutline.arpg`, `Panel.arpg`, `PanelHeader.arpg`, `PanelOutline.arpg`, `Shadow.arpg`, `StatusBar.arpg`,
 `ToolBar.arpg`
 
+### `assets/sprites/menus/character/`
+
+`AttributeRow.arpg`, `Back.arpg`, `Clear.arpg`, `Confirm.arpg`, `ProfessionRow.arpg`, `SheetPanel.arpg`,
+`SheetTab.arpg`, `SummaryPanel.arpg`, `ValueRow.arpg`
+
 ### `assets/sprites/menus/creator/`
 
+`AttributeRow.arpg`, `Back.arpg`, `Create.arpg`, `CreatorPanel.arpg`, `CreatorTab.arpg`, `DetailsPanel.arpg`,
+`FeatureRow.arpg`, `GenderRow.arpg`, `NameField.arpg`, `ProfessionRow.arpg`, `Randomize.arpg`, `SliderKnob.arpg`,
 `SliderTrack.arpg`
 
 ### `assets/sprites/menus/hud/`
@@ -2743,15 +2868,28 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/sprites/menus/inventory/`
 
-`Inset.arpg`, `Slot.arpg`, `ViewFrame.arpg`
+`BagBox.arpg`, `BagListToggle.arpg`, `BagToggle.arpg`, `CharacterButton.arpg`, `ChestBox.arpg`, `ChestListToggle.arpg`,
+`ChestToggle.arpg`, `ListRow.arpg`
 
-### `assets/sprites/menus/paper/`
+### `assets/sprites/menus/mainmenu/`
 
-`PaperStrip.arpg`
+`Back.arpg`, `CharacterSlot.arpg`, `Panel.arpg`
+
+### `assets/sprites/menus/settings/`
+
+`ActionRow.arpg`, `Back.arpg`, `BindingRow.arpg`, `OptionRow.arpg`, `PlaceholderNote.arpg`, `SettingsPanel.arpg`,
+`SettingsTab.arpg`, `SliderKnob.arpg`, `SliderTrack.arpg`
+
+### `assets/sprites/menus/shipwright/`
+
+`AddDeck.arpg`, `CatalogueItem.arpg`, `CatalogueNext.arpg`, `CataloguePrevious.arpg`, `CatalogueText.arpg`,
+`Close.arpg`, `ConfirmCancel.arpg`, `ConfirmDiscard.arpg`, `ConfirmSave.arpg`, `DeckDown.arpg`, `DeckUp.arpg`,
+`Launch.arpg`, `New.arpg`, `Redo.arpg`, `RemoveDeck.arpg`, `Save.arpg`, `ShipRow.arpg`, `TabFittings.arpg`,
+`TabFurniture.arpg`, `TabHull.arpg`, `TabMasts.arpg`, `TurnLeft.arpg`, `TurnRight.arpg`, `Undo.arpg`
 
 ### `assets/sprites/menus/wood/`
 
-`WoodPanel.arpg`, `WoodPeg.arpg`, `WoodSlat.arpg`
+`WoodSlat.arpg`
 
 ### `assets/stats/`
 

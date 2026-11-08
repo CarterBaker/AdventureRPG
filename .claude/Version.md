@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 53
-Task: RestreamPendingWork
+Delivery: 54
+Task: MenuElementSprites
 Applied: 2026-11-08
 
 ## Log
@@ -63,3 +63,4 @@ Applied: 2026-11-08
 - 51, 2026-11-08, AppearanceShapeDefaults
 - 52, 2026-11-08, BiomeOutliner
 - 53, 2026-11-08, RestreamPendingWork
+- 54, 2026-11-08, MenuElementSprites
