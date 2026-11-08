@@ -230,11 +230,13 @@ class ChunkQueueManager extends ManagerPackage {
 
     // Restream \\
 
-    // Walked far to near so the nearest regenerated chunks load first
+    // Walked far to near so the nearest regenerated chunks load first; a chunk with a task still reserved is
+    // queued to unload instead, and the grid scan loads it again from the edited world once it goes
     void restreamRegion(GridInstance grid, WorldEditRegionStruct region) {
 
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
         LongLinkedOpenHashSet loadRequests = grid.getLoadRequests();
+        LongLinkedOpenHashSet unloadRequests = grid.getUnloadRequests();
         WorldHandle worldHandle = grid.getWorldHandle();
 
         for (int i = grid.getTotalSlots() - 1; i >= 0; i--) {
@@ -244,31 +246,20 @@ class ChunkQueueManager extends ManagerPackage {
             if (!region.reachesChunk(worldHandle, chunkCoordinate))
                 continue;
 
-            ChunkInstance chunkInstance = activeChunks.remove(chunkCoordinate);
+            ChunkInstance chunkInstance = activeChunks.get(chunkCoordinate);
 
             if (chunkInstance == null)
                 continue;
 
-            discardChunk(grid, chunkCoordinate, chunkInstance);
+            if (!unloadChunk(grid, chunkCoordinate, chunkInstance)) {
+                unloadRequests.add(chunkCoordinate);
+                continue;
+            }
+
+            activeChunks.remove(chunkCoordinate);
+            unloadRequests.remove(chunkCoordinate);
             loadRequests.addAndMoveToFirst(chunkCoordinate);
         }
-    }
-
-    // Waits out any work in flight, since every chunk the edit reaches must regenerate from the edited world
-    private void discardChunk(GridInstance grid, long chunkCoordinate, ChunkInstance chunkInstance) {
-
-        ChunkDataSyncContainer syncContainer = chunkInstance.getChunkDataSyncContainer();
-        syncContainer.acquire();
-
-        try {
-            grid.getUnloadRequests().remove(chunkCoordinate);
-            clearChunk(chunkCoordinate, chunkInstance);
-        } finally {
-            syncContainer.release();
-        }
-
-        worldStreamManager.invalidateMegaForChunk(chunkCoordinate);
-        recycleChunk(grid, chunkInstance);
     }
 
     // Queue Execution \\
