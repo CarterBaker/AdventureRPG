@@ -418,6 +418,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_ANIMATION_TREE_EDITOR = "Animation Tree Editor";
     public static final String TAB_TITLE_ANIMATION_OUTLINER = "Animation Outliner";
     public static final String TAB_TITLE_ANIMATION_TIMELINE = "Animation Timeline";
+    public static final String TAB_TITLE_BIOME_OUTLINER = "Biome Outliner";
     public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
     public static final String TAB_TITLE_BRUSHES = "Brushes";

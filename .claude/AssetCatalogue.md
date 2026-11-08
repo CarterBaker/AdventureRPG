@@ -196,6 +196,10 @@ One line per session that changed this file: the date, what was added or removed
   the dock raised above it).
 - 2026-11-08: Appearance outliner range rows. Regenerated `menus/editor/CharacterEditor.arpg` (a pair row template: two
   typed value boxes side by side, for a shape slider's Min and Max beneath its default slider).
+- 2026-11-08: Biome Outliner. Added `menus/editor/BiomeOutliner.arpg` (the biome list the World Editor paints from);
+  regenerated `menus/editor/BiomePlanner.arpg` (no biome list, the grid across the tab), `menus/editor/Properties.arpg`
+  (no biome palette rows: painting shows the selected biome's fields) and `menus/editor/EditorWindow.arpg` (Biome
+  Outliner in the World menu).
 ---
 
 ## Textures and Sprites (2175 files)
@@ -2189,8 +2193,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/menus/editor/`
 
-`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomePlanner.arpg`,
-`BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
+`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
+`BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `CharacterMeshEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
 `HeightEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`, `Recordings.arpg`,
 `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`,

@@ -6,7 +6,6 @@ import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewPanelSystem;
 import editor.runtime.characterview.panel.CharacterViewStepTarget;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
-import editor.runtime.properties.panel.BiomePropertiesSystem;
 import editor.runtime.properties.panel.InfoPropertiesSystem;
 import editor.runtime.properties.panel.PropertiesSystem;
 import editor.runtime.properties.panel.RowPropertiesSystem;
@@ -19,8 +18,7 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
      * The editor's one Properties tab, shared by every window: it shows what
      * the window worked in last provides — a character, face or animation
      * window's value rows, each number on a slider and typed into its box,
-     * the World Editor's biome palette while it paints, or, for the Hierarchy
-     * and every content tool, the entry selected there with every field to
+     * or, for the Hierarchy and every content tool, the entry selected there with every field to
      * edit, the editor's Info Panel. Its toolbar and status line work on the
      * entry selected in the Hierarchy. Every edit goes through the manager
      * that owns it, so every window shows it at once. The shared tool keys
@@ -32,7 +30,6 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
     private CharacterViewPanelSystem characterViewPanelSystem;
     private RowPropertiesSystem rowPropertiesSystem;
     private InfoPropertiesSystem infoPropertiesSystem;
-    private BiomePropertiesSystem biomePropertiesSystem;
     private ToolCanvasSystem toolCanvasSystem;
     private FileMenuSourceSystem fileMenuSourceSystem;
 
@@ -44,7 +41,6 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
         this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
         this.rowPropertiesSystem = create(RowPropertiesSystem.class);
         this.infoPropertiesSystem = create(InfoPropertiesSystem.class);
-        this.biomePropertiesSystem = create(BiomePropertiesSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }

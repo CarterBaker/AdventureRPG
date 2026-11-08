@@ -160,6 +160,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCameraPlanner(window.getGLWindow());
     }
 
+    public void openBiomeOutliner(WindowInstance window) {
+        tabManager.openBiomeOutliner(window.getGLWindow());
+    }
+
     public void openBiomePlanner(WindowInstance window) {
         tabManager.openBiomePlanner(window.getGLWindow());
     }

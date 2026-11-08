@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 51
-Task: AppearanceShapeDefaults
+Delivery: 52
+Task: BiomeOutliner
 Applied: 2026-11-08
 
 ## Log
@@ -61,3 +61,4 @@ Applied: 2026-11-08
 - 49, 2026-11-07, CharacterAppearanceSculpt
 - 50, 2026-11-07, ThinTunnelFrame
 - 51, 2026-11-08, AppearanceShapeDefaults
+- 52, 2026-11-08, BiomeOutliner

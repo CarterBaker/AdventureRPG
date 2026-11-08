@@ -9,6 +9,7 @@ import editor.runtime.animationoutliner.AnimationOutlinerContext;
 import editor.runtime.animationtimeline.AnimationTimelineContext;
 import editor.runtime.animationtreeeditor.AnimationTreeEditorContext;
 import editor.runtime.arpgviewer.ArpgViewerContext;
+import editor.runtime.biomeoutliner.BiomeOutlinerContext;
 import editor.runtime.biomeplanner.BiomePlannerContext;
 import editor.runtime.biomeviewer.BiomeViewerContext;
 import editor.runtime.brushes.BrushesContext;
@@ -264,6 +265,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openBrushes(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_BRUSHES, BrushesContext.class, osWindow);
+    }
+
+    public TabHandle openBiomeOutliner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_BIOME_OUTLINER, BiomeOutlinerContext.class, osWindow);
     }
 
     public TabHandle openBiomePlanner(WindowInstance osWindow) {
