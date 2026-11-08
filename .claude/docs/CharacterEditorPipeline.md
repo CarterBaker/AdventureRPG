@@ -45,10 +45,12 @@ layouts like any other.
 - **The Appearance outliner is the player's creator.** In Appearance the Character Outliner lists what the game's
   creator offers the player: the gender, the features worn (Hair: the race default, none, or any style that fits),
   then every shape slider under its group in the order the race first lists each, each a ranged row
-  (`CharacterViewRowStruct.ranged`) sliding across the shape's own `min` to `max`, with its Min and Max rows beneath
-  it. Those ends are written through `FaceEditorManager.setRangeEnd`, the path the Face Editor's range rows take (a
-  step apart, the default carried inside, one face history step), so the slider follows a new range the moment the
-  preview rebuilds. Appearance lists no pose: a mode names the pose it stands in (`CharacterEditorMode.getStandingPose`,
+  (`CharacterViewRowStruct.ranged`) setting the shape's game `default` across its own `min` to `max`
+  (`FaceEditorManager.setDefault`, the Face Editor's default row path, the preview's override cleared so it shows the
+  new default), with one pair row (`CharacterViewRowStruct.pair`, two typed value boxes side by side, no slider) for
+  its Min and Max beneath it. Those ends are written through `FaceEditorManager.setRangeEnd`, the path the Face
+  Editor's range rows take (a step apart, the default carried inside, one face history step), so the slider follows a
+  new range the moment the preview rebuilds. Appearance lists no pose: a mode names the pose it stands in (`CharacterEditorMode.getStandingPose`,
   Appearance idles as the creator shows the player) or lets its outliner pick one (`picksPose`: Build, Equipment,
   Weights). Colors, tones, details and Blink stay in the Properties tab.
 - **Values live in the shared Properties tab.** The character, face and animation viewport contexts implement

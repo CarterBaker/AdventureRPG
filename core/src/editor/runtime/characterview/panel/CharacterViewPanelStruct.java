@@ -41,7 +41,7 @@ public class CharacterViewPanelStruct extends StructPackage {
 
     // Rows \\
 
-    // True when a list holds the same rows as shown, by kind, key, label and selection, whatever their values
+    // True when a list holds the same rows as shown, by kind, keys, labels and selection, whatever their values
     public boolean lists(ObjectArrayList<CharacterViewRowStruct> listed, CharacterViewTemplateStruct listedTemplates) {
 
         if (listedTemplates != templates || listed.size() != rows.size())
@@ -55,7 +55,9 @@ public class CharacterViewPanelStruct extends StructPackage {
             if (shown.getKind() != row.getKind()
                     || shown.isSelected() != row.isSelected()
                     || !shown.getKey().equals(row.getKey())
-                    || !shown.getLabel().equals(row.getLabel()))
+                    || !shown.getLabel().equals(row.getLabel())
+                    || !shown.getPairKey().equals(row.getPairKey())
+                    || !shown.getPairLabel().equals(row.getPairLabel()))
                 return false;
         }
 

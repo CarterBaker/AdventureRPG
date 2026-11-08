@@ -221,7 +221,7 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_THIN -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_THIN);
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_HEAVY);
             case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> getDetail(SkinnedDetail.VALUES[axis]);
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> characterEditorManager.getShapeValue(axis);
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> resolveShape(key).getDefaultValue();
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN -> resolveShape(key).getMin();
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> resolveShape(key).getMax();
             case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.getBlink();
@@ -268,8 +268,7 @@ class CharacterPropertyBranch extends BranchPackage {
                             value,
                             EditorSetting.CHARACTER_EDITOR_DETAIL_MIN,
                             EditorSetting.CHARACTER_EDITOR_DETAIL_MAX));
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> characterEditorManager.setShapeValue(
-                    axis, CharacterViewUtility.round(resolveShape(key).clamp(value)));
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> setShapeDefault(axis, value);
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN -> faceEditorManager.setRangeEnd(axis, false, value);
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> faceEditorManager.setRangeEnd(axis, true, value);
             case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.setBlink(
@@ -301,6 +300,13 @@ class CharacterPropertyBranch extends BranchPackage {
                     Math.max(EditorSetting.CHARACTER_EDITOR_ANCHOR_SIZE_MIN, value),
                     EngineSetting.DEFAULT_ENTITY_SIZE);
         }
+    }
+
+    // The default the game starts the slider at moved, the preview following it
+    private void setShapeDefault(int shapeIndex, float value) {
+
+        faceEditorManager.setDefault(shapeIndex, CharacterViewUtility.round(value));
+        characterEditorManager.setShapeValue(shapeIndex, Float.NaN);
     }
 
     float getStep(String key) {

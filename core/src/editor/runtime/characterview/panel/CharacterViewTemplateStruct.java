@@ -8,8 +8,9 @@ public class CharacterViewTemplateStruct extends StructPackage {
      * The row templates one character tool's menu declares, one per row kind
      * and a second for a selected item, and the ids of the label, the value
      * and the button it sits on, the step buttons inside them, and a number
-     * row's slider track and knob. A tool that lists no text rows declares
-     * no text template. Each tool's
+     * row's slider track and knob, and the second label, value and button
+     * of a pair row. A tool that lists no text or pair rows declares no
+     * template for them. Each tool's
      * templates call its own menu branch, so the panels it fills route back
      * to it.
      */
@@ -22,6 +23,7 @@ public class CharacterViewTemplateStruct extends StructPackage {
     private final String textTemplate;
     private final String choiceTemplate;
     private final String actionTemplate;
+    private final String pairTemplate;
 
     // Elements
     private final String labelElement;
@@ -31,6 +33,9 @@ public class CharacterViewTemplateStruct extends StructPackage {
     private final String increaseElement;
     private final String trackElement;
     private final String knobElement;
+    private final String pairLabelElement;
+    private final String pairValueElement;
+    private final String pairValueButtonElement;
 
     // Constructor \\
 
@@ -42,13 +47,17 @@ public class CharacterViewTemplateStruct extends StructPackage {
             String textTemplate,
             String choiceTemplate,
             String actionTemplate,
+            String pairTemplate,
             String labelElement,
             String valueElement,
             String valueButtonElement,
             String decreaseElement,
             String increaseElement,
             String trackElement,
-            String knobElement) {
+            String knobElement,
+            String pairLabelElement,
+            String pairValueElement,
+            String pairValueButtonElement) {
 
         // Templates
         this.headerTemplate = headerTemplate;
@@ -58,6 +67,7 @@ public class CharacterViewTemplateStruct extends StructPackage {
         this.textTemplate = textTemplate;
         this.choiceTemplate = choiceTemplate;
         this.actionTemplate = actionTemplate;
+        this.pairTemplate = pairTemplate;
 
         // Elements
         this.labelElement = labelElement;
@@ -67,6 +77,9 @@ public class CharacterViewTemplateStruct extends StructPackage {
         this.increaseElement = increaseElement;
         this.trackElement = trackElement;
         this.knobElement = knobElement;
+        this.pairLabelElement = pairLabelElement;
+        this.pairValueElement = pairValueElement;
+        this.pairValueButtonElement = pairValueButtonElement;
     }
 
     // Accessible \\
@@ -100,6 +113,11 @@ public class CharacterViewTemplateStruct extends StructPackage {
         return actionTemplate;
     }
 
+    // Null for a tool that lists no pair rows
+    public String getPairTemplate() {
+        return pairTemplate;
+    }
+
     public String getLabelElement() {
         return labelElement;
     }
@@ -126,5 +144,17 @@ public class CharacterViewTemplateStruct extends StructPackage {
 
     public String getKnobElement() {
         return knobElement;
+    }
+
+    public String getPairLabelElement() {
+        return pairLabelElement;
+    }
+
+    public String getPairValueElement() {
+        return pairValueElement;
+    }
+
+    public String getPairValueButtonElement() {
+        return pairValueButtonElement;
     }
 }

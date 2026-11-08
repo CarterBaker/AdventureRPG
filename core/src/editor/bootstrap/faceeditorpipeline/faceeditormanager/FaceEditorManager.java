@@ -205,6 +205,14 @@ public class FaceEditorManager extends ManagerPackage {
             facePropertyBranch.setRangeEnd(getActiveDocument(), shapeIndex, upper, value);
     }
 
+    // A control's default moved, as the Character Appearance outliner's sliders move it, through the same path the
+    // Face Editor's default row takes
+    public void setDefault(int shapeIndex, float value) {
+
+        if (hasFace() && !isGesturing())
+            facePropertyBranch.setDefault(getActiveDocument(), shapeIndex, value);
+    }
+
     public String getValueText(String key) {
         return hasFace() ? facePropertyBranch.getValueText(key) : "";
     }

@@ -26,7 +26,8 @@ public class CharacterViewPanelSystem extends SystemPackage {
      * was and where it now is, through the context's step target, the path
      * the step buttons take. A ranged row's slider spans the range it
      * declares instead, its knob standing where its value does and following
-     * it whenever the value or the range moves. Tools refill a panel only when their state has
+     * it whenever the value or the range moves. A pair row hands each of its
+     * two value buttons its own key. Tools refill a panel only when their state has
      * moved, never per frame.
      */
 
@@ -121,6 +122,9 @@ public class CharacterViewPanelSystem extends SystemPackage {
             setKey(element, templates.getValueButtonElement(), row.getKey());
             setKey(element, templates.getDecreaseElement(), row.getKey());
             setKey(element, templates.getIncreaseElement(), row.getKey());
+            setText(element, templates.getPairLabelElement(), row.getPairLabel());
+            setText(element, templates.getPairValueElement(), row.getPairValue());
+            setKey(element, templates.getPairValueButtonElement(), row.getPairKey());
 
             ElementInstance track = element.findChildById(templates.getTrackElement());
 
@@ -133,6 +137,7 @@ public class CharacterViewPanelSystem extends SystemPackage {
     private void refreshValues(CharacterViewPanelStruct panel, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         String valueElement = panel.getTemplates().getValueElement();
+        String pairValueElement = panel.getTemplates().getPairValueElement();
 
         for (int i = 0; i < rows.size(); i++) {
 
@@ -140,6 +145,9 @@ public class CharacterViewPanelSystem extends SystemPackage {
 
             if (!row.getValue().equals(panel.getRow(i).getValue()))
                 setText(panel.getElement(i), valueElement, row.getValue());
+
+            if (!row.getPairValue().equals(panel.getRow(i).getPairValue()))
+                setText(panel.getElement(i), pairValueElement, row.getPairValue());
 
             panel.setRow(i, row);
             placeRangedKnob(panel, i);
@@ -154,6 +162,7 @@ public class CharacterViewPanelSystem extends SystemPackage {
             case TEXT -> resolveTextTemplate(templates);
             case CHOICE -> templates.getChoiceTemplate();
             case ACTION -> templates.getActionTemplate();
+            case PAIR -> resolvePairTemplate(templates);
         };
     }
 
@@ -163,6 +172,14 @@ public class CharacterViewPanelSystem extends SystemPackage {
             throwException("A character tool listed a text row but its menu declares no text row template.");
 
         return templates.getTextTemplate();
+    }
+
+    private String resolvePairTemplate(CharacterViewTemplateStruct templates) {
+
+        if (templates.getPairTemplate() == null)
+            throwException("A character tool listed a pair row but its menu declares no pair row template.");
+
+        return templates.getPairTemplate();
     }
 
     // Slider \\

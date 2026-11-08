@@ -659,13 +659,17 @@ public class EditorSetting {
             "editor/CharacterEditor/character_editor_text_row",
             "editor/CharacterEditor/character_editor_choice_row",
             "editor/CharacterEditor/character_editor_action_row",
+            "editor/CharacterEditor/character_editor_pair_row",
             "character_editor_row_label",
             "character_editor_row_value",
             "character_editor_row_value_button",
             "character_editor_row_decrease",
             "character_editor_row_increase",
             "character_editor_row_track",
-            "character_editor_row_knob");
+            "character_editor_row_knob",
+            "character_editor_row_pair_label",
+            "character_editor_row_pair_value",
+            "character_editor_row_pair_value_button");
     public static final CharacterViewTemplateStruct ANIMATION_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/AnimationEditor/animation_editor_header_row",
             "editor/AnimationEditor/animation_editor_item_row",
@@ -674,13 +678,17 @@ public class EditorSetting {
             null,
             "editor/AnimationEditor/animation_editor_choice_row",
             "editor/AnimationEditor/animation_editor_action_row",
+            null,
             "animation_editor_row_label",
             "animation_editor_row_value",
             "animation_editor_row_value_button",
             "animation_editor_row_decrease",
             "animation_editor_row_increase",
             "animation_editor_row_track",
-            "animation_editor_row_knob");
+            "animation_editor_row_knob",
+            null,
+            null,
+            null);
     public static final CharacterViewTemplateStruct FACE_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/FaceEditor/face_editor_header_row",
             "editor/FaceEditor/face_editor_item_row",
@@ -689,13 +697,17 @@ public class EditorSetting {
             "editor/FaceEditor/face_editor_text_row",
             "editor/FaceEditor/face_editor_choice_row",
             "editor/FaceEditor/face_editor_action_row",
+            null,
             "face_editor_row_label",
             "face_editor_row_value",
             "face_editor_row_value_button",
             "face_editor_row_decrease",
             "face_editor_row_increase",
             "face_editor_row_track",
-            "face_editor_row_knob");
+            "face_editor_row_knob",
+            null,
+            null,
+            null);
 
     // Character View — viewport gestures: the buttons, the GLFW keys a transform locks its axis with, pointer
     // distances in pixels, snapping, and the undo history they record

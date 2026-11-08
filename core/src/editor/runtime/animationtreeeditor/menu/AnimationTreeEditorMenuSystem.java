@@ -53,13 +53,17 @@ public class AnimationTreeEditorMenuSystem extends SystemPackage {
                 null,
                 AnimationTreeEditorSetting.TEMPLATE_CHOICE_ROW,
                 AnimationTreeEditorSetting.TEMPLATE_ACTION_ROW,
+                null,
                 AnimationTreeEditorSetting.ELEMENT_ROW_LABEL,
                 AnimationTreeEditorSetting.ELEMENT_ROW_VALUE,
                 AnimationTreeEditorSetting.ELEMENT_ROW_VALUE_BUTTON,
                 AnimationTreeEditorSetting.ELEMENT_ROW_DECREASE,
                 AnimationTreeEditorSetting.ELEMENT_ROW_INCREASE,
                 AnimationTreeEditorSetting.ELEMENT_ROW_TRACK,
-                AnimationTreeEditorSetting.ELEMENT_ROW_KNOB);
+                AnimationTreeEditorSetting.ELEMENT_ROW_KNOB,
+                null,
+                null,
+                null);
 
         // Rows
         this.rows = new ObjectArrayList<>();

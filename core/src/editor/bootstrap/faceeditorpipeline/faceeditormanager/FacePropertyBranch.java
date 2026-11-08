@@ -208,8 +208,7 @@ class FacePropertyBranch extends BranchPackage {
         switch (keyName) {
             case EditorSetting.FACE_EDITOR_KEY_MIN -> setRangeEnd(document, shapeIndex, false, value);
             case EditorSetting.FACE_EDITOR_KEY_MAX -> setRangeEnd(document, shapeIndex, true, value);
-            case EditorSetting.FACE_EDITOR_KEY_DEFAULT -> faceEditBranch.setRange(
-                    document, shapeIndex, min, max, CharacterViewUtility.clamp(value, min, max));
+            case EditorSetting.FACE_EDITOR_KEY_DEFAULT -> setDefault(document, shapeIndex, value);
             case EditorSetting.FACE_EDITOR_KEY_PREVIEW -> characterEditorManager.setShapeValue(
                     shapeIndex, CharacterViewUtility.round(CharacterViewUtility.clamp(value, min, max)));
             case EditorSetting.FACE_EDITOR_KEY_START -> faceEditBranch.setStart(
@@ -243,6 +242,15 @@ class FacePropertyBranch extends BranchPackage {
 
         float written = Math.min(value, max - gap);
         faceEditBranch.setRange(document, shapeIndex, written, max, Math.max(defaultValue, written));
+    }
+
+    // A control's default moved, held inside its range
+    void setDefault(CharacterDocumentInstance document, int shapeIndex, float value) {
+
+        float min = faceEditBranch.getMin(document, shapeIndex);
+        float max = faceEditBranch.getMax(document, shapeIndex);
+
+        faceEditBranch.setRange(document, shapeIndex, min, max, CharacterViewUtility.clamp(value, min, max));
     }
 
     private float getStep(String keyName, int index) {

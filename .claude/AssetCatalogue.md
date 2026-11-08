@@ -194,6 +194,8 @@ One line per session that changed this file: the date, what was added or removed
   lists, kept to its `canvases` and `tools` where it applies to only some), `schemas/Shortcuts.arpg` (the `hint`,
   `canvases` and `tools` fields) and `menus/editor/EditorWindow.arpg` (the hint bar along the foot of the main window,
   the dock raised above it).
+- 2026-11-08: Appearance outliner range rows. Regenerated `menus/editor/CharacterEditor.arpg` (a pair row template: two
+  typed value boxes side by side, for a shape slider's Min and Max beneath its default slider).
 ---
 
 ## Textures and Sprites (2175 files)

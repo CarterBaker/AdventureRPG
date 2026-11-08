@@ -11,7 +11,8 @@ public class CharacterViewRowStruct extends StructPackage {
      * beside it for numbers and choices, and whether an item is selected. A
      * ranged number also carries its amount, the range it may take and the
      * step it moves by, so its slider spans that range instead of a count of
-     * steps about where the value stood.
+     * steps about where the value stood. A pair also carries the key, label
+     * and value of the second value shown beside the first.
      */
 
     // Identity
@@ -29,6 +30,11 @@ public class CharacterViewRowStruct extends StructPackage {
     private final float rangeMax;
     private final float rangeStep;
 
+    // Pair
+    private final String pairKey;
+    private final String pairLabel;
+    private final String pairValue;
+
     // Constructor \\
 
     public CharacterViewRowStruct(
@@ -40,7 +46,10 @@ public class CharacterViewRowStruct extends StructPackage {
             float amount,
             float rangeMin,
             float rangeMax,
-            float rangeStep) {
+            float rangeStep,
+            String pairKey,
+            String pairLabel,
+            String pairValue) {
 
         // Identity
         this.kind = kind;
@@ -56,6 +65,11 @@ public class CharacterViewRowStruct extends StructPackage {
         this.rangeMin = rangeMin;
         this.rangeMax = rangeMax;
         this.rangeStep = rangeStep;
+
+        // Pair
+        this.pairKey = pairKey;
+        this.pairLabel = pairLabel;
+        this.pairValue = pairValue;
     }
 
     public static CharacterViewRowStruct header(String label) {
@@ -80,7 +94,8 @@ public class CharacterViewRowStruct extends StructPackage {
             float rangeMax,
             float rangeStep) {
         return new CharacterViewRowStruct(
-                CharacterViewRowKind.NUMBER, key, label, value, false, amount, rangeMin, rangeMax, rangeStep);
+                CharacterViewRowKind.NUMBER, key, label, value, false, amount, rangeMin, rangeMax, rangeStep,
+                "", "", "");
     }
 
     public static CharacterViewRowStruct text(String key, String label, String value) {
@@ -95,13 +110,25 @@ public class CharacterViewRowStruct extends StructPackage {
         return unranged(CharacterViewRowKind.ACTION, key, label, "", false);
     }
 
+    // Two values side by side, each with its own key, opened for typing
+    public static CharacterViewRowStruct pair(
+            String key,
+            String label,
+            String value,
+            String pairKey,
+            String pairLabel,
+            String pairValue) {
+        return new CharacterViewRowStruct(
+                CharacterViewRowKind.PAIR, key, label, value, false, 0f, 0f, 0f, 0f, pairKey, pairLabel, pairValue);
+    }
+
     private static CharacterViewRowStruct unranged(
             CharacterViewRowKind kind,
             String key,
             String label,
             String value,
             boolean selected) {
-        return new CharacterViewRowStruct(kind, key, label, value, selected, 0f, 0f, 0f, 0f);
+        return new CharacterViewRowStruct(kind, key, label, value, selected, 0f, 0f, 0f, 0f, "", "", "");
     }
 
     // Range \\
@@ -148,5 +175,17 @@ public class CharacterViewRowStruct extends StructPackage {
 
     public boolean isSelected() {
         return selected;
+    }
+
+    public String getPairKey() {
+        return pairKey;
+    }
+
+    public String getPairLabel() {
+        return pairLabel;
+    }
+
+    public String getPairValue() {
+        return pairValue;
     }
 }

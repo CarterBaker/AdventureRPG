@@ -141,7 +141,7 @@ class CharacterRowBranch extends BranchPackage {
         return false;
     }
 
-    // A slider sliding across the range the player has, then the two ends of that range
+    // A slider setting the default the game starts the player at across their range, the range's two ends beneath it
     private void addShape(
             CharacterDocumentInstance document,
             ObjectArrayList<CharacterViewRowStruct> rows,
@@ -158,10 +158,17 @@ class CharacterRowBranch extends BranchPackage {
                 shape.getMin(),
                 shape.getMax(),
                 characterPropertyBranch.getStep(key)));
-        addNumber(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN, shapeIndex),
-                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_MIN);
-        addNumber(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX, shapeIndex),
-                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_MAX);
+
+        String minKey = CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN, shapeIndex);
+        String maxKey = CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX, shapeIndex);
+
+        rows.add(CharacterViewRowStruct.pair(
+                minKey,
+                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_MIN,
+                characterPropertyBranch.getValueText(document, minKey),
+                maxKey,
+                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_MAX,
+                characterPropertyBranch.getValueText(document, maxKey)));
     }
 
     private void addBoneRows(RigHandle rigHandle, ObjectArrayList<CharacterViewRowStruct> rows) {
