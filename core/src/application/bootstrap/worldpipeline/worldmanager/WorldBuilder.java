@@ -28,15 +28,15 @@ class WorldBuilder extends BuilderPackage {
      * companion file is also the durable home for the world's generation
      * seed: once assigned, it is written back to disk immediately so every
      * future load reproduces the same terrain. Its hand-picked settlement
-     * and structure placements, and whether settlements also grow on their
-     * own, are read from it too.
+     * and structure placements, whether settlements also grow on their own,
+     * and whether its time ticks, are read from it too.
      * The height layer beside the world image is read with it and must match
      * its size; a world without one gets a neutral layer, written to disk only
      * once the editor saves what is painted on it. A virtual world is built
      * over an image held in memory instead, for the editor's previews: it has
      * no files, a neutral height layer, every default, a seed taken from its
      * name so it generates the same each time, nothing placed or grown on
-     * it, and biome borders running straight along its pixel edges, so the
+     * it, time held at noon so it is always seen in daylight, and biome borders running straight along its pixel edges, so the
      * areas painted on it keep their shape.
      */
 
@@ -104,6 +104,7 @@ class WorldBuilder extends BuilderPackage {
                 arpg, worldName);
         boolean naturalSettlements = ArpgUtility.getBoolean(
                 arpg, "natural_settlements", EngineSetting.DEFAULT_NATURAL_SETTLEMENTS);
+        boolean tickTime = ArpgUtility.getBoolean(arpg, "tick_time", EngineSetting.DEFAULT_TICK_TIME);
 
         long seed = resolveWorldSeed(arpg, arpgFile);
 
@@ -118,6 +119,7 @@ class WorldBuilder extends BuilderPackage {
                 gravityMultiplier,
                 gravityDirection,
                 calendarName,
+                tickTime,
                 rotationSpeed,
                 axialTilt,
                 planetaryOffset,
@@ -148,6 +150,7 @@ class WorldBuilder extends BuilderPackage {
                         EngineSetting.DEFAULT_GRAVITY_Y,
                         EngineSetting.DEFAULT_GRAVITY_Z),
                 EngineSetting.DEFAULT_CALENDAR_NAME,
+                false,
                 EngineSetting.DEFAULT_WORLD_ROTATION_SPEED,
                 EngineSetting.DEFAULT_AXIAL_TILT_DEGREES,
                 EngineSetting.DEFAULT_PLANETARY_OFFSET,

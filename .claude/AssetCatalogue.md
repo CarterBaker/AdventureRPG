@@ -208,6 +208,8 @@ One line per session that changed this file: the date, what was added or removed
   `inventory/ViewFrame` (companion removed) at their element sizes; removed the shared `boards/`, `paper/`,
   `wood/WoodPanel`, `wood/WoodPeg`, `inventory/Inset` and `inventory/Slot` images and companions; regenerated the
   nine menus that reference them.
+- 2026-11-09: World time ticking. Rewrote `schemas/Worlds.arpg` with the `tick_time` boolean (default true): a world
+  without it stands at noon, as the Biome Viewer's planner world now does.
 ---
 
 ## Textures and Sprites (2273 files)

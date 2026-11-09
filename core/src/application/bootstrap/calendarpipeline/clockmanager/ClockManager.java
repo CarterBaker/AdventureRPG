@@ -11,6 +11,7 @@ import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -29,7 +30,8 @@ public class ClockManager extends ManagerPackage {
      * afterward so every value is already correct before the first frame
      * reads it. Any place on the world can ask its visual time of day, so a
      * map can shade the whole world by the same shared clock every grid
-     * follows. Moving the clock to another day and minute is one path too:
+     * follows; each grid reads it on its own world, and a world whose time
+     * does not tick always answers noon. Moving the clock to another day and minute is one path too:
      * every tracker forgets what it last saw and the clock is solved again at
      * once, so a jump of any size lands on the right date in one step. A
      * clock can also be held at any moment, to the millisecond, by the time
@@ -146,11 +148,6 @@ public class ClockManager extends ManagerPackage {
 
     private void updateLocationTimes() {
 
-        WorldHandle locationWorld = resolveLocationWorld();
-
-        if (locationWorld == null)
-            return;
-
         ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
         Object[] elements = grids.elements();
         int size = grids.size();
@@ -158,6 +155,7 @@ public class ClockManager extends ManagerPackage {
         for (int i = 0; i < size; i++) {
 
             GridInstance grid = (GridInstance) elements[i];
+            WorldHandle locationWorld = grid.getWorldHandle();
             long chunkCoordinate = grid.getActiveChunkCoordinate();
 
             grid.getClockInstance().update(
@@ -170,19 +168,13 @@ public class ClockManager extends ManagerPackage {
     // Location Time \\
 
     public double computeVisualTimeOfDay(WorldHandle world, long chunkCoordinate) {
+
+        if (!world.isTickTime())
+            return EngineSetting.CLOCK_NOON;
+
         return currentTracker.computeVisualTimeOfDay(
                 WorldWrapUtility.wrappedPlanetaryOffset(world, chunkCoordinate),
                 WorldWrapUtility.wrappedLatitudeFactor(world, chunkCoordinate));
-    }
-
-    // Location \\
-
-    private WorldHandle resolveLocationWorld() {
-
-        if (!worldStreamManager.hasGrids())
-            return null;
-
-        return worldStreamManager.getActiveWorldHandle();
     }
 
     // Move \\

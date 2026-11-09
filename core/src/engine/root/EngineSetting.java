@@ -782,6 +782,7 @@ public class EngineSetting {
     public static final float DEFAULT_GRAVITY_Y = -1.0f;
     public static final float DEFAULT_GRAVITY_Z = 0.0f;
     public static final float DEFAULT_PLANETARY_OFFSET = 0.0f;
+    public static final boolean DEFAULT_TICK_TIME = true;
     public static final float DEFAULT_WORLD_ROTATION_SPEED = 1.0f;
     public static final int ENCODED_FACE_NATURAL_FULL_OFFSET = 24;
     public static final int ENCODED_FACE_SPIN_COUNT = 4;

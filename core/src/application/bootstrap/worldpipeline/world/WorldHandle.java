@@ -70,6 +70,10 @@ public class WorldHandle extends HandlePackage {
         return data.getCalendarName();
     }
 
+    public boolean isTickTime() {
+        return data.isTickTime();
+    }
+
     public float getRotationSpeed() {
         return data.getRotationSpeed();
     }
