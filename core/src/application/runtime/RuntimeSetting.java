@@ -186,6 +186,7 @@ public class RuntimeSetting {
     public static final String MENU_CREATOR_SECTION_HEADER = "CharacterCreator/section_header";
     public static final String MENU_CREATOR_FEATURE_ROW = "CharacterCreator/feature_row";
     public static final String MENU_CREATOR_STYLE_ROW = "CharacterCreator/style_row";
+    public static final String MENU_CREATOR_VARIANT_ROW = "CharacterCreator/variant_row";
     public static final String MENU_CREATOR_SWATCH_ROW = "CharacterCreator/swatch_row";
     public static final String MENU_CREATOR_SWATCH = "CharacterCreator/swatch";
     public static final String MENU_CREATOR_SLIDER_ROW = "CharacterCreator/slider_row";
@@ -250,6 +251,7 @@ public class RuntimeSetting {
     public static final String CREATOR_FORMAT_TRADE_LEARNING = "Learns %s  x%.2f";
     public static final String CREATOR_FORMAT_STARTING_TRADE = "Starts with %s  %.0f";
     public static final String CREATOR_FEATURE_NONE = "None";
+    public static final String CREATOR_VARIANT_SUFFIX = " Style";
     public static final String CREATOR_FEATURE_PATH_SEPARATOR = "/";
     public static final String CREATOR_WORD_BOUNDARY_PATTERN = "(?<=[a-z])(?=[A-Z])";
     public static final String CREATOR_WORD_SEPARATOR = " ";

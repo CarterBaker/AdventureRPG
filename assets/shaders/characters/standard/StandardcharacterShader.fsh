@@ -5,8 +5,6 @@ in vec3 v_viewPosition;
 in vec3 v_viewNormal;
 in vec3 v_surfacePosition;
 in vec4 v_masks;
-in vec3 v_bindPosition;
-in vec3 v_bindNormal;
 in float v_maskWeight;
 flat in int v_zone;
 flat in int v_instance;
@@ -37,21 +35,23 @@ void main() {
     if (isHiddenFragment(v_instance, v_maskWeight))
     discard;
 
-    vec4 base = texture(u_texture, vec3(v_uv.xy, float(u_layer_albedo)));
+    vec2 uv   = resolveCharacterUV(v_instance, v_uv.xy, v_uv.zw);
+    vec4 base = texture(u_texture, vec3(uv, float(u_layer_albedo)));
 
     if (base.a < 0.01)
     discard;
 
     vec3 smoothView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
-    CharacterMaterial material = sampleCharacterMaterial(v_uv.xy, v_viewPosition, smoothView);
-    vec3 normalView = material.normal;
+    CharacterFrame frame = resolveCharacterFrame(smoothView, v_viewPosition, v_uv.zw);
+    CharacterMaterial material = sampleCharacterMaterial(uv, frame);
     CharacterSurface surface = resolveCharacterSurface(
-        v_instance, v_zone, base.rgb, v_uv.zw, v_masks, v_surfacePosition, v_bindPosition, v_bindNormal, normalView);
+        v_instance, v_zone, base.rgb, v_uv.zw, v_masks, v_surfacePosition, v_viewPosition, frame, material);
+    vec3 normalView = surface.normal;
 
     // Blending is enabled for this pass, so every target writes alpha = 1.0.
     // gMaterial packs r = sun visibility, g = specular, b = ao (see
     // StandardSurfaceShader.fsh).
-    gAlbedo   = vec4(resolveCharacterAlbedo(base.rgb, surface.albedo, material), 1.0);
+    gAlbedo   = vec4(surface.albedo, 1.0);
     gNormal   = vec4(encodeSmoothNormal(normalView), 1.0);
-    gMaterial = vec4(1.0, resolveCharacterSpecular(surface.specular, material), material.ao, 1.0);
+    gMaterial = vec4(1.0, surface.specular, material.ao, 1.0);
 }

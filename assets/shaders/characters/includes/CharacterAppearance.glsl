@@ -3,8 +3,9 @@
 
 // Every skinned instance owns one row of the palette texture: its bones, then its appearance from u_appearanceBase —
 // a header texel (x = SkinnedMaskMode), one texel per color in SkinnedColor order, the detail amounts four to a texel
-// in SkinnedDetail order, the bone mask (SKINNED_BONE_MASK_BITS bones to a channel) and three texels per overlay in
-// SkinnedOverlay order — then its morph weights four to a texel from u_morphBase.
+// in SkinnedDetail order, the bone mask (SKINNED_BONE_MASK_BITS bones to a channel), three texels per overlay in
+// SkinnedOverlay order and the tile of the material variant the part drawn shows — then its morph weights four to a
+// texel from u_morphBase.
 
 uniform sampler2D u_bonePalette;
 uniform int u_appearanceBase;
@@ -84,7 +85,23 @@ bool isMaskedBone(int instance, int bone) {
     return ((bits >> (bone % CHARACTER_MASK_BITS)) & 1) != 0;
 }
 
-// One texel of an overlay's placement: 0 its atlas tile, 1 its box centre and projection, 2 its box size and repeat
+// The atlas tile (u0, u1, v0, v1) of the material variant the part drawn shows, all zero for its own texture
+vec4 fetchCharacterVariant(int instance) {
+    int base = characterMaskBase() + CHARACTER_MASK_TEXELS + CHARACTER_OVERLAY_COUNT * CHARACTER_OVERLAY_TEXELS;
+    return texelFetch(u_bonePalette, ivec2(base, instance), 0);
+}
+
+// Where a corner samples the atlas: its own place, or its raw UV laid into the variant's tile (a texture swap)
+vec2 resolveCharacterUV(int instance, vec2 atlasUV, vec2 rawUV) {
+    vec4 variant = fetchCharacterVariant(instance);
+
+    if (variant.y <= variant.x)
+    return atlasUV;
+
+    return vec2(variant.x, variant.z) + clamp(rawUV, 0.0, 1.0) * vec2(variant.y - variant.x, variant.w - variant.z);
+}
+
+// One texel of an overlay's placement: 0 the atlas tile of the style worn, 1 its UV region, 2 its relief in blocks
 vec4 fetchOverlay(int instance, int overlay, int texel) {
     int base = characterMaskBase() + CHARACTER_MASK_TEXELS + overlay * CHARACTER_OVERLAY_TEXELS;
     return texelFetch(u_bonePalette, ivec2(base + texel, instance), 0);

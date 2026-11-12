@@ -13,6 +13,7 @@ import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantStruct;
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
@@ -89,7 +90,29 @@ class PlayerSaveBranch extends BranchPackage {
         appearanceArpg.add("head_proportion", buildVector(appearanceHandle.getHeadProportion()));
         appearanceArpg.add("features", buildFeatures(appearanceHandle));
         appearanceArpg.add("overlay_styles", buildOverlayStyles(appearanceHandle, raceGender));
+        appearanceArpg.add("feature_variants", buildFeatureVariants(appearanceHandle));
         return appearanceArpg;
+    }
+
+    // The variant of every worn feature the player chose one for, by name, so it survives the variants' order changing
+    private ArpgObjectStruct buildFeatureVariants(AppearanceHandle appearanceHandle) {
+
+        ArpgObjectStruct variantsArpg = new ArpgObjectStruct();
+
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
+
+            int variantIndex = appearanceHandle.getFeatureVariant(featureSlot);
+
+            if (!appearanceHandle.hasFeature(featureSlot) || !appearanceHandle.getFeature(featureSlot).hasVariants())
+                continue;
+
+            SkinnedVariantStruct variants = appearanceHandle.getFeature(featureSlot).getVariants();
+
+            if (variantIndex >= 0 && variantIndex < variants.getCount())
+                variantsArpg.addProperty(ArpgUtility.toEnumName(featureSlot), variants.getName(variantIndex));
+        }
+
+        return variantsArpg;
     }
 
     // The style of every overlay the player chose one for, by name, so it survives the styles' order changing

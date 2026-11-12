@@ -1,6 +1,7 @@
 package application.bootstrap.entitypipeline.feature;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import engine.root.HandlePackage;
 
@@ -51,5 +52,13 @@ public class FeatureHandle extends HandlePackage {
 
     public MaterialInstance getMaterial() {
         return featureData.getMaterial();
+    }
+
+    public boolean hasVariants() {
+        return featureData.hasVariants();
+    }
+
+    public SkinnedVariantStruct getVariants() {
+        return featureData.getVariants();
     }
 }

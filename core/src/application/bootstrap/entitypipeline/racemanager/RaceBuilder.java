@@ -16,11 +16,10 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
-import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedProjection;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantUtility;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
@@ -169,10 +168,8 @@ class RaceBuilder extends BuilderPackage {
 
     // Overlays \\
 
-    // Where each overlay the gender's model names lies on it: the "styles" it offers, each a "name" and the "texture"
-    // painting it, the style worn by "default" (the first when none is named), the "projection", box "center" and
-    // "size", whether it is "mirror"ed across the body and, for a wrapped overlay, how often its image "repeat"s per
-    // block
+    // Where each overlay the gender's model names lies on it: the "region" of the model's UV layout its images cover
+    // (u0, v0, u1, v1) and the "styles" it offers with the one worn by "default" (SkinnedVariantUtility)
     private SkinnedOverlayStruct[] parseOverlays(ArpgObjectStruct genderArpg, String genderName, String raceName) {
 
         SkinnedOverlayStruct[] overlays = new SkinnedOverlayStruct[SkinnedOverlay.VALUES.length];
@@ -186,80 +183,30 @@ class RaceBuilder extends BuilderPackage {
 
             SkinnedOverlay skinnedOverlay = ArpgUtility.toEnum(key, SkinnedOverlay.class);
             ArpgObjectStruct overlayArpg = overlaysArpg.getAsObject(key);
-            ArpgArrayStruct stylesArpg = ArpgUtility.validateArray(overlayArpg, "styles");
-            Vector3 size = toVector3(ArpgUtility.validateArray(overlayArpg, "size", 3));
-
-            if (stylesArpg.size() == 0)
-                throwException("Race gender \"" + genderName + "\" gives overlay \"" + key
-                        + "\" no styles. Source: " + raceName);
-
-            if (size.x <= 0f || size.y <= 0f || size.z <= 0f)
-                throwException("Race gender \"" + genderName + "\" gives overlay \"" + key
-                        + "\" a size that is not positive. Source: " + raceName);
-
-            String[] styleNames = new String[stylesArpg.size()];
-            float[] styleTiles = new float[stylesArpg.size() * EngineSetting.COLOR_CHANNEL_COUNT];
-
-            for (int i = 0; i < styleNames.length; i++)
-                parseOverlayStyle(stylesArpg.get(i).getAsObject(), styleNames, styleTiles, i, key, raceName);
 
             overlays[skinnedOverlay.ordinal()] = new SkinnedOverlayStruct(
-                    styleNames,
-                    styleTiles,
-                    resolveDefaultStyle(overlayArpg, styleNames, key, raceName),
-                    toVector3(ArpgUtility.validateArray(overlayArpg, "center", 3)),
-                    size,
-                    ArpgUtility.getEnum(overlayArpg, "projection", SkinnedProjection.class, SkinnedProjection.FRONT),
-                    ArpgUtility.getBoolean(overlayArpg, "mirror", false),
-                    ArpgUtility.getFloat(overlayArpg, "repeat", EngineSetting.SKINNED_OVERLAY_REPEAT_DEFAULT));
+                    SkinnedVariantUtility.parse(overlayArpg, "styles", textureManager, genderName + " " + key,
+                            raceName),
+                    parseOverlayRegion(overlayArpg, genderName, key, raceName));
         }
 
         return overlays;
     }
 
-    private void parseOverlayStyle(
-            ArpgObjectStruct styleArpg,
-            String[] styleNames,
-            float[] styleTiles,
-            int styleIndex,
-            String overlayName,
-            String raceName) {
+    private float[] parseOverlayRegion(ArpgObjectStruct overlayArpg, String genderName, String key, String raceName) {
 
-        String styleName = ArpgUtility.validateString(styleArpg, "name");
+        ArpgArrayStruct regionArpg = ArpgUtility.validateArray(overlayArpg, "region", EngineSetting.COLOR_CHANNEL_COUNT);
+        float[] region = new float[EngineSetting.COLOR_CHANNEL_COUNT];
 
-        for (int i = 0; i < styleIndex; i++)
-            if (styleNames[i].equals(styleName))
-                throwException("Overlay \"" + overlayName + "\" names style \"" + styleName + "\" twice. Source: "
-                        + raceName);
+        for (int i = 0; i < region.length; i++)
+            region[i] = regionArpg.get(i).getAsFloat();
 
-        TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(
-                ArpgUtility.validateString(styleArpg, "texture"));
-        int tile = styleIndex * EngineSetting.COLOR_CHANNEL_COUNT;
+        if (region[0] < 0f || region[1] < 0f || region[2] > 1f || region[3] > 1f
+                || region[2] <= region[0] || region[3] <= region[1])
+            throwException("Race gender \"" + genderName + "\" gives overlay \"" + key
+                    + "\" a region outside the UV layout or of no size. Source: " + raceName);
 
-        styleNames[styleIndex] = styleName;
-        styleTiles[tile] = textureHandle.getU0();
-        styleTiles[tile + 1] = textureHandle.getU1();
-        styleTiles[tile + 2] = textureHandle.getV0();
-        styleTiles[tile + 3] = textureHandle.getV1();
-    }
-
-    private int resolveDefaultStyle(
-            ArpgObjectStruct overlayArpg,
-            String[] styleNames,
-            String overlayName,
-            String raceName) {
-
-        if (!ArpgUtility.hasString(overlayArpg, "default"))
-            return 0;
-
-        String styleName = overlayArpg.get("default").getAsString();
-
-        for (int i = 0; i < styleNames.length; i++)
-            if (styleNames[i].equals(styleName))
-                return i;
-
-        return throwException("Overlay \"" + overlayName + "\" defaults to style \"" + styleName
-                + "\", which it does not offer. Source: " + raceName);
+        return region;
     }
 
     // Equipment \\

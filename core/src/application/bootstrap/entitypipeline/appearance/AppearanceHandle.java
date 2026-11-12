@@ -62,6 +62,9 @@ public class AppearanceHandle extends HandlePackage {
     // Features — indexed by FeatureSlot ordinal
     private FeatureHandle[] features;
 
+    // Feature Variants — indexed by FeatureSlot ordinal, INDEX_NOT_FOUND for the worn feature's default
+    private int[] featureVariants;
+
     // Overlay Styles — indexed by SkinnedOverlay ordinal, INDEX_NOT_FOUND for the model's default
     private int[] overlayStyles;
 
@@ -104,6 +107,7 @@ public class AppearanceHandle extends HandlePackage {
 
         // Features
         this.features = new FeatureHandle[FeatureSlot.VALUES.length];
+        this.featureVariants = new int[FeatureSlot.VALUES.length];
         this.overlayStyles = new int[SkinnedOverlay.VALUES.length];
 
         // Proportions
@@ -137,6 +141,7 @@ public class AppearanceHandle extends HandlePackage {
             details[skinnedDetail.ordinal()] = appearanceData.getDetail(skinnedDetail);
 
         Arrays.fill(overlayStyles, EngineSetting.INDEX_NOT_FOUND);
+        Arrays.fill(featureVariants, EngineSetting.INDEX_NOT_FOUND);
 
         Arrays.fill(morphWeights, 0f);
 
@@ -324,12 +329,24 @@ public class AppearanceHandle extends HandlePackage {
                     + "\" does not fit this character — its mesh must use the character's rig.");
 
         features[featureHandle.getFeatureSlot().ordinal()] = featureHandle;
+        featureVariants[featureHandle.getFeatureSlot().ordinal()] = EngineSetting.INDEX_NOT_FOUND;
         resolveSprings();
     }
 
     public void clearFeature(FeatureSlot featureSlot) {
         features[featureSlot.ordinal()] = null;
+        featureVariants[featureSlot.ordinal()] = EngineSetting.INDEX_NOT_FOUND;
         resolveSprings();
+    }
+
+    // The variant a worn feature shows, by its place among the variants the feature offers; INDEX_NOT_FOUND for the
+    // feature's default
+    public int getFeatureVariant(FeatureSlot featureSlot) {
+        return featureVariants[featureSlot.ordinal()];
+    }
+
+    public void setFeatureVariant(FeatureSlot featureSlot, int variantIndex) {
+        featureVariants[featureSlot.ordinal()] = variantIndex;
     }
 
     // Springs \\

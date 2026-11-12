@@ -13,6 +13,7 @@ out vec4 fragColor;
 #include "postprocessing/lighting/includes/AtmosphericFog.glsl"
 #include "postprocessing/lighting/includes/Outline.glsl"
 #include "postprocessing/lighting/includes/ToonLighting.glsl"
+#include "postprocessing/lighting/includes/SkyReflection.glsl"
 #include "weather/includes/CloudComposite.glsl"
 
 // The weather pass's cloud color and distance targets (CloudComposite).
@@ -83,6 +84,9 @@ void main() {
     vec3  toFragment   = fragPosWorld - u_cameraPosition;
     float fragDistance = length(toFragment);
     vec3  fragDir      = toFragment / max(fragDistance, LIGHTING_DISTANCE_EPSILON);
+
+    if (isSmoothNormal(storedNormal))
+    lit += resolveSkyReflection(normal, -fragDir, specular, ao);
 
     float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
 

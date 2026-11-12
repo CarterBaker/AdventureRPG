@@ -22,8 +22,6 @@ out vec3 v_viewPosition;
 out vec3 v_viewNormal;
 out vec3 v_surfacePosition;                     // bind-pose position after morphs, where skin detail is fixed
 out vec4 v_masks;
-out vec3 v_bindPosition;                        // bind-pose position before morphs, where overlays are fixed
-out vec3 v_bindNormal;
 out float v_maskWeight;
 flat out int v_zone;
 flat out int v_instance;
@@ -96,8 +94,6 @@ void main() {
     v_viewNormal      = mat3(u_view) * mat3(a_instanceModel) * mat3(skin) * a_normal;
     v_surfacePosition = morphedPosition;
     v_masks           = a_masks;
-    v_bindPosition    = a_position;
-    v_bindNormal      = a_normal;
     v_maskWeight      = resolveMaskWeight();
     v_zone            = zone;
     v_instance        = gl_InstanceID;

@@ -243,9 +243,29 @@ One line per session that changed this file: the date, what was added or removed
   (`u_characterDetail`), `shaders/includes/SettingsData.glsl`, `characters/includes/CharactersStandard.glsl`,
   `CharacterSurface.glsl`, `characters/standard/StandardcharacterShader.fsh`,
   `editor/characterview/CharacterViewCharacterShader.fsh` and both body meshes (unwrapped, drawn with their maps).
+- 2026-11-12: Overlays as UV-space layers. Baked every box-projected overlay into each body's UV layout as the
+  starting art: added `MaleBrows*`, `MaleNipples*` (with height and normal maps for relief), `MaleChestHair*`,
+  `MaleStomachHair*`, `MalePubicHair*`, `MaleUnderarmHair*`, `MaleArmHair*`, `MaleLegHair*` and the same `Female*`
+  sets; deleted the projected images `BodyHairLightTile`, `BodyHairTile`, `BrowOverlay`, `BrowStraightOverlay`,
+  `BrowThickOverlay`, `BrowThinOverlay`, `ChestHairCenterOverlay`, `ChestHairLightOverlay`, `ChestHairOverlay`,
+  `NippleLargeOverlay`, `NippleOverlay`, `NippleSmallOverlay`, `PubicHairFullOverlay`, `PubicHairOverlay`,
+  `PubicHairTrimmedOverlay`, `StomachHairFullOverlay` and `StomachHairOverlay` (superseded by the baked layers);
+  regenerated `races/Human.arpg` (overlay regions and styles), `schemas/Races.arpg` (`region`, style `relief`; the box
+  fields dropped), `characters/includes/CharacterMaterial.glsl`, `CharacterSurface.glsl` and both character shaders.
+- 2026-11-12: Teeth as images. Added the teeth variant image sets `TeethStandard`, `TeethSharp`, `TeethFangs`,
+  `TeethGapped`, `TeethMissing`, `TeethGoldTooth`, `TeethSilverTooth`, `TeethGoldGrill` and `TeethBraces` (albedo
+  cutout, tint mask, metallic, roughness, normal, height); regenerated `mesh/characters/humanoid/HumanoidTeethMesh.arpg`
+  (a UV-mapped strip per row, the tongue kept), `features/humanoid/teeth/HumanoidTeeth.arpg` (`variants`),
+  `schemas/Features.arpg`, `menus/CharacterCreator.arpg` (variant row), `CharacterAppearance.glsl`,
+  `CharacterSurface.glsl` and both character shaders.
+- 2026-11-12: Eyes as images with reflections. Added the eye variant image sets `EyeAnime`, `EyeRealistic`, `EyeCat`
+  and `EyeRinged` (albedo, tint mask, normal) and the lighting include
+  `postprocessing/lighting/includes/SkyReflection.glsl`; regenerated `features/humanoid/eyes/HumanoidEyes.arpg` (`variants`), the body normal maps `MaleBody` and
+  `FemaleBody` (soft, so toon lighting shows no speckle), `CharacterSurface.glsl`, both character shaders and
+  `postprocessing/lighting/LightingShader.fsh`.
 ---
 
-## Textures and Sprites (2296 files)
+## Textures and Sprites (2399 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -448,27 +468,65 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/textures/characters/standard/`
 
-- `BodyHairLightTile`: A
-- `BodyHairTile`: A
-- `BrowOverlay`: A
-- `BrowStraightOverlay`: A
-- `BrowThickOverlay`: A
-- `BrowThinOverlay`: A
-- `ChestHairCenterOverlay`: A
-- `ChestHairLightOverlay`: A
-- `ChestHairOverlay`: A
+- `EyeAnime`: A, n, tint
+- `EyeCat`: A, n, tint
+- `EyeRealistic`: A, n, tint
+- `EyeRinged`: A, n, tint
+- `FemaleArmHairFull`: A
+- `FemaleArmHairLight`: A
 - `FemaleBody`: A, ao, n
+- `FemaleBrowsArched`: A
+- `FemaleBrowsStraight`: A
+- `FemaleBrowsThick`: A
+- `FemaleBrowsThin`: A
+- `FemaleChestHairCenter`: A
+- `FemaleChestHairFull`: A
+- `FemaleChestHairLight`: A
+- `FemaleLegHairFull`: A
+- `FemaleLegHairLight`: A
+- `FemaleNipplesLarge`: A, h, n
+- `FemaleNipplesMedium`: A, h, n
+- `FemaleNipplesSmall`: A, h, n
+- `FemalePubicHairFull`: A
+- `FemalePubicHairNatural`: A
+- `FemalePubicHairTrimmed`: A
+- `FemaleStomachHairFull`: A
+- `FemaleStomachHairTrail`: A
+- `FemaleUnderarmHairFull`: A
+- `FemaleUnderarmHairLight`: A
 - `Hair`: A
+- `MaleArmHairFull`: A
+- `MaleArmHairLight`: A
 - `MaleBody`: A, ao, n
-- `NippleLargeOverlay`: A
-- `NippleOverlay`: A
-- `NippleSmallOverlay`: A
-- `PubicHairFullOverlay`: A
-- `PubicHairOverlay`: A
-- `PubicHairTrimmedOverlay`: A
+- `MaleBrowsArched`: A
+- `MaleBrowsStraight`: A
+- `MaleBrowsThick`: A
+- `MaleBrowsThin`: A
+- `MaleChestHairCenter`: A
+- `MaleChestHairFull`: A
+- `MaleChestHairLight`: A
+- `MaleLegHairFull`: A
+- `MaleLegHairLight`: A
+- `MaleNipplesLarge`: A, h, n
+- `MaleNipplesMedium`: A, h, n
+- `MaleNipplesSmall`: A, h, n
+- `MalePubicHairFull`: A
+- `MalePubicHairNatural`: A
+- `MalePubicHairTrimmed`: A
+- `MaleStomachHairFull`: A
+- `MaleStomachHairTrail`: A
+- `MaleUnderarmHairFull`: A
+- `MaleUnderarmHairLight`: A
 - `Skin`: A
-- `StomachHairFullOverlay`: A
-- `StomachHairOverlay`: A
+- `TeethBraces`: A, h, m, n, rough, tint
+- `TeethFangs`: A, h, m, n, rough, tint
+- `TeethGapped`: A, h, m, n, rough, tint
+- `TeethGoldGrill`: A, h, m, n, rough, tint
+- `TeethGoldTooth`: A, h, m, n, rough, tint
+- `TeethMissing`: A, h, m, n, rough, tint
+- `TeethSharp`: A, h, m, n, rough, tint
+- `TeethSilverTooth`: A, h, m, n, rough, tint
+- `TeethStandard`: A, h, m, n, rough, tint
 
 ### `assets/textures/items/standard/`
 
@@ -1265,7 +1323,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (183 files)
+## Shaders (184 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1388,7 +1446,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/postprocessing/lighting/includes/`
 
-`AtmosphericFog.glsl`, `Outline.glsl`, `ToonLighting.glsl`
+`AtmosphericFog.glsl`, `Outline.glsl`, `SkyReflection.glsl`, `ToonLighting.glsl`
 
 ### `assets/shaders/postprocessing/ssao/`
 

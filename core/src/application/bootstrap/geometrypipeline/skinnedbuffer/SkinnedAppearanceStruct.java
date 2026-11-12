@@ -13,8 +13,9 @@ public class SkinnedAppearanceStruct extends StructPackage {
      * The appearance one skinned draw writes into its instance's palette row
      * after the bones: a header texel (x = SkinnedMaskMode), one texel per
      * SkinnedColor, the SkinnedDetail amounts four to a texel, the bone mask
-     * and three texels per SkinnedOverlay placing it and the style worn on
-     * the model drawn,
+     * three texels per SkinnedOverlay placing it and the style worn on the
+     * model drawn, and the tile of the material variant the part drawn shows
+     * (zero for a part showing its own texture),
      * followed by the morph weights of the mesh they were resolved for — any
      * other mesh drawn with this appearance, hair worn on the body, gets zero
      * weights.
@@ -77,6 +78,19 @@ public class SkinnedAppearanceStruct extends StructPackage {
                 0f);
     }
 
+    // The variant a part is drawn in, by its place among the variants given; none shows the part's own texture
+    public void setVariant(SkinnedVariantStruct variants, int variantIndex) {
+
+        int base = getVariantTexel() * EngineSetting.COLOR_CHANNEL_COUNT;
+
+        if (variants != null) {
+            variants.writeTile(texels, base, variantIndex);
+            return;
+        }
+
+        Arrays.fill(texels, base, base + EngineSetting.SKINNED_VARIANT_TEXELS * EngineSetting.COLOR_CHANNEL_COUNT, 0f);
+    }
+
     public void setColor(SkinnedColor skinnedColor, Color color) {
 
         int base = (EngineSetting.SKINNED_APPEARANCE_HEADER_TEXELS + skinnedColor.ordinal())
@@ -118,6 +132,10 @@ public class SkinnedAppearanceStruct extends StructPackage {
     // Accessible \\
 
     public static int getTexelCount() {
+        return getVariantTexel() + EngineSetting.SKINNED_VARIANT_TEXELS;
+    }
+
+    private static int getVariantTexel() {
         return getMaskTexel() + EngineSetting.SKINNED_BONE_MASK_TEXELS
                 + SkinnedOverlay.VALUES.length * EngineSetting.SKINNED_OVERLAY_TEXELS;
     }

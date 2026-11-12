@@ -155,6 +155,21 @@ class PlayerRestoreBranch extends BranchPackage {
 
         restoreFeatures(ArpgUtility.validateObject(appearanceArpg, "features"), appearanceHandle);
         restoreOverlayStyles(getBlock(appearanceArpg, "overlay_styles"), appearanceHandle, raceGender);
+        restoreFeatureVariants(getBlock(appearanceArpg, "feature_variants"), appearanceHandle);
+    }
+
+    // A variant the save names that the worn feature no longer offers leaves the feature in its default
+    private void restoreFeatureVariants(ArpgObjectStruct variantsArpg, AppearanceHandle appearanceHandle) {
+
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
+
+            String key = ArpgUtility.toEnumName(featureSlot);
+
+            if (appearanceHandle.hasFeature(featureSlot) && appearanceHandle.getFeature(featureSlot).hasVariants()
+                    && ArpgUtility.hasString(variantsArpg, key))
+                appearanceHandle.setFeatureVariant(featureSlot, appearanceHandle.getFeature(featureSlot)
+                        .getVariants().find(variantsArpg.get(key).getAsString()));
+        }
     }
 
     // A style the save names that the gender's model no longer offers leaves the overlay in its default

@@ -7,10 +7,19 @@
 // A character's material maps, each its own layer of the character atlas: the normal map bends the smooth normal
 // through a tangent frame rebuilt from screen-space derivatives (the mesh carries no tangents), AO darkens, metallic
 // and roughness shape the highlight, and the tint mask says which texels take the player's colors. Fine detail fades
-// out between CHARACTER_DETAIL_FADE_START of the Character Detail distance and all of it.
+// out between CHARACTER_DETAIL_FADE_START of the Character Detail distance and all of it. The frame is resolved once
+// per fragment, in uniform control flow, so overlays sampled inside branches take its derivatives explicitly.
 
 const float CHARACTER_DETAIL_FADE_START = 0.75;
 const float CHARACTER_ROUGHNESS_NEUTRAL = 0.5;
+
+struct CharacterFrame {
+    mat3  basis;
+    vec2  uvDx;
+    vec2  uvDy;
+    float uvPerMeter;
+    float detail;
+};
 
 struct CharacterMaterial {
     vec3  normal;
@@ -30,7 +39,10 @@ float sampleCharacterLayer(vec2 uv, int layer) {
     return texture(u_texture, vec3(uv, float(layer))).r;
 }
 
-vec3 perturbCharacterNormal(vec3 normal, vec3 viewPosition, vec2 uv, vec3 mapNormal) {
+// The tangent frame of the corner UVs about the smooth normal (the cotangent frame), the UVs' screen derivatives, how
+// many UV units span a block there, and how much fine detail the distance allows
+CharacterFrame resolveCharacterFrame(vec3 normal, vec3 viewPosition, vec2 uv) {
+    CharacterFrame frame;
     vec3 dp1 = dFdx(viewPosition);
     vec3 dp2 = dFdy(viewPosition);
     vec2 duv1 = dFdx(uv);
@@ -41,16 +53,20 @@ vec3 perturbCharacterNormal(vec3 normal, vec3 viewPosition, vec2 uv, vec3 mapNor
     vec3 bitangent = dp2perp * duv1.y + dp1perp * duv2.y;
     float scale = inversesqrt(max(max(dot(tangent, tangent), dot(bitangent, bitangent)), 1e-20));
 
-    return normalize(mat3(tangent * scale, bitangent * scale, normal) * mapNormal);
+    frame.basis      = mat3(tangent * scale, bitangent * scale, normal);
+    frame.uvDx       = duv1;
+    frame.uvDy       = duv2;
+    frame.uvPerMeter = length(duv1) / max(length(dp1), 1e-6);
+    frame.detail     = resolveCharacterDetail(viewPosition);
+
+    return frame;
 }
 
-CharacterMaterial sampleCharacterMaterial(vec2 uv, vec3 viewPosition, vec3 normal) {
+CharacterMaterial sampleCharacterMaterial(vec2 uv, CharacterFrame frame) {
     CharacterMaterial material;
-    float detail = resolveCharacterDetail(viewPosition);
     vec3 mapNormal = texture(u_texture, vec3(uv, float(u_layer_normal))).xyz * 2.0 - 1.0;
 
-    material.normal    = perturbCharacterNormal(normal, viewPosition, uv, normalize(mix(vec3(0.0, 0.0, 1.0),
-                                                                                      mapNormal, detail)));
+    material.normal    = normalize(frame.basis * normalize(mix(vec3(0.0, 0.0, 1.0), mapNormal, frame.detail)));
     material.ao        = sampleCharacterLayer(uv, u_layer_ao);
     material.metallic  = sampleCharacterLayer(uv, u_layer_metallic);
     material.roughness = sampleCharacterLayer(uv, u_layer_roughness);

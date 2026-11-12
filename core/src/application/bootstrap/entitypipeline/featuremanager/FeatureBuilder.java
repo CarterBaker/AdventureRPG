@@ -7,8 +7,11 @@ import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantUtility;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.BuilderPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
@@ -26,6 +29,7 @@ class FeatureBuilder extends BuilderPackage {
     private FeatureManager featureManager;
     private MeshManager meshManager;
     private MaterialManager materialManager;
+    private TextureManager textureManager;
 
     // Base \\
 
@@ -34,6 +38,7 @@ class FeatureBuilder extends BuilderPackage {
         this.featureManager = get(FeatureManager.class);
         this.meshManager = get(MeshManager.class);
         this.materialManager = get(MaterialManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     // Build \\
@@ -49,7 +54,8 @@ class FeatureBuilder extends BuilderPackage {
                 featureID,
                 featureSlot,
                 parseMesh(arpg, file),
-                parseMaterial(arpg));
+                parseMaterial(arpg),
+                parseVariants(arpg, featureName, file));
 
         FeatureHandle handle = create(FeatureHandle.class);
         handle.constructor(featureData);
@@ -80,6 +86,15 @@ class FeatureBuilder extends BuilderPackage {
                     + "\" has no rig — mesh features are skinned onto the character's rig. File: " + file.getName());
 
         return meshHandle;
+    }
+
+    // The image sets the feature may be worn in, none when it names none: its mesh then shows its own texture
+    private SkinnedVariantStruct parseVariants(ArpgObjectStruct arpg, String featureName, File file) {
+
+        if (!ArpgUtility.hasArray(arpg, "variants"))
+            return null;
+
+        return SkinnedVariantUtility.parse(arpg, "variants", textureManager, featureName, file.getName());
     }
 
     private MaterialInstance parseMaterial(ArpgObjectStruct arpg) {

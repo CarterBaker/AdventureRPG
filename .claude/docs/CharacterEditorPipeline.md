@@ -191,18 +191,35 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   keeps only fragments they carry at least half of (part isolation). A rig may hold at most
   `SKINNED_BONE_MASK_CAPACITY` bones.
 - **Overlays.** Brows, nipples and body hair (`SkinnedOverlay`: chest, stomach, pubic, underarm, arm, leg) are images
-  painted over the skin, never geometry. Each gender's model places them (`genders.<g>.overlays`: the `styles` it
-  offers, each a `name` and a `texture` in the character atlas, the style worn by `default`, the `projection` front,
-  back or wrap, the box `center` and `size` on the bind-pose body, `mirror`, and a wrapped image's `repeat` per block;
-  `RaceGenderStruct.getOverlay`), written into each draw as three texels, the tile that of the style worn
-  (`SkinnedOverlayStruct.write`, `AppearanceHandle.getOverlayStyle`, `INDEX_NOT_FOUND` for the model's default). The
-  shader lays them on the position before morphs (`v_bindPosition`), so they stay on the same skin however the body
-  is shaped or posed, tinted by the overlay's `SkinnedColor` (`BROWS`, `NIPPLES`, `BODY_HAIR`) and shown as far as
-  its `SkinnedDetail`. Saves keep a chosen style by name (`overlay_styles`); the creator lists a style row and an
-  amount per overlay, and the Character Appearance outliner's Marks rows set the previewed gender's `default`.
-  **Not yet industry standard:** the box projection stands in for UV-space layers on the unwrapped bodies; the
-  planned replacement is in the handoff the owner holds. The boxes are laid on the A-pose body; the arm hair's
-  wrap box is axis-aligned, so it covers the slanted arm only roughly until then.
+  painted over the skin in the body's own UV layout, never geometry: UV-space decal layers. Each gender's model places
+  them (`genders.<g>.overlays`: the `region` of its UV layout the images cover, u0 v0 u1 v1, the `styles` it offers,
+  each a `name`, a `texture` in the character atlas and an optional `relief` in blocks, and the style worn by
+  `default`; `RaceGenderStruct.getOverlay`), written into each draw as three texels: the tile of the style worn, the
+  region and the relief (`SkinnedOverlayStruct.write`, `AppearanceHandle.getOverlayStyle`, `INDEX_NOT_FOUND` for the
+  model's default). The shader maps the corner UV into the region and samples the style's layers there
+  (`shadeOverlays`), tinted by the overlay's `SkinnedColor` (`BROWS`, `NIPPLES`, `BODY_HAIR`) and shown as far as its
+  `SkinnedDetail`. A style with relief (the nipples) rises from the skin through its height map by parallax occlusion
+  (`marchOverlayRelief`: the ray enters the relief's top and marches down to the skin, so bare skin never shifts) and
+  bends the normal through its normal map, both faded by the Character Detail distance. An overlay's images cover only
+  its region, so a style is a small image; paint a new style in the body's layout, crop it to the region, and every
+  map it carries (A, h, n, ...) goes beside it by suffix. Saves keep a chosen style by name (`overlay_styles`); the
+  creator lists a style row and an amount per overlay, and the Character Appearance outliner's Marks rows set the
+  previewed gender's `default`.
+- **Eyes.** An eye is its variant's image set (`features/humanoid/eyes/HumanoidEyes`: Anime, Realistic, Cat, Ringed)
+  on the eye zone's raw UVs, the iris centred at `CHARACTER_IRIS_CENTRE` (`shadeEye`): Iris Size scales the image about
+  the iris, Pupil Size dilates the pupil by a radial remap inside it, and the iris, `CHARACTER_IRIS_DEPTH` behind the
+  cornea, shifts against the view (refraction); the eye color reaches what the tint mask allows. The eye writes a
+  specular falling from `CHARACTER_EYE_SPECULAR` toward `CHARACTER_EYE_SPECULAR_FAR` across the Character Detail
+  distance, and the lighting pass (and the editor viewport) mirrors the sky on every glossy character pixel by that
+  specular, weighted by Fresnel and occlusion (`SkyReflection.glsl`). **Not yet industry standard:** the environment
+  is the analytic sky the sky shader paints, not a captured reflection probe of the surroundings.
+- **Material variants.** A look offering several image sets is a `SkinnedVariantStruct` (names, tiles, reliefs,
+  default), parsed for overlays' `styles` and features' `variants` alike by `SkinnedVariantUtility.parse`. A feature
+  naming `variants` and a `default` is worn in the one its appearance picks (`AppearanceHandle.getFeatureVariant`,
+  INDEX_NOT_FOUND for the default, cleared when the feature changes): `EntityRenderSystem.pushBody` writes the
+  variant's tile into the draw's variant texel (`SkinnedAppearanceStruct.setVariant`, none for the body) and the shader
+  lays the corner's raw UV into that tile for every layer (`resolveCharacterUV`), a texture swap on one mesh. Saves keep
+  the variant by name (`feature_variants`); the creator lists a variant row under the feature row.
 - **Material maps.** Every character texture may carry the material maps by file suffix like any atlas
   (`texturealiases/`): albedo, normal, height, AO, metallic, roughness and tint, each its own image; a map no file
   provides is its alias's default color (flat normal, AO 1, metallic 0, roughness 0.5, tint 1), and `TextureLoader`
@@ -257,8 +274,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   the A-pose). Additive clips (Lean, Look) never key the arms. Key a new clip the same way; the Animation Editor's
   pose and IK tools already work against the bind rotation. Both genders
   wear `features/humanoid/eyes/HumanoidEyes` (`HumanoidEyesMesh`, drawn from the eye zone's raw UVs with
-  `CharacterEyeMaterial`) and `features/humanoid/teeth/HumanoidTeeth` (`HumanoidTeethMesh`: both rows of teeth and
-  the tongue, `CharacterTeethMaterial`). `HumanoidRig` names its `parts` (eyes, mouth, hands, feet) and seven
+  `CharacterEyeMaterial`) and `features/humanoid/teeth/HumanoidTeeth` (`HumanoidTeethMesh`: a UV-mapped strip per
+  row of teeth, the upper on the head in front of the lower on the jaw, and the tongue; `CharacterTeethMaterial`; nine
+  variants, from Standard to Braces, each an image set whose tint mask keeps metal from taking the teeth color).
+  `HumanoidRig` names its `parts` (eyes, mouth, hands, feet) and seven
   `poses` (`animations/humanoid/poses/`). All are generated (catalogued); a rigged mesh may hold at most
   `RIGGED_MESH_VERT_LIMIT` corners. Each hand is one bone: hanging at the side its palm faces the thigh with the
   thumb forward (+z), so `hand_l` is a left hand at +x; keep that chirality on any hand you model or mirror.

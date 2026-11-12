@@ -1,6 +1,7 @@
 package application.bootstrap.entitypipeline.feature;
 
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantStruct;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import engine.root.DataPackage;
 
@@ -21,6 +22,7 @@ public class FeatureData extends DataPackage {
     // Content
     private final MeshHandle meshHandle;
     private final MaterialInstance material;
+    private final SkinnedVariantStruct variants;
 
     // Constructor \\
 
@@ -29,7 +31,8 @@ public class FeatureData extends DataPackage {
             short featureID,
             FeatureSlot featureSlot,
             MeshHandle meshHandle,
-            MaterialInstance material) {
+            MaterialInstance material,
+            SkinnedVariantStruct variants) {
 
         // Identity
         this.featureName = featureName;
@@ -39,6 +42,7 @@ public class FeatureData extends DataPackage {
         // Content
         this.meshHandle = meshHandle;
         this.material = material;
+        this.variants = variants;
     }
 
     // Accessible \\
@@ -65,5 +69,13 @@ public class FeatureData extends DataPackage {
 
     public MaterialInstance getMaterial() {
         return material;
+    }
+
+    public boolean hasVariants() {
+        return variants != null;
+    }
+
+    public SkinnedVariantStruct getVariants() {
+        return variants;
     }
 }

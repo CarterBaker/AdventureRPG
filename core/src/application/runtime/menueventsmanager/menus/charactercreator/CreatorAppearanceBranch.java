@@ -11,6 +11,7 @@ import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantStruct;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
@@ -213,8 +214,61 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         characterCreatorBranch.injectSectionHeader(session, title);
 
-        for (FeatureSlot featureSlot : featureSlots)
+        for (FeatureSlot featureSlot : featureSlots) {
+
             injectFeatureRow(session, appearance, featureSlot);
+
+            if (appearance.hasFeature(featureSlot) && appearance.getFeature(featureSlot).hasVariants())
+                injectVariantRow(session, appearance, featureSlot);
+        }
+    }
+
+    // The variant a worn feature shows, stepped through every variant it offers
+    private void injectVariantRow(CreatorSessionStruct session, AppearanceHandle appearance, FeatureSlot featureSlot) {
+
+        SkinnedVariantStruct variants = appearance.getFeature(featureSlot).getVariants();
+        String variantName = variants.getName(variants.resolve(appearance.getFeatureVariant(featureSlot)));
+
+        menuManager.inject(
+                session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_OPTIONS, RuntimeSetting.MENU_CREATOR_VARIANT_ROW,
+                row -> {
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_LABEL)
+                            .setFontText(toTitle(featureSlot.name()) + RuntimeSetting.CREATOR_VARIANT_SUFFIX);
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_VALUE)
+                            .setFontText(variantName);
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_PREVIOUS)
+                            .setActionArgOverride(featureSlot.name());
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_NEXT)
+                            .setActionArgOverride(featureSlot.name());
+                });
+    }
+
+    public void previousVariant(String slotName, WindowInstance window) {
+        cycleVariant(window, FeatureSlot.valueOf(slotName), -1);
+    }
+
+    public void nextVariant(String slotName, WindowInstance window) {
+        cycleVariant(window, FeatureSlot.valueOf(slotName), 1);
+    }
+
+    private void cycleVariant(WindowInstance window, FeatureSlot featureSlot, int step) {
+
+        CreatorSessionStruct session = characterCreatorBranch.getSession(window);
+
+        if (session == null || !session.getPlayer().hasAppearance())
+            return;
+
+        AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
+
+        if (!appearance.hasFeature(featureSlot) || !appearance.getFeature(featureSlot).hasVariants())
+            return;
+
+        SkinnedVariantStruct variants = appearance.getFeature(featureSlot).getVariants();
+
+        appearance.setFeatureVariant(
+                featureSlot,
+                Math.floorMod(variants.resolve(appearance.getFeatureVariant(featureSlot)) + step, variants.getCount()));
+        characterCreatorBranch.refreshOptions(session);
     }
 
     private void injectFeatureRow(CreatorSessionStruct session, AppearanceHandle appearance, FeatureSlot featureSlot) {
@@ -364,6 +418,12 @@ public class CreatorAppearanceBranch extends BranchPackage {
             if (overlay != null)
                 appearance.setOverlayStyle(skinnedOverlay, randomIndex(overlay.getStyleCount()));
         }
+
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+            if (appearance.hasFeature(featureSlot) && appearance.getFeature(featureSlot).hasVariants())
+                appearance.setFeatureVariant(
+                        featureSlot,
+                        randomIndex(appearance.getFeature(featureSlot).getVariants().getCount()));
     }
 
     private int randomIndex(int count) {

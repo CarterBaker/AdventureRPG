@@ -165,7 +165,8 @@ public class EntityRenderSystem extends SystemPackage {
     }
 
     // The body the gender wears through the mask, then every feature its appearance wears that the isolation
-    // shows, through the mask where it masks that feature, each with its own material when it names one
+    // shows, through the mask where it masks that feature, each with its own material when it names one and in the
+    // variant the appearance picks
     private void pushBody(
             RaceGenderStruct raceGender,
             AppearanceHandle appearance,
@@ -177,6 +178,7 @@ public class EntityRenderSystem extends SystemPackage {
             WindowInstance window) {
 
         appearanceScratch.setBoneMask(boneMask);
+        appearanceScratch.setVariant(null, EngineSetting.INDEX_NOT_FOUND);
 
         if (isolation.isBodyShown())
             pushCharacterPart(raceGender.getMeshHandle(), material, skinningMatrices, targetFbo, window);
@@ -192,6 +194,7 @@ public class EntityRenderSystem extends SystemPackage {
             FeatureHandle feature = appearance.getFeature(featureSlot);
 
             appearanceScratch.setBoneMask(isolation.isFeatureMasked(featureSlot) ? boneMask : noMask);
+            appearanceScratch.setVariant(feature.getVariants(), appearance.getFeatureVariant(featureSlot));
             pushCharacterPart(
                     feature.getMeshHandle(),
                     feature.hasMaterial() ? feature.getMaterial() : material,
