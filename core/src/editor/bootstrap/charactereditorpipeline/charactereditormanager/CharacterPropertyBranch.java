@@ -9,6 +9,8 @@ import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
@@ -453,6 +455,9 @@ class CharacterPropertyBranch extends BranchPackage {
                             characterEditorManager.getSide(characterEditorManager.getRegion()).ordinal() + direction,
                             CharacterEditorSide.VALUES.length)]);
             case EditorSetting.CHARACTER_EDITOR_KEY_GENDER -> cycleGender(document, direction);
+            case EditorSetting.CHARACTER_EDITOR_KEY_OVERLAY_STYLE -> cycleOverlayStyle(
+                    document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), SkinnedOverlay.class),
+                    direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE -> cycleFeature(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class),
                     direction);
@@ -483,6 +488,8 @@ class CharacterPropertyBranch extends BranchPackage {
                     .getGenderHandleFromGenderID(characterEditorManager.getPreviewGenderID())
                     .getDisplayName();
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE -> getFeatureText(CharacterViewUtility.getKeyArgument(key));
+            case EditorSetting.CHARACTER_EDITOR_KEY_OVERLAY_STYLE -> getOverlayStyleText(
+                    document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), SkinnedOverlay.class));
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_SLOT -> anchor != null
                     ? ArpgUtility.getString(anchor, EditorSetting.CHARACTER_EDITOR_FIELD_SLOT, "")
                     : "";
@@ -635,6 +642,36 @@ class CharacterPropertyBranch extends BranchPackage {
 
         return features != null && ArpgUtility.hasString(features, slotKey)
                 ? features.get(slotKey).getAsString()
+                : null;
+    }
+
+    // Overlay Styles \\
+
+    // The style an overlay starts in on the previewed gender's model stepped on, written as the model's default
+    private void cycleOverlayStyle(CharacterDocumentInstance document, SkinnedOverlay skinnedOverlay, int direction) {
+
+        SkinnedOverlayStruct overlay = resolveOverlay(document, skinnedOverlay);
+
+        if (overlay == null)
+            return;
+
+        int styleIndex = Math.floorMod(overlay.getDefaultStyle() + direction, overlay.getStyleCount());
+
+        characterEditBranch.setOverlayDefault(
+                document, getPreviewGenderName(), ArpgUtility.toEnumName(skinnedOverlay),
+                overlay.getStyleName(styleIndex));
+    }
+
+    private String getOverlayStyleText(CharacterDocumentInstance document, SkinnedOverlay skinnedOverlay) {
+
+        SkinnedOverlayStruct overlay = resolveOverlay(document, skinnedOverlay);
+        return overlay != null ? overlay.getStyleName(overlay.getDefaultStyle()) : "";
+    }
+
+    private SkinnedOverlayStruct resolveOverlay(CharacterDocumentInstance document, SkinnedOverlay skinnedOverlay) {
+        return document.hasPreview()
+                ? document.getPreviewData().getGender(characterEditorManager.getPreviewGenderID())
+                        .getOverlay(skinnedOverlay)
                 : null;
     }
 

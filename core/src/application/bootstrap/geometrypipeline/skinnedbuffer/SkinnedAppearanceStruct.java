@@ -13,7 +13,8 @@ public class SkinnedAppearanceStruct extends StructPackage {
      * The appearance one skinned draw writes into its instance's palette row
      * after the bones: a header texel (x = SkinnedMaskMode), one texel per
      * SkinnedColor, the SkinnedDetail amounts four to a texel, the bone mask
-     * and three texels per SkinnedOverlay placing it on the model drawn,
+     * and three texels per SkinnedOverlay placing it and the style worn on
+     * the model drawn,
      * followed by the morph weights of the mesh they were resolved for — any
      * other mesh drawn with this appearance, hair worn on the body, gets zero
      * weights.
@@ -57,14 +58,15 @@ public class SkinnedAppearanceStruct extends StructPackage {
         boneMask.write(texels, getMaskTexel() * EngineSetting.COLOR_CHANNEL_COUNT);
     }
 
-    // Where an overlay lies on the model drawn; null where the model places none, so it paints nothing
-    public void setOverlay(SkinnedOverlay skinnedOverlay, SkinnedOverlayStruct overlay) {
+    // Where an overlay lies on the model drawn and the style it paints; null where the model places none, so it
+    // paints nothing
+    public void setOverlay(SkinnedOverlay skinnedOverlay, SkinnedOverlayStruct overlay, int styleIndex) {
 
         int base = (getMaskTexel() + EngineSetting.SKINNED_BONE_MASK_TEXELS
                 + skinnedOverlay.ordinal() * EngineSetting.SKINNED_OVERLAY_TEXELS) * EngineSetting.COLOR_CHANNEL_COUNT;
 
         if (overlay != null) {
-            overlay.write(texels, base);
+            overlay.write(texels, base, styleIndex);
             return;
         }
 

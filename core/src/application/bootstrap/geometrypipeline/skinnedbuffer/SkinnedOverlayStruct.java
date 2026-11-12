@@ -7,19 +7,19 @@ import engine.util.mathematics.vectors.Vector3;
 public class SkinnedOverlayStruct extends StructPackage {
 
     /*
-     * Where one overlay lies on a model and what it paints there: the tile of
-     * its image in the character atlas, the centre and size of its box
-     * on the bind-pose body, how it is projected, whether it is repeated on
-     * the mirrored side, and for a wrapped overlay how many times its image
-     * repeats per block. Written into each draw as three texels
-     * (CharacterAppearance.glsl). Immutable once built.
+     * Where one overlay lies on a model and the styles it may paint there:
+     * each style's name and the tile of its image in the character atlas,
+     * the style worn by default, the centre and size of its box on the
+     * bind-pose body, how it is projected, whether it is repeated on the
+     * mirrored side, and for a wrapped overlay how many times its image
+     * repeats per block. Written into each draw as three texels, the tile
+     * the style worn (CharacterAppearance.glsl). Immutable once built.
      */
 
-    // Tile
-    private final float u0;
-    private final float u1;
-    private final float v0;
-    private final float v1;
+    // Styles — names, and four tile floats each (u0, u1, v0, v1)
+    private final String[] styleNames;
+    private final float[] styleTiles;
+    private final int defaultStyle;
 
     // Placement
     private final Vector3 center;
@@ -31,21 +31,19 @@ public class SkinnedOverlayStruct extends StructPackage {
     // Constructor \\
 
     public SkinnedOverlayStruct(
-            float u0,
-            float u1,
-            float v0,
-            float v1,
+            String[] styleNames,
+            float[] styleTiles,
+            int defaultStyle,
             Vector3 center,
             Vector3 size,
             SkinnedProjection projection,
             boolean mirrored,
             float repeat) {
 
-        // Tile
-        this.u0 = u0;
-        this.u1 = u1;
-        this.v0 = v0;
-        this.v1 = v1;
+        // Styles
+        this.styleNames = styleNames;
+        this.styleTiles = styleTiles;
+        this.defaultStyle = defaultStyle;
 
         // Placement
         this.center = center;
@@ -57,12 +55,16 @@ public class SkinnedOverlayStruct extends StructPackage {
 
     // Write \\
 
-    public void write(float[] out, int offset) {
+    // The overlay as one style paints it, the default for a style outside the overlay's
+    public void write(float[] out, int offset, int styleIndex) {
 
-        out[offset] = u0;
-        out[offset + 1] = u1;
-        out[offset + 2] = v0;
-        out[offset + 3] = v1;
+        int tile = (styleIndex >= 0 && styleIndex < styleNames.length ? styleIndex : defaultStyle)
+                * EngineSetting.COLOR_CHANNEL_COUNT;
+
+        out[offset] = styleTiles[tile];
+        out[offset + 1] = styleTiles[tile + 1];
+        out[offset + 2] = styleTiles[tile + 2];
+        out[offset + 3] = styleTiles[tile + 3];
         out[offset + 4] = center.x;
         out[offset + 5] = center.y;
         out[offset + 6] = center.z;
@@ -75,6 +77,28 @@ public class SkinnedOverlayStruct extends StructPackage {
     }
 
     // Accessible \\
+
+    public int getStyleCount() {
+        return styleNames.length;
+    }
+
+    public String getStyleName(int styleIndex) {
+        return styleNames[styleIndex];
+    }
+
+    // A style's place by its name, INDEX_NOT_FOUND for a name the overlay does not offer
+    public int findStyle(String styleName) {
+
+        for (int i = 0; i < styleNames.length; i++)
+            if (styleNames[i].equals(styleName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    public int getDefaultStyle() {
+        return defaultStyle;
+    }
 
     public Vector3 getCenter() {
         return center;

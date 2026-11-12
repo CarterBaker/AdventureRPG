@@ -9,6 +9,8 @@ import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
@@ -16,6 +18,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CreatorAppearanceBranch extends BranchPackage {
@@ -67,9 +70,13 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_SKIN, SkinnedColor.SKIN);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_EYE_COLOR, SkinnedColor.EYES);
-        injectFeatureSection(session, RuntimeSetting.CREATOR_SECTION_FACE_FEATURES, RuntimeSetting.CREATOR_FACE_FEATURES);
+        injectFeatureSection(
+                session, RuntimeSetting.CREATOR_SECTION_FACE_FEATURES, RuntimeSetting.CREATOR_FACE_FEATURES);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_TEETH_COLOR, SkinnedColor.TEETH);
         creatorBodyBranch.injectShapeGroups(session, false);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_LIP_COLOR, SkinnedColor.LIPS);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BLUSH_COLOR, SkinnedColor.BLUSH);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_FRECKLE_COLOR, SkinnedColor.FRECKLES);
         injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_DETAILS, RuntimeSetting.CREATOR_APPEARANCE_DETAILS);
     }
 
@@ -80,24 +87,114 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         injectFeatureSection(session, RuntimeSetting.CREATOR_SECTION_HAIRSTYLE, RuntimeSetting.CREATOR_HAIR_FEATURES);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_HAIR_COLOR, SkinnedColor.HAIR);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BROW_COLOR, SkinnedColor.BROWS);
         injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_HAIR_DETAILS, RuntimeSetting.CREATOR_HAIR_DETAILS);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BROW_COLOR, SkinnedColor.BROWS);
+        injectOverlaySection(session, RuntimeSetting.CREATOR_SECTION_BROWS, RuntimeSetting.CREATOR_BROW_OVERLAYS);
     }
 
-    // The body's own colors and the amounts of the marks painted over its skin, on the Body tab
+    // The body's own colors and the marks painted over its skin, each in the style chosen and as far as it shows,
+    // on the Body tab
     void populateBodyMarks(CreatorSessionStruct session) {
 
         if (!session.getPlayer().hasAppearance())
             return;
 
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_NIPPLE_COLOR, SkinnedColor.NIPPLES);
+        injectOverlaySection(session, RuntimeSetting.CREATOR_SECTION_NIPPLES, RuntimeSetting.CREATOR_NIPPLE_OVERLAYS);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BODY_HAIR_COLOR, SkinnedColor.BODY_HAIR);
-        injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_BODY_DETAILS, RuntimeSetting.CREATOR_BODY_DETAILS);
+        injectOverlaySection(
+                session, RuntimeSetting.CREATOR_SECTION_BODY_HAIR, RuntimeSetting.CREATOR_BODY_HAIR_OVERLAYS);
     }
 
+    // A color's swatches from the race's palette, then its hue, saturation and brightness for any color between
     private void injectColorSection(CreatorSessionStruct session, String title, SkinnedColor skinnedColor) {
+
         characterCreatorBranch.injectSectionHeader(session, title);
         injectSwatches(session, skinnedColor, session.getPlayer().getAppearanceHandle().getColor(skinnedColor));
+
+        for (CreatorSlider slider : RuntimeSetting.CREATOR_COLOR_SLIDERS)
+            creatorBodyBranch.injectSlider(session, slider, skinnedColor.ordinal());
+    }
+
+    // Overlays \\
+
+    // Each overlay the worn gender's model places: the style it is painted in, then how far it shows
+    private void injectOverlaySection(CreatorSessionStruct session, String title, SkinnedOverlay[] overlays) {
+
+        EntityInstance player = session.getPlayer();
+        boolean headed = false;
+
+        for (SkinnedOverlay skinnedOverlay : overlays) {
+
+            SkinnedOverlayStruct overlay = player.getRaceGender().getOverlay(skinnedOverlay);
+
+            if (overlay == null)
+                continue;
+
+            if (!headed) {
+                characterCreatorBranch.injectSectionHeader(session, title);
+                headed = true;
+            }
+
+            injectStyleRow(session, skinnedOverlay, overlay);
+            creatorBodyBranch.injectSlider(session, CreatorSlider.DETAIL, skinnedOverlay.getDetail().ordinal());
+        }
+    }
+
+    private void injectStyleRow(
+            CreatorSessionStruct session,
+            SkinnedOverlay skinnedOverlay,
+            SkinnedOverlayStruct overlay) {
+
+        String styleName = overlay.getStyleName(resolveStyle(session.getPlayer(), skinnedOverlay, overlay));
+
+        menuManager.inject(
+                session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_OPTIONS, RuntimeSetting.MENU_CREATOR_STYLE_ROW,
+                row -> {
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_LABEL)
+                            .setFontText(creatorBodyBranch.toTitle(ArpgUtility.toEnumName(skinnedOverlay)));
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_VALUE)
+                            .setFontText(styleName);
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_PREVIOUS)
+                            .setActionArgOverride(skinnedOverlay.name());
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_NEXT)
+                            .setActionArgOverride(skinnedOverlay.name());
+                });
+    }
+
+    public void previousStyle(String overlayName, WindowInstance window) {
+        cycleStyle(window, SkinnedOverlay.valueOf(overlayName), -1);
+    }
+
+    public void nextStyle(String overlayName, WindowInstance window) {
+        cycleStyle(window, SkinnedOverlay.valueOf(overlayName), 1);
+    }
+
+    private void cycleStyle(WindowInstance window, SkinnedOverlay skinnedOverlay, int step) {
+
+        CreatorSessionStruct session = characterCreatorBranch.getSession(window);
+
+        if (session == null || !session.getPlayer().hasAppearance())
+            return;
+
+        EntityInstance player = session.getPlayer();
+        SkinnedOverlayStruct overlay = player.getRaceGender().getOverlay(skinnedOverlay);
+
+        if (overlay == null)
+            return;
+
+        player.getAppearanceHandle().setOverlayStyle(
+                skinnedOverlay,
+                Math.floorMod(resolveStyle(player, skinnedOverlay, overlay) + step, overlay.getStyleCount()));
+        characterCreatorBranch.refreshOptions(session);
+    }
+
+    // The style an overlay is painted in, its model's default where none was chosen
+    private int resolveStyle(EntityInstance player, SkinnedOverlay skinnedOverlay, SkinnedOverlayStruct overlay) {
+
+        int styleIndex = player.getAppearanceHandle().getOverlayStyle(skinnedOverlay);
+
+        return styleIndex >= 0 && styleIndex < overlay.getStyleCount() ? styleIndex : overlay.getDefaultStyle();
     }
 
     private void injectDetailSection(CreatorSessionStruct session, String title, int[] details) {
@@ -258,6 +355,14 @@ public class CreatorAppearanceBranch extends BranchPackage {
             Color[] colors = appearanceData.getPalette(skinnedColor);
             Color color = colors[randomIndex(colors.length)];
             appearance.setColor(skinnedColor, color.r, color.g, color.b);
+        }
+
+        for (SkinnedOverlay skinnedOverlay : SkinnedOverlay.VALUES) {
+
+            SkinnedOverlayStruct overlay = player.getRaceGender().getOverlay(skinnedOverlay);
+
+            if (overlay != null)
+                appearance.setOverlayStyle(skinnedOverlay, randomIndex(overlay.getStyleCount()));
         }
     }
 

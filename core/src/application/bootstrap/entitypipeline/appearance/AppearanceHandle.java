@@ -11,6 +11,7 @@ import application.bootstrap.geometrypipeline.rig.RigSpringChainStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
@@ -20,8 +21,9 @@ public class AppearanceHandle extends HandlePackage {
 
     /*
      * Per-entity appearance: the body its gender wears, its colors, detail
-     * amounts, shape slider values, worn features, body build and head shape.
-     * Seeded from the race and edited in place. Slider values are kept as
+     * amounts, shape slider values, worn features, the style each overlay is
+     * painted in, body build and head shape. Seeded from the race and edited
+     * in place. Slider values are kept as
      * the weights of the body's morphs, beside the expression weights the
      * face plays — a blink at an interval of its own, passing through the
      * half-closed shape, while the face is animated — and as the moves, turns
@@ -59,6 +61,9 @@ public class AppearanceHandle extends HandlePackage {
 
     // Features — indexed by FeatureSlot ordinal
     private FeatureHandle[] features;
+
+    // Overlay Styles — indexed by SkinnedOverlay ordinal, INDEX_NOT_FOUND for the model's default
+    private int[] overlayStyles;
 
     // Proportions
     private float weightRatio;
@@ -99,6 +104,7 @@ public class AppearanceHandle extends HandlePackage {
 
         // Features
         this.features = new FeatureHandle[FeatureSlot.VALUES.length];
+        this.overlayStyles = new int[SkinnedOverlay.VALUES.length];
 
         // Proportions
         this.weightRatio = weightRatio;
@@ -129,6 +135,8 @@ public class AppearanceHandle extends HandlePackage {
 
         for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
             details[skinnedDetail.ordinal()] = appearanceData.getDetail(skinnedDetail);
+
+        Arrays.fill(overlayStyles, EngineSetting.INDEX_NOT_FOUND);
 
         Arrays.fill(morphWeights, 0f);
 
@@ -187,6 +195,18 @@ public class AppearanceHandle extends HandlePackage {
 
     public void setColor(SkinnedColor skinnedColor, float r, float g, float b) {
         colors[skinnedColor.ordinal()].set(r, g, b, 1f);
+    }
+
+    // Overlay Styles \\
+
+    // The style an overlay is painted in, by its place among the styles the worn gender's model offers;
+    // INDEX_NOT_FOUND for the model's default
+    public int getOverlayStyle(SkinnedOverlay skinnedOverlay) {
+        return overlayStyles[skinnedOverlay.ordinal()];
+    }
+
+    public void setOverlayStyle(SkinnedOverlay skinnedOverlay, int styleIndex) {
+        overlayStyles[skinnedOverlay.ordinal()] = styleIndex;
     }
 
     // Details \\

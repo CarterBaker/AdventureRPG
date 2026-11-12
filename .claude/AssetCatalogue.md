@@ -223,9 +223,15 @@ One line per session that changed this file: the date, what was added or removed
   `CharacterEyeMaterial` and `CharacterTeethMaterial`, the editor pose clips under `animations/humanoid/poses/` and the
   overlay images `BodyHairTile`, `BrowOverlay`, `ChestHairOverlay`, `NippleOverlay`, `PubicHairOverlay` and
   `StomachHairOverlay`.
+- 2026-11-12: Overlay styles and creator colors. Added the style images `BrowStraightOverlay`, `BrowThickOverlay`,
+  `BrowThinOverlay`, `NippleSmallOverlay`, `NippleLargeOverlay`, `ChestHairLightOverlay`, `ChestHairCenterOverlay`,
+  `StomachHairFullOverlay`, `PubicHairTrimmedOverlay`, `PubicHairFullOverlay` and `BodyHairLightTile`; regenerated
+  `races/Human.arpg` (overlay `styles` and defaults, teeth color and palette), `schemas/Races.arpg`,
+  `menus/CharacterCreator.arpg` (style row) and the shaders `CharacterAppearance.glsl` and `CharacterSurface.glsl`
+  (teeth color).
 ---
 
-## Textures and Sprites (2279 files)
+## Textures and Sprites (2290 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -428,13 +434,24 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/textures/characters/standard/`
 
+- `BodyHairLightTile`: A
 - `BodyHairTile`: A
 - `BrowOverlay`: A
+- `BrowStraightOverlay`: A
+- `BrowThickOverlay`: A
+- `BrowThinOverlay`: A
+- `ChestHairCenterOverlay`: A
+- `ChestHairLightOverlay`: A
 - `ChestHairOverlay`: A
 - `Hair`: A
+- `NippleLargeOverlay`: A
 - `NippleOverlay`: A
+- `NippleSmallOverlay`: A
+- `PubicHairFullOverlay`: A
 - `PubicHairOverlay`: A
+- `PubicHairTrimmedOverlay`: A
 - `Skin`: A
+- `StomachHairFullOverlay`: A
 - `StomachHairOverlay`: A
 
 ### `assets/textures/items/standard/`

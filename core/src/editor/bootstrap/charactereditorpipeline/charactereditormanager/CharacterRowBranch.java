@@ -4,7 +4,9 @@ import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
@@ -114,6 +116,32 @@ class CharacterRowBranch extends BranchPackage {
 
             addChoice(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_FEATURE, slotName),
                     slotName);
+        }
+
+        addOverlayRows(document, rows);
+    }
+
+    // The style each overlay the previewed gender's model places starts in, as the creator offers it
+    private void addOverlayRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        RaceGenderStruct raceGender = document.getPreviewData().getGender(characterEditorManager.getPreviewGenderID());
+        boolean headed = false;
+
+        for (SkinnedOverlay skinnedOverlay : SkinnedOverlay.VALUES) {
+
+            if (raceGender.getOverlay(skinnedOverlay) == null)
+                continue;
+
+            if (!headed) {
+                rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_OVERLAYS));
+                headed = true;
+            }
+
+            String overlayName = ArpgUtility.toEnumName(skinnedOverlay);
+
+            addChoice(document, rows,
+                    CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_OVERLAY_STYLE, overlayName),
+                    overlayName);
         }
     }
 

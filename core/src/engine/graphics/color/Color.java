@@ -171,6 +171,52 @@ public class Color extends EngineUtility {
         return this;
     }
 
+    // Hue, Saturation, Brightness \\
+
+    // The hue as a share of the colour wheel, 0 to 1, red at 0; 0 for a grey
+    public float getHue() {
+
+        float max = Math.max(r, Math.max(g, b));
+        float range = max - Math.min(r, Math.min(g, b));
+
+        if (range <= 0f)
+            return 0f;
+
+        float sector = max == r ? (g - b) / range : max == g ? (b - r) / range + 2f : (r - g) / range + 4f;
+        float hue = sector / 6f;
+
+        return hue < 0f ? hue + 1f : hue;
+    }
+
+    public float getSaturation() {
+        float max = Math.max(r, Math.max(g, b));
+        return max <= 0f ? 0f : (max - Math.min(r, Math.min(g, b))) / max;
+    }
+
+    public float getBrightness() {
+        return Math.max(r, Math.max(g, b));
+    }
+
+    // Sets the colour, opaque, from a hue share of the wheel, a saturation and a brightness, each 0 to 1
+    public Color setHSB(float hue, float saturation, float brightness) {
+
+        float sector = (hue - (float) Math.floor(hue)) * 6f;
+        int index = (int) sector;
+        float part = sector - index;
+        float low = brightness * (1f - saturation);
+        float falling = brightness * (1f - saturation * part);
+        float rising = brightness * (1f - saturation * (1f - part));
+
+        return switch (index) {
+            case 0 -> set(brightness, rising, low);
+            case 1 -> set(falling, brightness, low);
+            case 2 -> set(low, brightness, rising);
+            case 3 -> set(low, falling, brightness);
+            case 4 -> set(rising, low, brightness);
+            default -> set(brightness, low, falling);
+        };
+    }
+
     // Packed Color \\
 
     public float toPackedFloat() {

@@ -169,8 +169,10 @@ class RaceBuilder extends BuilderPackage {
 
     // Overlays \\
 
-    // Where each overlay the gender's model names lies on it: its "texture", "projection", box "center" and "size",
-    // whether it is "mirror"ed across the body and, for a wrapped overlay, how often its image "repeat"s per block
+    // Where each overlay the gender's model names lies on it: the "styles" it offers, each a "name" and the "texture"
+    // painting it, the style worn by "default" (the first when none is named), the "projection", box "center" and
+    // "size", whether it is "mirror"ed across the body and, for a wrapped overlay, how often its image "repeat"s per
+    // block
     private SkinnedOverlayStruct[] parseOverlays(ArpgObjectStruct genderArpg, String genderName, String raceName) {
 
         SkinnedOverlayStruct[] overlays = new SkinnedOverlayStruct[SkinnedOverlay.VALUES.length];
@@ -184,19 +186,27 @@ class RaceBuilder extends BuilderPackage {
 
             SkinnedOverlay skinnedOverlay = ArpgUtility.toEnum(key, SkinnedOverlay.class);
             ArpgObjectStruct overlayArpg = overlaysArpg.getAsObject(key);
-            TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(
-                    ArpgUtility.validateString(overlayArpg, "texture"));
+            ArpgArrayStruct stylesArpg = ArpgUtility.validateArray(overlayArpg, "styles");
             Vector3 size = toVector3(ArpgUtility.validateArray(overlayArpg, "size", 3));
+
+            if (stylesArpg.size() == 0)
+                throwException("Race gender \"" + genderName + "\" gives overlay \"" + key
+                        + "\" no styles. Source: " + raceName);
 
             if (size.x <= 0f || size.y <= 0f || size.z <= 0f)
                 throwException("Race gender \"" + genderName + "\" gives overlay \"" + key
                         + "\" a size that is not positive. Source: " + raceName);
 
+            String[] styleNames = new String[stylesArpg.size()];
+            float[] styleTiles = new float[stylesArpg.size() * EngineSetting.COLOR_CHANNEL_COUNT];
+
+            for (int i = 0; i < styleNames.length; i++)
+                parseOverlayStyle(stylesArpg.get(i).getAsObject(), styleNames, styleTiles, i, key, raceName);
+
             overlays[skinnedOverlay.ordinal()] = new SkinnedOverlayStruct(
-                    textureHandle.getU0(),
-                    textureHandle.getU1(),
-                    textureHandle.getV0(),
-                    textureHandle.getV1(),
+                    styleNames,
+                    styleTiles,
+                    resolveDefaultStyle(overlayArpg, styleNames, key, raceName),
                     toVector3(ArpgUtility.validateArray(overlayArpg, "center", 3)),
                     size,
                     ArpgUtility.getEnum(overlayArpg, "projection", SkinnedProjection.class, SkinnedProjection.FRONT),
@@ -205,6 +215,51 @@ class RaceBuilder extends BuilderPackage {
         }
 
         return overlays;
+    }
+
+    private void parseOverlayStyle(
+            ArpgObjectStruct styleArpg,
+            String[] styleNames,
+            float[] styleTiles,
+            int styleIndex,
+            String overlayName,
+            String raceName) {
+
+        String styleName = ArpgUtility.validateString(styleArpg, "name");
+
+        for (int i = 0; i < styleIndex; i++)
+            if (styleNames[i].equals(styleName))
+                throwException("Overlay \"" + overlayName + "\" names style \"" + styleName + "\" twice. Source: "
+                        + raceName);
+
+        TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(
+                ArpgUtility.validateString(styleArpg, "texture"));
+        int tile = styleIndex * EngineSetting.COLOR_CHANNEL_COUNT;
+
+        styleNames[styleIndex] = styleName;
+        styleTiles[tile] = textureHandle.getU0();
+        styleTiles[tile + 1] = textureHandle.getU1();
+        styleTiles[tile + 2] = textureHandle.getV0();
+        styleTiles[tile + 3] = textureHandle.getV1();
+    }
+
+    private int resolveDefaultStyle(
+            ArpgObjectStruct overlayArpg,
+            String[] styleNames,
+            String overlayName,
+            String raceName) {
+
+        if (!ArpgUtility.hasString(overlayArpg, "default"))
+            return 0;
+
+        String styleName = overlayArpg.get("default").getAsString();
+
+        for (int i = 0; i < styleNames.length; i++)
+            if (styleNames[i].equals(styleName))
+                return i;
+
+        return throwException("Overlay \"" + overlayName + "\" defaults to style \"" + styleName
+                + "\", which it does not offer. Source: " + raceName);
     }
 
     // Equipment \\

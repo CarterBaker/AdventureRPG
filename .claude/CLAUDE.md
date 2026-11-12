@@ -8,6 +8,14 @@ When in doubt, find the closest existing system and mirror it exactly.
 
 ## Non-Negotiables
 
+- **Industry-standard techniques, always (highest priority).** Every system, asset and workflow uses the technique
+  professional studios and tools use for that job (UV-unwrapped meshes with texture maps, material variants by texture
+  or material swap, morph targets for shape variants, PBR-style maps kept in their own images, standard rigging and
+  skinning, and so on), never a home-grown shortcut that only imitates it. Before building, check the approach
+  against the standard; when the owner asks for something that is not the standard way, or when existing code or
+  assets are found doing something non-standard, say so plainly before proceeding and name the standard alternative.
+  A deliberate departure is fine where this engine's design calls for it (its own lifecycle, registry and `.arpg`
+  data), but it is stated, never silent.
 - **Always finish the job.** Every fix or implementation is complete and compiles. No TODOs, stubs,
   placeholders, "rest unchanged" snippets, or partial methods. If a change touches a caller, update the caller.
 - **Always professional.** Clean, deliberate, production-quality code. No hacks, no debug leftovers, no

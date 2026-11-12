@@ -1,6 +1,8 @@
 package application.runtime;
 
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.runtime.menueventsmanager.menus.charactercreator.CreatorSlider;
 import engine.graphics.color.Color;
 import engine.util.mathematics.vectors.Vector4;
 
@@ -183,6 +185,7 @@ public class RuntimeSetting {
     public static final String MENU_CREATOR_TAB = "CharacterCreator/creator_tab";
     public static final String MENU_CREATOR_SECTION_HEADER = "CharacterCreator/section_header";
     public static final String MENU_CREATOR_FEATURE_ROW = "CharacterCreator/feature_row";
+    public static final String MENU_CREATOR_STYLE_ROW = "CharacterCreator/style_row";
     public static final String MENU_CREATOR_SWATCH_ROW = "CharacterCreator/swatch_row";
     public static final String MENU_CREATOR_SWATCH = "CharacterCreator/swatch";
     public static final String MENU_CREATOR_SLIDER_ROW = "CharacterCreator/slider_row";
@@ -229,7 +232,12 @@ public class RuntimeSetting {
     public static final String CREATOR_SECTION_FACE_FEATURES = "Eyes & Teeth";
     public static final String CREATOR_SECTION_NIPPLE_COLOR = "Nipple Color";
     public static final String CREATOR_SECTION_BODY_HAIR_COLOR = "Body Hair Color";
-    public static final String CREATOR_SECTION_BODY_DETAILS = "Body Marks";
+    public static final String CREATOR_SECTION_TEETH_COLOR = "Teeth Color";
+    public static final String CREATOR_SECTION_BLUSH_COLOR = "Blush Color";
+    public static final String CREATOR_SECTION_FRECKLE_COLOR = "Freckle Color";
+    public static final String CREATOR_SECTION_BROWS = "Brows";
+    public static final String CREATOR_SECTION_NIPPLES = "Nipples";
+    public static final String CREATOR_SECTION_BODY_HAIR = "Body Hair";
     public static final String CREATOR_SECTION_HAIR_COLOR = "Hair Color";
     public static final String CREATOR_SECTION_BROW_COLOR = "Brow & Lash Color";
     public static final String CREATOR_SECTION_HAIR_DETAILS = "Hair Finish";
@@ -258,6 +266,11 @@ public class RuntimeSetting {
     public static final String CREATOR_FORMAT_HEIGHT = "%.2f m";
     public static final String CREATOR_FORMAT_WEIGHT = "%.0f kg";
     public static final String CREATOR_FORMAT_PERCENT = "%.0f%%";
+    public static final String CREATOR_FORMAT_DEGREES = "%.0f°";
+    public static final float CREATOR_HUE_DEGREES = 360f;
+    public static final String CREATOR_SLIDER_HUE = "Hue";
+    public static final String CREATOR_SLIDER_SATURATION = "Saturation";
+    public static final String CREATOR_SLIDER_BRIGHTNESS = "Brightness";
     public static final float CREATOR_HEAD_PROPORTION_MIN = 0.85f;
     public static final float CREATOR_HEAD_PROPORTION_MAX = 1.15f;
 
@@ -275,12 +288,21 @@ public class RuntimeSetting {
     public static final float[] CREATOR_DETAIL_MAX = { 1.3f, 1.4f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f,
             1f, 1f };
     public static final int[] CREATOR_APPEARANCE_DETAILS = { 0, 1, 3, 4, 5, 6, 7 };
-    public static final int[] CREATOR_HAIR_DETAILS = { 2, 8 };
-    public static final int[] CREATOR_BODY_DETAILS = { 9, 10, 11, 12, 13, 14, 15 };
+    public static final int[] CREATOR_HAIR_DETAILS = { 2 };
 
     // Character Creator — the worn parts each tab offers
     public static final FeatureSlot[] CREATOR_HAIR_FEATURES = { FeatureSlot.HAIR };
     public static final FeatureSlot[] CREATOR_FACE_FEATURES = { FeatureSlot.EYES, FeatureSlot.TEETH };
+
+    // Character Creator — the overlays each section offers, each with its style and amount, and the sliders under
+    // every color's swatches
+    public static final SkinnedOverlay[] CREATOR_BROW_OVERLAYS = { SkinnedOverlay.BROWS };
+    public static final SkinnedOverlay[] CREATOR_NIPPLE_OVERLAYS = { SkinnedOverlay.NIPPLES };
+    public static final SkinnedOverlay[] CREATOR_BODY_HAIR_OVERLAYS = {
+            SkinnedOverlay.CHEST_HAIR, SkinnedOverlay.STOMACH_HAIR, SkinnedOverlay.PUBIC_HAIR,
+            SkinnedOverlay.UNDERARM_HAIR, SkinnedOverlay.ARM_HAIR, SkinnedOverlay.LEG_HAIR };
+    public static final CreatorSlider[] CREATOR_COLOR_SLIDERS = {
+            CreatorSlider.COLOR_HUE, CreatorSlider.COLOR_SATURATION, CreatorSlider.COLOR_BRIGHTNESS };
     public static final float CREATOR_PERCENT_SCALE = 100f;
 
     // Character Creator Name

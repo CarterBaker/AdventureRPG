@@ -331,13 +331,16 @@ public class EntityRenderSystem extends SystemPackage {
 
     // Appearance \\
 
-    // The appearance worn and every overlay the gender's model places, the mask left to each draw
+    // The appearance worn and every overlay the gender's model places in the style worn, the mask left to each draw
     private void resolveAppearance(RaceGenderStruct raceGender, AppearanceHandle appearance) {
 
         appearanceScratch.reset();
 
         for (SkinnedOverlay skinnedOverlay : SkinnedOverlay.VALUES)
-            appearanceScratch.setOverlay(skinnedOverlay, raceGender.getOverlay(skinnedOverlay));
+            appearanceScratch.setOverlay(
+                    skinnedOverlay,
+                    raceGender.getOverlay(skinnedOverlay),
+                    appearance != null ? appearance.getOverlayStyle(skinnedOverlay) : EngineSetting.INDEX_NOT_FOUND);
 
         if (appearance == null)
             return;

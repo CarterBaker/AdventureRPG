@@ -5,6 +5,7 @@ import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.race.RaceData;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
@@ -14,6 +15,7 @@ import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
+import engine.graphics.color.Color;
 import engine.root.BranchPackage;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -208,7 +210,19 @@ public class CreatorBodyBranch extends BranchPackage {
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> applyHeadProportion(slider, player, value);
             case SHAPE -> player.getAppearanceHandle().setShapeValue(index, value);
             case DETAIL -> player.getAppearanceHandle().setDetail(SkinnedDetail.VALUES[index], value);
+            case COLOR_HUE, COLOR_SATURATION, COLOR_BRIGHTNESS -> applyColor(slider, player, index, value);
         }
+    }
+
+    // One of a color's hue, saturation and brightness moved, the other two held
+    private void applyColor(CreatorSlider slider, EntityInstance player, int index, float value) {
+
+        Color color = player.getAppearanceHandle().getColor(SkinnedColor.VALUES[index]);
+
+        color.setHSB(
+                slider == CreatorSlider.COLOR_HUE ? value : color.getHue(),
+                slider == CreatorSlider.COLOR_SATURATION ? value : color.getSaturation(),
+                slider == CreatorSlider.COLOR_BRIGHTNESS ? value : color.getBrightness());
     }
 
     private void applyHeight(EntityInstance player, float height) {
@@ -238,6 +252,9 @@ public class CreatorBodyBranch extends BranchPackage {
             case HEAD_DEPTH -> player.getAppearanceHandle().getHeadProportion().z;
             case SHAPE -> player.getAppearanceHandle().getShapeValue(index);
             case DETAIL -> player.getAppearanceHandle().getDetail(SkinnedDetail.VALUES[index]);
+            case COLOR_HUE -> player.getAppearanceHandle().getColor(SkinnedColor.VALUES[index]).getHue();
+            case COLOR_SATURATION -> player.getAppearanceHandle().getColor(SkinnedColor.VALUES[index]).getSaturation();
+            case COLOR_BRIGHTNESS -> player.getAppearanceHandle().getColor(SkinnedColor.VALUES[index]).getBrightness();
         };
     }
 
@@ -248,6 +265,7 @@ public class CreatorBodyBranch extends BranchPackage {
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> RuntimeSetting.CREATOR_HEAD_PROPORTION_MIN;
             case SHAPE -> player.getEntityData().getRaceData().getAppearanceData().getShape(index).getMin();
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_MIN[index];
+            case COLOR_HUE, COLOR_SATURATION, COLOR_BRIGHTNESS -> 0f;
         };
     }
 
@@ -258,6 +276,7 @@ public class CreatorBodyBranch extends BranchPackage {
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> RuntimeSetting.CREATOR_HEAD_PROPORTION_MAX;
             case SHAPE -> player.getEntityData().getRaceData().getAppearanceData().getShape(index).getMax();
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_MAX[index];
+            case COLOR_HUE, COLOR_SATURATION, COLOR_BRIGHTNESS -> 1f;
         };
     }
 
@@ -268,8 +287,10 @@ public class CreatorBodyBranch extends BranchPackage {
         return switch (slider) {
             case HEIGHT -> String.format(RuntimeSetting.CREATOR_FORMAT_HEIGHT, value);
             case WEIGHT -> String.format(RuntimeSetting.CREATOR_FORMAT_WEIGHT, value);
-            case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH, SHAPE, DETAIL -> String.format(
-                    RuntimeSetting.CREATOR_FORMAT_PERCENT, value * RuntimeSetting.CREATOR_PERCENT_SCALE);
+            case COLOR_HUE -> String.format(
+                    RuntimeSetting.CREATOR_FORMAT_DEGREES, value * RuntimeSetting.CREATOR_HUE_DEGREES);
+            case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH, SHAPE, DETAIL, COLOR_SATURATION, COLOR_BRIGHTNESS ->
+                    String.format(RuntimeSetting.CREATOR_FORMAT_PERCENT, value * RuntimeSetting.CREATOR_PERCENT_SCALE);
         };
     }
 
@@ -285,7 +306,7 @@ public class CreatorBodyBranch extends BranchPackage {
     }
 
     // A lower-case name split at its separators into capitalised words
-    private String toTitle(String name) {
+    String toTitle(String name) {
 
         String[] words = name.split(RuntimeSetting.CREATOR_SHAPE_NAME_SEPARATOR);
 

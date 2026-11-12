@@ -7,7 +7,8 @@ public enum CreatorSlider {
     /*
      * The values the creator exposes as sliders: the body's height and
      * weight, the head's proportions, and, indexed, every shape slider and
-     * detail amount of the character's appearance. A slider's name and index
+     * detail amount of the character's appearance, and the hue, saturation
+     * and brightness of each of its colors. A slider's name and index
      * ride as its drag argument, so the one drag handler knows which value
      * the track it received controls. Indexed sliders take their label from
      * the appearance.
@@ -19,7 +20,10 @@ public enum CreatorSlider {
     HEAD_LENGTH(RuntimeSetting.CREATOR_SLIDER_HEAD_HEIGHT),
     HEAD_DEPTH(RuntimeSetting.CREATOR_SLIDER_HEAD_DEPTH),
     SHAPE(null),
-    DETAIL(null);
+    DETAIL(null),
+    COLOR_HUE(RuntimeSetting.CREATOR_SLIDER_HUE),
+    COLOR_SATURATION(RuntimeSetting.CREATOR_SLIDER_SATURATION),
+    COLOR_BRIGHTNESS(RuntimeSetting.CREATOR_SLIDER_BRIGHTNESS);
 
     // Internal
     private final String label;

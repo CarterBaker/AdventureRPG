@@ -111,6 +111,25 @@ class CharacterEditBranch extends BranchPackage {
                 .addProperty(shapeName, value));
     }
 
+    // Overlays \\
+
+    // The style an overlay starts in on a gender's model
+    void setOverlayDefault(
+            CharacterDocumentInstance document,
+            String genderName,
+            String overlayName,
+            String styleName) {
+        edit(document, race -> CharacterViewUtility.requireObject(
+                        CharacterViewUtility.requireObject(
+                                CharacterViewUtility.requireObject(
+                                        CharacterViewUtility.requireObject(
+                                                race, EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
+                                        genderName),
+                                EditorSetting.CHARACTER_EDITOR_FIELD_OVERLAYS),
+                        overlayName)
+                .addProperty(EditorSetting.CHARACTER_EDITOR_FIELD_DEFAULT, styleName));
+    }
+
     // Colors \\
 
     void setColorChannel(CharacterDocumentInstance document, CharacterEditorColor color, int channel, float value) {

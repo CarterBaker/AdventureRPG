@@ -8,12 +8,15 @@ import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -99,14 +102,16 @@ class PlayerRestoreBranch extends BranchPackage {
             restoreAppearance(
                     ArpgUtility.validateObject(characterArpg, "appearance"),
                     player.getAppearanceHandle(),
-                    player.getEntityData().getRaceData().getAppearanceData());
+                    player.getEntityData().getRaceData().getAppearanceData(),
+                    player.getRaceGender());
     }
 
     // Every color, amount and shape the save holds; anything it leaves out keeps the template's default
     private void restoreAppearance(
             ArpgObjectStruct appearanceArpg,
             AppearanceHandle appearanceHandle,
-            AppearanceData appearanceData) {
+            AppearanceData appearanceData,
+            RaceGenderStruct raceGender) {
 
         Vector3 headProportion = parseVector(appearanceArpg, "head_proportion");
         ArpgObjectStruct colorsArpg = getBlock(appearanceArpg, "colors");
@@ -149,6 +154,23 @@ class PlayerRestoreBranch extends BranchPackage {
         appearanceHandle.setHeadProportion(headProportion.x, headProportion.y, headProportion.z);
 
         restoreFeatures(ArpgUtility.validateObject(appearanceArpg, "features"), appearanceHandle);
+        restoreOverlayStyles(getBlock(appearanceArpg, "overlay_styles"), appearanceHandle, raceGender);
+    }
+
+    // A style the save names that the gender's model no longer offers leaves the overlay in its default
+    private void restoreOverlayStyles(
+            ArpgObjectStruct stylesArpg,
+            AppearanceHandle appearanceHandle,
+            RaceGenderStruct raceGender) {
+
+        for (SkinnedOverlay skinnedOverlay : SkinnedOverlay.VALUES) {
+
+            String key = ArpgUtility.toEnumName(skinnedOverlay);
+            SkinnedOverlayStruct overlay = raceGender.getOverlay(skinnedOverlay);
+
+            if (overlay != null && ArpgUtility.hasString(stylesArpg, key))
+                appearanceHandle.setOverlayStyle(skinnedOverlay, overlay.findStyle(stylesArpg.get(key).getAsString()));
+        }
     }
 
     private ArpgObjectStruct getBlock(ArpgObjectStruct arpg, String key) {

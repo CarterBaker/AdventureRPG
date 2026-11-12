@@ -8,8 +8,11 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
@@ -67,12 +70,17 @@ class PlayerSaveBranch extends BranchPackage {
 
         if (player.hasAppearance())
             characterArpg.add("appearance", buildAppearance(
-                    player.getAppearanceHandle(), player.getEntityData().getRaceData().getAppearanceData()));
+                    player.getAppearanceHandle(),
+                    player.getEntityData().getRaceData().getAppearanceData(),
+                    player.getRaceGender()));
 
         return characterArpg;
     }
 
-    private ArpgObjectStruct buildAppearance(AppearanceHandle appearanceHandle, AppearanceData appearanceData) {
+    private ArpgObjectStruct buildAppearance(
+            AppearanceHandle appearanceHandle,
+            AppearanceData appearanceData,
+            RaceGenderStruct raceGender) {
 
         ArpgObjectStruct appearanceArpg = new ArpgObjectStruct();
         appearanceArpg.add("colors", buildColors(appearanceHandle));
@@ -80,7 +88,25 @@ class PlayerSaveBranch extends BranchPackage {
         appearanceArpg.add("shapes", buildShapes(appearanceHandle, appearanceData));
         appearanceArpg.add("head_proportion", buildVector(appearanceHandle.getHeadProportion()));
         appearanceArpg.add("features", buildFeatures(appearanceHandle));
+        appearanceArpg.add("overlay_styles", buildOverlayStyles(appearanceHandle, raceGender));
         return appearanceArpg;
+    }
+
+    // The style of every overlay the player chose one for, by name, so it survives the styles' order changing
+    private ArpgObjectStruct buildOverlayStyles(AppearanceHandle appearanceHandle, RaceGenderStruct raceGender) {
+
+        ArpgObjectStruct stylesArpg = new ArpgObjectStruct();
+
+        for (SkinnedOverlay skinnedOverlay : SkinnedOverlay.VALUES) {
+
+            SkinnedOverlayStruct overlay = raceGender.getOverlay(skinnedOverlay);
+            int styleIndex = appearanceHandle.getOverlayStyle(skinnedOverlay);
+
+            if (overlay != null && styleIndex >= 0 && styleIndex < overlay.getStyleCount())
+                stylesArpg.addProperty(ArpgUtility.toEnumName(skinnedOverlay), overlay.getStyleName(styleIndex));
+        }
+
+        return stylesArpg;
     }
 
     private ArpgObjectStruct buildColors(AppearanceHandle appearanceHandle) {

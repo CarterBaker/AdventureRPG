@@ -735,6 +735,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_FIELD_FEATURES = "features";
     public static final String CHARACTER_EDITOR_FIELD_GENDERS = "genders";
     public static final String CHARACTER_EDITOR_FIELD_SHAPES = "shapes";
+    public static final String CHARACTER_EDITOR_FIELD_OVERLAYS = "overlays";
+    public static final String CHARACTER_EDITOR_FIELD_DEFAULT = "default";
     public static final String CHARACTER_EDITOR_FIELD_COLORS = "colors";
     public static final String CHARACTER_EDITOR_FIELD_PALETTES = "palettes";
     public static final String CHARACTER_EDITOR_FIELD_DETAILS = "details";
@@ -753,6 +755,7 @@ public class EditorSetting {
     // Character Editor — panel keys
     public static final String CHARACTER_EDITOR_KEY_POSE = "pose";
     public static final String CHARACTER_EDITOR_KEY_SIDE = "side";
+    public static final String CHARACTER_EDITOR_KEY_OVERLAY_STYLE = "overlay_style";
     public static final String CHARACTER_EDITOR_KEY_GENDER = "gender";
     public static final String CHARACTER_EDITOR_KEY_FEATURE = "feature";
     public static final String CHARACTER_EDITOR_KEY_COLOR_PREFIX = "color_";
@@ -830,12 +833,13 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_HEADER_NO_APPEARANCE = "No appearance block";
     public static final String[] CHARACTER_EDITOR_COLOR_HEADERS = {
             "Skin", "Eyes", "Hair", "Brows & Lashes", "Lips", "Blush", "Freckles", "Clothing", "Nipples",
-            "Body Hair" };
+            "Body Hair", "Teeth" };
     public static final String[] CHARACTER_EDITOR_DETAIL_LABELS = {
             "Iris Size", "Pupil Size", "Hair Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes",
             "Brow Thickness", "Nipples", "Chest Hair", "Stomach Hair", "Pubic Hair", "Underarm Hair", "Arm Hair",
             "Leg Hair" };
     public static final String CHARACTER_EDITOR_HEADER_DETAILS = "Details";
+    public static final String CHARACTER_EDITOR_HEADER_OVERLAYS = "Marks";
     public static final String CHARACTER_EDITOR_HEADER_SHAPE_KEYS = "Shape Keys";
     public static final String CHARACTER_EDITOR_LABEL_BLINK = "Blink";
     public static final String CHARACTER_EDITOR_LABEL_SHAPE_MIN = "Min";

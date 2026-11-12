@@ -191,12 +191,19 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   keeps only fragments they carry at least half of (part isolation). A rig may hold at most
   `SKINNED_BONE_MASK_CAPACITY` bones.
 - **Overlays.** Brows, nipples and body hair (`SkinnedOverlay`: chest, stomach, pubic, underarm, arm, leg) are images
-  painted over the skin, never geometry. Each gender's model places them (`genders.<g>.overlays`: `texture` in the
-  character atlas, `projection` front, back or wrap, box `center` and `size` on the bind-pose body, `mirror`, and a
-  wrapped image's `repeat` per block; `RaceGenderStruct.getOverlay`), written into each draw as three texels
-  (`SkinnedOverlayStruct`). The shader lays them on the position before morphs (`v_bindPosition`), so they stay on
-  the same skin however the body is shaped or posed, tinted by the overlay's `SkinnedColor` (`BROWS`, `NIPPLES`,
-  `BODY_HAIR`) and shown as far as its `SkinnedDetail`, which thins the image's coverage from its faint edges in.
+  painted over the skin, never geometry. Each gender's model places them (`genders.<g>.overlays`: the `styles` it
+  offers, each a `name` and a `texture` in the character atlas, the style worn by `default`, the `projection` front,
+  back or wrap, the box `center` and `size` on the bind-pose body, `mirror`, and a wrapped image's `repeat` per block;
+  `RaceGenderStruct.getOverlay`), written into each draw as three texels, the tile that of the style worn
+  (`SkinnedOverlayStruct.write`, `AppearanceHandle.getOverlayStyle`, `INDEX_NOT_FOUND` for the model's default). The
+  shader lays them on the position before morphs (`v_bindPosition`), so they stay on the same skin however the body
+  is shaped or posed, tinted by the overlay's `SkinnedColor` (`BROWS`, `NIPPLES`, `BODY_HAIR`) and shown as far as
+  its `SkinnedDetail`. Saves keep a chosen style by name (`overlay_styles`); the creator lists a style row and an
+  amount per overlay, and the Character Appearance outliner's Marks rows set the previewed gender's `default`.
+  **Not yet industry standard:** the box projection stands in for UV-space layers until the bodies are unwrapped;
+  the planned replacement is in the handoff the owner holds.
+- **Colors in the creator.** Every color section lists the race's palette swatches, then Hue, Saturation and
+  Brightness sliders (`CreatorSlider.COLOR_*`, `Color.setHSB`) for any color between. Teeth take `SkinnedColor.TEETH`.
 - **Appearance.** `AppearanceData` holds the race's body meshes (each gender's `mesh`, in the race's order),
   colors, palettes, details, shape sliders and the morphs each `AppearanceExpression` plays, the morphs resolved on
   every body (`getShapeMorph`, `getExpressionMorph`). A slider (`AppearanceShapeStruct`) is known by its `name` (its

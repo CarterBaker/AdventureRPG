@@ -49,7 +49,6 @@ const int   CHARACTER_PROJECT_FRONT   = 0;
 const int   CHARACTER_PROJECT_WRAP    = 2;
 const int   CHARACTER_PROJECT_MIRROR  = 4;
 
-const vec3  CHARACTER_TEETH          = vec3(0.95, 0.94, 0.90);
 const float CHARACTER_MOUTH_SHADE    = 0.35;
 const float CHARACTER_LASH_SHADE     = 0.25;
 
@@ -252,7 +251,7 @@ CharacterSurface resolveCharacterSurface(
     } else if (zone == CHARACTER_ZONE_LASH) {
         surface.albedo = fetchCharacterColor(instance, CHARACTER_COLOR_BROWS) * CHARACTER_LASH_SHADE;
     } else if (zone == CHARACTER_ZONE_TEETH) {
-        surface.albedo = CHARACTER_TEETH;
+        surface.albedo = fetchCharacterColor(instance, CHARACTER_COLOR_TEETH);
     } else if (zone == CHARACTER_ZONE_MOUTH) {
         surface.albedo = fetchCharacterColor(instance, CHARACTER_COLOR_LIPS) * CHARACTER_MOUTH_SHADE;
     } else if (zone == CHARACTER_ZONE_CLOTH) {
