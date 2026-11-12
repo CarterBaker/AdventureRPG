@@ -396,6 +396,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_OPTION_RENDER_DISTANCE = "Distance";
     public static final String SETTINGS_OPTION_TERRAIN_DETAIL = "Detail";
     public static final String SETTINGS_OPTION_TREE_DETAIL = "Tree Detail";
+    public static final String SETTINGS_OPTION_CHARACTER_DETAIL = "Character Detail";
     public static final String SETTINGS_OPTION_MACRO_TERRAIN = "Distant Terrain";
     public static final String SETTINGS_OPTION_CHUNK_STREAMING = "Chunks";
     public static final String SETTINGS_OPTION_OUTLINES = "Outlines";
@@ -440,6 +441,7 @@ public class RuntimeSetting {
     public static final int SETTINGS_RENDER_DISTANCE_PER_RADIUS = 2;
     public static final int SETTINGS_TERRAIN_DETAIL_STEP = 8;
     public static final int SETTINGS_TREE_DETAIL_STEP = 1;
+    public static final int SETTINGS_CHARACTER_DETAIL_STEP = 2;
     public static final float SETTINGS_FIELD_OF_VIEW_STEP = 5f;
     public static final float SETTINGS_SLIDER_PERCENT_SCALE = 100f;
 

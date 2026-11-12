@@ -12,5 +12,11 @@ layout(std140) uniform SettingsData {
     // relief, material maps and covering growth. See
     // surface/includes/SurfaceTessellationTier.glsl.
     float u_detailRadius;
+
+    // Source: application Settings — runtime, user-configurable. Distance in
+    // blocks out to which characters draw their fine detail: normal maps,
+    // relief and the eyes' depth and reflections. See
+    // characters/includes/CharacterMaterial.glsl.
+    float u_characterDetail;
 };
 #endif

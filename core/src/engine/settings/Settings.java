@@ -33,6 +33,7 @@ public class Settings {
     public int maxRenderDistance = 32;
     public int detailRadius = 48;
     public int treeDetailDistance = 4;
+    public int characterDetailDistance = 12;
     public boolean macroTerrain = true;
 
     // Render — Main Menu

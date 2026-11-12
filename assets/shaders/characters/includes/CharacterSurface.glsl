@@ -5,8 +5,6 @@
 #include "characters/includes/CharacterAppearance.glsl"
 #include "characters/includes/CharacterZone.glsl"
 
-uniform sampler2DArray u_texture;
-
 // A character's surface is shaded by the zone its face is made of, from the colors and amounts in its palette row.
 // Skin takes its tile tinted by the skin color, then blemishes, blush, freckles, lip color and eyeliner where the
 // mesh's masks paint them; freckles and blemishes are cells fixed to the bind-pose surface, so they stay put as the

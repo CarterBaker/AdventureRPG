@@ -52,6 +52,13 @@ public class SettingsValueUtility extends EngineUtility {
                 settings.treeDetailDistance = stepTreeDetail(settings.treeDetailDistance, step);
                 settingsSystem.applyTreeDetail();
             }
+            case CHARACTER_DETAIL -> {
+                settings.characterDetailDistance = Math.clamp(
+                        settings.characterDetailDistance + step * RuntimeSetting.SETTINGS_CHARACTER_DETAIL_STEP,
+                        EngineSetting.CHARACTER_DETAIL_DISTANCE_MIN,
+                        EngineSetting.CHARACTER_DETAIL_DISTANCE_MAX);
+                settingsSystem.applyCharacterDetail();
+            }
             case MACRO_TERRAIN -> settings.macroTerrain = !settings.macroTerrain;
             case MENU_CHUNK_STREAMING -> settings.menuChunkStreaming = !settings.menuChunkStreaming;
             case MENU_RENDER_DISTANCE -> settings.menuRenderDistance = stepRenderDistance(
@@ -119,6 +126,9 @@ public class SettingsValueUtility extends EngineUtility {
                     RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
                     settings.detailRadius);
             case TREE_DETAIL -> String.format(RuntimeSetting.SETTINGS_FORMAT_CHUNKS, settings.treeDetailDistance);
+            case CHARACTER_DETAIL -> String.format(
+                    RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
+                    settings.characterDetailDistance);
             case MACRO_TERRAIN -> formatToggle(settings.macroTerrain);
             case MENU_CHUNK_STREAMING -> formatToggle(settings.menuChunkStreaming);
             case MENU_RENDER_DISTANCE -> formatRenderDistance(settings.menuRenderDistance);

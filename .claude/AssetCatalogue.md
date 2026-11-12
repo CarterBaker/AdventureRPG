@@ -231,9 +231,21 @@ One line per session that changed this file: the date, what was added or removed
   (teeth color).
 - 2026-11-12: Editor startup fix. Regenerated `schemas/Races.arpg` (each overlay's `default` names a style of its own
   gender's overlay through a local path, so the editor no longer refuses the schema at boot).
+- 2026-11-12: Professional base bodies in an A-pose. Regenerated `mesh/characters/humanoid/HumanoidMaleMesh.arpg` and
+  `HumanoidFemaleMesh.arpg` (new game-topology bodies after the owner's references, about seven heads tall, the old
+  heads enlarged and the old hands kept, body morphs regenerated), `HumanoidEyesMesh.arpg`, `HumanoidTeethMesh.arpg`
+  and the four hair meshes (moved with the enlarged head), `rigs/HumanoidRig.arpg` (A-pose bind, head and face bones
+  moved), every non-additive clip under `animations/humanoid/` and `animations/humanoid/poses/` (retargeted onto the
+  A-pose) and `races/Human.arpg` (anchors, face controls and overlay boxes on the new bodies).
+- 2026-11-12: Character material maps and body UVs. Added the texture aliases `Roughness` and `Tint`, the shader include
+  `characters/includes/CharacterMaterial.glsl` and the body maps `MaleBody` and `FemaleBody` (albedo, AO, normal in
+  each body's UV layout); regenerated `ubos/CharactersStandard.arpg` (every material layer), `ubos/SettingsData.arpg`
+  (`u_characterDetail`), `shaders/includes/SettingsData.glsl`, `characters/includes/CharactersStandard.glsl`,
+  `CharacterSurface.glsl`, `characters/standard/StandardcharacterShader.fsh`,
+  `editor/characterview/CharacterViewCharacterShader.fsh` and both body meshes (unwrapped, drawn with their maps).
 ---
 
-## Textures and Sprites (2290 files)
+## Textures and Sprites (2296 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -445,7 +457,9 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `ChestHairCenterOverlay`: A
 - `ChestHairLightOverlay`: A
 - `ChestHairOverlay`: A
+- `FemaleBody`: A, ao, n
 - `Hair`: A
+- `MaleBody`: A, ao, n
 - `NippleLargeOverlay`: A
 - `NippleOverlay`: A
 - `NippleSmallOverlay`: A
@@ -1251,12 +1265,12 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (182 files)
+## Shaders (183 files)
 
 ### `assets/shaders/characters/includes/`
 
-`CharacterAppearance.glsl`, `CharacterHair.glsl`, `CharacterHidden.glsl`, `CharacterNormal.glsl`,
-`CharacterSurface.glsl`, `CharacterZone.glsl`, `CharactersStandard.glsl`
+`CharacterAppearance.glsl`, `CharacterHair.glsl`, `CharacterHidden.glsl`, `CharacterMaterial.glsl`,
+`CharacterNormal.glsl`, `CharacterSurface.glsl`, `CharacterZone.glsl`, `CharactersStandard.glsl`
 
 ### `assets/shaders/characters/standard/`
 
@@ -1571,7 +1585,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1794 files)
+## Data Files (1796 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2982,7 +2996,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/texturealiases/`
 
-`Albedo.arpg`, `AO.arpg`, `Emissive.arpg`, `Growth.arpg`, `Height.arpg`, `Metal.arpg`, `Normal.arpg`, `Specular.arpg`
+`Albedo.arpg`, `AO.arpg`, `Emissive.arpg`, `Growth.arpg`, `Height.arpg`, `Metal.arpg`, `Normal.arpg`, `Roughness.arpg`,
+`Specular.arpg`, `Tint.arpg`
 
 ### `assets/tiers/`
 

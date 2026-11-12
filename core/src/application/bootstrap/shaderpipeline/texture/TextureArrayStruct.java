@@ -3,18 +3,15 @@ package application.bootstrap.shaderpipeline.texture;
 import java.awt.image.BufferedImage;
 
 import engine.root.StructPackage;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 public class TextureArrayStruct extends StructPackage {
 
     /*
      * Bootstrap container grouping all alias layers for one texture array
-     * directory. Carries the tile coordinate map and the set of alias IDs
-     * actually found in source files — used by seedUBO to write only the
-     * uniforms this atlas provides. Cleared and GCs with the loader after
-     * GPU upload.
+     * directory, every alias holding a layer (its default color where no
+     * source file provides it), with the tile coordinate map. Cleared and
+     * GCs with the loader after GPU upload.
      */
 
     // Identity
@@ -27,9 +24,6 @@ public class TextureArrayStruct extends StructPackage {
     // Tiles
     private final Object2ObjectOpenHashMap<String, TextureTileStruct> tileCoordinateMap;
 
-    // Alias Tracking
-    private final IntSet foundAliasIds;
-
     // Constructor \\
 
     public TextureArrayStruct(
@@ -41,17 +35,6 @@ public class TextureArrayStruct extends StructPackage {
         this.atlasPixelSize = atlasPixelSize;
         this.textureArray = textureArray;
         this.tileCoordinateMap = new Object2ObjectOpenHashMap<>();
-        this.foundAliasIds = new IntOpenHashSet();
-    }
-
-    // Alias Tracking \\
-
-    public void registerFoundAlias(int aliasId) {
-        foundAliasIds.add(aliasId);
-    }
-
-    public IntSet getFoundAliasIds() {
-        return foundAliasIds;
     }
 
     // Tiles \\

@@ -539,6 +539,8 @@ public class EngineSetting {
     public static final int RENDER_DISTANCE_MIN = 16;
     public static final int TREE_DETAIL_DISTANCE_MAX = 6;
     public static final int TREE_DETAIL_DISTANCE_MIN = 2;
+    public static final int CHARACTER_DETAIL_DISTANCE_MAX = 48;
+    public static final int CHARACTER_DETAIL_DISTANCE_MIN = 2;
 
     // User Settings — Post Processing
     public static final float BLOOM_INTENSITY_MAX = 1f;
@@ -691,6 +693,7 @@ public class EngineSetting {
     public static final String UNIFORM_CURRENT_MINUTE = "u_currentMinute";
     public static final String UNIFORM_DELTA_TIME = "u_deltaTime";
     public static final String UNIFORM_DETAIL_RADIUS = "u_detailRadius";
+    public static final String UNIFORM_CHARACTER_DETAIL = "u_characterDetail";
     public static final String UNIFORM_DEST_RECT = "u_destRect";
     public static final String UNIFORM_DISTANCE_FROM_CENTER = "u_distanceFromCenter";
     public static final String UNIFORM_FACE_ORIENTATIONS = "u_faceOrientations";

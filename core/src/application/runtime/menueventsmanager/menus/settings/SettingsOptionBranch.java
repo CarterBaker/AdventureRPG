@@ -61,6 +61,7 @@ public class SettingsOptionBranch extends BranchPackage {
         injectOptionRow(session, SettingsOption.RENDER_DISTANCE);
         injectOptionRow(session, SettingsOption.TERRAIN_DETAIL);
         injectOptionRow(session, SettingsOption.TREE_DETAIL);
+        injectOptionRow(session, SettingsOption.CHARACTER_DETAIL);
         injectOptionRow(session, SettingsOption.MACRO_TERRAIN);
         settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_MACRO_TERRAIN);
         settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_WORLD_APPLY);

@@ -10,7 +10,6 @@ import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
 import engine.util.mathematics.vectors.Vector2;
-import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -18,8 +17,9 @@ class TextureLoader extends LoaderPackage {
 
     /*
      * Discovers atlas directories and loads one per load() call: builds the
-     * atlas, seeds its optional companion UBO with the aliases present, uploads
-     * it, and frees the heap images.
+     * atlas, seeds its optional companion UBO with the layer of every alias it
+     * declares (a layer no source provides holds the alias's default color),
+     * uploads it, and frees the heap images.
      */
 
     // Internal
@@ -110,12 +110,9 @@ class TextureLoader extends LoaderPackage {
         if (ubo == null)
             return;
 
-        IntIterator it = arrayStruct.getFoundAliasIds().iterator();
-
-        while (it.hasNext()) {
-            int aliasId = it.nextInt();
+        for (int aliasId = 0; aliasId < aliasLibrarySystem.getAliasCount(); aliasId++) {
             String uniformName = aliasLibrarySystem.getUniformName(aliasId);
-            if (uniformName != null && !uniformName.isEmpty())
+            if (uniformName != null && ubo.getCompiledUniform(uniformName) != null)
                 ubo.updateUniform(uniformName, aliasId);
         }
 

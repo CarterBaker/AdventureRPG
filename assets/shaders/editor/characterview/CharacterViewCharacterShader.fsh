@@ -13,6 +13,7 @@ flat in int v_instance;
 
 #include "includes/CameraData.glsl"
 #include "characters/includes/CharactersStandard.glsl"
+#include "characters/includes/CharacterMaterial.glsl"
 #include "characters/includes/CharacterSurface.glsl"
 #include "characters/includes/CharacterHidden.glsl"
 #include "characters/includes/CharacterNormal.glsl"
@@ -35,17 +36,21 @@ void main() {
     if (base.a < 0.01)
     discard;
 
-    vec3 normalView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
+    vec3 smoothView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
+    CharacterMaterial material = sampleCharacterMaterial(v_uv.xy, v_viewPosition, smoothView);
+    vec3 normalView = material.normal;
     CharacterSurface surface = resolveCharacterSurface(
         v_instance, v_zone, base.rgb, v_uv.zw, v_masks, v_surfacePosition, v_bindPosition, v_bindNormal, normalView);
+    vec3  albedo    = resolveCharacterAlbedo(base.rgb, surface.albedo, material);
+    float specular  = resolveCharacterSpecular(surface.specular, material);
 
     vec3  viewDir   = normalize(-v_viewPosition);
     vec3  lightView = normalize(mat3(u_view) * -u_lightDirection);
     vec3  halfway   = normalize(lightView + viewDir);
     float diffuse   = max(dot(normalView, lightView), 0.0);
-    float highlight = surface.specular * pow(max(dot(normalView, halfway), 0.0), 32.0);
+    float highlight = specular * pow(max(dot(normalView, halfway), 0.0), 32.0);
     vec3  light     = vec3(1.0 - u_ambient);
 
-    FragColor = vec4(resolveToonLight(surface.albedo, normalView, viewDir, diffuse, 1.0, highlight, 0.0, u_ambient,
-                                      light, vec3(0.0)), 1.0);
+    FragColor = vec4(resolveToonLight(albedo, normalView, viewDir, diffuse, 1.0, highlight, 0.0,
+                                      u_ambient * material.ao, light, vec3(0.0)), 1.0);
 }

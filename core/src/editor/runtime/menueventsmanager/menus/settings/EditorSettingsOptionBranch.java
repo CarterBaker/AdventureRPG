@@ -78,6 +78,7 @@ public class EditorSettingsOptionBranch extends BranchPackage {
         injectOptionRow(SettingsOption.RENDER_DISTANCE);
         injectOptionRow(SettingsOption.TERRAIN_DETAIL);
         injectOptionRow(SettingsOption.TREE_DETAIL);
+        injectOptionRow(SettingsOption.CHARACTER_DETAIL);
         injectOptionRow(SettingsOption.MACRO_TERRAIN);
         editorSettingsBranch.injectNote(RuntimeSetting.SETTINGS_NOTE_MACRO_TERRAIN);
         editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_WORLD_APPLY);

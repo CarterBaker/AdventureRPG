@@ -12,6 +12,7 @@ flat in int v_zone;
 flat in int v_instance;
 
 #include "characters/includes/CharactersStandard.glsl"
+#include "characters/includes/CharacterMaterial.glsl"
 #include "characters/includes/CharacterSurface.glsl"
 #include "characters/includes/CharacterHidden.glsl"
 #include "characters/includes/CharacterNormal.glsl"
@@ -41,14 +42,16 @@ void main() {
     if (base.a < 0.01)
     discard;
 
-    vec3 normalView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
+    vec3 smoothView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
+    CharacterMaterial material = sampleCharacterMaterial(v_uv.xy, v_viewPosition, smoothView);
+    vec3 normalView = material.normal;
     CharacterSurface surface = resolveCharacterSurface(
         v_instance, v_zone, base.rgb, v_uv.zw, v_masks, v_surfacePosition, v_bindPosition, v_bindNormal, normalView);
 
     // Blending is enabled for this pass, so every target writes alpha = 1.0.
     // gMaterial packs r = sun visibility, g = specular, b = ao (see
     // StandardSurfaceShader.fsh).
-    gAlbedo   = vec4(surface.albedo, 1.0);
+    gAlbedo   = vec4(resolveCharacterAlbedo(base.rgb, surface.albedo, material), 1.0);
     gNormal   = vec4(encodeSmoothNormal(normalView), 1.0);
-    gMaterial = vec4(1.0, surface.specular, 1.0, 1.0);
+    gMaterial = vec4(1.0, resolveCharacterSpecular(surface.specular, material), material.ao, 1.0);
 }

@@ -16,7 +16,8 @@ public class SettingsSystem extends SystemPackage {
      * Applies user settings to the running engine and writes them to disk.
      * Every settings change routes through one method per category: display
      * mode through the window platform, field of view onto every window's
-     * camera, render settings through onRenderSettingsChanged(), effect
+     * camera, render settings through onRenderSettingsChanged() (character
+     * detail through applyCharacterDetail(), the uniform alone), effect
      * settings through applyPostProcessing(), and saveSettings() for the
      * file. Owns the RenderSettingsData and PostProcessData UBOs — the single
      * source of truth for render and effect settings on the GPU — and the two
@@ -82,12 +83,20 @@ public class SettingsSystem extends SystemPackage {
         // Source: application Settings — runtime, user-configurable
         renderSettingsData.updateUniform(EngineSetting.UNIFORM_RENDER_DISTANCE, (float) settings.maxRenderDistance);
         renderSettingsData.updateUniform(EngineSetting.UNIFORM_DETAIL_RADIUS, (float) settings.detailRadius);
+        renderSettingsData.updateUniform(
+                EngineSetting.UNIFORM_CHARACTER_DETAIL,
+                (float) settings.characterDetailDistance);
         uboManager.push(renderSettingsData);
     }
 
     public void onRenderSettingsChanged() {
         refreshRanges();
         this.rangeRevision++;
+        pushRenderSettings();
+    }
+
+    // Character detail is read live by the character shaders, so only the uniform changes
+    public void applyCharacterDetail() {
         pushRenderSettings();
     }
 

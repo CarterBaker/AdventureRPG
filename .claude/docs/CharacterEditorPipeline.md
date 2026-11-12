@@ -200,8 +200,24 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   is shaped or posed, tinted by the overlay's `SkinnedColor` (`BROWS`, `NIPPLES`, `BODY_HAIR`) and shown as far as
   its `SkinnedDetail`. Saves keep a chosen style by name (`overlay_styles`); the creator lists a style row and an
   amount per overlay, and the Character Appearance outliner's Marks rows set the previewed gender's `default`.
-  **Not yet industry standard:** the box projection stands in for UV-space layers until the bodies are unwrapped;
-  the planned replacement is in the handoff the owner holds.
+  **Not yet industry standard:** the box projection stands in for UV-space layers on the unwrapped bodies; the
+  planned replacement is in the handoff the owner holds. The boxes are laid on the A-pose body; the arm hair's
+  wrap box is axis-aligned, so it covers the slanted arm only roughly until then.
+- **Material maps.** Every character texture may carry the material maps by file suffix like any atlas
+  (`texturealiases/`): albedo, normal, height, AO, metallic, roughness and tint, each its own image; a map no file
+  provides is its alias's default color (flat normal, AO 1, metallic 0, roughness 0.5, tint 1), and `TextureLoader`
+  seeds every layer the atlas's UBO declares (`ubos/CharactersStandard.arpg`).
+  `characters/includes/CharacterMaterial.glsl` samples them: the normal map through a tangent frame rebuilt from screen-space derivatives (meshes carry no tangents),
+  AO into the lighting's ambient, roughness and metallic into the highlight, and the tint mask choosing where the
+  player's colors reach (`resolveCharacterAlbedo`: 0 keeps the texture's own color, so gold or silver never takes the
+  teeth color). Fine detail fades out toward the Character Detail distance (`Settings.characterDetailDistance`, the
+  graphics menu's Character Detail row, pushed by `SettingsSystem.applyCharacterDetail` into `u_characterDetail` of
+  `SettingsData`); every detail feature reads `resolveCharacterDetail`, never a distance of its own.
+- **Body UVs.** Each body is unwrapped into its own layout (`characters/standard/MaleBody`, `FemaleBody`: albedo
+  near white, tinted by the skin color, with AO and normal maps). Shells: head (denser), torso front and back (side and
+  shoulder seams), each arm (seam under the arm), each leg with its foot (seam up the inner leg and along the sole),
+  each hand's palm and back, each ear. The genders' hands differ in topology, so the genders do not share a layout.
+  A topology change means a new unwrap and a transfer of the painted maps; sculpting, morphs and posing keep them.
 - **Colors in the creator.** Every color section lists the race's palette swatches, then Hue, Saturation and
   Brightness sliders (`CreatorSlider.COLOR_*`, `Color.setHSB`) for any color between. Teeth take `SkinnedColor.TEETH`.
 - **Appearance.** `AppearanceData` holds the race's body meshes (each gender's `mesh`, in the race's order),
@@ -227,9 +243,19 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Assets.** The race `races/Human` (entity `HumanoidEntity`) is male, its default, or female. `HumanoidMaleMesh` and
   `HumanoidFemaleMesh` share the rig with its 15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes,
   brows, ears) set on the anime heads, three joints on every finger and the thumb of each hand and a toe at each
-  foot's ball, and carry the same morphs (blinks, body sliders, `ear_point`). Each head is a smooth grid stitched to
-  the body's neck ring, with eye sockets whose lids close over the eye (the upper lid edge in the lash zone), a mouth
-  cavity behind the lips (mouth zone) and ears as their own shells; the meshes are exactly symmetric. Both genders
+  foot's ball, and carry the same morphs (blinks, body sliders, `ear_point`). Each body is game topology about seven
+  heads tall: edge loops at the joints, 16 columns round the torso, 12 round each leg, 8 round each arm, sock feet,
+  and on the female a radial loop (pole, areola ring, two rings) on each breast. The head (a dense grid with eye
+  sockets whose lids close over the eye, the upper lid edge in the lash zone, a mouth cavity behind the lips in the
+  mouth zone, and ears as their own shells) and the hands join the body through quad reduction rows (16 to 32 to 64
+  at the neck, 8 to 16 to 32 at each forearm). The body is exactly symmetric; the hands nearly so, as modelled.
+- **A-pose bind.** `HumanoidRig` binds the arms in an A-pose: each upper arm carries a bind `rotation` of 37 degrees
+  about z (`upper_arm_r` -37), so the arms hang 45 degrees from vertical, and every mesh, anchor and arm or finger IK
+  pole is laid out in that pose. A clip's rotation is added to the bind's and z composes outermost, so every clip
+  outside an additive layer keys each upper arm's z 37 degrees below what it would key against arms at the sides,
+  and lists an upper-arm track even when it holds the arm still (an override layer writes a missing track as zero,
+  the A-pose). Additive clips (Lean, Look) never key the arms. Key a new clip the same way; the Animation Editor's
+  pose and IK tools already work against the bind rotation. Both genders
   wear `features/humanoid/eyes/HumanoidEyes` (`HumanoidEyesMesh`, drawn from the eye zone's raw UVs with
   `CharacterEyeMaterial`) and `features/humanoid/teeth/HumanoidTeeth` (`HumanoidTeethMesh`: both rows of teeth and
   the tongue, `CharacterTeethMaterial`). `HumanoidRig` names its `parts` (eyes, mouth, hands, feet) and seven
@@ -364,4 +390,6 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Part editors need rig parts.** A rig without `parts` leaves the Hand, Foot, Eye and Mouth Editors showing
   nothing; name the bones there, not in code.
 - **Euler angles.** Bones compose `Rz * Ry * Rx` from degrees and a clip's rotation is added to the bind rotation.
+  **Not industry standard:** engines compose a clip's rotation with the bind as quaternions and blend layers by slerp;
+  summing and lerping Euler angles holds only while turns stay small or share an axis.
   Read a turn back with `CharacterPoseUtility.toEuler` against the angle it replaces, so keys never spin the long way.

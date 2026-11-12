@@ -25,8 +25,8 @@ class TextureBuilder extends BuilderPackage {
     /*
      * Builds TextureArrayStructs from image files: creates tiles, records each
      * tile's average albedo and its reveal, packs the atlas and composites one
-     * layer per alias. Only aliases found in the sources are registered, so
-     * UBO seeding writes exactly those. The average is weighted by coverage,
+     * layer per alias, filled with the alias's default color wherever no
+     * source provides it. The average is weighted by coverage,
      * so a cutout texture's transparent pixels never darken it. The reveal
      * follows the surface shader's full draw of a covering texel for texel —
      * shown once its growth is reached and its alpha clears the cutoff, tinted
@@ -339,14 +339,8 @@ class TextureBuilder extends BuilderPackage {
                 atlasPixelSize,
                 atlasLayers);
 
-        int aliasCount = aliasLibrarySystem.getAliasCount();
-
-        for (TextureTileStruct tile : tileMap.values()) {
+        for (TextureTileStruct tile : tileMap.values())
             arrayStruct.registerTile(tile);
-            for (int alias = 0; alias < aliasCount; alias++)
-                if (tile.getImage(alias) != null)
-                    arrayStruct.registerFoundAlias(alias);
-        }
 
         return arrayStruct;
     }
