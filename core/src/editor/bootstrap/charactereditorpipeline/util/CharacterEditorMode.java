@@ -10,8 +10,8 @@ public enum CharacterEditorMode {
      * features, colors and palettes, Build the build curve and the preview's
      * body, Equipment the anchors worn and held gear hangs from, Mesh the
      * vertices and faces of a worn part, Sculpt that part's surface under the
-     * brush, Weights the bones each of its vertices follows, and Rig the
-     * bones themselves. Each mode that takes viewport input is its own tool
+     * brush, Weights the bones each of its vertices follows, Paint the
+     * texture maps it is coloured by, and Rig the bones themselves. Each mode that takes viewport input is its own tool
      * canvas; the mesh modes edit the part's mesh file, Rig holds the bind
      * pose so the character stands exactly as its mesh and rig are authored,
      * and those that show the vertices draw them over the body. Each carries
@@ -51,6 +51,14 @@ public enum CharacterEditorMode {
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_SCULPT_HINT),
     WEIGHTS(EditorSetting.CHARACTER_EDITOR_MODE_WEIGHTS, ToolCanvas.CHARACTER_WEIGHTS, true, false, true, null, null),
+    PAINT(
+            EditorSetting.CHARACTER_EDITOR_MODE_PAINT,
+            ToolCanvas.CHARACTER_PAINT,
+            true,
+            false,
+            false,
+            null,
+            EditorSetting.CHARACTER_EDITOR_STATUS_PAINT_HINT),
     RIG(
             EditorSetting.CHARACTER_EDITOR_MODE_RIG,
             ToolCanvas.CHARACTER_RIG,
@@ -115,6 +123,16 @@ public enum CharacterEditorMode {
 
     public boolean showsVertices() {
         return vertexOverlay;
+    }
+
+    // True for the mode that paints the part's texture maps rather than its mesh, so no mesh stroke runs in it
+    public boolean paintsMaps() {
+        return toolCanvas == ToolCanvas.CHARACTER_PAINT;
+    }
+
+    // True for the mode that edits the rig, which draws the colliders its bones carry
+    public boolean showsColliders() {
+        return toolCanvas == ToolCanvas.CHARACTER_RIG;
     }
 
     // The tool canvas the viewport is while this mode is open, null for a mode that takes no tools

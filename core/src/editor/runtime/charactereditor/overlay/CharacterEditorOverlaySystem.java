@@ -43,8 +43,10 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
      * toward the camera, so hidden vertices stay hidden; with it on it
      * draws over everything. The box being dragged, the brush of any mesh
      * mode, Sculpt's included, and the axis a transform is held to are
-     * drawn on top as guides. The overlay is rebuilt in place only when
-     * what it shows has moved.
+     * drawn on top as guides. In Rig mode the colliders the rig's bones
+     * carry are drawn over the body as wire spheres and capsules, the one
+     * selected in the selection's colour. The overlay is rebuilt in place
+     * only when what it shows has moved.
      */
 
     // Internal
@@ -69,24 +71,34 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private boolean depthBiasXray;
     private MeshInstance guideOverlay;
     private ModelInstance guideModel;
+    private MeshInstance colliderOverlay;
+    private ModelInstance colliderModel;
 
     // Geometry
     private FloatArrayList vertices;
     private ShortArrayList indices;
     private FloatArrayList guideVertices;
     private ShortArrayList guideIndices;
+    private FloatArrayList colliderVertices;
+    private ShortArrayList colliderIndices;
     private LongOpenHashSet edges;
 
     // State
     private CharacterMeshDocumentInstance builtDocument;
     private int builtRevision;
     private int builtManagerRevision;
+    private int builtColliderRevision;
 
     // Scratch
     private float[] colorScratch;
     private Vector3 pointA;
     private Vector3 pointB;
     private Vector3 rayDirection;
+    private Vector3 colliderStart;
+    private Vector3 colliderEnd;
+    private Vector3 colliderAxis;
+    private Vector3 colliderSide;
+    private Vector3 colliderUp;
 
     // Base \\
 
@@ -98,17 +110,25 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         this.indices = new ShortArrayList();
         this.guideVertices = new FloatArrayList();
         this.guideIndices = new ShortArrayList();
+        this.colliderVertices = new FloatArrayList();
+        this.colliderIndices = new ShortArrayList();
         this.edges = new LongOpenHashSet();
 
         // State
         this.builtRevision = EngineSetting.INDEX_NOT_FOUND;
         this.builtManagerRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.builtColliderRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Scratch
         this.colorScratch = new float[CharacterEditorSetting.OVERLAY_COLOR_FLOATS];
         this.pointA = new Vector3();
         this.pointB = new Vector3();
         this.rayDirection = new Vector3();
+        this.colliderStart = new Vector3();
+        this.colliderEnd = new Vector3();
+        this.colliderAxis = new Vector3();
+        this.colliderSide = new Vector3();
+        this.colliderUp = new Vector3();
     }
 
     @Override
@@ -140,6 +160,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         if (guideOverlay != null)
             modelManager.removeMesh(guideOverlay);
+
+        if (colliderOverlay != null)
+            modelManager.removeMesh(colliderOverlay);
     }
 
     // Update \\
@@ -147,10 +170,14 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     @Override
     protected void update() {
 
+        WindowInstance window = context.getWindow();
+
+        if (characterEditorManager.getMode().showsColliders())
+            pushColliderOverlay(window);
+
         if (!characterEditorManager.getMode().isMeshMode() || !characterEditorMeshViewSystem.hasActiveDocument())
             return;
 
-        WindowInstance window = context.getWindow();
         boolean xray = characterEditorManager.isXray();
 
         if (characterEditorManager.getMode().showsVertices())
@@ -189,6 +216,156 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         meshModel.getMaterial().setUniform(
                 CharacterEditorSetting.UNIFORM_DEPTH_BIAS,
                 xray ? 0f : CharacterEditorSetting.OVERLAY_DEPTH_BIAS);
+    }
+
+    // Collider Overlay \\
+
+    private void pushColliderOverlay(WindowInstance window) {
+
+        syncColliderOverlay();
+
+        if (colliderModel != null && !colliderIndices.isEmpty())
+            renderManager.pushRenderCall(
+                    colliderModel,
+                    characterViewRenderSystem.getOverlayFbo(),
+                    CharacterEditorSetting.DEPTH_GUIDES,
+                    window);
+    }
+
+    // Rebuilds when the editor's state has moved, the rig's colliders and selection among it
+    private void syncColliderOverlay() {
+
+        if (characterEditorManager.getRevision() == builtColliderRevision)
+            return;
+
+        this.builtColliderRevision = characterEditorManager.getRevision();
+
+        colliderVertices.clear();
+        colliderIndices.clear();
+
+        int selected = characterEditorManager.getSelectedRigColliderIndex();
+
+        for (int c = 0; c < characterEditorManager.getRigColliderCount(); c++) {
+            setColor(c == selected ? CharacterEditorSetting.COLOR_SELECTED : CharacterEditorSetting.COLOR_COLLIDER);
+            appendCollider(c);
+        }
+
+        if (colliderIndices.isEmpty())
+            return;
+
+        if (colliderOverlay == null) {
+            this.colliderOverlay = meshManager.createMesh(overlayVAO, colliderVertices, colliderIndices);
+            this.colliderModel = modelManager.createModel(colliderOverlay, overlayMaterialID);
+            colliderModel.getMaterial().setUniform(CharacterEditorSetting.UNIFORM_DEPTH_BIAS, 0f);
+            return;
+        }
+
+        meshManager.updateMesh(colliderOverlay, colliderVertices, colliderIndices);
+        colliderModel.updateMeshData(colliderOverlay.getMeshData());
+    }
+
+    // A sphere as three great circles; a capsule as a ring and two half circles at each end and four lines between
+    private void appendCollider(int colliderIndex) {
+
+        float radius = characterEditorManager.getRigColliderRadius(colliderIndex);
+        float full = (float) (Math.PI * 2.0);
+
+        characterEditorManager.resolveRigColliderPoint(colliderIndex, false, colliderStart);
+        characterEditorManager.resolveRigColliderPoint(colliderIndex, true, colliderEnd);
+        colliderAxis.set(colliderEnd).subtract(colliderStart);
+
+        float length = colliderAxis.length();
+        boolean capsule = characterEditorManager.isRigColliderCapsule(colliderIndex)
+                && length > CharacterEditorSetting.COLLIDER_GUIDE_EPSILON;
+
+        if (capsule)
+            colliderAxis.divide(length);
+        else
+            colliderAxis.set(0f, 1f, 0f);
+
+        resolveColliderSides();
+
+        if (!capsule) {
+            appendArc(colliderStart, colliderSide, colliderUp, radius, full);
+            appendArc(colliderStart, colliderSide, colliderAxis, radius, full);
+            appendArc(colliderStart, colliderUp, colliderAxis, radius, full);
+            return;
+        }
+
+        float half = (float) Math.PI;
+
+        appendArc(colliderStart, colliderSide, colliderUp, radius, full);
+        appendArc(colliderEnd, colliderSide, colliderUp, radius, full);
+        appendArc(colliderEnd, colliderSide, colliderAxis, radius, half);
+        appendArc(colliderEnd, colliderUp, colliderAxis, radius, half);
+        colliderAxis.multiply(-1f);
+        appendArc(colliderStart, colliderSide, colliderAxis, radius, half);
+        appendArc(colliderStart, colliderUp, colliderAxis, radius, half);
+        appendSideLine(colliderSide, radius);
+        appendSideLine(colliderSide, -radius);
+        appendSideLine(colliderUp, radius);
+        appendSideLine(colliderUp, -radius);
+    }
+
+    // Two directions square to the collider's axis and to each other, the first crossed from the up axis, or from
+    // across when the collider stands upright
+    private void resolveColliderSides() {
+
+        float ax = colliderAxis.x;
+        float ay = colliderAxis.y;
+        float az = colliderAxis.z;
+        boolean upright = Math.abs(ay) > CharacterEditorSetting.COLLIDER_GUIDE_UP_COSINE;
+        float rx = upright ? 1f : 0f;
+        float ry = upright ? 0f : 1f;
+
+        colliderSide.set(-az * ry, az * rx, ax * ry - ay * rx);
+        colliderSide.divide(colliderSide.length());
+        colliderUp.set(
+                ay * colliderSide.z - az * colliderSide.y,
+                az * colliderSide.x - ax * colliderSide.z,
+                ax * colliderSide.y - ay * colliderSide.x);
+    }
+
+    // The arc about a centre through the first direction toward the second, a full circle or a half
+    private void appendArc(Vector3 centre, Vector3 from, Vector3 toward, float radius, float span) {
+
+        int segments = Math.max(1, Math.round(
+                CharacterEditorSetting.COLLIDER_GUIDE_SEGMENTS * span / (float) (Math.PI * 2.0)));
+
+        for (int i = 0; i < segments; i++) {
+
+            float a = span * i / segments;
+            float b = span * (i + 1) / segments;
+            float ca = (float) Math.cos(a) * radius;
+            float sa = (float) Math.sin(a) * radius;
+            float cb = (float) Math.cos(b) * radius;
+            float sb = (float) Math.sin(b) * radius;
+
+            if (!appendLine(
+                    colliderVertices,
+                    colliderIndices,
+                    centre.x + from.x * ca + toward.x * sa,
+                    centre.y + from.y * ca + toward.y * sa,
+                    centre.z + from.z * ca + toward.z * sa,
+                    centre.x + from.x * cb + toward.x * sb,
+                    centre.y + from.y * cb + toward.y * sb,
+                    centre.z + from.z * cb + toward.z * sb,
+                    CharacterEditorSetting.GUIDE_HALF_PIXELS))
+                return;
+        }
+    }
+
+    private void appendSideLine(Vector3 side, float reach) {
+        appendLine(
+                colliderVertices,
+                colliderIndices,
+                colliderStart.x + side.x * reach,
+                colliderStart.y + side.y * reach,
+                colliderStart.z + side.z * reach,
+                colliderEnd.x + side.x * reach,
+                colliderEnd.y + side.y * reach,
+                colliderEnd.z + side.z * reach,
+                CharacterEditorSetting.GUIDE_HALF_PIXELS);
     }
 
     // Mesh Overlay \\

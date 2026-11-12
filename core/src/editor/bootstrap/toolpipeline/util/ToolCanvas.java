@@ -71,11 +71,19 @@ public enum ToolCanvas {
             true,
             screenSize(),
             strength(EditorSetting.TOOL_WEIGHT_STRENGTH_DEFAULT)),
+    CHARACTER_PAINT(
+            EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
+            new EditorTool[] {
+                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL, EditorTool.PICK },
+            new ToolActionGroupStruct[] { paintLayers() },
+            true,
+            screenSize(),
+            strength(EditorSetting.TOOL_PAINT_STRENGTH_DEFAULT)),
     CHARACTER_RIG(
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.PLACE, EditorTool.ERASE },
-            new ToolActionGroupStruct[] { rigActions(), hairActions() },
+            new ToolActionGroupStruct[] { rigActions(), colliderActions(), hairActions() },
             false),
     CHARACTER_FACE(
             EditorSetting.TOOL_CANVAS_CHARACTER_FACE,
@@ -219,6 +227,24 @@ public enum ToolCanvas {
                 action(EditorSetting.CHARACTER_RIG_LABEL_DIGITS, EditorSetting.CHARACTER_RIG_KEY_DIGITS),
                 action(EditorSetting.CHARACTER_RIG_LABEL_IK_ADD, EditorSetting.CHARACTER_RIG_KEY_IK_ADD),
                 action(EditorSetting.CHARACTER_RIG_LABEL_IK_REMOVE, EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE));
+    }
+
+    private static ToolActionGroupStruct paintLayers() {
+        return new ToolActionGroupStruct(
+                EditorSetting.CHARACTER_PAINT_HEADER_LAYERS,
+                action(EditorSetting.CHARACTER_PAINT_LABEL_LAYER_ADD, EditorSetting.CHARACTER_PAINT_KEY_LAYER_ADD),
+                action(
+                        EditorSetting.CHARACTER_PAINT_LABEL_LAYER_REMOVE,
+                        EditorSetting.CHARACTER_PAINT_KEY_LAYER_REMOVE));
+    }
+
+    private static ToolActionGroupStruct colliderActions() {
+        return new ToolActionGroupStruct(
+                EditorSetting.CHARACTER_RIG_HEADER_COLLIDERS,
+                action(EditorSetting.CHARACTER_RIG_LABEL_COLLIDER_ADD, EditorSetting.CHARACTER_RIG_KEY_COLLIDER_ADD),
+                action(
+                        EditorSetting.CHARACTER_RIG_LABEL_COLLIDER_REMOVE,
+                        EditorSetting.CHARACTER_RIG_KEY_COLLIDER_REMOVE));
     }
 
     private static ToolActionGroupStruct hairActions() {

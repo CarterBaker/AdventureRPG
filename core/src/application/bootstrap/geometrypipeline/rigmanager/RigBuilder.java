@@ -3,6 +3,8 @@ package application.bootstrap.geometrypipeline.rigmanager;
 import java.io.File;
 
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
+import application.bootstrap.geometrypipeline.rig.RigColliderShape;
+import application.bootstrap.geometrypipeline.rig.RigColliderStruct;
 import application.bootstrap.geometrypipeline.rig.RigData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
@@ -30,8 +32,12 @@ class RigBuilder extends BuilderPackage {
      * each name at least two "bones", each the parent of the next, the first
      * hung from a bone the body moves, none in another chain or an IK
      * handle, with the "stiffness", "damping", "gravity" and "drag" the
-     * runtime simulates them by, each within its range. Its optional
-     * "parts" name, per RigPart, the bones that part holds, and its optional
+     * runtime simulates them by, each within its range, an optional
+     * "radius" for how thick its bones are and the "colliders" they rest
+     * against. Its optional "colliders" each name the "bone" they ride, a
+     * "shape" — a sphere about its "offset", or a capsule from its "start"
+     * to its "end", in the bone's bind frame — and a positive "radius",
+     * every name its own. Its optional "parts" name, per RigPart, the bones that part holds, and its optional
      * "poses" the animation clips its editors strike as poses.
      */
 
@@ -66,7 +72,9 @@ class RigBuilder extends BuilderPackage {
             bones[i] = parseBone(bonesArray.get(i).getAsObject(), i, boneName2Index, sourceName);
 
         RigIkChainStruct[] ikChains = parseIkChains(arpg, bones, boneName2Index, sourceName);
-        RigSpringChainStruct[] springChains = parseSpringChains(arpg, bones, boneName2Index, ikChains, sourceName);
+        RigColliderStruct[] colliders = parseColliders(arpg, boneName2Index, sourceName);
+        RigSpringChainStruct[] springChains = parseSpringChains(
+                arpg, bones, boneName2Index, ikChains, colliders, sourceName);
 
         return new RigData(
                 rigName,
@@ -74,6 +82,7 @@ class RigBuilder extends BuilderPackage {
                 boneName2Index,
                 ikChains,
                 springChains,
+                colliders,
                 parseParts(arpg, boneName2Index, sourceName),
                 parsePoses(arpg));
     }
@@ -203,6 +212,7 @@ class RigBuilder extends BuilderPackage {
             RigBoneStruct[] bones,
             Object2IntOpenHashMap<String> boneName2Index,
             RigIkChainStruct[] ikChains,
+            RigColliderStruct[] colliders,
             String sourceName) {
 
         if (!ArpgUtility.hasArray(arpg, "springs"))
@@ -215,7 +225,7 @@ class RigBuilder extends BuilderPackage {
         for (int i = 0; i < chains.length; i++) {
 
             chains[i] = parseSpringChain(
-                    chainsArray.get(i).getAsObject(), bones, boneName2Index, ikChains, sprung, sourceName);
+                    chainsArray.get(i).getAsObject(), bones, boneName2Index, ikChains, colliders, sprung, sourceName);
 
             for (int j = 0; j < i; j++)
                 if (chains[j].getName().equals(chains[i].getName()))
@@ -231,6 +241,7 @@ class RigBuilder extends BuilderPackage {
             RigBoneStruct[] bones,
             Object2IntOpenHashMap<String> boneName2Index,
             RigIkChainStruct[] ikChains,
+            RigColliderStruct[] colliders,
             boolean[] sprung,
             String sourceName) {
 
@@ -280,7 +291,60 @@ class RigBuilder extends BuilderPackage {
                 parseSpringValue(chainArpg, "stiffness", EngineSetting.RIG_SPRING_STIFFNESS_MAX, name, sourceName),
                 parseSpringValue(chainArpg, "damping", EngineSetting.RIG_SPRING_DAMPING_MAX, name, sourceName),
                 parseSpringValue(chainArpg, "gravity", EngineSetting.RIG_SPRING_GRAVITY_MAX, name, sourceName),
-                parseSpringValue(chainArpg, "drag", EngineSetting.RIG_SPRING_DRAG_MAX, name, sourceName));
+                parseSpringValue(chainArpg, "drag", EngineSetting.RIG_SPRING_DRAG_MAX, name, sourceName),
+                parseSpringRadius(chainArpg, name, sourceName),
+                parseChainColliders(chainArpg, colliders, name, sourceName));
+    }
+
+    private float parseSpringRadius(ArpgObjectStruct chainArpg, String name, String sourceName) {
+
+        float radius = ArpgUtility.getFloat(chainArpg, "radius", EngineSetting.RIG_SPRING_RADIUS_DEFAULT);
+
+        if (radius < 0f || radius > EngineSetting.RIG_SPRING_RADIUS_MAX)
+            throwException("Spring chain \"" + name + "\" \"radius\" must lie between 0 and "
+                    + EngineSetting.RIG_SPRING_RADIUS_MAX + ", found " + radius + " in rig: " + sourceName);
+
+        return radius;
+    }
+
+    // The colliders a chain names, by their place in the rig; none when it names none
+    private int[] parseChainColliders(
+            ArpgObjectStruct chainArpg,
+            RigColliderStruct[] colliders,
+            String name,
+            String sourceName) {
+
+        if (!ArpgUtility.hasArray(chainArpg, "colliders"))
+            return new int[0];
+
+        ArpgArrayStruct namesArray = chainArpg.getAsArray("colliders");
+        int[] indices = new int[namesArray.size()];
+
+        for (int i = 0; i < indices.length; i++) {
+
+            String colliderName = namesArray.get(i).getAsString();
+            indices[i] = findCollider(colliders, colliderName);
+
+            if (indices[i] == EngineSetting.INDEX_NOT_FOUND)
+                throwException("Spring chain \"" + name + "\" names unknown collider \"" + colliderName
+                        + "\" in rig: " + sourceName);
+
+            for (int j = 0; j < i; j++)
+                if (indices[j] == indices[i])
+                    throwException("Spring chain \"" + name + "\" names collider \"" + colliderName
+                            + "\" more than once in rig: " + sourceName);
+        }
+
+        return indices;
+    }
+
+    private int findCollider(RigColliderStruct[] colliders, String colliderName) {
+
+        for (int i = 0; i < colliders.length; i++)
+            if (colliders[i].getName().equals(colliderName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
     }
 
     private float parseSpringValue(ArpgObjectStruct chainArpg, String key, float max, String name, String sourceName) {
@@ -326,6 +390,78 @@ class RigBuilder extends BuilderPackage {
                 carried[next++] = i;
 
         return carried;
+    }
+
+    // Colliders \\
+
+    private RigColliderStruct[] parseColliders(
+            ArpgObjectStruct arpg,
+            Object2IntOpenHashMap<String> boneName2Index,
+            String sourceName) {
+
+        if (!ArpgUtility.hasArray(arpg, "colliders"))
+            return new RigColliderStruct[0];
+
+        ArpgArrayStruct collidersArray = arpg.getAsArray("colliders");
+
+        if (collidersArray.size() > EngineSetting.RIG_COLLIDER_MAX)
+            throwException("Rig has " + collidersArray.size() + " colliders, more than the "
+                    + EngineSetting.RIG_COLLIDER_MAX + " a rig may carry: " + sourceName);
+
+        RigColliderStruct[] colliders = new RigColliderStruct[collidersArray.size()];
+
+        for (int i = 0; i < colliders.length; i++) {
+
+            colliders[i] = parseCollider(collidersArray.get(i).getAsObject(), boneName2Index, sourceName);
+
+            if (findCollider(colliders, colliders[i].getName()) != i)
+                throwException("Duplicate collider name \"" + colliders[i].getName() + "\" in rig: " + sourceName);
+        }
+
+        return colliders;
+    }
+
+    private RigColliderStruct parseCollider(
+            ArpgObjectStruct colliderArpg,
+            Object2IntOpenHashMap<String> boneName2Index,
+            String sourceName) {
+
+        String name = ArpgUtility.validateString(colliderArpg, "name");
+        String boneName = ArpgUtility.validateString(colliderArpg, "bone");
+        int boneIndex = boneName2Index.getInt(boneName);
+
+        if (boneIndex == EngineSetting.INDEX_NOT_FOUND)
+            throwException("Collider \"" + name + "\" names unknown bone \"" + boneName + "\" in rig: " + sourceName);
+
+        RigColliderShape shape = ArpgUtility.toEnum(
+                ArpgUtility.validateString(colliderArpg, "shape"), RigColliderShape.class);
+        float radius = ArpgUtility.validateFloat(colliderArpg, "radius");
+
+        if (radius <= 0f || radius > EngineSetting.RIG_COLLIDER_RADIUS_MAX)
+            throwException("Collider \"" + name + "\" \"radius\" must lie above 0 and at most "
+                    + EngineSetting.RIG_COLLIDER_RADIUS_MAX + ", found " + radius + " in rig: " + sourceName);
+
+        if (shape == RigColliderShape.SPHERE) {
+
+            Vector3 offset = parseColliderPoint(colliderArpg, "offset", name, sourceName);
+            return new RigColliderStruct(name, boneIndex, shape, offset, new Vector3(offset), radius);
+        }
+
+        return new RigColliderStruct(
+                name,
+                boneIndex,
+                shape,
+                parseColliderPoint(colliderArpg, "start", name, sourceName),
+                parseColliderPoint(colliderArpg, "end", name, sourceName),
+                radius);
+    }
+
+    private Vector3 parseColliderPoint(ArpgObjectStruct colliderArpg, String key, String name, String sourceName) {
+
+        if (!ArpgUtility.hasObject(colliderArpg, key))
+            throwException("Collider \"" + name + "\" is missing \"" + key + "\" in rig: " + sourceName);
+
+        return parseVector3(colliderArpg, key, sourceName, true);
     }
 
     // Parts \\

@@ -154,6 +154,32 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
   (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
   in `CharacterShapeBranch.resolveMove`.
 
+## Paint
+
+Paint mode (`CharacterEditorMode.PAINT`, `ToolCanvas.CHARACTER_PAINT`: Brush, Erase, Smooth, Fill, Pick, the Brushes
+tab's brush) paints the open part's texture maps in every modelling tab. It is a mesh mode that `paintsMaps`, so the
+mesh view skins the part in any pose and the sculpt system stays out of it.
+
+- **Projection painting**, as Blender and Substance paint: `CharacterEditorPaintSystem` lays a stamp every brush
+  spacing and hands `CharacterPaintStampStruct` every face of the region under the brush whose middle the camera sees,
+  its corners on the window; `CharacterPaintBranch.stamp` rasterises each face's two UV triangles over the map and
+  paints each texel by the tip's coverage where the same barycentrics place it on the window, so strokes cross UV
+  seams; texels within `CHARACTER_PAINT_BLEED_PIXELS` of an island edge are painted too. Fill covers the island of
+  faces joined corner to corner around the face clicked (`pickFace`), Pick takes the flattened map's colour there.
+- **Canvases** (`CharacterPaintCanvasStruct`): one per texture and map (albedo, normal, height, AO, metallic,
+  roughness, tint; `CHARACTER_PAINT_MAP_*`), opened on first use from `<Name>_<suffix>.png` beside the texture or the
+  alias's default colour. Its layers are image documents of `ImageManager` (`beginPaint` / `paintPixel` /
+  `flushPaint`), the first the image itself, each above laid over by alpha and opacity; every stroke is one undo step
+  of the layer it touched (the before colours of the pixels it changed), and each change is laid flat and uploaded
+  into the atlas layer the map fills, only its rectangle, rows bottom first (`TextureManager.updateTextureArrayLayer`,
+  `glTexSubImage3D`). The base keeps its own alpha; Erase wears the base to the default and a layer to nothing.
+- **Values** (Map, Layer, Opacity, Red, Green, Blue) live in the Properties tab (`CharacterPaintPropertyBranch`,
+  `CharacterPaintRowBranch`); Add Layer and Remove Layer are the canvas's tool actions. Save (File) writes every
+  changed map flat into its image, Revert puts the atlas back as the images hold it, Undo and Redo (Edit) step the
+  paint history in Paint mode. Painted maps are the owner's art: never catalogue them.
+- **Not industry standard:** layers above the base last the editor session and are flattened into the image on save;
+  a painting tool keeps them in a layered project file (Substance, Krita) beside the exported maps.
+
 ## Characters
 
 Every entity template names its race (`race`, required), every race lists the genders it may be made as (`genders`, at
@@ -321,6 +347,16 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `MeshHandle.weighsOnto`, set for every rigged mesh in `MeshManager.applyRiggedMesh`), so a bald or short-haired
   character simulates nothing. Settings apply live (`RigManager.updateRig` keeps a rig in place while its chains keep
   their bones); a new or changed chain is structure and takes hold at the next start.
+- **Springs rest against colliders bound to bones** (the physics-asset / spring-bone collider approach). A rig's
+  `colliders` (`RigColliderStruct`, at most `RIG_COLLIDER_MAX`) each name a `name`, the `bone` it rides, a `shape`
+  (`RigColliderShape`: `sphere` about its `offset`, or `capsule` from `start` to `end`, all in the bone's bind frame)
+  and a `radius`; each chain names the colliders it rests against (`colliders`, none passes through everything) and
+  its own thickness (`radius`, default `RIG_SPRING_RADIUS_DEFAULT`). `RigBuilder` refuses unknown bones and collider
+  names, repeats and radii out of range; the Rigs schema carries the same rules. `AnimationSpringStruct.capture` places
+  every collider by the pose's world matrices in the body's frame (its radius sized with the bone and body); each
+  substep, after the length and swing cone, `collide` pushes the joint so the bone from the joint above it (a capsule of
+  the chain's radius) clears every named collider, the push divided by how far down the bone the contact lies, then the
+  length is held again. Colliders are not structure: they apply live.
 - **Hair tools.** In the Hair Editor, Rig mode's **Rig Hair Locks** (`CharacterRigBranch.addHairLocks`) finds the
   cards (`CharacterHairBranch.detectCards`: hair faces joined corner to corner whose v spans
   `CHARACTER_HAIR_CARD_MIN_SPAN`), keeps those at least `CHARACTER_HAIR_LOCK_MIN_LENGTH` long (shorter hair stays
@@ -333,12 +369,24 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   (`CharacterWeightBranch.weighLocks`) hands each long card to the hair chain whose joints lie nearest its line
   (`CharacterHairBranch.findChain`, roots within `CHARACTER_HAIR_WEIGHT_REACH`), by how far down the card each vertex
   grows: the head near the root, then each segment's bone, blended at joints; spring weights held before are let go
-  first. The chains are bones, so save the rig and restart between the two. The selected bone's chain lists its four
-  settings in the Properties tab (`CharacterRigRowBranch.addSpringRows`), stepped and typed live. **Preview Springs**
+  first. The chains are bones, so save the rig and restart between the two. The selected bone's chain lists its five
+  settings (stiffness, damping, gravity, drag, radius) in the Properties tab (`CharacterRigRowBranch.addSpringRows`),
+  stepped and typed live, then a Yes or No per rig collider it rests against. **Add Collider** and **Remove Collider**
+  (Rig mode's Colliders group, `CharacterColliderBranch`) add a sphere on the selected bone, halfway to its first
+  child, that every chain rests against, and remove the collider selected among the bone's; while mirroring is on a
+  sided bone's collider is added, removed, reshaped and moved with its twin (named as its mirror). The selected bone's
+  colliders are listed in the Properties tab; the selected one shows its Shape (a capsule runs from the joint out past
+  the sphere's centre as far again; back to a sphere at the capsule's middle), Radius, Offset or Start and End, and
+  Spring Chains (All or None). Rig mode draws every collider over the body as a wire sphere or capsule
+  (`CharacterEditorOverlaySystem`, the selected one in the selection colour), rebuilt only when the editor's state
+  moves. **Preview Springs**
   (Rig and Weights) makes every modelling tab play the pose chosen (Idle at rest) with the springs simulated, until
   pressed again. The Animation Editor never lists, picks or keys a spring bone (`AnimationEditorManager.isKeyedBone`).
-- **Assets.** `HumanoidRig` carries 14 hair chains (`hair_1` to `hair_14`, five joints each) laid by Rig Hair Locks on
-  `FemaleLongHairMesh`; `FemaleLongHairMesh` and `FemaleMediumHairMesh` are weighed onto them by Weigh Onto Locks.
+- **Assets.** `HumanoidRig` carries 14 hair chains (`hair_1` to `hair_14`, five joints each, radius 0.012) laid by Rig
+  Hair Locks on `FemaleLongHairMesh`, every one resting against its five colliders: `head` (sphere on `head`), `neck`
+  (capsule on `head`), `shoulder_l` / `shoulder_r` (capsules on the upper arms) and `chest` (capsule across
+  `upper_torso`), sized inside the female body's skin with every hair joint clear of them at rest;
+  `FemaleLongHairMesh` and `FemaleMediumHairMesh` are weighed onto them by Weigh Onto Locks.
   `MaleShortHairMesh` and `MaleMediumHairMesh` are short and stay on the head.
 - **Toon lighting.** Characters write a smooth normal (`GBufferNormal.glsl`); the lighting pass lights those pixels
   in toon tones with a rim (`ToonLighting.glsl`), and the editor viewport's character shader uses the same function.
@@ -377,6 +425,9 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Weighed meshes name the rig's bones.** A hair mesh weighed onto locks names `hair_*` bones; reverting or removing
   them from the rig without the meshes weighed onto them stops every mesh load (and the editor) with an unknown bone.
   Re-lay and re-weigh through the tools, rig first.
+- **Colliders sit inside the skin.** A collider poking out of the body pushes hair off the surface at rest, and a hair
+  joint inside a collider at rest is pushed out on the first step. Size them against the body's own vertices and the
+  chains' rest joints; a collider a chain names must exist, or the rig refuses to load.
 - **Spring settings are tuned per real time.** The editor preview under a slow renderer hits the chains with the
   pose's motion in large steps; judge them at the game's frame rate. A chain stepped longer than
   `RIG_SPRING_MAX_DELTA` rides the rest rigidly, by design.
@@ -409,7 +460,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   the preview poses on the GPU and the mesh view skins on the CPU, but edits are written to the bind-pose file.
 - **Part editors need rig parts.** A rig without `parts` leaves the Hand, Foot, Eye and Mouth Editors showing
   nothing; name the bones there, not in code.
-- **Euler angles.** Bones compose `Rz * Ry * Rx` from degrees and a clip's rotation is added to the bind rotation.
-  **Not industry standard:** engines compose a clip's rotation with the bind as quaternions and blend layers by slerp;
-  summing and lerping Euler angles holds only while turns stay small or share an axis.
-  Read a turn back with `CharacterPoseUtility.toEuler` against the angle it replaces, so keys never spin the long way.
+- **Quaternion poses, Euler keys.** Clips keep Euler-degree curves (as DCC tools author them); `AnimationStateHandle`
+  turns every sampled turn into a unit quaternion (`RigMathUtility.toQuaternion`, the `Rz * Ry * Rx` order), blends
+  brackets, cross-fades and override layers by slerp, multiplies additive layers on, and composes each bone as bind
+  rotation, then shaping, then pose. For a bind turned about z alone (the A-pose arms) this equals the old Euler sum, so
+  existing clips play unchanged. The editors key against the bind the same way
+  (`CharacterPoseUtility.composeBindTurn` / `toKeyEuler`, nearest the key it replaces so keys never spin the long
+  way); never add a key to the bind rotation.

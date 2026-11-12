@@ -101,6 +101,12 @@ class TextureLoader extends LoaderPackage {
         request(directory);
     }
 
+    // Aliases \\
+
+    AliasLibrarySystem getAliasLibrarySystem() {
+        return aliasLibrarySystem;
+    }
+
     // UBO Seeding \\
 
     private void seedUBO(String arrayName, TextureArrayStruct arrayStruct) {

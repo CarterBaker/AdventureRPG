@@ -15,7 +15,8 @@ public class RigData extends DataPackage {
      * parent before child so poses evaluate in one pass, with the IK handles
      * its tools pose limbs and digits through and the spring chains the
      * runtime simulates in place of any key — every bone a chain turns, and
-     * the chain each bone belongs to, found once here. It names the bones
+     * the chain each bone belongs to, found once here, and the colliders
+     * its bones carry for those chains to rest against. It names the bones
      * each body part holds and the clips its editors strike as poses.
      * Bind-pose world matrices and their inverses are baked once per rig
      * whenever it is built.
@@ -36,6 +37,9 @@ public class RigData extends DataPackage {
     private final int[] bone2SpringChain;
     private final int[] springCarriedBones;
 
+    // Colliders — the shapes bones carry, which spring chains are kept out of
+    private final RigColliderStruct[] colliders;
+
     // Parts — the bones each part names, by RigPart ordinal; the clips struck as editor poses
     private final int[][] part2Bones;
     private final String[] poseNames;
@@ -52,6 +56,7 @@ public class RigData extends DataPackage {
             Object2IntOpenHashMap<String> boneName2Index,
             RigIkChainStruct[] ikChains,
             RigSpringChainStruct[] springChains,
+            RigColliderStruct[] colliders,
             int[][] part2Bones,
             String[] poseNames) {
 
@@ -69,6 +74,9 @@ public class RigData extends DataPackage {
         this.springChains = springChains;
         this.bone2SpringChain = resolveSpringChains(bones.length, springChains);
         this.springCarriedBones = resolveSpringCarried(bones.length, springChains);
+
+        // Colliders
+        this.colliders = colliders;
 
         // Parts
         this.part2Bones = part2Bones;
@@ -239,6 +247,14 @@ public class RigData extends DataPackage {
 
     public int[] getSpringCarriedBones() {
         return springCarriedBones;
+    }
+
+    public int getColliderCount() {
+        return colliders.length;
+    }
+
+    public RigColliderStruct getCollider(int colliderIndex) {
+        return colliders[colliderIndex];
     }
 
     // The IK handle whose end is a bone, null when none ends there

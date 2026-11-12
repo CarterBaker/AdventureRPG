@@ -268,6 +268,11 @@ One line per session that changed this file: the date, what was added or removed
   arch and toe box, every vertex mirrored; unwrapped afresh), the body maps `MaleBody` and `FemaleBody` (a far softer
   normal and albedo), every overlay layer `Male*` and `Female*` (baked into the new layouts) and `races/Human.arpg`
   (overlay regions).
+- 2026-11-12: Hair collision and the paint tool. Regenerated `rigs/HumanoidRig.arpg` (five colliders, head, neck,
+  both shoulders and chest, sized inside the bodies, named by all 14 hair chains with a radius each),
+  `schemas/Rigs.arpg` (the `colliders` and each chain's `radius` and `colliders`) and
+  `menus/editor/CharacterMeshEditor.arpg` (a Paint mode button), so hair rests on the body and maps are painted in the
+  modelling tabs.
 ---
 
 ## Textures and Sprites (2399 files)

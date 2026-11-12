@@ -3,6 +3,7 @@ package application.bootstrap.geometrypipeline.rig;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.quaternions.Quaternion;
 import engine.util.mathematics.vectors.Vector3;
 
 public class RigMathUtility extends EngineUtility {
@@ -12,7 +13,11 @@ public class RigMathUtility extends EngineUtility {
      * and AnimationStateHandle's per-frame pose, so both always agree. Rotation
      * composes in XYZ order from degrees, and composeLocal() writes into
      * caller-owned output and scratch matrices so the per-bone hot path never
-     * allocates; setPivotTurn() turns a bone about its joint onto a new
+     * allocates. A pose composes and blends its turns as unit quaternions —
+     * a bind rotation times the clip's turn within it, layers blended by
+     * slerp and additive layers multiplied on — as engines do, the Euler
+     * degrees clips are authored in turned into the same Z, Y, X order;
+     * setPivotTurn() turns a bone about its joint onto a new
      * direction, as a spring chain bends its bones after the joints it
      * simulates.
      */
@@ -43,6 +48,63 @@ public class RigMathUtility extends EngineUtility {
         // scratchA = S ; out = T * R * S
         setScale(scratchA, scale);
         out.multiply(scratchA);
+    }
+
+    // A bone's local transform from a turn held as a unit quaternion
+    public static void composeLocal(
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Matrix4 out,
+            Matrix4 scratch) {
+
+        setTranslation(out, position);
+        out.multiply(rotation.toMatrix(scratch));
+        setScale(scratch, scale);
+        out.multiply(scratch);
+    }
+
+    // Quaternion \\
+
+    // Euler degrees turned into the unit quaternion of Rz * Ry * Rx, the order composeLocal turns a bone in
+    public static Quaternion toQuaternion(Vector3 degrees, Quaternion out) {
+
+        double halfX = Math.toRadians(degrees.x) * 0.5;
+        double halfY = Math.toRadians(degrees.y) * 0.5;
+        double halfZ = Math.toRadians(degrees.z) * 0.5;
+
+        return out.set((float) Math.cos(halfZ), 0f, 0f, (float) Math.sin(halfZ))
+                .multiply((float) Math.cos(halfY), 0f, (float) Math.sin(halfY), 0f)
+                .multiply((float) Math.cos(halfX), (float) Math.sin(halfX), 0f, 0f);
+    }
+
+    // A turn carried a share of the way toward another along the shortest arc, written back into the first;
+    // turns nearly alike are blended straight and normalised
+    public static void slerp(Quaternion target, Quaternion to, float share) {
+
+        float[] a = target.val;
+        float[] b = to.val;
+        float dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+        float sign = dot < 0f ? -1f : 1f;
+        float cos = dot * sign;
+        float keep = 1f - share;
+        float take = share * sign;
+
+        if (cos < EngineSetting.RIG_SLERP_LINEAR_COSINE) {
+
+            float angle = (float) Math.acos(cos);
+            float sin = (float) Math.sin(angle);
+
+            keep = (float) Math.sin(keep * angle) / sin;
+            take = (float) Math.sin(share * angle) / sin * sign;
+        }
+
+        target.set(
+                a[0] * keep + b[0] * take,
+                a[1] * keep + b[1] * take,
+                a[2] * keep + b[2] * take,
+                a[3] * keep + b[3] * take);
+        target.normalize();
     }
 
     // Pivot \\

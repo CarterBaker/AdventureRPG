@@ -55,6 +55,7 @@ public class FaceEditorGestureSystem extends SystemPackage {
     private Vector2 jointScreen;
     private Vector3 startHit;
     private Vector3 startRotation;
+    private Vector3 bindRotation;
     private Vector3 startMove;
     private Vector3 startTurn;
     private Vector3 startScale;
@@ -83,6 +84,7 @@ public class FaceEditorGestureSystem extends SystemPackage {
     private Matrix4 turnScratch;
     private Matrix4 rotated;
     private Matrix4 matrixScratch;
+    private Matrix4 bindScratch;
 
     // Base \\
 
@@ -95,6 +97,7 @@ public class FaceEditorGestureSystem extends SystemPackage {
         this.jointScreen = new Vector2();
         this.startHit = new Vector3();
         this.startRotation = new Vector3();
+        this.bindRotation = new Vector3();
         this.startMove = new Vector3();
         this.startTurn = new Vector3();
         this.startScale = new Vector3();
@@ -118,6 +121,7 @@ public class FaceEditorGestureSystem extends SystemPackage {
         this.turnScratch = new Matrix4();
         this.rotated = new Matrix4();
         this.matrixScratch = new Matrix4();
+        this.bindScratch = new Matrix4();
     }
 
     @Override
@@ -248,9 +252,10 @@ public class FaceEditorGestureSystem extends SystemPackage {
 
         float jump = value - valueBefore;
 
-        startRotation.set(bone.getRotation()).add(state.getBoneShapeRotation(boneIndex))
+        bindRotation.set(bone.getRotation());
+        startRotation.set(state.getBoneShapeRotation(boneIndex))
                 .add(startTurn.x * jump, startTurn.y * jump, startTurn.z * jump);
-        CharacterPoseUtility.toRotation(startRotation, startLocal);
+        CharacterPoseUtility.composeBindTurn(bindRotation, startRotation, startLocal, matrixScratch);
         resolveHit(mouseX, mouseY, startHit);
 
         this.dragTool = tool;
@@ -380,7 +385,7 @@ public class FaceEditorGestureSystem extends SystemPackage {
 
         CharacterPoseUtility.toAxisRotation(axis, angle, turnScratch);
         CharacterPoseUtility.applyWorldTurn(parentRotation, turnScratch, startLocal, rotated, matrixScratch);
-        CharacterPoseUtility.toEuler(rotated, startRotation, eulerScratch);
+        CharacterPoseUtility.toKeyEuler(rotated, bindRotation, startRotation, eulerScratch, matrixScratch, bindScratch);
         eulerScratch.subtract(startRotation);
 
         turn.set(

@@ -40,8 +40,9 @@ class CharacterPropertyBranch extends BranchPackage {
      * slider's range is the Face Editor's to write, through the same path its
      * own range rows take, so both tools keep one rule for it. The
      * keys of the Mesh, Sculpt and Weights panels pass straight to
-     * CharacterMeshPropertyBranch, and those of the Rig panels to
-     * CharacterRigPropertyBranch.
+     * CharacterMeshPropertyBranch, those of the Rig panels to
+     * CharacterRigPropertyBranch and those of the Paint panel to
+     * CharacterPaintPropertyBranch.
      */
 
     // Internal
@@ -49,6 +50,7 @@ class CharacterPropertyBranch extends BranchPackage {
     private CharacterEditBranch characterEditBranch;
     private CharacterMeshPropertyBranch characterMeshPropertyBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
+    private CharacterPaintPropertyBranch characterPaintPropertyBranch;
     private FaceEditorManager faceEditorManager;
     private FeatureManager featureManager;
     private GenderManager genderManager;
@@ -61,6 +63,7 @@ class CharacterPropertyBranch extends BranchPackage {
         this.characterEditBranch = get(CharacterEditBranch.class);
         this.characterMeshPropertyBranch = get(CharacterMeshPropertyBranch.class);
         this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
+        this.characterPaintPropertyBranch = get(CharacterPaintPropertyBranch.class);
         this.faceEditorManager = get(FaceEditorManager.class);
         this.featureManager = get(FeatureManager.class);
         this.genderManager = get(GenderManager.class);
@@ -77,6 +80,7 @@ class CharacterPropertyBranch extends BranchPackage {
             characterMeshPropertyBranch.select(key);
         else if (characterRigPropertyBranch.handles(keyName))
             characterRigPropertyBranch.select(key);
+
         else if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BONE))
             characterEditorManager.selectBone(index);
         else if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR))
@@ -93,6 +97,9 @@ class CharacterPropertyBranch extends BranchPackage {
         if (isRigKey(key))
             return characterRigPropertyBranch.getValueText(key);
 
+        if (isPaintKey(key))
+            return characterPaintPropertyBranch.getValueText(key);
+
         if (isNumberKey(key))
             return CharacterViewUtility.formatNumber(getNumber(document, key));
 
@@ -107,6 +114,9 @@ class CharacterPropertyBranch extends BranchPackage {
         if (isRigKey(key))
             return characterRigPropertyBranch.isValueValid(key, text);
 
+        if (isPaintKey(key))
+            return characterPaintPropertyBranch.isValueValid(key, text);
+
         return isNumberKey(key) && hasTarget(document, key) && CharacterViewUtility.isNumber(text);
     }
 
@@ -119,6 +129,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isRigKey(key)) {
             characterRigPropertyBranch.setValue(key, text);
+            return;
+        }
+
+        if (isPaintKey(key)) {
+            characterPaintPropertyBranch.setValue(key, text);
             return;
         }
 
@@ -137,6 +152,11 @@ class CharacterPropertyBranch extends BranchPackage {
             return;
         }
 
+        if (isPaintKey(key)) {
+            characterPaintPropertyBranch.step(key, direction);
+            return;
+        }
+
         if (isNumberKey(key) && hasTarget(document, key))
             writeNumber(document, key, getNumber(document, key) + direction * getStep(key));
     }
@@ -147,6 +167,10 @@ class CharacterPropertyBranch extends BranchPackage {
 
     private boolean isRigKey(String key) {
         return characterRigPropertyBranch.handles(CharacterViewUtility.getKeyName(key));
+    }
+
+    private boolean isPaintKey(String key) {
+        return characterPaintPropertyBranch.handles(CharacterViewUtility.getKeyName(key));
     }
 
     // Numbers \\
@@ -436,6 +460,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isRigKey(key)) {
             characterRigPropertyBranch.cycle(key, direction);
+            return;
+        }
+
+        if (isPaintKey(key)) {
+            characterPaintPropertyBranch.cycle(key, direction);
             return;
         }
 
@@ -838,6 +867,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isRigKey(key)) {
             characterRigPropertyBranch.act(key);
+            return;
+        }
+
+        if (isPaintKey(key)) {
+            characterPaintPropertyBranch.act(key);
             return;
         }
 

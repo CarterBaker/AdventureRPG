@@ -49,8 +49,10 @@ class CharacterRigBranch extends BranchPackage {
      * joint where it stood, and the bones stay parent before child. Spring
      * chains are rig data beside the bones: the hair's are laid on the locks
      * found in its cards, any other on a bone and the single children below
-     * it, and their stiffness, damping, gravity and drag apply at once to
-     * every character simulating them.
+     * it, and their stiffness, damping, gravity, drag and radius apply at
+     * once to every character simulating them. The colliders the chains rest
+     * against are CharacterColliderBranch's, read with the bones and edited
+     * through the same path.
      */
 
     // Internal
@@ -59,6 +61,7 @@ class CharacterRigBranch extends BranchPackage {
     private CharacterEditorManager characterEditorManager;
     private CharacterDigitBranch characterDigitBranch;
     private CharacterHairBranch characterHairBranch;
+    private CharacterColliderBranch characterColliderBranch;
 
     // Rig
     private RigHandle rigHandle;
@@ -131,6 +134,7 @@ class CharacterRigBranch extends BranchPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterDigitBranch = get(CharacterDigitBranch.class);
         this.characterHairBranch = get(CharacterHairBranch.class);
+        this.characterColliderBranch = get(CharacterColliderBranch.class);
     }
 
     // Rig \\
@@ -207,6 +211,8 @@ class CharacterRigBranch extends BranchPackage {
 
         if (selectedBone >= boneCount)
             this.selectedBone = boneCount > 0 ? 0 : EngineSetting.INDEX_NOT_FOUND;
+
+        characterColliderBranch.reload(getRigArpg());
     }
 
     private void readBone(int boneIndex, ArpgObjectStruct boneArpg) {
@@ -267,6 +273,21 @@ class CharacterRigBranch extends BranchPackage {
         return findBefore(boneName, boneCount);
     }
 
+    // A bone of the draft by name, INDEX_NOT_FOUND when the rig holds none of it
+    int findBoneIndex(String boneName) {
+        return findBone(boneName);
+    }
+
+    // A bone's first child in the draft, or none
+    int findFirstChild(int boneIndex) {
+
+        for (int i = boneIndex + 1; i < boneCount; i++)
+            if (parents.getInt(i) == boneIndex)
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
     // Edits \\
 
     // One change to the rig's bones, recorded for undo first unless a gesture already holds the rig as it stood
@@ -275,7 +296,7 @@ class CharacterRigBranch extends BranchPackage {
     }
 
     // One change to the rig as a whole, recorded for undo first
-    private void editRig(Consumer<ArpgObjectStruct> editor) {
+    void editRig(Consumer<ArpgObjectStruct> editor) {
 
         ArpgObjectStruct rigArpg = getRigArpg();
 
@@ -782,6 +803,8 @@ class CharacterRigBranch extends BranchPackage {
                     EditorSetting.CHARACTER_RIG_SPRING_FIELDS[i],
                     EditorSetting.CHARACTER_RIG_SPRING_DEFAULTS[i]);
 
+        chainArpg.add(EditorSetting.CHARACTER_RIG_FIELD_COLLIDERS, characterColliderBranch.buildColliderNames());
+
         return chainArpg;
     }
 
@@ -815,7 +838,7 @@ class CharacterRigBranch extends BranchPackage {
         return chainArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES).get(joint).getAsString();
     }
 
-    private ArpgArrayStruct getSpringsArpg() {
+    ArpgArrayStruct getSpringsArpg() {
 
         ArpgObjectStruct rigArpg = getRigArpg();
 
@@ -989,6 +1012,11 @@ class CharacterRigBranch extends BranchPackage {
 
         ArpgArrayStruct bones = chainArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
         return bones.get(bones.size() - 1).getAsString();
+    }
+
+    // A bone's twin across the body, INDEX_NOT_FOUND for a bone with no side
+    int findTwinBone(int boneIndex) {
+        return findTwin(boneIndex);
     }
 
     private int findTwin(int boneIndex) {
@@ -1338,6 +1366,7 @@ class CharacterRigBranch extends BranchPackage {
 
         if (boneIndex >= 0 && boneIndex < boneCount) {
             this.selectedBone = boneIndex;
+            characterColliderBranch.followBone(boneIndex);
             characterEditorManager.notifyChanged();
         }
     }

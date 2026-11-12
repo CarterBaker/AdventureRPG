@@ -11,7 +11,9 @@ public class RigSpringChainStruct extends StructPackage {
      * a tail, a cloak's corner. Stiffness pulls each joint back toward where
      * the pose holds it, damping settles its swing against the body, gravity
      * draws it down and drag holds it back against the air, so it trails,
-     * bounces and settles as the head and body move.
+     * bounces and settles as the head and body move. Its bones are as thick
+     * as its radius, and they rest against the colliders it names, by their
+     * place in the rig; a chain naming none passes through everything.
      */
 
     // Identity
@@ -27,6 +29,10 @@ public class RigSpringChainStruct extends StructPackage {
     private final float gravity;
     private final float drag;
 
+    // Collision — how thick the chain's bones are, and the rig's colliders they are kept out of
+    private final float radius;
+    private final int[] colliders;
+
     // Constructor \\
 
     public RigSpringChainStruct(
@@ -36,7 +42,9 @@ public class RigSpringChainStruct extends StructPackage {
             float stiffness,
             float damping,
             float gravity,
-            float drag) {
+            float drag,
+            float radius,
+            int[] colliders) {
 
         // Identity
         this.name = name;
@@ -50,6 +58,10 @@ public class RigSpringChainStruct extends StructPackage {
         this.damping = damping;
         this.gravity = gravity;
         this.drag = drag;
+
+        // Collision
+        this.radius = radius;
+        this.colliders = colliders;
     }
 
     // Accessible \\
@@ -93,5 +105,18 @@ public class RigSpringChainStruct extends StructPackage {
 
     public float getDrag() {
         return drag;
+    }
+
+    public float getRadius() {
+        return radius;
+    }
+
+    public int getColliderCount() {
+        return colliders.length;
+    }
+
+    // The rig collider the chain rests against, by its place in the rig
+    public int getCollider(int index) {
+        return colliders[index];
     }
 }

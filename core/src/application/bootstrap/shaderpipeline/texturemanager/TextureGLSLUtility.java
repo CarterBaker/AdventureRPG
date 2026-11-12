@@ -144,6 +144,32 @@ class TextureGLSLUtility extends EngineUtility {
         EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
     }
 
+    // One rectangle of one layer of a texture array replaced, the region's rows bottom first as the array holds them
+    static void updateTextureArrayLayer(
+            int handle,
+            int x,
+            int y,
+            int layer,
+            int width,
+            int height,
+            ByteBuffer pixels) {
+
+        GL30 gl30 = (GL30) EngineContext.gl20;
+
+        pixels.position(0);
+
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, handle);
+        gl30.glTexSubImage3D(
+                EngineSetting.GL_TEXTURE_2D_ARRAY,
+                0,
+                x, y, layer,
+                width, height, 1,
+                EngineSetting.GL_RGBA,
+                EngineSetting.GL_UNSIGNED_BYTE,
+                pixels);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_HANDLE_NONE);
+    }
+
     // GPU Disposal \\
 
     static void deleteTexture2D(int handle) {

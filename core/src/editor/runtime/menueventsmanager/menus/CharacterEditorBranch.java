@@ -93,6 +93,10 @@ public class CharacterEditorBranch extends BranchPackage {
         characterEditorManager.setMode(CharacterEditorMode.WEIGHTS);
     }
 
+    public void showPaint() {
+        characterEditorManager.setMode(CharacterEditorMode.PAINT);
+    }
+
     public void showRig() {
         characterEditorManager.setMode(CharacterEditorMode.RIG);
     }

@@ -90,6 +90,14 @@ public class RigHandle extends HandlePackage {
         return rigData.getSpringCarriedBones();
     }
 
+    public int getColliderCount() {
+        return rigData.getColliderCount();
+    }
+
+    public RigColliderStruct getCollider(int colliderIndex) {
+        return rigData.getCollider(colliderIndex);
+    }
+
     public int[] getPartBones(RigPart rigPart) {
         return rigData.getPartBones(rigPart);
     }

@@ -20,8 +20,9 @@ public class ImageManager extends ManagerPackage {
      * change the moment it is made. Every change goes through notifyEdited(),
      * which marks the document, queues its region for the GPU texture views
      * draw, and hands the region to the image's edit listeners. Strokes and
-     * fills each make one undo step. Edits, history, disk access and the
-     * texture each live in their own branch.
+     * fills each make one undo step, and so does a paint, whose tool writes
+     * its pixels one by one and hands them over a stamp at a time. Edits,
+     * history, disk access and the texture each live in their own branch.
      */
 
     // Internal
@@ -133,6 +134,26 @@ public class ImageManager extends ManagerPackage {
         notifyEdited(document, editRegion);
     }
 
+    // A stroke whose tool works out every pixel itself, one undo step however many stamps it lays
+    public void beginPaint(ImageDocumentInstance document) {
+
+        endStroke(document);
+        imageHistoryBranch.beginStep(document);
+        document.beginStroke(0, 0);
+        editRegion.clear();
+    }
+
+    public void paintPixel(ImageDocumentInstance document, int x, int y, int color) {
+        imageEditBranch.writePixel(document, x, y, color, editRegion);
+    }
+
+    // The pixels painted since the last flush handed on, as a stamp of a stroke is shown
+    public void flushPaint(ImageDocumentInstance document) {
+
+        notifyEdited(document, editRegion);
+        editRegion.clear();
+    }
+
     public int pickColor(ImageDocumentInstance document, int x, int y) {
         return imageEditBranch.readPixel(document, x, y);
     }
@@ -194,6 +215,22 @@ public class ImageManager extends ManagerPackage {
 
         document.markSaved();
         return true;
+    }
+
+    // Pixels flattened by their owner written to a file, as an image saves
+    public boolean writeImage(File file, Pixmap pixmap) {
+        return imageLibraryBranch.write(file, pixmap);
+    }
+
+    // A document no tool edits any longer let go, with its texture and listeners
+    public void closeImage(String imageName) {
+
+        ImageDocumentInstance document = imageName2ImageDocument.remove(imageName);
+
+        imageName2EditListeners.remove(imageName);
+
+        if (document != null)
+            imageTextureBranch.delete(document);
     }
 
     // Texture \\

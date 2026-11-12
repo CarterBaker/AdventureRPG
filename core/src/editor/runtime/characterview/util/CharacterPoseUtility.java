@@ -179,6 +179,27 @@ public class CharacterPoseUtility extends EngineUtility {
         out.set(scratch).multiply(turn).multiply(parentRotation).multiply(local);
     }
 
+    // A bone's local turn as the pose composes it: its bind rotation, then a keyed turn within it
+    public static void composeBindTurn(Vector3 bindDegrees, Vector3 keyDegrees, Matrix4 out, Matrix4 scratch) {
+        toRotation(bindDegrees, out);
+        toRotation(keyDegrees, scratch);
+        out.multiply(scratch);
+    }
+
+    // The keyed turn in Euler degrees that carries a bone from its bind rotation to a local turn, nearest a reference
+    public static void toKeyEuler(
+            Matrix4 local,
+            Vector3 bindDegrees,
+            Vector3 reference,
+            Vector3 out,
+            Matrix4 scratchA,
+            Matrix4 scratchB) {
+
+        toRotation(bindDegrees, scratchA);
+        scratchB.set(scratchA).inverse().multiply(local);
+        toEuler(scratchB, reference, out);
+    }
+
     // Euler degrees of a pure turn composed Z, Y then X, in the form nearest a reference angle by angle
     public static void toEuler(Matrix4 rotation, Vector3 reference, Vector3 out) {
 

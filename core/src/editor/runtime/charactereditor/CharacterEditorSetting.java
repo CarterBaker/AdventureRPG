@@ -65,6 +65,13 @@ public class CharacterEditorSetting {
     public static final float AXIS_GUIDE_LENGTH = 4f;
     public static final int BRUSH_GUIDE_SEGMENTS = 32;
 
+    // Overlay — colliders: each circle of a wire sphere or capsule is drawn in this many segments; a capsule shorter
+    // than the epsilon is drawn as a sphere, and a ring's side is found against the up axis unless the axis lies within
+    // the cosine given of it
+    public static final int COLLIDER_GUIDE_SEGMENTS = 24;
+    public static final float COLLIDER_GUIDE_EPSILON = 0.0001f;
+    public static final float COLLIDER_GUIDE_UP_COSINE = 0.9f;
+
     // Overlay — colours
     public static final float[] COLOR_VERTEX = { 0.05f, 0.05f, 0.08f, 1f };
     public static final float[] COLOR_SELECTED = { 1f, 0.55f, 0.1f, 1f };
@@ -75,6 +82,7 @@ public class CharacterEditorSetting {
     public static final float[] COLOR_HEAT_HALF = { 0.15f, 0.85f, 0.2f, 1f };
     public static final float[] COLOR_HEAT_FULL = { 0.95f, 0.15f, 0.1f, 1f };
     public static final float[] COLOR_GUIDE = { 1f, 1f, 1f, 0.85f };
+    public static final float[] COLOR_COLLIDER = { 0.35f, 0.85f, 1f, 0.9f };
     public static final float[] COLOR_AXIS_NORMAL = { 1f, 0.85f, 0.2f, 1f };
     public static final float[][] COLOR_AXES = {
             { 0.95f, 0.25f, 0.25f, 1f },

@@ -18,6 +18,7 @@ import editor.runtime.charactereditor.overlay.CharacterEditorOverlaySystem;
 import editor.runtime.charactereditor.preview.CharacterEditorPreviewSystem;
 import editor.runtime.charactereditor.region.CharacterRegionFrameSystem;
 import editor.runtime.charactereditor.region.CharacterRegionIsolationSystem;
+import editor.runtime.charactereditor.paint.CharacterEditorPaintSystem;
 import editor.runtime.charactereditor.rig.CharacterEditorRigSystem;
 import editor.runtime.charactereditor.sculpt.CharacterEditorSculptSystem;
 import editor.runtime.characterview.panel.CharacterViewRowSource;
@@ -43,8 +44,8 @@ public abstract class CharacterModelingContext extends ContextPackage
      * Every tab that models a character: the meshes it wears — their
      * vertices, faces, new parts, sculpted surface and bone weights — and the
      * rig it is built on, shown in the exact bind pose and framed on the
-     * tab's region. Its modes are Mesh, Sculpt, Weights and Rig (the rig
-     * where the region takes one), each a tool canvas worked with the Tools
+     * tab's region. Its modes are Mesh, Sculpt, Weights, Paint and Rig (the
+     * rig where the region takes one), each a tool canvas worked with the Tools
      * and Brushes tabs, every pick, box, stroke and mirror held to the
      * region; the mesh's actions are listed in the Tools tab and the values
      * of the mode and of what is picked in the Properties tab while the tab
@@ -64,6 +65,7 @@ public abstract class CharacterModelingContext extends ContextPackage
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private CharacterEditorSculptSystem characterEditorSculptSystem;
     private CharacterEditorRigSystem characterEditorRigSystem;
+    private CharacterEditorPaintSystem characterEditorPaintSystem;
     private CharacterEditorOverlaySystem characterEditorOverlaySystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
     private CharacterEditorMenuSystem characterEditorMenuSystem;
@@ -85,6 +87,7 @@ public abstract class CharacterModelingContext extends ContextPackage
         this.characterEditorMeshViewSystem = create(CharacterEditorMeshViewSystem.class);
         this.characterEditorSculptSystem = create(CharacterEditorSculptSystem.class);
         this.characterEditorRigSystem = create(CharacterEditorRigSystem.class);
+        this.characterEditorPaintSystem = create(CharacterEditorPaintSystem.class);
         this.characterEditorOverlaySystem = create(CharacterEditorOverlaySystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterEditorMenuSystem = create(CharacterEditorMenuSystem.class);

@@ -337,7 +337,7 @@ class ImageEditBranch extends BranchPackage {
 
     // Pixels \\
 
-    private void writePixel(ImageDocumentInstance document, int x, int y, int color, ImageRegionStruct region) {
+    void writePixel(ImageDocumentInstance document, int x, int y, int color, ImageRegionStruct region) {
 
         int index = toPixelIndex(document, x, y);
 

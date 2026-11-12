@@ -2362,7 +2362,8 @@ public class EngineSetting {
     // Rig Springs — chains of bones a rig simulates instead of keying, stepped in substeps no longer than the step,
     // at most the step count per update and no more time than the delta allows, reset when a body travels farther
     // than the reset distance in one update; a joint swings at most the angle whose cosine is given from the way the
-    // pose holds its bone; their stiffness, damping, gravity and drag stay within these ranges
+    // pose holds its bone; their stiffness, damping, gravity, drag and radius stay within these ranges, a chain naming
+    // no radius as thick as the default
     public static final int RIG_SPRING_MIN_BONES = 2;
     public static final float RIG_SPRING_STEP = 1f / 120f;
     public static final int RIG_SPRING_MAX_STEPS = 8;
@@ -2374,6 +2375,20 @@ public class EngineSetting {
     public static final float RIG_SPRING_DAMPING_MAX = 100f;
     public static final float RIG_SPRING_GRAVITY_MAX = 50f;
     public static final float RIG_SPRING_DRAG_MAX = 50f;
+    public static final float RIG_SPRING_RADIUS_MAX = 0.5f;
+    public static final float RIG_SPRING_RADIUS_DEFAULT = 0.01f;
+
+    // Rig Blending — turns closer than the angle whose cosine is given are blended straight and normalised, where
+    // slerp would divide by almost nothing
+    public static final float RIG_SLERP_LINEAR_COSINE = 0.9995f;
+
+    // Rig Colliders — spheres and capsules a rig's bones carry for its spring chains to rest against, at most the
+    // count given per rig, each a radius up to the maximum; a bone's segment is pushed out only where it meets a
+    // collider at least the share given of the way from its joint above, the rest of the push left to that joint
+    public static final int RIG_COLLIDER_MAX = 32;
+    public static final int RIG_COLLIDER_END_FLOATS = 6;
+    public static final float RIG_COLLIDER_RADIUS_MAX = 2f;
+    public static final float RIG_COLLIDER_SEGMENT_SHARE_MIN = 0.25f;
 
     // Face Animation — blinks fall at a pseudo-random interval per character, each closing and opening the lids
     public static final float FACE_BLINK_INTERVAL_MIN = 2.2f;

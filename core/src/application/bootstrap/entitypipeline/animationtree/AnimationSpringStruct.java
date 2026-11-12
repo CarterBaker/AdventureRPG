@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.animationtree;
 
+import application.bootstrap.geometrypipeline.rig.RigColliderStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.rig.RigSpringChainStruct;
@@ -19,8 +20,12 @@ public class AnimationSpringStruct extends StructPackage {
      * joint before it, its swing against that joint damped, drawn down by
      * gravity and held back by the air's drag, then kept its bone's length
      * from the joint before it and within a cone about the way the pose
-     * holds its bone, so no jolt flips a lock over; the bones are then turned
-     * about their joints onto the simulated points. A chain
+     * holds its bone, so no jolt flips a lock over, then pushed out of every
+     * collider the chain names — the bone between it and the joint before
+     * it a capsule of the chain's radius, each collider placed where the
+     * pose just composed carries its bone — and held its length again; the
+     * bones are then turned about their joints onto the simulated points. A
+     * chain
      * starts afresh at the pose when it is first stepped, switched back on,
      * or its body is moved farther than a step could carry it; an update
      * longer than the springs simulate carries them rigidly with the pose for
@@ -42,6 +47,10 @@ public class AnimationSpringStruct extends StructPackage {
     private final float[][] posed;
     private final float[][] lastPosed;
 
+    // Colliders — per rig collider, both ends and the radius in the body's frame where the pose last held them
+    private final float[] colliderEnds;
+    private final float[] colliderRadii;
+
     // Frame — how the body stands turned and sized in the world, and back
     private final Matrix4 frame;
     private final Matrix4 frameInverse;
@@ -52,6 +61,8 @@ public class AnimationSpringStruct extends StructPackage {
     private final Vector3 toScratch;
     private final Matrix4 turnScratch;
     private final Matrix4 matrixScratch;
+    private float closestBone;
+    private float closestCollider;
 
     // Constructor \\
 
@@ -83,6 +94,10 @@ public class AnimationSpringStruct extends StructPackage {
             chainActive[c] = true;
             chainReset[c] = true;
         }
+
+        // Colliders
+        this.colliderEnds = new float[EngineSetting.RIG_COLLIDER_MAX * EngineSetting.RIG_COLLIDER_END_FLOATS];
+        this.colliderRadii = new float[EngineSetting.RIG_COLLIDER_MAX];
 
         // Frame
         this.frame = new Matrix4(1f);
@@ -148,8 +163,11 @@ public class AnimationSpringStruct extends StructPackage {
 
     // Capture \\
 
-    // Where the pose just composed holds every joint, in the body's frame
+    // Where the pose just composed holds every joint and every collider, in the body's frame
     public void capture(Matrix4[] worldMatrices) {
+
+        for (int k = 0; k < rigHandle.getColliderCount(); k++)
+            captureCollider(rigHandle.getCollider(k), worldMatrices, k);
 
         for (int c = 0; c < posed.length; c++) {
 
@@ -164,15 +182,43 @@ public class AnimationSpringStruct extends StructPackage {
     }
 
     private void writeFramed(Matrix4 world, float[] out, int i) {
+        writeFramedPoint(world.val[12], world.val[13], world.val[14], out, i);
+    }
+
+    private void writeFramedPoint(float x, float y, float z, float[] out, int i) {
 
         float[] m = frame.val;
-        float x = world.val[12];
-        float y = world.val[13];
-        float z = world.val[14];
 
         out[i] = m[0] * x + m[4] * y + m[8] * z + m[12];
         out[i + 1] = m[1] * x + m[5] * y + m[9] * z + m[13];
         out[i + 2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+    }
+
+    // A collider's ends carried by its bone as posed into the body's frame, its radius sized with the bone and body
+    private void captureCollider(RigColliderStruct collider, Matrix4[] worldMatrices, int colliderIndex) {
+
+        float[] w = worldMatrices[collider.getBoneIndex()].val;
+        float[] m = frame.val;
+        int i = colliderIndex * EngineSetting.RIG_COLLIDER_END_FLOATS;
+
+        writeCarried(w, collider.getStart().x, collider.getStart().y, collider.getStart().z, i);
+        writeCarried(w, collider.getEnd().x, collider.getEnd().y, collider.getEnd().z,
+                i + EngineSetting.RIGGED_MESH_POSITION_FLOATS);
+
+        float ax = m[0] * w[0] + m[4] * w[1] + m[8] * w[2];
+        float ay = m[1] * w[0] + m[5] * w[1] + m[9] * w[2];
+        float az = m[2] * w[0] + m[6] * w[1] + m[10] * w[2];
+
+        colliderRadii[colliderIndex] = collider.getRadius() * (float) Math.sqrt(ax * ax + ay * ay + az * az);
+    }
+
+    private void writeCarried(float[] w, float x, float y, float z, int i) {
+        writeFramedPoint(
+                w[0] * x + w[4] * y + w[8] * z + w[12],
+                w[1] * x + w[5] * y + w[9] * z + w[13],
+                w[2] * x + w[6] * y + w[10] * z + w[14],
+                colliderEnds,
+                i);
     }
 
     // Step \\
@@ -260,8 +306,13 @@ public class AnimationSpringStruct extends StructPackage {
             }
 
             for (int i = EngineSetting.RIGGED_MESH_POSITION_FLOATS; i < p.length;
-                    i += EngineSetting.RIGGED_MESH_POSITION_FLOATS)
+                    i += EngineSetting.RIGGED_MESH_POSITION_FLOATS) {
+
                 stepJoint(p, q, now, then, i, t, keep, hold, pull, fall);
+
+                if (collide(chain, p, i))
+                    holdLength(p, now, i, i - EngineSetting.RIGGED_MESH_POSITION_FLOATS);
+            }
         }
     }
 
@@ -344,6 +395,101 @@ public class AnimationSpringStruct extends StructPackage {
         p[i] = p[parent] + dx * rest;
         p[i + 1] = p[parent + 1] + dy * rest;
         p[i + 2] = p[parent + 2] + dz * rest;
+    }
+
+    // Collision \\
+
+    // A joint pushed out of every collider its chain names, the bone from the joint before it swept by the chain's
+    // radius; true when it moved
+    private boolean collide(RigSpringChainStruct chain, float[] p, int i) {
+
+        int parent = i - EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+        boolean pushed = false;
+
+        for (int k = 0; k < chain.getColliderCount(); k++) {
+
+            int collider = chain.getCollider(k);
+            int start = collider * EngineSetting.RIG_COLLIDER_END_FLOATS;
+            int end = start + EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+            float reach = colliderRadii[collider] + chain.getRadius();
+
+            resolveClosest(p, parent, i, colliderEnds, start, end);
+
+            if (closestBone < EngineSetting.RIG_COLLIDER_SEGMENT_SHARE_MIN)
+                continue;
+
+            float dx = p[parent] + (p[i] - p[parent]) * closestBone
+                    - colliderEnds[start] - (colliderEnds[end] - colliderEnds[start]) * closestCollider;
+            float dy = p[parent + 1] + (p[i + 1] - p[parent + 1]) * closestBone
+                    - colliderEnds[start + 1] - (colliderEnds[end + 1] - colliderEnds[start + 1]) * closestCollider;
+            float dz = p[parent + 2] + (p[i + 2] - p[parent + 2]) * closestBone
+                    - colliderEnds[start + 2] - (colliderEnds[end + 2] - colliderEnds[start + 2]) * closestCollider;
+            float distanceSquared = dx * dx + dy * dy + dz * dz;
+
+            if (distanceSquared >= reach * reach)
+                continue;
+
+            float distance = (float) Math.sqrt(distanceSquared);
+
+            if (distance <= EngineSetting.RIG_SPRING_DIRECTION_EPSILON)
+                continue;
+
+            float push = (reach - distance) / (distance * closestBone);
+
+            p[i] += dx * push;
+            p[i + 1] += dy * push;
+            p[i + 2] += dz * push;
+            pushed = true;
+        }
+
+        return pushed;
+    }
+
+    // Where a bone's segment and a collider's come closest, as shares of the way along each, a sphere's segment a
+    // point
+    private void resolveClosest(float[] p, int a0, int a1, float[] c, int b0, int b1) {
+
+        float d1x = p[a1] - p[a0];
+        float d1y = p[a1 + 1] - p[a0 + 1];
+        float d1z = p[a1 + 2] - p[a0 + 2];
+        float d2x = c[b1] - c[b0];
+        float d2y = c[b1 + 1] - c[b0 + 1];
+        float d2z = c[b1 + 2] - c[b0 + 2];
+        float rx = p[a0] - c[b0];
+        float ry = p[a0 + 1] - c[b0 + 1];
+        float rz = p[a0 + 2] - c[b0 + 2];
+        float a = d1x * d1x + d1y * d1y + d1z * d1z;
+        float e = d2x * d2x + d2y * d2y + d2z * d2z;
+        float f = d2x * rx + d2y * ry + d2z * rz;
+        float epsilon = EngineSetting.RIG_SPRING_DIRECTION_EPSILON;
+
+        if (a <= epsilon) {
+            closestBone = 0f;
+            closestCollider = e <= epsilon ? 0f : Math.clamp(f / e, 0f, 1f);
+            return;
+        }
+
+        float cross = d1x * rx + d1y * ry + d1z * rz;
+
+        if (e <= epsilon) {
+            closestCollider = 0f;
+            closestBone = Math.clamp(-cross / a, 0f, 1f);
+            return;
+        }
+
+        float b = d1x * d2x + d1y * d2y + d1z * d2z;
+        float denominator = a * e - b * b;
+
+        closestBone = denominator > epsilon ? Math.clamp((b * f - cross * e) / denominator, 0f, 1f) : 0f;
+        closestCollider = (b * closestBone + f) / e;
+
+        if (closestCollider < 0f) {
+            closestCollider = 0f;
+            closestBone = Math.clamp(-cross / a, 0f, 1f);
+        } else if (closestCollider > 1f) {
+            closestCollider = 1f;
+            closestBone = Math.clamp((b - cross) / a, 0f, 1f);
+        }
     }
 
     // Apply \\

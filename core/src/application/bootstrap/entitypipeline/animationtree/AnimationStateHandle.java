@@ -10,15 +10,19 @@ import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.quaternions.Quaternion;
 import engine.util.mathematics.vectors.Vector3;
 
 public class AnimationStateHandle extends HandlePackage {
 
     /*
      * Per-entity playback of an animation tree. Tracks each layer's node,
-     * cross-fade and phase, blends clips with Hermite-sampled tracks as offsets
-     * from the bind pose, stacks override and additive layers through bone
-     * masks, and writes the per-bone skinning matrices rendering consumes. A
+     * cross-fade and phase, blends clips with Hermite-sampled tracks as
+     * offsets from the bind pose, stacks override and additive layers
+     * through bone masks — every turn held as a unit quaternion, a clip's
+     * Euler keys turned into one as sampled, blended by slerp, an additive
+     * layer multiplied on and each bone's bind rotation composed before its
+     * pose — and writes the per-bone skinning matrices rendering consumes. A
      * layer with a node for the entity's current action plays it in place of
      * its state node, its phase pinned to the action's phase so a swing's
      * strike always lands on the strike frame; a new action on the node
@@ -67,12 +71,12 @@ public class AnimationStateHandle extends HandlePackage {
 
     // Layer Pose — the offsets each layer last produced, per bone
     private Vector3[][] layerPositions;
-    private Vector3[][] layerRotations;
+    private Quaternion[][] layerRotations;
     private Vector3[][] layerScales;
 
     // Capture — the frozen layer pose an interrupted cross-fade fades out of
     private Vector3[][] capturePositions;
-    private Vector3[][] captureRotations;
+    private Quaternion[][] captureRotations;
     private Vector3[][] captureScales;
 
     // Proportions — per bone, non-inherited
@@ -97,16 +101,18 @@ public class AnimationStateHandle extends HandlePackage {
     private Matrix4 localScratch;
     private Matrix4 proportionScratch;
     private Matrix4 matrixScratchA;
-    private Matrix4 matrixScratchB;
     private Vector3 positionScratch;
-    private Vector3 rotationScratch;
+    private Quaternion rotationScratch;
     private Vector3 scaleScratch;
     private Vector3 nodePositionScratch;
-    private Vector3 nodeRotationScratch;
+    private Quaternion nodeRotationScratch;
     private Vector3 nodeScaleScratch;
     private Vector3 clipPositionScratch;
-    private Vector3 clipRotationScratch;
+    private Quaternion clipRotationScratch;
     private Vector3 clipScaleScratch;
+    private Vector3 eulerScratch;
+    private Quaternion boneTurnScratch;
+    private Quaternion turnScratch;
 
     // Bracket — the two clips a node blends between this sample
     private int bracketLow;
@@ -145,10 +151,10 @@ public class AnimationStateHandle extends HandlePackage {
 
         // Layer Pose and Capture
         this.layerPositions = new Vector3[layerCount][boneCount];
-        this.layerRotations = new Vector3[layerCount][boneCount];
+        this.layerRotations = new Quaternion[layerCount][boneCount];
         this.layerScales = new Vector3[layerCount][boneCount];
         this.capturePositions = new Vector3[layerCount][boneCount];
-        this.captureRotations = new Vector3[layerCount][boneCount];
+        this.captureRotations = new Quaternion[layerCount][boneCount];
         this.captureScales = new Vector3[layerCount][boneCount];
 
         for (int l = 0; l < layerCount; l++) {
@@ -160,10 +166,10 @@ public class AnimationStateHandle extends HandlePackage {
 
             for (int i = 0; i < boneCount; i++) {
                 layerPositions[l][i] = new Vector3();
-                layerRotations[l][i] = new Vector3();
+                layerRotations[l][i] = new Quaternion(1f, 0f, 0f, 0f);
                 layerScales[l][i] = new Vector3(1f, 1f, 1f);
                 capturePositions[l][i] = new Vector3();
-                captureRotations[l][i] = new Vector3();
+                captureRotations[l][i] = new Quaternion(1f, 0f, 0f, 0f);
                 captureScales[l][i] = new Vector3(1f, 1f, 1f);
             }
         }
@@ -192,16 +198,18 @@ public class AnimationStateHandle extends HandlePackage {
         this.localScratch = new Matrix4();
         this.proportionScratch = new Matrix4();
         this.matrixScratchA = new Matrix4();
-        this.matrixScratchB = new Matrix4();
         this.positionScratch = new Vector3();
-        this.rotationScratch = new Vector3();
+        this.rotationScratch = new Quaternion(1f, 0f, 0f, 0f);
         this.scaleScratch = new Vector3();
         this.nodePositionScratch = new Vector3();
-        this.nodeRotationScratch = new Vector3();
+        this.nodeRotationScratch = new Quaternion(1f, 0f, 0f, 0f);
         this.nodeScaleScratch = new Vector3();
         this.clipPositionScratch = new Vector3();
-        this.clipRotationScratch = new Vector3();
+        this.clipRotationScratch = new Quaternion(1f, 0f, 0f, 0f);
         this.clipScaleScratch = new Vector3();
+        this.eulerScratch = new Vector3();
+        this.boneTurnScratch = new Quaternion(1f, 0f, 0f, 0f);
+        this.turnScratch = new Quaternion(1f, 0f, 0f, 0f);
 
         // Playback
         enterInitialNodes(initialState);
@@ -555,13 +563,13 @@ public class AnimationStateHandle extends HandlePackage {
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
             positionScratch.set(0f, 0f, 0f);
-            rotationScratch.set(0f, 0f, 0f);
+            rotationScratch.set(1f, 0f, 0f, 0f);
             scaleScratch.set(1f, 1f, 1f);
 
             for (int l = 0; l < animationTreeHandle.getLayerCount(); l++)
                 applyLayer(l, i);
 
-            rotationScratch.add(bonePostures[i]);
+            rotationScratch.multiply(RigMathUtility.toQuaternion(bonePostures[i], turnScratch));
             composeBone(i);
         }
 
@@ -594,7 +602,8 @@ public class AnimationStateHandle extends HandlePackage {
 
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
-            AnimationClipUtility.sampleClip(clip, phase, i, positionScratch, rotationScratch, scaleScratch);
+            AnimationClipUtility.sampleClip(clip, phase, i, positionScratch, eulerScratch, scaleScratch);
+            RigMathUtility.toQuaternion(eulerScratch, rotationScratch);
             composeBone(i);
         }
 
@@ -607,7 +616,7 @@ public class AnimationStateHandle extends HandlePackage {
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
             positionScratch.set(0f, 0f, 0f);
-            rotationScratch.set(0f, 0f, 0f);
+            rotationScratch.set(1f, 0f, 0f, 0f);
             scaleScratch.set(1f, 1f, 1f);
 
             composeBone(i);
@@ -617,20 +626,20 @@ public class AnimationStateHandle extends HandlePackage {
     }
 
     // Composes one bone from the offsets in the pose scratch over its bind pose as the appearance shapes it, parent
-    // before child
+    // before child: the bind rotation, the shaping's turn within it, then the pose's
     private void composeBone(int boneIndex) {
 
         RigBoneStruct bone = rigHandle.getBone(boneIndex);
 
         positionScratch.add(bone.getPosition()).add(boneShapePositions[boneIndex]);
-        rotationScratch.add(bone.getRotation()).add(boneShapeRotations[boneIndex]);
+        RigMathUtility.toQuaternion(bone.getRotation(), boneTurnScratch)
+                .multiply(RigMathUtility.toQuaternion(boneShapeRotations[boneIndex], turnScratch))
+                .multiply(rotationScratch);
 
         if (!bone.isRoot())
             positionScratch.multiply(boneProportions[bone.getParentIndex()]);
 
-        RigMathUtility.composeLocal(
-                positionScratch, rotationScratch, scaleScratch,
-                localScratch, matrixScratchA, matrixScratchB);
+        RigMathUtility.composeLocal(positionScratch, boneTurnScratch, scaleScratch, localScratch, matrixScratchA);
 
         Matrix4 currentWorld = currentWorldMatrices[boneIndex];
 
@@ -663,18 +672,19 @@ public class AnimationStateHandle extends HandlePackage {
         evaluateLayer(layerIndex, boneIndex);
 
         Vector3 position = layerPositions[layerIndex][boneIndex];
-        Vector3 rotation = layerRotations[layerIndex][boneIndex];
+        Quaternion rotation = layerRotations[layerIndex][boneIndex];
         Vector3 scale = layerScales[layerIndex][boneIndex];
 
         if (!layer.isAdditive()) {
             lerpInto(positionScratch, position, weight);
-            lerpInto(rotationScratch, rotation, weight);
+            RigMathUtility.slerp(rotationScratch, rotation, weight);
             lerpInto(scaleScratch, scale, weight);
             return;
         }
 
         positionScratch.add(position.x * weight, position.y * weight, position.z * weight);
-        rotationScratch.add(rotation.x * weight, rotation.y * weight, rotation.z * weight);
+        RigMathUtility.slerp(turnScratch.set(1f, 0f, 0f, 0f), rotation, weight);
+        rotationScratch.multiply(turnScratch);
         scaleScratch.multiply(
                 lerp(1f, scale.x, weight),
                 lerp(1f, scale.y, weight),
@@ -684,7 +694,7 @@ public class AnimationStateHandle extends HandlePackage {
     private void evaluateLayer(int layerIndex, int boneIndex) {
 
         Vector3 position = layerPositions[layerIndex][boneIndex];
-        Vector3 rotation = layerRotations[layerIndex][boneIndex];
+        Quaternion rotation = layerRotations[layerIndex][boneIndex];
         Vector3 scale = layerScales[layerIndex][boneIndex];
 
         sampleNode(layerIndex, layerCurrentNodes[layerIndex], boneIndex, position, rotation, scale);
@@ -696,7 +706,7 @@ public class AnimationStateHandle extends HandlePackage {
 
         if (layerCaptured[layerIndex]) {
             lerpInto(position, capturePositions[layerIndex][boneIndex], sourceWeight);
-            lerpInto(rotation, captureRotations[layerIndex][boneIndex], sourceWeight);
+            RigMathUtility.slerp(rotation, captureRotations[layerIndex][boneIndex], sourceWeight);
             lerpInto(scale, captureScales[layerIndex][boneIndex], sourceWeight);
             return;
         }
@@ -710,7 +720,7 @@ public class AnimationStateHandle extends HandlePackage {
                 nodeScaleScratch);
 
         lerpInto(position, nodePositionScratch, sourceWeight);
-        lerpInto(rotation, nodeRotationScratch, sourceWeight);
+        RigMathUtility.slerp(rotation, nodeRotationScratch, sourceWeight);
         lerpInto(scale, nodeScaleScratch, sourceWeight);
     }
 
@@ -721,7 +731,7 @@ public class AnimationStateHandle extends HandlePackage {
             int nodeIndex,
             int boneIndex,
             Vector3 outPosition,
-            Vector3 outRotation,
+            Quaternion outRotation,
             Vector3 outScale) {
 
         AnimationNodeStruct node = animationTreeHandle.getLayer(layerIndex).getNode(nodeIndex);
@@ -733,13 +743,16 @@ public class AnimationStateHandle extends HandlePackage {
                     phase,
                     boneIndex,
                     outPosition,
-                    outRotation,
+                    eulerScratch,
                     outScale);
+            RigMathUtility.toQuaternion(eulerScratch, outRotation);
             return;
         }
 
         resolveBracket(node);
-        AnimationClipUtility.sampleClip(node.getClip(bracketLow), phase, boneIndex, outPosition, outRotation, outScale);
+        AnimationClipUtility.sampleClip(
+                node.getClip(bracketLow), phase, boneIndex, outPosition, eulerScratch, outScale);
+        RigMathUtility.toQuaternion(eulerScratch, outRotation);
 
         if (bracketWeight <= 0f)
             return;
@@ -749,11 +762,12 @@ public class AnimationStateHandle extends HandlePackage {
                 phase,
                 boneIndex,
                 clipPositionScratch,
-                clipRotationScratch,
+                eulerScratch,
                 clipScaleScratch);
+        RigMathUtility.toQuaternion(eulerScratch, clipRotationScratch);
 
         lerpInto(outPosition, clipPositionScratch, bracketWeight);
-        lerpInto(outRotation, clipRotationScratch, bracketWeight);
+        RigMathUtility.slerp(outRotation, clipRotationScratch, bracketWeight);
         lerpInto(outScale, clipScaleScratch, bracketWeight);
     }
 

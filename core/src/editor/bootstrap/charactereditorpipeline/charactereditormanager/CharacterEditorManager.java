@@ -9,6 +9,7 @@ import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStampStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
@@ -76,6 +77,8 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterEditBranch characterEditBranch;
     private CharacterPreviewBranch characterPreviewBranch;
     private CharacterLookBranch characterLookBranch;
+    private CharacterColliderBranch characterColliderBranch;
+    private CharacterPaintBranch characterPaintBranch;
     private CharacterPropertyBranch characterPropertyBranch;
     private CharacterRowBranch characterRowBranch;
     private CharacterHistoryBranch characterHistoryBranch;
@@ -165,6 +168,10 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterSculptBranch = create(CharacterSculptBranch.class);
         this.characterShapeBranch = create(CharacterShapeBranch.class);
         this.characterRigBranch = create(CharacterRigBranch.class);
+        this.characterColliderBranch = create(CharacterColliderBranch.class);
+        this.characterPaintBranch = create(CharacterPaintBranch.class);
+        create(CharacterPaintPropertyBranch.class);
+        create(CharacterPaintRowBranch.class);
         this.characterRigPropertyBranch = create(CharacterRigPropertyBranch.class);
         this.characterRigRowBranch = create(CharacterRigRowBranch.class);
         this.characterMeshPropertyBranch = create(CharacterMeshPropertyBranch.class);
@@ -327,6 +334,11 @@ public class CharacterEditorManager extends ManagerPackage {
         if (!saveRigFile())
             return;
 
+        if (!characterPaintBranch.save()) {
+            setStatusMessage(EditorSetting.CHARACTER_PAINT_MESSAGE_NOT_SAVED);
+            return;
+        }
+
         setStatusMessage(infoManager.saveDocument(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName())
                 ? EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + activeDocument.getRaceName()
                 : infoManager.getRefusal());
@@ -340,6 +352,7 @@ public class CharacterEditorManager extends ManagerPackage {
         infoManager.revertDocument(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName());
         revertDirtyMeshes();
         revertRigFile();
+        characterPaintBranch.revert();
         setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + activeDocument.getRaceName());
     }
 
@@ -856,10 +869,59 @@ public class CharacterEditorManager extends ManagerPackage {
             characterWeightBranch.endStroke(document);
     }
 
+    // Paint \\
+
+    // A paint stroke on the active part's texture maps, false where nothing is open to paint
+    public boolean beginPaint() {
+
+        if (!mode.paintsMaps() || getActiveMeshDocument() == null)
+            return false;
+
+        characterPaintBranch.beginStroke();
+        return true;
+    }
+
+    // One stamp of the paint brush, every face under it painted by the tool in use at its strength
+    public void paint(CharacterPaintStampStruct stamp) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document != null)
+            characterPaintBranch.stamp(document, stamp, getPaintTool(), getBrushStrength());
+    }
+
+    public void endPaint() {
+        characterPaintBranch.endStroke();
+    }
+
+    // The island of the face clicked filled, or the colour under the pointer taken, by the tool in use
+    public void clickPaint(int faceIndex, float u, float v) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (!mode.paintsMaps() || document == null || faceIndex == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        if (getPaintTool() == EditorTool.PICK)
+            characterPaintBranch.pick(document, faceIndex, u, v);
+        else
+            characterPaintBranch.fill(document, faceIndex, getBrushStrength());
+    }
+
+    public EditorTool getPaintTool() {
+        return toolManager.getTool(ToolCanvas.CHARACTER_PAINT);
+    }
+
     // History \\
 
-    // A step back in the history of what the mode edits: the rig in Rig mode, the active part's mesh otherwise
+    // A step back in the history of what the mode edits: the maps in Paint mode, the rig in Rig mode, the active
+    // part's mesh otherwise
     public void undo() {
+
+        if (mode.paintsMaps()) {
+            reportHistory(!characterPaintBranch.isStroking() && characterPaintBranch.undo(), true);
+            return;
+        }
 
         if (mode == CharacterEditorMode.RIG) {
             reportHistory(syncRig() && characterRigBranch.undo(), true);
@@ -880,6 +942,11 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     public void redo() {
+
+        if (mode.paintsMaps()) {
+            reportHistory(!characterPaintBranch.isStroking() && characterPaintBranch.redo(), false);
+            return;
+        }
 
         if (mode == CharacterEditorMode.RIG) {
             reportHistory(syncRig() && characterRigBranch.redo(), false);
@@ -1509,6 +1576,27 @@ public class CharacterEditorManager extends ManagerPackage {
         return characterRigBranch.getSize(boneIndex);
     }
 
+    public int getRigColliderCount() {
+        return syncRig() ? characterColliderBranch.getColliderCount() : 0;
+    }
+
+    public int getSelectedRigColliderIndex() {
+        return syncRig() ? characterColliderBranch.getSelectedCollider() : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    public boolean isRigColliderCapsule(int colliderIndex) {
+        return characterColliderBranch.isCapsule(colliderIndex);
+    }
+
+    public float getRigColliderRadius(int colliderIndex) {
+        return characterColliderBranch.getRadius(colliderIndex);
+    }
+
+    // One end of a collider where the rig as it is being edited places it in the world
+    public void resolveRigColliderPoint(int colliderIndex, boolean end, Vector3 out) {
+        characterColliderBranch.resolvePoint(colliderIndex, end, out);
+    }
+
     public EditorTool getRigTool() {
         return toolManager.getTool(ToolCanvas.CHARACTER_RIG);
     }
@@ -1577,7 +1665,8 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName())
                 || hasDirtyWornMesh()
-                || syncRig() && characterRigBranch.isDirty())
+                || syncRig() && characterRigBranch.isDirty()
+                || characterPaintBranch.isDirty())
             status.append(EditorSetting.CHARACTER_VIEW_DIRTY_MARKER);
 
         status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(mode.getLabel());
@@ -1590,6 +1679,10 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (mode.isMeshMode())
             appendMeshStatus(status);
+
+        if (mode.paintsMaps())
+            characterPaintBranch.appendStatus(
+                    status, characterPaintBranch.resolveActiveCanvas(getActiveMeshDocument()));
         else if (mode == CharacterEditorMode.RIG && syncRig())
             characterRigBranch.appendStatus(status);
 

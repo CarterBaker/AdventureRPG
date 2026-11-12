@@ -92,6 +92,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
     private Matrix4 turn;
     private Matrix4 rotated;
     private Matrix4 matrixScratch;
+    private Matrix4 bindScratch;
     private Matrix4 rootTurn;
     private Matrix4 middleTurn;
     private Vector3 reached;
@@ -137,6 +138,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         this.turn = new Matrix4();
         this.rotated = new Matrix4();
         this.matrixScratch = new Matrix4();
+        this.bindScratch = new Matrix4();
         this.rootTurn = new Matrix4();
         this.middleTurn = new Matrix4();
         this.reached = new Vector3();
@@ -266,11 +268,8 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         holdParent(state, bone);
 
         bindRotation.set(bone.getRotation());
-        startRotation.set(
-                bindRotation.x + pose[AnimationEditorChannel.ROTATION.toPoseIndex(0)],
-                bindRotation.y + pose[AnimationEditorChannel.ROTATION.toPoseIndex(1)],
-                bindRotation.z + pose[AnimationEditorChannel.ROTATION.toPoseIndex(2)]);
-        CharacterPoseUtility.toRotation(startRotation, startLocal);
+        readRotation(pose, startRotation);
+        CharacterPoseUtility.composeBindTurn(bindRotation, startRotation, startLocal, matrixScratch);
         resolveHit(mouseX, mouseY, startHit);
 
         this.dragTool = tool;
@@ -381,8 +380,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
 
         CharacterPoseUtility.toAxisRotation(axis, angle, turn);
         CharacterPoseUtility.applyWorldTurn(parentRotation, turn, startLocal, rotated, matrixScratch);
-        CharacterPoseUtility.toEuler(rotated, startRotation, eulerScratch);
-        eulerScratch.subtract(bindRotation);
+        CharacterPoseUtility.toKeyEuler(rotated, bindRotation, startRotation, eulerScratch, matrixScratch, bindScratch);
         writeChannel(AnimationEditorChannel.ROTATION, eulerScratch);
     }
 
@@ -454,11 +452,11 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         holdParent(state, root);
 
         bindRotation.set(root.getRotation());
-        startRotation.set(bindRotation).add(readRotation(pose, eulerScratch));
-        CharacterPoseUtility.toRotation(startRotation, startLocal);
+        readRotation(pose, startRotation);
+        CharacterPoseUtility.composeBindTurn(bindRotation, startRotation, startLocal, matrixScratch);
         middleBindRotation.set(middle.getRotation());
-        middleStartRotation.set(middleBindRotation).add(readRotation(middlePose, eulerScratch));
-        CharacterPoseUtility.toRotation(middleStartRotation, middleStartLocal);
+        readRotation(middlePose, middleStartRotation);
+        CharacterPoseUtility.composeBindTurn(middleBindRotation, middleStartRotation, middleStartLocal, matrixScratch);
 
         joint.set(ikEnd);
         resolveHit(mouseX, mouseY, startHit);
@@ -516,15 +514,14 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         resolveTurn(eulerScratch, reached, middleTurn);
 
         CharacterPoseUtility.applyWorldTurn(parentRotation, rootTurn, startLocal, rotated, matrixScratch);
-        CharacterPoseUtility.toEuler(rotated, startRotation, eulerScratch);
-        eulerScratch.subtract(bindRotation);
+        CharacterPoseUtility.toKeyEuler(rotated, bindRotation, startRotation, eulerScratch, matrixScratch, bindScratch);
         writeChannel(AnimationEditorChannel.ROTATION, eulerScratch);
 
         matrixScratch.set(rootTurn).inverse();
         turn.set(matrixScratch).multiply(middleTurn).multiply(rootTurn);
         CharacterPoseUtility.applyWorldTurn(rootWorldRotation, turn, middleStartLocal, rotated, matrixScratch);
-        CharacterPoseUtility.toEuler(rotated, middleStartRotation, eulerScratch);
-        eulerScratch.subtract(middleBindRotation);
+        CharacterPoseUtility.toKeyEuler(
+                rotated, middleBindRotation, middleStartRotation, eulerScratch, matrixScratch, bindScratch);
         middlePose[AnimationEditorChannel.ROTATION.toPoseIndex(0)] = eulerScratch.x;
         middlePose[AnimationEditorChannel.ROTATION.toPoseIndex(1)] = eulerScratch.y;
         middlePose[AnimationEditorChannel.ROTATION.toPoseIndex(2)] = eulerScratch.z;

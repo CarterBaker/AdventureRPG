@@ -1,5 +1,6 @@
 package application.bootstrap.shaderpipeline.texturemanager;
 
+import java.awt.Color;
 import java.nio.ByteBuffer;
 
 import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
@@ -198,6 +199,27 @@ public class TextureManager extends ManagerPackage {
 
     public void updateTexture2D(int handle, int x, int y, int width, int height, ByteBuffer pixels) {
         TextureGLSLUtility.updateTexture2D(handle, x, y, width, height, pixels);
+    }
+
+    // The layer of every texture array an alias's maps fill, INDEX_NOT_FOUND for a name no alias carries
+    public int getAliasLayer(String aliasName) {
+        return ((TextureLoader) internalLoader).getAliasLibrarySystem().get(aliasName);
+    }
+
+    // What an alias's layer holds where no image provides it
+    public Color getAliasDefaultColor(int aliasLayer) {
+        return ((TextureLoader) internalLoader).getAliasLibrarySystem().getDefaultColor(aliasLayer);
+    }
+
+    public void updateTextureArrayLayer(
+            int handle,
+            int x,
+            int y,
+            int layer,
+            int width,
+            int height,
+            ByteBuffer pixels) {
+        TextureGLSLUtility.updateTextureArrayLayer(handle, x, y, layer, width, height, pixels);
     }
 
     public void deleteTexture2D(int handle) {

@@ -821,6 +821,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_SCULPT = "Sculpt";
     public static final String CHARACTER_EDITOR_MODE_WEIGHTS = "Weights";
     public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
+    public static final String CHARACTER_EDITOR_MODE_PAINT = "Paint";
     public static final String CHARACTER_EDITOR_POSE_REST = "Bind";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
@@ -1043,6 +1044,8 @@ public class EditorSetting {
             + " part way, Shift adds, Ctrl removes; Move, Rotate and Scale follow it; drag off the mesh to orbit";
     public static final String CHARACTER_EDITOR_STATUS_SCULPT_HINT = "Drag on the mesh to sculpt with the tool in use,"
             + " Ctrl inverts the stroke; drag off it to orbit, right-drag to pan";
+    public static final String CHARACTER_EDITOR_STATUS_PAINT_HINT = "Drag on the mesh to paint the map chosen; Fill"
+            + " fills the island clicked, Pick takes its colour; drag off it to orbit, right-drag to pan";
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
             + " Scale sizes it, Place adds a child, Erase removes one; drag off the joints to orbit";
     public static final String CHARACTER_EDITOR_STATUS_TRANSFORM_HINT = "X Y Z hold to an axis, Ctrl snaps, click or "
@@ -1082,6 +1085,61 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_FIELD_IK = "ik";
     public static final String CHARACTER_RIG_FIELD_POLE = "pole";
     public static final String CHARACTER_RIG_FIELD_SPRINGS = "springs";
+    public static final String CHARACTER_RIG_FIELD_COLLIDERS = "colliders";
+    public static final String CHARACTER_RIG_FIELD_BONE = "bone";
+    public static final String CHARACTER_RIG_FIELD_SHAPE = "shape";
+    public static final String CHARACTER_RIG_FIELD_RADIUS = "radius";
+    public static final String CHARACTER_RIG_FIELD_OFFSET = "offset";
+    public static final String CHARACTER_RIG_FIELD_START = "start";
+    public static final String CHARACTER_RIG_FIELD_END = "end";
+
+    // Character Paint — the maps a part's texture carries, in the order the Map row steps through them, each with its
+    // label, the alias whose layer it fills and the suffix its image takes beside the texture; a canvas holds at most
+    // the layer count, its first the image itself; an image open for painting is named by the prefix, its texture,
+    // map and layer number; a texel within the bleed of a face's UV edge is painted with it, so islands never show a
+    // seam, and a face whose UV area falls under the epsilon paints nothing; values step by these steps and the
+    // colour starts white
+    public static final String[] CHARACTER_PAINT_MAP_LABELS = {
+            "Albedo", "Normal", "Height", "AO", "Metallic", "Roughness", "Tint" };
+    public static final String[] CHARACTER_PAINT_MAP_ALIASES = {
+            "albedo", "normal", "height", "ao", "metallic", "roughness", "tint" };
+    public static final String[] CHARACTER_PAINT_MAP_SUFFIXES = { "A", "n", "h", "ao", "m", "rough", "tint" };
+    public static final String CHARACTER_PAINT_SUFFIX_SEPARATOR = "_";
+    public static final String CHARACTER_PAINT_EXTENSION_SEPARATOR = ".";
+    public static final int CHARACTER_PAINT_MAX_LAYERS = 8;
+    public static final String CHARACTER_PAINT_IMAGE_PREFIX = "paint/";
+    public static final String CHARACTER_PAINT_IMAGE_SEPARATOR = "/";
+    public static final float CHARACTER_PAINT_BLEED_PIXELS = 1.5f;
+    public static final float CHARACTER_PAINT_AREA_EPSILON = 0.000001f;
+    public static final float CHARACTER_PAINT_COLOR_STEP = 0.02f;
+    public static final float CHARACTER_PAINT_OPACITY_STEP = 0.05f;
+    public static final float[] CHARACTER_PAINT_COLOR_DEFAULT = { 1f, 1f, 1f };
+    public static final String[] CHARACTER_PAINT_COLOR_LABELS = { "Red", "Green", "Blue" };
+
+    // Character Paint — row keys, labels and messages
+    public static final String CHARACTER_PAINT_KEY_MAP = "paint_map";
+    public static final String CHARACTER_PAINT_KEY_LAYER = "paint_layer";
+    public static final String CHARACTER_PAINT_KEY_OPACITY = "paint_opacity";
+    public static final String CHARACTER_PAINT_KEY_COLOR = "paint_color";
+    public static final String CHARACTER_PAINT_KEY_LAYER_ADD = "paint_layer_add";
+    public static final String CHARACTER_PAINT_KEY_LAYER_REMOVE = "paint_layer_remove";
+    public static final String CHARACTER_PAINT_HEADER_PAINT = "Paint ";
+    public static final String CHARACTER_PAINT_HEADER_COLOR = "Colour";
+    public static final String CHARACTER_PAINT_HEADER_LAYERS = "Layers";
+    public static final String CHARACTER_PAINT_HEADER_NO_TEXTURE = "The part worn here has no texture to paint";
+    public static final String CHARACTER_PAINT_LABEL_MAP = "Map";
+    public static final String CHARACTER_PAINT_LABEL_LAYER = "Layer";
+    public static final String CHARACTER_PAINT_LABEL_OPACITY = "Opacity";
+    public static final String CHARACTER_PAINT_LABEL_LAYER_ADD = "Add Layer";
+    public static final String CHARACTER_PAINT_LABEL_LAYER_REMOVE = "Remove Layer";
+    public static final String CHARACTER_PAINT_LAYER_BASE = "Base";
+    public static final String CHARACTER_PAINT_LAYER_NAME = "Layer ";
+    public static final String CHARACTER_PAINT_MESSAGE_LAYER_ADDED = "Layer added: ";
+    public static final String CHARACTER_PAINT_MESSAGE_LAYER_REMOVED = "Layer removed: ";
+    public static final String CHARACTER_PAINT_MESSAGE_LAYER_BASE = "The base layer is the image itself and stays";
+    public static final String CHARACTER_PAINT_MESSAGE_LAYER_FULL = "A map holds at most "
+            + CHARACTER_PAINT_MAX_LAYERS + " layers";
+    public static final String CHARACTER_PAINT_MESSAGE_NOT_SAVED = "A painted map could not be written";
 
     // Character Rig — new bones and sizes, in blocks; a new bone is named this and a number, then its parent's side
     public static final float CHARACTER_RIG_SIZE_MIN = 0.005f;
@@ -1115,14 +1173,33 @@ public class EditorSetting {
 
     // Character Rig — spring chains: the settings a chain is simulated by, in the order their rows list them, each
     // with its label, the step its row moves by, its largest value and what a new chain starts with
-    public static final String[] CHARACTER_RIG_SPRING_FIELDS = { "stiffness", "damping", "gravity", "drag" };
-    public static final String[] CHARACTER_RIG_SPRING_LABELS = { "Stiffness", "Damping", "Gravity", "Drag" };
-    public static final float[] CHARACTER_RIG_SPRING_STEPS = { 5f, 0.5f, 0.5f, 0.1f };
+    public static final String[] CHARACTER_RIG_SPRING_FIELDS = { "stiffness", "damping", "gravity", "drag", "radius" };
+    public static final String[] CHARACTER_RIG_SPRING_LABELS = { "Stiffness", "Damping", "Gravity", "Drag", "Radius" };
+    public static final float[] CHARACTER_RIG_SPRING_STEPS = { 5f, 0.5f, 0.5f, 0.1f, 0.002f };
     public static final float[] CHARACTER_RIG_SPRING_MAXIMA = {
             EngineSetting.RIG_SPRING_STIFFNESS_MAX, EngineSetting.RIG_SPRING_DAMPING_MAX,
-            EngineSetting.RIG_SPRING_GRAVITY_MAX, EngineSetting.RIG_SPRING_DRAG_MAX };
-    public static final float[] CHARACTER_RIG_SPRING_DEFAULTS = { 80f, 6f, 9.8f, 0.8f };
+            EngineSetting.RIG_SPRING_GRAVITY_MAX, EngineSetting.RIG_SPRING_DRAG_MAX,
+            EngineSetting.RIG_SPRING_RADIUS_MAX };
+    public static final float[] CHARACTER_RIG_SPRING_DEFAULTS = {
+            80f, 6f, 9.8f, 0.8f, EngineSetting.RIG_SPRING_RADIUS_DEFAULT };
     public static final String CHARACTER_RIG_SPRING_SUFFIX = "_spring";
+
+    // Character Rig — colliders: a new one is named after its bone's stem with this suffix and its side, numbered
+    // from two when taken, a sphere at the centre share of the way to the bone's first child, its radius the width
+    // share of the bone's thinner side and never under the minimum; its rows list the radius, then each end's three
+    // axes, each row's key index the collider times the stride plus the field, the radius stepped by the radius
+    // step and the ends by the point step; the shapes it steps through, labelled
+    public static final String CHARACTER_RIG_COLLIDER_SUFFIX = "_collider";
+    public static final float CHARACTER_RIG_COLLIDER_RADIUS_STEP = 0.002f;
+    public static final float CHARACTER_RIG_COLLIDER_POINT_STEP = 0.002f;
+    public static final float CHARACTER_RIG_COLLIDER_RADIUS_MIN = 0.002f;
+    public static final float CHARACTER_RIG_COLLIDER_CENTRE_SHARE = 0.5f;
+    public static final float CHARACTER_RIG_COLLIDER_WIDTH_SHARE = 0.5f;
+    public static final int CHARACTER_RIG_COLLIDER_FIELD_RADIUS = 0;
+    public static final int CHARACTER_RIG_COLLIDER_FIELD_START = 1;
+    public static final int CHARACTER_RIG_COLLIDER_FIELD_END = 4;
+    public static final int CHARACTER_RIG_COLLIDER_STRIDE = 7;
+    public static final String[] CHARACTER_RIG_COLLIDER_SHAPE_LABELS = { "Sphere", "Capsule" };
 
     // Character Rig — hair locks: a card is a run of hair faces whose v spans at least this share root to tip, its
     // centre line read row by row where v differs by more than the row gap; a card this long or longer is a lock
@@ -1181,6 +1258,13 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_KEY_SPRING_ADD = "rig_spring_add";
     public static final String CHARACTER_RIG_KEY_SPRING_REMOVE = "rig_spring_remove";
     public static final String CHARACTER_RIG_KEY_SPRING_PREVIEW = "rig_spring_preview";
+    public static final String CHARACTER_RIG_KEY_SPRING_COLLIDER = "rig_spring_collider";
+    public static final String CHARACTER_RIG_KEY_COLLIDER = "rig_collider";
+    public static final String CHARACTER_RIG_KEY_COLLIDER_VALUE = "rig_collider_value";
+    public static final String CHARACTER_RIG_KEY_COLLIDER_SHAPE = "rig_collider_shape";
+    public static final String CHARACTER_RIG_KEY_COLLIDER_CHAINS = "rig_collider_chains";
+    public static final String CHARACTER_RIG_KEY_COLLIDER_ADD = "rig_collider_add";
+    public static final String CHARACTER_RIG_KEY_COLLIDER_REMOVE = "rig_collider_remove";
 
     // Character Rig — panel text
     public static final String CHARACTER_RIG_INDENT = "   ";
@@ -1203,6 +1287,19 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_LABEL_SPRING_ADD = "Add Spring Chain";
     public static final String CHARACTER_RIG_LABEL_SPRING_REMOVE = "Remove Spring Chain";
     public static final String CHARACTER_RIG_LABEL_SPRING_PREVIEW = "Preview Springs";
+    public static final String CHARACTER_RIG_LABEL_COLLIDER_ADD = "Add Collider";
+    public static final String CHARACTER_RIG_LABEL_COLLIDER_REMOVE = "Remove Collider";
+    public static final String CHARACTER_RIG_LABEL_COLLIDER = "Collider ";
+    public static final String CHARACTER_RIG_LABEL_SHAPE = "Shape";
+    public static final String CHARACTER_RIG_LABEL_RADIUS = "Radius";
+    public static final String CHARACTER_RIG_LABEL_OFFSET = "Offset";
+    public static final String CHARACTER_RIG_LABEL_START = "Start";
+    public static final String CHARACTER_RIG_LABEL_END = "End";
+    public static final String CHARACTER_RIG_LABEL_CHAINS = "Spring Chains";
+    public static final String CHARACTER_RIG_LABEL_CHAINS_ALL = "All";
+    public static final String CHARACTER_RIG_LABEL_CHAINS_SOME = " of ";
+    public static final String CHARACTER_RIG_HEADER_COLLIDERS = "Colliders";
+    public static final String CHARACTER_RIG_HEADER_SPRING_COLLIDERS = "Rests Against";
     public static final String CHARACTER_RIG_HEADER_HAIR = "Hair";
     public static final String CHARACTER_RIG_HEADER_SPRING = "Spring Chain ";
     public static final String CHARACTER_RIG_HEADER_ACTIONS = "Rig";
@@ -1230,6 +1327,11 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_MESSAGE_SPRING_NONE =
             "Pick a bone with a chain of single children below it, in no spring chain or IK handle yet";
     public static final String CHARACTER_RIG_MESSAGE_SPRING_FREE = "The selected bone is in no spring chain";
+    public static final String CHARACTER_RIG_MESSAGE_COLLIDER_ADDED = "Collider added: ";
+    public static final String CHARACTER_RIG_MESSAGE_COLLIDER_REMOVED = "Collider removed: ";
+    public static final String CHARACTER_RIG_MESSAGE_COLLIDER_NONE = "The selected bone carries no collider";
+    public static final String CHARACTER_RIG_MESSAGE_COLLIDER_FULL = "A rig carries at most "
+            + EngineSetting.RIG_COLLIDER_MAX + " colliders";
     public static final String CHARACTER_RIG_MESSAGE_PREVIEW_ON = "Springs preview live in the pose chosen";
     public static final String CHARACTER_RIG_MESSAGE_PREVIEW_OFF = "Spring preview off, the bind pose held";
     public static final String CHARACTER_RIG_MESSAGE_IK_NONE =
@@ -1772,6 +1874,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_WEIGHTS = "Character Weights";
     public static final String TOOL_CANVAS_CHARACTER_SCULPT = "Character Sculpt";
     public static final String TOOL_CANVAS_CHARACTER_RIG = "Character Rig";
+    public static final String TOOL_CANVAS_CHARACTER_PAINT = "Character Paint";
     public static final String TOOL_CANVAS_CHARACTER_FACE = "Character Face";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
@@ -1792,6 +1895,7 @@ public class EditorSetting {
     public static final float TOOL_STRENGTH_DEFAULT = 1f;
     public static final float TOOL_WEIGHT_STRENGTH_DEFAULT = 0.2f;
     public static final float TOOL_SCULPT_STRENGTH_DEFAULT = 0.5f;
+    public static final float TOOL_PAINT_STRENGTH_DEFAULT = 0.5f;
     public static final float TOOL_TWIST_STEP = 15f;
     public static final float TOOL_TWIST_MAX = 360f;
     public static final float TOOL_TWIST_DEFAULT = 90f;

@@ -72,6 +72,11 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     private int faceMinRow;
     private int faceMaxRow;
 
+    // Hit — how far along the last ray met a triangle, and where on it from its first corner
+    private float hitDistance;
+    private float hitU;
+    private float hitV;
+
     // Scratch
     private Vector2 screenScratch;
     private Vector2 occlusionScratch;
@@ -290,6 +295,59 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
                 strengths.add(falloff * strength);
             }
         }
+    }
+
+    // The active part's face whose surface the ray through a window pixel meets first, its UV there written out;
+    // INDEX_NOT_FOUND where the ray meets none of the region's faces
+    public int pickFace(float pixelX, float pixelY, Vector2 uvOut) {
+
+        if (activeDocument == null)
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        RiggedMeshStruct mesh = activeDocument.getMesh();
+        int picked = EngineSetting.INDEX_NOT_FOUND;
+        float nearest = Float.POSITIVE_INFINITY;
+
+        resolveRay(pixelX, pixelY, rayOrigin, rayDirection);
+
+        for (int f = 0; f < mesh.getFaceCount(); f++) {
+
+            if (!isInRegion(mesh.getFaceVertex(f, 0)))
+                continue;
+
+            for (int t = 0; t < 2; t++) {
+
+                int b = t == 0 ? 1 : 2;
+                int c = t == 0 ? 2 : 3;
+
+                if (!hitsTriangle(activePositions, mesh.getFaceVertex(f, 0), mesh.getFaceVertex(f, b),
+                        mesh.getFaceVertex(f, c), nearest))
+                    continue;
+
+                nearest = hitDistance;
+                picked = f;
+                uvOut.set(
+                        resolveHitUV(mesh, f, b, c, true),
+                        resolveHitUV(mesh, f, b, c, false));
+            }
+        }
+
+        return picked;
+    }
+
+    // A face's UV where the last ray met its triangle from the first corner through two others
+    private float resolveHitUV(RiggedMeshStruct mesh, int faceIndex, int b, int c, boolean u) {
+
+        float a0 = u ? mesh.getFaceU(faceIndex, 0) : mesh.getFaceV(faceIndex, 0);
+        float b0 = u ? mesh.getFaceU(faceIndex, b) : mesh.getFaceV(faceIndex, b);
+        float c0 = u ? mesh.getFaceU(faceIndex, c) : mesh.getFaceV(faceIndex, c);
+
+        return a0 + (b0 - a0) * hitU + (c0 - a0) * hitV;
+    }
+
+    // Whether a point on the active part shows to the camera, always with X-Ray on
+    public boolean isPointShown(float x, float y, float z) {
+        return characterEditorManager.isXray() || !isOccluded(x, y, z);
     }
 
     // Region \\
@@ -603,6 +661,11 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
             return false;
 
         float t = (e2x * qx + e2y * qy + e2z * qz) * inverse;
+
+        this.hitDistance = t;
+        this.hitU = u;
+        this.hitV = v;
+
         return t > CharacterEditorSetting.OCCLUSION_EPSILON && t < reach;
     }
 
