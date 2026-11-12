@@ -501,6 +501,13 @@ class InfoValidationBranch extends BranchPackage {
                 if (value.isArray() && index >= 0 && index < value.getAsArray().size())
                     collectLocalValues(steps, stepIndex + 1, value.getAsArray().get(index), segmentIndex + 2);
             }
+            case SAME_KEY -> {
+
+                String key = resolveSameKey(step, segmentIndex);
+
+                if (value.isObject() && key != null && value.getAsObject().has(key))
+                    collectLocalValues(steps, stepIndex + 1, value.getAsObject().get(key), segmentIndex + 2);
+            }
         }
     }
 
@@ -515,6 +522,15 @@ class InfoValidationBranch extends BranchPackage {
         } catch (NumberFormatException e) {
             return EngineSetting.INDEX_NOT_FOUND;
         }
+    }
+
+    // The map key the referring value sits under below a step's key, or none when it sits elsewhere
+    private String resolveSameKey(InfoLocalStepStruct step, int segmentIndex) {
+
+        if (segmentIndex + 1 >= segments.size() || !segments.get(segmentIndex).equals(step.getKey()))
+            return null;
+
+        return segments.get(segmentIndex + 1);
     }
 
     private String resolveTargetSchemaName(InfoReferenceStruct reference, ArpgObjectStruct container) {

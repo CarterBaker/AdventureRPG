@@ -1976,6 +1976,7 @@ public class EditorSetting {
     public static final String INFO_LOCAL_SEPARATOR = ".";
     public static final String INFO_LOCAL_ANY_ELEMENT = "[]";
     public static final String INFO_LOCAL_SAME_ELEMENT = "[.]";
+    public static final String INFO_LOCAL_SAME_KEY = "{.}";
     public static final String INFO_LOCAL_MAP_KEYS = "{}";
     public static final String INFO_TILE_ALIAS_SEPARATOR = "_";
     public static final String INFO_VALUE_KEY_STRING = "s:";

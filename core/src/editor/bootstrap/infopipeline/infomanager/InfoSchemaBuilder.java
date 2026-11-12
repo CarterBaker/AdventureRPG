@@ -548,7 +548,7 @@ class InfoSchemaBuilder extends BuilderPackage {
 
             if (last && step.getStep() != InfoLocalStep.FIELD && step.getStep() != InfoLocalStep.MAP_KEYS)
                 throwException("Info schema '" + schemaName + "' field '" + key + "' has a local path '" + path
-                        + "' that ends on an array instead of a value or map keys.");
+                        + "' that ends on an array or a map entry instead of a value or map keys.");
 
             steps.add(step);
         }
@@ -556,13 +556,15 @@ class InfoSchemaBuilder extends BuilderPackage {
         return steps;
     }
 
-    // A local path cut at every separator outside a step's brackets, so a same-element step keeps its own
+    // A local path cut at every separator outside a step's brackets, so a same-entry step keeps its own
     private ObjectArrayList<String> splitLocalPath(String path) {
 
         ObjectArrayList<String> segments = new ObjectArrayList<>();
         char separator = EditorSetting.INFO_LOCAL_SEPARATOR.charAt(0);
-        char open = EditorSetting.INFO_LOCAL_ANY_ELEMENT.charAt(0);
-        char close = EditorSetting.INFO_LOCAL_ANY_ELEMENT.charAt(1);
+        char openElement = EditorSetting.INFO_LOCAL_ANY_ELEMENT.charAt(0);
+        char closeElement = EditorSetting.INFO_LOCAL_ANY_ELEMENT.charAt(1);
+        char openKey = EditorSetting.INFO_LOCAL_MAP_KEYS.charAt(0);
+        char closeKey = EditorSetting.INFO_LOCAL_MAP_KEYS.charAt(1);
         int depth = 0;
         int start = 0;
 
@@ -570,9 +572,9 @@ class InfoSchemaBuilder extends BuilderPackage {
 
             char character = path.charAt(i);
 
-            if (character == open)
+            if (character == openElement || character == openKey)
                 depth++;
-            else if (character == close)
+            else if (character == closeElement || character == closeKey)
                 depth--;
             else if (character == separator && depth == 0) {
                 segments.add(path.substring(start, i));
@@ -595,6 +597,11 @@ class InfoSchemaBuilder extends BuilderPackage {
             return new InfoLocalStepStruct(
                     segment.substring(0, segment.length() - EditorSetting.INFO_LOCAL_ANY_ELEMENT.length()),
                     InfoLocalStep.ANY_ELEMENT);
+
+        if (segment.endsWith(EditorSetting.INFO_LOCAL_SAME_KEY))
+            return new InfoLocalStepStruct(
+                    segment.substring(0, segment.length() - EditorSetting.INFO_LOCAL_SAME_KEY.length()),
+                    InfoLocalStep.SAME_KEY);
 
         if (segment.endsWith(EditorSetting.INFO_LOCAL_MAP_KEYS))
             return new InfoLocalStepStruct(
@@ -631,7 +638,7 @@ class InfoSchemaBuilder extends BuilderPackage {
             InfoFieldType expected = switch (step.getStep()) {
                 case FIELD -> i == steps.size() - 1 ? InfoFieldType.STRING : InfoFieldType.OBJECT;
                 case ANY_ELEMENT, SAME_ELEMENT -> InfoFieldType.ARRAY;
-                case MAP_KEYS -> InfoFieldType.MAP;
+                case SAME_KEY, MAP_KEYS -> InfoFieldType.MAP;
             };
 
             if (stepField == null || stepField.getType() != expected)
@@ -640,6 +647,7 @@ class InfoSchemaBuilder extends BuilderPackage {
                         + expected.getSchemaName() + " field.");
 
             current = step.getStep() == InfoLocalStep.ANY_ELEMENT || step.getStep() == InfoLocalStep.SAME_ELEMENT
+                    || step.getStep() == InfoLocalStep.SAME_KEY
                     ? stepField.getElement()
                     : stepField;
         }

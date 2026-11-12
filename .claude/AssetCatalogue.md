@@ -229,6 +229,8 @@ One line per session that changed this file: the date, what was added or removed
   `races/Human.arpg` (overlay `styles` and defaults, teeth color and palette), `schemas/Races.arpg`,
   `menus/CharacterCreator.arpg` (style row) and the shaders `CharacterAppearance.glsl` and `CharacterSurface.glsl`
   (teeth color).
+- 2026-11-12: Editor startup fix. Regenerated `schemas/Races.arpg` (each overlay's `default` names a style of its own
+  gender's overlay through a local path, so the editor no longer refuses the schema at boot).
 ---
 
 ## Textures and Sprites (2290 files)

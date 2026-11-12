@@ -93,12 +93,13 @@ Schemas also carry every rule the Builder enforces, so the editor refuses to sav
 load (`InfoValidationBranch` checks, `InfoIntegrityBranch` gates every save and delete). A string names other content
 with `reference` (a schema; or `{"by": sibling, "schemas": {value: schema}}`), `resource` (`{"directory", "naming":
 "stem"|"file"|"tile"}`) or `local` (a path in the same entry: `a[]` any element, `a[.]` the referring value's own
-element, `m{}` a map's keys), with `allow` listing accepted values such as `""` for none; a map names content with
-`key_reference`. Numbers take `min`/`max` (inclusive) or `above`/`below` (exclusive) and `at_least_field`; lists take
-`min_count`/`max_count`; fields take `required_unless`, `required_when` (`{"key", "values"}`), `conflicts_with`,
-`distinct` (inside array elements) and `unique` (top level). A schema may set `reference_form: "name"` (entries
-registered by bare name) and `required_names` (entries the game cannot start without). When a Builder gains a rule,
-add it to the schema in the same change. Keys a schema does not declare are shown as ignored and never block a save.
+element, `m{.}` the referring value's own map entry, `m{}` a map's keys), with `allow` listing accepted values such as
+`""` for none; a map names content with `key_reference`. Numbers take `min`/`max` (inclusive) or `above`/`below`
+(exclusive) and `at_least_field`; lists take `min_count`/`max_count`; fields take `required_unless`, `required_when`
+(`{"key", "values"}`), `conflicts_with`, `distinct` (inside array elements) and `unique` (top level). A schema may
+set `reference_form: "name"` (entries registered by bare name) and `required_names` (entries the game cannot start
+without). When a Builder gains a rule, add it to the schema in the same change. Keys a schema does not declare are
+shown as ignored and never block a save.
 
 | Schema | Directory under `assets/` | Layout |
 |---|---|---|
