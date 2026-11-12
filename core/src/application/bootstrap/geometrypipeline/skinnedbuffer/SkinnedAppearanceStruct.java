@@ -1,5 +1,7 @@
 package application.bootstrap.geometrypipeline.skinnedbuffer;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
@@ -9,10 +11,12 @@ public class SkinnedAppearanceStruct extends StructPackage {
 
     /*
      * The appearance one skinned draw writes into its instance's palette row
-     * after the bones: a header texel (x = hidden bone index), one texel per
-     * SkinnedColor and the SkinnedDetail amounts four to a texel, followed by
-     * the morph weights of the mesh they were resolved for — any other mesh
-     * drawn with this appearance, hair worn on the body, gets zero weights.
+     * after the bones: a header texel (x = SkinnedMaskMode), one texel per
+     * SkinnedColor, the SkinnedDetail amounts four to a texel, the bone mask
+     * and three texels per SkinnedOverlay placing it on the model drawn,
+     * followed by the morph weights of the mesh they were resolved for — any
+     * other mesh drawn with this appearance, hair worn on the body, gets zero
+     * weights.
      * Reused as a mutable scratch by whoever submits skinned draws, holding
      * the weights array it is lent, never a copy.
      */
@@ -38,23 +42,37 @@ public class SkinnedAppearanceStruct extends StructPackage {
 
     public void reset() {
 
-        texels[0] = EngineSetting.SKINNED_HIDDEN_BONE_NONE;
-        texels[1] = 0f;
-        texels[2] = 0f;
-        texels[3] = 0f;
+        Arrays.fill(texels, 0f);
 
         for (SkinnedColor skinnedColor : SkinnedColor.VALUES)
             setColor(skinnedColor, Color.WHITE);
-
-        for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
-            setDetail(skinnedDetail, 0f);
 
         morphMesh = null;
         morphWeights = null;
     }
 
-    public void setHiddenBone(float hiddenBone) {
-        texels[0] = hiddenBone;
+    // The bones this draw hides or alone shows, copied in whole
+    public void setBoneMask(SkinnedBoneMaskStruct boneMask) {
+        texels[0] = boneMask.getMode().ordinal();
+        boneMask.write(texels, getMaskTexel() * EngineSetting.COLOR_CHANNEL_COUNT);
+    }
+
+    // Where an overlay lies on the model drawn; null where the model places none, so it paints nothing
+    public void setOverlay(SkinnedOverlay skinnedOverlay, SkinnedOverlayStruct overlay) {
+
+        int base = (getMaskTexel() + EngineSetting.SKINNED_BONE_MASK_TEXELS
+                + skinnedOverlay.ordinal() * EngineSetting.SKINNED_OVERLAY_TEXELS) * EngineSetting.COLOR_CHANNEL_COUNT;
+
+        if (overlay != null) {
+            overlay.write(texels, base);
+            return;
+        }
+
+        Arrays.fill(
+                texels,
+                base,
+                base + EngineSetting.SKINNED_OVERLAY_TEXELS * EngineSetting.COLOR_CHANNEL_COUNT,
+                0f);
     }
 
     public void setColor(SkinnedColor skinnedColor, Color color) {
@@ -98,6 +116,11 @@ public class SkinnedAppearanceStruct extends StructPackage {
     // Accessible \\
 
     public static int getTexelCount() {
+        return getMaskTexel() + EngineSetting.SKINNED_BONE_MASK_TEXELS
+                + SkinnedOverlay.VALUES.length * EngineSetting.SKINNED_OVERLAY_TEXELS;
+    }
+
+    private static int getMaskTexel() {
         return EngineSetting.SKINNED_APPEARANCE_HEADER_TEXELS + SkinnedColor.VALUES.length
                 + EngineSetting.SKINNED_APPEARANCE_DETAIL_TEXELS;
     }

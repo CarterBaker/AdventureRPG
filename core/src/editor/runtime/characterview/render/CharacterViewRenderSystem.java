@@ -1,6 +1,7 @@
 package editor.runtime.characterview.render;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
+import application.bootstrap.entitypipeline.appearance.AppearanceIsolationStruct;
 import application.bootstrap.entitypipeline.entitymanager.EntityRenderSystem;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
@@ -32,7 +33,8 @@ public class CharacterViewRenderSystem extends SystemPackage {
      * an overlay above the scene, so they
      * show through the body. Marker models are pooled and only ever grow.
      * Tools drawing more of their own into the viewport use the same scene
-     * and overlay targets.
+     * and overlay targets; a part editor narrows what of the character is
+     * drawn through the viewport's isolation.
      */
 
     // Internal
@@ -52,6 +54,7 @@ public class CharacterViewRenderSystem extends SystemPackage {
     // Models
     private ModelInstance gridModel;
     private MaterialInstance characterMaterial;
+    private AppearanceIsolationStruct isolation;
 
     // Markers
     private ObjectArrayList<ModelInstance> markerModels;
@@ -71,6 +74,9 @@ public class CharacterViewRenderSystem extends SystemPackage {
 
     @Override
     protected void create() {
+
+        // Models
+        this.isolation = new AppearanceIsolationStruct();
 
         // Markers
         this.markerModels = new ObjectArrayList<>();
@@ -188,12 +194,12 @@ public class CharacterViewRenderSystem extends SystemPackage {
 
         if (characterViewPoseSystem.hasSubject())
             entityRenderSystem.pushPreview(
-                    characterViewPoseSystem.getRaceData(),
                     characterViewPoseSystem.getRaceGender(),
                     characterViewPoseSystem.getAppearanceHandle(),
                     characterViewPoseSystem.getAnimationStateHandle().getSkinningMatrices(),
                     modelMatrix,
                     characterMaterial,
+                    isolation,
                     sceneFbo,
                     window);
 
@@ -208,6 +214,11 @@ public class CharacterViewRenderSystem extends SystemPackage {
     }
 
     // Accessible \\
+
+    // What of the character this viewport draws, everything until a part editor isolates its part
+    public AppearanceIsolationStruct getIsolation() {
+        return isolation;
+    }
 
     public FBOInstance getSceneFbo() {
         return sceneFbo;

@@ -27,9 +27,12 @@ class CharacterShapeBranch extends BranchPackage {
      * Inflate swells each vertex along its own, Smooth relaxes it toward its
      * neighbours, Pinch draws it toward the brush's centre across the line
      * of sight, Flatten levels it onto the area's plane and Nudge carries it
-     * with the pointer; an inverted stroke does the opposite. With mirror
-     * on, every move is handed across x to the vertex's mirror and the two
-     * share it where both lie under the brush. Positions are written rounded
+     * with the pointer; Crease cuts a sharp line under the brush's centre,
+     * drawing the surface in and toward it, as a lid fold or a lip line is
+     * cut, and Relax evens the spacing of the vertices along the surface
+     * without wearing the shape down; an inverted stroke does the opposite.
+     * With mirror on, every move is handed across x to the vertex's mirror
+     * and the two share it where both lie under the brush. Positions are written rounded
      * to the editor's precision; the manager shows them once a frame however
      * many stamps the frame held.
      */
@@ -205,6 +208,26 @@ class CharacterShapeBranch extends BranchPackage {
                 float along = move.x * view.x + move.y * view.y + move.z * view.z;
                 move.subtract(view.x * along, view.y * along, view.z * along)
                         .multiply(strength * stamp.getDirection() * EditorSetting.CHARACTER_SCULPT_PINCH_RATE);
+            }
+            case CREASE -> {
+                Vector3 view = stamp.getViewDirection();
+                Vector3 center = stamp.getCenter();
+
+                move.set(center.x - x, center.y - y, center.z - z);
+                float along = move.x * view.x + move.y * view.y + move.z * view.z;
+                move.subtract(view.x * along, view.y * along, view.z * along)
+                        .multiply(strength * EditorSetting.CHARACTER_SCULPT_CREASE_PINCH_RATE)
+                        .add(areaNormal.x * -reach * EditorSetting.CHARACTER_SCULPT_CREASE_RATE,
+                                areaNormal.y * -reach * EditorSetting.CHARACTER_SCULPT_CREASE_RATE,
+                                areaNormal.z * -reach * EditorSetting.CHARACTER_SCULPT_CREASE_RATE);
+            }
+            case RELAX -> {
+                resolveNeighbourAverage(vertexIndex, move);
+                resolveVertexNormal(vertexIndex, normal);
+                move.subtract(x, y, z);
+                float along = move.x * normal.x + move.y * normal.y + move.z * normal.z;
+                move.subtract(normal.x * along, normal.y * along, normal.z * along)
+                        .multiply(strength * EditorSetting.CHARACTER_SCULPT_RELAX_RATE);
             }
             case FLATTEN -> {
                 float distance = (x - areaCenter.x) * areaNormal.x

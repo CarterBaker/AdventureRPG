@@ -13,7 +13,7 @@ import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
 import editor.bootstrap.faceeditorpipeline.faceeditormanager.FaceEditorManager;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
@@ -221,7 +221,7 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_THIN -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_THIN);
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_HEAVY);
             case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> getDetail(SkinnedDetail.VALUES[axis]);
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> resolveShape(key).getDefaultValue();
+            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> getStartingShape(resolveShape(key));
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN -> resolveShape(key).getMin();
             case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> resolveShape(key).getMax();
             case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.getBlink();
@@ -302,11 +302,46 @@ class CharacterPropertyBranch extends BranchPackage {
         }
     }
 
-    // The default the game starts the slider at moved, the preview following it
+    // The value the game starts the previewed gender's slider at moved, the preview following it: the gender's own
+    // where its preset names the shape, the race's default otherwise
     private void setShapeDefault(int shapeIndex, float value) {
 
-        faceEditorManager.setDefault(shapeIndex, CharacterViewUtility.round(value));
+        AppearanceShapeStruct shape = resolveAppearanceData().getShape(shapeIndex);
+        float rounded = CharacterViewUtility.round(
+                CharacterViewUtility.clamp(value, shape.getMin(), shape.getMax()));
+
+        if (findGenderShapes(shape) != null)
+            characterEditBranch.setGenderShape(
+                    characterEditorManager.getActiveDocument(), getPreviewGenderName(), shape.getShapeName(), rounded);
+        else
+            faceEditorManager.setDefault(shapeIndex, rounded);
+
         characterEditorManager.setShapeValue(shapeIndex, Float.NaN);
+    }
+
+    // The value the game starts the previewed gender at on a slider: its preset's where it names the shape, else the
+    // race's default
+    private float getStartingShape(AppearanceShapeStruct shape) {
+
+        ArpgObjectStruct shapes = findGenderShapes(shape);
+
+        return shapes != null
+                ? ArpgUtility.getFloat(shapes, shape.getShapeName(), shape.getDefaultValue())
+                : shape.getDefaultValue();
+    }
+
+    // The previewed gender's preset shapes where they name the shape, null otherwise
+    private ArpgObjectStruct findGenderShapes(AppearanceShapeStruct shape) {
+
+        ArpgObjectStruct shapes = CharacterViewUtility.findObject(
+                CharacterViewUtility.findObject(
+                        CharacterViewUtility.findObject(
+                                characterEditorManager.getTemplateArpg(),
+                                EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
+                        getPreviewGenderName()),
+                EditorSetting.CHARACTER_EDITOR_FIELD_SHAPES);
+
+        return shapes != null && ArpgUtility.hasNumber(shapes, shape.getShapeName()) ? shapes : null;
     }
 
     float getStep(String key) {
@@ -411,9 +446,12 @@ class CharacterPropertyBranch extends BranchPackage {
         }
 
         switch (keyName) {
-            case EditorSetting.CHARACTER_EDITOR_KEY_POSE -> characterEditorManager.setPose(CharacterEditorPose.VALUES[
-                    Math.floorMod(characterEditorManager.getPose().ordinal() + direction,
-                            CharacterEditorPose.VALUES.length)]);
+            case EditorSetting.CHARACTER_EDITOR_KEY_POSE -> characterEditorManager.stepPose(direction);
+            case EditorSetting.CHARACTER_EDITOR_KEY_SIDE -> characterEditorManager.setSide(
+                    characterEditorManager.getRegion(),
+                    CharacterEditorSide.VALUES[Math.floorMod(
+                            characterEditorManager.getSide(characterEditorManager.getRegion()).ordinal() + direction,
+                            CharacterEditorSide.VALUES.length)]);
             case EditorSetting.CHARACTER_EDITOR_KEY_GENDER -> cycleGender(document, direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE -> cycleFeature(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class),
@@ -437,7 +475,10 @@ class CharacterPropertyBranch extends BranchPackage {
         ArpgObjectStruct anchor = getSelectedAnchor();
 
         return switch (keyName) {
-            case EditorSetting.CHARACTER_EDITOR_KEY_POSE -> characterEditorManager.getPose().getLabel();
+            case EditorSetting.CHARACTER_EDITOR_KEY_POSE -> characterEditorManager.getPoseLabel();
+            case EditorSetting.CHARACTER_EDITOR_KEY_SIDE -> characterEditorManager
+                    .getSide(characterEditorManager.getRegion())
+                    .getLabel();
             case EditorSetting.CHARACTER_EDITOR_KEY_GENDER -> genderManager
                     .getGenderHandleFromGenderID(characterEditorManager.getPreviewGenderID())
                     .getDisplayName();

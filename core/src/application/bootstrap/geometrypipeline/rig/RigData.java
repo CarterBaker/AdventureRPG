@@ -15,9 +15,10 @@ public class RigData extends DataPackage {
      * parent before child so poses evaluate in one pass, with the IK handles
      * its tools pose limbs and digits through and the spring chains the
      * runtime simulates in place of any key — every bone a chain turns, and
-     * the chain each bone belongs to, found once here. Bind-pose world
-     * matrices and their inverses are baked once per rig whenever it is
-     * built.
+     * the chain each bone belongs to, found once here. It names the bones
+     * each body part holds and the clips its editors strike as poses.
+     * Bind-pose world matrices and their inverses are baked once per rig
+     * whenever it is built.
      */
 
     // Identity
@@ -35,6 +36,10 @@ public class RigData extends DataPackage {
     private final int[] bone2SpringChain;
     private final int[] springCarriedBones;
 
+    // Parts — the bones each part names, by RigPart ordinal; the clips struck as editor poses
+    private final int[][] part2Bones;
+    private final String[] poseNames;
+
     // Bind Pose — baked
     private final Matrix4[] bindWorldMatrices;
     private final Matrix4[] bindWorldInverseMatrices;
@@ -46,7 +51,9 @@ public class RigData extends DataPackage {
             RigBoneStruct[] bones,
             Object2IntOpenHashMap<String> boneName2Index,
             RigIkChainStruct[] ikChains,
-            RigSpringChainStruct[] springChains) {
+            RigSpringChainStruct[] springChains,
+            int[][] part2Bones,
+            String[] poseNames) {
 
         // Identity
         this.rigName = rigName;
@@ -62,6 +69,10 @@ public class RigData extends DataPackage {
         this.springChains = springChains;
         this.bone2SpringChain = resolveSpringChains(bones.length, springChains);
         this.springCarriedBones = resolveSpringCarried(bones.length, springChains);
+
+        // Parts
+        this.part2Bones = part2Bones;
+        this.poseNames = poseNames;
 
         // Bind Pose — baked
         this.bindWorldMatrices = new Matrix4[bones.length];
@@ -238,5 +249,19 @@ public class RigData extends DataPackage {
                 return chain;
 
         return null;
+    }
+
+    // The bones a part names, empty for a part the rig does not name
+    public int[] getPartBones(RigPart rigPart) {
+        return part2Bones[rigPart.ordinal()];
+    }
+
+    public int getPoseCount() {
+        return poseNames.length;
+    }
+
+    // The clip struck as an editor pose, by its animation name
+    public String getPoseName(int poseIndex) {
+        return poseNames[poseIndex];
     }
 }

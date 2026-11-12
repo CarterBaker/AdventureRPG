@@ -4,8 +4,10 @@ import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedMaskMode;
 import engine.graphics.color.Color;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
@@ -20,13 +22,16 @@ public class AppearanceData extends DataPackage {
      * each AppearanceExpression plays resolved on every body, the default
      * color and palette of every SkinnedColor, the default amount of every
      * SkinnedDetail, the shape sliders, the default feature per slot, each
-     * gender's starting preset, the head-shape bone and the build curve.
+     * gender's starting preset, the head-shape bone with the mask that hides
+     * it and every bone below it from a character's own eyes, and the build
+     * curve.
      * isCompatible() is the one rule for whether a feature can be worn.
      */
 
     // Rig
     private final RigHandle rigHandle;
     private final int headBoneIndex;
+    private final SkinnedBoneMaskStruct headMask;
 
     // Bodies — in the order the race's genders wear them
     private final MeshHandle[] bodyMeshes;
@@ -78,6 +83,9 @@ public class AppearanceData extends DataPackage {
         // Rig
         this.rigHandle = rigHandle;
         this.headBoneIndex = headBoneIndex;
+        this.headMask = new SkinnedBoneMaskStruct();
+        headMask.setMode(SkinnedMaskMode.HIDE);
+        headMask.addBranch(rigHandle, headBoneIndex);
 
         // Bodies
         this.bodyMeshes = bodyMeshes;
@@ -209,6 +217,11 @@ public class AppearanceData extends DataPackage {
 
     public int getHeadBoneIndex() {
         return headBoneIndex;
+    }
+
+    // Hides the head and everything it carries, the eyes and teeth worn in it included
+    public SkinnedBoneMaskStruct getHeadMask() {
+        return headMask;
     }
 
     public Color getColor(SkinnedColor skinnedColor) {

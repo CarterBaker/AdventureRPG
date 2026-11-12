@@ -7,10 +7,10 @@ import editor.runtime.charactereditor.CharacterModelingContext;
 public class FootEditorContext extends CharacterModelingContext {
 
     /*
-     * Editor tab for the feet, framed on the left with its toes: the body's
-     * mesh where it weighs on the feet, sculpted and weighted, and the foot
-     * and toe bones rigged, every edit mirrored to the right foot while
-     * mirror is on.
+     * Editor tab for the feet, shown one side at a time and framed on it
+     * with its toes: the body's mesh where it weighs on the bones the rig
+     * names as its feet, sculpted and weighted, and the foot and toe bones
+     * rigged, every edit mirrored to the other foot.
      */
 
     // Window \\

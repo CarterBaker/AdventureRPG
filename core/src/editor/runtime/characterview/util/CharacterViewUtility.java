@@ -64,10 +64,34 @@ public class CharacterViewUtility extends EngineUtility {
 
     // Numbers \\
 
+    // A resource name read as words: its last path part, split where its PascalCase starts a word ("poses/TPose" is
+    // "T Pose")
+    public static String toResourceLabel(String resourceName) {
+
+        String name = resourceName.substring(resourceName.lastIndexOf(EditorSetting.CHARACTER_VIEW_RESOURCE_SEPARATOR) + 1);
+        StringBuilder label = new StringBuilder(name.length() + EditorSetting.CHARACTER_VIEW_LABEL_SLACK);
+
+        for (int i = 0; i < name.length(); i++) {
+
+            char c = name.charAt(i);
+            boolean wordStart = i > 0 && Character.isUpperCase(c)
+                    && (Character.isLowerCase(name.charAt(i - 1))
+                    || i + 1 < name.length() && Character.isLowerCase(name.charAt(i + 1)));
+
+            if (wordStart)
+                label.append(EditorSetting.CHARACTER_VIEW_WORD_SEPARATOR);
+
+            label.append(c);
+        }
+
+        return label.toString();
+    }
+
+    // Rounded to the editor's precision away from zero at a tie, so a point and its mirror always round alike
     public static float round(float value) {
 
         float scale = EditorSetting.CHARACTER_VIEW_DECIMAL_SCALE;
-        return Math.round(value * scale) / scale;
+        return Math.signum(value) * Math.round(Math.abs(value) * scale) / scale;
     }
 
     public static float clamp(float value, float min, float max) {

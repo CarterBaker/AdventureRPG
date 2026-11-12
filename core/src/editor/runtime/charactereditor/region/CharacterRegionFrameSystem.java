@@ -20,8 +20,9 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
     /*
      * What a modelling tab's view camera frames: the whole character for the
      * whole region, otherwise the region's frame bone and every bone below
-     * it — the left hand with its fingers, the left foot with its toes, the
-     * head with the hair on it. While the region's part is open the frame is
+     * it — the hand shown with its fingers, the foot shown with its toes, the
+     * eye shown in its socket, the jaw with the mouth, the head with the hair
+     * on it. While the region's part is open the frame is
      * the box of every vertex those bones carry at least the pick share of,
      * worked out again only once the mesh changes; otherwise it is about the
      * bones' joints as the preview stands. The radius reaches past the
@@ -39,6 +40,7 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
     private boolean framed;
     private CharacterMeshDocumentInstance framedDocument;
     private int framedRevision;
+    private int framedBone;
 
     // Scratch
     private BooleanArrayList chainBones;
@@ -74,11 +76,11 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
     protected void update() {
 
         CharacterEditorRegion region = characterEditorModeSystem.getRegion();
-        String frameBone = region.getFrameBone();
+        int frameBone = !characterViewPoseSystem.hasSubject()
+                ? EngineSetting.INDEX_NOT_FOUND
+                : characterEditorManager.getRegionFrameBone(region, characterViewPoseSystem.getRaceData().getRigHandle());
 
-        if (frameBone == null || !characterViewPoseSystem.hasSubject()
-                || characterViewPoseSystem.getAnimationStateHandle() == null
-                || !characterViewPoseSystem.getRaceData().getRigHandle().hasBone(frameBone)) {
+        if (frameBone == EngineSetting.INDEX_NOT_FOUND || characterViewPoseSystem.getAnimationStateHandle() == null) {
             this.framed = false;
             this.framedDocument = null;
             return;
@@ -94,18 +96,19 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
         frameChain(characterViewPoseSystem.getRaceData().getRigHandle(), frameBone);
     }
 
-    // The box of every vertex the frame bone and the bones below it carry, once per change of the mesh
-    private void frameMesh(CharacterMeshDocumentInstance document, String frameBone) {
+    // The box of every vertex the frame bone and the bones below it carry, once per change of the mesh or the bone
+    private void frameMesh(CharacterMeshDocumentInstance document, int frameBone) {
 
-        if (document == framedDocument && document.getRevision() == framedRevision)
+        if (document == framedDocument && document.getRevision() == framedRevision && frameBone == framedBone)
             return;
 
         this.framedDocument = document;
         this.framedRevision = document.getRevision();
+        this.framedBone = frameBone;
 
         RiggedMeshStruct mesh = document.getMesh();
 
-        resolveChain(mesh.getRigHandle(), mesh.getRigHandle().getBoneIndex(frameBone));
+        resolveChain(mesh.getRigHandle(), frameBone);
         low.set(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE);
         high.set(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE);
 
@@ -152,9 +155,8 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
     }
 
     // The frame bone and every bone below it framed about their joints as the preview stands
-    private void frameChain(RigHandle rigHandle, String frameBone) {
+    private void frameChain(RigHandle rigHandle, int root) {
 
-        int root = rigHandle.getBoneIndex(frameBone);
         int count = 0;
 
         resolveChain(rigHandle, root);

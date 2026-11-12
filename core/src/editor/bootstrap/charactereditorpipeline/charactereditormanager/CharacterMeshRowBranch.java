@@ -66,6 +66,9 @@ class CharacterMeshRowBranch extends BranchPackage {
 
             String partKey = partKeys.get(i);
 
+            if (!characterEditorManager.holdsPartKey(characterEditorManager.getRegion(), partKey))
+                continue;
+
             rows.add(CharacterViewRowStruct.item(
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_MESH_PART, partKey),
                     toPartLabel(document, partKey),

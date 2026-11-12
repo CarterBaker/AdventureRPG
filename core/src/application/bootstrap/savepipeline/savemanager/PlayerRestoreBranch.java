@@ -155,7 +155,9 @@ class PlayerRestoreBranch extends BranchPackage {
         return ArpgUtility.hasObject(arpg, key) ? arpg.getAsObject(key) : new ArpgObjectStruct();
     }
 
-    // A feature a save names that no longer exists leaves the slot as the gender starts it
+    // A feature a save names that no longer exists leaves the slot as the gender starts it; a slot the save leaves
+    // bare stays bare where the player may bare it, and keeps its start otherwise, so a save written before a slot
+    // existed takes the gender's eyes and teeth
     private void restoreFeatures(ArpgObjectStruct featuresArpg, AppearanceHandle appearanceHandle) {
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
@@ -163,7 +165,10 @@ class PlayerRestoreBranch extends BranchPackage {
             String key = ArpgUtility.toEnumName(featureSlot);
 
             if (!featuresArpg.has(key)) {
-                appearanceHandle.clearFeature(featureSlot);
+
+                if (featureSlot.isRemovable())
+                    appearanceHandle.clearFeature(featureSlot);
+
                 continue;
             }
 

@@ -14,9 +14,14 @@ import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedProjection;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.shaderpipeline.texture.TextureHandle;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
@@ -45,6 +50,7 @@ class RaceBuilder extends BuilderPackage {
     private MeshManager meshManager;
     private RigManager rigManager;
     private MaterialManager materialManager;
+    private TextureManager textureManager;
     private AnimationTreeManager animationTreeManager;
     private GenderManager genderManager;
     private AppearanceBuilder appearanceBuilder;
@@ -58,6 +64,7 @@ class RaceBuilder extends BuilderPackage {
         this.meshManager = get(MeshManager.class);
         this.rigManager = get(RigManager.class);
         this.materialManager = get(MaterialManager.class);
+        this.textureManager = get(TextureManager.class);
         this.animationTreeManager = get(AnimationTreeManager.class);
         this.genderManager = get(GenderManager.class);
         this.appearanceBuilder = get(AppearanceBuilder.class);
@@ -156,7 +163,48 @@ class RaceBuilder extends BuilderPackage {
                 meshHandle,
                 rigHandle,
                 material,
-                animationTreeHandle);
+                animationTreeHandle,
+                parseOverlays(genderArpg, genderName, raceName));
+    }
+
+    // Overlays \\
+
+    // Where each overlay the gender's model names lies on it: its "texture", "projection", box "center" and "size",
+    // whether it is "mirror"ed across the body and, for a wrapped overlay, how often its image "repeat"s per block
+    private SkinnedOverlayStruct[] parseOverlays(ArpgObjectStruct genderArpg, String genderName, String raceName) {
+
+        SkinnedOverlayStruct[] overlays = new SkinnedOverlayStruct[SkinnedOverlay.VALUES.length];
+
+        if (!ArpgUtility.hasObject(genderArpg, "overlays"))
+            return overlays;
+
+        ArpgObjectStruct overlaysArpg = genderArpg.getAsObject("overlays");
+
+        for (String key : overlaysArpg.keySet()) {
+
+            SkinnedOverlay skinnedOverlay = ArpgUtility.toEnum(key, SkinnedOverlay.class);
+            ArpgObjectStruct overlayArpg = overlaysArpg.getAsObject(key);
+            TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(
+                    ArpgUtility.validateString(overlayArpg, "texture"));
+            Vector3 size = toVector3(ArpgUtility.validateArray(overlayArpg, "size", 3));
+
+            if (size.x <= 0f || size.y <= 0f || size.z <= 0f)
+                throwException("Race gender \"" + genderName + "\" gives overlay \"" + key
+                        + "\" a size that is not positive. Source: " + raceName);
+
+            overlays[skinnedOverlay.ordinal()] = new SkinnedOverlayStruct(
+                    textureHandle.getU0(),
+                    textureHandle.getU1(),
+                    textureHandle.getV0(),
+                    textureHandle.getV1(),
+                    toVector3(ArpgUtility.validateArray(overlayArpg, "center", 3)),
+                    size,
+                    ArpgUtility.getEnum(overlayArpg, "projection", SkinnedProjection.class, SkinnedProjection.FRONT),
+                    ArpgUtility.getBoolean(overlayArpg, "mirror", false),
+                    ArpgUtility.getFloat(overlayArpg, "repeat", EngineSetting.SKINNED_OVERLAY_REPEAT_DEFAULT));
+        }
+
+        return overlays;
     }
 
     // Equipment \\
@@ -193,8 +241,10 @@ class RaceBuilder extends BuilderPackage {
         if (!ArpgUtility.hasArray(anchorArpg, key))
             return new Vector3(defaultValue);
 
-        ArpgArrayStruct vectorArpg = ArpgUtility.validateArray(anchorArpg, key, 3);
+        return toVector3(ArpgUtility.validateArray(anchorArpg, key, 3));
+    }
 
+    private Vector3 toVector3(ArpgArrayStruct vectorArpg) {
         return new Vector3(
                 vectorArpg.get(0).getAsFloat(),
                 vectorArpg.get(1).getAsFloat(),

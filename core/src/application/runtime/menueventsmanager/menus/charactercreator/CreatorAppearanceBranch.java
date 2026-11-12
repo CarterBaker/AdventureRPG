@@ -67,6 +67,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_SKIN, SkinnedColor.SKIN);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_EYE_COLOR, SkinnedColor.EYES);
+        injectFeatureSection(session, RuntimeSetting.CREATOR_SECTION_FACE_FEATURES, RuntimeSetting.CREATOR_FACE_FEATURES);
         creatorBodyBranch.injectShapeGroups(session, false);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_LIP_COLOR, SkinnedColor.LIPS);
         injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_DETAILS, RuntimeSetting.CREATOR_APPEARANCE_DETAILS);
@@ -77,16 +78,21 @@ public class CreatorAppearanceBranch extends BranchPackage {
         if (!session.getPlayer().hasAppearance())
             return;
 
-        AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
-
-        characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_HAIRSTYLE);
-
-        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
-            injectFeatureRow(session, appearance, featureSlot);
-
+        injectFeatureSection(session, RuntimeSetting.CREATOR_SECTION_HAIRSTYLE, RuntimeSetting.CREATOR_HAIR_FEATURES);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_HAIR_COLOR, SkinnedColor.HAIR);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BROW_COLOR, SkinnedColor.BROWS);
         injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_HAIR_DETAILS, RuntimeSetting.CREATOR_HAIR_DETAILS);
+    }
+
+    // The body's own colors and the amounts of the marks painted over its skin, on the Body tab
+    void populateBodyMarks(CreatorSessionStruct session) {
+
+        if (!session.getPlayer().hasAppearance())
+            return;
+
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_NIPPLE_COLOR, SkinnedColor.NIPPLES);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BODY_HAIR_COLOR, SkinnedColor.BODY_HAIR);
+        injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_BODY_DETAILS, RuntimeSetting.CREATOR_BODY_DETAILS);
     }
 
     private void injectColorSection(CreatorSessionStruct session, String title, SkinnedColor skinnedColor) {
@@ -103,6 +109,16 @@ public class CreatorAppearanceBranch extends BranchPackage {
     }
 
     // Features \\
+
+    private void injectFeatureSection(CreatorSessionStruct session, String title, FeatureSlot[] featureSlots) {
+
+        AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
+
+        characterCreatorBranch.injectSectionHeader(session, title);
+
+        for (FeatureSlot featureSlot : featureSlots)
+            injectFeatureRow(session, appearance, featureSlot);
+    }
 
     private void injectFeatureRow(CreatorSessionStruct session, AppearanceHandle appearance, FeatureSlot featureSlot) {
         menuManager.inject(
@@ -136,7 +152,8 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
         ObjectArrayList<FeatureHandle> options = resolveOptions(
-                session.getPlayer().getEntityData().getRaceData().getAppearanceData(), featureSlot, true);
+                session.getPlayer().getEntityData().getRaceData().getAppearanceData(), featureSlot,
+                featureSlot.isRemovable());
         int index = Math.floorMod(options.indexOf(appearance.getFeature(featureSlot)) + step, options.size());
 
         applyFeature(appearance, featureSlot, options.get(index));

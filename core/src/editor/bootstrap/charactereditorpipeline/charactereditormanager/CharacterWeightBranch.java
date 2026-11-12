@@ -252,13 +252,12 @@ class CharacterWeightBranch extends BranchPackage {
         int weighed = 0;
         boolean begun = false;
 
-        for (String rootName : region.getRootBones()) {
+        int[] partBones = rigHandle.getPartBones(region.getRigPart());
 
-            if (!rigHandle.hasBone(rootName))
-                continue;
+        for (int p = 0; p < partBones.length; p++) {
 
-            int root = rigHandle.getBoneIndex(rootName);
-            String side = CharacterMeshUtility.toSideSuffix(rootName);
+            int root = partBones[p];
+            String side = CharacterMeshUtility.toSideSuffix(rigHandle.getBone(root).getName());
 
             characterDigitBranch.detect(mesh, root, digits);
 

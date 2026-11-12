@@ -17,6 +17,7 @@ import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.charactereditor.overlay.CharacterEditorOverlaySystem;
 import editor.runtime.charactereditor.preview.CharacterEditorPreviewSystem;
 import editor.runtime.charactereditor.region.CharacterRegionFrameSystem;
+import editor.runtime.charactereditor.region.CharacterRegionIsolationSystem;
 import editor.runtime.charactereditor.rig.CharacterEditorRigSystem;
 import editor.runtime.charactereditor.sculpt.CharacterEditorSculptSystem;
 import editor.runtime.characterview.panel.CharacterViewRowSource;
@@ -59,6 +60,7 @@ public abstract class CharacterModelingContext extends ContextPackage
     private CharacterEditorModeSystem characterEditorModeSystem;
     private CharacterEditorPreviewSystem characterEditorPreviewSystem;
     private CharacterRegionFrameSystem characterRegionFrameSystem;
+    private CharacterRegionIsolationSystem characterRegionIsolationSystem;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private CharacterEditorSculptSystem characterEditorSculptSystem;
     private CharacterEditorRigSystem characterEditorRigSystem;
@@ -79,6 +81,7 @@ public abstract class CharacterModelingContext extends ContextPackage
         this.characterEditorModeSystem = create(CharacterEditorModeSystem.class);
         this.characterEditorPreviewSystem = create(CharacterEditorPreviewSystem.class);
         this.characterRegionFrameSystem = create(CharacterRegionFrameSystem.class);
+        this.characterRegionIsolationSystem = create(CharacterRegionIsolationSystem.class);
         this.characterEditorMeshViewSystem = create(CharacterEditorMeshViewSystem.class);
         this.characterEditorSculptSystem = create(CharacterEditorSculptSystem.class);
         this.characterEditorRigSystem = create(CharacterEditorRigSystem.class);

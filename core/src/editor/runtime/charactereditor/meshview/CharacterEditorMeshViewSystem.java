@@ -3,6 +3,7 @@ package editor.runtime.charactereditor.meshview;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.runtime.charactereditor.CharacterEditorSetting;
@@ -284,7 +285,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
                     brushManager.getActiveBrush(), screenScratch.x - pixelX, screenScratch.y - pixelY, radius)
                     * characterEditorManager.getRegionShare(activeDocument, characterEditorModeSystem.getRegion(), v);
 
-            if (falloff > 0f && isVisible(v)) {
+            if (falloff > 0f && characterEditorManager.isOnRegionSide(activeDocument, v) && isVisible(v)) {
                 vertices.add(v);
                 strengths.add(falloff * strength);
             }
@@ -293,9 +294,34 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
     // Region \\
 
-    // Whether a vertex of the active part is one the tab's region picks and selects
+    // Whether a vertex of the active part is one the tab's region picks and selects, on the side it shows
     public boolean isInRegion(int vertexIndex) {
-        return characterEditorManager.isInRegion(activeDocument, characterEditorModeSystem.getRegion(), vertexIndex);
+        return characterEditorManager.isInRegion(activeDocument, characterEditorModeSystem.getRegion(), vertexIndex)
+                && characterEditorManager.isOnRegionSide(activeDocument, vertexIndex);
+    }
+
+    // Whether a worn face is drawn in the tab, so it hides what lies behind it: every face for the whole character, a
+    // face of the active part with a corner the region shows, and the faces of the parts worn with a region that
+    // holds a feature beside the body
+    private boolean isFaceShown(int documentIndex, int faceIndex) {
+
+        CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+
+        if (region.isWhole())
+            return true;
+
+        CharacterMeshDocumentInstance document = wornDocuments.get(documentIndex);
+
+        if (document != activeDocument)
+            return region.holdsFeature();
+
+        RiggedMeshStruct mesh = document.getMesh();
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            if (isInRegion(mesh.getFaceVertex(faceIndex, c)))
+                return true;
+
+        return false;
     }
 
     // Occlusion \\
@@ -407,6 +433,9 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
             for (int f = 0; f < mesh.getFaceCount(); f++) {
 
+                if (!isFaceShown(d, f))
+                    continue;
+
                 if (!resolveFaceCells(mesh, wornScreens.get(d), f)) {
                     unbinnedDocuments.add(d);
                     unbinnedFaces.add(f);
@@ -435,7 +464,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
             for (int f = 0; f < mesh.getFaceCount(); f++) {
 
-                if (!resolveFaceCells(mesh, wornScreens.get(d), f))
+                if (!isFaceShown(d, f) || !resolveFaceCells(mesh, wornScreens.get(d), f))
                     continue;
 
                 for (int row = faceMinRow; row <= faceMaxRow; row++)

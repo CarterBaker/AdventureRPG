@@ -1,6 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.util;
 
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.geometrypipeline.rig.RigPart;
 import editor.runtime.EditorSetting;
 
 public enum CharacterEditorRegion {
@@ -11,29 +12,31 @@ public enum CharacterEditorRegion {
      * its card roots held to the scalp so every stroke combs, puffs, clumps
      * and smooths from the root out, and the spring chains its locks hang on,
      * every bone named with the hair prefix and the head they hang from;
-     * Hands and Feet are the body where it weighs on the hands or feet and
-     * every bone below them, the fingers and toes. A region names the worn
-     * part it edits (none keeps the part chosen), the bones it holds with
-     * every bone below them, the bone it is framed about, whether it takes
-     * the rig, and the prefix naming its own bones, which new bones there
-     * take.
+     * Hands and Feet are the body where it weighs on the bones the rig names
+     * as its hands or feet and every bone below them, the fingers and toes;
+     * Eyes are the socket and lids on the body where they weigh on the rig's
+     * eye bones together with the eyes worn in them, and Mouth the lips, the
+     * jaw and the mouth's inside on the body with the teeth and tongue worn
+     * there. A region names the worn part it holds, the RigPart whose bones
+     * it holds on the body with every bone below them, whether its roots are
+     * pinned, whether it takes the rig, and the prefix naming its own bones,
+     * which new bones there take. Every creature's part editors work the
+     * same way, through the bones its own rig names for each part.
      */
 
-    WHOLE(null, EditorSetting.CHARACTER_REGION_NO_BONES, null, false, true, EditorSetting.CHARACTER_REGION_NO_PREFIX),
-    HAIR(FeatureSlot.HAIR, EditorSetting.CHARACTER_REGION_NO_BONES, EditorSetting.CHARACTER_REGION_HAIR_FRAME,
-            true, true, EditorSetting.CHARACTER_HAIR_LOCK_PREFIX),
-    HANDS(null, EditorSetting.CHARACTER_REGION_HAND_BONES, EditorSetting.CHARACTER_REGION_HAND_FRAME, false, true,
-            EditorSetting.CHARACTER_REGION_NO_PREFIX),
-    FEET(null, EditorSetting.CHARACTER_REGION_FOOT_BONES, EditorSetting.CHARACTER_REGION_FOOT_FRAME, false, true,
-            EditorSetting.CHARACTER_REGION_NO_PREFIX);
+    WHOLE(null, null, false, true, EditorSetting.CHARACTER_REGION_NO_PREFIX),
+    HAIR(FeatureSlot.HAIR, null, true, true, EditorSetting.CHARACTER_HAIR_LOCK_PREFIX),
+    HANDS(null, RigPart.HANDS, false, true, EditorSetting.CHARACTER_REGION_NO_PREFIX),
+    FEET(null, RigPart.FEET, false, true, EditorSetting.CHARACTER_REGION_NO_PREFIX),
+    EYES(FeatureSlot.EYES, RigPart.EYES, false, true, EditorSetting.CHARACTER_REGION_NO_PREFIX),
+    MOUTH(FeatureSlot.TEETH, RigPart.MOUTH, false, true, EditorSetting.CHARACTER_REGION_NO_PREFIX);
 
     // Values
     public static final CharacterEditorRegion[] VALUES = values();
 
     // Internal
     private final FeatureSlot featureSlot;
-    private final String[] rootBones;
-    private final String frameBone;
+    private final RigPart rigPart;
     private final boolean rootPinned;
     private final boolean rigged;
     private final String bonePrefix;
@@ -42,15 +45,13 @@ public enum CharacterEditorRegion {
 
     CharacterEditorRegion(
             FeatureSlot featureSlot,
-            String[] rootBones,
-            String frameBone,
+            RigPart rigPart,
             boolean rootPinned,
             boolean rigged,
             String bonePrefix) {
 
         this.featureSlot = featureSlot;
-        this.rootBones = rootBones;
-        this.frameBone = frameBone;
+        this.rigPart = rigPart;
         this.rootPinned = rootPinned;
         this.rigged = rigged;
         this.bonePrefix = bonePrefix;
@@ -62,8 +63,8 @@ public enum CharacterEditorRegion {
         return this == WHOLE;
     }
 
-    // Whether the region is a worn feature rather than the body
-    public boolean isFeature() {
+    // Whether the region holds a worn feature
+    public boolean holdsFeature() {
         return featureSlot != null;
     }
 
@@ -71,16 +72,13 @@ public enum CharacterEditorRegion {
         return featureSlot;
     }
 
-    public boolean isBound() {
-        return rootBones.length > 0;
+    // Whether the region holds the body where it weighs on the bones of a part of the rig
+    public boolean holdsBody() {
+        return rigPart != null;
     }
 
-    public String[] getRootBones() {
-        return rootBones;
-    }
-
-    public String getFrameBone() {
-        return frameBone;
+    public RigPart getRigPart() {
+        return rigPart;
     }
 
     public boolean isRootPinned() {
@@ -101,6 +99,7 @@ public enum CharacterEditorRegion {
 
     // Whether a bone is the region's own by name: named with its prefix, or the bone its prefixed bones hang from
     public boolean namesBone(String boneName) {
-        return hasBonePrefix() && (boneName.startsWith(bonePrefix) || boneName.equals(frameBone));
+        return hasBonePrefix()
+                && (boneName.startsWith(bonePrefix) || boneName.equals(EditorSetting.CHARACTER_REGION_HAIR_FRAME));
     }
 }

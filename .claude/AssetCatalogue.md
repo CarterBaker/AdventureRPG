@@ -210,9 +210,22 @@ One line per session that changed this file: the date, what was added or removed
   nine menus that reference them.
 - 2026-11-09: World time ticking. Rewrote `schemas/Worlds.arpg` with the `tick_time` boolean (default true): a world
   without it stands at noon, as the Biome Viewer's planner world now does.
+- 2026-11-12: Anime heads, eyes, teeth, overlays and part editors. Regenerated
+  `mesh/characters/humanoid/HumanoidFemaleMesh.arpg` and `HumanoidMaleMesh.arpg` (new smooth anime heads with eye
+  sockets, lids, mouth cavity and ears, face bones weighed, blink and `ear_point` morphs rebuilt, brow strips removed,
+  bodies made exactly symmetric), the four hair meshes (locks lifted clear of the new skulls), `rigs/HumanoidRig.arpg`
+  (face joints on the new heads, `parts` and `poses`), `races/Human.arpg` (eyes and teeth features, nipple and body
+  hair colors and palettes, overlay details, each gender's overlay placement), `menus/editor/EditorWindow.arpg` (Eye
+  and Mouth Editors), `shortcuts/Tools.arpg` (Crease and Relax), the schemas `Races.arpg`, `Features.arpg` and
+  `Rigs.arpg`, and the shaders `CharacterAppearance.glsl`, `CharacterHidden.glsl`, `CharacterSurface.glsl`,
+  `StandardcharacterShader.vsh`/`.fsh` and `CharacterViewCharacterShader.fsh` (bone masks, overlays). Added
+  `HumanoidEyesMesh.arpg`, `HumanoidTeethMesh.arpg`, the features `HumanoidEyes` and `HumanoidTeeth`, the materials
+  `CharacterEyeMaterial` and `CharacterTeethMaterial`, the editor pose clips under `animations/humanoid/poses/` and the
+  overlay images `BodyHairTile`, `BrowOverlay`, `ChestHairOverlay`, `NippleOverlay`, `PubicHairOverlay` and
+  `StomachHairOverlay`.
 ---
 
-## Textures and Sprites (2273 files)
+## Textures and Sprites (2279 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -415,8 +428,14 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/textures/characters/standard/`
 
+- `BodyHairTile`: A
+- `BrowOverlay`: A
+- `ChestHairOverlay`: A
 - `Hair`: A
+- `NippleOverlay`: A
+- `PubicHairOverlay`: A
 - `Skin`: A
+- `StomachHairOverlay`: A
 
 ### `assets/textures/items/standard/`
 
@@ -1533,7 +1552,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1781 files)
+## Data Files (1794 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -1550,6 +1569,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `HumanoidTread.arpg`, `HumanoidUnderwaterSwim.arpg`, `HumanoidUnderwaterTread.arpg`, `HumanoidWade.arpg`,
 `HumanoidWadeIdle.arpg`, `HumanoidWadeRun.arpg`, `HumanoidWadeShallow.arpg`, `HumanoidWalk.arpg`,
 `HumanoidWaterJump.arpg`, `HumanoidWaterLeap.arpg`
+
+### `assets/animations/humanoid/poses/`
+
+`ArmsRaised.arpg`, `Crouching.arpg`, `Kneeling.arpg`, `Reaching.arpg`, `Sitting.arpg`, `Stride.arpg`, `TPose.arpg`
 
 ### `assets/animationtrees/humanoid/`
 
@@ -2145,9 +2168,17 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 `HumanoidEntity.arpg`
 
+### `assets/features/humanoid/eyes/`
+
+`HumanoidEyes.arpg`
+
 ### `assets/features/humanoid/hair/`
 
 `FemaleLongHair.arpg`, `FemaleMediumHair.arpg`, `MaleMediumHair.arpg`, `MaleShortHair.arpg`
+
+### `assets/features/humanoid/teeth/`
+
+`HumanoidTeeth.arpg`
 
 ### `assets/furnishings/farm/`
 
@@ -2239,7 +2270,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/materials/characters/`
 
-`StandardCharacterMaterial.arpg`
+`CharacterEyeMaterial.arpg`, `CharacterTeethMaterial.arpg`, `StandardCharacterMaterial.arpg`
 
 ### `assets/materials/debug/`
 
@@ -2326,7 +2357,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/mesh/characters/humanoid/`
 
-`HumanoidFemaleMesh.arpg`, `HumanoidMaleMesh.arpg`
+`HumanoidEyesMesh.arpg`, `HumanoidFemaleMesh.arpg`, `HumanoidMaleMesh.arpg`, `HumanoidTeethMesh.arpg`
 
 ### `assets/mesh/characters/humanoid/hair/`
 

@@ -20,7 +20,9 @@ public enum CharacterEditorColor {
     LIPS(SkinnedColor.LIPS),
     BLUSH(SkinnedColor.BLUSH),
     FRECKLES(SkinnedColor.FRECKLES),
-    CLOTH(SkinnedColor.CLOTH);
+    CLOTH(SkinnedColor.CLOTH),
+    NIPPLES(SkinnedColor.NIPPLES),
+    BODY_HAIR(SkinnedColor.BODY_HAIR);
 
     // Values
     public static final CharacterEditorColor[] VALUES = values();

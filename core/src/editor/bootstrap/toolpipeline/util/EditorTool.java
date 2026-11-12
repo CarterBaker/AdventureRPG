@@ -35,6 +35,8 @@ public enum EditorTool {
     SCATTER(EditorSetting.TOOL_SCATTER, true, ToolOption.SIZE, ToolOption.STRENGTH),
     INFLATE(EditorSetting.TOOL_INFLATE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     PINCH(EditorSetting.TOOL_PINCH, true, ToolOption.SIZE, ToolOption.STRENGTH),
+    CREASE(EditorSetting.TOOL_CREASE, true, ToolOption.SIZE, ToolOption.STRENGTH),
+    RELAX(EditorSetting.TOOL_RELAX, true, ToolOption.SIZE, ToolOption.STRENGTH),
     FLATTEN(EditorSetting.TOOL_FLATTEN, true, ToolOption.SIZE, ToolOption.STRENGTH),
     NUDGE(EditorSetting.TOOL_NUDGE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     RAISE(EditorSetting.TOOL_RAISE, true, ToolOption.SIZE, ToolOption.STRENGTH),

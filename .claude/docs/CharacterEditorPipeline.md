@@ -1,8 +1,9 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the
-Character Editor, the Face Editor, the Animation Editor, their docker windows, races and their
-genders' models, or a character's appearance (morphs, face controls, zones, masks, shaders). `.claude/CLAUDE.md` still
+Character Editor, the part editors (Hair, Hand, Foot, Eye, Mouth), the Face Editor, the Animation Editor, their docker
+windows, races and their genders' models, or a character's appearance (morphs, face controls, zones, masks, overlays,
+shaders). `.claude/CLAUDE.md` still
 applies in full.
 
 ---
@@ -22,8 +23,10 @@ layouts like any other.
 | Character Equipment | `CharacterEquipmentContext` | the live preview in the Equipment mode, its anchors marked |
 | Character Mesh Editor | `CharacterMeshEditorContext` | modelling the whole character: the bind-pose preview, its overlay and the Mesh, Sculpt, Weights and Rig toolbar; a tool canvas |
 | Hair Editor | `HairEditorContext` | modelling the worn hair, framed on the head, its card roots pinned; its Rig mode holds the hair's spring chains |
-| Hand Editor | `HandEditorContext` | modelling the hands and finger bones, framed on the left hand |
-| Foot Editor | `FootEditorContext` | modelling the feet and toe bones, framed on the left foot |
+| Hand Editor | `HandEditorContext` | modelling the hands and finger bones, one side shown and framed, edits mirrored |
+| Foot Editor | `FootEditorContext` | modelling the feet and toe bones, one side shown and framed, edits mirrored |
+| Eye Editor | `EyeEditorContext` | modelling one eye socket and its lids on the head with the eye worn in it, edits mirrored |
+| Mouth Editor | `MouthEditorContext` | modelling the lips, jaw and mouth's inside on the head with the teeth and tongue |
 | Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
 | Face Editor | `FaceEditorContext` | the open character framed on its head, its face bones marked; the Character Face tool canvas |
 | Face Outliner | `FaceOutlinerContext` | `FaceEditorManager.buildListRows` |
@@ -45,9 +48,10 @@ layouts like any other.
 - **The Appearance outliner is the player's creator.** In Appearance the Character Outliner lists what the game's
   creator offers the player: the gender, the features worn (Hair: the race default, none, or any style that fits),
   then every shape slider under its group in the order the race first lists each, each a ranged row
-  (`CharacterViewRowStruct.ranged`) setting the shape's game `default` across its own `min` to `max`
-  (`FaceEditorManager.setDefault`, the Face Editor's default row path, the preview's override cleared so it shows the
-  new default), with one pair row (`CharacterViewRowStruct.pair`, two typed value boxes side by side, no slider) for
+  (`CharacterViewRowStruct.ranged`) holding the value the game starts the previewed gender at, across the shape's
+  own `min` to `max`: the gender preset's `shapes` value where it names the shape (`CharacterEditBranch.setGenderShape`),
+  the race's `default` otherwise (`FaceEditorManager.setDefault`, the Face Editor's default row path), the preview's
+  override cleared so it shows the new start, with one pair row (`CharacterViewRowStruct.pair`, two typed value boxes side by side, no slider) for
   its Min and Max beneath it. Those ends are written through `FaceEditorManager.setRangeEnd`, the path the Face
   Editor's range rows take (a step apart, the default carried inside, one face history step), so the slider follows a
   new range the moment the preview rebuilds. Appearance lists no pose: a mode names the pose it stands in (`CharacterEditorMode.getStandingPose`,
@@ -90,24 +94,34 @@ layouts like any other.
 
 ## Modelling tabs and regions
 
-- **One modelling tab, four regions.** `CharacterModelingContext` (abstract) is every modelling tab; the Character Mesh
-  Editor, Hair Editor, Hand Editor and Foot Editor only name their `CharacterEditorRegion` (through
+- **One modelling tab, six regions.** `CharacterModelingContext` (abstract) is every modelling tab; the Character Mesh
+  Editor, Hair, Hand, Foot, Eye and Mouth Editors only name their `CharacterEditorRegion` (through
   `CharacterEditorWindowProvider.getRegion`) and starting mode. Their keys are one file,
   `shortcuts/CharacterMeshEditor.arpg`, naming the base class: `ShortcutManager` finds a context's pressed shortcuts on
   its own class or the nearest class it extends.
-- **A region is data.** `CharacterEditorRegion` names the worn feature it edits (Hair: `FeatureSlot.HAIR`; the others
-  keep the body), the bones it holds with every bone below them (`hand_l`, `hand_r`; `foot_l`, `foot_r`), the bone it
-  frames (`CharacterRegionFrameSystem`: the box of every vertex that bone and those below it carry while the part is
-  open, its joints otherwise), whether its card roots are pinned, whether it takes the rig, and the prefix naming its
-  own bones (Hair: `hair_`, every such bone and the head they hang from; new bones there take the prefix). Bone
-  membership is read only through `CharacterRegionBranch.holdsBone` / `holdsRigBone`. The active tab hands its
-  region to `CharacterEditorManager.setRegion`, which picks the region's part when the character wears it.
-- **One mask.** `CharacterRegionBranch` gives each vertex its share of the region (the weight it puts on the region's
-  bones; for pinned hair how far along its card it stands, root 0 to tip 1), cached per region until the mesh changes.
-  The mesh view's pick, box and brush (`isInRegion`, the brush's strength times the share), the overlay, the
-  proportional transform, sculpt mirroring, weight mirroring, the selection (`CharacterSelectionBranch.changed` drops
-  anything outside) and rig joint picking all read it; never test a region anywhere else. A tab whose region's part is
-  not worn edits nothing and says so.
+- **A region is data, its bones the rig's.** `CharacterEditorRegion` names the worn feature it holds (Hair: `HAIR`,
+  Eyes: `EYES`, Mouth: `TEETH`) and the `RigPart` whose bones it holds on the body with every bone below them (Hands,
+  Feet, Eyes, Mouth). The bones come from the rig's own `parts` (`RigData.getPartBones`), never from names in code, so
+  any creature's rig gets every part editor by naming its parts; a rig that names no such part leaves that editor
+  empty. Hair also names its own bones by prefix (`hair_`, and the head they hang from). Bone membership is read only
+  through `CharacterRegionBranch.holdsBone` / `holdsRigBone`. The active tab hands its region to
+  `CharacterEditorManager.setRegion`, which keeps the part picked while the region holds it, else picks its body, else
+  its feature. A region holding both lists only those two in the outliner's Parts (`holdsPartKey`), so the Eye Editor
+  sculpts the socket on the head and the eye itself, and the Mouth Editor the lips and the teeth.
+- **Sides.** A region whose every part bone has a twin (`_l`/`_r`) is sided (`CharacterRegionBranch.isSided`, cached
+  per rig data): the outliner lists Side (`CharacterEditorSide`, kept per region in the manager), the tab frames the
+  side's first part bone (`getRegionFrameBone`), shows and picks only that side (`isOnRegionSide`, `isBoneShown`,
+  `isRigBoneShown`), and `isMirror` is held on, so every edit is made to the hidden twin as well.
+- **Isolation.** `CharacterRegionIsolationSystem` fills the viewport's `AppearanceIsolationStruct`
+  (`CharacterViewRenderSystem.getIsolation`): the body only where the region holds a part, drawn through a `SHOW`
+  bone mask of the bones shown, and of the worn features only the region's own, masked too where sided. The mesh view
+  takes faces hidden this way out of occlusion (`isFaceShown`). The Character Mesh Editor isolates nothing.
+- **One mask.** `CharacterRegionBranch` gives each vertex its share of the region (on the body the weight it puts on
+  the part's bones; the region's own feature whole, or for pinned hair how far along its card it stands, root 0 to
+  tip 1), cached per region until the mesh changes. The mesh view's pick, box and brush (`isInRegion`, the brush's
+  strength times the share), the overlay, the proportional transform, sculpt mirroring, weight mirroring, the
+  selection (`CharacterSelectionBranch.changed` drops anything outside) and rig joint picking all read it; never test
+  a region anywhere else. A tab whose region's part is not worn edits nothing and says so.
 - **Digits are found, not placed by hand.** `CharacterDigitBranch.detect` sweeps the vertices a hand or foot bone
   carries from the farthest in toward its joint, joining them face by face: every branch ending where it meets
   another, two long ones (`CHARACTER_RIG_DIGIT_MIN_LENGTH`) meeting are both digits. Five are thumb (meeting the palm
@@ -123,6 +137,22 @@ layouts like any other.
 `CharacterEditorMode` carries its behaviour as data: its tool canvas, whether it edits a worn mesh, whether it holds
 the bind pose, whether it draws vertices, and its status hint. Check those flags, never `mode == X`, except where a
 mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
+
+- **Poses.** Every mode that picks a pose (Build, Equipment, Mesh, Sculpt, Weights) lists one Pose row, stepped by
+  `CharacterEditorManager.stepPose` through Bind (the default: the mesh exactly as its file holds it in a mesh mode),
+  each clip the rig names in `poses` (struck still at its start, `CharacterEditorPreviewSystem.strikeClip`, labelled
+  by `CharacterViewUtility.toResourceLabel`), then Idle, Walk and Run played. Rig holds the bind pose. Vertices are
+  moved only in Bind: a sculpt stroke or a transform while posed is refused with `CHARACTER_EDITOR_MESSAGE_POSED`
+  (`isPosed`); selecting and painting weights work in any pose, the mesh view skinning every vertex by it. A pose is a
+  plain clip on the rig (`animations/humanoid/poses/`); add one by naming it in the rig's `poses`.
+- **Mirror pairs.** `CharacterSelectionBranch.resolveMirror` pairs each vertex with the one at its mirrored position
+  on the decimal grid, then pairs every vertex left without a twin with the nearest one likewise left across x within
+  `CHARACTER_MESH_MIRROR_REACH` (`pairNearest`, binned by reach-sized cells), so a mesh not modelled exactly
+  symmetric still mirrors every stroke. `CharacterViewUtility.round` rounds half away from zero, so a point and its
+  mirror always round alike.
+- **Sculpt tools.** Brush, Smooth, Relax (even spacing along the surface without shrinking), Inflate, Pinch, Crease
+  (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
+  in `CharacterShapeBranch.resolveMove`.
 
 ## Characters
 
@@ -151,6 +181,22 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   appearance texels (`SkinnedAppearanceStruct`: hidden bone, one texel per `SkinnedColor`, `SkinnedDetail` amounts),
   then its morph weights. The shaders read them through `characters/includes/CharacterAppearance.glsl` and shade by
   zone in `CharacterSurface.glsl`; keep the GLSL constants in step with the enums.
+- **Eyes and teeth are worn parts.** `FeatureSlot` holds `HAIR`, `EYES` and `TEETH`; each feature may name its own
+  `material` (`FeatureData.getMaterial`), drawn with it by `EntityRenderSystem.pushBody`, the body's otherwise. A
+  removable slot (`FeatureSlot.isRemovable`, hair) is offered bare in the game's creator; eyes and teeth are not, and a
+  save that names none for them keeps the gender's. The head's sockets, lids, lips and mouth cavity are the body's.
+- **Bone masks.** A skinned draw's palette row carries a `SkinnedBoneMaskStruct` and its `SkinnedMaskMode`
+  (`SkinnedAppearanceStruct.setBoneMask`): `HIDE` cuts every fragment the masked bones move at all (a character seen
+  from its own eyes: `AppearanceData.getHeadMask`, the head and everything below it, eyes and teeth included), `SHOW`
+  keeps only fragments they carry at least half of (part isolation). A rig may hold at most
+  `SKINNED_BONE_MASK_CAPACITY` bones.
+- **Overlays.** Brows, nipples and body hair (`SkinnedOverlay`: chest, stomach, pubic, underarm, arm, leg) are images
+  painted over the skin, never geometry. Each gender's model places them (`genders.<g>.overlays`: `texture` in the
+  character atlas, `projection` front, back or wrap, box `center` and `size` on the bind-pose body, `mirror`, and a
+  wrapped image's `repeat` per block; `RaceGenderStruct.getOverlay`), written into each draw as three texels
+  (`SkinnedOverlayStruct`). The shader lays them on the position before morphs (`v_bindPosition`), so they stay on
+  the same skin however the body is shaped or posed, tinted by the overlay's `SkinnedColor` (`BROWS`, `NIPPLES`,
+  `BODY_HAIR`) and shown as far as its `SkinnedDetail`, which thins the image's coverage from its faint edges in.
 - **Appearance.** `AppearanceData` holds the race's body meshes (each gender's `mesh`, in the race's order),
   colors, palettes, details, shape sliders and the morphs each `AppearanceExpression` plays, the morphs resolved on
   every body (`getShapeMorph`, `getExpressionMorph`). A slider (`AppearanceShapeStruct`) is known by its `name` (its
@@ -172,13 +218,17 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   Editor): `CharacterViewPoseSystem.setGender` takes on its model and tree, its body and features are the parts the
   mesh modes edit, and untouched preview sliders sit where that gender starts them.
 - **Assets.** The race `races/Human` (entity `HumanoidEntity`) is male, its default, or female. `HumanoidMaleMesh` and
-  `HumanoidFemaleMesh` share the rig with its
-  15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes, brows, ears), three joints on every finger and
-  the thumb of each hand and a toe at each foot's ball (laid and weighed by Rig Digits and Weigh Onto Digits), carry the same morphs (blinks, body
-  sliders, `ear_point`) and draw their eyes from the eye zone's raw UVs, brows and lash line as their own strips.
-  They are generated (catalogued); a rigged mesh may hold at most `RIGGED_MESH_VERT_LIMIT` corners. Each hand is
-  one bone: hanging at the side its palm faces the thigh with the thumb forward (+z), so `hand_l` is a left hand at
-  +x; keep that chirality on any hand you model or mirror.
+  `HumanoidFemaleMesh` share the rig with its 15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes,
+  brows, ears) set on the anime heads, three joints on every finger and the thumb of each hand and a toe at each
+  foot's ball, and carry the same morphs (blinks, body sliders, `ear_point`). Each head is a smooth grid stitched to
+  the body's neck ring, with eye sockets whose lids close over the eye (the upper lid edge in the lash zone), a mouth
+  cavity behind the lips (mouth zone) and ears as their own shells; the meshes are exactly symmetric. Both genders
+  wear `features/humanoid/eyes/HumanoidEyes` (`HumanoidEyesMesh`, drawn from the eye zone's raw UVs with
+  `CharacterEyeMaterial`) and `features/humanoid/teeth/HumanoidTeeth` (`HumanoidTeethMesh`: both rows of teeth and
+  the tongue, `CharacterTeethMaterial`). `HumanoidRig` names its `parts` (eyes, mouth, hands, feet) and seven
+  `poses` (`animations/humanoid/poses/`). All are generated (catalogued); a rigged mesh may hold at most
+  `RIGGED_MESH_VERT_LIMIT` corners. Each hand is one bone: hanging at the side its palm faces the thigh with the
+  thumb forward (+z), so `hand_l` is a left hand at +x; keep that chirality on any hand you model or mirror.
 - **Features are the gender's.** The Character Outliner's Features rows (Appearance mode) read and write the previewed
   gender's `genders.<gender>.features`, the features it is made with; a gender naming none wears the race's
   `appearance.features` default, shown with `CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX`. A row steps through the default
@@ -302,5 +352,9 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   move, turn or growth it makes by the control's preview value; a control previewed near nothing is first taken to the
   far end of its range. A control must always drive a morph or a bone, or the builder refuses the template: its last
   bone is let go only while it has a morph, and its morph cleared only while it drives a bone.
+- **Vertices move only in Bind.** A modelling tab struck in any other pose refuses sculpt strokes and transforms;
+  the preview poses on the GPU and the mesh view skins on the CPU, but edits are written to the bind-pose file.
+- **Part editors need rig parts.** A rig without `parts` leaves the Hand, Foot, Eye and Mouth Editors showing
+  nothing; name the bones there, not in code.
 - **Euler angles.** Bones compose `Rz * Ry * Rx` from degrees and a clip's rotation is added to the bind rotation.
   Read a turn back with `CharacterPoseUtility.toEuler` against the angle it replaces, so keys never spin the long way.

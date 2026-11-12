@@ -12,13 +12,14 @@ public enum CharacterEditorMode {
      * vertices and faces of a worn part, Sculpt that part's surface under the
      * brush, Weights the bones each of its vertices follows, and Rig the
      * bones themselves. Each mode that takes viewport input is its own tool
-     * canvas; the mesh modes edit the part's mesh file, the ones that hold
-     * the bind pose show the character exactly as its mesh and rig are
-     * authored, and those that show the vertices draw them over the body.
-     * Each carries the hint the status bar shows while it is open, and a
-     * posed mode either stands in the one pose it names, as Appearance stands
-     * idle the way the game's creator shows the player, or lets its outliner
-     * pick the pose the preview strikes. The modes
+     * canvas; the mesh modes edit the part's mesh file, Rig holds the bind
+     * pose so the character stands exactly as its mesh and rig are authored,
+     * and those that show the vertices draw them over the body. Each carries
+     * the hint the status bar shows while it is open, and every other mode
+     * either stands in the one pose it names, as Appearance stands idle the
+     * way the game's creator shows the player, or lets its outliner pick the
+     * pose the preview strikes — the mesh modes in the bind pose by default,
+     * their vertices moved there alone. The modes
      * that take tools are worked in the Character Mesh Editor, the rest in
      * the Character Editor, each window keeping to its own.
      */
@@ -37,7 +38,7 @@ public enum CharacterEditorMode {
             EditorSetting.CHARACTER_EDITOR_MODE_MESH,
             ToolCanvas.CHARACTER_MESH,
             true,
-            true,
+            false,
             true,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_MESH_HINT),
@@ -45,7 +46,7 @@ public enum CharacterEditorMode {
             EditorSetting.CHARACTER_EDITOR_MODE_SCULPT,
             ToolCanvas.CHARACTER_SCULPT,
             true,
-            true,
+            false,
             false,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_SCULPT_HINT),

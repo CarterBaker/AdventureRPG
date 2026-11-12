@@ -26,7 +26,10 @@ class CharacterSelectionBranch extends BranchPackage {
      * weight edits then act on each vertex as far as it is selected. Also
      * finds the vertex each one mirrors onto across x — the one at its
      * position with x negated on the editor's decimal grid, itself on the
-     * centre plane — again whenever the geometry has changed.
+     * centre plane, and for a vertex with no such twin the nearest one
+     * likewise left alone across x within the mirror reach, so a mesh not
+     * modelled exactly symmetric still mirrors every edit — again whenever
+     * the geometry has changed.
      */
 
     // Internal
@@ -37,6 +40,8 @@ class CharacterSelectionBranch extends BranchPackage {
 
     // Scratch
     private Long2IntOpenHashMap position2Vertex;
+    private Long2IntOpenHashMap cell2Vertex;
+    private IntArrayList cellNext;
 
     // Base \\
 
@@ -46,6 +51,9 @@ class CharacterSelectionBranch extends BranchPackage {
         // Scratch
         this.position2Vertex = new Long2IntOpenHashMap();
         this.position2Vertex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        this.cell2Vertex = new Long2IntOpenHashMap();
+        this.cell2Vertex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        this.cellNext = new IntArrayList();
     }
 
     @Override
@@ -307,8 +315,92 @@ class CharacterSelectionBranch extends BranchPackage {
             mirrorVertices.add(position2Vertex.get(
                     CharacterMeshUtility.toPositionKey(-mesh.getX(i), mesh.getY(i), mesh.getZ(i))));
 
+        pairNearest(mesh, mirrorVertices);
         document.markMirrorResolved();
         return mirrorVertices;
+    }
+
+    // Every vertex off the centre plane the exact pass left without a twin paired with the nearest one across x also
+    // left without one, within the mirror reach; vertices are binned by reach-sized cells so each looks only about its
+    // mirrored point, and every pair is made both ways
+    private void pairNearest(RiggedMeshStruct mesh, IntArrayList mirrorVertices) {
+
+        float reach = EditorSetting.CHARACTER_MESH_MIRROR_REACH;
+        float tolerance = EditorSetting.CHARACTER_MESH_CENTER_TOLERANCE;
+
+        cell2Vertex.clear();
+        cellNext.clear();
+        cellNext.size(mesh.getVertexCount());
+
+        for (int v = 0; v < mesh.getVertexCount(); v++)
+            if (mirrorVertices.getInt(v) == EngineSetting.INDEX_NOT_FOUND && mesh.getX(v) < -tolerance)
+                cellNext.set(v, cell2Vertex.put(toCellKey(mesh.getX(v), mesh.getY(v), mesh.getZ(v), reach), v));
+
+        for (int v = 0; v < mesh.getVertexCount(); v++) {
+
+            if (mirrorVertices.getInt(v) != EngineSetting.INDEX_NOT_FOUND || mesh.getX(v) <= tolerance)
+                continue;
+
+            int twin = findNearestUnpaired(mesh, mirrorVertices, -mesh.getX(v), mesh.getY(v), mesh.getZ(v), reach);
+
+            if (twin == EngineSetting.INDEX_NOT_FOUND)
+                continue;
+
+            mirrorVertices.set(v, twin);
+            mirrorVertices.set(twin, v);
+        }
+
+        for (int v = 0; v < mesh.getVertexCount(); v++)
+            if (mirrorVertices.getInt(v) == EngineSetting.INDEX_NOT_FOUND && Math.abs(mesh.getX(v)) <= tolerance)
+                mirrorVertices.set(v, v);
+    }
+
+    private int findNearestUnpaired(
+            RiggedMeshStruct mesh,
+            IntArrayList mirrorVertices,
+            float x,
+            float y,
+            float z,
+            float reach) {
+
+        int cellX = (int) Math.floor(x / reach);
+        int cellY = (int) Math.floor(y / reach);
+        int cellZ = (int) Math.floor(z / reach);
+        float nearest = reach * reach;
+        int found = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dy = -1; dy <= 1; dy++)
+                for (int dz = -1; dz <= 1; dz++)
+                    for (int v = cell2Vertex.get(packCell(cellX + dx, cellY + dy, cellZ + dz));
+                            v != EngineSetting.INDEX_NOT_FOUND;
+                            v = cellNext.getInt(v)) {
+
+                        if (mirrorVertices.getInt(v) != EngineSetting.INDEX_NOT_FOUND)
+                            continue;
+
+                        float ex = mesh.getX(v) - x;
+                        float ey = mesh.getY(v) - y;
+                        float ez = mesh.getZ(v) - z;
+                        float distance = ex * ex + ey * ey + ez * ez;
+
+                        if (distance <= nearest) {
+                            nearest = distance;
+                            found = v;
+                        }
+                    }
+
+        return found;
+    }
+
+    private long toCellKey(float x, float y, float z, float reach) {
+        return packCell((int) Math.floor(x / reach), (int) Math.floor(y / reach), (int) Math.floor(z / reach));
+    }
+
+    private long packCell(int x, int y, int z) {
+        return ((long) x & EditorSetting.CHARACTER_MESH_KEY_MASK) << (EditorSetting.CHARACTER_MESH_KEY_BITS * 2)
+                | ((long) y & EditorSetting.CHARACTER_MESH_KEY_MASK) << EditorSetting.CHARACTER_MESH_KEY_BITS
+                | (long) z & EditorSetting.CHARACTER_MESH_KEY_MASK;
     }
 
     // Measure \\

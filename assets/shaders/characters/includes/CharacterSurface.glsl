@@ -1,13 +1,18 @@
 #ifndef CHARACTER_SURFACE_GLSL
 #define CHARACTER_SURFACE_GLSL
 
+#include "characters/includes/CharactersStandard.glsl"
 #include "characters/includes/CharacterAppearance.glsl"
 #include "characters/includes/CharacterZone.glsl"
+
+uniform sampler2DArray u_texture;
 
 // A character's surface is shaded by the zone its face is made of, from the colors and amounts in its palette row.
 // Skin takes its tile tinted by the skin color, then blemishes, blush, freckles, lip color and eyeliner where the
 // mesh's masks paint them; freckles and blemishes are cells fixed to the bind-pose surface, so they stay put as the
-// face moves. The eye is drawn from its raw corner UVs: a lid-shadowed sclera around an iris graded dark to light
+// face moves. Over the skin go the overlays the model places — the brows, the nipples and the body hair — each an image
+// from the character atlas laid on the bind-pose body before any morph, so it stays on the same skin however the body
+// is shaped or posed, tinted by its color and shown as far as its detail amount. The eye is drawn from its raw corner UVs: a lid-shadowed sclera around an iris graded dark to light
 // with a darker rim, a pupil and two highlights, tall and tucked under the upper lid as an anime eye is drawn. Hair is
 // its cards' strand texture with a root-to-tip grade and a broken band of shine where it faces up toward the light.
 // Specular rises for the wet eye and the shining hair.
@@ -36,6 +41,13 @@ const vec3  CHARACTER_SCLERA         = vec3(0.97, 0.96, 0.95);
 const vec3  CHARACTER_PUPIL          = vec3(0.03, 0.03, 0.05);
 const vec2  CHARACTER_HIGHLIGHT_MAIN = vec2(-0.30, -0.38);
 const vec2  CHARACTER_HIGHLIGHT_SIDE = vec2(0.28, 0.30);
+
+const float CHARACTER_OVERLAY_FACING  = 0.2;
+const float CHARACTER_OVERLAY_EDGE    = 0.25;
+const float CHARACTER_OVERLAY_SOFTNESS = 0.3;
+const int   CHARACTER_PROJECT_FRONT   = 0;
+const int   CHARACTER_PROJECT_WRAP    = 2;
+const int   CHARACTER_PROJECT_MIRROR  = 4;
 
 const vec3  CHARACTER_TEETH          = vec3(0.95, 0.94, 0.90);
 const float CHARACTER_MOUTH_SHADE    = 0.35;
@@ -72,6 +84,76 @@ float characterSpots(vec3 position, float cells, float density) {
     }
 
     return cover;
+}
+
+// The overlay image at a point of its tile, the tile repeating across whole coordinates without a seam in its mips
+vec4 sampleOverlayTile(vec4 tile, vec2 coordinate) {
+    vec2 scale = vec2(tile.y - tile.x, tile.w - tile.z);
+    vec2 uv    = vec2(tile.x, tile.z) + fract(coordinate) * scale;
+
+    return textureGrad(u_texture, vec3(uv, float(u_layer_albedo)), dFdx(coordinate) * scale, dFdy(coordinate) * scale);
+}
+
+// How far one overlay covers a point of the bind-pose body, with the shade its image gives there: a front or back
+// overlay is its image stretched once across its box on the faces turned that way, a wrapped one its image repeated
+// from all three axes and faded at the box's edge, and a mirrored one lies on both sides of the body. The detail
+// amount thins the image's coverage from its faint edges in, so a small amount keeps only its strongest marks.
+vec4 shadeOverlay(int instance, int overlay, vec3 bindPosition, vec3 bindNormal) {
+    vec4  size   = fetchOverlay(instance, overlay, 2);
+    float amount = fetchCharacterDetail(instance, CHARACTER_OVERLAY_DETAIL[overlay]);
+
+    if (size.x <= 0.0 || amount <= 0.001)
+    return vec4(0.0);
+
+    vec4 tile  = fetchOverlay(instance, overlay, 0);
+    vec4 place = fetchOverlay(instance, overlay, 1);
+    int  code  = int(place.w + 0.5);
+    vec3 point = bindPosition;
+    vec3 facing = normalize(bindNormal);
+
+    if (code >= CHARACTER_PROJECT_MIRROR && point.x * place.x < 0.0) {
+        point.x  = -point.x;
+        facing.x = -facing.x;
+    }
+
+    int  projection = code % CHARACTER_PROJECT_MIRROR;
+    vec3 local      = (point - place.xyz) / (size.xyz * 0.5);
+
+    if (any(greaterThan(abs(local), vec3(1.0))))
+    return vec4(0.0);
+
+    vec4 image;
+
+    if (projection == CHARACTER_PROJECT_WRAP) {
+        vec3 repeat = point * size.w;
+        vec3 blend  = pow(abs(facing), vec3(4.0));
+        blend /= blend.x + blend.y + blend.z;
+
+        image = sampleOverlayTile(tile, repeat.zy) * blend.x
+            + sampleOverlayTile(tile, repeat.xz) * blend.y
+            + sampleOverlayTile(tile, repeat.xy) * blend.z;
+        image.a *= 1.0 - smoothstep(1.0 - CHARACTER_OVERLAY_EDGE, 1.0, max(abs(local.x), max(abs(local.y), abs(local.z))));
+    } else {
+        float side = projection == CHARACTER_PROJECT_FRONT ? 1.0 : -1.0;
+        vec2  uv   = clamp(vec2(local.x * side, -local.y) * 0.5 + 0.5, 0.0, 0.999);
+
+        image = sampleOverlayTile(tile, uv);
+        image.a *= smoothstep(0.0, CHARACTER_OVERLAY_FACING, facing.z * side);
+    }
+
+    float cover = smoothstep(1.0 - amount, 1.0 - amount + CHARACTER_OVERLAY_SOFTNESS, image.a);
+    return vec4(image.rgb, cover * image.a);
+}
+
+vec3 shadeOverlays(int instance, vec3 skin, vec3 bindPosition, vec3 bindNormal) {
+    for (int i = 0; i < CHARACTER_OVERLAY_COUNT; i++) {
+        vec4 overlay = shadeOverlay(instance, i, bindPosition, bindNormal);
+
+        if (overlay.a > 0.001)
+        skin = mix(skin, fetchCharacterColor(instance, CHARACTER_OVERLAY_COLOR[i]) * overlay.rgb, overlay.a);
+    }
+
+    return skin;
 }
 
 vec3 shadeSkin(int instance, vec3 base, vec4 masks, vec3 surfacePosition) {
@@ -152,6 +234,8 @@ CharacterSurface resolveCharacterSurface(
     vec2 rawUV,
     vec4 masks,
     vec3 surfacePosition,
+    vec3 bindPosition,
+    vec3 bindNormal,
     vec3 viewNormal) {
 
     CharacterSurface surface;
@@ -174,7 +258,8 @@ CharacterSurface resolveCharacterSurface(
     } else if (zone == CHARACTER_ZONE_CLOTH) {
         surface.albedo = base * fetchCharacterColor(instance, CHARACTER_COLOR_CLOTH);
     } else {
-        surface.albedo = shadeSkin(instance, base, masks, surfacePosition);
+        surface.albedo = shadeOverlays(instance, shadeSkin(instance, base, masks, surfacePosition), bindPosition,
+            bindNormal);
     }
 
     return surface;

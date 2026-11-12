@@ -59,8 +59,8 @@ public enum ToolCanvas {
     CHARACTER_SCULPT(
             EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.INFLATE, EditorTool.PINCH,
-                    EditorTool.FLATTEN, EditorTool.NUDGE },
+                    EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.RELAX, EditorTool.INFLATE, EditorTool.PINCH,
+                    EditorTool.CREASE, EditorTool.FLATTEN, EditorTool.NUDGE },
             true,
             screenSize(),
             strength(EditorSetting.TOOL_SCULPT_STRENGTH_DEFAULT)),

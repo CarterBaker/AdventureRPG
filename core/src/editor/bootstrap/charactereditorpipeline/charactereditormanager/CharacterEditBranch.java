@@ -99,6 +99,18 @@ class CharacterEditBranch extends BranchPackage {
         });
     }
 
+    // Shapes \\
+
+    // The value a gender's preset starts a shape slider at
+    void setGenderShape(CharacterDocumentInstance document, String genderName, String shapeName, float value) {
+        edit(document, race -> CharacterViewUtility.requireObject(
+                        CharacterViewUtility.requireObject(
+                                CharacterViewUtility.requireObject(race, EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
+                                genderName),
+                        EditorSetting.CHARACTER_EDITOR_FIELD_SHAPES)
+                .addProperty(shapeName, value));
+    }
+
     // Colors \\
 
     void setColorChannel(CharacterDocumentInstance document, CharacterEditorColor color, int channel, float value) {

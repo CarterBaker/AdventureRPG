@@ -6,6 +6,7 @@ import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
+import application.bootstrap.geometrypipeline.rig.RigPart;
 import application.bootstrap.geometrypipeline.rig.RigSpringChainStruct;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
@@ -29,7 +30,9 @@ class RigBuilder extends BuilderPackage {
      * each name at least two "bones", each the parent of the next, the first
      * hung from a bone the body moves, none in another chain or an IK
      * handle, with the "stiffness", "damping", "gravity" and "drag" the
-     * runtime simulates them by, each within its range.
+     * runtime simulates them by, each within its range. Its optional
+     * "parts" name, per RigPart, the bones that part holds, and its optional
+     * "poses" the animation clips its editors strike as poses.
      */
 
     // Build \\
@@ -51,6 +54,10 @@ class RigBuilder extends BuilderPackage {
         if (bonesArray.size() == 0)
             throwException("Rig has no bones: " + sourceName);
 
+        if (bonesArray.size() > EngineSetting.SKINNED_BONE_MASK_CAPACITY)
+            throwException("Rig has " + bonesArray.size() + " bones, more than the "
+                    + EngineSetting.SKINNED_BONE_MASK_CAPACITY + " a skinned draw can mask: " + sourceName);
+
         RigBoneStruct[] bones = new RigBoneStruct[bonesArray.size()];
         Object2IntOpenHashMap<String> boneName2Index = new Object2IntOpenHashMap<>();
         boneName2Index.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
@@ -61,7 +68,14 @@ class RigBuilder extends BuilderPackage {
         RigIkChainStruct[] ikChains = parseIkChains(arpg, bones, boneName2Index, sourceName);
         RigSpringChainStruct[] springChains = parseSpringChains(arpg, bones, boneName2Index, ikChains, sourceName);
 
-        return new RigData(rigName, bones, boneName2Index, ikChains, springChains);
+        return new RigData(
+                rigName,
+                bones,
+                boneName2Index,
+                ikChains,
+                springChains,
+                parseParts(arpg, boneName2Index, sourceName),
+                parsePoses(arpg));
     }
 
     // Parse \\
@@ -312,6 +326,55 @@ class RigBuilder extends BuilderPackage {
                 carried[next++] = i;
 
         return carried;
+    }
+
+    // Parts \\
+
+    private int[][] parseParts(ArpgObjectStruct arpg, Object2IntOpenHashMap<String> boneName2Index, String sourceName) {
+
+        int[][] part2Bones = new int[RigPart.VALUES.length][];
+
+        for (RigPart rigPart : RigPart.VALUES)
+            part2Bones[rigPart.ordinal()] = new int[0];
+
+        if (!ArpgUtility.hasObject(arpg, "parts"))
+            return part2Bones;
+
+        ArpgObjectStruct partsArpg = arpg.getAsObject("parts");
+
+        for (String key : partsArpg.keySet()) {
+
+            RigPart rigPart = ArpgUtility.toEnum(key, RigPart.class);
+            ArpgArrayStruct boneNames = partsArpg.getAsArray(key);
+            int[] boneIndices = new int[boneNames.size()];
+
+            for (int i = 0; i < boneNames.size(); i++) {
+
+                boneIndices[i] = boneName2Index.getInt(boneNames.get(i).getAsString());
+
+                if (boneIndices[i] == EngineSetting.INDEX_NOT_FOUND)
+                    throwException("Rig part \"" + key + "\" names unknown bone \""
+                            + boneNames.get(i).getAsString() + "\": " + sourceName);
+            }
+
+            part2Bones[rigPart.ordinal()] = boneIndices;
+        }
+
+        return part2Bones;
+    }
+
+    private String[] parsePoses(ArpgObjectStruct arpg) {
+
+        if (!ArpgUtility.hasArray(arpg, "poses"))
+            return new String[0];
+
+        ArpgArrayStruct posesArray = arpg.getAsArray("poses");
+        String[] poseNames = new String[posesArray.size()];
+
+        for (int i = 0; i < posesArray.size(); i++)
+            poseNames[i] = posesArray.get(i).getAsString();
+
+        return poseNames;
     }
 
     // Vector Parsing \\

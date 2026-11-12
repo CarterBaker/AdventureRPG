@@ -89,4 +89,16 @@ public class RigHandle extends HandlePackage {
     public int[] getSpringCarriedBones() {
         return rigData.getSpringCarriedBones();
     }
+
+    public int[] getPartBones(RigPart rigPart) {
+        return rigData.getPartBones(rigPart);
+    }
+
+    public int getPoseCount() {
+        return rigData.getPoseCount();
+    }
+
+    public String getPoseName(int poseIndex) {
+        return rigData.getPoseName(poseIndex);
+    }
 }

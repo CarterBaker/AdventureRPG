@@ -1,5 +1,6 @@
 package application.runtime;
 
+import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import engine.graphics.color.Color;
 import engine.util.mathematics.vectors.Vector4;
 
@@ -225,6 +226,10 @@ public class RuntimeSetting {
     public static final String CREATOR_SECTION_LIP_COLOR = "Lip Color";
     public static final String CREATOR_SECTION_DETAILS = "Skin & Makeup";
     public static final String CREATOR_SECTION_HAIRSTYLE = "Hairstyle";
+    public static final String CREATOR_SECTION_FACE_FEATURES = "Eyes & Teeth";
+    public static final String CREATOR_SECTION_NIPPLE_COLOR = "Nipple Color";
+    public static final String CREATOR_SECTION_BODY_HAIR_COLOR = "Body Hair Color";
+    public static final String CREATOR_SECTION_BODY_DETAILS = "Body Marks";
     public static final String CREATOR_SECTION_HAIR_COLOR = "Hair Color";
     public static final String CREATOR_SECTION_BROW_COLOR = "Brow & Lash Color";
     public static final String CREATOR_SECTION_HAIR_DETAILS = "Hair Finish";
@@ -262,11 +267,20 @@ public class RuntimeSetting {
     public static final String CREATOR_SHAPE_GROUP_BODY = "body";
     public static final String CREATOR_SHAPE_NAME_SEPARATOR = "_";
     public static final String[] CREATOR_DETAIL_LABELS = {
-            "Iris Size", "Pupil Size", "Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes" };
-    public static final float[] CREATOR_DETAIL_MIN = { 0.75f, 0.6f, 0f, 0f, 0f, 0f, 0f, 0f };
-    public static final float[] CREATOR_DETAIL_MAX = { 1.3f, 1.4f, 1f, 1f, 1f, 1f, 1f, 1f };
+            "Iris Size", "Pupil Size", "Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes",
+            "Brow Thickness", "Nipples", "Chest Hair", "Stomach Hair", "Pubic Hair", "Underarm Hair", "Arm Hair",
+            "Leg Hair" };
+    public static final float[] CREATOR_DETAIL_MIN = { 0.75f, 0.6f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f,
+            0f, 0f };
+    public static final float[] CREATOR_DETAIL_MAX = { 1.3f, 1.4f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f,
+            1f, 1f };
     public static final int[] CREATOR_APPEARANCE_DETAILS = { 0, 1, 3, 4, 5, 6, 7 };
-    public static final int[] CREATOR_HAIR_DETAILS = { 2 };
+    public static final int[] CREATOR_HAIR_DETAILS = { 2, 8 };
+    public static final int[] CREATOR_BODY_DETAILS = { 9, 10, 11, 12, 13, 14, 15 };
+
+    // Character Creator — the worn parts each tab offers
+    public static final FeatureSlot[] CREATOR_HAIR_FEATURES = { FeatureSlot.HAIR };
+    public static final FeatureSlot[] CREATOR_FACE_FEATURES = { FeatureSlot.EYES, FeatureSlot.TEETH };
     public static final float CREATOR_PERCENT_SCALE = 100f;
 
     // Character Creator Name

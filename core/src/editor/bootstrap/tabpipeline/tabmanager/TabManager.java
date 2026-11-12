@@ -30,10 +30,12 @@ import editor.runtime.characteroutliner.CharacterOutlinerContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
+import editor.runtime.eyeeditor.EyeEditorContext;
 import editor.runtime.faceeditor.FaceEditorContext;
 import editor.runtime.footeditor.FootEditorContext;
 import editor.runtime.haireditor.HairEditorContext;
 import editor.runtime.handeditor.HandEditorContext;
+import editor.runtime.moutheditor.MouthEditorContext;
 import editor.runtime.faceoutliner.FaceOutlinerContext;
 import editor.runtime.heighteditor.HeightEditorContext;
 import editor.runtime.hierarchy.HierarchyContext;
@@ -195,6 +197,14 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openFootEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_FOOT_EDITOR, FootEditorContext.class, osWindow);
+    }
+
+    public TabHandle openEyeEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_EYE_EDITOR, EyeEditorContext.class, osWindow);
+    }
+
+    public TabHandle openMouthEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_MOUTH_EDITOR, MouthEditorContext.class, osWindow);
     }
 
     public TabHandle openFaceEditor(WindowInstance osWindow) {

@@ -248,7 +248,10 @@ public class CharacterCreatorBranch extends BranchPackage {
         switch (session.getActiveTab()) {
             case APPEARANCE -> creatorAppearanceBranch.populateAppearance(session);
             case HAIR -> creatorAppearanceBranch.populateHair(session);
-            case BODY -> creatorBodyBranch.populateBody(session);
+            case BODY -> {
+                creatorBodyBranch.populateBody(session);
+                creatorAppearanceBranch.populateBodyMarks(session);
+            }
             case ATTRIBUTES -> creatorProgressionBranch.populateAttributes(session);
             case PROFESSION -> creatorProgressionBranch.populateProfessions(session);
         }

@@ -419,14 +419,17 @@ class CharacterRigBranch extends BranchPackage {
         ObjectArrayList<ArpgObjectStruct> added = new ObjectArrayList<>();
         ObjectArrayList<CharacterDigitStruct> digits = new ObjectArrayList<>();
 
-        for (String rootName : region.getRootBones()) {
+        int[] partBones = mesh.getRigHandle().getPartBones(region.getRigPart());
 
+        for (int p = 0; p < partBones.length; p++) {
+
+            String rootName = mesh.getRigHandle().getBone(partBones[p]).getName();
             int root = findBone(rootName);
 
-            if (root == EngineSetting.INDEX_NOT_FOUND || !mesh.getRigHandle().hasBone(rootName))
+            if (root == EngineSetting.INDEX_NOT_FOUND)
                 continue;
 
-            characterDigitBranch.detect(mesh, mesh.getRigHandle().getBoneIndex(rootName), digits);
+            characterDigitBranch.detect(mesh, partBones[p], digits);
             matrixScratchA.set(worldMatrices.get(root)).inverse();
 
             String side = CharacterMeshUtility.toSideSuffix(rootName);
@@ -1393,6 +1396,11 @@ class CharacterRigBranch extends BranchPackage {
 
     int getSelectedBone() {
         return selectedBone;
+    }
+
+    // The loaded rig the draft is edited from, null before a character is opened
+    RigHandle getRigHandle() {
+        return rigHandle;
     }
 
     String getBoneName(int boneIndex) {

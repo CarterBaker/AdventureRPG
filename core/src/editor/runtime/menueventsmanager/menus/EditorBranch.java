@@ -114,6 +114,14 @@ public class EditorBranch extends BranchPackage {
         tabManager.openFootEditor(window.getGLWindow());
     }
 
+    public void openEyeEditor(WindowInstance window) {
+        tabManager.openEyeEditor(window.getGLWindow());
+    }
+
+    public void openMouthEditor(WindowInstance window) {
+        tabManager.openMouthEditor(window.getGLWindow());
+    }
+
     public void openFaceEditor(WindowInstance window) {
         tabManager.openFaceEditor(window.getGLWindow());
     }

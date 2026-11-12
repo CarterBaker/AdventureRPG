@@ -1,8 +1,10 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
+import application.bootstrap.entitypipeline.appearance.AppearanceIsolationStruct;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityStateHandle;
+import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
@@ -12,6 +14,8 @@ import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
@@ -35,10 +39,13 @@ public class EntityRenderSystem extends SystemPackage {
      * skinned buffers once per frame, then pushCharacter() builds a character's
      * model matrix from its footprint, yaw and size, placed relative to the
      * chunk the viewer stands in across the world's wrap, plays its face,
-     * packs its appearance into its palette row, and submits its body, worn
-     * features and equipment as skinned and rigid draws, the body and its
-     * material those of the gender it wears. pushPreview() draws a posed
-     * character outside any world for editors. Runtime code never touches the
+     * packs its appearance and the overlays its model places into its palette
+     * row, and submits its body, worn features and equipment as skinned and
+     * rigid draws, the body and its material those of the gender it wears,
+     * each feature with its own material when it names one; seen from its own
+     * eyes, its head and everything the head carries is masked away.
+     * pushPreview() draws a posed character outside any world for editors,
+     * as much of it as the editor isolates. Runtime code never touches the
      * skinned buffers directly.
      */
 
@@ -59,6 +66,8 @@ public class EntityRenderSystem extends SystemPackage {
     private Matrix4 matrixScratchA;
     private Matrix4 matrixScratchB;
     private SkinnedAppearanceStruct appearanceScratch;
+    private SkinnedBoneMaskStruct noMask;
+    private AppearanceIsolationStruct wholeIsolation;
     private Matrix4 anchorScratch;
     private Matrix4 equipmentScratch;
 
@@ -75,6 +84,8 @@ public class EntityRenderSystem extends SystemPackage {
         this.matrixScratchA = new Matrix4();
         this.matrixScratchB = new Matrix4();
         this.appearanceScratch = new SkinnedAppearanceStruct();
+        this.noMask = new SkinnedBoneMaskStruct();
+        this.wholeIsolation = new AppearanceIsolationStruct();
         this.anchorScratch = new Matrix4();
         this.equipmentScratch = new Matrix4();
 
@@ -114,11 +125,13 @@ public class EntityRenderSystem extends SystemPackage {
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
         composeModelMatrix(entity, viewerChunkCoordinate);
-        resolveAppearance(raceData, entity.getAppearanceHandle(), hideHead);
+        resolveAppearance(raceGender, entity.getAppearanceHandle());
         pushBody(
-                raceGender.getMeshHandle(),
+                raceGender,
                 entity.getAppearanceHandle(),
                 raceGender.getMaterial(),
+                hideHead && entity.hasAppearance() ? raceData.getAppearanceData().getHeadMask() : noMask,
+                wholeIsolation,
                 skinningMatrices,
                 targetFbo,
                 window);
@@ -127,44 +140,65 @@ public class EntityRenderSystem extends SystemPackage {
 
     // A posed character outside any world — an editor's preview — at its own model matrix and without equipment,
     // wearing the model of the gender given and drawn with its own material so it never batches with the
-    // characters of a game view
+    // characters of a game view, the body and features the editor isolates drawn through its mask
     public void pushPreview(
-            RaceData raceData,
             RaceGenderStruct raceGender,
             AppearanceHandle appearance,
             Matrix4[] skinningMatrices,
             Matrix4 modelMatrix,
             MaterialInstance material,
+            AppearanceIsolationStruct isolation,
             FBOInstance targetFbo,
             WindowInstance window) {
 
         modelMatrixScratch.set(modelMatrix);
-        resolveAppearance(raceData, appearance, false);
-        pushBody(raceGender.getMeshHandle(), appearance, material, skinningMatrices, targetFbo, window);
+        resolveAppearance(raceGender, appearance);
+        pushBody(
+                raceGender,
+                appearance,
+                material,
+                isolation.getBoneMask(),
+                isolation,
+                skinningMatrices,
+                targetFbo,
+                window);
     }
 
-    // The body the gender wears, then every feature its appearance wears
+    // The body the gender wears through the mask, then every feature its appearance wears that the isolation
+    // shows, through the mask where it masks that feature, each with its own material when it names one
     private void pushBody(
-            MeshHandle bodyMesh,
+            RaceGenderStruct raceGender,
             AppearanceHandle appearance,
             MaterialInstance material,
+            SkinnedBoneMaskStruct boneMask,
+            AppearanceIsolationStruct isolation,
             Matrix4[] skinningMatrices,
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        pushCharacterPart(bodyMesh, material, skinningMatrices, targetFbo, window);
+        appearanceScratch.setBoneMask(boneMask);
+
+        if (isolation.isBodyShown())
+            pushCharacterPart(raceGender.getMeshHandle(), material, skinningMatrices, targetFbo, window);
 
         if (appearance == null)
             return;
 
-        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
-            if (appearance.hasFeature(featureSlot))
-                pushCharacterPart(
-                        appearance.getFeature(featureSlot).getMeshHandle(),
-                        material,
-                        skinningMatrices,
-                        targetFbo,
-                        window);
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
+
+            if (!appearance.hasFeature(featureSlot) || !isolation.isFeatureShown(featureSlot))
+                continue;
+
+            FeatureHandle feature = appearance.getFeature(featureSlot);
+
+            appearanceScratch.setBoneMask(isolation.isFeatureMasked(featureSlot) ? boneMask : noMask);
+            pushCharacterPart(
+                    feature.getMeshHandle(),
+                    feature.hasMaterial() ? feature.getMaterial() : material,
+                    skinningMatrices,
+                    targetFbo,
+                    window);
+        }
     }
 
     private void pushCharacterPart(
@@ -297,12 +331,13 @@ public class EntityRenderSystem extends SystemPackage {
 
     // Appearance \\
 
-    private void resolveAppearance(RaceData raceData, AppearanceHandle appearance, boolean hideHead) {
+    // The appearance worn and every overlay the gender's model places, the mask left to each draw
+    private void resolveAppearance(RaceGenderStruct raceGender, AppearanceHandle appearance) {
 
         appearanceScratch.reset();
-        appearanceScratch.setHiddenBone(hideHead && appearance != null
-                ? (float) raceData.getAppearanceData().getHeadBoneIndex()
-                : EngineSetting.SKINNED_HIDDEN_BONE_NONE);
+
+        for (SkinnedOverlay skinnedOverlay : SkinnedOverlay.VALUES)
+            appearanceScratch.setOverlay(skinnedOverlay, raceGender.getOverlay(skinnedOverlay));
 
         if (appearance == null)
             return;

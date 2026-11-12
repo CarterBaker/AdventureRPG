@@ -16,6 +16,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
@@ -24,6 +25,7 @@ import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.bootstrap.toolpipeline.util.ToolOption;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -100,8 +102,9 @@ public class CharacterEditorManager extends ManagerPackage {
     private int selectedBoneIndex;
     private int selectedAnchorIndex;
 
-    // Preview
+    // Preview — the pose struck: Bind, one of the rig's own poses, or a movement played
     private CharacterEditorPose pose;
+    private int poseClipIndex;
     private boolean springPreview;
     private int genderIndex;
     private float weightRatio;
@@ -113,6 +116,7 @@ public class CharacterEditorManager extends ManagerPackage {
     // Mesh
     private String activePartKey;
     private CharacterEditorRegion region;
+    private CharacterEditorSide[] region2Side;
     private boolean mirror;
     private boolean xray;
     private boolean proportional;
@@ -177,7 +181,8 @@ public class CharacterEditorManager extends ManagerPackage {
         this.selectedAnchorIndex = EngineSetting.INDEX_NOT_FOUND;
 
         // Preview
-        this.pose = CharacterEditorPose.IDLE;
+        this.pose = CharacterEditorPose.REST;
+        this.poseClipIndex = EngineSetting.INDEX_NOT_FOUND;
         this.weightRatio = EditorSetting.CHARACTER_VIEW_WEIGHT_RATIO;
         this.headProportion = new Vector3(1f, 1f, 1f);
         this.toneIndices = new int[CharacterEditorColor.VALUES.length];
@@ -187,6 +192,8 @@ public class CharacterEditorManager extends ManagerPackage {
         // Mesh
         this.activePartKey = EditorSetting.CHARACTER_EDITOR_PART_BODY;
         this.region = CharacterEditorRegion.WHOLE;
+        this.region2Side = new CharacterEditorSide[CharacterEditorRegion.VALUES.length];
+        Arrays.fill(region2Side, CharacterEditorSide.LEFT);
         this.mirror = true;
         this.proportionalRadius = EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_DEFAULT;
         this.snapStep = EditorSetting.CHARACTER_EDITOR_MESH_SNAP_DEFAULT;
@@ -493,22 +500,42 @@ public class CharacterEditorManager extends ManagerPackage {
             selectPart(partKey);
     }
 
+    // The part a region edits: the part picked while it is one the region holds, else its body, else its feature
     private String resolveRegionPartKey(CharacterEditorRegion region) {
 
-        if (region.isFeature())
-            return ArpgUtility.toEnumName(region.getFeatureSlot());
+        if (region.isWhole() || holdsPartKey(region, activePartKey))
+            return activePartKey;
 
-        return region.isWhole() ? activePartKey : EditorSetting.CHARACTER_EDITOR_PART_BODY;
+        return region.holdsBody()
+                ? EditorSetting.CHARACTER_EDITOR_PART_BODY
+                : ArpgUtility.toEnumName(region.getFeatureSlot());
     }
 
-    // Whether a mesh is the part a region edits, the active part when that is the region's own
+    // Whether a part, by its key, is one a region holds: the body where it holds a part of the rig, or its feature
+    boolean holdsPartKey(CharacterEditorRegion region, String partKey) {
+
+        if (region.isWhole())
+            return true;
+
+        if (partKey.equals(EditorSetting.CHARACTER_EDITOR_PART_BODY))
+            return region.holdsBody();
+
+        return region.holdsFeature() && partKey.equals(ArpgUtility.toEnumName(region.getFeatureSlot()));
+    }
+
+    // Whether a mesh is the part a region edits, the active part when that is one the region holds
     boolean isRegionPart(CharacterMeshDocumentInstance document, CharacterEditorRegion region) {
 
         if (region.isWhole())
             return true;
 
         CharacterMeshDocumentInstance active = getActiveMeshDocument();
-        return document == active && resolveRegionPartKey(region).equals(activePartKey);
+        return document == active && holdsPartKey(region, activePartKey);
+    }
+
+    // Whether the open part is the region's feature rather than its body
+    boolean isRegionFeatureOpen(CharacterEditorRegion region) {
+        return region.holdsFeature() && activePartKey.equals(ArpgUtility.toEnumName(region.getFeatureSlot()));
     }
 
     // How far a vertex of a mesh belongs to a region, the share each stroke reaching it is held to
@@ -543,6 +570,61 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public CharacterEditorRegion getRegion() {
         return region;
+    }
+
+    // Sides \\
+
+    // Whether a region's part has a twin across the body, so it is shown and framed one side at a time
+    public boolean isSided(CharacterEditorRegion region) {
+
+        RigHandle rigHandle = resolveRegionRig();
+        return rigHandle != null && characterRegionBranch.isSided(region, rigHandle);
+    }
+
+    public CharacterEditorSide getSide(CharacterEditorRegion region) {
+        return region2Side[region.ordinal()];
+    }
+
+    void setSide(CharacterEditorRegion region, CharacterEditorSide side) {
+
+        if (region2Side[region.ordinal()] == side)
+            return;
+
+        region2Side[region.ordinal()] = side;
+        notifyChanged();
+    }
+
+    // Whether a vertex stands on the side a sided region shows; every vertex does for any other region
+    public boolean isOnRegionSide(CharacterMeshDocumentInstance document, int vertexIndex) {
+        return !isSided(region) || getSide(region).holdsX(document.getMesh().getX(vertexIndex));
+    }
+
+    // The bone a region is framed about: the first bone of its part on the side shown, the bone its own bones hang
+    // from for one that names them, INDEX_NOT_FOUND for the whole character or a rig that names no such part
+    public int getRegionFrameBone(CharacterEditorRegion region, RigHandle rigHandle) {
+        return characterRegionBranch.resolveFrameBone(region, getSide(region), rigHandle);
+    }
+
+    // Whether a bone of a loaded rig is shown in a region: one it holds, on the side shown where it is sided
+    public boolean isBoneShown(CharacterEditorRegion region, RigHandle rigHandle, int boneIndex) {
+        return characterRegionBranch.holdsBone(region, rigHandle, boneIndex)
+                && (!characterRegionBranch.isSided(region, rigHandle)
+                || getSide(region).namesBone(rigHandle.getBone(boneIndex).getName()));
+    }
+
+    // Whether a bone of the rig being edited is shown in a region: one it holds, on the side shown where it is sided
+    public boolean isRigBoneShown(CharacterEditorRegion region, int boneIndex) {
+
+        if (!isRigBoneInRegion(region, boneIndex))
+            return false;
+
+        return !isSided(region) || getSide(region).namesBone(characterRigBranch.getBoneName(boneIndex));
+    }
+
+    private RigHandle resolveRegionRig() {
+        return activeDocument != null && activeDocument.hasPreview()
+                ? activeDocument.getPreviewData().getRigHandle()
+                : null;
     }
 
     // The open mesh of the part picked, falling back to the body once the character no longer wears it; null without
@@ -648,7 +730,8 @@ public class CharacterEditorManager extends ManagerPackage {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
-        if (document == null || mode != CharacterEditorMode.MESH || !characterSculptBranch.beginTransform(document))
+        if (document == null || mode != CharacterEditorMode.MESH || refusePosedEdit()
+                || !characterSculptBranch.beginTransform(document))
             return false;
 
         notifyChanged();
@@ -665,6 +748,17 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public void cancelTransform() {
         characterSculptBranch.cancelTransform();
+    }
+
+    // Vertices are moved only in the bind pose, where they stand as the mesh file holds them; struck in any other
+    // pose, the edit is refused and the status says why
+    private boolean refusePosedEdit() {
+
+        if (!isPosed())
+            return false;
+
+        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_POSED);
+        return true;
     }
 
     public boolean isTransforming() {
@@ -688,8 +782,10 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (isSelectStroke())
             characterSelectionBranch.beginStroke(document, selection);
-        else if (mode == CharacterEditorMode.SCULPT)
-            characterShapeBranch.beginStroke(document);
+        else if (mode == CharacterEditorMode.SCULPT) {
+            if (!refusePosedEdit())
+                characterShapeBranch.beginStroke(document);
+        }
         else
             characterWeightBranch.beginStroke(document);
     }
@@ -882,7 +978,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
-        if (!region.isBound() || document == null || !isRegionPart(document, region)) {
+        if (!region.holdsBody() || document == null || !isRegionPart(document, region)) {
             setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NO_REGION);
             return;
         }
@@ -894,7 +990,7 @@ public class CharacterEditorManager extends ManagerPackage {
     // Every vertex of the region's hand or foot bones weighed onto the digit bones the rig lays below them
     void weighDigits(CharacterMeshDocumentInstance document) {
 
-        if (!region.isBound() || !isRegionPart(document, region)) {
+        if (!region.holdsBody() || !isRegionPart(document, region)) {
             setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NO_REGION);
             return;
         }
@@ -1079,10 +1175,24 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Preview \\
 
-    void setPose(CharacterEditorPose pose) {
+    // The pose every outliner picks, stepped through Bind, each pose the rig names, then the movements played
+    void stepPose(int direction) {
 
-        this.pose = pose;
+        RigHandle rigHandle = resolveRegionRig();
+        int clipCount = rigHandle != null ? rigHandle.getPoseCount() : 0;
+        int slot = Math.floorMod(getPoseSlot(clipCount) + direction, clipCount + CharacterEditorPose.VALUES.length);
+
+        this.poseClipIndex = slot >= 1 && slot <= clipCount ? slot - 1 : EngineSetting.INDEX_NOT_FOUND;
+        this.pose = slot > clipCount ? CharacterEditorPose.VALUES[slot - clipCount] : CharacterEditorPose.REST;
         notifyChanged();
+    }
+
+    private int getPoseSlot(int clipCount) {
+
+        if (poseClipIndex != EngineSetting.INDEX_NOT_FOUND && poseClipIndex < clipCount)
+            return poseClipIndex + 1;
+
+        return pose == CharacterEditorPose.REST ? 0 : pose.ordinal() + clipCount;
     }
 
     // The gender the preview is made as, by its place in the race's genders; it wears that gender's model, so the
@@ -1205,6 +1315,31 @@ public class CharacterEditorManager extends ManagerPackage {
         return pose;
     }
 
+    // The rig's pose struck, by its place in the rig's poses, INDEX_NOT_FOUND while a movement or Bind is
+    public int getPoseClipIndex() {
+
+        RigHandle rigHandle = resolveRegionRig();
+
+        return rigHandle != null && poseClipIndex < rigHandle.getPoseCount()
+                ? poseClipIndex
+                : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    public String getPoseLabel() {
+
+        int clipIndex = getPoseClipIndex();
+
+        return clipIndex != EngineSetting.INDEX_NOT_FOUND
+                ? CharacterViewUtility.toResourceLabel(resolveRegionRig().getPoseName(clipIndex))
+                : pose.getLabel();
+    }
+
+    // Whether a modelling mode shows the character out of its bind pose, so its vertices may not be moved
+    public boolean isPosed() {
+        return mode.isMeshMode() && mode.picksPose()
+                && (pose != CharacterEditorPose.REST || getPoseClipIndex() != EngineSetting.INDEX_NOT_FOUND);
+    }
+
     public boolean isSpringPreview() {
         return springPreview;
     }
@@ -1283,8 +1418,9 @@ public class CharacterEditorManager extends ManagerPackage {
         return activePartKey;
     }
 
+    // Mirror is held on in a sided region, so an edit to the side shown is always made to its twin
     public boolean isMirror() {
-        return mirror;
+        return mirror || isSided(region);
     }
 
     public boolean isXray() {
@@ -1387,7 +1523,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (activeDocument == null)
             status.append(EditorSetting.CHARACTER_EDITOR_STATUS_NO_TEMPLATE);
-        else if (mode.isMeshMode() && region.isFeature() && !isRegionOpen(region))
+        else if (mode.isMeshMode() && !region.isWhole() && !region.holdsBody() && !isRegionOpen(region))
             status.append(EditorSetting.CHARACTER_REGION_STATUS_NO_PART)
                     .append(ArpgUtility.toEnumName(region.getFeatureSlot()));
         else
@@ -1447,7 +1583,10 @@ public class CharacterEditorManager extends ManagerPackage {
         status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(mode.getLabel());
 
         if (mode.picksPose())
-            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(pose.getLabel());
+            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(getPoseLabel());
+
+        if (isSided(region))
+            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(getSide(region).getLabel());
 
         if (mode.isMeshMode())
             appendMeshStatus(status);

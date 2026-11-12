@@ -5,7 +5,9 @@ in vec3 v_viewPosition;
 in vec3 v_viewNormal;
 in vec3 v_surfacePosition;
 in vec4 v_masks;
-in float v_hiddenWeight;
+in vec3 v_bindPosition;
+in vec3 v_bindNormal;
+in float v_maskWeight;
 flat in int v_zone;
 flat in int v_instance;
 
@@ -15,7 +17,6 @@ flat in int v_instance;
 #include "characters/includes/CharacterNormal.glsl"
 #include "includes/GBufferNormal.glsl"
 
-uniform sampler2DArray u_texture;
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -32,7 +33,7 @@ layout(location = 2) out vec4 gMaterial;
  */
 
 void main() {
-    if (isHiddenFragment(v_hiddenWeight))
+    if (isHiddenFragment(v_instance, v_maskWeight))
     discard;
 
     vec4 base = texture(u_texture, vec3(v_uv.xy, float(u_layer_albedo)));
@@ -42,7 +43,7 @@ void main() {
 
     vec3 normalView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
     CharacterSurface surface = resolveCharacterSurface(
-        v_instance, v_zone, base.rgb, v_uv.zw, v_masks, v_surfacePosition, normalView);
+        v_instance, v_zone, base.rgb, v_uv.zw, v_masks, v_surfacePosition, v_bindPosition, v_bindNormal, normalView);
 
     // Blending is enabled for this pass, so every target writes alpha = 1.0.
     // gMaterial packs r = sun visibility, g = specular, b = ao (see

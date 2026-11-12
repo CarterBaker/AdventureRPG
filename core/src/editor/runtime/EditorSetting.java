@@ -431,6 +431,8 @@ public class EditorSetting {
     public static final String TAB_TITLE_HAIR_EDITOR = "Hair Editor";
     public static final String TAB_TITLE_HAND_EDITOR = "Hand Editor";
     public static final String TAB_TITLE_FOOT_EDITOR = "Foot Editor";
+    public static final String TAB_TITLE_EYE_EDITOR = "Eye Editor";
+    public static final String TAB_TITLE_MOUTH_EDITOR = "Mouth Editor";
     public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
     public static final String TAB_TITLE_HEIGHT_EDITOR = "Height Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
@@ -626,6 +628,9 @@ public class EditorSetting {
     // Character View — panel keys, numbers and text
     public static final String CHARACTER_VIEW_KEY_SEPARATOR = ":";
     public static final float CHARACTER_VIEW_DECIMAL_SCALE = 10000f;
+    public static final int CHARACTER_VIEW_LABEL_SLACK = 4;
+    public static final char CHARACTER_VIEW_RESOURCE_SEPARATOR = '/';
+    public static final char CHARACTER_VIEW_WORD_SEPARATOR = ' ';
     public static final String CHARACTER_VIEW_ZERO_TEXT = "0";
     public static final String[] CHARACTER_VIEW_AXIS_NAMES = { "x", "y", "z" };
     public static final String[] CHARACTER_VIEW_AXIS_LABELS = { "X", "Y", "Z" };
@@ -729,6 +734,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_FIELD_APPEARANCE = "appearance";
     public static final String CHARACTER_EDITOR_FIELD_FEATURES = "features";
     public static final String CHARACTER_EDITOR_FIELD_GENDERS = "genders";
+    public static final String CHARACTER_EDITOR_FIELD_SHAPES = "shapes";
     public static final String CHARACTER_EDITOR_FIELD_COLORS = "colors";
     public static final String CHARACTER_EDITOR_FIELD_PALETTES = "palettes";
     public static final String CHARACTER_EDITOR_FIELD_DETAILS = "details";
@@ -746,6 +752,7 @@ public class EditorSetting {
 
     // Character Editor — panel keys
     public static final String CHARACTER_EDITOR_KEY_POSE = "pose";
+    public static final String CHARACTER_EDITOR_KEY_SIDE = "side";
     public static final String CHARACTER_EDITOR_KEY_GENDER = "gender";
     public static final String CHARACTER_EDITOR_KEY_FEATURE = "feature";
     public static final String CHARACTER_EDITOR_KEY_COLOR_PREFIX = "color_";
@@ -811,7 +818,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_SCULPT = "Sculpt";
     public static final String CHARACTER_EDITOR_MODE_WEIGHTS = "Weights";
     public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
-    public static final String CHARACTER_EDITOR_POSE_REST = "Rest";
+    public static final String CHARACTER_EDITOR_POSE_REST = "Bind";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
     public static final String CHARACTER_EDITOR_POSE_RUN = "Run";
@@ -822,9 +829,12 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX = " (race default)";
     public static final String CHARACTER_EDITOR_HEADER_NO_APPEARANCE = "No appearance block";
     public static final String[] CHARACTER_EDITOR_COLOR_HEADERS = {
-            "Skin", "Eyes", "Hair", "Brows & Lashes", "Lips", "Blush", "Freckles", "Clothing" };
+            "Skin", "Eyes", "Hair", "Brows & Lashes", "Lips", "Blush", "Freckles", "Clothing", "Nipples",
+            "Body Hair" };
     public static final String[] CHARACTER_EDITOR_DETAIL_LABELS = {
-            "Iris Size", "Pupil Size", "Hair Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes" };
+            "Iris Size", "Pupil Size", "Hair Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes",
+            "Brow Thickness", "Nipples", "Chest Hair", "Stomach Hair", "Pubic Hair", "Underarm Hair", "Arm Hair",
+            "Leg Hair" };
     public static final String CHARACTER_EDITOR_HEADER_DETAILS = "Details";
     public static final String CHARACTER_EDITOR_HEADER_SHAPE_KEYS = "Shape Keys";
     public static final String CHARACTER_EDITOR_LABEL_BLINK = "Blink";
@@ -841,6 +851,9 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_HEADER_ANCHORS = "Anchors";
     public static final String CHARACTER_EDITOR_HEADER_ANCHOR = "Anchor";
     public static final String CHARACTER_EDITOR_LABEL_POSE = "Pose";
+    public static final String CHARACTER_EDITOR_LABEL_SIDE = "Side";
+    public static final String CHARACTER_EDITOR_SIDE_LEFT = "Left";
+    public static final String CHARACTER_EDITOR_SIDE_RIGHT = "Right";
     public static final String CHARACTER_EDITOR_LABEL_GENDER = "Gender";
     public static final String CHARACTER_EDITOR_LABEL_TONE = "Tone Worn";
     public static final String CHARACTER_EDITOR_LABEL_TONE_PREFIX = "Tone ";
@@ -944,6 +957,7 @@ public class EditorSetting {
     public static final long CHARACTER_MESH_KEY_MASK = (1L << CHARACTER_MESH_KEY_BITS) - 1L;
     public static final float CHARACTER_MESH_CENTER_TOLERANCE = 0.001f;
     public static final float CHARACTER_MESH_SYMMETRIZE_REACH = 0.02f;
+    public static final float CHARACTER_MESH_MIRROR_REACH = 0.003f;
     public static final float CHARACTER_MESH_SPAN_EPSILON = 0.0001f;
     public static final float CHARACTER_MESH_WEIGHT_EPSILON = 0.0001f;
     public static final float CHARACTER_MESH_BONE_SELECT_WEIGHT = 0.25f;
@@ -1033,6 +1047,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_LIMIT = "That edit would pass the mesh vertex limit";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED = "A mesh file could not be written";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_REVERTED = "The mesh file could not be read";
+    public static final String CHARACTER_EDITOR_MESSAGE_POSED = "Vertices move only in the Bind pose: pick Bind under Pose";
     public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_EXTRUDE = "Select faces or edges to extrude";
     public static final String CHARACTER_EDITOR_MESSAGE_NO_FACES = "Select whole faces first";
     public static final String CHARACTER_EDITOR_MESSAGE_FACE_VERTICES = "Select 3 or 4 vertices to make a face";
@@ -1051,6 +1066,9 @@ public class EditorSetting {
     public static final float CHARACTER_SCULPT_INFLATE_RATE = 0.1f;
     public static final float CHARACTER_SCULPT_SMOOTH_RATE = 0.5f;
     public static final float CHARACTER_SCULPT_PINCH_RATE = 0.2f;
+    public static final float CHARACTER_SCULPT_CREASE_RATE = 0.06f;
+    public static final float CHARACTER_SCULPT_CREASE_PINCH_RATE = 0.25f;
+    public static final float CHARACTER_SCULPT_RELAX_RATE = 0.5f;
     public static final float CHARACTER_SCULPT_FLATTEN_RATE = 0.5f;
 
     // Character Rig — rig fields
@@ -1277,11 +1295,6 @@ public class EditorSetting {
     // frames with every bone below it; a vertex weighing on a region's bones at least this much is picked and
     // selected there, a stroke reaching each in proportion; a framed region's sphere reaches this far past its
     // farthest joint, or past this share of its frame bone's largest side, and at least this far
-    public static final String[] CHARACTER_REGION_HAND_BONES = { "hand_l", "hand_r" };
-    public static final String[] CHARACTER_REGION_FOOT_BONES = { "foot_l", "foot_r" };
-    public static final String[] CHARACTER_REGION_NO_BONES = {};
-    public static final String CHARACTER_REGION_HAND_FRAME = "hand_l";
-    public static final String CHARACTER_REGION_FOOT_FRAME = "foot_l";
     public static final String CHARACTER_REGION_HAIR_FRAME = "head";
     public static final String CHARACTER_REGION_NO_PREFIX = "";
     public static final float CHARACTER_REGION_PICK_SHARE = 0.5f;
@@ -1741,6 +1754,8 @@ public class EditorSetting {
     public static final String TOOL_IK = "IK Handle";
     public static final String TOOL_INFLATE = "Inflate";
     public static final String TOOL_PINCH = "Pinch";
+    public static final String TOOL_CREASE = "Crease";
+    public static final String TOOL_RELAX = "Relax";
     public static final String TOOL_FLATTEN = "Flatten";
     public static final String TOOL_NUDGE = "Nudge";
     public static final String TOOL_RAISE = "Raise";

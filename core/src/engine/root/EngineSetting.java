@@ -2320,7 +2320,6 @@ public class EngineSetting {
     public static final int SKINNED_BONE_TEXELS_PER_BONE = 3;
     public static final int SKINNED_NORMAL_FLOATS = 3;
     public static final float SKINNED_NORMAL_SMOOTH_COSINE = 0.5f;
-    public static final float SKINNED_HIDDEN_BONE_NONE = -1f;
     public static final int RIGGED_MESH_POSITION_FLOATS = 3;
     public static final int RIGGED_MESH_UV_FLOATS = 2;
     public static final int RIGGED_MESH_MORPH_FLOATS = 2;
@@ -2345,7 +2344,14 @@ public class EngineSetting {
     public static final int SKINNED_INSTANCE_MODEL_FLOATS = 16;
     public static final int SKINNED_INSTANCE_FLOATS = SKINNED_INSTANCE_MODEL_FLOATS;
     public static final int SKINNED_APPEARANCE_HEADER_TEXELS = 1;
-    public static final int SKINNED_APPEARANCE_DETAIL_TEXELS = 2;
+    public static final int SKINNED_APPEARANCE_DETAIL_TEXELS = 4;
+    public static final int SKINNED_BONE_MASK_TEXELS = 4;
+    public static final int SKINNED_BONE_MASK_BITS = 24;
+    public static final int SKINNED_BONE_MASK_CAPACITY = SKINNED_BONE_MASK_TEXELS * COLOR_CHANNEL_COUNT
+            * SKINNED_BONE_MASK_BITS;
+    public static final int SKINNED_OVERLAY_TEXELS = 3;
+    public static final float SKINNED_OVERLAY_MIRROR_FLAG = 4f;
+    public static final float SKINNED_OVERLAY_REPEAT_DEFAULT = 1f;
     public static final int SKINNED_MORPH_WEIGHTS_PER_TEXEL = 4;
     public static final String UNIFORM_MORPH_TARGETS = "u_morphTargets";
     public static final String UNIFORM_APPEARANCE_BASE = "u_appearanceBase";

@@ -22,7 +22,9 @@ out vec3 v_viewPosition;
 out vec3 v_viewNormal;
 out vec3 v_surfacePosition;                     // bind-pose position after morphs, where skin detail is fixed
 out vec4 v_masks;
-out float v_hiddenWeight;
+out vec3 v_bindPosition;                        // bind-pose position before morphs, where overlays are fixed
+out vec3 v_bindNormal;
+out float v_maskWeight;
 flat out int v_zone;
 flat out int v_instance;
 
@@ -61,20 +63,17 @@ vec3 applyMorphs(vec3 position) {
     return position;
 }
 
-// How much of this vertex the hidden bone moves, 0 when no bone is hidden (CharacterHidden.glsl).
-float resolveHiddenWeight() {
-    float hiddenBone = fetchHiddenBone(gl_InstanceID);
-
-    if (hiddenBone < 0.0)
+// How much of this vertex the masked bones move, 0 when the draw masks nothing (CharacterHidden.glsl).
+float resolveMaskWeight() {
+    if (fetchMaskMode(gl_InstanceID) == CHARACTER_MASK_NONE)
     return 0.0;
 
-    int   hidden = int(hiddenBone + 0.5);
     float weight = 0.0;
 
-    if (int(a_boneIndices.x) == hidden) weight += a_boneWeights.x;
-    if (int(a_boneIndices.y) == hidden) weight += a_boneWeights.y;
-    if (int(a_boneIndices.z) == hidden) weight += a_boneWeights.z;
-    if (int(a_boneIndices.w) == hidden) weight += a_boneWeights.w;
+    if (isMaskedBone(gl_InstanceID, int(a_boneIndices.x + 0.5))) weight += a_boneWeights.x;
+    if (isMaskedBone(gl_InstanceID, int(a_boneIndices.y + 0.5))) weight += a_boneWeights.y;
+    if (isMaskedBone(gl_InstanceID, int(a_boneIndices.z + 0.5))) weight += a_boneWeights.z;
+    if (isMaskedBone(gl_InstanceID, int(a_boneIndices.w + 0.5))) weight += a_boneWeights.w;
 
     return weight;
 }
@@ -97,7 +96,9 @@ void main() {
     v_viewNormal      = mat3(u_view) * mat3(a_instanceModel) * mat3(skin) * a_normal;
     v_surfacePosition = morphedPosition;
     v_masks           = a_masks;
-    v_hiddenWeight    = resolveHiddenWeight();
+    v_bindPosition    = a_position;
+    v_bindNormal      = a_normal;
+    v_maskWeight      = resolveMaskWeight();
     v_zone            = zone;
     v_instance        = gl_InstanceID;
 

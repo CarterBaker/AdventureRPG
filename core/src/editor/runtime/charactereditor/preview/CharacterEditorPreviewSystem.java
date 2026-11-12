@@ -1,5 +1,7 @@
 package editor.runtime.charactereditor.preview;
 
+import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
+import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
@@ -27,10 +29,11 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * it is made as; that gender — the model it requires, moving by its own
      * tree, and the features it wears — the sliders,
      * the tone worn, the build and the head shape are applied whenever the
-     * editor's state moves; and each frame the preview is posed — at rest or
-     * played in the chosen movement, or held in the exact bind pose while its
-     * mesh or rig is edited unless Preview Springs plays the movement there
-     * with its springs simulated — and given the markers of the mode: the joints in
+     * editor's state moves; and each frame the preview is posed — in the
+     * bind pose, one of the poses the rig names, or played in the chosen
+     * movement, held in the exact bind pose while its rig is edited, and
+     * played with its springs simulated while Preview Springs is on — and
+     * given the markers of the mode: the joints in
      * Build, Mesh and Weights, the rig's bones as they are being edited in
      * Rig, every equipment anchor in Equipment, the selected one highlighted.
      * The tab's own mode decides all of it, so the Character Appearance,
@@ -43,6 +46,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     private CharacterEditorModeSystem characterEditorModeSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
+    private AnimationManager animationManager;
 
     // Bound
     private CharacterDocumentInstance boundDocument;
@@ -72,6 +76,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         this.characterEditorModeSystem = get(CharacterEditorModeSystem.class);
         this.characterViewPoseSystem = get(CharacterViewPoseSystem.class);
         this.characterViewRenderSystem = get(CharacterViewRenderSystem.class);
+        this.animationManager = get(AnimationManager.class);
     }
 
     // Update \\
@@ -124,29 +129,66 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     // Pose \\
 
-    // The bind pose while a model is edited, unless the springs are previewed in the pose chosen, standing idle for
-    // one at rest; the pose the mode stands in, or the pose chosen, otherwise
+    // The pose the mode stands in, or the pose chosen: the bind pose exactly as the mesh file holds it while a model
+    // is edited and Bind is chosen, one of the rig's own poses struck still, or a movement played; the rig is edited in
+    // the bind pose alone, and Preview Springs plays the movement chosen in a modelling tab, idle at Bind, with its
+    // springs simulated
     private void strikePose() {
 
         CharacterEditorMode mode = characterEditorModeSystem.getMode();
         CharacterEditorPose pose = mode.getStandingPose() != null
                 ? mode.getStandingPose()
                 : characterEditorManager.getPose();
-        boolean modelling = mode.holdsBindPose();
+        boolean springs = mode.isModeling() && characterEditorManager.isSpringPreview();
 
-        if (modelling && !characterEditorManager.isSpringPreview()) {
+        if (springs) {
+            play(pose.isPlayed() ? pose : CharacterEditorPose.IDLE);
+            return;
+        }
+
+        if (mode.holdsBindPose()) {
             characterViewPoseSystem.poseBind();
             return;
         }
 
-        if (modelling && !pose.isPlayed())
-            pose = CharacterEditorPose.IDLE;
+        int clipIndex = mode.getStandingPose() == null
+                ? characterEditorManager.getPoseClipIndex()
+                : EngineSetting.INDEX_NOT_FOUND;
 
-        if (!pose.isPlayed()) {
-            characterViewPoseSystem.poseRest();
+        if (clipIndex != EngineSetting.INDEX_NOT_FOUND && strikeClip(clipIndex, mode.isMeshMode()))
             return;
-        }
 
+        if (pose.isPlayed())
+            play(pose);
+        else if (mode.isMeshMode())
+            characterViewPoseSystem.poseBind();
+        else
+            characterViewPoseSystem.poseRest();
+    }
+
+    // One of the rig's own poses, its clip struck at its start, unshaped while a model is edited; false when the rig
+    // names a clip that is not loaded or moves another rig
+    private boolean strikeClip(int clipIndex, boolean unshaped) {
+
+        RigHandle rigHandle = characterViewPoseSystem.getRaceData().getRigHandle();
+        String clipName = rigHandle.getPoseName(clipIndex);
+
+        if (!animationManager.hasClip(clipName))
+            return false;
+
+        AnimationClipHandle clip = animationManager.getClipHandleFromClipName(clipName);
+
+        if (clip.getRigHandle() != rigHandle)
+            return false;
+
+        if (unshaped)
+            characterViewPoseSystem.poseBind();
+
+        characterViewPoseSystem.poseClip(clip, 0f);
+        return true;
+    }
+
+    private void play(CharacterEditorPose pose) {
         characterViewPoseSystem.setParameter(AnimationParameter.SPEED, pose.getSpeed());
         characterViewPoseSystem.play(
                 pose.getMovementState(), EntityAction.NONE, 0f, 0, pose.getSpeed(), internal.getDeltaTime());
@@ -171,7 +213,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         CharacterEditorRegion region = characterEditorModeSystem.getRegion();
 
         for (int i = 0; i < rigHandle.getBoneCount(); i++)
-            if (characterEditorManager.isBoneInRegion(region, rigHandle, i))
+            if (characterEditorManager.isBoneShown(region, rigHandle, i))
                 characterViewRenderSystem.addJointMarker(i, i == characterEditorManager.getSelectedBoneIndex());
     }
 
@@ -182,7 +224,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         int selected = characterEditorManager.getSelectedRigBoneIndex();
 
         for (int i = 0; i < boneCount; i++)
-            if (characterEditorManager.isRigBoneInRegion(characterEditorModeSystem.getRegion(), i))
+            if (characterEditorManager.isRigBoneShown(characterEditorModeSystem.getRegion(), i))
                 characterViewRenderSystem.addWorldMarker(
                         characterEditorManager.getRigBoneWorldMatrix(i),
                         i == selected ? EditorSetting.CHARACTER_VIEW_JOINT_SELECTED_SIZE

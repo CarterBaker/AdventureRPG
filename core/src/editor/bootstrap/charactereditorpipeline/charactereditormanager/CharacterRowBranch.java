@@ -32,8 +32,11 @@ class CharacterRowBranch extends BranchPackage {
      * the mode and of what is picked, the mesh modes' from
      * CharacterMeshRowBranch and the rig's from CharacterRigRowBranch. Every
      * value shown is read through CharacterPropertyBranch, the same path that
-     * edits it. Only a mode whose outliner picks the pose lists it; a race
-     * of more than one gender lists the gender the preview is made as.
+     * edits it. Only a mode whose outliner picks the pose lists it — Bind,
+     * the rig's own poses, then the movements; a race of more than one
+     * gender lists the gender the preview is made as, and a part editor
+     * whose part is sided the side it shows, its edits mirrored to the
+     * other.
      */
 
     // Internal
@@ -58,8 +61,9 @@ class CharacterRowBranch extends BranchPackage {
 
         CharacterEditorMode mode = characterEditorManager.getMode();
         boolean genders = document.hasPreview() && document.getPreviewData().getGenderCount() > 1;
+        boolean sided = mode.isModeling() && characterEditorManager.isSided(characterEditorManager.getRegion());
 
-        if (mode.picksPose() || genders)
+        if (mode.picksPose() || genders || sided)
             rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
 
         if (genders)
@@ -69,6 +73,10 @@ class CharacterRowBranch extends BranchPackage {
         if (mode.picksPose())
             addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_POSE,
                     EditorSetting.CHARACTER_EDITOR_LABEL_POSE);
+
+        if (sided)
+            addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_SIDE,
+                    EditorSetting.CHARACTER_EDITOR_LABEL_SIDE);
 
         RigHandle rigHandle = characterPropertyBranch.resolveRig(document);
 
