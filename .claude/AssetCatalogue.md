@@ -263,6 +263,11 @@ One line per session that changed this file: the date, what was added or removed
   `postprocessing/lighting/includes/SkyReflection.glsl`; regenerated `features/humanoid/eyes/HumanoidEyes.arpg` (`variants`), the body normal maps `MaleBody` and
   `FemaleBody` (soft, so toon lighting shows no speckle), `CharacterSurface.glsl`, both character shaders and
   `postprocessing/lighting/LightingShader.fsh`.
+- 2026-11-12: Smoother bodies, new hands and feet. Regenerated `mesh/characters/humanoid/HumanoidMaleMesh.arpg` and
+  `HumanoidFemaleMesh.arpg` (two subdivision levels; generated hands with jointed fingers and thumb, and feet with heel,
+  arch and toe box, every vertex mirrored; unwrapped afresh), the body maps `MaleBody` and `FemaleBody` (a far softer
+  normal and albedo), every overlay layer `Male*` and `Female*` (baked into the new layouts) and `races/Human.arpg`
+  (overlay regions).
 ---
 
 ## Textures and Sprites (2399 files)

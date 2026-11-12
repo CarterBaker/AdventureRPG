@@ -261,11 +261,12 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `HumanoidFemaleMesh` share the rig with its 15 face bones (jaw, chin, lips, mouth corners, nose, cheeks, eyes,
   brows, ears) set on the anime heads, three joints on every finger and the thumb of each hand and a toe at each
   foot's ball, and carry the same morphs (blinks, body sliders, `ear_point`). Each body is game topology about seven
-  heads tall: edge loops at the joints, 16 columns round the torso, 12 round each leg, 8 round each arm, sock feet,
-  and on the female a radial loop (pole, areola ring, two rings) on each breast. The head (a dense grid with eye
+  heads tall, a quad cage smoothed by two Catmull-Clark levels: edge loops at the joints, a radial loop (pole, areola
+  ring, rings about it) on each side of the chest (flat on the male), hands with a palm, three-jointed fingers and a
+  thumb following the rig's finger bones, and feet with heel, arch, ball and toe box. The head (a dense grid with eye
   sockets whose lids close over the eye, the upper lid edge in the lash zone, a mouth cavity behind the lips in the
-  mouth zone, and ears as their own shells) and the hands join the body through quad reduction rows (16 to 32 to 64
-  at the neck, 8 to 16 to 32 at each forearm). The body is exactly symmetric; the hands nearly so, as modelled.
+  mouth zone, and ears as their own shells) joins the body through one quad reduction row (32 to 64) at the neck.
+  Every vertex has an exact mirror twin, so mirroring pairs the whole body.
 - **A-pose bind.** `HumanoidRig` binds the arms in an A-pose: each upper arm carries a bind `rotation` of 37 degrees
   about z (`upper_arm_r` -37), so the arms hang 45 degrees from vertical, and every mesh, anchor and arm or finger IK
   pole is laid out in that pose. A clip's rotation is added to the bind's and z composes outermost, so every clip
