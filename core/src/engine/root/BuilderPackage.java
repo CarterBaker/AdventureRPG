@@ -5,6 +5,7 @@ public abstract class BuilderPackage extends SystemPackage {
     /*
      * Base class for builders. A builder is created and owned by its
      * LoaderPackage, receives files one at a time from the loader's load(), and
-     * is released together with it once the queue is empty.
+     * is released together with it once the queue is empty, or kept with it
+     * for the engine lifetime when the loader persists.
      */
 }

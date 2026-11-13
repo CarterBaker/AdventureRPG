@@ -12,6 +12,8 @@ public abstract class LoaderPackage extends ManagerPackage {
      * them, and once the queue is empty it fires onComplete() and releases
      * itself and its builders in the next RELEASE phase. request() loads one
      * queued file immediately, for on-demand lookups while the loader lives.
+     * A loader whose content loads while the game runs persists instead, kept
+     * with its builders for the engine lifetime so request() always answers.
      * Only files the engine's asset manifest admits are ever queued.
      */
 
@@ -71,6 +73,11 @@ public abstract class LoaderPackage extends ManagerPackage {
     }
 
     protected void scan() {
+    }
+
+    // True for a loader kept once its queue empties, for content requested while the game runs
+    protected boolean persists() {
+        return false;
     }
 
     // Queue \\
@@ -139,7 +146,7 @@ public abstract class LoaderPackage extends ManagerPackage {
         if (!this.verifyContext(SystemContext.RELEASE))
             return;
 
-        if (this.pendingRelease) {
+        if (this.pendingRelease && !this.persists()) {
 
             this.release();
 

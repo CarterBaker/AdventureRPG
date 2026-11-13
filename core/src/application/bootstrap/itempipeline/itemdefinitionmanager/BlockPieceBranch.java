@@ -111,6 +111,7 @@ class BlockPieceBranch extends BranchPackage {
                 EngineSetting.TOOL_NONE,
                 EngineSetting.DEFAULT_TOOL_TIER,
                 EngineSetting.WEAPON_NONE,
+                EngineSetting.INSTRUMENT_NONE,
                 EngineSetting.SKILL_NONE,
                 EngineSetting.BLOCK_PIECE_STACK_SIZE,
                 blockID,

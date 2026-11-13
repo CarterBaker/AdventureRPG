@@ -15,7 +15,10 @@ public class SoundData extends DataPackage {
      * The samples themselves live only in the buffer; how many there are, at
      * what rate and over how many channels is kept here, with how much of the
      * file was kept and across how long its tail was faded into its head, so
-     * a tool decoding it again hears the same samples. SoundHandle wraps
+     * a tool decoding it again hears the same samples. Loop points mark the
+     * stretch a held note repeats — set on its buffer, so a voice looping it
+     * repeats that stretch and, let go, plays on through the rest — both 0
+     * for a sound without them. SoundHandle wraps
      * this class and delegates every accessor to it.
      */
 
@@ -31,6 +34,10 @@ public class SoundData extends DataPackage {
     private final int frameCount;
     private final float keepSeconds;
     private final float loopCrossfadeSeconds;
+
+    // Loop Points — seconds into the kept samples, both 0 for none
+    private final float loopStartSeconds;
+    private final float loopEndSeconds;
 
     // Playback
     private final SoundCategory category;
@@ -56,6 +63,8 @@ public class SoundData extends DataPackage {
             int frameCount,
             float keepSeconds,
             float loopCrossfadeSeconds,
+            float loopStartSeconds,
+            float loopEndSeconds,
             SoundCategory category,
             float volume,
             float pitch,
@@ -77,6 +86,10 @@ public class SoundData extends DataPackage {
         this.frameCount = frameCount;
         this.keepSeconds = keepSeconds;
         this.loopCrossfadeSeconds = loopCrossfadeSeconds;
+
+        // Loop Points
+        this.loopStartSeconds = loopStartSeconds;
+        this.loopEndSeconds = loopEndSeconds;
 
         // Playback
         this.category = category;
@@ -127,6 +140,18 @@ public class SoundData extends DataPackage {
 
     public float getLoopCrossfadeSeconds() {
         return loopCrossfadeSeconds;
+    }
+
+    public float getLoopStartSeconds() {
+        return loopStartSeconds;
+    }
+
+    public float getLoopEndSeconds() {
+        return loopEndSeconds;
+    }
+
+    public boolean hasLoopPoints() {
+        return loopEndSeconds > 0f;
     }
 
     public SoundCategory getCategory() {

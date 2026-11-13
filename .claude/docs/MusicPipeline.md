@@ -1,0 +1,86 @@
+# Music Pipeline (code guide)
+
+Where the music pipeline's code lives, which method owns each operation, and the traps. The design is
+`.claude/docs/Music.md`; read both before touching instruments, note sets, the sampler, songs, MIDI or the recorder's
+music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps this file current.
+
+---
+
+## Where things live
+
+| What | Where |
+|---|---|
+| Pipeline | `application/bootstrap/musicpipeline/MusicPipeline.java`, registered after `SoundPipeline` in `ApplicationBootstrapAssembly` and `LauncherBootstrapAssembly` |
+| Note sets | `notesetmanager/` (`NoteSetManager`, `NoteSetLoader`, `NoteSetBuilder`), `noteset/` (`NoteSetData`, `NoteSetHandle`, `NoteRegionStruct`, `NoteEnvelopeStruct`, `NoteLoopMode`) |
+| Instruments | `instrumentmanager/` (`InstrumentManager`, `InstrumentLoader`, `InstrumentBuilder`), `instrument/` (`InstrumentData`, `InstrumentHandle`, `InstrumentRigStruct`) |
+| Sampler | `samplermanager/SamplerManager`, `sampler/SamplerNoteStruct` |
+| Shared logic | `util/NoteUtility` (names, pitch ratios, gains, scales), `util/NoteScale`, `util/NoteEnvelopeUtility` (the one envelope curve) |
+| Constants | `EngineSetting` groups `// Music Notes`, `// Music Scales`, `// Music Note Sets`, `// Music Instruments`, `// Music Sampler` |
+| Content | `assets/notesets/<Instrument>.arpg`, `assets/instruments/<Instrument>.arpg`, samples and companions in `assets/sounds/notes/<Instrument>/`; schemas `NoteSets.arpg`, `Instruments.arpg` |
+| Items | `instrument` field, read by `ItemDefinitionBuilder.parseInstrument` exactly as `weapon`; `ItemDefinitionHandle.getInstrumentID` / `hasInstrument`; an item played as an instrument is gear |
+| Conversion | `.claude/tools/SfzConvert.py`, Claude-side only; nothing in the engine or the editor reads SFZ or WAV |
+
+## Who owns what
+
+- **Load an instrument:** `InstrumentManager.getInstrumentIDFromInstrumentName` (on demand; `InstrumentLoader`
+  persists). Building it loads its note set's definition through `NoteSetManager.getNoteSetIDFromNoteSetName`, never
+  its samples.
+- **Load a note set's samples:** `NoteSetManager.prepare(noteSetID)`, once; it asks `SoundManager.requestSoundAsync`
+  for every region's sound and `NoteSetManager.update` marks it ready (`isReady`) once every sample has landed,
+  checking that every looping region's sample has loop points. Call it the first time an instrument is held, laid or
+  previewed.
+- **Find the region a note plays:** `NoteSetHandle.findRegion(pitch, velocity, roundRobinTurn)` over the per-pitch
+  index `NoteSetBuilder.buildIndex` makes once. Live and offline playback both use it.
+- **Play:** `SamplerManager.noteOn` / `noteOnAt` (placed), `noteOff`, `stopAll`. One path, `start`, begins every note;
+  `letGo` lets every note go (note-off, same-pitch retrigger, polyphony); `cut` stops one at once (slot stealing,
+  `stopAll`, a finished release); `update` runs every envelope.
+- **Gain and pitch:** region gain (`NoteUtility.toGain(volume)`) times `NoteUtility.toVelocityGain` times instrument
+  volume times `NoteEnvelopeUtility.gainAt` / `releaseGainAt`; pitch `NoteUtility.toPitchRatio(pitch, root, tune)`,
+  applied through `SoundManager.setVoicePitch` (which pitch bend will also use).
+- **Sustain loops:** `SoundManager.createBuffer` sets `loopStart`/`loopEnd` on the buffer at upload, through
+  `Audio.setBufferLoopPoints` (`AL_SOFT_loop_points`, checked in `Lwjgl3Audio.openDevice`). `NoteLoopMode` decides
+  whether a voice loops while held (`loopsHeld`), after release (`loopsReleased`), and whether note-off fades it
+  (`releases`); the sampler only reads those.
+
+## Converting an instrument (Claude-side)
+
+1. The owner's SFZ and the WAVs it names must be in `.claude/assets/`. If they are only in `.claude/catalogue/`, send a
+   fetch zip (`.claude/CLAUDE.md`) and ask the owner to commit and push.
+2. Compile directly (`.claude/docs/Build.md`) and run, from the project root:
+
+   ```
+   python3 -I .claude/tools/SfzConvert.py "<.sfz under .claude/assets>" <Instrument> \
+       --arpg "java -cp $S/out:<jars> lwjgl3.Lwjgl3LauncherArpg" --scratch $S/convert \
+       [--display-name "<Name>"] [--midi-program <0..127>] [--percussion]
+   ```
+
+   It refuses a keyswitch patch, prints the report (opcodes left out, crossfades split at their middle, envelope values
+   most regions give, loops, decoded bytes) and writes the samples, companions, note set and, when none exists, the
+   instrument. Re-running replaces the samples and note set and keeps the instrument file.
+3. `verify` every file it wrote, boot the editor once (the builders are the final authority), and state each note
+   set's decoded bytes. Deliver the files; the note sets and sounds are the owner's library and are never catalogued,
+   an instrument file whose fields Claude set by hand (a `midi_program`, rigs) is.
+
+## Traps
+
+- **Persistent loaders.** `SoundLoader`, `NoteSetLoader` and `InstrumentLoader` override `LoaderPackage.persists()`, so
+  they and their builders stay alive for runtime on-demand loads. Every other loader still releases itself after
+  bootstrap, so an instrument loaded while the game runs can only name rigs and clips already loaded.
+- **No samples at bootstrap.** `SoundLoader.scan` never queues a sound under `sounds/notes/`. A note set's samples
+  exist in the palette only after `prepare`; `noteOn` on an instrument whose samples have not landed asks for them and
+  returns -1.
+- **Gain never above one.** OpenAL clamps a source's gain at 1, so a region's `volume` is at most 0 dB. The converter
+  brings every sample to full scale and takes that gain back out of its region's volume, so it plays exactly as the
+  SFZ sets it.
+- **The envelope runs per frame.** `SamplerManager.update` sets each voice's gain once a frame; OpenAL Soft smooths
+  the steps. Offline mixing (render, video export) must follow `NoteEnvelopeUtility` sample by sample, never re-derive
+  the curve.
+- **Voices are shared.** Notes take voices from `SoundManager`'s 64-voice pool, which steals the oldest voice that does
+  not loop; a released note's voice can be taken. `SAMPLER_NOTE_COUNT` (32) bounds sounding notes; an instrument's
+  `polyphony` bounds its held notes.
+- **The recorder hears a voice's start only.** `DevRecorderSoundSystem` records the volume and pitch a voice began
+  with; envelope and pitch changes made afterwards are not captured.
+- **The launcher.** `LauncherBootstrapAssembly` creates `AnimationPipeline` because `InstrumentBuilder` resolves rig
+  clips; the launcher's asset manifest queues no clip, so an instrument the launcher loads must have no rigs, or its
+  rigs and clips must be on the manifest.
+- **Display text.** The editor's font has no em dash; never put one in text the editor shows.

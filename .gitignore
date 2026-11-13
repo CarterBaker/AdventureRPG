@@ -71,6 +71,7 @@ desktop.ini
 
 ## Deliveries from Claude (applied and deleted by .claude/Delivery.bat):
 /.claude/AdventureRPG_Delivery*.zip
+/.claude/AdventureRPG_Fetch*.zip
 
 ## Runtime logs:
 /logs/

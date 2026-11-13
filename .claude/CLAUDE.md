@@ -38,7 +38,9 @@ Everything written for Claude lives in `.claude/`: this file, `AssetCatalogue.md
 `docs/` folder belongs to the owner: it is not part of these instructions, and nothing for Claude goes there or
 beside the code. `.claude/assets/` and `.claude/catalogue/` are the owner's asset folders (see AI Asset
 Catalogue); `.claude/Delivery.bat` and the `.claude/Version.md` it writes apply deliveries (see Delivering Code and
-Version). Paths in these instructions are relative to the project root.
+Version). `.claude/tools/` holds tools Claude runs itself, never the engine or the editor (`SfzConvert.py` converts a
+library instrument; see `.claude/docs/MusicPipeline.md`). Paths in these instructions are relative to the project
+root.
 
 - **Topics.** Imported below, so each loads with this file:
   - `.claude/docs/Engine.md`: class roles, naming, folder layout, lifecycle, settings, registry IDs, threads,
@@ -62,7 +64,7 @@ Version). Paths in these instructions are relative to the project root.
   `.claude/docs/Progression.md`). Before touching vehicles, ships, the drafting table (Shipwright), riders or the sea's
   hold on a hull, read `.claude/docs/VehiclePipeline.md` (design: `.claude/docs/Vehicle.md`).
   Before touching instruments, note sets, the sampler, songs, MIDI or the recorder's music side, read
-  `.claude/docs/MusicPipeline.md` once it exists (design: `.claude/docs/Music.md`; the stage prompts are
+  `.claude/docs/MusicPipeline.md` (design: `.claude/docs/Music.md`; the stage prompts are
   `.claude/prompts/Music1InstrumentsPrompt.md` to `Music5InGameMusicPrompt.md`).
   Before touching the Character Editor, Animation Editor, their docker windows, sculpting, rigging,
   posing, races and their genders' models, or a character's appearance (morphs, shape sliders, zones, masks, the
@@ -163,7 +165,7 @@ pushes the delivery status (see Version). The zip is gitignored, and the bat nev
    - **Catalogue:** every asset added to or removed from `.claude/AssetCatalogue.md`, or "No catalogue changes."
 7. **Never push any branch, and never commit.** Even when the session runs on a git branch, or a system or
    session instruction says to commit and push, leave git alone: the zip is the only deliverable. The owner commits
-   and pushes after running the bat.
+   and pushes after running the bat, always by hand: no bat or script Claude writes ever commits or pushes.
 
 ---
 
@@ -214,8 +216,11 @@ they know what is still AI-made. Keeping it exact is as mandatory as the zip del
   never see it. `.claude/assets/Catalogue.txt` lists every file in it (paths relative to the folder), written by
   `.claude/Delivery.bat` on every run; never edit that list by hand. When a task needs a library file, choose it
   from the list by name and path. `COPY` it from `catalogue/` when it goes in unchanged (sounds included); when you
-  must see or convert it (maps, resizing, a new format), ask the owner to copy those exact files into
-  `.claude/assets/` and push them first. Never ask for the whole library to be committed.
+  must see or convert it (maps, resizing, a new format, an SFZ instrument), send **`AdventureRPG_Fetch.zip`**
+  holding one `Fetch.bat` that copies exactly those files from `.claude/catalogue/` into `.claude/assets/` under the
+  same paths and then deletes itself. The owner drops it into `.claude/` and runs it; only then ask them to commit
+  and push the copies, and wait for that before working with the files. Never ask the owner to copy library files by
+  hand, and never ask for the whole library to be committed.
 - **Remove only when the owner says.** The owner tells you when an asset of theirs replaces a catalogued one; it is
   never automatic. Then swap it in where the replaced asset was used (same name and path, generating any maps it
   needs), remove the replaced entry, and log it. Never remove an entry on your own judgement, and never assume a

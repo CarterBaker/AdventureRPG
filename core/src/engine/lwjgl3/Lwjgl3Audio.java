@@ -6,6 +6,8 @@ import java.nio.ShortBuffer;
 
 import org.lwjgl.openal.AL;
 import org.lwjgl.openal.AL10;
+import org.lwjgl.openal.AL11;
+import org.lwjgl.openal.ALCapabilities;
 import org.lwjgl.openal.ALC;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCCapabilities;
@@ -16,6 +18,7 @@ import org.lwjgl.system.MemoryUtil;
 
 import engine.audio.Audio;
 import engine.root.EngineSetting;
+import engine.root.EngineUtility;
 
 class Lwjgl3Audio implements Audio {
 
@@ -23,6 +26,8 @@ class Lwjgl3Audio implements Audio {
      * Thin delegation layer mapping the engine Audio interface onto LWJGL3's
      * OpenAL and stb_vorbis bindings. Holds only the device and context it
      * opened; every other method is a direct forward to the underlying call.
+     * A device without AL_SOFT_loop_points cannot sustain an instrument's
+     * notes, so opening one is fatal, naming the extension.
      */
 
     // Device
@@ -47,7 +52,16 @@ class Lwjgl3Audio implements Audio {
             return false;
         }
 
-        AL.createCapabilities(deviceCapabilities);
+        ALCapabilities capabilities = AL.createCapabilities(deviceCapabilities);
+
+        if (!capabilities.AL_SOFT_loop_points) {
+            closeDevice();
+            EngineUtility.throwException("The audio device's OpenAL does not offer the "
+                    + EngineSetting.AL_SOFT_LOOP_POINTS_EXTENSION
+                    + " extension, which instruments' sustain loops need. Run the game with OpenAL Soft, the OpenAL "
+                    + "LWJGL ships.");
+        }
+
         return true;
     }
 
@@ -85,6 +99,13 @@ class Lwjgl3Audio implements Audio {
 
     public void alBufferData(int buffer, int format, short[] data, int frequency) {
         AL10.alBufferData(buffer, format, data, frequency);
+    }
+
+    public void setBufferLoopPoints(int buffer, int startFrame, int endFrame) {
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            AL11.alBufferiv(buffer, EngineSetting.AL_LOOP_POINTS_SOFT, stack.ints(startFrame, endFrame));
+        }
     }
 
     // Sources \\

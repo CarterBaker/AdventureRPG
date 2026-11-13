@@ -20,6 +20,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemStation;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
+import application.bootstrap.musicpipeline.instrumentmanager.InstrumentManager;
 import application.bootstrap.progressionpipeline.skillmanager.SkillManager;
 import application.bootstrap.progressionpipeline.statmanager.StatManager;
 import application.bootstrap.progressionpipeline.util.ProgressionArpgUtility;
@@ -62,7 +63,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * into words. A tool names its tool type, whose model it is drawn with
      * unless it names its own mesh, and the highest break tier it can break. A
      * "weapon" names the weapon the item is wielded with, loaded on demand;
-     * one that names none fights with the default item weapon. "stats" names
+     * one that names none fights with the default item weapon. An
+     * "instrument" names the instrument the item is played as, loaded on
+     * demand the same way; one that names none plays nothing. "stats" names
      * what the item grants from the stat registry, and "skill" the skill its
      * use trains. A stackable item holds up to its stack size in one item,
      * which a container cannot. An item's "actions" each name a "trigger",
@@ -86,6 +89,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private SubVoxelManager subVoxelManager;
     private ToolTypeManager toolTypeManager;
     private WeaponManager weaponManager;
+    private InstrumentManager instrumentManager;
     private CoveringManager coveringManager;
     private StatManager statManager;
     private SkillManager skillManager;
@@ -113,6 +117,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.subVoxelManager = get(SubVoxelManager.class);
         this.toolTypeManager = get(ToolTypeManager.class);
         this.weaponManager = get(WeaponManager.class);
+        this.instrumentManager = get(InstrumentManager.class);
         this.coveringManager = get(CoveringManager.class);
         this.statManager = get(StatManager.class);
         this.soundCueManager = get(SoundCueManager.class);
@@ -165,6 +170,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
         short toolTypeID = parseToolType(itemArpg);
         int toolTier = parseToolTier(itemArpg, toolTypeID, itemName);
         short weaponID = parseWeapon(itemArpg);
+        short instrumentID = parseInstrument(itemArpg);
         short skillID = parseSkill(itemArpg);
         int stackSize = parseStackSize(itemArpg, itemName);
 
@@ -223,6 +229,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 toolTypeID,
                 toolTier,
                 weaponID,
+                instrumentID,
                 skillID,
                 stackSize,
                 EngineSetting.BLOCK_PIECE_NONE,
@@ -313,6 +320,18 @@ class ItemDefinitionBuilder extends BuilderPackage {
             return EngineSetting.WEAPON_NONE;
 
         return weaponManager.getWeaponIDFromWeaponName(weaponName);
+    }
+
+    // Music \\
+
+    private short parseInstrument(ArpgObjectStruct itemArpg) {
+
+        String instrumentName = ArpgUtility.getString(itemArpg, "instrument", EngineSetting.ITEM_INSTRUMENT_NONE);
+
+        if (instrumentName.isEmpty())
+            return EngineSetting.INSTRUMENT_NONE;
+
+        return instrumentManager.getInstrumentIDFromInstrumentName(instrumentName);
     }
 
     // Stacking \\

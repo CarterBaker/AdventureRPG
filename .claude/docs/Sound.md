@@ -105,7 +105,13 @@ its window's world). Runtime systems play what only their window hears.
 - A companion `.arpg` beside the file (schema `Sounds.arpg`) sets `category` (`music`, `effect`, `ambient`,
   `interface`, `voice`), `volume`, `pitch`, `loop`, `spatial`, `mono`, `length` (seconds kept from the start),
   `loopCrossfade` (seconds of tail faded into the head of a looping sound; 0 for a file already seamless),
-  `referenceDistance`, `maxDistance` and `rolloff`. A companion may stand before its sound exists, waiting for it.
+  `loopStart` and `loopEnd` (the stretch a held note repeats, in seconds into what is kept, both 0 for none; set on
+  the buffer at upload through `AL_SOFT_loop_points`, so a voice looping it repeats that stretch and, let go of the
+  loop, plays on through the rest), `referenceDistance`, `maxDistance` and `rolloff`. A companion may stand before its
+  sound exists, waiting for it.
+- Instrument samples live in `sounds/notes/<Instrument>/` and are never loaded at bootstrap: they load the first time
+  their note set plays, read on the main thread, decoded on the general thread and uploaded the frame they land
+  (`SoundManager.requestSoundAsync`). The sound loader persists for that.
 - A cue (schema `SoundCues.arpg`) holds `sounds` (one or more sound names), `volume`, `volumeVariance`, `pitch`,
   `pitchVariance` and `fadeSeconds` (for loops).
 - Volumes are the player's settings (`Settings.masterVolume` and one per category), shown on the settings menu's Audio
@@ -119,15 +125,36 @@ sound: name its library path and engine name for the owner, write its companion 
 `loopCrossfade` keep long or surround recordings small and seamless) and name it in a cue. Library sounds are the
 owner's: never catalogue them, only their companions and cues.
 
+## Notes and instruments
+
+Instruments play through the sampler, never through cues. Get `SamplerManager` and `InstrumentManager` in `get()`,
+resolve the instrument's name once to its ID, and play notes by ID:
+
+```java
+// Heard as it is; the handle lets the note go later, -1 when nothing played
+int note = samplerManager.noteOn(instrumentID, pitch, velocity);
+samplerManager.noteOff(note);
+
+// Placed in the world, like playCueAt
+samplerManager.noteOnAt(instrumentID, pitch, velocity, entity.getWorldHandle(), entity.getWorldPositionStruct());
+```
+
+- A pitch is a MIDI note number (60 is middle C), a velocity 1 to 127. A note holds until `noteOff`; a sustained
+  sample repeats its loop meanwhile and plays its tail once let go, as its envelope's release fades it.
+- The first note of an instrument whose samples have not loaded asks for them and plays nothing; call
+  `NoteSetManager.prepare` when an instrument is equipped, laid or previewed so its first note sounds.
+- Note sets, the sampler's rules and the traps are in `.claude/docs/MusicPipeline.md`.
+
 ## Code map
 
-- `application/bootstrap/soundpipeline/`: `SoundManager` (device, palette, voices, listener), `SoundLoader`,
-  `SoundBuilder`, `SoundVoiceBranch`, `SoundDecodeUtility`; `SoundCueManager`, `SoundCueLoader`, `SoundCueBuilder`,
+- `application/bootstrap/soundpipeline/`: `SoundManager` (device, palette, voices, listener), `SoundLoader`
+  (persists for on-demand loads), `SoundBuilder` (`read`, `decode`, `finish`; `SoundBuildStruct` carries a sound
+  between them), `SoundVoiceBranch`, `SoundDecodeUtility`; `SoundCueManager`, `SoundCueLoader`, `SoundCueBuilder`,
   `SoundCueHandle`/`SoundCueData`, `SoundLoopInstance`, `SoundSurfaceStruct`.
 - `application/runtime/sound/`: `SoundListenerSystem`, `AmbienceSoundSystem`, `AmbienceLayer`, `MusicSoundSystem`.
 - `engine/audio/Audio` is the backend interface (`EngineContext.audio`), implemented by `engine/lwjgl3/Lwjgl3Audio`
-  over OpenAL and stb_vorbis. Never import `org.lwjgl` outside `engine/lwjgl3`. OpenAL constants are in the
-  `// OpenAL Constants` group of `EngineSetting`.
+  over OpenAL and stb_vorbis; opening a device without `AL_SOFT_loop_points` is fatal. Never import `org.lwjgl`
+  outside `engine/lwjgl3`. OpenAL constants are in the `// OpenAL Constants` group of `EngineSetting`.
 
 ## Recorder and Sound Library
 

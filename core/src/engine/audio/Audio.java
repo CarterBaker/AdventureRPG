@@ -4,8 +4,9 @@ public interface Audio {
 
     /*
      * Engine audio interface. Maps the subset of OpenAL calls the engine uses,
-     * the opening and closing of the output device, and the decoding of an
-     * Ogg Vorbis file. Implemented by the backend audio delegation class.
+     * the opening and closing of the output device, a buffer's loop points
+     * (AL_SOFT_loop_points, which the device must offer), and the decoding of
+     * an Ogg Vorbis file. Implemented by the backend audio delegation class.
      */
 
     // Device \\
@@ -25,6 +26,9 @@ public interface Audio {
     void alDeleteBuffer(int buffer);
 
     void alBufferData(int buffer, int format, short[] data, int frequency);
+
+    // The stretch, in sample frames, a source looping the buffer repeats; set before any source holds the buffer
+    void setBufferLoopPoints(int buffer, int startFrame, int endFrame);
 
     // Sources \\
 

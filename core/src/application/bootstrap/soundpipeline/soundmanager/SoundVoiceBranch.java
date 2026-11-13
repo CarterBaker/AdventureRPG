@@ -254,6 +254,19 @@ class SoundVoiceBranch extends BranchPackage {
         applyGain(voice);
     }
 
+    // The voice's own pitch, times its sound's, as a played note or a pitch bend sets it
+    void setPitch(int handle, float pitch) {
+
+        SoundVoiceStruct voice = resolve(handle);
+
+        if (voice == null)
+            return;
+
+        voice.setPitch(pitch);
+        EngineContext.audio.alSourcef(voice.getSource(), EngineSetting.AL_PITCH,
+                voice.getSoundHandle().getPitch() * pitch);
+    }
+
     void setLooping(int handle, boolean looping) {
 
         SoundVoiceStruct voice = resolve(handle);

@@ -103,7 +103,7 @@ shown as ignored and never block a save.
 
 | Schema | Directory under `assets/` | Layout |
 |---|---|---|
-| AnimationTrees, Animations, Architectures, Behaviors, Biomes, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Materials, Passes, Races, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, SoundCues, Sounds, Sprites, StructureLists, Structures, TextureAliases, UBOs, Vehicles, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
+| AnimationTrees, Animations, Architectures, Behaviors, Biomes, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Instruments, Materials, NoteSets, Passes, Races, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, SoundCues, Sounds, Sprites, StructureLists, Structures, TextureAliases, UBOs, Vehicles, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
 | Blocks, FBOs, Items, Threads, Tools | `blocks`, `application/fbos`, `items`, `application/threads`, `tools` | an array (`blocks`, `fbos`, `items`, `threads`, `tools`) of entries, each named by its `name` field |
 | (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `CommandBuilder`, `SubVoxelArpgUtility`) |
 

@@ -85,6 +85,7 @@ public class EngineSetting {
     public static final int AL_FORMAT_STEREO16 = 0x1103;
     public static final int AL_GAIN = 0x100A;
     public static final int AL_INVERSE_DISTANCE_CLAMPED = 0xD002;
+    public static final int AL_LOOP_POINTS_SOFT = 0x2015;
     public static final int AL_LOOPING = 0x1007;
     public static final int AL_MAX_DISTANCE = 0x1023;
     public static final int AL_NONE = 0;
@@ -98,6 +99,7 @@ public class EngineSetting {
     public static final int AL_SEC_OFFSET = 0x1024;
     public static final int AL_SOURCE_RELATIVE = 0x202;
     public static final int AL_SOURCE_STATE = 0x1010;
+    public static final String AL_SOFT_LOOP_POINTS_EXTENSION = "AL_SOFT_loop_points";
     public static final int AL_TRUE = 1;
 
     // Buffers
@@ -240,6 +242,7 @@ public class EngineSetting {
     public static final String SHADER_PATH = "shaders";
     public static final String SKILL_PATH = "skills";
     public static final String SOUND_FILE_EXTENSION = "ogg";
+    public static final String SOUND_NOTE_PATH = "notes";
     public static final String SOUND_PATH = "sounds";
     public static final String SPRITE_PATH = "sprites";
     public static final String STAT_PATH = "stats";
@@ -407,6 +410,8 @@ public class EngineSetting {
     public static final boolean DEFAULT_SOUND_MONO = false;
     public static final float DEFAULT_SOUND_LENGTH = 0f;
     public static final float DEFAULT_SOUND_LOOP_CROSSFADE = 0.5f;
+    public static final float DEFAULT_SOUND_LOOP_START = 0f;
+    public static final float DEFAULT_SOUND_LOOP_END = 0f;
     public static final float DEFAULT_SOUND_REFERENCE_DISTANCE = 4f;
     public static final float DEFAULT_SOUND_MAX_DISTANCE = 48f;
     public static final float DEFAULT_SOUND_ROLLOFF = 1f;
@@ -494,6 +499,81 @@ public class EngineSetting {
     public static final int SOUND_VORBIS_FORMAT_FIELDS = 2;
     public static final int SOUND_VORBIS_FORMAT_CHANNELS = 0;
     public static final int SOUND_VORBIS_FORMAT_SAMPLE_RATE = 1;
+
+    // Music Notes — a pitch is a MIDI note number, 60 is middle C (C4), twelve steps to an octave; a velocity is
+    // how hard a note is played
+    public static final int NOTE_PITCH_MIN = 0;
+    public static final int NOTE_PITCH_MAX = 127;
+    public static final int NOTE_PITCH_COUNT = 128;
+    public static final int NOTE_VELOCITY_MIN = 1;
+    public static final int NOTE_VELOCITY_MAX = 127;
+    public static final int NOTE_SEMITONES_PER_OCTAVE = 12;
+    public static final float NOTE_CENTS_PER_OCTAVE = 1200f;
+    public static final float NOTE_DECIBELS_PER_GAIN_DECADE = 20f;
+    public static final int NOTE_OCTAVE_OFFSET = 1;
+    public static final String[] NOTE_NAMES = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+    public static final String NOTE_LETTERS = "CDEFGAB";
+    public static final int[] NOTE_LETTER_STEPS = { 0, 2, 4, 5, 7, 9, 11 };
+    public static final String NOTE_ACCIDENTALS = "#b";
+    public static final char NOTE_SHARP = '#';
+    public static final int NOTE_NAME_MIN_LENGTH = 2;
+
+    // Music Scales — the steps above a key's root each scale holds
+    public static final int[] NOTE_SCALE_MAJOR = { 0, 2, 4, 5, 7, 9, 11 };
+    public static final int[] NOTE_SCALE_MINOR = { 0, 2, 3, 5, 7, 8, 10 };
+    public static final int[] NOTE_SCALE_HARMONIC_MINOR = { 0, 2, 3, 5, 7, 8, 11 };
+    public static final int[] NOTE_SCALE_MELODIC_MINOR = { 0, 2, 3, 5, 7, 9, 11 };
+    public static final int[] NOTE_SCALE_MAJOR_PENTATONIC = { 0, 2, 4, 7, 9 };
+    public static final int[] NOTE_SCALE_MINOR_PENTATONIC = { 0, 3, 5, 7, 10 };
+    public static final int[] NOTE_SCALE_BLUES = { 0, 3, 5, 6, 7, 10 };
+    public static final int[] NOTE_SCALE_DORIAN = { 0, 2, 3, 5, 7, 9, 10 };
+    public static final int[] NOTE_SCALE_PHRYGIAN = { 0, 1, 3, 5, 7, 8, 10 };
+    public static final int[] NOTE_SCALE_LYDIAN = { 0, 2, 4, 6, 7, 9, 11 };
+    public static final int[] NOTE_SCALE_MIXOLYDIAN = { 0, 2, 4, 5, 7, 9, 10 };
+    public static final int[] NOTE_SCALE_LOCRIAN = { 0, 1, 3, 5, 6, 8, 10 };
+    public static final int[] NOTE_SCALE_CHROMATIC = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+
+    // Music Note Sets — the samples an instrument plays from, each region stretched no more than an octave from the
+    // pitch it was recorded at, its volume no louder than the sample as recorded; the defaults of every optional field
+    public static final String NOTE_SET_PATH = "notesets";
+    public static final int NOTE_SET_MAX_TRANSPOSE = 12;
+    public static final float NOTE_SET_MAX_TUNE = 100f;
+    public static final float NOTE_SET_MIN_VOLUME = -96f;
+    public static final float NOTE_SET_MAX_VOLUME = 0f;
+    public static final float NOTE_ENVELOPE_MAX_SECONDS = 100f;
+    public static final double NOTE_ENVELOPE_CURVE = 2.0;
+    public static final int DEFAULT_NOTE_ROUND_ROBIN = 0;
+    public static final int DEFAULT_NOTE_ROUND_ROBIN_COUNT = 1;
+    public static final float DEFAULT_NOTE_TUNE = 0f;
+    public static final float DEFAULT_NOTE_VOLUME = 0f;
+    public static final float DEFAULT_NOTE_VELOCITY_TRACKING = 1f;
+    public static final float DEFAULT_NOTE_ATTACK = 0f;
+    public static final float DEFAULT_NOTE_HOLD = 0f;
+    public static final float DEFAULT_NOTE_DECAY = 0f;
+    public static final float DEFAULT_NOTE_SUSTAIN = 1f;
+    public static final float DEFAULT_NOTE_RELEASE = 0.001f;
+    public static final byte NOTE_SET_SAMPLES_UNLOADED = 0;
+    public static final byte NOTE_SET_SAMPLES_LOADING = 1;
+    public static final byte NOTE_SET_SAMPLES_READY = 2;
+
+    // Music Instruments — what plays notes, and the defaults of every optional field
+    public static final String INSTRUMENT_PATH = "instruments";
+    public static final String INSTRUMENT_DISPLAY_NAME_NONE = "";
+    public static final int DEFAULT_INSTRUMENT_POLYPHONY = 16;
+    public static final float DEFAULT_INSTRUMENT_VOLUME = 1f;
+    public static final boolean DEFAULT_INSTRUMENT_PERCUSSION = false;
+    public static final int INSTRUMENT_MIDI_PROGRAM_NONE = -1;
+    public static final int INSTRUMENT_MIDI_PROGRAM_MAX = 127;
+    public static final String ITEM_INSTRUMENT_NONE = "";
+    public static final short INSTRUMENT_NONE = 0;
+
+    // Music Sampler — the notes that sound at once, in a fixed array of slots; a note handle packs its slot in the
+    // low bits and the generation of that slot above them
+    public static final int SAMPLER_NOTE_COUNT = 32;
+    public static final int SAMPLER_NOTE_SLOT_BITS = 8;
+    public static final int SAMPLER_NOTE_SLOT_MASK = (1 << SAMPLER_NOTE_SLOT_BITS) - 1;
+    public static final int SAMPLER_NOTE_GENERATION_MASK = 0x7FFFFF;
+    public static final int SAMPLER_ROUND_ROBIN_MASK = 0x7FFFFFFF;
 
     // Input & Bindings
     public static final int BINDING_MOUSE_CODE_OFFSET = 1000;

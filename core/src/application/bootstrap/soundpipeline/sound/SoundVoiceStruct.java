@@ -152,6 +152,10 @@ public class SoundVoiceStruct extends StructPackage {
         return pitch;
     }
 
+    public void setPitch(float pitch) {
+        this.pitch = pitch;
+    }
+
     public boolean isLooping() {
         return looping;
     }

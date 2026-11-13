@@ -58,6 +58,18 @@ public class SoundHandle extends HandlePackage {
         return soundData.getLoopCrossfadeSeconds();
     }
 
+    public float getLoopStartSeconds() {
+        return soundData.getLoopStartSeconds();
+    }
+
+    public float getLoopEndSeconds() {
+        return soundData.getLoopEndSeconds();
+    }
+
+    public boolean hasLoopPoints() {
+        return soundData.hasLoopPoints();
+    }
+
     public SoundCategory getCategory() {
         return soundData.getCategory();
     }

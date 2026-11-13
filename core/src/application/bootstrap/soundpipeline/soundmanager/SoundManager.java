@@ -35,7 +35,8 @@ public class SoundManager extends ManagerPackage {
      * quieted when asked, as a recording session does. The master and
      * category volumes of the player's settings scale everything that plays.
      * With no audio device the game runs silent and every play hands back -1. Decoded samples are only ever kept in the
-     * device's buffers; a tool that mixes sounds itself decodes them again.
+     * device's buffers; a tool that mixes sounds itself decodes them again. Instrument samples load while the game
+     * runs, the first time their note set plays, decoded on a worker and uploaded on the main thread.
      */
 
     // Internal
@@ -119,8 +120,9 @@ public class SoundManager extends ManagerPackage {
         this.soundCount++;
     }
 
-    // The samples go to a buffer of the device, none while the game runs silent
-    int createBuffer(SoundPcmStruct pcm) {
+    // The samples go to a buffer of the device, none while the game runs silent, with the stretch a held note
+    // repeats set before any source holds it, its seconds turned to frames at the rate they were decoded to
+    int createBuffer(SoundPcmStruct pcm, float loopStartSeconds, float loopEndSeconds) {
 
         if (!soundVoiceBranch.isAudible())
             return EngineSetting.AL_NONE;
@@ -135,6 +137,15 @@ public class SoundManager extends ManagerPackage {
                 pcm.getSamples(),
                 pcm.getSampleRate());
 
+        if (loopEndSeconds > 0f) {
+
+            int frames = pcm.getFrameCount();
+            int endFrame = Math.min(Math.round(loopEndSeconds * pcm.getSampleRate()), frames);
+            int startFrame = Math.min(Math.round(loopStartSeconds * pcm.getSampleRate()), endFrame - 1);
+
+            EngineContext.audio.setBufferLoopPoints(buffer, startFrame, endFrame);
+        }
+
         return buffer;
     }
 
@@ -142,6 +153,21 @@ public class SoundManager extends ManagerPackage {
 
     public void request(String soundName) {
         ((SoundLoader) internalLoader).request(soundName);
+    }
+
+    // The sound's ID at once, its samples decoded on a worker and uploaded a later frame, for content that loads
+    // while the game runs; isSoundLoaded says when it can play. -1 when the project has no such sound
+    public int requestSoundAsync(String soundName) {
+        return ((SoundLoader) internalLoader).requestAsync(soundName);
+    }
+
+    // True while a file stands under the sound directory for the name, loaded or not
+    public boolean hasSoundFile(String soundName) {
+        return ((SoundLoader) internalLoader).hasFile(soundName);
+    }
+
+    public boolean isSoundLoaded(int soundID) {
+        return RegistryUtility.getHandle(soundID2SoundHandle, soundID) != null;
     }
 
     // Play \\
@@ -230,6 +256,11 @@ public class SoundManager extends ManagerPackage {
 
     public void setVoiceLooping(int voice, boolean looping) {
         soundVoiceBranch.setLooping(voice, looping);
+    }
+
+    // How high the voice plays against its sound's own pitch: a played note's pitch ratio, later bent
+    public void setVoicePitch(int voice, float pitch) {
+        soundVoiceBranch.setPitch(voice, pitch);
     }
 
     public void moveVoice(int voice, WorldHandle worldHandle, WorldPositionStruct place) {
@@ -363,7 +394,7 @@ public class SoundManager extends ManagerPackage {
     // The sound's ID, loaded now when its file has not been yet, -1 when the project has no such sound
     public int findSoundID(String soundName) {
 
-        if (!hasSound(soundName) && internalLoader != null && ((SoundLoader) internalLoader).hasFile(soundName))
+        if (!hasSound(soundName) && hasSoundFile(soundName))
             request(soundName);
 
         return hasSound(soundName) ? soundName2SoundID.getInt(soundName) : EngineSetting.INDEX_NOT_FOUND;
@@ -371,7 +402,7 @@ public class SoundManager extends ManagerPackage {
 
     public int getSoundIDFromSoundName(String soundName) {
 
-        if (!hasSound(soundName) && internalLoader != null)
+        if (!hasSound(soundName))
             request(soundName);
 
         if (!hasSound(soundName))

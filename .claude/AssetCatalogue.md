@@ -273,6 +273,10 @@ One line per session that changed this file: the date, what was added or removed
   `schemas/Rigs.arpg` (the `colliders` and each chain's `radius` and `colliders`) and
   `menus/editor/CharacterMeshEditor.arpg` (a Paint mode button), so hair rests on the body and maps are painted in the
   modelling tabs.
+- 2026-11-13: Music pipeline, instruments. Added the schemas `NoteSets.arpg` and `Instruments.arpg`, the `instrument`
+  field in `schemas/Items.arpg` and `loopStart`/`loopEnd` in `schemas/Sounds.arpg`, and the instruments
+  `instruments/BaroqueSopranoRecorder.arpg` and `instruments/FolkHarp.arpg` (their `midi_program` set by hand). Their
+  note sets and samples under `sounds/notes/` are converted from the owner's VCSL library and are not catalogued.
 ---
 
 ## Textures and Sprites (2399 files)
@@ -1653,7 +1657,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1796 files)
+## Data Files (1800 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2308,6 +2312,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 `Genders.arpg`
 
+### `assets/instruments/`
+
+`BaroqueSopranoRecorder.arpg`, `FolkHarp.arpg`
+
 ### `assets/items/armor/`
 
 `Armor.arpg`
@@ -2596,8 +2604,9 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `Animations.arpg`, `AnimationTrees.arpg`, `Architectures.arpg`, `Attributes.arpg`, `Behaviors.arpg`, `Biomes.arpg`,
 `Blocks.arpg`, `Brushes.arpg`, `Calendars.arpg`, `CaveBiomes.arpg`, `Clouds.arpg`, `Contents.arpg`, `Coverings.arpg`,
 `DamageTypes.arpg`, `Deeds.arpg`, `Entities.arpg`, `FBOs.arpg`, `Features.arpg`, `Furnishings.arpg`, `Genders.arpg`,
-`Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Npcs.arpg`, `Passes.arpg`, `Professions.arpg`, `Races.arpg`,
-`Rigs.arpg`, `Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Shortcuts.arpg`, `Skills.arpg`,
+`Instruments.arpg`, `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `NoteSets.arpg`, `Npcs.arpg`, `Passes.arpg`,
+`Professions.arpg`, `Races.arpg`, `Rigs.arpg`, `Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`,
+`Shortcuts.arpg`, `Skills.arpg`,
 `SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`,
 `TextureAliases.arpg`, `Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Transitions.arpg`, `Trees.arpg`,
 `UBOs.arpg`, `Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`

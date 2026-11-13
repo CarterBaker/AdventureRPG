@@ -31,8 +31,9 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
 ## Industry-standard choices
 
 - **Sample-based instruments** in the SFZ region model (key range, velocity range, round robin, sustain loop,
-  envelope), the model every sampler (SFZ players, Kontakt, SoundFont players) uses. Instruments are imported from the
-  owner's VSCO 2 CE and VCSL libraries (both CC0: no credit, no restriction) by an SFZ importer in the editor.
+  envelope), the model every sampler (SFZ players, Kontakt, SoundFont players) uses. Instruments are converted from
+  the owner's VSCO 2 CE and VCSL libraries (both CC0: no credit, no restriction) by Claude, with
+  `.claude/tools/SfzConvert.py`, and delivered as finished engine content.
 - **Sustain loops through OpenAL Soft's `AL_SOFT_loop_points`**, set on each sample's buffer from its sound companion's
   `loopStart`/`loopEnd`. The voice loops while the note is held and stops looping on release, so it plays its tail:
   SFZ `loop_sustain`.
@@ -50,12 +51,15 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
 - **Player songs are `.mid` files**, not `.arpg`. Players bring MIDI from anywhere, so the game reads
   `Documents/My Games/AdventureRPG/Songs/*.mid` (`EngineSetting.SONG_USER_DIRECTORY`). Everything the engine itself
   writes is still `.arpg`.
-- **The editor runs ffmpeg** to import samples and render songs. These are owner-only tools: the game never runs it.
-  The editor uses `ffmpeg` on the PATH, else the copy `Delivery.bat` keeps at `%LOCALAPPDATA%\AdventureRPG\ffmpeg.exe`.
-  Without either it refuses with a message telling the owner to run `Delivery.bat` once. Every ffmpeg call goes through
-  one editor utility, and through the thread pipeline.
-- **The SFZ importer reads `.sfz` and `.wav` files.** It is an import tool, like MIDI import; nothing at runtime reads
-  them.
+- **Library conversion happens only from `.claude/`.** The engine and the editor never read `.sfz` or `.wav`, never
+  run ffmpeg to bring an instrument in and never acknowledge `.claude/`. Claude converts an instrument from
+  `.claude/assets/` with `.claude/tools/SfzConvert.py` (the SFZ is read, each sample trimmed, mixed to mono, brought
+  to full scale and encoded with Delivery.bat's ffmpeg settings, every `.arpg` sealed by the ARPG tool) and delivers
+  the results; files Claude needs to see reach `.claude/assets/` through a fetch zip (`.claude/CLAUDE.md`).
+- **The editor runs ffmpeg** only to render songs (a later stage). The game never runs it. The editor uses `ffmpeg` on
+  the PATH, else the copy `Delivery.bat` keeps at `%LOCALAPPDATA%\AdventureRPG\ffmpeg.exe`. Without either it refuses
+  with a message telling the owner to run `Delivery.bat` once. Every ffmpeg call goes through one editor utility, and
+  through the thread pipeline.
 
 ## Content types
 
@@ -93,9 +97,10 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
 
 ## Performance
 
-- Note sets load on demand, the first time an instrument is held, laid or previewed, never at bootstrap.
+- Note sets load on demand, the first time an instrument is held, laid or previewed, never at bootstrap. An
+  instrument's samples live in `assets/sounds/notes/<Instrument>/` and load with its note set, decoded on a worker.
 - Instrument samples are `mono` and trimmed with `length` to their loop end plus release tail. Each stage that
-  touches loading states the decoded bytes of every imported note set.
+  touches loading states the decoded bytes of every converted note set.
 - `SamplerManager` keeps a fixed array of live notes sized once from `EngineSetting`. Note-on, note-off, envelope and
   voice stealing allocate nothing. Notes take voices from `SoundManager`'s pool through its API, with each
   instrument's `polyphony` as its limit.

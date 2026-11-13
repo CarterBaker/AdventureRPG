@@ -20,9 +20,10 @@ public class ItemDefinitionData extends DataPackage {
      * a pocket carries the box of walls its space is shown in, drawn only in
      * the inventory's menus. A tool names the tool type it is and the highest
      * break tier it can break; an item names the weapon it is wielded with,
-     * fighting with the default item weapon when it names none; an item names
-     * the skill its use trains, and an item that grants stats, is worn, is a
-     * tool or names its own weapon is gear, which carries a level, tier and
+     * fighting with the default item weapon when it names none, and the
+     * instrument it is played as; an item names the skill its use trains,
+     * and an item that grants stats, is worn, is a tool, names its own weapon
+     * or is played as an instrument is gear, which carries a level, tier and
      * condition of its own; a stackable item holds up to its stack size in one
      * item; a block piece names the block it builds. An item may carry actions
      * that turn it into another item where it stands, and may be picked up as
@@ -71,6 +72,9 @@ public class ItemDefinitionData extends DataPackage {
     // Combat — the weapon the item is wielded with, WEAPON_NONE when it names none
     private final short weaponID;
 
+    // Music — the instrument the item is played as, INSTRUMENT_NONE when it names none
+    private final short instrumentID;
+
     // Skill — the skill using the item trains, SKILL_NONE for none
     private final short skillID;
 
@@ -115,6 +119,7 @@ public class ItemDefinitionData extends DataPackage {
             short toolTypeID,
             int toolTier,
             short weaponID,
+            short instrumentID,
             short skillID,
             int stackSize,
             short blockID,
@@ -160,6 +165,9 @@ public class ItemDefinitionData extends DataPackage {
 
         // Combat
         this.weaponID = weaponID;
+
+        // Music
+        this.instrumentID = instrumentID;
 
         // Skill
         this.skillID = skillID;
@@ -233,12 +241,13 @@ public class ItemDefinitionData extends DataPackage {
         return stats;
     }
 
-    // True for anything with a level of its own — whatever grants stats, is worn, is a tool or is wielded
+    // True for anything with a level of its own — whatever grants stats, is worn, is a tool, is wielded or is played
     public boolean isGear() {
         return !stats.isEmpty()
                 || equipmentType != EquipmentType.NONE
                 || toolTypeID != EngineSetting.TOOL_NONE
-                || weaponID != EngineSetting.WEAPON_NONE;
+                || weaponID != EngineSetting.WEAPON_NONE
+                || instrumentID != EngineSetting.INSTRUMENT_NONE;
     }
 
     public ItemShapeStruct getShape() {
@@ -299,6 +308,14 @@ public class ItemDefinitionData extends DataPackage {
 
     public boolean hasWeapon() {
         return weaponID != EngineSetting.WEAPON_NONE;
+    }
+
+    public short getInstrumentID() {
+        return instrumentID;
+    }
+
+    public boolean hasInstrument() {
+        return instrumentID != EngineSetting.INSTRUMENT_NONE;
     }
 
     public int getStackSize() {

@@ -12,6 +12,7 @@ import application.bootstrap.lightingpipeline.LightingPipeline;
 import application.bootstrap.lootpipeline.LootPipeline;
 import application.bootstrap.mappipeline.MapPipeline;
 import application.bootstrap.menupipeline.MenuPipeline;
+import application.bootstrap.musicpipeline.MusicPipeline;
 import application.bootstrap.oceanpipeline.OceanPipeline;
 import application.bootstrap.physicspipeline.PhysicsPipeline;
 import application.bootstrap.progressionpipeline.ProgressionPipeline;
@@ -40,6 +41,7 @@ public class ApplicationBootstrapAssembly extends AssemblyPackage {
         create(ShaderPipeline.class);
         create(RenderPipeline.class);
         create(SoundPipeline.class);
+        create(MusicPipeline.class);
         create(ProgressionPipeline.class);
         create(ItemPipeline.class);
         create(FurnishingPipeline.class);

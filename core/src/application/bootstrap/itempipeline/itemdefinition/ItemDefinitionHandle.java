@@ -143,6 +143,14 @@ public class ItemDefinitionHandle extends HandlePackage {
         return itemDefinitionData.hasWeapon();
     }
 
+    public short getInstrumentID() {
+        return itemDefinitionData.getInstrumentID();
+    }
+
+    public boolean hasInstrument() {
+        return itemDefinitionData.hasInstrument();
+    }
+
     public short getSkillID() {
         return itemDefinitionData.getSkillID();
     }
