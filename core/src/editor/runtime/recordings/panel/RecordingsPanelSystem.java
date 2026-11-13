@@ -22,7 +22,8 @@ public class RecordingsPanelSystem extends SystemPackage {
      * Binds this window to a UI render target and shows the recordings. When
      * the recorder's revision moves it refills the list — a row for every
      * recording saved in the game's directory, most recently changed first,
-     * the open one marked — what the open recording holds, and the status
+     * the open one marked, each picked up by its name to be opened or dragged
+     * onto the Timeline to nest — what the open recording holds, and the status
      * line, which follows the recorder's.
      */
 
@@ -121,7 +122,7 @@ public class RecordingsPanelSystem extends SystemPackage {
                             ? RecordingsSetting.TEMPLATE_RECORDING_ROW_SELECTED
                             : RecordingsSetting.TEMPLATE_RECORDING_ROW);
 
-            row.setActionArgOverride(recordingName);
+            row.setOnDragArgOverride(recordingName);
             row.findChildById(RecordingsSetting.ELEMENT_ROW_LABEL).setFontText(recordingName);
             row.findChildById(RecordingsSetting.ELEMENT_ROW_VALUE).setFontText(
                     open ? RecordingsSetting.TEXT_OPEN : RecordingsSetting.TEXT_EMPTY_VALUE);

@@ -4,7 +4,8 @@ public class RecorderSetting {
 
     /*
      * Constants used only by RecorderContext and the Recorder tabs beside it
-     * — Keys, Bin, Assets and Settings, which share its systems — the menus
+     * — Timeline, Keys, Bin, Assets and Settings, which share its systems —
+     * the menus
      * each opens, the row, clip, transition, node, timeline, Keys and Assets
      * templates their panels are filled from and their elements, each menu's
      * entry points, the timeline's fixed steps, its ruler's ticks, the sizes
@@ -73,10 +74,15 @@ public class RecorderSetting {
     public static final String MENU_ASSETS = "editor/Recorder/RecorderAssets";
     public static final String MENU_SETTINGS = "editor/Recorder/RecorderSettings";
 
-    // Entry Points — the timeline's menu; the clip lanes and the ruler are EditorSetting RECORDER_ENTRY_CLIP_LANES and
-    // RECORDER_ENTRY_RULER, which the drags and the wheel share
+    // Entry Points — the transport's menu
     public static final int ENTRY_STATUS = 0;
     public static final int ENTRY_CLOCK = 1;
+    public static final int ENTRY_OPEN = 2;
+    public static final int ENTRY_LOOP = 3;
+
+    // Entry Points — the Timeline's menu, its status at ENTRY_STATUS; the clip lanes and the ruler are EditorSetting
+    // RECORDER_ENTRY_CLIP_LANES and RECORDER_ENTRY_RULER, which the drags and the wheel share
+    public static final int ENTRY_TIMELINE_TITLE = 1;
     public static final int ENTRY_PLAYHEAD = 4;
     public static final int ENTRY_RANGE_START = 5;
     public static final int ENTRY_RANGE_END = 6;
@@ -142,6 +148,10 @@ public class RecorderSetting {
     public static final String TEXT_OPEN_RECORDING_HINT = "Open or make a recording in the Recordings tool";
     public static final String TEXT_NO_CLIP = "Click a clip on the timeline to edit it";
     public static final String TEXT_UNSAVED_SUFFIX = " *";
+    public static final String TEXT_BREADCRUMB_SEPARATOR = " > ";
+    public static final String TEXT_LOOP_ON = "on";
+    public static final String TEXT_LOOP_OFF = "off";
+    public static final String TEXT_TIMELINE_TITLE = "Timeline";
     public static final String TEXT_CHANNEL_SEPARATOR = " ";
 
     // Text — settings and clip
@@ -240,7 +250,13 @@ public class RecorderSetting {
 
     // Formats
     public static final String FORMAT_TIME = "%d:%05.2f";
-    public static final String FORMAT_CLOCK = "%s   %s / %s";
+    public static final String FORMAT_CLOCK = "%s / %s";
+    public static final String FORMAT_TIMELINE_TITLE = "Timeline: %s";
+
+    // Formats — a clip's name on its bar, by the kind of its source in RecordingSourceKind order: a take's, a nested
+    // recording's, a song's and a notes clip's instrument
+    public static final String[] FORMAT_CLIP_LABELS = { "%s", "[%s]", "%s", "%s" };
+    public static final String FORMAT_LOOP = "Loop %s   %s to %s";
     public static final String FORMAT_RESOLUTION = "%d x %d";
     public static final String FORMAT_FRAME_RATE = "%d fps";
     public static final String FORMAT_MOTION_BLUR = "%d samples";
@@ -248,7 +264,9 @@ public class RecorderSetting {
     public static final String FORMAT_TAKE = "%s   %s   %s";
     public static final String FORMAT_TAKE_PLACED = "%s   %s   %s   x%d";
     public static final String FORMAT_CLIP_PLACE = "Lane %d   %s to %s";
-    public static final String FORMAT_CLIP_SOURCE = "Plays %s to %s of the take";
+    public static final String FORMAT_CLIP_SOURCE = "Plays %s to %s of the %s";
+    public static final String FORMAT_CLIPS_SELECTED = "%d clips selected: they move, delete and nest together";
+    public static final String FORMAT_CLIP_SOURCE_MISSING = "%s %s is missing and plays nothing";
     public static final String FORMAT_NODE = "%s   %s to %s";
     public static final String FORMAT_VIEW = "%s to %s";
     public static final String FORMAT_NODE_HEADER = "%s: %s";

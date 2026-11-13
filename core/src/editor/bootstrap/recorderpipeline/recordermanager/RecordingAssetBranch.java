@@ -20,6 +20,7 @@ import editor.bootstrap.recorderpipeline.recording.RecorderOverlay;
 import editor.bootstrap.recorderpipeline.recording.RecordingAssetSectionStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingAssetStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
@@ -34,11 +35,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RecordingAssetBranch extends BranchPackage {
 
     /*
-     * Gathers every asset a recording uses, across every take in its bin,
-     * into one section per RecorderAssetKind. The recording names its world,
+     * Gathers every asset a recording uses, across every take in its bin and
+     * every recording nested in it at any depth, into one section per
+     * RecorderAssetKind. The recording names its world,
      * and each take its characters' templates, genders and animations, the
      * features and items each look wore, the items thrown, the vehicles, the
-     * interface targets it captured and the sounds it holds. Each named asset
+     * interface targets it captured and the sounds it holds; each clip of
+     * another source names the recording, song or instrument it plays. Each named asset
      * is looked up once,
      * the first time it is named, for what it is drawn and moved with — a
      * template's model, material and animation tree, a feature's model and
@@ -95,14 +98,39 @@ class RecordingAssetBranch extends BranchPackage {
             return;
 
         gatherWorld(recording.getWorldName(), recording.getRecordingName());
+        gatherRecording(recording);
+
+        for (int i = 0; i < sections.length; i++)
+            sections[i].sort();
+    }
+
+    // Every take of the recording, and every clip of another source it lays: a nested recording gathered whole the
+    // first time it is named, a song and a notes clip's instrument by name, each missing while it is not bound
+    private void gatherRecording(RecordingInstance recording) {
 
         ObjectArrayList<RecordingTakeStruct> takes = recording.getTakes();
+        ObjectArrayList<RecordingClipStruct> clips = recording.getClips();
+        String owner = recording.getRecordingName();
 
         for (int i = 0; i < takes.size(); i++)
             gatherTake(takes.get(i));
 
-        for (int i = 0; i < sections.length; i++)
-            sections[i].sort();
+        for (int i = 0; i < clips.size(); i++) {
+
+            RecordingClipStruct clip = clips.get(i);
+
+            if (clip.getTake() != null)
+                continue;
+
+            RecordingAssetSectionStruct section = sections[clip.getSourceKind().getAssetKind().ordinal()];
+            boolean known = section.contains(clip.getSourceName());
+
+            section.add(clip.getSourceName(), owner)
+                    .setMissing(clip.getChild() == null && clip.getSong() == null);
+
+            if (!known && clip.getChild() != null)
+                gatherRecording(clip.getChild());
+        }
     }
 
     private void gatherTake(RecordingTakeStruct take) {

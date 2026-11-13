@@ -26,7 +26,12 @@ public class SongPlaybackInstance extends InstancePackage {
      * their clips and lanes give them; a sound clip plays its sound through
      * SoundManager from as far in as the clip starts and stops where it ends.
      * A player's song is held by name while it plays and let go when it stops
-     * or ends. Every cursor and held note is kept on the instance, so playing
+     * or ends. A song can instead follow a clock its owner drives, as the
+     * recorder's timeline does: follow lays it out the same way and followTo
+     * walks it to the tick the owner's clock has reached, passing over every
+     * note before the first tick it is given, so it plays from wherever the
+     * clock stands; every note it sounds is scaled by the volume it follows
+     * at. Every cursor and held note is kept on the instance, so playing
      * allocates nothing once a song of its size has been played.
      */
 
@@ -56,6 +61,7 @@ public class SongPlaybackInstance extends InstancePackage {
     private boolean ready;
     private double secondsPlayed;
     private int lastTick;
+    private float volume;
 
     // Internal \\
 
@@ -71,6 +77,7 @@ public class SongPlaybackInstance extends InstancePackage {
 
         // Clock
         this.lastTick = EngineSetting.SONG_PLAYBACK_START_TICK;
+        this.volume = EngineSetting.SAMPLER_NOTE_FULL_VOLUME;
     }
 
     @Override
@@ -104,15 +111,20 @@ public class SongPlaybackInstance extends InstancePackage {
         return true;
     }
 
-    // The one way a song begins: laid out, its instruments and sounds resolved, its samples asked for
+    // The one way a song begins from its start on its own clock
     private void start(SongHandle handle, short instrumentOverride, int lane) {
+        lay(handle, handle.getSongData(), instrumentOverride, lane, EngineSetting.SAMPLER_NOTE_FULL_VOLUME);
+    }
+
+    // The one way a song is laid out to play: its instruments and sounds resolved, its samples asked for
+    private void lay(SongHandle handle, SongData songData, short instrumentOverride, int lane, float volume) {
 
         stop();
 
         this.songHandle = handle;
-        this.tempo = handle.getTempo();
-        this.length = handle.getLength();
-        this.cursorCount = SongFlattenUtility.flatten(handle.getSongData(), lane, cursors);
+        this.tempo = songData.getTempo();
+        this.length = songData.getLength();
+        this.cursorCount = SongFlattenUtility.flatten(songData, lane, cursors);
 
         for (int i = 0; i < cursorCount; i++)
             resolve(cursors.get(i), instrumentOverride);
@@ -121,6 +133,53 @@ public class SongPlaybackInstance extends InstancePackage {
         this.ready = false;
         this.secondsPlayed = 0.0;
         this.lastTick = EngineSetting.SONG_PLAYBACK_START_TICK;
+        this.volume = volume;
+    }
+
+    // Follow \\
+
+    // The song laid out to follow a clock its owner drives, every note it sounds scaled by the volume
+    public void follow(SongData songData, float volume) {
+        lay(null, songData, EngineSetting.INSTRUMENT_NONE, EngineSetting.SONG_LANE_ALL, volume);
+    }
+
+    // How loud the notes it sounds from now on play, 0 to 1, as the clip it follows for fades
+    public void setVolume(float volume) {
+        this.volume = volume;
+    }
+
+    // The song walked to the tick its owner's clock has reached; the first tick it is given once its samples have
+    // landed is where it starts, every note before it passed over
+    public void followTo(double tick) {
+
+        if (!playing || !isReady())
+            return;
+
+        int at = (int) tick;
+
+        if (lastTick == EngineSetting.SONG_PLAYBACK_START_TICK)
+            skipTo(at);
+
+        letGoNotes(at);
+
+        for (int i = 0; i < cursorCount; i++)
+            walk(cursors.get(i), at);
+
+        this.lastTick = at;
+    }
+
+    // Every cursor moved on to its first note at or after the tick, and the clock set just before it
+    private void skipTo(int tick) {
+
+        for (int i = 0; i < cursorCount; i++) {
+
+            SongCursorStruct cursor = cursors.get(i);
+
+            if (cursor.getKind() == SongClipKind.NOTES)
+                cursor.setNextNote(findFirstNote(cursor, tick));
+        }
+
+        this.lastTick = tick - 1;
     }
 
     private void resolve(SongCursorStruct cursor, short instrumentOverride) {
@@ -134,15 +193,16 @@ public class SongPlaybackInstance extends InstancePackage {
             cursor.setInstrumentID(instrumentOverride);
 
         noteSetManager.prepare(resolveNoteSetID(cursor));
-        cursor.setNextNote(findFirstNote(cursor));
+        cursor.setNextNote(findFirstNote(cursor, cursor.getWindowStart()));
     }
 
-    // The first of the clip's notes that begins inside its window
-    private int findFirstNote(SongCursorStruct cursor) {
+    // The first of the clip's notes that begins inside its window at or after the tick
+    private int findFirstNote(SongCursorStruct cursor, int tick) {
 
+        int from = Math.max(tick, cursor.getWindowStart());
         int note = 0;
 
-        while (note < cursor.getClip().getNoteCount() && cursor.getNoteTick(note) < cursor.getWindowStart())
+        while (note < cursor.getClip().getNoteCount() && cursor.getNoteTick(note) < from)
             note++;
 
         return note;
@@ -234,7 +294,7 @@ public class SongPlaybackInstance extends InstancePackage {
                 cursor.getInstrumentID(),
                 cursor.getNotePitch(note),
                 cursor.getClip().getNoteVelocity(note),
-                cursor.getGain());
+                cursor.getGain() * volume);
 
         if (noteHandle != EngineSetting.INDEX_NOT_FOUND)
             hold(noteHandle, cursor.getNoteEndTick(note));
@@ -249,7 +309,7 @@ public class SongPlaybackInstance extends InstancePackage {
         if (cursor.getSoundID() != EngineSetting.INDEX_NOT_FOUND && windowStart > lastTick && windowStart <= tick)
             cursor.setVoice(soundManager.playSound(
                     cursor.getSoundID(),
-                    cursor.getGain(),
+                    cursor.getGain() * volume,
                     NoteUtility.toPitchRatio(cursor.getTranspose(), 0, 0f),
                     (float) (tempo.toSeconds(windowStart) - tempo.toSeconds(cursor.toSongTick(0)))));
 
@@ -334,5 +394,14 @@ public class SongPlaybackInstance extends InstancePackage {
 
     public double getSecondsPlayed() {
         return secondsPlayed;
+    }
+
+    // How many notes are held now, each by the handle SamplerManager gave it
+    public int getHeldCount() {
+        return heldCount;
+    }
+
+    public int getHeldNote(int held) {
+        return heldNotes[held];
     }
 }

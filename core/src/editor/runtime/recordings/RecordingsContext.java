@@ -13,7 +13,8 @@ public class RecordingsContext extends ContextPackage implements FileMenuProvide
      * Editor tab for the recordings saved in the game's directory: every one
      * by name, most recently changed first, the open one marked, and what the
      * open one holds. A row opens its recording in the recorder every
-     * Recorder tab edits, the toolbar renames the open one, and the editor's
+     * Recorder tab edits, or dragged onto the Timeline's lanes is laid there
+     * nested in the open recording, as a take is from the bin; the toolbar renames the open one, and the editor's
      * File menu makes, copies, saves and deletes them while this tab is the
      * one worked in. All state lives in RecorderManager; this tab only shows
      * it and hands clicks to RecordingsBranch.

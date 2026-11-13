@@ -2,6 +2,7 @@ package application.bootstrap.musicpipeline.util;
 
 import application.bootstrap.musicpipeline.song.SongClipKind;
 import application.bootstrap.musicpipeline.song.SongClipStruct;
+import application.bootstrap.musicpipeline.song.SongTempoStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.arpg.ArpgArrayStruct;
@@ -11,8 +12,13 @@ import engine.util.arpg.ArpgUtility;
 public class SongArpgUtility extends EngineUtility {
 
     /*
-     * The one codec between a song's clips and ARPG, used by SongBuilder and
-     * by the editor alike. A clip is read with every rule the game holds it
+     * The one codec between a song's tempo map, meter and clips and ARPG,
+     * used by SongBuilder and by the editor alike, for songs and for the
+     * recorder's recordings, which keep a tempo map, a meter and notes clips
+     * of their own. A tempo map lists at least one change, the first at tick
+     * 0 and each later one at a later tick, each inside SONG_BPM_MIN to
+     * SONG_BPM_MAX; a bar holds 1 to SONG_BEATS_PER_BAR_MAX beats of a whole,
+     * half, quarter, eighth, sixteenth or thirty-second note. A clip is read with every rule the game holds it
      * to — its kind, a lane the song has, a start, a length of at least one
      * tick, an offset into its source, a volume of 0 to 1 and a transpose of
      * up to SONG_CLIP_MAX_TRANSPOSE semitones either way — and what its kind
@@ -25,6 +31,71 @@ public class SongArpgUtility extends EngineUtility {
 
     // Internal
     private static final int[] NO_NOTES = new int[0];
+
+    // Time \\
+
+    public static SongTempoStruct readTempo(ArpgArrayStruct temposArpg, String owner) {
+
+        if (temposArpg.size() == 0)
+            throwException(owner + " has no tempo; its first plays from tick 0.");
+
+        int[] ticks = new int[temposArpg.size()];
+        float[] bpms = new float[temposArpg.size()];
+
+        for (int i = 0; i < ticks.length; i++) {
+
+            ArpgObjectStruct tempoArpg = temposArpg.get(i).getAsObject();
+
+            ticks[i] = ArpgUtility.validateInt(tempoArpg, "tick");
+            bpms[i] = ArpgUtility.validateFloat(tempoArpg, "bpm");
+
+            if (i == 0 && ticks[i] != 0)
+                throwException(owner + " starts its tempos at tick " + ticks[i] + "; the first plays from tick 0.");
+
+            if (i > 0 && ticks[i] <= ticks[i - 1])
+                throwException(owner + " tempo " + i + " at tick " + ticks[i] + " is not after the one before it, at "
+                        + ticks[i - 1] + "; tempos run in order of their tick.");
+
+            if (bpms[i] < EngineSetting.SONG_BPM_MIN || bpms[i] > EngineSetting.SONG_BPM_MAX)
+                throwException(owner + " tempo " + i + " plays at " + bpms[i] + " beats a minute, outside "
+                        + EngineSetting.SONG_BPM_MIN + " to " + EngineSetting.SONG_BPM_MAX + ".");
+        }
+
+        return new SongTempoStruct(ticks, bpms);
+    }
+
+    public static ArpgArrayStruct writeTempo(SongTempoStruct tempo) {
+
+        ArpgArrayStruct temposArpg = new ArpgArrayStruct();
+
+        for (int i = 0; i < tempo.getChangeCount(); i++) {
+
+            ArpgObjectStruct tempoArpg = new ArpgObjectStruct();
+            tempoArpg.addProperty("tick", tempo.getTick(i));
+            tempoArpg.addProperty("bpm", tempo.getBpm(i));
+            temposArpg.add(tempoArpg);
+        }
+
+        return temposArpg;
+    }
+
+    // A tempo map of one tempo throughout
+    public static SongTempoStruct createTempo(float bpm) {
+        return new SongTempoStruct(new int[] { 0 }, new float[] { bpm });
+    }
+
+    // The beats a bar holds and the note value of a beat, refused outside what a bar may be
+    public static void validateMeter(int beatsPerBar, int beatUnit, String owner) {
+
+        if (beatsPerBar < 1 || beatsPerBar > EngineSetting.SONG_BEATS_PER_BAR_MAX)
+            throwException(owner + " holds " + beatsPerBar + " \"beats_per_bar\", outside 1 to "
+                    + EngineSetting.SONG_BEATS_PER_BAR_MAX + ".");
+
+        if (beatUnit < 1 || beatUnit > EngineSetting.SONG_BEAT_UNIT_MAX || Integer.bitCount(beatUnit) != 1)
+            throwException(owner + " counts its beats in a \"beat_unit\" of " + beatUnit
+                    + "; a beat is a whole, half, quarter, eighth, sixteenth or thirty-second note (1 to "
+                    + EngineSetting.SONG_BEAT_UNIT_MAX + ").");
+    }
 
     // Clips \\
 

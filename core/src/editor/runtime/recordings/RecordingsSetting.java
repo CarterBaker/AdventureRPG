@@ -39,7 +39,7 @@ public class RecordingsSetting {
     public static final String TEXT_LENGTH = "Length";
     public static final String TEXT_STATE = "State";
     public static final String TEXT_OPEN_HINT = "Click a recording to open it in every Recorder tab";
-    public static final String TEXT_EDIT_HINT = "Edit the open recording's timeline in a Recorder tab";
+    public static final String TEXT_EDIT_HINT = "Drag a recording onto the Timeline to nest it in the open one";
 
     // Formats
     public static final String FORMAT_LIST_TITLE = "Recordings (%d)";

@@ -23,10 +23,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecorderBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Recorder tabs — the timeline, the Keys, the
-     * Bin, the Assets and the Settings. Every action works on the one
-     * recorder all tabs share; the recordings themselves are made, opened,
-     * renamed, copied and deleted from the Recordings tool. Takes are named
+     * Menu event handlers for the Recorder tabs — the transport, the
+     * Timeline, the Keys, the Bin, the Assets and the Settings. Every action
+     * works on the one recorder all tabs share; the recordings themselves are
+     * made, renamed, copied and deleted from the Recordings tool, where a row
+     * pressed is picked up and laid nested in the open recording when let go
+     * over the Timeline's lanes, or opened when let go where it was pressed.
+     * The transport plays round the loop range, sets its ends at the
+     * playhead and returns to the recording the open one was opened inside.
+     * Nest Selection names its new recording through the name dialog. Takes are named
      * through the text dialog, and deleting a take asks for its name to be
      * typed back. Dragging along the ruler
      * moves the playhead to the moment under the cursor. Pressing a take in
@@ -152,7 +157,7 @@ public class RecorderBranch extends BranchPackage {
             return;
 
         WindowInstance window = windowManager.getHoveredWindow();
-        MenuInstance menu = window != null ? findMenu(window, EditorSetting.RECORDER_MENU) : null;
+        MenuInstance menu = window != null ? findMenu(window, EditorSetting.RECORDER_TIMELINE_MENU) : null;
         ElementInstance lanes = menu != null ? menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_CLIP_LANES) : null;
 
         if (recorderManager.getDrag().isActive() || !recorderManager.hasRecording() || lanes == null
@@ -185,7 +190,7 @@ public class RecorderBranch extends BranchPackage {
         if (wheel == 0f && sideways == 0f)
             return;
 
-        MenuInstance timelineMenu = findMenu(window, EditorSetting.RECORDER_MENU);
+        MenuInstance timelineMenu = findMenu(window, EditorSetting.RECORDER_TIMELINE_MENU);
         MenuInstance keysMenu = findMenu(window, EditorSetting.RECORDER_KEYS_MENU);
 
         if (timelineMenu == null && keysMenu == null)
@@ -260,6 +265,26 @@ public class RecorderBranch extends BranchPackage {
 
     public void toEnd() {
         recorderManager.toEnd();
+    }
+
+    public void toggleLoop() {
+        recorderManager.toggleLoop();
+    }
+
+    public void setRangeStart() {
+        recorderManager.setRangeStart();
+    }
+
+    public void setRangeEnd() {
+        recorderManager.setRangeEnd();
+    }
+
+    public void clearRange() {
+        recorderManager.clearRange();
+    }
+
+    public void backToParent() {
+        recorderManager.backToParent();
     }
 
     public void scrubTimeline(WindowInstance window, ElementInstance track) {
@@ -500,6 +525,35 @@ public class RecorderBranch extends BranchPackage {
         dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
     }
 
+    // A saved recording is picked up on the press in the Recordings tab, and carried over the Timeline's lanes under
+    // the cursor until let go
+    public void dragRecording(String recordingName, WindowInstance window) {
+
+        if (!recorderManager.getDrag().isActive())
+            recorderManager.beginRecordingDrag(
+                    recordingName,
+                    window,
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window));
+
+        WindowInstance hovered = windowManager.getHoveredWindow();
+
+        dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
+    }
+
+    // The selected clips nested into a new recording of the name typed
+    private void openNestSelection(WindowInstance window) {
+
+        if (recorderManager.getSelectedClip() < 0)
+            return;
+
+        nameDialogBranch.open(
+                window,
+                EditorSetting.DIALOG_TITLE_NEST_SELECTION,
+                recorderManager::isRecordingNameAvailable,
+                recorderManager::nestSelection);
+    }
+
     // A transition is picked up on the press wherever it was pressed, and carried over the lanes of the Recorder tab
     // under the cursor until let go
     public void dragTransition(String transitionName, WindowInstance window) {
@@ -574,6 +628,7 @@ public class RecorderBranch extends BranchPackage {
                     resolveTime(window, lanes),
                     resolveLane(window, lanes),
                     isNameRow(window, lanes),
+                    shortcutManager.isHeld(extendSelectionShortcutID, window),
                     resolveSecondsPerPixel(lanes),
                     window,
                     inputManager.getHoverMouseX(window),
@@ -669,7 +724,8 @@ public class RecorderBranch extends BranchPackage {
     // The lanes of the Recorder tab open in the window, null when it shows none
     private ElementInstance findLanes(WindowInstance window) {
 
-        return findEntry(findMenu(window, EditorSetting.RECORDER_MENU), EditorSetting.RECORDER_ENTRY_CLIP_LANES);
+        return findEntry(
+                findMenu(window, EditorSetting.RECORDER_TIMELINE_MENU), EditorSetting.RECORDER_ENTRY_CLIP_LANES);
     }
 
     // The Recorder tab menu of a name open in the window, null when the window shows none
@@ -722,6 +778,8 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_CLIP_SPLIT -> recorderManager.splitClip();
             case EditorSetting.RECORDER_KEY_CLIP_STAMP -> recorderManager.stampClip();
             case EditorSetting.RECORDER_KEY_CLIP_REMOVE -> recorderManager.removeClip();
+            case EditorSetting.RECORDER_KEY_CLIP_NEST -> openNestSelection(window);
+            case EditorSetting.RECORDER_KEY_CLIP_OPEN -> recorderManager.openNested(recorderManager.getSelectedClip());
             case EditorSetting.RECORDER_KEY_NODE_NEXT -> recorderManager.nextNodeState();
             case EditorSetting.RECORDER_KEY_NODE_PREVIOUS -> recorderManager.previousNodeState();
             case EditorSetting.RECORDER_KEY_NODE_REMOVE -> recorderManager.removeNode();

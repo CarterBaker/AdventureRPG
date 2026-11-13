@@ -299,6 +299,14 @@ public class SamplerManager extends ManagerPackage {
         }
     }
 
+    // The voice the note sounds through, -1 when the handle answers to no note
+    public int getNoteVoice(int noteHandle) {
+
+        SamplerNoteStruct note = resolve(noteHandle);
+
+        return note != null ? note.getVoice() : EngineSetting.INDEX_NOT_FOUND;
+    }
+
     // Utility \\
 
     // The note that answers to the handle, null for none

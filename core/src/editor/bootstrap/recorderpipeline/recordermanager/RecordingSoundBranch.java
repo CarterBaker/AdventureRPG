@@ -44,7 +44,7 @@ class RecordingSoundBranch extends BranchPackage {
             float time,
             float tolerance) {
 
-        float takeTime = clip.toTakeTime(time);
+        float takeTime = clip.toChildTime(time);
         int found = EngineSetting.INDEX_NOT_FOUND;
 
         for (int i = track.findFirstSounding(takeTime - tolerance);

@@ -180,6 +180,13 @@ samplerManager.noteOnAt(instrumentID, pitch, velocity, entity.getWorldHandle(), 
   (`RecordingTakeStruct.isSoundOf`), reused for every later drop of the same sound, laid as an ordinary clip.
 - Exports mix every sound clip offline (`RecordingMixBranch`) into 48 kHz 16-bit stereo PCM, written beside each
   video frame: a PCM track in MP4 and MOV, a second OpenDML stream in AVI.
+- A clip plays a take, a nested recording, a song or a notes clip (`RecordingSourceKind`). The sound channel walks down
+  into every nested recording at the moment mapped into it (`toChildTime`), each sound told apart by the path of clips
+  it was reached by, its fade the product of every transition around it; songs and notes clips follow the playhead
+  through `SongPlaybackInstance.follow`/`followTo` from a pool of `RECORDER_MUSIC_PLAYBACK_COUNT`, and their sampler
+  voices are never captured back into a take. Exports mix nested sounds the same way and render songs and notes
+  through `SamplerMixUtility`. The transport is the Recorder tab, the clips the Timeline tab (`TimelineContext`), and a
+  Sound Library row is dropped on the Timeline's lanes.
 - The Sound Library tab (`SoundLibraryContext`, state in `SoundLibraryManager`) lists every loaded sound by folder,
-  previews the selected one (play, pause, stop, rewind, loop, scrub), and drags rows onto any Recorder tab's lanes
+  previews the selected one (play, pause, stop, rewind, loop, scrub), and drags rows onto the Timeline's lanes
   through `RecorderBranch.dragSound`.

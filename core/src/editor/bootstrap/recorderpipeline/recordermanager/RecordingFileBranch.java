@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
+import application.bootstrap.musicpipeline.util.SongArpgUtility;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveProperty;
@@ -21,6 +22,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayStreamStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingSourceKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTrackStruct;
@@ -40,22 +42,28 @@ class RecordingFileBranch extends BranchPackage {
 
     /*
      * Writes a recording to its ARPG file and reads one back. The file keeps
-     * the world it was made in, the movement states and actions by name so a
+     * the world it was made in, its tempo map and meter through the song
+     * codec, the movement states and actions by name so a
      * recording outlives either list changing, how it exports, its bin of
      * takes with their tracks — each track's samples packed into one block by
      * RecordingArpgUtility, a character's identity, clips and looks written
      * plainly beside them, an overlay's frames as one block of frame sizes and
      * one of their packed bytes, its sounds as the names they use and one
      * block of every sound heard — and the clips on its timeline, each naming
-     * its take by its place in the bin and the transition on each edge by
-     * name, with how long it runs; a clip written before transitions were
-     * laid reads with none. Beside each track lie the curves it
+     * the kind of its source and its take by its place in the bin, its nested
+     * recording or song by name, or holding its notes clip written by the
+     * song codec, with the span, channels and transition on each edge it was
+     * given, kept as asked; a clip written before transitions were laid reads
+     * with none, one written before clips named their source plays a take,
+     * and a file written before recordings kept a tempo map plays at
+     * RECORDER_DEFAULT_BPM in four four. Beside each track lie the curves it
      * has been given, each naming its property and part with its keys packed
      * into one block, their modes named once for the whole file as the states
      * and actions are. A file written before sounds were recorded reads with
      * every take silent. A file of the first version, which laid takes straight
      * onto the timeline as layers, is read as a bin of those takes each placed
-     * once where it was recorded, and is saved in the new form from then on. A
+     * once where it was recorded. A file of any older version is saved in
+     * the new form as soon as it is opened. A
      * file that cannot be read, or no longer fits the game, is logged and
      * comes back null without touching anything.
      */
@@ -71,6 +79,9 @@ class RecordingFileBranch extends BranchPackage {
         ArpgObjectStruct recordingArpg = new ArpgObjectStruct();
         recordingArpg.addProperty("version", EditorSetting.RECORDER_FILE_VERSION);
         recordingArpg.addProperty("world", recording.getWorldName());
+        recordingArpg.add("tempos", SongArpgUtility.writeTempo(recording.getTempo()));
+        recordingArpg.addProperty("beats_per_bar", recording.getBeatsPerBar());
+        recordingArpg.addProperty("beat_unit", recording.getBeatUnit());
         recordingArpg.add("states", buildEnumNames(EntityState.VALUES));
         recordingArpg.add("actions", buildEnumNames(EntityAction.VALUES));
         recordingArpg.add("key_modes", buildEnumNames(RecorderKeyMode.VALUES));
@@ -314,12 +325,12 @@ class RecordingFileBranch extends BranchPackage {
 
             RecordingClipStruct clip = recording.getClips().get(i);
             ArpgObjectStruct clipArpg = new ArpgObjectStruct();
-            clipArpg.addProperty("take", recording.getTakes().indexOf(clip.getTake()));
+            addSource(clipArpg, clip, recording);
             clipArpg.addProperty("lane", clip.getLane());
             clipArpg.addProperty("start", clip.getStart());
-            clipArpg.addProperty("in", clip.getInPoint());
-            clipArpg.addProperty("out", clip.getOutPoint());
-            clipArpg.add("channels", buildChannels(clip.getChannelMask()));
+            clipArpg.addProperty("in", clip.getStoredInPoint());
+            clipArpg.addProperty("out", clip.getStoredOutPoint());
+            clipArpg.add("channels", buildChannels(clip.getStoredChannelMask()));
             clipArpg.addProperty("muted", clip.isMuted());
             clipArpg.addProperty("time_ramp", clip.getTimeRampSeconds());
             addTransitions(clipArpg, clip);
@@ -327,6 +338,20 @@ class RecordingFileBranch extends BranchPackage {
         }
 
         return clipsArpg;
+    }
+
+    // What the clip plays, by kind: a take by its place in the bin, a nested recording or a song by name, or a notes
+    // clip's instrument and notes through the song codec
+    private void addSource(ArpgObjectStruct clipArpg, RecordingClipStruct clip, RecordingInstance recording) {
+
+        clipArpg.addProperty("source", ArpgUtility.toEnumName(clip.getSourceKind()));
+
+        switch (clip.getSourceKind()) {
+            case TAKE -> clipArpg.addProperty("take", recording.getTakes().indexOf(clip.getTake()));
+            case RECORDING -> clipArpg.addProperty("recording", clip.getSourceName());
+            case SONG -> clipArpg.addProperty("song", clip.getSourceName());
+            case NOTES -> clipArpg.add("notes", SongArpgUtility.writeClip(clip.getNotes()));
+        }
     }
 
     // Each edge holding a transition written under its own key, its name and how long it was asked to run
@@ -517,7 +542,7 @@ class RecordingFileBranch extends BranchPackage {
         }
     }
 
-    // True when the last file read was of the first version, so it is saved in the new form at once
+    // True when the last file read was of an older version, so it is saved in the new form at once
     boolean isUpgraded() {
         return upgraded;
     }
@@ -527,19 +552,30 @@ class RecordingFileBranch extends BranchPackage {
         int version = ArpgUtility.getInt(recordingArpg, "version", 0);
         boolean layered = version == EditorSetting.RECORDER_FILE_VERSION_LAYERS;
 
-        this.upgraded = layered;
+        this.upgraded = version != EditorSetting.RECORDER_FILE_VERSION;
 
-        if (version != EditorSetting.RECORDER_FILE_VERSION && !layered
+        if (version < EditorSetting.RECORDER_FILE_VERSION_LAYERS || version > EditorSetting.RECORDER_FILE_VERSION
                 || !ArpgUtility.hasString(recordingArpg, "world")
                 || !ArpgUtility.hasArray(recordingArpg, "states")
                 || !ArpgUtility.hasArray(recordingArpg, "actions")
                 || !ArpgUtility.hasArray(recordingArpg, layered ? "layers" : "takes"))
             return rejectFile(recordingName);
 
+        int beatsPerBar = ArpgUtility.getInt(recordingArpg, "beats_per_bar", EngineSetting.DEFAULT_SONG_BEATS_PER_BAR);
+        int beatUnit = ArpgUtility.getInt(recordingArpg, "beat_unit", EngineSetting.DEFAULT_SONG_BEAT_UNIT);
+        String owner = EditorSetting.RECORDER_FILE_OWNER_PREFIX + recordingName;
+
+        SongArpgUtility.validateMeter(beatsPerBar, beatUnit, owner);
+
         RecordingInstance recording = create(RecordingInstance.class);
         recording.constructor(
                 recordingName,
                 recordingArpg.get("world").getAsString(),
+                ArpgUtility.hasArray(recordingArpg, "tempos")
+                        ? SongArpgUtility.readTempo(recordingArpg.getAsArray("tempos"), owner)
+                        : SongArpgUtility.createTempo(EditorSetting.RECORDER_DEFAULT_BPM),
+                beatsPerBar,
+                beatUnit,
                 parseExport(recordingArpg));
 
         IntArrayList states = resolveEnumOrdinals(recordingArpg.getAsArray("states"), EntityState.VALUES);
@@ -553,7 +589,7 @@ class RecordingFileBranch extends BranchPackage {
                 ? parseLayers(recordingArpg.getAsArray("layers"), recording, states, actions)
                 : parseTakes(recordingArpg.getAsArray("takes"), recording, states, actions)
                         && (!ArpgUtility.hasArray(recordingArpg, "clips")
-                                || parseClips(recordingArpg.getAsArray("clips"), recording));
+                                || parseClips(recordingArpg.getAsArray("clips"), recording, owner));
 
         return parsed ? recording : rejectFile(recordingName);
     }
@@ -635,33 +671,32 @@ class RecordingFileBranch extends BranchPackage {
         return true;
     }
 
-    private boolean parseClips(ArpgArrayStruct clipsArpg, RecordingInstance recording) {
+    // Every clip on the timeline; a clip written before clips named their source plays a take
+    private boolean parseClips(ArpgArrayStruct clipsArpg, RecordingInstance recording, String owner) {
 
         for (int i = 0; i < clipsArpg.size(); i++) {
 
             ArpgObjectStruct clipArpg = clipsArpg.get(i).getAsObject();
 
-            if (!ArpgUtility.hasNumber(clipArpg, "take")
-                    || !ArpgUtility.hasNumber(clipArpg, "start")
+            if (!ArpgUtility.hasNumber(clipArpg, "start")
                     || !ArpgUtility.hasNumber(clipArpg, "in")
                     || !ArpgUtility.hasNumber(clipArpg, "out")
                     || !ArpgUtility.hasArray(clipArpg, "channels"))
                 return false;
 
-            int takeIndex = clipArpg.get("take").getAsInt();
-
-            if (takeIndex < 0 || takeIndex >= recording.getTakes().size())
-                return false;
-
-            RecordingClipStruct clip = new RecordingClipStruct(
-                    recording.getTakes().get(takeIndex),
+            RecordingClipStruct clip = parseSource(
+                    clipArpg,
+                    recording,
                     clipArpg.get("in").getAsFloat(),
                     clipArpg.get("out").getAsFloat(),
                     Math.clamp(ArpgUtility.getInt(clipArpg, "lane", 0), 0, EditorSetting.RECORDER_LANE_COUNT - 1),
                     clipArpg.get("start").getAsFloat(),
-                    parseChannels(clipArpg.getAsArray("channels")));
+                    parseChannels(clipArpg.getAsArray("channels")),
+                    owner + EditorSetting.RECORDER_FILE_CLIP_OWNER + i);
 
-            clip.setSpan(clip.getInPoint(), clip.getOutPoint());
+            if (clip == null)
+                return false;
+
             clip.setMuted(ArpgUtility.getBoolean(clipArpg, "muted", false));
             clip.setTimeRampSeconds(ArpgUtility.getFloat(clipArpg, "time_ramp", 0f));
             parseTransitions(clipArpg, clip);
@@ -669,6 +704,44 @@ class RecordingFileBranch extends BranchPackage {
         }
 
         return true;
+    }
+
+    // The clip of the source it names, null when what it names is missing from the file
+    private RecordingClipStruct parseSource(
+            ArpgObjectStruct clipArpg,
+            RecordingInstance recording,
+            float inPoint,
+            float outPoint,
+            int lane,
+            float start,
+            int channelMask,
+            String owner) {
+
+        RecordingSourceKind kind = ArpgUtility.getEnum(clipArpg, "source", RecordingSourceKind.class,
+                RecordingSourceKind.TAKE);
+
+        return switch (kind) {
+            case TAKE -> {
+                int takeIndex = ArpgUtility.getInt(clipArpg, "take", EngineSetting.INDEX_NOT_FOUND);
+
+                yield takeIndex >= 0 && takeIndex < recording.getTakes().size()
+                        ? RecordingClipStruct.ofTake(recording.getTakes().get(takeIndex), inPoint, outPoint, lane,
+                                start, channelMask)
+                        : null;
+            }
+            case RECORDING -> ArpgUtility.hasString(clipArpg, "recording")
+                    ? RecordingClipStruct.ofRecording(clipArpg.get("recording").getAsString(), inPoint, outPoint,
+                            lane, start, channelMask)
+                    : null;
+            case SONG -> ArpgUtility.hasString(clipArpg, "song")
+                    ? RecordingClipStruct.ofSong(clipArpg.get("song").getAsString(), inPoint, outPoint, lane, start)
+                    : null;
+            case NOTES -> ArpgUtility.hasObject(clipArpg, "notes")
+                    ? RecordingClipStruct.ofNotes(
+                            SongArpgUtility.readClip(clipArpg.getAsObject("notes"), 1, owner),
+                            inPoint, outPoint, lane, start)
+                    : null;
+        };
     }
 
     // Each edge's transition read back when it names one, every other edge left without
@@ -723,7 +796,7 @@ class RecordingFileBranch extends BranchPackage {
             take.shiftTimes(-start);
             recording.addTake(take);
 
-            RecordingClipStruct clip = new RecordingClipStruct(
+            RecordingClipStruct clip = RecordingClipStruct.ofTake(
                     take,
                     0f,
                     take.getDuration(),

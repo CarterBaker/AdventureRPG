@@ -1,6 +1,8 @@
 package editor.runtime.dev.recorder;
 
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
+import application.bootstrap.musicpipeline.samplermanager.SamplerManager;
+import application.bootstrap.musicpipeline.song.SongPlaybackInstance;
 import application.bootstrap.soundpipeline.sound.SoundHandle;
 import application.bootstrap.soundpipeline.sound.SoundVoiceStruct;
 import application.bootstrap.soundpipeline.soundmanager.SoundManager;
@@ -16,6 +18,7 @@ import editor.runtime.EditorSetting;
 import editor.runtime.dev.DevContext;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class DevRecorderSoundSystem extends SystemPackage {
@@ -24,7 +27,12 @@ public class DevRecorderSoundSystem extends SystemPackage {
      * Carries the recorder's sound in this Dev window. While the timeline's
      * sounds are heard, every unmuted clip holding the sound channel sounds
      * every sound of its take that spans the playhead, all together whatever
-     * their lanes: each is started where the playhead stands within it, at
+     * their lanes, walking down into every nested recording at the moment
+     * mapped into it, so a sound laid twice through two nested clips plays
+     * twice, each followed along the path of clips it was reached by; a song
+     * or a notes clip follows the playhead through the sampler, from wherever
+     * the playhead first finds it, each from a fixed pool of song playbacks,
+     * and its notes are never captured back into a take. Each sound is started where the playhead stands within it, at
      * its volume and pitch and, when it was placed, where it was placed, and
      * stopped once the playhead leaves it or its clip; across its clip's
      * transitions its volume fades in and out, set again whenever the fade
@@ -47,10 +55,13 @@ public class DevRecorderSoundSystem extends SystemPackage {
     // Internal
     private RecorderManager recorderManager;
     private SoundManager soundManager;
+    private SamplerManager samplerManager;
     private PlayerManager playerManager;
 
-    // Playback — one entry per sound playing from the timeline, reused as sounds come and go
+    // Playback — one entry per sound playing from the timeline, each the clip, the path of clips it was reached by
+    // and its sound on the take, reused as sounds come and go
     private ObjectArrayList<RecordingClipStruct> playingClips;
+    private long[] playingPaths;
     private int[] playingEvents;
     private int[] playingVoices;
     private float[] playingFades;
@@ -59,6 +70,15 @@ public class DevRecorderSoundSystem extends SystemPackage {
     private float lastPlayhead;
     private boolean sounding;
     private int shownSoundRevision;
+
+    // Music — one song playback per song or notes clip following the playhead, by its clip and path, and every voice
+    // their notes sound through
+    private SongPlaybackInstance[] musicPlaybacks;
+    private ObjectArrayList<RecordingClipStruct> musicClips;
+    private long[] musicPaths;
+    private boolean[] musicSeen;
+    private int musicCount;
+    private IntArrayList musicVoices;
 
     // Capture — for each voice slot, the voice captured from it and the sound it became on the take
     private int[] capturedVoices;
@@ -76,10 +96,23 @@ public class DevRecorderSoundSystem extends SystemPackage {
 
         // Playback
         this.playingClips = new ObjectArrayList<>();
+        this.playingPaths = new long[EngineSetting.SOUND_VOICE_COUNT];
         this.playingEvents = new int[EngineSetting.SOUND_VOICE_COUNT];
         this.playingVoices = new int[EngineSetting.SOUND_VOICE_COUNT];
         this.playingFades = new float[EngineSetting.SOUND_VOICE_COUNT];
         this.playingSeen = new boolean[EngineSetting.SOUND_VOICE_COUNT];
+
+        // Music
+        this.musicPlaybacks = new SongPlaybackInstance[EditorSetting.RECORDER_MUSIC_PLAYBACK_COUNT];
+        this.musicClips = new ObjectArrayList<>();
+        this.musicPaths = new long[EditorSetting.RECORDER_MUSIC_PLAYBACK_COUNT];
+        this.musicSeen = new boolean[EditorSetting.RECORDER_MUSIC_PLAYBACK_COUNT];
+        this.musicVoices = new IntArrayList();
+
+        for (int i = 0; i < musicPlaybacks.length; i++) {
+            musicPlaybacks[i] = create(SongPlaybackInstance.class);
+            musicClips.add(null);
+        }
 
         // Capture
         this.capturedVoices = new int[EngineSetting.SOUND_VOICE_COUNT];
@@ -93,6 +126,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
     protected void get() {
         this.recorderManager = get(RecorderManager.class);
         this.soundManager = get(SoundManager.class);
+        this.samplerManager = get(SamplerManager.class);
         this.playerManager = get(PlayerManager.class);
     }
 
@@ -157,11 +191,33 @@ public class DevRecorderSoundSystem extends SystemPackage {
 
     // Playback \\
 
-    // Every sound spanning the playhead kept sounding or started, and every other one stopped
+    // Every sound spanning the playhead kept sounding or started, every song and notes clip followed, and every other
+    // one stopped
     private void play(RecordingInstance recording, float time) {
 
         for (int i = 0; i < playingCount; i++)
             playingSeen[i] = false;
+
+        for (int i = 0; i < musicCount; i++)
+            musicSeen[i] = false;
+
+        playRecording(recording, time, 1f, EditorSetting.RECORDER_PATH_ROOT);
+
+        for (int i = playingCount - 1; i >= 0; i--)
+            if (!playingSeen[i])
+                release(i);
+
+        for (int i = musicCount - 1; i >= 0; i--)
+            if (!musicSeen[i])
+                releaseMusic(i);
+
+        collectMusicVoices();
+    }
+
+    // Every clip of the recording sounding at the time, each faded by its transitions on top of the fade it was
+    // reached with: its take's sounds, the nested recording it lays at the moment mapped into it, or the song it
+    // sounds
+    private void playRecording(RecordingInstance recording, float time, float fade, long path) {
 
         ObjectArrayList<RecordingClipStruct> clips = recording.getClips();
 
@@ -172,30 +228,44 @@ public class DevRecorderSoundSystem extends SystemPackage {
             if (!clip.covers(RecorderChannel.SOUND, time))
                 continue;
 
-            RecordingSoundTrackStruct track = clip.getTake().getSoundTrack();
-            float takeTime = clip.toTakeTime(time);
+            long clipPath = path * EditorSetting.RECORDER_PATH_RADIX + i + 1;
+            float clipFade = fade * recorderManager.resolveClipGain(clip, time);
+            float childTime = clip.toChildTime(time);
 
-            for (int event = track.findFirstSounding(takeTime);
-                    event < track.size() && track.getTime(event) <= takeTime; event++)
-                if (takeTime < track.getTime(event) + track.getDuration(event))
-                    sound(clip, track, event, takeTime, recorderManager.resolveClipGain(clip, time));
+            if (clip.getTake() != null)
+                soundTake(clip, clipPath, clip.getTake().getSoundTrack(), childTime, clipFade);
+
+            if (clip.getChild() != null)
+                playRecording(clip.getChild(), childTime, clipFade, clipPath);
+
+            if (clip.getSong() != null)
+                followSong(clip, clipPath, childTime, clipFade);
         }
+    }
 
-        for (int i = playingCount - 1; i >= 0; i--)
-            if (!playingSeen[i])
-                release(i);
+    private void soundTake(
+            RecordingClipStruct clip,
+            long path,
+            RecordingSoundTrackStruct track,
+            float takeTime,
+            float fade) {
+        for (int event = track.findFirstSounding(takeTime);
+                event < track.size() && track.getTime(event) <= takeTime; event++)
+            if (takeTime < track.getTime(event) + track.getDuration(event))
+                sound(clip, path, track, event, takeTime, fade);
     }
 
     // The sound kept sounding when it already is, its volume set again when its clip's fade has moved, else started
     // where the playhead stands within it
     private void sound(
             RecordingClipStruct clip,
+            long path,
             RecordingSoundTrackStruct track,
             int event,
             float takeTime,
             float fade) {
 
-        int playing = findPlaying(clip, event);
+        int playing = findPlaying(clip, path, event);
 
         if (playing != EngineSetting.INDEX_NOT_FOUND) {
 
@@ -232,6 +302,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
         else
             playingClips.set(playingCount, clip);
 
+        playingPaths[playingCount] = path;
         playingEvents[playingCount] = event;
         playingVoices[playingCount] = voice;
         playingFades[playingCount] = fade;
@@ -244,10 +315,10 @@ public class DevRecorderSoundSystem extends SystemPackage {
         return soundHandle.isLoop() ? offset % soundHandle.getLength() : offset;
     }
 
-    private int findPlaying(RecordingClipStruct clip, int event) {
+    private int findPlaying(RecordingClipStruct clip, long path, int event) {
 
         for (int i = 0; i < playingCount; i++)
-            if (playingClips.get(i) == clip && playingEvents[i] == event)
+            if (playingClips.get(i) == clip && playingPaths[i] == path && playingEvents[i] == event)
                 return i;
 
         return EngineSetting.INDEX_NOT_FOUND;
@@ -261,6 +332,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
         int last = playingCount - 1;
 
         playingClips.set(playing, playingClips.get(last));
+        playingPaths[playing] = playingPaths[last];
         playingEvents[playing] = playingEvents[last];
         playingVoices[playing] = playingVoices[last];
         playingFades[playing] = playingFades[last];
@@ -270,17 +342,93 @@ public class DevRecorderSoundSystem extends SystemPackage {
     }
 
     private void stopAll() {
+
         while (playingCount > 0)
             release(playingCount - 1);
+
+        while (musicCount > 0)
+            releaseMusic(musicCount - 1);
     }
 
+    // True for a voice this system sounds: a sound of the timeline's, or a note of a song it follows
     private boolean isPlayedHere(int voice) {
 
         for (int i = 0; i < playingCount; i++)
             if (playingVoices[i] == voice)
                 return true;
 
-        return false;
+        return musicVoices.contains(voice);
+    }
+
+    // Music \\
+
+    // The song the clip sounds followed to the playhead from a playback of its own, begun from wherever the playhead
+    // first finds it; nothing when every playback is taken
+    private void followSong(RecordingClipStruct clip, long path, float childTime, float fade) {
+
+        int slot = findMusic(clip, path);
+
+        if (slot == EngineSetting.INDEX_NOT_FOUND) {
+
+            if (musicCount == musicPlaybacks.length)
+                return;
+
+            slot = musicCount++;
+            musicClips.set(slot, clip);
+            musicPaths[slot] = path;
+            musicPlaybacks[slot].follow(clip.getSong(), fade);
+        }
+
+        musicSeen[slot] = true;
+        musicPlaybacks[slot].setVolume(fade);
+        musicPlaybacks[slot].followTo(clip.toSongTick(childTime));
+    }
+
+    private int findMusic(RecordingClipStruct clip, long path) {
+
+        for (int i = 0; i < musicCount; i++)
+            if (musicClips.get(i) == clip && musicPaths[i] == path)
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // The slot's song stopped, every note it held let go, the last slot moved into its place with its playback
+    private void releaseMusic(int slot) {
+
+        SongPlaybackInstance stopped = musicPlaybacks[slot];
+        int last = musicCount - 1;
+
+        stopped.stop();
+        musicPlaybacks[slot] = musicPlaybacks[last];
+        musicPlaybacks[last] = stopped;
+        musicClips.set(slot, musicClips.get(last));
+        musicClips.set(last, null);
+        musicPaths[slot] = musicPaths[last];
+        musicSeen[slot] = musicSeen[last];
+        this.musicCount--;
+    }
+
+    // Every voice a followed song's held notes sound through kept, so none of them is captured into a take, and
+    // every voice that has stopped let go
+    private void collectMusicVoices() {
+
+        for (int i = musicVoices.size() - 1; i >= 0; i--)
+            if (!soundManager.isVoicePlaying(musicVoices.getInt(i)))
+                musicVoices.removeInt(i);
+
+        for (int i = 0; i < musicCount; i++) {
+
+            SongPlaybackInstance playback = musicPlaybacks[i];
+
+            for (int held = 0; held < playback.getHeldCount(); held++) {
+
+                int voice = samplerManager.getNoteVoice(playback.getHeldNote(held));
+
+                if (voice != EngineSetting.INDEX_NOT_FOUND && !musicVoices.contains(voice))
+                    musicVoices.add(voice);
+            }
+        }
     }
 
     // Take \\

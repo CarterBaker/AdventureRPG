@@ -1,6 +1,12 @@
 package editor.bootstrap.recorderpipeline.recordermanager;
 
-import application.bootstrap.soundpipeline.sound.SoundHandle;
+import application.bootstrap.musicpipeline.instrument.InstrumentHandle;
+import application.bootstrap.musicpipeline.instrumentmanager.InstrumentManager;
+import application.bootstrap.musicpipeline.sampler.SamplerPcmStruct;
+import application.bootstrap.musicpipeline.song.SongClipKind;
+import application.bootstrap.musicpipeline.song.SongCursorStruct;
+import application.bootstrap.musicpipeline.util.SamplerMixUtility;
+import application.bootstrap.musicpipeline.util.SongFlattenUtility;
 import application.bootstrap.soundpipeline.sound.SoundPcmStruct;
 import application.bootstrap.soundpipeline.soundmanager.SoundManager;
 import application.bootstrap.soundpipeline.util.SoundDecodeUtility;
@@ -19,27 +25,35 @@ class RecordingMixBranch extends BranchPackage {
     /*
      * Mixes a recording's sounds into the stereo sound of its export. Before
      * the export begins every sound a clip plays within its range is decoded
-     * once at the export's rate; then each video frame's stretch of sound is
-     * mixed from every unmuted clip holding the sound channel — sounds add up,
-     * whatever their lanes — each sound read from the moment it began, at its
-     * pitch, looping when its sound loops, cut where its clip ends, as loud
-     * and from the side it reached the camera when it was recorded, and faded
-     * in and out across its clip's transitions. A mono
-     * sound is spread over both sides by equal power, a stereo one balanced.
-     * A sound the game no longer has is left silent. The decoded sounds are
-     * let go once the export ends.
+     * once at the export's rate, and every sample the songs and notes clips
+     * within it can sound; then each video frame's stretch of sound is mixed
+     * from every unmuted clip holding the sound channel — sounds add up,
+     * whatever their lanes — walking down into every nested recording at the
+     * moment mapped into it, its sounds heard only within the nested clip's
+     * span and faded by every transition around it. A take's sound is read
+     * from the moment it began, at its pitch, looping when its sound loops,
+     * cut where its clip ends, as loud and from the side it reached the
+     * camera when it was recorded, and faded in and out across its clip's
+     * transitions; a song or a notes clip is laid out flat and rendered
+     * through SamplerMixUtility, the one offline sampler, heard from the
+     * middle. A mono sound is spread over both sides by equal power, a stereo
+     * one balanced. A sound the game no longer has is left silent. The
+     * decoded sounds are let go once the export ends.
      */
 
     // Internal
     private SoundManager soundManager;
+    private InstrumentManager instrumentManager;
     private RecordingTransitionBranch recordingTransitionBranch;
 
     // Samples
-    private Object2ObjectOpenHashMap<String, SoundPcmStruct> soundName2Pcm;
+    private Object2ObjectOpenHashMap<String, SamplerPcmStruct> soundName2Sample;
     private int sampleRate;
 
     // Scratch
     private float[] mixScratch;
+    private ObjectArrayList<SongCursorStruct> cursors;
+    private ObjectArrayList<String> soundNames;
 
     // Base \\
 
@@ -47,25 +61,41 @@ class RecordingMixBranch extends BranchPackage {
     protected void create() {
 
         // Samples
-        this.soundName2Pcm = new Object2ObjectOpenHashMap<>();
+        this.soundName2Sample = new Object2ObjectOpenHashMap<>();
 
         // Scratch
         this.mixScratch = new float[0];
+        this.cursors = new ObjectArrayList<>();
+        this.soundNames = new ObjectArrayList<>();
     }
 
     @Override
     protected void get() {
         this.soundManager = get(SoundManager.class);
+        this.instrumentManager = get(InstrumentManager.class);
         this.recordingTransitionBranch = get(RecordingTransitionBranch.class);
     }
 
     // Prepare \\
 
-    // Every sound heard between the moments decoded once at the rate, true when any is
+    // Every sound and sample heard between the moments decoded once at the rate, true when any is
     boolean prepare(RecordingInstance recording, float from, float to, int sampleRate) {
 
         clear();
         this.sampleRate = sampleRate;
+        soundNames.clear();
+        collectRecording(recording, from, to);
+
+        for (int i = 0; i < soundNames.size(); i++)
+            decode(soundNames.get(i));
+
+        soundNames.clear();
+        return !soundName2Sample.isEmpty();
+    }
+
+    // Every sound a clip of the recording sounds between the moments named, nested recordings walked at the moments
+    // mapped into them
+    private void collectRecording(RecordingInstance recording, float from, float to) {
 
         ObjectArrayList<RecordingClipStruct> clips = recording.getClips();
 
@@ -76,25 +106,59 @@ class RecordingMixBranch extends BranchPackage {
             if (!isSounding(clip, from, to))
                 continue;
 
-            RecordingSoundTrackStruct track = clip.getTake().getSoundTrack();
+            float clipFrom = Math.max(from, clip.getStart());
+            float clipTo = Math.min(to, clip.getEnd());
 
-            for (int event = 0; event < track.size(); event++)
-                if (clip.toTimelineTime(track.getTime(event)) < to
-                        && resolveEnd(clip, track, event) > Math.max(from, clip.getStart()))
-                    decode(track.getSoundName(event));
+            if (clip.getTake() != null)
+                collectTake(clip, clip.getTake().getSoundTrack(), clipFrom, clipTo);
+
+            if (clip.getChild() != null)
+                collectRecording(clip.getChild(), clip.toChildTime(clipFrom), clip.toChildTime(clipTo));
+
+            if (clip.getSong() != null)
+                collectSong(clip);
         }
-
-        return !soundName2Pcm.isEmpty();
     }
 
+    private void collectTake(RecordingClipStruct clip, RecordingSoundTrackStruct track, float from, float to) {
+        for (int event = 0; event < track.size(); event++)
+            if (clip.toTimelineTime(track.getTime(event)) < to && resolveEnd(clip, track, event) > from)
+                addName(track.getSoundName(event));
+    }
+
+    // Every sample the song the clip sounds can play, each of its notes clips on its instrument
+    private void collectSong(RecordingClipStruct clip) {
+
+        int count = SongFlattenUtility.flatten(clip.getSong(), EngineSetting.SONG_LANE_ALL, cursors);
+
+        for (int i = 0; i < count; i++) {
+
+            SongCursorStruct cursor = cursors.get(i);
+
+            SamplerMixUtility.collectSamples(cursor, resolveInstrument(cursor), soundNames);
+        }
+    }
+
+    private void addName(String soundName) {
+        if (!soundNames.contains(soundName))
+            soundNames.add(soundName);
+    }
+
+    // The sound decoded at the mix's rate, loaded first when it has not been yet; left silent when the game has no
+    // such sound
     private void decode(String soundName) {
-        if (!soundName2Pcm.containsKey(soundName) && soundManager.hasSound(soundName))
-            soundName2Pcm.put(soundName, soundManager.decodeSound(
-                    soundManager.getSoundIDFromSoundName(soundName), sampleRate));
+
+        int soundID = soundManager.findSoundID(soundName);
+
+        if (soundID == EngineSetting.INDEX_NOT_FOUND || soundName2Sample.containsKey(soundName))
+            return;
+
+        soundName2Sample.put(soundName, new SamplerPcmStruct(
+                soundManager.getSoundHandleFromSoundID(soundID), soundManager.decodeSound(soundID, sampleRate)));
     }
 
     void clear() {
-        soundName2Pcm.clear();
+        soundName2Sample.clear();
         this.mixScratch = new float[0];
     }
 
@@ -111,26 +175,61 @@ class RecordingMixBranch extends BranchPackage {
         for (int i = 0; i < sampleCount; i++)
             mixScratch[i] = 0f;
 
-        float to = time + (float) frameCount / sampleRate;
+        mixRecording(recording, time, 1f, 0, frameCount);
+
+        for (int i = 0; i < sampleCount; i++)
+            samples[i] = SoundDecodeUtility.toSample(mixScratch[i] / EngineSetting.SOUND_SAMPLE_SCALE);
+    }
+
+    // Every clip of the recording sounding within the frames given of the stretch beginning at the time — the frames
+    // every nested clip around it leaves open — faded by every transition around it
+    private void mixRecording(RecordingInstance recording, float time, float fade, int firstFrame, int endFrame) {
+
         ObjectArrayList<RecordingClipStruct> clips = recording.getClips();
+        float from = time + (float) firstFrame / sampleRate;
+        float to = time + (float) endFrame / sampleRate;
 
         for (int i = 0; i < clips.size(); i++) {
 
             RecordingClipStruct clip = clips.get(i);
 
-            if (!isSounding(clip, time, to))
+            if (!isSounding(clip, from, to))
                 continue;
 
-            RecordingSoundTrackStruct track = clip.getTake().getSoundTrack();
-            float takeTo = clip.toTakeTime(to);
+            int clipFirst = Math.max(firstFrame, toFrame(clip.getStart() - time));
+            int clipEnd = Math.min(endFrame, toFrame(clip.getEnd() - time));
 
-            for (int event = track.findFirstSounding(clip.toTakeTime(time));
-                    event < track.size() && track.getTime(event) < takeTo; event++)
-                mixEvent(clip, track, event, time, frameCount);
+            if (clipEnd <= clipFirst)
+                continue;
+
+            float childTime = clip.toChildTime(time);
+            float middleFade = fade * recordingTransitionBranch.resolveGain(clip,
+                    time + (float) ((clipFirst + clipEnd) >>> 1) / sampleRate);
+
+            if (clip.getTake() != null)
+                mixTake(clip, clip.getTake().getSoundTrack(), time, fade, clipFirst, clipEnd);
+
+            if (clip.getChild() != null)
+                mixRecording(clip.getChild(), childTime, middleFade, clipFirst, clipEnd);
+
+            if (clip.getSong() != null)
+                mixSong(clip, childTime, middleFade, clipFirst, clipEnd);
         }
+    }
 
-        for (int i = 0; i < sampleCount; i++)
-            samples[i] = SoundDecodeUtility.toSample(mixScratch[i] / EngineSetting.SOUND_SAMPLE_SCALE);
+    private void mixTake(
+            RecordingClipStruct clip,
+            RecordingSoundTrackStruct track,
+            float time,
+            float fade,
+            int firstFrame,
+            int endFrame) {
+
+        float takeTo = clip.toChildTime(time + (float) endFrame / sampleRate);
+
+        for (int event = track.findFirstSounding(clip.toChildTime(time + (float) firstFrame / sampleRate));
+                event < track.size() && track.getTime(event) < takeTo; event++)
+            mixEvent(clip, track, event, time, fade, firstFrame, endFrame);
     }
 
     // One sound added across the part of the frames it is heard in, read between its two nearest samples
@@ -139,19 +238,21 @@ class RecordingMixBranch extends BranchPackage {
             RecordingSoundTrackStruct track,
             int event,
             float time,
-            int frameCount) {
+            float fade,
+            int windowFirst,
+            int windowEnd) {
 
-        SoundPcmStruct pcm = soundName2Pcm.get(track.getSoundName(event));
+        SamplerPcmStruct sample = soundName2Sample.get(track.getSoundName(event));
 
-        if (pcm == null)
+        if (sample == null)
             return;
 
-        SoundHandle soundHandle = soundManager.getSoundHandleFromSoundName(track.getSoundName(event));
+        SoundPcmStruct pcm = sample.getPcm();
         float began = clip.toTimelineTime(track.getTime(event));
         float from = Math.max(Math.max(began, clip.getStart()), time);
         float until = resolveEnd(clip, track, event);
-        int firstFrame = Math.max(0, (int) Math.ceil((from - time) * sampleRate));
-        int endFrame = Math.min(frameCount, (int) Math.ceil((until - time) * sampleRate));
+        int firstFrame = Math.max(windowFirst, toFrame(from - time));
+        int endFrame = Math.min(windowEnd, toFrame(until - time));
 
         if (endFrame <= firstFrame)
             return;
@@ -159,10 +260,10 @@ class RecordingMixBranch extends BranchPackage {
         short[] source = pcm.getSamples();
         int channels = pcm.getChannels();
         int sourceFrames = pcm.getFrameCount();
-        boolean loop = soundHandle.isLoop();
-        double step = track.getPitch(event) * soundHandle.getPitch();
+        boolean loop = sample.isLooping();
+        double step = track.getPitch(event) * sample.getPitch();
         double position = ((time - began) * sampleRate + firstFrame) * step;
-        float gain = track.getHeardGain(event);
+        float gain = track.getHeardGain(event) * fade;
         float pan = track.getHeardPan(event);
         float leftGain = resolveLeftGain(channels, gain, pan);
         float rightGain = resolveRightGain(channels, gain, pan);
@@ -184,10 +285,40 @@ class RecordingMixBranch extends BranchPackage {
                     ? left
                     : readBlended(source, channels, first, second, 1, blend);
 
-            float fade = faded ? recordingTransitionBranch.resolveGain(clip, time + (float) frame / sampleRate) : 1f;
+            float transitionFade = faded
+                    ? recordingTransitionBranch.resolveGain(clip, time + (float) frame / sampleRate)
+                    : 1f;
 
-            mixScratch[out] += left * leftGain * fade;
-            mixScratch[out + 1] += right * rightGain * fade;
+            mixScratch[out] += left * leftGain * transitionFade;
+            mixScratch[out + 1] += right * rightGain * transitionFade;
+        }
+    }
+
+    // The song the clip sounds laid out flat and every part of it rendered through the offline sampler, heard from
+    // the middle within the frames the clip leaves open
+    private void mixSong(RecordingClipStruct clip, float childTime, float fade, int firstFrame, int endFrame) {
+
+        int count = SongFlattenUtility.flatten(clip.getSong(), EngineSetting.SONG_LANE_ALL, cursors);
+        float leftGain = resolveLeftGain(EngineSetting.SOUND_MONO_CHANNELS, fade, 0f);
+        float rightGain = resolveRightGain(EngineSetting.SOUND_MONO_CHANNELS, fade, 0f);
+
+        for (int i = 0; i < count; i++) {
+
+            SongCursorStruct cursor = cursors.get(i);
+
+            SamplerMixUtility.mixCursor(
+                    cursor,
+                    resolveInstrument(cursor),
+                    clip.getSong().getTempo(),
+                    clip.resolveSongTickOffset(),
+                    clip.toSongSeconds(childTime),
+                    soundName2Sample,
+                    leftGain,
+                    rightGain,
+                    mixScratch,
+                    firstFrame,
+                    endFrame,
+                    sampleRate);
         }
     }
 
@@ -222,5 +353,17 @@ class RecordingMixBranch extends BranchPackage {
     // The moment of the timeline the sound stops being heard: when it ends, or its clip does first
     private float resolveEnd(RecordingClipStruct clip, RecordingSoundTrackStruct track, int event) {
         return Math.min(clip.toTimelineTime(track.getTime(event) + track.getDuration(event)), clip.getEnd());
+    }
+
+    // The frame of the stretch the seconds into it fall on, rounded up
+    private int toFrame(float seconds) {
+        return (int) Math.ceil(seconds * sampleRate);
+    }
+
+    // The instrument a notes cursor plays on, null for a sound cursor
+    private InstrumentHandle resolveInstrument(SongCursorStruct cursor) {
+        return cursor.getKind() == SongClipKind.NOTES
+                ? instrumentManager.getInstrumentHandleFromInstrumentID(cursor.getInstrumentID())
+                : null;
     }
 }

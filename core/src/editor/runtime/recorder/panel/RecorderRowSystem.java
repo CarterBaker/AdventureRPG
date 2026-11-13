@@ -13,6 +13,7 @@ import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
@@ -22,6 +23,7 @@ import editor.runtime.EditorSetting;
 import editor.runtime.recorder.RecorderSetting;
 import editor.runtime.recorder.RecorderTabProvider;
 import engine.root.SystemPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RecorderRowSystem extends SystemPackage {
 
@@ -29,7 +31,8 @@ public class RecorderRowSystem extends SystemPackage {
      * Binds one Recorder tab to a UI render target and opens the menu its
      * context names, and holds what every Recorder tab fills its panels
      * with: header, text, setting and action rows on any of the menu's entry
-     * points, the times and channel lists they show, and the inspector of
+     * points, the times, channel lists and the way down to the recording open
+     * they show, and the inspector of
      * what is selected on a clip — its node, its sound or its transition —
      * which the Bin's clip panel and the Keys' inspector both show. While a
      * pane tab is the active window, it is the pane the
@@ -52,8 +55,8 @@ public class RecorderRowSystem extends SystemPackage {
     // Menus
     private MenuInstance menu;
 
-    // Scratch
-    private StringBuilder channelScratch;
+    // Scratch — text built for a row or a label
+    private StringBuilder textScratch;
 
     // Base \\
 
@@ -61,7 +64,7 @@ public class RecorderRowSystem extends SystemPackage {
     protected void create() {
 
         // Scratch
-        this.channelScratch = new StringBuilder();
+        this.textScratch = new StringBuilder();
     }
 
     @Override
@@ -291,6 +294,30 @@ public class RecorderRowSystem extends SystemPackage {
                 RecorderSetting.FORMAT_TIME, minutes, seconds - minutes * RecorderSetting.SECONDS_PER_MINUTE);
     }
 
+    // What is open: every recording the open one was opened inside, outermost first, down to it, marked while it
+    // holds unsaved changes
+    public String describeOpen() {
+
+        RecordingInstance recording = recorderManager.getRecording();
+
+        if (recording == null)
+            return RecorderSetting.TEXT_NO_RECORDING;
+
+        ObjectArrayList<String> parentNames = recorderManager.getParentNames();
+
+        textScratch.setLength(0);
+
+        for (int i = 0; i < parentNames.size(); i++)
+            textScratch.append(parentNames.get(i)).append(RecorderSetting.TEXT_BREADCRUMB_SEPARATOR);
+
+        textScratch.append(recording.getRecordingName());
+
+        if (recorderManager.isUnsaved())
+            textScratch.append(RecorderSetting.TEXT_UNSAVED_SUFFIX);
+
+        return textScratch.toString();
+    }
+
     public String toOnOff(boolean on) {
         return on ? RecorderSetting.TEXT_ON : RecorderSetting.TEXT_OFF;
     }
@@ -298,19 +325,19 @@ public class RecorderRowSystem extends SystemPackage {
     // Every channel in a mask by its label, in channel order
     public String describeChannels(int channelMask) {
 
-        channelScratch.setLength(0);
+        textScratch.setLength(0);
 
         for (RecorderChannel channel : RecorderChannel.VALUES) {
 
             if (!channel.isIn(channelMask))
                 continue;
 
-            if (!channelScratch.isEmpty())
-                channelScratch.append(RecorderSetting.TEXT_CHANNEL_SEPARATOR);
+            if (!textScratch.isEmpty())
+                textScratch.append(RecorderSetting.TEXT_CHANNEL_SEPARATOR);
 
-            channelScratch.append(channel.getLabel());
+            textScratch.append(channel.getLabel());
         }
 
-        return channelScratch.toString();
+        return textScratch.toString();
     }
 }

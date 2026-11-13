@@ -1,5 +1,6 @@
 package editor.bootstrap.recorderpipeline.recording;
 
+import application.bootstrap.musicpipeline.song.SongTempoStruct;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
@@ -8,18 +9,28 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecordingInstance extends InstancePackage {
 
     /*
-     * One recording open in the recorder: its name, the world it was made in,
-     * its bin of takes in the order they were recorded, the clips laid on its
-     * timeline, and how it exports. It runs as long as its last clip reaches.
-     * For each channel the clip on the highest lane covering a moment is the
-     * one that plays it, the later laid of two on the same lane; a transition
-     * also asks what plays with one clip set aside and its neighbour carried
-     * on past its own span.
+     * One recording open in the recorder, or laid inside another: its name,
+     * the world it was made in, its tempo map and meter — which time its
+     * notes clips and the music grid of its timeline — its bin of takes in
+     * the order they were recorded, the clips laid on its timeline, and how
+     * it exports. It runs as long as its last clip reaches. For each channel
+     * the clip on the highest lane covering a moment is the one that plays
+     * it, the later laid of two on the same lane; a nested recording is
+     * walked down into at the moment mapped into it, by the same rule at
+     * every depth, and one that plays nothing there gives way to the clip
+     * below it. A transition also asks what plays with one clip set aside and
+     * its neighbour carried on past its own span, at whatever depth the two
+     * lie.
      */
 
     // Identity
     private String recordingName;
     private String worldName;
+
+    // Time
+    private SongTempoStruct tempo;
+    private int beatsPerBar;
+    private int beatUnit;
 
     // Bin
     private ObjectArrayList<RecordingTakeStruct> takes;
@@ -44,11 +55,22 @@ public class RecordingInstance extends InstancePackage {
 
     // Constructor \\
 
-    public void constructor(String recordingName, String worldName, RecordingExportStruct exportStruct) {
+    public void constructor(
+            String recordingName,
+            String worldName,
+            SongTempoStruct tempo,
+            int beatsPerBar,
+            int beatUnit,
+            RecordingExportStruct exportStruct) {
 
         // Identity
         this.recordingName = recordingName;
         this.worldName = worldName;
+
+        // Time
+        this.tempo = tempo;
+        this.beatsPerBar = beatsPerBar;
+        this.beatUnit = beatUnit;
 
         // Export
         this.exportStruct = exportStruct;
@@ -101,44 +123,86 @@ public class RecordingInstance extends InstancePackage {
         clips.remove(index);
     }
 
-    // The clip playing the channel at the time — the highest lane, then the later laid — null when none does
-    public RecordingClipStruct findPlayingClip(RecorderChannel channel, float time) {
+    // Every channel any clip plays, nested recordings counted as they play
+    public int resolveChannelMask() {
 
-        RecordingClipStruct playing = null;
+        int channelMask = RecorderChannel.NONE;
 
-        for (int i = 0; i < clips.size(); i++) {
+        for (int i = 0; i < clips.size(); i++)
+            if (!clips.get(i).isMuted())
+                channelMask |= clips.get(i).getChannelMask();
 
-            RecordingClipStruct clip = clips.get(i);
-
-            if (clip.covers(channel, time) && (playing == null || clip.getLane() >= playing.getLane()))
-                playing = clip;
-        }
-
-        return playing;
+        return channelMask;
     }
 
-    // The clip playing the channel at the time as the timeline plays without one clip, with another carried on past
-    // its own span as though it still covered the time; null when none does
-    public RecordingClipStruct findPlayingClipWithout(
+    // What plays the channel at the time, walked down through nested recordings, as the timeline plays without one
+    // clip — none set aside when it is null — with another carried on past its own span as though it still covered
+    // the time; the playing struct filled and handed back, or null when nothing does
+    public RecordingPlayingStruct findPlaying(
             RecorderChannel channel,
             float time,
             RecordingClipStruct without,
-            RecordingClipStruct carried) {
+            RecordingClipStruct carried,
+            RecordingPlayingStruct playing) {
 
-        RecordingClipStruct playing = null;
+        int boundLane = Integer.MAX_VALUE;
+        int boundIndex = Integer.MAX_VALUE;
+
+        while (true) {
+
+            int found = findCandidate(channel, time, without, carried, boundLane, boundIndex);
+
+            if (found == EngineSetting.INDEX_NOT_FOUND)
+                return null;
+
+            RecordingClipStruct clip = clips.get(found);
+            float childTime = clip.toChildTime(time);
+
+            if (clip.getTake() != null) {
+                playing.set(clip, childTime);
+                return playing;
+            }
+
+            if (clip.getChild() != null
+                    && clip.getChild().findPlaying(channel, childTime, without, carried, playing) != null)
+                return playing;
+
+            boundLane = clip.getLane();
+            boundIndex = found;
+        }
+    }
+
+    // The clip of the highest lane, then the later laid, that covers the channel at the time and ranks below the
+    // bound given; -1 when none does
+    private int findCandidate(
+            RecorderChannel channel,
+            float time,
+            RecordingClipStruct without,
+            RecordingClipStruct carried,
+            int boundLane,
+            int boundIndex) {
+
+        int found = EngineSetting.INDEX_NOT_FOUND;
+        int foundLane = Integer.MIN_VALUE;
 
         for (int i = 0; i < clips.size(); i++) {
 
             RecordingClipStruct clip = clips.get(i);
+            int lane = clip.getLane();
             boolean covering = clip == carried
                     ? !clip.isMuted() && clip.holds(channel)
                     : clip.covers(channel, time);
 
-            if (clip != without && covering && (playing == null || clip.getLane() >= playing.getLane()))
-                playing = clip;
+            if (clip == without || !covering || lane > boundLane || lane == boundLane && i >= boundIndex)
+                continue;
+
+            if (lane >= foundLane) {
+                found = i;
+                foundLane = lane;
+            }
         }
 
-        return playing;
+        return found;
     }
 
     // The clip on the same lane that ends just where the clip begins, or begins just where it ends, null for none
@@ -159,12 +223,19 @@ public class RecordingInstance extends InstancePackage {
         return null;
     }
 
-    // True when any clip but the one shows a picture at the time
+    // True when any clip but the one shows a picture at the time, a nested recording only where it shows one itself
     public boolean showsPictureWithout(float time, RecordingClipStruct without) {
 
-        for (int i = 0; i < clips.size(); i++)
-            if (clips.get(i) != without && clips.get(i).showsPictureAt(time))
+        for (int i = 0; i < clips.size(); i++) {
+
+            RecordingClipStruct clip = clips.get(i);
+
+            if (clip == without || !clip.showsPictureAt(time))
+                continue;
+
+            if (clip.getChild() == null || clip.getChild().showsPictureWithout(clip.toChildTime(time), without))
                 return true;
+        }
 
         return false;
     }
@@ -195,6 +266,18 @@ public class RecordingInstance extends InstancePackage {
 
     public String getWorldName() {
         return worldName;
+    }
+
+    public SongTempoStruct getTempo() {
+        return tempo;
+    }
+
+    public int getBeatsPerBar() {
+        return beatsPerBar;
+    }
+
+    public int getBeatUnit() {
+        return beatUnit;
     }
 
     public ObjectArrayList<RecordingTakeStruct> getTakes() {

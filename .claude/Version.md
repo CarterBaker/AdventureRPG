@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 68
-Task: MusicSongs
+Delivery: 69
+Task: MusicNestedRecordings
 Applied: 2026-11-13
 
 ## Log
@@ -78,3 +78,4 @@ Applied: 2026-11-13
 - 66, 2026-11-12, MusicPlan
 - 67, 2026-11-12, MusicInstruments
 - 68, 2026-11-13, MusicSongs
+- 69, 2026-11-13, MusicNestedRecordings

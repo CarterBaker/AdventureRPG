@@ -9,7 +9,9 @@ public class RecordingsBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the Recordings tab. Every action works on the
-     * one recorder all tabs share. A row opens the recording it names. New,
+     * one recorder all tabs share. A row is picked up and dragged through
+     * RecorderBranch, which opens the recording it names when it is let go
+     * where it was pressed and nests it when it is let go on the Timeline. New,
      * renamed and copied recordings are named through the name dialog, and
      * deleting the open recording asks for its name to be typed back. Rows
      * hand back the name of the recording they show.
@@ -35,10 +37,6 @@ public class RecordingsBranch extends BranchPackage {
                 EditorSetting.DIALOG_TITLE_NEW_RECORDING,
                 recorderManager::isRecordingNameAvailable,
                 recorderManager::createRecording);
-    }
-
-    public void openRecording(String recordingName) {
-        recorderManager.openRecording(recordingName);
     }
 
     public void saveRecording() {

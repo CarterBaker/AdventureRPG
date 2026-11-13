@@ -292,6 +292,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
     public static final String DIALOG_TITLE_DUPLICATE_RECORDING = "Copy Recording As";
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
+    public static final String DIALOG_TITLE_NEST_SELECTION = "Nest Selection As";
     public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
     public static final String DIALOG_TITLE_SOUND_VOLUME = "Sound Volume (%)";
     public static final String DIALOG_TITLE_SOUND_PITCH = "Sound Pitch (%)";
@@ -442,6 +443,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
+    public static final String TAB_TITLE_TIMELINE = "Timeline";
     public static final String TAB_TITLE_RECORDER_KEYS = "Recorder Keys";
     public static final String TAB_TITLE_RECORDER_BIN = "Recorder Bin";
     public static final String TAB_TITLE_RECORDER_ASSETS = "Recorder Assets";
@@ -1878,7 +1880,10 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_FACE = "Character Face";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
-    public static final String TOOL_CANVAS_RECORDER = "Recorder Timeline";
+    public static final String TOOL_CANVAS_RECORDER = "Timeline";
+    public static final String TOOL_ACTION_HEADER_NESTING = "Nesting";
+    public static final String TOOL_ACTION_LABEL_NEST_SELECTION = "Nest Selection";
+    public static final String TOOL_ACTION_LABEL_OPEN_NESTED = "Open Nested";
     public static final String TOOL_OPTION_SIZE = "Size";
     public static final String TOOL_OPTION_STRENGTH = "Strength";
     public static final String TOOL_OPTION_TWIST = "Twist";
@@ -2177,7 +2182,7 @@ public class EditorSetting {
     public static final int RECORDER_LABEL_MAX_LENGTH = 48;
     public static final String RECORDER_VIDEO_NAME_SEPARATOR = "_";
     public static final String RECORDER_EXTENSION_SEPARATOR = ".";
-    public static final int RECORDER_FILE_VERSION = 2;
+    public static final int RECORDER_FILE_VERSION = 3;
     public static final int RECORDER_SOUND_TAKE_FIRST_NUMBER = 2;
     public static final float RECORDER_SOUND_JUMP_SECONDS = 0.25f;
     public static final String RECORDER_SOUND_TAKE_NAME_SEPARATOR = " ";
@@ -2200,6 +2205,23 @@ public class EditorSetting {
     public static final int RECORDER_FILE_VERSION_LAYERS = 1;
     public static final String RECORDER_FILE_CHANNEL_WORLD = "world";
     public static final String RECORDER_FILE_TRANSITION_PREFIX = "transition_";
+    public static final String RECORDER_FILE_OWNER_PREFIX = "Recording ";
+    public static final String RECORDER_FILE_CLIP_OWNER = " clip ";
+
+    // Recorder — clip sources, as the Assets tab and the clip panel name them; a recording keeps a tempo map and a
+    // meter, one tempo throughout until it is given more, and a nested clip is opened by two clicks this close
+    public static final String RECORDER_SOURCE_LABEL_TAKE = "Take";
+    public static final String RECORDER_SOURCE_LABEL_RECORDING = "Nested recording";
+    public static final String RECORDER_SOURCE_LABEL_SONG = "Song";
+    public static final String RECORDER_SOURCE_LABEL_NOTES = "Notes";
+    public static final float RECORDER_DEFAULT_BPM = 120f;
+    public static final long RECORDER_DOUBLE_CLICK_MILLIS = 400L;
+
+    // Recorder — nested playback: a sound or a song is told apart by the path of clips it was reached by, each clip's
+    // place added to the path above it, and the songs and notes clips heard at once follow from a fixed pool
+    public static final long RECORDER_PATH_ROOT = 0L;
+    public static final long RECORDER_PATH_RADIX = 1_000_003L;
+    public static final int RECORDER_MUSIC_PLAYBACK_COUNT = 8;
 
     // Recorder — transitions; clips this near meet at a cut, a transition dropped on the first share of a clip
     // lands on its start and on the rest its end, and the length dialog writes its seconds so
@@ -2221,15 +2243,16 @@ public class EditorSetting {
     public static final String RECORDER_TRANSITION_UNIFORM_SIDE_PARAMS = "u_sideParams";
     public static final String RECORDER_TRANSITION_UNIFORM_COLOR = "u_color";
 
-    // Recorder — the timeline's menu and the Keys', those of the tools beside them, and the lanes the drags land on
-    // and the ruler and graph the wheel zooms, which every Recorder tab shares
+    // Recorder — the transport's menu, the timeline's and the Keys', those of the tools beside them, and the lanes the
+    // drags land on and the ruler and graph the wheel zooms, which every Recorder tab shares
     public static final String RECORDER_MENU = "editor/Recorder/Recorder";
+    public static final String RECORDER_TIMELINE_MENU = "editor/Timeline/Timeline";
     public static final String RECORDER_KEYS_MENU = "editor/Recorder/RecorderKeys";
     public static final String SOUND_LIBRARY_MENU = "editor/SoundLibrary/SoundLibrary";
     public static final String TRANSITIONS_MENU = "editor/Transitions/Transitions";
     public static final String RECORDINGS_MENU = "editor/Recordings/Recordings";
     public static final String SOUND_LIBRARY_STATUS_READY =
-            "Pick a sound to sample it, or drag it onto the Recorder's timeline";
+            "Pick a sound to sample it, or drag it onto the Timeline";
     public static final String SOUND_LIBRARY_STATUS_SELECTED = "Selected ";
     public static final String SOUND_LIBRARY_STATUS_PLAYING = "Playing ";
     public static final String SOUND_LIBRARY_STATUS_PAUSED = "Paused";
@@ -2237,7 +2260,7 @@ public class EditorSetting {
     public static final String SOUND_LIBRARY_STATUS_ENDED = "Finished playing";
     public static final String SOUND_LIBRARY_STATUS_NO_SOUND = "Select a sound first";
     public static final String SOUND_LIBRARY_STATUS_SILENT = "No audio device is open, so nothing can play";
-    public static final String SOUND_LIBRARY_STATUS_ADDED = "Laid on the Recorder's timeline: ";
+    public static final String SOUND_LIBRARY_STATUS_ADDED = "Laid on the Timeline: ";
     public static final int RECORDER_ENTRY_CLIP_LANES = 2;
     public static final int RECORDER_ENTRY_RULER = 3;
     public static final int RECORDER_ENTRY_KEY_ROWS = 1;
@@ -2376,6 +2399,9 @@ public class EditorSetting {
     public static final String RECORDER_ASSET_LABEL_ANIMATIONS = "Animations";
     public static final String RECORDER_ASSET_LABEL_INTERFACE = "Interface";
     public static final String RECORDER_ASSET_LABEL_SOUNDS = "Sounds";
+    public static final String RECORDER_ASSET_LABEL_RECORDINGS = "Nested recordings";
+    public static final String RECORDER_ASSET_LABEL_SONGS = "Songs";
+    public static final String RECORDER_ASSET_LABEL_INSTRUMENTS = "Instruments";
 
     // Recorder — key modes, as the Keys pane names them
     public static final String RECORDER_KEY_MODE_LABEL_AUTO = "Auto";
@@ -2584,6 +2610,11 @@ public class EditorSetting {
     public static final String RECORDER_MESSAGE_NO_VEHICLE = "A recorded vehicle type no longer exists: ";
     public static final String RECORDER_MESSAGE_OVERLAY_UNREADABLE = "A recorded interface frame could not be read: ";
     public static final String RECORDER_MESSAGE_FLUSH_FAILED = "An interface frame was lost finishing a take: ";
+    public static final String RECORDER_MESSAGE_NESTED_LOOP = "A nested recording reaches itself and is left silent: ";
+    public static final String RECORDER_MESSAGE_NESTED_MISSING = "A nested recording could not be read: ";
+    public static final String RECORDER_MESSAGE_SONG_MISSING = "A song laid in a recording could not be loaded: ";
+    public static final String RECORDER_MESSAGE_INSTRUMENT_MISSING =
+            "A notes clip's instrument could not be loaded: ";
 
     // Recorder — status text
     public static final String RECORDER_STATUS_READY = "Ready";
@@ -2656,13 +2687,17 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_EXPORTED = "Exported ";
     public static final String RECORDER_STATUS_EXPORT_FAILED = "Export failed: ";
     public static final String RECORDER_STATUS_EXPORT_CANCELLED = "Export cancelled";
+    public static final String RECORDER_STATUS_LOOP_REFUSED = "Refused: it would nest a recording in itself: ";
+    public static final String RECORDER_STATUS_OTHER_WORLD =
+            "Refused: a nested recording with a picture must be of this world, not ";
+    public static final String RECORDER_STATUS_NESTED = "Nested the selection as ";
 
-    // Recorder — the held shortcuts its drags and wheel read, named in shortcuts/Recorder
-    public static final String RECORDER_SHORTCUT_FREE_DRAG = "Recorder/FreeDrag";
-    public static final String RECORDER_SHORTCUT_SCROLL_VIEW = "Recorder/ScrollView";
-    public static final String RECORDER_SHORTCUT_ZOOM_VALUES = "Recorder/ZoomValues";
-    public static final String RECORDER_SHORTCUT_EXTEND_SELECTION = "Recorder/ExtendSelection";
-    public static final String RECORDER_SHORTCUT_SUBTRACT_SELECTION = "Recorder/SubtractSelection";
+    // Recorder — the held shortcuts its drags and wheel read, named in shortcuts/Timeline
+    public static final String RECORDER_SHORTCUT_FREE_DRAG = "Timeline/FreeDrag";
+    public static final String RECORDER_SHORTCUT_SCROLL_VIEW = "Timeline/ScrollView";
+    public static final String RECORDER_SHORTCUT_ZOOM_VALUES = "Timeline/ZoomValues";
+    public static final String RECORDER_SHORTCUT_EXTEND_SELECTION = "Timeline/ExtendSelection";
+    public static final String RECORDER_SHORTCUT_SUBTRACT_SELECTION = "Timeline/SubtractSelection";
 
     // Recorder — the keys the Recorder tab's setting rows hand back; channel rows add the channel's key to a prefix,
     // and the rows laying a transition on a clip's edge add the edge's key to theirs
@@ -2676,6 +2711,8 @@ public class EditorSetting {
     public static final String RECORDER_KEY_CLIP_SPLIT = "clip_split";
     public static final String RECORDER_KEY_CLIP_STAMP = "clip_stamp";
     public static final String RECORDER_KEY_CLIP_REMOVE = "clip_remove";
+    public static final String RECORDER_KEY_CLIP_NEST = "clip_nest";
+    public static final String RECORDER_KEY_CLIP_OPEN = "clip_open";
     public static final String RECORDER_KEY_NODE_NEXT = "node_next";
     public static final String RECORDER_KEY_NODE_PREVIOUS = "node_previous";
     public static final String RECORDER_KEY_NODE_REMOVE = "node_remove";

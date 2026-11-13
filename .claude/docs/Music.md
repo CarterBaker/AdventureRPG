@@ -54,7 +54,14 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
 - **A piano roll** edits notes (pitch rows down the side, time across, notes as bars), inside the recorder's timeline,
   which edits clips. Musical Typing plays notes from the computer keyboard, using the layout DAWs use.
 - **Nested recordings** work like Premiere's nested sequences: a recording or song laid inside another is a reference,
-  so editing it changes every place it is laid. Any loop, direct or through other files, is refused.
+  so editing it changes every place it is laid. Any loop, direct or through other files, is refused, naming the loop.
+  A recording's clip plays a take, a nested recording, a song or a notes clip; a nested clip's span is kept as asked and
+  held within the child's current length only when read. A nested recording showing a picture must share its parent's
+  world. Double-clicking a nested clip opens it (Back returns, the way down shown as a breadcrumb), and Nest Selection
+  moves the selected clips into a new recording laid where they were (Premiere's Nest, After Effects' Pre-compose).
+- **Recording time**: a recording keeps a tempo map and meter (`tempos`, `beats_per_bar`, `beat_unit`, written through
+  `SongArpgUtility`, 120 in four four by default). A notes clip is timed by that map where it lies on the timeline, as
+  a DAW's MIDI clip is; a song clip by the song's own map from its start.
 - **Render** mixes a song offline and encodes it to the engine's sound format, Ogg Vorbis at 48 kHz, with the same
   ffmpeg settings `.claude/Delivery.bat` uses.
 

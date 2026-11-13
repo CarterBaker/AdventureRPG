@@ -19,11 +19,12 @@ public class RecorderBinSystem extends SystemPackage {
     /*
      * Fills the Recorder Bin tab: beside each other, the bin of takes, each
      * with its channels, its length and how often it is laid, picked up by
-     * its name to be dragged onto the timeline in the Recorder tab, laid at
-     * the playhead, renamed or deleted; and the clip selected on the
-     * timeline with where it lies, what of its take it plays, the node,
-     * sound or transition selected on it, the channels it plays and every
-     * edit it takes. Both are drawn again when the recorder's revision moves.
+     * its name to be dragged onto the Timeline tab, laid at the playhead,
+     * renamed or deleted; and the clip selected on the timeline with where
+     * it lies, what of its source it plays — a take, a nested recording, a
+     * song or a notes clip, or that what it names is missing — the node,
+     * sound or transition selected on it, the channels its source can play,
+     * how many clips are selected with it, and every edit it takes. Both are drawn again when the recorder's revision moves.
      */
 
     // Internal
@@ -136,23 +137,28 @@ public class RecorderBinSystem extends SystemPackage {
         }
 
         RecordingClipStruct clip = recording.getClips().get(selected);
-        RecordingTakeStruct take = clip.getTake();
+        int sourceChannels = clip.resolveSourceChannelMask();
+        String sourceLabel = clip.getSourceKind().getLabel();
 
-        recorderRowSystem.injectHeader(entryPoint, take.getName());
+        recorderRowSystem.injectHeader(entryPoint, clip.getSourceName());
         recorderRowSystem.injectText(entryPoint, String.format(RecorderSetting.FORMAT_CLIP_PLACE,
                 clip.getLane() + 1,
                 recorderRowSystem.formatTime(clip.getStart()),
                 recorderRowSystem.formatTime(clip.getEnd())));
-        recorderRowSystem.injectText(entryPoint, String.format(RecorderSetting.FORMAT_CLIP_SOURCE,
-                recorderRowSystem.formatTime(clip.getInPoint()),
-                recorderRowSystem.formatTime(clip.getOutPoint())));
+        recorderRowSystem.injectText(entryPoint, sourceChannels != RecorderChannel.NONE
+                ? String.format(RecorderSetting.FORMAT_CLIP_SOURCE,
+                        recorderRowSystem.formatTime(clip.getInPoint()),
+                        recorderRowSystem.formatTime(clip.getOutPoint()),
+                        sourceLabel.toLowerCase())
+                : String.format(RecorderSetting.FORMAT_CLIP_SOURCE_MISSING, sourceLabel, clip.getSourceName()));
+
         recorderRowSystem.injectNode(entryPoint);
         recorderRowSystem.injectSound(entryPoint);
         recorderRowSystem.injectTransition(entryPoint);
         recorderRowSystem.injectHeader(entryPoint, RecorderSetting.TEXT_HEADER_PLAYS);
 
         for (RecorderChannel channel : RecorderChannel.VALUES)
-            if (take.holds(channel))
+            if (channel.isIn(sourceChannels))
                 recorderRowSystem.injectSetting(
                         entryPoint,
                         channel.getLabel(),
@@ -174,9 +180,13 @@ public class RecorderBinSystem extends SystemPackage {
         recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_SPLIT, EditorSetting.RECORDER_KEY_CLIP_SPLIT);
         recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_STAMP, EditorSetting.RECORDER_KEY_CLIP_STAMP);
 
-        if (take.holds(RecorderChannel.SOUND))
+        if (clip.getTake() != null && clip.getTake().holds(RecorderChannel.SOUND))
             recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_SOUNDS_ADD,
                     EditorSetting.RECORDER_KEY_SOUND_ADD);
+
+        if (recorderManager.getSelectedClipCount() > 1)
+            recorderRowSystem.injectText(entryPoint, String.format(RecorderSetting.FORMAT_CLIPS_SELECTED,
+                    recorderManager.getSelectedClipCount()));
 
         recorderRowSystem.injectAction(entryPoint, RecorderSetting.TEXT_TRANSITION_IN,
                 EditorSetting.RECORDER_KEY_TRANSITION_PREFIX + RecorderClipEdge.START.getKey());

@@ -576,6 +576,7 @@ public class EngineSetting {
     public static final int SAMPLER_NOTE_GENERATION_MASK = 0x7FFFFF;
     public static final int SAMPLER_ROUND_ROBIN_MASK = 0x7FFFFFFF;
     public static final float SAMPLER_NOTE_FULL_VOLUME = 1f;
+    public static final int SAMPLER_MIX_CHANNELS = 2;
 
     // Music Songs — a tick is a 480th of a quarter-note beat, as MIDI counts time; a tempo is quarter-note beats a
     // minute; a note is four packed ints, its start and length in ticks from its clip's start, its pitch and velocity

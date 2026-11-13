@@ -6,6 +6,7 @@ import java.util.Arrays;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
+import application.bootstrap.musicpipeline.util.SongArpgUtility;
 import application.bootstrap.soundpipeline.sound.SoundHandle;
 import application.bootstrap.soundpipeline.soundmanager.SoundManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
@@ -31,6 +32,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingPlayingStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTransitionStruct;
@@ -53,6 +55,7 @@ import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 
@@ -136,7 +139,21 @@ public class RecorderManager extends ManagerPackage {
      * are listed, opened, renamed, copied and deleted from the Recordings
      * tool. Each structural change marks the recording unsaved
      * and moves the revision the recorder tab redraws on. Takes save the
-     * recording at once.
+     * recording at once. A clip plays a take, another recording nested by
+     * name, a song or a notes clip: a saved recording dragged from the
+     * Recordings tab is laid as a clip nesting it, refused when it would
+     * reach the open recording again at any depth, naming the loop, or when
+     * it shows a picture of another world; every clip is bound to what it
+     * names whenever a recording opens, and a recording is read again
+     * wherever it is nested once it is saved, so editing it changes every
+     * place it lies. A nested clip clicked twice opens its recording inside
+     * the open one, and Back returns to the one it was opened inside, the
+     * way down shown as a breadcrumb. Any number of clips are selected at
+     * once — picked alone, or added and taken away with Shift — and move and
+     * are deleted together, and Nest Selection moves them into a new
+     * recording laid where they were as one clip. Playing loops round the
+     * export's range, the whole recording while none is set, when the loop
+     * is on.
      */
 
     // Internal
@@ -157,6 +174,7 @@ public class RecorderManager extends ManagerPackage {
     private RecordingMixBranch recordingMixBranch;
     private RecordingSoundBranch recordingSoundBranch;
     private RecordingTransitionBranch recordingTransitionBranch;
+    private RecordingSourceBranch recordingSourceBranch;
 
     // Directory
     private File recordingDirectory;
@@ -166,6 +184,9 @@ public class RecorderManager extends ManagerPackage {
     private RecordingInstance recording;
     private boolean unsaved;
 
+    // Nesting — the recordings opened on the way down to the open one, outermost first
+    private ObjectArrayList<String> parentNames;
+
     // Transport
     private RecorderState state;
     private float playhead;
@@ -174,14 +195,19 @@ public class RecorderManager extends ManagerPackage {
     private float takeStart;
     private int takeCount;
     private DevContext devContext;
+    private boolean looping;
 
     // Suspension
     private boolean suspended;
     private int resumeFrames;
 
-    // Selection
+    // Selection — the clip picked last, every clip selected with it, and the clip last clicked and when, so a second
+    // click on it opens what it nests
     private int selectedTake;
     private int selectedClip;
+    private IntArrayList selectedClips;
+    private int clickedClip;
+    private long clickedMillis;
     private int selectedNode;
     private int selectedNodeClip;
     private RecordingBodyTrackStruct selectedNodeTrack;
@@ -264,16 +290,23 @@ public class RecorderManager extends ManagerPackage {
         this.recordingMixBranch = create(RecordingMixBranch.class);
         this.recordingSoundBranch = create(RecordingSoundBranch.class);
         this.recordingTransitionBranch = create(RecordingTransitionBranch.class);
+        this.recordingSourceBranch = create(RecordingSourceBranch.class);
 
         // Directory
         this.recordingDirectory = new File(internal.path, EditorSetting.RECORDER_DIRECTORY);
         this.videoDirectory = new File(recordingDirectory, EditorSetting.RECORDER_VIDEO_DIRECTORY);
+        recordingSourceBranch.setRecordingDirectory(recordingDirectory);
+
+        // Nesting
+        this.parentNames = new ObjectArrayList<>();
 
         // Transport
         this.state = RecorderState.IDLE;
         this.armedChannels = RecorderChannel.ALL;
 
         // Selection
+        this.selectedClips = new IntArrayList();
+        this.clickedClip = EngineSetting.INDEX_NOT_FOUND;
         clearSelection();
 
         // Transition
@@ -393,11 +426,30 @@ public class RecorderManager extends ManagerPackage {
 
         playhead += internal.getDeltaTime();
 
+        if (state == RecorderState.PLAYING && looping && wrapLoop())
+            return;
+
         if (state == RecorderState.PLAYING && playhead >= recording.getDuration()) {
             playhead = recording.getDuration();
             state = RecorderState.PAUSED;
             revision++;
         }
+    }
+
+    // A playhead playing past the loop range's end goes back to its start; true when it did
+    private boolean wrapLoop() {
+
+        RecordingExportStruct exportStruct = recording.getExportStruct();
+        float duration = recording.getDuration();
+        float loopStart = exportStruct.resolveStart(duration);
+        float loopEnd = exportStruct.resolveEnd(duration);
+
+        if (loopEnd - loopStart < EditorSetting.RECORDER_MIN_TAKE_SECONDS || playhead < loopEnd)
+            return false;
+
+        this.playhead = loopStart;
+        revision++;
+        return true;
     }
 
     // The view keeps to the timeline as it grows and shrinks, and pages along after a running playhead
@@ -506,7 +558,7 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         if (playhead >= recording.getDuration())
-            playhead = 0f;
+            playhead = looping ? recording.getExportStruct().resolveStart(recording.getDuration()) : 0f;
 
         this.state = RecorderState.PLAYING;
         setStatus(EditorSetting.RECORDER_STATUS_PLAYING);
@@ -586,8 +638,7 @@ public class RecorderManager extends ManagerPackage {
         }
 
         recording.addTake(take);
-        this.selectedTake = recording.getTakes().size() - 1;
-        this.selectedClip = recordingTimelineBranch.placeRecordedTake(recording, take, takeStart);
+        pickClip(recordingTimelineBranch.placeRecordedTake(recording, take, takeStart));
         queueCurves(take);
         this.saveWhenLaid = true;
         this.assetsStale = true;
@@ -676,6 +727,13 @@ public class RecorderManager extends ManagerPackage {
             viewRevision++;
     }
 
+    // Plays round the loop range, the export's start to its end, the whole recording while none is set, or stops
+    // doing so
+    public void toggleLoop() {
+        this.looping = !looping;
+        revision++;
+    }
+
     // Arming \\
 
     // The player follows the camera, so arming the player arms the camera and disarming the camera the player
@@ -710,50 +768,75 @@ public class RecorderManager extends ManagerPackage {
         created.constructor(
                 recordingName,
                 worldManager.getActiveWorld().getWorldName(),
+                SongArpgUtility.createTempo(EditorSetting.RECORDER_DEFAULT_BPM),
+                EngineSetting.DEFAULT_SONG_BEATS_PER_BAR,
+                EngineSetting.DEFAULT_SONG_BEAT_UNIT,
                 new RecordingExportStruct());
 
+        parentNames.clear();
         activateRecording(created);
         markUnsaved();
         saveRecording();
         return true;
     }
 
+    // The recording opened from the list, every recording it was opened inside let go
     public void openRecording(String recordingName) {
 
         if (recording != null && recording.getRecordingName().equals(recordingName))
             return;
 
+        parentNames.clear();
+        switchRecording(recordingName);
+    }
+
+    // The one way a saved recording is opened in place of the open one, read and bound to all it nests; an older
+    // file is saved in the new form at once
+    private boolean switchRecording(String recordingName) {
+
         File file = getRecordingFile(recordingName);
 
         if (!file.isFile()) {
             setStatus(EditorSetting.RECORDER_STATUS_MISSING + recordingName);
-            return;
+            return false;
         }
 
         RecordingInstance opened = recordingFileBranch.read(file, recordingName);
 
         if (opened == null) {
             setStatus(EditorSetting.RECORDER_STATUS_UNREADABLE + recordingName);
-            return;
+            return false;
         }
+
+        boolean upgraded = recordingFileBranch.isUpgraded();
 
         closeRecording();
         activateRecording(opened);
 
-        if (!recordingFileBranch.isUpgraded()) {
+        if (!upgraded) {
             setStatus(EditorSetting.RECORDER_STATUS_OPENED + recordingName);
-            return;
+            return true;
         }
 
         markUnsaved();
         saveRecording();
         setStatus(EditorSetting.RECORDER_STATUS_UPGRADED + recordingName);
+        return true;
     }
 
+    // The open recording written to its file, refused while it nests itself at any depth; every recording kept
+    // for nesting it is read again, so it is nested as it now stands
     public void saveRecording() {
 
         if (recording == null || !unsaved)
             return;
+
+        String loop = recordingSourceBranch.findLoopIn(recording);
+
+        if (loop != null) {
+            setStatus(EditorSetting.RECORDER_STATUS_LOOP_REFUSED + loop);
+            return;
+        }
 
         recordingDirectory.mkdirs();
 
@@ -762,6 +845,7 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
+        recordingSourceBranch.forget(recording.getRecordingName());
         this.unsaved = false;
         revision++;
     }
@@ -780,6 +864,7 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
+        recordingSourceBranch.forget(recording.getRecordingName());
         recording.setRecordingName(recordingName);
         setStatus(EditorSetting.RECORDER_STATUS_RENAMED + recordingName);
     }
@@ -801,6 +886,7 @@ public class RecorderManager extends ManagerPackage {
         }
 
         closeRecording();
+        parentNames.clear();
         activateRecording(copy);
         markUnsaved();
         saveRecording();
@@ -822,6 +908,8 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
+        recordingSourceBranch.forget(recordingName);
+        parentNames.clear();
         this.recording = null;
         this.unsaved = false;
         unlaidTracks.clear();
@@ -844,10 +932,11 @@ public class RecorderManager extends ManagerPackage {
         this.recording = null;
     }
 
-    // The recording opened with every take still without keys queued to be laid on them, and its first clip
-    // selected so the Keys pane shows its keys at once
+    // The recording opened, bound to everything it nests, with every take still without keys queued to be laid on
+    // them, and its first clip selected so the Keys pane shows its keys at once
     private void activateRecording(RecordingInstance activated) {
 
+        recordingSourceBranch.bind(activated);
         this.recording = activated;
         this.unsaved = false;
         this.playhead = 0f;
@@ -863,10 +952,8 @@ public class RecorderManager extends ManagerPackage {
         for (int i = 0; i < activated.getTakes().size(); i++)
             queueCurves(activated.getTakes().get(i));
 
-        if (!activated.getClips().isEmpty()) {
-            this.selectedClip = 0;
-            this.selectedTake = activated.getTakes().indexOf(activated.getClips().get(0).getTake());
-        }
+        if (!activated.getClips().isEmpty())
+            pickClip(0);
 
         fitView();
         rebuildNodes();
@@ -921,8 +1008,7 @@ public class RecorderManager extends ManagerPackage {
 
         RecordingTakeStruct placed = recording.getTakes().get(takeIndex);
 
-        this.selectedTake = takeIndex;
-        this.selectedClip = recordingTimelineBranch.placeTake(recording, placed, start, lane);
+        pickClip(recordingTimelineBranch.placeTake(recording, placed, start, lane));
         markUnsaved();
         setStatus(EditorSetting.RECORDER_STATUS_PLACED + placed.getName());
     }
@@ -1016,16 +1102,72 @@ public class RecorderManager extends ManagerPackage {
                 && recordingTransitionBranch.toClipIndex(selectedTransition) != clipIndex)
             clearTransitionSelection();
 
-        this.selectedClip = clipIndex;
-        this.selectedTake = recording.getTakes().indexOf(recording.getClips().get(clipIndex).getTake());
+        focusClip(clipIndex);
         revision++;
     }
 
-    // The clip selected with none of its nodes or transitions, as a click on it away from them selects it
+    // The clip selected with none of its nodes or transitions, as a click on it away from them selects it, and no
+    // other clip
     private void selectClipAlone(int clipIndex) {
         clearNodeSelection();
         clearTransitionSelection();
+        pickClip(clipIndex);
         selectClip(clipIndex);
+    }
+
+    // A clip clicked with Shift joins the clips selected, or leaves them when it was among them already
+    private void toggleClipSelection(int clipIndex) {
+
+        if (!isClipIndex(clipIndex))
+            return;
+
+        int at = selectedClips.indexOf(clipIndex);
+
+        clearNodeSelection();
+        clearTransitionSelection();
+
+        if (at == EngineSetting.INDEX_NOT_FOUND) {
+            selectedClips.add(clipIndex);
+            focusClip(clipIndex);
+        } else {
+            selectedClips.removeInt(at);
+            this.selectedClip = selectedClips.isEmpty()
+                    ? EngineSetting.INDEX_NOT_FOUND
+                    : selectedClips.getInt(selectedClips.size() - 1);
+        }
+
+        revision++;
+    }
+
+    // The clip selected alone, its take the one the bin shows
+    private void pickClip(int clipIndex) {
+        selectedClips.clear();
+        selectedClips.add(clipIndex);
+        focusClip(clipIndex);
+    }
+
+    // The clip made the one picked last, kept among those selected, or selected alone when it was not among them
+    private void focusClip(int clipIndex) {
+
+        if (!selectedClips.contains(clipIndex)) {
+            selectedClips.clear();
+            selectedClips.add(clipIndex);
+        }
+
+        this.selectedClip = clipIndex;
+        this.selectedTake = recording.getTakes().indexOf(recording.getClips().get(clipIndex).getTake());
+    }
+
+    // A clip clicked twice in quick succession opens the recording it nests; true when it did
+    private boolean openOnSecondClick(int clipIndex) {
+
+        long now = internal.getTime();
+        boolean second = clipIndex == clickedClip && now - clickedMillis <= EditorSetting.RECORDER_DOUBLE_CLICK_MILLIS;
+
+        this.clickedClip = second ? EngineSetting.INDEX_NOT_FOUND : clipIndex;
+        this.clickedMillis = now;
+
+        return second && openNested(clipIndex);
     }
 
     // The clip's start or end dragged to the moment, as far as its take and the clips beside it allow
@@ -1041,34 +1183,49 @@ public class RecorderManager extends ManagerPackage {
         else
             recordingTimelineBranch.trimEndTo(clip, recordingTimelineBranch.resolveTrimEnd(recording, clip, time));
 
-        this.selectedClip = clipIndex;
+        focusClip(clipIndex);
         this.playhead = Math.min(playhead, recording.getDuration());
         markUnsaved();
-        setStatus(EditorSetting.RECORDER_STATUS_TRIMMED + clip.getTake().getName());
+        setStatus(EditorSetting.RECORDER_STATUS_TRIMMED + clip.getSourceName());
     }
 
+    // The clip moved to the moment and lane, and every other clip selected with it by as far, each landing on the
+    // nearest clear lane to the one it is carried to
     public void moveClip(int clipIndex, float start, int lane) {
 
         if (!isClipIndex(clipIndex) || !canEditTimeline())
             return;
 
         RecordingClipStruct clip = recording.getClips().get(clipIndex);
+        float shift = start - clip.getStart();
+        int rise = lane - clip.getLane();
 
         recordingTimelineBranch.moveClip(recording, clip, start, lane);
-        this.selectedClip = clipIndex;
+
+        if (selectedClips.contains(clipIndex))
+            for (int i = 0; i < selectedClips.size(); i++) {
+
+                RecordingClipStruct carried = recording.getClips().get(selectedClips.getInt(i));
+
+                if (carried != clip)
+                    recordingTimelineBranch.moveClip(recording, carried, carried.getStart() + shift,
+                            carried.getLane() + rise);
+            }
+
+        focusClip(clipIndex);
         markUnsaved();
-        setStatus(EditorSetting.RECORDER_STATUS_MOVED + clip.getTake().getName());
+        setStatus(EditorSetting.RECORDER_STATUS_MOVED + clip.getSourceName());
     }
 
-    // The selected clip plays the channel or stops playing it; only a channel its take recorded can be given
+    // The selected clip plays the channel or stops playing it; only a channel its source can play can be given
     public void toggleClipChannel(RecorderChannel channel) {
 
         RecordingClipStruct clip = requireSelectedClip();
 
-        if (clip == null || !clip.getTake().holds(channel))
+        if (clip == null || !channel.isIn(clip.resolveSourceChannelMask()))
             return;
 
-        clip.setChannelMask(clip.getChannelMask() ^ channel.getBit());
+        clip.setChannelMask(clip.getStoredChannelMask() ^ channel.getBit());
         markUnsaved();
     }
 
@@ -1121,10 +1278,9 @@ public class RecorderManager extends ManagerPackage {
             return false;
 
         clearNodeSelection();
-        this.selectedClip = cut;
-        this.selectedTake = recording.getTakes().indexOf(clip.getTake());
+        pickClip(cut);
         markUnsaved();
-        setStatus(EditorSetting.RECORDER_STATUS_CUT + clip.getTake().getName());
+        setStatus(EditorSetting.RECORDER_STATUS_CUT + clip.getSourceName());
         return true;
     }
 
@@ -1173,7 +1329,7 @@ public class RecorderManager extends ManagerPackage {
         }
 
         markUnsaved();
-        setStatus(EditorSetting.RECORDER_STATUS_TRIMMED + clip.getTake().getName());
+        setStatus(EditorSetting.RECORDER_STATUS_TRIMMED + clip.getSourceName());
     }
 
     // A copy of the selected clip laid from the playhead
@@ -1184,12 +1340,12 @@ public class RecorderManager extends ManagerPackage {
         if (clip == null)
             return;
 
-        this.selectedClip = recordingTimelineBranch.stampClip(recording, clip, playhead);
+        pickClip(recordingTimelineBranch.stampClip(recording, clip, playhead));
         markUnsaved();
-        setStatus(EditorSetting.RECORDER_STATUS_STAMPED + clip.getTake().getName());
+        setStatus(EditorSetting.RECORDER_STATUS_STAMPED + clip.getSourceName());
     }
 
-    // The selected clip leaves the timeline; its take stays in the bin
+    // Every selected clip leaves the timeline as one edit; their takes stay in the bin
     public void removeClip() {
 
         RecordingClipStruct clip = requireSelectedClip();
@@ -1197,13 +1353,190 @@ public class RecorderManager extends ManagerPackage {
         if (clip == null)
             return;
 
-        recording.removeClip(selectedClip);
-        this.selectedClip = EngineSetting.INDEX_NOT_FOUND;
-        clearNodeSelection();
-        clearTransitionSelection();
+        removeSelectedClips();
         this.playhead = Math.min(playhead, recording.getDuration());
         markUnsaved();
-        setStatus(EditorSetting.RECORDER_STATUS_CLIP_REMOVED + clip.getTake().getName());
+        setStatus(EditorSetting.RECORDER_STATUS_CLIP_REMOVED + clip.getSourceName());
+    }
+
+    // Every selected clip taken off the timeline, the last laid first so the places of the rest hold
+    private void removeSelectedClips() {
+
+        sortSelectedClips();
+
+        for (int i = selectedClips.size() - 1; i >= 0; i--)
+            recording.removeClip(selectedClips.getInt(i));
+
+        clearSelection();
+    }
+
+    // The selected clips in the order they were laid, so a copy lays them as they were
+    private void sortSelectedClips() {
+        IntArrays.unstableSort(selectedClips.elements(), 0, selectedClips.size());
+    }
+
+    // Nesting \\
+
+    // The recording the clip nests opened in place of the open one, which it is opened inside, so Back returns to
+    // it; true when it was opened
+    public boolean openNested(int clipIndex) {
+
+        if (!isClipIndex(clipIndex) || state.isSession())
+            return false;
+
+        String nestedName = recording.getClips().get(clipIndex).getNestedName();
+
+        if (nestedName == null)
+            return false;
+
+        String parentName = recording.getRecordingName();
+
+        saveRecording();
+
+        if (!switchRecording(nestedName))
+            return false;
+
+        parentNames.add(parentName);
+        revision++;
+        return true;
+    }
+
+    // The recording the open one was opened inside opened again, nesting it as it now stands
+    public void backToParent() {
+
+        if (parentNames.isEmpty() || state.isSession())
+            return;
+
+        String parentName = parentNames.pop();
+
+        saveRecording();
+        switchRecording(parentName);
+        revision++;
+    }
+
+    // The selected clips moved into a new recording of the name, laid where they lay, and that recording laid
+    // where they were as one clip nesting it: Premiere's Nest, After Effects' Pre-compose
+    public void nestSelection(String recordingName) {
+
+        RecordingClipStruct focused = requireSelectedClip();
+
+        if (focused == null)
+            return;
+
+        if (!isRecordingNameAvailable(recordingName)) {
+            setStatus(EditorSetting.RECORDER_STATUS_NAME_TAKEN + recordingName);
+            return;
+        }
+
+        float start = Float.MAX_VALUE;
+        int lane = EditorSetting.RECORDER_LANE_COUNT;
+
+        for (int i = 0; i < selectedClips.size(); i++) {
+
+            RecordingClipStruct clip = recording.getClips().get(selectedClips.getInt(i));
+
+            start = Math.min(start, clip.getStart());
+            lane = Math.min(lane, clip.getLane());
+        }
+
+        recordingDirectory.mkdirs();
+
+        if (!recordingFileBranch.write(getRecordingFile(recordingName), collectSelection(recordingName, start, lane))) {
+            setStatus(EditorSetting.RECORDER_STATUS_SAVE_FAILED + recordingName);
+            return;
+        }
+
+        removeSelectedClips();
+        layRecording(recordingName, start, lane);
+        this.assetsStale = true;
+        setStatus(EditorSetting.RECORDER_STATUS_NESTED + recordingName);
+    }
+
+    // A new recording holding a copy of every selected clip, laid from its own start and lowest lane as they lay
+    // against each other, with every take they play in its bin
+    private RecordingInstance collectSelection(String recordingName, float start, int lane) {
+
+        RecordingInstance nested = create(RecordingInstance.class);
+
+        nested.constructor(
+                recordingName,
+                recording.getWorldName(),
+                recording.getTempo(),
+                recording.getBeatsPerBar(),
+                recording.getBeatUnit(),
+                new RecordingExportStruct());
+
+        sortSelectedClips();
+
+        for (int i = 0; i < selectedClips.size(); i++) {
+
+            RecordingClipStruct clip = recording.getClips().get(selectedClips.getInt(i));
+            RecordingTakeStruct clipTake = clip.getTake();
+
+            if (clipTake != null && !nested.getTakes().contains(clipTake))
+                nested.addTake(clipTake);
+
+            nested.addClip(clip.copyTo(clip.getLane() - lane, clip.getStart() - start));
+        }
+
+        return nested;
+    }
+
+    // Laying a recording \\
+
+    // A saved recording picked up from the Recordings tab, to be laid where it is let go over the lanes, or opened
+    // when it is let go where it was pressed
+    public void beginRecordingDrag(String recordingName, WindowInstance window, float pressX, float pressY) {
+
+        if (drag.isActive() || state == RecorderState.RECORDING || state == RecorderState.EXPORTING)
+            return;
+
+        beginDrag(RecorderDragKind.RECORDING, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
+                window, pressX, pressY, 0f, 0f);
+        drag.carry(recordingName);
+    }
+
+    // The saved recording laid inside the open one from the moment, on the lane asked for or the nearest clear one;
+    // refused when it would nest the open recording in itself, at any depth, or shows a picture of another world
+    public void placeRecording(String recordingName, float start, int lane) {
+
+        if (!canEditTimeline())
+            return;
+
+        if (layRecording(recordingName, start, lane))
+            setStatus(EditorSetting.RECORDER_STATUS_PLACED + recordingName);
+    }
+
+    // The one way a nested recording is laid; true when it was, after saying why not when it was not
+    private boolean layRecording(String recordingName, float start, int lane) {
+
+        RecordingInstance child = recordingSourceBranch.requireChild(recordingName);
+
+        if (child == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_UNREADABLE + recordingName);
+            return false;
+        }
+
+        String loop = recordingSourceBranch.findLoopLaying(recording, child);
+
+        if (loop != null) {
+            setStatus(EditorSetting.RECORDER_STATUS_LOOP_REFUSED + loop);
+            return false;
+        }
+
+        if (!recordingSourceBranch.isWorldShared(recording, child)) {
+            setStatus(EditorSetting.RECORDER_STATUS_OTHER_WORLD + child.getWorldName());
+            return false;
+        }
+
+        RecordingClipStruct clip = RecordingClipStruct.ofRecording(
+                recordingName, 0f, child.getDuration(), lane, start, RecorderChannel.ALL);
+
+        clip.bindChild(child);
+        pickClip(recordingTimelineBranch.placeClip(recording, clip));
+        this.assetsStale = true;
+        markUnsaved();
+        return true;
     }
 
     // The selected clip when the timeline can be edited, null after saying why not
@@ -1258,12 +1591,14 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // What a press on the lanes takes hold of, read once where it began: a clip's edge to trim it, a node's notch or a
-    // gesture to retime or move it, a clip to move it, or the empty lanes to scroll the view; the timeline can only
-    // be scrolled under a take or an export
+    // gesture to retime or move it, a clip to move it — with Shift, to add it to the clips selected or take it from
+    // them should the press not travel — or the empty lanes to scroll the view; the timeline can only be scrolled
+    // under a take or an export
     public void pressLanes(
             float time,
             int lane,
             boolean nameRow,
+            boolean extending,
             float secondsPerPixel,
             WindowInstance window,
             float pressX,
@@ -1311,8 +1646,11 @@ public class RecorderManager extends ManagerPackage {
         }
 
         float notchTolerance = EditorSetting.RECORDER_NOTCH_GRAB_PIXELS * secondsPerPixel;
-        int nodeIndex = recordingNodeBranch.findNodeAt(nodes, clipIndex,
-                recording.getClips().get(clipIndex).getTake().getPlayerTrack(), time, nameRow, notchTolerance);
+        RecordingTakeStruct clipTake = recording.getClips().get(clipIndex).getTake();
+        int nodeIndex = clipTake != null
+                ? recordingNodeBranch.findNodeAt(nodes, clipIndex, clipTake.getPlayerTrack(), time, nameRow,
+                        notchTolerance)
+                : EngineSetting.INDEX_NOT_FOUND;
 
         if (nodeIndex != EngineSetting.INDEX_NOT_FOUND && isNodeGrabbed(nodes.get(nodeIndex), time, notchTolerance)) {
             RecordingNodeStruct node = nodes.get(nodeIndex);
@@ -1323,6 +1661,7 @@ public class RecorderManager extends ManagerPackage {
 
         beginDrag(RecorderDragKind.CLIP, clipIndex, nodeIndex, window, pressX, pressY, time,
                 time - recording.getClips().get(clipIndex).getStart());
+        drag.anchorSelection(extending, false, selectedClips.contains(clipIndex));
     }
 
     // The edge of the clip under the press when it has one there, else the nearer of the two edges found
@@ -1389,7 +1728,7 @@ public class RecorderManager extends ManagerPackage {
         float tolerance = snapping ? EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel : 0f;
 
         switch (drag.getKind()) {
-            case TAKE, SOUND, CLIP -> landSpan(overLanes, time, lane, tolerance);
+            case TAKE, SOUND, RECORDING, CLIP -> landSpan(overLanes, time, lane, tolerance);
             case TRIM_START, TRIM_END -> landEdge(time, tolerance);
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
@@ -1416,6 +1755,11 @@ public class RecorderManager extends ManagerPackage {
 
     // The span lands on the lane it would really be laid on, which the tab shows before it is let go
     private void landSpan(boolean overLanes, float time, int lane, float tolerance) {
+
+        if (recording == null) {
+            drag.land(false, time, lane);
+            return;
+        }
 
         RecordingClipStruct ignored = drag.getKind() == RecorderDragKind.CLIP
                 ? recording.getClips().get(drag.getIndex())
@@ -1516,6 +1860,7 @@ public class RecorderManager extends ManagerPackage {
         double pressValue = drag.getPressValue();
         double reachValue = drag.getReachValue();
         int target = drag.getTarget();
+        String carriedName = drag.getName();
 
         cancelDrag();
 
@@ -1525,6 +1870,12 @@ public class RecorderManager extends ManagerPackage {
                     placeTake(index, landingStart, landingLane);
                 else
                     selectTake(index);
+            }
+            case RECORDING -> {
+                if (dropped)
+                    placeRecording(carriedName, landingStart, landingLane);
+                else if (!moved)
+                    openRecording(carriedName);
             }
             case SOUND -> {
                 if (dropped)
@@ -1549,9 +1900,11 @@ public class RecorderManager extends ManagerPackage {
             case CLIP -> {
                 if (dropped)
                     moveClip(index, landingStart, landingLane);
+                else if (extending)
+                    toggleClipSelection(index);
                 else if (nodeIndex != EngineSetting.INDEX_NOT_FOUND)
                     selectNode(nodeIndex);
-                else
+                else if (!openOnSecondClick(index))
                     selectClipAlone(index);
             }
             case CUT -> {
@@ -1622,10 +1975,19 @@ public class RecorderManager extends ManagerPackage {
         return switch (drag.getKind()) {
             case TAKE -> recording.getTakes().get(drag.getIndex()).getDuration();
             case SOUND -> soundManager.getSoundHandleFromSoundID(drag.getIndex()).getPlayedLength();
+            case RECORDING -> resolveRecordingLength(drag.getName());
             case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
             case TRIM_START, TRIM_END, CUT, NODE, PAN, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS,
                     KEYS_BOX, GRAPH_BOX, SOUND_EVENT, TRANSITION, TRANSITION_LENGTH, NONE -> 0f;
         };
+    }
+
+    // How long the saved recording of the name runs, nothing when it cannot be read
+    private float resolveRecordingLength(String recordingName) {
+
+        RecordingInstance child = recordingSourceBranch.requireChild(recordingName);
+
+        return child != null ? child.getDuration() : 0f;
     }
 
     // Nodes \\
@@ -1704,7 +2066,7 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         RecordingClipStruct clip = recording.getClips().get(node.getClipIndex());
-        float takeTime = clip.toTakeTime(recordingNodeBranch.resolveLanding(node, clip, time));
+        float takeTime = clip.toChildTime(recordingNodeBranch.resolveLanding(node, clip, time));
         String label = node.getLabel();
 
         if (node.getKind() == RecorderNodeKind.MOVEMENT)
@@ -1712,7 +2074,7 @@ public class RecorderManager extends ManagerPackage {
         else
             recordingNodeBranch.moveGesture(resolveNodeTrack(node), node, takeTime);
 
-        this.selectedClip = node.getClipIndex();
+        focusClip(node.getClipIndex());
         anchorNode(node, takeTime);
         markUnsaved();
         setStatus(EditorSetting.RECORDER_STATUS_RETIMED + label);
@@ -2092,7 +2454,7 @@ public class RecorderManager extends ManagerPackage {
 
             RecordingCurveStruct curve = getSelectedCurve();
             int key = curve != null && canEditTimeline()
-                    ? curve.findKey(clip.toTakeTime(time), EditorSetting.RECORDER_KEY_GRAB_PIXELS * secondsPerPixel)
+                    ? curve.findKey(clip.toChildTime(time), EditorSetting.RECORDER_KEY_GRAB_PIXELS * secondsPerPixel)
                     : EngineSetting.INDEX_NOT_FOUND;
 
             if (key != EngineSetting.INDEX_NOT_FOUND) {
@@ -2150,7 +2512,7 @@ public class RecorderManager extends ManagerPackage {
         if (drag.isActive() || clip == null || curve == null)
             return;
 
-        float takeTime = clip.toTakeTime(time);
+        float takeTime = clip.toChildTime(time);
 
         if (canEditTimeline() && !extending && !subtracting && selectedKey >= 0 && selectedKey < curve.size()
                 && curve.getMode(selectedKey) != RecorderKeyMode.CONSTANT) {
@@ -2323,7 +2685,7 @@ public class RecorderManager extends ManagerPackage {
 
         if (drag.getKind() == RecorderDragKind.HANDLE_IN || drag.getKind() == RecorderDragKind.HANDLE_OUT) {
             curve.setHandle(keyIndex, drag.getKind() == RecorderDragKind.HANDLE_OUT,
-                    clip.toTakeTime(time) - curve.getTime(keyIndex), value - curve.getValue(keyIndex));
+                    clip.toChildTime(time) - curve.getTime(keyIndex), value - curve.getValue(keyIndex));
             curveRevision++;
             return;
         }
@@ -2334,7 +2696,7 @@ public class RecorderManager extends ManagerPackage {
             landing = recordingTimelineBranch.snapTime(recording, landing, playhead,
                     EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel, null);
 
-        moveSelectedKeys(curve, clip.toTakeTime(landing) - drag.getKeyTime(),
+        moveSelectedKeys(curve, clip.toChildTime(landing) - drag.getKeyTime(),
                 drag.getKind() == RecorderDragKind.GRAPH_KEY ? value - drag.getPressValue() : 0.0);
         curveRevision++;
     }
@@ -2362,7 +2724,7 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         RecordingClipStruct clip = getSelectedClipStruct();
-        float takeTime = Math.clamp(clip.toTakeTime(playhead), 0f, clip.getTake().getDuration());
+        float takeTime = Math.clamp(clip.toChildTime(playhead), 0f, clip.getTake().getDuration());
 
         int keyIndex = curve.addKey(takeTime, curve.evaluate(takeTime), RecorderKeyMode.AUTO);
 
@@ -2516,8 +2878,8 @@ public class RecorderManager extends ManagerPackage {
             to = clip.getEnd();
         }
 
-        double minimum = recordingCurveBranch.resolveMinimum(curve, clip.toTakeTime(from), clip.toTakeTime(to));
-        double maximum = recordingCurveBranch.resolveMaximum(curve, clip.toTakeTime(from), clip.toTakeTime(to));
+        double minimum = recordingCurveBranch.resolveMinimum(curve, clip.toChildTime(from), clip.toChildTime(to));
+        double maximum = recordingCurveBranch.resolveMaximum(curve, clip.toChildTime(from), clip.toChildTime(to));
         double span = Math.max(maximum - minimum, curve.getProperty().getKind().getMinimumSpan());
         double middle = (minimum + maximum) / 2.0;
         double reach = span / 2.0 * (1.0 + 2.0 * EditorSetting.RECORDER_GRAPH_MARGIN_SHARE);
@@ -2650,8 +3012,13 @@ public class RecorderManager extends ManagerPackage {
         return recording != null && recording.getWorldName().equals(activeWorld.getWorldName()) ? activeWorld : null;
     }
 
+    // The selected clip when it plays a take, whose keys and sounds the Keys pane shows; null for none or for a clip
+    // of any other source, whose keys are edited where it lies
     private RecordingClipStruct getSelectedClipStruct() {
-        return isClipIndex(selectedClip) ? recording.getClips().get(selectedClip) : null;
+
+        RecordingClipStruct clip = isClipIndex(selectedClip) ? recording.getClips().get(selectedClip) : null;
+
+        return clip != null && clip.getTake() != null ? clip : null;
     }
 
     private boolean isKeyTrackIndex(int trackIndex) {
@@ -2762,7 +3129,7 @@ public class RecorderManager extends ManagerPackage {
         String soundName = track.getSoundName(soundIndex);
 
         this.selectedSound = track.moveEvent(soundIndex,
-                clip.toTakeTime(recordingSoundBranch.resolveLanding(clip, time)));
+                clip.toChildTime(recordingSoundBranch.resolveLanding(clip, time)));
         finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_MOVED + soundName);
     }
 
@@ -2793,7 +3160,7 @@ public class RecorderManager extends ManagerPackage {
         }
 
         SoundHandle soundHandle = soundManager.getSoundHandleFromSoundID(soundID);
-        float takeTime = Math.clamp(clip.toTakeTime(time), clip.getInPoint(), clip.getOutPoint());
+        float takeTime = Math.clamp(clip.toChildTime(time), clip.getInPoint(), clip.getOutPoint());
 
         this.selectedSound = recordingSoundBranch.addSound(track, soundHandle, takeTime);
         this.soundLayerOpened = true;
@@ -2818,7 +3185,7 @@ public class RecorderManager extends ManagerPackage {
 
         String soundName = track.getSoundName(selectedSound);
 
-        this.selectedSound = track.copyEvent(selectedSound, getSelectedClipStruct().toTakeTime(playhead));
+        this.selectedSound = track.copyEvent(selectedSound, getSelectedClipStruct().toChildTime(playhead));
         finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_ADDED + soundName);
     }
 
@@ -3047,10 +3414,12 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // The clip playing the channel at the moment on the side of the transition this frame plays
-    public RecordingClipStruct findPlayingClip(RecorderChannel channel, float time) {
+    // What plays the channel at the moment on the side of the transition this frame plays, walked down through
+    // nested recordings into the playing struct given; null when nothing does
+    public RecordingPlayingStruct findPlaying(RecorderChannel channel, float time, RecordingPlayingStruct playing) {
         return transition.isWithoutPlayed()
-                ? recording.findPlayingClipWithout(channel, time, transition.getClip(), transition.getCarried())
-                : recording.findPlayingClip(channel, time);
+                ? recording.findPlaying(channel, time, transition.getClip(), transition.getCarried(), playing)
+                : recording.findPlaying(channel, time, null, null, playing);
     }
 
     // How loud the clip's own sounds are at the moment, faded across its transitions
@@ -3520,6 +3889,7 @@ public class RecorderManager extends ManagerPackage {
     private void clearSelection() {
         this.selectedTake = EngineSetting.INDEX_NOT_FOUND;
         this.selectedClip = EngineSetting.INDEX_NOT_FOUND;
+        selectedClips.clear();
         clearNodeSelection();
         clearTransitionSelection();
     }
@@ -3609,6 +3979,24 @@ public class RecorderManager extends ManagerPackage {
 
     public int getSelectedClip() {
         return selectedClip;
+    }
+
+    // True when the clip is among those selected
+    public boolean isClipSelected(int clipIndex) {
+        return selectedClips.contains(clipIndex);
+    }
+
+    public int getSelectedClipCount() {
+        return selectedClips.size();
+    }
+
+    // The recordings the open one was opened inside, outermost first
+    public ObjectArrayList<String> getParentNames() {
+        return parentNames;
+    }
+
+    public boolean isLooping() {
+        return looping;
     }
 
     public int getSelectedNode() {

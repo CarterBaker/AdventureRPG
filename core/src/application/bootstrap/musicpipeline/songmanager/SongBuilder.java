@@ -23,10 +23,9 @@ class SongBuilder extends BuilderPackage {
 
     /*
      * Parses one song ARPG file into a SongData and wraps it in a SongHandle,
-     * under the short song ID SongManager assigns its name. "tempos" lists at
-     * least one tempo change, the first at tick 0 and each later one at a
-     * later tick, its "bpm" inside SONG_BPM_MIN to SONG_BPM_MAX;
-     * "beats_per_bar" and "beat_unit" set the bar, the unit a power of two;
+     * under the short song ID SongManager assigns its name. "tempos" is the
+     * tempo map and "beats_per_bar" and "beat_unit" the bar, both read and
+     * held to their rules by SongArpgUtility;
      * "key_root" and "key_scale" the key; "lanes" at most SONG_LANE_COUNT
      * lanes; "clips" the clips laid on them, read through SongArpgUtility. A
      * notes clip's instrument and a song clip's song load on demand, and a
@@ -70,19 +69,13 @@ class SongBuilder extends BuilderPackage {
         short songID = songManager.registerSongName(songName);
         String owner = "Song \"" + songName + "\"";
 
-        SongTempoStruct tempo = parseTempos(ArpgUtility.validateArray(arpg, "tempos"), owner, file);
+        String fileOwner = owner + " (" + file.getName() + ")";
+        SongTempoStruct tempo = SongArpgUtility.readTempo(ArpgUtility.validateArray(arpg, "tempos"), fileOwner);
         int beatsPerBar = ArpgUtility.getInt(arpg, "beats_per_bar", EngineSetting.DEFAULT_SONG_BEATS_PER_BAR);
         int beatUnit = ArpgUtility.getInt(arpg, "beat_unit", EngineSetting.DEFAULT_SONG_BEAT_UNIT);
         int keyRoot = ArpgUtility.getInt(arpg, "key_root", EngineSetting.DEFAULT_SONG_KEY_ROOT);
 
-        if (beatsPerBar < 1 || beatsPerBar > EngineSetting.SONG_BEATS_PER_BAR_MAX)
-            throwException(owner + " holds " + beatsPerBar + " \"beats_per_bar\", outside 1 to "
-                    + EngineSetting.SONG_BEATS_PER_BAR_MAX + ". File: " + file.getName());
-
-        if (beatUnit < 1 || beatUnit > EngineSetting.SONG_BEAT_UNIT_MAX || Integer.bitCount(beatUnit) != 1)
-            throwException(owner + " counts its beats in a \"beat_unit\" of " + beatUnit
-                    + "; a beat is a whole, half, quarter, eighth, sixteenth or thirty-second note (1 to "
-                    + EngineSetting.SONG_BEAT_UNIT_MAX + "). File: " + file.getName());
+        SongArpgUtility.validateMeter(beatsPerBar, beatUnit, fileOwner);
 
         if (keyRoot < 0 || keyRoot > EngineSetting.SONG_KEY_ROOT_MAX)
             throwException(owner + " names a \"key_root\" of " + keyRoot + "; a key's root is a step from C, 0 to "
@@ -118,40 +111,6 @@ class SongBuilder extends BuilderPackage {
         } finally {
             buildingSongNames.pop();
         }
-    }
-
-    // Tempo Parsing \\
-
-    private SongTempoStruct parseTempos(ArpgArrayStruct temposArpg, String owner, File file) {
-
-        if (temposArpg.size() == 0)
-            throwException(owner + " has no tempo; its first plays from tick 0. File: " + file.getName());
-
-        int[] ticks = new int[temposArpg.size()];
-        float[] bpms = new float[temposArpg.size()];
-
-        for (int i = 0; i < ticks.length; i++) {
-
-            ArpgObjectStruct tempoArpg = temposArpg.get(i).getAsObject();
-
-            ticks[i] = ArpgUtility.validateInt(tempoArpg, "tick");
-            bpms[i] = ArpgUtility.validateFloat(tempoArpg, "bpm");
-
-            if (i == 0 && ticks[i] != 0)
-                throwException(owner + " starts its tempos at tick " + ticks[i] + "; the first plays from tick 0. "
-                        + "File: " + file.getName());
-
-            if (i > 0 && ticks[i] <= ticks[i - 1])
-                throwException(owner + " tempo " + i + " at tick " + ticks[i] + " is not after the one before it, at "
-                        + ticks[i - 1] + "; tempos run in order of their tick. File: " + file.getName());
-
-            if (bpms[i] < EngineSetting.SONG_BPM_MIN || bpms[i] > EngineSetting.SONG_BPM_MAX)
-                throwException(owner + " tempo " + i + " plays at " + bpms[i] + " beats a minute, outside "
-                        + EngineSetting.SONG_BPM_MIN + " to " + EngineSetting.SONG_BPM_MAX + ". File: "
-                        + file.getName());
-        }
-
-        return new SongTempoStruct(ticks, bpms);
     }
 
     // Lane Parsing \\

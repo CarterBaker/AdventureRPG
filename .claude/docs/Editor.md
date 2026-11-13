@@ -21,8 +21,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Character Mesh Editor models its meshes and rig with the Tools and Brushes tabs, the Hair, Hand, Foot, Eye and Mouth
   Editors the same kept to the hair, the hands with their fingers, the feet with their toes, an eye socket with its eye
   and the lips with the teeth, each showing its part alone and a sided part one side at a time; the Recorder is its
-  timeline, with Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside it, each opening its own menu
-  through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act on.
+  transport (record, play, loop range, clock, what is open with Back) and the Timeline its clips, with Recorder Keys,
+  Recorder Bin, Recorder Assets and Recorder Settings beside them, each opening its own menu through a shared
+  `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act on; the Recordings tab
+  lists the recordings and its rows drag onto the Timeline to nest.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 
 ## The active window

@@ -280,6 +280,12 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-13: Music pipeline, songs. Added the schema `Songs.arpg` and the test song `songs/Test/Scale.arpg` (a C major
   scale on the Folk Harp over a drum line of sound clips, at 100 then 120 beats a minute), written to prove that songs
   build, play and read back from MIDI unchanged.
+- 2026-11-13: Music pipeline, nested recordings. Added `menus/editor/Timeline.arpg` (the recorder's timeline in its
+  own tab, titled with what is open) and `shortcuts/Timeline.arpg` (the timeline's keys and held modifiers moved from
+  the Recorder's, Nest Selection, Open Nested, Back); regenerated `menus/editor/Recorder.arpg` (the Recorder menu is
+  the transport: loop, in, out, clear, what is open with Back, the clock), `menus/editor/Recordings.arpg` (rows are
+  dragged onto the Timeline to nest), `menus/editor/EditorWindow.arpg` (Timeline in the Media menu) and
+  `shortcuts/Recorder.arpg` (transport keys only, loop range and Back), so the timeline is a tab of its own.
 ---
 
 ## Textures and Sprites (2399 files)
@@ -1660,7 +1666,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1802 files)
+## Data Files (1804 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2460,8 +2466,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `CharacterMeshEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
 `HeightEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`, `Recordings.arpg`,
-`SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Tools.arpg`,
-`Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
+`SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Timeline.arpg`,
+`Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
 
@@ -2764,7 +2770,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterAppearance.arpg`,
 `CharacterBuild.arpg`, `CharacterEquipment.arpg`, `CharacterMeshEditor.arpg`, `FaceEditor.arpg`, `HeightEditor.arpg`,
 `Hierarchy.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`, `RecorderBin.arpg`,
-`RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Tools.arpg`, `WorldEditor.arpg`
+`RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `WorldEditor.arpg`
 
 ### `assets/skills/`
 

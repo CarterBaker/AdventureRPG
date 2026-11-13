@@ -122,9 +122,10 @@ public class DevOverlayCaptureStruct extends StructPackage {
 
     // Job \\
 
+    // The job is handed in already running, so its result may land before this is called; the result is left
+    // as it stands, cleared only once the job before it was taken in
     public void beginJob(Future<?> job, float time, int frameWidth, int frameHeight, boolean keyframe) {
         this.job = job;
-        this.jobResult = null;
         this.jobTime = time;
         this.jobWidth = frameWidth;
         this.jobHeight = frameHeight;

@@ -8,6 +8,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.util.RecordingSampleUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -85,8 +86,8 @@ class RecordingNodeBranch extends BranchPackage {
 
     // Collect \\
 
-    // Every node of every character every clip plays, the clips in timeline order and each character's nodes in time
-    // order
+    // Every node of every character every clip of a take plays, the clips in timeline order and each character's
+    // nodes in time order; a nested recording's are edited inside it
     void collectNodes(RecordingInstance recording, ObjectArrayList<RecordingNodeStruct> nodes) {
 
         for (int i = 0; i < nodes.size(); i++)
@@ -102,17 +103,18 @@ class RecordingNodeBranch extends BranchPackage {
         for (int i = 0; i < clips.size(); i++) {
 
             RecordingClipStruct clip = clips.get(i);
+            RecordingTakeStruct take = clip.getTake();
 
-            if (clip.getLength() <= 0f)
+            if (take == null || clip.getLength() <= 0f)
                 continue;
 
-            if (clip.holds(RecorderChannel.PLAYER) && clip.getTake().hasPlayerTrack())
-                collectTrack(clip, i, clip.getTake().getPlayerTrack(), nodes);
+            if (clip.holds(RecorderChannel.PLAYER) && take.hasPlayerTrack())
+                collectTrack(clip, i, take.getPlayerTrack(), nodes);
 
             if (!clip.holds(RecorderChannel.CHARACTERS))
                 continue;
 
-            ObjectArrayList<RecordingBodyTrackStruct> residentTracks = clip.getTake().getResidentTracks();
+            ObjectArrayList<RecordingBodyTrackStruct> residentTracks = take.getResidentTracks();
 
             for (int j = 0; j < residentTracks.size(); j++)
                 collectTrack(clip, i, residentTracks.get(j), nodes);
@@ -349,7 +351,7 @@ class RecordingNodeBranch extends BranchPackage {
 
     // The moment of the timeline a movable node's start would be dragged to, kept where its samples allow
     float resolveLanding(RecordingNodeStruct node, RecordingClipStruct clip, float time) {
-        return clip.toTimelineTime(Math.clamp(clip.toTakeTime(time), node.getEarliestStart(), node.getLatestStart()));
+        return clip.toTimelineTime(Math.clamp(clip.toChildTime(time), node.getEarliestStart(), node.getLatestStart()));
     }
 
     // Movement \\

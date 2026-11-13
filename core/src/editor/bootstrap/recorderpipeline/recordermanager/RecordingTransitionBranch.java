@@ -17,7 +17,9 @@ class RecordingTransitionBranch extends BranchPackage {
      * Reads and edits the transitions laid on a recording's clips. A
      * transition runs inside its clip from the edge it lies on. At a moment
      * the picture passes through the transition of the highest clip showing
-     * a picture whose edge's transition runs across it: into a clip, the
+     * a picture whose edge's transition runs across it — and where none does,
+     * the one inside the nested recording the picture is drawn from, at any
+     * depth, at the moment mapped into it: into a clip, the
      * timeline as it plays without the clip gives way to it — the clip that
      * ends just where it begins on its lane carried on past its own end — and
      * out of a clip it gives way to the timeline without it, the clip that
@@ -48,18 +50,35 @@ class RecordingTransitionBranch extends BranchPackage {
 
         transition.clear();
 
-        if (recording == null)
-            return;
+        if (recording != null)
+            resolveWithin(recording, recording, time, time, transition);
+    }
+
+    // The transition of the highest clip showing a picture whose edge's transition runs across the moment; with
+    // none here, the one inside the nested recording the picture is drawn from, at the moment mapped into it
+    private void resolveWithin(
+            RecordingInstance timeline,
+            RecordingInstance recording,
+            float timelineTime,
+            float time,
+            RecordingTransitionStruct transition) {
 
         ObjectArrayList<RecordingClipStruct> clips = recording.getClips();
         RecordingClipStruct found = null;
         RecorderClipEdge foundEdge = null;
+        RecordingClipStruct shown = null;
 
         for (int i = 0; i < clips.size(); i++) {
 
             RecordingClipStruct clip = clips.get(i);
 
-            if (!clip.showsPicture() || found != null && clip.getLane() < found.getLane())
+            if (!clip.showsPictureAt(time))
+                continue;
+
+            if (shown == null || clip.getLane() >= shown.getLane())
+                shown = clip;
+
+            if (found != null && clip.getLane() < found.getLane())
                 continue;
 
             for (int e = 0; e < RecorderClipEdge.VALUES.length; e++) {
@@ -73,8 +92,13 @@ class RecordingTransitionBranch extends BranchPackage {
             }
         }
 
-        if (found == null)
+        if (found == null) {
+
+            if (shown != null && shown.getChild() != null)
+                resolveWithin(timeline, shown.getChild(), timelineTime, shown.toChildTime(time), transition);
+
             return;
+        }
 
         RecordingClipStruct carried = recording.findAdjoiningClip(found, foundEdge == RecorderClipEdge.START);
 
@@ -87,7 +111,7 @@ class RecordingTransitionBranch extends BranchPackage {
                 carried,
                 resolveHandle(found, foundEdge),
                 resolveMix(found, foundEdge, time),
-                carried != null || recording.showsPictureWithout(time, found));
+                carried != null || timeline.showsPictureWithout(timelineTime, found));
     }
 
     // How far the picture has gone over at the moment, eased as the transition paces itself

@@ -23,7 +23,9 @@ public enum ToolCanvas {
      * raised, lowered, smoothed, flattened and erased back to level with
      * the brush, never painted from a palette. A character's rig, its face
      * and an animation's pose take the tools that pick and drag its joints;
-     * the face drags a bone into the face control selected.
+     * the face drags a bone into the face control selected. The recorder's
+     * Timeline selects and cuts clips, and nests the selection or opens a
+     * nested clip.
      */
 
     BIOMES(
@@ -101,6 +103,7 @@ public enum ToolCanvas {
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
+            new ToolActionGroupStruct[] { timelineNesting() },
             false);
 
     // Values
@@ -269,6 +272,13 @@ public enum ToolCanvas {
                 action(EditorSetting.FACE_EDITOR_LABEL_ADD_TARGET, EditorSetting.FACE_EDITOR_KEY_ADD_TARGET),
                 action(EditorSetting.FACE_EDITOR_LABEL_MIRROR_TARGETS, EditorSetting.FACE_EDITOR_KEY_MIRROR_TARGETS),
                 action(EditorSetting.FACE_EDITOR_LABEL_RESET_PREVIEW, EditorSetting.FACE_EDITOR_KEY_RESET_PREVIEW));
+    }
+
+    private static ToolActionGroupStruct timelineNesting() {
+        return new ToolActionGroupStruct(
+                EditorSetting.TOOL_ACTION_HEADER_NESTING,
+                action(EditorSetting.TOOL_ACTION_LABEL_NEST_SELECTION, EditorSetting.RECORDER_KEY_CLIP_NEST),
+                action(EditorSetting.TOOL_ACTION_LABEL_OPEN_NESTED, EditorSetting.RECORDER_KEY_CLIP_OPEN));
     }
 
     private static ToolActionStruct action(String label, String key) {

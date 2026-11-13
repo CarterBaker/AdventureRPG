@@ -17,9 +17,9 @@ import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderOverlay;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
-import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayStreamStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingPlayingStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.util.RecordingOverlayUtility;
 import editor.runtime.dev.DevContext;
@@ -70,6 +70,7 @@ public class DevRecorderOverlaySystem extends SystemPackage {
     // Playback
     private DevOverlayPlaybackStruct[] playbacks;
     private boolean playing;
+    private RecordingPlayingStruct played;
 
     // Base \\
 
@@ -83,6 +84,7 @@ public class DevRecorderOverlaySystem extends SystemPackage {
 
         // Playback
         this.playbacks = new DevOverlayPlaybackStruct[RecorderOverlay.VALUES.length];
+        this.played = new RecordingPlayingStruct();
 
         for (int i = 0; i < RecorderOverlay.VALUES.length; i++) {
             captures[i] = new DevOverlayCaptureStruct(RecorderOverlay.VALUES[i]);
@@ -346,8 +348,8 @@ public class DevRecorderOverlaySystem extends SystemPackage {
             return true;
 
         float time = recorderManager.getPlayhead();
-        RecordingClipStruct clip = recorderManager.findPlayingClip(RecorderChannel.INTERFACE, time);
-        RecordingOverlayTrackStruct track = clip == null ? null : clip.getTake().getOverlayTrack();
+        RecordingPlayingStruct found = recorderManager.findPlaying(RecorderChannel.INTERFACE, time, played);
+        RecordingOverlayTrackStruct track = found == null ? null : found.getTake().getOverlayTrack();
         boolean settled = true;
 
         this.playing = true;
@@ -357,7 +359,7 @@ public class DevRecorderOverlaySystem extends SystemPackage {
             DevOverlayPlaybackStruct playback = playbacks[i];
 
             collectDecode(playback);
-            want(playback, track, clip, time);
+            want(playback, track, found);
 
             if (playback.isWanting() && !playback.hasJob()
                     && !playback.isDecoded(playback.getWantedStream(), playback.getWantedFrame())
@@ -373,8 +375,7 @@ public class DevRecorderOverlaySystem extends SystemPackage {
     private void want(
             DevOverlayPlaybackStruct playback,
             RecordingOverlayTrackStruct track,
-            RecordingClipStruct clip,
-            float time) {
+            RecordingPlayingStruct found) {
 
         if (track == null) {
             playback.clearWanted();
@@ -382,7 +383,7 @@ public class DevRecorderOverlaySystem extends SystemPackage {
         }
 
         RecordingOverlayStreamStruct stream = track.getStream(playback.getOverlay());
-        int frame = stream.findFrame(clip.toTakeTime(time));
+        int frame = stream.findFrame(found.getTakeTime());
 
         if (frame < 0 || stream.isHidden(frame)) {
             playback.clearWanted();

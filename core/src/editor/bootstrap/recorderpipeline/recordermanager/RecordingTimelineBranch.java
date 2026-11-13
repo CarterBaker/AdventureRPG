@@ -14,14 +14,15 @@ class RecordingTimelineBranch extends BranchPackage {
     /*
      * Lays clips on a recording's timeline and edits them. A clip asked onto a
      * lane where it would cover another lands on the nearest clear lane above,
-     * then below, and only when every lane is taken on the one asked for. A
+     * then below, and only when every lane is taken on the one asked for; a
+     * take, a nested recording, a song or a notes clip is laid the same way. A
      * take just recorded lands above every clip it was recorded over, so it
      * plays over them. Cutting a clip in two at a moment lays a copy of it
      * where it lies and trims the clip's end and the copy's start to the
      * moment, trimming moves one end of a clip to a moment, and stamping lays
      * a copy of it at a moment; a cut being placed snaps as a drag does and
      * keeps inside its clip. A clip's edges are found near a press, a dragged
-     * edge reaches no further than its take or the clips beside it on its
+     * edge reaches no further than its source or the clips beside it on its
      * lane, and what is dragged snaps to the nearest edge of the timeline —
      * its start, the playhead or another clip's end — within a tolerance.
      * Nothing here marks the recording changed; RecorderManager does, once,
@@ -90,21 +91,26 @@ class RecordingTimelineBranch extends BranchPackage {
 
     // The whole take laid from the moment, on the lane asked for or the nearest clear one
     int placeTake(RecordingInstance recording, RecordingTakeStruct take, float start, int lane) {
-
-        float clampedStart = Math.max(0f, start);
-        int landing = resolveLane(recording, clampedStart, clampedStart + take.getDuration(), lane, null);
-
-        return recording.addClip(new RecordingClipStruct(
-                take, 0f, take.getDuration(), landing, clampedStart, take.getChannelMask()));
+        return placeClip(recording, RecordingClipStruct.ofTake(
+                take, 0f, take.getDuration(), lane, Math.max(0f, start), take.getChannelMask()));
     }
 
     // The whole take laid where it was recorded, over everything it was recorded against
     int placeRecordedTake(RecordingInstance recording, RecordingTakeStruct take, float start) {
+        return recording.addClip(RecordingClipStruct.ofTake(
+                take, 0f, take.getDuration(), resolveTopLane(recording, start, start + take.getDuration()), start,
+                take.getChannelMask()));
+    }
 
-        int lane = resolveTopLane(recording, start, start + take.getDuration());
+    // The clip laid from where it starts, kept at or after the timeline's start, on the lane it asks for or the
+    // nearest clear one
+    int placeClip(RecordingInstance recording, RecordingClipStruct clip) {
 
-        return recording.addClip(new RecordingClipStruct(
-                take, 0f, take.getDuration(), lane, start, take.getChannelMask()));
+        clip.setStart(Math.max(0f, clip.getStart()));
+        recording.addClip(clip);
+        clip.setLane(resolveLane(recording, clip.getStart(), clip.getEnd(), clip.getLane(), clip));
+
+        return recording.getClips().size() - 1;
     }
 
     // Edges \\
@@ -229,7 +235,7 @@ class RecordingTimelineBranch extends BranchPackage {
 
     // Trim \\
 
-    // The moment a clip's start can be dragged to: no earlier than its take, the timeline or the clip before it on
+    // The moment a clip's start can be dragged to: no earlier than its source, the timeline or the clip before it on
     // its lane, and no later than leaves it the shortest a take may be
     float resolveTrimStart(RecordingInstance recording, RecordingClipStruct clip, float time) {
 
@@ -249,12 +255,12 @@ class RecordingTimelineBranch extends BranchPackage {
         return Math.clamp(time, earliest, Math.max(earliest, clip.getEnd() - EditorSetting.RECORDER_MIN_TAKE_SECONDS));
     }
 
-    // The moment a clip's end can be dragged to: no later than its take or the clip after it on its lane, and no
-    // earlier than leaves it the shortest a take may be
+    // The moment a clip's end can be dragged to: no later than its source as it now runs or the clip after it on its
+    // lane, and no earlier than leaves it the shortest a take may be
     float resolveTrimEnd(RecordingInstance recording, RecordingClipStruct clip, float time) {
 
         ObjectArrayList<RecordingClipStruct> clips = recording.getClips();
-        float latest = clip.toTimelineTime(clip.getTake().getDuration());
+        float latest = clip.toTimelineTime(clip.resolveSourceDuration());
 
         for (int i = 0; i < clips.size(); i++) {
 
@@ -271,12 +277,12 @@ class RecordingTimelineBranch extends BranchPackage {
 
     // The clip's start brought to the moment, what plays after it left where it was
     void trimStartTo(RecordingClipStruct clip, float time) {
-        clip.setSpan(clip.toTakeTime(time), clip.getOutPoint());
+        clip.setInPoint(clip.toChildTime(time));
         clip.setStart(time);
     }
 
     void trimEndTo(RecordingClipStruct clip, float time) {
-        clip.setSpan(clip.getInPoint(), clip.toTakeTime(time));
+        clip.setOutPoint(clip.toChildTime(time));
     }
 
     // Edit \\

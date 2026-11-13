@@ -25,16 +25,20 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecorderTimelineSystem extends SystemPackage {
 
     /*
-     * Shows the Recorder tab's timeline: when the recorder's revision moves
-     * it redraws the status line and the stretch of the timeline in view —
+     * Shows the Timeline tab: when the recorder's revision moves it redraws
+     * the status line, the title naming the recording open and the ones it
+     * was opened inside, and the stretch of the timeline in view —
      * its ruler's ticks, its export range, and its clips on their lanes,
      * highest on top, each with what the player does along it — the
      * movement it is in along its lower row and every gesture of its hands
      * along its upper row — and a mark across each transition laid on it,
-     * named after the transition; a sound laid from the sound library is
-     * drawn in a shade of its own. The Keys, the Bin, the Assets and the
-     * settings are their own tabs beside it, and the recordings themselves
-     * are listed in the Recordings tool. Only what lies in view is drawn,
+     * named after the transition; every clip selected is drawn selected, a
+     * clip that is only heard — a sound laid from the sound library, a song,
+     * a notes clip — is drawn in a shade of its own, and each is named after
+     * its source, a nested recording's name in the form its kind gives it.
+     * The transport, the Keys, the Bin, the Assets and the settings are
+     * their own tabs beside it, and the recordings themselves are listed in
+     * the Recordings tool. Only what lies in view is drawn,
      * cut at the view's edges, and the view's zooming and scrolling redraws
      * the timeline alone. Both playheads follow the playhead every frame from
      * positions built once, hidden while it is out of view, and what is being
@@ -43,9 +47,8 @@ public class RecorderTimelineSystem extends SystemPackage {
      * far side would move to, or at the clip edge a transition would be laid
      * on — from positions built the first time each is needed, so neither
      * playback nor a drag allocates; the Cut tool shows the same line where
-     * it would cut under the pointer. The clock text, a timeline still
-     * growing under a take and a resized timeline refresh a few times a
-     * second.
+     * it would cut under the pointer. A timeline still growing under a take
+     * and a resized timeline refresh a few times a second.
      */
 
     // Internal
@@ -56,7 +59,7 @@ public class RecorderTimelineSystem extends SystemPackage {
     // Menus
     private MenuInstance recorderMenu;
     private ElementInstance statusLabel;
-    private ElementInstance clockLabel;
+    private ElementInstance titleLabel;
     private ElementInstance playhead;
     private ElementInstance lanePlayhead;
     private ElementInstance rangeStartMarker;
@@ -151,7 +154,7 @@ public class RecorderTimelineSystem extends SystemPackage {
 
         this.recorderMenu = recorderRowSystem.getMenu();
         this.statusLabel = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_STATUS);
-        this.clockLabel = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_CLOCK);
+        this.titleLabel = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_TIMELINE_TITLE);
         this.playhead = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_PLAYHEAD);
         this.lanePlayhead = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_LANE_PLAYHEAD);
         this.rangeStartMarker = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_RANGE_START);
@@ -178,7 +181,6 @@ public class RecorderTimelineSystem extends SystemPackage {
 
         if (refreshElapsed >= RecorderSetting.REFRESH_SECONDS) {
             this.refreshElapsed = 0f;
-            refreshClock();
 
             if (isTimelineStale())
                 refreshTimeline();
@@ -190,8 +192,8 @@ public class RecorderTimelineSystem extends SystemPackage {
 
     private void refreshAll() {
         refreshStatus();
+        refreshTitle();
         refreshTimeline();
-        refreshClock();
     }
 
     // Status \\
@@ -200,20 +202,11 @@ public class RecorderTimelineSystem extends SystemPackage {
         statusLabel.setFontText(recorderManager.getStatusText());
     }
 
-    private void refreshClock() {
-
-        RecordingInstance recording = recorderManager.getRecording();
-
-        if (recording == null) {
-            clockLabel.setFontText(RecorderSetting.TEXT_NO_RECORDING);
-            return;
-        }
-
-        clockLabel.setFontText(String.format(
-                RecorderSetting.FORMAT_CLOCK,
-                recording.getRecordingName() + (recorderManager.isUnsaved() ? RecorderSetting.TEXT_UNSAVED_SUFFIX : ""),
-                recorderRowSystem.formatTime(recorderManager.getPlayhead()),
-                recorderRowSystem.formatTime(recorderManager.resolveLength())));
+    // The recording open, and every recording it was opened inside
+    private void refreshTitle() {
+        titleLabel.setFontText(recorderManager.hasRecording()
+                ? String.format(RecorderSetting.FORMAT_TIMELINE_TITLE, recorderRowSystem.describeOpen())
+                : RecorderSetting.TEXT_TIMELINE_TITLE);
     }
 
     // Timeline \\
@@ -312,8 +305,8 @@ public class RecorderTimelineSystem extends SystemPackage {
         return (float) Math.ceil(wanted / longest) * longest;
     }
 
-    // One bar per clip across the part of it in view, on its own lane, named after its take; a take of one sound
-    // dropped from the sound library is drawn in its own shade
+    // One bar per clip across the part of it in view, on its own lane, named after its source; a clip only heard is
+    // drawn in its own shade
     private void injectClipBar(RecordingClipStruct clip, int clipIndex, RecordingViewStruct view) {
 
         if (!clip.overlaps(view.getStart(), view.getEnd()))
@@ -322,10 +315,10 @@ public class RecorderTimelineSystem extends SystemPackage {
         int fromStep = toViewStep(clip.getStart());
         DimensionVector2Struct position = resolveLanePosition(clip.getLane(), fromStep);
         DimensionVector2Struct size = resolveBarSize(toViewStep(clip.getEnd()) - fromStep);
-        String template = clipIndex == recorderManager.getSelectedClip()
+        String template = recorderManager.isClipSelected(clipIndex)
                 ? RecorderSetting.TEMPLATE_CLIP_BAR_SELECTED
                 : clip.isMuted() ? RecorderSetting.TEMPLATE_CLIP_BAR_MUTED
-                        : clip.getTake().getChannelMask() == RecorderChannel.SOUND.getBit()
+                        : clip.resolveSourceChannelMask() == RecorderChannel.SOUND.getBit()
                                 ? RecorderSetting.TEMPLATE_CLIP_BAR_SOUND
                                 : RecorderSetting.TEMPLATE_CLIP_BAR;
 
@@ -335,7 +328,8 @@ public class RecorderTimelineSystem extends SystemPackage {
                     injected.setSizeOverride(size);
                 });
 
-        bar.findChildById(RecorderSetting.ELEMENT_CLIP_LABEL).setFontText(clip.getTake().getName());
+        bar.findChildById(RecorderSetting.ELEMENT_CLIP_LABEL).setFontText(String.format(
+                RecorderSetting.FORMAT_CLIP_LABELS[clip.getSourceKind().ordinal()], clip.getSourceName()));
     }
 
     // A mark across each transition laid on the clip, over the part of it in view, named after the transition; too
@@ -390,7 +384,7 @@ public class RecorderTimelineSystem extends SystemPackage {
 
         RecordingClipStruct clip = recording.getClips().get(node.getClipIndex());
 
-        if (node.getTrack() != clip.getTake().getPlayerTrack()
+        if (clip.getTake() == null || node.getTrack() != clip.getTake().getPlayerTrack()
                 || node.getEnd() <= view.getStart() || node.getStart() >= view.getEnd())
             return;
 

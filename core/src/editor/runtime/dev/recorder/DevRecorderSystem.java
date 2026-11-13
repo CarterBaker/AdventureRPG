@@ -41,7 +41,7 @@ import editor.bootstrap.recorderpipeline.recording.RecorderCurveProperty;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCameraTrackStruct;
-import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingPlayingStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingVehicleTrackStruct;
@@ -70,7 +70,9 @@ public class DevRecorderSystem extends SystemPackage {
      * the player, the camera, free flight, the clock and the wind's gusts —
      * and puts it all back when the session ends. Every frame it plays each
      * channel the session plays from the clip on the timeline's highest lane
-     * covering the playhead, read at that clip's own moment of its take: the
+     * covering the playhead, walked down through every nested recording by
+     * the same rule at the moment mapped into it, read at the moment of the
+     * take the clip found plays: the
      * camera flies the window's player along as an unseen anchor, so the world
      * streams and draws around the recorded view; the player and the residents
      * are puppets — entities drawn only, posed sample by sample and dressed in
@@ -161,6 +163,7 @@ public class DevRecorderSystem extends SystemPackage {
     private float lastWeatherSampleTime;
 
     // Scratch
+    private RecordingPlayingStruct playing;
     private WorldPositionStruct placeScratch;
     private Vector3 eyeScratch;
     private Vector3 directionScratch;
@@ -202,6 +205,7 @@ public class DevRecorderSystem extends SystemPackage {
         this.vehicle2Track = new Reference2ObjectOpenHashMap<>();
 
         // Scratch
+        this.playing = new RecordingPlayingStruct();
         this.placeScratch = new WorldPositionStruct();
         this.eyeScratch = new Vector3();
         this.directionScratch = new Vector3();
@@ -380,10 +384,10 @@ public class DevRecorderSystem extends SystemPackage {
         float time = recorderManager.getPlayhead();
 
         if (RecorderChannel.PLAYER.isIn(live))
-            handOverPlayer(recorderManager.findPlayingClip(RecorderChannel.PLAYER, time), time);
+            handOverPlayer(recorderManager.findPlaying(RecorderChannel.PLAYER, time, playing));
 
         if (RecorderChannel.TIME.isIn(live))
-            handOverClock(recorderManager.findPlayingClip(RecorderChannel.TIME, time), time);
+            handOverClock(recorderManager.findPlaying(RecorderChannel.TIME, time, playing));
 
         if (RecorderChannel.WEATHER.isIn(live))
             releaseWeather();
@@ -392,13 +396,13 @@ public class DevRecorderSystem extends SystemPackage {
         this.clockHeld = false;
     }
 
-    private void handOverPlayer(RecordingClipStruct clip, float time) {
+    private void handOverPlayer(RecordingPlayingStruct found) {
 
-        if (clip == null || !clip.getTake().hasPlayerTrack())
+        if (found == null || !found.getTake().hasPlayerTrack())
             return;
 
-        RecordingBodyTrackStruct track = clip.getTake().getPlayerTrack();
-        float takeTime = clip.toTakeTime(time);
+        RecordingBodyTrackStruct track = found.getTake().getPlayerTrack();
+        float takeTime = found.getTakeTime();
         int sample = Math.max(0, track.findSample(takeTime));
         EntityInstance player = playerManager.getPlayerForWindow(context.getWindow().getWindowID());
 
@@ -408,10 +412,10 @@ public class DevRecorderSystem extends SystemPackage {
                 track, RecorderCurveProperty.FACING, takeTime, track.getBodyYaws(), sample, 0f), 0f);
     }
 
-    private void handOverClock(RecordingClipStruct clip, float time) {
-        if (clip != null)
-            clockManager.holdClock(clip.getTake().getClockTrack().evaluate(
-                    clip.toTakeTime(time), clip.getTimeRampSeconds()));
+    private void handOverClock(RecordingPlayingStruct found) {
+        if (found != null)
+            clockManager.holdClock(found.getTake().getClockTrack().evaluate(
+                    found.getTakeTime(), found.getTimeRampSeconds()));
     }
 
     // Play \\
@@ -431,25 +435,25 @@ public class DevRecorderSystem extends SystemPackage {
         shownVehicles.clear();
 
         if (RecorderChannel.CAMERA.isIn(played))
-            playCamera(recorderManager.findPlayingClip(RecorderChannel.CAMERA, time), time);
+            playCamera(recorderManager.findPlaying(RecorderChannel.CAMERA, time, playing));
 
         if (RecorderChannel.PLAYER.isIn(played))
-            playPlayer(recorderManager.findPlayingClip(RecorderChannel.PLAYER, time), time, animationDelta);
+            playPlayer(recorderManager.findPlaying(RecorderChannel.PLAYER, time, playing), animationDelta);
 
         if (RecorderChannel.CHARACTERS.isIn(played))
-            playCharacters(recorderManager.findPlayingClip(RecorderChannel.CHARACTERS, time), time, animationDelta);
+            playCharacters(recorderManager.findPlaying(RecorderChannel.CHARACTERS, time, playing), animationDelta);
 
         if (RecorderChannel.ITEMS.isIn(played))
-            playItems(recorderManager.findPlayingClip(RecorderChannel.ITEMS, time), time);
+            playItems(recorderManager.findPlaying(RecorderChannel.ITEMS, time, playing));
 
         if (RecorderChannel.VEHICLES.isIn(played))
-            playVehicles(recorderManager.findPlayingClip(RecorderChannel.VEHICLES, time), time);
+            playVehicles(recorderManager.findPlaying(RecorderChannel.VEHICLES, time, playing));
 
         if (RecorderChannel.WEATHER.isIn(played))
-            playWeather(recorderManager.findPlayingClip(RecorderChannel.WEATHER, time), time);
+            playWeather(recorderManager.findPlaying(RecorderChannel.WEATHER, time, playing));
 
         if (RecorderChannel.TIME.isIn(played))
-            playClock(recorderManager.findPlayingClip(RecorderChannel.TIME, time), time);
+            playClock(recorderManager.findPlaying(RecorderChannel.TIME, time, playing));
         else
             this.clockHeld = false;
 
@@ -457,13 +461,13 @@ public class DevRecorderSystem extends SystemPackage {
     }
 
     // The anchor stands so its eye is on the camera, and the camera is placed in the frame of the anchor's chunk
-    private void playCamera(RecordingClipStruct clip, float time) {
+    private void playCamera(RecordingPlayingStruct found) {
 
-        if (clip == null || clip.getTake().getCameraTrack().isEmpty())
+        if (found == null || found.getTake().getCameraTrack().isEmpty())
             return;
 
-        RecordingCameraTrackStruct track = clip.getTake().getCameraTrack();
-        float takeTime = clip.toTakeTime(time);
+        RecordingCameraTrackStruct track = found.getTake().getCameraTrack();
+        float takeTime = found.getTakeTime();
         int sample = Math.max(0, track.findSample(takeTime));
         float blend = RecordingSampleUtility.resolveBlend(track.getTimes(), sample, takeTime);
         int windowID = context.getWindow().getWindowID();
@@ -505,57 +509,57 @@ public class DevRecorderSystem extends SystemPackage {
                 track, RecorderCurveProperty.FIELD_OF_VIEW, takeTime, track.getFovs(), sample, blend));
     }
 
-    private void playPlayer(RecordingClipStruct clip, float time, float animationDelta) {
-        if (clip != null && clip.getTake().hasPlayerTrack())
-            posePuppet(clip.getTake().getPlayerTrack(), clip.toTakeTime(time), animationDelta);
+    private void playPlayer(RecordingPlayingStruct found, float animationDelta) {
+        if (found != null && found.getTake().hasPlayerTrack())
+            posePuppet(found.getTake().getPlayerTrack(), found.getTakeTime(), animationDelta);
     }
 
-    private void playCharacters(RecordingClipStruct clip, float time, float animationDelta) {
+    private void playCharacters(RecordingPlayingStruct found, float animationDelta) {
 
-        if (clip == null)
+        if (found == null)
             return;
 
-        ObjectArrayList<RecordingBodyTrackStruct> residentTracks = clip.getTake().getResidentTracks();
-        float takeTime = clip.toTakeTime(time);
+        ObjectArrayList<RecordingBodyTrackStruct> residentTracks = found.getTake().getResidentTracks();
+        float takeTime = found.getTakeTime();
 
         for (int i = 0; i < residentTracks.size(); i++)
             posePuppet(residentTracks.get(i), takeTime, animationDelta);
     }
 
-    private void playItems(RecordingClipStruct clip, float time) {
+    private void playItems(RecordingPlayingStruct found) {
 
-        if (clip == null)
+        if (found == null)
             return;
 
-        ObjectArrayList<RecordingProjectileTrackStruct> projectileTracks = clip.getTake().getProjectileTracks();
-        float takeTime = clip.toTakeTime(time);
+        ObjectArrayList<RecordingProjectileTrackStruct> projectileTracks = found.getTake().getProjectileTracks();
+        float takeTime = found.getTakeTime();
 
         for (int i = 0; i < projectileTracks.size(); i++)
             placeItem(projectileTracks.get(i), takeTime);
     }
 
-    private void playVehicles(RecordingClipStruct clip, float time) {
+    private void playVehicles(RecordingPlayingStruct found) {
 
-        if (clip == null)
+        if (found == null)
             return;
 
-        ObjectArrayList<RecordingVehicleTrackStruct> vehicleTracks = clip.getTake().getVehicleTracks();
-        float takeTime = clip.toTakeTime(time);
+        ObjectArrayList<RecordingVehicleTrackStruct> vehicleTracks = found.getTake().getVehicleTracks();
+        float takeTime = found.getTakeTime();
 
         for (int i = 0; i < vehicleTracks.size(); i++)
             poseVehicle(vehicleTracks.get(i), takeTime);
     }
 
     // The weather and the gusts held where the take had them; with no clip to play them they go on live
-    private void playWeather(RecordingClipStruct clip, float time) {
+    private void playWeather(RecordingPlayingStruct found) {
 
-        if (clip == null || clip.getTake().getWeatherTrack().isEmpty()) {
+        if (found == null || found.getTake().getWeatherTrack().isEmpty()) {
             releaseWeather();
             return;
         }
 
-        RecordingWeatherTrackStruct track = clip.getTake().getWeatherTrack();
-        float takeTime = clip.toTakeTime(time);
+        RecordingWeatherTrackStruct track = found.getTake().getWeatherTrack();
+        float takeTime = found.getTakeTime();
         int sample = track.findSample(takeTime);
         float blend = track.resolveBlend(sample, takeTime);
 
@@ -570,9 +574,9 @@ public class DevRecorderSystem extends SystemPackage {
     }
 
     // The clock follows the recording; a jump nothing here made — a time command — shifts it from then on
-    private void playClock(RecordingClipStruct clip, float time) {
+    private void playClock(RecordingPlayingStruct found) {
 
-        if (clip == null) {
+        if (found == null) {
             this.clockHeld = false;
             return;
         }
@@ -586,7 +590,7 @@ public class DevRecorderSystem extends SystemPackage {
                 liveClockOffsetMillis += moved;
         }
 
-        long elapsed = clip.getTake().getClockTrack().evaluate(clip.toTakeTime(time), clip.getTimeRampSeconds())
+        long elapsed = found.getTake().getClockTrack().evaluate(found.getTakeTime(), found.getTimeRampSeconds())
                 + liveClockOffsetMillis;
 
         clockManager.holdClock(elapsed);

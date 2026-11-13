@@ -15,7 +15,8 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 | Instruments | `instrumentmanager/` (`InstrumentManager`, `InstrumentLoader`, `InstrumentBuilder`), `instrument/` (`InstrumentData`, `InstrumentHandle`, `InstrumentRigStruct`) |
 | Sampler | `samplermanager/SamplerManager`, `sampler/SamplerNoteStruct` |
 | Songs | `songmanager/` (`SongManager`, `SongLoader`, `SongBuilder`), `song/` (`SongData`, `SongHandle`, `SongClipStruct`, `SongTempoStruct`, `SongLaneStruct`, `SongClipKind`, `SongCursorStruct`, `SongPlaybackInstance`) |
-| Shared logic | `util/NoteUtility` (names, pitch ratios, gains, scales), `util/NoteScale`, `util/NoteEnvelopeUtility` (the one envelope curve), `util/SongArpgUtility` (the clip and note codec), `util/SongFlattenUtility` (a song laid out flat), `util/SongMidiUtility` (MIDI read and write) |
+| Shared logic | `util/NoteUtility` (names, pitch ratios, gains, scales), `util/NoteScale`, `util/NoteEnvelopeUtility` (the one envelope curve), `util/SongArpgUtility` (the tempo, meter, clip and note codec), `util/SongFlattenUtility` (a song laid out flat), `util/SongMidiUtility` (MIDI read and write), `util/SamplerMixUtility` (the one offline sampler render), `sampler/SamplerPcmStruct` (a sample decoded for it) |
+| Recorder music side | `editor/bootstrap/recorderpipeline/`: `recording/RecordingSourceKind`, `RecordingClipStruct` (sources), `RecordingPlayingStruct`, `RecordingInstance` (tempo, meter, `findPlaying`); `recordermanager/RecordingSourceBranch` (binding, child cache, loops, worlds), `RecordingFileBranch` (version 3), `RecordingMixBranch` (export); `editor/runtime/dev/recorder/DevRecorderSoundSystem` (live) |
 | Constants | `EngineSetting` groups `// Music Notes`, `// Music Scales`, `// Music Note Sets`, `// Music Instruments`, `// Music Sampler`, `// Music Songs`, `// Music MIDI`, `// Music Playback`; `SONG_USER_DIRECTORY` in `// Engine & Application` |
 | Content | `assets/notesets/<Instrument>.arpg`, `assets/instruments/<Instrument>.arpg`, samples and companions in `assets/sounds/notes/<Instrument>/`, `assets/songs/<Folder>/<Song>.arpg` (`Test/Scale` proves the pipeline); schemas `NoteSets.arpg`, `Instruments.arpg`, `Songs.arpg` |
 | Player songs | `Documents/My Games/AdventureRPG/Songs/*.mid`, created by `Lwjgl3Launcher` (game) and `Lwjgl3LauncherEditor` as required directories |
@@ -73,6 +74,26 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
   whether a voice loops while held (`loopsHeld`), after release (`loopsReleased`), and whether note-off fades it
   (`releases`); the sampler only reads those.
 
+- **A recording's clip source:** `RecordingClipStruct` reads its source through `resolveSourceChannelMask`,
+  `resolveSourceDuration` and the lookups `getTake`, `getChild`, `getSong`; nothing else branches on its kind.
+  `RecordingSourceBranch.bindClip` is the one place a name is resolved: a nested recording through the child cache
+  (`resolveChild`, read once, bound in turn, dropped with every recording reaching it by `forget` when one is saved), a
+  song through `SongManager`, a notes clip to a one-lane `SongData` on the recording's tempo map (`layNotes`).
+- **What plays a channel:** `RecordingInstance.findPlaying(channel, time, without, carried, playing)` takes the highest
+  lane, then the later laid, walks into a nested recording at `toChildTime`, and lets the clip below take over when the
+  nest plays nothing there; the transition's `without`/`carried` hold at every depth, and
+  `RecordingTransitionBranch.resolve` descends into the nest the picture is drawn from.
+- **Song time in a recording:** `toSongSeconds`, `resolveSongTickOffset` and `toSongTick` map a clip's source time to
+  the song it sounds: a song from its own start, a notes clip from where it lies on the recording's tempo map.
+- **Playing from a timeline:** `SongPlaybackInstance.follow(songData, volume)` then `followTo(tick)` each frame; the
+  first tick after its samples land passes over every earlier note. `getHeldCount`/`getHeldNote` with
+  `SamplerManager.getNoteVoice` let the recorder keep those voices out of a take.
+- **Offline render:** `SamplerMixUtility.collectSamples` names every sample a cursor can sound (the caller decodes each
+  once into a `SamplerPcmStruct`), `mixCursor` adds a cursor over a frame window; each stretch is computed from the
+  notes alone, round robin turned by the note's index, a note let go at its end or when its pitch is struck again.
+- **Loops and worlds:** `RecordingSourceBranch.findLoopLaying` (laying) and `findLoopIn` (saving) walk nested recordings
+  by name and name the loop; `isWorldShared` refuses a nested picture from another world.
+
 ## Converting an instrument (Claude-side)
 
 1. The owner's SFZ and the WAVs it names must be in `.claude/assets/`. If they are only in `.claude/catalogue/`, send a
@@ -120,6 +141,13 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 - **Notes are kept sorted.** `SongArpgUtility.readNotes` and `SongMidiUtility.read` sort through
   `SongArpgUtility.sortNotes`; playback walks forward from `nextNote` and relies on it. Anything that builds a
   `SongClipStruct` by hand sorts its notes first.
+- **Nested spans are never clamped in storage.** `getInPoint`/`getOutPoint`/`getLength` clamp to the source as it now
+  runs; the file writes `getStoredInPoint`/`getStoredOutPoint`/`getStoredChannelMask`. A clip whose source is unbound
+  keeps its stored span and plays nothing.
+- **Recording file version 3.** Each clip writes `source` and its `take` index, `recording`, `song` or `notes` (the song
+  codec's clip, lane 0, start 0); the recording writes `tempos`, `beats_per_bar`, `beat_unit`. Versions 1 and 2 read
+  as takes at 120 bpm and are saved as 3 when opened.
+- **Live song fades** set the volume of notes started after the fade moves; a note already sounding keeps its own.
 - **Pan is not live.** Lane `pan` is read, validated and written to MIDI, but `SoundManager` has no pan for an
   unplaced voice, so live playback is centred until the sound pipeline gains one.
 - **The MIDI index loads every instrument.** The first `getInstrumentIDFromMidiProgram` or `getPercussionInstrumentID`

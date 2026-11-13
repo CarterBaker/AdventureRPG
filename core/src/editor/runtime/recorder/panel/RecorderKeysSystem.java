@@ -681,13 +681,13 @@ public class RecorderKeysSystem extends SystemPackage {
         int segments = Math.max(1, (int) Math.ceil(
                 (to - from) / view.getSpan() * width / RecorderSetting.GRAPH_SEGMENT_PIXELS));
         float lastX = toGraphX(from, width);
-        float lastY = toGraphY(curve.evaluate(clip.toTakeTime(from)), height);
+        float lastY = toGraphY(curve.evaluate(clip.toChildTime(from)), height);
 
         for (int i = 1; i <= segments; i++) {
 
             float time = from + (to - from) * i / segments;
             float x = toGraphX(time, width);
-            float y = toGraphY(curve.evaluate(clip.toTakeTime(time)), height);
+            float y = toGraphY(curve.evaluate(clip.toChildTime(time)), height);
 
             placeLine(segmentPool, lastX, lastY, x, y, RecorderSetting.GRAPH_LINE_PIXELS);
             lastX = x;
@@ -897,7 +897,7 @@ public class RecorderKeysSystem extends SystemPackage {
             return;
 
         nowLabel.setFontText(String.format(RecorderSetting.FORMAT_CURVE_NOW, recorderManager.formatValue(
-                curve.getProperty().getKind(), curve.evaluate(clip.toTakeTime(recorderManager.getPlayhead())))));
+                curve.getProperty().getKind(), curve.evaluate(clip.toChildTime(recorderManager.getPlayhead())))));
     }
 
     // Playhead \\

@@ -31,9 +31,9 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   Crease, `Shift+S` Relax, `Shift+F` Flatten, `N` Nudge, `R` Raise, `L` Lower), resize the brush (`[` and `]`) and step
   through the brushes (`-` and `=`). Besides the Tools tab, they work in every window `ToolManager` counts as a tool
   window — each canvas (World Editor, Height Editor, Item Editor, Character Mesh Editor, Face Editor, Animation Editor,
-  Recorder), the Brushes tab, the Properties tab and the character, face and animation docker windows (Outliner,
+  Timeline), the Brushes tab, the Properties tab and the character, face and animation docker windows (Outliner,
   Timeline), each opened there by its `ToolCanvasSystem` — after that window's own keys, so a window's own shortcut wins
-  where both use a key (the Character Mesh Editor's `E` extrudes and `S` scales; the Recorder's `B` keeps its own
+  where both use a key (the Character Mesh Editor's `E` extrudes and `S` scales; the Timeline's `B` keeps its own
   action). A tool a canvas does not take is ignored there. Rebinding one on the Settings dialog's Shortcuts page rebinds
   it in every editor at once.
 
@@ -43,7 +43,7 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
 
 ```json
 {
-  "context": "editor.runtime.recorder.RecorderContext",
+  "context": "editor.runtime.timeline.TimelineContext",
   "pressed": [
     { "name": "Delete", "key": "Delete",
       "class": "editor.runtime.menueventsmanager.menus.RecorderBranch", "method": "deleteSelection" },
@@ -70,7 +70,7 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   take them, so a gesture's modifiers are listed like its keys.
 - `"shared": true` makes a file's pressed shortcuts also work in every window `ToolManager` opens, after that
   window's own. Only the tools' own file should be shared.
-- A shortcut's registered name is the file's name, a `/`, then its own: `Recorder/ExtendSelection`.
+- A shortcut's registered name is the file's name, a `/`, then its own: `Timeline/ExtendSelection`.
 
 ---
 

@@ -8,7 +8,8 @@ public class RecordingDragStruct extends StructPackage {
 
     /*
      * The drag the Recorder tab has under way: what is carried, the index of
-     * its take or clip and of the node pressed on, the window the press began
+     * its take or clip and of the node pressed on, or the name of the saved
+     * recording carried, the window the press began
      * in, where and at what moment the press began so a press that never
      * travelled reads as a click, how far into the carried span the cursor
      * took hold, where the view started so a scroll can follow the cursor,
@@ -25,6 +26,7 @@ public class RecordingDragStruct extends StructPackage {
     private RecorderDragKind kind;
     private int index;
     private int node;
+    private String name;
     private WindowInstance window;
 
     // Press
@@ -77,6 +79,7 @@ public class RecordingDragStruct extends StructPackage {
         this.kind = kind;
         this.index = index;
         this.node = node;
+        this.name = null;
         this.window = window;
 
         // Press
@@ -91,6 +94,11 @@ public class RecordingDragStruct extends StructPackage {
         this.overLanes = false;
         this.overKeys = false;
         this.target = EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // What is carried named rather than counted, as a saved recording is
+    public void carry(String name) {
+        this.name = name;
     }
 
     // The key taken hold of as it stood, and the value under the cursor, so a drag moves it by how far it travels
@@ -122,6 +130,7 @@ public class RecordingDragStruct extends StructPackage {
         this.kind = RecorderDragKind.NONE;
         this.index = EngineSetting.INDEX_NOT_FOUND;
         this.node = EngineSetting.INDEX_NOT_FOUND;
+        this.name = null;
         this.window = null;
         this.overLanes = false;
         this.overKeys = false;
@@ -174,6 +183,11 @@ public class RecordingDragStruct extends StructPackage {
 
     public int getNode() {
         return node;
+    }
+
+    // The name of what is carried, null for what is counted instead
+    public String getName() {
+        return name;
     }
 
     public WindowInstance getWindow() {
