@@ -40,6 +40,7 @@ import editor.runtime.faceoutliner.FaceOutlinerContext;
 import editor.runtime.heighteditor.HeightEditorContext;
 import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.itemeditor.ItemEditorContext;
+import editor.runtime.pianoroll.PianoRollContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
 import editor.runtime.recorder.RecorderContext;
@@ -323,6 +324,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openTimeline(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_TIMELINE, TimelineContext.class, osWindow);
+    }
+
+    public TabHandle openPianoRoll(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_PIANO_ROLL, PianoRollContext.class, osWindow);
     }
 
     public TabHandle openRecorderKeys(WindowInstance osWindow) {

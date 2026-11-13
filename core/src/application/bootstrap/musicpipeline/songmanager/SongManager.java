@@ -26,7 +26,9 @@ public class SongManager extends ManagerPackage {
      * by name apart from the palette, held by every play that loads one and
      * let go once the last of them releases it; an unreadable one is logged
      * and plays nothing. Auto-triggers an on-demand load via SongLoader on a
-     * name-based cache miss.
+     * name-based cache miss. The editor writes the project's songs itself and
+     * has each read again where it lies once saved, so every song laying it
+     * plays it as it now stands.
      */
 
     // Internal
@@ -176,6 +178,30 @@ public class SongManager extends ManagerPackage {
                     songFiles.add(file);
 
         return songFiles;
+    }
+
+    // Live Edit \\
+
+    // The song saved under the name read again into the handle it already has; throws a catchable InternalException,
+    // leaving the song as it was, when the file is refused
+    public void rebuildSong(String songName) {
+        ((SongLoader) internalLoader).rebuild(songName,
+                RegistryUtility.getHandle(songName2SongID, songID2SongHandle, songName));
+    }
+
+    // The song's file deleted from the project's songs
+    public void forgetSong(String songName) {
+        ((SongLoader) internalLoader).forget(songName);
+    }
+
+    // Every project song by name, sorted by name, into the list given
+    public void collectSongNames(ObjectArrayList<String> songNames) {
+        ((SongLoader) internalLoader).collectNames(songNames);
+    }
+
+    // Where the project's song of the name is written, whether or not it exists yet
+    public File resolveSongFile(String songName) {
+        return ((SongLoader) internalLoader).resolveFile(songName);
     }
 
     // Accessible \\

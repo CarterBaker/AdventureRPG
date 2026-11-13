@@ -24,7 +24,9 @@ class RecordingTimelineBranch extends BranchPackage {
      * keeps inside its clip. A clip's edges are found near a press, a dragged
      * edge reaches no further than its source or the clips beside it on its
      * lane, and what is dragged snaps to the nearest edge of the timeline —
-     * its start, the playhead or another clip's end — within a tolerance.
+     * its start, the playhead or another clip's end — within a tolerance, and
+     * on a Music file's timeline to the nearest beat of its grid whenever no
+     * edge lies nearer.
      * Nothing here marks the recording changed; RecorderManager does, once,
      * for each edit it makes through here.
      */
@@ -39,11 +41,12 @@ class RecordingTimelineBranch extends BranchPackage {
             int lane,
             RecordingClipStruct ignored) {
 
-        int asked = Math.clamp(lane, 0, EditorSetting.RECORDER_LANE_COUNT - 1);
+        int laneCount = recording.getLaneCount();
+        int asked = Math.clamp(lane, 0, laneCount - 1);
 
-        for (int distance = 0; distance < EditorSetting.RECORDER_LANE_COUNT; distance++) {
+        for (int distance = 0; distance < laneCount; distance++) {
 
-            if (asked + distance < EditorSetting.RECORDER_LANE_COUNT
+            if (asked + distance < laneCount
                     && isClear(recording, start, end, asked + distance, ignored))
                 return asked + distance;
 
@@ -178,6 +181,11 @@ class RecordingTimelineBranch extends BranchPackage {
 
         float snapped = time;
         float nearest = tolerance;
+
+        if (!recording.getKind().isFilmed() && tolerance > 0f) {
+            snapped = recording.snapToGrid(time, recording.getBeatTicks());
+            nearest = Math.abs(snapped - time);
+        }
 
         if (Math.abs(time) <= nearest) {
             snapped = 0f;

@@ -9,7 +9,6 @@ import application.bootstrap.soundpipeline.soundmanager.SoundManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
-import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
@@ -165,7 +164,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
     protected void lateUpdate() {
 
         boolean recording = recorderManager.isSessionFor((DevContext) context)
-                && recorderManager.getState() == RecorderState.RECORDING
+                && recorderManager.isTaking()
                 && RecorderChannel.SOUND.isIn(recorderManager.getLiveChannels());
 
         if (!recording) {
@@ -229,7 +228,8 @@ public class DevRecorderSoundSystem extends SystemPackage {
                 continue;
 
             long clipPath = path * EditorSetting.RECORDER_PATH_RADIX + i + 1;
-            float clipFade = fade * recorderManager.resolveClipGain(clip, time);
+            float clipFade = fade * recording.resolveLaneGain(clip.getLane())
+                    * recorderManager.resolveClipGain(clip, time);
             float childTime = clip.toChildTime(time);
 
             if (clip.getTake() != null)

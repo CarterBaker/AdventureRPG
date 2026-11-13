@@ -9,7 +9,6 @@ import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolOption;
 import editor.runtime.EditorSetting;
-import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.slider.SliderUtility;
 import engine.root.BranchPackage;
 import engine.util.arpg.ArpgUtility;
@@ -91,8 +90,8 @@ public class ToolBranch extends BranchPackage {
                 window,
                 EditorSetting.DIALOG_TITLE_EDIT_VALUE,
                 range.format(toolManager.getOption(toolManager.getCanvas(), option)),
-                CharacterViewUtility::isNumber,
-                text -> toolManager.setTargetOption(option, CharacterViewUtility.parseNumber(text)));
+                range::accepts,
+                text -> toolManager.setTargetOption(option, range.parse(text)));
     }
 
     public void shrinkBrush() {

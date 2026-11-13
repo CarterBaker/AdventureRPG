@@ -94,4 +94,10 @@ class InstrumentLoader extends LoaderPackage {
             if (!instrumentManager.hasInstrument(instrumentNames.get(i)))
                 request(instrumentName2File.get(instrumentNames.get(i)));
     }
+
+    // Every instrument file by name, sorted by name
+    void collectNames(ObjectArrayList<String> instrumentNames) {
+        instrumentNames.addAll(instrumentName2File.keySet());
+        instrumentNames.sort(null);
+    }
 }

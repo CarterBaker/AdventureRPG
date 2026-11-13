@@ -16,7 +16,8 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 | Sampler | `samplermanager/SamplerManager`, `sampler/SamplerNoteStruct` |
 | Songs | `songmanager/` (`SongManager`, `SongLoader`, `SongBuilder`), `song/` (`SongData`, `SongHandle`, `SongClipStruct`, `SongTempoStruct`, `SongLaneStruct`, `SongClipKind`, `SongCursorStruct`, `SongPlaybackInstance`) |
 | Shared logic | `util/NoteUtility` (names, pitch ratios, gains, scales), `util/NoteScale`, `util/NoteEnvelopeUtility` (the one envelope curve), `util/SongArpgUtility` (the tempo, meter, clip and note codec), `util/SongFlattenUtility` (a song laid out flat), `util/SongMidiUtility` (MIDI read and write), `util/SamplerMixUtility` (the one offline sampler render), `sampler/SamplerPcmStruct` (a sample decoded for it) |
-| Recorder music side | `editor/bootstrap/recorderpipeline/`: `recording/RecordingSourceKind`, `RecordingClipStruct` (sources), `RecordingPlayingStruct`, `RecordingInstance` (tempo, meter, `findPlaying`); `recordermanager/RecordingSourceBranch` (binding, child cache, loops, worlds), `RecordingFileBranch` (version 3), `RecordingMixBranch` (export); `editor/runtime/dev/recorder/DevRecorderSoundSystem` (live) |
+| Recorder music side | `editor/bootstrap/recorderpipeline/`: `recording/RecordingKind` (Video or Music), `RecordingLaneStruct` (a Music file's lane mix), `RecordingSourceKind`, `RecordingClipStruct` (sources, codec clip), `RecordingPlayingStruct`, `RecordingInstance` (kind, tempo, meter, key, lanes, grid, `findPlaying`); `recordermanager/RecordingSourceBranch` (binding, child cache, loops, worlds), `RecordingFileBranch` (Video, version 3), `RecordingMusicBranch` (Music file read, write, `toSong`), `RecordingRowBranch` (Properties rows), `RecordingRenderBranch` (Render), `RecordingMixBranch` (video export); `util/FfmpegUtility`; `editor/runtime/dev/recorder/DevRecorderSoundSystem` (live) |
+| Piano Roll | `recorderpipeline/pianorollmanager/` (`PianoRollManager`, `PianoRollHistoryBranch`, `PianoRollTypingBranch`), `pianoroll/PianoRollDragKind`; tab `editor/runtime/pianoroll/` (`PianoRollContext`, `PianoRollSetting`, `panel/PianoRollSystem`); `menueventsmanager/menus/PianoRollBranch`; menu `assets/menus/editor/PianoRoll.arpg` (also the music row templates); keys `assets/shortcuts/PianoRoll.arpg` |
 | Constants | `EngineSetting` groups `// Music Notes`, `// Music Scales`, `// Music Note Sets`, `// Music Instruments`, `// Music Sampler`, `// Music Songs`, `// Music MIDI`, `// Music Playback`; `SONG_USER_DIRECTORY` in `// Engine & Application` |
 | Content | `assets/notesets/<Instrument>.arpg`, `assets/instruments/<Instrument>.arpg`, samples and companions in `assets/sounds/notes/<Instrument>/`, `assets/songs/<Folder>/<Song>.arpg` (`Test/Scale` proves the pipeline); schemas `NoteSets.arpg`, `Instruments.arpg`, `Songs.arpg` |
 | Player songs | `Documents/My Games/AdventureRPG/Songs/*.mid`, created by `Lwjgl3Launcher` (game) and `Lwjgl3LauncherEditor` as required directories |
@@ -91,6 +92,35 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 - **Offline render:** `SamplerMixUtility.collectSamples` names every sample a cursor can sound (the caller decodes each
   once into a `SamplerPcmStruct`), `mixCursor` adds a cursor over a frame window; each stretch is computed from the
   notes alone, round robin turned by the note's index, a note let go at its end or when its pitch is struck again.
+- **Music files:** a Music file is a `RecordingInstance` of `RecordingKind.MUSIC`, so the Timeline, the transport and
+  live playback are the recorder's own. `RecorderManager.createRecording(name, kind)`, `openSong`, `saveRecording` and
+  the rest pick the file by kind (`getRecordingFile(name, kind)`: Videos beside the recordings, Music files through
+  `SongManager.resolveSongFile`). `RecordingMusicBranch.read` turns each song clip into a timeline clip where its ticks
+  fall (a notes clip keeps its notes as its codec clip, a song clip its song, volume and transpose through
+  `RecordingClipStruct.ofSongClip`, a sound clip becomes the bin's take of that sound via
+  `RecordingSoundBranch.requireSoundTake`); `write` goes through `toSong(recording, false)` and
+  `SongArpgUtility.writeSong`, notes clips normalised to offset 0 holding only the notes heard. Saving calls
+  `SongManager.rebuildSong`, which reads the song again into the handle it already has, so every song laying it hears
+  the change.
+- **Codec clips:** a clip carrying `getSongClip()` (a notes clip, a Music file's song clip) is timed by the recording's
+  tempo map where it lies (`resolveSongOrigin`), bound by `RecordingSourceBranch.layNotes` / `laySong` to a one-lane
+  song, and is replaced whole by every edit through `RecorderManager.replaceSongClip` (rebind, sound revision, unsaved);
+  never change one in place.
+- **Tempo, meter, key, mixer, metronome:** `RecorderManager.setTempo` retimes every clip so it keeps its bars and beats,
+  `setMeter`, `setKey`, the lane setters and `toggleMetronome` (`tickMetronome` clicks `RECORDER_METRONOME_SOUND` on
+  every beat). `RecordingInstance.resolveLaneGain` is the one lane mix, read by `DevRecorderSoundSystem` and
+  `RecordingMixBranch`. Rows: `RecordingRowBranch` behind `RecorderManager.buildRows`/`stepRow`/`cycleRow`/
+  `setRowValue`.
+- **Recording notes:** `record()` on a Music file runs the transport with no take (`isTaking()` false), laying a notes
+  clip when none is selected; `PianoRollTypingBranch` writes typed notes into it.
+- **Piano roll edits:** every edit in `PianoRollManager` loads the notes as five-int records (the selection carried),
+  edits them, and `commit` sorts and writes a new codec clip, kept by `PianoRollHistoryBranch` for undo. Snap is laid on
+  the song's ticks (`snapTick`), Scale Lock is `lockPitch`.
+- **Export:** `RecorderManager.exportMidi` writes `SongMidiUtility.write(toSong(recording, true))` to
+  `Documents/My Games/AdventureRPG/Songs/<Name>.mid`. `renderMusic` hands the same song to `RecordingRenderBranch`,
+  which flattens it, decodes and mixes it on the General thread through `SamplerMixUtility` (lane pan by equal power,
+  `RECORDER_RENDER_TAIL_SECONDS` past the end) and encodes it through `FfmpegUtility.encodeVorbis` to
+  `assets/sounds/music/<Name>.ogg`; the main thread writes the `music` companion.
 - **Loops and worlds:** `RecordingSourceBranch.findLoopLaying` (laying) and `findLoopIn` (saving) walk nested recordings
   by name and name the loop; `isWorldShared` refuses a nested picture from another world.
 
@@ -154,6 +184,12 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
   loads all of `assets/instruments/`, so every instrument's rig clips must be loaded by then (see the launcher trap).
 - **No percussion instrument yet.** None is marked `percussion`, so a MIDI file's channel 10 plays on the default
   instrument, and `Test/Scale`'s drum line is sound clips. Converting a VCSL drum kit (with `--percussion`) fixes both.
+- **Lifecycle names.** Managers and branches inherit `render()`, `release()`, `draw()` and the rest; a public method of
+  that name overrides the engine's hook and runs every frame. Render is `renderMusic`.
+- **Musical Typing claims keys.** While it is on, `ShortcutManager.claimKeys` makes every other shortcut on a note,
+  octave or velocity chord give way in the Piano Roll's window; those four pressed shortcuts are `claimed` and run only
+  then. Note-on is `ShortcutManager.isPressed`, note-off `isHeld` going false.
+- **Lane mute and solo are live; pan is heard only in Render**, not in live playback (see Pan is not live).
 - **Schema rules for songs** are editor vocabulary added for this pipeline: `record` (the notes), `ascending_from`
   (tempo ticks), `one_of` (`beat_unit`), `index_into` (a clip's `lane`) and `acyclic` (a song clip's `song`), built in
   `InfoSchemaBuilder.parseRule`/`verifyEntryRules` and checked in `InfoValidationBranch`.

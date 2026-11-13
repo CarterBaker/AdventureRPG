@@ -43,7 +43,11 @@ public class ShortcutManager extends ManagerPackage {
      * tool keys, after that window's own, so a window's own key wins where the
      * two share one. The shortcuts that carry a hint are read out for the
      * hint bar through appendHints(), the window's own first, and a rebind
-     * moves the revision so the bar reads them again.
+     * moves the revision so the bar reads them again. A window may claim the
+     * keys of some of its shortcuts, as Musical Typing does: while it does,
+     * the one check at dispatch skips every other shortcut on the same chord
+     * there, and a shortcut marked claimed runs only while its window claims
+     * it.
      */
 
     // Internal
@@ -63,6 +67,10 @@ public class ShortcutManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<Class<? extends ContextPackage>, ObjectArrayList<ShortcutHandle>>
             contextClass2HintedShortcuts;
     private ObjectArrayList<Class<? extends ContextPackage>> sharedContextClasses;
+
+    // Claims — the window claiming the keys of its shortcuts, and those shortcuts
+    private WindowInstance claimWindow;
+    private int[] claimShortcutIDs;
 
     // Status
     private int revision;
@@ -189,6 +197,7 @@ public class ShortcutManager extends ManagerPackage {
                 shortcutData.getActionClass(),
                 shortcutData.getActionMethod(),
                 shortcutData.getActionArg(),
+                shortcutData.isClaimed(),
                 shortcutData.getHint(),
                 shortcutData.getCanvasMask(),
                 shortcutData.getToolMask()));
@@ -255,7 +264,7 @@ public class ShortcutManager extends ManagerPackage {
 
             ShortcutHandle shortcut = pressedShortcuts.get(i);
 
-            if (!shortcut.isPressed(input, heldModifiers))
+            if (!shortcut.isPressed(input, heldModifiers) || isClaimedAway(shortcut, window))
                 continue;
 
             elementHitSystem.executeAction(
@@ -264,6 +273,44 @@ public class ShortcutManager extends ManagerPackage {
                     shortcut.getActionArg(),
                     window);
             return true;
+        }
+
+        return false;
+    }
+
+    // Claims \\
+
+    // The window claims the chords of the shortcuts given, until it lets them go
+    public void claimKeys(WindowInstance window, int[] shortcutIDs) {
+        this.claimWindow = window;
+        this.claimShortcutIDs = shortcutIDs;
+    }
+
+    public void releaseKeys(WindowInstance window) {
+
+        if (claimWindow != window)
+            return;
+
+        this.claimWindow = null;
+        this.claimShortcutIDs = null;
+    }
+
+    // The one claim check at dispatch: a claimed shortcut waits for its window to claim it, and while the window
+    // claims keys every other shortcut on one of their chords gives way
+    private boolean isClaimedAway(ShortcutHandle shortcut, WindowInstance window) {
+
+        boolean claiming = window == claimWindow;
+
+        if (shortcut.isClaimed() || !claiming)
+            return shortcut.isClaimed() && !claiming;
+
+        for (int i = 0; i < claimShortcutIDs.length; i++) {
+
+            ShortcutHandle claimed = shortcutID2ShortcutHandle.get(claimShortcutIDs[i]);
+
+            if (claimed != shortcut && claimed.getKey() == shortcut.getKey()
+                    && claimed.getModifiers() == shortcut.getModifiers())
+                return true;
         }
 
         return false;
@@ -371,6 +418,14 @@ public class ShortcutManager extends ManagerPackage {
             throwException("Shortcut ID not found: " + shortcutID);
 
         return handle;
+    }
+
+    // True on the frame the shortcut's key goes down on the window's input with exactly its modifiers held
+    public boolean isPressed(int shortcutID, WindowInstance window) {
+
+        Input input = inputManager.getRawInput(window);
+
+        return getShortcutHandleFromShortcutID(shortcutID).isPressed(input, ShortcutModifier.resolveHeld(input));
     }
 
     // True while the held shortcut's key and modifiers are down on the window's input

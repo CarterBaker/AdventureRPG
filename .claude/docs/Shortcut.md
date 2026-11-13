@@ -27,7 +27,7 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   also runs S. Two pressed shortcuts of one tool on the same chord fail at load.
 - **Shared tool keys.** `assets/shortcuts/Tools.arpg` names `ToolsContext` and is marked `"shared": true`: its keys
   choose the editor's generic tools (`V` Select, `B` Brush, `E` Erase, `S` Smooth, `Q` Swirl, `J` Scatter, `F` Fill, `I`
-  Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut, `O` Inflate, `K` Pinch, `Shift+C`
+  Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut, `D` Draw, `O` Inflate, `K` Pinch, `Shift+C`
   Crease, `Shift+S` Relax, `Shift+F` Flatten, `N` Nudge, `R` Raise, `L` Lower), resize the brush (`[` and `]`) and step
   through the brushes (`-` and `=`). Besides the Tools tab, they work in every window `ToolManager` counts as a tool
   window — each canvas (World Editor, Height Editor, Item Editor, Character Mesh Editor, Face Editor, Animation Editor,
@@ -71,6 +71,12 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
 - `"shared": true` makes a file's pressed shortcuts also work in every window `ToolManager` opens, after that
   window's own. Only the tools' own file should be shared.
 - A shortcut's registered name is the file's name, a `/`, then its own: `Timeline/ExtendSelection`.
+- `"claimed": true` makes a pressed shortcut run only while its window claims its keys
+  (`ShortcutManager.claimKeys(window, shortcutIDs)` / `releaseKeys`). While a window claims keys, the one check at
+  dispatch (`isClaimedAway`) skips every other shortcut, its own or shared, on the same chord there. The Piano Roll's
+  Musical Typing (`M`) claims its note keys `A W S E D F T G Y H U J K` (held) and `Z X C V` (claimed pressed), so
+  Ctrl+Z, Ctrl+S and every other chord still work. A tool reads a held key's press with
+  `ShortcutManager.isPressed(id, window)` and its release with `isHeld` going false.
 
 ---
 

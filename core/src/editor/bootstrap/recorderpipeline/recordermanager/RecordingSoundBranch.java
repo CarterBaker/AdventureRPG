@@ -2,11 +2,15 @@ package editor.bootstrap.recorderpipeline.recordermanager;
 
 import application.bootstrap.soundpipeline.sound.SoundHandle;
 import application.bootstrap.soundpipeline.soundmanager.SoundManager;
+import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RecordingSoundBranch extends BranchPackage {
 
@@ -19,7 +23,9 @@ class RecordingSoundBranch extends BranchPackage {
      * shorter or longer with it — another length no longer than it can run,
      * or another sound heard as loud as the library would play it, and every
      * one of a sound is removed at once. Every edit changes the take, so every
-     * clip of it hears the change. Nothing here marks the recording changed;
+     * clip of it hears the change. A sound laid on the timeline is a take of
+     * that sound alone, the bin keeping one such take for each sound however
+     * often it is laid. Nothing here marks the recording changed;
      * RecorderManager does, once, for each edit.
      */
 
@@ -31,6 +37,68 @@ class RecordingSoundBranch extends BranchPackage {
     @Override
     protected void get() {
         this.soundManager = get(SoundManager.class);
+    }
+
+    // Sound Takes \\
+
+    // The bin's take of the sound alone, added when the bin has none yet; its place in the bin
+    int requireSoundTake(RecordingInstance recording, SoundHandle soundHandle) {
+
+        ObjectArrayList<RecordingTakeStruct> takes = recording.getTakes();
+
+        for (int i = 0; i < takes.size(); i++)
+            if (takes.get(i).isSoundOf(soundHandle.getSoundName()))
+                return i;
+
+        return addSoundTake(recording, soundHandle);
+    }
+
+    // A take of the sound alone, heard from its start as the sound library plays it, named after the sound
+    private int addSoundTake(RecordingInstance recording, SoundHandle soundHandle) {
+
+        float length = soundHandle.getPlayedLength();
+        RecordingTakeStruct soundTake = new RecordingTakeStruct(
+                resolveSoundTakeName(recording, soundHandle.getSoundName()), RecorderChannel.SOUND.getBit());
+
+        soundTake.getSoundTrack().addEvent(
+                0f,
+                length,
+                soundHandle.getSoundName(),
+                EngineSetting.DEFAULT_SOUND_VOLUME,
+                EngineSetting.DEFAULT_SOUND_PITCH,
+                false,
+                0L,
+                0f,
+                0f,
+                0f,
+                soundHandle.getVolume(),
+                0f);
+        soundTake.setDuration(length);
+        recording.addTake(soundTake);
+        return recording.getTakes().size() - 1;
+    }
+
+    // The last part of the sound's name, numbered on when a take already has it
+    private String resolveSoundTakeName(RecordingInstance recording, String soundName) {
+
+        String baseName = soundName.substring(soundName.lastIndexOf(EngineSetting.PATH_SEPARATOR) + 1);
+        String takeName = baseName;
+        int number = EditorSetting.RECORDER_SOUND_TAKE_FIRST_NUMBER;
+
+        while (recording.hasTakeName(takeName))
+            takeName = baseName + EditorSetting.RECORDER_SOUND_TAKE_NAME_SEPARATOR + number++;
+
+        return takeName;
+    }
+
+    // The sound a take of one sound alone holds, null for any other take
+    String findSoleSound(RecordingTakeStruct take) {
+        if (take.getSoundTrack().size() == 0)
+            return null;
+
+        String soundName = take.getSoundTrack().getSoundName(0);
+
+        return take.isSoundOf(soundName) ? soundName : null;
     }
 
     // Find \\

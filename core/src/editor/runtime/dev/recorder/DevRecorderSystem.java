@@ -38,7 +38,6 @@ import application.runtime.world.WorldSystem;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveProperty;
-import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCameraTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingPlayingStruct;
@@ -263,7 +262,7 @@ public class DevRecorderSystem extends SystemPackage {
         if (!sessionActive)
             return;
 
-        if (recorderManager.getState() == RecorderState.RECORDING && recorderManager.getTakeCount() != seenTakeCount)
+        if (recorderManager.isTaking() && recorderManager.getTakeCount() != seenTakeCount)
             beginTake();
 
         holdAnchor();
@@ -272,7 +271,7 @@ public class DevRecorderSystem extends SystemPackage {
 
     @Override
     protected void lateUpdate() {
-        if (sessionActive && recorderManager.getState() == RecorderState.RECORDING && !recorderManager.isSuspended())
+        if (sessionActive && recorderManager.isTaking() && !recorderManager.isSuspended())
             capture();
     }
 

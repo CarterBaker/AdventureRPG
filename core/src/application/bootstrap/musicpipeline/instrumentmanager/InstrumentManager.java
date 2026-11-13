@@ -90,6 +90,11 @@ public class InstrumentManager extends ManagerPackage {
         return getInstrumentHandleFromInstrumentID(getInstrumentIDFromInstrumentName(instrumentName));
     }
 
+    // Every instrument of the project by name, loaded or not, sorted by name, into the list given
+    public void collectInstrumentNames(ObjectArrayList<String> instrumentNames) {
+        ((InstrumentLoader) internalLoader).collectNames(instrumentNames);
+    }
+
     // MIDI \\
 
     // The instrument a General MIDI program plays on, INSTRUMENT_NONE when no instrument names it

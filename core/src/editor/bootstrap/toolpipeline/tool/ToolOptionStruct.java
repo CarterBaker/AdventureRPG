@@ -10,7 +10,8 @@ public class ToolOptionStruct extends StructPackage {
      * One option a canvas honours, with the range it is held to there, the
      * step the Tools panel and the brush size keys move it by, and the value
      * it starts at. A slider sets it by its share of the range, landing on
-     * the nearest step.
+     * the nearest step. An option of named steps — a note grid, on or off —
+     * shows and is typed by the name of each whole step from its low end.
      */
 
     // Option
@@ -20,9 +21,27 @@ public class ToolOptionStruct extends StructPackage {
     private final float step;
     private final float defaultValue;
 
+    // Names — one for each whole step from the low end, null for an option shown as its number
+    private final String[] names;
+
     // Constructor \\
 
     public ToolOptionStruct(ToolOption option, float min, float max, float step, float defaultValue) {
+        this(option, min, max, step, defaultValue, null);
+    }
+
+    // An option of named steps, from 0 to the last name, starting at the step given
+    public ToolOptionStruct(ToolOption option, String[] names, int defaultIndex) {
+        this(option, 0f, names.length - 1, 1f, defaultIndex, names);
+    }
+
+    private ToolOptionStruct(
+            ToolOption option,
+            float min,
+            float max,
+            float step,
+            float defaultValue,
+            String[] names) {
 
         // Option
         this.option = option;
@@ -30,6 +49,9 @@ public class ToolOptionStruct extends StructPackage {
         this.max = max;
         this.step = step;
         this.defaultValue = defaultValue;
+
+        // Names
+        this.names = names;
     }
 
     // Range \\
@@ -55,14 +77,37 @@ public class ToolOptionStruct extends StructPackage {
 
     // Text \\
 
-    // Whole numbers as they are, fractions to the precision the Tools panel shows and keeps
+    // A named step by its name, whole numbers as they are, fractions to the precision the Tools panel shows and keeps
     public String format(float value) {
+
+        if (names != null)
+            return names[Math.round(clamp(value))];
 
         float precision = EditorSetting.TOOL_OPTION_PRECISION;
 
         return value == Math.round(value)
                 ? Integer.toString(Math.round(value))
                 : Float.toString(Math.round(value * precision) / precision);
+    }
+
+    // The value typed: a named step by its name, ignoring case, else a number; not a number for neither
+    public float parse(String text) {
+
+        if (names != null)
+            for (int i = 0; i < names.length; i++)
+                if (names[i].equalsIgnoreCase(text.trim()))
+                    return i;
+
+        try {
+            float value = Float.parseFloat(text.trim());
+            return Float.isFinite(value) ? value : Float.NaN;
+        } catch (NumberFormatException e) {
+            return Float.NaN;
+        }
+    }
+
+    public boolean accepts(String text) {
+        return !Float.isNaN(parse(text));
     }
 
     // Accessible \\

@@ -27,7 +27,9 @@ class SongBuilder extends BuilderPackage {
      * tempo map and "beats_per_bar" and "beat_unit" the bar, both read and
      * held to their rules by SongArpgUtility;
      * "key_root" and "key_scale" the key; "lanes" at most SONG_LANE_COUNT
-     * lanes; "clips" the clips laid on them, read through SongArpgUtility. A
+     * lanes, each read through SongArpgUtility; "clips" the clips laid on
+     * them, read through SongArpgUtility. A song the editor saves again is
+     * read into the handle it already has. A
      * notes clip's instrument and a song clip's song load on demand, and a
      * sound clip's sound must stand under the sound directory. The songs
      * being built are kept as a chain, so a song clip naming one of them —
@@ -65,8 +67,21 @@ class SongBuilder extends BuilderPackage {
 
     SongHandle build(File file, String songName) {
 
+        SongHandle handle = create(SongHandle.class);
+
+        handle.constructor(read(file, songName, songManager.registerSongName(songName)));
+        return handle;
+    }
+
+    // The song saved again by the editor read into the handle it already has, so every clip laying it plays it as it
+    // now stands; the handle keeps what it held when the file is refused
+    void rebuild(File file, String songName, SongHandle handle) {
+        handle.constructor(read(file, songName, handle.getSongID()));
+    }
+
+    private SongData read(File file, String songName, short songID) {
+
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
-        short songID = songManager.registerSongName(songName);
         String owner = "Song \"" + songName + "\"";
 
         String fileOwner = owner + " (" + file.getName() + ")";
@@ -76,10 +91,7 @@ class SongBuilder extends BuilderPackage {
         int keyRoot = ArpgUtility.getInt(arpg, "key_root", EngineSetting.DEFAULT_SONG_KEY_ROOT);
 
         SongArpgUtility.validateMeter(beatsPerBar, beatUnit, fileOwner);
-
-        if (keyRoot < 0 || keyRoot > EngineSetting.SONG_KEY_ROOT_MAX)
-            throwException(owner + " names a \"key_root\" of " + keyRoot + "; a key's root is a step from C, 0 to "
-                    + EngineSetting.SONG_KEY_ROOT_MAX + ". File: " + file.getName());
+        SongArpgUtility.validateKeyRoot(keyRoot, fileOwner);
 
         String displayName = ArpgUtility.getString(arpg, "display_name", EngineSetting.SONG_DISPLAY_NAME_NONE);
 
@@ -91,8 +103,7 @@ class SongBuilder extends BuilderPackage {
         buildingSongNames.add(songName);
 
         try {
-
-            SongData songData = new SongData(
+            return new SongData(
                     songName,
                     songID,
                     displayName,
@@ -103,11 +114,6 @@ class SongBuilder extends BuilderPackage {
                     ArpgUtility.getEnum(arpg, "key_scale", NoteScale.class, NoteScale.MAJOR),
                     lanes,
                     parseClips(ArpgUtility.validateArray(arpg, "clips"), lanes.length, owner, file));
-
-            SongHandle handle = create(SongHandle.class);
-            handle.constructor(songData);
-
-            return handle;
         } finally {
             buildingSongNames.pop();
         }
@@ -123,23 +129,9 @@ class SongBuilder extends BuilderPackage {
 
         SongLaneStruct[] lanes = new SongLaneStruct[lanesArpg.size()];
 
-        for (int i = 0; i < lanes.length; i++) {
-
-            ArpgObjectStruct laneArpg = lanesArpg.get(i).getAsObject();
-            float volume = ArpgUtility.getFloat(laneArpg, "volume", EngineSetting.DEFAULT_SONG_LANE_VOLUME);
-            float pan = ArpgUtility.getFloat(laneArpg, "pan", EngineSetting.DEFAULT_SONG_LANE_PAN);
-
-            if (volume < 0f || volume > 1f || pan < -1f || pan > 1f)
-                throwException(owner + " lane " + i + " plays at a \"volume\" outside 0 to 1 or a \"pan\" outside -1 "
-                        + "to 1. File: " + file.getName());
-
-            lanes[i] = new SongLaneStruct(
-                    ArpgUtility.getString(laneArpg, "name", EngineSetting.SONG_LANE_NAME_NONE),
-                    volume,
-                    pan,
-                    ArpgUtility.getBoolean(laneArpg, "muted", EngineSetting.DEFAULT_SONG_LANE_MUTED),
-                    ArpgUtility.getBoolean(laneArpg, "solo", EngineSetting.DEFAULT_SONG_LANE_SOLO));
-        }
+        for (int i = 0; i < lanes.length; i++)
+            lanes[i] = SongArpgUtility.readLane(lanesArpg.get(i).getAsObject(),
+                    owner + " lane " + i + " (" + file.getName() + ")");
 
         return lanes;
     }

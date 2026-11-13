@@ -27,7 +27,8 @@ class RecordingMixBranch extends BranchPackage {
      * the export begins every sound a clip plays within its range is decoded
      * once at the export's rate, and every sample the songs and notes clips
      * within it can sound; then each video frame's stretch of sound is mixed
-     * from every unmuted clip holding the sound channel — sounds add up,
+     * from every unmuted clip holding the sound channel, at its lane's mix —
+     * sounds add up,
      * whatever their lanes — walking down into every nested recording at the
      * moment mapped into it, its sounds heard only within the nested clip's
      * span and faded by every transition around it. A take's sound is read
@@ -203,11 +204,12 @@ class RecordingMixBranch extends BranchPackage {
                 continue;
 
             float childTime = clip.toChildTime(time);
-            float middleFade = fade * recordingTransitionBranch.resolveGain(clip,
+            float laneFade = fade * recording.resolveLaneGain(clip.getLane());
+            float middleFade = laneFade * recordingTransitionBranch.resolveGain(clip,
                     time + (float) ((clipFirst + clipEnd) >>> 1) / sampleRate);
 
             if (clip.getTake() != null)
-                mixTake(clip, clip.getTake().getSoundTrack(), time, fade, clipFirst, clipEnd);
+                mixTake(clip, clip.getTake().getSoundTrack(), time, laneFade, clipFirst, clipEnd);
 
             if (clip.getChild() != null)
                 mixRecording(clip.getChild(), childTime, middleFade, clipFirst, clipEnd);

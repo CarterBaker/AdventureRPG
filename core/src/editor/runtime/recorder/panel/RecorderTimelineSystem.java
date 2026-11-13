@@ -1,10 +1,13 @@
 package editor.runtime.recorder.panel;
 
+import java.util.Arrays;
+
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
+import application.bootstrap.musicpipeline.song.SongTempoStruct;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
@@ -14,6 +17,8 @@ import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
+import editor.bootstrap.recorderpipeline.recording.RecordingKind;
+import editor.bootstrap.recorderpipeline.recording.RecordingLaneStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
 import editor.runtime.recorder.RecorderSetting;
@@ -48,7 +53,10 @@ public class RecorderTimelineSystem extends SystemPackage {
      * on — from positions built the first time each is needed, so neither
      * playback nor a drag allocates; the Cut tool shows the same line where
      * it would cut under the pointer. A timeline still growing under a take
-     * and a resized timeline refresh a few times a second.
+     * and a resized timeline refresh a few times a second. A Music file's
+     * timeline shows SONG_LANE_COUNT lanes, each with its mixer strip beside
+     * it — its name, volume, pan and whether it is muted or soloed, the lane
+     * selected marked — and its ruler counts bars and beats.
      */
 
     // Internal
@@ -66,6 +74,22 @@ public class RecorderTimelineSystem extends SystemPackage {
     private ElementInstance rangeEndMarker;
     private ElementInstance dragGhost;
     private ElementInstance viewLabel;
+    private ElementInstance timelineTrack;
+    private ElementInstance clipLanes;
+    private ElementInstance mixerRows;
+
+    // Layout — the lanes and ruler placed for a Video's lanes or beside a Music file's mixer strips, and the lane
+    // count every lane position is built for
+    private DimensionVector2Struct[] trackPositions;
+    private DimensionVector2Struct[] trackSizes;
+    private DimensionVector2Struct[] lanesPositions;
+    private DimensionVector2Struct[] lanesSizes;
+    private DimensionVector2Struct[] mixerSizes;
+    private DimensionVector2Struct[] rowPositions;
+    private String[] laneKeys;
+    private int shownLaneCount;
+    private RecordingKind shownKind;
+    private StringBuilder textScratch;
 
     // Timeline
     private DimensionVector2Struct[] timelinePositions;
@@ -110,7 +134,7 @@ public class RecorderTimelineSystem extends SystemPackage {
                     DimensionValueStruct.ofPercent(toPercent(i)),
                     DimensionValueStruct.ofAbsolute(0f));
 
-        this.lanePositions = new DimensionVector2Struct[EditorSetting.RECORDER_LANE_COUNT]
+        this.lanePositions = new DimensionVector2Struct[EngineSetting.SONG_LANE_COUNT]
                 [RecorderSetting.TIMELINE_STEPS + 2 * RecorderSetting.GHOST_OVERHANG_STEPS + 1];
         this.barSizes = new DimensionVector2Struct[RecorderSetting.TIMELINE_STEPS + 1];
         this.rangeMarkerSize = new DimensionVector2Struct(
@@ -130,6 +154,51 @@ public class RecorderTimelineSystem extends SystemPackage {
 
         // View
         this.shownViewRevision = EngineSetting.INDEX_NOT_FOUND;
+
+        // Layout
+        this.trackPositions = new DimensionVector2Struct[RecordingKind.VALUES.length];
+        this.trackSizes = new DimensionVector2Struct[RecordingKind.VALUES.length];
+        this.lanesPositions = new DimensionVector2Struct[RecordingKind.VALUES.length];
+        this.lanesSizes = new DimensionVector2Struct[RecordingKind.VALUES.length];
+        this.mixerSizes = new DimensionVector2Struct[RecordingKind.VALUES.length];
+
+        for (int i = 0; i < RecordingKind.VALUES.length; i++) {
+
+            RecordingKind kind = RecordingKind.VALUES[i];
+            float mixer = kind.isFilmed() ? 0f : RecorderSetting.MIXER_PIXELS;
+            float height = kind.getLaneCount() * EditorSetting.RECORDER_LANE_PIXELS;
+
+            trackPositions[i] = new DimensionVector2Struct(
+                    DimensionValueStruct.ofAbsolute(RecorderSetting.TIMELINE_INSET_PIXELS + mixer),
+                    DimensionValueStruct.ofAbsolute(RecorderSetting.TRACK_TOP_PIXELS));
+            trackSizes[i] = new DimensionVector2Struct(
+                    DimensionValueStruct.ofPercentWithOffset(RecorderSetting.TIMELINE_PERCENT,
+                            -2f * RecorderSetting.TIMELINE_INSET_PIXELS - mixer),
+                    DimensionValueStruct.ofAbsolute(RecorderSetting.TRACK_HEIGHT_PIXELS));
+            lanesPositions[i] = new DimensionVector2Struct(
+                    DimensionValueStruct.ofAbsolute(RecorderSetting.TIMELINE_INSET_PIXELS + mixer),
+                    DimensionValueStruct.ofAbsolute(RecorderSetting.LANES_TOP_PIXELS));
+            lanesSizes[i] = new DimensionVector2Struct(
+                    DimensionValueStruct.ofPercentWithOffset(RecorderSetting.TIMELINE_PERCENT,
+                            -2f * RecorderSetting.TIMELINE_INSET_PIXELS - mixer),
+                    DimensionValueStruct.ofAbsolute(height));
+            mixerSizes[i] = new DimensionVector2Struct(
+                    DimensionValueStruct.ofAbsolute(kind.isFilmed() ? 0f : mixer - RecorderSetting.MIXER_GAP_PIXELS),
+                    DimensionValueStruct.ofAbsolute(kind.isFilmed() ? 0f : height));
+        }
+
+        this.rowPositions = new DimensionVector2Struct[EngineSetting.SONG_LANE_COUNT];
+        this.laneKeys = new String[EngineSetting.SONG_LANE_COUNT];
+
+        for (int i = 0; i < rowPositions.length; i++) {
+            rowPositions[i] = new DimensionVector2Struct(
+                    DimensionValueStruct.ofAbsolute(0f),
+                    DimensionValueStruct.ofAbsolute(-i * EditorSetting.RECORDER_LANE_PIXELS));
+            laneKeys[i] = Integer.toString(i);
+        }
+
+        this.shownLaneCount = EditorSetting.RECORDER_LANE_COUNT;
+        this.textScratch = new StringBuilder();
 
         // Ghost
         this.edgeGhostSize = new DimensionVector2Struct(
@@ -161,6 +230,11 @@ public class RecorderTimelineSystem extends SystemPackage {
         this.rangeEndMarker = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_RANGE_END);
         this.dragGhost = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_DRAG_GHOST);
         this.viewLabel = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_VIEW);
+        this.timelineTrack = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_TIMELINE_TRACK);
+        this.mixerRows = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_MIXER_ROWS);
+        this.clipLanes = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_LANE_AREA);
+
+        recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_LANE_STRIPES);
 
         recorderRowSystem.requireEntryPoint(EditorSetting.RECORDER_ENTRY_RULER);
         recorderRowSystem.requireEntryPoint(EditorSetting.RECORDER_ENTRY_CLIP_LANES);
@@ -225,8 +299,13 @@ public class RecorderTimelineSystem extends SystemPackage {
 
         menuManager.ejectAll(recorderMenu, EditorSetting.RECORDER_ENTRY_CLIP_LANES);
         menuManager.ejectAll(recorderMenu, EditorSetting.RECORDER_ENTRY_RULER);
+        menuManager.ejectAll(recorderMenu, RecorderSetting.ENTRY_LANE_STRIPES);
+        menuManager.ejectAll(recorderMenu, RecorderSetting.ENTRY_MIXER_ROWS);
 
         RecordingInstance recording = recorderManager.getRecording();
+
+        applyLayout(recording != null ? recording.getKind() : RecordingKind.VIDEO);
+        injectLaneStripes();
         RecordingViewStruct view = recorderManager.getView();
         float lanesWidth = resolveLanesWidth();
 
@@ -243,7 +322,10 @@ public class RecorderTimelineSystem extends SystemPackage {
                         RecorderSetting.FORMAT_VIEW,
                         recorderRowSystem.formatTime(view.getStart()),
                         recorderRowSystem.formatTime(view.getEnd())));
-        injectRulerTicks(view, lanesWidth);
+        if (recording != null && !recording.getKind().isFilmed())
+            injectBeatTicks(recording, view, lanesWidth);
+        else
+            injectRulerTicks(view, lanesWidth);
 
         if (recording == null) {
             rangeStartMarker.setSizeOverride(hiddenSize);
@@ -252,6 +334,9 @@ public class RecorderTimelineSystem extends SystemPackage {
         }
 
         ObjectArrayList<RecordingClipStruct> clips = recording.getClips();
+
+        if (!recording.getKind().isFilmed())
+            injectMixerRows(recording);
 
         for (int i = 0; i < clips.size(); i++)
             injectClipBar(clips.get(i), i, view);
@@ -269,6 +354,142 @@ public class RecorderTimelineSystem extends SystemPackage {
         placeRangeMarker(rangeStartMarker, exportStruct.hasRangeStart(), exportStruct.getRangeStart());
         placeRangeMarker(rangeEndMarker, exportStruct.hasRangeEnd(), exportStruct.getRangeEnd());
     }
+
+    // Layout \\
+
+    // The ruler and the lanes placed for the kind, beside the mixer strips of a Music file; every lane position is
+    // built again when the lane count changes
+    private void applyLayout(RecordingKind kind) {
+
+        if (kind == shownKind)
+            return;
+
+        this.shownKind = kind;
+        timelineTrack.setPositionOverride(trackPositions[kind.ordinal()]);
+        timelineTrack.setSizeOverride(trackSizes[kind.ordinal()]);
+        clipLanes.setPositionOverride(lanesPositions[kind.ordinal()]);
+        clipLanes.setSizeOverride(lanesSizes[kind.ordinal()]);
+        mixerRows.setSizeOverride(mixerSizes[kind.ordinal()]);
+
+        if (kind.getLaneCount() == shownLaneCount)
+            return;
+
+        this.shownLaneCount = kind.getLaneCount();
+
+        for (int i = 0; i < lanePositions.length; i++)
+            Arrays.fill(lanePositions[i], null);
+    }
+
+    // A stripe along every lane, alternately shaded
+    private void injectLaneStripes() {
+        for (int row = 0; row < shownLaneCount; row++) {
+
+            DimensionVector2Struct position = rowPositions[row];
+
+            String template = row % 2 == 0
+                    ? RecorderSetting.TEMPLATE_LANE_STRIPE
+                    : RecorderSetting.TEMPLATE_LANE_STRIPE_ALTERNATE;
+
+            menuManager.inject(recorderMenu, RecorderSetting.ENTRY_LANE_STRIPES, template,
+                    injected -> injected.setPositionOverride(position));
+        }
+    }
+
+    // A mixer strip beside every lane, the highest at the top: its number and name, volume, pan and whether it is
+    // muted or soloed, pressed to select it, with its M and S
+    private void injectMixerRows(RecordingInstance recording) {
+
+        for (int lane = recording.getLaneCount() - 1; lane >= 0; lane--) {
+
+            DimensionVector2Struct position = rowPositions[recording.getLaneCount() - 1 - lane];
+            String laneKey = laneKeys[lane];
+            ElementInstance row = menuManager.inject(recorderMenu, RecorderSetting.ENTRY_MIXER_ROWS,
+                    lane == recorderManager.getSelectedLane()
+                            ? RecorderSetting.TEMPLATE_MIXER_ROW_SELECTED
+                            : RecorderSetting.TEMPLATE_MIXER_ROW,
+                    injected -> {
+                        injected.setPositionOverride(position);
+                        injected.setActionArgOverride(laneKey);
+                    });
+
+            row.findChildById(RecorderSetting.ELEMENT_MIXER_MUTE).setActionArgOverride(laneKey);
+            row.findChildById(RecorderSetting.ELEMENT_MIXER_SOLO).setActionArgOverride(laneKey);
+            row.findChildById(RecorderSetting.ELEMENT_MIXER_NAME).setFontText(describeLane(recording, lane));
+        }
+    }
+
+    private String describeLane(RecordingInstance recording, int lane) {
+
+        RecordingLaneStruct mixed = recording.getLane(lane);
+
+        textScratch.setLength(0);
+        textScratch.append(lane + 1).append(RecorderSetting.TEXT_MIXER_SEPARATOR);
+
+        if (!mixed.getName().isEmpty())
+            textScratch.append(mixed.getName()).append(RecorderSetting.TEXT_MIXER_SEPARATOR);
+
+        textScratch.append(String.format(RecorderSetting.FORMAT_MIXER_MIX,
+                mixed.getVolume() * RecorderSetting.MIXER_PERCENT, mixed.getPan()));
+
+        if (mixed.isMuted())
+            textScratch.append(RecorderSetting.TEXT_MIXER_MUTED);
+
+        if (mixed.isSolo())
+            textScratch.append(RecorderSetting.TEXT_MIXER_SOLO);
+
+        return textScratch.toString();
+    }
+
+    // A tick at every whole bar or beat in view, the closest step of the grid that keeps the labels apart, named by
+    // its bar, and a beat within its bar after it
+    private void injectBeatTicks(RecordingInstance recording, RecordingViewStruct view, float lanesWidth) {
+
+        SongTempoStruct tempo = recording.getTempo();
+        int interval = resolveBeatInterval(recording, view, lanesWidth);
+        int barTicks = recording.getBarTicks();
+        int beatTicks = recording.getBeatTicks();
+        long first = (long) Math.ceil(tempo.toTicks(view.getStart()) / interval);
+
+        for (long tick = first * interval; tempo.toSeconds(tick) <= view.getEnd(); tick += interval) {
+
+            DimensionVector2Struct position = timelinePositions[toViewStep((float) tempo.toSeconds(tick))];
+            ElementInstance mark = menuManager.inject(
+                    recorderMenu,
+                    EditorSetting.RECORDER_ENTRY_RULER,
+                    RecorderSetting.TEMPLATE_RULER_TICK,
+                    injected -> injected.setPositionOverride(position));
+            long bar = tick / barTicks + 1;
+            long beat = tick % barTicks / beatTicks + 1;
+
+            mark.findChildById(RecorderSetting.ELEMENT_RULER_LABEL).setFontText(tick % barTicks == 0
+                    ? Long.toString(bar)
+                    : String.format(RecorderSetting.FORMAT_BAR_BEAT, bar, beat));
+        }
+    }
+
+    // The fewest ticks between labels that keeps them apart: a beat, doubled up to a bar, then bars doubled
+    private int resolveBeatInterval(RecordingInstance recording, RecordingViewStruct view, float lanesWidth) {
+
+        SongTempoStruct tempo = recording.getTempo();
+        double ticksPerSecond = tempo.toTicks(view.getStart() + 1f) - tempo.toTicks(view.getStart());
+        double wanted = (lanesWidth > 0f
+                ? view.getSpan() * RecorderSetting.RULER_MIN_TICK_PIXELS / lanesWidth
+                : view.getSpan() / RecorderSetting.RULER_FALLBACK_TICKS) * ticksPerSecond;
+        int interval = recording.getBeatTicks();
+
+        while (interval < wanted && interval * 2 <= recording.getBarTicks())
+            interval *= 2;
+
+        if (interval < wanted)
+            interval = recording.getBarTicks();
+
+        while (interval < wanted)
+            interval *= 2;
+
+        return interval;
+    }
+
+    // Ruler \\
 
     // A tick with its time at every whole interval in view, the interval the closest that keeps the labels apart
     private void injectRulerTicks(RecordingViewStruct view, float lanesWidth) {
@@ -493,7 +714,7 @@ public class RecorderTimelineSystem extends SystemPackage {
 
         int step = toGhostStep(dragShown ? drag.getLandingStart() : recorderManager.getCutHoverTime());
         int lane = Math.clamp(dragShown ? drag.getLandingLane() : recording.getClips().get(cutClip).getLane(),
-                0, EditorSetting.RECORDER_LANE_COUNT - 1);
+                0, shownLaneCount - 1);
 
         if (step == ghostStep && lane == ghostLane)
             return;
@@ -507,14 +728,14 @@ public class RecorderTimelineSystem extends SystemPackage {
     // may lie a view's width to either side, where only a ghost is drawn
     private DimensionVector2Struct resolveLanePosition(int lane, int step) {
 
-        int clampedLane = Math.clamp(lane, 0, EditorSetting.RECORDER_LANE_COUNT - 1);
+        int clampedLane = Math.clamp(lane, 0, shownLaneCount - 1);
         int slot = step + RecorderSetting.GHOST_OVERHANG_STEPS;
         DimensionVector2Struct position = lanePositions[clampedLane][slot];
 
         if (position != null)
             return position;
 
-        int row = EditorSetting.RECORDER_LANE_COUNT - 1 - clampedLane;
+        int row = shownLaneCount - 1 - clampedLane;
 
         position = new DimensionVector2Struct(
                 DimensionValueStruct.ofPercent(toPercent(step)),

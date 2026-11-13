@@ -3,11 +3,13 @@ package editor.bootstrap.recorderpipeline.recordermanager;
 import java.io.File;
 
 import application.bootstrap.musicpipeline.instrumentmanager.InstrumentManager;
+import application.bootstrap.musicpipeline.song.SongClipKind;
 import application.bootstrap.musicpipeline.song.SongClipStruct;
 import application.bootstrap.musicpipeline.song.SongData;
+import application.bootstrap.musicpipeline.song.SongHandle;
 import application.bootstrap.musicpipeline.song.SongLaneStruct;
 import application.bootstrap.musicpipeline.songmanager.SongManager;
-import application.bootstrap.musicpipeline.util.NoteScale;
+import application.bootstrap.musicpipeline.util.SongArpgUtility;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
@@ -24,7 +26,9 @@ class RecordingSourceBranch extends BranchPackage {
      * Binds every clip of a recording to what it names, at every depth: a
      * nested recording to the recording read from its file, a song to the
      * project's song, a notes clip to its notes laid out as a song of one
-     * lane on its instrument, timed by its recording's tempo map. Nested
+     * lane on its instrument, timed by its recording's tempo map, and a song
+     * a Music file lays to a song of one lane laying it, the same way, so it
+     * plays at the file's tempo with its volume and transpose. Nested
      * recordings are read once and kept by name, each bound in turn, and one
      * is read again whenever it is saved, along with every kept recording
      * that reaches it. While binding, the recordings being bound are kept as
@@ -95,8 +99,10 @@ class RecordingSourceBranch extends BranchPackage {
     void bindClip(RecordingInstance recording, RecordingClipStruct clip) {
         switch (clip.getSourceKind()) {
             case RECORDING -> clip.bindChild(resolveChild(clip.getSourceName()));
-            case SONG -> clip.bindSong(resolveSong(clip.getSourceName()));
-            case NOTES -> clip.bindSong(layNotes(recording, clip.getNotes()));
+            case SONG -> clip.bindSong(clip.getSongClip() != null
+                    ? laySong(recording, clip.getSongClip())
+                    : resolveSong(clip.getSourceName()));
+            case NOTES -> clip.bindSong(layNotes(recording, clip.getSongClip()));
             case TAKE -> {
             }
         }
@@ -163,22 +169,58 @@ class RecordingSourceBranch extends BranchPackage {
             return null;
         }
 
+        return layAlone(recording, notes);
+    }
+
+    // A Music file's song clip as a song of one lane laying the whole song it names from its start, with the clip's
+    // volume and transpose, timed by the file's tempo map; null when the game cannot load the song
+    private SongData laySong(RecordingInstance recording, SongClipStruct songClip) {
+
+        SongHandle handle;
+
+        try {
+            handle = songManager.getSongHandleFromSongName(songClip.getSongName());
+        } catch (InternalException e) {
+            errorLog(EditorSetting.RECORDER_MESSAGE_SONG_MISSING + songClip.getSongName(), e);
+            return null;
+        }
+
+        SongClipStruct laid = new SongClipStruct(
+                SongClipKind.SONG,
+                0,
+                0,
+                Math.max(1, handle.getSongData().getLength()),
+                EngineSetting.DEFAULT_SONG_CLIP_OFFSET,
+                false,
+                songClip.getVolume(),
+                songClip.getTranspose(),
+                EngineSetting.SONG_REFERENCE_NONE,
+                SongArpgUtility.NO_NOTES,
+                songClip.getSongName(),
+                EngineSetting.SONG_REFERENCE_NONE);
+
+        laid.resolveSong(handle);
+        return layAlone(recording, laid);
+    }
+
+    // One clip on a song's only lane, timed by the recording's tempo map and meter, in its key
+    private SongData layAlone(RecordingInstance recording, SongClipStruct clip) {
         return new SongData(
-                notes.getInstrumentName(),
+                recording.getRecordingName(),
                 EngineSetting.SONG_NONE,
-                notes.getInstrumentName(),
+                recording.getRecordingName(),
                 recording.getTempo(),
                 recording.getBeatsPerBar(),
                 recording.getBeatUnit(),
-                EngineSetting.DEFAULT_SONG_KEY_ROOT,
-                NoteScale.MAJOR,
+                recording.getKeyRoot(),
+                recording.getKeyScale(),
                 new SongLaneStruct[] { new SongLaneStruct(
-                        notes.getInstrumentName(),
+                        EngineSetting.SONG_LANE_NAME_NONE,
                         EngineSetting.DEFAULT_SONG_LANE_VOLUME,
                         EngineSetting.DEFAULT_SONG_LANE_PAN,
                         EngineSetting.DEFAULT_SONG_LANE_MUTED,
                         EngineSetting.DEFAULT_SONG_LANE_SOLO) },
-                new SongClipStruct[] { notes });
+                new SongClipStruct[] { clip });
     }
 
     // Refresh \\

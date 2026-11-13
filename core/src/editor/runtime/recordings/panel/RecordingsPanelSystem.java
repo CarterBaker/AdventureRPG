@@ -10,6 +10,7 @@ import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
+import editor.bootstrap.recorderpipeline.recording.RecordingKind;
 import editor.runtime.EditorSetting;
 import editor.runtime.recordings.RecordingsSetting;
 import engine.root.EngineSetting;
@@ -20,11 +21,12 @@ public class RecordingsPanelSystem extends SystemPackage {
 
     /*
      * Binds this window to a UI render target and shows the recordings. When
-     * the recorder's revision moves it refills the list — a row for every
-     * recording saved in the game's directory, most recently changed first,
-     * the open one marked, each picked up by its name to be opened or dragged
-     * onto the Timeline to nest — what the open recording holds, and the status
-     * line, which follows the recorder's.
+     * the recorder's revision moves it refills the list — under Videos a row
+     * for every recording saved in the game's directory, most recently
+     * changed first, and under Songs a row for every project song, a Music
+     * file, by name; the open one marked, each picked up by its name to be
+     * opened or dragged onto the Timeline to lay — what the open recording
+     * holds, and the status line, which follows the recorder's.
      */
 
     // Internal
@@ -98,34 +100,59 @@ public class RecordingsPanelSystem extends SystemPackage {
 
     // Recordings \\
 
-    // A row for every recording saved, most recently changed first, the open one marked
+    // A row for every Video saved, most recently changed first, then every song, the open one marked
     private void refreshRecordings() {
 
         menuManager.ejectAll(recordingsMenu, RecordingsSetting.ENTRY_RECORDINGS);
 
         ObjectArrayList<String> recordingNames = recorderManager.getRecordingNames();
-        String openName = recorderManager.hasRecording() ? recorderManager.getRecording().getRecordingName() : null;
+        ObjectArrayList<String> songNames = recorderManager.getSongNames();
+        RecordingInstance open = recorderManager.getRecording();
 
-        listTitle.setFontText(String.format(RecordingsSetting.FORMAT_LIST_TITLE, recordingNames.size()));
+        listTitle.setFontText(String.format(RecordingsSetting.FORMAT_LIST_TITLE,
+                recordingNames.size() + songNames.size()));
+
+        injectText(RecordingsSetting.ENTRY_RECORDINGS, String.format(RecordingsSetting.FORMAT_VIDEOS_HEADER,
+                recordingNames.size()));
 
         if (recordingNames.isEmpty())
             injectText(RecordingsSetting.ENTRY_RECORDINGS, RecordingsSetting.TEXT_NO_RECORDINGS);
 
-        for (int i = 0; i < recordingNames.size(); i++) {
+        injectRows(recordingNames, open, RecordingKind.VIDEO, RecordingsSetting.TEMPLATE_RECORDING_ROW,
+                RecordingsSetting.TEMPLATE_RECORDING_ROW_SELECTED);
+        injectText(RecordingsSetting.ENTRY_RECORDINGS, String.format(RecordingsSetting.FORMAT_SONGS_HEADER,
+                songNames.size()));
 
-            String recordingName = recordingNames.get(i);
-            boolean open = recordingName.equals(openName);
+        if (songNames.isEmpty())
+            injectText(RecordingsSetting.ENTRY_RECORDINGS, RecordingsSetting.TEXT_NO_SONGS);
+
+        injectRows(songNames, open, RecordingKind.MUSIC, RecordingsSetting.TEMPLATE_SONG_ROW,
+                RecordingsSetting.TEMPLATE_SONG_ROW_SELECTED);
+    }
+
+    // A row for every name, picked up by its name, the open one of the kind marked
+    private void injectRows(
+            ObjectArrayList<String> names,
+            RecordingInstance open,
+            RecordingKind kind,
+            String template,
+            String selectedTemplate) {
+
+        String openName = open != null && open.getKind() == kind ? open.getRecordingName() : null;
+
+        for (int i = 0; i < names.size(); i++) {
+
+            String name = names.get(i);
+            boolean opened = name.equals(openName);
             ElementInstance row = menuManager.inject(
                     recordingsMenu,
                     RecordingsSetting.ENTRY_RECORDINGS,
-                    open
-                            ? RecordingsSetting.TEMPLATE_RECORDING_ROW_SELECTED
-                            : RecordingsSetting.TEMPLATE_RECORDING_ROW);
+                    opened ? selectedTemplate : template);
 
-            row.setOnDragArgOverride(recordingName);
-            row.findChildById(RecordingsSetting.ELEMENT_ROW_LABEL).setFontText(recordingName);
+            row.setOnDragArgOverride(name);
+            row.findChildById(RecordingsSetting.ELEMENT_ROW_LABEL).setFontText(name);
             row.findChildById(RecordingsSetting.ELEMENT_ROW_VALUE).setFontText(
-                    open ? RecordingsSetting.TEXT_OPEN : RecordingsSetting.TEXT_EMPTY_VALUE);
+                    opened ? RecordingsSetting.TEXT_OPEN : RecordingsSetting.TEXT_EMPTY_VALUE);
         }
     }
 
@@ -145,6 +172,7 @@ public class RecordingsPanelSystem extends SystemPackage {
         RecordingInstance recording = recorderManager.getRecording();
 
         injectHeader(recording.getRecordingName());
+        injectDetail(RecordingsSetting.TEXT_KIND, recording.getKind().getLabel());
         injectDetail(RecordingsSetting.TEXT_STATE,
                 recorderManager.isUnsaved() ? RecordingsSetting.TEXT_UNSAVED : RecordingsSetting.TEXT_SAVED);
         injectDetail(RecordingsSetting.TEXT_WORLD, recording.getWorldName());

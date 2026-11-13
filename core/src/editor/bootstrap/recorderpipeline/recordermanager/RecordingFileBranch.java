@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
+import application.bootstrap.musicpipeline.util.NoteScale;
 import application.bootstrap.musicpipeline.util.SongArpgUtility;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
@@ -19,6 +20,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
+import editor.bootstrap.recorderpipeline.recording.RecordingKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayStreamStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
@@ -350,7 +352,7 @@ class RecordingFileBranch extends BranchPackage {
             case TAKE -> clipArpg.addProperty("take", recording.getTakes().indexOf(clip.getTake()));
             case RECORDING -> clipArpg.addProperty("recording", clip.getSourceName());
             case SONG -> clipArpg.addProperty("song", clip.getSourceName());
-            case NOTES -> clipArpg.add("notes", SongArpgUtility.writeClip(clip.getNotes()));
+            case NOTES -> clipArpg.add("notes", SongArpgUtility.writeClip(clip.getSongClip()));
         }
     }
 
@@ -569,6 +571,7 @@ class RecordingFileBranch extends BranchPackage {
 
         RecordingInstance recording = create(RecordingInstance.class);
         recording.constructor(
+                RecordingKind.VIDEO,
                 recordingName,
                 recordingArpg.get("world").getAsString(),
                 ArpgUtility.hasArray(recordingArpg, "tempos")
@@ -576,6 +579,8 @@ class RecordingFileBranch extends BranchPackage {
                         : SongArpgUtility.createTempo(EditorSetting.RECORDER_DEFAULT_BPM),
                 beatsPerBar,
                 beatUnit,
+                EngineSetting.DEFAULT_SONG_KEY_ROOT,
+                NoteScale.MAJOR,
                 parseExport(recordingArpg));
 
         IntArrayList states = resolveEnumOrdinals(recordingArpg.getAsArray("states"), EntityState.VALUES);

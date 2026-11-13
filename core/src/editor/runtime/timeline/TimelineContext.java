@@ -2,21 +2,30 @@ package editor.runtime.timeline;
 
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
+import editor.runtime.characterview.panel.CharacterViewRowSource;
+import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.menueventsmanager.menus.RecorderBranch;
 import editor.runtime.recorder.RecorderTabProvider;
 import editor.runtime.recorder.panel.RecorderRowSystem;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.recorder.panel.RecorderTimelineSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import engine.root.ContextPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TimelineContext extends ContextPackage
-        implements ToolCanvasProvider, ToolActionProvider, RecorderTabProvider, FileMenuProvider {
+        implements ToolCanvasProvider, ToolActionProvider, RecorderTabProvider, FileMenuProvider, PropertiesProvider,
+        CharacterViewRowSource {
 
     /*
      * Editor tab for the recorder's timeline: its lanes of clips to move,
@@ -31,7 +40,10 @@ public class TimelineContext extends ContextPackage
      * selected. The transport is the Recorder tab beside it. All state lives
      * in RecorderManager; this tab only shows it and hands clicks, drags and
      * the wheel to RecorderBranch. The tab is a tool canvas, the timeline,
-     * for as long as it is open.
+     * for as long as it is open: a Video's clips, or a Music file's, where
+     * Draw draws a notes clip, Export MIDI and Render export it, and the
+     * Properties tab shows the mix of the lane selected and the clip
+     * selected's instrument, volume and transpose.
      */
 
     // Internal
@@ -39,7 +51,9 @@ public class TimelineContext extends ContextPackage
     private RecorderTimelineSystem recorderTimelineSystem;
     private ToolCanvasSystem toolCanvasSystem;
     private FileMenuSourceSystem fileMenuSourceSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
     private RecorderBranch recorderBranch;
+    private RecorderManager recorderManager;
 
     // Internal \\
 
@@ -49,11 +63,13 @@ public class TimelineContext extends ContextPackage
         this.recorderTimelineSystem = create(RecorderTimelineSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
     protected void get() {
         this.recorderBranch = get(RecorderBranch.class);
+        this.recorderManager = get(RecorderManager.class);
     }
 
     @Override
@@ -78,13 +94,45 @@ public class TimelineContext extends ContextPackage
 
     @Override
     public ToolCanvas getToolCanvas() {
-        return ToolCanvas.RECORDER;
+        return recorderManager.getToolCanvas();
     }
 
-    // The Nesting actions run exactly as their keys run them, on this tab's window
+    // The Nesting and Export actions run exactly as their keys run them, on this tab's window
     @Override
     public void runToolAction(String actionKey) {
         recorderBranch.actSetting(actionKey, getWindow());
+    }
+
+    // Properties \\
+
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.ROWS;
+    }
+
+    @Override
+    public int getRowRevision() {
+        return recorderManager.getRevision();
+    }
+
+    @Override
+    public String getRowTitle() {
+        return EditorSetting.RECORDER_TIMELINE_PROPERTIES_TITLE;
+    }
+
+    @Override
+    public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recorderManager.buildRows(rows, true);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getRowTemplates() {
+        return EditorSetting.RECORDER_MUSIC_ROW_TEMPLATES;
+    }
+
+    @Override
+    public void stepRow(String key, int steps) {
+        recorderManager.stepRow(key, steps);
     }
 
     // File Menu \\

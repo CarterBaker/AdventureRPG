@@ -14,6 +14,8 @@ public class ShortcutData extends DataPackage {
      * its tool reads it while a press or a drag is under way. A shortcut with
      * a hint is listed on the hint bar while its window is active, on the
      * canvases and with the tools its masks name, every one for an empty mask.
+     * A claimed shortcut runs only while its window claims its keys, as the
+     * Piano Roll's Musical Typing does.
      */
 
     // Identity
@@ -31,6 +33,7 @@ public class ShortcutData extends DataPackage {
     private final String actionClass;
     private final String actionMethod;
     private final String actionArg;
+    private final boolean claimed;
 
     // Hint
     private final String hint;
@@ -48,6 +51,7 @@ public class ShortcutData extends DataPackage {
             String actionClass,
             String actionMethod,
             String actionArg,
+            boolean claimed,
             String hint,
             int canvasMask,
             int toolMask) {
@@ -67,6 +71,7 @@ public class ShortcutData extends DataPackage {
         this.actionClass = actionClass;
         this.actionMethod = actionMethod;
         this.actionArg = actionArg;
+        this.claimed = claimed;
 
         // Hint
         this.hint = hint;
@@ -106,6 +111,10 @@ public class ShortcutData extends DataPackage {
 
     public String getActionArg() {
         return actionArg;
+    }
+
+    public boolean isClaimed() {
+        return claimed;
     }
 
     public String getHint() {

@@ -51,6 +51,10 @@ public class RecorderSetting {
     public static final String TEMPLATE_ASSET_SECTION_ROW = "editor/Recorder/recorder_asset_section_row";
     public static final String TEMPLATE_ASSET_ROW = "editor/Recorder/recorder_asset_row";
     public static final String TEMPLATE_ASSET_ROW_MISSING = "editor/Recorder/recorder_asset_row_missing";
+    public static final String TEMPLATE_LANE_STRIPE = "editor/Timeline/timeline_lane_stripe";
+    public static final String TEMPLATE_LANE_STRIPE_ALTERNATE = "editor/Timeline/timeline_lane_stripe_alternate";
+    public static final String TEMPLATE_MIXER_ROW = "editor/Timeline/timeline_mixer_row";
+    public static final String TEMPLATE_MIXER_ROW_SELECTED = "editor/Timeline/timeline_mixer_row_selected";
 
     // Elements
     public static final String ELEMENT_ROW_LABEL = "recorder_row_label";
@@ -67,6 +71,9 @@ public class RecorderSetting {
     public static final String ELEMENT_KEY_STRIP = "recorder_key_strip";
     public static final String ELEMENT_GRAPH_LINES = "recorder_key_graph_lines";
     public static final String ELEMENT_GRAPH_POINTS = "recorder_key_graph_points";
+    public static final String ELEMENT_MIXER_NAME = "timeline_mixer_name";
+    public static final String ELEMENT_MIXER_MUTE = "timeline_mixer_mute";
+    public static final String ELEMENT_MIXER_SOLO = "timeline_mixer_solo";
 
     // Menus — the timeline's and the Keys' are EditorSetting RECORDER_MENU and RECORDER_KEYS_MENU, which the drags
     // and the wheel look for
@@ -79,6 +86,8 @@ public class RecorderSetting {
     public static final int ENTRY_CLOCK = 1;
     public static final int ENTRY_OPEN = 2;
     public static final int ENTRY_LOOP = 3;
+    public static final int ENTRY_MUSIC = 4;
+    public static final int ENTRY_METRONOME = 5;
 
     // Entry Points — the Timeline's menu, its status at ENTRY_STATUS; the clip lanes and the ruler are EditorSetting
     // RECORDER_ENTRY_CLIP_LANES and RECORDER_ENTRY_RULER, which the drags and the wheel share
@@ -89,6 +98,10 @@ public class RecorderSetting {
     public static final int ENTRY_DRAG_GHOST = 7;
     public static final int ENTRY_LANE_PLAYHEAD = 8;
     public static final int ENTRY_VIEW = 9;
+    public static final int ENTRY_LANE_STRIPES = 10;
+    public static final int ENTRY_MIXER_ROWS = 11;
+    public static final int ENTRY_TIMELINE_TRACK = 12;
+    public static final int ENTRY_LANE_AREA = 13;
 
     // Entry Points — the Keys' menu; its rows and graph are EditorSetting RECORDER_ENTRY_KEY_ROWS and
     // RECORDER_ENTRY_KEY_GRAPH, which the drags and the wheel share
@@ -119,6 +132,21 @@ public class RecorderSetting {
     public static final float RANGE_MARKER_WIDTH_PIXELS = 2f;
     public static final float RANGE_MARKER_HEIGHT_PIXELS = 30f;
 
+    // Timeline — where the ruler and the lanes stand in the tab, and a Music file's mixer strips beside them: how
+    // wide, the gap before the lanes, and how each reads
+    public static final float TIMELINE_INSET_PIXELS = 12f;
+    public static final float TRACK_TOP_PIXELS = -30f;
+    public static final float TRACK_HEIGHT_PIXELS = 20f;
+    public static final float LANES_TOP_PIXELS = -56f;
+    public static final float MIXER_PIXELS = 190f;
+    public static final float MIXER_GAP_PIXELS = 6f;
+    public static final float MIXER_PERCENT = 100f;
+    public static final String TEXT_MIXER_SEPARATOR = "  ";
+    public static final String FORMAT_MIXER_MIX = "%.0f%%  pan %.2f";
+    public static final String TEXT_MIXER_MUTED = "  muted";
+    public static final String TEXT_MIXER_SOLO = "  solo";
+    public static final String FORMAT_BAR_BEAT = "%d.%d";
+
     // Keys — a mark set aside is moved this far off the window; a key's diamond is a square turned on its corner,
     // the graph's line is sampled every few pixels, its lines are drawn this thick, and keys closer than this on
     // it are drawn once
@@ -136,6 +164,14 @@ public class RecorderSetting {
             0.1f, 0.25f, 0.5f, 1f, 2f, 5f, 10f, 15f, 30f, 60f, 120f, 300f, 600f, 1200f, 3600f };
     public static final float RULER_MIN_TICK_PIXELS = 72f;
     public static final int RULER_FALLBACK_TICKS = 8;
+
+    // Music — the transport's line for a Music file's time and key, and its metronome button
+    public static final String FORMAT_MUSIC = "%s bpm   %d/%d   %s %s   (set in the Properties tab)";
+    public static final String TEXT_MUSIC_NONE = "Tempo and key belong to a Music file";
+    public static final String TEXT_METRONOME_ON = "Metronome on";
+    public static final String TEXT_METRONOME_OFF = "Metronome off";
+    public static final String TEXT_ENUM_SEPARATOR = "_";
+    public static final String TEXT_WORD_SEPARATOR = " ";
 
     // Refresh
     public static final float REFRESH_SECONDS = 0.1f;

@@ -133,6 +133,11 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   into a `SongHandle` kept by name apart from the palette (no song ID), and `releaseUserSong` lets it go with the last
   play that holds it; an unreadable file is logged and plays nothing. Project songs keep assigned IDs and load on
   demand. The game and editor launchers create `Songs/` with their other required directories.
+- Songs the owner makes are Music files, saved by the editor straight into `assets/songs/` through the song codec and
+  listed under Songs in the Recordings tab; New asks Video or Music. The Timeline shows a Music file's
+  `SONG_LANE_COUNT` lanes with a mixer strip each, a bars-and-beats ruler and a beat grid it snaps to, refuses takes and
+  nested recordings, draws notes clips with Draw, and exports through its Export MIDI and Render actions. The Piano Roll
+  tab edits the notes clip selected there; Musical Typing plays and records into it.
 - Songs the owner makes are saved by the editor straight into `assets/songs/`. Exported MIDI goes to
   `Documents/My Games/AdventureRPG/Songs/`, where player songs live. Video recordings stay in `Recordings/`.
 - Constants: `EngineSetting` (`// Music ...` groups) for anything the game uses; `EditorSetting` for the editor.
@@ -151,3 +156,6 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   fixed int arrays. Playing the test song measured 0 bytes allocated by `play` on a reused instance and 0 bytes across
   265 frame updates (and across 1,057 updates driven in one frame).
 - A song's clock starts only once every instrument it plays has its samples, so its first notes are never lost.
+- Musical Typing and the Piano Roll's playhead allocate nothing per frame (fixed arrays, positions built once); a note
+  written, drawn or edited is an edit and builds one new codec clip. Render decodes and mixes on the General thread in
+  stretches of `RECORDER_RENDER_STRETCH_FRAMES`.

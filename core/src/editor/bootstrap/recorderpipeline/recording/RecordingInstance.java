@@ -1,6 +1,7 @@
 package editor.bootstrap.recorderpipeline.recording;
 
 import application.bootstrap.musicpipeline.song.SongTempoStruct;
+import application.bootstrap.musicpipeline.util.NoteScale;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
@@ -9,9 +10,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecordingInstance extends InstancePackage {
 
     /*
-     * One recording open in the recorder, or laid inside another: its name,
-     * the world it was made in, its tempo map and meter — which time its
-     * notes clips and the music grid of its timeline — its bin of takes in
+     * One recording open in the recorder, or laid inside another: its kind,
+     * a Video or a Music file, its name, the world it was made in, its tempo
+     * map and meter — which time its notes clips and the music grid of its
+     * timeline — its key, which Scale Lock keeps notes on, its lanes as a
+     * Music file mixes them, each heard at its volume, none while muted or
+     * while another is soloed, its bin of takes in
      * the order they were recorded, the clips laid on its timeline, and how
      * it exports. It runs as long as its last clip reaches. For each channel
      * the clip on the highest lane covering a moment is the one that plays
@@ -24,13 +28,22 @@ public class RecordingInstance extends InstancePackage {
      */
 
     // Identity
+    private RecordingKind kind;
     private String recordingName;
+    private String displayName;
     private String worldName;
 
     // Time
     private SongTempoStruct tempo;
     private int beatsPerBar;
     private int beatUnit;
+
+    // Key
+    private int keyRoot;
+    private NoteScale keyScale;
+
+    // Lanes
+    private RecordingLaneStruct[] lanes;
 
     // Bin
     private ObjectArrayList<RecordingTakeStruct> takes;
@@ -56,21 +69,36 @@ public class RecordingInstance extends InstancePackage {
     // Constructor \\
 
     public void constructor(
+            RecordingKind kind,
             String recordingName,
             String worldName,
             SongTempoStruct tempo,
             int beatsPerBar,
             int beatUnit,
+            int keyRoot,
+            NoteScale keyScale,
             RecordingExportStruct exportStruct) {
 
         // Identity
+        this.kind = kind;
         this.recordingName = recordingName;
+        this.displayName = EngineSetting.SONG_DISPLAY_NAME_NONE;
         this.worldName = worldName;
 
         // Time
         this.tempo = tempo;
         this.beatsPerBar = beatsPerBar;
         this.beatUnit = beatUnit;
+
+        // Key
+        this.keyRoot = keyRoot;
+        this.keyScale = keyScale;
+
+        // Lanes
+        this.lanes = new RecordingLaneStruct[kind.getLaneCount()];
+
+        for (int i = 0; i < lanes.length; i++)
+            lanes[i] = new RecordingLaneStruct();
 
         // Export
         this.exportStruct = exportStruct;
@@ -254,6 +282,83 @@ public class RecordingInstance extends InstancePackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
+    // Mix \\
+
+    // How loud the lane is heard: its volume, nothing while it is muted or another lane is soloed and it is not
+    public float resolveLaneGain(int lane) {
+
+        RecordingLaneStruct mixed = lanes[Math.clamp(lane, 0, lanes.length - 1)];
+
+        if (mixed.isMuted() || !mixed.isSolo() && isSoloed())
+            return 0f;
+
+        return mixed.getVolume();
+    }
+
+    private boolean isSoloed() {
+
+        for (int i = 0; i < lanes.length; i++)
+            if (lanes[i].isSolo())
+                return true;
+
+        return false;
+    }
+
+    // Grid \\
+
+    // The ticks of a beat: a whole note's ticks shared by the beat unit
+    public int getBeatTicks() {
+        return EngineSetting.SONG_TICKS_PER_BEAT * EditorSetting.RECORDER_QUARTERS_PER_WHOLE / beatUnit;
+    }
+
+    public int getBarTicks() {
+        return getBeatTicks() * beatsPerBar;
+    }
+
+    // The moment of the grid line nearest the time, the grid ruled every so many ticks of the tempo map
+    public float snapToGrid(float time, int gridTicks) {
+
+        double ticks = tempo.toTicks(Math.max(0f, time));
+
+        return (float) tempo.toSeconds(Math.round(ticks / gridTicks) * (double) gridTicks);
+    }
+
+    // Accessible \\
+
+    public RecordingKind getKind() {
+        return kind;
+    }
+
+    public int getLaneCount() {
+        return lanes.length;
+    }
+
+    public RecordingLaneStruct getLane(int lane) {
+        return lanes[lane];
+    }
+
+    public void setTempo(SongTempoStruct tempo) {
+        this.tempo = tempo;
+    }
+
+    public void setMeter(int beatsPerBar, int beatUnit) {
+        this.beatsPerBar = beatsPerBar;
+        this.beatUnit = beatUnit;
+    }
+
+    public int getKeyRoot() {
+        return keyRoot;
+    }
+
+    public NoteScale getKeyScale() {
+        return keyScale;
+    }
+
+    public void setKey(int keyRoot, NoteScale keyScale) {
+        this.keyRoot = keyRoot;
+        this.keyScale = keyScale;
+    }
+
     // Accessible \\
 
     public String getRecordingName() {
@@ -262,6 +367,15 @@ public class RecordingInstance extends InstancePackage {
 
     public void setRecordingName(String recordingName) {
         this.recordingName = recordingName;
+    }
+
+    // The name a Music file's song is shown under in the game, none to show its file's
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 
     public String getWorldName() {

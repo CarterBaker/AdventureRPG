@@ -198,6 +198,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openTimeline(window.getGLWindow());
     }
 
+    public void openPianoRoll(WindowInstance window) {
+        tabManager.openPianoRoll(window.getGLWindow());
+    }
+
     public void openRecorderKeys(WindowInstance window) {
         tabManager.openRecorderKeys(window.getGLWindow());
     }

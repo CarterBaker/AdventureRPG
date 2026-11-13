@@ -2,6 +2,7 @@ package editor.bootstrap.recorderpipeline.recording;
 
 import application.bootstrap.musicpipeline.song.SongClipStruct;
 import application.bootstrap.musicpipeline.song.SongData;
+import editor.runtime.EditorSetting;
 import engine.root.StructPackage;
 
 public class RecordingClipStruct extends StructPackage {
@@ -13,7 +14,13 @@ public class RecordingClipStruct extends StructPackage {
      * recording laid inside this one by name, a song by name, or a notes clip
      * of its own, timed by the recording's tempo map where it lies; a
      * recording or a song is bound to what it names once it is resolved, and
-     * a notes clip to the song its notes play as. What a source holds is read
+     * a notes clip to the song its notes play as. A clip may carry its source
+     * as the song codec writes it — a notes clip's instrument and notes, or
+     * in a Music file a song clip's song with its volume and transpose — and
+     * is then timed by the recording's tempo map where it lies, as a DAW's
+     * region is; edits replace that codec clip whole, never change it in
+     * place, so a copy keeps its own. A notes clip's notes run as long as the
+     * clip is drawn, so it is lengthened as far as its lane allows. What a source holds is read
      * through one method each — the channels it can play, how long it runs
      * and the take, nested recording or song it is looked up in — and nothing
      * else asks which kind it is. The span played is kept as asked and held
@@ -31,8 +38,8 @@ public class RecordingClipStruct extends StructPackage {
     // Source
     private final RecordingSourceKind sourceKind;
     private final RecordingTakeStruct take;
-    private final String sourceName;
-    private final SongClipStruct notes;
+    private String sourceName;
+    private SongClipStruct songClip;
     private RecordingInstance child;
     private SongData song;
 
@@ -59,7 +66,7 @@ public class RecordingClipStruct extends StructPackage {
             RecordingSourceKind sourceKind,
             RecordingTakeStruct take,
             String sourceName,
-            SongClipStruct notes,
+            SongClipStruct songClip,
             float inPoint,
             float outPoint,
             int lane,
@@ -70,7 +77,7 @@ public class RecordingClipStruct extends StructPackage {
         this.sourceKind = sourceKind;
         this.take = take;
         this.sourceName = sourceName;
-        this.notes = notes;
+        this.songClip = songClip;
 
         // Span
         setSpan(inPoint, outPoint);
@@ -117,6 +124,18 @@ public class RecordingClipStruct extends StructPackage {
                 start, RecorderChannel.SOUND.getBit());
     }
 
+    // A span of a project song laid in a Music file, its volume and transpose in its codec clip, timed by the
+    // recording's tempo map where it lies
+    public static RecordingClipStruct ofSongClip(
+            SongClipStruct songClip,
+            float inPoint,
+            float outPoint,
+            int lane,
+            float start) {
+        return new RecordingClipStruct(RecordingSourceKind.SONG, null, songClip.getSongName(), songClip, inPoint,
+                outPoint, lane, start, RecorderChannel.SOUND.getBit());
+    }
+
     // A span of the clip's own notes on an instrument, timed by the recording's tempo map
     public static RecordingClipStruct ofNotes(
             SongClipStruct notes,
@@ -134,7 +153,7 @@ public class RecordingClipStruct extends StructPackage {
     public RecordingClipStruct copyTo(int lane, float start) {
 
         RecordingClipStruct copy = new RecordingClipStruct(
-                sourceKind, take, sourceName, notes, inPoint, outPoint, lane, start, channelMask);
+                sourceKind, take, sourceName, songClip, inPoint, outPoint, lane, start, channelMask);
 
         copy.bindChild(child);
         copy.bindSong(song);
@@ -198,10 +217,15 @@ public class RecordingClipStruct extends StructPackage {
         return song.getTempo().toTicks(toSongSeconds(childTime)) - resolveSongTickOffset();
     }
 
-    // The seconds of the tempo map the source's own start falls on: a notes clip's notes are timed by the recording's
-    // tempo where they lie, every other source from its own start
+    // The seconds of the tempo map the source's own start falls on: a clip carrying its codec clip is timed by the
+    // recording's tempo where it lies, every other source from its own start
     private float resolveSongOrigin() {
-        return sourceKind == RecordingSourceKind.NOTES ? start - inPoint : 0f;
+        return songClip != null ? start - inPoint : 0f;
+    }
+
+    // The moment of the timeline the source's own first tick falls on
+    public float getOrigin() {
+        return start - inPoint;
     }
 
     // Source \\
@@ -216,14 +240,15 @@ public class RecordingClipStruct extends StructPackage {
         };
     }
 
-    // How long the source runs in its own seconds, as it stands now: a take's length, a nested recording's, a
-    // song's at its own tempo, or a notes clip's at the recording's tempo where it lies; while a source is unbound
+    // How long the source runs in its own seconds, as it stands now: a take's length, a nested recording's, or a
+    // song's at the tempo it is timed by; a notes clip's notes run as long as it is drawn; while a source is unbound
     // the span stands as asked, so a clip whose source is missing is still drawn where it lies
     public float resolveSourceDuration() {
         return switch (sourceKind) {
             case TAKE -> take.getDuration();
             case RECORDING -> child != null ? child.getDuration() : outPoint;
-            case SONG, NOTES -> song != null ? resolveSongDuration() : outPoint;
+            case SONG -> song != null ? resolveSongDuration() : outPoint;
+            case NOTES -> EditorSetting.RECORDER_NOTES_SOURCE_SECONDS;
         };
     }
 
@@ -269,9 +294,17 @@ public class RecordingClipStruct extends StructPackage {
         return sourceKind == RecordingSourceKind.RECORDING ? sourceName : null;
     }
 
-    // The notes of a notes clip, as the codec writes them; null for any other source
-    public SongClipStruct getNotes() {
-        return notes;
+    // The source as the song codec writes it — a notes clip's notes, a Music file's song clip — null for any other
+    public SongClipStruct getSongClip() {
+        return songClip;
+    }
+
+    // The codec clip replaced whole by an edit; the clip is bound again to play it
+    public void setSongClip(SongClipStruct songClip) {
+        this.songClip = songClip;
+        this.sourceName = sourceKind == RecordingSourceKind.NOTES
+                ? songClip.getInstrumentName()
+                : songClip.getSongName();
     }
 
     // Span \\

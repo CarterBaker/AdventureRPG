@@ -239,6 +239,11 @@ public class EditorSetting {
     public static final FileMenuTableStruct FILE_MENU_RECORDER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.RecorderBranch")
             .with(FileMenuAction.SAVE, "saveRecording");
+    public static final FileMenuTableStruct FILE_MENU_PIANO_ROLL = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.PianoRollBranch")
+            .with(FileMenuAction.SAVE, "saveRecording")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
     public static final FileMenuTableStruct FILE_MENU_RECORDINGS = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.RecordingsBranch")
             .with(FileMenuAction.NEW, "newRecording")
@@ -288,7 +293,10 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_LAYER = "Rename Layer";
     public static final String DIALOG_TITLE_NEW_NODE = "New Node";
     public static final String DIALOG_TITLE_RENAME_NODE = "Rename Node";
-    public static final String DIALOG_TITLE_NEW_RECORDING = "New Recording";
+    public static final String DIALOG_TITLE_NEW_RECORDING = "New: type Video or Music";
+    public static final String DIALOG_TITLE_NEW_KIND_PREFIX = "New ";
+    public static final String DIALOG_TITLE_OVERWRITE_PREFIX = "Overwrite ";
+    public static final String DIALOG_TITLE_OVERWRITE_SUFFIX = "? Type the Music file's name to confirm";
     public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
     public static final String DIALOG_TITLE_DUPLICATE_RECORDING = "Copy Recording As";
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
@@ -545,7 +553,8 @@ public class EditorSetting {
     public static final String COMMAND_MESSAGE_TIME_INVALID = ": time moves by a whole number, such as 3 or -3, not ";
     public static final String COMMAND_MESSAGE_TIME_BEFORE_CALENDAR = ": cannot move the clock before the first day"
             + " of the calendar's starting age";
-    public static final String COMMAND_MESSAGE_TIME_AFTER_CALENDAR = ": cannot move the clock past the last day of age ";
+    public static final String COMMAND_MESSAGE_TIME_AFTER_CALENDAR =
+            ": cannot move the clock past the last day of age ";
     public static final String COMMAND_MESSAGE_TIME_MOVED = ": the clock now reads ";
 
     // Dev Time — units, the groups the command console's dials sit in, and how the clock is described
@@ -1056,7 +1065,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_LIMIT = "That edit would pass the mesh vertex limit";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED = "A mesh file could not be written";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_REVERTED = "The mesh file could not be read";
-    public static final String CHARACTER_EDITOR_MESSAGE_POSED = "Vertices move only in the Bind pose: pick Bind under Pose";
+    public static final String CHARACTER_EDITOR_MESSAGE_POSED =
+            "Vertices move only in the Bind pose: pick Bind under Pose";
     public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_EXTRUDE = "Select faces or edges to extrude";
     public static final String CHARACTER_EDITOR_MESSAGE_NO_FACES = "Select whole faces first";
     public static final String CHARACTER_EDITOR_MESSAGE_FACE_VERTICES = "Select 3 or 4 vertices to make a face";
@@ -1860,6 +1870,7 @@ public class EditorSetting {
     public static final String TOOL_SCALE = "Scale";
     public static final String TOOL_CUT = "Cut";
     public static final String TOOL_IK = "IK Handle";
+    public static final String TOOL_DRAW = "Draw";
     public static final String TOOL_INFLATE = "Inflate";
     public static final String TOOL_PINCH = "Pinch";
     public static final String TOOL_CREASE = "Crease";
@@ -1881,12 +1892,22 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";
+    public static final String TOOL_CANVAS_MUSIC = "Music Timeline";
+    public static final String TOOL_CANVAS_PIANO_ROLL = "Piano Roll";
     public static final String TOOL_ACTION_HEADER_NESTING = "Nesting";
     public static final String TOOL_ACTION_LABEL_NEST_SELECTION = "Nest Selection";
     public static final String TOOL_ACTION_LABEL_OPEN_NESTED = "Open Nested";
+    public static final String TOOL_ACTION_HEADER_EXPORT = "Export";
+    public static final String TOOL_ACTION_LABEL_EXPORT_VIDEO = "Export Video";
+    public static final String TOOL_ACTION_LABEL_EXPORT_MIDI = "Export MIDI";
+    public static final String TOOL_ACTION_LABEL_RENDER = "Render";
     public static final String TOOL_OPTION_SIZE = "Size";
     public static final String TOOL_OPTION_STRENGTH = "Strength";
     public static final String TOOL_OPTION_TWIST = "Twist";
+    public static final String TOOL_OPTION_SNAP = "Snap";
+    public static final String TOOL_OPTION_NOTE_LENGTH = "Note Length";
+    public static final String TOOL_OPTION_VELOCITY = "Velocity";
+    public static final String TOOL_OPTION_SCALE_LOCK = "Scale Lock";
     public static final float TOOL_OPTION_PRECISION = 100f;
     public static final float TOOL_IMAGE_SIZE_MIN = 0f;
     public static final float TOOL_IMAGE_SIZE_MAX = 32f;
@@ -2216,6 +2237,279 @@ public class EditorSetting {
     public static final String RECORDER_SOURCE_LABEL_NOTES = "Notes";
     public static final float RECORDER_DEFAULT_BPM = 120f;
     public static final long RECORDER_DOUBLE_CLICK_MILLIS = 400L;
+
+    // Piano Roll — the note grids Snap and Note Length step through, from a whole note to a thirty-second triplet, in
+    // ticks; the options' defaults; the Notes actions by the keys their shortcuts and the Tools panel share
+    public static final String[] PIANO_ROLL_GRID_NAMES = {
+            "1/1", "1/2", "1/2T", "1/4", "1/4T", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T" };
+    public static final int[] PIANO_ROLL_GRID_TICKS = { 1920, 960, 640, 480, 320, 240, 160, 120, 80, 60, 40 };
+    public static final int PIANO_ROLL_SNAP_DEFAULT = 7;
+    public static final int PIANO_ROLL_NOTE_LENGTH_DEFAULT = 5;
+    public static final float PIANO_ROLL_VELOCITY_DEFAULT = 100f;
+    public static final String[] PIANO_ROLL_SCALE_LOCK_NAMES = { "Off", "On" };
+    public static final String PIANO_ROLL_HEADER_NOTES = "Notes";
+    public static final String PIANO_ROLL_LABEL_QUANTIZE = "Quantize";
+    public static final String PIANO_ROLL_LABEL_TRANSPOSE_UP = "Transpose Up";
+    public static final String PIANO_ROLL_LABEL_TRANSPOSE_DOWN = "Transpose Down";
+    public static final String PIANO_ROLL_LABEL_OCTAVE_UP = "Octave Up";
+    public static final String PIANO_ROLL_LABEL_OCTAVE_DOWN = "Octave Down";
+    public static final String PIANO_ROLL_LABEL_DOUBLE_LENGTH = "Double Length";
+    public static final String PIANO_ROLL_LABEL_HALF_LENGTH = "Half Length";
+    public static final String PIANO_ROLL_LABEL_DUPLICATE = "Duplicate";
+    public static final String PIANO_ROLL_LABEL_SELECT_ALL = "Select All";
+    public static final String PIANO_ROLL_LABEL_LEGATO = "Legato";
+    public static final String PIANO_ROLL_KEY_QUANTIZE = "notes_quantize";
+    public static final String PIANO_ROLL_KEY_TRANSPOSE_UP = "notes_transpose_up";
+    public static final String PIANO_ROLL_KEY_TRANSPOSE_DOWN = "notes_transpose_down";
+    public static final String PIANO_ROLL_KEY_OCTAVE_UP = "notes_octave_up";
+    public static final String PIANO_ROLL_KEY_OCTAVE_DOWN = "notes_octave_down";
+    public static final String PIANO_ROLL_KEY_DOUBLE_LENGTH = "notes_double_length";
+    public static final String PIANO_ROLL_KEY_HALF_LENGTH = "notes_half_length";
+    public static final String PIANO_ROLL_KEY_DUPLICATE = "notes_duplicate";
+    public static final String PIANO_ROLL_KEY_SELECT_ALL = "notes_select_all";
+    public static final String PIANO_ROLL_KEY_LEGATO = "notes_legato";
+    public static final String[] PIANO_ROLL_ACTION_KEYS = {
+            PIANO_ROLL_KEY_QUANTIZE, PIANO_ROLL_KEY_TRANSPOSE_UP, PIANO_ROLL_KEY_TRANSPOSE_DOWN,
+            PIANO_ROLL_KEY_OCTAVE_UP, PIANO_ROLL_KEY_OCTAVE_DOWN, PIANO_ROLL_KEY_DOUBLE_LENGTH,
+            PIANO_ROLL_KEY_HALF_LENGTH, PIANO_ROLL_KEY_DUPLICATE, PIANO_ROLL_KEY_SELECT_ALL, PIANO_ROLL_KEY_LEGATO };
+    public static final String[] PIANO_ROLL_ACTION_LABELS = {
+            PIANO_ROLL_LABEL_QUANTIZE, PIANO_ROLL_LABEL_TRANSPOSE_UP, PIANO_ROLL_LABEL_TRANSPOSE_DOWN,
+            PIANO_ROLL_LABEL_OCTAVE_UP, PIANO_ROLL_LABEL_OCTAVE_DOWN, PIANO_ROLL_LABEL_DOUBLE_LENGTH,
+            PIANO_ROLL_LABEL_HALF_LENGTH, PIANO_ROLL_LABEL_DUPLICATE, PIANO_ROLL_LABEL_SELECT_ALL,
+            PIANO_ROLL_LABEL_LEGATO };
+    public static final String PIANO_ROLL_LABEL_DRAWN = "drawn";
+    public static final String PIANO_ROLL_LABEL_TYPED = "typed";
+    public static final String PIANO_ROLL_LABEL_ERASED = "erased";
+    public static final String PIANO_ROLL_LABEL_CUT = "cut";
+    public static final String PIANO_ROLL_LABEL_MOVED = "moved";
+    public static final String PIANO_ROLL_LABEL_RESIZED = "resized";
+    public static final String PIANO_ROLL_LABEL_DELETED = "deleted";
+    public static final String PIANO_ROLL_LABEL_SET = "set";
+
+    // Piano Roll — a note edited as a record of its start, length, pitch and velocity, as the song codec packs them,
+    // and whether it is selected
+    public static final int PIANO_ROLL_RECORD_STRIDE = 5;
+    public static final int PIANO_ROLL_RECORD_START = 0;
+    public static final int PIANO_ROLL_RECORD_LENGTH = 1;
+    public static final int PIANO_ROLL_RECORD_PITCH = 2;
+    public static final int PIANO_ROLL_RECORD_VELOCITY = 3;
+    public static final int PIANO_ROLL_RECORD_SELECTED = 4;
+
+    // Piano Roll — the view: the lowest pitch shown first, how many ticks it shows at the least and the most, how far
+    // the wheel zooms and scrolls, a key clicked sounds this long, and edits kept to undo
+    public static final int PIANO_ROLL_DEFAULT_LOW_PITCH = 48;
+    public static final int PIANO_ROLL_MIN_SPAN_TICKS = 480;
+    public static final int PIANO_ROLL_MAX_SPAN_TICKS = 480 * 4 * 256;
+    public static final float PIANO_ROLL_ZOOM_STEP = 1.25f;
+    public static final float PIANO_ROLL_SCROLL_SHARE = 0.1f;
+    public static final int PIANO_ROLL_SCROLL_PITCHES = 2;
+    public static final float PIANO_ROLL_KEY_PREVIEW_SECONDS = 0.4f;
+    public static final int PIANO_ROLL_HISTORY_DEPTH = 64;
+    public static final float PIANO_ROLL_DRAG_THRESHOLD_PIXELS = 3f;
+    public static final float PIANO_ROLL_RESIZE_GRAB_SHARE = 0.25f;
+    public static final float PIANO_ROLL_RESIZE_GRAB_PIXELS = 6f;
+
+    // Piano Roll — Musical Typing: the thirteen note keys from C to the next C, the octave and velocity they start
+    // at, how far Z, X, C and V move them, and the held and claimed shortcuts by name
+    public static final String[] PIANO_ROLL_SHORTCUT_NOTES = {
+            "PianoRoll/NoteC", "PianoRoll/NoteCSharp", "PianoRoll/NoteD", "PianoRoll/NoteDSharp", "PianoRoll/NoteE",
+            "PianoRoll/NoteF", "PianoRoll/NoteFSharp", "PianoRoll/NoteG", "PianoRoll/NoteGSharp", "PianoRoll/NoteA",
+            "PianoRoll/NoteASharp", "PianoRoll/NoteB", "PianoRoll/NoteCHigh" };
+    public static final String[] PIANO_ROLL_SHORTCUT_TYPING = {
+            "PianoRoll/OctaveDown", "PianoRoll/OctaveUp", "PianoRoll/VelocityDown", "PianoRoll/VelocityUp" };
+    public static final String PIANO_ROLL_SHORTCUT_EXTEND_SELECTION = "PianoRoll/ExtendSelection";
+    public static final String PIANO_ROLL_SHORTCUT_SUBTRACT_SELECTION = "PianoRoll/SubtractSelection";
+    public static final String PIANO_ROLL_SHORTCUT_FREE_SNAP = "PianoRoll/FreeSnap";
+    public static final String PIANO_ROLL_SHORTCUT_SCROLL_TIME = "PianoRoll/ScrollTime";
+    public static final String PIANO_ROLL_SHORTCUT_ZOOM_TIME = "PianoRoll/ZoomTime";
+    public static final int PIANO_ROLL_TYPING_BASE_DEFAULT = 60;
+    public static final int PIANO_ROLL_TYPING_BASE_MIN = 0;
+    public static final int PIANO_ROLL_TYPING_BASE_MAX = 108;
+    public static final int PIANO_ROLL_TYPING_VELOCITY_STEP = 10;
+    public static final int PIANO_ROLL_TYPING_VELOCITY_DEFAULT = 100;
+
+    // Piano Roll — its tab, its menu, its Properties rows and its File and Edit menu table
+    public static final String TAB_TITLE_PIANO_ROLL = "Piano Roll";
+    public static final String PIANO_ROLL_MENU = "editor/PianoRoll/PianoRoll";
+    public static final String PIANO_ROLL_PROPERTIES_TITLE = "Notes";
+    public static final String RECORDER_TRANSPORT_PROPERTIES_TITLE = "Music";
+    public static final String RECORDER_TIMELINE_PROPERTIES_TITLE = "Mixer";
+    public static final String PIANO_ROLL_ROW_PITCH = "note_pitch";
+    public static final String PIANO_ROLL_ROW_START = "note_start";
+    public static final String PIANO_ROLL_ROW_LENGTH = "note_length";
+    public static final String PIANO_ROLL_ROW_VELOCITY = "note_velocity";
+    public static final String PIANO_ROLL_ROW_LABEL_PITCH = "Pitch";
+    public static final String PIANO_ROLL_ROW_LABEL_START = "Start (beats)";
+    public static final String PIANO_ROLL_ROW_LABEL_LENGTH = "Length (beats)";
+    public static final String PIANO_ROLL_ROW_LABEL_VELOCITY = "Velocity";
+    public static final String PIANO_ROLL_ROWS_NO_CLIP = "Select a notes clip on the Timeline to edit its notes";
+    public static final String PIANO_ROLL_ROWS_NO_NOTE = "Select a note to set its pitch, start, length and velocity";
+    public static final String PIANO_ROLL_ROWS_HEADER_FORMAT = "%d notes selected";
+    public static final String PIANO_ROLL_PITCH_FORMAT = "%s (%d)";
+    public static final String PIANO_ROLL_BEATS_FORMAT = "%.3f";
+    public static final CharacterViewTemplateStruct PIANO_ROLL_ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            "editor/PianoRoll/piano_roll_header_row",
+            "editor/PianoRoll/piano_roll_item_row",
+            "editor/PianoRoll/piano_roll_item_row_selected",
+            "editor/PianoRoll/piano_roll_number_row",
+            "editor/PianoRoll/piano_roll_text_row",
+            "editor/PianoRoll/piano_roll_choice_row",
+            "editor/PianoRoll/piano_roll_action_row",
+            null,
+            "piano_roll_row_label",
+            "piano_roll_row_value",
+            "piano_roll_row_value_button",
+            "piano_roll_row_decrease",
+            "piano_roll_row_increase",
+            "piano_roll_row_track",
+            "piano_roll_row_knob",
+            null,
+            null,
+            null);
+    public static final CharacterViewTemplateStruct RECORDER_MUSIC_ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            "editor/PianoRoll/music_header_row",
+            "editor/PianoRoll/music_item_row",
+            "editor/PianoRoll/music_item_row_selected",
+            "editor/PianoRoll/music_number_row",
+            "editor/PianoRoll/music_text_row",
+            "editor/PianoRoll/music_choice_row",
+            "editor/PianoRoll/music_action_row",
+            null,
+            "piano_roll_row_label",
+            "piano_roll_row_value",
+            "piano_roll_row_value_button",
+            "piano_roll_row_decrease",
+            "piano_roll_row_increase",
+            "piano_roll_row_track",
+            "piano_roll_row_knob",
+            null,
+            null,
+            null);
+
+    // Piano Roll — what its status line says
+    public static final String PIANO_ROLL_STATUS_READY = "Draw notes with the Draw tool, or press M for Musical Typing";
+    public static final String PIANO_ROLL_STATUS_NO_CLIP = "Select a notes clip on the Timeline of a Music file";
+    public static final String PIANO_ROLL_STATUS_EDITED = "Notes: ";
+    public static final String PIANO_ROLL_STATUS_UNDONE = "Undone";
+    public static final String PIANO_ROLL_STATUS_REDONE = "Redone";
+    public static final String PIANO_ROLL_STATUS_NOTHING_TO_UNDO = "Nothing to undo";
+    public static final String PIANO_ROLL_STATUS_NOTHING_TO_REDO = "Nothing to redo";
+    public static final String PIANO_ROLL_STATUS_NOTHING_SELECTED = "Select notes first";
+    public static final String PIANO_ROLL_TYPING_OFF = "Musical Typing off (M)";
+    public static final String PIANO_ROLL_TYPING_FORMAT = "Musical Typing on: %s to %s, velocity %d";
+
+    // Recorder Music — a recording is a Video or a Music file; a Music file is read and written as a song, records
+    // notes rather than takes, clicks its metronome on every beat and turns its clips into MIDI and a rendered sound
+    public static final String RECORDER_KIND_LABEL_VIDEO = "Video";
+    public static final String RECORDER_KIND_LABEL_MUSIC = "Music";
+    public static final int RECORDER_QUARTERS_PER_WHOLE = 4;
+    public static final float RECORDER_NOTES_SOURCE_SECONDS = Float.MAX_VALUE;
+    public static final String RECORDER_MUSIC_OWNER_PREFIX = "Music file ";
+    public static final String RECORDER_MUSIC_LANE_OWNER = " lane ";
+    public static final String RECORDER_MUSIC_WORLD_NONE = "";
+    public static final String RECORDER_MESSAGE_SOUND_MISSING = "Recorder: a Music file's sound is missing: ";
+    public static final String RECORDER_STATUS_MUSIC_REFUSES =
+            "A Music file holds notes, songs and sounds alone, refused: ";
+    public static final String RECORDER_STATUS_RECORDING_NOTES =
+            "Recording notes: play them with Musical Typing in the Piano Roll";
+    public static final String RECORDER_STATUS_SONG_REFUSED = "The game refuses the song: ";
+    public static final String RECORDER_STATUS_NOTES_DRAWN = "Notes clip drawn on ";
+    public static final String RECORDER_STATUS_EXPORT_MUSIC =
+            "A Music file is exported with Export MIDI or Render, not as a video";
+    public static final String RECORDER_STATUS_MIDI_MUSIC_ONLY = "Export MIDI needs a Music file open";
+    public static final String RECORDER_STATUS_MIDI_EXPORTED = "MIDI exported: ";
+    public static final String RECORDER_STATUS_MIDI_EXPORTED_FORMAT =
+            "MIDI exported: %s (%d sound clips left out: MIDI holds no sounds)";
+    public static final String RECORDER_STATUS_MIDI_FAILED = "MIDI export failed: ";
+    public static final String RECORDER_STATUS_RENDER_MUSIC_ONLY = "Render needs a Music file open";
+    public static final String RECORDER_STATUS_RENDER_RUNNING = "A render is already running";
+    public static final String RECORDER_STATUS_RENDERING_FORMAT = "Rendering: %d%%";
+    public static final float RECORDER_BPM_PRECISION = 1000f;
+    public static final String RECORDER_METRONOME_SOUND = "interface/Click";
+    public static final float RECORDER_METRONOME_VOLUME = 0.8f;
+    public static final float RECORDER_METRONOME_PITCH = 1f;
+    public static final float RECORDER_METRONOME_ACCENT_PITCH = 1.5f;
+
+    // Recorder Music — the Properties rows of a Music file's time, key, lane mix and clip, each by its key
+    public static final String RECORDER_ROWS_NO_MUSIC = "Open a Music file to set its time, key and mix";
+    public static final String RECORDER_ROWS_HEADER_TIME = "Time";
+    public static final String RECORDER_ROWS_HEADER_KEY = "Key";
+    public static final String RECORDER_ROWS_HEADER_LANE_FORMAT = "Lane %d";
+    public static final String RECORDER_ROWS_HEADER_CLIP_FORMAT = "Clip: %s";
+    public static final String RECORDER_ROW_TEMPO = "tempo";
+    public static final String RECORDER_ROW_BEATS_PER_BAR = "beats_per_bar";
+    public static final String RECORDER_ROW_BEAT_UNIT = "beat_unit";
+    public static final String RECORDER_ROW_KEY_ROOT = "key_root";
+    public static final String RECORDER_ROW_KEY_SCALE = "key_scale";
+    public static final String RECORDER_ROW_METRONOME = "metronome";
+    public static final String RECORDER_ROW_LANE_NAME = "lane_name";
+    public static final String RECORDER_ROW_LANE_VOLUME = "lane_volume";
+    public static final String RECORDER_ROW_LANE_PAN = "lane_pan";
+    public static final String RECORDER_ROW_LANE_MUTED = "lane_muted";
+    public static final String RECORDER_ROW_LANE_SOLO = "lane_solo";
+    public static final String RECORDER_ROW_CLIP_INSTRUMENT = "clip_instrument";
+    public static final String RECORDER_ROW_CLIP_VOLUME = "clip_volume";
+    public static final String RECORDER_ROW_CLIP_TRANSPOSE = "clip_transpose";
+    public static final String RECORDER_ROW_LABEL_TEMPO = "Tempo";
+    public static final String RECORDER_ROW_LABEL_BEATS_PER_BAR = "Beats a bar";
+    public static final String RECORDER_ROW_LABEL_BEAT_UNIT = "Beat unit";
+    public static final String RECORDER_ROW_LABEL_KEY_ROOT = "Root";
+    public static final String RECORDER_ROW_LABEL_KEY_SCALE = "Scale";
+    public static final String RECORDER_ROW_LABEL_METRONOME = "Metronome";
+    public static final String RECORDER_ROW_LABEL_LANE_NAME = "Name";
+    public static final String RECORDER_ROW_LABEL_VOLUME = "Volume";
+    public static final String RECORDER_ROW_LABEL_PAN = "Pan";
+    public static final String RECORDER_ROW_LABEL_MUTED = "Mute";
+    public static final String RECORDER_ROW_LABEL_SOLO = "Solo";
+    public static final String RECORDER_ROW_LABEL_INSTRUMENT = "Instrument";
+    public static final String RECORDER_ROW_LABEL_TRANSPOSE = "Transpose";
+    public static final String RECORDER_ROW_VALUE_NONE = "";
+    public static final String RECORDER_ROW_VALUE_ON = "On";
+    public static final String RECORDER_ROW_VALUE_OFF = "Off";
+    public static final float RECORDER_ROW_MIX_STEP = 0.01f;
+    public static final String RECORDER_ROW_ENUM_SEPARATOR = "_";
+    public static final String RECORDER_ROW_WORD_SEPARATOR = " ";
+    public static final String RECORDER_ROW_KEY_OCTAVE = "4";
+
+    // Recorder Render — a Music file mixed offline past its end for its release, a stretch at a time, into a raw file
+    // encoded to a music sound
+    public static final String RECORDER_STATUS_FFMPEG_MISSING =
+            "Render needs ffmpeg: run .claude/Delivery.bat once to fetch it";
+    public static final String RECORDER_STATUS_RENDER_EMPTY =
+            "Nothing to render: the Music file holds no notes, songs or sounds that play";
+    public static final String RECORDER_STATUS_RENDER_FAILED = "Render failed: ";
+    public static final String RECORDER_STATUS_RENDERED = "Rendered: ";
+    public static final float RECORDER_RENDER_TAIL_SECONDS = 3f;
+    public static final String RECORDER_RENDER_RAW_SUFFIX = ".pcm";
+    public static final int RECORDER_RENDER_STRETCH_FRAMES = 4096;
+    public static final int RECORDER_RENDER_PERCENT_MAX = 100;
+    public static final int RECORDER_RENDER_MIXED_PERCENT = 90;
+    public static final String RECORDER_RENDER_CATEGORY = "music";
+    public static final String RECORDER_RENDER_DIRECTORY = "music";
+
+    // ffmpeg — found on the PATH or as Delivery.bat's portable copy, run with Delivery.bat's sound settings
+    public static final String FFMPEG_PATH_VARIABLE = "PATH";
+    public static final String FFMPEG_LOCAL_APP_DATA_VARIABLE = "LOCALAPPDATA";
+    public static final String FFMPEG_PORTABLE_DIRECTORY = "AdventureRPG";
+    public static final String[] FFMPEG_FILE_NAMES = { "ffmpeg", "ffmpeg.exe" };
+    public static final String FFMPEG_ARG_NO_STDIN = "-nostdin";
+    public static final String FFMPEG_ARG_LOG_LEVEL = "-v";
+    public static final String FFMPEG_LOG_ERRORS = "error";
+    public static final String FFMPEG_ARG_OVERWRITE = "-y";
+    public static final String FFMPEG_ARG_FORMAT = "-f";
+    public static final String FFMPEG_FORMAT_PCM = "s16le";
+    public static final String FFMPEG_ARG_RATE = "-ar";
+    public static final String FFMPEG_ARG_CHANNELS = "-ac";
+    public static final String FFMPEG_ARG_INPUT = "-i";
+    public static final String FFMPEG_ARG_MAP = "-map";
+    public static final String FFMPEG_MAP_FIRST_AUDIO = "0:a:0";
+    public static final String FFMPEG_ARG_MAP_METADATA = "-map_metadata";
+    public static final String FFMPEG_MAP_METADATA_NONE = "-1";
+    public static final String FFMPEG_ARG_AUDIO_CODEC = "-c:a";
+    public static final String FFMPEG_CODEC_VORBIS = "libvorbis";
+    public static final String FFMPEG_ARG_AUDIO_QUALITY = "-q:a";
+    public static final String FFMPEG_VORBIS_QUALITY = "5";
+    public static final int FFMPEG_SOUND_RATE = 48_000;
 
     // Recorder — nested playback: a sound or a song is told apart by the path of clips it was reached by, each clip's
     // place added to the path above it, and the songs and notes clips heard at once follow from a fixed pool
@@ -2744,6 +3038,8 @@ public class EditorSetting {
     public static final String RECORDER_KEY_RANGE_CLEAR = "range_clear";
     public static final String RECORDER_KEY_EXPORT = "export";
     public static final String RECORDER_KEY_CANCEL_EXPORT = "cancel_export";
+    public static final String RECORDER_KEY_EXPORT_MIDI = "export_midi";
+    public static final String RECORDER_KEY_RENDER = "render";
 
     // Commands — Recorder
     public static final String COMMAND_RECORD = "record";

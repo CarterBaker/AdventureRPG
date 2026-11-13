@@ -7,8 +7,10 @@ public enum RecorderDragKind {
      * picked up from the bin to lay on the timeline, a sound picked up from
      * the sound library to lay as a take of its own or to add to the Sounds
      * layer of the Keys pane, a saved recording picked up from the
-     * Recordings tab to lay nested in the open one, a sound on that layer being retimed along its
-     * row, a clip already on it
+     * Recordings tab to lay nested in the open one, a project song picked up
+     * from the same tab to lay in it, a notes clip being drawn across an
+     * empty lane of a Music file, a sound on that layer being retimed along
+     * its row, a clip already on it
      * being moved along its lanes, the start or the end of a clip being
      * dragged to trim it, a cut being placed through a clip, a node on a clip
      * being retimed or moved, the empty lanes being dragged to scroll the view
@@ -27,6 +29,8 @@ public enum RecorderDragKind {
     TAKE,
     SOUND,
     RECORDING,
+    SONG,
+    DRAW,
     CLIP,
     TRIM_START,
     TRIM_END,
@@ -49,7 +53,7 @@ public enum RecorderDragKind {
 
     // True for what carries a whole span to lay on the lanes
     public boolean isSpan() {
-        return this == TAKE || this == SOUND || this == RECORDING || this == CLIP;
+        return this == TAKE || this == SOUND || this == RECORDING || this == SONG || this == DRAW || this == CLIP;
     }
 
     // True for what is let go at a single moment of the timeline

@@ -108,6 +108,11 @@ public class ShortcutHandle extends HandlePackage {
         return shortcutData.getActionClass() != null;
     }
 
+    // True for a shortcut that runs only while its window claims its keys
+    public boolean isClaimed() {
+        return shortcutData.isClaimed();
+    }
+
     public String getHint() {
         return shortcutData.getHint();
     }

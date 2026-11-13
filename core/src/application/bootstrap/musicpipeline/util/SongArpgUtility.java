@@ -2,6 +2,8 @@ package application.bootstrap.musicpipeline.util;
 
 import application.bootstrap.musicpipeline.song.SongClipKind;
 import application.bootstrap.musicpipeline.song.SongClipStruct;
+import application.bootstrap.musicpipeline.song.SongData;
+import application.bootstrap.musicpipeline.song.SongLaneStruct;
 import application.bootstrap.musicpipeline.song.SongTempoStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -12,13 +14,16 @@ import engine.util.arpg.ArpgUtility;
 public class SongArpgUtility extends EngineUtility {
 
     /*
-     * The one codec between a song's tempo map, meter and clips and ARPG,
-     * used by SongBuilder and by the editor alike, for songs and for the
-     * recorder's recordings, which keep a tempo map, a meter and notes clips
-     * of their own. A tempo map lists at least one change, the first at tick
+     * The one codec between a song's tempo map, meter, key, lanes and clips
+     * and ARPG, used by SongBuilder and by the editor alike, for songs and
+     * for the recorder's recordings, which keep a tempo map, a meter and
+     * notes clips of their own; the editor writes a whole song through
+     * writeSong, which gives back what SongBuilder reads. A tempo map lists at least one change, the first at tick
      * 0 and each later one at a later tick, each inside SONG_BPM_MIN to
      * SONG_BPM_MAX; a bar holds 1 to SONG_BEATS_PER_BAR_MAX beats of a whole,
-     * half, quarter, eighth, sixteenth or thirty-second note. A clip is read with every rule the game holds it
+     * half, quarter, eighth, sixteenth or thirty-second note. A key's root
+     * is a step from C, 0 to SONG_KEY_ROOT_MAX. A lane plays at a volume of
+     * 0 to 1 and a pan of -1 to 1. A clip is read with every rule the game holds it
      * to — its kind, a lane the song has, a start, a length of at least one
      * tick, an offset into its source, a volume of 0 to 1 and a transpose of
      * up to SONG_CLIP_MAX_TRANSPOSE semitones either way — and what its kind
@@ -29,8 +34,8 @@ public class SongArpgUtility extends EngineUtility {
      * read and written again is unchanged. Never held — all methods static.
      */
 
-    // Internal
-    private static final int[] NO_NOTES = new int[0];
+    // Notes — the notes of a clip that plays none
+    public static final int[] NO_NOTES = new int[0];
 
     // Time \\
 
@@ -95,6 +100,69 @@ public class SongArpgUtility extends EngineUtility {
             throwException(owner + " counts its beats in a \"beat_unit\" of " + beatUnit
                     + "; a beat is a whole, half, quarter, eighth, sixteenth or thirty-second note (1 to "
                     + EngineSetting.SONG_BEAT_UNIT_MAX + ").");
+    }
+
+    // The key's root, a step from C, refused outside the twelve
+    public static void validateKeyRoot(int keyRoot, String owner) {
+        if (keyRoot < 0 || keyRoot > EngineSetting.SONG_KEY_ROOT_MAX)
+            throwException(owner + " names a \"key_root\" of " + keyRoot + "; a key's root is a step from C, 0 to "
+                    + EngineSetting.SONG_KEY_ROOT_MAX + ".");
+    }
+
+    // Lanes \\
+
+    public static SongLaneStruct readLane(ArpgObjectStruct laneArpg, String owner) {
+
+        float volume = ArpgUtility.getFloat(laneArpg, "volume", EngineSetting.DEFAULT_SONG_LANE_VOLUME);
+        float pan = ArpgUtility.getFloat(laneArpg, "pan", EngineSetting.DEFAULT_SONG_LANE_PAN);
+
+        if (volume < 0f || volume > 1f || pan < -1f || pan > 1f)
+            throwException(owner + " plays at a \"volume\" outside 0 to 1 or a \"pan\" outside -1 to 1.");
+
+        return new SongLaneStruct(
+                ArpgUtility.getString(laneArpg, "name", EngineSetting.SONG_LANE_NAME_NONE),
+                volume,
+                pan,
+                ArpgUtility.getBoolean(laneArpg, "muted", EngineSetting.DEFAULT_SONG_LANE_MUTED),
+                ArpgUtility.getBoolean(laneArpg, "solo", EngineSetting.DEFAULT_SONG_LANE_SOLO));
+    }
+
+    public static ArpgObjectStruct writeLane(SongLaneStruct lane) {
+
+        ArpgObjectStruct laneArpg = new ArpgObjectStruct();
+
+        laneArpg.addProperty("name", lane.getName());
+        laneArpg.addProperty("volume", lane.getVolume());
+        laneArpg.addProperty("pan", lane.getPan());
+        laneArpg.addProperty("muted", lane.isMuted());
+        laneArpg.addProperty("solo", lane.isSolo());
+        return laneArpg;
+    }
+
+    // Song \\
+
+    // The whole song as its file holds it: its name shown, tempo map, meter, key, lanes and clips
+    public static ArpgObjectStruct writeSong(SongData song) {
+
+        ArpgObjectStruct songArpg = new ArpgObjectStruct();
+        ArpgArrayStruct lanesArpg = new ArpgArrayStruct();
+        ArpgArrayStruct clipsArpg = new ArpgArrayStruct();
+
+        for (int i = 0; i < song.getLaneCount(); i++)
+            lanesArpg.add(writeLane(song.getLane(i)));
+
+        for (int i = 0; i < song.getClipCount(); i++)
+            clipsArpg.add(writeClip(song.getClip(i)));
+
+        songArpg.addProperty("display_name", song.getDisplayName());
+        songArpg.add("tempos", writeTempo(song.getTempo()));
+        songArpg.addProperty("beats_per_bar", song.getBeatsPerBar());
+        songArpg.addProperty("beat_unit", song.getBeatUnit());
+        songArpg.addProperty("key_root", song.getKeyRoot());
+        songArpg.addProperty("key_scale", ArpgUtility.toEnumName(song.getKeyScale()));
+        songArpg.add("lanes", lanesArpg);
+        songArpg.add("clips", clipsArpg);
+        return songArpg;
     }
 
     // Clips \\

@@ -18,6 +18,7 @@ import editor.runtime.menueventsmanager.menus.ItemEditorBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.ProfilerBranch;
 import editor.runtime.menueventsmanager.menus.RecorderBranch;
+import editor.runtime.menueventsmanager.menus.PianoRollBranch;
 import editor.runtime.menueventsmanager.menus.RecordingsBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
 import editor.runtime.menueventsmanager.menus.ToolBranch;
@@ -76,6 +77,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(AnimationTreeEditorBranch.class);
         create(RecorderBranch.class);
         create(RecordingsBranch.class);
+        create(PianoRollBranch.class);
         create(SoundLibraryBranch.class);
         create(TransitionsBranch.class);
     }
