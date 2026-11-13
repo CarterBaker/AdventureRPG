@@ -26,8 +26,8 @@ public class SamplerManager extends ManagerPackage {
      * through one of SoundManager's voices pitched from the sample's root and
      * hands back a note handle, and noteOff lets it go; noteOnAt places it in
      * the world. A note's gain is its region's volume times its velocity's
-     * share times its instrument's volume times its envelope, worked out each
-     * frame. A pitch played again lets the note already sounding it go; an
+     * share times its instrument's volume times the volume it was played at
+     * times its envelope, worked out each frame. A pitch played again lets the note already sounding it go; an
      * instrument holding as many notes as its polyphony lets its oldest go;
      * with every slot sounding, the oldest note let go is cut, else the oldest
      * of all. An instrument whose samples have not loaded asks for them and
@@ -73,7 +73,12 @@ public class SamplerManager extends ManagerPackage {
 
     // Heard as it is, wherever the camera stands; the note's handle, -1 when nothing plays
     public int noteOn(short instrumentID, int pitch, int velocity) {
-        return start(instrumentID, pitch, velocity, null, 0L, 0f, 0f, 0f);
+        return noteOn(instrumentID, pitch, velocity, EngineSetting.SAMPLER_NOTE_FULL_VOLUME);
+    }
+
+    // Heard as it is, scaled by a volume of 0 to 1, as a song's clips and lanes set it
+    public int noteOn(short instrumentID, int pitch, int velocity, float volume) {
+        return start(instrumentID, pitch, velocity, volume, null, 0L, 0f, 0f, 0f);
     }
 
     // Placed in the world, fading with distance and heard from its side
@@ -86,8 +91,8 @@ public class SamplerManager extends ManagerPackage {
 
         Vector3 position = place.getPosition();
 
-        return start(instrumentID, pitch, velocity, worldHandle, place.getChunkCoordinate(),
-                position.x, position.y, position.z);
+        return start(instrumentID, pitch, velocity, EngineSetting.SAMPLER_NOTE_FULL_VOLUME, worldHandle,
+                place.getChunkCoordinate(), position.x, position.y, position.z);
     }
 
     // The one way a note begins
@@ -95,6 +100,7 @@ public class SamplerManager extends ManagerPackage {
             short instrumentID,
             int pitch,
             int velocity,
+            float volume,
             WorldHandle worldHandle,
             long chunkCoordinate,
             float x,
@@ -124,7 +130,8 @@ public class SamplerManager extends ManagerPackage {
 
         float baseGain = region.getGain()
                 * NoteUtility.toVelocityGain(velocity, noteSet.getVelocityTracking())
-                * instrument.getVolume();
+                * instrument.getVolume()
+                * volume;
         float gain = baseGain * NoteEnvelopeUtility.gainAt(noteSet.getEnvelope(), 0f);
         float ratio = NoteUtility.toPitchRatio(pitch, region.getRoot(), region.getTune());
         SamplerNoteStruct note = acquire();

@@ -1,5 +1,7 @@
 package application.bootstrap.musicpipeline.instrumentmanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.musicpipeline.instrument.InstrumentHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -18,12 +20,20 @@ public class InstrumentManager extends ManagerPackage {
      * with. Instruments load on demand, when an item, a song or a tool first
      * names one, at bootstrap or while the game runs. INSTRUMENT_NONE (0) is
      * the reserved sentinel for an item that names none. Auto-triggers an
-     * on-demand load via InstrumentLoader on a name-based cache miss.
+     * on-demand load via InstrumentLoader on a name-based cache miss. A MIDI
+     * file names instruments by General MIDI program, and its channel 10 by
+     * percussion; the first lookup by either loads every instrument and
+     * indexes them once, the first in order of name winning a program two
+     * instruments share.
      */
 
     // Palette
     private Object2IntOpenHashMap<String> instrumentName2InstrumentID;
     private ObjectArrayList<InstrumentHandle> instrumentID2InstrumentHandle;
+
+    // MIDI — the instrument each General MIDI program plays on, and the one marked percussion
+    private short[] midiProgram2InstrumentID;
+    private short percussionInstrumentID;
 
     // Base \\
 
@@ -78,5 +88,49 @@ public class InstrumentManager extends ManagerPackage {
 
     public InstrumentHandle getInstrumentHandleFromInstrumentName(String instrumentName) {
         return getInstrumentHandleFromInstrumentID(getInstrumentIDFromInstrumentName(instrumentName));
+    }
+
+    // MIDI \\
+
+    // The instrument a General MIDI program plays on, INSTRUMENT_NONE when no instrument names it
+    public short getInstrumentIDFromMidiProgram(int midiProgram) {
+
+        indexMidiPrograms();
+        return midiProgram2InstrumentID[midiProgram];
+    }
+
+    // The instrument that plays MIDI channel 10's drums, INSTRUMENT_NONE when none is marked percussion
+    public short getPercussionInstrumentID() {
+
+        indexMidiPrograms();
+        return percussionInstrumentID;
+    }
+
+    private void indexMidiPrograms() {
+
+        if (midiProgram2InstrumentID != null)
+            return;
+
+        ((InstrumentLoader) internalLoader).requestEvery();
+
+        ObjectArrayList<String> instrumentNames = new ObjectArrayList<>(instrumentName2InstrumentID.keySet());
+        instrumentNames.sort(null);
+
+        this.midiProgram2InstrumentID = new short[EngineSetting.INSTRUMENT_MIDI_PROGRAM_MAX + 1];
+        this.percussionInstrumentID = EngineSetting.INSTRUMENT_NONE;
+        Arrays.fill(midiProgram2InstrumentID, EngineSetting.INSTRUMENT_NONE);
+
+        for (int i = 0; i < instrumentNames.size(); i++) {
+
+            InstrumentHandle handle = getInstrumentHandleFromInstrumentName(instrumentNames.get(i));
+            int midiProgram = handle.getMidiProgram();
+
+            if (midiProgram != EngineSetting.INSTRUMENT_MIDI_PROGRAM_NONE
+                    && midiProgram2InstrumentID[midiProgram] == EngineSetting.INSTRUMENT_NONE)
+                midiProgram2InstrumentID[midiProgram] = handle.getInstrumentID();
+
+            if (handle.isPercussion() && percussionInstrumentID == EngineSetting.INSTRUMENT_NONE)
+                this.percussionInstrumentID = handle.getInstrumentID();
+        }
     }
 }

@@ -277,6 +277,9 @@ One line per session that changed this file: the date, what was added or removed
   field in `schemas/Items.arpg` and `loopStart`/`loopEnd` in `schemas/Sounds.arpg`, and the instruments
   `instruments/BaroqueSopranoRecorder.arpg` and `instruments/FolkHarp.arpg` (their `midi_program` set by hand). Their
   note sets and samples under `sounds/notes/` are converted from the owner's VCSL library and are not catalogued.
+- 2026-11-13: Music pipeline, songs. Added the schema `Songs.arpg` and the test song `songs/Test/Scale.arpg` (a C major
+  scale on the Folk Harp over a drum line of sound clips, at 100 then 120 beats a minute), written to prove that songs
+  build, play and read back from MIDI unchanged.
 ---
 
 ## Textures and Sprites (2399 files)
@@ -1657,7 +1660,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1800 files)
+## Data Files (1802 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2606,7 +2609,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `DamageTypes.arpg`, `Deeds.arpg`, `Entities.arpg`, `FBOs.arpg`, `Features.arpg`, `Furnishings.arpg`, `Genders.arpg`,
 `Instruments.arpg`, `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `NoteSets.arpg`, `Npcs.arpg`, `Passes.arpg`,
 `Professions.arpg`, `Races.arpg`, `Rigs.arpg`, `Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`,
-`Shortcuts.arpg`, `Skills.arpg`,
+`Shortcuts.arpg`, `Skills.arpg`, `Songs.arpg`,
 `SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`,
 `TextureAliases.arpg`, `Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Transitions.arpg`, `Trees.arpg`,
 `UBOs.arpg`, `Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
@@ -2766,6 +2769,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/skills/`
 
 `Skills.arpg`
+
+### `assets/songs/Test/`
+
+`Scale.arpg`
 
 ### `assets/soundcues/ambience/`
 

@@ -5,6 +5,7 @@ import editor.bootstrap.infopipeline.infoissue.InfoIssueStruct;
 import editor.bootstrap.infopipeline.infolink.InfoLinkStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoLocalStepStruct;
+import editor.bootstrap.infopipeline.infoschema.InfoRecordStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoReferenceStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoRuleStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
@@ -19,6 +20,7 @@ import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.arpg.ArpgValueStruct;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
@@ -32,13 +34,18 @@ class InfoValidationBranch extends BranchPackage {
      * wrong type, a fraction where a whole number belongs, an enum value or
      * number out of bounds or below the sibling it must reach, a list of the
      * wrong length or too few values, a field its condition requires, a value
-     * repeated where it must be distinct or unique, an entry without a name
-     * or with one another entry holds, an entry the game cannot start without
-     * taken away, and a name that names nothing — an entry no schema holds, a
-     * file no resource directory holds, or a value nothing in its own entry
-     * holds. A key the game never reads is noted as ignored rather than as an
-     * error: it cannot break the game, so it is kept as it is and never stops
-     * a save. The same walk lists every name a file depends on, so saving and
+     * repeated where it must be distinct or unique, a number not among those
+     * it lists, an index past its entry's list, an element not above the one
+     * before it where they climb, a list of records cut short or holding a
+     * slot out of bounds or a record running past its span, an entry without
+     * a name or with one another entry holds, an entry the game cannot start
+     * without taken away, a name that names nothing — an entry no schema
+     * holds, a file no resource directory holds, or a value nothing in its own
+     * entry holds — and an acyclic name that leads back to its own entry,
+     * through the entries it names at any depth, shown with the loop. A key
+     * the game never reads is noted as ignored rather than as an error: it
+     * cannot break the game, so it is kept as it is and never stops a save.
+     * The same walk lists every name a file depends on, so saving and
      * deleting can check what the game would find on disk.
      */
 
@@ -50,6 +57,8 @@ class InfoValidationBranch extends BranchPackage {
     private ObjectOpenHashSet<String> localValues;
     private ObjectOpenHashSet<String> distinctValues;
     private ObjectOpenHashSet<String> entryNames;
+    private ObjectArrayList<String> loopNames;
+    private ObjectOpenHashSet<String> loopVisited;
     private InfoSchemaHandle schema;
     private String definitionName;
     private String entryName;
@@ -67,6 +76,8 @@ class InfoValidationBranch extends BranchPackage {
         this.localValues = new ObjectOpenHashSet<>();
         this.distinctValues = new ObjectOpenHashSet<>();
         this.entryNames = new ObjectOpenHashSet<>();
+        this.loopNames = new ObjectArrayList<>();
+        this.loopVisited = new ObjectOpenHashSet<>();
     }
 
     @Override
@@ -316,13 +327,101 @@ class InfoValidationBranch extends BranchPackage {
             segments.pop();
         }
 
+        if (field.getRule().hasRecord())
+            validateRecords(field.getRule().getRecord(), array, container);
+
         if (element.isDistinct())
             validateDistinct(array, null);
 
-        if (element.getType() == InfoFieldType.OBJECT)
-            for (int i = 0; i < element.getFields().size(); i++)
-                if (element.getFields().get(i).isDistinct())
-                    validateDistinct(array, element.getFields().get(i).getKey());
+        if (element.getType() != InfoFieldType.OBJECT)
+            return;
+
+        for (int i = 0; i < element.getFields().size(); i++) {
+
+            InfoFieldStruct child = element.getFields().get(i);
+
+            if (child.isDistinct())
+                validateDistinct(array, child.getKey());
+
+            if (child.getRule().hasAscendingFrom())
+                validateAscending(array, child);
+        }
+    }
+
+    // Whole records only, every slot inside its own bounds and every record's span inside the sibling it names
+    private void validateRecords(InfoRecordStruct record, ArpgArrayStruct array, ArpgObjectStruct container) {
+
+        int stride = record.getStride();
+
+        if (array.size() % stride != 0) {
+            addIssue(EditorSetting.INFO_PROBLEM_RECORD_PREFIX + stride + EditorSetting.INFO_PROBLEM_RECORD_SLOTS
+                    + String.join(EditorSetting.INFO_PROBLEM_LIST_SEPARATOR, record.getSlotKeys()));
+            return;
+        }
+
+        for (int i = 0; i < array.size(); i++) {
+
+            InfoRuleStruct slotRule = record.getSlotRule(i % stride);
+
+            if (!isNumber(array.get(i)) || slotRule.isWithinBounds(array.get(i).getAsDouble()))
+                continue;
+
+            segments.add(Integer.toString(i));
+            addIssue(record.getSlotKey(i % stride) + EditorSetting.INFO_PROBLEM_SLOT_SEPARATOR
+                    + describeBounds(slotRule, true));
+            segments.pop();
+        }
+
+        ArpgElementStruct within = record.hasSpan() && container != null ? container.get(record.getSpanWithin()) : null;
+
+        if (!isNumber(within))
+            return;
+
+        for (int at = 0; at < array.size(); at += stride) {
+
+            ArpgElementStruct start = array.get(at + record.getSpanStartSlot());
+            ArpgElementStruct length = array.get(at + record.getSpanLengthSlot());
+
+            if (!isNumber(start) || !isNumber(length)
+                    || start.getAsDouble() + length.getAsDouble() <= within.getAsDouble())
+                continue;
+
+            segments.add(Integer.toString(at + record.getSpanStartSlot()));
+            addIssue(EditorSetting.INFO_PROBLEM_SPAN + record.getSpanWithin());
+            segments.pop();
+        }
+    }
+
+    // Each element's field starting from its declared value and climbing above the element before it
+    private void validateAscending(ArpgArrayStruct array, InfoFieldStruct field) {
+
+        double from = field.getRule().getAscendingFrom();
+        double previous = Double.NaN;
+
+        for (int i = 0; i < array.size(); i++) {
+
+            ArpgElementStruct value = array.get(i).isObject() ? array.get(i).getAsObject().get(field.getKey()) : null;
+
+            if (!isNumber(value))
+                continue;
+
+            double number = value.getAsDouble();
+            boolean wrong = i == 0 ? number != from : !Double.isNaN(previous) && number <= previous;
+
+            previous = number;
+
+            if (!wrong)
+                continue;
+
+            segments.add(Integer.toString(i));
+            segments.add(field.getKey());
+            addIssue(i == 0
+                    ? EditorSetting.INFO_PROBLEM_ASCENDING_FIRST
+                            + formatBound(from, field.getType() == InfoFieldType.INT)
+                    : EditorSetting.INFO_PROBLEM_ASCENDING);
+            segments.pop();
+            segments.pop();
+        }
     }
 
     // Each element's value, or each element's field under a key, repeated by no earlier element
@@ -384,6 +483,18 @@ class InfoValidationBranch extends BranchPackage {
             return;
         }
 
+        if (!rule.isOneOf(value.getAsDouble())) {
+            addIssue(EditorSetting.INFO_PROBLEM_ONE_OF + describeNumbers(rule.getOneOf(), whole));
+            return;
+        }
+
+        if (rule.hasIndexInto() && !isIndexOf(rule.getIndexInto(), value.getAsDouble())) {
+            addIssue(EditorSetting.INFO_PROBLEM_INDEX_PREFIX + rule.getIndexInto()
+                    + EditorSetting.INFO_PROBLEM_INDEX_COUNT + countEntryList(rule.getIndexInto())
+                    + EditorSetting.INFO_PROBLEM_LENGTH_SUFFIX);
+            return;
+        }
+
         ArpgElementStruct floor = rule.hasAtLeastField() && container != null
                 ? container.get(rule.getAtLeastField())
                 : null;
@@ -420,6 +531,86 @@ class InfoValidationBranch extends BranchPackage {
             case SCHEMA -> validateSchemaReference(reference, text, container);
             case RESOURCE -> validateResourceReference(reference, text);
             case LOCAL -> validateLocalReference(reference, text);
+        }
+
+        if (field.getRule().isAcyclic())
+            validateAcyclic(text);
+    }
+
+    // A name leading back to its own entry, through the acyclic names of every entry it reaches, shown with the loop
+    private void validateAcyclic(String text) {
+
+        if (entryName == null || !infoReferenceBranch.hasName(schema.getSchemaName(), text))
+            return;
+
+        loopNames.clear();
+        loopVisited.clear();
+        loopNames.add(entryName);
+
+        if (reachesEntry(text))
+            addIssue(EditorSetting.INFO_PROBLEM_LOOP
+                    + String.join(EditorSetting.INFO_PROBLEM_LOOP_SEPARATOR, loopNames));
+    }
+
+    private boolean reachesEntry(String name) {
+
+        loopNames.add(name);
+
+        if (name.equals(entryName))
+            return true;
+
+        ArpgObjectStruct arpg = loopVisited.add(name)
+                ? infoReferenceBranch.findEntryArpg(schema.getSchemaName(), name)
+                : null;
+
+        if (arpg != null) {
+
+            ObjectArrayList<String> targets = new ObjectArrayList<>();
+            collectAcyclicNames(schema.getRootField(), arpg, targets);
+
+            for (int i = 0; i < targets.size(); i++)
+                if (reachesEntry(targets.get(i)))
+                    return true;
+        }
+
+        loopNames.pop();
+        return false;
+    }
+
+    // Every name an entry's acyclic fields hold, at any depth
+    private void collectAcyclicNames(InfoFieldStruct field, ArpgElementStruct value, ObjectArrayList<String> names) {
+
+        if (!field.getType().accepts(value))
+            return;
+
+        switch (field.getType()) {
+            case STRING -> {
+
+                if (field.getRule().isAcyclic() && !value.getAsString().isEmpty())
+                    names.add(value.getAsString());
+            }
+            case OBJECT -> {
+
+                for (int i = 0; i < field.getFields().size(); i++) {
+
+                    ArpgElementStruct child = value.getAsObject().get(field.getFields().get(i).getKey());
+
+                    if (child != null)
+                        collectAcyclicNames(field.getFields().get(i), child, names);
+                }
+            }
+            case ARRAY -> {
+
+                for (ArpgElementStruct element : value.getAsArray())
+                    collectAcyclicNames(field.getElement(), element, names);
+            }
+            case MAP -> {
+
+                for (String key : value.getAsObject().keySet())
+                    collectAcyclicNames(field.getElement(), value.getAsObject().get(key), names);
+            }
+            default -> {
+            }
         }
     }
 
@@ -710,7 +901,33 @@ class InfoValidationBranch extends BranchPackage {
         return whole ? Long.toString((long) bound) : new ArpgValueStruct(bound).getAsString();
     }
 
+    private String describeNumbers(DoubleArrayList numbers, boolean whole) {
+
+        ObjectArrayList<String> texts = new ObjectArrayList<>(numbers.size());
+
+        for (int i = 0; i < numbers.size(); i++)
+            texts.add(formatBound(numbers.getDouble(i), whole));
+
+        return String.join(EditorSetting.INFO_PROBLEM_LIST_SEPARATOR, texts);
+    }
+
     // Utility \\
+
+    private boolean isNumber(ArpgElementStruct value) {
+        return value != null && value.isValue() && value.getAsValue().isNumber();
+    }
+
+    // Whether the number is a whole index into the entry's top-level list of that key
+    private boolean isIndexOf(String listKey, double value) {
+        return value >= 0 && value < countEntryList(listKey);
+    }
+
+    private int countEntryList(String listKey) {
+
+        ArpgElementStruct list = entryArpg != null ? entryArpg.get(listKey) : null;
+
+        return list != null && list.isArray() ? list.getAsArray().size() : 0;
+    }
 
     private String joinSegments() {
         return String.join(EditorSetting.INFO_PATH_SEPARATOR, segments);

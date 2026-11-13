@@ -23,8 +23,9 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
 - **Sustain loop**: a stretch inside a sample that repeats while the note is held; on release the sample plays on
   through its recorded tail.
 - **Envelope**: how a note fades in (attack), settles (decay to sustain) and fades out after release (release).
-- **Tick**: the unit of musical time, `EngineSetting.SONG_TICKS_PER_BEAT` (480, the MIDI standard) to a beat.
-  **Tempo**: beats per minute. **Bar**: `beats_per_bar` beats.
+- **Tick**: the unit of musical time, `EngineSetting.SONG_TICKS_PER_BEAT` (480, the MIDI standard) to a quarter-note
+  beat, as MIDI counts it. **Tempo**: quarter-note beats per minute. **Bar**: `beats_per_bar` beats of the note value
+  `beat_unit` names (4 a quarter, 8 an eighth), so a bar spans `beats_per_bar × 480 × 4 / beat_unit` ticks.
 - **Scale**: the pitches that sound right together in a key (C major, A minor, ...). **Scale Lock** keeps drawn and
   typed notes on them.
 
@@ -39,6 +40,17 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
   SFZ `loop_sustain`.
 - **MIDI** (Standard MIDI File, type 1) is the interchange format, read and written with `javax.sound.midi`. The engine
   already needs the `java.desktop` module, so this is no new dependency. ABC is not supported.
+  - Reading takes type 0 and 1 at any resolution, rescaled to 480 ticks a beat: every tempo change (rounded to three
+    decimals and held inside the song range; 120 before the first), the first time and key signatures (a major or
+    minor key), and a lane with one notes clip from tick 0 for every track and channel that plays notes, named after
+    its track (`<track> Ch <n>` when a track plays several channels) and set by its first volume (CC7) and pan (CC10).
+  - A part plays on the instrument whose `midi_program` matches the program its channel holds at its first note (the
+    first by name when two share one), channel 10 on the instrument marked `percussion`, and anything else on
+    `SONG_DEFAULT_INSTRUMENT` (`FolkHarp`). The first lookup loads every instrument once to index them.
+  - Writing gives type 1: a first track with the song's name, time signature, key (major and minor only) and tempo
+    map, then a track per lane with a channel per instrument it plays (its program, lane volume and pan at tick 0;
+    percussion on channel 10; more than 15 other parts is refused). It writes exactly what playback plays, nested songs
+    laid flat; sound clips cannot go into MIDI and are counted for the caller. Clip volumes are not written.
 - **A piano roll** edits notes (pitch rows down the side, time across, notes as bars), inside the recorder's timeline,
   which edits clips. Musical Typing plays notes from the computer keyboard, using the layout DAWs use.
 - **Nested recordings** work like Premiere's nested sequences: a recording or song laid inside another is a reference,
@@ -79,6 +91,22 @@ A song clip has `kind` (`notes`, `song`, `sound`), `lane`, `start`, `length`, `o
 `transpose` (semitones); a `notes` clip has `instrument` and `notes`, a flat int array of `start, length, pitch,
 velocity` per note, in ticks from the clip's start; a `song` clip has `song`; a `sound` clip has `sound`.
 
+- **Rules** (`SongBuilder`, `SongArpgUtility`, mirrored in `Songs.arpg`): `tempos` start at tick 0 and climb, each
+  `bpm` inside `SONG_BPM_MIN`..`SONG_BPM_MAX` (20 to 999); `beat_unit` is 1, 2, 4, 8, 16 or 32; at most
+  `SONG_LANE_COUNT` (16) lanes; a clip's `lane` is one the song has, its `length` at least 1, its `volume` 0 to 1, its
+  `transpose` within ±48; `notes` hold whole notes of four ints, each pitch 0 to 127, velocity 1 to 127, and every note
+  inside its clip's `length`; a `song` clip names a song, and no song reaches itself through its song clips at any
+  depth (the Builder and the editor both refuse it, naming the loop: `A > B > C > A`).
+- **Offset**: every clip plays its source from `offset` ticks in, so a source tick `t` sounds at `start - offset + t`,
+  heard only inside `start`..`start + length`. A notes clip's source is its own notes (the editor normally keeps its
+  offset at 0 and moves the notes); a song clip's is the song it lays; a sound clip's is its sound, started that far in.
+- **Nesting**: a song laid inside another plays at the outer song's tempo, its clips opened in place with every
+  offset, transpose and volume around them added up; a muted clip, a muted lane, or an unsoloed lane while another of
+  its song is soloed, plays nothing at any depth. Playback and MIDI export share this one layout
+  (`SongFlattenUtility`).
+- **Mix**: a note plays at its velocity, scaled by its clips' and lanes' volumes. A lane's `pan` is kept and exported to
+  MIDI, but is not yet heard live: the sound pipeline has no pan for a voice that is not placed in the world.
+
 An instrument can be played by every race whose rig it names. A race keeps one rig for all its genders, so a rig entry
 is the per-race animation, exactly as weapons name their attack clips per rig.
 
@@ -89,8 +117,15 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   `ApplicationBootstrapAssembly` and `LauncherBootstrapAssembly` beside `SoundPipeline`.
 - Shared stateless logic in `musicpipeline/util/`: `NoteUtility` (names, pitch ratios, scales), `NoteEnvelopeUtility`
   (one envelope curve for live and offline playback), `SongArpgUtility` (the one clip and note codec, used by
-  `SongBuilder` and the editor), `SongMidiUtility` (MIDI read and write), `SamplerMixUtility` (offline mixing for
-  render and video export).
+  `SongBuilder` and the editor), `SongFlattenUtility` (one layout of a song, nested songs opened in place, for playback
+  and export), `SongMidiUtility` (MIDI read and write), `SamplerMixUtility` (offline mixing for render and video
+  export).
+- Songs play through `SongPlaybackInstance` (`song/`), created by the system that plays one and updated by it each
+  frame.
+- Player songs: `SongManager.getUserSongNames()` lists the `.mid` files newest first, `loadUserSong(name)` reads one
+  into a `SongHandle` kept by name apart from the palette (no song ID), and `releaseUserSong` lets it go with the last
+  play that holds it; an unreadable file is logged and plays nothing. Project songs keep assigned IDs and load on
+  demand. The game and editor launchers create `Songs/` with their other required directories.
 - Songs the owner makes are saved by the editor straight into `assets/songs/`. Exported MIDI goes to
   `Documents/My Games/AdventureRPG/Songs/`, where player songs live. Video recordings stay in `Recordings/`.
 - Constants: `EngineSetting` (`// Music ...` groups) for anything the game uses; `EditorSetting` for the editor.
@@ -105,3 +140,7 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   voice stealing allocate nothing. Notes take voices from `SoundManager`'s pool through its API, with each
   instrument's `polyphony` as its limit.
 - Song scheduling walks the packed note arrays between the last and the current tick, with no iterators or boxing.
+  A song is laid out once, when it starts, into cursors the playback instance keeps and reuses; held notes live in two
+  fixed int arrays. Playing the test song measured 0 bytes allocated by `play` on a reused instance and 0 bytes across
+  265 frame updates (and across 1,057 updates driven in one frame).
+- A song's clock starts only once every instrument it plays has its samples, so its first notes are never lost.

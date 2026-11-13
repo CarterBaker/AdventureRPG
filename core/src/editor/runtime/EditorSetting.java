@@ -2121,6 +2121,17 @@ public class EditorSetting {
     public static final String INFO_PROBLEM_NOT_IN = "' is not in ";
     public static final String INFO_PROBLEM_NO_FILE = "' is not a file in ";
     public static final String INFO_PROBLEM_NOT_LOCAL = "' is not one of this entry's ";
+    public static final String INFO_PROBLEM_ONE_OF = "Must be one of: ";
+    public static final String INFO_PROBLEM_INDEX_PREFIX = "Must index this entry's ";
+    public static final String INFO_PROBLEM_INDEX_COUNT = ", which hold ";
+    public static final String INFO_PROBLEM_ASCENDING_FIRST = "The first must be ";
+    public static final String INFO_PROBLEM_ASCENDING = "Must be above the one before";
+    public static final String INFO_PROBLEM_RECORD_PREFIX = "Must hold whole records of ";
+    public static final String INFO_PROBLEM_RECORD_SLOTS = " values: ";
+    public static final String INFO_PROBLEM_SLOT_SEPARATOR = ": ";
+    public static final String INFO_PROBLEM_SPAN = "Runs past ";
+    public static final String INFO_PROBLEM_LOOP = "Reaches itself: ";
+    public static final String INFO_PROBLEM_LOOP_SEPARATOR = " > ";
 
     // Info Refusals
     public static final String INFO_REFUSAL_NONE = "";

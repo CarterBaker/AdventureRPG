@@ -26,6 +26,7 @@ public class Lwjgl3LauncherEditor {
                 EngineSetting.EDITOR_SETTINGS_FILE_NAME,
                 EngineSetting.LAUNCHER_EDITOR_WINDOW_TITLE,
                 EditorEngine::new,
-                EngineSetting.BIN_DIRECTORY + EngineSetting.PATH_SEPARATOR + EngineSetting.EDITOR_LAYOUT_DIRECTORY);
+                EngineSetting.BIN_DIRECTORY + EngineSetting.PATH_SEPARATOR + EngineSetting.EDITOR_LAYOUT_DIRECTORY,
+                EngineSetting.SONG_USER_DIRECTORY);
     }
 }

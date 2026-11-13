@@ -1,0 +1,338 @@
+package application.bootstrap.musicpipeline.song;
+
+import application.bootstrap.musicpipeline.instrumentmanager.InstrumentManager;
+import application.bootstrap.musicpipeline.notesetmanager.NoteSetManager;
+import application.bootstrap.musicpipeline.samplermanager.SamplerManager;
+import application.bootstrap.musicpipeline.songmanager.SongManager;
+import application.bootstrap.musicpipeline.util.NoteUtility;
+import application.bootstrap.musicpipeline.util.SongFlattenUtility;
+import application.bootstrap.soundpipeline.soundmanager.SoundManager;
+import engine.root.EngineSetting;
+import engine.root.InstancePackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+
+public class SongPlaybackInstance extends InstancePackage {
+
+    /*
+     * Plays one song, as a sequencer plays an arrangement, for the system that
+     * owns it and calls update every frame. play lays the song out flat once —
+     * one lane of it or all, nested songs opened in place with their offset
+     * and transpose — resolves every instrument once, an override standing in
+     * for each when given, and asks for their samples; the clock starts once
+     * they have all landed. Each update turns the seconds played into a tick
+     * through the song's tempo map and walks every clip's packed notes from
+     * the last tick to it, letting go the notes whose end has passed and
+     * sounding those whose start has, through SamplerManager at the volume
+     * their clips and lanes give them; a sound clip plays its sound through
+     * SoundManager from as far in as the clip starts and stops where it ends.
+     * A player's song is held by name while it plays and let go when it stops
+     * or ends. Every cursor and held note is kept on the instance, so playing
+     * allocates nothing once a song of its size has been played.
+     */
+
+    // Internal
+    private SongManager songManager;
+    private SamplerManager samplerManager;
+    private SoundManager soundManager;
+    private InstrumentManager instrumentManager;
+    private NoteSetManager noteSetManager;
+
+    // Song
+    private SongHandle songHandle;
+    private SongTempoStruct tempo;
+    private int length;
+
+    // Layout — the song's notes and sound clips laid out flat, reused from one play to the next
+    private ObjectArrayList<SongCursorStruct> cursors;
+    private int cursorCount;
+
+    // Held — every note sounding, with the tick it is let go at
+    private int[] heldNotes;
+    private int[] heldEndTicks;
+    private int heldCount;
+
+    // Clock
+    private boolean playing;
+    private boolean ready;
+    private double secondsPlayed;
+    private int lastTick;
+
+    // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Layout
+        this.cursors = new ObjectArrayList<>();
+
+        // Held
+        this.heldNotes = new int[EngineSetting.SONG_PLAYBACK_HELD_NOTE_COUNT];
+        this.heldEndTicks = new int[EngineSetting.SONG_PLAYBACK_HELD_NOTE_COUNT];
+
+        // Clock
+        this.lastTick = EngineSetting.SONG_PLAYBACK_START_TICK;
+    }
+
+    @Override
+    protected void get() {
+        this.songManager = get(SongManager.class);
+        this.samplerManager = get(SamplerManager.class);
+        this.soundManager = get(SoundManager.class);
+        this.instrumentManager = get(InstrumentManager.class);
+        this.noteSetManager = get(NoteSetManager.class);
+    }
+
+    // Play \\
+
+    // One of the project's songs from its start, on one lane or SONG_LANE_ALL, every notes clip on the override
+    // instrument unless it is INSTRUMENT_NONE
+    public void play(short songID, short instrumentOverride, int lane) {
+        start(songManager.getSongHandleFromSongID(songID), instrumentOverride, lane);
+    }
+
+    // A player's song from its start, read from their MIDI file by name; false, playing nothing, when it cannot be
+    public boolean playUserSong(String songName, short instrumentOverride, int lane) {
+
+        SongHandle userSongHandle = songManager.loadUserSong(songName);
+
+        if (userSongHandle == null) {
+            stop();
+            return false;
+        }
+
+        start(userSongHandle, instrumentOverride, lane);
+        return true;
+    }
+
+    // The one way a song begins: laid out, its instruments and sounds resolved, its samples asked for
+    private void start(SongHandle handle, short instrumentOverride, int lane) {
+
+        stop();
+
+        this.songHandle = handle;
+        this.tempo = handle.getTempo();
+        this.length = handle.getLength();
+        this.cursorCount = SongFlattenUtility.flatten(handle.getSongData(), lane, cursors);
+
+        for (int i = 0; i < cursorCount; i++)
+            resolve(cursors.get(i), instrumentOverride);
+
+        this.playing = true;
+        this.ready = false;
+        this.secondsPlayed = 0.0;
+        this.lastTick = EngineSetting.SONG_PLAYBACK_START_TICK;
+    }
+
+    private void resolve(SongCursorStruct cursor, short instrumentOverride) {
+
+        if (cursor.getKind() == SongClipKind.SOUND) {
+            cursor.setSoundID(soundManager.findSoundID(cursor.getClip().getSoundName()));
+            return;
+        }
+
+        if (instrumentOverride != EngineSetting.INSTRUMENT_NONE)
+            cursor.setInstrumentID(instrumentOverride);
+
+        noteSetManager.prepare(resolveNoteSetID(cursor));
+        cursor.setNextNote(findFirstNote(cursor));
+    }
+
+    // The first of the clip's notes that begins inside its window
+    private int findFirstNote(SongCursorStruct cursor) {
+
+        int note = 0;
+
+        while (note < cursor.getClip().getNoteCount() && cursor.getNoteTick(note) < cursor.getWindowStart())
+            note++;
+
+        return note;
+    }
+
+    // Stop \\
+
+    // Every held note let go, every sound stopped and a player's song let go of
+    public void stop() {
+
+        for (int i = 0; i < heldCount; i++)
+            samplerManager.noteOff(heldNotes[i]);
+
+        for (int i = 0; i < cursorCount; i++)
+            stopSound(cursors.get(i));
+
+        if (songHandle != null && songHandle.isUserSong())
+            songManager.releaseUserSong(songHandle);
+
+        this.heldCount = 0;
+        this.cursorCount = 0;
+        this.songHandle = null;
+        this.playing = false;
+    }
+
+    // Update \\
+
+    // The song moved on by the seconds given: ended notes let go, then every note and sound reached begun
+    public void update(float deltaTime) {
+
+        if (!playing || !isReady())
+            return;
+
+        if (lastTick != EngineSetting.SONG_PLAYBACK_START_TICK)
+            this.secondsPlayed += deltaTime;
+
+        int tick = (int) tempo.toTicks(secondsPlayed);
+
+        letGoNotes(tick);
+
+        for (int i = 0; i < cursorCount; i++)
+            walk(cursors.get(i), tick);
+
+        this.lastTick = tick;
+
+        if (tick >= length && heldCount == 0)
+            stop();
+    }
+
+    // Whether every instrument's samples have landed, so the clock may start
+    private boolean isReady() {
+
+        if (ready)
+            return true;
+
+        for (int i = 0; i < cursorCount; i++) {
+
+            SongCursorStruct cursor = cursors.get(i);
+
+            if (cursor.getKind() == SongClipKind.NOTES && !noteSetManager.isReady(resolveNoteSetID(cursor)))
+                return false;
+        }
+
+        this.ready = true;
+        return true;
+    }
+
+    // The clip walked from the last tick to this one
+    private void walk(SongCursorStruct cursor, int tick) {
+
+        if (cursor.getKind() == SongClipKind.SOUND) {
+            walkSound(cursor, tick);
+            return;
+        }
+
+        SongClipStruct clip = cursor.getClip();
+        int note = cursor.getNextNote();
+
+        for (; note < clip.getNoteCount() && cursor.getNoteTick(note) <= tick; note++)
+            if (cursor.playsNote(note))
+                playNote(cursor, note);
+
+        cursor.setNextNote(note);
+    }
+
+    private void playNote(SongCursorStruct cursor, int note) {
+
+        int noteHandle = samplerManager.noteOn(
+                cursor.getInstrumentID(),
+                cursor.getNotePitch(note),
+                cursor.getClip().getNoteVelocity(note),
+                cursor.getGain());
+
+        if (noteHandle != EngineSetting.INDEX_NOT_FOUND)
+            hold(noteHandle, cursor.getNoteEndTick(note));
+    }
+
+    // A sound clip begun as the clock reaches its start, from as far into its sound as the clip starts, and
+    // stopped as the clock reaches its end
+    private void walkSound(SongCursorStruct cursor, int tick) {
+
+        int windowStart = cursor.getWindowStart();
+
+        if (cursor.getSoundID() != EngineSetting.INDEX_NOT_FOUND && windowStart > lastTick && windowStart <= tick)
+            cursor.setVoice(soundManager.playSound(
+                    cursor.getSoundID(),
+                    cursor.getGain(),
+                    NoteUtility.toPitchRatio(cursor.getTranspose(), 0, 0f),
+                    (float) (tempo.toSeconds(windowStart) - tempo.toSeconds(cursor.toSongTick(0)))));
+
+        if (cursor.getWindowEnd() <= tick)
+            stopSound(cursor);
+    }
+
+    private void stopSound(SongCursorStruct cursor) {
+
+        if (cursor.getVoice() == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        soundManager.stopVoice(cursor.getVoice());
+        cursor.setVoice(EngineSetting.INDEX_NOT_FOUND);
+    }
+
+    // Held \\
+
+    // A note kept until its end; with every place taken, the note ending soonest is let go for it
+    private void hold(int noteHandle, int endTick) {
+
+        if (heldCount == heldNotes.length)
+            letGo(findSoonestEnd());
+
+        heldNotes[heldCount] = noteHandle;
+        heldEndTicks[heldCount] = endTick;
+        heldCount++;
+    }
+
+    private void letGoNotes(int tick) {
+
+        for (int i = heldCount - 1; i >= 0; i--)
+            if (heldEndTicks[i] <= tick)
+                letGo(i);
+    }
+
+    // The one way a held note is let go
+    private void letGo(int held) {
+
+        samplerManager.noteOff(heldNotes[held]);
+        heldCount--;
+        heldNotes[held] = heldNotes[heldCount];
+        heldEndTicks[held] = heldEndTicks[heldCount];
+    }
+
+    private int findSoonestEnd() {
+
+        int soonest = 0;
+
+        for (int i = 1; i < heldCount; i++)
+            if (heldEndTicks[i] < heldEndTicks[soonest])
+                soonest = i;
+
+        return soonest;
+    }
+
+    // Utility \\
+
+    private short resolveNoteSetID(SongCursorStruct cursor) {
+        return instrumentManager.getInstrumentHandleFromInstrumentID(cursor.getInstrumentID()).getNoteSetID();
+    }
+
+    // Accessible \\
+
+    public boolean isPlaying() {
+        return playing;
+    }
+
+    // Whether the song is waiting for its instruments' samples before its clock starts
+    public boolean isWaiting() {
+        return playing && !ready;
+    }
+
+    public SongHandle getSongHandle() {
+        return songHandle;
+    }
+
+    // The tick the song has reached, -1 before it starts
+    public int getTick() {
+        return lastTick;
+    }
+
+    public double getSecondsPlayed() {
+        return secondsPlayed;
+    }
+}

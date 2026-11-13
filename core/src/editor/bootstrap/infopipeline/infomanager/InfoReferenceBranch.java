@@ -3,6 +3,7 @@ package editor.bootstrap.infopipeline.infomanager;
 import java.io.File;
 
 import editor.bootstrap.infopipeline.infodocument.InfoDocumentInstance;
+import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaHandle;
 import editor.bootstrap.infopipeline.util.InfoResourceNaming;
 import editor.runtime.EditorSetting;
@@ -27,7 +28,9 @@ class InfoReferenceBranch extends BranchPackage {
      * twice shows, and rebuilt only once names have moved anywhere. Resource
      * directories are scanned once and named as the game names their files,
      * until a tool writes or removes one. Unique values are counted per
-     * schema and recounted once one of them moves.
+     * schema and recounted once one of them moves. An entry kept one to a
+     * file is found by its name as it stands in the editor, for a loop to be
+     * walked through it.
      */
 
     // Internal
@@ -128,6 +131,14 @@ class InfoReferenceBranch extends BranchPackage {
 
     int countName(String schemaName, String name) {
         return resolveNameCounts(schemaName).getInt(name);
+    }
+
+    // The entry a name finds in a schema of one entry per file, as it stands in the editor; null when none holds it
+    ArpgObjectStruct findEntryArpg(String schemaName, String name) {
+
+        InfoEntryStruct entry = infoManager.findEntry(schemaName, name, name);
+
+        return entry != null ? entry.getArpg() : null;
     }
 
     private Object2IntOpenHashMap<String> resolveNameCounts(String schemaName) {

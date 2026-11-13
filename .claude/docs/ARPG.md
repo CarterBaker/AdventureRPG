@@ -94,16 +94,21 @@ load (`InfoValidationBranch` checks, `InfoIntegrityBranch` gates every save and 
 with `reference` (a schema; or `{"by": sibling, "schemas": {value: schema}}`), `resource` (`{"directory", "naming":
 "stem"|"file"|"tile"}`) or `local` (a path in the same entry: `a[]` any element, `a[.]` the referring value's own
 element, `m{.}` the referring value's own map entry, `m{}` a map's keys), with `allow` listing accepted values such as
-`""` for none; a map names content with `key_reference`. Numbers take `min`/`max` (inclusive) or `above`/`below`
-(exclusive) and `at_least_field`; lists take `min_count`/`max_count`; fields take `required_unless`, `required_when`
-(`{"key", "values"}`), `conflicts_with`, `distinct` (inside array elements) and `unique` (top level). A schema may
-set `reference_form: "name"` (entries registered by bare name) and `required_names` (entries the game cannot start
-without). When a Builder gains a rule, add it to the schema in the same change. Keys a schema does not declare are
-shown as ignored and never block a save.
+`""` for none; a map names content with `key_reference`; a string naming its own schema's entries, one to a file, may be
+`acyclic` (no entry reaches itself through it at any depth; the editor names the loop). Numbers take `min`/`max`
+(inclusive) or `above`/`below` (exclusive), `at_least_field`, `one_of` (the numbers allowed) and `index_into` (a
+top-level array of the entry the int indexes); a number inside array elements may take `ascending_from` (the first
+element holds that value, each later one is above the one before). Lists take `min_count`/`max_count`; an int array may
+read as `record`s (`{"slots": [{"key", bounds}...], "span": {"start", "length", "within"}}`: whole records only, each
+slot in its bounds, each record's start plus length within a sibling number). Fields take `required_unless`,
+`required_when` (`{"key", "values"}`), `conflicts_with`, `distinct` (inside array elements) and `unique` (top level).
+A schema may set `reference_form: "name"` (entries registered by bare name) and `required_names` (entries the game
+cannot start without). When a Builder gains a rule, add it to the schema in the same change. Keys a schema does not
+declare are shown as ignored and never block a save.
 
 | Schema | Directory under `assets/` | Layout |
 |---|---|---|
-| AnimationTrees, Animations, Architectures, Behaviors, Biomes, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Instruments, Materials, NoteSets, Passes, Races, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, SoundCues, Sounds, Sprites, StructureLists, Structures, TextureAliases, UBOs, Vehicles, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
+| AnimationTrees, Animations, Architectures, Behaviors, Biomes, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Instruments, Materials, NoteSets, Passes, Races, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, Songs, SoundCues, Sounds, Sprites, StructureLists, Structures, TextureAliases, UBOs, Vehicles, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
 | Blocks, FBOs, Items, Threads, Tools | `blocks`, `application/fbos`, `items`, `application/threads`, `tools` | an array (`blocks`, `fbos`, `items`, `threads`, `tools`) of entries, each named by its `name` field |
 | (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `CommandBuilder`, `SubVoxelArpgUtility`) |
 

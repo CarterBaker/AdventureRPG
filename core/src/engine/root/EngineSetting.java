@@ -176,6 +176,7 @@ public class EngineSetting {
     public static final String TEMPORARY_FILE_SUFFIX = ".tmp";
     public static final int LOADER_BATCH_SIZE = 32;
     public static final String SAVE_DIRECTORY = "Saves";
+    public static final String SONG_USER_DIRECTORY = "Songs";
     public static final String SETTINGS_FILE_NAME = "Settings.arpg";
     public static final String SETTINGS_UBO = "SettingsData";
     public static final String POST_PROCESS_UBO = "PostProcessData";
@@ -574,6 +575,81 @@ public class EngineSetting {
     public static final int SAMPLER_NOTE_SLOT_MASK = (1 << SAMPLER_NOTE_SLOT_BITS) - 1;
     public static final int SAMPLER_NOTE_GENERATION_MASK = 0x7FFFFF;
     public static final int SAMPLER_ROUND_ROBIN_MASK = 0x7FFFFFFF;
+    public static final float SAMPLER_NOTE_FULL_VOLUME = 1f;
+
+    // Music Songs — a tick is a 480th of a quarter-note beat, as MIDI counts time; a tempo is quarter-note beats a
+    // minute; a note is four packed ints, its start and length in ticks from its clip's start, its pitch and velocity
+    public static final String SONG_PATH = "songs";
+    public static final int SONG_TICKS_PER_BEAT = 480;
+    public static final int SONG_LANE_COUNT = 16;
+    public static final int SONG_LANE_ALL = -1;
+    public static final float SONG_BPM_MIN = 20f;
+    public static final float SONG_BPM_MAX = 999f;
+    public static final double SONG_SECONDS_PER_MINUTE = 60.0;
+    public static final int SONG_QUARTER_NOTE_UNIT = 4;
+    public static final int SONG_BEATS_PER_BAR_MAX = 32;
+    public static final int SONG_BEAT_UNIT_MAX = 32;
+    public static final int SONG_KEY_ROOT_MAX = 11;
+    public static final int SONG_CLIP_MAX_TRANSPOSE = 48;
+    public static final int SONG_NOTE_STRIDE = 4;
+    public static final int SONG_NOTE_START = 0;
+    public static final int SONG_NOTE_LENGTH = 1;
+    public static final int SONG_NOTE_PITCH = 2;
+    public static final int SONG_NOTE_VELOCITY = 3;
+    public static final String SONG_DISPLAY_NAME_NONE = "";
+    public static final String SONG_LANE_NAME_NONE = "";
+    public static final String SONG_REFERENCE_NONE = "";
+    public static final String SONG_LOOP_SEPARATOR = " > ";
+    public static final String SONG_DEFAULT_INSTRUMENT = "FolkHarp";
+    public static final short SONG_NONE = 0;
+    public static final int DEFAULT_SONG_BEATS_PER_BAR = 4;
+    public static final int DEFAULT_SONG_BEAT_UNIT = 4;
+    public static final int DEFAULT_SONG_KEY_ROOT = 0;
+    public static final float DEFAULT_SONG_LANE_VOLUME = 1f;
+    public static final float DEFAULT_SONG_LANE_PAN = 0f;
+    public static final boolean DEFAULT_SONG_LANE_MUTED = false;
+    public static final boolean DEFAULT_SONG_LANE_SOLO = false;
+    public static final int DEFAULT_SONG_CLIP_OFFSET = 0;
+    public static final boolean DEFAULT_SONG_CLIP_MUTED = false;
+    public static final float DEFAULT_SONG_CLIP_VOLUME = 1f;
+    public static final int DEFAULT_SONG_CLIP_TRANSPOSE = 0;
+
+    // Music MIDI — Standard MIDI Files read and written as songs, player songs read from SONG_USER_DIRECTORY
+    public static final String SONG_USER_FILE_EXTENSION = "mid";
+    public static final int SONG_MIDI_FILE_TYPE = 1;
+    public static final int SONG_MIDI_CHANNEL_COUNT = 16;
+    public static final int SONG_MIDI_PERCUSSION_CHANNEL = 9;
+    public static final int SONG_MIDI_META_TRACK_NAME = 0x03;
+    public static final int SONG_MIDI_META_END_OF_TRACK = 0x2F;
+    public static final int SONG_MIDI_META_TEMPO = 0x51;
+    public static final int SONG_MIDI_META_TIME_SIGNATURE = 0x58;
+    public static final int SONG_MIDI_META_KEY_SIGNATURE = 0x59;
+    public static final int SONG_MIDI_TEMPO_BYTES = 3;
+    public static final int SONG_MIDI_SIGNATURE_BYTES = 2;
+    public static final int SONG_MIDI_BYTE_BITS = 8;
+    public static final int SONG_MIDI_BYTE_MASK = 0xFF;
+    public static final double SONG_MIDI_MICROSECONDS_PER_MINUTE = 60_000_000.0;
+    public static final double SONG_MIDI_BPM_SCALE = 1000.0;
+    public static final float SONG_MIDI_DEFAULT_BPM = 120f;
+    public static final int SONG_MIDI_TIME_SIGNATURE_CLOCKS = 24;
+    public static final int SONG_MIDI_TIME_SIGNATURE_32NDS = 8;
+    public static final int SONG_MIDI_KEY_FIFTH_STEPS = 7;
+    public static final int SONG_MIDI_KEY_MINOR_STEPS = 9;
+    public static final int SONG_MIDI_KEY_MAJOR = 0;
+    public static final int SONG_MIDI_KEY_MINOR = 1;
+    public static final int SONG_MIDI_KEY_SHARPS_MAX = 7;
+    public static final int SONG_MIDI_CONTROL_VOLUME = 7;
+    public static final int SONG_MIDI_CONTROL_PAN = 10;
+    public static final int SONG_MIDI_CONTROL_MAX = 127;
+    public static final int SONG_MIDI_PAN_CENTRE = 64;
+    public static final int SONG_MIDI_PAN_RANGE = 63;
+    public static final int SONG_MIDI_PROGRAM_DEFAULT = 0;
+    public static final String SONG_MIDI_LANE_NAME_FORMAT = "Track %d";
+    public static final String SONG_MIDI_CHANNEL_NAME_FORMAT = "%s Ch %d";
+
+    // Music Playback — the notes a song holds at once, let go when they end
+    public static final int SONG_PLAYBACK_HELD_NOTE_COUNT = SAMPLER_NOTE_COUNT;
+    public static final int SONG_PLAYBACK_START_TICK = -1;
 
     // Input & Bindings
     public static final int BINDING_MOUSE_CODE_OFFSET = 1000;

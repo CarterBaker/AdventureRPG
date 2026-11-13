@@ -7,6 +7,7 @@ import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class InstrumentLoader extends LoaderPackage {
 
@@ -14,7 +15,8 @@ class InstrumentLoader extends LoaderPackage {
      * Scans the instrument ARPG directory and remembers every file by name,
      * queueing none: an instrument loads only when something names it — an
      * item while the items load, a song, a tool — so the loader persists for
-     * the engine lifetime.
+     * the engine lifetime. A lookup over every instrument, as a MIDI file's
+     * programs need, loads all of them at once.
      */
 
     // Internal
@@ -80,5 +82,16 @@ class InstrumentLoader extends LoaderPackage {
                     + instrumentName + "\"");
 
         request(file);
+    }
+
+    // Every instrument not loaded yet, in order of its name
+    void requestEvery() {
+
+        ObjectArrayList<String> instrumentNames = new ObjectArrayList<>(instrumentName2File.keySet());
+        instrumentNames.sort(null);
+
+        for (int i = 0; i < instrumentNames.size(); i++)
+            if (!instrumentManager.hasInstrument(instrumentNames.get(i)))
+                request(instrumentName2File.get(instrumentNames.get(i)));
     }
 }

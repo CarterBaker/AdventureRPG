@@ -4,6 +4,7 @@ import java.io.File;
 
 import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoLocalStepStruct;
+import editor.bootstrap.infopipeline.infoschema.InfoRecordStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoReferenceStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoRuleStruct;
 import editor.bootstrap.infopipeline.infoschema.InfoSchemaData;
@@ -14,12 +15,14 @@ import editor.bootstrap.infopipeline.util.InfoReferenceKind;
 import editor.bootstrap.infopipeline.util.InfoResourceNaming;
 import editor.runtime.EditorSetting;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgNullStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.arpg.ArpgValueStruct;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -37,8 +40,10 @@ class InfoSchemaBuilder extends BuilderPackage {
      * be marked distinct. A string may declare one reference, a map a schema
      * reference for its keys, a number its bounds, a list its minimum count,
      * and any field the sibling that excuses it; every sibling a rule names is
-     * checked to exist with the right type, and a local reference's path
-     * against the fields it walks, so every rule the editor enforces is
+     * checked to exist with the right type, a local reference's path
+     * against the fields it walks, an index against the top-level list it
+     * names, a record's span against its slots and an acyclic reference
+     * against the schema's own entries, so every rule the editor enforces is
      * itself well formed. Required names list the entries the game itself
      * cannot start without.
      */
@@ -83,6 +88,7 @@ class InfoSchemaBuilder extends BuilderPackage {
                     + "' unique; entry names are unique already.");
 
         verifyLocalReferences(rootField, rootField, schemaName);
+        verifyEntryRules(rootField, rootField, entriesKey == null, schemaName);
 
         ObjectArrayList<String> referencedSchemaNames = new ObjectArrayList<>();
         ObjectArrayList<String> referencedDirectories = new ObjectArrayList<>();
@@ -206,9 +212,17 @@ class InfoSchemaBuilder extends BuilderPackage {
                     + "' is marked distinct, but only a primitive field inside an array element can be.");
 
         if (defaultValue != null && defaultValue.isValue() && defaultValue.getAsValue().isNumber()
-                && !rule.isWithinBounds(defaultValue.getAsDouble()))
+                && (!rule.isWithinBounds(defaultValue.getAsDouble()) || !rule.isOneOf(defaultValue.getAsDouble())))
             throwException("Info schema '" + schemaName + "' field '" + key
                     + "' has a default outside its own bounds.");
+
+        if (rule.hasRecord() && element.getType() != InfoFieldType.INT)
+            throwException("Info schema '" + schemaName + "' field '" + key
+                    + "' reads as records, but only an array of int values can.");
+
+        if (rule.hasAscendingFrom() && !inArray)
+            throwException("Info schema '" + schemaName + "' field '" + key
+                    + "' climbs from one element to the next, but only a field inside an array element can.");
 
         return new InfoFieldStruct(
                 key, type, required, unique, distinct, defaultValue, values, reference, keyReference, rule,
@@ -278,8 +292,15 @@ class InfoSchemaBuilder extends BuilderPackage {
         double max = parseBound(
                 fieldArpg, maxExclusive ? "below" : "max", Double.POSITIVE_INFINITY, type, key, schemaName);
         String atLeastField = ArpgUtility.getString(fieldArpg, "at_least_field", null);
+        DoubleArrayList oneOf = parseNumbers(fieldArpg, "one_of", type, key, schemaName);
+        String indexInto = ArpgUtility.getString(fieldArpg, "index_into", null);
+        double ascendingFrom = parseBound(fieldArpg, "ascending_from", Double.NaN, type, key, schemaName);
         int minCount = ArpgUtility.getInt(fieldArpg, "min_count", 0);
         int maxCount = ArpgUtility.getInt(fieldArpg, "max_count", Integer.MAX_VALUE);
+        InfoRecordStruct record = fieldArpg.has("record")
+                ? parseRecord(ArpgUtility.validateObject(fieldArpg, "record"), key, schemaName)
+                : null;
+        boolean acyclic = ArpgUtility.getBoolean(fieldArpg, "acyclic", false);
         String requiredUnless = ArpgUtility.getString(fieldArpg, "required_unless", null);
         String conflictsWith = ArpgUtility.getString(fieldArpg, "conflicts_with", null);
         ArpgObjectStruct requiredWhenArpg = fieldArpg.has("required_when")
@@ -310,15 +331,102 @@ class InfoSchemaBuilder extends BuilderPackage {
             throwException("Info schema '" + schemaName + "' field '" + key
                     + "' is required when a sibling holds a value, but lists no values.");
 
+        if (indexInto != null && type != InfoFieldType.INT)
+            throwException("Info schema '" + schemaName + "' field '" + key
+                    + "' indexes a list, but only an int field can.");
+
+        if (record != null && type != InfoFieldType.ARRAY)
+            throwException("Info schema '" + schemaName + "' field '" + key
+                    + "' reads as records, but only an array can.");
+
+        if (acyclic && type != InfoFieldType.STRING)
+            throwException("Info schema '" + schemaName + "' field '" + key
+                    + "' is acyclic, but only a string naming an entry can be.");
+
         return new InfoRuleStruct(
-                min, max, minExclusive, maxExclusive, atLeastField, minCount, maxCount,
-                requiredUnless, requiredWhenKey, requiredWhenValues, conflictsWith);
+                min, max, minExclusive, maxExclusive, atLeastField, oneOf, indexInto, ascendingFrom, minCount,
+                maxCount, record, requiredUnless, requiredWhenKey, requiredWhenValues, conflictsWith, acyclic);
     }
 
     private InfoRuleStruct createOpenRule() {
         return new InfoRuleStruct(
-                Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, false, false, null, 0, Integer.MAX_VALUE,
-                null, null, new ObjectArrayList<>(), null);
+                Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, false, false, null, new DoubleArrayList(), null,
+                Double.NaN, 0, Integer.MAX_VALUE, null, null, null, new ObjectArrayList<>(), null, false);
+    }
+
+    // The numbers a field lists, none when it lists none
+    private DoubleArrayList parseNumbers(
+            ArpgObjectStruct fieldArpg,
+            String numbersKey,
+            InfoFieldType type,
+            String key,
+            String schemaName) {
+
+        DoubleArrayList numbers = new DoubleArrayList();
+
+        if (!fieldArpg.has(numbersKey))
+            return numbers;
+
+        if (type != InfoFieldType.INT && type != InfoFieldType.FLOAT)
+            throwException("Info schema '" + schemaName + "' field '" + key + "' lists the numbers it must be one "
+                    + "of, but only int and float fields hold a number.");
+
+        ArpgArrayStruct numbersArpg = ArpgUtility.validateArray(fieldArpg, numbersKey);
+
+        for (int i = 0; i < numbersArpg.size(); i++) {
+
+            if (!numbersArpg.get(i).isValue() || !numbersArpg.get(i).getAsValue().isNumber())
+                throwException("Info schema '" + schemaName + "' field '" + key + "' lists a value under '"
+                        + numbersKey + "' that is not a number.");
+
+            numbers.add(numbersArpg.get(i).getAsDouble());
+        }
+
+        if (numbers.isEmpty())
+            throwException("Info schema '" + schemaName + "' field '" + key + "' lists no numbers under '"
+                    + numbersKey + "'.");
+
+        return numbers;
+    }
+
+    // A record's slots, each with its own bounds, and the slots and sibling its span names
+    private InfoRecordStruct parseRecord(ArpgObjectStruct recordArpg, String key, String schemaName) {
+
+        ArpgArrayStruct slotsArpg = ArpgUtility.validateArray(recordArpg, "slots");
+        ObjectArrayList<String> slotKeys = new ObjectArrayList<>(slotsArpg.size());
+        ObjectArrayList<InfoRuleStruct> slotRules = new ObjectArrayList<>(slotsArpg.size());
+
+        for (int i = 0; i < slotsArpg.size(); i++) {
+
+            ArpgObjectStruct slotArpg = slotsArpg.get(i).getAsObject();
+            String slotKey = ArpgUtility.validateString(slotArpg, "key");
+
+            if (slotKeys.contains(slotKey))
+                throwException("Info schema '" + schemaName + "' field '" + key + "' names record slot '" + slotKey
+                        + "' twice.");
+
+            slotKeys.add(slotKey);
+            slotRules.add(parseRule(slotArpg, InfoFieldType.INT, key + EditorSetting.INFO_PATH_SEPARATOR + slotKey,
+                    schemaName));
+        }
+
+        if (slotKeys.isEmpty())
+            throwException("Info schema '" + schemaName + "' field '" + key + "' reads as records of no slots.");
+
+        if (!recordArpg.has("span"))
+            return new InfoRecordStruct(slotKeys, slotRules, EngineSetting.INDEX_NOT_FOUND,
+                    EngineSetting.INDEX_NOT_FOUND, null);
+
+        ArpgObjectStruct spanArpg = ArpgUtility.validateObject(recordArpg, "span");
+        int spanStartSlot = slotKeys.indexOf(ArpgUtility.validateString(spanArpg, "start"));
+        int spanLengthSlot = slotKeys.indexOf(ArpgUtility.validateString(spanArpg, "length"));
+
+        if (spanStartSlot == EngineSetting.INDEX_NOT_FOUND || spanLengthSlot == EngineSetting.INDEX_NOT_FOUND)
+            throwException("Info schema '" + schemaName + "' field '" + key
+                    + "' has a record span naming a slot the record does not hold.");
+
+        return new InfoRecordStruct(slotKeys, slotRules, spanStartSlot, spanLengthSlot,
+                ArpgUtility.validateString(spanArpg, "within"));
     }
 
     // Every sibling a field's rule or keyed reference names present in its object, with the type the rule reads when
@@ -343,6 +451,10 @@ class InfoSchemaBuilder extends BuilderPackage {
 
             if (rule.hasConflict())
                 verifySibling(fields, field, rule.getConflictsWith(), schemaName, null, null);
+
+            if (rule.hasRecord() && rule.getRecord().hasSpan())
+                verifySibling(fields, field, rule.getRecord().getSpanWithin(), schemaName,
+                        InfoFieldType.INT, InfoFieldType.FLOAT);
 
             if (field.hasReference() && field.getReference().isKeyed())
                 verifySibling(fields, field, field.getReference().getKeyField(), schemaName,
@@ -651,6 +763,36 @@ class InfoSchemaBuilder extends BuilderPackage {
                     ? stepField.getElement()
                     : stepField;
         }
+    }
+
+    // Entry Rules \\
+
+    // Every index naming a top-level list of its entry, and every acyclic reference naming the schema's own entries,
+    // kept one to a file so a loop is walked file by file as the game loads them
+    private void verifyEntryRules(
+            InfoFieldStruct field,
+            InfoFieldStruct rootField,
+            boolean oneEntryPerFile,
+            String schemaName) {
+
+        InfoRuleStruct rule = field.getRule();
+
+        if (rule.hasIndexInto() && (rootField.findField(rule.getIndexInto()) == null
+                || rootField.findField(rule.getIndexInto()).getType() != InfoFieldType.ARRAY))
+            throwException("Info schema '" + schemaName + "' field '" + field.getKey() + "' indexes '"
+                    + rule.getIndexInto() + "', which the schema does not declare as a top-level array.");
+
+        if (rule.isAcyclic() && (!oneEntryPerFile || !field.hasReference()
+                || field.getReference().getKind() != InfoReferenceKind.SCHEMA || field.getReference().isKeyed()
+                || !schemaName.equals(field.getReference().getSchemaName())))
+            throwException("Info schema '" + schemaName + "' field '" + field.getKey() + "' is acyclic, but only a "
+                    + "reference to the schema's own entries, one to a file, can be.");
+
+        for (int i = 0; i < field.getFields().size(); i++)
+            verifyEntryRules(field.getFields().get(i), rootField, oneEntryPerFile, schemaName);
+
+        if (field.getElement() != null)
+            verifyEntryRules(field.getElement(), rootField, oneEntryPerFile, schemaName);
     }
 
     // Utility \\
