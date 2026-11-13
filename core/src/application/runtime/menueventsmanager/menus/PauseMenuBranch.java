@@ -14,7 +14,8 @@ public class PauseMenuBranch extends BranchPackage {
 
     /*
      * Runs the pause menu for this context's window. Opens on Pause while
-     * playing, closes on Pause or Continue, opens Settings over itself, and on
+     * playing, never while the player performs, whose own leave binding the
+     * same key may be; closes on Pause or Continue, opens Settings over itself, and on
      * Quit saves and releases the character and returns to the main menu. Pause
      * closes it only after it has shown a full frame. While it is open the
      * game is paused through ClockManager, so the world and everything in it
@@ -75,6 +76,7 @@ public class PauseMenuBranch extends BranchPackage {
 
     private boolean canPause(WindowInstance window) {
         return playerManager.hasPlayerForWindow(window.getWindowID())
+                && !playerManager.isPerformingForWindow(window.getWindowID())
                 && !window.getMenuListHandle().isInputLocked();
     }
 

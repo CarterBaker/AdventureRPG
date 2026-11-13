@@ -18,7 +18,8 @@ public class EntityActionHandle extends HandlePackage {
      * shift() swings a raised guard to another side, its pose already up but
      * not counted raised until the shift is done. getPhase() is where in its
      * clip the action stands: a move's strike frame always lands on the moment
-     * its effect does. One attack asked for while another still plays waits in
+     * its effect does, and a stance held with a looping clip, such as an
+     * instrument played, cycles through it once over every duration. One attack asked for while another still plays waits in
      * the queue until it can cut in or goes stale. Advanced by CombatManager
      * and read by the entity's animation. Lives on EntityInstance.
      */
@@ -264,12 +265,22 @@ public class EntityActionHandle extends HandlePackage {
         if (settled)
             return 1f;
 
+        if (isLooping()) {
+            float cycle = elapsed / duration;
+            return cycle - (float) Math.floor(cycle);
+        }
+
         float progress = getProgress();
 
         if (progress <= impact)
             return impact > 0f ? progress / impact * strike : strike;
 
         return strike + (progress - impact) / (1f - impact) * (1f - strike);
+    }
+
+    // True while a stance is held with a clip that loops, cycling through it instead of rising to its last frame
+    public boolean isLooping() {
+        return isHolding() && clip != null && clip.isLooping();
     }
 
     public CombatDirection getDirection() {

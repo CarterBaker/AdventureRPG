@@ -5,6 +5,7 @@ import application.runtime.inventory.InventoryRenderSystem;
 import application.runtime.menu.MainMenuSystem;
 import application.runtime.menu.MenuSystem;
 import application.runtime.menueventsmanager.MenuEventsManager;
+import application.runtime.music.InstrumentSystem;
 import application.runtime.npc.NpcSystem;
 import application.runtime.player.PlayerRenderSystem;
 import application.runtime.player.PlayerSystem;
@@ -66,6 +67,7 @@ public class RuntimeContext extends ContextPackage {
     private SoundListenerSystem soundListenerSystem;
     private AmbienceSoundSystem ambienceSoundSystem;
     private MusicSoundSystem musicSoundSystem;
+    private InstrumentSystem instrumentSystem;
 
     // Internal \\
 
@@ -99,5 +101,6 @@ public class RuntimeContext extends ContextPackage {
         this.soundListenerSystem = create(SoundListenerSystem.class);
         this.ambienceSoundSystem = create(AmbienceSoundSystem.class);
         this.musicSoundSystem = create(MusicSoundSystem.class);
+        this.instrumentSystem = create(InstrumentSystem.class);
     }
 }

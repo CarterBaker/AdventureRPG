@@ -45,9 +45,11 @@ FFMPEG_VORBIS = ["-c:a", "libvorbis", "-q:a", "5", "-ar", str(SAMPLE_RATE)]
 TOKEN = re.compile(r"<(\w+)>|([A-Za-z0-9_$]+)=")
 BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 PLAYED = {"sample", "key", "lokey", "hikey", "pitch_keycenter", "lovel", "hivel", "seq_length", "seq_position",
+          "trigger", "lorand", "hirand",
           "tune", "transpose", "volume", "amp_veltrack", "loop_mode", "loop_start", "loop_end", "offset", "end",
           "ampeg_attack", "ampeg_hold", "ampeg_decay", "ampeg_sustain", "ampeg_release"}
 APPROXIMATED = {"xfin_lovel", "xfin_hivel", "xfout_lovel", "xfout_hivel"}
+RELEASE_TRIGGERS = {"release", "release_key"}
 LOOP_MODES = {"no_loop": "none", "one_shot": "one_shot", "loop_sustain": "sustain", "loop_continuous": "continuous"}
 ENVELOPE = [("attack", "ampeg_attack", 0.0, 1.0), ("hold", "ampeg_hold", 0.0, 1.0),
             ("decay", "ampeg_decay", 0.0, 1.0), ("sustain", "ampeg_sustain", 1.0, 100.0),
@@ -235,6 +237,11 @@ def round_decibels(decibels):
 def plan(sfz_path, instrument, assets, report):
     """Every sample to convert and every region of the note set, with its envelope and velocity tracking."""
     regions, folder = parse_sfz(sfz_path, report)
+    released = [region for region in regions if region.get("trigger", "attack") in RELEASE_TRIGGERS]
+    if released:
+        report.append("Left out: %d regions play only on release (trigger=release); a note set plays on attack"
+                      % len(released))
+        regions = [region for region in regions if region.get("trigger", "attack") not in RELEASE_TRIGGERS]
     roots, layers = [], {}
     for region in regions:
         key = read_pitch(region, "key", None)
@@ -270,6 +277,10 @@ def plan(sfz_path, instrument, assets, report):
         steps = round(tune / 100)
         count = max(1, int(read_number(region, "seq_length", 1)))
         turn = min(count - 1, max(0, int(read_number(region, "seq_position", 1)) - 1))
+        if count == 1 and ("lorand" in region or "hirand" in region):
+            low_rand, high_rand = read_number(region, "lorand", 0.0), read_number(region, "hirand", 1.0)
+            count = max(1, round(1.0 / max(high_rand - low_rand, 1e-6)))
+            turn = min(count - 1, int(round(low_rand * count)))
         loop = (int(read_number(region, "loop_start", -1)), int(read_number(region, "loop_end", -1)) + 1)
         loop = loop if 0 <= loop[0] < loop[1] - 1 else None
         offset, end = int(read_number(region, "offset", 0)), int(read_number(region, "end", 0))

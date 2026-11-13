@@ -322,13 +322,15 @@ public class SettingsValueUtility extends EngineUtility {
         return false;
     }
 
-    // Binds the action to the code; another listed action holding it takes the action's old codes, so none is unbound
+    // Binds the action to the code; another listed action read in a scope it shares and holding it takes the
+    // action's old codes, so none is left unbound
     public static void rebind(SettingsBinding target, InputCode inputCode) {
 
         InputCode[] previousCodes = target.getBinding().getCodes();
 
         for (SettingsBinding settingsBinding : SettingsBinding.VALUES)
-            if (settingsBinding != target && isBoundTo(settingsBinding.getBinding(), inputCode))
+            if (settingsBinding != target && settingsBinding.sharesScope(target)
+                    && isBoundTo(settingsBinding.getBinding(), inputCode))
                 settingsBinding.getBinding().set(previousCodes);
 
         target.getBinding().set(inputCode);

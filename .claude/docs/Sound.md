@@ -81,6 +81,7 @@ its window's world). Runtime systems play what only their window hears.
 | Level, skill or trade step, profession (players only) | `ProgressionSoundBranch` | `progression/*` |
 | Wind, trees, rain, thunder, gusts, sea, shore, birds, crickets, under water | `AmbienceSoundSystem` (`AmbienceLayer` loops) | `ambience/*` |
 | Menu theme, day and night pieces | `MusicSoundSystem` | `music/*` |
+| Notes played by key, a song part from the Songbook | `PerformanceInstance`, driven by `InstrumentSystem` | none: placed sampler notes at the player |
 | Heartbeat near death | `VitalitySystem` | `vitality/Heartbeat` |
 | Defeat sting | `DefeatBranch` | `vitality/Defeat` |
 | Equip, stow in the inventory | `InventoryDragBranch` | `items/Equip`, `items/Stow` |
@@ -93,6 +94,14 @@ its window's world). Runtime systems play what only their window hears.
   it shore), the camera's height above the sea surface sets how near the water is, and solar elevation sets day.
 - To add a moment: write its cue file, add the name constant, resolve it in the owning class's `awake()` and play it
   at the one place the moment happens. Data that names a cue (menus, item actions) resolves it in its Builder.
+
+## Background music from a song
+
+A song becomes a day, night or menu piece with no code. In the editor, open the Music file and run Render: it mixes
+the song and writes `assets/sounds/music/<Name>.ogg` with its `music` companion. Then add `music/<Name>` to the
+`sounds` of the cue it should play under, `assets/soundcues/music/Day.arpg`, `Night.arpg` or `MainMenu.arpg`.
+`MusicSoundSystem` plays those cues, each play picking one of the cue's sounds, never the last while it has another,
+so a cue with several pieces rotates through them.
 
 ## Files
 

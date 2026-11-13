@@ -18,7 +18,9 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 | Shared logic | `util/NoteUtility` (names, pitch ratios, gains, scales), `util/NoteScale`, `util/NoteEnvelopeUtility` (the one envelope curve), `util/SongArpgUtility` (the tempo, meter, clip and note codec), `util/SongFlattenUtility` (a song laid out flat), `util/SongMidiUtility` (MIDI read and write), `util/SamplerMixUtility` (the one offline sampler render), `sampler/SamplerPcmStruct` (a sample decoded for it) |
 | Recorder music side | `editor/bootstrap/recorderpipeline/`: `recording/RecordingKind` (Video or Music), `RecordingLaneStruct` (a Music file's lane mix), `RecordingSourceKind`, `RecordingClipStruct` (sources, codec clip), `RecordingPlayingStruct`, `RecordingInstance` (kind, tempo, meter, key, lanes, grid, `findPlaying`); `recordermanager/RecordingSourceBranch` (binding, child cache, loops, worlds), `RecordingFileBranch` (Video, version 3), `RecordingMusicBranch` (Music file read, write, `toSong`), `RecordingRowBranch` (Properties rows), `RecordingRenderBranch` (Render), `RecordingMixBranch` (video export); `util/FfmpegUtility`; `editor/runtime/dev/recorder/DevRecorderSoundSystem` (live) |
 | Piano Roll | `recorderpipeline/pianorollmanager/` (`PianoRollManager`, `PianoRollHistoryBranch`, `PianoRollTypingBranch`), `pianoroll/PianoRollDragKind`; tab `editor/runtime/pianoroll/` (`PianoRollContext`, `PianoRollSetting`, `panel/PianoRollSystem`); `menueventsmanager/menus/PianoRollBranch`; menu `assets/menus/editor/PianoRoll.arpg` (also the music row templates); keys `assets/shortcuts/PianoRoll.arpg` |
-| Constants | `EngineSetting` groups `// Music Notes`, `// Music Scales`, `// Music Note Sets`, `// Music Instruments`, `// Music Sampler`, `// Music Songs`, `// Music MIDI`, `// Music Playback`; `SONG_USER_DIRECTORY` in `// Engine & Application` |
+| Performance | `performance/PerformanceInstance` (an entity playing its held instrument: keys, octave, velocity, a song part, the PLAY stance); play mode `application/runtime/music/InstrumentSystem`; Songbook `menueventsmanager/menus/music/SongbookBranch`, menu `assets/menus/SongbookMenu.arpg` (Songbook, Playing panel, Notice) |
+| Clips and items | `assets/animations/humanoid/instruments/Humanoid<Pipe/Flute/Harp/Lute/Fiddle/Cradle/Drum><Hold/Play>`, the tree's `perform` layer (`play` action, arms, hands and fingers); items `assets/items/instruments/Instruments.arpg`, meshes `assets/mesh/items/instruments/` |
+| Constants | `EngineSetting` groups `// Music Notes`, `// Music Scales`, `// Music Note Sets`, `// Music Instruments`, `// Music Sampler`, `// Music Songs`, `// Music MIDI`, `// Music Playback`, `// Music Performance`; `SONG_USER_DIRECTORY` in `// Engine & Application` |
 | Content | `assets/notesets/<Instrument>.arpg`, `assets/instruments/<Instrument>.arpg`, samples and companions in `assets/sounds/notes/<Instrument>/`, `assets/songs/<Folder>/<Song>.arpg` (`Test/Scale` proves the pipeline); schemas `NoteSets.arpg`, `Instruments.arpg`, `Songs.arpg` |
 | Player songs | `Documents/My Games/AdventureRPG/Songs/*.mid`, created by `Lwjgl3Launcher` (game) and `Lwjgl3LauncherEditor` as required directories |
 | Items | `instrument` field, read by `ItemDefinitionBuilder.parseInstrument` exactly as `weapon`; `ItemDefinitionHandle.getInstrumentID` / `hasInstrument`; an item played as an instrument is gear |
@@ -124,6 +126,19 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 - **Loops and worlds:** `RecordingSourceBranch.findLoopLaying` (laying) and `findLoopIn` (saving) walk nested recordings
   by name and name the loop; `isWorldShared` refuses a nested picture from another world.
 
+- **Play an instrument:** `create(PerformanceInstance.class)`, `canPlay(entity, instrumentID)` (the rig check),
+  `begin`, then `press`/`release(key)`, `stepOctave`, `stepVelocity`, `playSong`/`playUserSong(name, lane)`,
+  `stopSong`, `update(deltaTime)` every frame, `end`. `animate` raises `EntityAction.PLAY` through
+  `EntityActionHandle.holdMove` with the hold or play clip; a held stance with a looping clip cycles it
+  (`EntityActionHandle.isLooping`, `getPhase`).
+- **Fit a part to an instrument:** `NoteUtility.resolveOctaveShift` (whole part) and `fitToRange` (each note), applied
+  by `SongPlaybackInstance` only when it plays on an override instrument; `setPlace(world, place)` sends its notes
+  through `SamplerManager.noteOnAt(..., volume, ...)`.
+- **Play mode:** `InstrumentSystem` enters on `KeyBindings.PLAY_INSTRUMENT` while the window is in play, holds the
+  player through `PlayerManager.setPerformingForWindow` (which `isPlayingForWindow` and `PauseMenuBranch.canPause`
+  read), reads `KeyBindings.NOTES` and the other music bindings, and opens `SongbookBranch`. Rebinding conflicts are
+  scoped by `SettingsBinding.sharesScope` (`RuntimeSetting.SETTINGS_SCOPE_*`).
+
 ## Converting an instrument (Claude-side)
 
 1. The owner's SFZ and the WAVs it names must be in `.claude/assets/`. If they are only in `.claude/catalogue/`, send a
@@ -136,7 +151,8 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
        [--display-name "<Name>"] [--midi-program <0..127>] [--percussion]
    ```
 
-   It refuses a keyswitch patch, prints the report (opcodes left out, crossfades split at their middle, envelope values
+   It refuses a keyswitch patch, leaves out regions that play only on release (`trigger=release`), reads random
+   round robin (`lorand`/`hirand`) as round-robin turns, prints the report (opcodes left out, crossfades split at their middle, envelope values
    most regions give, loops, decoded bytes) and writes the samples, companions, note set and, when none exists, the
    instrument. Re-running replaces the samples and note set and keeps the instrument file.
 3. `verify` every file it wrote, boot the editor once (the builders are the final authority), and state each note
@@ -144,6 +160,14 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
    an instrument file whose fields Claude set by hand (a `midi_program`, rigs) is.
 
 ## Traps
+
+- **Action nodes never loop.** `AnimationTreeBuilder` refuses an action node whose clip loops; the `play` node's own
+  clip is a still fallback (`HumanoidBlock`), and the instrument's looping clip plays as the move clip, cycled by the
+  action's phase.
+- **No sustain loops in these libraries.** VCSL and VSCO samples carry no loop points, so a held note plays out its
+  recording and then stops; every converted note set reports `0 of N samples loop`.
+- **A user song is held twice while its part plays.** `SongbookBranch` loads it on choosing (one hold) and lets it go
+  on playing or going back; the play's own `playUserSong` holds it until the song stops.
 
 - **Persistent loaders.** `SoundLoader`, `NoteSetLoader` and `InstrumentLoader` override `LoaderPackage.persists()`, so
   they and their builders stay alive for runtime on-demand loads. Every other loader still releases itself after

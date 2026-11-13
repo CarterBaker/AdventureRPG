@@ -18,6 +18,7 @@ import application.runtime.menueventsmanager.menus.inventory.InventoryBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryContainerBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryDragBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryEquipmentBranch;
+import application.runtime.menueventsmanager.menus.music.SongbookBranch;
 import application.runtime.menueventsmanager.menus.settings.SettingsBindingBranch;
 import application.runtime.menueventsmanager.menus.settings.SettingsMenuBranch;
 import application.runtime.menueventsmanager.menus.settings.SettingsOptionBranch;
@@ -52,6 +53,7 @@ public class MenuEventsManager extends ManagerPackage {
         create(InventoryContainerBranch.class);
         create(InventoryDragBranch.class);
         create(ShipwrightBranch.class);
+        create(SongbookBranch.class);
         create(CharacterBranch.class);
         create(CharacterAttributeBranch.class);
         create(CharacterProficiencyBranch.class);

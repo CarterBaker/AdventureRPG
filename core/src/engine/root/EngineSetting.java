@@ -652,6 +652,14 @@ public class EngineSetting {
     public static final int SONG_PLAYBACK_HELD_NOTE_COUNT = SAMPLER_NOTE_COUNT;
     public static final int SONG_PLAYBACK_START_TICK = -1;
 
+    // Music Performance — an entity playing the instrument it holds: thirteen keys from one C to the next, the
+    // velocity they start at and how far a step moves it, and how long the play clip stays after the last note
+    public static final int PERFORMANCE_KEY_COUNT = 13;
+    public static final int PERFORMANCE_KEY_CENTRE = 6;
+    public static final int PERFORMANCE_VELOCITY_DEFAULT = 100;
+    public static final int PERFORMANCE_VELOCITY_STEP = 10;
+    public static final float PERFORMANCE_PLAY_LINGER_SECONDS = 0.4f;
+
     // Input & Bindings
     public static final int BINDING_MOUSE_CODE_OFFSET = 1000;
     public static final int INPUT_KEY_CODE_COUNT = 512;

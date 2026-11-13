@@ -1,5 +1,6 @@
 package application.bootstrap.musicpipeline.song;
 
+import application.bootstrap.musicpipeline.instrument.InstrumentHandle;
 import application.bootstrap.musicpipeline.instrumentmanager.InstrumentManager;
 import application.bootstrap.musicpipeline.notesetmanager.NoteSetManager;
 import application.bootstrap.musicpipeline.samplermanager.SamplerManager;
@@ -7,6 +8,8 @@ import application.bootstrap.musicpipeline.songmanager.SongManager;
 import application.bootstrap.musicpipeline.util.NoteUtility;
 import application.bootstrap.musicpipeline.util.SongFlattenUtility;
 import application.bootstrap.soundpipeline.soundmanager.SoundManager;
+import application.bootstrap.worldpipeline.util.WorldPositionStruct;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -31,7 +34,11 @@ public class SongPlaybackInstance extends InstancePackage {
      * walks it to the tick the owner's clock has reached, passing over every
      * note before the first tick it is given, so it plays from wherever the
      * clock stands; every note it sounds is scaled by the volume it follows
-     * at. Every cursor and held note is kept on the instance, so playing
+     * at. Played on an override instrument, the song is moved by the whole
+     * octaves that centre its notes in the instrument's range and any note
+     * still outside is moved into it by octaves, so every note sounds. Placed
+     * at someone's position, its notes are heard from there and fade with
+     * distance. Every cursor and held note is kept on the instance, so playing
      * allocates nothing once a song of its size has been played.
      */
 
@@ -55,6 +62,16 @@ public class SongPlaybackInstance extends InstancePackage {
     private int[] heldNotes;
     private int[] heldEndTicks;
     private int heldCount;
+
+    // Fit — the octaves the song moves by and the range it is moved into, when it plays on an override instrument
+    private boolean fitting;
+    private int fitShift;
+    private int fitLow;
+    private int fitHigh;
+
+    // Place — where the notes are heard from, null for heard as they are
+    private WorldHandle placeWorldHandle;
+    private WorldPositionStruct place;
 
     // Clock
     private boolean playing;
@@ -129,11 +146,54 @@ public class SongPlaybackInstance extends InstancePackage {
         for (int i = 0; i < cursorCount; i++)
             resolve(cursors.get(i), instrumentOverride);
 
+        fit(instrumentOverride);
         this.playing = true;
         this.ready = false;
         this.secondsPlayed = 0.0;
         this.lastTick = EngineSetting.SONG_PLAYBACK_START_TICK;
         this.volume = volume;
+    }
+
+    // The octaves that centre the song's notes in the override instrument's range, worked out once as it is laid
+    private void fit(short instrumentOverride) {
+
+        this.fitting = instrumentOverride != EngineSetting.INSTRUMENT_NONE;
+
+        if (!fitting)
+            return;
+
+        InstrumentHandle instrument = instrumentManager.getInstrumentHandleFromInstrumentID(instrumentOverride);
+        int lowest = EngineSetting.NOTE_PITCH_MAX;
+        int highest = EngineSetting.NOTE_PITCH_MIN;
+
+        for (int i = 0; i < cursorCount; i++) {
+
+            SongCursorStruct cursor = cursors.get(i);
+
+            if (cursor.getKind() != SongClipKind.NOTES)
+                continue;
+
+            for (int note = 0; note < cursor.getClip().getNoteCount(); note++) {
+
+                if (!cursor.playsNote(note))
+                    continue;
+
+                lowest = Math.min(lowest, cursor.getNotePitch(note));
+                highest = Math.max(highest, cursor.getNotePitch(note));
+            }
+        }
+
+        this.fitLow = instrument.getLow();
+        this.fitHigh = instrument.getHigh();
+        this.fitShift = lowest <= highest ? NoteUtility.resolveOctaveShift(lowest, highest, fitLow, fitHigh) : 0;
+    }
+
+    // Place \\
+
+    // Every note sounded from now on is heard from the place, as it stands when each note begins; null for none
+    public void setPlace(WorldHandle worldHandle, WorldPositionStruct place) {
+        this.placeWorldHandle = worldHandle;
+        this.place = place;
     }
 
     // Follow \\
@@ -290,11 +350,13 @@ public class SongPlaybackInstance extends InstancePackage {
 
     private void playNote(SongCursorStruct cursor, int note) {
 
-        int noteHandle = samplerManager.noteOn(
-                cursor.getInstrumentID(),
-                cursor.getNotePitch(note),
-                cursor.getClip().getNoteVelocity(note),
-                cursor.getGain() * volume);
+        short instrumentID = cursor.getInstrumentID();
+        int pitch = resolvePitch(cursor.getNotePitch(note));
+        int velocity = cursor.getClip().getNoteVelocity(note);
+        float gain = cursor.getGain() * volume;
+        int noteHandle = place != null
+                ? samplerManager.noteOnAt(instrumentID, pitch, velocity, gain, placeWorldHandle, place)
+                : samplerManager.noteOn(instrumentID, pitch, velocity, gain);
 
         if (noteHandle != EngineSetting.INDEX_NOT_FOUND)
             hold(noteHandle, cursor.getNoteEndTick(note));
@@ -367,6 +429,11 @@ public class SongPlaybackInstance extends InstancePackage {
     }
 
     // Utility \\
+
+    // The pitch a note sounds at, moved into the override instrument's range when the song is fitted to one
+    private int resolvePitch(int pitch) {
+        return fitting ? NoteUtility.fitToRange(pitch + fitShift, fitLow, fitHigh) : pitch;
+    }
 
     private short resolveNoteSetID(SongCursorStruct cursor) {
         return instrumentManager.getInstrumentHandleFromInstrumentID(cursor.getInstrumentID()).getNoteSetID();

@@ -10,8 +10,9 @@ public class NoteUtility extends EngineUtility {
      * a pitch's name and back (C4 is 60, sharps written with '#'), how fast a
      * sample plays to sound one pitch from the pitch it was recorded at, the
      * gain a decibel level and a velocity stand for, and whether a pitch lies
-     * on a key's scale, with the nearest one on it. Never held — all methods
-     * static.
+     * on a key's scale, with the nearest one on it, and how a pitch or a
+     * whole part is moved by octaves into an instrument's range. Never held —
+     * all methods static.
      */
 
     // Names \\
@@ -97,5 +98,29 @@ public class NoteUtility extends EngineUtility {
         }
 
         return pitch;
+    }
+
+    // Range \\
+
+    // The pitch moved by whole octaves into the range, held at its nearer end when the range spans less than one
+    public static int fitToRange(int pitch, int low, int high) {
+
+        int octave = EngineSetting.NOTE_SEMITONES_PER_OCTAVE;
+
+        if (pitch < low)
+            pitch += Math.ceilDiv(low - pitch, octave) * octave;
+
+        if (pitch > high)
+            pitch -= Math.ceilDiv(pitch - high, octave) * octave;
+
+        return Math.clamp(pitch, low, high);
+    }
+
+    // The whole octaves that move a part's span from its lowest to its highest pitch to the middle of the range
+    public static int resolveOctaveShift(int lowest, int highest, int low, int high) {
+
+        int octave = EngineSetting.NOTE_SEMITONES_PER_OCTAVE;
+
+        return Math.round((float) ((low + high) - (lowest + highest)) / (2 * octave)) * octave;
     }
 }

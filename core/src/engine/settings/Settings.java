@@ -126,6 +126,28 @@ public class Settings {
     public int[] bindLevelUp = { Keys.PAGE_UP };
     public int[] bindLevelDown = { Keys.PAGE_DOWN };
 
+    // Bindings — Music
+    public int[] bindPlayInstrument = { Keys.B };
+    public int[] bindSongbook = { Keys.N };
+    public int[] bindLeaveInstrument = { Keys.ESCAPE };
+    public int[] bindNoteC = { Keys.A };
+    public int[] bindNoteCSharp = { Keys.W };
+    public int[] bindNoteD = { Keys.S };
+    public int[] bindNoteDSharp = { Keys.E };
+    public int[] bindNoteE = { Keys.D };
+    public int[] bindNoteF = { Keys.F };
+    public int[] bindNoteFSharp = { Keys.T };
+    public int[] bindNoteG = { Keys.G };
+    public int[] bindNoteGSharp = { Keys.Y };
+    public int[] bindNoteA = { Keys.H };
+    public int[] bindNoteASharp = { Keys.U };
+    public int[] bindNoteB = { Keys.J };
+    public int[] bindNoteHighC = { Keys.K };
+    public int[] bindOctaveDown = { Keys.Z };
+    public int[] bindOctaveUp = { Keys.X };
+    public int[] bindSofter = { Keys.C };
+    public int[] bindLouder = { Keys.V };
+
     // Bindings — Editor Single
     public int[] bindToggleInspector = { Keys.I };
     public int[] bindFocusSelected = { Keys.F };

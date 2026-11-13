@@ -172,6 +172,40 @@ public class RuntimeSetting {
     public static final String ELEMENT_CHARACTER_SLOT_LABEL = "character_label";
     public static final int ENTRY_CHARACTER_LIST = 0;
 
+    // Songbook Menus — the Songbook lists the shipped songs and the player's, then a chosen song's parts
+    public static final String MENU_SONGBOOK = "SongbookMenu/Songbook";
+    public static final String MENU_SONGBOOK_SONG_ROW = "SongbookMenu/song_row";
+    public static final String MENU_SONGBOOK_PART_ROW = "SongbookMenu/part_row";
+    public static final String MENU_SONGBOOK_SECTION = "SongbookMenu/song_section";
+    public static final String MENU_SONGBOOK_EMPTY_NOTICE = "SongbookMenu/song_list_empty";
+    public static final String MENU_PLAYING = "SongbookMenu/Playing";
+    public static final String MENU_PLAYING_NOTICE = "SongbookMenu/Notice";
+    public static final String ELEMENT_SONGBOOK_SONG_ROW_LABEL = "song_row_label";
+    public static final String ELEMENT_SONGBOOK_PART_ROW_LABEL = "part_row_label";
+    public static final int ENTRY_SONGBOOK_LIST = 0;
+    public static final int ENTRY_SONGBOOK_TITLE = 1;
+    public static final int ENTRY_PLAYING_TITLE = 0;
+    public static final int ENTRY_PLAYING_DETAIL = 1;
+    public static final int ENTRY_PLAYING_HINT = 2;
+    public static final int ENTRY_PLAYING_NOTICE = 0;
+
+    // Songbook Text
+    public static final String SONGBOOK_TITLE = "Songbook";
+    public static final String SONGBOOK_SECTION_SONGS = "Songs";
+    public static final String SONGBOOK_SECTION_USER_SONGS = "My Songs";
+    public static final String SONGBOOK_SECTION_PARTS = "Parts";
+    public static final String SONGBOOK_EMPTY_SONGS = "No songs";
+    public static final String SONGBOOK_EMPTY_USER_SONGS = "Put .mid files in My Games/AdventureRPG/Songs";
+    public static final String SONGBOOK_EMPTY_PARTS = "This song has no parts to play";
+    public static final String SONGBOOK_PART_FORMAT = "Part %d";
+
+    // Playing — the play mode HUD, and the notice a refused instrument shows
+    public static final String PLAYING_DETAIL_FORMAT = "%s to %s, loudness %d";
+    public static final String PLAYING_HINT_FORMAT = "%s Songbook   %s Leave";
+    public static final String PLAYING_SONG_FORMAT = "%s Songbook   %s Leave   (playing a song)";
+    public static final String PLAYING_NOTICE_RACE = "Your race can't play this.";
+    public static final float PLAYING_NOTICE_SECONDS = 2.5f;
+
     // Pause Menu
     public static final String MENU_PAUSE = "PauseMenu/Pause";
 
@@ -378,6 +412,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_SECTION_VOLUME = "Volume";
     public static final String SETTINGS_SECTION_MOVEMENT = "Movement";
     public static final String SETTINGS_SECTION_ACTIONS = "Actions";
+    public static final String SETTINGS_SECTION_MUSIC = "Music";
     public static final String SETTINGS_SECTION_OUTLINES = "Outlines";
     public static final String SETTINGS_SECTION_DEPTH_OF_FIELD = "Depth of Field";
     public static final String SETTINGS_SECTION_IMAGE = "Image";
@@ -465,8 +500,32 @@ public class RuntimeSetting {
     public static final String SETTINGS_BINDING_CYCLE_NEXT = "Next Option";
     public static final String SETTINGS_BINDING_LEVEL_UP = "Level Up";
     public static final String SETTINGS_BINDING_LEVEL_DOWN = "Level Down";
+    public static final String SETTINGS_BINDING_PLAY_INSTRUMENT = "Play Instrument";
+    public static final String SETTINGS_BINDING_SONGBOOK = "Songbook";
+    public static final String SETTINGS_BINDING_LEAVE_INSTRUMENT = "Leave";
+    public static final String SETTINGS_BINDING_NOTE_C = "Note C";
+    public static final String SETTINGS_BINDING_NOTE_C_SHARP = "Note C#";
+    public static final String SETTINGS_BINDING_NOTE_D = "Note D";
+    public static final String SETTINGS_BINDING_NOTE_D_SHARP = "Note D#";
+    public static final String SETTINGS_BINDING_NOTE_E = "Note E";
+    public static final String SETTINGS_BINDING_NOTE_F = "Note F";
+    public static final String SETTINGS_BINDING_NOTE_F_SHARP = "Note F#";
+    public static final String SETTINGS_BINDING_NOTE_G = "Note G";
+    public static final String SETTINGS_BINDING_NOTE_G_SHARP = "Note G#";
+    public static final String SETTINGS_BINDING_NOTE_A = "Note A";
+    public static final String SETTINGS_BINDING_NOTE_A_SHARP = "Note A#";
+    public static final String SETTINGS_BINDING_NOTE_B = "Note B";
+    public static final String SETTINGS_BINDING_NOTE_HIGH_C = "Note High C";
+    public static final String SETTINGS_BINDING_OCTAVE_DOWN = "Octave Down";
+    public static final String SETTINGS_BINDING_OCTAVE_UP = "Octave Up";
+    public static final String SETTINGS_BINDING_SOFTER = "Softer";
+    public static final String SETTINGS_BINDING_LOUDER = "Louder";
     public static final String SETTINGS_BINDING_CAPTURE_PROMPT = "Press a key";
     public static final String SETTINGS_ACTION_RESET_BINDINGS = "Reset Controls";
+
+    // Settings Binding Scopes — where a binding is read; bindings sharing one never share a key
+    public static final int SETTINGS_SCOPE_WORLD = 1;
+    public static final int SETTINGS_SCOPE_MUSIC = 1 << 1;
 
     // Settings Colors
     public static final Color SETTINGS_TAB_ACTIVE_COLOR = new Color(1f, 1f, 1f, 1f);

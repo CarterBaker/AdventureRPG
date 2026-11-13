@@ -12,7 +12,9 @@ public enum EntityAction {
      * turned aside by a guard, and STAGGER the flinch of being struck while
      * winding up. AIM and BLOCK are stances, held for as long as the entity
      * keeps them up: AIM draws the held item back ready to throw, and BLOCK
-     * raises a guard toward one CombatDirection. An animation tree maps each
+     * raises a guard toward one CombatDirection. PLAY is the stance of
+     * playing a held instrument, looping the clip the instrument has for the
+     * entity's rig for as long as it is played. An animation tree maps each
      * by its lower-case name to the node it plays; NONE means the hands are
      * free.
      */
@@ -25,7 +27,8 @@ public enum EntityAction {
     RECOIL,
     STAGGER,
     AIM,
-    BLOCK;
+    BLOCK,
+    PLAY;
 
     // Values
     public static final EntityAction[] VALUES = values();

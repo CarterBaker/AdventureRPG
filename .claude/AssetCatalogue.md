@@ -294,6 +294,15 @@ One line per session that changed this file: the date, what was added or removed
   rows), `menus/editor/EditorWindow.arpg` (Piano Roll in the Media menu), `shortcuts/Tools.arpg` (D for Draw) and
   `schemas/Shortcuts.arpg` (`claimed`, the Draw tool and the Music and Piano Roll canvases), so songs are made in the
   editor.
+- 2026-11-13: Music pipeline, music in the game. Added 38 instruments under `instruments/` (display names and
+  `midi_program` set by hand, converted from the owner's VCSL and VSCO libraries, whose note sets and samples are not
+  catalogued) and gave 18 of them, `BaroqueSopranoRecorder.arpg` and `FolkHarp.arpg` among them, `HumanoidRig` rig
+  entries; added the 14 looping hold and play clips under `animations/humanoid/instruments/` (seven ways of holding
+  an instrument: pipe, flute, harp, lute, fiddle, cradle, drum), the 18 instrument item meshes under
+  `mesh/items/instruments/`, their items in `items/instruments/Instruments.arpg` and `menus/SongbookMenu.arpg` (the
+  Songbook, the play mode panel and its notice); regenerated `animationtrees/humanoid/HumanoidAnimationTree.arpg` (a
+  `perform` layer playing the `play` action over the arms, hands and fingers) and `schemas/AnimationTrees.arpg` (the
+  `play` action), so instruments are held and played in the game.
 ---
 
 ## Textures and Sprites (2399 files)
@@ -1674,7 +1683,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1804 files)
+## Data Files (1876 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -1695,6 +1704,13 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/animations/humanoid/poses/`
 
 `ArmsRaised.arpg`, `Crouching.arpg`, `Kneeling.arpg`, `Reaching.arpg`, `Sitting.arpg`, `Stride.arpg`, `TPose.arpg`
+
+### `assets/animations/humanoid/instruments/`
+
+`HumanoidCradleHold.arpg`, `HumanoidCradlePlay.arpg`, `HumanoidDrumHold.arpg`, `HumanoidDrumPlay.arpg`,
+`HumanoidFiddleHold.arpg`, `HumanoidFiddlePlay.arpg`, `HumanoidFluteHold.arpg`, `HumanoidFlutePlay.arpg`,
+`HumanoidHarpHold.arpg`, `HumanoidHarpPlay.arpg`, `HumanoidLuteHold.arpg`, `HumanoidLutePlay.arpg`,
+`HumanoidPipeHold.arpg`, `HumanoidPipePlay.arpg`
 
 ### `assets/animationtrees/humanoid/`
 
@@ -2331,7 +2347,13 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/instruments/`
 
-`BaroqueSopranoRecorder.arpg`, `FolkHarp.arpg`
+`BaroqueAltoRecorder.arpg`, `BaroqueBassRecorder.arpg`, `BaroqueSopranoRecorder.arpg`, `BaroqueTenorRecorder.arpg`,
+`Bassoon.arpg`, `CelloSection.arpg`, `Clarinet.arpg`, `ConcertHarp.arpg`, `Contrabass.arpg`, `DanTranh.arpg`,
+`Flute.arpg`, `FolkHarp.arpg`, `FrameDrum.arpg`, `FrenchHorn.arpg`, `Glockenspiel.arpg`, `Harmonica.arpg`,
+`Harpsichord.arpg`, `Kalimba.arpg`, `Marimba.arpg`, `Oboe.arpg`, `Ocarina.arpg`, `Piccolo.arpg`, `PipeOrgan.arpg`,
+`PizzicatoStrings.arpg`, `Psaltery.arpg`, `RenaissanceOrgan.arpg`, `Strumstick.arpg`, `Tambourine.arpg`,
+`TenorSaxophone.arpg`, `Timpani.arpg`, `Trombone.arpg`, `Trumpet.arpg`, `Tuba.arpg`, `TubularBells.arpg`,
+`UprightPiano.arpg`, `Vibraphone.arpg`, `ViolaSection.arpg`, `Violin.arpg`, `ViolinSection.arpg`, `Xylophone.arpg`
 
 ### `assets/items/armor/`
 
@@ -2356,6 +2378,10 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/items/furniture/`
 
 `Furniture.arpg`
+
+### `assets/items/instruments/`
+
+`Instruments.arpg`
 
 ### `assets/items/jewelry/`
 
@@ -2466,7 +2492,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/menus/`
 
 `Character.arpg`, `CharacterCreator.arpg`, `HUD.arpg`, `Inventory.arpg`, `Launcher.arpg`, `MainMenu.arpg`,
-`PauseMenu.arpg`, `Settings.arpg`, `Shipwright.arpg`
+`PauseMenu.arpg`, `Settings.arpg`, `Shipwright.arpg`, `SongbookMenu.arpg`
 
 ### `assets/menus/editor/`
 
@@ -2530,6 +2556,12 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 `CaptainsChair.arpg`, `CargoCrate.arpg`, `DraftingTable.arpg`, `GalleyStove.arpg`, `GreatTable.arpg`, `Lantern.arpg`,
 `LongTable.arpg`, `OakChair.arpg`, `OakDoor.arpg`, `OakDoorOpen.arpg`, `Rug.arpg`, `Sideboard.arpg`, `Stool.arpg`,
 `WritingDesk.arpg`
+
+### `assets/mesh/items/instruments/`
+
+`BaroqueAltoRecorder.arpg`, `BaroqueBassRecorder.arpg`, `BaroqueSopranoRecorder.arpg`, `BaroqueTenorRecorder.arpg`,
+`Clarinet.arpg`, `Flute.arpg`, `FolkHarp.arpg`, `FrameDrum.arpg`, `FrenchHorn.arpg`, `Harmonica.arpg`, `Kalimba.arpg`,
+`Oboe.arpg`, `Ocarina.arpg`, `Piccolo.arpg`, `Strumstick.arpg`, `Tambourine.arpg`, `Trumpet.arpg`, `Violin.arpg`
 
 ### `assets/mesh/items/jewelry/`
 

@@ -88,10 +88,21 @@ public class SamplerManager extends ManagerPackage {
             int velocity,
             WorldHandle worldHandle,
             WorldPositionStruct place) {
+        return noteOnAt(instrumentID, pitch, velocity, EngineSetting.SAMPLER_NOTE_FULL_VOLUME, worldHandle, place);
+    }
+
+    // Placed in the world and scaled by a volume of 0 to 1, as a song played by someone standing there sets it
+    public int noteOnAt(
+            short instrumentID,
+            int pitch,
+            int velocity,
+            float volume,
+            WorldHandle worldHandle,
+            WorldPositionStruct place) {
 
         Vector3 position = place.getPosition();
 
-        return start(instrumentID, pitch, velocity, EngineSetting.SAMPLER_NOTE_FULL_VOLUME, worldHandle,
+        return start(instrumentID, pitch, velocity, volume, worldHandle,
                 place.getChunkCoordinate(), position.x, position.y, position.z);
     }
 

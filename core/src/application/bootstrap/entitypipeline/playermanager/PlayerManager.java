@@ -76,7 +76,10 @@ public class PlayerManager extends ManagerPackage {
      * that camera's column and dropped onto its ground by the same check, so
      * the world streams around the view and the camera never starts inside
      * the ground. Each window's player position reaches its draw through a
-     * window draw step added to RenderManager.
+     * window draw step added to RenderManager. A performing window's player
+     * stands still with its hands held from the world, its input cleared each
+     * frame, while it still falls, animates and looks around; it is not in
+     * play, so nothing else reads its bindings.
      */
 
     // Internal
@@ -110,6 +113,7 @@ public class PlayerManager extends ManagerPackage {
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
     private Int2BooleanOpenHashMap windowID2FreeCamera;
     private Int2BooleanOpenHashMap windowID2Held;
+    private Int2BooleanOpenHashMap windowID2Performing;
 
     // Per-window zoom
     private Int2FloatOpenHashMap windowID2ZoomDistance;
@@ -161,6 +165,7 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
         this.windowID2FreeCamera = new Int2BooleanOpenHashMap();
         this.windowID2Held = new Int2BooleanOpenHashMap();
+        this.windowID2Performing = new Int2BooleanOpenHashMap();
 
         this.windowID2ZoomDistance = new Int2FloatOpenHashMap();
         this.windowID2ZoomTarget = new Int2FloatOpenHashMap();
@@ -241,6 +246,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2VerifyPlayerPosition.put(windowID, true);
         windowID2FreeCamera.put(windowID, false);
         windowID2Held.put(windowID, false);
+        windowID2Performing.put(windowID, false);
         windowID2ZoomDistance.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2ZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2FirstPersonToggled.put(windowID, false);
@@ -263,6 +269,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2VerifyPlayerPosition.remove(windowID);
         windowID2FreeCamera.remove(windowID);
         windowID2Held.remove(windowID);
+        windowID2Performing.remove(windowID);
         windowID2ZoomDistance.remove(windowID);
         windowID2ZoomTarget.remove(windowID);
         windowID2FirstPersonToggled.remove(windowID);
@@ -306,6 +313,17 @@ public class PlayerManager extends ManagerPackage {
 
     public boolean isHeldForWindow(int windowID) {
         return windowID2Held.get(windowID);
+    }
+
+    // Perform \\
+
+    // The window's player stands still with its hands held from the world while it plays an instrument
+    public void setPerformingForWindow(int windowID, boolean performing) {
+        windowID2Performing.put(windowID, performing);
+    }
+
+    public boolean isPerformingForWindow(int windowID) {
+        return windowID2Performing.get(windowID);
     }
 
     // Teleport \\
@@ -445,7 +463,12 @@ public class PlayerManager extends ManagerPackage {
         EntityInputHandle input = player.getEntityInputHandle();
         boolean firstPerson = isFirstPerson(windowID);
 
-        playerInputSystem.translate(raw, input, gesture);
+        if (windowID2Performing.get(windowID)) {
+            input.clear();
+            gesture.reset();
+        } else
+            playerInputSystem.translate(raw, input, gesture);
+
         input.setStrafe(firstPerson);
         input.setTwist(firstPerson && !combatManager.isEngaged(player));
 
@@ -827,8 +850,8 @@ public class PlayerManager extends ManagerPackage {
         return windowID2FreeCamera.get(windowID);
     }
 
-    // True while the window's player is in play — not flying free, not held, not posed for a preview, no menu
-    // holding input
+    // True while the window's player is in play — not flying free, not held, not performing, not posed for a
+    // preview, no menu holding input
     public boolean isPlayingForWindow(int windowID) {
 
         WindowInstance window = windowID2Window.get(windowID);
@@ -836,6 +859,7 @@ public class PlayerManager extends ManagerPackage {
         return window != null
                 && !windowID2FreeCamera.get(windowID)
                 && !windowID2Held.get(windowID)
+                && !windowID2Performing.get(windowID)
                 && !windowID2CharacterPreview.get(windowID)
                 && !window.getMenuListHandle().isInputLocked();
     }

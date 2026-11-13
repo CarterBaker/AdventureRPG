@@ -142,6 +142,25 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   `Documents/My Games/AdventureRPG/Songs/`, where player songs live. Video recordings stay in `Recordings/`.
 - Constants: `EngineSetting` (`// Music ...` groups) for anything the game uses; `EditorSetting` for the editor.
 
+## Playing in the game
+
+- **Play mode.** With an instrument item in the main hand, Play Instrument (B) takes it up, unless the player's race
+  names no rig in the instrument, which a notice refuses ("Your race can't play this."). The player stands still with
+  its hands held from the world (`PlayerManager.setPerformingForWindow`: input cleared, out of play, so no other
+  binding reads its keys), and the instrument's `hold` clip loops through the PLAY stance; the `play` clip loops while
+  any note sounds and a moment after. Leave (Escape) or Play Instrument puts it down, as does another menu taking the
+  window or the instrument leaving the hand.
+- **Keys.** The thirteen note keys are Musical Typing's layout (A W S E D F T G Y H U J K, C to C), Octave Down/Up
+  Z and X, Softer/Louder C and V, each rebindable under Music on the Controls page. Music bindings are read only in
+  play mode, so they may share keys with movement; rebinding swaps keys only between bindings read in one scope.
+  Notes are placed at the player, heard by distance, and moved into the instrument's `low`..`high` by octaves.
+- **Songbook** (N in play mode): the shipped songs by display name under Songs and the player's `.mid` files under My
+  Songs, then a chosen song's parts (its lanes that sound notes). A part plays on the held instrument, the whole part
+  moved by the octaves that centre it in the instrument's range and any note still outside moved in by octaves, placed
+  at the player. Stop ends it; leaving play mode stops it.
+- **Who plays what.** Human (`HumanoidRig`) plays the 18 instruments that are items, each with one of seven ways of
+  holding it (pipe, flute, harp, lute, fiddle, cradle, drum). The other 20 instruments are for songs only.
+
 ## Performance
 
 - Note sets load on demand, the first time an instrument is held, laid or previewed, never at bootstrap. An

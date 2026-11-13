@@ -12,7 +12,9 @@ public final class KeyBindings {
      * session. Initialized with engine defaults at startup — overwritten by
      * SettingsUtility.applyBindings() once Settings are loaded. Primary and
      * Pause are never loaded or rebound — they are how a player reaches and
-     * clicks the menus, so they can never be bound away.
+     * clicks the menus, so they can never be bound away. The music bindings
+     * are read only while an instrument is played, when nothing else reads
+     * the keys, so their keys may be the ones movement uses.
      */
 
     // Movement
@@ -46,6 +48,35 @@ public final class KeyBindings {
     public static Binding CYCLE_NEXT = new Binding(InputCode.key(Keys.F));
     public static Binding LEVEL_UP = new Binding(InputCode.key(Keys.PAGE_UP));
     public static Binding LEVEL_DOWN = new Binding(InputCode.key(Keys.PAGE_DOWN));
+
+    // Music — play mode, opened with an instrument held: the Songbook, and leaving
+    public static Binding PLAY_INSTRUMENT = new Binding(InputCode.key(Keys.B));
+    public static Binding SONGBOOK = new Binding(InputCode.key(Keys.N));
+    public static Binding LEAVE_INSTRUMENT = new Binding(InputCode.key(Keys.ESCAPE));
+
+    // Music — the thirteen note keys from C to the next C, laid out as Musical Typing, then octave and loudness
+    public static Binding NOTE_C = new Binding(InputCode.key(Keys.A));
+    public static Binding NOTE_C_SHARP = new Binding(InputCode.key(Keys.W));
+    public static Binding NOTE_D = new Binding(InputCode.key(Keys.S));
+    public static Binding NOTE_D_SHARP = new Binding(InputCode.key(Keys.E));
+    public static Binding NOTE_E = new Binding(InputCode.key(Keys.D));
+    public static Binding NOTE_F = new Binding(InputCode.key(Keys.F));
+    public static Binding NOTE_F_SHARP = new Binding(InputCode.key(Keys.T));
+    public static Binding NOTE_G = new Binding(InputCode.key(Keys.G));
+    public static Binding NOTE_G_SHARP = new Binding(InputCode.key(Keys.Y));
+    public static Binding NOTE_A = new Binding(InputCode.key(Keys.H));
+    public static Binding NOTE_A_SHARP = new Binding(InputCode.key(Keys.U));
+    public static Binding NOTE_B = new Binding(InputCode.key(Keys.J));
+    public static Binding NOTE_HIGH_C = new Binding(InputCode.key(Keys.K));
+    public static Binding OCTAVE_DOWN = new Binding(InputCode.key(Keys.Z));
+    public static Binding OCTAVE_UP = new Binding(InputCode.key(Keys.X));
+    public static Binding SOFTER = new Binding(InputCode.key(Keys.C));
+    public static Binding LOUDER = new Binding(InputCode.key(Keys.V));
+
+    // Music — the note keys in order, each the key one semitone above the last
+    public static final Binding[] NOTES = {
+            NOTE_C, NOTE_C_SHARP, NOTE_D, NOTE_D_SHARP, NOTE_E, NOTE_F, NOTE_F_SHARP,
+            NOTE_G, NOTE_G_SHARP, NOTE_A, NOTE_A_SHARP, NOTE_B, NOTE_HIGH_C };
 
     // Editor — Single
     public static Binding TOGGLE_INSPECTOR = new Binding(InputCode.key(Keys.I));
