@@ -17,6 +17,10 @@ writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
   case-only rename on Windows, which git does not record.
 - **Folder layout mirrors the pipeline.** `xpipeline/XPipeline.java`, `xpipeline/xmanager/` (manager, loader,
   builder, branches, systems), `xpipeline/x/` (handle, data, instance, structs).
+- **Sources are split by language.** Java lives under `core/src/java/` and `lwjgl3/src/java/`, each package path
+  below its root unchanged.
+- **C exists only as kernels behind `KernelPipeline`.** Stateless functions under `core/src/c/`, mirroring the Java
+  folder that calls them and called only through `KernelManager.invoke` (see `.claude/docs/Kernel.md`).
 - **Lifecycle is enforced.** Register systems in `create()`, resolve dependencies in `get()`. Never construct
   systems, handles, or instances with `new`; use `create(Class)`. Data and Struct objects may use constructors.
 - **Handles wrap Data.** A Handle takes its Data through `constructor(...)` and delegates accessors to it.

@@ -52,7 +52,7 @@ Systems are registered into a global engine registry or a context-local registry
 All code and assets follow standard Java naming, so paths match exactly on every platform and in git, which is
 case-sensitive even where the filesystem is not:
 
-- **Folders and packages** are all lowercase: `core/src/engine/util/arpg`, `assets/processingpasses`.
+- **Folders and packages** are all lowercase: `core/src/java/engine/util/arpg`, `assets/processingpasses`.
 - **Files** are PascalCase: `SeasonManager.java`, `Spring.arpg`, `FBOs.arpg`, `Button.png`. Acronyms stay
   upper case (`UBOs.arpg`, `DebugUV.arpg`). A texture's variant suffix follows one underscore (`Skin_A.png`).
 - **A file's name is its resource name**, so a reference in data must match its case exactly: a calendar season
@@ -64,7 +64,9 @@ case-sensitive even where the filesystem is not:
 
 ## Getting started
 
-This project uses [Gradle](https://gradle.org/) with the included wrapper.
+This project uses [Gradle](https://gradle.org/) with the included wrapper. The native kernels under `core/src/c`
+also need clang and lld: on Windows install [llvm-mingw](https://github.com/mstorsjo/llvm-mingw/releases) and put its
+`bin` folder on the PATH (or set `adventurerpg.clang` in `gradle.properties`). Every run and build task compiles them.
 
 ```
 Windows:      gradlew.bat <task>
@@ -78,6 +80,8 @@ macOS/Linux:  ./gradlew <task>
 | `lwjgl3:run` | Run the desktop application |
 | `lwjgl3:jar` | Build a runnable JAR (`lwjgl3/build/libs`) |
 | `lwjgl3:arpg` | ARPG data tool: `encode`, `decode`, `convert`, `export`, `verify` |
+| `lwjgl3:benchmark` | Time world generation and meshing over a fixed corpus, for every kernel variant |
+| `core:natives` | Compile the C kernels into the native library for Windows, Linux and macOS (Intel and Apple Silicon) |
 | `build` | Compile and package all modules |
 | `clean` | Remove build output |
 

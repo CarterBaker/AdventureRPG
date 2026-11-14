@@ -30,7 +30,101 @@ dependencies {
 sourceSets {
   main {
     java {
-      srcDirs = ['src']
+      srcDirs = ['src/java']
     }
   }
 }
+
+// Native kernels. Every C source under src/c is compiled with clang for windows-x64,
+// linux-x64, macos-x64 and macos-arm64 and linked by lld, with no C runtime, into one
+// AdventureRPG library per target under build/natives/<os>/<arch>/adventurerpg: the
+// classpath layout LWJGL's Library.loadNative reads, so dev runs, the jars and the packaged
+// builds load it alike. Kernel sources compile once per CPU level the target lists (x86-64-v2
+// and v3 on x64, the ARMv8-A baseline on arm64); KernelUtility.c, the library's fixed
+// exports, compiles once at the target's baseline. clang comes from the Gradle property
+// adventurerpg.clang or the PATH; llvm-mingw provides clang and lld on any host.
+def nativesSourceRoot = file('src/c')
+def nativesOutputRoot = layout.buildDirectory.dir('natives')
+def nativesObjectRoot = layout.buildDirectory.dir('natives-objects')
+def nativesBaseSource = 'application/kernel/kernelpipeline/kernelmanager/KernelUtility.c'
+def nativesBaseLevel = 2
+def nativesX64Levels = [2: 'x86-64-v2', 3: 'x86-64-v3']
+def nativesArm64Levels = [2: 'armv8-a']
+def nativesTargets = [
+  [triple: 'x86_64-w64-windows-gnu', folder: 'windows/x64/adventurerpg', library: 'AdventureRPG.dll',
+   flags: [], levels: nativesX64Levels],
+  [triple: 'x86_64-linux-gnu', folder: 'linux/x64/adventurerpg', library: 'libAdventureRPG.so',
+   flags: ['-fPIC'], levels: nativesX64Levels],
+  [triple: 'x86_64-apple-macos11', folder: 'macos/x64/adventurerpg', library: 'libAdventureRPG.dylib',
+   flags: [], levels: nativesX64Levels],
+  [triple: 'arm64-apple-macos11', folder: 'macos/arm64/adventurerpg', library: 'libAdventureRPG.dylib',
+   flags: [], levels: nativesArm64Levels]
+]
+def nativesCompileFlags = [
+  '-std=c11', '-O2', '-mtune=generic', '-ffp-contract=off', '-fno-fast-math', '-fno-math-errno',
+  '-ffreestanding', '-fvisibility=hidden', '-g', '-Wall', '-Wextra'
+]
+def nativesLinkFlags = ['-shared', '-nostdlib', '-fuse-ld=lld']
+
+def resolveClang = {
+  String configured = project.findProperty('adventurerpg.clang')
+  if (configured != null)
+    return configured
+  String executable = System.getProperty('os.name').toLowerCase().contains('windows') ? 'clang.exe' : 'clang'
+  for (String directory : System.getenv('PATH').split(File.pathSeparator)) {
+    File candidate = new File(directory, executable)
+    if (candidate.canExecute())
+      return candidate.path
+  }
+  throw new GradleException('clang was not found, so the native kernels cannot be built. Install llvm-mingw '
+    + '(https://github.com/mstorsjo/llvm-mingw/releases, the ucrt-x86_64 zip on Windows) and put its bin folder '
+    + 'on the PATH, or set adventurerpg.clang=<path to clang> in gradle.properties.')
+}
+
+def runNativeTool = { List command ->
+  Process process = new ProcessBuilder(command*.toString()).redirectErrorStream(true).start()
+  String output = process.inputStream.text
+  if (process.waitFor() != 0)
+    throw new GradleException("Native build step failed:\n${command.join(' ')}\n${output}")
+  if (!output.isBlank())
+    logger.warn(output)
+}
+
+tasks.register('natives') {
+  group = 'build'
+  description = 'Compiles the C kernels into the AdventureRPG native library for every desktop target.'
+  inputs.dir(nativesSourceRoot)
+  outputs.dir(nativesOutputRoot)
+  doLast {
+    String clang = resolveClang()
+    File objectRoot = nativesObjectRoot.get().asFile
+    File outputRoot = nativesOutputRoot.get().asFile
+    project.delete(objectRoot, outputRoot)
+
+    nativesTargets.each { target ->
+      List<String> objects = []
+
+      fileTree(nativesSourceRoot) { include '**/*.c' }.files.sort().each { File source ->
+        String relative = nativesSourceRoot.toPath().relativize(source.toPath()).toString().replace('\\', '/')
+        List<Integer> levels = relative == nativesBaseSource ? [nativesBaseLevel] : target.levels.keySet() as List
+
+        levels.each { int level ->
+          File object = new File(objectRoot, "${target.triple}/${relative - '.c'}_v${level}.o")
+          object.parentFile.mkdirs()
+          runNativeTool([clang, "--target=${target.triple}", "-march=${target.levels[level]}",
+                         "-DKERNEL_CPU_LEVEL=${level}", "-I${nativesSourceRoot.path}"]
+                        + nativesCompileFlags + target.flags
+                        + ['-c', source.path, '-o', object.path])
+          objects << object.path
+        }
+      }
+
+      File library = new File(outputRoot, "${target.folder}/${target.library}")
+      library.parentFile.mkdirs()
+      runNativeTool([clang, "--target=${target.triple}"] + nativesLinkFlags + objects + ['-o', library.path])
+    }
+  }
+}
+
+sourceSets.main.resources.srcDir(nativesOutputRoot)
+processResources.dependsOn('natives')

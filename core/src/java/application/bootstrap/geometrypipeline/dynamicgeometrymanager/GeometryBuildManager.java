@@ -1,0 +1,420 @@
+package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
+
+import java.util.BitSet;
+
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.SubCellGridStruct;
+import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketInstance;
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
+import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.block.BlockHandle;
+import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
+import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
+import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import engine.graphics.color.Color;
+import engine.root.EngineSetting;
+import engine.root.ManagerPackage;
+import engine.util.mathematics.extras.Direction3Vector;
+import engine.util.registry.RegistryUtility;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+
+class GeometryBuildManager extends ManagerPackage {
+
+    /*
+     * Drives a chunk's geometry build subchunk by subchunk and routes each
+     * block to its geometry branch. Empty subchunks, and uniform or opaque ones
+     * enclosed by equally solid neighbors, skip the block walk entirely; any
+     * other subchunk is gathered with its one-cell shell into the build's
+     * sub-cell grid once, before the walk, and the solid branches sample it.
+     * Trees are never part of the terrain: buildTrees() draws the trees a
+     * chunk holds into the chunk's own tree packet, so a tree that changes
+     * never rebuilds the ground under it. Callers already hold the chunk's
+     * lock, so no gating happens here.
+     */
+
+    private static final Direction3Vector[] LATERAL_DIRECTIONS = {
+            Direction3Vector.NORTH, Direction3Vector.EAST, Direction3Vector.SOUTH, Direction3Vector.WEST
+    };
+
+    // Internal
+    private SubCellSampleBranch subCellSampleBranch;
+    private SurfaceEmissionBranch surfaceEmissionBranch;
+    private FullGeometryBranch fullGeometryBranch;
+    private PartialGeometryBranch partialGeometryBranch;
+    private ComplexGeometryBranch complexGeometryBranch;
+    private LiquidGeometryBranch liquidGeometryBranch;
+    private TreeGeometryBranch treeGeometryBranch;
+    private DynamicGeometryManager dynamicGeometryManager;
+    private BiomeManager biomeManager;
+    private BlockManager blockManager;
+
+    // Settings
+    private int BLOCK_COORDINATE_COUNT;
+    private int worldHeight;
+
+    // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Internal
+        this.subCellSampleBranch = create(SubCellSampleBranch.class);
+        this.surfaceEmissionBranch = create(SurfaceEmissionBranch.class);
+        this.fullGeometryBranch = create(FullGeometryBranch.class);
+        this.partialGeometryBranch = create(PartialGeometryBranch.class);
+        this.complexGeometryBranch = create(ComplexGeometryBranch.class);
+        this.liquidGeometryBranch = create(LiquidGeometryBranch.class);
+        this.treeGeometryBranch = create(TreeGeometryBranch.class);
+
+        // Settings
+        this.BLOCK_COORDINATE_COUNT = ChunkCoordinateUtility.BLOCK_COORDINATE_COUNT;
+        this.worldHeight = EngineSetting.WORLD_HEIGHT;
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+    }
+
+    @Override
+    protected void start() {
+
+        this.biomeManager = dynamicGeometryManager.getBiomeManager();
+        this.blockManager = dynamicGeometryManager.getBlockManager();
+    }
+
+    // Chunk Geometry \\
+
+    boolean build(
+            DynamicGeometryAsyncContainer dynamicGeometryAsyncContainer,
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance) {
+
+        QuadPacketInstance quadPacket = subChunkInstance.getQuadPacketInstance();
+
+        quadPacket.clear();
+        quadPacket.beginGenerating();
+        subChunkInstance.beginBlockTypeTally();
+
+        if (subChunkInstance.isKnownEmpty()) {
+            subChunkInstance.finalizeBlockTypeTally();
+            quadPacket.unlock();
+            return true;
+        }
+
+        if (subChunkInstance.isUniformFill() && isFullyEnclosed(chunkInstance, subChunkInstance)) {
+            tallyUniformFill(subChunkInstance);
+            subChunkInstance.finalizeBlockTypeTally();
+            quadPacket.unlock();
+            return true;
+        }
+
+        if (subChunkInstance.isOpaqueInterior() && isFullyEnclosedOpaque(chunkInstance, subChunkInstance)) {
+            tallyOpaqueInterior(subChunkInstance);
+            subChunkInstance.finalizeBlockTypeTally();
+            quadPacket.unlock();
+            return true;
+        }
+
+        dynamicGeometryAsyncContainer.reset();
+
+        SubCellGridStruct subCellGrid = dynamicGeometryAsyncContainer.getSubCellGrid();
+        subCellSampleBranch.gather(subCellGrid, chunkInstance, subChunkInstance);
+
+        BlockPaletteHandle biomePaletteHandle = subChunkInstance.getBiomePaletteHandle();
+        BlockPaletteHandle blockPaletteHandle = subChunkInstance.getBlockPaletteHandle();
+        BlockPaletteHandle rotationPaletteHandle = subChunkInstance.getBlockRotationPaletteHandle();
+        BitSet[] directionalBatches = dynamicGeometryAsyncContainer.getDirectionalBatches();
+        BitSet batchReturn = dynamicGeometryAsyncContainer.getBatchReturn();
+        BitSet[] subDirectionalBatches = dynamicGeometryAsyncContainer.getSubDirectionalBatches();
+        Color vertColorAccumulator = dynamicGeometryAsyncContainer.getVertColorAccumulator();
+        short tallyLiquidBlockID = RegistryUtility.RESERVED_ID;
+
+        for (int i = 0; i < BLOCK_COORDINATE_COUNT; i++) {
+
+            int xyz = ChunkCoordinateUtility.getBlockCoordinate(i);
+            short biomeID = biomePaletteHandle.getBlock(xyz);
+            BiomeHandle biomeHandle = biomeManager.getBiomeHandleFromBiomeID(biomeID);
+            short blockID = blockPaletteHandle.getBlock(xyz);
+            BlockHandle blockHandle = blockManager.getBlockHandleFromBlockID(blockID);
+            DynamicGeometryType blockGeometry = SubBlockUtility.isSubdivided(blockPaletteHandle.getSubBlockMask(xyz))
+                    ? DynamicGeometryType.PARTIAL
+                    : blockHandle.getGeometry();
+
+            if (blockGeometry == DynamicGeometryType.NONE)
+                continue;
+
+            subChunkInstance.tallyBlockType(blockGeometry);
+
+            // A run of the same liquid is tallied once; the tally is a set, so the repeats added nothing
+            if (blockGeometry == DynamicGeometryType.LIQUID && blockID != tallyLiquidBlockID) {
+                subChunkInstance.tallyLiquidBlock(blockID);
+                tallyLiquidBlockID = blockID;
+            }
+
+            for (int direction = 0; direction < Direction3Vector.LENGTH; direction++) {
+
+                batchReturn.clear();
+                BitSet accumulatedBatch = directionalBatches[direction];
+
+                if (accumulatedBatch.get(i))
+                    continue;
+
+                assembleQuads(
+                        blockGeometry,
+                        chunkInstance,
+                        subCellGrid,
+                        subChunkInstance,
+                        biomePaletteHandle,
+                        blockPaletteHandle,
+                        rotationPaletteHandle,
+                        quadPacket,
+                        xyz,
+                        Direction3Vector.VALUES[direction],
+                        biomeHandle,
+                        blockHandle,
+                        accumulatedBatch,
+                        batchReturn,
+                        subDirectionalBatches[direction],
+                        vertColorAccumulator);
+            }
+        }
+
+        subChunkInstance.finalizeBlockTypeTally();
+        quadPacket.finish();
+
+        return true;
+    }
+
+    // Tree Geometry \\
+
+    // The trees a chunk holds drawn into its own tree packet, apart from its terrain
+    boolean buildTrees(ChunkInstance chunkInstance) {
+
+        DynamicPacketInstance treePacketInstance = chunkInstance.getTreePacketInstance();
+
+        treePacketInstance.beginGenerating();
+        treePacketInstance.clearModels();
+
+        return pushVerts(treeGeometryBranch.assembleTrees(chunkInstance), treePacketInstance);
+    }
+
+    // Every material's vertices handed to the packet, which is ready when anything was drawn
+    private boolean pushVerts(
+            Int2ObjectOpenHashMap<FloatArrayList> verts,
+            DynamicPacketInstance dynamicPacketInstance) {
+
+        boolean success = true;
+
+        ObjectIterator<Int2ObjectMap.Entry<FloatArrayList>> iterator = verts.int2ObjectEntrySet().fastIterator();
+
+        while (iterator.hasNext()) {
+            Int2ObjectMap.Entry<FloatArrayList> entry = iterator.next();
+            if (!dynamicPacketInstance.addVertices(entry.getIntKey(), entry.getValue()))
+                success = false;
+        }
+
+        if (dynamicPacketInstance.hasModels())
+            dynamicPacketInstance.setReady();
+        else
+            dynamicPacketInstance.unlock();
+
+        return success;
+    }
+
+    private boolean assembleQuads(
+            DynamicGeometryType geometry,
+            ChunkInstance chunkInstance,
+            SubCellGridStruct subCellGrid,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
+            BlockPaletteHandle rotationPaletteHandle,
+            QuadPacketInstance quadPacket,
+            int xyz,
+            Direction3Vector direction3Vector,
+            BiomeHandle biomeHandle,
+            BlockHandle blockHandle,
+            BitSet accumulatedBatch,
+            BitSet batchReturn,
+            BitSet subAccumulatedBatch,
+            Color vertColorAccumulator) {
+
+        return switch (geometry) {
+            case FULL -> subCellSampleBranch.isBlockSimple(subCellGrid, xyz, direction3Vector, blockHandle)
+                            ? fullGeometryBranch.assembleQuads(
+                                    subCellGrid,
+                                    subChunkInstance,
+                                    biomePaletteHandle,
+                                    blockPaletteHandle,
+                                    rotationPaletteHandle,
+                                    xyz,
+                                    direction3Vector,
+                                    biomeHandle,
+                                    blockHandle,
+                                    quadPacket,
+                                    accumulatedBatch,
+                                    vertColorAccumulator)
+                            : partialGeometryBranch.assembleQuads(
+                                    subCellGrid,
+                                    subChunkInstance,
+                                    biomePaletteHandle,
+                                    blockPaletteHandle,
+                                    rotationPaletteHandle,
+                                    xyz,
+                                    direction3Vector,
+                                    biomeHandle,
+                                    blockHandle,
+                                    quadPacket,
+                                    subAccumulatedBatch,
+                                    vertColorAccumulator);
+            case PARTIAL -> partialGeometryBranch.assembleQuads(
+                    subCellGrid,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    rotationPaletteHandle,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    quadPacket,
+                    subAccumulatedBatch,
+                    vertColorAccumulator);
+            case COMPLEX -> complexGeometryBranch.assembleQuads(
+                    chunkInstance,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    rotationPaletteHandle,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    quadPacket,
+                    accumulatedBatch,
+                    batchReturn,
+                    vertColorAccumulator);
+            case LIQUID -> liquidGeometryBranch.assembleQuads(
+                    chunkInstance,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    rotationPaletteHandle,
+                    xyz,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    quadPacket,
+                    accumulatedBatch,
+                    batchReturn,
+                    vertColorAccumulator);
+            case NONE -> true;
+        };
+    }
+
+    // Uniform Enclosure Fast Path \\
+
+    private boolean isFullyEnclosed(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
+
+        int subY = (int) subChunkInstance.getCoordinate();
+
+        if (subY == 0 || subY == worldHeight - 1)
+            return false;
+
+        DynamicGeometryType type = subChunkInstance.getUniformGeometryType();
+        short blockID = subChunkInstance.getUniformBlockID();
+
+        if (!matchesUniform(chunkInstance.getSubChunk(subY - 1), type, blockID))
+            return false;
+
+        if (!matchesUniform(chunkInstance.getSubChunk(subY + 1), type, blockID))
+            return false;
+
+        ChunkNeighborHandle neighbors = chunkInstance.getChunkNeighbors();
+
+        for (Direction3Vector direction : LATERAL_DIRECTIONS) {
+
+            ChunkInstance neighborChunk = neighbors.getBuildNeighborChunk(direction.to2D().index);
+
+            if (neighborChunk == null)
+                return false;
+
+            if (!matchesUniform(neighborChunk.getSubChunk(subY), type, blockID))
+                return false;
+        }
+
+        return true;
+    }
+
+    private boolean matchesUniform(SubChunkInstance other, DynamicGeometryType type, short blockID) {
+
+        if (!other.isUniformFill() || other.getUniformGeometryType() != type)
+            return false;
+
+        return type != DynamicGeometryType.LIQUID || other.getUniformBlockID() == blockID;
+    }
+
+    private void tallyUniformFill(SubChunkInstance subChunkInstance) {
+
+        DynamicGeometryType type = subChunkInstance.getUniformGeometryType();
+
+        subChunkInstance.tallyBlockType(type, BLOCK_COORDINATE_COUNT);
+
+        if (type == DynamicGeometryType.LIQUID)
+            subChunkInstance.tallyLiquidBlock(subChunkInstance.getUniformBlockID());
+    }
+
+    // Opaque Interior Fast Path \\
+
+    private boolean isFullyEnclosedOpaque(ChunkInstance chunkInstance, SubChunkInstance subChunkInstance) {
+
+        int subY = (int) subChunkInstance.getCoordinate();
+
+        if (subY == 0 || subY == worldHeight - 1)
+            return false;
+
+        if (!isNeighborFullySolid(chunkInstance.getSubChunk(subY - 1)))
+            return false;
+
+        if (!isNeighborFullySolid(chunkInstance.getSubChunk(subY + 1)))
+            return false;
+
+        ChunkNeighborHandle neighbors = chunkInstance.getChunkNeighbors();
+
+        for (Direction3Vector direction : LATERAL_DIRECTIONS) {
+
+            ChunkInstance neighborChunk = neighbors.getBuildNeighborChunk(direction.to2D().index);
+
+            if (neighborChunk == null)
+                return false;
+
+            if (!isNeighborFullySolid(neighborChunk.getSubChunk(subY)))
+                return false;
+        }
+
+        return true;
+    }
+
+    private boolean isNeighborFullySolid(SubChunkInstance other) {
+
+        if (other.isOpaqueInterior())
+            return true;
+
+        return other.isUniformFill() && other.getUniformGeometryType() == DynamicGeometryType.FULL;
+    }
+
+    private void tallyOpaqueInterior(SubChunkInstance subChunkInstance) {
+        subChunkInstance.tallyBlockType(DynamicGeometryType.FULL, BLOCK_COORDINATE_COUNT);
+    }
+}

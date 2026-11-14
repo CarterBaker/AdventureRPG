@@ -13,6 +13,9 @@ Performance is the top priority. Lag spikes, GC pauses and memory growth are bug
   paths, no `ensureCapacity(size + n)` growth loops (reserve the exact total once, then append).
 - **Release what nothing will read again.** `clear()` keeps storage for an imminent rebuild; once data is on the GPU
   or dumped, release its storage (`QuadPacketInstance.release()`, trimmed lists).
+- **Released storage that comes back goes through a pool.** Block palettes give their arrays to
+  `BlockStoragePoolStruct` (owned by `BlockManager`) when a subchunk collapses, unloads or regenerates, and take them
+  back when it populates, so streaming frees nothing to the collector; storage of the same kind does the same.
 - **Smallest footprint.** Pack data into the fewest bits that hold its range (see the Quad Records group in
   `EngineSetting`); never duplicate per-quad data per vertex; never keep a CPU copy the GPU already holds.
 - **All generated mesh is greedily merged.** Terrain, partial blocks, water, items, trees and structures go through

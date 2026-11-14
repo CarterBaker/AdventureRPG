@@ -1,0 +1,336 @@
+package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
+
+import java.util.BitSet;
+
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.SubCellGridStruct;
+import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
+import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.block.BlockHandle;
+import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
+import application.bootstrap.worldpipeline.blockmanager.BlockManager;
+import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
+import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import engine.graphics.color.Color;
+import engine.root.BranchPackage;
+import engine.root.EngineSetting;
+import engine.util.mathematics.extras.Coordinate3Int;
+import engine.util.mathematics.extras.Direction3Vector;
+
+class FullGeometryBranch extends BranchPackage {
+
+    /*
+     * Block-resolution pass for whole full-cube blocks. Greedily merges the
+     * faces GeometryBuildManager routes here — only faces SubCellSampleBranch
+     * proves block-simple, so no block this face or its edges consult is
+     * subdivided — into quads of up to GEOMETRY_MAX_MERGE_EXTENT blocks, and
+     * hands each to SurfaceEmissionBranch with one edge word entry per block.
+     * A face that is not block-simple, and every face of a subdivided block,
+     * belongs to PartialGeometryBranch instead, and expansion here never
+     * crosses into one, so the two passes never emit the same surface. A
+     * quad only grows over blocks whose face carries the same coverage word
+     * and that hold the same content.
+     */
+
+    // Internal
+    private DynamicGeometryManager dynamicGeometryManager;
+    private BiomeManager biomeManager;
+    private BlockManager blockManager;
+    private SubCellSampleBranch subCellSampleBranch;
+    private SurfaceEmissionBranch surfaceEmissionBranch;
+
+    // Settings
+    private int divisions;
+    private int maxMergeExtent;
+
+    // Internal \\
+
+    @Override
+    protected void create() {
+
+        // Settings
+        this.divisions = SubBlockUtility.DIVISIONS;
+        this.maxMergeExtent = EngineSetting.GEOMETRY_MAX_MERGE_EXTENT;
+    }
+
+    @Override
+    protected void get() {
+
+        // Internal
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+        this.subCellSampleBranch = get(SubCellSampleBranch.class);
+        this.surfaceEmissionBranch = get(SurfaceEmissionBranch.class);
+    }
+
+    @Override
+    protected void start() {
+
+        this.biomeManager = dynamicGeometryManager.getBiomeManager();
+        this.blockManager = dynamicGeometryManager.getBlockManager();
+    }
+
+    // Build \\
+
+    boolean assembleQuads(
+            SubCellGridStruct subCellGrid,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
+            BlockPaletteHandle rotationPaletteHandle,
+            int xyz,
+            Direction3Vector direction3Vector,
+            BiomeHandle biomeHandle,
+            BlockHandle blockHandle,
+            QuadPacketInstance quadPacket,
+            BitSet accumulatedBatch,
+            Color vertColorAccumulator) {
+
+        if (!blockHasFace(subCellGrid, subChunkInstance, xyz, direction3Vector, blockHandle))
+            return false;
+
+        assembleQuad(
+                subCellGrid,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                rotationPaletteHandle,
+                xyz,
+                direction3Vector,
+                biomeHandle,
+                blockHandle,
+                quadPacket,
+                accumulatedBatch,
+                vertColorAccumulator);
+
+        return true;
+    }
+
+    // Face Presence \\
+
+    private boolean blockHasFace(
+            SubCellGridStruct subCellGrid,
+            SubChunkInstance subChunkInstance,
+            int xyz,
+            Direction3Vector direction3Vector,
+            BlockHandle blockHandle) {
+
+        return subCellSampleBranch.hasSubFace(
+                subCellGrid,
+                toFrontSub(Coordinate3Int.unpackX(xyz), direction3Vector.x),
+                toFrontSub(Coordinate3Int.unpackY(xyz), direction3Vector.y),
+                toFrontSub(Coordinate3Int.unpackZ(xyz), direction3Vector.z),
+                blockHandle,
+                direction3Vector);
+    }
+
+    // The sub-cell of a block on the low side of each tangent and touching the face along its normal
+    private int toFrontSub(int cell, int directionComponent) {
+        return cell * divisions + (directionComponent > 0 ? divisions - 1 : 0);
+    }
+
+    // Merging \\
+
+    private void assembleQuad(
+            SubCellGridStruct subCellGrid,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
+            BlockPaletteHandle rotationPaletteHandle,
+            int xyz,
+            Direction3Vector direction3Vector,
+            BiomeHandle biomeHandle,
+            BlockHandle blockHandle,
+            QuadPacketInstance quadPacket,
+            BitSet accumulatedBatch,
+            Color vertColorAccumulator) {
+
+        int sizeA = 1;
+        int sizeB = 1;
+
+        Direction3Vector tangentA = Direction3Vector.getTangentA(direction3Vector);
+        Direction3Vector tangentB = Direction3Vector.getTangentB(direction3Vector);
+
+        short baseOrientation = rotationPaletteHandle.getBlock(xyz);
+        int baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, xyz, direction3Vector);
+        short baseContentID = surfaceEmissionBranch.resolveContentID(subChunkInstance, xyz);
+
+        accumulatedBatch.set(ChunkCoordinateUtility.getIndex(xyz));
+
+        // Each run grows as far as it can along A, then the rows it spans grow along B
+        while (tryExpand(
+                subCellGrid,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                rotationPaletteHandle,
+                xyz,
+                direction3Vector,
+                tangentA,
+                tangentB,
+                sizeA,
+                sizeB,
+                biomeHandle,
+                blockHandle,
+                baseOrientation,
+                baseCoverageWord,
+                baseContentID,
+                accumulatedBatch)) {
+            markRow(xyz, tangentA, tangentB, sizeA, sizeB, accumulatedBatch);
+            sizeA++;
+        }
+
+        while (tryExpand(
+                subCellGrid,
+                subChunkInstance,
+                biomePaletteHandle,
+                blockPaletteHandle,
+                rotationPaletteHandle,
+                xyz,
+                direction3Vector,
+                tangentB,
+                tangentA,
+                sizeB,
+                sizeA,
+                biomeHandle,
+                blockHandle,
+                baseOrientation,
+                baseCoverageWord,
+                baseContentID,
+                accumulatedBatch)) {
+            markRow(xyz, tangentB, tangentA, sizeB, sizeA, accumulatedBatch);
+            sizeB++;
+        }
+
+        surfaceEmissionBranch.emitQuad(
+                subCellGrid,
+                subChunkInstance,
+                rotationPaletteHandle,
+                quadPacket,
+                vertColorAccumulator,
+                toFrontSub(Coordinate3Int.unpackX(xyz), direction3Vector.x),
+                toFrontSub(Coordinate3Int.unpackY(xyz), direction3Vector.y),
+                toFrontSub(Coordinate3Int.unpackZ(xyz), direction3Vector.z),
+                sizeA * divisions,
+                sizeB * divisions,
+                divisions,
+                direction3Vector,
+                biomeHandle,
+                blockHandle);
+    }
+
+    private boolean tryExpand(
+            SubCellGridStruct subCellGrid,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
+            BlockPaletteHandle rotationPaletteHandle,
+            int xyz,
+            Direction3Vector direction3Vector,
+            Direction3Vector expandDirection,
+            Direction3Vector tangentDirection,
+            int currentSize,
+            int tangentSize,
+            BiomeHandle biomeHandle,
+            BlockHandle blockHandle,
+            short baseOrientation,
+            int baseCoverageWord,
+            short baseContentID,
+            BitSet accumulatedBatch) {
+
+        if (currentSize >= maxMergeExtent)
+            return false;
+
+        int nextXYZ = ChunkCoordinateUtility.getNeighborWithOffset(xyz, expandDirection, currentSize);
+
+        if (nextXYZ == -1)
+            return false;
+
+        boolean orientationSensitive = subCellSampleBranch.requiresOrientationMatch(blockHandle);
+
+        for (int i = 0; i < tangentSize; i++) {
+
+            int checkXYZ = ChunkCoordinateUtility.getNeighborWithOffset(nextXYZ, tangentDirection, i);
+
+            if (checkXYZ == -1 || !canMerge(
+                    subCellGrid,
+                    subChunkInstance,
+                    biomePaletteHandle,
+                    blockPaletteHandle,
+                    rotationPaletteHandle,
+                    checkXYZ,
+                    direction3Vector,
+                    biomeHandle,
+                    blockHandle,
+                    orientationSensitive,
+                    baseOrientation,
+                    baseCoverageWord,
+                    baseContentID,
+                    accumulatedBatch))
+                return false;
+        }
+
+        return true;
+    }
+
+    // The row tryExpand() just proved, taken into the quad once the whole row merges
+    private void markRow(
+            int xyz,
+            Direction3Vector expandDirection,
+            Direction3Vector tangentDirection,
+            int currentSize,
+            int tangentSize,
+            BitSet accumulatedBatch) {
+
+        int nextXYZ = ChunkCoordinateUtility.getNeighborWithOffset(xyz, expandDirection, currentSize);
+
+        for (int i = 0; i < tangentSize; i++)
+            accumulatedBatch.set(ChunkCoordinateUtility.getIndex(
+                    ChunkCoordinateUtility.getNeighborWithOffset(nextXYZ, tangentDirection, i)));
+    }
+
+    private boolean canMerge(
+            SubCellGridStruct subCellGrid,
+            SubChunkInstance subChunkInstance,
+            BlockPaletteHandle biomePaletteHandle,
+            BlockPaletteHandle blockPaletteHandle,
+            BlockPaletteHandle rotationPaletteHandle,
+            int checkXYZ,
+            Direction3Vector direction3Vector,
+            BiomeHandle biomeHandle,
+            BlockHandle blockHandle,
+            boolean orientationSensitive,
+            short baseOrientation,
+            int baseCoverageWord,
+            short baseContentID,
+            BitSet accumulatedBatch) {
+
+        if (accumulatedBatch.get(ChunkCoordinateUtility.getIndex(checkXYZ)))
+            return false;
+
+        if (biomeManager.getBiomeHandleFromBiomeID(biomePaletteHandle.getBlock(checkXYZ)) != biomeHandle)
+            return false;
+
+        if (blockManager.getBlockHandleFromBlockID(blockPaletteHandle.getBlock(checkXYZ)) != blockHandle)
+            return false;
+
+        if (blockPaletteHandle.getSubBlockMask(checkXYZ) != SubBlockUtility.MASK_FULL)
+            return false;
+
+        if (orientationSensitive && rotationPaletteHandle.getBlock(checkXYZ) != baseOrientation)
+            return false;
+
+        if (surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, checkXYZ, direction3Vector)
+                != baseCoverageWord)
+            return false;
+
+        if (surfaceEmissionBranch.resolveContentID(subChunkInstance, checkXYZ) != baseContentID)
+            return false;
+
+        if (!blockHasFace(subCellGrid, subChunkInstance, checkXYZ, direction3Vector, blockHandle))
+            return false;
+
+        return subCellSampleBranch.isBlockSimple(
+                subCellGrid, checkXYZ, direction3Vector, blockHandle);
+    }
+}

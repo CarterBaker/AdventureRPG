@@ -66,6 +66,8 @@ root.
   Before touching instruments, note sets, the sampler, songs, MIDI or the recorder's music side, read
   `.claude/docs/MusicPipeline.md` (design: `.claude/docs/Music.md`; the stage prompts are
   `.claude/prompts/Music1InstrumentsPrompt.md` to `Music5InGameMusicPrompt.md`).
+  Before touching kernels or any C code under `core/src/c/`, read `.claude/docs/KernelPipeline.md` (design:
+  `.claude/docs/Kernel.md`).
   Before touching the Character Editor, Animation Editor, their docker windows, sculpting, rigging,
   posing, races and their genders' models, or a character's appearance (morphs, shape sliders, zones, masks, the
   character shaders), read `.claude/docs/CharacterEditorPipeline.md`.
@@ -140,7 +142,7 @@ pushes the delivery status (see Version). The zip is gitignored, and the bat nev
    DELIVERY 4
    BASE 3
    TASK SoundBank
-   DELETE core/src/main/java/engine/old/OldThing.java
+   DELETE core/src/java/engine/old/OldThing.java
    COPY catalogue/<path exactly as in Catalogue.txt> > assets/sounds/ambient/Wind.wav
    COPY assets/<path inside .claude/assets> > assets/textures/blocks/Stone.png
    ```

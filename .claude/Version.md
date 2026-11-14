@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 71
-Task: MusicInGame
+Delivery: 73
+Task: StoragePoolMacKernels
 Applied: 2026-11-13
 
 ## Log
@@ -81,3 +81,5 @@ Applied: 2026-11-13
 - 69, 2026-11-13, MusicNestedRecordings
 - 70, 2026-11-13, MusicEditor
 - 71, 2026-11-13, MusicInGame
+- 72, 2026-11-13, KernelPipeline
+- 73, 2026-11-13, StoragePoolMacKernels

@@ -13,7 +13,7 @@ apply plugin: 'io.github.fourlastor.construo'
 
 import io.github.fourlastor.construo.Target
 
-sourceSets.main.java.srcDirs = ['src']
+sourceSets.main.java.srcDirs = ['src/java']
 sourceSets.main.resources.srcDirs += [ rootProject.file('assets').path ]
 mainClassName = 'lwjgl3.Lwjgl3Launcher'
 application.setMainClass(mainClassName)
@@ -94,6 +94,21 @@ tasks.register('arpg', JavaExec) {
   workingDir = rootProject.projectDir
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'lwjgl3.Lwjgl3LauncherArpg'
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
+// Runs the benchmark tool behind a hidden window with the game's JVM arguments:
+// times world generation and meshing over a fixed corpus of chunks, prints the
+// report, and exits non-zero when a version of a routine differs from Java's.
+tasks.register('benchmark', JavaExec) {
+  group = 'application'
+  description = 'Times world generation and meshing over a fixed corpus of chunks.'
+  workingDir = rootProject.file('assets').path
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'lwjgl3.Lwjgl3LauncherBenchmark'
+  jvmArgs += gameJvmArgs
   javaLauncher = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(21)
   }
