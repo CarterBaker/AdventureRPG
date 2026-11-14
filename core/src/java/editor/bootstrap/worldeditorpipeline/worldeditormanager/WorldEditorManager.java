@@ -39,9 +39,9 @@ public class WorldEditorManager extends ManagerPackage {
      * its biome image and its height layer, each opened through ImageManager
      * on the world's own pixels so generation reads every stroke at once, the
      * palette of biomes the image can paint, the selected biome, the World
-     * Editor's mode, Paint, Settlements or Cameras, and the status line. Each
-     * layer is worked in its own tab, the biomes in the World Editor and the
-     * heights in the Height Editor, and every call that paints names the
+     * Editor's mode, Paint, Settlements or Cameras, and the status line. The
+     * World Editor works on the layer picked in the Layers tab, and every
+     * call that paints names the
      * layer it paints. The mode follows what is being worked on: selecting a
      * biome paints, selecting a settlement or structure in the Hierarchy or
      * the Settlement Planner places those, and working in the Camera Planner

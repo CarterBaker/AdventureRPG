@@ -3,29 +3,27 @@ package editor.runtime.charactereditor;
 public class CharacterEditorSetting {
 
     /*
-     * Constants used only by CharacterLookContext, CharacterModelingContext
-     * and the viewport systems they own — the toolbar menu the Character
-     * Appearance, Build and Equipment tabs share, the one every modelling
-     * tab shares and the status entry both share, the size of the box shown
-     * for a held anchor, and the mesh modes' box selection, held shortcuts
-     * and the overlay their vertices and edges are drawn with. Its panels'
-     * rows are the docker windows'.
+     * Constants used only by CharacterEditorContext and the viewport systems
+     * it owns — its status bar menu and the entry the status is written in,
+     * the size of the box shown for a held anchor, the held shortcuts the
+     * mesh, rig and face layers read, the mesh layers' box selection and the
+     * overlay their vertices and edges are drawn with. Its panels' rows are
+     * the docker windows'.
      */
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/CharacterEditor/Toolbar";
-    public static final String MENU_MODELING_TOOLBAR = "editor/CharacterMeshEditor/Toolbar";
     public static final int ENTRY_STATUS = 0;
 
     // Markers — the box shown for a held anchor, in blocks
     public static final float HELD_ANCHOR_MARKER_SIZE = 0.06f;
 
-    // Mesh Input — the held shortcuts a selection, a transform and a stroke read, named in
-    // shortcuts/CharacterMeshEditor
-    public static final String SHORTCUT_ADD_SELECTION = "CharacterMeshEditor/AddSelection";
-    public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterMeshEditor/SubtractSelection";
-    public static final String SHORTCUT_SNAP = "CharacterMeshEditor/Snap";
-    public static final String SHORTCUT_INVERT_STROKE = "CharacterMeshEditor/InvertStroke";
+    // Input — the held shortcuts a selection, a transform, a face drag and a stroke read, named in
+    // shortcuts/CharacterEditor
+    public static final String SHORTCUT_ADD_SELECTION = "CharacterEditor/AddSelection";
+    public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterEditor/SubtractSelection";
+    public static final String SHORTCUT_SNAP = "CharacterEditor/Snap";
+    public static final String SHORTCUT_INVERT_STROKE = "CharacterEditor/InvertStroke";
 
     // Mesh Input — the pointer distance in pixels a press travels before it draws a box
     public static final float DRAG_PIXELS = 4f;

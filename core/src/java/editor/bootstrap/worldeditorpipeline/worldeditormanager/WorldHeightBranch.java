@@ -10,8 +10,8 @@ class WorldHeightBranch extends BranchPackage {
      * Names the height layer's levels for the status line: each by how far it
      * raises or lowers the ground as a share of the most it can, the level
      * that leaves the ground as generated named neutral. The layer itself is
-     * raised and lowered with the Height Editor's tools, never painted from a
-     * palette of levels.
+     * raised and lowered with the World Editor's height tools, never painted
+     * from a palette of levels.
      */
 
     // Description \\

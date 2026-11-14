@@ -14,12 +14,12 @@ class CharacterLookBranch extends BranchPackage {
      * it is made as, with the body and features that gender wears, the tone
      * worn of every color, every slider, the blink, the build and the head
      * shape. Every viewport that shows the active character — the Character
-     * Editor's and the Face Editor's — takes its look from here, so both show
-     * one face. A neutral look holds every slider at nothing and the eyes
-     * open, as the mesh is authored; a still face never blinks on its own.
-     * The sliders are staged and taken up in the one proportions pass the
-     * build sets off, and the spring chains run as the meshes worn now weigh
-     * onto them.
+     * Editor's on every layer, its Face layer's too — takes its look from
+     * here, so all show one face. A neutral look holds every slider at
+     * nothing and the eyes open, as the mesh is authored; a still face never
+     * blinks on its own. The sliders are staged and taken up in the one
+     * proportions pass the build sets off, and the spring chains run as the
+     * meshes worn now weigh onto them.
      */
 
     // Internal

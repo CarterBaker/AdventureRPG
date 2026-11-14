@@ -64,7 +64,7 @@ public class CharacterEditorManager extends ManagerPackage {
      * neighbours, and on the rig the tools pick, drag, size, add and remove
      * bones. Save and Revert carry every open mesh's changes and the rig's
      * with the race's. The rig's spring chains — the hair's laid on the locks
-     * its cards are found in — are previewed live in the modelling tabs while
+     * its cards are found in — are previewed live on the modelling layers while
      * Preview Springs is on, the preview then playing the pose chosen and
      * travelling at its pace. Edits, previews, mesh files, selection,
      * geometry, sculpting, weights, the rig, hair locks, history, panel
@@ -498,7 +498,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Regions \\
 
-    // The region of the modelling tab worked in last, its part picked whenever the character wears it
+    // The region of the layer worked in last, its part picked whenever the character wears it
     public void setRegion(CharacterEditorRegion region) {
 
         if (region != this.region) {
@@ -1094,7 +1094,7 @@ public class CharacterEditorManager extends ManagerPackage {
             setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_UNRIGGED);
     }
 
-    // The modelling tabs' preview leaves the bind pose to play the pose chosen with its springs simulated, or holds it
+    // Modelling layers' preview leaves the bind pose to play the pose chosen with its springs simulated, or holds it
     void toggleSpringPreview() {
 
         this.springPreview = !springPreview;

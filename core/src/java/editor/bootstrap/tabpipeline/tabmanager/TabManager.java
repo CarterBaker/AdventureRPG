@@ -22,24 +22,15 @@ import editor.bootstrap.tabpipeline.tab.TabContext;
 import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
-import editor.runtime.characterappearance.CharacterAppearanceContext;
-import editor.runtime.characterbuild.CharacterBuildContext;
-import editor.runtime.characterequipment.CharacterEquipmentContext;
-import editor.runtime.charactermesheditor.CharacterMeshEditorContext;
+import editor.runtime.charactereditor.CharacterEditorContext;
 import editor.runtime.characteroutliner.CharacterOutlinerContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
-import editor.runtime.eyeeditor.EyeEditorContext;
-import editor.runtime.faceeditor.FaceEditorContext;
-import editor.runtime.footeditor.FootEditorContext;
-import editor.runtime.haireditor.HairEditorContext;
-import editor.runtime.handeditor.HandEditorContext;
-import editor.runtime.moutheditor.MouthEditorContext;
 import editor.runtime.faceoutliner.FaceOutlinerContext;
-import editor.runtime.heighteditor.HeightEditorContext;
 import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.itemeditor.ItemEditorContext;
+import editor.runtime.layers.LayersContext;
 import editor.runtime.pianoroll.PianoRollContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
@@ -165,52 +156,20 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_PROPERTIES, PropertiesContext.class, osWindow);
     }
 
+    public TabHandle openLayers(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_LAYERS, LayersContext.class, osWindow);
+    }
+
     public TabHandle openItemEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ITEM_EDITOR, ItemEditorContext.class, osWindow);
     }
 
-    public TabHandle openCharacterAppearance(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_APPEARANCE, CharacterAppearanceContext.class, osWindow);
-    }
-
-    public TabHandle openCharacterBuild(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_BUILD, CharacterBuildContext.class, osWindow);
-    }
-
-    public TabHandle openCharacterEquipment(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_EQUIPMENT, CharacterEquipmentContext.class, osWindow);
-    }
-
-    public TabHandle openCharacterMeshEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_MESH_EDITOR, CharacterMeshEditorContext.class, osWindow);
+    public TabHandle openCharacterEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_EDITOR, CharacterEditorContext.class, osWindow);
     }
 
     public TabHandle openCharacterOutliner(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_OUTLINER, CharacterOutlinerContext.class, osWindow);
-    }
-
-    public TabHandle openHairEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_HAIR_EDITOR, HairEditorContext.class, osWindow);
-    }
-
-    public TabHandle openHandEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_HAND_EDITOR, HandEditorContext.class, osWindow);
-    }
-
-    public TabHandle openFootEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_FOOT_EDITOR, FootEditorContext.class, osWindow);
-    }
-
-    public TabHandle openEyeEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_EYE_EDITOR, EyeEditorContext.class, osWindow);
-    }
-
-    public TabHandle openMouthEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_MOUTH_EDITOR, MouthEditorContext.class, osWindow);
-    }
-
-    public TabHandle openFaceEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_FACE_EDITOR, FaceEditorContext.class, osWindow);
     }
 
     public TabHandle openFaceOutliner(WindowInstance osWindow) {
@@ -257,10 +216,6 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openWorldEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_WORLD_EDITOR, WorldEditorContext.class, osWindow);
-    }
-
-    public TabHandle openHeightEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_HEIGHT_EDITOR, HeightEditorContext.class, osWindow);
     }
 
     public TabHandle openSettlementPlanner(WindowInstance osWindow) {

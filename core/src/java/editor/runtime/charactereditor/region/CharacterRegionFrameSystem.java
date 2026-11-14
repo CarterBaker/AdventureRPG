@@ -18,15 +18,16 @@ import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 public class CharacterRegionFrameSystem extends SystemPackage implements ViewCameraSubject {
 
     /*
-     * What a modelling tab's view camera frames: the whole character for the
-     * whole region, otherwise the region's frame bone and every bone below
-     * it — the hand shown with its fingers, the foot shown with its toes, the
-     * eye shown in its socket, the jaw with the mouth, the head with the hair
-     * on it. While the region's part is open the frame is
-     * the box of every vertex those bones carry at least the pick share of,
-     * worked out again only once the mesh changes; otherwise it is about the
-     * bones' joints as the preview stands. The radius reaches past the
-     * farthest point by a margin, never less than a set least.
+     * What the Character Editor window's view camera frames on every layer:
+     * the whole character for the whole region, otherwise the region's frame
+     * bone and every bone below it — the head with its face, ears, eyes and
+     * hair, the hand shown with its fingers, the foot shown with its toes,
+     * the ear on its side, the eye shown in its socket, the jaw with the
+     * mouth. While the region's part is open the frame is the box of every
+     * vertex those bones carry at least the pick share of, worked out again
+     * only once the mesh changes; otherwise it is about the bones' joints as
+     * the preview stands. The radius reaches past the farthest point by a
+     * margin, never less than a set least.
      */
 
     // Internal

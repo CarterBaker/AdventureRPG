@@ -5,12 +5,12 @@ import engine.input.Buttons;
 public class WorldEditorSetting {
 
     /*
-     * Constants used only by WorldEditorContext and the view, tool and
-     * render systems it owns, which the Height Editor's tab creates as well —
-     * their viewport mesh and materials, the height overlay's opacity, zoom
-     * limits, mouse bindings and selection reach, the held shortcuts the
-     * selection reads, and the World Editor's toolbar menu. The images, their
-     * brush and the biome palette are the editor's.
+     * Constants used only by WorldEditorContext and the layer, view, tool
+     * and render systems it owns — their viewport mesh and materials, the
+     * height layer's opacity, zoom limits, mouse bindings and selection
+     * reach, the held shortcuts the selection reads, and the World Editor's
+     * toolbar menu. The images, their brush and the biome palette are the
+     * editor's.
      */
 
     // Meshes

@@ -5,10 +5,9 @@ import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
 public interface WorldEditorLayerProvider {
 
     /*
-     * Names the world layer a world canvas tab works on, so the view, tool
-     * and render systems every such tab shares paint, show and describe that
-     * layer: the biomes in the World Editor, the heights in the Height
-     * Editor.
+     * Names the world layer a world canvas window works on now, the one
+     * picked in the Layers tab, so the File and Edit menus undo and redo the
+     * history of that layer.
      */
 
     WorldEditorLayer getWorldEditorLayer();

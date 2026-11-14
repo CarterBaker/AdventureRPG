@@ -24,7 +24,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CharacterEditorPreviewSystem extends SystemPackage {
 
     /*
-     * Drives this tab's character viewport from the character editor. A new
+     * Drives the Character Editor window's viewport from the character
+     * editor on every layer but the face's, which FaceEditorPreviewSystem
+     * drives; coming back from it the preview is bound afresh. A new
      * preview of the active race is put on the animation tree of the gender
      * it is made as; that gender — the model it requires, moving by its own
      * tree, and the features it wears — the sliders,
@@ -36,9 +38,8 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * given the markers of the mode: the joints in
      * Build, Mesh and Weights, the rig's bones as they are being edited in
      * Rig, every equipment anchor in Equipment, the selected one highlighted.
-     * The tab's own mode decides all of it, so the Character Appearance,
-     * Build, Equipment and Mesh Editor tabs each show the character their own
-     * way side by side.
+     * The window's own mode decides all of it, so two Character Editor
+     * windows each show the character their own way side by side.
      */
 
     // Internal
@@ -84,6 +85,11 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     @Override
     protected void update() {
 
+        if (characterEditorModeSystem.getMode().shapesFace()) {
+            unbind();
+            return;
+        }
+
         CharacterDocumentInstance document = characterEditorManager.getActiveDocument();
 
         if (document == null || !document.hasPreview()) {
@@ -101,6 +107,12 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         strikePose();
         pushMarkers();
+    }
+
+    // Let go while another system drives the viewport, so the preview is bound and dressed again on return
+    private void unbind() {
+        this.boundDocument = null;
+        this.lookRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
     private void bind(CharacterDocumentInstance document) {
@@ -131,7 +143,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     // The pose the mode stands in, or the pose chosen: the bind pose exactly as the mesh file holds it while a model
     // is edited and Bind is chosen, one of the rig's own poses struck still, or a movement played; the rig is edited in
-    // the bind pose alone, and Preview Springs plays the movement chosen in a modelling tab, idle at Bind, with its
+    // the bind pose alone, and Preview Springs plays the movement chosen on a modelling layer, idle at Bind, with its
     // springs simulated
     private void strikePose() {
 

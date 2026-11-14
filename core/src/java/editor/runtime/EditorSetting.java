@@ -432,22 +432,13 @@ public class EditorSetting {
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
     public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
-    public static final String TAB_TITLE_CHARACTER_APPEARANCE = "Character Appearance";
-    public static final String TAB_TITLE_CHARACTER_BUILD = "Character Build";
-    public static final String TAB_TITLE_CHARACTER_EQUIPMENT = "Character Equipment";
-    public static final String TAB_TITLE_CHARACTER_MESH_EDITOR = "Character Mesh Editor";
-    public static final String TAB_TITLE_FACE_EDITOR = "Face Editor";
-    public static final String TAB_TITLE_HAIR_EDITOR = "Hair Editor";
-    public static final String TAB_TITLE_HAND_EDITOR = "Hand Editor";
-    public static final String TAB_TITLE_FOOT_EDITOR = "Foot Editor";
-    public static final String TAB_TITLE_EYE_EDITOR = "Eye Editor";
-    public static final String TAB_TITLE_MOUTH_EDITOR = "Mouth Editor";
+    public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
     public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
-    public static final String TAB_TITLE_HEIGHT_EDITOR = "Height Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_PROPERTIES = "Properties";
+    public static final String TAB_TITLE_LAYERS = "Layers";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
@@ -833,6 +824,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_WEIGHTS = "Weights";
     public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
     public static final String CHARACTER_EDITOR_MODE_PAINT = "Paint";
+    public static final String CHARACTER_EDITOR_MODE_FACE = "Face";
     public static final String CHARACTER_EDITOR_POSE_REST = "Bind";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
@@ -1322,7 +1314,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_MESSAGE_DIGITS =
             " digit bones added; save the rig and restart to weigh onto them";
     public static final String CHARACTER_RIG_MESSAGE_NO_DIGITS = "No new digits found under this region's bones";
-    public static final String CHARACTER_RIG_MESSAGE_NO_REGION = "Rig and weigh digits in the Hand or Foot Editor";
+    public static final String CHARACTER_RIG_MESSAGE_NO_REGION = "Rig and weigh digits on the Hands or Feet layers";
     public static final String CHARACTER_RIG_MESSAGE_WEIGHED = " vertices weighed onto the digits";
     public static final String CHARACTER_RIG_MESSAGE_UNRIGGED = "Rig the digits, save the rig and restart first";
     public static final String CHARACTER_RIG_MESSAGE_IK_ADDED = " IK handles added";
@@ -1330,7 +1322,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_MESSAGE_HAIR =
             " hair locks rigged on spring chains; save the rig and restart to weigh onto them";
     public static final String CHARACTER_RIG_MESSAGE_NO_HAIR = "No new hair locks long enough for spring bones";
-    public static final String CHARACTER_RIG_MESSAGE_HAIR_REGION = "Rig and weigh hair locks in the Hair Editor";
+    public static final String CHARACTER_RIG_MESSAGE_HAIR_REGION = "Rig and weigh hair locks on the Hair layers";
     public static final String CHARACTER_RIG_MESSAGE_HAIR_WEIGHED = " hair vertices weighed onto the locks";
     public static final String CHARACTER_RIG_MESSAGE_HAIR_UNRIGGED =
             "Rig the hair locks, save the rig and restart first";
@@ -1409,10 +1401,10 @@ public class EditorSetting {
     public static final String FACE_EDITOR_NEW_CONTROL_NAME = "control_";
     public static final String FACE_EDITOR_COPY_SUFFIX = "_copy";
 
-    // Character Regions — the bones each focused modelling tab works on, with every bone below them, and the bone it
-    // frames with every bone below it; a vertex weighing on a region's bones at least this much is picked and
-    // selected there, a stroke reaching each in proportion; a framed region's sphere reaches this far past its
-    // farthest joint, or past this share of its frame bone's largest side, and at least this far
+    // Character Regions — the bones each part layer of the Character Editor works on, with every bone below them,
+    // and the bone it frames with every bone below it; a vertex weighing on a region's bones at least this much is
+    // picked and selected there, a stroke reaching each in proportion; a framed region's sphere reaches this far past
+    // its farthest joint, or past this share of its frame bone's largest side, and at least this far
     public static final String CHARACTER_REGION_HAIR_FRAME = "head";
     public static final String CHARACTER_REGION_NO_PREFIX = "";
     public static final float CHARACTER_REGION_PICK_SHARE = 0.5f;
@@ -1421,11 +1413,23 @@ public class EditorSetting {
     public static final float CHARACTER_REGION_FRAME_SIZE_SHARE = 0.5f;
     public static final String CHARACTER_REGION_STATUS_NO_PART = "This character wears no ";
 
-    // Face Editor — the frame about the head, its middle a share of the head bone's height above its joint and its
-    // radius a share of the head bone's largest side; a drag below this preview value first takes the control to its
-    // end
-    public static final float FACE_EDITOR_FRAME_CENTRE_SHARE = 0.5f;
-    public static final float FACE_EDITOR_FRAME_RADIUS_SHARE = 1.1f;
+    // Character Regions — the name each region's group of layers is listed under in the Layers tab
+    public static final String CHARACTER_REGION_LABEL_WHOLE = "Body";
+    public static final String CHARACTER_REGION_LABEL_HEAD = "Head";
+    public static final String CHARACTER_REGION_LABEL_HAIR = "Hair";
+    public static final String CHARACTER_REGION_LABEL_EARS = "Ears";
+    public static final String CHARACTER_REGION_LABEL_EYES = "Eyes";
+    public static final String CHARACTER_REGION_LABEL_MOUTH = "Mouth";
+    public static final String CHARACTER_REGION_LABEL_HANDS = "Hands";
+    public static final String CHARACTER_REGION_LABEL_FEET = "Feet";
+
+    // Character Layers — the group the look modes are listed under in the Layers tab, its key, and the separator
+    // between a region's key and a mode's in a layer's key
+    public static final String CHARACTER_LAYER_LOOK_KEY = "look";
+    public static final String CHARACTER_LAYER_LOOK_LABEL = "Character";
+    public static final String CHARACTER_LAYER_KEY_SEPARATOR = "/";
+
+    // Face Editor — a drag below this preview value first takes the control to its end
     public static final float FACE_EDITOR_DRAG_VALUE_MIN = 0.05f;
 
     // Face Editor — panel text

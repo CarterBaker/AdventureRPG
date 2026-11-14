@@ -6,16 +6,19 @@ import editor.runtime.EditorSetting;
 public enum WorldEditorLayer {
 
     /*
-     * Which of the world's images a window paints, each in its own tab:
-     * Biomes, the world image whose colors place every biome, painted in the
-     * World Editor, which also places what its mode places, or Heights, the
-     * grey height layer beside it that raises and lowers the ground, worked
-     * in the Height Editor, which draws it over the biomes. Each is its own
+     * The World Editor's layers, bottom first, as the Layers tab stacks them:
+     * Biomes, the world image whose colors place every biome, which also
+     * places what the editor's mode places, and Heights, the grey height
+     * layer over it that raises and lowers the ground, drawn over the biomes.
+     * The layer picked is the one the editor's tools work on; each is its own
      * tool canvas, keeping its own tool and brush size.
      */
 
     BIOMES(EditorSetting.WORLD_EDITOR_LAYER_BIOMES, ToolCanvas.BIOMES, true, false),
     HEIGHTS(EditorSetting.WORLD_EDITOR_LAYER_HEIGHTS, ToolCanvas.HEIGHTS, false, true);
+
+    // Values
+    public static final WorldEditorLayer[] VALUES = values();
 
     // Internal
     private final String label;
@@ -42,12 +45,12 @@ public enum WorldEditorLayer {
         return toolCanvas;
     }
 
-    // True for the layer whose window also places what the World Editor's mode places
+    // True for the layer that also places what the World Editor's mode places
     public boolean isPlacing() {
         return placing;
     }
 
-    // True for the layer its window draws over the biomes
+    // True for the layer drawn over the biomes
     public boolean isOverlay() {
         return overlay;
     }

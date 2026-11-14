@@ -7,9 +7,10 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.faceeditorpipeline.faceeditormanager.FaceEditorManager;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.runtime.charactereditor.CharacterEditorSetting;
+import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
-import editor.runtime.faceeditor.FaceEditorSetting;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.EditorSetting;
@@ -22,25 +23,27 @@ import engine.util.mathematics.vectors.Vector3;
 public class FaceEditorGestureSystem extends SystemPackage {
 
     /*
-     * Turns this tab's pointer into face shaping, by the face tool in use. A
-     * click on a face joint picks its bone with every tool; Move, Rotate and
-     * Scale then drag it, and the picked control's target on that bone is
-     * shaped so the bone stands where the drag puts it at the control's
-     * preview value: the move, turn and growth the drag makes, divided by
-     * that value. A press beside every face joint is left to the view camera.
-     * A move carries the joint across the plane facing the camera, or along
-     * a held world axis, into its parent's space; a turn follows the pointer
-     * about the joint on screen, about the line of sight or the held axis,
-     * carried into the bone's own Euler rotation; a scale grows the bone by
-     * how far the pointer travels from the joint, on every axis or the one
-     * held. Ctrl snaps. A drag is one undo step: letting go keeps it, a right
-     * click or Escape puts the face back.
+     * Turns the Character Editor window's pointer into face shaping while its
+     * Face layer is worked on, by the face tool in use. A click on a face
+     * joint picks its bone with every tool; Move, Rotate and Scale then drag
+     * it, and the picked control's target on that bone is shaped so the bone
+     * stands where the drag puts it at the control's preview value: the move,
+     * turn and growth the drag makes, divided by that value. A press beside
+     * every face joint is left to the view camera. A move carries the joint
+     * across the plane facing the camera, or along a held world axis, into
+     * its parent's space; a turn follows the pointer about the joint on
+     * screen, about the line of sight or the held axis, carried into the
+     * bone's own Euler rotation; a scale grows the bone by how far the
+     * pointer travels from the joint, on every axis or the one held. Ctrl
+     * snaps. A drag is one undo step: letting go keeps it, a right click or
+     * Escape puts the face back.
      */
 
     // Internal
     private EditorInputSystem editorInputSystem;
     private ViewCameraSystem viewCameraSystem;
     private FaceEditorManager faceEditorManager;
+    private CharacterEditorModeSystem characterEditorModeSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private ShortcutManager shortcutManager;
 
@@ -129,13 +132,14 @@ public class FaceEditorGestureSystem extends SystemPackage {
         this.editorInputSystem = get(EditorInputSystem.class);
         this.viewCameraSystem = get(ViewCameraSystem.class);
         this.faceEditorManager = get(FaceEditorManager.class);
+        this.characterEditorModeSystem = get(CharacterEditorModeSystem.class);
         this.characterViewPoseSystem = get(CharacterViewPoseSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
     }
 
     @Override
     protected void start() {
-        this.snapShortcutID = shortcutManager.getShortcutIDFromShortcutName(FaceEditorSetting.SHORTCUT_SNAP);
+        this.snapShortcutID = shortcutManager.getShortcutIDFromShortcutName(CharacterEditorSetting.SHORTCUT_SNAP);
     }
 
     // Update \\
@@ -145,7 +149,8 @@ public class FaceEditorGestureSystem extends SystemPackage {
 
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
 
-        if (faceEditorManager.getToolCanvas() == null || !characterViewPoseSystem.hasSubject()) {
+        if (!characterEditorModeSystem.getMode().shapesFace() || faceEditorManager.getToolCanvas() == null
+                || !characterViewPoseSystem.hasSubject()) {
             abandon();
             return;
         }

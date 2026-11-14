@@ -9,18 +9,17 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **Many windows, never one crowded one.** Each tab does one task and works with the tabs around it. When a window
   starts doing two jobs, split it into two tabs that share their manager's state, the way Krita splits its dockers.
-  Never cram another mode, panel or palette into an existing window to save a tab.
+  Never cram another panel or palette into an existing window to save a tab. The one way a canvas does several jobs
+  is layers (below): its tasks are layers picked in the Layers tab, never modes or toolbars of its own.
 - **Tabs talk through shared state.** What is chosen in one tab (a biome, a brush, a tree, a ship, a bone) is the
   choice every other tab sees at once. Tabs never keep private copies of a shared choice.
-- **Name a tab for what it holds.** A list of biomes is the Biome Outliner; a window that paints heights is the
-  Height Editor. Never a generic name that hides what the tab is for.
-- **Split so far:** the World Editor paints biomes and places settlements and cameras, the biome it paints chosen in the
-  Biome Outliner and shown in the Properties tab, while the Biome Planner only plans; the Height Editor raises and
-  lowers the ground; entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab;
-  Character Appearance, Character Build and Character Equipment each shape one part of how a race looks, and the
-  Character Mesh Editor models its meshes and rig with the Tools and Brushes tabs, the Hair, Hand, Foot, Eye and Mouth
-  Editors the same kept to the hair, the hands with their fingers, the feet with their toes, an eye socket with its eye
-  and the lips with the teeth, each showing its part alone and a sided part one side at a time; the Recorder is its
+- **Name a tab for what it holds.** A list of biomes is the Biome Outliner; a window that paints the world's images is
+  the World Editor. Never a generic name that hides what the tab is for.
+- **Split so far:** the World Editor paints the biomes and places settlements and cameras on its Biomes layer and raises
+  and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
+  Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
+  and edited in the Properties tab; the Character Editor holds every part of making a race's character as layers (see
+  `.claude/docs/CharacterEditorPipeline.md`), with the Character and Face Outliners beside it; the Recorder is its
   transport (record, play, loop range, clock, what is open with Back) and the Timeline its clips, with Recorder Keys,
   Recorder Bin, Recorder Assets and Recorder Settings beside them, each opening its own menu through a shared
   `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act on; the Recordings tab
@@ -30,6 +29,22 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Timeline with the Tools tab's Select, Draw, Erase and Cut and its Notes actions, the selected notes in the Properties
   tab, and plays and records them with Musical Typing.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
+
+## Layers
+
+- **One canvas, many layers.** A window whose canvas does several jobs lists them as layers in the shared Layers tab
+  (`editor.bootstrap.layerspipeline`), as Krita and Photoshop list theirs: the layer picked is the one the window's
+  tools work on, groups fold what they hold, and an eye shows or hides a layer that can be hidden. The Layers tab
+  lives beside the Hierarchy and Properties tabs (the Content menu) and, like Properties, shows the window worked in
+  last that has layers. This is the standard for putting several tools in one window, and the base the editor's
+  image editing is built on.
+- **A window that has layers** implements `LayersProvider` (its revision, title, the stack as `LayerNodeStruct`s top
+  first, `selectLayer` and `toggleLayerVisible`) and creates a `LayersSourceSystem`. Layer keys are stable names (an
+  enum's name, `region/mode`), never IDs. The window keeps the layer picked itself and every system reads it there;
+  a layer picked hands its tool canvas, Properties rows and File and Edit table to the shared tabs through the
+  window's own providers, which answer for the layer picked.
+- **So far:** the World Editor (Heights over Biomes, each with an eye) and the Character Editor (the Character group of
+  look modes, then the Body and every region within it, each holding its modes; no eyes).
 
 ## The active window
 
@@ -56,7 +71,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   worked in last (see `.claude/docs/Engine.md` and `.claude/docs/Shortcut.md`). A tool is never a panel button.
 - **Brushes live in the Brushes tab, never in the Tools tab.** The Tools tab shows tools, their actions and their
   options only. Every stroking tool on every canvas stamps with the one brush chosen in the Brushes tab, and so does
-  Select wherever the canvas sizes a brush (the Character Mesh Editor's vertices), selecting as much as the tip
+  Select wherever the canvas sizes a brush (the Character Editor's mesh layers' vertices), selecting as much as the tip
   covers so the tools that follow act through its falloff.
 - **Brushes work like Krita's presets:** soft or hard, round, square or diamond, turned and squashed, dense or
   speckled, and each listed with a thumbnail of the stroke it makes. Keep plenty of them; a new kind of tip is a new

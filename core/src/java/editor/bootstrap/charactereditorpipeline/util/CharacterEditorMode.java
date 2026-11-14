@@ -11,17 +11,19 @@ public enum CharacterEditorMode {
      * body, Equipment the anchors worn and held gear hangs from, Mesh the
      * vertices and faces of a worn part, Sculpt that part's surface under the
      * brush, Weights the bones each of its vertices follows, Paint the
-     * texture maps it is coloured by, and Rig the bones themselves. Each mode that takes viewport input is its own tool
-     * canvas; the mesh modes edit the part's mesh file, Rig holds the bind
-     * pose so the character stands exactly as its mesh and rig are authored,
-     * and those that show the vertices draw them over the body. Each carries
-     * the hint the status bar shows while it is open, and every other mode
-     * either stands in the one pose it names, as Appearance stands idle the
-     * way the game's creator shows the player, or lets its outliner pick the
-     * pose the preview strikes — the mesh modes in the bind pose by default,
-     * their vertices moved there alone. The modes
-     * that take tools are worked in the Character Mesh Editor, the rest in
-     * the Character Editor, each window keeping to its own.
+     * texture maps it is coloured by, Rig the bones themselves, and Face the
+     * controls that shape the face through its bones. Each mode that takes
+     * viewport input is its own tool canvas; the mesh modes edit the part's
+     * mesh file, Rig holds the bind pose so the character stands exactly as
+     * its mesh and rig are authored, and those that show the vertices draw
+     * them over the body. Each carries the hint the status bar shows while it
+     * is open, and every other mode either stands in the one pose it names,
+     * as Appearance stands idle the way the game's creator shows the player
+     * and Face stands at rest, or lets its outliner pick the pose the preview
+     * strikes — the mesh modes in the bind pose by default, their vertices
+     * moved there alone. Each is a layer of the Character Editor: the modes
+     * that take tools under every region that takes them, the rest under the
+     * whole character.
      */
 
     APPEARANCE(
@@ -66,7 +68,18 @@ public enum CharacterEditorMode {
             true,
             false,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_RIG_HINT);
+            EditorSetting.CHARACTER_EDITOR_STATUS_RIG_HINT),
+    FACE(
+            EditorSetting.CHARACTER_EDITOR_MODE_FACE,
+            ToolCanvas.CHARACTER_FACE,
+            false,
+            false,
+            false,
+            CharacterEditorPose.REST,
+            null);
+
+    // Values
+    public static final CharacterEditorMode[] VALUES = values();
 
     // Internal
     private final String label;
@@ -130,6 +143,11 @@ public enum CharacterEditorMode {
         return toolCanvas == ToolCanvas.CHARACTER_PAINT;
     }
 
+    // True for the mode that shapes the face's controls, worked through the face editor rather than the mesh or rig
+    public boolean shapesFace() {
+        return toolCanvas == ToolCanvas.CHARACTER_FACE;
+    }
+
     // True for the mode that edits the rig, which draws the colliders its bones carry
     public boolean showsColliders() {
         return toolCanvas == ToolCanvas.CHARACTER_RIG;
@@ -140,9 +158,15 @@ public enum CharacterEditorMode {
         return toolCanvas;
     }
 
-    // True for a mode worked in the Character Mesh Editor, the modes that take tools
+    // True for a mode that takes tools, listed under every region that takes it rather than the whole character's look
     public boolean isModeling() {
         return toolCanvas != null;
+    }
+
+    // Whether a region's layers list this mode: a mode that takes tools, the rig and the face only where it takes them
+    public boolean isHeldBy(CharacterEditorRegion region) {
+        return isModeling() && (toolCanvas != ToolCanvas.CHARACTER_RIG || region.takesRig())
+                && (!shapesFace() || region.takesFace());
     }
 
     // What the status bar tells the pointer to do in this mode, null for a mode with nothing to say

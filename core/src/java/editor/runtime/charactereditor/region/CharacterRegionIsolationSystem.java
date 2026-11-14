@@ -16,14 +16,15 @@ import engine.root.SystemPackage;
 public class CharacterRegionIsolationSystem extends SystemPackage {
 
     /*
-     * Shows a part editor's part alone. The whole character's tab draws
-     * everything; any other draws the body only where it holds a part of the
-     * rig, through a mask showing the bones the region holds — on the side
-     * shown, where the part is sided — and of the worn parts only its own
-     * feature, through the same mask where it is sided, so the Eye Editor
-     * shows one socket with its eye, the Hand Editor one hand, the Mouth
-     * Editor the jaw and lips with the teeth, and the Hair Editor the hair.
-     * The isolation is built again only when the editor's state moves.
+     * Shows the region of the layer worked on alone. The whole character's
+     * layers draw everything; any other draws the body only where it holds a
+     * part of the rig, through a mask showing the bones the region holds —
+     * on the side shown, where the part is sided — and of the worn parts only
+     * those the region shows, through the same mask where it is sided, so
+     * the Head shows the head with its hair, eyes and teeth, the Eyes one
+     * socket with its eye, the Ears one ear, the Hands one hand, the Mouth
+     * the jaw and lips with the teeth, and the Hair the hair. The isolation
+     * is built again only when the editor's state or the region moves.
      */
 
     // Internal
@@ -85,7 +86,7 @@ public class CharacterRegionIsolationSystem extends SystemPackage {
         isolation.setBodyShown(region.holdsBody());
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
-            isolation.setFeature(featureSlot, featureSlot == region.getFeatureSlot(), sided);
+            isolation.setFeature(featureSlot, region.showsFeature(featureSlot), sided);
 
         if (!region.holdsBody())
             return;

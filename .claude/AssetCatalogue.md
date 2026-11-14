@@ -303,9 +303,17 @@ One line per session that changed this file: the date, what was added or removed
   Songbook, the play mode panel and its notice); regenerated `animationtrees/humanoid/HumanoidAnimationTree.arpg` (a
   `perform` layer playing the `play` action over the arms, hands and fingers) and `schemas/AnimationTrees.arpg` (the
   `play` action), so instruments are held and played in the game.
+- 2026-11-14: Layers. Added the sprite `menus/EyeIcon`, the menu `menus/editor/Layers.arpg` (the Layers tab's rows,
+  fold markers and eyes) and `shortcuts/CharacterEditor.arpg` (every Character Editor layer's keys, Undo, Redo and Save
+  through the File menu's action); regenerated `menus/editor/EditorWindow.arpg` (Layers in the Content menu, one
+  Character Editor in the Characters menu, no Height Editor), `menus/editor/FaceEditor.arpg` (row templates only),
+  `rigs/HumanoidRig.arpg` and `schemas/Rigs.arpg` (the `head` and `ears` parts); removed `menus/editor/HeightEditor.arpg`,
+  `menus/editor/CharacterMeshEditor.arpg` and the shortcuts `HeightEditor`, `CharacterAppearance`, `CharacterBuild`,
+  `CharacterEquipment`, `CharacterMeshEditor` and `FaceEditor`, so the World Editor and the Character Editor work as
+  layers.
 ---
 
-## Textures and Sprites (2399 files)
+## Textures and Sprites (2400 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -321,6 +329,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `DialNeedle`
 - `DialRing`
 - `EditorTab`
+- `EyeIcon`
 - `FrameOutline`
 - `LoopIcon`
 - `MaximizeIcon`
@@ -1683,7 +1692,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1876 files)
+## Data Files (1870 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2498,8 +2507,8 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
-`CharacterMeshEditor.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
-`HeightEditor.arpg`, `ItemEditor.arpg`, `PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
+`PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Timeline.arpg`,
 `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
@@ -2807,9 +2816,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/shortcuts/`
 
-`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterAppearance.arpg`,
-`CharacterBuild.arpg`, `CharacterEquipment.arpg`, `CharacterMeshEditor.arpg`, `FaceEditor.arpg`, `HeightEditor.arpg`,
-`Hierarchy.arpg`, `ItemEditor.arpg`, `PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ItemEditor.arpg`, `PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `RecorderBin.arpg`,
 `RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `WorldEditor.arpg`
 

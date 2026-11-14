@@ -2,14 +2,13 @@ package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 
 public class CharacterEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the character tabs' keys and panels, and their
+     * Menu event handlers for the Character Editor's keys and panels, and its
      * File and Edit menu actions. Every
      * action works on the shared active character. A copy is named through
      * the name dialog, deleting a character asks for its name to be typed
@@ -65,40 +64,6 @@ public class CharacterEditorBranch extends BranchPackage {
                         + EditorSetting.DIALOG_TITLE_DELETE_SUFFIX,
                 characterEditorManager::isActiveTemplateName,
                 confirmedName -> characterEditorManager.deleteActiveTemplate());
-    }
-
-    // Modes \\
-
-    public void showAppearance() {
-        characterEditorManager.setMode(CharacterEditorMode.APPEARANCE);
-    }
-
-    public void showBuild() {
-        characterEditorManager.setMode(CharacterEditorMode.BUILD);
-    }
-
-    public void showEquipment() {
-        characterEditorManager.setMode(CharacterEditorMode.EQUIPMENT);
-    }
-
-    public void showMesh() {
-        characterEditorManager.setMode(CharacterEditorMode.MESH);
-    }
-
-    public void showSculpt() {
-        characterEditorManager.setMode(CharacterEditorMode.SCULPT);
-    }
-
-    public void showWeights() {
-        characterEditorManager.setMode(CharacterEditorMode.WEIGHTS);
-    }
-
-    public void showPaint() {
-        characterEditorManager.setMode(CharacterEditorMode.PAINT);
-    }
-
-    public void showRig() {
-        characterEditorManager.setMode(CharacterEditorMode.RIG);
     }
 
     // History \\

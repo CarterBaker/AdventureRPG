@@ -20,8 +20,9 @@ public class FaceOutlinerContext extends ContextPackage implements CharacterView
      * Docker window listing what the face editor works on: the gender the
      * face is previewed as and whether edits mirror across it, every face
      * control under its group, and every face bone. Picking a row picks it
-     * for every Face Editor tab; the state lives in FaceEditorManager. The
-     * shared tool keys work while this window is focused.
+     * for the Character Editor's Face layer; the state lives in
+     * FaceEditorManager. The shared tool keys work while this window is
+     * focused.
      */
 
     // Internal

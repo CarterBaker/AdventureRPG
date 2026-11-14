@@ -6,9 +6,9 @@ import engine.root.PipelinePackage;
 public class FaceEditorPipeline extends PipelinePackage {
 
     /*
-     * Registers the face editor's shared state, so every Face Editor and
-     * Face Outliner window and the Properties tab work on the same face
-     * control of the character open in the character tabs.
+     * Registers the face editor's shared state, so the Character Editor's
+     * Face layer, the Face Outliner window and the Properties tab work on the
+     * same face control of the character open in the Character Editor.
      */
 
     // Internal \\

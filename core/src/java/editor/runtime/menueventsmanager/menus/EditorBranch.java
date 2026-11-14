@@ -50,6 +50,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openProperties(window.getGLWindow());
     }
 
+    public void openLayers(WindowInstance window) {
+        tabManager.openLayers(window.getGLWindow());
+    }
+
     public void openArpgViewer(WindowInstance window) {
         tabManager.openArpgViewer(window.getGLWindow());
     }
@@ -82,48 +86,12 @@ public class EditorBranch extends BranchPackage {
 
     // Characters Dropdown \\
 
-    public void openCharacterAppearance(WindowInstance window) {
-        tabManager.openCharacterAppearance(window.getGLWindow());
-    }
-
-    public void openCharacterBuild(WindowInstance window) {
-        tabManager.openCharacterBuild(window.getGLWindow());
-    }
-
-    public void openCharacterEquipment(WindowInstance window) {
-        tabManager.openCharacterEquipment(window.getGLWindow());
-    }
-
-    public void openCharacterMeshEditor(WindowInstance window) {
-        tabManager.openCharacterMeshEditor(window.getGLWindow());
+    public void openCharacterEditor(WindowInstance window) {
+        tabManager.openCharacterEditor(window.getGLWindow());
     }
 
     public void openCharacterOutliner(WindowInstance window) {
         tabManager.openCharacterOutliner(window.getGLWindow());
-    }
-
-    public void openHairEditor(WindowInstance window) {
-        tabManager.openHairEditor(window.getGLWindow());
-    }
-
-    public void openHandEditor(WindowInstance window) {
-        tabManager.openHandEditor(window.getGLWindow());
-    }
-
-    public void openFootEditor(WindowInstance window) {
-        tabManager.openFootEditor(window.getGLWindow());
-    }
-
-    public void openEyeEditor(WindowInstance window) {
-        tabManager.openEyeEditor(window.getGLWindow());
-    }
-
-    public void openMouthEditor(WindowInstance window) {
-        tabManager.openMouthEditor(window.getGLWindow());
-    }
-
-    public void openFaceEditor(WindowInstance window) {
-        tabManager.openFaceEditor(window.getGLWindow());
     }
 
     public void openFaceOutliner(WindowInstance window) {
@@ -154,10 +122,6 @@ public class EditorBranch extends BranchPackage {
 
     public void openWorldEditor(WindowInstance window) {
         tabManager.openWorldEditor(window.getGLWindow());
-    }
-
-    public void openHeightEditor(WindowInstance window) {
-        tabManager.openHeightEditor(window.getGLWindow());
     }
 
     public void openSettlementPlanner(WindowInstance window) {

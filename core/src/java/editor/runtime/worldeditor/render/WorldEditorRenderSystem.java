@@ -31,6 +31,7 @@ import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManage
 import editor.runtime.EditorSetting;
 import editor.runtime.placementicon.PlacementIconSystem;
 import editor.runtime.worldeditor.WorldEditorSetting;
+import editor.runtime.worldeditor.layer.WorldEditorLayerSystem;
 import editor.runtime.worldeditor.tool.WorldEditorToolSystem;
 import editor.runtime.worldeditor.view.WorldEditorViewSystem;
 import engine.root.EngineSetting;
@@ -42,20 +43,20 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class WorldEditorRenderSystem extends SystemPackage {
 
     /*
-     * Draws the world image into this window's scene target where the view
-     * places it, from the GPU texture ImageManager keeps current, then, in a
-     * tab whose layer lies over the biomes, the height layer over it pixel
-     * for pixel as the black and white heightmap it is, partly see-through so
+     * Draws every layer shown in the Layers tab into this window's scene
+     * target where the view places it, from the GPU textures ImageManager
+     * keeps current: the world image, then the height layer over it pixel for
+     * pixel as the black and white heightmap it is, partly see-through so
      * every level lines up with the land beneath. Then comes the brush
      * preset's outline, in its own shape, turned and squashed as its tip is,
      * over the pixels a stroke at the pointer would cover, or, while placing
      * or carrying a design from the Settlement Planner, a ring as wide as its
      * design around the column it would stand on, the box the Select tool is
-     * dragging and, in the tab that places, an icon for every hand-placed
-     * settlement, structure and camera through PlacementIconSystem, those
-     * being moved drawn where they would stand, and, while shown, an arrow
-     * for every player at their place and facing. Marker quads are pooled
-     * with their own materials.
+     * dragging and, while the layer picked places, an icon for every
+     * hand-placed settlement, structure and camera through
+     * PlacementIconSystem, those being moved drawn where they would stand,
+     * and, while shown, an arrow for every player at their place and facing.
+     * Marker quads are pooled with their own materials.
      */
 
     // Internal
@@ -72,6 +73,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
     private SettlementPlannerManager settlementPlannerManager;
     private WorldEditorViewSystem worldEditorViewSystem;
     private WorldEditorToolSystem worldEditorToolSystem;
+    private WorldEditorLayerSystem worldEditorLayerSystem;
     private PlacementIconSystem placementIconSystem;
 
     // Render Target
@@ -130,6 +132,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
         this.settlementPlannerManager = get(SettlementPlannerManager.class);
         this.worldEditorViewSystem = get(WorldEditorViewSystem.class);
         this.worldEditorToolSystem = get(WorldEditorToolSystem.class);
+        this.worldEditorLayerSystem = get(WorldEditorLayerSystem.class);
         this.placementIconSystem = get(PlacementIconSystem.class);
     }
 
@@ -182,6 +185,9 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
         setViewRect(window, 0.0, 0.0, image.getWidth(), image.getHeight());
 
+        if (!worldEditorLayerSystem.isShown(WorldEditorLayer.BIOMES))
+            return;
+
         MaterialInstance material = imageModel.getMaterial();
         material.setUniform(WorldEditorSetting.UNIFORM_VIEW_RECT, viewRect);
         material.setUniform(WorldEditorSetting.UNIFORM_UV_RECT, uvRect);
@@ -201,7 +207,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
     // Laid over the whole image with the view rectangle the image was just drawn with
     private void renderHeights(WindowInstance window) {
 
-        if (!worldEditorToolSystem.getLayer().isOverlay())
+        if (!worldEditorLayerSystem.isShown(WorldEditorLayer.HEIGHTS))
             return;
 
         int texture = imageManager.useTexture(worldEditorManager.getHeightImage());

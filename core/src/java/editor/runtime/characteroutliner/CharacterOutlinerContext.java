@@ -19,9 +19,9 @@ public class CharacterOutlinerContext extends ContextPackage implements Characte
     /*
      * Docker window listing what the character editor works on in its mode:
      * how the preview stands and the features, bones, anchors or worn parts
-     * to pick, the rig's bones in Rig mode, for whichever of the Character
-     * Editor and Character Mesh Editor was worked in last. Picking a row
-     * picks it for every such tab; the state lives in
+     * to pick, the rig's bones in Rig mode, for the layer of the Character
+     * Editor worked in last. Picking a row picks it for every Character
+     * Editor window; the state lives in
      * CharacterEditorManager. The shared tool keys work while this window is
      * focused.
      */
