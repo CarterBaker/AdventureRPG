@@ -440,6 +440,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_OPTION_OUTLINE_THICKNESS = "Thickness";
     public static final String SETTINGS_OPTION_MIN_TEXT_SIZE = "Minimum Text Size";
     public static final String SETTINGS_OPTION_ANTI_ALIASING = "Anti-Aliasing";
+    public static final String SETTINGS_OPTION_TEXTURE_QUALITY = "Texture Quality";
+    public static final String SETTINGS_OPTION_TEXTURE_ANISOTROPY = "Anisotropic Filtering";
     public static final String SETTINGS_OPTION_DEPTH_OF_FIELD = "Depth of Field";
     public static final String SETTINGS_OPTION_DEPTH_OF_FIELD_THIRD_PERSON = "Third Person";
     public static final String SETTINGS_OPTION_BLOOM = "Bloom";
@@ -471,6 +473,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_FORMAT_FIELD_OF_VIEW = "%.0f";
     public static final String SETTINGS_FORMAT_SENSITIVITY = "%.2f";
     public static final String SETTINGS_FORMAT_PIXELS = "%d px";
+    public static final String SETTINGS_FORMAT_ANISOTROPY = "%dx";
+    public static final String[] SETTINGS_TEXTURE_QUALITY_VALUES = { "Low", "Medium", "High" };
     public static final String SETTINGS_FORMAT_PERCENT = "%.0f%%";
     public static final int SETTINGS_OUTLINE_THICKNESS_STEP = 1;
     public static final int SETTINGS_MIN_TEXT_SIZE_STEP = 1;

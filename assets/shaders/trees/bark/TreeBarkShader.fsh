@@ -4,12 +4,12 @@ in vec3      vWorldPos;
 in vec3      vModelPos;
 in vec2      vLocal;
 flat in vec2 vSize;
-flat in vec2 vUVOrigin;
+flat in int  vTile;
 flat in vec3 vColor;
 flat in int  vFace;
 flat in int  vEdges;
 
-#include "trees/includes/TreeBark.glsl"
+#include "trees/includes/TreeBarkShading.glsl"
 #include "trees/includes/TreeFade.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
@@ -23,6 +23,6 @@ void main() {
     discard;
 
     shadeTreeBark(
-        vWorldPos, vModelPos, vLocal, vSize, vUVOrigin, vColor, vFace, vEdges,
+        vWorldPos, vModelPos, vLocal, vSize, vTile, vColor, vFace, vEdges,
         mat3(1.0), gAlbedo, gNormal, gMaterial);
 }

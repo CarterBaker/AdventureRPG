@@ -17,7 +17,7 @@ import engine.root.SystemPackage;
 public class TextureViewerMenuSystem extends SystemPackage {
 
     /*
-     * Opens the status bar over the atlas. It names the image under the
+     * Opens the status bar over the tiles. It names the texture under the
      * pointer, otherwise the current brush, and rewrites only on change.
      */
 

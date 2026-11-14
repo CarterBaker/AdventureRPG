@@ -64,6 +64,14 @@ public class SettingsUtility extends EngineUtility {
                 settings.detailRadius,
                 EngineSetting.DETAIL_RADIUS_MIN,
                 EngineSetting.DETAIL_RADIUS_MAX);
+        settings.textureQuality = Math.clamp(
+                settings.textureQuality,
+                EngineSetting.TEXTURE_QUALITY_LOW,
+                EngineSetting.TEXTURE_QUALITY_HIGH);
+        settings.textureAnisotropy = Math.clamp(
+                settings.textureAnisotropy,
+                EngineSetting.TEXTURE_ANISOTROPY_LEVELS[0],
+                EngineSetting.TEXTURE_ANISOTROPY_LEVELS[EngineSetting.TEXTURE_ANISOTROPY_LEVELS.length - 1]);
         settings.maxRenderDistance = Math.clamp(
                 settings.maxRenderDistance,
                 EngineSetting.RENDER_DISTANCE_MIN,

@@ -30,6 +30,7 @@ public class EngineSetting {
     public static final int GL_DEPTH_TEST = 0x0B71;
     public static final int GL_DYNAMIC_DRAW = 0x88E8;
     public static final int GL_ELEMENT_ARRAY_BUFFER = 0x8893;
+    public static final int GL_EXTENSIONS = 0x1F03;
     public static final int GL_FLOAT = 0x1406;
     public static final int GL_FRAGMENT_SHADER = 0x8B30;
     public static final int GL_FRAMEBUFFER = 0x8D40;
@@ -37,14 +38,22 @@ public class EngineSetting {
     public static final int GL_FRONT = 0x0404;
     public static final int GL_LEQUAL = 0x0203;
     public static final int GL_LINEAR = 0x2601;
+    public static final int GL_LINEAR_MIPMAP_LINEAR = 0x2703;
     public static final int GL_LINK_STATUS = 0x8B82;
+    public static final int GL_MAJOR_VERSION = 0x821B;
     public static final int GL_MAP_READ_BIT = 0x0001;
+    public static final int GL_MAX_ARRAY_TEXTURE_LAYERS = 0x88FF;
+    public static final int GL_MAX_TEXTURE_IMAGE_UNITS = 0x8872;
+    public static final int GL_MAX_TEXTURE_MAX_ANISOTROPY = 0x84FF;
+    public static final int GL_MINOR_VERSION = 0x821C;
     public static final int GL_NEAREST = 0x2600;
+    public static final int GL_NUM_EXTENSIONS = 0x821D;
     public static final int GL_ONE = 0x0001;
     public static final int GL_ONE_MINUS_SRC_ALPHA = 0x0303;
     public static final int GL_PATCHES = 0x000E;
     public static final int GL_PATCH_VERTICES = 0x8E72;
     public static final int GL_PIXEL_PACK_BUFFER = 0x88EB;
+    public static final int GL_PIXEL_UNPACK_BUFFER = 0x88EC;
     public static final int GL_QUERY_RESULT = 0x8866;
     public static final int GL_QUERY_RESULT_AVAILABLE = 0x8867;
     public static final int GL_RENDERBUFFER = 0x8D41;
@@ -54,6 +63,7 @@ public class EngineSetting {
     public static final int GL_RGB32F = 0x8815;
     public static final int GL_RGB8 = 0x8051;
     public static final int GL_RG32UI = 0x823C;
+    public static final int GL_RG_INTEGER = 0x8228;
     public static final int GL_RGBA = 0x1908;
     public static final int GL_RGBA16F = 0x881A;
     public static final int GL_RGBA32F = 0x8814;
@@ -62,12 +72,16 @@ public class EngineSetting {
     public static final int GL_SCISSOR_TEST = 0x0C11;
     public static final int GL_SRC_ALPHA = 0x0302;
     public static final int GL_STATIC_DRAW = 0x88E4;
+    public static final int GL_STREAM_DRAW = 0x88E0;
     public static final int GL_STREAM_READ = 0x88E1;
     public static final int GL_TEXTURE0 = 0x84C0;
     public static final int GL_TEXTURE_2D = 0x0DE1;
     public static final int GL_TEXTURE_2D_ARRAY = 0x8C1A;
+    public static final int GL_TEXTURE_BASE_LEVEL = 0x813C;
     public static final int GL_TEXTURE_BUFFER = 0x8C2A;
     public static final int GL_TEXTURE_MAG_FILTER = 0x2800;
+    public static final int GL_TEXTURE_MAX_ANISOTROPY = 0x84FE;
+    public static final int GL_TEXTURE_MAX_LEVEL = 0x813D;
     public static final int GL_TEXTURE_MIN_FILTER = 0x2801;
     public static final int GL_TEXTURE_WRAP_S = 0x2802;
     public static final int GL_TEXTURE_WRAP_T = 0x2803;
@@ -75,6 +89,7 @@ public class EngineSetting {
     public static final int GL_TRIANGLES = 0x0004;
     public static final int GL_UNIFORM_BUFFER = 0x8A11;
     public static final int GL_UNSIGNED_BYTE = 0x1401;
+    public static final int GL_UNSIGNED_INT = 0x1405;
     public static final int GL_UNSIGNED_SHORT = 0x1403;
     public static final int GL_VERTEX_SHADER = 0x8B31;
 
@@ -286,6 +301,7 @@ public class EngineSetting {
     public static final int ARPG_TAG_STRING = 6;
     public static final int ARPG_TAG_ARRAY = 7;
     public static final int ARPG_TAG_OBJECT = 8;
+    public static final int ARPG_TAG_BYTES = 9;
     public static final int ARPG_BYTE_MASK = 0xFF;
     public static final int ARPG_BYTE_BITS = 8;
     public static final int ARPG_VARINT_PAYLOAD_MASK = 0x7F;
@@ -304,6 +320,15 @@ public class EngineSetting {
     public static final char ARPG_TEXT_ESCAPE_LIMIT = 0x20;
     public static final int ARPG_TEXT_UNICODE_DIGITS = 4;
     public static final int ARPG_TEXT_HEX_RADIX = 16;
+    public static final String ARPG_TEXT_BYTES_MARKER = "$bytes:";
+
+    // Texture Bake Tool
+    public static final String TEXTURE_BAKE_TOOL_ASSET_ROOT = "assets";
+    public static final String TEXTURE_BAKE_TOOL_FORCE = "force";
+    public static final String TEXTURE_BAKE_TOOL_USAGE = String.join("\n",
+            "Texture bake tool, run from the project root.",
+            "  (no arguments)  Bake every tile under assets/textures whose sources changed into assets/bakedtextures.",
+            "  force           Bake every tile, changed or not.");
 
     // ARPG Tool
     public static final String ARPG_TOOL_COMMAND_ENCODE = "encode";
@@ -386,6 +411,13 @@ public class EngineSetting {
     public static final int PROFILER_CAPTURE_FRAMES = 600;
     public static final String PROFILER_COUNTER_DRAW_CALLS = "Draw Calls";
     public static final String PROFILER_COUNTER_TRIANGLES = "Triangles";
+    public static final String PROFILER_COUNTER_TEXTURE_TILES = "Texture Tiles Referenced";
+    public static final String[] PROFILER_COUNTER_TEXTURE_RESIDENT = {
+            "Texture Tiles Resident 128", "Texture Tiles Resident 256", "Texture Tiles Resident 512" };
+    public static final String PROFILER_COUNTER_TEXTURE_EVICTIONS = "Texture Evictions";
+    public static final String PROFILER_COUNTER_TEXTURE_FALLBACK = "Texture Fallback Tiles";
+    public static final String PROFILER_COUNTER_TEXTURE_UPLOADS = "Texture Uploads";
+    public static final String PROFILER_COUNTER_TEXTURE_UPLOAD_MILLIS = "Texture Upload ms";
     public static final String PROFILER_DIRECTORY = "Profiler";
     public static final String PROFILER_GPU_FRAME_LABEL = "GPU Frame";
     public static final String PROFILER_GPU_PASS_PREFIX = "Pass: ";
@@ -754,6 +786,11 @@ public class EngineSetting {
     public static final int TREE_DETAIL_DISTANCE_MIN = 2;
     public static final int CHARACTER_DETAIL_DISTANCE_MAX = 48;
     public static final int CHARACTER_DETAIL_DISTANCE_MIN = 2;
+    public static final int TEXTURE_QUALITY_LOW = 0;
+    public static final int TEXTURE_QUALITY_MEDIUM = 1;
+    public static final int TEXTURE_QUALITY_HIGH = 2;
+    public static final int[] TEXTURE_ANISOTROPY_LEVELS = { 1, 2, 4, 8, 16 };
+    public static final int TEXTURE_ANISOTROPY_DEFAULT = 8;
 
     // User Settings — Post Processing
     public static final float BLOOM_INTENSITY_MAX = 1f;
@@ -849,8 +886,6 @@ public class EngineSetting {
     public static final String SHADER_ALIAS_ALBEDO = "Albedo";
     public static final float SHADER_ALIAS_DEFAULT_ALPHA = 1.0f;
     public static final String SHADER_ALIAS_GROWTH = "Growth";
-    public static final int SHADER_ALIAS_LIBRARY_GROWTH_FACTOR = 2;
-    public static final int SHADER_ALIAS_LIBRARY_INITIAL_CAPACITY = 16;
     public static final int SHADER_UBO_UNSPECIFIED_BINDING = INDEX_NOT_FOUND;
     public static final String SPRITE_COLOR_UNIFORM = "u_color";
     public static final Color SPRITE_DEFAULT_COLOR = Color.WHITE;
@@ -858,9 +893,109 @@ public class EngineSetting {
     public static final String SPRITE_DEFAULT_MESH = "sprites/SpriteMesh";
     public static final String SPRITE_STRETCH_UNIFORM = "u_stretch";
     public static final String SUN_LIGHT_UBO = "SunLightData";
-    public static final String TEXTURE_UV_SCALE_UNIFORM = "u_uvPerBlock";
     public static final int TRIANGLE_VERTEX_COUNT = 3;
     public static final String UBO_TIME_DATA_NAME = "TimeData";
+
+    // Texture Compression — BC7 mode 6 for colour and packed maps, BC5 for normal maps, as the GPU reads them
+    public static final int GL_COMPRESSED_RGBA_BPTC_UNORM = 0x8E8C;
+    public static final int GL_COMPRESSED_RG_RGTC2 = 0x8DBD;
+    public static final int TEXTURE_BLOCK_EDGE = 4;
+    public static final int TEXTURE_BLOCK_TEXELS = TEXTURE_BLOCK_EDGE * TEXTURE_BLOCK_EDGE;
+    public static final int TEXTURE_BLOCK_BYTES = 16;
+    public static final int TEXTURE_BC7_MODE6_HEADER = 1 << 6;
+    public static final int TEXTURE_BC7_MODE6_HEADER_BITS = 7;
+    public static final int TEXTURE_BC7_ENDPOINT_BITS = 7;
+    public static final int TEXTURE_BC7_ENDPOINT_MAX = (1 << TEXTURE_BC7_ENDPOINT_BITS) - 1;
+    public static final int TEXTURE_BC7_INDEX_BITS = 4;
+    public static final int TEXTURE_BC7_ANCHOR_INDEX_BITS = TEXTURE_BC7_INDEX_BITS - 1;
+    public static final int TEXTURE_BC7_INDEX_COUNT = 1 << TEXTURE_BC7_INDEX_BITS;
+    public static final int TEXTURE_BC7_ANCHOR_INDEX_LIMIT = 1 << TEXTURE_BC7_ANCHOR_INDEX_BITS;
+    public static final int[] TEXTURE_BC7_WEIGHTS = { 0, 4, 9, 13, 17, 21, 26, 30, 34, 38, 43, 47, 51, 55, 60, 64 };
+    public static final int TEXTURE_BC7_WEIGHT_TOTAL = 64;
+    public static final int TEXTURE_BC7_WEIGHT_ROUNDING = 32;
+    public static final int TEXTURE_BC7_WEIGHT_SHIFT = 6;
+    public static final int TEXTURE_BC7_PCA_ITERATIONS = 8;
+    public static final int TEXTURE_BC7_REFINE_PASSES = 2;
+    public static final float TEXTURE_BC7_FLAT_VARIANCE = 1e-4f;
+    public static final int TEXTURE_BC4_BYTES = 8;
+    public static final int TEXTURE_BC4_INDEX_BITS = 3;
+    public static final int TEXTURE_BC4_PALETTE_SIZE = 1 << TEXTURE_BC4_INDEX_BITS;
+    public static final int TEXTURE_BC4_INTERPOLATION_STEPS = TEXTURE_BC4_PALETTE_SIZE - 1;
+    public static final int TEXTURE_BC5_CHANNELS = 2;
+
+    // Texture Bake — what the bake tool writes under bakedtextures/ from the sources under textures/, one definition
+    // per tile (its average, reveal, fallback and extra maps) and one file per tier it fills
+    public static final String BAKED_TEXTURE_PATH = "bakedtextures";
+    public static final String BAKED_TEXTURE_TILE_DIRECTORY = "tiles";
+    public static final String BAKED_TEXTURE_TIER_PREFIX = "tier";
+    public static final int TEXTURE_BAKE_VERSION = 1;
+    public static final int[] TEXTURE_TIER_SIZES = { 128, 256, 512 };
+    public static final int TEXTURE_TIER_COUNT = TEXTURE_TIER_SIZES.length;
+    public static final int TEXTURE_TIER_BASE_SIZE = TEXTURE_TIER_SIZES[0];
+    public static final int TEXTURE_TIER_TOP_SIZE = TEXTURE_TIER_SIZES[TEXTURE_TIER_COUNT - 1];
+    public static final int TEXTURE_FALLBACK_SIZE = 16;
+    public static final int TEXTURE_EXTRA_SIZE = 128;
+    public static final int TEXTURE_NORMAL_SOURCE_CHANNELS = 3;
+    public static final int TEXTURE_SCALAR_SOURCE_CHANNELS = 1;
+    public static final float TEXTURE_COVERAGE_SCALE_MAX = 4f;
+    public static final int TEXTURE_COVERAGE_SEARCH_STEPS = 12;
+    public static final String TEXTURE_BAKE_KEY_SOURCE = "source";
+    public static final String TEXTURE_BAKE_KEY_SIZE = "size";
+    public static final String TEXTURE_BAKE_KEY_AVERAGE = "average";
+    public static final String TEXTURE_BAKE_KEY_REVEAL = "reveal";
+    public static final String TEXTURE_BAKE_KEY_SHARES = "shares";
+    public static final String TEXTURE_BAKE_KEY_COLOR = "color";
+    public static final String TEXTURE_BAKE_KEY_TINTABLE = "tintable";
+    public static final String TEXTURE_BAKE_KEY_FALLBACK = "fallback";
+    public static final String TEXTURE_BAKE_KEY_EXTRA = "extra";
+    public static final String TEXTURE_TILE_NAME_SEPARATOR = "/";
+    public static final String TEXTURE_ALIAS_KEY_DEFAULT_COLOR = "defaultColor";
+    public static final int TEXTURE_ALIAS_DEFAULT_COLOR_CHANNELS = 3;
+    public static final String TEXTURE_ALIAS_KEY_MAP = "map";
+    public static final String TEXTURE_ALIAS_KEY_CHANNEL = "channel";
+    public static final String TEXTURE_ALIAS_KEY_ALIASES = "aliases";
+
+    // Texture Streaming — fixed pools allocated once from the quality setting; slot N of a tier holds the same tile
+    // in every map's array, layer 0 of each array is the reserved sentinel, and the tile lookup texture maps a tile ID
+    // to its slots in two words: the base and middle tier slots, then the top tier slot, the extra layer and the
+    // fallback layer. Layouts must match includes/TileTextures.glsl.
+    public static final int[] TEXTURE_TIER_SLOTS = { 1024, 256, 64 };
+    public static final int TEXTURE_TILE_CAPACITY = 2047;
+    public static final int TEXTURE_EXTRA_SLOTS = 255;
+    public static final int TEXTURE_SENTINEL_LAYERS = 1;
+    public static final int TEXTURE_LOOKUP_WIDTH = 256;
+    public static final int TEXTURE_LOOKUP_WORDS = 2;
+    public static final int TEXTURE_LOOKUP_WIDE_BITS = 16;
+    public static final int TEXTURE_LOOKUP_NARROW_BITS = 8;
+    public static final int TEXTURE_TIER_NONE = -1;
+    public static final int TEXTURE_STREAM_MAX_IN_FLIGHT = 32;
+    public static final int TEXTURE_STREAM_UPLOAD_BYTES_PER_FRAME = 2 * 1024 * 1024;
+    public static final int TEXTURE_STREAM_STAGING_BUFFERS = 3;
+    public static final int TEXTURE_STREAM_MAX_UPLOADS_PER_FLUSH = 64;
+    public static final int TEXTURE_STREAM_USER_CAPACITY = 16384;
+    public static final int TEXTURE_USER_BOUNDS_FLOATS = 4;
+    public static final float TEXTURE_ENTITY_REACH_BLOCKS = 1f;
+    public static final float TEXTURE_STREAM_PREFETCH_SECONDS = 1.5f;
+    public static final float TEXTURE_STREAM_TIER_DISTANCE_BIAS = 1.5f;
+    public static final String TEXTURE_STREAM_THREAD_NAME = GENERAL_THREAD_NAME;
+    public static final int TEXTURE_SHADER_SAMPLER_HEADROOM = 2;
+    public static final int TEXTURE_BPTC_CORE_MAJOR = 4;
+    public static final int TEXTURE_BPTC_CORE_MINOR = 2;
+    public static final String GL_EXTENSION_TEXTURE_COMPRESSION_BPTC = "GL_ARB_texture_compression_bptc";
+    public static final String GL_EXTENSION_TEXTURE_FILTER_ANISOTROPIC = "GL_EXT_texture_filter_anisotropic";
+    public static final String GL_EXTENSION_TEXTURE_FILTER_ANISOTROPIC_ARB = "GL_ARB_texture_filter_anisotropic";
+    public static final String UNIFORM_TILE_SLOTS = "u_tileSlots";
+    public static final String UNIFORM_TILE_EXTRA = "u_tileExtra";
+    public static final String UNIFORM_TEXTURE_ANISOTROPY = "u_textureAnisotropy";
+    public static final String[][] TEXTURE_TIER_SAMPLER_NAMES = {
+            { "u_tileAlbedo0", "u_tileNormal0", "u_tileMaterial0" },
+            { "u_tileAlbedo1", "u_tileNormal1", "u_tileMaterial1" },
+            { "u_tileAlbedo2", "u_tileNormal2", "u_tileMaterial2" } };
+    public static final String[] TEXTURE_FALLBACK_SAMPLER_NAMES = {
+            "u_tileAlbedoFallback", "u_tileNormalFallback", "u_tileMaterialFallback" };
+    public static final int TEXTURE_SINGLE_SAMPLER_COUNT = 2;
+    public static final int TEXTURE_SAMPLER_COUNT = (TEXTURE_TIER_COUNT + 1) * TEXTURE_FALLBACK_SAMPLER_NAMES.length
+            + TEXTURE_SINGLE_SAMPLER_COUNT;
 
     // Camera
     public static final float CAMERA_EYE_BLEND_DISTANCE = 1f;
@@ -1120,14 +1255,13 @@ public class EngineSetting {
 
     // Quad Records — the packed per-quad records terrain and water draw from, pulled by their shaders from a buffer
     // texture with no vertex attributes. Word 0 of every layout is the quad's position in sub-blocks from its draw's
-    // origin, so merging shifts a record with one add. A solid record carries the geometry meta word, the content
-    // its block holds above the meta's flags, the coverage word beside the tile's atlas cell, then one stream of
-    // 24-bit words — four corner tints, four low and four high edge words — packed four words to three ints. A
-    // liquid record carries its face, extents, level and tidal flag in one word. Layouts must match
-    // includes/QuadRecord.glsl.
+    // origin, so merging shifts a record with one add. A solid record carries the geometry meta word, the content its
+    // block holds above the meta's flags, the coverage word below the tile's ID (QUAD_RECORD_TILE_SHIFT up, so a tile
+    // ID fits in sixteen bits), then one stream of 24-bit words — four corner tints, four low and four high edge words
+    // — packed four words to three ints. A liquid record carries its face, extents, level and tidal flag in one word.
+    // Layouts must match includes/QuadRecord.glsl.
     public static final String QUAD_VAO = "util/vao/QuadVAO";
     public static final String UNIFORM_QUAD_BUFFER = "u_quadBuffer";
-    public static final int ATLAS_CELL_AXIS_BITS = 8;
     public static final int QUAD_PACKET_INITIAL_BUCKETS = 4;
     public static final int QUAD_BUFFER_SHRINK_DIVISOR = 4;
     public static final int QUAD_RECORD_POSITION_X_BITS = 10;
@@ -1960,7 +2094,7 @@ public class EngineSetting {
     public static final int TREE_PART_LEAF = 2;
     public static final int TREE_PART_ACCENT = 3;
     public static final int TREE_PART_COUNT = 4;
-    public static final int TREE_PART_CORNER_FLOATS = 2;
+    public static final int TREE_TILE_PADDING_FLOATS = 1;
     public static final int TREE_WOOD_PART_COUNT = 2;
 
     // Tree Mesh — how a wood vertex packs its face and edge kinds, the slots a wood and a leaf vertex leave empty,
@@ -2541,7 +2675,7 @@ public class EngineSetting {
     public static final int RIGGED_MESH_POSITION_FLOATS = 3;
     public static final int RIGGED_MESH_UV_FLOATS = 2;
     public static final int RIGGED_MESH_MORPH_FLOATS = 2;
-    public static final int RIGGED_MESH_DETAIL_FLOATS = 3;
+    public static final int RIGGED_MESH_DETAIL_FLOATS = 2;
     public static final String[] RIGGED_MESH_MASK_CHANNELS = { "freckles", "blush", "lips", "liner" };
     public static final int RIGGED_MESH_MASK_FLOATS = 4;
     public static final int[] RIGGED_MESH_TRAILING_ATTRIBUTE_SIZES = {
@@ -2550,7 +2684,7 @@ public class EngineSetting {
     public static final int RIGGED_MESH_VERTEX_STRIDE = RIGGED_MESH_POSITION_FLOATS + RIGGED_MESH_UV_FLOATS
             + MAX_BONE_INFLUENCES * 2 + SKINNED_NORMAL_FLOATS + RIGGED_MESH_MORPH_FLOATS + RIGGED_MESH_DETAIL_FLOATS
             + RIGGED_MESH_MASK_FLOATS;
-    public static final int RIGGED_MESH_TILE_FLOATS = 6;
+    public static final int RIGGED_MESH_TILE_INTS = 2;
     public static final int RIGGED_MESH_VERT_LIMIT = 65536;
     public static final int RIGGED_MESH_MORPH_ENTRY_FLOATS = 4;
     public static final String[] RIGGED_MESH_NO_MORPHS = {};
@@ -3662,9 +3796,9 @@ public class EngineSetting {
     public static final float SUB_VOXEL_IMPORT_RAY_Z = 0.0071f;
     public static final int SUB_VOXEL_MAX_PARTS = 255;
     public static final int SUB_VOXEL_MAX_MODEL_BLOCKS = 8;
-    public static final String SUB_VOXEL_VAO = "util/vao/ItemVAO";
-    public static final int SUB_VOXEL_UV_BOUNDS_FLOATS = 4;
-    public static final int SUB_VOXEL_VERTEX_STRIDE = 6;
+    public static final String SUB_VOXEL_VAO = "util/vao/SubVoxelVAO";
+    public static final int SUB_VOXEL_VERTEX_STRIDE = 5;
+    public static final int SUB_VOXEL_TILE_OFFSET = 4;
     public static final int SUB_VOXEL_AXIS_COUNT = 3;
     public static final float SUB_VOXEL_WALL_EDGE_SNAP = 0.25f;
     public static final String[] SUB_VOXEL_WALL_AXIS_KEYS = { "x", "y", "z" };

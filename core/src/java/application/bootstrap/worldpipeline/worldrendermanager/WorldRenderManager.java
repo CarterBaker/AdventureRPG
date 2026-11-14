@@ -15,6 +15,8 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -34,6 +36,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2FloatMap;
 import it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -86,6 +89,7 @@ public class WorldRenderManager extends ManagerPackage {
     private RenderManager renderManager;
     private WorldStreamManager worldStreamManager;
     private CloudManager cloudManager;
+    private TextureManager textureManager;
     private FrustumCullingSystem frustumCullingSystem;
     private MacroRenderSystem macroRenderSystem;
     private MacroWaterRenderSystem macroWaterRenderSystem;
@@ -94,6 +98,10 @@ public class WorldRenderManager extends ManagerPackage {
     private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> chunkEntries;
     private Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>>> megaEntries;
     private LongOpenHashSet emptyChunks;
+
+    // Texture Users — the texture user of every chunk whose terrain, and whose trees, are on the GPU
+    private Long2IntOpenHashMap chunkTextureUsers;
+    private Long2IntOpenHashMap treeTextureUsers;
 
     // Tree Entries
     private TreeEntries chunkTrees;
@@ -149,6 +157,12 @@ public class WorldRenderManager extends ManagerPackage {
         this.megaEntries = new Long2ObjectOpenHashMap<>();
         this.emptyChunks = new LongOpenHashSet();
 
+        // Texture Users
+        this.chunkTextureUsers = new Long2IntOpenHashMap();
+        this.chunkTextureUsers.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        this.treeTextureUsers = new Long2IntOpenHashMap();
+        this.treeTextureUsers.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+
         // Tree Entries
         this.chunkTrees = new TreeEntries();
         this.megaTrees = new TreeEntries();
@@ -193,6 +207,7 @@ public class WorldRenderManager extends ManagerPackage {
         this.renderManager = get(RenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.cloudManager = get(CloudManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     @Override
@@ -550,6 +565,10 @@ public class WorldRenderManager extends ManagerPackage {
                 drawnRevision++;
 
             boolean drawn = updateQuadEntries(coordinate, chunkStaging, chunkEntries);
+
+            if (drawn)
+                updateTextureUser(chunkTextureUsers, coordinate, chunkStaging.getTiles());
+
             chunkStaging.clear();
 
             return drawn;
@@ -559,6 +578,7 @@ public class WorldRenderManager extends ManagerPackage {
             return false;
 
         removeEntries(coordinate, chunkEntries);
+        removeTextureUser(chunkTextureUsers, coordinate);
 
         if (emptyChunks.add(coordinate))
             drawnRevision++;
@@ -576,12 +596,19 @@ public class WorldRenderManager extends ManagerPackage {
     // A chunk's tree packet on the GPU, or its old trees taken down when it holds none — false only when no grid
     // draws the chunk any more
     public boolean addChunkTrees(long coordinate, DynamicPacketInstance treePacket) {
-        return updateTrees(coordinate, treePacket, chunkTrees);
+
+        if (!updateTrees(coordinate, treePacket, chunkTrees))
+            return false;
+
+        updateTextureUser(treeTextureUsers, coordinate, treePacket.getTiles());
+
+        return true;
     }
 
     // A chunk's trees taken down fall away rather than vanish, under whatever draws the ground they stood on next
     public void removeChunkTrees(long coordinate) {
         retireTrees(coordinate, chunkTrees);
+        removeTextureUser(treeTextureUsers, coordinate);
     }
 
     public boolean addMegaTrees(long coordinate, DynamicPacketInstance treePacket) {
@@ -965,6 +992,40 @@ public class WorldRenderManager extends ManagerPackage {
             drawnRevision++;
 
         removeEntries(coordinate, chunkEntries);
+        removeTextureUser(chunkTextureUsers, coordinate);
+    }
+
+    // Texture Users \\
+
+    // A chunk's texture user for the tiles its geometry draws from, registered over the chunk's footprint on its
+    // first upload and given its new tiles on every one after; dropped once it draws none
+    private void updateTextureUser(Long2IntOpenHashMap users, long coordinate, TextureTileSetStruct tiles) {
+
+        if (tiles.isEmpty()) {
+            removeTextureUser(users, coordinate);
+            return;
+        }
+
+        int user = users.get(coordinate);
+
+        if (user != EngineSetting.INDEX_NOT_FOUND) {
+            textureManager.setTextureUserTiles(user, tiles.getTileIDs());
+            return;
+        }
+
+        float minX = Coordinate2Long.unpackX(coordinate) * (float) EngineSetting.CHUNK_SIZE;
+        float minZ = Coordinate2Long.unpackY(coordinate) * (float) EngineSetting.CHUNK_SIZE;
+
+        users.put(coordinate, textureManager.registerTextureUser(
+                tiles.getTileIDs(), minX, minZ, minX + EngineSetting.CHUNK_SIZE, minZ + EngineSetting.CHUNK_SIZE));
+    }
+
+    private void removeTextureUser(Long2IntOpenHashMap users, long coordinate) {
+
+        int user = users.remove(coordinate);
+
+        if (user != EngineSetting.INDEX_NOT_FOUND)
+            textureManager.removeTextureUser(user);
     }
 
     // A mega's stand-in trees leave with it

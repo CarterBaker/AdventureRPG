@@ -1,7 +1,7 @@
 #version 330 core
 layout(location = 0) in vec3  aPos;
 layout(location = 1) in float aNorIndex;
-layout(location = 2) in vec2  aUV;
+layout(location = 2) in float aTile;
 
 #include "includes/CameraData.glsl"
 
@@ -12,13 +12,13 @@ const vec3 NORMALS[6] = vec3[](
 
 out vec3 vNormal;
 out vec3 vPosition;
-out vec2 vUVOrigin;
+flat out int vTile;
 flat out int vFace;
 
 void main() {
     vNormal     = NORMALS[int(aNorIndex)];
     vPosition   = aPos;
-    vUVOrigin   = aUV;
+    vTile       = int(aTile + 0.5);
     vFace       = int(aNorIndex);
     gl_Position = u_viewProjection * vec4(aPos, 1.0);
 }

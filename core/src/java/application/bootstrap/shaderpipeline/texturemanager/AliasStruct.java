@@ -2,32 +2,35 @@ package application.bootstrap.shaderpipeline.texturemanager;
 
 import java.awt.Color;
 
+import application.bootstrap.shaderpipeline.texture.TextureMapType;
 import engine.root.StructPackage;
 
 public class AliasStruct extends StructPackage {
 
     /*
-     * Bootstrap container for a single alias type, its default fill colour,
-     * and the UBO uniform name that receives this alias's layer index during
-     * texture UBO seeding. GCs with the loader when bootstrap completes.
+     * One alias type: its default fill colour, the baked map its images go
+     * into and the first channel of that map they fill. The bake reads it to
+     * pack a tile's images, and the editor to paint one back.
      */
 
     // Identity
     private final String aliasType;
     private final Color defaultColor;
-    private final String uniformName;
+    private final TextureMapType mapType;
+    private final int channel;
 
     // Constructor \\
 
-    public AliasStruct(String aliasType, Color defaultColor, String uniformName) {
+    public AliasStruct(String aliasType, Color defaultColor, TextureMapType mapType, int channel) {
         this.aliasType = aliasType;
         this.defaultColor = defaultColor;
-        this.uniformName = uniformName;
+        this.mapType = mapType;
+        this.channel = channel;
     }
 
     // Accessible \\
 
-    String getAliasType() {
+    public String getAliasType() {
         return aliasType;
     }
 
@@ -35,7 +38,11 @@ public class AliasStruct extends StructPackage {
         return defaultColor;
     }
 
-    public String getUniformName() {
-        return uniformName;
+    public TextureMapType getMapType() {
+        return mapType;
+    }
+
+    public int getChannel() {
+        return channel;
     }
 }

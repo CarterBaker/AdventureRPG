@@ -1,7 +1,7 @@
 #version 330 core
 layout(location = 0) in vec3  aPos;
 layout(location = 1) in float aNorIndex;
-layout(location = 2) in vec2  aUV;
+layout(location = 2) in float aTile;
 layout(location = 3) in vec4  aInstance0; // chunkX(intBits), chunkZ(intBits), localX, localZ
 layout(location = 4) in vec2  aInstance1; // localY, orientation
 
@@ -16,7 +16,7 @@ const vec3 NORMALS[6] = vec3[](
 
 out vec3 vNormalView;
 out vec3 vViewPosition;
-out vec2 vUVOrigin;
+flat out int vTile;
 out vec3 vModelPosition;
 flat out int vFace;
 
@@ -24,7 +24,7 @@ void main() {
     mat4 R      = u_rotations[int(aInstance1.y)];
     vec3 rotPos = (R * vec4(aPos - vec3(0.5), 1.0)).xyz + vec3(0.5);
     vNormalView = normalize(mat3(u_view) * (mat3(R) * NORMALS[int(aNorIndex)]));
-    vUVOrigin      = aUV;
+    vTile          = int(aTile + 0.5);
     vModelPosition = aPos;
     vFace          = int(aNorIndex);
 

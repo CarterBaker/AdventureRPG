@@ -112,6 +112,8 @@ public class EditorSettingsOptionBranch extends BranchPackage {
 
         editorSettingsBranch.injectSectionHeader(RuntimeSetting.SETTINGS_SECTION_IMAGE);
         injectOptionRow(SettingsOption.ANTI_ALIASING);
+        injectOptionRow(SettingsOption.TEXTURE_QUALITY);
+        injectOptionRow(SettingsOption.TEXTURE_ANISOTROPY);
         injectOptionRow(SettingsOption.BLOOM);
         injectSlider(SettingsSlider.BLOOM_INTENSITY);
 

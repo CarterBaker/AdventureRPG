@@ -47,6 +47,10 @@ public class SkinnedOverlayStruct extends StructPackage {
 
     // Accessible \\
 
+    public int getTile(int styleIndex) {
+        return styles.getTile(styleIndex);
+    }
+
     public int getStyleCount() {
         return styles.getCount();
     }

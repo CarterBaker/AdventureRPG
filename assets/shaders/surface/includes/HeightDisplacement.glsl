@@ -1,15 +1,16 @@
 #ifndef HEIGHT_DISPLACEMENT_GLSL
 #define HEIGHT_DISPLACEMENT_GLSL
 
-#include "surface/includes/SurfaceStandard.glsl"
+#include "includes/TileTextures.glsl"
 
 // Height-map displacement for the near ring. The caller supplies a single weight already folded from
 // natural-block eligibility, distance fade, and the surface-boundary gradient, so displacement is exactly
 // zero on every edge cell where the surface ends and only the bevel survives at a seam. A second window
-// carries it to zero at every unit block boundary as well: the map is sampled per block through fract(),
-// and adjacent blocks of a natural surface draw a different spin of the tile, so without that window the
-// sampled height steps discontinuously at every internal block line and cracks the surface inside a single
-// merged quad. Displacement rides the flat geometric normal, never the beveled one.
+// carries it to zero at every unit block boundary as well: the map repeats once per block, and adjacent
+// blocks of a natural surface draw a different spin of the tile, so without that window the sampled height
+// steps discontinuously at every internal block line and cracks the surface inside a single merged quad. The
+// height is read at the mip level the vertex spacing calls for, so a coarse patch never aliases a fine map.
+// Displacement rides the flat geometric normal, never the beveled one.
 
 const float HEIGHT_DISPLACE_SCALE    = 0.12;
 const float HEIGHT_BLOCK_EDGE_MARGIN = 0.25;
@@ -25,7 +26,8 @@ float heightBlockWindow(vec3 localPos, vec3 normal) {
     return window.x * window.y;
 }
 
-vec3 applyHeightDisplacement(vec3 worldPos, vec3 basePos, vec3 normal, vec2 tiledUV, float weight) {
+vec3 applyHeightDisplacement(
+    vec3 worldPos, vec3 basePos, vec3 normal, int tileID, vec2 uv, float spacing, float weight) {
     if (weight <= 0.001)
     return worldPos;
 
@@ -34,7 +36,9 @@ vec3 applyHeightDisplacement(vec3 worldPos, vec3 basePos, vec3 normal, vec2 tile
     if (window <= 0.001)
     return worldPos;
 
-    float h = texture(u_textureArray, vec3(tiledUV, float(u_layer_height))).r;
+    float    footprint = spacing * TILE_BASE_SIZE;
+    TileRead tile      = resolveTileRead(tileID, footprint);
+    float    h         = sampleTileMaterialLod(tile, uv, log2(max(footprint, TILE_MIN_FOOTPRINT))).a;
 
     return worldPos + normal * ((h - 0.5) * HEIGHT_DISPLACE_SCALE * weight * window);
 }

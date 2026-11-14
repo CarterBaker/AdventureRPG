@@ -72,8 +72,8 @@ public class TreeHandle extends HandlePackage {
         return treeData.getHeightReachBlocks();
     }
 
-    public float[] getPartCorners() {
-        return treeData.getPartCorners();
+    public int[] getPartTiles() {
+        return treeData.getPartTiles();
     }
 
     public int[] getPartColors() {

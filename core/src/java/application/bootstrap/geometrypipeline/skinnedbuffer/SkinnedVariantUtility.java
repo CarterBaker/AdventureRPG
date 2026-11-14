@@ -1,8 +1,6 @@
 package application.bootstrap.geometrypipeline.skinnedbuffer;
 
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
-import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
@@ -33,7 +31,7 @@ public class SkinnedVariantUtility extends EngineUtility {
             throwException("\"" + ownerName + "\" offers no " + listKey + ". Source: " + sourceName);
 
         String[] names = new String[listArpg.size()];
-        float[] tiles = new float[listArpg.size() * EngineSetting.COLOR_CHANNEL_COUNT];
+        int[] tiles = new int[listArpg.size()];
         float[] reliefs = new float[listArpg.size()];
 
         for (int i = 0; i < names.length; i++)
@@ -47,7 +45,7 @@ public class SkinnedVariantUtility extends EngineUtility {
     private static void parseVariant(
             ArpgObjectStruct variantArpg,
             String[] names,
-            float[] tiles,
+            int[] tiles,
             float[] reliefs,
             int index,
             TextureManager textureManager,
@@ -65,15 +63,8 @@ public class SkinnedVariantUtility extends EngineUtility {
         if (relief < 0f)
             throwException("\"" + ownerName + "\" gives \"" + name + "\" a negative relief. Source: " + sourceName);
 
-        TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(
-                ArpgUtility.validateString(variantArpg, "texture"));
-        int tile = index * EngineSetting.COLOR_CHANNEL_COUNT;
-
         names[index] = name;
-        tiles[tile] = textureHandle.getU0();
-        tiles[tile + 1] = textureHandle.getU1();
-        tiles[tile + 2] = textureHandle.getV0();
-        tiles[tile + 3] = textureHandle.getV1();
+        tiles[index] = textureManager.getTileIDFromTextureName(ArpgUtility.validateString(variantArpg, "texture"));
         reliefs[index] = relief;
     }
 

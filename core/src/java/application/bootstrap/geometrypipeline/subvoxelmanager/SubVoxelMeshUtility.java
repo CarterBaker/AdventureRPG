@@ -3,6 +3,7 @@ package application.bootstrap.geometrypipeline.subvoxelmanager;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelQuadListStruct;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -14,9 +15,9 @@ public class SubVoxelMeshUtility extends EngineUtility {
      * The item vertex format for sub-voxel surfaces. A model's cubes and
      * walls are laid onto a sub-voxel grid and meshed by
      * SubVoxelGridMeshUtility like every other sub-voxel surface, so its faces
-     * merge across block boundaries. A face carries only its part's texture
-     * corner, and the item shaders repeat the texture once per block of the
-     * model grid, so a merged face keeps every texel. A pocket's open box is
+     * merge across block boundaries. A face carries only its part's tile ID,
+     * and the item shaders repeat the tile once per block of the model grid,
+     * so a merged face keeps every texel. A pocket's open box is
      * built here too, one quad per wall, and emitFace() is the one face writer
      * every item-format sub-voxel mesh goes through, a vehicle's included.
      */
@@ -75,12 +76,12 @@ public class SubVoxelMeshUtility extends EngineUtility {
 
     // Quads \\
 
-    // Every quad from first up to last written as item-format faces, each carrying its part's texture corner
+    // Every quad from first up to last written as item-format faces, each carrying its part's tile
     static void emitQuads(
             SubVoxelQuadListStruct quads,
             int first,
             int last,
-            float[] partUVBounds,
+            int[] partTiles,
             float[] minScratch,
             float[] maxScratch,
             FloatArrayList vertices,
@@ -88,12 +89,10 @@ public class SubVoxelMeshUtility extends EngineUtility {
 
         for (int quad = first; quad < last; quad++) {
 
-            int uvBase = quads.getPart(quad) * EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS;
-
             resolveQuadBounds(quads, quad, minScratch, maxScratch);
             emitFace(
                     quads.getFace(quad), minScratch, maxScratch,
-                    partUVBounds[uvBase], partUVBounds[uvBase + 1], vertices, indices);
+                    partTiles[quads.getPart(quad)], vertices, indices);
         }
     }
 
@@ -104,7 +103,7 @@ public class SubVoxelMeshUtility extends EngineUtility {
             int sizeX,
             int sizeY,
             int sizeZ,
-            float[] uvBounds,
+            int tile,
             FloatArrayList vertices,
             ShortArrayList indices) {
 
@@ -131,35 +130,33 @@ public class SubVoxelMeshUtility extends EngineUtility {
             min[axis] = plane;
             max[axis] = plane;
 
-            emitFace(face, min, max, uvBounds[0], uvBounds[1], vertices, indices);
+            emitFace(face, min, max, tile, vertices, indices);
         }
     }
 
     // Emit \\
 
-    // One face spanning min to max in block units, carrying its texture's corner
+    // One face spanning min to max in block units, carrying its tile
     static void emitFace(
             int face,
             float[] min,
             float[] max,
-            float u0,
-            float v0,
+            int tile,
             FloatArrayList vertices,
             ShortArrayList indices) {
 
         float[] corners = new float[EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.AXIS_COUNT];
 
         resolveCorners(face, min, max, corners);
-        emitCorners(face, corners, u0, v0, vertices, indices);
+        emitCorners(face, corners, tile, vertices, indices);
     }
 
-    // One quad through four corners in block units, three floats each in winding order, carrying its texture's
-    // corner and read by the shader as the face given
+    // One quad through four corners in block units, three floats each in winding order, carrying its tile and read
+    // by the shader as the face given
     static void emitCorners(
             int face,
             float[] corners,
-            float u0,
-            float v0,
+            int tile,
             FloatArrayList vertices,
             ShortArrayList indices) {
 
@@ -171,7 +168,7 @@ public class SubVoxelMeshUtility extends EngineUtility {
                     corners[corner * EngineSetting.AXIS_COUNT],
                     corners[corner * EngineSetting.AXIS_COUNT + 1],
                     corners[corner * EngineSetting.AXIS_COUNT + 2],
-                    face, u0, v0);
+                    face, tile);
 
         indices.add((short) baseVertex);
         indices.add((short) (baseVertex + 1));
@@ -240,15 +237,24 @@ public class SubVoxelMeshUtility extends EngineUtility {
             float y,
             float z,
             int face,
-            float u0,
-            float v0) {
+            int tile) {
 
         vertices.add(x);
         vertices.add(y);
         vertices.add(z);
         vertices.add(face);
-        vertices.add(u0);
-        vertices.add(v0);
+        vertices.add(tile);
+    }
+
+    // Tiles \\
+
+    // Every tile the first floats of a sub-voxel vertex array draw from, read from each vertex's tile float
+    public static void collectTiles(float[] vertices, int length, TextureTileSetStruct tiles) {
+
+        int stride = EngineSetting.SUB_VOXEL_VERTEX_STRIDE;
+
+        for (int v = EngineSetting.SUB_VOXEL_TILE_OFFSET; v < length; v += stride)
+            tiles.add((int) vertices[v]);
     }
 
     // Utility \\

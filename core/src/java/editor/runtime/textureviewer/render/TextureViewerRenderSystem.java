@@ -22,8 +22,8 @@ import engine.util.mathematics.vectors.Vector4;
 public class TextureViewerRenderSystem extends SystemPackage {
 
     /*
-     * Draws the item atlas into this window's scene target where the atlas
-     * system placed it. The shader outlines every source image, highlighting
+     * Draws the grid of item tiles into this window's scene target where the
+     * atlas system placed it. The shader outlines every tile, highlighting
      * the one under the pointer and the one chosen as the brush.
      */
 
@@ -78,6 +78,7 @@ public class TextureViewerRenderSystem extends SystemPackage {
         MaterialInstance material = atlasModel.getMaterial();
         material.setUniform(TextureViewerSetting.UNIFORM_TILE_RECTS, textureViewerAtlasSystem.getTileRects());
         material.setUniform(TextureViewerSetting.UNIFORM_TILE_COUNT, textureViewerAtlasSystem.getTileRects().length);
+        material.setUniform(TextureViewerSetting.UNIFORM_TILE_IDS, textureViewerAtlasSystem.getTileIDs());
     }
 
     // Update \\

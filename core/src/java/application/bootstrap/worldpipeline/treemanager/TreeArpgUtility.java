@@ -1,7 +1,6 @@
 package application.bootstrap.worldpipeline.treemanager;
 
 import java.util.Arrays;
-import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
 import application.bootstrap.worldpipeline.tree.TreeBranchStruct;
@@ -43,7 +42,7 @@ class TreeArpgUtility extends EngineUtility {
             String treeName,
             short treeID,
             ArpgObjectStruct treeArpg,
-            Function<String, float[]> resolveTextureCorner,
+            ToIntFunction<String> resolveTextureTile,
             ToIntFunction<String> resolveTextureColor,
             ToIntFunction<String> resolveToolTypeID,
             ToIntFunction<String> resolveItemID) {
@@ -61,7 +60,7 @@ class TreeArpgUtility extends EngineUtility {
                 form, trunk, branches, leaves, wood, growth,
                 computeReach(form, trunk, branches, leaves),
                 computeHeightReach(trunk, leaves),
-                resolvePartCorners(wood, leaves, resolveTextureCorner),
+                resolvePartTiles(wood, leaves, resolveTextureTile),
                 resolvePartColors(wood, leaves),
                 resolvePartAlbedos(wood, leaves, resolveTextureColor),
                 resolvePartOpaque(),
@@ -364,25 +363,20 @@ class TreeArpgUtility extends EngineUtility {
 
     // Parts \\
 
-    private static float[] resolvePartCorners(
+    // Every part's tile ID, indexed by part
+    private static int[] resolvePartTiles(
             TreeWoodStruct wood,
             TreeLeafStruct leaves,
-            Function<String, float[]> resolveTextureCorner) {
+            ToIntFunction<String> resolveTextureTile) {
 
-        float[] corners = new float[EngineSetting.TREE_PART_COUNT * EngineSetting.TREE_PART_CORNER_FLOATS];
+        int[] tiles = new int[EngineSetting.TREE_PART_COUNT];
 
-        writeCorner(corners, EngineSetting.TREE_PART_BARK, resolveTextureCorner.apply(wood.getBarkTextureName()));
-        writeCorner(corners, EngineSetting.TREE_PART_WOOD, resolveTextureCorner.apply(wood.getWoodTextureName()));
-        writeCorner(corners, EngineSetting.TREE_PART_LEAF, resolveTextureCorner.apply(leaves.getTextureName()));
-        writeCorner(corners, EngineSetting.TREE_PART_ACCENT,
-                resolveTextureCorner.apply(leaves.getAccentTextureName()));
+        tiles[EngineSetting.TREE_PART_BARK] = resolveTextureTile.applyAsInt(wood.getBarkTextureName());
+        tiles[EngineSetting.TREE_PART_WOOD] = resolveTextureTile.applyAsInt(wood.getWoodTextureName());
+        tiles[EngineSetting.TREE_PART_LEAF] = resolveTextureTile.applyAsInt(leaves.getTextureName());
+        tiles[EngineSetting.TREE_PART_ACCENT] = resolveTextureTile.applyAsInt(leaves.getAccentTextureName());
 
-        return corners;
-    }
-
-    private static void writeCorner(float[] corners, int part, float[] corner) {
-        corners[part * EngineSetting.TREE_PART_CORNER_FLOATS] = corner[0];
-        corners[part * EngineSetting.TREE_PART_CORNER_FLOATS + 1] = corner[1];
+        return tiles;
     }
 
     private static int[] resolvePartColors(TreeWoodStruct wood, TreeLeafStruct leaves) {

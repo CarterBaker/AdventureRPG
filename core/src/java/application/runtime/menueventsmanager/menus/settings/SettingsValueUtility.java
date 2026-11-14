@@ -89,6 +89,17 @@ public class SettingsValueUtility extends EngineUtility {
                 settings.antiAliasing = !settings.antiAliasing;
                 settingsSystem.applyPostProcessing();
             }
+            case TEXTURE_QUALITY -> {
+                settings.textureQuality = Math.clamp(
+                        settings.textureQuality + step,
+                        EngineSetting.TEXTURE_QUALITY_LOW,
+                        EngineSetting.TEXTURE_QUALITY_HIGH);
+                settingsSystem.applyTextureQuality();
+            }
+            case TEXTURE_ANISOTROPY -> {
+                settings.textureAnisotropy = stepAnisotropy(settings.textureAnisotropy, step);
+                settingsSystem.applyTextureAnisotropy();
+            }
             case BLOOM -> {
                 settings.bloom = !settings.bloom;
                 settingsSystem.applyPostProcessing();
@@ -107,6 +118,19 @@ public class SettingsValueUtility extends EngineUtility {
                 renderDistance + step * RuntimeSetting.SETTINGS_RENDER_DISTANCE_STEP,
                 EngineSetting.RENDER_DISTANCE_MIN,
                 EngineSetting.RENDER_DISTANCE_MAX);
+    }
+
+    // The anisotropy level a step away along the offered levels, from the level nearest the one set
+    private static int stepAnisotropy(int anisotropy, int step) {
+
+        int[] levels = EngineSetting.TEXTURE_ANISOTROPY_LEVELS;
+        int index = 0;
+
+        for (int i = 1; i < levels.length; i++)
+            if (Math.abs(levels[i] - anisotropy) < Math.abs(levels[index] - anisotropy))
+                index = i;
+
+        return levels[Math.clamp(index + step, 0, levels.length - 1)];
     }
 
     private static int stepTreeDetail(int treeDetailDistance, int step) {
@@ -141,6 +165,10 @@ public class SettingsValueUtility extends EngineUtility {
             case DEPTH_OF_FIELD -> formatToggle(settings.depthOfField);
             case DEPTH_OF_FIELD_THIRD_PERSON -> formatToggle(settings.depthOfFieldThirdPerson);
             case ANTI_ALIASING -> formatToggle(settings.antiAliasing);
+            case TEXTURE_QUALITY -> RuntimeSetting.SETTINGS_TEXTURE_QUALITY_VALUES[settings.textureQuality];
+            case TEXTURE_ANISOTROPY -> settings.textureAnisotropy > 1
+                    ? String.format(RuntimeSetting.SETTINGS_FORMAT_ANISOTROPY, settings.textureAnisotropy)
+                    : RuntimeSetting.SETTINGS_VALUE_OFF;
             case BLOOM -> formatToggle(settings.bloom);
             case CAMERA_SHAKE -> formatToggle(settings.cameraShake);
             case HEAD_BOB -> formatToggle(settings.headBob);

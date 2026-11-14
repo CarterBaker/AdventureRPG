@@ -3,18 +3,15 @@ package application.bootstrap.shaderpipeline.texture;
 import java.awt.image.BufferedImage;
 
 import engine.assets.atlas.AtlasTileData;
-import engine.root.EngineSetting;
 
 public class TextureTileStruct extends AtlasTileData {
 
     /*
-     * Bootstrap container for a single named texture tile. Holds per-alias
-     * source images during the build phase. Derives pixel dimensions from the
-     * first image assigned — all subsequent alias layers must match that size.
-     * The builder records the tile's average albedo and its reveal before the
-     * images go, so distant terrain and maps can stand in for the texture, and
-     * for a covering grown over a face, with one color.
-     * GCs with the loader after bootstrap completes.
+     * Bootstrap container for a single named font glyph tile packed into its
+     * font's atlas. Holds its layer images while the atlas is composited and
+     * derives its pixel dimensions from the first image assigned — every
+     * later layer must match that size. GCs with the font builder once the
+     * atlas is uploaded.
      * Extends AtlasTileData (external utility) rather than StructPackage —
      * naming exception due to the external base class.
      */
@@ -26,17 +23,12 @@ public class TextureTileStruct extends AtlasTileData {
     // Images
     private BufferedImage[] imageLayers;
 
-    // Average
-    private int averageColor;
-    private TextureRevealStruct reveal;
-
     // Constructor \\
 
     public TextureTileStruct(String name, String atlas, int aliasCount) {
         this.name = name;
         this.atlas = atlas;
         this.imageLayers = new BufferedImage[aliasCount];
-        this.averageColor = EngineSetting.PACKED_COLOR_WHITE;
     }
 
     // Management \\
@@ -68,13 +60,6 @@ public class TextureTileStruct extends AtlasTileData {
             imageLayers[i] = null;
     }
 
-    public void setAverageColor(int averageColor) {
-        this.averageColor = averageColor;
-    }
-
-    public void setReveal(TextureRevealStruct reveal) {
-        this.reveal = reveal;
-    }
 
     // Accessible \\
 
@@ -84,13 +69,5 @@ public class TextureTileStruct extends AtlasTileData {
 
     String getAtlas() {
         return atlas;
-    }
-
-    public int getAverageColor() {
-        return averageColor;
-    }
-
-    public TextureRevealStruct getReveal() {
-        return reveal;
     }
 }

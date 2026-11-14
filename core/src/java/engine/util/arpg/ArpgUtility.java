@@ -148,6 +148,10 @@ public class ArpgUtility extends EngineUtility {
         return requireField(object, key, "").getAsFloat();
     }
 
+    public static byte[] validateBytes(ArpgObjectStruct object, String key) {
+        return requireField(object, key, "bytes ").getAsBytes();
+    }
+
     public static ArpgArrayStruct validateArray(ArpgObjectStruct object, String key) {
 
         ArpgElementStruct element = requireField(object, key, "array ");
@@ -245,6 +249,11 @@ public class ArpgUtility extends EngineUtility {
     public static boolean hasBoolean(ArpgObjectStruct object, String key) {
         ArpgElementStruct element = object.get(key);
         return element != null && element.isValue() && element.getAsValue().isBoolean();
+    }
+
+    public static boolean hasBytes(ArpgObjectStruct object, String key) {
+        ArpgElementStruct element = object.get(key);
+        return element != null && element.isValue() && element.getAsValue().isBytes();
     }
 
     public static boolean hasObject(ArpgObjectStruct object, String key) {

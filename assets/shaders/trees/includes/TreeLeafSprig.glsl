@@ -2,6 +2,7 @@
 #define TREE_LEAF_SPRIG_GLSL
 
 #include "includes/NoiseUtility.glsl"
+#include "includes/TileTextures.glsl"
 #include "trees/includes/TreeLeaf.glsl"
 
 // Every leaf card is cut out of a transparent sprig texture drawn right here: fronds radiate from the card's centre out
@@ -184,13 +185,13 @@ int traceTreeLeafCard(
 // corner on its card from -1 to 1, underside the share of the rim its downward fronds reach, and rotation turns the
 // cluster's own axes into the world's
 bool shadeTreeLeaf(
-    vec3 worldPos, vec2 card, vec3 center, vec2 radii, vec2 cardRadii, float underside, float seed, vec2 uvOrigin,
+    vec3 worldPos, vec2 card, vec3 center, vec2 radii, vec2 cardRadii, float underside, float seed, int tile,
     vec3 color, mat3 rotation, out vec4 albedoOut, out vec4 normalOut, out vec4 materialOut) {
     vec2  point  = card * cardRadii;
     float widen  = length(fwidth(point)) * TREE_LEAF_WIDEN;
     vec3  facing = normalize(cross(dFdx(worldPos), dFdy(worldPos)));
-    vec2  gradX  = dFdx(point) * u_uvPerBlock;
-    vec2  gradY  = dFdy(point) * u_uvPerBlock;
+    vec2  gradX  = dFdx(point);
+    vec2  gradY  = dFdy(point);
     vec3  camera = u_inverseView[3].xyz;
     float shown  = smoothstep(TREE_LEAF_GRAZE_MIN, TREE_LEAF_GRAZE_MAX,
         abs(dot(facing, normalize(camera - worldPos))));
@@ -205,8 +206,7 @@ bool shadeTreeLeaf(
     if (kind == TREE_LEAF_MISS)
     return false;
 
-    vec4 albedo = textureGrad(u_textureArray,
-        vec3(uvOrigin + fract(point) * u_uvPerBlock, float(u_layer_albedo)), gradX, gradY);
+    vec4 albedo = sampleTileAlbedo(resolveTileReadGrad(tile, gradX, gradY), point, gradX, gradY);
 
     if (albedo.a < TREE_LEAF_GAP_ALPHA)
     return false;

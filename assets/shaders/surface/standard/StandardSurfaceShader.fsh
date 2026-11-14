@@ -3,7 +3,7 @@
 in vec3       vLocalPos;
 in vec3       vUVLocalPos;
 in vec3       vNormal;
-flat in vec2  vUVOrigin;
+flat in float vTile;
 flat in float vOrient;
 in vec3 vColor;
 flat in float vCoverage;
@@ -12,13 +12,10 @@ flat in float vContent;
 #include "includes/CameraData.glsl"
 #include "includes/SettingsData.glsl"
 #include "includes/SunLightData.glsl"
-#include "surface/includes/SurfaceStandard.glsl"
+#include "includes/TileTextures.glsl"
 #include "includes/BlockOrientationMapData.glsl"
-#include "surface/includes/TiledSampling.glsl"
-#include "surface/includes/Albedo.glsl"
+#include "surface/includes/FaceGradient.glsl"
 #include "surface/includes/Normal.glsl"
-#include "surface/includes/AO.glsl"
-#include "surface/includes/Specular.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 #include "surface/includes/SurfaceTierFull.glsl"
 #include "surface/includes/SurfaceTierFlat.glsl"
@@ -41,7 +38,9 @@ layout(location = 2) out vec4 gMaterial;
  * approximations, and within it the detail tier and the full draws take
  * over: a covering texel over a content texel over the block, the base maps
  * read only where neither shows. Inside the fade band both are drawn and
- * blended, so nothing pops. This selection governs material detail only —
+ * blended, so nothing pops. The face's UV and gradients, and the covering
+ * top tile's, are resolved first, in uniform control flow, so every read
+ * after them takes explicit gradients wherever it branches. This selection governs material detail only —
  * it has no bearing on fog, which the deferred Lighting.fsh pass computes
  * from the fragment's reconstructed world position.
  */
@@ -63,15 +62,17 @@ float resolveSunVisibility() {
 }
 
 void main() {
-    vec2  tiledUV = tileUV(vUVLocalPos, vUVOrigin, vNormal, vOrient);
-    float detail  = getDetailStrength(vLocalPos);
+    FaceUV   face    = resolveFaceUV(vUVLocalPos, vNormal, vOrient);
+    FaceUV   topFace = resolveFaceUV(vUVLocalPos, vNormal, COVERAGE_TOP_ENCODED_FACE);
+    TileRead tile    = resolveTileReadGrad(int(vTile + 0.5), face.dx, face.dy);
+    float    detail  = getDetailStrength(vLocalPos);
 
     vec3  albedo;
     vec3  normalView;
     float specular;
     float ao;
 
-    if (!shadeSurfaceFlat(tiledUV, vNormal, u_view, albedo, normalView, specular, ao))
+    if (!shadeSurfaceFlat(tile, face, vNormal, u_view, albedo, normalView, specular, ao))
     discard;
 
     vec3 farAlbedo = detail < 1.0
@@ -86,16 +87,16 @@ void main() {
         float nearAO;
 
         bool covered = sampleCoverageDetail(
-            vUVLocalPos, tiledUV, vUVOrigin, vCoverage, vColor, vNormal, u_view,
+            face, topFace, vCoverage, vColor, vNormal, u_view,
             nearAlbedo, nearNormalView, nearSpecular, nearAO);
 
         bool contained = !covered && sampleContentDetail(
-            tiledUV, vUVOrigin, vContent, vNormal, u_view,
+            face, vContent, vNormal, u_view,
             nearAlbedo, nearNormalView, nearSpecular, nearAO);
 
         if (!covered && !contained) {
             nearAlbedo = albedo;
-            sampleSurfaceDetail(tiledUV, vNormal, u_view, nearNormalView, nearSpecular, nearAO);
+            sampleSurfaceDetail(tile, face, vNormal, u_view, nearNormalView, nearSpecular, nearAO);
         }
 
         albedo     = mix(farAlbedo, nearAlbedo, detail);

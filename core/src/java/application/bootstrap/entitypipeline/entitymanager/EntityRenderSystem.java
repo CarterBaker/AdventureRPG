@@ -16,6 +16,7 @@ import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
@@ -23,6 +24,9 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
@@ -53,6 +57,7 @@ public class EntityRenderSystem extends SystemPackage {
     private RenderManager renderManager;
     private MaterialManager materialManager;
     private ItemModelManager itemModelManager;
+    private TextureManager textureManager;
 
     // Equipment
     private int equipmentMaterialID;
@@ -70,6 +75,13 @@ public class EntityRenderSystem extends SystemPackage {
     private AppearanceIsolationStruct wholeIsolation;
     private Matrix4 anchorScratch;
     private Matrix4 equipmentScratch;
+
+    // Texture — the tiles a character draws gathered each push, and the screen user every editor preview shares
+    private TextureTileSetStruct tileScratch;
+    private TextureTileSetStruct previewTiles;
+    private int previewUser;
+    private int frame;
+    private int previewFrame;
 
     // Internal \\
 
@@ -89,6 +101,11 @@ public class EntityRenderSystem extends SystemPackage {
         this.anchorScratch = new Matrix4();
         this.equipmentScratch = new Matrix4();
 
+        // Texture
+        this.tileScratch = new TextureTileSetStruct();
+        this.previewTiles = new TextureTileSetStruct();
+        this.previewUser = EngineSetting.INDEX_NOT_FOUND;
+
         // Equipment
         this.unitScale = new Vector3(1f, 1f, 1f);
     }
@@ -98,6 +115,7 @@ public class EntityRenderSystem extends SystemPackage {
         this.renderManager = get(RenderManager.class);
         this.materialManager = get(MaterialManager.class);
         this.itemModelManager = get(ItemModelManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     @Override
@@ -108,7 +126,14 @@ public class EntityRenderSystem extends SystemPackage {
 
     @Override
     protected void render() {
+
         renderManager.clearSkinnedBuffers();
+        frame++;
+
+        if (previewUser != EngineSetting.INDEX_NOT_FOUND && previewFrame < frame - 1) {
+            textureManager.removeTextureUser(previewUser);
+            this.previewUser = EngineSetting.INDEX_NOT_FOUND;
+        }
     }
 
     // Character Push \\
@@ -125,6 +150,7 @@ public class EntityRenderSystem extends SystemPackage {
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
         composeModelMatrix(entity, viewerChunkCoordinate);
+        refreshTextureUser(entity);
         resolveAppearance(raceGender, entity.getAppearanceHandle());
         pushBody(
                 raceGender,
@@ -152,6 +178,7 @@ public class EntityRenderSystem extends SystemPackage {
             WindowInstance window) {
 
         modelMatrixScratch.set(modelMatrix);
+        refreshPreviewTiles(raceGender, appearance);
         resolveAppearance(raceGender, appearance);
         pushBody(
                 raceGender,
@@ -330,6 +357,108 @@ public class EntityRenderSystem extends SystemPackage {
         RigMathUtility.composeLocal(
                 positionScratch, rotationScratch, scaleScratch,
                 modelMatrixScratch, matrixScratchA, matrixScratchB);
+    }
+
+    // Texture \\
+
+    // The entity's texture user given the tiles it draws now and where it stands, its tiles sent only when they change
+    private void refreshTextureUser(EntityInstance entity) {
+
+        int user = entity.getTextureUser();
+
+        if (user == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        tileScratch.clear();
+        collectCharacterTiles(entity.getRaceGender(), entity.getAppearanceHandle(), tileScratch);
+        collectEquipmentTiles(entity, tileScratch);
+
+        TextureTileSetStruct tiles = entity.getTextureTiles();
+
+        if (!tileScratch.getTileIDs().equals(tiles.getTileIDs())) {
+            tiles.clear();
+            tiles.addAll(tileScratch);
+            textureManager.setTextureUserTiles(user, tiles.getTileIDs());
+        }
+
+        WorldPositionStruct position = entity.getWorldPositionStruct();
+        float reach = EngineSetting.TEXTURE_ENTITY_REACH_BLOCKS;
+        float x = Coordinate2Long.unpackX(position.getChunkCoordinate()) * (float) EngineSetting.CHUNK_SIZE
+                + position.getPosition().x;
+        float z = Coordinate2Long.unpackY(position.getChunkCoordinate()) * (float) EngineSetting.CHUNK_SIZE
+                + position.getPosition().z;
+
+        textureManager.setTextureUserBounds(user, x - reach, z - reach, x + reach, z + reach);
+    }
+
+    // Every character an editor previews this frame, held as one screen user and let go the frame after none is
+    private void refreshPreviewTiles(RaceGenderStruct raceGender, AppearanceHandle appearance) {
+
+        if (previewFrame != frame)
+            previewTiles.clear();
+
+        this.previewFrame = frame;
+        tileScratch.clear();
+        tileScratch.addAll(previewTiles);
+        collectCharacterTiles(raceGender, appearance, tileScratch);
+
+        if (previewUser == EngineSetting.INDEX_NOT_FOUND) {
+            previewTiles.addAll(tileScratch);
+            this.previewUser = textureManager.registerScreenTextureUser(previewTiles.getTileIDs());
+            return;
+        }
+
+        if (tileScratch.getTileIDs().equals(previewTiles.getTileIDs()))
+            return;
+
+        previewTiles.clear();
+        previewTiles.addAll(tileScratch);
+        textureManager.setTextureUserTiles(previewUser, previewTiles.getTileIDs());
+    }
+
+    // The body's tiles, and those of every feature worn, its variant and every overlay in the style worn
+    private void collectCharacterTiles(
+            RaceGenderStruct raceGender,
+            AppearanceHandle appearance,
+            TextureTileSetStruct tiles) {
+
+        tiles.addAll(raceGender.getMeshHandle().getTiles());
+
+        for (SkinnedOverlay skinnedOverlay : SkinnedOverlay.VALUES) {
+
+            SkinnedOverlayStruct overlay = raceGender.getOverlay(skinnedOverlay);
+
+            if (overlay != null)
+                tiles.add(overlay.getTile(appearance != null
+                        ? appearance.getOverlayStyle(skinnedOverlay)
+                        : EngineSetting.INDEX_NOT_FOUND));
+        }
+
+        if (appearance == null)
+            return;
+
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
+
+            if (!appearance.hasFeature(featureSlot))
+                continue;
+
+            FeatureHandle feature = appearance.getFeature(featureSlot);
+            tiles.addAll(feature.getMeshHandle().getTiles());
+
+            if (feature.getVariants() != null)
+                tiles.add(feature.getVariants().getTile(appearance.getFeatureVariant(featureSlot)));
+        }
+    }
+
+    private void collectEquipmentTiles(EntityInstance entity, TextureTileSetStruct tiles) {
+
+        ObjectArrayList<EquipmentAnchorStruct> anchors = entity.getEntityData().getRaceData().getEquipmentAnchors();
+        InventoryHandle inventory = entity.getInventoryHandle();
+
+        for (int i = 0; i < anchors.size(); i++)
+            if (inventory.isShown(anchors.get(i).getEquipmentSlot()))
+                tiles.addAll(inventory.getItem(anchors.get(i).getEquipmentSlot()).getItemDefinitionHandle()
+                        .getMeshHandle().getTiles());
     }
 
     // Appearance \\

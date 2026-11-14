@@ -1,14 +1,14 @@
 #version 330 core
 layout(location = 0) in vec3  aPos;
 layout(location = 1) in float aNorIndex;
-layout(location = 2) in vec2  aUV;
+layout(location = 2) in float aTile;
 
 #include "includes/CameraData.glsl"
 
 // Carries the item's one-block cube onto its anchor on the posed character.
 uniform mat4 u_model;
 
-out vec2 vUVOrigin;
+flat out int vTile;
 out vec3 vModelPosition;
 out vec3 vViewPosition;
 flat out int vFace;
@@ -16,7 +16,7 @@ flat out int vFace;
 void main() {
     vec4 worldPosition = u_model * vec4(aPos, 1.0);
 
-    vUVOrigin      = aUV;
+    vTile          = int(aTile + 0.5);
     vModelPosition = aPos;
     vFace          = int(aNorIndex);
     vViewPosition = (u_view * worldPosition).xyz;

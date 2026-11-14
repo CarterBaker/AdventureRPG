@@ -2,31 +2,27 @@ package application.bootstrap.shaderpipeline.texturemanager;
 
 import java.io.File;
 
-import application.bootstrap.shaderpipeline.texture.TextureArrayStruct;
-import application.bootstrap.shaderpipeline.texture.TextureTileStruct;
-import application.bootstrap.shaderpipeline.ubo.UBOHandle;
-import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
 import engine.util.io.FileUtility;
-import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class TextureLoader extends LoaderPackage {
 
     /*
-     * Discovers atlas directories and loads one per load() call: builds the
-     * atlas, seeds its optional companion UBO with the layer of every alias it
-     * declares (a layer no source provides holds the alias's default color),
-     * uploads it, and frees the heap images.
+     * Discovers the baked texture packs under bakedtextures/tiles and loads
+     * one pack per load() call: every tile definition in name order, each
+     * registered with its fallback and extra maps staged into the pools,
+     * then uploaded together. The texture manager requests every pack at
+     * bootstrap, so the game never reads a source image or packs an atlas;
+     * the tiers themselves stream later. The alias library loads first, for
+     * the extra set's defaults and for the editor that paints tiles.
      */
 
     // Internal
     private File root;
     private TextureManager textureManager;
-    private UBOManager uboManager;
-    private AliasLibrarySystem aliasLibrarySystem;
     private TextureBuilder internalBuilder;
 
     // File Registry
@@ -37,34 +33,36 @@ class TextureLoader extends LoaderPackage {
     @Override
     protected void scan() {
 
-        this.root = new File(EngineSetting.BLOCK_TEXTURE_PATH);
+        this.root = new File(new File(EngineSetting.BAKED_TEXTURE_PATH), EngineSetting.BAKED_TEXTURE_TILE_DIRECTORY);
         this.arrayName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root,
-                "Texture root directory not found: " + root.getAbsolutePath());
+        FileUtility.verifyDirectory(root, "Baked texture directory not found: " + root.getAbsolutePath()
+                + ". Run gradlew lwjgl3:bake.");
 
-        for (File directory : FileUtility.collectAllSubdirectories(root)) {
-            String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
-            arrayName2File.put(arrayName, directory);
+        ObjectArrayList<File> directories = FileUtility.collectAllSubdirectories(root);
+        directories.sort(null);
+
+        for (int i = 0; i < directories.size(); i++) {
+            File directory = directories.get(i);
+            arrayName2File.put(FileUtility.getPathWithFileNameWithoutExtension(root, directory), directory);
             queueFile(directory);
         }
     }
 
     @Override
     protected void create() {
-        this.aliasLibrarySystem = create(AliasLibrarySystem.class);
         this.internalBuilder = create(TextureBuilder.class);
     }
 
     @Override
     protected void get() {
         this.textureManager = get(TextureManager.class);
-        this.uboManager = get(UBOManager.class);
     }
 
     @Override
     protected void awake() {
-        aliasLibrarySystem.loadAliases();
+        textureManager.setAliasLibrary(
+                TextureBakeUtility.loadAliasLibrary(new File(EngineSetting.BLOCK_TEXTURE_ALIAS_PATH)));
     }
 
     // Load \\
@@ -72,21 +70,19 @@ class TextureLoader extends LoaderPackage {
     @Override
     protected void load(File directory) {
 
-        ObjectArrayList<File> imageFiles = FileUtility.collectFilesShallow(
-                directory, EngineSetting.TEXTURE_FILE_EXTENSIONS);
+        ObjectArrayList<File> definitionFiles = FileUtility.collectFilesShallow(
+                directory, EngineSetting.ARPG_FILE_EXTENSIONS);
 
-        if (imageFiles.isEmpty())
+        if (definitionFiles.isEmpty())
             return;
 
         String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
-        TextureArrayStruct arrayStruct = internalBuilder.build(imageFiles, directory, arrayName);
+        definitionFiles.sort(null);
 
-        if (arrayStruct == null)
-            return;
+        for (int i = 0; i < definitionFiles.size(); i++)
+            internalBuilder.build(definitionFiles.get(i), arrayName);
 
-        seedUBO(arrayName, arrayStruct);
-        pushToGPU(arrayStruct);
-        clearHeapImages(arrayStruct);
+        textureManager.flushUploads();
     }
 
     // On-Demand \\
@@ -99,57 +95,5 @@ class TextureLoader extends LoaderPackage {
             throwException("On-demand texture load failed — array not found: \"" + arrayName + "\"");
 
         request(directory);
-    }
-
-    // Aliases \\
-
-    AliasLibrarySystem getAliasLibrarySystem() {
-        return aliasLibrarySystem;
-    }
-
-    // UBO Seeding \\
-
-    private void seedUBO(String arrayName, TextureArrayStruct arrayStruct) {
-
-        UBOHandle ubo = uboManager.findUBOHandle(FileUtility.toPascalCase(arrayName));
-
-        if (ubo == null)
-            return;
-
-        for (int aliasId = 0; aliasId < aliasLibrarySystem.getAliasCount(); aliasId++) {
-            String uniformName = aliasLibrarySystem.getUniformName(aliasId);
-            if (uniformName != null && ubo.getCompiledUniform(uniformName) != null)
-                ubo.updateUniform(uniformName, aliasId);
-        }
-
-        TextureTileStruct firstTile = arrayStruct.getTileCoordinateMap().values().iterator().next();
-        float uvScaleX = firstTile.getTileWidth() / (float) arrayStruct.getAtlasPixelSize();
-        float uvScaleY = firstTile.getTileHeight() / (float) arrayStruct.getAtlasPixelSize();
-        ubo.updateUniform(EngineSetting.TEXTURE_UV_SCALE_UNIFORM, new Vector2(uvScaleX, uvScaleY));
-
-        uboManager.push(ubo);
-    }
-
-    // GPU Upload \\
-
-    private void pushToGPU(TextureArrayStruct arrayStruct) {
-
-        int gpuHandle = TextureGLSLUtility.pushTextureArray(arrayStruct.getRawImageArray());
-        int atlasPixelSize = arrayStruct.getAtlasPixelSize();
-        float invAtlas = 1.0f / atlasPixelSize;
-
-        for (TextureTileStruct tile : arrayStruct.getTileCoordinateMap().values()) {
-            float u0 = tile.getAtlasX() * invAtlas;
-            float v0 = tile.getAtlasY() * invAtlas;
-            float u1 = (tile.getAtlasX() + tile.getTileWidth()) * invAtlas;
-            float v1 = (tile.getAtlasY() + tile.getTileHeight()) * invAtlas;
-            textureManager.registerTile(tile, u0, v0, u1, v1, arrayStruct, gpuHandle);
-        }
-    }
-
-    private void clearHeapImages(TextureArrayStruct arrayStruct) {
-        for (TextureTileStruct tile : arrayStruct.getTileCoordinateMap().values())
-            tile.clearImages();
-        arrayStruct.clearAtlases();
     }
 }

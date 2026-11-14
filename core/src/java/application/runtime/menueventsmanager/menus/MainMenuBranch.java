@@ -5,6 +5,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.savepipeline.savemanager.SaveManager;
 import application.bootstrap.settingspipeline.settingssystem.SettingsSystem;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.world.WorldSystem;
 import engine.root.BranchPackage;
@@ -22,8 +23,10 @@ public class MainMenuBranch extends BranchPackage {
      * of play back to the menu: the character is saved and released and the
      * main menu opens over the world. Opening the menu points this window's
      * grid at the main menu's range and closing it at the play range, so the
-     * world behind the menu streams only as far as its own settings allow;
-     * the creator streams the play world its preview stands in. The world
+     * world behind the menu streams only as far as its own settings allow,
+     * and every texture tier the world around the player wants is filled
+     * before play begins; the creator streams the play world its preview
+     * stands in. The world
      * behind the menu is seen through one of the world's hand-placed
      * cameras, chosen at random each time it is shown, through PlayerManager.
      */
@@ -32,6 +35,7 @@ public class MainMenuBranch extends BranchPackage {
     private MenuManager menuManager;
     private PlayerManager playerManager;
     private SaveManager saveManager;
+    private TextureManager textureManager;
     private SettingsSystem settingsSystem;
     private WorldSystem worldSystem;
 
@@ -44,6 +48,7 @@ public class MainMenuBranch extends BranchPackage {
         this.menuManager = get(MenuManager.class);
         this.playerManager = get(PlayerManager.class);
         this.saveManager = get(SaveManager.class);
+        this.textureManager = get(TextureManager.class);
         this.settingsSystem = get(SettingsSystem.class);
         this.worldSystem = get(WorldSystem.class);
     }
@@ -70,6 +75,7 @@ public class MainMenuBranch extends BranchPackage {
     public void streamPlayWorld() {
         playerManager.endMenuView(context.getWindow().getWindowID());
         worldSystem.useRange(settingsSystem.getPlayRange());
+        textureManager.completeTextureStreaming();
     }
 
     // Game \\

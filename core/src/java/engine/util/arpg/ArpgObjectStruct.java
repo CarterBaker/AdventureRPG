@@ -66,6 +66,10 @@ public final class ArpgObjectStruct extends ArpgElementStruct {
         add(key, new ArpgValueStruct(value));
     }
 
+    public void addProperty(String key, byte[] value) {
+        add(key, value != null ? new ArpgValueStruct(value) : ArpgNullStruct.INSTANCE);
+    }
+
     boolean addUnique(String key, ArpgElementStruct element) {
         return key2Element.putIfAbsent(key, element) == null;
     }

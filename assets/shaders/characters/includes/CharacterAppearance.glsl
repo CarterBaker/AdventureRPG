@@ -85,23 +85,20 @@ bool isMaskedBone(int instance, int bone) {
     return ((bits >> (bone % CHARACTER_MASK_BITS)) & 1) != 0;
 }
 
-// The atlas tile (u0, u1, v0, v1) of the material variant the part drawn shows, all zero for its own texture
+// The tile ID of the material variant the part drawn shows in x, zero for its own texture
 vec4 fetchCharacterVariant(int instance) {
     int base = characterMaskBase() + CHARACTER_MASK_TEXELS + CHARACTER_OVERLAY_COUNT * CHARACTER_OVERLAY_TEXELS;
     return texelFetch(u_bonePalette, ivec2(base, instance), 0);
 }
 
-// Where a corner samples the atlas: its own place, or its raw UV laid into the variant's tile (a texture swap)
-vec2 resolveCharacterUV(int instance, vec2 atlasUV, vec2 rawUV) {
-    vec4 variant = fetchCharacterVariant(instance);
+// The tile a corner samples: its own, or the variant's in its place (a texture swap) at the same UV
+int resolveCharacterTile(int instance, int ownTile) {
+    int variant = int(fetchCharacterVariant(instance).x + 0.5);
 
-    if (variant.y <= variant.x)
-    return atlasUV;
-
-    return vec2(variant.x, variant.z) + clamp(rawUV, 0.0, 1.0) * vec2(variant.y - variant.x, variant.w - variant.z);
+    return variant > 0 ? variant : ownTile;
 }
 
-// One texel of an overlay's placement: 0 the atlas tile of the style worn, 1 its UV region, 2 its relief in blocks
+// One texel of an overlay's placement: 0 the tile ID of the style worn in x, 1 its UV region, 2 its relief in blocks
 vec4 fetchOverlay(int instance, int overlay, int texel) {
     int base = characterMaskBase() + CHARACTER_MASK_TEXELS + overlay * CHARACTER_OVERLAY_TEXELS;
     return texelFetch(u_bonePalette, ivec2(base + texel, instance), 0);

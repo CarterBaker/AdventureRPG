@@ -311,6 +311,15 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/CharacterMeshEditor.arpg` and the shortcuts `HeightEditor`, `CharacterAppearance`, `CharacterBuild`,
   `CharacterEquipment`, `CharacterMeshEditor` and `FaceEditor`, so the World Editor and the Character Editor work as
   layers.
+- 2026-11-14: Texture streaming. Added the baked texture files under `bakedtextures/` (every tile of the three packs,
+  baked from `textures/`), `mesh/util/vao/SubVoxelVAO.arpg` and the shaders `includes/TileTextures.glsl`,
+  `items/includes/BlockAlbedo.glsl`, `surface/includes/FaceGradient.glsl` and `trees/includes/TreeBarkShading.glsl`;
+  removed `ubos/SurfaceStandard.arpg`, `ubos/ItemsStandard.arpg`, `ubos/CharactersStandard.arpg` and the shaders
+  `surface/includes/Albedo.glsl`, `AO.glsl`, `Emissive.glsl`, `Height.glsl`, `Metal.glsl`, `Specular.glsl`,
+  `SurfaceStandard.glsl`, `items/includes/ItemsStandard.glsl` and `characters/includes/CharactersStandard.glsl`;
+  regenerated every texture alias, `schemas/TextureAliases.arpg`, `ubos/SettingsData.arpg`, the materials that named a
+  texture pack, every item mesh (the sub-voxel layout) and the shaders that sampled the old atlas, so every texture
+  streams from fixed block-compressed pools.
 ---
 
 ## Textures and Sprites (2400 files)
@@ -1372,12 +1381,12 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (184 files)
+## Shaders (179 files)
 
 ### `assets/shaders/characters/includes/`
 
 `CharacterAppearance.glsl`, `CharacterHair.glsl`, `CharacterHidden.glsl`, `CharacterMaterial.glsl`,
-`CharacterNormal.glsl`, `CharacterSurface.glsl`, `CharacterZone.glsl`, `CharactersStandard.glsl`
+`CharacterNormal.glsl`, `CharacterSurface.glsl`, `CharacterZone.glsl`
 
 ### `assets/shaders/characters/standard/`
 
@@ -1440,8 +1449,8 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 `GBufferData.glsl`, `GBufferNormal.glsl`, `GridCoordinateData.glsl`, `ItemRotationData.glsl`, `MacroCoverageData.glsl`,
 `MacroCoverageUtility.glsl`, `MacroWaterData.glsl`, `MoonLightData.glsl`, `NaturalNoiseData.glsl`, `NoiseUtility.glsl`,
 `OceanData.glsl`, `OrthoData.glsl`, `PlayerPositionData.glsl`, `PostProcessData.glsl`, `PrecipitationData.glsl`,
-`QuadRecord.glsl`, `SettingsData.glsl`, `SkyColorData.glsl`, `SliceData.glsl`, `SunLightData.glsl`, `TimeData.glsl`,
-`WeatherMapData.glsl`, `WeatherMapUtility.glsl`, `WindData.glsl`
+`QuadRecord.glsl`, `SettingsData.glsl`, `SkyColorData.glsl`, `SliceData.glsl`, `SunLightData.glsl`, `TileTextures.glsl`,
+`TimeData.glsl`, `WeatherMapData.glsl`, `WeatherMapUtility.glsl`, `WindData.glsl`
 
 ### `assets/shaders/items/equipment/`
 
@@ -1449,7 +1458,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/items/includes/`
 
-`BlockRepeat.glsl`, `ItemsStandard.glsl`
+`BlockAlbedo.glsl`, `BlockRepeat.glsl`
 
 ### `assets/shaders/items/inventory/`
 
@@ -1524,10 +1533,9 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/surface/includes/`
 
-`Albedo.glsl`, `AO.glsl`, `Bevel.glsl`, `CloudShadow.glsl`, `Content.glsl`, `Coverage.glsl`, `Emissive.glsl`,
-`Height.glsl`, `HeightDisplacement.glsl`, `Metal.glsl`, `NearTerrainNoise.glsl`, `Normal.glsl`, `PatchCulling.glsl`,
-`Specular.glsl`, `SurfaceStandard.glsl`, `SurfaceTessellationTier.glsl`, `SurfaceTierFlat.glsl`, `SurfaceTierFull.glsl`,
-`TiledSampling.glsl`
+`Bevel.glsl`, `CloudShadow.glsl`, `Content.glsl`, `Coverage.glsl`, `FaceGradient.glsl`, `HeightDisplacement.glsl`,
+`NearTerrainNoise.glsl`, `Normal.glsl`, `PatchCulling.glsl`, `SurfaceTessellationTier.glsl`, `SurfaceTierFlat.glsl`,
+`SurfaceTierFull.glsl`, `TiledSampling.glsl`
 
 ### `assets/shaders/surface/macro/`
 
@@ -1543,7 +1551,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/trees/includes/`
 
-`TreeBark.glsl`, `TreeFade.glsl`, `TreeLeaf.glsl`, `TreeLeafSprig.glsl`, `TreeShading.glsl`
+`TreeBark.glsl`, `TreeBarkShading.glsl`, `TreeFade.glsl`, `TreeLeaf.glsl`, `TreeLeafSprig.glsl`, `TreeShading.glsl`
 
 ### `assets/shaders/trees/leaf/`
 
@@ -1692,9 +1700,16 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (1870 files)
+## Data Files (3592 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
+
+### `assets/bakedtextures/`
+
+Every file below `tiles/`, `tier128/`, `tier256/` and `tier512/` (1724 files: one definition per tile and one file
+per tier it fills, 844 tiles across `characters/standard/`, `items/standard/` and `surface/standard/`), generated by
+the texture bake from the images under `assets/textures/`. Each baked tile follows its source images: once the owner's
+images replace a tile's and it is baked again, its baked files are the owner's too.
 
 ### `assets/animations/humanoid/`
 
@@ -2629,7 +2644,7 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 ### `assets/mesh/util/vao/`
 
 `ChunkVAO.arpg`, `DockChromeVAO.arpg`, `ItemVAO.arpg`, `LabelVAO.arpg`, `MacroVAO.arpg`, `MacroWaterVAO.arpg`,
-`QuadVAO.arpg`
+`QuadVAO.arpg`, `SubVoxelVAO.arpg`
 
 ### `assets/npcs/`
 
@@ -3185,11 +3200,11 @@ Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the 
 
 ### `assets/ubos/`
 
-`BlockOrientationMapData.arpg`, `CameraData.arpg`, `CelestialData.arpg`, `CharactersStandard.arpg`, `ContentData.arpg`,
-`CoveringData.arpg`, `GridCoordinateData.arpg`, `ItemRotationData.arpg`, `ItemsStandard.arpg`, `MacroCoverageData.arpg`,
-`MoonLightData.arpg`, `NaturalNoiseData.arpg`, `OceanData.arpg`, `OrthoData.arpg`, `PlayerPositionData.arpg`,
-`PostProcessData.arpg`, `PrecipitationData.arpg`, `SettingsData.arpg`, `SkyColorData.arpg`, `SliceData.arpg`,
-`SSAOData.arpg`, `SunLightData.arpg`, `SurfaceStandard.arpg`, `TimeData.arpg`, `WeatherMapData.arpg`, `WindData.arpg`
+`BlockOrientationMapData.arpg`, `CameraData.arpg`, `CelestialData.arpg`, `ContentData.arpg`, `CoveringData.arpg`,
+`GridCoordinateData.arpg`, `ItemRotationData.arpg`, `MacroCoverageData.arpg`, `MoonLightData.arpg`,
+`NaturalNoiseData.arpg`, `OceanData.arpg`, `OrthoData.arpg`, `PlayerPositionData.arpg`, `PostProcessData.arpg`,
+`PrecipitationData.arpg`, `SettingsData.arpg`, `SkyColorData.arpg`, `SliceData.arpg`, `SSAOData.arpg`,
+`SunLightData.arpg`, `TimeData.arpg`, `WeatherMapData.arpg`, `WindData.arpg`
 
 ### `assets/vehicles/`
 

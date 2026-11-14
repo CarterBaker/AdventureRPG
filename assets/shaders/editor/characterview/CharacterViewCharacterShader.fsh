@@ -1,6 +1,6 @@
 #version 330 core
 
-in vec4 v_uv;
+in vec2 v_uv;
 in vec3 v_viewPosition;
 in vec3 v_viewNormal;
 in vec3 v_surfacePosition;
@@ -8,9 +8,9 @@ in vec4 v_masks;
 in float v_maskWeight;
 flat in int v_zone;
 flat in int v_instance;
+flat in int v_tile;
 
 #include "includes/CameraData.glsl"
-#include "characters/includes/CharactersStandard.glsl"
 #include "characters/includes/CharacterMaterial.glsl"
 #include "characters/includes/CharacterSurface.glsl"
 #include "characters/includes/CharacterHidden.glsl"
@@ -30,17 +30,17 @@ void main() {
     if (isHiddenFragment(v_instance, v_maskWeight))
     discard;
 
-    vec2 uv   = resolveCharacterUV(v_instance, v_uv.xy, v_uv.zw);
-    vec4 base = texture(u_texture, vec3(uv, float(u_layer_albedo)));
+    vec3           smoothView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
+    CharacterFrame frame      = resolveCharacterFrame(smoothView, v_viewPosition, v_uv);
+    TileRead       tile       = resolveTileReadGrad(resolveCharacterTile(v_instance, v_tile), frame.uvDx, frame.uvDy);
+    vec4           base       = sampleTileAlbedo(tile, v_uv, frame.uvDx, frame.uvDy);
 
     if (base.a < 0.01)
     discard;
 
-    vec3 smoothView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
-    CharacterFrame frame = resolveCharacterFrame(smoothView, v_viewPosition, v_uv.zw);
-    CharacterMaterial material = sampleCharacterMaterial(uv, frame);
+    CharacterMaterial material = sampleCharacterMaterial(tile, v_uv, frame);
     CharacterSurface surface = resolveCharacterSurface(
-        v_instance, v_zone, base.rgb, v_uv.zw, v_masks, v_surfacePosition, v_viewPosition, frame, material);
+        v_instance, v_zone, base.rgb, v_uv, v_masks, v_surfacePosition, v_viewPosition, frame, material);
     vec3 normalView = surface.normal;
     vec3  albedo    = surface.albedo;
     float specular  = surface.specular;

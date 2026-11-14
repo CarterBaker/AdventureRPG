@@ -3,9 +3,11 @@
 
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
-// Samples a face texture per block. A natural top or bottom face spins its tile by a hash of the block it
-// belongs to, found a quarter block behind the sampled position — inside the owning sub-block, so a sub-block
-// face lying inside its block, or on either side of a block boundary, always resolves to its own block.
+// Lays a face's texture once per block. The face's planar coordinate runs continuously across a merged quad and the
+// tile repeats over it, so its UVs need no wrapping of their own; a natural top or bottom face spins its tile by a
+// hash of the block it belongs to, found a quarter block behind the sampled position — inside the owning sub-block,
+// so a sub-block face lying inside its block, or on either side of a block boundary, always resolves to its own
+// block. The spin turns the UV about each block's centre; FaceGradient.glsl turns the screen gradients with it.
 
 int blockPosHash(ivec3 p) {
     int h = p.x * 1619 + p.y * 31337 + p.z * 6271;
@@ -16,39 +18,41 @@ int blockPosHash(ivec3 p) {
     return h;
 }
 
-vec2 tileUV(vec3 localPos, vec2 uvOrigin, vec3 normal, float encodedFaceF) {
+// The planar axes a face reads and the quarter turns its tile takes, as x and y
+ivec2 resolveFaceLayout(vec3 localPos, vec3 normal, float encodedFaceF) {
     int encodedFace = int(encodedFaceF);
-    int axisMode;
-    int spin;
 
     if (encodedFace >= 24) {
         int faceOrdinal = encodedFace - 24;
-        axisMode = 0;
         ivec3 blockPos = ivec3(floor(localPos - normal * (SUB_BLOCK_SIZE * 0.5)));
         // Mask to [0, CHUNK_SIZE-1] so block (1,1,1) hashes identically in every chunk.
         // u_chunkSize = 16 (const from SettingsData.glsl); power-of-two so & mask is exact,
         // and two's complement makes it correct for negative coordinates too.
         int hash = blockPosHash((blockPos & ivec3(int(u_chunkSize) - 1)) + ivec3(faceOrdinal * 7, faceOrdinal * 13, faceOrdinal * 3));
-        spin = abs(hash) & 3;
-    } else {
-        vec2 faceData = u_faceOrientations[encodedFace];
-        axisMode = int(faceData.x);
-        spin     = int(faceData.y);
+        return ivec2(0, abs(hash) & 3);
     }
 
-    vec2 planar;
-    if      (axisMode == 0) planar = localPos.xz;
-    else if (axisMode == 1) planar = localPos.zy;
-    else                    planar = localPos.xy;
+    vec2 faceData = u_faceOrientations[encodedFace];
+    return ivec2(int(faceData.x), int(faceData.y));
+}
 
-    vec2 c = fract(planar) - 0.5;
-    vec2 rotated;
-    if      (spin == 1) rotated = vec2(-c.y,  c.x);
-    else if (spin == 2) rotated = vec2(-c.x, -c.y);
-    else if (spin == 3) rotated = vec2( c.y, -c.x);
-    else                rotated = c;
+vec2 resolveFacePlanar(vec3 localPos, int axisMode) {
+    if (axisMode == 0) return localPos.xz;
+    if (axisMode == 1) return localPos.zy;
+    return localPos.xy;
+}
 
-    return uvOrigin + (rotated + 0.5) * u_uvPerBlock;
+// A vector in the tile's frame turned by the spin
+vec2 spinTileVector(vec2 v, int spin) {
+    if (spin == 1) return vec2(-v.y,  v.x);
+    if (spin == 2) return vec2(-v.x, -v.y);
+    if (spin == 3) return vec2( v.y, -v.x);
+    return v;
+}
+
+vec2 tileUV(vec3 localPos, vec3 normal, float encodedFace) {
+    ivec2 faceLayout = resolveFaceLayout(localPos, normal, encodedFace);
+    return spinTileVector(resolveFacePlanar(localPos, faceLayout.x) - 0.5, faceLayout.y) + 0.5;
 }
 
 #endif

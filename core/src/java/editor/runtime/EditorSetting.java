@@ -1111,6 +1111,7 @@ public class EditorSetting {
     public static final String CHARACTER_PAINT_SUFFIX_SEPARATOR = "_";
     public static final String CHARACTER_PAINT_EXTENSION_SEPARATOR = ".";
     public static final int CHARACTER_PAINT_MAX_LAYERS = 8;
+    public static final long CHARACTER_PAINT_PREVIEW_NANOS = 250_000_000L;
     public static final String CHARACTER_PAINT_IMAGE_PREFIX = "paint/";
     public static final String CHARACTER_PAINT_IMAGE_SEPARATOR = "/";
     public static final float CHARACTER_PAINT_BLEED_PIXELS = 1.5f;

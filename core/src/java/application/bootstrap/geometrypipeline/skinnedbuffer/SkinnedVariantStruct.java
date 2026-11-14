@@ -7,22 +7,22 @@ public class SkinnedVariantStruct extends StructPackage {
 
     /*
      * The material variants one look offers — an overlay's styles, a worn
-     * feature's variants: each a name, the tile of its image set in the
-     * character atlas (every map the image carries shares the tile) and how
-     * far its relief rises in blocks, with the variant worn by default. A draw
-     * picks one by index and writes its tile, the default standing in for an
-     * index the look does not offer. Immutable once built.
+     * feature's variants: each a name, the tile ID of its image set (every
+     * map the image carries shares the tile) and how far its relief rises in
+     * blocks, with the variant worn by default. A draw picks one by index and
+     * writes its tile into the first component of a texel, the default
+     * standing in for an index the look does not offer. Immutable once built.
      */
 
-    // Variants — names, four tile floats each (u0, u1, v0, v1) and a relief depth each
+    // Variants — names, a tile ID each and a relief depth each
     private final String[] names;
-    private final float[] tiles;
+    private final int[] tiles;
     private final float[] reliefs;
     private final int defaultVariant;
 
     // Constructor \\
 
-    public SkinnedVariantStruct(String[] names, float[] tiles, float[] reliefs, int defaultVariant) {
+    public SkinnedVariantStruct(String[] names, int[] tiles, float[] reliefs, int defaultVariant) {
 
         // Variants
         this.names = names;
@@ -38,9 +38,17 @@ public class SkinnedVariantStruct extends StructPackage {
         return variantIndex >= 0 && variantIndex < names.length ? variantIndex : defaultVariant;
     }
 
+    // The variant's tile ID in a texel's first component, the rest cleared
     public void writeTile(float[] out, int offset, int variantIndex) {
-        System.arraycopy(tiles, resolve(variantIndex) * EngineSetting.COLOR_CHANNEL_COUNT, out, offset,
-                EngineSetting.COLOR_CHANNEL_COUNT);
+
+        out[offset] = tiles[resolve(variantIndex)];
+
+        for (int c = 1; c < EngineSetting.COLOR_CHANNEL_COUNT; c++)
+            out[offset + c] = 0f;
+    }
+
+    public int getTile(int variantIndex) {
+        return tiles[resolve(variantIndex)];
     }
 
     public float getRelief(int variantIndex) {

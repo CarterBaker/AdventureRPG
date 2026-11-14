@@ -61,7 +61,7 @@ class ContentBuilder extends BuilderPackage {
         // Rendering
         TextureHandle texture = textureManager.getTextureHandleFromTextureName(
                 ArpgUtility.validateString(arpg, "texture"));
-        validateTextureArray(texture, hostBlockIDs, contentName);
+        validateHostTextures(hostBlockIDs, contentName);
         TextureRevealStruct reveal = validateReveal(texture, contentName);
 
         // Breaking
@@ -125,8 +125,7 @@ class ContentBuilder extends BuilderPackage {
 
     // Rendering \\
 
-    private void validateTextureArray(
-            TextureHandle textureHandle,
+    private void validateHostTextures(
             ShortOpenHashSet hostBlockIDs,
             String contentName) {
 
@@ -143,11 +142,6 @@ class ContentBuilder extends BuilderPackage {
                 if (hostTileID == EngineSetting.BLOCK_TEXTURE_UNDEFINED)
                     throwException("Content \"" + contentName + "\" names host \"" + hostHandle.getBlockName()
                             + "\", which draws no texture to lay its overlay over.");
-
-                if (textureManager.getTextureHandleFromTileID(hostTileID).getArrayID() != textureHandle.getArrayID())
-                    throwException("Content \"" + contentName + "\" texture \"" + textureHandle.getTileName()
-                            + "\" lives in another texture array than host \"" + hostHandle.getBlockName()
-                            + "\" — a content's tile must share the array its hosts are drawn from.");
             }
         }
     }

@@ -1,5 +1,6 @@
 package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
@@ -35,6 +36,7 @@ public class DynamicGeometryManager extends ManagerPackage {
     private BlockHandle airBlockHandle;
     private BiomeManager biomeManager;
     private CoveringManager coveringManager;
+    private ContentManager contentManager;
     private TreeManager treeManager;
 
     // Internal \\
@@ -65,6 +67,10 @@ public class DynamicGeometryManager extends ManagerPackage {
         this.coveringManager = coveringManager;
     }
 
+    public void bindContentManager(ContentManager contentManager) {
+        this.contentManager = contentManager;
+    }
+
     public void bindTreeManager(TreeManager treeManager) {
         this.treeManager = treeManager;
     }
@@ -83,6 +89,10 @@ public class DynamicGeometryManager extends ManagerPackage {
 
     CoveringManager getCoveringManager() {
         return coveringManager;
+    }
+
+    ContentManager getContentManager() {
+        return contentManager;
     }
 
     TreeManager getTreeManager() {

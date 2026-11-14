@@ -1,27 +1,23 @@
 package editor.bootstrap.charactereditorpipeline.charactermesh;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 
+import application.bootstrap.shaderpipeline.texturemanager.AliasStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import engine.assets.image.Pixmap;
-import engine.root.EngineSetting;
 import engine.root.StructPackage;
-import engine.util.memory.BufferUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterPaintCanvasStruct extends StructPackage {
 
     /*
-     * One map of one character texture open for painting: where its tile
-     * lies in its atlas and which layer of the texture array the map fills,
-     * the image file it saves to beside the texture, its paint layers — the
-     * first the image itself, each above it laid over it by its own alpha
-     * and opacity, each an image document so every stroke is an undo step —
-     * and the flattened result the atlas shows, with the buffer the region a
-     * change touches is uploaded through, rows bottom first as the atlas
-     * holds the tile.
+     * One map of one character texture open for painting: the tile it
+     * paints and the alias whose map and channels it fills, the image file
+     * it saves to beside the texture, its paint layers — the first the image
+     * itself, each above it laid over it by its own alpha and opacity, each
+     * an image document so every stroke is an undo step — and the flattened
+     * result the tile is baked from while it is painted.
      */
 
     // Identity
@@ -29,11 +25,9 @@ public class CharacterPaintCanvasStruct extends StructPackage {
     private final int mapIndex;
     private final File file;
 
-    // Atlas — the array's texture, the tile's corner in it and the layer the map fills
-    private final int gpuHandle;
-    private final int atlasX;
-    private final int atlasY;
-    private final int aliasLayer;
+    // Tile — the tile painted, the alias the map is, and the map's size
+    private final int tileID;
+    private final AliasStruct alias;
     private final int width;
     private final int height;
     private final int defaultColor;
@@ -46,9 +40,8 @@ public class CharacterPaintCanvasStruct extends StructPackage {
     private int nextLayerNumber;
     private boolean layersChanged;
 
-    // Composite — the flattened map, and the rows of a region on their way to the atlas
+    // Composite — the flattened map
     private final Pixmap composite;
-    private final ByteBuffer upload;
 
     // Constructor \\
 
@@ -56,10 +49,8 @@ public class CharacterPaintCanvasStruct extends StructPackage {
             String textureName,
             int mapIndex,
             File file,
-            int gpuHandle,
-            int atlasX,
-            int atlasY,
-            int aliasLayer,
+            int tileID,
+            AliasStruct alias,
             int width,
             int height,
             int defaultColor) {
@@ -69,11 +60,9 @@ public class CharacterPaintCanvasStruct extends StructPackage {
         this.mapIndex = mapIndex;
         this.file = file;
 
-        // Atlas
-        this.gpuHandle = gpuHandle;
-        this.atlasX = atlasX;
-        this.atlasY = atlasY;
-        this.aliasLayer = aliasLayer;
+        // Tile
+        this.tileID = tileID;
+        this.alias = alias;
         this.width = width;
         this.height = height;
         this.defaultColor = defaultColor;
@@ -85,7 +74,6 @@ public class CharacterPaintCanvasStruct extends StructPackage {
 
         // Composite
         this.composite = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        this.upload = BufferUtility.newByteBuffer(width * height * EngineSetting.COLOR_CHANNEL_COUNT);
     }
 
     // Layers \\
@@ -144,20 +132,12 @@ public class CharacterPaintCanvasStruct extends StructPackage {
         return file;
     }
 
-    public int getGpuHandle() {
-        return gpuHandle;
+    public int getTileID() {
+        return tileID;
     }
 
-    public int getAtlasX() {
-        return atlasX;
-    }
-
-    public int getAtlasY() {
-        return atlasY;
-    }
-
-    public int getAliasLayer() {
-        return aliasLayer;
+    public AliasStruct getAlias() {
+        return alias;
     }
 
     public int getWidth() {
@@ -201,7 +181,4 @@ public class CharacterPaintCanvasStruct extends StructPackage {
         return composite;
     }
 
-    public ByteBuffer getUpload() {
-        return upload;
-    }
 }

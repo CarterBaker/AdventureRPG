@@ -8,10 +8,9 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 public class TextureArrayStruct extends StructPackage {
 
     /*
-     * Bootstrap container grouping all alias layers for one texture array
-     * directory, every alias holding a layer (its default color where no
-     * source file provides it), with the tile coordinate map. Cleared and
-     * GCs with the loader after GPU upload.
+     * Bootstrap container for one font atlas: its layers and the coordinate
+     * map of every glyph tile packed into it. Cleared and GCs with the font
+     * builder after GPU upload.
      */
 
     // Identity

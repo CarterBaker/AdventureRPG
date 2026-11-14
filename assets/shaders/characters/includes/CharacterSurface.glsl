@@ -1,7 +1,6 @@
 #ifndef CHARACTER_SURFACE_GLSL
 #define CHARACTER_SURFACE_GLSL
 
-#include "characters/includes/CharactersStandard.glsl"
 #include "characters/includes/CharacterMaterial.glsl"
 #include "characters/includes/CharacterAppearance.glsl"
 #include "characters/includes/CharacterZone.glsl"
@@ -82,23 +81,19 @@ float characterSpots(vec3 position, float cells, float density) {
     return cover;
 }
 
-// One layer of an overlay's image at a place in its region, scaled into its tile of the atlas with the region's
-// screen derivatives
-vec4 sampleOverlayTile(vec4 tile, vec2 local, vec2 dx, vec2 dy, int layer) {
-    vec2 scale = vec2(tile.y - tile.x, tile.w - tile.z);
-    vec2 uv    = vec2(tile.x, tile.z) + clamp(local, 0.0, 1.0) * scale;
-
-    return textureGrad(u_texture, vec3(uv, float(layer)), dx * scale, dy * scale);
+// An overlay's height at a place in its region, its tile spanning the region with the region's screen derivatives
+float sampleOverlayHeight(TileRead tile, vec2 local, vec2 dx, vec2 dy) {
+    return sampleTileMaterial(tile, clamp(local, 0.0, 1.0), dx, dy).a;
 }
 
 // Parallax occlusion for relief standing on the skin: the view ray enters the relief's top shifted toward the eye and
 // marches down to the skin itself, so bare skin is never shifted; more steps the nearer the eye
-vec2 marchOverlayRelief(vec4 tile, vec2 local, vec2 dx, vec2 dy, vec2 shift, float detail) {
+vec2 marchOverlayRelief(TileRead tile, vec2 local, vec2 dx, vec2 dy, vec2 shift, float detail) {
     int   steps  = int(mix(float(CHARACTER_RELIEF_STEPS_MIN), float(CHARACTER_RELIEF_STEPS_MAX), detail));
     float stride = 1.0 / float(steps);
     vec2  entry  = local + shift;
     float ray    = 1.0;
-    float height = sampleOverlayTile(tile, entry, dx, dy, u_layer_height).r;
+    float height = sampleOverlayHeight(tile, entry, dx, dy);
     float above  = ray - height;
 
     for (int i = 0; i < CHARACTER_RELIEF_STEPS_MAX; i++) {
@@ -107,7 +102,7 @@ vec2 marchOverlayRelief(vec4 tile, vec2 local, vec2 dx, vec2 dy, vec2 shift, flo
 
         above  = ray - height;
         ray   -= stride;
-        height = sampleOverlayTile(tile, mix(local, entry, ray), dx, dy, u_layer_height).r;
+        height = sampleOverlayHeight(tile, mix(local, entry, ray), dx, dy);
     }
 
     float below = height - ray;
@@ -133,22 +128,22 @@ vec3 shadeOverlays(int instance, vec3 skin, vec2 rawUV, vec3 viewPosition, Chara
         if (any(lessThan(local, vec2(0.0))) || any(greaterThan(local, vec2(1.0))))
         continue;
 
-        vec4  tile   = fetchOverlay(instance, i, 0);
-        float relief = fetchOverlay(instance, i, 2).x * frame.detail;
-        vec2  dx     = frame.uvDx / size;
-        vec2  dy     = frame.uvDy / size;
+        float    relief = fetchOverlay(instance, i, 2).x * frame.detail;
+        vec2     dx     = frame.uvDx / size;
+        vec2     dy     = frame.uvDy / size;
+        TileRead tile   = resolveTileReadGrad(int(fetchOverlay(instance, i, 0).x + 0.5), dx, dy);
 
         if (relief > 0.0)
         local = marchOverlayRelief(tile, local, dx, dy,
             viewTS.xy / max(viewTS.z, CHARACTER_RELIEF_GRAZING) * relief * frame.uvPerMeter / size, frame.detail);
 
-        vec4  image = sampleOverlayTile(tile, local, dx, dy, u_layer_albedo);
+        vec4  image = sampleTileAlbedo(tile, clamp(local, 0.0, 1.0), dx, dy);
         float cover = smoothstep(1.0 - amount, 1.0 - amount + CHARACTER_OVERLAY_SOFTNESS, image.a) * image.a;
 
         skin = mix(skin, fetchCharacterColor(instance, CHARACTER_OVERLAY_COLOR[i]) * image.rgb, cover);
 
         if (relief > 0.0) {
-            vec3 mapNormal = sampleOverlayTile(tile, local, dx, dy, u_layer_normal).xyz * 2.0 - 1.0;
+            vec3 mapNormal = sampleTileNormal(tile, clamp(local, 0.0, 1.0), dx, dy);
             normal = normalize(mix(normal, normalize(frame.basis * mapNormal), cover * frame.detail));
         }
     }
@@ -183,9 +178,9 @@ vec3 shadeSkin(int instance, vec3 base, vec4 masks, vec3 surfacePosition) {
 // the pupil size, and the iris seen through the cornea — sitting CHARACTER_IRIS_DEPTH behind the eye's surface, it
 // shifts against the view, within the Character Detail distance. The eye color reaches what the tint mask allows.
 vec3 shadeEye(int instance, vec2 rawUV, vec3 viewPosition, CharacterFrame frame) {
-    vec4 tile = fetchCharacterVariant(instance);
+    int variant = int(fetchCharacterVariant(instance).x + 0.5);
 
-    if (tile.y <= tile.x)
+    if (variant <= 0)
     return vec3(1.0);
 
     vec3  viewDir   = normalize(-viewPosition);
@@ -207,12 +202,12 @@ vec3 shadeEye(int instance, vec2 rawUV, vec3 viewPosition, CharacterFrame frame)
 
     local *= radius < 1.0 && radius > 0.00001 ? drawn / radius : 1.0;
 
-    vec2  scale = vec2(tile.y - tile.x, tile.w - tile.z);
-    vec2  uv    = vec2(tile.x, tile.z) + clamp(CHARACTER_IRIS_CENTRE + local, 0.0, 1.0) * scale;
-    vec2  dx    = frame.uvDx / irisScale * scale;
-    vec2  dy    = frame.uvDy / irisScale * scale;
-    vec3  image = textureGrad(u_texture, vec3(uv, float(u_layer_albedo)), dx, dy).rgb;
-    float tint  = textureGrad(u_texture, vec3(uv, float(u_layer_tint)), dx, dy).r;
+    vec2     uv    = clamp(CHARACTER_IRIS_CENTRE + local, 0.0, 1.0);
+    vec2     dx    = frame.uvDx / irisScale;
+    vec2     dy    = frame.uvDy / irisScale;
+    TileRead tile  = resolveTileReadGrad(variant, dx, dy);
+    vec3     image = sampleTileAlbedo(tile, uv, dx, dy).rgb;
+    float    tint  = sampleTileExtra(tile, uv, dx, dy).b;
 
     return mix(image, image * fetchCharacterColor(instance, CHARACTER_COLOR_EYES), tint);
 }

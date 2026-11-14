@@ -9,7 +9,6 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelQuadListStruct;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.geometrypipeline.vaomanager.VAOManager;
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -102,7 +101,7 @@ public class SubVoxelManager extends ManagerPackage {
     }
 
     // Every face of the grid as item-format meshes, each cut before it passes the mesh vertex limit
-    public ObjectArrayList<MeshInstance> createGridMeshes(SubVoxelGridStruct grid, float[] partUVBounds) {
+    public ObjectArrayList<MeshInstance> createGridMeshes(SubVoxelGridStruct grid, int[] partTiles) {
 
         ObjectArrayList<MeshInstance> meshes = new ObjectArrayList<>();
         SubVoxelQuadListStruct quads = new SubVoxelQuadListStruct();
@@ -118,7 +117,7 @@ public class SubVoxelManager extends ManagerPackage {
             indices.clear();
 
             SubVoxelMeshUtility.emitQuads(
-                    quads, first, Math.min(first + quadsPerMesh, quads.size()), partUVBounds,
+                    quads, first, Math.min(first + quadsPerMesh, quads.size()), partTiles,
                     minScratch, maxScratch, vertices, indices);
 
             meshes.add(createMesh(vertices, indices));
@@ -155,7 +154,7 @@ public class SubVoxelManager extends ManagerPackage {
         indices.clear();
 
         SubVoxelMeshUtility.emitQuads(
-                modelQuads, 0, modelQuads.size(), resolvePartUVBounds(model),
+                modelQuads, 0, modelQuads.size(), resolvePartTiles(model),
                 minScratch, maxScratch, vertices, indices);
     }
 
@@ -165,27 +164,19 @@ public class SubVoxelManager extends ManagerPackage {
         meshGrid(modelGrid, null, modelQuads);
     }
 
-    private float[] resolvePartUVBounds(SubVoxelModelStruct model) {
+    // Every part's tile ID, indexed by part
+    private int[] resolvePartTiles(SubVoxelModelStruct model) {
 
-        float[] partUVBounds = new float[model.getPartCount() * EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS];
+        int[] partTiles = new int[model.getPartCount()];
 
         for (int partIndex = 0; partIndex < model.getPartCount(); partIndex++)
-            writeUVBounds(
-                    model.getPart(partIndex).getTextureName(),
-                    partUVBounds,
-                    partIndex * EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS);
+            partTiles[partIndex] = resolveTile(model.getPart(partIndex).getTextureName());
 
-        return partUVBounds;
+        return partTiles;
     }
 
-    public void writeUVBounds(String textureName, float[] uvBounds, int uvBase) {
-
-        TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(textureName);
-
-        uvBounds[uvBase] = textureHandle.getU0();
-        uvBounds[uvBase + 1] = textureHandle.getV0();
-        uvBounds[uvBase + 2] = textureHandle.getU1();
-        uvBounds[uvBase + 3] = textureHandle.getV1();
+    public int resolveTile(String textureName) {
+        return textureManager.getTileIDFromTextureName(textureName);
     }
 
     // Runtime Mesh \\
@@ -207,7 +198,10 @@ public class SubVoxelManager extends ManagerPackage {
         buildGeometry(model, vertices, indices);
 
         VAOHandle vaoTemplate = vaoManager.getVAOHandleFromVAOName(EngineSetting.SUB_VOXEL_VAO);
-        return meshManager.createMeshHandle(meshName, vaoTemplate, vertices, indices);
+        MeshHandle meshHandle = meshManager.createMeshHandle(meshName, vaoTemplate, vertices, indices);
+        SubVoxelMeshUtility.collectTiles(vertices.elements(), vertices.size(), meshHandle.getTiles());
+
+        return meshHandle;
     }
 
     // A pocket's open box around a space of the given size in sub-voxels, its corner at the origin
@@ -215,10 +209,7 @@ public class SubVoxelManager extends ManagerPackage {
 
         FloatArrayList vertices = new FloatArrayList();
         ShortArrayList indices = new ShortArrayList();
-        float[] uvBounds = new float[EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS];
-
-        writeUVBounds(textureName, uvBounds, 0);
-        SubVoxelMeshUtility.buildPocket(size.x, size.y, size.z, uvBounds, vertices, indices);
+        SubVoxelMeshUtility.buildPocket(size.x, size.y, size.z, resolveTile(textureName), vertices, indices);
 
         return createMesh(vertices, indices);
     }
@@ -241,29 +232,27 @@ public class SubVoxelManager extends ManagerPackage {
 
     // Faces \\
 
-    // One face spanning min to max in block units carrying the texture corner at uvBase — the same vertices every
-    // item-format sub-voxel mesh is made of
+    // One face spanning min to max in block units carrying its tile — the same vertices every item-format sub-voxel
+    // mesh is made of
     public void emitFace(
             int face,
             float[] min,
             float[] max,
-            float[] uvBounds,
-            int uvBase,
+            int tile,
             FloatArrayList vertices,
             ShortArrayList indices) {
-        SubVoxelMeshUtility.emitFace(face, min, max, uvBounds[uvBase], uvBounds[uvBase + 1], vertices, indices);
+        SubVoxelMeshUtility.emitFace(face, min, max, tile, vertices, indices);
     }
 
-    // One quad through four corners in block units, wound as given, carrying the texture corner at uvBase — a face
-    // laid at any slant, read by the shader as the face given
+    // One quad through four corners in block units, wound as given, carrying its tile — a face laid at any slant,
+    // read by the shader as the face given
     public void emitQuad(
             int face,
             float[] corners,
-            float[] uvBounds,
-            int uvBase,
+            int tile,
             FloatArrayList vertices,
             ShortArrayList indices) {
-        SubVoxelMeshUtility.emitCorners(face, corners, uvBounds[uvBase], uvBounds[uvBase + 1], vertices, indices);
+        SubVoxelMeshUtility.emitCorners(face, corners, tile, vertices, indices);
     }
 
     // The face whose normal runs along an axis, toward its positive or negative side

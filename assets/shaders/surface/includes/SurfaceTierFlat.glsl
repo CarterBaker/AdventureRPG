@@ -16,14 +16,15 @@ const float FLAT_TIER_SPECULAR = 0.0;
 const float FLAT_TIER_AO       = 1.0;
 
 bool shadeSurfaceFlat(
-    vec2 tiledUV,
+    TileRead tile,
+    FaceUV face,
     vec3 worldNormal,
     mat4 viewMat,
     out vec3 outAlbedo,
     out vec3 outNormalView,
     out float outSpecular,
     out float outAO) {
-    vec4 albedo = sampleLayerTiled(tiledUV, u_layer_albedo);
+    vec4 albedo = sampleTileAlbedo(tile, face.uv, face.dx, face.dy);
     if (albedo.a < 0.01)
     return false;
 

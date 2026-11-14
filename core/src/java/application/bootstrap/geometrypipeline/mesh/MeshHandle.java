@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
 import engine.util.mathematics.vectors.Vector3;
@@ -41,6 +42,9 @@ public class MeshHandle extends HandlePackage {
     // Bones — by rig bone, whether any vertex weighs onto it
     private boolean[] weighedBones;
 
+    // Tiles — every texture tile the mesh's vertices draw from
+    private TextureTileSetStruct tiles;
+
     // Constructor \\
 
     public void constructor(
@@ -68,6 +72,12 @@ public class MeshHandle extends HandlePackage {
 
         // Rig
         this.rigHandle = rigHandle;
+
+        // Tiles
+        if (tiles == null)
+            this.tiles = new TextureTileSetStruct();
+
+        tiles.clear();
 
         // Morphs
         if (morphNames == null)
@@ -154,6 +164,10 @@ public class MeshHandle extends HandlePackage {
 
     public int getIndexCount() {
         return meshData.getIndexCount();
+    }
+
+    public TextureTileSetStruct getTiles() {
+        return tiles;
     }
 
     public RigHandle getRigHandle() {

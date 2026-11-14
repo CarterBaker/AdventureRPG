@@ -1,14 +1,12 @@
 #version 330 core
 
-in vec2 vUVOrigin;
+flat in int vTile;
 in vec3 vModelPosition;
 in vec3 vViewPosition;
 flat in int vFace;
 
-#include "items/includes/ItemsStandard.glsl"
-#include "items/includes/BlockRepeat.glsl"
+#include "items/includes/BlockAlbedo.glsl"
 
-uniform sampler2DArray u_textureArray;
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -38,8 +36,7 @@ float resolveDitherThreshold() {
 }
 
 void main() {
-    vec2 uv     = resolveRepeatedUV(vUVOrigin, vModelPosition, vFace, u_uvPerBlock);
-    vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
+    vec4 albedo = sampleBlockAlbedo(vTile, vModelPosition, vFace);
 
     if (albedo.a < resolveDitherThreshold())
     discard;

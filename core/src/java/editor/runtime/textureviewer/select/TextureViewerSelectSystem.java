@@ -11,8 +11,8 @@ import engine.root.SystemPackage;
 public class TextureViewerSelectSystem extends SystemPackage {
 
     /*
-     * Tracks which atlas image is under the pointer and, on click, makes it
-     * the item editor's brush texture.
+     * Tracks which item tile is under the pointer and, on click, makes it the
+     * item editor's brush texture.
      */
 
     // Internal

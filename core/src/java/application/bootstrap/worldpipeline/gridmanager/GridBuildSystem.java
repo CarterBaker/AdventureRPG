@@ -8,6 +8,7 @@ import application.bootstrap.oceanpipeline.exposuremanager.ExposureManager;
 import application.bootstrap.oceanpipeline.turbulencemanager.TurbulenceManager;
 import application.bootstrap.oceanpipeline.wavemanager.WaveManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
@@ -42,6 +43,7 @@ class GridBuildSystem extends SystemPackage {
 
     // Internal
     private UBOManager uboManager;
+    private TextureManager textureManager;
     private ClockManager clockManager;
     private WeatherPatternManager weatherPatternManager;
     private WindManager windManager;
@@ -79,6 +81,7 @@ class GridBuildSystem extends SystemPackage {
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
+        this.textureManager = get(TextureManager.class);
         this.clockManager = get(ClockManager.class);
         this.weatherPatternManager = get(WeatherPatternManager.class);
         this.windManager = get(WindManager.class);
@@ -212,6 +215,7 @@ class GridBuildSystem extends SystemPackage {
         settingsData.updateUniform(EngineSetting.UNIFORM_RENDER_DISTANCE, (float) gridInstance.getRenderDistance());
         settingsData.updateUniform(EngineSetting.UNIFORM_CHUNK_SIZE, (float) chunkSize);
         settingsData.updateUniform(EngineSetting.UNIFORM_DETAIL_RADIUS, (float) settings.detailRadius);
+        settingsData.updateUniform(EngineSetting.UNIFORM_TEXTURE_ANISOTROPY, textureManager.getTextureAnisotropy());
         uboManager.push(settingsData);
     }
 

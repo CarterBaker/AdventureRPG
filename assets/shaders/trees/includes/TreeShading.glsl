@@ -2,16 +2,13 @@
 #define TREE_SHADING_GLSL
 
 #include "includes/SunLightData.glsl"
-#include "items/includes/ItemsStandard.glsl"
 #include "items/includes/BlockRepeat.glsl"
 #include "surface/includes/CloudShadow.glsl"
 
-// Shared by every tree shader: the item atlas every tree part is drawn from, the six faces in the order the
+// Shared by every tree shader: the item tiles every tree part is drawn from, the six faces in the order the
 // sub-voxel mesher numbers them, the two axes each face runs along (u the axis after the normal's, v the one after
 // that, as the mesher lays quads out), the tint every vertex carries as an exact 24-bit RGB triple, and the cloud
 // shadow trees take exactly as the terrain beneath them does.
-
-uniform sampler2DArray u_textureArray;
 
 const vec3 TREE_FACE_NORMALS[6] = vec3[](
     vec3(0, 0, 1),

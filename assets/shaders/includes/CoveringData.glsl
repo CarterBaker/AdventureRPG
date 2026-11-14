@@ -12,8 +12,7 @@
 // Source: CoveringBufferSystem, indexed by covering ID, and the reveal rows by covering face, the covering ID times
 // two for its top tile and one more for its side tile.
 //
-// coveringTiles:          xy = the top tile's atlas origin, zw = the side tile's, negative where the covering has no
-//                         sides.
+// coveringTiles:          x = the top tile's ID, z = the side tile's, negative where the covering has no sides.
 // coveringStyle:          x  = how far the biome's tint colors the covering, 0 not at all to 1 fully.
 // coveringRevealColor:    rgb = the average albedo of the face's tile where it shows at its full level.
 // coveringRevealTintable: rgb = the same average weighted by how far each texel takes the biome's tint.

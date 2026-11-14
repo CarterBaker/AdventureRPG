@@ -99,6 +99,20 @@ tasks.register('arpg', JavaExec) {
   }
 }
 
+// Runs the texture bake tool from the project root: bakes every tile under
+// assets/textures whose source images changed into assets/bakedtextures, or every
+// tile with gradlew lwjgl3:bake --args="force".
+tasks.register('bake', JavaExec) {
+  group = 'application'
+  description = 'Bakes texture sources into the block-compressed tiles the game streams.'
+  workingDir = rootProject.projectDir
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'lwjgl3.Lwjgl3LauncherBake'
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
 // Runs the benchmark tool behind a hidden window with the game's JVM arguments:
 // times world generation and meshing over a fixed corpus of chunks, prints the
 // report, and exits non-zero when a version of a routine differs from Java's.

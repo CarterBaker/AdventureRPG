@@ -64,9 +64,7 @@ public final class TreeMeshUtility extends EngineUtility {
             int part = quads.getPart(quad);
             TreeHandle treeHandle = partSpecies.get(part / EngineSetting.TREE_WOOD_PART_COUNT);
             int woodPart = part % EngineSetting.TREE_WOOD_PART_COUNT;
-            float[] partCorners = treeHandle.getPartCorners();
-            float cornerU = partCorners[woodPart * EngineSetting.TREE_PART_CORNER_FLOATS];
-            float cornerV = partCorners[woodPart * EngineSetting.TREE_PART_CORNER_FLOATS + 1];
+            int tile = treeHandle.getPartTiles()[woodPart];
             float color = treeHandle.getPartColors()[woodPart];
             int face = quads.getFace(quad);
             float meta = face | resolveEdges(grid, quads, quad, cell) << EngineSetting.TREE_META_EDGE_SHIFT;
@@ -80,8 +78,8 @@ public final class TreeMeshUtility extends EngineUtility {
                 out.add(originX + corners[corner] * SCALE);
                 out.add(originY + corners[corner + 1] * SCALE);
                 out.add(originZ + corners[corner + 2] * SCALE);
-                out.add(cornerU);
-                out.add(cornerV);
+                out.add(tile);
+                addPadding(out, EngineSetting.TREE_TILE_PADDING_FLOATS);
                 out.add(meta);
                 out.add(color);
                 out.add(localU);
@@ -103,8 +101,7 @@ public final class TreeMeshUtility extends EngineUtility {
             float maxX,
             float maxY,
             float maxZ,
-            float cornerU,
-            float cornerV,
+            int tile,
             float color,
             boolean capped,
             float[] scratch,
@@ -153,8 +150,8 @@ public final class TreeMeshUtility extends EngineUtility {
                 out.add(scratch[min] + scratch[corner] * SCALE);
                 out.add(scratch[min + 1] + scratch[corner + 1] * SCALE);
                 out.add(scratch[min + 2] + scratch[corner + 2] * SCALE);
-                out.add(cornerU);
-                out.add(cornerV);
+                out.add(tile);
+                addPadding(out, EngineSetting.TREE_TILE_PADDING_FLOATS);
                 out.add(meta);
                 out.add(color);
                 out.add(localU);
@@ -357,7 +354,7 @@ public final class TreeMeshUtility extends EngineUtility {
             FloatArrayList out) {
 
         TreeHandle treeHandle = shape.getTreeHandle();
-        float[] corners = treeHandle.getPartCorners();
+        int[] tiles = treeHandle.getPartTiles();
         int[] colors = treeHandle.getPartColors();
 
         for (int leaf = 0; leaf < shape.getLeafCount(); leaf++) {
@@ -375,8 +372,7 @@ public final class TreeMeshUtility extends EngineUtility {
             emitCluster(
                     centerX, centerY, centerZ,
                     shape.getLeafRadiusH(leaf), shape.getLeafRadiusV(leaf),
-                    corners[part * EngineSetting.TREE_PART_CORNER_FLOATS],
-                    corners[part * EngineSetting.TREE_PART_CORNER_FLOATS + 1],
+                    tiles[part],
                     colors[part],
                     shape.getLeafSeed(leaf),
                     out);
@@ -391,8 +387,7 @@ public final class TreeMeshUtility extends EngineUtility {
             float centerZ,
             float radiusH,
             float radiusV,
-            float cornerU,
-            float cornerV,
+            int tile,
             int color,
             float seed,
             FloatArrayList out) {
@@ -407,12 +402,12 @@ public final class TreeMeshUtility extends EngineUtility {
 
             emitCard(
                     centerX, centerY, centerZ, radiusH, radiusV, acrossX, acrossZ, 0f, radiusV, 0f,
-                    cornerU, cornerV, color, seed, card, out);
+                    tile, color, seed, card, out);
         }
 
         emitCard(
                 centerX, centerY, centerZ, radiusH, radiusV, radiusH, 0f, 0f, 0f, radiusH,
-                cornerU, cornerV, color, seed, EngineSetting.TREE_LEAF_UPRIGHT_CARDS, out);
+                tile, color, seed, EngineSetting.TREE_LEAF_UPRIGHT_CARDS, out);
     }
 
     // One card through the cluster's centre, reaching its level across half and its up half to either side
@@ -427,8 +422,7 @@ public final class TreeMeshUtility extends EngineUtility {
             float upX,
             float upY,
             float upZ,
-            float cornerU,
-            float cornerV,
+            int tile,
             int color,
             float seed,
             int card,
@@ -445,8 +439,8 @@ public final class TreeMeshUtility extends EngineUtility {
             out.add(centerX + offsetX);
             out.add(centerY + offsetY);
             out.add(centerZ + offsetZ);
-            out.add(cornerU);
-            out.add(cornerV);
+            out.add(tile);
+            addPadding(out, EngineSetting.TREE_TILE_PADDING_FLOATS);
             out.add(card);
             out.add(color);
             out.add(-offsetX);

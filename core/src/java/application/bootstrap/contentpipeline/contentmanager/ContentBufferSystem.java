@@ -17,7 +17,7 @@ class ContentBufferSystem extends SystemPackage {
      * Seeds the ContentData UBO with every content's overlay tile, indexed by
      * content ID, so a terrain quad carries only the ID in its meta word and
      * the surface shader looks the rest up. Each tile row holds the overlay
-     * tile's atlas origin; each reveal row the average color the tile shows
+     * tile's ID; each reveal row the average color the tile shows
      * and, in its last component, the share of the tile it shows, which
      * distant faces approximate the content with. The reserved ID and any
      * unused slot stay empty.
@@ -78,8 +78,7 @@ class ContentBufferSystem extends SystemPackage {
         Vector4 reveal = contentReveal[contentID];
         int revealColor = contentHandle.getReveal().getRevealColor();
 
-        tiles.x = texture.getU0();
-        tiles.y = texture.getV0();
+        tiles.x = texture.getTileID();
 
         reveal.x = PackedColorUtility.red(revealColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
         reveal.y = PackedColorUtility.green(revealColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;

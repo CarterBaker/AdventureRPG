@@ -2,6 +2,7 @@ package application.bootstrap.contentpipeline.contentmanager;
 
 import application.bootstrap.contentpipeline.content.ContentHandle;
 import application.bootstrap.contentpipeline.util.ContentUtility;
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import engine.graphics.color.PackedColorUtility;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -25,6 +26,7 @@ public class ContentManager extends ManagerPackage {
 
     // Internal
     private ContentBufferSystem contentBufferSystem;
+    private DynamicGeometryManager dynamicGeometryManager;
 
     // Palette
     private Object2IntOpenHashMap<String> contentName2ContentID;
@@ -46,9 +48,15 @@ public class ContentManager extends ManagerPackage {
     }
 
     @Override
+    protected void get() {
+        this.dynamicGeometryManager = get(DynamicGeometryManager.class);
+    }
+
+    @Override
     protected void awake() {
         internalLoader.requestAll();
         contentBufferSystem.pushContentTable(contentID2ContentHandle);
+        dynamicGeometryManager.bindContentManager(this);
     }
 
     // Management \\

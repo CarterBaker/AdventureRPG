@@ -67,6 +67,10 @@ public abstract class ArpgElementStruct extends StructPackage {
         throw mismatch("a boolean");
     }
 
+    public byte[] getAsBytes() {
+        throw mismatch("bytes");
+    }
+
     // Copy \\
 
     public abstract ArpgElementStruct deepCopy();

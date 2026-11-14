@@ -21,7 +21,7 @@ class ArpgBinaryUtility extends EngineUtility {
      * indices and whole numbers are zigzag varints; a decimal is its shortest
      * decimal mantissa and power-of-ten scale, which rebuilds the exact same
      * double in one multiply or divide, and falls back to raw IEEE bits only
-     * when it cannot.
+     * when it cannot. A bytes value is its varint length and the raw bytes.
      */
 
     // Internal
@@ -138,6 +138,13 @@ class ArpgBinaryUtility extends EngineUtility {
             }
 
             case DECIMAL -> writeDecimal(value.getAsDouble(), buffer);
+
+            case BYTES -> {
+                byte[] bytes = value.getAsBytes();
+                buffer.writeByte(EngineSetting.ARPG_TAG_BYTES);
+                buffer.writeVarint(bytes.length);
+                buffer.writeBytes(bytes);
+            }
         }
     }
 
@@ -194,6 +201,7 @@ class ArpgBinaryUtility extends EngineUtility {
             case EngineSetting.ARPG_TAG_INTEGER -> new ArpgValueStruct(cursor.readVarint());
             case EngineSetting.ARPG_TAG_DECIMAL -> new ArpgValueStruct(readDecimal(cursor));
             case EngineSetting.ARPG_TAG_DOUBLE -> new ArpgValueStruct(Double.longBitsToDouble(cursor.readLong()));
+            case EngineSetting.ARPG_TAG_BYTES -> new ArpgValueStruct(cursor.readBytes(cursor.readCount()));
             case EngineSetting.ARPG_TAG_TRUE -> ArpgValueStruct.TRUE;
             case EngineSetting.ARPG_TAG_FALSE -> ArpgValueStruct.FALSE;
             case EngineSetting.ARPG_TAG_NULL -> ArpgNullStruct.INSTANCE;
@@ -403,6 +411,13 @@ class ArpgBinaryUtility extends EngineUtility {
                 value = (value << EngineSetting.ARPG_BYTE_BITS) | readByte();
 
             return value;
+        }
+
+        byte[] readBytes(int length) {
+
+            byte[] block = Arrays.copyOfRange(bytes, position, position + length);
+            position += length;
+            return block;
         }
 
         String readString(int length) {

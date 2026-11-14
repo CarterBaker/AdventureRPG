@@ -1,12 +1,13 @@
 #ifndef CHARACTER_MATERIAL_GLSL
 #define CHARACTER_MATERIAL_GLSL
 
-#include "characters/includes/CharactersStandard.glsl"
+#include "includes/TileTextures.glsl"
 #include "includes/SettingsData.glsl"
 
-// A character's material maps, each its own layer of the character atlas: the normal map bends the smooth normal
+// A character's material maps, read from its tile: the normal map bends the smooth normal
 // through a tangent frame rebuilt from screen-space derivatives (the mesh carries no tangents), AO darkens, metallic
-// and roughness shape the highlight, and the tint mask says which texels take the player's colors. Fine detail fades
+// and roughness shape the highlight, and the tint mask says which texels take the player's colors. Ambient occlusion
+// and metallic come from the tile's material map, roughness and the tint mask from its extra set. Fine detail fades
 // out between CHARACTER_DETAIL_FADE_START of the Character Detail distance and all of it. The frame is resolved once
 // per fragment, in uniform control flow, so overlays sampled inside branches take its derivatives explicitly.
 
@@ -35,10 +36,6 @@ float resolveCharacterDetail(vec3 viewPosition) {
     return 1.0 - smoothstep(reach * CHARACTER_DETAIL_FADE_START, reach, length(viewPosition));
 }
 
-float sampleCharacterLayer(vec2 uv, int layer) {
-    return texture(u_texture, vec3(uv, float(layer))).r;
-}
-
 // The tangent frame of the corner UVs about the smooth normal (the cotangent frame), the UVs' screen derivatives, how
 // many UV units span a block there, and how much fine detail the distance allows
 CharacterFrame resolveCharacterFrame(vec3 normal, vec3 viewPosition, vec2 uv) {
@@ -62,15 +59,17 @@ CharacterFrame resolveCharacterFrame(vec3 normal, vec3 viewPosition, vec2 uv) {
     return frame;
 }
 
-CharacterMaterial sampleCharacterMaterial(vec2 uv, CharacterFrame frame) {
+CharacterMaterial sampleCharacterMaterial(TileRead tile, vec2 uv, CharacterFrame frame) {
     CharacterMaterial material;
-    vec3 mapNormal = texture(u_texture, vec3(uv, float(u_layer_normal))).xyz * 2.0 - 1.0;
+    vec3 mapNormal = sampleTileNormal(tile, uv, frame.uvDx, frame.uvDy);
+    vec4 maps      = sampleTileMaterial(tile, uv, frame.uvDx, frame.uvDy);
+    vec4 extra     = sampleTileExtra(tile, uv, frame.uvDx, frame.uvDy);
 
     material.normal    = normalize(frame.basis * normalize(mix(vec3(0.0, 0.0, 1.0), mapNormal, frame.detail)));
-    material.ao        = sampleCharacterLayer(uv, u_layer_ao);
-    material.metallic  = sampleCharacterLayer(uv, u_layer_metallic);
-    material.roughness = sampleCharacterLayer(uv, u_layer_roughness);
-    material.tint      = sampleCharacterLayer(uv, u_layer_tint);
+    material.ao        = maps.r;
+    material.metallic  = maps.b;
+    material.roughness = extra.g;
+    material.tint      = extra.b;
 
     return material;
 }

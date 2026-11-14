@@ -45,9 +45,6 @@ public class TextureHandle extends HandlePackage {
         return textureData.getGpuHandle();
     }
 
-    public int getAtlasPixelSize() {
-        return textureData.getAtlasPixelSize();
-    }
 
     public int getTileWidth() {
         return textureData.getTileWidth();
@@ -73,9 +70,6 @@ public class TextureHandle extends HandlePackage {
         return textureData.getV1();
     }
 
-    public int getAtlasCell() {
-        return textureData.getAtlasCell();
-    }
 
     public int getAverageColor() {
         return textureData.getAverageColor();

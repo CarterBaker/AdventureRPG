@@ -1,17 +1,17 @@
 package application.bootstrap.shaderpipeline.texture;
 
 import engine.root.DataPackage;
-import engine.root.EngineSetting;
 
 public class TextureData extends DataPackage {
 
     /*
      * Persistent tile record. Holds tile identity, parent array identity,
-     * GPU handle, atlas and tile pixel dimensions, normalised UV region, the
-     * tile's atlas cell packed column and row for shaders that rebuild its
-     * UV origin from u_uvPerBlock, the tile's average albedo as a packed
+     * the GPU handle and normalised UV region of a font glyph within its
+     * atlas, the tile's pixel size, the tile's average albedo as a packed
      * 0xRRGGBB color, and its reveal, null for a tile no image source baked
-     * (a font atlas).
+     * (a font glyph). A streamed tile fills its own layer of the tile pools,
+     * so its region spans the whole layer and it has no handle of its own;
+     * shaders reach it by its tile ID.
      * Owned by TextureHandle for the full engine session — nothing is discarded.
      */
 
@@ -25,7 +25,6 @@ public class TextureData extends DataPackage {
 
     // GPU
     private final int gpuHandle;
-    private final int atlasPixelSize;
     private final int tileWidth;
     private final int tileHeight;
 
@@ -34,7 +33,6 @@ public class TextureData extends DataPackage {
     private final float v0;
     private final float u1;
     private final float v1;
-    private final int atlasCell;
 
     // Average
     private final int averageColor;
@@ -48,7 +46,6 @@ public class TextureData extends DataPackage {
             int arrayID,
             String arrayName,
             int gpuHandle,
-            int atlasPixelSize,
             int tileWidth,
             int tileHeight,
             float u0, float v0,
@@ -61,15 +58,12 @@ public class TextureData extends DataPackage {
         this.arrayID = arrayID;
         this.arrayName = arrayName;
         this.gpuHandle = gpuHandle;
-        this.atlasPixelSize = atlasPixelSize;
         this.tileWidth = tileWidth;
         this.tileHeight = tileHeight;
         this.u0 = u0;
         this.v0 = v0;
         this.u1 = u1;
         this.v1 = v1;
-        this.atlasCell = (Math.round(u0 * atlasPixelSize) / tileWidth)
-                | ((Math.round(v0 * atlasPixelSize) / tileHeight) << EngineSetting.ATLAS_CELL_AXIS_BITS);
         this.averageColor = averageColor;
         this.reveal = reveal;
     }
@@ -96,9 +90,6 @@ public class TextureData extends DataPackage {
         return gpuHandle;
     }
 
-    public int getAtlasPixelSize() {
-        return atlasPixelSize;
-    }
 
     public int getTileWidth() {
         return tileWidth;
@@ -124,9 +115,6 @@ public class TextureData extends DataPackage {
         return v1;
     }
 
-    public int getAtlasCell() {
-        return atlasCell;
-    }
 
     public int getAverageColor() {
         return averageColor;

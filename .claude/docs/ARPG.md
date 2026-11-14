@@ -38,7 +38,9 @@ offset  size  field
   bytes, then the root element. An element is a tag byte (`EngineSetting.ARPG_TAG_*`) followed by its body.
   Objects and arrays carry a varint count; object keys and string values are indices into the string table;
   whole numbers are zigzag varints; decimals are a zigzag varint mantissa plus a power-of-ten scale that
-  rebuilds the identical double, or 8 raw IEEE bytes when that is impossible.
+  rebuilds the identical double, or 8 raw IEEE bytes when that is impossible. A bytes value
+  (`ARPG_TAG_BYTES`, added without a version change, so every older file reads and re-encodes byte for byte) is
+  a varint length and the raw bytes, never entered in the string table.
 
 ## Code rules
 
@@ -53,9 +55,9 @@ offset  size  field
   - Files: `resolveFile(directory, name)`, `resolveCompanionFile(pngFile)`, `toFileName(name)`,
     `isArpgFile(file)`. Loaders scan with `EngineSetting.ARPG_FILE_EXTENSIONS`. Never build `"." + "arpg"` paths
     by hand.
-  - Fields: `validateString/Int/Float/Boolean/Array/Object` (required, fatal when missing),
-    `getString/Int/Float/Boolean/Enum` (optional with default), `hasString/Number/Boolean/Object/Array` (type
-    checks), `toEnum` / `toEnumName` (enum names match ignoring case and are written in lower case).
+  - Fields: `validateString/Int/Float/Boolean/Bytes/Array/Object` (required, fatal when missing),
+    `getString/Int/Float/Boolean/Enum` (optional with default), `hasString/Number/Boolean/Bytes/Object/Array`
+    (type checks), `toEnum` / `toEnumName` (enum names match ignoring case and are written in lower case).
   - Text: `parseText`, `tryParseText`, `formatText` (pretty), `formatCompactText`. Only the editor's raw field,
     the tool and diagnostics use text; the game never loads text.
 - **Tree types** (`engine.util.arpg`): `ArpgElementStruct` (base: `isObject/isArray/isValue/isNull`,
@@ -75,6 +77,9 @@ The authoring form of an `.arpg` file is **strict JSON** (RFC 8259, UTF-8). The 
 and turns sealed files back into it.
 
 - The root must be an object. Allowed values: object, array, string, number, `true`, `false`, `null`.
+- A bytes value is written as a string of its base64 behind the reserved marker `$bytes:`
+  (`EngineSetting.ARPG_TEXT_BYTES_MARKER`), and any string opening with that marker reads back as bytes, so
+  `decode`, `encode`, `export`, `convert` and `verify` carry raw data unchanged.
 - Rejected: comments, trailing commas, single quotes, unquoted keys, a key repeated in one object, `NaN`,
   `Infinity`, numbers too large for a double. Errors report the line and column.
 - A number without `.` or an exponent is stored as a whole number; with either it is a decimal. Write integers
@@ -111,10 +116,38 @@ declare are shown as ignored and never block a save.
 | AnimationTrees, Animations, Architectures, Behaviors, Biomes, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Instruments, Materials, NoteSets, Passes, Races, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, Songs, SoundCues, Sounds, Sprites, StructureLists, Structures, TextureAliases, UBOs, Vehicles, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
 | Blocks, FBOs, Items, Threads, Tools | `blocks`, `application/fbos`, `items`, `application/threads`, `tools` | an array (`blocks`, `fbos`, `items`, `threads`, `tools`) of entries, each named by its `name` field |
 | (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `CommandBuilder`, `SubVoxelArpgUtility`) |
+| (no schema, baked) Baked textures | `bakedtextures` | written only by the bake tool (`TextureBakeUtility`), never by hand: see Baked textures below |
 
 Sprite and world companions sit beside their PNG with the same stem (`sprites/menus/Button.arpg` next to
 `Button.png`; `worlds/TerraArcana.arpg` next to `TerraArcana.png`). Sound companions sit beside their OGG the same
 way (`sounds/interface/Click.arpg` next to `Click.ogg`); a sound without one plays with every default.
+
+## Baked textures
+
+The game never reads a texture image. The bake tool turns the source images under `assets/textures/<pack>/`
+(`<Tile>_<alias>.png`, the alias naming the map and channel it fills, `assets/texturealiases/`) into the
+block-compressed files it streams, under `assets/bakedtextures/`:
+
+- `tiles/<pack>/<Tile>.arpg`, the definition every tile loads at bootstrap: `source` (the CRC32C of the bake
+  version and every source file, names and bytes), `size` (the top tier, the power of two nearest the largest
+  source side, held to 128..512), `average` (packed albedo average), `reveal` (`shares` per coverage level,
+  `color`, `tintable`), `fallback` (the `albedo`, `normal` and `material` mip chains at 16 texels) and, only for a
+  tile with growth, roughness, tint or emissive images, `extra` (its 128-texel chain).
+- `tier<size>/<pack>/<Tile>.arpg`, one per tier the tile fills (`tier128` always, `tier256` and `tier512` up to its
+  size): its `albedo`, `normal` and `material` chains.
+
+Every map value is bytes: BC7 (albedo, material, extra) or BC5 (normal) blocks, levels from the largest down to one
+texel, back to back, rows bottom first. The bake re-bakes only tiles whose `source` checksum changed and removes
+baked files no current tile owns:
+
+```
+gradlew lwjgl3:bake                    bake every tile whose sources changed
+gradlew lwjgl3:bake --args="force"     bake every tile
+```
+
+Directly, after the direct compile (`.claude/docs/Build.md`): `java -cp "$S/out:$CP" lwjgl3.Lwjgl3LauncherBake`.
+Run it after any change under `assets/textures/` or `assets/texturealiases/`, then `verify assets/bakedtextures`,
+and deliver the baked files with the sources. The character editor's Paint mode bakes the tile it saves itself.
 
 ## The ARPG tool
 

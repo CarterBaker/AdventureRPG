@@ -1,5 +1,7 @@
 package engine.util.arpg;
 
+import java.util.Base64;
+
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.root.StructPackage;
@@ -15,6 +17,8 @@ class ArpgTextUtility extends EngineUtility {
      * repeated keys and non-finite numbers, and reports the line and column
      * of the first problem. Pretty output indents objects and nested arrays
      * one member per line and keeps arrays of plain values on a single line.
+     * A bytes value is written as a string of its base64 behind the reserved
+     * marker, and any string opening with that marker reads back as bytes.
      */
 
     // Parse \\
@@ -44,7 +48,7 @@ class ArpgTextUtility extends EngineUtility {
         return switch (current) {
             case '{' -> readObject(cursor);
             case '[' -> readArray(cursor);
-            case '"' -> new ArpgValueStruct(readString(cursor));
+            case '"' -> readStringValue(cursor);
             case 't' -> readLiteral(cursor, Boolean.TRUE.toString(), ArpgValueStruct.TRUE);
             case 'f' -> readLiteral(cursor, Boolean.FALSE.toString(), ArpgValueStruct.FALSE);
             case 'n' -> readLiteral(cursor, EngineSetting.ARPG_TEXT_NULL_LITERAL, ArpgNullStruct.INSTANCE);
@@ -107,6 +111,22 @@ class ArpgTextUtility extends EngineUtility {
 
         cursor.expect(']');
         return array;
+    }
+
+    // A string, or a bytes value where the string opens with the reserved marker
+    private static ArpgValueStruct readStringValue(ParseCursorStruct cursor) {
+
+        String string = readString(cursor);
+
+        if (!string.startsWith(EngineSetting.ARPG_TEXT_BYTES_MARKER))
+            return new ArpgValueStruct(string);
+
+        try {
+            return new ArpgValueStruct(Base64.getDecoder().decode(
+                    string.substring(EngineSetting.ARPG_TEXT_BYTES_MARKER.length())));
+        } catch (IllegalArgumentException exception) {
+            throw cursor.error("Bytes value is not valid base64");
+        }
     }
 
     private static String readString(ParseCursorStruct cursor) {
@@ -258,6 +278,10 @@ class ArpgTextUtility extends EngineUtility {
         return Double.toString(value);
     }
 
+    static String formatBytes(byte[] bytes) {
+        return EngineSetting.ARPG_TEXT_BYTES_MARKER + Base64.getEncoder().encodeToString(bytes);
+    }
+
     private static void writePretty(ArpgElementStruct element, int depth, StringBuilder builder) {
 
         if (element.isObject()) {
@@ -395,7 +419,7 @@ class ArpgTextUtility extends EngineUtility {
 
         ArpgValueStruct value = element.getAsValue();
 
-        if (value.isString())
+        if (value.isString() || value.isBytes())
             writeString(value.getAsString(), builder);
         else
             builder.append(value.getAsString());

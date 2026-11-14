@@ -300,12 +300,11 @@ public final class TreeModelUtility extends EngineUtility {
             boolean capped,
             FloatArrayList bark) {
 
-        int barkCorner = EngineSetting.TREE_PART_BARK * EngineSetting.TREE_PART_CORNER_FLOATS;
-        float[] corners = treeHandle.getPartCorners();
+        int[] tiles = treeHandle.getPartTiles();
 
         TreeMeshUtility.emitWoodBox(
                 minX, minY, minZ, maxX, maxY, maxZ,
-                corners[barkCorner], corners[barkCorner + 1],
+                tiles[EngineSetting.TREE_PART_BARK],
                 treeHandle.getPartColors()[EngineSetting.TREE_PART_BARK],
                 capped, model.getBox(), bark);
     }
@@ -435,7 +434,7 @@ public final class TreeModelUtility extends EngineUtility {
         int part = cells[cell + EngineSetting.TREE_MODEL_CELL_ACCENTS] * 2f > count
                 ? EngineSetting.TREE_PART_ACCENT
                 : EngineSetting.TREE_PART_LEAF;
-        float[] corners = treeHandle.getPartCorners();
+        int[] tiles = treeHandle.getPartTiles();
 
         TreeMeshUtility.emitCluster(
                 rootX + (minX + maxX) * 0.5f,
@@ -443,8 +442,7 @@ public final class TreeModelUtility extends EngineUtility {
                 rootZ + (minZ + maxZ) * 0.5f,
                 Math.max(maxX - minX, maxZ - minZ) * 0.5f * reach,
                 (maxY - minY) * 0.5f * reach,
-                corners[part * EngineSetting.TREE_PART_CORNER_FLOATS],
-                corners[part * EngineSetting.TREE_PART_CORNER_FLOATS + 1],
+                tiles[part],
                 treeHandle.getPartColors()[part],
                 cells[cell + EngineSetting.TREE_MODEL_CELL_SEED],
                 leaves);
@@ -484,8 +482,7 @@ public final class TreeModelUtility extends EngineUtility {
             return;
 
         int count = TreeImpostorUtility.layoutCrown(treeHandle.getForm(), crown, lumps);
-        int leafCorner = EngineSetting.TREE_PART_LEAF * EngineSetting.TREE_PART_CORNER_FLOATS;
-        float[] corners = treeHandle.getPartCorners();
+        int[] tiles = treeHandle.getPartTiles();
 
         for (int lump = 0; lump < count; lump++) {
 
@@ -497,7 +494,7 @@ public final class TreeModelUtility extends EngineUtility {
                     rootZ,
                     lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_RADIUS_H],
                     lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_RADIUS_V],
-                    corners[leafCorner], corners[leafCorner + 1],
+                    tiles[EngineSetting.TREE_PART_LEAF],
                     treeHandle.getPartColors()[EngineSetting.TREE_PART_LEAF],
                     BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
                             tree.getSeed() ^ EngineSetting.TREE_IMPOSTOR_SEED_SALT, lump, 0)),

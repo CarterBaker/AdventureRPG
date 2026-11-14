@@ -43,12 +43,12 @@ class MeshQuadUtility extends EngineUtility {
         return cornerUVs;
     }
 
-    static float snapUV(float local, float tileMin, float tileMax, int tilePixelSize) {
+    // A corner's UV snapped to its tile's texel grid and kept a hair inside the tile, so the repeat never reaches it
+    static float snapUV(float local, int tilePixelSize) {
 
         int pixel = Math.round(local * tilePixelSize);
         float inset = EngineSetting.MESH_UV_EDGE_INSET_TEXELS / tilePixelSize;
-        float snapped = Math.clamp(pixel / (float) tilePixelSize, inset, 1f - inset);
 
-        return tileMin + snapped * (tileMax - tileMin);
+        return Math.clamp(pixel / (float) tilePixelSize, inset, 1f - inset);
     }
 }

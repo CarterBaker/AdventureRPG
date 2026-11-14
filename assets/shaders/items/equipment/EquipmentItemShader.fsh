@@ -1,14 +1,12 @@
 #version 330 core
 
-in vec2 vUVOrigin;
+flat in int vTile;
 in vec3 vModelPosition;
 in vec3 vViewPosition;
 flat in int vFace;
 
-#include "items/includes/ItemsStandard.glsl"
-#include "items/includes/BlockRepeat.glsl"
+#include "items/includes/BlockAlbedo.glsl"
 
-uniform sampler2DArray u_textureArray;
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -19,13 +17,12 @@ layout(location = 2) out vec4 gMaterial;
  * deferred lighting pass lights both identically. The anchor transform
  * stretches the item non-uniformly, so the flat facet normal is rebuilt
  * from screen-space derivatives rather than carried through the matrix.
- * Faces merge across block boundaries, so the texture repeats once per block.
+ * Faces merge across block boundaries, so the tile repeats once per block.
  */
 const float EQUIPMENT_SPECULAR = 0.18;
 
 void main() {
-    vec2 uv     = resolveRepeatedUV(vUVOrigin, vModelPosition, vFace, u_uvPerBlock);
-    vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
+    vec4 albedo = sampleBlockAlbedo(vTile, vModelPosition, vFace);
 
     if (albedo.a < 0.01)
     discard;

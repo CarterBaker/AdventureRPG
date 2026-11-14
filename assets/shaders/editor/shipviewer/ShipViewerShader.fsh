@@ -1,15 +1,13 @@
 #version 330 core
 
-in vec2 vUVOrigin;
+flat in int vTile;
 in vec3 vModelPosition;
 in vec3 vViewPosition;
 flat in int vFace;
 
-#include "items/includes/ItemsStandard.glsl"
-#include "items/includes/BlockRepeat.glsl"
+#include "items/includes/BlockAlbedo.glsl"
 #include "editor/treeviewer/TreeViewerLight.glsl"
 
-uniform sampler2DArray u_textureArray;
 
 // The model height everything above is cut away at, in model blocks
 uniform float u_cutawayHeight;
@@ -38,8 +36,7 @@ void main() {
     if (vModelPosition.y > u_cutawayHeight)
     discard;
 
-    vec2 uv     = resolveRepeatedUV(vUVOrigin, vModelPosition, vFace, u_uvPerBlock);
-    vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
+    vec4 albedo = sampleBlockAlbedo(vTile, vModelPosition, vFace);
 
     if (albedo.a < resolveDitherThreshold())
     discard;

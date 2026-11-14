@@ -11,11 +11,10 @@ mat3 buildTBN(vec3 N) {
     return mat3(T, B, N);
 }
 
-// Decodes normal map, runs it through TBN into view space.
-vec3 sampleNormalViewSpace(vec2 tiledUV, int layer, vec3 vNormal, mat4 viewMat) {
-    vec3 tsNormal = texture(u_textureArray, vec3(tiledUV, float(layer))).xyz * 2.0 - 1.0;
-    mat3 TBN      = buildTBN(normalize(vNormal));
-    vec3 worldN   = normalize(TBN * tsNormal);
+// A tangent-space normal run through the TBN into view space.
+vec3 toViewSpaceNormal(vec3 tangentNormal, vec3 vNormal, mat4 viewMat) {
+    mat3 TBN    = buildTBN(normalize(vNormal));
+    vec3 worldN = normalize(TBN * tangentNormal);
     return normalize(mat3(viewMat) * worldN);
 }
 

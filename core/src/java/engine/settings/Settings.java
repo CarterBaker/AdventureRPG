@@ -34,6 +34,8 @@ public class Settings {
     public int detailRadius = 48;
     public int treeDetailDistance = 4;
     public int characterDetailDistance = 12;
+    public int textureQuality = EngineSetting.TEXTURE_QUALITY_MEDIUM;
+    public int textureAnisotropy = EngineSetting.TEXTURE_ANISOTROPY_DEFAULT;
     public boolean macroTerrain = true;
 
     // Render — Main Menu

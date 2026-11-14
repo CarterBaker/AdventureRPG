@@ -1,14 +1,12 @@
 #version 330 core
 
-in vec2 vUVOrigin;
+flat in int vTile;
 in vec3 vModelPosition;
 in vec3 vPosition;
 flat in int vFace;
 
-#include "items/includes/ItemsStandard.glsl"
-#include "items/includes/BlockRepeat.glsl"
+#include "items/includes/BlockAlbedo.glsl"
 
-uniform sampler2DArray u_textureArray;
 uniform vec3  u_lightDirection;
 uniform float u_ambient;
 uniform vec4  u_tint;
@@ -20,11 +18,10 @@ out vec4 FragColor;
  * facet normal comes from screen-space derivatives, since the transform
  * scales items freely. u_tint blends the lit colour toward a tint colour by
  * its alpha — greyed for hidden gear, green or red for a drop preview. Faces
- * merge across block boundaries, so the texture repeats once per block.
+ * merge across block boundaries, so the tile repeats once per block.
  */
 void main() {
-    vec2 uv     = resolveRepeatedUV(vUVOrigin, vModelPosition, vFace, u_uvPerBlock);
-    vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
+    vec4 albedo = sampleBlockAlbedo(vTile, vModelPosition, vFace);
 
     if (albedo.a < 0.01)
     discard;

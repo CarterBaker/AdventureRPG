@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import application.bootstrap.geometrypipeline.dynamicmodel.DynamicModelHandle;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -17,7 +18,8 @@ public class DynamicPacketInstance extends InstancePackage {
      * Geometry packet for one subchunk, chunk or mega, bucketed per material.
      * Builders already hold the owner's lock, so its state is status only.
      * clear() is the full reset used by pooling and dumps, and buckets are
-     * reused for the pooled object's lifetime. Merges shift copied vertices in
+     * reused for the pooled object's lifetime. The tiles its vertices draw
+     * from are gathered beside them, for texture streaming. Merges shift copied vertices in
      * place inside the target bucket, so they allocate nothing.
      */
 
@@ -27,6 +29,9 @@ public class DynamicPacketInstance extends InstancePackage {
 
     // Model Management
     private Int2ObjectOpenHashMap<ObjectArrayList<DynamicModelHandle>> materialID2ModelCollection;
+
+    // Tiles
+    private TextureTileSetStruct tiles;
 
     // Offsets
     private static final int[] EMPTY_OFFSET_INDICES = new int[0];
@@ -38,6 +43,7 @@ public class DynamicPacketInstance extends InstancePackage {
     protected void create() {
         this.state = new AtomicReference<>(DynamicPacketState.EMPTY);
         this.materialID2ModelCollection = new Int2ObjectOpenHashMap<>();
+        this.tiles = new TextureTileSetStruct();
     }
 
     // Constructor \\
@@ -120,6 +126,8 @@ public class DynamicPacketInstance extends InstancePackage {
 
     public boolean merge(DynamicPacketInstance other, int[] offsetIndices, float[] offsets) {
 
+        tiles.addAll(other.tiles);
+
         if (other == null || other.materialID2ModelCollection == null)
             return true;
 
@@ -167,6 +175,8 @@ public class DynamicPacketInstance extends InstancePackage {
 
     public void clearModels() {
 
+        tiles.clear();
+
         for (ObjectArrayList<DynamicModelHandle> modelList : materialID2ModelCollection.values()) {
             Object[] elements = modelList.elements();
             int count = modelList.size();
@@ -181,6 +191,10 @@ public class DynamicPacketInstance extends InstancePackage {
     }
 
     // Accessible \\
+
+    public TextureTileSetStruct getTiles() {
+        return tiles;
+    }
 
     public DynamicPacketState getState() {
         return state.get();

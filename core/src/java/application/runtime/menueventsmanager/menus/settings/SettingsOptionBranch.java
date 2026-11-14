@@ -97,6 +97,8 @@ public class SettingsOptionBranch extends BranchPackage {
 
         settingsMenuBranch.injectSectionHeader(session, RuntimeSetting.SETTINGS_SECTION_IMAGE);
         injectOptionRow(session, SettingsOption.ANTI_ALIASING);
+        injectOptionRow(session, SettingsOption.TEXTURE_QUALITY);
+        injectOptionRow(session, SettingsOption.TEXTURE_ANISOTROPY);
         injectOptionRow(session, SettingsOption.BLOOM);
         injectSlider(session, SettingsSlider.BLOOM_INTENSITY);
 

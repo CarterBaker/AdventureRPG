@@ -218,6 +218,11 @@ public enum UniformType {
             buffer.putInt((Integer) value);
         }
     },
+    SAMPLE_UINT_IMAGE_2D("usampler2D", 4, 4) {
+        public void writeElement(ByteBuffer buffer, Object value) {
+            buffer.putInt((Integer) value);
+        }
+    },
     SAMPLE_IMAGE_2D_ARRAY("sampler2DArray", 4, 4) {
         public void writeElement(ByteBuffer buffer, Object value) {
             buffer.putInt((Integer) value);

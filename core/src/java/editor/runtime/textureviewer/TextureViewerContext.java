@@ -10,9 +10,9 @@ import engine.root.ContextPackage;
 public class TextureViewerContext extends ContextPackage {
 
     /*
-     * Editor tab showing the atlas the game assembles for item textures, with
-     * every source image outlined. Clicking an image makes it the item
-     * editor's brush, so Place and Paint build with that texture.
+     * Editor tab showing every item texture as a grid of its streamed tiles,
+     * each outlined. Clicking a tile makes it the item editor's brush, so
+     * Place and Paint build with that texture.
      */
 
     // Internal

@@ -1,6 +1,5 @@
 package editor.runtime.textureviewer.atlas;
 
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
@@ -8,14 +7,18 @@ import editor.runtime.textureviewer.TextureViewerSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector4;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TextureViewerAtlasSystem extends SystemPackage {
 
     /*
-     * Knows the item atlas: every source image packed into it and the region
-     * each occupies, in atlas UV space. Each frame it fits the square atlas
-     * into this window and answers which image lies under a window point.
+     * Knows the item tiles: every item texture laid out in a square grid, the
+     * region each occupies in the grid's own UV space and the tile ID it
+     * draws. The tiles are held as one screen texture user while the window
+     * is open, so all of them stream in at full detail. Each frame it fits
+     * the square grid into this window and answers which texture lies under
+     * a window point.
      */
 
     // Internal
@@ -25,6 +28,8 @@ public class TextureViewerAtlasSystem extends SystemPackage {
     // Tiles
     private ObjectArrayList<String> tileNames;
     private Vector4[] tileRects;
+    private Integer[] tileIDs;
+    private int textureUser;
 
     // Layout
     private float atlasX;
@@ -48,12 +53,36 @@ public class TextureViewerAtlasSystem extends SystemPackage {
             throwException("Item atlas holds " + tileNames.size() + " textures; the texture viewer shows at most "
                     + TextureViewerSetting.MAX_TILES + ".");
 
-        this.tileRects = new Vector4[tileNames.size()];
+        int count = tileNames.size();
+        int columns = Math.max(1, (int) Math.ceil(Math.sqrt(count)));
+        float cell = 1f / columns;
+        float gap = cell * TextureViewerSetting.TILE_GAP_SHARE;
+        IntArrayList userTiles = new IntArrayList(count);
 
-        for (int i = 0; i < tileNames.size(); i++) {
-            TextureHandle handle = textureManager.getTextureHandleFromTextureName(tileNames.get(i));
-            tileRects[i] = new Vector4(handle.getU0(), handle.getV0(), handle.getU1(), handle.getV1());
+        this.tileRects = new Vector4[count];
+        this.tileIDs = new Integer[TextureViewerSetting.MAX_TILES];
+
+        for (int i = 0; i < TextureViewerSetting.MAX_TILES; i++)
+            tileIDs[i] = 0;
+
+        for (int i = 0; i < count; i++) {
+
+            float left = (i % columns) * cell;
+            float bottom = 1f - (i / columns + 1) * cell;
+
+            tileRects[i] = new Vector4(left + gap, bottom + gap, left + cell - gap, bottom + cell - gap);
+            int tileID = textureManager.getTileIDFromTextureName(tileNames.get(i));
+
+            tileIDs[i] = tileID;
+            userTiles.add(tileID);
         }
+
+        this.textureUser = textureManager.registerScreenTextureUser(userTiles);
+    }
+
+    @Override
+    protected void dispose() {
+        textureManager.removeTextureUser(textureUser);
     }
 
     // Update \\
@@ -99,6 +128,10 @@ public class TextureViewerAtlasSystem extends SystemPackage {
 
     public Vector4[] getTileRects() {
         return tileRects;
+    }
+
+    public Integer[] getTileIDs() {
+        return tileIDs;
     }
 
     public float getAtlasX() {

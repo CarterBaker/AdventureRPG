@@ -10,7 +10,7 @@
 // reads as a round limb and a wide trunk as a square one with softly rounded corners; along an inner edge, where
 // a limb grows out of its parent or wood folds into a notch, the crease darkens like the occluded corner it is;
 // and a flat edge, where the surface runs on into the next quad, shades nothing, so merged quads never show a
-// seam. The texture repeats once per block over the merged faces exactly as on an item, read from the wood's own
+// seam. The tile repeats once per block over the merged faces exactly as on an item, read from the wood's own
 // position so it stays on the wood however a falling tree turns. The vertex layout must match the one
 // TreeMeshUtility writes: the face and the four edge kinds share the meta word, the tint is an exact 24-bit RGB
 // triple, and the low edge slot holds the vertex's place on its quad and the quad's size, both in sub-voxels.
@@ -82,21 +82,6 @@ vec3 bevelTreeNormal(int face, int edges, vec2 local, vec2 size, out float creas
     float facing = sqrt(max(1.0 - tiltU * tiltU - tiltV * tiltV, TREE_MIN_FACING));
 
     return normalize(normal * facing + axisU * tiltU + axisV * tiltV);
-}
-
-// Every G-buffer target for one bark fragment; rotation turns the wood's own axes into the world's
-void shadeTreeBark(
-    vec3 worldPos, vec3 modelPos, vec2 local, vec2 size, vec2 uvOrigin, vec3 color, int face, int edges,
-    mat3 rotation, out vec4 albedoOut, out vec4 normalOut, out vec4 materialOut) {
-    float crease;
-    vec3  normal = bevelTreeNormal(face, edges, local, size, crease);
-    vec2  uv     = resolveRepeatedUV(uvOrigin, modelPos, face, u_uvPerBlock);
-    vec4  albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
-
-    // Blending is enabled for this pass, so every target writes alpha = 1.0.
-    albedoOut   = vec4(albedo.rgb * color, 1.0);
-    normalOut   = vec4(normalize(mat3(u_view) * (rotation * normal)), 1.0);
-    materialOut = vec4(resolveTreeSunVisibility(worldPos), TREE_BARK_SPECULAR, crease, 1.0);
 }
 
 #endif

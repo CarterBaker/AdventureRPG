@@ -17,6 +17,8 @@ import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -62,6 +64,7 @@ public class InventoryRenderSystem extends SystemPackage {
     private WorldSystem worldSystem;
     private TierManager tierManager;
     private MeshManager meshManager;
+    private TextureManager textureManager;
 
     // Render Target
     private FBOInstance inventoryFbo;
@@ -84,6 +87,11 @@ public class InventoryRenderSystem extends SystemPackage {
     private Vector4 frameEffects;
     private Vector2 frameMotion;
 
+    // Texture — the screen user holding every tile the open inventory draws, and those gathered this frame
+    private TextureTileSetStruct shownTiles;
+    private TextureTileSetStruct tileScratch;
+    private int textureUser;
+
     // Base \\
 
     @Override
@@ -97,6 +105,11 @@ public class InventoryRenderSystem extends SystemPackage {
         this.frameColor = new Vector4();
         this.frameEffects = new Vector4();
         this.frameMotion = new Vector2();
+
+        // Texture
+        this.shownTiles = new TextureTileSetStruct();
+        this.tileScratch = new TextureTileSetStruct();
+        this.textureUser = EngineSetting.INDEX_NOT_FOUND;
     }
 
     @Override
@@ -111,6 +124,7 @@ public class InventoryRenderSystem extends SystemPackage {
         this.worldSystem = get(WorldSystem.class);
         this.tierManager = get(TierManager.class);
         this.meshManager = get(MeshManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     @Override
@@ -139,9 +153,12 @@ public class InventoryRenderSystem extends SystemPackage {
         InventorySessionStruct session = inventoryBranch.getSession();
         WindowInstance window = context.getWindow();
 
-        if (session == null || session.isCovered())
+        if (session == null || session.isCovered()) {
+            releaseTextureUser();
             return;
+        }
 
+        tileScratch.clear();
         InventoryViewUtility.composeProjection(window.getWidth(), window.getHeight(), iconProjection);
         renderManager.ensureFboRendered(inventoryFbo, window);
 
@@ -156,6 +173,7 @@ public class InventoryRenderSystem extends SystemPackage {
 
         pushSlots(session, window);
         pushHeld(session, window);
+        syncTextureUser();
 
         fboRenderSystem.pushFbo(inventoryFbo, RuntimeSetting.LAYER_INVENTORY, window);
     }
@@ -170,6 +188,7 @@ public class InventoryRenderSystem extends SystemPackage {
         ItemDefinitionHandle containerItem = view.getContainerItem().getItemDefinitionHandle();
 
         InventoryViewUtility.composeShellMatrix(containerMatrix, containerItem, transform);
+        tileScratch.addAll(containerItem.getMeshHandle().getTiles());
         pushOverlayMesh(resolveShellMesh(containerItem), viewProjection, RuntimeSetting.INVENTORY_TINT_NONE, window);
 
         ObjectArrayList<ContainerSlotStruct> slots = view.getContainerInstance().getSlots();
@@ -182,8 +201,7 @@ public class InventoryRenderSystem extends SystemPackage {
             InventoryViewUtility.composeItemMatrix(
                     containerMatrix, item.getShape(), slot.getX(), slot.getY(), slot.getZ(), slot.getRotation(),
                     transform, transformScratch);
-            pushOverlayMesh(
-                    item.getMeshHandle().getMeshData(), viewProjection, RuntimeSetting.INVENTORY_TINT_NONE, window);
+            pushOverlayMesh(item, viewProjection, RuntimeSetting.INVENTORY_TINT_NONE, window);
         }
 
         if (!session.isHolding() || session.getDropView() != view)
@@ -196,7 +214,7 @@ public class InventoryRenderSystem extends SystemPackage {
                 containerMatrix, item.getShape(), session.getDropX(), session.getDropY(), session.getDropZ(),
                 held.getRotation(), transform, transformScratch);
         pushOverlayMesh(
-                item.getMeshHandle().getMeshData(),
+                item,
                 viewProjection,
                 session.isDropValid() ? RuntimeSetting.INVENTORY_TINT_VALID : RuntimeSetting.INVENTORY_TINT_INVALID,
                 window);
@@ -222,6 +240,7 @@ public class InventoryRenderSystem extends SystemPackage {
 
         if (containerItem.hasOpenMesh()) {
             transform.set(view.getWorldItemMatrix());
+            tileScratch.addAll(containerItem.getMeshHandle().getTiles());
             pushWorldMesh(containerItem.getOpenMeshData(), window);
         }
 
@@ -240,8 +259,13 @@ public class InventoryRenderSystem extends SystemPackage {
             InventoryViewUtility.composeItemMatrix(
                     worldContainer, item.getShape(), slot.getX(), slot.getY(), slot.getZ(), slot.getRotation(),
                     transform, transformScratch);
-            pushWorldMesh(item.getMeshHandle().getMeshData(), window);
+            pushWorldMesh(item, window);
         }
+    }
+
+    private void pushWorldMesh(ItemDefinitionHandle item, WindowInstance window) {
+        tileScratch.addAll(item.getMeshHandle().getTiles());
+        pushWorldMesh(item.getMeshHandle().getMeshData(), window);
     }
 
     private void pushWorldMesh(MeshData meshData, WindowInstance window) {
@@ -341,7 +365,12 @@ public class InventoryRenderSystem extends SystemPackage {
         ItemDefinitionHandle item = itemInstance.getItemDefinitionHandle();
 
         InventoryViewUtility.composeIconMatrix(centerX, centerY, size, item.getShape(), transform);
-        pushOverlayMesh(item.getMeshHandle().getMeshData(), iconProjection, tint, window);
+        pushOverlayMesh(item, iconProjection, tint, window);
+    }
+
+    private void pushOverlayMesh(ItemDefinitionHandle item, Matrix4 projection, Vector4 tint, WindowInstance window) {
+        tileScratch.addAll(item.getMeshHandle().getTiles());
+        pushOverlayMesh(item.getMeshHandle().getMeshData(), projection, tint, window);
     }
 
     private void pushOverlayMesh(MeshData meshData, Matrix4 projection, Vector4 tint, WindowInstance window) {
@@ -353,6 +382,34 @@ public class InventoryRenderSystem extends SystemPackage {
         model.getMaterial().setUniform(RuntimeSetting.UNIFORM_INVENTORY_TINT, tint);
 
         renderManager.pushRenderCall(model, inventoryFbo, RuntimeSetting.INVENTORY_DRAW_DEPTH, window);
+    }
+
+    // Texture \\
+
+    // The open inventory's screen user given the tiles it drew this frame, registered as it opens and sent only when
+    // they change
+    private void syncTextureUser() {
+
+        if (textureUser != EngineSetting.INDEX_NOT_FOUND && tileScratch.getTileIDs().equals(shownTiles.getTileIDs()))
+            return;
+
+        shownTiles.clear();
+        shownTiles.addAll(tileScratch);
+
+        if (textureUser == EngineSetting.INDEX_NOT_FOUND)
+            this.textureUser = textureManager.registerScreenTextureUser(shownTiles.getTileIDs());
+        else
+            textureManager.setTextureUserTiles(textureUser, shownTiles.getTileIDs());
+    }
+
+    // Lets the tiles go once the inventory closes or is covered
+    private void releaseTextureUser() {
+
+        if (textureUser == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        textureManager.removeTextureUser(textureUser);
+        this.textureUser = EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Utility \\

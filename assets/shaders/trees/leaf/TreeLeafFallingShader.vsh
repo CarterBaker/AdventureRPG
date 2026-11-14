@@ -1,6 +1,6 @@
 #version 400 core
 layout (location = 0) in vec3  aPos;
-layout (location = 1) in vec2  aUVOrigin;
+layout (location = 1) in float aTile;
 layout (location = 2) in float aMeta;
 layout (location = 3) in float aColor;
 layout (location = 4) in vec4  aEdgeLow;
@@ -19,7 +19,7 @@ flat out vec2  vRadii;
 flat out vec2  vCardRadii;
 flat out float vUnderside;
 flat out float vSeed;
-flat out vec2  vUVOrigin;
+flat out int   vTile;
 flat out vec3  vColor;
 
 // A falling cluster's cards turn with the piece about the cluster's own centre, so the sheaf falls whole.
@@ -35,7 +35,7 @@ void main() {
     vCardRadii = resolveTreeLeafCardRadii(card, radii);
     vUnderside = resolveTreeLeafCardUnderside(card);
     vSeed      = resolveTreeLeafCardSeed(aEdgeHigh.y, card);
-    vUVOrigin  = aUVOrigin;
+    vTile      = int(aTile + 0.5);
     vColor     = unpackTreeColor(aColor);
 
     gl_Position = u_viewProjection * vec4(vWorldPos, 1.0);

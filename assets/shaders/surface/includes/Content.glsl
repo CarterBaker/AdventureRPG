@@ -5,8 +5,8 @@
 #include "surface/includes/Coverage.glsl"
 
 // Lays the content a block holds — an ore, a rock, a root — over every face of the block. The quad's content ID names
-// an overlay tile in the same texture array as the block, sampled at exactly the offset into its tile the block's own
-// texture is, so the overlay spins and turns with the face beneath it. Within the detail radius every texel whose
+// an overlay tile, sampled at exactly the UV and gradients the block's own texture is, so the overlay spins and turns
+// with the face beneath it. Within the detail radius every texel whose
 // alpha clears the cutoff shows the overlay, with its own normal, specular and ambient occlusion swapped in, and every
 // other texel keeps the block; a covering grown over the face is drawn over both. Beyond the radius the overlay is
 // approximated without a single texture read: ContentBufferSystem bakes the average color the overlay shows and the
@@ -15,8 +15,7 @@
 
 // Full draw — true where the content shows over this texel, with its own material written out
 bool sampleContentDetail(
-    vec2 tiledUV,
-    vec2 uvOrigin,
+    FaceUV face,
     float contentID,
     vec3 worldNormal,
     mat4 viewMat,
@@ -35,16 +34,18 @@ bool sampleContentDetail(
     if (id == 0)
     return false;
 
-    vec2 contentUV     = u_contentTiles[id].xy + (tiledUV - uvOrigin);
-    vec4 contentAlbedo = sampleLayerTiled(contentUV, u_layer_albedo);
+    TileRead tile          = resolveTileReadGrad(int(u_contentTiles[id].x + 0.5), face.dx, face.dy);
+    vec4     contentAlbedo = sampleTileAlbedo(tile, face.uv, face.dx, face.dy);
 
     if (contentAlbedo.a < COVERAGE_ALPHA_CUTOFF)
     return false;
 
+    vec4 material = sampleTileMaterial(tile, face.uv, face.dx, face.dy);
+
     albedo     = contentAlbedo.rgb;
-    normalView = sampleNormalViewSpace(contentUV, u_layer_normal, worldNormal, viewMat);
-    specular   = sampleSpecular(contentUV, u_layer_specular);
-    ao         = sampleAO(contentUV, u_layer_ao);
+    normalView = toViewSpaceNormal(sampleTileNormal(tile, face.uv, face.dx, face.dy), worldNormal, viewMat);
+    specular   = material.g;
+    ao         = material.r;
     return true;
 }
 

@@ -14,6 +14,7 @@ import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformType;
 import application.bootstrap.shaderpipeline.uniforms.UniformUtility;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -70,7 +71,7 @@ class MaterialBuilder extends BuilderPackage {
         Object2ObjectOpenHashMap<String, UniformStruct<?>> uniforms = new Object2ObjectOpenHashMap<>();
 
         for (String uniformName : shaderUniforms.keySet())
-            uniforms.put(uniformName, shaderUniforms.get(uniformName).clone());
+            uniforms.put(uniformName, seedTileSampler(uniformName, shaderUniforms.get(uniformName).clone()));
 
         if (arpg.has("uniforms")) {
 
@@ -125,14 +126,31 @@ class MaterialBuilder extends BuilderPackage {
                 || type == UniformType.SAMPLE_IMAGE_2D_ARRAY;
     }
 
+    // A tile sampler is bound to its pool by name, as a uniform block is, so no material names it
+    @SuppressWarnings("unchecked")
+    private UniformStruct<?> seedTileSampler(String uniformName, UniformStruct<?> uniform) {
+
+        int gpuHandle = textureManager.getTileSamplerHandle(uniformName);
+
+        if (gpuHandle != EngineSetting.GL_HANDLE_NONE)
+            ((UniformAttributeStruct<Integer>) uniform.attribute()).set(gpuHandle);
+
+        return uniform;
+    }
+
     private int resolveTextureHandle(
             String textureName,
             String uniformName,
             String materialName) {
 
-        if (textureManager.hasTexture(textureName))
-            return textureManager.getTextureHandleFromTextureName(textureName).getGpuHandle();
+        int gpuHandle = textureManager.hasTexture(textureName)
+                ? textureManager.getTextureHandleFromTextureName(textureName).getGpuHandle()
+                : textureManager.getTextureHandleFromArrayName(textureName).getGpuHandle();
 
-        return textureManager.getTextureHandleFromArrayName(textureName).getGpuHandle();
+        if (gpuHandle == EngineSetting.GL_HANDLE_NONE)
+            throwException("Material '" + materialName + "' binds streamed texture '" + textureName + "' to "
+                    + uniformName + "; streamed tiles are read through the tile samplers by tile ID.");
+
+        return gpuHandle;
     }
 }

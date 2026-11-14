@@ -93,20 +93,20 @@ class VehicleGeometryBranch extends BranchPackage {
     ObjectArrayList<MeshInstance> buildHullMeshes(ObjectArrayList<VehiclePartStruct> parts) {
 
         SubVoxelGridStruct grid = new SubVoxelGridStruct();
-        float[] partUVBounds = resolveUVBounds(parts);
+        int[] partTiles = resolvePartTiles(parts);
 
         for (int partIndex = 0; partIndex < parts.size(); partIndex++)
             if (parts.get(partIndex).getRole().isStatic())
                 rasterize(grid, parts.get(partIndex), partIndex);
 
-        ObjectArrayList<MeshInstance> meshes = subVoxelManager.createGridMeshes(grid, partUVBounds);
+        ObjectArrayList<MeshInstance> meshes = subVoxelManager.createGridMeshes(grid, partTiles);
 
         quadVertices.clear();
         quadIndices.clear();
 
         for (int partIndex = 0; partIndex < parts.size(); partIndex++)
             if (parts.get(partIndex).getRole().isStatic())
-                emitPartQuads(parts.get(partIndex), partIndex, partUVBounds, meshes);
+                emitPartQuads(parts.get(partIndex), partIndex, partTiles, meshes);
 
         flushQuads(meshes);
 
@@ -116,7 +116,7 @@ class VehicleGeometryBranch extends BranchPackage {
     // Every moving part meshed alone, so it can be drawn through its own transform
     void buildPartMeshes(ObjectArrayList<VehiclePartStruct> parts) {
 
-        float[] partUVBounds = resolveUVBounds(parts);
+        int[] partTiles = resolvePartTiles(parts);
         SubVoxelGridStruct grid = new SubVoxelGridStruct();
 
         for (int partIndex = 0; partIndex < parts.size(); partIndex++) {
@@ -129,11 +129,11 @@ class VehicleGeometryBranch extends BranchPackage {
             grid.clear();
             rasterize(grid, part, partIndex);
 
-            ObjectArrayList<MeshInstance> meshes = subVoxelManager.createGridMeshes(grid, partUVBounds);
+            ObjectArrayList<MeshInstance> meshes = subVoxelManager.createGridMeshes(grid, partTiles);
 
             quadVertices.clear();
             quadIndices.clear();
-            emitPartQuads(part, partIndex, partUVBounds, meshes);
+            emitPartQuads(part, partIndex, partTiles, meshes);
             flushQuads(meshes);
 
             for (int i = 0; i < meshes.size(); i++)
@@ -147,10 +147,10 @@ class VehicleGeometryBranch extends BranchPackage {
     private void emitPartQuads(
             VehiclePartStruct part,
             int partIndex,
-            float[] partUVBounds,
+            int[] partTiles,
             ObjectArrayList<MeshInstance> meshes) {
 
-        int uvBase = partIndex * EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS;
+        int tile = partTiles[partIndex];
         int sideVertices = EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.VEHICLE_QUAD_SIDES;
 
         for (int quad = 0; quad < part.getQuadCount(); quad++) {
@@ -164,9 +164,9 @@ class VehicleGeometryBranch extends BranchPackage {
                     subVoxelManager.getFaceNormal(face, subVoxelManager.getFaceAxis(face)) < 0);
 
             writeCorners(part, quad, false);
-            subVoxelManager.emitQuad(face, cornerScratch, partUVBounds, uvBase, quadVertices, quadIndices);
+            subVoxelManager.emitQuad(face, cornerScratch, tile, quadVertices, quadIndices);
             writeCorners(part, quad, true);
-            subVoxelManager.emitQuad(back, cornerScratch, partUVBounds, uvBase, quadVertices, quadIndices);
+            subVoxelManager.emitQuad(back, cornerScratch, tile, quadVertices, quadIndices);
         }
     }
 
@@ -231,17 +231,14 @@ class VehicleGeometryBranch extends BranchPackage {
 
     // Utility \\
 
-    // The texture bounds of every part, four floats each
-    private float[] resolveUVBounds(ObjectArrayList<VehiclePartStruct> parts) {
+    // The tile ID of every part, indexed by part
+    private int[] resolvePartTiles(ObjectArrayList<VehiclePartStruct> parts) {
 
-        float[] uvBounds = new float[parts.size() * EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS];
+        int[] partTiles = new int[parts.size()];
 
         for (int partIndex = 0; partIndex < parts.size(); partIndex++)
-            subVoxelManager.writeUVBounds(
-                    parts.get(partIndex).getTextureName(),
-                    uvBounds,
-                    partIndex * EngineSetting.SUB_VOXEL_UV_BOUNDS_FLOATS);
+            partTiles[partIndex] = subVoxelManager.resolveTile(parts.get(partIndex).getTextureName());
 
-        return uvBounds;
+        return partTiles;
     }
 }

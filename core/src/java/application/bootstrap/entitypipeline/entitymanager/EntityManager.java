@@ -8,11 +8,13 @@ import application.bootstrap.entitypipeline.entity.EntityHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -43,6 +45,7 @@ public class EntityManager extends ManagerPackage {
     private CombatManager combatManager;
     private VehicleManager vehicleManager;
     private ProgressionManager progressionManager;
+    private TextureManager textureManager;
 
     // Palette
     private Object2IntOpenHashMap<String> templateName2TemplateID;
@@ -68,6 +71,7 @@ public class EntityManager extends ManagerPackage {
         this.combatManager = get(CombatManager.class);
         this.vehicleManager = get(VehicleManager.class);
         this.progressionManager = get(ProgressionManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     // Management \\
@@ -167,6 +171,11 @@ public class EntityManager extends ManagerPackage {
         progressionManager.addBeing(entityInstance);
         progressionManager.resetBeing(entityInstance, EngineSetting.IDENTITY_NONE);
 
+        float x = Coordinate2Long.unpackX(chunkCoordinate) * (float) EngineSetting.CHUNK_SIZE + position.x;
+        float z = Coordinate2Long.unpackY(chunkCoordinate) * (float) EngineSetting.CHUNK_SIZE + position.z;
+        entityInstance.setTextureUser(
+                textureManager.registerTextureUser(entityInstance.getTextureTiles().getTileIDs(), x, z, x, z));
+
         return entityInstance;
     }
 
@@ -196,6 +205,8 @@ public class EntityManager extends ManagerPackage {
         combatManager.removeCombatant(entityInstance);
         progressionManager.removeBeing(entityInstance);
         vehicleManager.releaseEntity(entityInstance);
+        textureManager.removeTextureUser(entityInstance.getTextureUser());
+        entityInstance.setTextureUser(EngineSetting.INDEX_NOT_FOUND);
     }
 
     public void rerollEntity(EntityInstance entityInstance) {

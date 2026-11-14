@@ -15,6 +15,7 @@ import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -89,6 +90,10 @@ public class EntityInstance extends InstancePackage {
     private short genderID;
     private RaceGenderStruct raceGender;
 
+    // Texture — the texture user holding the tiles the entity draws while it is in the world, and those tiles
+    private int textureUser;
+    private TextureTileSetStruct textureTiles;
+
     // Internal \\
 
     @Override
@@ -120,6 +125,10 @@ public class EntityInstance extends InstancePackage {
         this.springScale = new Vector3();
         this.springScratchA = new Matrix4();
         this.springScratchB = new Matrix4();
+
+        // Texture
+        this.textureUser = EngineSetting.INDEX_NOT_FOUND;
+        this.textureTiles = new TextureTileSetStruct();
     }
 
     @Override
@@ -312,6 +321,18 @@ public class EntityInstance extends InstancePackage {
 
     public WorldPositionStruct getWorldPositionStruct() {
         return worldPositionStruct;
+    }
+
+    public int getTextureUser() {
+        return textureUser;
+    }
+
+    public void setTextureUser(int textureUser) {
+        this.textureUser = textureUser;
+    }
+
+    public TextureTileSetStruct getTextureTiles() {
+        return textureTiles;
     }
 
     public void setLocation(Vector3 position, long chunkCoordinate) {

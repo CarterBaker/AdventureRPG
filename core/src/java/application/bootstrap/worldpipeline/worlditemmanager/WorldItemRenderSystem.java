@@ -7,6 +7,8 @@ import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worlditem.WorldItemCompositeInstance;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstance;
@@ -18,6 +20,7 @@ import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Coordinate4Long;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -43,6 +46,7 @@ public class WorldItemRenderSystem extends SystemPackage {
     private CompositeBufferManager compositeBufferManager;
     private RenderManager renderSystem;
     private WorldStreamManager worldStreamManager;
+    private TextureManager textureManager;
 
     // Per item definition — composite buffer + material
     private Int2ObjectOpenHashMap<WorldItemCompositeInstance> itemDefID2Composite;
@@ -53,6 +57,10 @@ public class WorldItemRenderSystem extends SystemPackage {
     // Per chunk — tracks which instances belong to each chunk for O(1) pull
     private Long2ObjectOpenHashMap<ObjectArrayList<WorldItemInstance>> chunkCoord2Items;
     private ObjectArrayList<ObjectArrayList<WorldItemInstance>> itemListPool;
+
+    // Texture Users — per chunk in the renderer, the user holding the tiles its items draw from
+    private Long2IntOpenHashMap chunkCoord2TextureUser;
+    private TextureTileSetStruct tileScratch;
 
     // Scratch
     private float[] instanceDataScratch;
@@ -65,6 +73,9 @@ public class WorldItemRenderSystem extends SystemPackage {
         this.itemDefID2SlotMap = new Int2ObjectOpenHashMap<>();
         this.chunkCoord2Items = new Long2ObjectOpenHashMap<>();
         this.itemListPool = new ObjectArrayList<>();
+        this.chunkCoord2TextureUser = new Long2IntOpenHashMap();
+        this.chunkCoord2TextureUser.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        this.tileScratch = new TextureTileSetStruct();
         this.instanceDataScratch = new float[countInstanceFloats()];
     }
 
@@ -74,6 +85,7 @@ public class WorldItemRenderSystem extends SystemPackage {
         this.compositeBufferManager = get(CompositeBufferManager.class);
         this.renderSystem = get(RenderManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
+        this.textureManager = get(TextureManager.class);
     }
 
     @Override
@@ -122,12 +134,14 @@ public class WorldItemRenderSystem extends SystemPackage {
             stored.add(instance);
         }
         chunkCoord2Items.put(chunkCoordinate, stored);
+        refreshTextureUser(chunkCoordinate);
     }
 
     public void pull(long chunkCoordinate) {
         ObjectArrayList<WorldItemInstance> items = chunkCoord2Items.remove(chunkCoordinate);
         if (items == null)
             return;
+        refreshTextureUser(chunkCoordinate);
         for (int i = 0; i < items.size(); i++)
             removeFromBuffer(items.get(i));
 
@@ -154,6 +168,7 @@ public class WorldItemRenderSystem extends SystemPackage {
         }
 
         items.add(instance);
+        refreshTextureUser(chunkCoordinate);
     }
 
     public void removeItem(WorldItemInstance instance) {
@@ -161,6 +176,44 @@ public class WorldItemRenderSystem extends SystemPackage {
         ObjectArrayList<WorldItemInstance> list = chunkCoord2Items.get(instance.getChunkCoordinate());
         if (list != null)
             list.remove(instance);
+        refreshTextureUser(instance.getChunkCoordinate());
+    }
+
+    // Texture Users \\
+
+    // The chunk's texture user given the tiles every item it holds draws from, over the chunk's footprint; dropped
+    // when the chunk holds none
+    private void refreshTextureUser(long chunkCoordinate) {
+
+        ObjectArrayList<WorldItemInstance> items = chunkCoord2Items.get(chunkCoordinate);
+        int user = chunkCoord2TextureUser.get(chunkCoordinate);
+
+        tileScratch.clear();
+
+        for (int i = 0; items != null && i < items.size(); i++)
+            tileScratch.addAll(items.get(i).getItemDefinitionHandle().getMeshHandle().getTiles());
+
+        if (tileScratch.isEmpty()) {
+
+            if (user != EngineSetting.INDEX_NOT_FOUND)
+                textureManager.removeTextureUser(chunkCoord2TextureUser.remove(chunkCoordinate));
+
+            return;
+        }
+
+        if (user != EngineSetting.INDEX_NOT_FOUND) {
+            textureManager.setTextureUserTiles(user, tileScratch.getTileIDs());
+            return;
+        }
+
+        float minX = Coordinate2Long.unpackX(chunkCoordinate) * (float) EngineSetting.CHUNK_SIZE;
+        float minZ = Coordinate2Long.unpackY(chunkCoordinate) * (float) EngineSetting.CHUNK_SIZE;
+
+        float maxX = minX + EngineSetting.CHUNK_SIZE;
+        float maxZ = minZ + EngineSetting.CHUNK_SIZE;
+
+        chunkCoord2TextureUser.put(chunkCoordinate,
+                textureManager.registerTextureUser(tileScratch.getTileIDs(), minX, minZ, maxX, maxZ));
     }
 
     // Visibility \\

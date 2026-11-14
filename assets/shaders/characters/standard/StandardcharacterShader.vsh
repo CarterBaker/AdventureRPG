@@ -1,12 +1,12 @@
 #version 330 core
 
 layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec2 a_uv;
+layout(location = 1) in vec2 a_uv;            // the corner's place across its tile
 layout(location = 2) in vec4 a_boneIndices;
 layout(location = 3) in vec4 a_boneWeights;
 layout(location = 4) in vec3 a_normal;          // smooth normal MeshBuilder bakes, on either side of the face
 layout(location = 5) in vec2 a_morph;           // first morph entry of the vertex, entry count
-layout(location = 6) in vec3 a_detail;          // zone, raw corner uv
+layout(location = 6) in vec2 a_detail;          // zone, tile
 layout(location = 7) in vec4 a_masks;           // freckles, blush, lips, liner
 layout(location = 8) in mat4 a_instanceModel;
 
@@ -17,7 +17,7 @@ layout(location = 8) in mat4 a_instanceModel;
 uniform sampler2D u_morphTargets;
 uniform int u_morphBase;
 
-out vec4 v_uv;                                  // xy = atlas uv, zw = raw corner uv
+out vec2 v_uv;                                  // the corner's place across its tile
 out vec3 v_viewPosition;
 out vec3 v_viewNormal;
 out vec3 v_surfacePosition;                     // bind-pose position after morphs, where skin detail is fixed
@@ -25,6 +25,7 @@ out vec4 v_masks;
 out float v_maskWeight;
 flat out int v_zone;
 flat out int v_instance;
+flat out int v_tile;
 
 mat4 fetchBoneMatrix(int boneIndex) {
     int baseX = boneIndex * 3;
@@ -87,9 +88,9 @@ void main() {
     vec4 worldPosition   = a_instanceModel * (skin * vec4(morphedPosition, 1.0));
     int  zone            = int(a_detail.x + 0.5);
 
-    worldPosition.xyz += resolveHairSway(zone, a_detail.z, morphedPosition);
+    worldPosition.xyz += resolveHairSway(zone, a_uv.y, morphedPosition);
 
-    v_uv              = vec4(a_uv, a_detail.yz);
+    v_uv              = a_uv;
     v_viewPosition    = (u_view * worldPosition).xyz;
     v_viewNormal      = mat3(u_view) * mat3(a_instanceModel) * mat3(skin) * a_normal;
     v_surfacePosition = morphedPosition;
@@ -97,6 +98,7 @@ void main() {
     v_maskWeight      = resolveMaskWeight();
     v_zone            = zone;
     v_instance        = gl_InstanceID;
+    v_tile            = int(a_detail.y + 0.5);
 
     gl_Position = u_viewProjection * worldPosition;
 }

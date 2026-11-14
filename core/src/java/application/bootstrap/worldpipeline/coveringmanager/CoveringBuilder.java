@@ -64,7 +64,7 @@ class CoveringBuilder extends BuilderPackage {
         // Rendering
         TextureHandle topTexture = textureManager.getTextureHandleFromTextureName(
                 ArpgUtility.validateString(arpg, "top_texture"));
-        validateTextureArray(topTexture, hostBlockIDs, coveringName);
+        validateHostTextures(hostBlockIDs, coveringName);
 
         int sideTileID = EngineSetting.BLOCK_TEXTURE_UNDEFINED;
         TextureRevealStruct sideReveal = null;
@@ -72,7 +72,6 @@ class CoveringBuilder extends BuilderPackage {
 
         if (!sideTextureName.equals(EngineSetting.COVERING_TEXTURE_NONE)) {
             TextureHandle sideTexture = textureManager.getTextureHandleFromTextureName(sideTextureName);
-            validateTextureArray(sideTexture, hostBlockIDs, coveringName);
             sideTileID = sideTexture.getTileID();
             sideReveal = validateReveal(sideTexture, coveringName);
         }
@@ -148,8 +147,7 @@ class CoveringBuilder extends BuilderPackage {
 
     // Rendering \\
 
-    private void validateTextureArray(
-            TextureHandle textureHandle,
+    private void validateHostTextures(
             ShortOpenHashSet hostBlockIDs,
             String coveringName) {
 
@@ -163,11 +161,6 @@ class CoveringBuilder extends BuilderPackage {
             if (hostTileID == EngineSetting.BLOCK_TEXTURE_UNDEFINED)
                 throwException("Covering \"" + coveringName + "\" names host \"" + hostHandle.getBlockName()
                         + "\", which draws no texture to grow over.");
-
-            if (textureManager.getTextureHandleFromTileID(hostTileID).getArrayID() != textureHandle.getArrayID())
-                throwException("Covering \"" + coveringName + "\" texture \"" + textureHandle.getTileName()
-                        + "\" lives in another texture array than host \"" + hostHandle.getBlockName()
-                        + "\" — a covering's tiles must share the array its hosts are drawn from.");
         }
     }
 

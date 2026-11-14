@@ -3,12 +3,11 @@
 #include "includes/GridCoordinateData.glsl"
 #include "includes/SettingsData.glsl"
 #include "includes/QuadRecord.glsl"
-#include "surface/includes/SurfaceStandard.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
 
 out vec3  tcWorldPos;
 out vec3  tcNormal;
-out vec2  tcUVOrigin;
+out float tcTile;
 out float tcOrient;
 out vec3  tcColor;
 out float tcSizeA;
@@ -23,8 +22,8 @@ out float tcContent;
 // Places one corner of a solid quad in world space from the quad's packed record (see includes/QuadRecord.glsl),
 // three texels of four ints. Int 0 is the quad's origin sub-block. Int 1 is the geometry meta word: face index,
 // encoded face orientation, both merged extents in sub-blocks less one, the natural-block flag, the edge
-// resolution and the ID of the content its block holds. Int 2 holds the coverage word in its low sixteen bits and the tile's atlas column and row in the high
-// two bytes, from which the tile's UV origin is rebuilt. The rest is a stream of twelve 24-bit words: the four corner
+// resolution and the ID of the content its block holds. Int 2 holds the coverage word in its low sixteen bits and the
+// tile's ID in the high sixteen. The rest is a stream of twelve 24-bit words: the four corner
 // tints as exact RGB triples, then the low and the high word of each edge (A0, A1, B0, B1 in xyzw), whose four-bit
 // column codes cover one entry each across a run capped at ten entries plus one padding entry at either end. An entry
 // covers two sub-blocks on a block-resolution quad and one on a sub-block quad. A corner on the positive side of its
@@ -53,12 +52,12 @@ void main() {
     uvec4 tints    = unpackQuadWords(head.w, middle.x, middle.y);
     int   col      = int(tints[corner]);
     uint  surface  = head.z;
-    uint  cell     = surface >> 16;
+    uint  tile     = surface >> 16;
 
     gl_Position = vec4(worldPos, 1.0);
     tcWorldPos  = worldPos;
     tcNormal    = vec3(QUAD_NORMALS[face]);
-    tcUVOrigin  = vec2(float(cell & 255u), float(cell >> 8)) * u_uvPerBlock;
+    tcTile      = float(tile);
     tcOrient    = float((meta >> 3) & 63);
     tcSizeA     = float(sizeA) * SUB_BLOCK_SIZE;
     tcSizeB     = float(sizeB) * SUB_BLOCK_SIZE;

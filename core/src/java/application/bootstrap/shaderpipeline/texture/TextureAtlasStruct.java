@@ -7,9 +7,9 @@ import engine.root.StructPackage;
 public class TextureAtlasStruct extends StructPackage {
 
     /*
-     * Bootstrap container for a fully composited atlas image for one alias
-     * layer. Held during GPU upload only — image cleared immediately after
-     * to free heap. GCs with the loader when bootstrap completes.
+     * Bootstrap container for one fully composited font atlas layer. Held
+     * during GPU upload only — the image is cleared immediately after to
+     * free heap. GCs with the font builder once the font is built.
      */
 
     // Identity

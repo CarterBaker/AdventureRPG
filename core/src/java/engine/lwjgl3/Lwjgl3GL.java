@@ -498,4 +498,35 @@ class Lwjgl3GL implements GL40 {
         GL30C.glDrawBuffers(buf);
         stack.pop();
     }
+
+    // Compressed Textures \\
+
+    public void glCompressedTexImage3D(int target, int level, int internalformat, int width, int height, int depth,
+            int border, int imageSize, long data) {
+        GL13.glCompressedTexImage3D(target, level, internalformat, width, height, depth, border, imageSize, data);
+    }
+
+    public void glCompressedTexSubImage3D(int target, int level, int xoffset, int yoffset, int zoffset, int width,
+            int height, int depth, int format, int imageSize, long data) {
+        GL13.glCompressedTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format,
+                imageSize, data);
+    }
+
+    public void glTexParameterf(int target, int pname, float param) {
+        GL11.glTexParameterf(target, pname, param);
+    }
+
+    // Queries \\
+
+    public int glGetInteger(int pname) {
+        return GL11.glGetInteger(pname);
+    }
+
+    public float glGetFloat(int pname) {
+        return GL11.glGetFloat(pname);
+    }
+
+    public String glGetStringi(int name, int index) {
+        return GL30.glGetStringi(name, index);
+    }
 }

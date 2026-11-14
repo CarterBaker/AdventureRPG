@@ -7,7 +7,7 @@
 
 // Source: ContentBufferSystem, indexed by content ID.
 //
-// contentTiles:  xy = the overlay tile's atlas origin.
+// contentTiles:  x = the overlay tile's ID.
 // contentReveal: rgb = the average albedo of the texels the overlay shows, a = the share of its tile it shows.
 layout(std140) uniform ContentData {
     vec4 u_contentTiles[CONTENT_ID_COUNT];

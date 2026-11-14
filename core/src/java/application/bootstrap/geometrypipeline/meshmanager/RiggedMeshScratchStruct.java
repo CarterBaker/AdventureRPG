@@ -37,7 +37,7 @@ class RiggedMeshScratchStruct extends StructPackage {
     final IntArrayList vertexMorphStarts;
 
     // Textures
-    float[] textureTiles;
+    int[] textureTiles;
 
     // Constructor \\
 
@@ -61,6 +61,6 @@ class RiggedMeshScratchStruct extends StructPackage {
         this.vertexMorphStarts = new IntArrayList();
 
         // Textures
-        this.textureTiles = new float[0];
+        this.textureTiles = new int[0];
     }
 }

@@ -2,24 +2,21 @@
 
 in vec3 vNormal;
 in vec3 vPosition;
-in vec2 vUVOrigin;
+flat in int vTile;
 flat in int vFace;
 
 #include "includes/CameraData.glsl"
-#include "items/includes/ItemsStandard.glsl"
-#include "items/includes/BlockRepeat.glsl"
+#include "items/includes/BlockAlbedo.glsl"
 
-uniform sampler2DArray u_textureArray;
 uniform vec3  u_lightDirection;
 uniform float u_ambient;
 
 out vec4 FragColor;
 
 // A wall is one quad seen from both sides, so its normal turns toward the camera. Faces merge across block
-// boundaries, so the texture repeats once per block of the model grid.
+// boundaries, so the tile repeats once per block of the model grid.
 void main() {
-    vec2 uv     = resolveRepeatedUV(vUVOrigin, vPosition, vFace, u_uvPerBlock);
-    vec4 albedo = texture(u_textureArray, vec3(uv, float(u_layer_albedo)));
+    vec4 albedo = sampleBlockAlbedo(vTile, vPosition, vFace);
 
     if (albedo.a < 0.01)
     discard;

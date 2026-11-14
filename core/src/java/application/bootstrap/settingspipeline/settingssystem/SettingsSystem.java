@@ -1,5 +1,6 @@
 package application.bootstrap.settingspipeline.settingssystem;
 
+import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.worldpipeline.grid.GridRangeStruct;
@@ -30,6 +31,7 @@ public class SettingsSystem extends SystemPackage {
 
     // Internal
     private UBOManager uboManager;
+    private TextureManager textureManager;
     private WindowManager windowManager;
 
     // UBO
@@ -54,6 +56,7 @@ public class SettingsSystem extends SystemPackage {
     @Override
     protected void get() {
         this.uboManager = get(UBOManager.class);
+        this.textureManager = get(TextureManager.class);
         this.windowManager = get(WindowManager.class);
     }
 
@@ -86,6 +89,9 @@ public class SettingsSystem extends SystemPackage {
         renderSettingsData.updateUniform(
                 EngineSetting.UNIFORM_CHARACTER_DETAIL,
                 (float) settings.characterDetailDistance);
+        renderSettingsData.updateUniform(
+                EngineSetting.UNIFORM_TEXTURE_ANISOTROPY,
+                textureManager.getTextureAnisotropy());
         uboManager.push(renderSettingsData);
     }
 
@@ -97,6 +103,19 @@ public class SettingsSystem extends SystemPackage {
 
     // Character detail is read live by the character shaders, so only the uniform changes
     public void applyCharacterDetail() {
+        pushRenderSettings();
+    }
+
+    // Textures \\
+
+    // The tile pools sized again for the quality, every tier streaming back in
+    public void applyTextureQuality() {
+        textureManager.applyTextureQuality(settings.textureQuality);
+    }
+
+    // The pools' filtering and the footprint every tile read measures with, held within what the driver allows
+    public void applyTextureAnisotropy() {
+        textureManager.applyTextureAnisotropy(settings.textureAnisotropy);
         pushRenderSettings();
     }
 

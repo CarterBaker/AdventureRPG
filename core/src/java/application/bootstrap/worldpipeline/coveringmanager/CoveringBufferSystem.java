@@ -19,8 +19,8 @@ class CoveringBufferSystem extends SystemPackage {
      * Seeds the CoveringData UBO with every covering's tiles, indexed by
      * covering ID, so a terrain vertex carries only its packed coverage and
      * the surface shader looks the rest up. Each tile row holds the top
-     * tile's atlas origin and the side tile's, or COVERING_TILE_NONE where
-     * the covering has no sides; each style row holds its tint strength.
+     * tile's ID and the side tile's, or COVERING_TILE_NONE where the
+     * covering has no sides; each style row holds its tint strength.
      * Each covering face, top then side, also gets its reveal: the average
      * color it shows at its full level, whole and tintable, and the share of
      * its tile shown at every level packed a byte per level, which distant
@@ -103,14 +103,12 @@ class CoveringBufferSystem extends SystemPackage {
         Vector4 tiles = coveringTiles[coveringID];
         int faceID = coveringID * EngineSetting.COVERING_FACES_PER_COVERING;
 
-        tiles.x = topTexture.getU0();
-        tiles.y = topTexture.getV0();
+        tiles.x = topTexture.getTileID();
         writeReveal(faceID, coveringHandle.getTopReveal());
 
         if (coveringHandle.hasSide()) {
             TextureHandle sideTexture = textureManager.getTextureHandleFromTileID(coveringHandle.getSideTileID());
-            tiles.z = sideTexture.getU0();
-            tiles.w = sideTexture.getV0();
+            tiles.z = sideTexture.getTileID();
             writeReveal(faceID + 1, coveringHandle.getSideReveal());
         }
 

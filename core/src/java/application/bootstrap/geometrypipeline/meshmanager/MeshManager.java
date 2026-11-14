@@ -253,6 +253,10 @@ public class MeshManager extends ManagerPackage {
         RiggedMeshGLSLUtility.deleteTexture(meshHandle.getMorphTexture());
         meshHandle.setMorphTargets(RiggedMeshGLSLUtility.createMorphTexture(morphEntries), morphNames);
         meshHandle.setWeighedBones(resolveWeighedBones(mesh));
+        meshHandle.getTiles().clear();
+
+        for (int t = 0; t < mesh.getTextureCount(); t++)
+            meshHandle.getTiles().add(textureManager.getTileIDFromTextureName(mesh.getTextureName(t)));
     }
 
     private boolean[] resolveWeighedBones(RiggedMeshStruct mesh) {
@@ -293,27 +297,23 @@ public class MeshManager extends ManagerPackage {
         applyRiggedMesh(meshHandle, mesh, riggedMorphEntries);
     }
 
-    // Each palette texture's tile as u0, u1, v0, v1, width and height, in the scratch's reusable array
-    private float[] resolveTextureTiles(RiggedMeshStruct mesh) {
+    // Each palette texture's tile ID and size, in the scratch's reusable array
+    private int[] resolveTextureTiles(RiggedMeshStruct mesh) {
 
-        int floatCount = mesh.getTextureCount() * EngineSetting.RIGGED_MESH_TILE_FLOATS;
+        int intCount = mesh.getTextureCount() * EngineSetting.RIGGED_MESH_TILE_INTS;
 
-        if (riggedScratch.textureTiles.length < floatCount)
-            riggedScratch.textureTiles = new float[floatCount];
+        if (riggedScratch.textureTiles.length < intCount)
+            riggedScratch.textureTiles = new int[intCount];
 
-        float[] tiles = riggedScratch.textureTiles;
+        int[] tiles = riggedScratch.textureTiles;
 
         for (int t = 0; t < mesh.getTextureCount(); t++) {
 
             TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(mesh.getTextureName(t));
-            int base = t * EngineSetting.RIGGED_MESH_TILE_FLOATS;
+            int base = t * EngineSetting.RIGGED_MESH_TILE_INTS;
 
-            tiles[base] = textureHandle.getU0();
-            tiles[base + 1] = textureHandle.getU1();
-            tiles[base + 2] = textureHandle.getV0();
-            tiles[base + 3] = textureHandle.getV1();
-            tiles[base + 4] = textureHandle.getTileWidth();
-            tiles[base + 5] = textureHandle.getTileHeight();
+            tiles[base] = textureHandle.getTileID();
+            tiles[base + 1] = textureHandle.getTileWidth();
         }
 
         return tiles;

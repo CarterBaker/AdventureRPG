@@ -18,5 +18,11 @@ layout(std140) uniform SettingsData {
     // relief and the eyes' depth and reflections. See
     // characters/includes/CharacterMaterial.glsl.
     float u_characterDetail;
+
+    // Source: application Settings — runtime, user-configurable. The
+    // anisotropic filtering every tile pool samples with, held within what
+    // the driver allows; tile reads measure their footprint with it. See
+    // includes/TileTextures.glsl.
+    float u_textureAnisotropy;
 };
 #endif

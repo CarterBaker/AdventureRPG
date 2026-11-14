@@ -3,6 +3,7 @@ package application.bootstrap.geometrypipeline.quadpacket;
 import java.util.Arrays;
 
 import application.bootstrap.geometrypipeline.dynamicpacket.DynamicPacketState;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -17,7 +18,9 @@ public class QuadPacketInstance extends InstancePackage {
      * then appends the records shifted by one add on their position word.
      * clear() empties the buckets for a rebuild and keeps their storage, and
      * release() hands the storage back once nothing will read it again. The
-     * state is status only, published to the render thread.
+     * tiles every record draws from are gathered beside them, and merge with
+     * them, so the packet names what texture streaming must keep resident.
+     * The state is status only, published to the render thread.
      */
 
     // Internal
@@ -29,6 +32,9 @@ public class QuadPacketInstance extends InstancePackage {
     private int[] bucketStrides;
     private int[] bucketReserved;
     private IntArrayList[] bucketRecords;
+
+    // Tiles
+    private TextureTileSetStruct tiles;
 
     // Internal \\
 
@@ -43,6 +49,9 @@ public class QuadPacketInstance extends InstancePackage {
         this.bucketStrides = new int[EngineSetting.QUAD_PACKET_INITIAL_BUCKETS];
         this.bucketReserved = new int[EngineSetting.QUAD_PACKET_INITIAL_BUCKETS];
         this.bucketRecords = new IntArrayList[EngineSetting.QUAD_PACKET_INITIAL_BUCKETS];
+
+        // Tiles
+        this.tiles = new TextureTileSetStruct();
     }
 
     // State Management \\
@@ -140,6 +149,8 @@ public class QuadPacketInstance extends InstancePackage {
     // Every record of the source appended, its position word shifted by an offset packed like a position
     public void merge(QuadPacketInstance source, int positionOffset) {
 
+        tiles.addAll(source.tiles);
+
         for (int i = 0; i < source.bucketCount; i++) {
 
             IntArrayList from = source.bucketRecords[i];
@@ -172,6 +183,7 @@ public class QuadPacketInstance extends InstancePackage {
         for (int i = 0; i < bucketCount; i++)
             bucketRecords[i].clear();
 
+        tiles.clear();
         unlock();
     }
 
@@ -182,6 +194,7 @@ public class QuadPacketInstance extends InstancePackage {
             bucketRecords[i].trim();
         }
 
+        tiles.release();
         unlock();
     }
 
@@ -189,6 +202,10 @@ public class QuadPacketInstance extends InstancePackage {
 
     public DynamicPacketState getState() {
         return state;
+    }
+
+    public TextureTileSetStruct getTiles() {
+        return tiles;
     }
 
     public boolean hasRecords() {

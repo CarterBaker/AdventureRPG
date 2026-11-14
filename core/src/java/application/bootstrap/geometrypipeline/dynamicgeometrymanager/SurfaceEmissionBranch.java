@@ -1,16 +1,20 @@
 package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 
+import application.bootstrap.contentpipeline.content.ContentHandle;
+import application.bootstrap.contentpipeline.contentmanager.ContentManager;
 import application.bootstrap.contentpipeline.util.ContentUtility;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.SubCellGridStruct;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.VertBlockNeighbor3Vector;
 import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
 import application.bootstrap.geometrypipeline.quadpacket.QuadRecordUtility;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
+import application.bootstrap.worldpipeline.covering.CoveringHandle;
 import application.bootstrap.worldpipeline.coveringmanager.CoveringManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
@@ -27,7 +31,7 @@ class SurfaceEmissionBranch extends BranchPackage {
      * Turns one merged solid quad into its packed record at either
      * resolution: its origin, the face, extents, flags and the content its
      * block holds in one meta word, the coverage word beside the tile's
-     * atlas cell, then its four corner tints and the column codes along each
+     * ID, then its four corner tints and the column codes along each
      * edge as 24-bit words, so the surface shader rebuilds its corners and
      * the sub-cells around any vertex exactly as neighboring quads do. The
      * coverage word carries the cell's covering and level on an upper face,
@@ -43,6 +47,7 @@ class SurfaceEmissionBranch extends BranchPackage {
     private TextureManager textureManager;
     private DynamicGeometryManager dynamicGeometryManager;
     private CoveringManager coveringManager;
+    private ContentManager contentManager;
     private SubCellSampleBranch subCellSampleBranch;
 
     // Settings
@@ -99,6 +104,7 @@ class SurfaceEmissionBranch extends BranchPackage {
     @Override
     protected void start() {
         this.coveringManager = dynamicGeometryManager.getCoveringManager();
+        this.contentManager = dynamicGeometryManager.getContentManager();
     }
 
     // Emission \\
@@ -188,9 +194,12 @@ class SurfaceEmissionBranch extends BranchPackage {
         IntArrayList records = quadPacket.getRecords(
                 blockHandle.getMaterialID(), EngineSetting.QUAD_RECORD_SOLID_INTS);
 
+        addTiles(quadPacket, textureHandle.getTileID(), subChunkInstance, cellXYZ, faceDirection, coverageWord,
+                contentID);
+
         records.add(QuadRecordUtility.packPosition(originSubX, originSubY, originSubZ));
         records.add(meta);
-        records.add(coverageWord | (textureHandle.getAtlasCell() << tileShift));
+        records.add(coverageWord | (textureHandle.getTileID() << tileShift));
         QuadRecordUtility.addWords(records, vert0Color, vert1Color, vert2Color, vert3Color);
         QuadRecordUtility.addWords(records, toLowWord(edgeA0), toLowWord(edgeA1), toLowWord(edgeB0),
                 toLowWord(edgeB1));
@@ -281,6 +290,37 @@ class SurfaceEmissionBranch extends BranchPackage {
         }
 
         return Direction3Vector.getEncodedFace(orientation, worldFace);
+    }
+
+    // Tiles \\
+
+    // The face's own tile, its content's overlay and its covering's tile, gathered for texture streaming
+    private void addTiles(
+            QuadPacketInstance quadPacket,
+            int tileID,
+            SubChunkInstance subChunkInstance,
+            int cellXYZ,
+            Direction3Vector faceDirection,
+            int coverageWord,
+            short contentID) {
+
+        TextureTileSetStruct tiles = quadPacket.getTiles();
+        tiles.add(tileID);
+
+        ContentHandle contentHandle = contentManager.getContentHandleFromContent(contentID);
+
+        if (contentHandle != null)
+            tiles.add(contentHandle.getTileID());
+
+        if (coverageWord == CoverageUtility.NONE)
+            return;
+
+        CoveringHandle coveringHandle = coveringManager.getCoveringHandleFromCoverage(
+                subChunkInstance.getCoverage(cellXYZ));
+
+        tiles.add(faceDirection == Direction3Vector.UP
+                ? coveringHandle.getTopTileID()
+                : coveringHandle.getSideTileID());
     }
 
     // Coverage \\

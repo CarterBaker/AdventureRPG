@@ -7,7 +7,7 @@ flat in vec2  vRadii;
 flat in vec2  vCardRadii;
 flat in float vUnderside;
 flat in float vSeed;
-flat in vec2  vUVOrigin;
+flat in int   vTile;
 flat in vec3  vColor;
 
 #include "trees/includes/TreeLeafSprig.glsl"
@@ -24,7 +24,7 @@ void main() {
     discard;
 
     if (!shadeTreeLeaf(
-        vWorldPos, vCard, vCenter, vRadii, vCardRadii, vUnderside, vSeed, vUVOrigin, vColor, mat3(1.0),
+        vWorldPos, vCard, vCenter, vRadii, vCardRadii, vUnderside, vSeed, vTile, vColor, mat3(1.0),
         gAlbedo, gNormal, gMaterial))
     discard;
 }

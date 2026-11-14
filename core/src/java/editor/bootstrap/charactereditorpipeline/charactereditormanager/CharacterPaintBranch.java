@@ -2,10 +2,16 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import java.awt.Color;
 import java.io.File;
-import java.nio.ByteBuffer;
+import java.awt.image.BufferedImage;
 
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
+import application.bootstrap.shaderpipeline.texture.TextureBakeStruct;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
+import application.bootstrap.shaderpipeline.texture.TextureSourceStruct;
+import application.bootstrap.shaderpipeline.texturemanager.AliasLibraryStruct;
+import application.bootstrap.shaderpipeline.texturemanager.AliasStruct;
+import application.bootstrap.shaderpipeline.texturemanager.TextureBakeUtility;
+import application.bootstrap.shaderpipeline.texturemanager.TextureCompressionScratchStruct;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import editor.bootstrap.brushpipeline.brush.BrushHandle;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
@@ -24,6 +30,7 @@ import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CharacterPaintBranch extends BranchPackage {
@@ -39,12 +46,13 @@ class CharacterPaintBranch extends BranchPackage {
      * — the image beside the texture, or its alias's default where none is
      * there — layered in image documents, so every stroke, fill and erase
      * is one undo step of the layer it touched, and each change is laid
-     * flat and uploaded into the atlas layer the map fills, only the
-     * rectangle it touched. Brush paints the colour, Erase wears the base
+     * flat and the texture baked again from its images and canvases into
+     * the tile pools, as often as a stroke allows and whenever one ends. Brush paints the colour, Erase wears the base
      * back to the map's default and a layer back to nothing, Smooth blurs,
      * Fill covers the island of faces clicked and Pick takes the colour
-     * under the pointer. Saving writes each changed map flat into its image;
-     * reverting puts the atlas back as its images hold it. Layers above the
+     * under the pointer. Saving writes each changed map flat into its image
+     * and bakes its texture's streamed files again; reverting puts the tile
+     * back as its images hold it. Layers above the
      * base last the session and are laid into the image when it is saved.
      */
 
@@ -76,6 +84,13 @@ class CharacterPaintBranch extends BranchPackage {
     private IntArrayList vertexFill;
     private int[] channelSums;
 
+    // Preview — the textures painted since they were last baked, and when that was
+    private ObjectLinkedOpenHashSet<String> pendingPreviews;
+    private TextureCompressionScratchStruct compressionScratch;
+    private File textureRoot;
+    private File bakeRoot;
+    private long lastPreviewNanos;
+
     // Base \\
 
     @Override
@@ -100,6 +115,12 @@ class CharacterPaintBranch extends BranchPackage {
         this.vertexFaces = new IntArrayList();
         this.vertexFill = new IntArrayList();
         this.channelSums = new int[EngineSetting.COLOR_CHANNEL_COUNT];
+
+        // Preview
+        this.pendingPreviews = new ObjectLinkedOpenHashSet<>();
+        this.compressionScratch = new TextureCompressionScratchStruct();
+        this.textureRoot = new File(EngineSetting.BLOCK_TEXTURE_PATH);
+        this.bakeRoot = new File(EngineSetting.BAKED_TEXTURE_PATH);
     }
 
     @Override
@@ -108,6 +129,13 @@ class CharacterPaintBranch extends BranchPackage {
         this.textureManager = get(TextureManager.class);
         this.imageManager = get(ImageManager.class);
         this.brushManager = get(BrushManager.class);
+    }
+
+    // Update \\
+
+    @Override
+    protected void update() {
+        flushPreviews(false);
     }
 
     // Canvases \\
@@ -140,8 +168,7 @@ class CharacterPaintBranch extends BranchPackage {
     private CharacterPaintCanvasStruct openCanvas(String textureName, int map) {
 
         TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(textureName);
-        int atlasSize = textureHandle.getAtlasPixelSize();
-        int aliasLayer = textureManager.getAliasLayer(EditorSetting.CHARACTER_PAINT_MAP_ALIASES[map]);
+        AliasStruct alias = textureManager.getAliasLibrary().findAlias(EditorSetting.CHARACTER_PAINT_MAP_ALIASES[map]);
         File file = new File(
                 new File(EngineSetting.BLOCK_TEXTURE_PATH, textureHandle.getArrayName()),
                 textureName.substring(textureName.lastIndexOf(EditorSetting.CHARACTER_PAINT_IMAGE_SEPARATOR) + 1)
@@ -153,13 +180,11 @@ class CharacterPaintBranch extends BranchPackage {
                 textureName,
                 map,
                 file,
-                textureHandle.getGpuHandle(),
-                Math.round(textureHandle.getU0() * atlasSize),
-                Math.round(textureHandle.getV0() * atlasSize),
-                aliasLayer,
+                textureHandle.getTileID(),
+                alias,
                 textureHandle.getTileWidth(),
                 textureHandle.getTileHeight(),
-                toRGBA(textureManager.getAliasDefaultColor(aliasLayer)));
+                toRGBA(alias.getAliasColor()));
 
         openLayer(canvas, loadBase(canvas), EditorSetting.CHARACTER_PAINT_LAYER_BASE);
         PixmapUtility.copyPixels(canvas.getLayer(0).getPixmap(), canvas.getComposite());
@@ -191,7 +216,7 @@ class CharacterPaintBranch extends BranchPackage {
         return blank;
     }
 
-    // A layer of the canvas as an image document, laid flat into the atlas whenever anything changes it
+    // A layer of the canvas as an image document, laid flat into the composite whenever anything changes it
     private ImageDocumentInstance openLayer(CharacterPaintCanvasStruct canvas, Pixmap pixmap, String layerName) {
 
         String imageName = EditorSetting.CHARACTER_PAINT_IMAGE_PREFIX + canvas.getTextureName()
@@ -209,7 +234,7 @@ class CharacterPaintBranch extends BranchPackage {
 
     // Composite \\
 
-    // A rectangle of the canvas laid flat, each layer over the base by its alpha and opacity, and uploaded
+    // A rectangle of the canvas laid flat, each layer over the base by its alpha and opacity, and queued for preview
     private void recomposite(CharacterPaintCanvasStruct canvas, int minX, int minY, int maxX, int maxY) {
 
         Pixmap composite = canvas.getComposite();
@@ -231,39 +256,79 @@ class CharacterPaintBranch extends BranchPackage {
                 composite.drawPixel(x, y, flat);
             }
 
-        upload(canvas, minX, minY, maxX, maxY);
+        upload(canvas);
     }
 
-    // The rows of a rectangle copied into the atlas layer the map fills, bottom first as the atlas holds the tile
-    private void upload(CharacterPaintCanvasStruct canvas, int minX, int minY, int maxX, int maxY) {
+    // The texture a change touched, baked again and swapped into the pools once the preview is due
+    private void upload(CharacterPaintCanvasStruct canvas) {
+        pendingPreviews.add(canvas.getTextureName());
+    }
 
-        ByteBuffer source = canvas.getComposite().getPixels();
-        ByteBuffer upload = canvas.getUpload();
-        int channels = EngineSetting.COLOR_CHANNEL_COUNT;
-        int rowBytes = (maxX - minX + 1) * channels;
-        int rows = maxY - minY + 1;
+    // Every texture painted since the last preview, baked from its images with its open canvases laid in; at most
+    // once every preview interval while a stroke is under way, so a stroke stays smooth
+    private void flushPreviews(boolean force) {
 
-        upload.clear();
+        long now = System.nanoTime();
 
-        for (int r = 0; r < rows; r++) {
+        boolean early = now - lastPreviewNanos < EditorSetting.CHARACTER_PAINT_PREVIEW_NANOS;
 
-            int sourceRow = maxY - r;
-            int from = (sourceRow * canvas.getWidth() + minX) * channels;
+        if (pendingPreviews.isEmpty() || (!force && early))
+            return;
 
-            for (int b = 0; b < rowBytes; b++)
-                upload.put(r * rowBytes + b, source.get(from + b));
+        for (String textureName : pendingPreviews)
+            bakeTexture(textureName, false);
+
+        pendingPreviews.clear();
+        lastPreviewNanos = now;
+    }
+
+    // A texture baked from its source images, each map open for painting taken from its canvas instead; written to
+    // the baked files when saved, so the game streams what was painted
+    private void bakeTexture(String textureName, boolean write) {
+
+        AliasLibraryStruct library = textureManager.getAliasLibrary();
+        TextureSourceStruct source = TextureBakeUtility.collectTileSource(textureRoot, textureName, library);
+        CharacterPaintCanvasStruct[] canvases = textureName2Canvases.get(textureName);
+        ObjectArrayList<BufferedImage> images = new ObjectArrayList<>();
+        ObjectArrayList<AliasStruct> aliases = new ObjectArrayList<>();
+
+        for (int i = 0; i < source.getSourceCount(); i++) {
+
+            CharacterPaintCanvasStruct canvas = findCanvas(canvases, source.getAlias(i));
+            images.add(canvas != null
+                    ? PixmapUtility.toBufferedImage(canvas.getComposite())
+                    : TextureBakeUtility.readImage(source.getFile(i)));
+            aliases.add(source.getAlias(i));
         }
 
-        upload.limit(rows * rowBytes);
-        textureManager.updateTextureArrayLayer(
-                canvas.getGpuHandle(),
-                canvas.getAtlasX() + minX,
-                canvas.getAtlasY() + canvas.getHeight() - 1 - maxY,
-                canvas.getAliasLayer(),
-                maxX - minX + 1,
-                rows,
-                upload);
-        upload.clear();
+        for (int m = 0; canvases != null && m < canvases.length; m++) {
+            if (canvases[m] != null && !aliases.contains(canvases[m].getAlias())) {
+                images.add(PixmapUtility.toBufferedImage(canvases[m].getComposite()));
+                aliases.add(canvases[m].getAlias());
+            }
+        }
+
+        TextureBakeStruct bake = TextureBakeUtility.bakeImages(
+                textureName,
+                images.toArray(new BufferedImage[0]),
+                aliases.toArray(new AliasStruct[0]),
+                library,
+                write ? TextureBakeUtility.computeChecksum(source) : 0L,
+                compressionScratch);
+
+        if (write)
+            TextureBakeUtility.writeBake(bakeRoot, bake);
+
+        textureManager.replaceTileBake(textureManager.getTileIDFromTextureName(textureName), bake);
+    }
+
+    private CharacterPaintCanvasStruct findCanvas(CharacterPaintCanvasStruct[] canvases, AliasStruct alias) {
+
+        for (int m = 0; canvases != null && m < canvases.length; m++)
+            if (canvases[m] != null && canvases[m].getAlias() == alias)
+                return canvases[m];
+
+        return null;
     }
 
     // Strokes \\
@@ -350,6 +415,7 @@ class CharacterPaintBranch extends BranchPackage {
 
         strokeCanvases.clear();
         this.stroking = false;
+        flushPreviews(true);
         characterEditorManager.notifyChanged();
     }
 
@@ -729,10 +795,12 @@ class CharacterPaintBranch extends BranchPackage {
         return false;
     }
 
-    // Every changed map laid flat into its image; false when one could not be written
+    // Every changed map laid flat into its image and its texture baked again from them; false when one could not
+    // be written
     boolean save() {
 
         boolean saved = true;
+        ObjectLinkedOpenHashSet<String> savedTextures = new ObjectLinkedOpenHashSet<>();
 
         for (CharacterPaintCanvasStruct[] canvases : textureName2Canvases.values())
             for (CharacterPaintCanvasStruct canvas : canvases) {
@@ -749,12 +817,16 @@ class CharacterPaintBranch extends BranchPackage {
                     canvas.getLayer(l).markSaved();
 
                 canvas.markLayersChanged(false);
+                savedTextures.add(canvas.getTextureName());
             }
+
+        for (String textureName : savedTextures)
+            bakeTexture(textureName, true);
 
         return saved;
     }
 
-    // Every changed map's atlas layer put back as its image holds it, and its canvas let go
+    // Every changed map put back as its image holds it, its tile baked from the images again, and its canvas let go
     void revert() {
 
         for (CharacterPaintCanvasStruct[] canvases : textureName2Canvases.values())
@@ -769,7 +841,7 @@ class CharacterPaintBranch extends BranchPackage {
 
                 PixmapUtility.copyPixels(base, canvas.getComposite());
                 base.dispose();
-                upload(canvas, 0, 0, canvas.getWidth() - 1, canvas.getHeight() - 1);
+                upload(canvas);
 
                 for (int l = canvas.getLayerCount() - 1; l >= 0; l--)
                     closeLayer(canvas.getLayer(l));
@@ -777,6 +849,7 @@ class CharacterPaintBranch extends BranchPackage {
                 canvases[m] = null;
             }
 
+        flushPreviews(true);
         characterEditorManager.notifyChanged();
     }
 

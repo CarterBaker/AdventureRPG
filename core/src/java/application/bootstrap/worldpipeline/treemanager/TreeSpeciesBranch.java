@@ -2,7 +2,6 @@ package application.bootstrap.worldpipeline.treemanager;
 
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.tree.TreeData;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
@@ -63,7 +62,7 @@ class TreeSpeciesBranch extends BranchPackage {
 
         TreeData treeData = TreeArpgUtility.parse(
                 treeName, treeHandle.getTreeID(), treeArpg,
-                textureName -> resolveTextureCorner(treeName, textureName),
+                textureName -> resolveTextureTile(treeName, textureName),
                 textureName -> resolveTextureColor(treeName, textureName),
                 toolTypeName -> resolveToolTypeID(treeName, toolTypeName),
                 itemName -> resolveItemID(treeName, itemName));
@@ -94,14 +93,12 @@ class TreeSpeciesBranch extends BranchPackage {
 
     // Resolution \\
 
-    private float[] resolveTextureCorner(String treeName, String textureName) {
+    private int resolveTextureTile(String treeName, String textureName) {
 
         if (!textureManager.hasTexture(textureName))
             throw fail(treeName, "names unknown texture \"" + textureName + "\".");
 
-        TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(textureName);
-
-        return new float[] { textureHandle.getU0(), textureHandle.getV0() };
+        return textureManager.getTileIDFromTextureName(textureName);
     }
 
     private int resolveTextureColor(String treeName, String textureName) {

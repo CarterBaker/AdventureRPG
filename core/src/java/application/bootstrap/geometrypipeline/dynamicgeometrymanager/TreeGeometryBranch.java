@@ -3,6 +3,7 @@ package application.bootstrap.geometrypipeline.dynamicgeometrymanager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.TreeGeometryAsyncContainer;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
+import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.tree.TreeDetail;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
@@ -88,6 +89,7 @@ class TreeGeometryBranch extends BranchPackage {
         scratch.reset();
 
         TreeInstance[] trees = chunkInstance.getTreePaletteHandle().getTrees();
+        TextureTileSetStruct tiles = chunkInstance.getTreePacketInstance().getTiles();
         ObjectArrayList<TreeInstance> grownTrees = scratch.getGrownTrees();
         ObjectArrayList<TreeShapeStruct> shapes = scratch.getShapes();
         WorldHandle worldHandle = chunkInstance.getWorldHandle();
@@ -100,6 +102,7 @@ class TreeGeometryBranch extends BranchPackage {
         for (int i = 0; i < trees.length; i++) {
 
             TreeInstance tree = trees[i];
+            tiles.addAll(tree.getTreeHandle().getPartTiles());
 
             if (!tree.isDetailed()) {
 

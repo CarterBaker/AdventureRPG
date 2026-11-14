@@ -1,12 +1,10 @@
 package application.bootstrap.shaderpipeline.texturemanager;
 
-import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 
-import engine.assets.image.Pixmap;
-import engine.assets.image.PixmapUtility;
-import engine.graphics.gl.GL30;
+import engine.graphics.gl.GL40;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -15,79 +13,14 @@ import engine.util.memory.BufferUtility;
 class TextureGLSLUtility extends EngineUtility {
 
     /*
-     * GL30 wrapper for texture array operations. Handles upload and deletion only.
-     * Pixel conversion is delegated to PixmapUtility. Atlas images are already
-     * flipped at composite time — no flip applied here.
+     * GL wrapper for the engine's textures: plain 2D textures, the
+     * block-compressed tile pools with their full mip chains, the integer
+     * tile lookup, the unpack buffers tile data is staged through, and the
+     * capability queries the pools are checked against. Upload and deletion
+     * only; layers arrive rows bottom first, as the GPU reads them.
      */
 
-    // GPU Upload \\
-
-    static int pushTextureArray(BufferedImage[] layers) {
-
-        int depth = layers.length;
-
-        if (depth == 0)
-            throwException("No layers defined in texture array");
-
-        BufferedImage first = layers[0];
-        int width = first.getWidth();
-        int height = first.getHeight();
-
-        for (int i = 1; i < depth; i++) {
-            BufferedImage b = layers[i];
-            if (b.getWidth() != width || b.getHeight() != height)
-                throwException("All texture array layers must have identical dimensions");
-        }
-
-        if (!(EngineContext.gl20 instanceof GL30))
-            throwException("GL30 required for texture arrays");
-
-        GL30 gl30 = (GL30) EngineContext.gl20;
-        int handle = EngineContext.gl20.glGenTexture();
-
-        if (handle == 0)
-            throwException("GPU handle could not be generated for texture array");
-
-        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, handle);
-
-        gl30.glTexImage3D(
-                EngineSetting.GL_TEXTURE_2D_ARRAY,
-                0,
-                EngineSetting.GL_RGBA8,
-                width, height, depth,
-                0,
-                EngineSetting.GL_RGBA,
-                EngineSetting.GL_UNSIGNED_BYTE,
-                (ByteBuffer) null);
-
-        for (int layer = 0; layer < depth; layer++) {
-            Pixmap pix = PixmapUtility.fromBufferedImage(layers[layer], false);
-            ByteBuffer pixels = pix.getPixels();
-            pixels.position(0);
-            gl30.glTexSubImage3D(
-                    EngineSetting.GL_TEXTURE_2D_ARRAY,
-                    0,
-                    0, 0, layer,
-                    width, height, 1,
-                    EngineSetting.GL_RGBA,
-                    EngineSetting.GL_UNSIGNED_BYTE,
-                    pixels);
-            pix.dispose();
-        }
-
-        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MIN_FILTER,
-                EngineSetting.GL_NEAREST);
-        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MAG_FILTER,
-                EngineSetting.GL_NEAREST);
-        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_WRAP_S,
-                EngineSetting.GL_CLAMP_TO_EDGE);
-        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_WRAP_T,
-                EngineSetting.GL_CLAMP_TO_EDGE);
-
-        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_HANDLE_NONE);
-
-        return handle;
-    }
+    // Texture 2D \\
 
     static int createFloatTexture2D(float[] pixels, int width, int height, int wrapMode, int filterMode) {
         FloatBuffer buffer = BufferUtility.newFloatBuffer(pixels.length);
@@ -144,30 +77,151 @@ class TextureGLSLUtility extends EngineUtility {
         EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
     }
 
-    // One rectangle of one layer of a texture array replaced, the region's rows bottom first as the array holds them
-    static void updateTextureArrayLayer(
-            int handle,
-            int x,
-            int y,
-            int layer,
-            int width,
-            int height,
-            ByteBuffer pixels) {
+    // Tile Pools \\
 
-        GL30 gl30 = (GL30) EngineContext.gl20;
+    static int generateTexture() {
 
-        pixels.position(0);
+        int handle = EngineContext.gl20.glGenTexture();
 
-        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, handle);
-        gl30.glTexSubImage3D(
-                EngineSetting.GL_TEXTURE_2D_ARRAY,
-                0,
-                x, y, layer,
-                width, height, 1,
-                EngineSetting.GL_RGBA,
-                EngineSetting.GL_UNSIGNED_BYTE,
-                pixels);
-        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_HANDLE_NONE);
+        if (handle == EngineSetting.GL_HANDLE_NONE)
+            throwException("GPU handle could not be generated for a texture");
+
+        return handle;
+    }
+
+    // Gives a compressed array storage for every mip of the given square size, filtered trilinearly and repeating
+    static void allocateCompressedArray(int handle, int format, int size, int layers, float anisotropy) {
+
+        GL40 gl = EngineContext.gl40;
+        int levels = Integer.numberOfTrailingZeros(size) + 1;
+
+        gl.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, handle);
+
+        for (int level = 0, edge = size; level < levels; level++, edge >>= 1)
+            gl.glCompressedTexImage3D(EngineSetting.GL_TEXTURE_2D_ARRAY, level, format, edge, edge, layers, 0,
+                    TextureCompressionUtility.getLevelBytes(edge, edge) * layers, 0L);
+
+        gl.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_BASE_LEVEL, 0);
+        gl.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MAX_LEVEL, levels - 1);
+        gl.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MIN_FILTER,
+                EngineSetting.GL_LINEAR_MIPMAP_LINEAR);
+        gl.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MAG_FILTER,
+                EngineSetting.GL_LINEAR);
+        gl.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_WRAP_S,
+                EngineSetting.GL_REPEAT);
+        gl.glTexParameteri(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_WRAP_T,
+                EngineSetting.GL_REPEAT);
+        applyAnisotropy(gl, anisotropy);
+        gl.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_HANDLE_NONE);
+    }
+
+    static void setAnisotropy(int handle, float anisotropy) {
+
+        GL40 gl = EngineContext.gl40;
+
+        gl.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, handle);
+        applyAnisotropy(gl, anisotropy);
+        gl.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_HANDLE_NONE);
+    }
+
+    // Anisotropy one means none, so a driver without the extension is never asked for it
+    private static void applyAnisotropy(GL40 gl, float anisotropy) {
+        if (anisotropy > 1f)
+            gl.glTexParameterf(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_TEXTURE_MAX_ANISOTROPY,
+                    anisotropy);
+    }
+
+    // One layer's whole chain from the bound unpack buffer, its levels back to back from the given offset
+    static void uploadCompressedLayer(int handle, int format, int size, int layer, long offset) {
+
+        GL40 gl = EngineContext.gl40;
+        long position = offset;
+
+        gl.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, handle);
+
+        for (int level = 0, edge = size; edge >= 1; level++, edge >>= 1) {
+
+            int bytes = TextureCompressionUtility.getLevelBytes(edge, edge);
+            gl.glCompressedTexSubImage3D(EngineSetting.GL_TEXTURE_2D_ARRAY, level, 0, 0, layer, edge, edge, 1,
+                    format, bytes, position);
+            position += bytes;
+        }
+
+        gl.glBindTexture(EngineSetting.GL_TEXTURE_2D_ARRAY, EngineSetting.GL_HANDLE_NONE);
+    }
+
+    // The tile lookup: two unsigned words per texel, read with texelFetch only
+    static int createLookupTexture(int width, int height, IntBuffer words) {
+
+        int handle = generateTexture();
+
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, handle);
+        EngineContext.gl20.glTexImage2D(EngineSetting.GL_TEXTURE_2D, 0, EngineSetting.GL_RG32UI, width, height, 0,
+                EngineSetting.GL_RG_INTEGER, EngineSetting.GL_UNSIGNED_INT, words);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_MIN_FILTER,
+                EngineSetting.GL_NEAREST);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_MAG_FILTER,
+                EngineSetting.GL_NEAREST);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_WRAP_S,
+                EngineSetting.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glTexParameteri(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_TEXTURE_WRAP_T,
+                EngineSetting.GL_CLAMP_TO_EDGE);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
+
+        return handle;
+    }
+
+    // Rows of the lookup replaced, the words positioned at the first row's first texel
+    static void updateLookupRows(int handle, int firstRow, int rows, int width, IntBuffer words) {
+
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, handle);
+        EngineContext.gl20.glTexSubImage2D(EngineSetting.GL_TEXTURE_2D, 0, 0, firstRow, width, rows,
+                EngineSetting.GL_RG_INTEGER, EngineSetting.GL_UNSIGNED_INT, words);
+        EngineContext.gl20.glBindTexture(EngineSetting.GL_TEXTURE_2D, EngineSetting.GL_HANDLE_NONE);
+    }
+
+    // Staging \\
+
+    static int generateStagingBuffer() {
+        return EngineContext.gl20.glGenBuffer();
+    }
+
+    // Orphans the buffer's old storage, fills it from the staged bytes and leaves it bound for the uploads that read it
+    static void bindStaged(int buffer, int capacity, ByteBuffer staged) {
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_PIXEL_UNPACK_BUFFER, buffer);
+        EngineContext.gl20.glBufferData(EngineSetting.GL_PIXEL_UNPACK_BUFFER, capacity, null,
+                EngineSetting.GL_STREAM_DRAW);
+        EngineContext.gl20.glBufferSubData(EngineSetting.GL_PIXEL_UNPACK_BUFFER, 0, staged.remaining(), staged);
+    }
+
+    static void unbindStaged() {
+        EngineContext.gl20.glBindBuffer(EngineSetting.GL_PIXEL_UNPACK_BUFFER, EngineSetting.GL_HANDLE_NONE);
+    }
+
+    static void deleteStagingBuffer(int buffer) {
+        if (buffer != EngineSetting.GL_HANDLE_NONE)
+            EngineContext.gl20.glDeleteBuffer(buffer);
+    }
+
+    // Capabilities \\
+
+    static int getInteger(int name) {
+        return EngineContext.gl40.glGetInteger(name);
+    }
+
+    static float getFloat(int name) {
+        return EngineContext.gl40.glGetFloat(name);
+    }
+
+    static boolean hasExtension(String extension) {
+
+        int count = EngineContext.gl40.glGetInteger(EngineSetting.GL_NUM_EXTENSIONS);
+
+        for (int i = 0; i < count; i++)
+            if (extension.equals(EngineContext.gl40.glGetStringi(EngineSetting.GL_EXTENSIONS, i)))
+                return true;
+
+        return false;
     }
 
     // GPU Disposal \\

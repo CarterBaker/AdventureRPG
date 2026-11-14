@@ -20,18 +20,19 @@ class RiggedMeshGeometryUtility extends EngineUtility {
      * side before it is added and only the line of the result is kept; the
      * shader turns it toward the face it shades. Each corner also carries
      * where its vertex's morph entries start and how many there are, its
-     * face's zone with the raw corner UV the zone's procedural shading reads,
-     * and its vertex's mask channels. The morph entries — a delta and the
+     * face's zone with the tile its texture is drawn from, and its vertex's
+     * mask channels; its UV runs across that tile, which the zone's
+     * procedural shading reads as well. The morph entries — a delta and the
      * morph it belongs to, grouped vertex by vertex — fill the entry list the
      * mesh's morph texture is made from. Texture tiles arrive resolved,
-     * RIGGED_MESH_TILE_FLOATS per palette entry.
+     * RIGGED_MESH_TILE_INTS per palette entry: the tile ID and its size.
      */
 
     // Build \\
 
     static void build(
             RiggedMeshStruct mesh,
-            float[] textureTiles,
+            int[] textureTiles,
             RiggedMeshScratchStruct scratch,
             FloatArrayList vertices,
             ShortArrayList indices,
@@ -69,27 +70,19 @@ class RiggedMeshGeometryUtility extends EngineUtility {
             RiggedMeshStruct mesh,
             int faceIndex,
             int corner,
-            float[] textureTiles,
+            int[] textureTiles,
             RiggedMeshScratchStruct scratch,
             FloatArrayList vertices) {
 
         int vertexIndex = mesh.getFaceVertex(faceIndex, corner);
-        int tile = mesh.getFaceTexture(faceIndex) * EngineSetting.RIGGED_MESH_TILE_FLOATS;
+        int tile = mesh.getFaceTexture(faceIndex) * EngineSetting.RIGGED_MESH_TILE_INTS;
         int influenceCount = mesh.getInfluenceCount(vertexIndex);
 
         vertices.add(mesh.getX(vertexIndex));
         vertices.add(mesh.getY(vertexIndex));
         vertices.add(mesh.getZ(vertexIndex));
-        vertices.add(MeshQuadUtility.snapUV(
-                mesh.getFaceU(faceIndex, corner),
-                textureTiles[tile],
-                textureTiles[tile + 1],
-                (int) textureTiles[tile + 4]));
-        vertices.add(MeshQuadUtility.snapUV(
-                mesh.getFaceV(faceIndex, corner),
-                textureTiles[tile + 2],
-                textureTiles[tile + 3],
-                (int) textureTiles[tile + 5]));
+        vertices.add(MeshQuadUtility.snapUV(mesh.getFaceU(faceIndex, corner), textureTiles[tile + 1]));
+        vertices.add(MeshQuadUtility.snapUV(mesh.getFaceV(faceIndex, corner), textureTiles[tile + 1]));
 
         for (int i = 0; i < EngineSetting.MAX_BONE_INFLUENCES; i++)
             vertices.add(i < influenceCount ? mesh.getInfluenceBone(vertexIndex, i) : 0f);
@@ -104,8 +97,7 @@ class RiggedMeshGeometryUtility extends EngineUtility {
         vertices.add(morphStart);
         vertices.add(scratch.vertexMorphStarts.getInt(vertexIndex + 1) - morphStart);
         vertices.add(mesh.getFaceZone(faceIndex).ordinal());
-        vertices.add(mesh.getFaceU(faceIndex, corner));
-        vertices.add(mesh.getFaceV(faceIndex, corner));
+        vertices.add(textureTiles[tile]);
 
         for (int i = 0; i < EngineSetting.RIGGED_MESH_MASK_FLOATS; i++)
             vertices.add(mesh.getMask(vertexIndex, i));

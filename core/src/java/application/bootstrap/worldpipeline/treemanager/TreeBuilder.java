@@ -4,7 +4,6 @@ import java.io.File;
 
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
-import application.bootstrap.shaderpipeline.texture.TextureHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.tree.TreeData;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
@@ -49,7 +48,7 @@ class TreeBuilder extends BuilderPackage {
         try {
             treeData = TreeArpgUtility.parse(
                     treeName, treeID, arpg,
-                    this::resolveTextureCorner,
+                    textureManager::getTileIDFromTextureName,
                     this::resolveTextureColor,
                     toolTypeManager::getToolTypeIDFromToolTypeName,
                     itemDefinitionManager::getItemIDFromItemName);
@@ -61,14 +60,6 @@ class TreeBuilder extends BuilderPackage {
         treeHandle.constructor(treeData);
 
         return treeHandle;
-    }
-
-    // The corner of a texture's tile in its atlas
-    private float[] resolveTextureCorner(String textureName) {
-
-        TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(textureName);
-
-        return new float[] { textureHandle.getU0(), textureHandle.getV0() };
     }
 
     private int resolveTextureColor(String textureName) {
