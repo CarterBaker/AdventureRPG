@@ -18,19 +18,22 @@ int blockPosHash(ivec3 p) {
     return h;
 }
 
+// The quarter turns a natural top or bottom face's tile takes, from a hash of the block it belongs to
+int resolveNaturalSpin(vec3 localPos, vec3 normal, int faceOrdinal) {
+    ivec3 blockPos = ivec3(floor(localPos - normal * (SUB_BLOCK_SIZE * 0.5)));
+    // Mask to [0, CHUNK_SIZE-1] so block (1,1,1) hashes identically in every chunk.
+    // u_chunkSize = 16 (const from SettingsData.glsl); power-of-two so & mask is exact,
+    // and two's complement makes it correct for negative coordinates too.
+    int hash = blockPosHash((blockPos & ivec3(int(u_chunkSize) - 1)) + ivec3(faceOrdinal * 7, faceOrdinal * 13, faceOrdinal * 3));
+    return abs(hash) & 3;
+}
+
 // The planar axes a face reads and the quarter turns its tile takes, as x and y
 ivec2 resolveFaceLayout(vec3 localPos, vec3 normal, float encodedFaceF) {
     int encodedFace = int(encodedFaceF);
 
-    if (encodedFace >= 24) {
-        int faceOrdinal = encodedFace - 24;
-        ivec3 blockPos = ivec3(floor(localPos - normal * (SUB_BLOCK_SIZE * 0.5)));
-        // Mask to [0, CHUNK_SIZE-1] so block (1,1,1) hashes identically in every chunk.
-        // u_chunkSize = 16 (const from SettingsData.glsl); power-of-two so & mask is exact,
-        // and two's complement makes it correct for negative coordinates too.
-        int hash = blockPosHash((blockPos & ivec3(int(u_chunkSize) - 1)) + ivec3(faceOrdinal * 7, faceOrdinal * 13, faceOrdinal * 3));
-        return ivec2(0, abs(hash) & 3);
-    }
+    if (encodedFace >= 24)
+    return ivec2(0, resolveNaturalSpin(localPos, normal, encodedFace - 24));
 
     vec2 faceData = u_faceOrientations[encodedFace];
     return ivec2(int(faceData.x), int(faceData.y));

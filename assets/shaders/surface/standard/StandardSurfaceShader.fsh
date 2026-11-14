@@ -63,7 +63,7 @@ float resolveSunVisibility() {
 
 void main() {
     FaceUV   face    = resolveFaceUV(vUVLocalPos, vNormal, vOrient);
-    FaceUV   topFace = resolveFaceUV(vUVLocalPos, vNormal, COVERAGE_TOP_ENCODED_FACE);
+    FaceUV   topFace = resolveNaturalFaceUV(vUVLocalPos, vNormal, COVERAGE_TOP_FACE_ORDINAL);
     TileRead tile    = resolveTileReadGrad(int(vTile + 0.5), face.dx, face.dy);
     float    detail  = getDetailStrength(vLocalPos);
 

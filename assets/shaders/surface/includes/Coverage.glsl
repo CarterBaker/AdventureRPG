@@ -18,7 +18,7 @@
 // tinted average by exactly the share a full draw would show. The alpha cutoff and chroma band must match
 // EngineSetting.COVERAGE_ALPHA_CUTOFF, COVERAGE_TINT_CHROMA_LOW and COVERAGE_TINT_CHROMA_HIGH, which the bake uses.
 
-const float COVERAGE_TOP_ENCODED_FACE = 28.0; // EngineSetting.ENCODED_FACE_NATURAL_FULL_OFFSET + UP
+const int   COVERAGE_TOP_FACE_ORDINAL = 4;    // Direction3Vector.UP, the ordinal a natural top face spins by
 const float COVERAGE_ALPHA_CUTOFF     = 0.5;
 const float COVERAGE_TINT_CHROMA_LOW  = 0.08;
 const float COVERAGE_TINT_CHROMA_HIGH = 0.3;

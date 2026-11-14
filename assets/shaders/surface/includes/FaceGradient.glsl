@@ -13,16 +13,26 @@ struct FaceUV {
     vec2 dy;
 };
 
-// The face's UV and its screen gradients. Takes derivatives, so call it from uniform control flow.
-FaceUV resolveFaceUV(vec3 localPos, vec3 normal, float encodedFace) {
-    ivec2 faceLayout = resolveFaceLayout(localPos, normal, encodedFace);
-    vec2 planar  = resolveFacePlanar(localPos, faceLayout.x);
+// A face's UV and its screen gradients for the planar axes and quarter turns given. Takes derivatives, so call it
+// from uniform control flow.
+FaceUV buildFaceUV(vec3 localPos, ivec2 faceLayout) {
+    vec2 planar = resolveFacePlanar(localPos, faceLayout.x);
 
     FaceUV face;
     face.uv = spinTileVector(planar - 0.5, faceLayout.y) + 0.5;
     face.dx = spinTileVector(dFdx(planar), faceLayout.y);
     face.dy = spinTileVector(dFdy(planar), faceLayout.y);
     return face;
+}
+
+// The UV a face reads by its encoded face
+FaceUV resolveFaceUV(vec3 localPos, vec3 normal, float encodedFace) {
+    return buildFaceUV(localPos, resolveFaceLayout(localPos, normal, encodedFace));
+}
+
+// The UV a natural top or bottom face reads, spun by its block, whatever face it is laid over
+FaceUV resolveNaturalFaceUV(vec3 localPos, vec3 normal, int faceOrdinal) {
+    return buildFaceUV(localPos, ivec2(0, resolveNaturalSpin(localPos, normal, faceOrdinal)));
 }
 
 #endif

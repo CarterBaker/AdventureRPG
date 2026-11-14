@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 75
-Task: TextureStreaming
+Delivery: 76
+Task: TextureStreamingNvidiaFix
 Applied: 2026-11-14
 
 ## Log
@@ -85,3 +85,4 @@ Applied: 2026-11-14
 - 73, 2026-11-13, StoragePoolMacKernels
 - 74, 2026-11-13, Layers
 - 75, 2026-11-14, TextureStreaming
+- 76, 2026-11-14, TextureStreamingNvidiaFix
