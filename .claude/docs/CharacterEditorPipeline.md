@@ -1,7 +1,7 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the
-Character Editor and its layers (the look modes, every region's modelling modes, the face), the Animation Editor, their
+character tool tabs (Appearance, Build, Equipment, Mesh, Sculpt, Weights, Paint, Rig, Face), the Animation Editor, their
 docker windows, races and their genders' models, or a character's appearance (morphs, face controls, zones, masks,
 overlays, shaders). `.claude/CLAUDE.md` still applies in full.
 
@@ -9,42 +9,57 @@ overlays, shaders). `.claude/CLAUDE.md` still applies in full.
 
 ## Windows
 
-Every character tool is split into windows, the way Krita splits its dockers, and every part of making a character is
-one window, the Character Editor, its tasks layers picked in the Layers tab (see `.claude/docs/Editor.md`). A viewport
-tab holds the status bar and the viewport; saving, reverting, copying, deleting, undoing and redoing are the editor's
-File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`, `FILE_MENU_FACE` on the Face layer, `FILE_MENU_ANIMATION`),
-shared by each tool's viewport and docker tabs; everything else is its own tab, opened from the editor's Characters menu
-(its Tools section holds the Outliner, above the Character and Animation sections), the Content menu (Color Wheel,
-beside Layers) or the Textures menu (Texture Maps), and restored by layouts like any other.
+Every character tool is split into windows, the way Krita splits its dockers: every part of making a character is its
+own tool tab, laid out however the owner likes, each working the one character through the shared state (see
+`.claude/docs/Editor.md`). A viewport tab holds the status bar and the viewport; saving, reverting, copying, deleting,
+undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`, `FILE_MENU_FACE` in the
+Face tab, `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
+from the editor's Characters menu (its Tools section holds the Outliner, above the Character section's tool tabs and the
+Animation section), the Content menu (Color Wheel, beside Layers) or the Textures menu (Texture Maps), and restored by
+layouts like any other.
 
 | Window | Context | Shows |
 |---|---|---|
-| Character Editor | `CharacterEditorContext` | the layer picked: the live preview in a look mode, or the region framed and shown alone in a mode that takes tools (a tool canvas) |
-| Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `FaceEditorManager.buildListRows` on the Face layer, `AnimationEditorManager.buildListRows` |
+| Character Appearance, Build, Equipment | `CharacterAppearanceContext`, `CharacterBuildContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
+| Character Mesh, Sculpt, Weights, Rig | `CharacterMeshContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
+| Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
+| Character Face | `CharacterFaceContext` | the face's region (the Head) framed, the face controls' canvas, no layers |
+| Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `FaceEditorManager.buildListRows` in the Face tab, `AnimationEditorManager.buildListRows` |
 | Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), then Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) |
 | Texture Maps | `TextureMapsContext` | every map of the texture painted (`CharacterEditorManager.buildMapRows`), the one painted selected |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
 | Animation Timeline | `AnimationTimelineContext` | transport, summary track and a dope sheet lane per bone |
 | Properties | `PropertiesContext` | the value rows of the character, face or animation tab worked in last |
 
-- **Layers.** The Character Editor's layers are a region and a mode (`CharacterEditorModeSystem`, the window's own
-  state, keyed `region/mode`, the region kept by its key and found again whenever the regions are made again): the
-  Character group holds the look modes (Appearance, Build, Equipment) on the whole character, then the Body
-  (`CharacterRegionStruct.WHOLE`) and every region nested under it by `getParent`, each a group holding every mode
-  `CharacterEditorMode.isHeldBy` gives it: Mesh, Sculpt, Weights, Paint and Rig on every region, and Face
-  (`CharacterEditorMode.FACE`, the face controls) where the region takes the face. Every region has the same tools; a
-  region is only the closer, isolated view. Picking a group keeps the mode where the region holds it, Mesh otherwise.
-  Add a region as a rig part, a mode as enum data, never as a window.
-- **One window, one manager.** Each Character Editor window remembers its own layer and draws its preview in it
-  (`CharacterEditorPreviewSystem` reads the window's mode, never the manager's); while it is the active window, and
-  when a layer is picked for it, it hands its region and mode to `CharacterEditorManager.setRegion` / `setMode`, so the
-  Outliner and the Properties tab follow the window worked in last. The context creates every viewport system; the
-  mesh view, sculpt, rig, paint and overlay systems act only in the modes their flags name, and on the Face layer
-  `FaceEditorPreviewSystem` and `FaceEditorGestureSystem` drive the viewport instead of the character preview (each
-  binds afresh when it takes over). `CharacterEditorContext` answers its tool canvas, tool actions, Properties rows,
-  templates and File and Edit table for the layer picked: the face editor's on Face, the character editor's on every
-  other. Its keys are one file, `shortcuts/CharacterEditor.arpg`, kept to their layers by `canvases`; Undo, Redo and
-  Save run the File menu's action (`FileMenuBranch.run`), so they act on the face on the Face layer.
+- **One tab per tool.** Every tool tab extends `CharacterToolContext` and names its `CharacterEditorMode` (`getMode`)
+  and title (`getTabTitle`, `EditorSetting.TAB_TITLE_CHARACTER_*`); each opens from its own Characters menu button
+  (`EditorBranch.openCharacter<Tool>`, `TabManager.openCharacter<Tool>`). Add a tool as a mode with its flags, a
+  context naming it and a menu button, never as a mode switch inside a tab. `CharacterEditorModeSystem` holds the
+  tab's mode, read from its context, and its region (`getRegion`).
+- **Layers.** A tab lists layers only where its mode `listsLayers`, and creates its `LayersSourceSystem` only then:
+  a mode that `takesRegions` (Mesh, Sculpt, Weights, Rig) lists the Body (`CharacterRegionStruct.WHOLE`) and every
+  region nested under it by `getParent`, keyed by region key; Paint lists the paint layers of the map painted, top
+  first, keyed by number, each above the base with an eye (`CharacterPaintCanvasStruct.isLayerVisible`; a hidden layer
+  stays out of the composite, so Save writes only what is shown), as Substance Painter and Krita list theirs. The look
+  tabs and Face list none. Add a region as a rig part, never in code.
+- **Shared choices.** The region picked is one choice for every tab that takes regions
+  (`CharacterEditorManager.pickRegion` / `getPickedRegion`, kept by key and found again whenever the regions are made
+  again); the Face tab works in `getFaceRegion` (the first region that takes the face), the look tabs and Paint on the
+  whole character. The bone selected is one choice too: the weights' bone (`CharacterEditorManager.selectBone`) and
+  the rig's (`CharacterRigBranch.pickBone`) follow each other by name (`followRigBone`, `followBone`), so a bone
+  selected in the Rig tab is the bone the Weights tab paints. The vertex selection lives in the part's mesh document,
+  shared by every tab.
+- **One window, one manager.** Each tab draws its preview in its own mode (`CharacterEditorPreviewSystem` reads the
+  window's mode, never the manager's); while it is the active window, and when a layer is picked for it, it hands its
+  region and mode to `CharacterEditorManager.setRegion` / `setMode`, so the Outliner and the Properties tab follow the
+  window worked in last. The context creates every viewport system; the mesh view, sculpt, rig, paint and overlay
+  systems act only in the modes their flags name, and in the Face tab `FaceEditorPreviewSystem` and
+  `FaceEditorGestureSystem` drive the viewport instead of the character preview (each binds afresh when it takes
+  over). `CharacterToolContext` answers its tool canvas, tool actions, Properties rows, templates and File and Edit
+  table for its mode: the face editor's in Face, the character editor's in every other. The keys of every tool tab are
+  one file, `shortcuts/CharacterEditor.arpg`, naming `CharacterToolContext` (a shortcut file naming a base context keys
+  every tab built on it, `ShortcutManager.findShortcuts`) and kept to their tools by `canvases`; Undo, Redo and Save run
+  the File menu's action (`FileMenuBranch.run`), so they act on the face in the Face tab.
 
 - **The Appearance outliner is the player's creator.** In Appearance the Outliner lists everything the game's creator
   offers the player: the gender, the features worn (Hair: the race default, none, or any style that fits), under each
@@ -62,7 +77,7 @@ beside Layers) or the Textures menu (Texture Maps), and restored by layouts like
   `AppearanceGenderStruct.getShapeMin` / `getShapeMax`, read only through `AppearanceData.getShapeMin(genderID, i)` /
   `getShapeMax`, which fall back to the slider's own), written through `CharacterPropertyBranch.setGenderRangeEnd` (a
   step apart, within the slider's range), so each race and each gender has its own range; the game's creator, its
-  randomise and NPC variation read the same two methods. The Face layer's range rows still set the slider's own range,
+  randomise and NPC variation read the same two methods. The Face tab's range rows still set the slider's own range,
   the outer bound every gender's range sits in. Appearance lists no pose: a mode names the pose it stands in
   (`CharacterEditorMode.getStandingPose`, Appearance idles as the creator shows the player) or lets its outliner pick
   one (`picksPose`: Build, Equipment, Weights). Only Blink, a preview control, stays in the Properties tab.
@@ -95,15 +110,15 @@ beside Layers) or the Textures menu (Texture Maps), and restored by layouts like
   weights reach it as far. Add a tool to a canvas in
   `ToolCanvas`, never as a panel button. The mesh's one-off operations (transform, geometry, weights, selection) are
   the canvas's action groups (`ToolActionGroupStruct`), shown in the Tools window under the tools and run by
-  `CharacterEditorContext.runToolAction` through `CharacterEditorManager.act`, the same key their shortcuts carry; a
+  `CharacterToolContext.runToolAction` through `CharacterEditorManager.act`, the same key their shortcuts carry; a
   face control's operations (add, duplicate, remove, drive the picked bone, mirror, reset the preview) are the face
-  canvas's, run by `CharacterEditorContext.runToolAction` on the Face layer through `FaceEditorManager.act`.
+  canvas's, run by `CharacterToolContext.runToolAction` in the Face tab through `FaceEditorManager.act`.
   Properties keeps values only.
 - Every viewport (Character, Face, Animation, Animation Tree Editor) looks through the editor's `ViewCameraSystem`
   (zoomed in as far as it goes, the wheel dollies the pivot forward, and the near plane follows the distance, so close
   detail is never clipped),
-  framing `CharacterViewPoseSystem` (the Character Editor frames its region through `CharacterRegionFrameSystem` on
-  every layer, the Face layer's on the Head). A viewport
+  framing `CharacterViewPoseSystem` (every character tool tab frames its region through `CharacterRegionFrameSystem`,
+  the Face tab's on the Head). A viewport
   system takes a click only when it acts on something (a vertex, a joint, the mesh under the brush) and claims it with
   `EditorInputSystem.claim`; any other left press orbits and a right press pans. Cancel clicks
   (`CHARACTER_VIEW_BUTTON_CANCEL`) are claimed too. Test `ViewCameraSystem.isDragging`, never a held button, to stay
@@ -119,7 +134,7 @@ beside Layers) or the Textures menu (Texture Maps), and restored by layouts like
   Body, one per part in the rig's order (labelled by `LabelUtility.toWords`, sided when every bone has a `_l`/`_r` twin,
   listed under the part holding the nearest bone above its own), then Hair (the worn hair, its roots pinned, its own
   bones named by prefix, `hair_`, and the head they hang from, listed under the part that shows hair). Any creature's
-  rig gets its layers by naming its parts; Rig mode's **Add Layer From Bone** (`CharacterRigBranch.addPart`) makes a
+  rig gets its layers by naming its parts; the Rig tab's **Add Layer From Bone** (`CharacterRigBranch.addPart`) makes a
   part of the selected bone and its twin, named after the bone without its side, and **Remove Layer** drops the part
   holding it; the rig applies live, so the Layers tab follows at once. Bone membership is read only through
   `CharacterRegionBranch.holdsBone` / `holdsRigBone`. The active window hands its region to
@@ -145,8 +160,8 @@ beside Layers) or the Textures menu (Texture Maps), and restored by layouts like
   carries from the farthest in toward its joint, joining them face by face: every branch ending where it meets
   another, two long ones (`CHARACTER_RIG_DIGIT_MIN_LENGTH`) meeting are both digits. Five are thumb (meeting the palm
   nearest the joint), index, middle, ring and pinky by distance from it; a region with none apart takes one toe at
-  `CHARACTER_RIG_BALL_SHARE` of its length. Rig mode's **Rig Digits** lays a chain of `CHARACTER_RIG_DIGIT_SHARES`
-  joints on each (`CharacterRigBranch.addDigits`, named `<digit>_<n>_<side>`, a toe `toe_<side>`); Weights mode's
+  `CHARACTER_RIG_BALL_SHARE` of its length. The Rig tab's **Rig Digits** lays a chain of `CHARACTER_RIG_DIGIT_SHARES`
+  joints on each (`CharacterRigBranch.addDigits`, named `<digit>_<n>_<side>`, a toe `toe_<side>`); the Weights tab's
   **Weigh Onto Digits** (`CharacterWeightBranch.weighDigits`) then hands each vertex of the hand or foot bone to them,
   a digit's own vertices wholly, blended across each joint, the palm near each digit's root partly. Bones are
   structure, so save the rig and restart between the two.
@@ -194,7 +209,7 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
   the line of sight, so what it carries follows), run by `CharacterEditorBoneSystem`. Pose writes the edit pose
   (`CharacterEditorManager.setEditPoseTurn`, a turn per bone in its own frame, mirrored onto the twin while mirroring,
   never saved; Reset Pose, Alt+R, clears it); `CharacterEditorPreviewSystem.applyEditPose` lays it on the preview as
-  `AnimationStateHandle` postures, which every pose (the tree, a struck clip, the rest) now carries. A layer with an
+  `AnimationStateHandle` postures, which every pose (the tree, a struck clip, the rest) now carries. A tab with an
   edit pose counts as posed: select, weigh and transform in it (pose a thumb out of the way to reach the fingers),
   Reset Pose before sculpting.
 - **Sculpt tools.** Brush, Smooth, Relax (even spacing along the surface without shrinking), Inflate, Pinch, Crease
@@ -203,7 +218,7 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
 
 ## Paint
 
-Paint mode (`CharacterEditorMode.PAINT`, `ToolCanvas.CHARACTER_PAINT`: Brush, Erase, Smooth, Fill, Pick, the Brushes
+The Paint tab (`CharacterEditorMode.PAINT`, `ToolCanvas.CHARACTER_PAINT`: Brush, Erase, Smooth, Fill, Pick, the Brushes
 tab's brush) paints the open part's texture maps on every region. It is a mesh mode that `paintsMaps`, so the
 mesh view skins the part in any pose and the sculpt system stays out of it.
 
@@ -226,15 +241,16 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
   of the layer it touched (the before colours of the pixels it changed), and each change is laid flat and uploaded
   into the atlas layer the map fills, only its rectangle, rows bottom first (`TextureManager.updateTextureArrayLayer`,
   `glTexSubImage3D`). The base keeps its own alpha; Erase wears the base to the default and a layer to nothing.
-- **Values.** The Properties tab holds Layer and Opacity; the colour lives in the Color Wheel tab (Hue, Saturation and
+- **Values.** The Layers tab picks the layer painted and shows or hides each above the base; the Properties tab names
+  it and holds its Opacity; the colour lives in the Color Wheel tab (Hue, Saturation and
   Brightness, `CHARACTER_PAINT_KEY_HSB`, a grey keeping the hue last chosen in `CharacterPaintBranch.getHue`; Red,
   Green and Blue, `CHARACTER_PAINT_KEY_COLOR`) and the map painted is picked in the Texture Maps tab
   (`CHARACTER_PAINT_KEY_MAP_ITEM`, `CharacterPaintBranch.setMapIndex`), every key read and written through
   `CharacterPaintPropertyBranch` and listed by `CharacterPaintRowBranch`; Add Layer and Remove Layer are the canvas's
   tool actions. Save (File) writes every
   changed map flat into its image, Revert puts the atlas back as the images hold it, Undo and Redo (Edit) step the
-  paint history in Paint mode. Painted maps are the owner's art: never catalogue them.
-- **Generate Maps** (File menu, `FileMenuAction.GENERATE_MAPS`, Paint mode only; as Materialize or Bitmap2Material
+  paint history in the Paint tab. Painted maps are the owner's art: never catalogue them.
+- **Generate Maps** (File menu, `FileMenuAction.GENERATE_MAPS`, Paint tab only; as Materialize or Bitmap2Material
   generate maps): `GenerateMapsDialogBranch` opens a dialog over the window on the albedo of the part painted (layers
   and all), listing every `MapGenerateOption` (height detail, softness, contrast and Dark Is High; normal strength;
   occlusion strength and radius; roughness and its variation; metallic; which maps are written) beside a preview
@@ -420,7 +436,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   race; read a preset's feature only through it (`AppearanceData.getStartingFeature`).
 - **IK handles are rig data.** A rig's `ik` lists handles (`RigIkChainStruct`): three `bones`, root to end, each the
   child of the one before, and the `pole` their middle joint bends toward in the character's space (`RigBuilder`
-  refuses anything else). Rig mode's **Add IK Handle** and **Remove IK Handle** (`CharacterRigBranch.addIkChain` /
+  refuses anything else). The Rig tab's **Add IK Handle** and **Remove IK Handle** (`CharacterRigBranch.addIkChain` /
   `removeIkChain`) work on the selected bone as the end and on its twin across the body; a new handle's pole is the way
   its middle joint stands off the line from root to end, or, for a straight chain, across it from the front (a
   finger's knuckle away from the palm), mirrored on the right. Edit a pole in the Properties tab (Rigs). The Animation
@@ -463,7 +479,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   substep, after the length and swing cone, `collide` pushes the joint so the bone from the joint above it (a capsule of
   the chain's radius) clears every named collider, the push divided by how far down the bone the contact lies, then the
   length is held again. Colliders are not structure: they apply live.
-- **Hair tools.** On the Hair layers, Rig mode's **Rig Hair Locks** (`CharacterRigBranch.addHairLocks`) finds the
+- **Hair tools.** On the Hair region, the Rig tab's **Rig Hair Locks** (`CharacterRigBranch.addHairLocks`) finds the
   cards (`CharacterHairBranch.detectCards`: hair faces joined corner to corner whose v spans
   `CHARACTER_HAIR_CARD_MIN_SPAN`), keeps those at least `CHARACTER_HAIR_LOCK_MIN_LENGTH` long (shorter hair stays
   shader-only), joins cards rooted and hanging together into locks (`detectLocks`, matched point for point within
@@ -471,14 +487,14 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `CHARACTER_HAIR_LOCK_SEGMENT` and a tip, named `hair_<lock>_<joint>`, its spring named `hair_<lock>` with
   `CHARACTER_RIG_SPRING_DEFAULTS`; a lock rooted within the lock radius of a hair chain already rigged takes that
   chain, so every style shares one set. **Add Spring Chain** / **Remove Spring Chain** make or drop a chain from the
-  selected bone down its single children (and its twin), for hand-built chains. Weights mode's **Weigh Onto Locks**
+  selected bone down its single children (and its twin), for hand-built chains. The Weights tab's **Weigh Onto Locks**
   (`CharacterWeightBranch.weighLocks`) hands each long card to the hair chain whose joints lie nearest its line
   (`CharacterHairBranch.findChain`, roots within `CHARACTER_HAIR_WEIGHT_REACH`), by how far down the card each vertex
   grows: the head near the root, then each segment's bone, blended at joints; spring weights held before are let go
   first. The chains are bones, so save the rig and restart between the two. The selected bone's chain lists its five
   settings (stiffness, damping, gravity, drag, radius) in the Properties tab (`CharacterRigRowBranch.addSpringRows`),
   stepped and typed live, then a Yes or No per rig collider it rests against. **Add Collider** and **Remove Collider**
-  (Rig mode's Colliders group, `CharacterColliderBranch`) add a sphere on the selected bone, halfway to its first
+  (The Rig tab's Colliders group, `CharacterColliderBranch`) add a sphere on the selected bone, halfway to its first
   child, that every chain rests against, and remove the collider selected among the bone's; while mirroring is on a
   sided bone's collider is added, removed, reshaped and moved with its twin (named as its mirror). The selected bone's
   colliders are listed in the Properties tab; the selected one shows its Shape (a capsule runs from the joint out past
@@ -486,7 +502,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   Spring Chains (All or None). Rig mode draws every collider over the body as a wire sphere or capsule
   (`CharacterEditorOverlaySystem`, the selected one in the selection colour), rebuilt only when the editor's state
   moves. **Preview Springs**
-  (Rig and Weights) makes every modelling layer play the pose chosen (Idle at rest) with the springs simulated, until
+  (Rig and Weights) makes every modelling tab play the pose chosen (Idle at rest) with the springs simulated, until
   pressed again. The Animation Editor never lists, picks or keys a spring bone (`AnimationEditorManager.isKeyedBone`).
 - **Assets.** `HumanoidRig` carries 14 hair chains (`hair_1` to `hair_14`, five joints each, radius 0.012) laid by Rig
   Hair Locks on `FemaleLongHairMesh`, every one resting against its five colliders: `head` (sphere on `head`), `neck`
@@ -512,7 +528,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   carries them over a renumbering.
 - Rig: `CharacterRigBranch` owns the draft read from the rig's InfoManager entry, every rig edit (`edit`), its
   history and the live apply (`RigManager.updateRig`). Values and actions: `CharacterRigPropertyBranch`; rows:
-  `CharacterRigRowBranch`; viewport: `CharacterEditorRigSystem`. Rig mode's tools are Select, Move, Rotate (turns the
+  `CharacterRigRowBranch`; viewport: `CharacterEditorRigSystem`. The Rig tab's tools are Select, Move, Rotate (turns the
   selected bone's bind `rotation` about the line of sight, children carried, the twin turned the mirrored way while
   mirroring: `CharacterRigBranch.rotateGesture`, one undo step), Scale, Place and Erase. A bind edit never moves the
   mesh, as a rig tool keeps the skin where it is; Pose on the mesh and weights layers moves what a bone carries.
@@ -522,7 +538,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - Face controls: `FaceEditBranch` performs every edit of the template's shapes through InfoManager, recorded in the
   template's face history (`FaceEditorManager.getHistory`); values and actions: `FacePropertyBranch`; rows:
   `FaceRowBranch`. Bone drags go through `FaceEditorManager.beginGesture / writeGesture / endGesture / cancelGesture`;
-  viewport: `FaceEditorGestureSystem` on the Face layer. The face editor always works on the Character Editor's active race, saves
+  viewport: `FaceEditorGestureSystem` in the Face tab. The face editor always works on the character tools' active race, saves
   and reverts through it, and takes its preview gender and slider values from it. Gender starts live under the race's
   `genders`, the controls under its `appearance`.
 - The preview look (gender, tones, sliders, blink, build, head) is put on any viewport's appearance by

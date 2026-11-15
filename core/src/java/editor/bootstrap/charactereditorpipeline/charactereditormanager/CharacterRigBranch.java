@@ -456,7 +456,7 @@ class CharacterRigBranch extends BranchPackage {
         writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_SIZE, vectorScratch.set(size, size, size));
 
         edit(bones -> bones.add(boneArpg));
-        this.selectedBone = findBone(boneName);
+        pickBone(findBone(boneName));
         characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_ADDED + boneName);
     }
 
@@ -1239,7 +1239,7 @@ class CharacterRigBranch extends BranchPackage {
                 if (subtree.getBoolean(i))
                     bones.remove(i);
         });
-        this.selectedBone = parent;
+        pickBone(parent);
         characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_REMOVED + boneName);
     }
 
@@ -1325,7 +1325,7 @@ class CharacterRigBranch extends BranchPackage {
             reorder(bones);
         });
 
-        this.selectedBone = findBone(boneName);
+        pickBone(findBone(boneName));
     }
 
     // The bones laid out again parent before child, each keeping its place among those free to stand there; a bone
@@ -1531,9 +1531,29 @@ class CharacterRigBranch extends BranchPackage {
     void selectBone(int boneIndex) {
 
         if (boneIndex >= 0 && boneIndex < boneCount) {
-            this.selectedBone = boneIndex;
+            pickBone(boneIndex);
             characterColliderBranch.followBone(boneIndex);
             characterEditorManager.notifyChanged();
+        }
+    }
+
+    // The bone selected, handed to the editor so the weights work on the same bone
+    private void pickBone(int boneIndex) {
+
+        this.selectedBone = boneIndex;
+
+        if (boneIndex != EngineSetting.INDEX_NOT_FOUND)
+            characterEditorManager.followRigBone(boneNames.get(boneIndex));
+    }
+
+    // The bone the weights picked, selected here too while the draft holds it
+    void followBone(String boneName) {
+
+        int boneIndex = findBone(boneName);
+
+        if (boneIndex != EngineSetting.INDEX_NOT_FOUND) {
+            this.selectedBone = boneIndex;
+            characterColliderBranch.followBone(boneIndex);
         }
     }
 

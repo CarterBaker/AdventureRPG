@@ -8,7 +8,7 @@ before touching Import Model, Export Model or any `Gltf*` class. `.claude/CLAUDE
 ## Where glTF stands
 
 - **Only at the editor's edge.** `.arpg` stays the only format the engine and the tools read and write. A `.glb` is
-  something the Character Editor imports from and exports to so models can move to and from Blender, Maya, ZBrush or
+  something the character tool tabs import from and export to so models can move to and from Blender, Maya, ZBrush or
   an asset store. The game never reads one, none goes under `assets/`, and `.gitattributes` marks `*.glb binary`.
 - **Outside art is the owner's.** A model brought in through Import Model is not AI-generated: never catalogue it.
 - **The specification is the authority:** glTF 2.0 (registry.khronos.org/glTF/specs/2.0/glTF-2.0.html).

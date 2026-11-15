@@ -11,7 +11,8 @@ class CharacterPaintRowBranch extends BranchPackage {
 
     /*
      * Lists the rows of the Paint tabs: in the Properties tab the texture
-     * painted, the layer painted with its opacity above the base; in the
+     * painted and the layer painted, picked in the Layers tab, with its
+     * opacity above the base; in the
      * Color Wheel its hue, saturation and brightness and its red, green and
      * blue, each a slider across 0 to 1; in Texture Maps every map of the
      * texture, the one painted selected. Every value is read through
@@ -42,7 +43,7 @@ class CharacterPaintRowBranch extends BranchPackage {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_PAINT_HEADER_PAINT
                 + CharacterViewUtility.toResourceLabel(canvas.getTextureName())));
-        addChoice(rows, EditorSetting.CHARACTER_PAINT_KEY_LAYER, EditorSetting.CHARACTER_PAINT_LABEL_LAYER);
+        rows.add(CharacterViewRowStruct.header(canvas.getLayerName(canvas.getActiveLayer())));
 
         if (canvas.getActiveLayer() > 0)
             rows.add(CharacterViewRowStruct.number(
@@ -102,9 +103,5 @@ class CharacterPaintRowBranch extends BranchPackage {
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_PAINT_KEY_MAP_ITEM, map),
                     EditorSetting.CHARACTER_PAINT_MAP_LABELS[map],
                     map == canvas.getMapIndex()));
-    }
-
-    private void addChoice(ObjectArrayList<CharacterViewRowStruct> rows, String key, String label) {
-        rows.add(CharacterViewRowStruct.choice(key, label, characterPaintPropertyBranch.getValueText(key)));
     }
 }

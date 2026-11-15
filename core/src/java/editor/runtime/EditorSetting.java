@@ -438,7 +438,15 @@ public class EditorSetting {
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
     public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
-    public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
+    public static final String TAB_TITLE_CHARACTER_APPEARANCE = "Character Appearance";
+    public static final String TAB_TITLE_CHARACTER_BUILD = "Character Build";
+    public static final String TAB_TITLE_CHARACTER_EQUIPMENT = "Character Equipment";
+    public static final String TAB_TITLE_CHARACTER_MESH = "Character Mesh";
+    public static final String TAB_TITLE_CHARACTER_SCULPT = "Character Sculpt";
+    public static final String TAB_TITLE_CHARACTER_WEIGHTS = "Character Weights";
+    public static final String TAB_TITLE_CHARACTER_PAINT = "Character Paint";
+    public static final String TAB_TITLE_CHARACTER_RIG = "Character Rig";
+    public static final String TAB_TITLE_CHARACTER_FACE = "Character Face";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
@@ -1208,7 +1216,6 @@ public class EditorSetting {
     public static final float CHARACTER_PAINT_CHANNEL_MAX = 1f;
 
     // Character Paint — row keys, labels and messages
-    public static final String CHARACTER_PAINT_KEY_LAYER = "paint_layer";
     public static final String CHARACTER_PAINT_KEY_OPACITY = "paint_opacity";
     public static final String CHARACTER_PAINT_KEY_COLOR = "paint_color";
     public static final String CHARACTER_PAINT_KEY_HSB = "paint_hsb";
@@ -1222,7 +1229,6 @@ public class EditorSetting {
     public static final String CHARACTER_PAINT_HEADER_MAPS = "Maps of ";
     public static final String CHARACTER_PAINT_HEADER_LAYERS = "Layers";
     public static final String CHARACTER_PAINT_HEADER_NO_TEXTURE = "The part worn here has no texture to paint";
-    public static final String CHARACTER_PAINT_LABEL_LAYER = "Layer";
     public static final String CHARACTER_PAINT_LABEL_OPACITY = "Opacity";
     public static final String CHARACTER_PAINT_LABEL_LAYER_ADD = "Add Layer";
     public static final String CHARACTER_PAINT_LABEL_LAYER_REMOVE = "Remove Layer";
@@ -1513,7 +1519,7 @@ public class EditorSetting {
     public static final float CHARACTER_REGION_FRAME_SIZE_SHARE = 0.5f;
     public static final String CHARACTER_REGION_STATUS_NO_PART = "This character wears no ";
 
-    // Character Regions — the name each region's group of layers is listed under in the Layers tab
+    // Character Regions — the name each region is listed under in the Layers tab
     public static final String CHARACTER_REGION_LABEL_WHOLE = "Body";
     public static final String CHARACTER_REGION_LABEL_HEAD = "Head";
     public static final String CHARACTER_REGION_LABEL_HAIR = "Hair";
@@ -1522,12 +1528,6 @@ public class EditorSetting {
     public static final String CHARACTER_REGION_LABEL_MOUTH = "Mouth";
     public static final String CHARACTER_REGION_LABEL_HANDS = "Hands";
     public static final String CHARACTER_REGION_LABEL_FEET = "Feet";
-
-    // Character Layers — the group the look modes are listed under in the Layers tab, its key, and the separator
-    // between a region's key and a mode's in a layer's key
-    public static final String CHARACTER_LAYER_LOOK_KEY = "look";
-    public static final String CHARACTER_LAYER_LOOK_LABEL = "Character";
-    public static final String CHARACTER_LAYER_KEY_SEPARATOR = "/";
 
     // Face Editor — a drag below this preview value first takes the control to its end
     public static final float FACE_EDITOR_DRAG_VALUE_MIN = 0.05f;

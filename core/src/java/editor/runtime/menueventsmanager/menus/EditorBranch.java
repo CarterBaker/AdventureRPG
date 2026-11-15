@@ -96,8 +96,40 @@ public class EditorBranch extends BranchPackage {
 
     // Characters Dropdown \\
 
-    public void openCharacterEditor(WindowInstance window) {
-        tabManager.openCharacterEditor(window.getGLWindow());
+    public void openCharacterAppearance(WindowInstance window) {
+        tabManager.openCharacterAppearance(window.getGLWindow());
+    }
+
+    public void openCharacterBuild(WindowInstance window) {
+        tabManager.openCharacterBuild(window.getGLWindow());
+    }
+
+    public void openCharacterEquipment(WindowInstance window) {
+        tabManager.openCharacterEquipment(window.getGLWindow());
+    }
+
+    public void openCharacterMesh(WindowInstance window) {
+        tabManager.openCharacterMesh(window.getGLWindow());
+    }
+
+    public void openCharacterSculpt(WindowInstance window) {
+        tabManager.openCharacterSculpt(window.getGLWindow());
+    }
+
+    public void openCharacterWeights(WindowInstance window) {
+        tabManager.openCharacterWeights(window.getGLWindow());
+    }
+
+    public void openCharacterPaint(WindowInstance window) {
+        tabManager.openCharacterPaint(window.getGLWindow());
+    }
+
+    public void openCharacterRig(WindowInstance window) {
+        tabManager.openCharacterRig(window.getGLWindow());
+    }
+
+    public void openCharacterFace(WindowInstance window) {
+        tabManager.openCharacterFace(window.getGLWindow());
     }
 
     public void openCharacterOutliner(WindowInstance window) {

@@ -1,66 +1,50 @@
 package editor.runtime.charactereditor.mode;
 
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintCanvasStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
-import editor.runtime.EditorSetting;
-import engine.root.EngineSetting;
+import editor.runtime.charactereditor.CharacterToolContext;
 import engine.root.SystemPackage;
-import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterEditorModeSystem extends SystemPackage {
 
     /*
-     * Keeps the layer a Character Editor window works on: the region of the
-     * character it frames, isolates and holds every edit to, and the mode it
-     * works in there, Appearance on the whole character when it opens. The
-     * Layers tab lists them as the Character group holding the look modes,
-     * then the Body holding the modes that take tools and the regions within
-     * it, each region a group holding the modes it takes and the regions
-     * listed under it, the regions being the parts the race's rig names; a
-     * layer's key is its region's key and its mode's, a group's its region's
-     * alone, so picking a group keeps the mode where the region takes it. The
-     * window keeps its region by key, found again among the rig's regions
-     * whenever they are made again, the Body once the rig no longer names
-     * it. While the window is the active window, and
-     * whenever a layer is picked for it, its region and mode are handed to
-     * the editor, so the Character Outliner and the Properties tab follow
-     * the window worked in last. The window draws its preview in its own
-     * mode whatever the editor's is.
+     * Keeps the mode a character tool tab works in, the one its context names,
+     * and the region it works on there: the region picked in the Layers tab
+     * for every tab that takes regions, shared by all of them, the Head for
+     * the Face, and the whole character for the rest. The Layers tab lists
+     * the regions of the race's rig for a tab that takes them, the Body
+     * holding every region nested under it, and the paint layers of the map
+     * painted, top first, for the Paint tab. While the window is the active
+     * window, and whenever a layer is picked for it, its region and mode are
+     * handed to the editor, so the Character Outliner and the Properties tab
+     * follow the window worked in last. The window draws its preview in its
+     * own mode whatever the editor's is.
      */
 
     // Internal
     private ActiveWindowManager activeWindowManager;
     private CharacterEditorManager characterEditorManager;
 
-    // Layer
-    private String regionKey;
-    private CharacterRegionStruct region;
-    private int regionsRevision;
+    // Mode
     private CharacterEditorMode mode;
 
-    // Revision
-    private int revision;
+    // Paint Layers — the canvas and its layer revision last listed, so the stack is laid out again when either moves
+    private CharacterPaintCanvasStruct listedCanvas;
+    private int listedLayerRevision;
+    private int paintRevision;
 
     // Base \\
-
-    @Override
-    protected void create() {
-
-        // Layer
-        this.region = CharacterRegionStruct.WHOLE;
-        this.regionKey = region.getKey();
-        this.regionsRevision = EngineSetting.INDEX_NOT_FOUND;
-        this.mode = CharacterEditorMode.APPEARANCE;
-    }
 
     @Override
     protected void get() {
         this.activeWindowManager = get(ActiveWindowManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
+        this.mode = ((CharacterToolContext) context).getMode();
     }
 
     // Update \\
@@ -82,54 +66,51 @@ public class CharacterEditorModeSystem extends SystemPackage {
 
     // Layers \\
 
-    // A layer by its key: a mode in a region, the look group keeping a look mode, or a region keeping a mode it holds
+    // A region by its key, picked for every tab that takes regions, or a paint layer by its number
     public void select(String layerKey) {
 
-        int separator = layerKey.indexOf(EditorSetting.CHARACTER_LAYER_KEY_SEPARATOR);
-
-        if (separator != EngineSetting.INDEX_NOT_FOUND)
-            pick(
-                    characterEditorManager.findRegion(layerKey.substring(0, separator)),
-                    ArpgUtility.toEnum(
-                            layerKey.substring(separator + EditorSetting.CHARACTER_LAYER_KEY_SEPARATOR.length()),
-                            CharacterEditorMode.class));
-        else if (layerKey.equals(EditorSetting.CHARACTER_LAYER_LOOK_KEY))
-            pick(CharacterRegionStruct.WHOLE, isLook(mode) ? mode : CharacterEditorMode.APPEARANCE);
+        if (mode.paintsMaps())
+            characterEditorManager.selectPaintLayer(Integer.parseInt(layerKey));
         else
-            pickRegion(characterEditorManager.findRegion(layerKey));
-    }
+            characterEditorManager.pickRegion(characterEditorManager.findRegion(layerKey));
 
-    private void pickRegion(CharacterRegionStruct picked) {
-        pick(picked, mode.isHeldBy(picked) ? mode : CharacterEditorMode.MESH);
-    }
-
-    private void pick(CharacterRegionStruct pickedRegion, CharacterEditorMode pickedMode) {
-
-        if (pickedRegion == getRegion() && pickedMode == mode)
-            return;
-
-        this.region = pickedRegion;
-        this.regionKey = pickedRegion.getKey();
-        this.mode = pickedMode;
-        revision++;
         adopt();
     }
 
-    // The Character group of look modes, then the Body and every region within it
-    public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
-
-        LayerNodeStruct look = new LayerNodeStruct(
-                EditorSetting.CHARACTER_LAYER_LOOK_KEY, EditorSetting.CHARACTER_LAYER_LOOK_LABEL, isLook(mode), true);
-
-        for (CharacterEditorMode listed : CharacterEditorMode.VALUES)
-            if (isLook(listed))
-                look.addChild(buildLayer(CharacterRegionStruct.WHOLE, listed));
-
-        roots.add(look);
-        roots.add(buildRegion(CharacterRegionStruct.WHOLE));
+    // A paint layer above the base shown or hidden; the regions are always drawn, the one picked standing alone
+    public void toggleVisible(String layerKey) {
+        if (mode.paintsMaps())
+            characterEditorManager.togglePaintLayerVisible(Integer.parseInt(layerKey));
     }
 
-    // A region's group: the modes it takes, then the regions listed under it, open by default while it holds regions
+    // The paint layers top first, or the Body and every region within it
+    public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
+
+        if (mode.paintsMaps())
+            buildPaintLayers(roots);
+        else
+            roots.add(buildRegion(CharacterRegionStruct.WHOLE));
+    }
+
+    // Every layer of the map painted, the base an image that is never hidden, each above it with its eye
+    private void buildPaintLayers(ObjectArrayList<LayerNodeStruct> roots) {
+
+        CharacterPaintCanvasStruct canvas = characterEditorManager.getPaintCanvas();
+
+        if (canvas == null)
+            return;
+
+        for (int i = canvas.getLayerCount() - 1; i >= 0; i--)
+            roots.add(new LayerNodeStruct(
+                    Integer.toString(i),
+                    canvas.getLayerName(i),
+                    i == canvas.getActiveLayer(),
+                    i > 0,
+                    canvas.isLayerVisible(i),
+                    false));
+    }
+
+    // A region's group, open by default while it holds regions: the region itself, then the regions listed under it
     private LayerNodeStruct buildRegion(CharacterRegionStruct listed) {
 
         ObjectArrayList<CharacterRegionStruct> regions = characterEditorManager.getRegions();
@@ -138,44 +119,13 @@ public class CharacterEditorModeSystem extends SystemPackage {
         for (int i = 0; i < regions.size(); i++)
             nests |= regions.get(i).getParent() == listed;
 
-        LayerNodeStruct group = new LayerNodeStruct(listed.getKey(), listed.getLabel(), holdsLayer(listed), nests);
-
-        for (CharacterEditorMode held : CharacterEditorMode.VALUES)
-            if (held.isHeldBy(listed))
-                group.addChild(buildLayer(listed, held));
+        LayerNodeStruct node = new LayerNodeStruct(listed.getKey(), listed.getLabel(), listed == getRegion(), nests);
 
         for (int i = 0; i < regions.size(); i++)
             if (regions.get(i).getParent() == listed)
-                group.addChild(buildRegion(regions.get(i)));
+                node.addChild(buildRegion(regions.get(i)));
 
-        return group;
-    }
-
-    private LayerNodeStruct buildLayer(CharacterRegionStruct listedRegion, CharacterEditorMode listedMode) {
-        return new LayerNodeStruct(
-                listedRegion.getKey() + EditorSetting.CHARACTER_LAYER_KEY_SEPARATOR
-                        + ArpgUtility.toEnumName(listedMode),
-                listedMode.getLabel(),
-                listedRegion == getRegion() && listedMode == mode,
-                false);
-    }
-
-    // Whether a region's group holds the layer worked on: one of its modes, or one of a region listed under it
-    private boolean holdsLayer(CharacterRegionStruct listed) {
-
-        if (isLook(mode))
-            return false;
-
-        for (CharacterRegionStruct held = getRegion(); held != null; held = held.getParent())
-            if (held == listed)
-                return true;
-
-        return false;
-    }
-
-    // A mode of the whole character's look, listed in the Character group
-    private boolean isLook(CharacterEditorMode listed) {
-        return !listed.isModeling();
+        return node;
     }
 
     // Accessible \\
@@ -184,23 +134,30 @@ public class CharacterEditorModeSystem extends SystemPackage {
         return mode;
     }
 
-    // The window's region among the rig's regions as they stand, found again by its key once they are made again
+    // The region picked for a tab that takes regions, the face's region for the Face, the whole character otherwise
     public CharacterRegionStruct getRegion() {
 
-        int regionsRevision = characterEditorManager.getRegionsRevision();
+        if (mode.takesRegions())
+            return characterEditorManager.getPickedRegion();
 
-        if (regionsRevision != this.regionsRevision) {
-            this.regionsRevision = regionsRevision;
-            this.region = characterEditorManager.findRegion(regionKey);
-            revision++;
-        }
-
-        return region;
+        return mode.shapesFace() ? characterEditorManager.getFaceRegion() : CharacterRegionStruct.WHOLE;
     }
 
-    // Moves whenever the layer picked or the layers listed change
+    // Moves whenever the layers listed or the layer picked change
     public int getRevision() {
-        getRegion();
-        return revision;
+
+        if (!mode.paintsMaps())
+            return characterEditorManager.getRegionPickRevision();
+
+        CharacterPaintCanvasStruct canvas = characterEditorManager.getPaintCanvas();
+        int layerRevision = canvas != null ? canvas.getLayerRevision() : 0;
+
+        if (canvas != listedCanvas || layerRevision != listedLayerRevision) {
+            this.listedCanvas = canvas;
+            this.listedLayerRevision = layerRevision;
+            paintRevision++;
+        }
+
+        return paintRevision;
     }
 }

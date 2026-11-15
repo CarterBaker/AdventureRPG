@@ -10,6 +10,7 @@ import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintCanvasStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStampStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
@@ -132,6 +133,13 @@ public class CharacterEditorManager extends ManagerPackage {
     // Mesh
     private String activePartKey;
     private CharacterRegionStruct region;
+
+    // Picked Region — the region every tool tab that takes regions works on, kept by its key and found again among
+    // the rig's regions whenever they are made again; the revision moves with the pick or the regions
+    private String pickedRegionKey;
+    private CharacterRegionStruct pickedRegion;
+    private int pickedRegionsRevision;
+    private int regionPickRevision;
     private Object2ObjectOpenHashMap<String, CharacterEditorSide> regionKey2Side;
     private boolean proportional;
     private float proportionalRadius;
@@ -216,6 +224,9 @@ public class CharacterEditorManager extends ManagerPackage {
         // Mesh
         this.activePartKey = EditorSetting.CHARACTER_EDITOR_PART_BODY;
         this.region = CharacterRegionStruct.WHOLE;
+        this.pickedRegion = CharacterRegionStruct.WHOLE;
+        this.pickedRegionKey = pickedRegion.getKey();
+        this.pickedRegionsRevision = EngineSetting.INDEX_NOT_FOUND;
         this.regionKey2Side = new Object2ObjectOpenHashMap<>();
         this.proportionalRadius = EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_DEFAULT;
         this.snapStep = EditorSetting.CHARACTER_EDITOR_MESH_SNAP_DEFAULT;
@@ -611,7 +622,39 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Regions \\
 
-    // The region of the layer worked in last, its part picked whenever the character wears it
+    // The region picked in the Layers tab for every tool tab that takes regions
+    public void pickRegion(CharacterRegionStruct picked) {
+
+        if (picked == getPickedRegion())
+            return;
+
+        this.pickedRegion = picked;
+        this.pickedRegionKey = picked.getKey();
+        regionPickRevision++;
+        notifyChanged();
+    }
+
+    // The region picked among the rig's regions as they stand, found again by its key once they are made again
+    public CharacterRegionStruct getPickedRegion() {
+
+        int regionsRevision = getRegionsRevision();
+
+        if (regionsRevision != pickedRegionsRevision) {
+            this.pickedRegionsRevision = regionsRevision;
+            this.pickedRegion = findRegion(pickedRegionKey);
+            regionPickRevision++;
+        }
+
+        return pickedRegion;
+    }
+
+    // Moves whenever the region picked or the regions listed change
+    public int getRegionPickRevision() {
+        getPickedRegion();
+        return regionPickRevision;
+    }
+
+    // The region of the tab worked in last, its part picked whenever the character wears it
     public void setRegion(CharacterRegionStruct region) {
 
         if (region != this.region) {
@@ -698,9 +741,22 @@ public class CharacterEditorManager extends ManagerPackage {
         return region;
     }
 
-    // The regions of the active race's rig, the Body first, each a group in the Character Editor's Layers tab
+    // The regions of the active race's rig, the Body first, each a layer of the tool tabs that take regions
     public ObjectArrayList<CharacterRegionStruct> getRegions() {
         return characterRegionBranch.resolveRegions(resolveRegionRig());
+    }
+
+    // The first region the face is shaped in, the one the Face tab frames and shows alone; the Body for a rig
+    // naming none
+    public CharacterRegionStruct getFaceRegion() {
+
+        ObjectArrayList<CharacterRegionStruct> regions = getRegions();
+
+        for (int i = 0; i < regions.size(); i++)
+            if (regions.get(i).takesFace())
+                return regions.get(i);
+
+        return CharacterRegionStruct.WHOLE;
     }
 
     // A region of the active race's rig by its layer key, the Body for one the rig no longer names
@@ -1042,6 +1098,19 @@ public class CharacterEditorManager extends ManagerPackage {
         return toolManager.getTool(ToolCanvas.CHARACTER_PAINT);
     }
 
+    // The canvas of the active part's texture under the map painted, its layers the Paint tab's; null with none open
+    public CharacterPaintCanvasStruct getPaintCanvas() {
+        return characterPaintPropertyBranch.getCanvas();
+    }
+
+    public void selectPaintLayer(int layerIndex) {
+        characterPaintPropertyBranch.selectLayer(layerIndex);
+    }
+
+    public void togglePaintLayerVisible(int layerIndex) {
+        characterPaintPropertyBranch.toggleLayerVisible(layerIndex);
+    }
+
     // History \\
 
     // A step back in the history of what the mode edits: the maps in Paint mode, the rig in Rig mode, the active
@@ -1359,10 +1428,21 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Selection \\
 
+    // The bone every weight action works on, the rig tab's selection following it, so one bone is picked everywhere
     void selectBone(int boneIndex) {
 
         this.selectedBoneIndex = boneIndex;
+        characterRigBranch.followBone(getSelectedBoneName());
         notifyChanged();
+    }
+
+    // The bone the rig tab selected, picked for the weights too while the loaded rig holds it
+    void followRigBone(String boneName) {
+
+        RigHandle rigHandle = resolveRegionRig();
+
+        if (rigHandle != null && rigHandle.hasBone(boneName))
+            this.selectedBoneIndex = rigHandle.getBoneIndex(boneName);
     }
 
     void selectAnchor(int anchorIndex) {

@@ -21,9 +21,9 @@ public enum CharacterEditorMode {
      * as Appearance stands idle the way the game's creator shows the player
      * and Face stands at rest, or lets its outliner pick the pose the preview
      * strikes — the mesh modes in the bind pose by default, their vertices
-     * moved there alone. Each is a layer of the Character Editor: the modes
-     * that take tools under every region that takes them, the rest under the
-     * whole character.
+     * moved there alone. Each is its own character tool tab; Mesh, Sculpt,
+     * Weights and Rig list the regions as their layers, Paint the paint
+     * layers of the map painted, and the rest work on the whole character.
      */
 
     APPEARANCE(
@@ -158,14 +158,19 @@ public enum CharacterEditorMode {
         return toolCanvas;
     }
 
-    // True for a mode that takes tools, listed under every region that takes it rather than the whole character's look
+    // True for a mode that takes tools, rather than one shaping the whole character's look
     public boolean isModeling() {
         return toolCanvas != null;
     }
 
-    // Whether a region's layers list this mode: a mode that takes tools, the face only where the region takes it
-    public boolean isHeldBy(CharacterRegionStruct region) {
-        return isModeling() && (!shapesFace() || region.takesFace());
+    // True for a mode whose tab lists the regions as its layers, every edit held to the region picked
+    public boolean takesRegions() {
+        return isModeling() && !paintsMaps() && !shapesFace();
+    }
+
+    // True for a mode whose tab lists layers in the Layers tab: the regions, or the paint layers
+    public boolean listsLayers() {
+        return takesRegions() || paintsMaps();
     }
 
     // What the status bar tells the pointer to do in this mode, null for a mode with nothing to say

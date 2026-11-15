@@ -73,9 +73,9 @@ root.
   Before touching talk with NPCs, the dictionary, intents, replies, phrases, topics, traits, moods, relations,
   lessons, the dialogue models, the trainer or the talk menu, read `.claude/docs/DialoguePipeline.md` (design:
   `.claude/docs/Dialogue.md`).
-  Before touching the Character Editor, Animation Editor, their docker windows, sculpting, rigging,
-  posing, races and their genders' models, or a character's appearance (morphs, shape sliders, zones, masks, the
-  character shaders), read `.claude/docs/CharacterEditorPipeline.md`.
+  Before touching the character tool tabs (Appearance to Face), the Animation Editor, their docker windows, sculpting,
+  rigging, posing, races and their genders' models, or a character's appearance (morphs, shape sliders, zones, masks,
+  the character shaders), read `.claude/docs/CharacterEditorPipeline.md`.
 
 @docs/Engine.md
 

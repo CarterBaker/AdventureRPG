@@ -493,11 +493,6 @@ class CharacterPropertyBranch extends BranchPackage {
             return;
         }
 
-        if (isPaintKey(key)) {
-            characterPaintPropertyBranch.cycle(key, direction);
-            return;
-        }
-
         String keyName = CharacterViewUtility.getKeyName(key);
         CharacterEditorColor color = CharacterEditorColor.fromKeyName(keyName);
 

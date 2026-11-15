@@ -3,12 +3,12 @@ package editor.runtime.charactereditor;
 public class CharacterEditorSetting {
 
     /*
-     * Constants used only by CharacterEditorContext and the viewport systems
-     * it owns — its status bar menu and the entry the status is written in,
-     * the size of the box shown for a held anchor, the held shortcuts the
-     * mesh, rig and face layers read, the mesh layers' box selection and the
-     * overlay their vertices and edges are drawn with. Its panels' rows are
-     * the docker windows'.
+     * Constants used only by the character tool tabs (CharacterToolContext)
+     * and the viewport systems they own — the status bar menu and the entry
+     * the status is written in, the size of the box shown for a held anchor,
+     * the held shortcuts the mesh, rig and face tabs read, the mesh tabs' box
+     * selection and the overlay their vertices and edges are drawn with.
+     * Their panels' rows are the docker windows'.
      */
 
     // Menus

@@ -12,8 +12,8 @@ class CharacterPaintPropertyBranch extends BranchPackage {
      * The one place every value of the Paint panel is read, stepped, typed,
      * cycled or acted on, by the key its row carries, for
      * CharacterPropertyBranch to hand those keys to: the
-     * layer painted and its opacity on the canvas of the active part's
-     * texture, and the colour's red, green and blue and its hue, saturation
+     * opacity of the layer painted on the canvas of the active part's
+     * texture, the layer itself picked in the Layers tab, and the colour's red, green and blue and its hue, saturation
      * and brightness (a grey keeps the hue last chosen, as a colour wheel
      * does); a map picked from the list; the actions add and remove layers.
      * Nothing here acts while a stroke is under way.
@@ -43,8 +43,7 @@ class CharacterPaintPropertyBranch extends BranchPackage {
 
     boolean handles(String keyName) {
         return switch (keyName) {
-            case EditorSetting.CHARACTER_PAINT_KEY_LAYER,
-                    EditorSetting.CHARACTER_PAINT_KEY_OPACITY,
+            case EditorSetting.CHARACTER_PAINT_KEY_OPACITY,
                     EditorSetting.CHARACTER_PAINT_KEY_COLOR,
                     EditorSetting.CHARACTER_PAINT_KEY_HSB,
                     EditorSetting.CHARACTER_PAINT_KEY_MAP_ITEM,
@@ -61,9 +60,6 @@ class CharacterPaintPropertyBranch extends BranchPackage {
         CharacterPaintCanvasStruct canvas = getCanvas();
 
         return switch (CharacterViewUtility.getKeyName(key)) {
-            case EditorSetting.CHARACTER_PAINT_KEY_LAYER -> canvas != null
-                    ? canvas.getLayerName(canvas.getActiveLayer())
-                    : "";
             case EditorSetting.CHARACTER_PAINT_KEY_OPACITY -> canvas != null
                     ? CharacterViewUtility.formatNumber(canvas.getOpacity(canvas.getActiveLayer()))
                     : "";
@@ -156,17 +152,24 @@ class CharacterPaintPropertyBranch extends BranchPackage {
             characterPaintBranch.setMapIndex(CharacterViewUtility.getKeyIndex(key));
     }
 
-    // Choices \\
+    // Layers \\
 
-    void cycle(String key, int direction) {
-
-        if (!isIdle())
-            return;
+    // A layer picked in the Layers tab becomes the one painted
+    void selectLayer(int layerIndex) {
 
         CharacterPaintCanvasStruct canvas = getCanvas();
 
-        if (CharacterViewUtility.getKeyName(key).equals(EditorSetting.CHARACTER_PAINT_KEY_LAYER) && canvas != null)
-            characterPaintBranch.stepLayer(canvas, direction);
+        if (isIdle() && canvas != null)
+            characterPaintBranch.selectLayer(canvas, layerIndex);
+    }
+
+    // A layer's eye in the Layers tab shows or hides it
+    void toggleLayerVisible(int layerIndex) {
+
+        CharacterPaintCanvasStruct canvas = getCanvas();
+
+        if (isIdle() && canvas != null)
+            characterPaintBranch.toggleLayerVisible(canvas, layerIndex);
     }
 
     // Actions \\

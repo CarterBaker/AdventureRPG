@@ -241,7 +241,8 @@ class CharacterPaintBranch extends BranchPackage {
 
     // Composite \\
 
-    // A rectangle of the canvas laid flat, each layer over the base by its alpha and opacity, and queued for preview
+    // A rectangle of the canvas laid flat, each layer shown over the base by its alpha and opacity, and queued for
+    // preview
     private void recomposite(CharacterPaintCanvasStruct canvas, int minX, int minY, int maxX, int maxY) {
 
         Pixmap composite = canvas.getComposite();
@@ -252,6 +253,9 @@ class CharacterPaintBranch extends BranchPackage {
                 int flat = canvas.getLayer(0).getPixmap().getPixel(x, y);
 
                 for (int l = 1; l < canvas.getLayerCount(); l++) {
+
+                    if (!canvas.isLayerVisible(l))
+                        continue;
 
                     int over = canvas.getLayer(l).getPixmap().getPixel(x, y);
                     float share = (over & EngineSetting.PACKED_COLOR_CHANNEL_MASK)
@@ -758,8 +762,25 @@ class CharacterPaintBranch extends BranchPackage {
         characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_PAINT_MESSAGE_LAYER_REMOVED + layerName);
     }
 
-    void stepLayer(CharacterPaintCanvasStruct canvas, int direction) {
-        canvas.setActiveLayer(Math.floorMod(canvas.getActiveLayer() + direction, canvas.getLayerCount()));
+    // A layer picked in the Layers tab becomes the one painted
+    void selectLayer(CharacterPaintCanvasStruct canvas, int layerIndex) {
+
+        if (layerIndex < 0 || layerIndex >= canvas.getLayerCount())
+            return;
+
+        canvas.setActiveLayer(layerIndex);
+        characterEditorManager.notifyChanged();
+    }
+
+    // A layer above the base shown or hidden, the map laid flat again; Save writes only the layers shown
+    void toggleLayerVisible(CharacterPaintCanvasStruct canvas, int layerIndex) {
+
+        if (layerIndex <= 0 || layerIndex >= canvas.getLayerCount())
+            return;
+
+        canvas.setLayerVisible(layerIndex, !canvas.isLayerVisible(layerIndex));
+        canvas.markLayersChanged(true);
+        recomposite(canvas, 0, 0, canvas.getWidth() - 1, canvas.getHeight() - 1);
         characterEditorManager.notifyChanged();
     }
 

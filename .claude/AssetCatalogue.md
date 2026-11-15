@@ -365,6 +365,9 @@ One line per session that changed this file: the date, what was added or removed
   `LightingShader.fsh` and `CharacterViewCharacterShader.fsh` (makeup overlays, the lash line as skin, a cornea
   catchlight) and the baked files of every changed image; added `menus/editor/ColorWheel.arpg` and
   `menus/editor/GenerateMapsDialog.arpg`.
+- 2026-11-15: Character tool tabs. Regenerated `menus/editor/EditorWindow.arpg` (the Character Editor button replaced
+  by one button per character tool tab, Appearance to Face, the Characters menu grown to hold them) and
+  `shortcuts/CharacterEditor.arpg` (keys every tab built on `CharacterToolContext`).
 
 ---
 

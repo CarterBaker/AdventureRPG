@@ -1,6 +1,7 @@
 package editor.runtime.charactereditor;
 
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.faceeditorpipeline.faceeditormanager.FaceEditorManager;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
@@ -42,27 +43,27 @@ import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class CharacterEditorContext extends ContextPackage
+public abstract class CharacterToolContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, PropertiesProvider,
         OutlinerProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider {
 
     /*
-     * The one editor tab for every part of making a character, worked as a
-     * stack of layers in the Layers tab. The Character group shapes how it
-     * looks — Appearance, Build and Equipment on the live preview — and the
-     * Body and every region within it (the Head with its Hair, Ears, Eyes and
-     * Mouth, the Hands and the Feet) each hold Mesh, Sculpt, Weights, Paint
-     * and Rig, modelling the meshes it wears and the rig it is built on in
-     * the exact bind pose, framed on the region and shown alone, every pick,
-     * box, stroke and mirror held to it; the Head also holds Face, the
-     * controls shaped through the face's bones. Each layer that takes tools
+     * The base of every character tool tab, each working the character in the
+     * one mode it names, so the owner lays the tools out as they wish:
+     * Appearance, Build and Equipment shape how it looks on the live preview;
+     * Mesh, Sculpt, Weights and Rig model the meshes it wears and the rig it
+     * is built on in the region picked in the Layers tab, shared by all four,
+     * framed and shown alone, every pick, box, stroke and mirror held to it;
+     * Paint paints the maps of the part open, its paint layers listed in the
+     * Layers tab; Face shapes the face's controls on the Head. Each tool tab
      * is a tool canvas worked with the Tools and Brushes tabs, its actions
      * listed in the Tools tab and its values and those of what is picked in
      * the Properties tab while the tab is worked in; the File and Edit menus
-     * act on the character, or on its face on the Face layer. All state lives
-     * in CharacterEditorManager and FaceEditorManager; this tab keeps the
-     * layer worked on, reads input, orbits the camera, poses and draws the
-     * preview, and shows the status bar.
+     * act on the character, or on its face in the Face tab. All state lives
+     * in CharacterEditorManager and FaceEditorManager, the region, the bone
+     * and the vertices selected shared by every tab; a tab keeps its mode,
+     * reads input, orbits the camera, poses and draws the preview, and shows
+     * the status bar.
      */
 
     // Internal
@@ -114,7 +115,9 @@ public class CharacterEditorContext extends ContextPackage
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
-        this.layersSourceSystem = create(LayersSourceSystem.class);
+
+        if (getMode().listsLayers())
+            this.layersSourceSystem = create(LayersSourceSystem.class);
     }
 
     @Override
@@ -128,6 +131,14 @@ public class CharacterEditorContext extends ContextPackage
         getWindow().setCaptureEligible(false);
     }
 
+    // Tool \\
+
+    // The one mode this tab works the character in
+    public abstract CharacterEditorMode getMode();
+
+    // The tab's title, naming the tool at the Layers tab's head
+    protected abstract String getTabTitle();
+
     // Layers \\
 
     @Override
@@ -137,7 +148,7 @@ public class CharacterEditorContext extends ContextPackage
 
     @Override
     public String getLayerTitle() {
-        return EditorSetting.TAB_TITLE_CHARACTER_EDITOR;
+        return getTabTitle();
     }
 
     @Override
@@ -150,25 +161,25 @@ public class CharacterEditorContext extends ContextPackage
         characterEditorModeSystem.select(layerKey);
     }
 
-    // Every layer is always drawn, the region worked on standing alone
     @Override
     public void toggleLayerVisible(String layerKey) {
+        characterEditorModeSystem.toggleVisible(layerKey);
     }
 
-    // True while the Face layer is worked on, whose tools, rows and file actions are the face editor's
+    // True for the Face tab, whose tools, rows and file actions are the face editor's
     private boolean isFace() {
-        return characterEditorModeSystem.getMode().shapesFace();
+        return getMode().shapesFace();
     }
 
     // Tools \\
 
-    // The tools of the layer worked on, the face's only while the character has a face to shape
+    // The tools of the tab's mode, the face's only while the character has a face to shape
     @Override
     public ToolCanvas getToolCanvas() {
         return isFace() ? faceEditorManager.getToolCanvas() : characterEditorModeSystem.getMode().getToolCanvas();
     }
 
-    // The layer's actions run exactly as their keys and panel rows run them, in this window's region and mode
+    // The tab's actions run exactly as their keys and panel rows run them, in this window's region and mode
     @Override
     public void runToolAction(String actionKey) {
 

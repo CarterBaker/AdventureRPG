@@ -6,6 +6,7 @@ import application.bootstrap.shaderpipeline.texturemanager.AliasStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import engine.assets.image.Pixmap;
 import engine.root.StructPackage;
+import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -15,9 +16,10 @@ public class CharacterPaintCanvasStruct extends StructPackage {
      * One map of one character texture open for painting: the tile it
      * paints and the alias whose map and channels it fills, the image file
      * it saves to beside the texture, its paint layers — the first the image
-     * itself, each above it laid over it by its own alpha and opacity, each
-     * an image document so every stroke is an undo step — and the flattened
-     * result the tile is baked from while it is painted.
+     * itself, each above it laid over it by its own alpha and opacity while
+     * it is shown, each an image document so every stroke is an undo step —
+     * and the flattened result the tile is baked from while it is painted.
+     * The layer revision moves whenever the stack, its pick or its eyes do.
      */
 
     // Identity
@@ -36,9 +38,11 @@ public class CharacterPaintCanvasStruct extends StructPackage {
     private final ObjectArrayList<ImageDocumentInstance> layers;
     private final ObjectArrayList<String> layerNames;
     private final FloatArrayList opacities;
+    private final BooleanArrayList visibilities;
     private int activeLayer;
     private int nextLayerNumber;
     private boolean layersChanged;
+    private int layerRevision;
 
     // Composite — the flattened map
     private final Pixmap composite;
@@ -71,6 +75,7 @@ public class CharacterPaintCanvasStruct extends StructPackage {
         this.layers = new ObjectArrayList<>();
         this.layerNames = new ObjectArrayList<>();
         this.opacities = new FloatArrayList();
+        this.visibilities = new BooleanArrayList();
 
         // Composite
         this.composite = new Pixmap(width, height, Pixmap.Format.RGBA8888);
@@ -82,13 +87,17 @@ public class CharacterPaintCanvasStruct extends StructPackage {
         layers.add(layer);
         layerNames.add(layerName);
         opacities.add(opacity);
+        visibilities.add(true);
         nextLayerNumber++;
+        layerRevision++;
     }
 
     public ImageDocumentInstance removeLayer(int layerIndex) {
 
         opacities.removeFloat(layerIndex);
+        visibilities.removeBoolean(layerIndex);
         layerNames.remove(layerIndex);
+        layerRevision++;
 
         return layers.remove(layerIndex);
     }
@@ -99,6 +108,12 @@ public class CharacterPaintCanvasStruct extends StructPackage {
 
     public void setActiveLayer(int activeLayer) {
         this.activeLayer = activeLayer;
+        layerRevision++;
+    }
+
+    public void setLayerVisible(int layerIndex, boolean visible) {
+        visibilities.set(layerIndex, visible);
+        layerRevision++;
     }
 
     public void markLayersChanged(boolean layersChanged) {
@@ -169,6 +184,14 @@ public class CharacterPaintCanvasStruct extends StructPackage {
         return opacities.getFloat(layerIndex);
     }
 
+    public boolean isLayerVisible(int layerIndex) {
+        return visibilities.getBoolean(layerIndex);
+    }
+
+    public int getLayerRevision() {
+        return layerRevision;
+    }
+
     public int getActiveLayer() {
         return activeLayer;
     }
@@ -180,5 +203,4 @@ public class CharacterPaintCanvasStruct extends StructPackage {
     public Pixmap getComposite() {
         return composite;
     }
-
 }

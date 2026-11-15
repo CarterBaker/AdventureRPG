@@ -21,7 +21,15 @@ import editor.bootstrap.tabpipeline.tab.TabContext;
 import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
-import editor.runtime.charactereditor.CharacterEditorContext;
+import editor.runtime.charactereditor.CharacterAppearanceContext;
+import editor.runtime.charactereditor.CharacterBuildContext;
+import editor.runtime.charactereditor.CharacterEquipmentContext;
+import editor.runtime.charactereditor.CharacterFaceContext;
+import editor.runtime.charactereditor.CharacterMeshContext;
+import editor.runtime.charactereditor.CharacterPaintContext;
+import editor.runtime.charactereditor.CharacterRigContext;
+import editor.runtime.charactereditor.CharacterSculptContext;
+import editor.runtime.charactereditor.CharacterWeightsContext;
 import editor.runtime.characteroutliner.CharacterOutlinerContext;
 import editor.runtime.colorwheel.ColorWheelContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
@@ -172,8 +180,40 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_ITEM_EDITOR, ItemEditorContext.class, osWindow);
     }
 
-    public TabHandle openCharacterEditor(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_EDITOR, CharacterEditorContext.class, osWindow);
+    public TabHandle openCharacterAppearance(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_APPEARANCE, CharacterAppearanceContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterBuild(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_BUILD, CharacterBuildContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterEquipment(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_EQUIPMENT, CharacterEquipmentContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterMesh(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_MESH, CharacterMeshContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterSculpt(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_SCULPT, CharacterSculptContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterWeights(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_WEIGHTS, CharacterWeightsContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterPaint(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_PAINT, CharacterPaintContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterRig(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_RIG, CharacterRigContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterFace(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_FACE, CharacterFaceContext.class, osWindow);
     }
 
     public TabHandle openCharacterOutliner(WindowInstance osWindow) {
