@@ -130,6 +130,16 @@ public class ArpgUtility extends EngineUtility {
         return ArpgTextUtility.formatCompact(element);
     }
 
+    // Buffers — typed arrays made for writing \\
+
+    public static ArpgBufferStruct toBuffer(float[] values, int count) {
+        return new ArpgBufferStruct(values, count);
+    }
+
+    public static ArpgBufferStruct toBuffer(ArpgBufferType bufferType, int[] values, int count) {
+        return new ArpgBufferStruct(bufferType, values, count);
+    }
+
     // Required field accessors — throw if missing \\
 
     public static String validateString(ArpgObjectStruct object, String key) {
@@ -150,6 +160,27 @@ public class ArpgUtility extends EngineUtility {
 
     public static byte[] validateBytes(ArpgObjectStruct object, String key) {
         return requireField(object, key, "bytes ").getAsBytes();
+    }
+
+    public static ArpgBufferStruct validateBuffer(ArpgObjectStruct object, String key) {
+
+        ArpgElementStruct element = requireField(object, key, "buffer ");
+
+        if (!element.isBuffer())
+            return throwException("Field '" + key + "' is not a valid ARPG buffer");
+
+        return element.getAsBuffer();
+    }
+
+    public static ArpgBufferStruct validateBuffer(ArpgObjectStruct object, String key, ArpgBufferType bufferType) {
+
+        ArpgBufferStruct buffer = validateBuffer(object, key);
+
+        if (buffer.getBufferType() != bufferType)
+            return throwException("Buffer '" + key + "' must hold " + bufferType.getTextName() + " values, found "
+                    + buffer.getBufferType().getTextName());
+
+        return buffer;
     }
 
     public static ArpgArrayStruct validateArray(ArpgObjectStruct object, String key) {
@@ -211,6 +242,10 @@ public class ArpgUtility extends EngineUtility {
         return object.has(key) ? object.get(key).getAsFloat() : defaultValue;
     }
 
+    public static ArpgBufferStruct getBuffer(ArpgObjectStruct object, String key) {
+        return hasBuffer(object, key) ? object.get(key).getAsBuffer() : null;
+    }
+
     public static <E extends Enum<E>> E getEnum(
             ArpgObjectStruct object,
             String key,
@@ -254,6 +289,11 @@ public class ArpgUtility extends EngineUtility {
     public static boolean hasBytes(ArpgObjectStruct object, String key) {
         ArpgElementStruct element = object.get(key);
         return element != null && element.isValue() && element.getAsValue().isBytes();
+    }
+
+    public static boolean hasBuffer(ArpgObjectStruct object, String key) {
+        ArpgElementStruct element = object.get(key);
+        return element != null && element.isBuffer();
     }
 
     public static boolean hasObject(ArpgObjectStruct object, String key) {

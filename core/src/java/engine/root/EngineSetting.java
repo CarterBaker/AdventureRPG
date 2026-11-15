@@ -315,6 +315,8 @@ public class EngineSetting {
     public static final int ARPG_TAG_ARRAY = 7;
     public static final int ARPG_TAG_OBJECT = 8;
     public static final int ARPG_TAG_BYTES = 9;
+    public static final int ARPG_TAG_BUFFER = 10;
+    public static final int ARPG_SHORT_MASK = 0xFFFF;
     public static final int ARPG_BYTE_MASK = 0xFF;
     public static final int ARPG_BYTE_BITS = 8;
     public static final int ARPG_VARINT_PAYLOAD_MASK = 0x7F;
@@ -334,6 +336,8 @@ public class EngineSetting {
     public static final int ARPG_TEXT_UNICODE_DIGITS = 4;
     public static final int ARPG_TEXT_HEX_RADIX = 16;
     public static final String ARPG_TEXT_BYTES_MARKER = "$bytes:";
+    public static final String ARPG_TEXT_BUFFER_KEY = "$buffer";
+    public static final String ARPG_TEXT_BUFFER_VALUES_KEY = "values";
 
     // Texture Bake Tool
     public static final String TEXTURE_BAKE_TOOL_ASSET_ROOT = "assets";

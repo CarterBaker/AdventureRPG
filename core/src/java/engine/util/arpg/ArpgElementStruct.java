@@ -6,7 +6,7 @@ public abstract class ArpgElementStruct extends StructPackage {
 
     /*
      * Base of the ARPG document tree every data file decodes into. A node is
-     * an object, an array, a value, or null; typed accessors convert on read
+     * an object, an array, a value, a typed buffer, or null; typed accessors convert on read
      * and throw a catchable InternalException naming both kinds on mismatch,
      * so ArpgUtility can report the failing file.
      */
@@ -22,6 +22,10 @@ public abstract class ArpgElementStruct extends StructPackage {
     }
 
     public boolean isValue() {
+        return false;
+    }
+
+    public boolean isBuffer() {
         return false;
     }
 
@@ -41,6 +45,10 @@ public abstract class ArpgElementStruct extends StructPackage {
 
     public ArpgValueStruct getAsValue() {
         throw mismatch("a value");
+    }
+
+    public ArpgBufferStruct getAsBuffer() {
+        throw mismatch("a buffer");
     }
 
     public String getAsString() {

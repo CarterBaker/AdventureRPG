@@ -2,6 +2,7 @@ package engine.util.arpg;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
@@ -21,7 +22,10 @@ class ArpgBinaryUtility extends EngineUtility {
      * indices and whole numbers are zigzag varints; a decimal is its shortest
      * decimal mantissa and power-of-ten scale, which rebuilds the exact same
      * double in one multiply or divide, and falls back to raw IEEE bits only
-     * when it cannot. A bytes value is its varint length and the raw bytes.
+     * when it cannot. A bytes value is its varint length and the raw bytes; a
+     * typed buffer is its component type's code, its varint value count and
+     * its values as raw little-endian bytes, which decode as a view into the
+     * payload, never a copy.
      */
 
     // Internal
@@ -104,6 +108,17 @@ class ArpgBinaryUtility extends EngineUtility {
 
             for (int i = 0; i < array.size(); i++)
                 writeElement(array.get(i), string2Index, buffer);
+
+            return;
+        }
+
+        if (element.isBuffer()) {
+
+            ArpgBufferStruct typed = element.getAsBuffer();
+            buffer.writeByte(EngineSetting.ARPG_TAG_BUFFER);
+            buffer.writeByte(typed.getBufferType().ordinal());
+            buffer.writeVarint(typed.size());
+            buffer.writeBuffer(typed.getData());
 
             return;
         }
@@ -202,6 +217,7 @@ class ArpgBinaryUtility extends EngineUtility {
             case EngineSetting.ARPG_TAG_DECIMAL -> new ArpgValueStruct(readDecimal(cursor));
             case EngineSetting.ARPG_TAG_DOUBLE -> new ArpgValueStruct(Double.longBitsToDouble(cursor.readLong()));
             case EngineSetting.ARPG_TAG_BYTES -> new ArpgValueStruct(cursor.readBytes(cursor.readCount()));
+            case EngineSetting.ARPG_TAG_BUFFER -> readBuffer(cursor);
             case EngineSetting.ARPG_TAG_TRUE -> ArpgValueStruct.TRUE;
             case EngineSetting.ARPG_TAG_FALSE -> ArpgValueStruct.FALSE;
             case EngineSetting.ARPG_TAG_NULL -> ArpgNullStruct.INSTANCE;
@@ -234,6 +250,17 @@ class ArpgBinaryUtility extends EngineUtility {
             array.add(readElement(cursor, strings));
 
         return array;
+    }
+
+    private static ArpgBufferStruct readBuffer(DecodeCursorStruct cursor) {
+
+        int code = cursor.readByte();
+        ArpgBufferType bufferType = ArpgBufferType.fromCode(code);
+
+        if (bufferType == null)
+            throw new InternalException("ARPG payload holds a buffer of unknown component type " + code);
+
+        return new ArpgBufferStruct(bufferType, cursor.viewBytes(cursor.readCount(), bufferType.getValueBytes()));
     }
 
     private static String readString(DecodeCursorStruct cursor, String[] strings) {
@@ -303,6 +330,15 @@ class ArpgBinaryUtility extends EngineUtility {
             ensureCapacity(values.length);
             System.arraycopy(values, 0, bytes, size, values.length);
             size += values.length;
+        }
+
+        void writeBuffer(ByteBuffer values) {
+
+            int length = values.remaining();
+
+            ensureCapacity(length);
+            values.get(bytes, size, length);
+            size += length;
         }
 
         void writeVarint(long value) {
@@ -418,6 +454,20 @@ class ArpgBinaryUtility extends EngineUtility {
             byte[] block = Arrays.copyOfRange(bytes, position, position + length);
             position += length;
             return block;
+        }
+
+        // A view of the next count values where they lie in the payload, without copying them
+        ByteBuffer viewBytes(int count, int valueBytes) {
+
+            long length = (long) count * valueBytes;
+
+            if (length > bytes.length - position)
+                throw new InternalException("ARPG payload declares a buffer of " + length + " bytes with only "
+                        + (bytes.length - position) + " bytes left");
+
+            ByteBuffer view = ByteBuffer.wrap(bytes, position, (int) length);
+            position += (int) length;
+            return view;
         }
 
         String readString(int length) {

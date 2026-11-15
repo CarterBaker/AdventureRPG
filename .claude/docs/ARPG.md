@@ -40,7 +40,10 @@ offset  size  field
   whole numbers are zigzag varints; decimals are a zigzag varint mantissa plus a power-of-ten scale that
   rebuilds the identical double, or 8 raw IEEE bytes when that is impossible. A bytes value
   (`ARPG_TAG_BYTES`, added without a version change, so every older file reads and re-encodes byte for byte) is
-  a varint length and the raw bytes, never entered in the string table.
+  a varint length and the raw bytes, never entered in the string table. A typed array (`ARPG_TAG_BUFFER`, added
+  the same way) is one byte naming its component type (`ArpgBufferType`, in order: float32, int32, uint16, uint8,
+  int16, int8; new types only at the end), a varint count of values and the values as raw little-endian bytes. A
+  build older than the tag rejects a file holding it as an unknown element.
 
 ## Code rules
 
@@ -55,9 +58,11 @@ offset  size  field
   - Files: `resolveFile(directory, name)`, `resolveCompanionFile(pngFile)`, `toFileName(name)`,
     `isArpgFile(file)`. Loaders scan with `EngineSetting.ARPG_FILE_EXTENSIONS`. Never build `"." + "arpg"` paths
     by hand.
-  - Fields: `validateString/Int/Float/Boolean/Bytes/Array/Object` (required, fatal when missing),
-    `getString/Int/Float/Boolean/Enum` (optional with default), `hasString/Number/Boolean/Bytes/Object/Array`
-    (type checks), `toEnum` / `toEnumName` (enum names match ignoring case and are written in lower case).
+  - Fields: `validateString/Int/Float/Boolean/Bytes/Buffer/Array/Object` (required, fatal when missing;
+    `validateBuffer(object, key, type)` also checks the component type), `getString/Int/Float/Boolean/Enum`
+    (optional with default), `getBuffer` (null when absent), `hasString/Number/Boolean/Bytes/Buffer/Object/Array`
+    (type checks), `toBuffer(float[], count)` / `toBuffer(type, int[], count)` (a typed array to write, range
+    checked), `toEnum` / `toEnumName` (enum names match ignoring case and are written in lower case).
   - Text: `parseText`, `tryParseText`, `formatText` (pretty), `formatCompactText`. Only the editor's raw field,
     the tool and diagnostics use text; the game never loads text.
 - **Tree types** (`engine.util.arpg`): `ArpgElementStruct` (base: `isObject/isArray/isValue/isNull`,
@@ -65,8 +70,14 @@ offset  size  field
   `ArpgObjectStruct` (`has`, `get`, `getAsObject(key)`, `getAsArray(key)`, `getAsValue(key)`, `add`,
   `addProperty`, `remove`, `keySet`, `entrySet`, `size`; keys keep insertion order), `ArpgArrayStruct` (`get`,
   `add`, `set`, `remove`, `size`, iterable), `ArpgValueStruct` (immutable string, boolean, whole number or
-  decimal; `isString/isNumber/isBoolean/isInteger`), `ArpgNullStruct.INSTANCE`. A wrong-type read throws a
+  decimal; `isString/isNumber/isBoolean/isInteger`), `ArpgBufferStruct` (a typed array: `getBufferType`, `size`,
+  `getFloat(i)`, `getInt(i)`, `getData()` its little-endian bytes; one decoded from a file is a read-only view into
+  the file's bytes, never a copy, so it keeps them alive while it is held; `isBuffer` / `getAsBuffer` on the base),
+  `ArpgNullStruct.INSTANCE`. A wrong-type read throws a
   catchable `InternalException` naming both types.
+- **Bulk numbers go in typed arrays.** Vertex data, indices and any long list of numbers of one kind are stored as
+  an `ArpgBufferStruct` in the smallest component type that holds their range, never as an array of number
+  values; code that walks a tree generically checks `isBuffer` before `getAsValue`.
 - **Naming:** a loaded root is `arpg`; other trees are `<thing>Arpg` (`blockArpg`, `layerArpg`, `meshArpg`).
 - **Constants** for the format, tool and text form live in `EngineSetting` under the `// ARPG ...`
   groups.
@@ -80,6 +91,12 @@ and turns sealed files back into it.
 - A bytes value is written as a string of its base64 behind the reserved marker `$bytes:`
   (`EngineSetting.ARPG_TEXT_BYTES_MARKER`), and any string opening with that marker reads back as bytes, so
   `decode`, `encode`, `export`, `convert` and `verify` carry raw data unchanged.
+- A typed array is written as an object whose first key is the reserved `$buffer`
+  (`EngineSetting.ARPG_TEXT_BUFFER_KEY`) naming its component type, with `values`, a plain number list, as its only
+  other key: `{"$buffer": "float32", "values": [0.5, 1.25, -3]}`. Any object opening with `$buffer` reads back as a
+  typed array, so no ordinary object may use that key first. Whole types take whole numbers in their range; float32
+  takes any number and prints as the shortest decimal that reads back as the same float (`-3` comes back as
+  `-3.0`), so `decode` then `encode` reproduces the file byte for byte. A non-finite float cannot be written as text.
 - Rejected: comments, trailing commas, single quotes, unquoted keys, a key repeated in one object, `NaN`,
   `Infinity`, numbers too large for a double. Errors report the line and column.
 - A number without `.` or an exponent is stored as a whole number; with either it is a decimal. Write integers

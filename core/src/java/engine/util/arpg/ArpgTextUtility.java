@@ -18,7 +18,10 @@ class ArpgTextUtility extends EngineUtility {
      * of the first problem. Pretty output indents objects and nested arrays
      * one member per line and keeps arrays of plain values on a single line.
      * A bytes value is written as a string of its base64 behind the reserved
-     * marker, and any string opening with that marker reads back as bytes.
+     * marker, and any string opening with that marker reads back as bytes. A
+     * typed buffer is written as an object whose first key is the reserved
+     * buffer key naming its component type, beside the list of its values,
+     * and any object opening with that key reads back as a buffer.
      */
 
     // Parse \\
@@ -46,7 +49,7 @@ class ArpgTextUtility extends EngineUtility {
         char current = cursor.peek();
 
         return switch (current) {
-            case '{' -> readObject(cursor);
+            case '{' -> readObjectElement(cursor);
             case '[' -> readArray(cursor);
             case '"' -> readStringValue(cursor);
             case 't' -> readLiteral(cursor, Boolean.TRUE.toString(), ArpgValueStruct.TRUE);
@@ -60,6 +63,93 @@ class ArpgTextUtility extends EngineUtility {
                 throw cursor.error("Unexpected character '" + current + "'");
             }
         };
+    }
+
+    // An object, or a typed buffer where the object opens with the reserved key
+    private static ArpgElementStruct readObjectElement(ParseCursorStruct cursor) {
+
+        ArpgObjectStruct object = readObject(cursor);
+
+        if (object.isEmpty() || !object.keySet().iterator().next().equals(EngineSetting.ARPG_TEXT_BUFFER_KEY))
+            return object;
+
+        try {
+            return toBuffer(object);
+        } catch (InternalException exception) {
+            throw cursor.error(exception.getMessage());
+        }
+    }
+
+    private static ArpgBufferStruct toBuffer(ArpgObjectStruct object) {
+
+        ArpgElementStruct name = object.get(EngineSetting.ARPG_TEXT_BUFFER_KEY);
+        ArpgElementStruct values = object.get(EngineSetting.ARPG_TEXT_BUFFER_VALUES_KEY);
+        boolean named = name.isValue() && name.getAsValue().isString();
+        ArpgBufferType bufferType = named ? ArpgBufferType.fromTextName(name.getAsString()) : null;
+
+        if (bufferType == null)
+            throw new InternalException("Buffer names an unknown component type");
+
+        if (object.size() != 2 || values == null || !values.isArray())
+            throw new InternalException("Buffer must hold its component type and a '"
+                    + EngineSetting.ARPG_TEXT_BUFFER_VALUES_KEY + "' list, nothing else");
+
+        ArpgArrayStruct list = values.getAsArray();
+        int count = list.size();
+
+        for (int i = 0; i < count; i++)
+            if (!list.get(i).isValue() || !list.get(i).getAsValue().isNumber())
+                throw new InternalException("Buffer value " + i + " is not a number");
+
+        if (bufferType.isFloat()) {
+
+            float[] floats = new float[count];
+
+            for (int i = 0; i < count; i++)
+                floats[i] = list.get(i).getAsFloat();
+
+            return new ArpgBufferStruct(floats, count);
+        }
+
+        int[] wholes = new int[count];
+
+        for (int i = 0; i < count; i++) {
+
+            ArpgValueStruct value = list.get(i).getAsValue();
+
+            if (!value.isInteger() || !bufferType.holds(value.getAsLong()))
+                throw new InternalException("Buffer value " + i + " does not fit " + bufferType.getTextName());
+
+            wholes[i] = (int) value.getAsLong();
+        }
+
+        return new ArpgBufferStruct(bufferType, wholes, count);
+    }
+
+    // The object a buffer is written as; a float prints as the shortest decimal that reads back as the same float
+    private static ArpgObjectStruct toBufferObject(ArpgBufferStruct buffer) {
+
+        ArpgObjectStruct object = new ArpgObjectStruct();
+        ArpgArrayStruct values = new ArpgArrayStruct(buffer.size());
+        boolean floats = buffer.getBufferType().isFloat();
+
+        for (int i = 0; i < buffer.size(); i++)
+            values.add(floats ? toFloatValue(buffer.getFloat(i)) : new ArpgValueStruct((long) buffer.getInt(i)));
+
+        object.addProperty(EngineSetting.ARPG_TEXT_BUFFER_KEY, buffer.getBufferType().getTextName());
+        object.add(EngineSetting.ARPG_TEXT_BUFFER_VALUES_KEY, values);
+
+        return object;
+    }
+
+    private static ArpgValueStruct toFloatValue(float value) {
+
+        if (!Float.isFinite(value))
+            throw new InternalException("ARPG text cannot hold the non-finite buffer value " + value);
+
+        double shortest = Double.parseDouble(Float.toString(value));
+
+        return new ArpgValueStruct((float) shortest == value ? shortest : (double) value);
     }
 
     private static ArpgObjectStruct readObject(ParseCursorStruct cursor) {
@@ -284,6 +374,11 @@ class ArpgTextUtility extends EngineUtility {
 
     private static void writePretty(ArpgElementStruct element, int depth, StringBuilder builder) {
 
+        if (element.isBuffer()) {
+            writePrettyObject(toBufferObject(element.getAsBuffer()), depth, builder);
+            return;
+        }
+
         if (element.isObject()) {
             writePrettyObject(element.getAsObject(), depth, builder);
             return;
@@ -361,13 +456,18 @@ class ArpgTextUtility extends EngineUtility {
     private static boolean holdsOnlyScalars(ArpgArrayStruct array) {
 
         for (int i = 0; i < array.size(); i++)
-            if (array.get(i).isObject() || array.get(i).isArray())
+            if (array.get(i).isObject() || array.get(i).isArray() || array.get(i).isBuffer())
                 return false;
 
         return true;
     }
 
     private static void writeCompact(ArpgElementStruct element, StringBuilder builder) {
+
+        if (element.isBuffer()) {
+            writeCompact(toBufferObject(element.getAsBuffer()), builder);
+            return;
+        }
 
         if (element.isObject()) {
 
