@@ -16,6 +16,8 @@ import application.bootstrap.geometrypipeline.vbomanager.VBOManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgBufferStruct;
+import engine.util.arpg.ArpgBufferType;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
@@ -28,7 +30,9 @@ class MeshBuilder extends BuilderPackage {
 
     /*
      * Assembles a MeshHandle from registered VAO, VBO and IBO data, expanding
-     * quad entries inline; a plain quad carries its own vertex data whole.
+     * quads inline: a static quad mesh in the compact layout lists its
+     * distinct vertices and the four each quad joins, and one still in quad
+     * entries carries each corner's vertex data whole.
      * Rigged meshes are parsed into a RiggedMeshStruct and built through
      * MeshManager — shared, packed vertices carrying bone weights, smooth
      * normals, zones and masks, and the morph texture their handle receives — the same
@@ -66,7 +70,7 @@ class MeshBuilder extends BuilderPackage {
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
         String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
         RigHandle rigHandle = resolveRig(arpg);
-        boolean hasQuads = hasQuadEntries(arpg);
+        boolean hasQuads = hasQuadEntries(arpg) || MeshLayoutUtility.isCompact(arpg);
         boolean hasSubVoxels = subVoxelManager.hasSubVoxels(arpg);
 
         if (hasSubVoxels && (rigHandle != null || hasQuads))
@@ -74,9 +78,8 @@ class MeshBuilder extends BuilderPackage {
                     + "its geometry is generated entirely from its cubes. File: " + file.getName());
 
         if (rigHandle != null && !hasQuads)
-            throwException("Rigged mesh \"" + resourceName + "\" must declare its vertex data through quad "
-                    + "entries — bone weighting and entity-scale bounds can only be resolved from quad-expanded "
-                    + "vertex data. File: " + file.getName());
+            throwException("Rigged mesh \"" + resourceName + "\" must declare its vertex data as quads — bone "
+                    + "weighting and entity-scale bounds can only be resolved from them. File: " + file.getName());
 
         VBOHandle vboHandle;
         IBOHandle iboHandle;
@@ -99,7 +102,9 @@ class MeshBuilder extends BuilderPackage {
                         + "cannot derive an entity-scale ratio from a mesh with no size. File: " + file.getName());
         } else if (hasQuads) {
 
-            QuadExpansionStruct expansion = expandVBO(arpg, vaoInstance, file);
+            QuadExpansionStruct expansion = MeshLayoutUtility.isCompact(arpg)
+                    ? expandCompact(arpg, vaoInstance, file)
+                    : expandVBO(arpg, vaoInstance, file);
             vboHandle = vboManager.addVBOFromData(resourceName, expansion.vertices, vaoInstance);
             iboHandle = iboManager.addIBOFromData(resourceName, expansion.indices, vaoInstance);
             boundsMin = expansion.boundsMin;
@@ -231,6 +236,48 @@ class MeshBuilder extends BuilderPackage {
         return new QuadExpansionStruct(vertices.toFloatArray(), allIndices.toShortArray(), boundsMin, boundsMax);
     }
 
+    // Compact Expansion \\
+
+    // A static quad mesh in the compact layout: its distinct vertices as they stand, two triangles to the quad
+    private QuadExpansionStruct expandCompact(ArpgObjectStruct arpg, VAOInstance vaoInstance, File file) {
+
+        ArpgObjectStruct compactArpg = arpg.getAsObject("mesh");
+        ArpgBufferStruct vertexBuffer = ArpgUtility.validateBuffer(compactArpg, "vertices", ArpgBufferType.FLOAT32);
+        ArpgBufferStruct quads = ArpgUtility.validateBuffer(compactArpg, "quads");
+        int vertStride = vaoInstance.getVAOData().getVertStride();
+        int vertexCount = vertexBuffer.size() / vertStride;
+        int quadCount = quads.size() / EngineSetting.QUAD_VERTEX_COUNT;
+
+        if (vertexBuffer.size() % vertStride != 0 || quads.size() % EngineSetting.QUAD_VERTEX_COUNT != 0
+                || quadCount == 0 || vertexCount > EngineSetting.RIGGED_MESH_VERT_LIMIT)
+            throwException("Mesh blocks do not fit a layout of " + vertStride + " floats to the vertex, four "
+                    + "vertices to the quad. File: " + file.getName());
+
+        FloatArrayList vertices = new FloatArrayList(vertexBuffer.size());
+        short[] indices = new short[quadCount * EngineSetting.QUAD_INDEX_COUNT];
+
+        for (int i = 0; i < vertexBuffer.size(); i++)
+            vertices.add(vertexBuffer.getFloat(i));
+
+        for (int q = 0; q < quadCount; q++)
+            for (int i = 0; i < EngineSetting.QUAD_INDEX_COUNT; i++) {
+
+                int vertex = quads.getInt(q * EngineSetting.QUAD_VERTEX_COUNT + EngineSetting.QUAD_INDEX_CORNERS[i]);
+
+                if (vertex >= vertexCount)
+                    throwException("Mesh quad " + q + " names vertex " + vertex + " of " + vertexCount
+                            + ". File: " + file.getName());
+
+                indices[q * EngineSetting.QUAD_INDEX_COUNT + i] = (short) vertex;
+            }
+
+        Vector3 boundsMin = new Vector3();
+        Vector3 boundsMax = new Vector3();
+        meshManager.computeBounds(vertices, vertStride, boundsMin, boundsMax);
+
+        return new QuadExpansionStruct(vertices.toFloatArray(), indices, boundsMin, boundsMax);
+    }
+
     // Rigged Build \\
 
     // A rigged mesh parsed into its shared form and built from it, exactly as the character editor rebuilds it; the
@@ -243,11 +290,11 @@ class MeshBuilder extends BuilderPackage {
 
         RiggedMeshStruct mesh = meshManager.parseRiggedMesh(arpg, file.getName());
 
-        meshManager.buildRiggedGeometry(mesh);
+        meshManager.buildRiggedGeometry(mesh, meshManager.parseRiggedNormals(arpg, mesh));
 
         if (!meshManager.hasRiggedIndices())
             throwException("No index data produced for file: " + file.getName()
-                    + ". A rigged mesh needs at least one quad entry.");
+                    + ". A rigged mesh needs at least one quad.");
 
         return mesh;
     }

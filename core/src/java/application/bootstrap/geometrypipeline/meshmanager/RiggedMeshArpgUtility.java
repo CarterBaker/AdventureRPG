@@ -8,28 +8,38 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgBufferStruct;
+import engine.util.arpg.ArpgBufferType;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RiggedMeshArpgUtility extends EngineUtility {
 
     /*
      * The single definition of the rigged mesh format: a mesh ARPG file naming
-     * its "rig" whose "vbo" lists textured quad entries, each with four
-     * "quad" corners, the "bones" weighting it — once for the quad or once
-     * per corner, a lone bone weighing in full without a "weight" — its
-     * "texture", optionally its own corner "uvs" and the "zone" it is made of.
-     * Corners standing on one position with the same influences parse into one
-     * shared vertex, numbered in the order they first appear; "masks" and
-     * "morphs" name vertices by that number, each mask channel and morph
-     * target listing the "vertices" it touches beside their "values" or
-     * three "deltas" each. Writing
-     * keeps every other field of the source file in place and names a quad's
-     * bones once wherever its corners agree, so a mesh read and written
-     * unchanged comes back exactly as it was. MeshBuilder parses through here
-     * and the character editor reads and writes through here.
+     * its "rig" whose "mesh" object holds the model as typed arrays, quad by
+     * quad. "positions" lists each distinct vertex once; "bones" names the
+     * bones the file weighs onto, resolved against the rig by name at load,
+     * with "influence_counts" per vertex over the runs of "influence_bones"
+     * and "influence_weights"; "quads" indexes four vertices per face beside
+     * "quad_textures" and "quad_zones", indices into the "textures" and
+     * "zones" name lists, "quad_uv_flags" marking the faces that author the
+     * eight floats they take in "quad_uvs"; "masks" and "morphs" are sparse,
+     * each channel and target listing the "vertices" it touches beside their
+     * "values" or three "deltas" each; and "normals" stores every corner's
+     * smoothed normal, packed as the vertex buffer holds it, so loading does
+     * not compute them. A file still in the first layout, a "vbo" of quad
+     * entries each carrying its own corners, bones, texture, UVs and zone, is
+     * read by rewriting its tree into this one first; only this layout is
+     * ever written. Writing keeps every other field of the source file in
+     * place, so a mesh read and written unchanged comes back exactly as it
+     * was. MeshBuilder parses through here, the character editor reads and
+     * writes through here and the ARPG tool upgrades files through here.
      */
 
     // Detection \\
@@ -42,16 +52,558 @@ class RiggedMeshArpgUtility extends EngineUtility {
         return ArpgUtility.validateString(meshArpg, "rig");
     }
 
+    // A rigged file whose geometry is still quad entries under "vbo"
+    static boolean isQuadLayout(ArpgObjectStruct meshArpg) {
+        return isRigged(meshArpg) && !ArpgUtility.hasObject(meshArpg, "mesh") && ArpgUtility.hasArray(meshArpg, "vbo");
+    }
+
     // Parse \\
 
     static RiggedMeshStruct parse(ArpgObjectStruct meshArpg, RigHandle rigHandle, String sourceName) {
 
         if (meshArpg.has("ibo") && !meshArpg.get("ibo").isNull())
-            throwException("Rigged mesh declares an 'ibo' — its indices come from its quad entries alone. File: "
+            throwException("Rigged mesh declares an 'ibo' — its indices come from its quads alone. File: "
                     + sourceName);
 
-        ArpgArrayStruct vboArpg = ArpgUtility.validateArray(meshArpg, "vbo");
+        ArpgObjectStruct compactArpg = ArpgUtility.validateObject(
+                isQuadLayout(meshArpg) ? upgrade(meshArpg, sourceName) : meshArpg, "mesh");
         RiggedMeshStruct mesh = new RiggedMeshStruct(rigHandle);
+
+        parseGeometry(mesh, compactArpg, sourceName);
+        parseInfluences(mesh, compactArpg, sourceName);
+        parseMasks(mesh, compactArpg, sourceName);
+        parseMorphs(mesh, compactArpg, sourceName);
+
+        return mesh;
+    }
+
+    // Every corner's stored normal, or null where the file stores none that fit the mesh and they must be computed
+    static int[] parseNormals(ArpgObjectStruct meshArpg, RiggedMeshStruct mesh) {
+
+        if (!ArpgUtility.hasObject(meshArpg, "mesh") || !ArpgUtility.hasBuffer(meshArpg.getAsObject("mesh"), "normals"))
+            return null;
+
+        ArpgBufferStruct normals = meshArpg.getAsObject("mesh").get("normals").getAsBuffer();
+        int cornerCount = mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT;
+
+        if (normals.getBufferType() != ArpgBufferType.INT32 || normals.size() != cornerCount)
+            return null;
+
+        int[] packed = new int[cornerCount];
+
+        for (int i = 0; i < cornerCount; i++)
+            packed[i] = normals.getInt(i);
+
+        return packed;
+    }
+
+    private static void parseGeometry(RiggedMeshStruct mesh, ArpgObjectStruct compactArpg, String sourceName) {
+
+        ArpgBufferStruct positions = ArpgUtility.validateBuffer(compactArpg, "positions", ArpgBufferType.FLOAT32);
+        ArpgBufferStruct quads = ArpgUtility.validateBuffer(compactArpg, "quads");
+        ArpgBufferStruct quadTextures = ArpgUtility.validateBuffer(compactArpg, "quad_textures");
+        ArpgBufferStruct quadZones = ArpgUtility.validateBuffer(compactArpg, "quad_zones");
+        ArpgBufferStruct uvFlags = ArpgUtility.validateBuffer(compactArpg, "quad_uv_flags");
+        ArpgBufferStruct uvs = ArpgUtility.validateBuffer(compactArpg, "quad_uvs", ArpgBufferType.FLOAT32);
+        ArpgArrayStruct texturesArpg = ArpgUtility.validateArray(compactArpg, "textures");
+        ArpgArrayStruct zonesArpg = ArpgUtility.validateArray(compactArpg, "zones");
+        int vertexCount = positions.size() / EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+        int faceCount = quads.size() / EngineSetting.QUAD_VERTEX_COUNT;
+        int uvFloats = EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.RIGGED_MESH_UV_FLOATS;
+
+        if (positions.size() % EngineSetting.RIGGED_MESH_POSITION_FLOATS != 0
+                || quads.size() % EngineSetting.QUAD_VERTEX_COUNT != 0
+                || quadTextures.size() != faceCount
+                || quadZones.size() != faceCount
+                || uvFlags.size() != faceCount)
+            throwException("Rigged mesh blocks do not agree on its vertex and quad counts. File: " + sourceName);
+
+        int[] textures = new int[texturesArpg.size()];
+        MeshZone[] zones = new MeshZone[zonesArpg.size()];
+
+        for (int t = 0; t < textures.length; t++)
+            textures[t] = mesh.resolveTexture(texturesArpg.get(t).getAsString());
+
+        for (int z = 0; z < zones.length; z++)
+            zones[z] = ArpgUtility.toEnum(zonesArpg.get(z).getAsString(), MeshZone.class);
+
+        for (int v = 0; v < vertexCount; v++) {
+
+            int base = v * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+            mesh.addVertex(positions.getFloat(base), positions.getFloat(base + 1), positions.getFloat(base + 2));
+        }
+
+        int uvBase = 0;
+
+        for (int f = 0; f < faceCount; f++) {
+
+            int base = f * EngineSetting.QUAD_VERTEX_COUNT;
+            int texture = quadTextures.getInt(f);
+            int zone = quadZones.getInt(f);
+
+            if (texture >= textures.length || zone >= zones.length)
+                throwException("Rigged mesh quad " + f + " names a texture or zone the file does not list. File: "
+                        + sourceName);
+
+            int faceIndex = mesh.addFace(
+                    validateVertex(mesh, quads.getInt(base), sourceName),
+                    validateVertex(mesh, quads.getInt(base + 1), sourceName),
+                    validateVertex(mesh, quads.getInt(base + 2), sourceName),
+                    validateVertex(mesh, quads.getInt(base + 3), sourceName),
+                    textures[texture]);
+
+            mesh.setFaceZone(faceIndex, zones[zone]);
+
+            if (uvFlags.getInt(f) == 0)
+                continue;
+
+            if (uvBase + uvFloats > uvs.size())
+                throwException("Rigged mesh lists fewer UVs than its quads author. File: " + sourceName);
+
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                mesh.setFaceUV(
+                        faceIndex,
+                        c,
+                        uvs.getFloat(uvBase + c * EngineSetting.RIGGED_MESH_UV_FLOATS),
+                        uvs.getFloat(uvBase + c * EngineSetting.RIGGED_MESH_UV_FLOATS + 1));
+
+            uvBase += uvFloats;
+        }
+    }
+
+    private static void parseInfluences(RiggedMeshStruct mesh, ArpgObjectStruct compactArpg, String sourceName) {
+
+        ArpgArrayStruct bonesArpg = ArpgUtility.validateArray(compactArpg, "bones");
+        ArpgBufferStruct counts = ArpgUtility.validateBuffer(compactArpg, "influence_counts");
+        ArpgBufferStruct bones = ArpgUtility.validateBuffer(compactArpg, "influence_bones");
+        ArpgBufferStruct weights = ArpgUtility.validateBuffer(
+                compactArpg, "influence_weights", ArpgBufferType.FLOAT32);
+        RigHandle rigHandle = mesh.getRigHandle();
+        int[] rigBones = new int[bonesArpg.size()];
+
+        if (counts.size() != mesh.getVertexCount() || bones.size() != weights.size())
+            throwException("Rigged mesh influence blocks do not agree on their counts. File: " + sourceName);
+
+        for (int b = 0; b < rigBones.length; b++) {
+
+            String boneName = bonesArpg.get(b).getAsString();
+
+            if (!rigHandle.hasBone(boneName))
+                throwException("Rigged mesh references unknown bone \"" + boneName
+                        + "\" for rig in file: " + sourceName);
+
+            rigBones[b] = rigHandle.getBoneIndex(boneName);
+        }
+
+        int cursor = 0;
+
+        for (int v = 0; v < mesh.getVertexCount(); v++) {
+
+            int influenceCount = counts.getInt(v);
+            float weightSum = 0f;
+
+            if (influenceCount == 0 || influenceCount > EngineSetting.MAX_BONE_INFLUENCES
+                    || cursor + influenceCount > bones.size())
+                throwException("Rigged mesh vertex " + v + " must hold between 1 and "
+                        + EngineSetting.MAX_BONE_INFLUENCES + " bone influences, found " + influenceCount
+                        + " in file: " + sourceName);
+
+            for (int i = 0; i < influenceCount; i++) {
+
+                int bone = bones.getInt(cursor);
+                float weight = weights.getFloat(cursor++);
+
+                if (bone >= rigBones.length || weight < 0f)
+                    throwException("Rigged mesh vertex " + v + " holds an unlisted bone or a negative weight in "
+                            + "file: " + sourceName);
+
+                mesh.addInfluence(v, rigBones[bone], weight);
+                weightSum += weight;
+            }
+
+            if (Math.abs(weightSum - 1f) > EngineSetting.BONE_WEIGHT_SUM_EPSILON)
+                throwException("Rigged mesh bone weights must sum to 1.0, got " + weightSum
+                        + " on vertex " + v + " in file: " + sourceName);
+        }
+    }
+
+    private static void parseMasks(RiggedMeshStruct mesh, ArpgObjectStruct compactArpg, String sourceName) {
+
+        if (!ArpgUtility.hasObject(compactArpg, "masks"))
+            return;
+
+        ArpgObjectStruct masksArpg = compactArpg.getAsObject("masks");
+
+        for (String channelName : masksArpg.keySet()) {
+
+            int channel = findMaskChannel(channelName);
+
+            if (channel == EngineSetting.INDEX_NOT_FOUND)
+                throwException("Rigged mesh declares unknown mask channel \"" + channelName + "\". File: "
+                        + sourceName);
+
+            ArpgObjectStruct channelArpg = masksArpg.getAsObject(channelName);
+            ArpgBufferStruct vertices = ArpgUtility.validateBuffer(channelArpg, "vertices");
+            ArpgBufferStruct values = ArpgUtility.validateBuffer(channelArpg, "values", ArpgBufferType.FLOAT32);
+
+            if (values.size() != vertices.size())
+                throwException("Mask channel \"" + channelName + "\" lists " + vertices.size() + " vertices but "
+                        + values.size() + " values. File: " + sourceName);
+
+            for (int i = 0; i < vertices.size(); i++)
+                mesh.setMask(validateVertex(mesh, vertices.getInt(i), sourceName), channel, values.getFloat(i));
+        }
+    }
+
+    private static void parseMorphs(RiggedMeshStruct mesh, ArpgObjectStruct compactArpg, String sourceName) {
+
+        if (!ArpgUtility.hasObject(compactArpg, "morphs"))
+            return;
+
+        ArpgObjectStruct morphsArpg = compactArpg.getAsObject("morphs");
+
+        for (String morphName : morphsArpg.keySet()) {
+
+            ArpgObjectStruct morphArpg = morphsArpg.getAsObject(morphName);
+            ArpgBufferStruct vertices = ArpgUtility.validateBuffer(morphArpg, "vertices");
+            ArpgBufferStruct deltas = ArpgUtility.validateBuffer(morphArpg, "deltas", ArpgBufferType.FLOAT32);
+            int morphIndex = mesh.resolveMorph(morphName);
+
+            if (deltas.size() != vertices.size() * EngineSetting.RIGGED_MESH_POSITION_FLOATS)
+                throwException("Morph \"" + morphName + "\" lists " + vertices.size() + " vertices but "
+                        + deltas.size() + " delta floats, expected three per vertex. File: " + sourceName);
+
+            for (int i = 0; i < vertices.size(); i++) {
+
+                int vertexIndex = validateVertex(mesh, vertices.getInt(i), sourceName);
+                int base = i * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+
+                if (mesh.findMorphEntry(morphIndex, vertexIndex) != EngineSetting.INDEX_NOT_FOUND)
+                    throwException("Morph \"" + morphName + "\" lists vertex " + vertexIndex + " twice. File: "
+                            + sourceName);
+
+                mesh.setMorphDelta(
+                        morphIndex,
+                        vertexIndex,
+                        deltas.getFloat(base),
+                        deltas.getFloat(base + 1),
+                        deltas.getFloat(base + 2));
+            }
+        }
+    }
+
+    private static int findMaskChannel(String channelName) {
+
+        for (int i = 0; i < EngineSetting.RIGGED_MESH_MASK_CHANNELS.length; i++)
+            if (EngineSetting.RIGGED_MESH_MASK_CHANNELS[i].equals(channelName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private static int validateVertex(RiggedMeshStruct mesh, int vertexIndex, String sourceName) {
+
+        if (vertexIndex < 0 || vertexIndex >= mesh.getVertexCount())
+            throwException("Rigged mesh names vertex " + vertexIndex + " but holds " + mesh.getVertexCount()
+                    + " vertices. File: " + sourceName);
+
+        return vertexIndex;
+    }
+
+    // Write \\
+
+    // The source file's fields in their order, its geometry replaced by the mesh's own in the compact layout
+    static ArpgObjectStruct write(RiggedMeshStruct mesh, ArpgObjectStruct sourceArpg) {
+
+        RigHandle rigHandle = mesh.getRigHandle();
+        ObjectArrayList<String> boneNames = new ObjectArrayList<>(rigHandle.getBoneCount());
+
+        for (int b = 0; b < rigHandle.getBoneCount(); b++)
+            boneNames.add(rigHandle.getBone(b).getName());
+
+        return write(mesh, boneNames, sourceArpg);
+    }
+
+    private static ArpgObjectStruct write(
+            RiggedMeshStruct mesh,
+            ObjectArrayList<String> boneNames,
+            ArpgObjectStruct sourceArpg) {
+
+        ArpgObjectStruct meshArpg = new ArpgObjectStruct();
+        ArpgObjectStruct compactArpg = writeCompact(mesh, boneNames);
+
+        for (String key : sourceArpg.keySet()) {
+
+            boolean geometry = key.equals("vbo") || key.equals("mesh");
+
+            if (geometry && !meshArpg.has("mesh"))
+                meshArpg.add("mesh", compactArpg);
+
+            if (!geometry && !key.equals("masks") && !key.equals("morphs"))
+                meshArpg.add(key, sourceArpg.get(key).deepCopy());
+        }
+
+        if (!meshArpg.has("mesh"))
+            meshArpg.add("mesh", compactArpg);
+
+        return meshArpg;
+    }
+
+    private static ArpgObjectStruct writeCompact(RiggedMeshStruct mesh, ObjectArrayList<String> boneNames) {
+
+        ArpgObjectStruct compactArpg = new ArpgObjectStruct();
+        int[] fileVertices = resolveFileVertices(mesh);
+        int[] vertices = resolveFileOrder(fileVertices);
+
+        writeVertices(mesh, vertices, boneNames, compactArpg);
+        writeQuads(mesh, fileVertices, compactArpg);
+
+        ArpgObjectStruct masksArpg = writeMasks(mesh, fileVertices);
+        ArpgObjectStruct morphsArpg = writeMorphs(mesh, fileVertices);
+
+        if (masksArpg.size() > 0)
+            compactArpg.add("masks", masksArpg);
+
+        if (morphsArpg.size() > 0)
+            compactArpg.add("morphs", morphsArpg);
+
+        int[] normals = new int[mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT];
+
+        RiggedMeshGeometryUtility.packNormals(mesh, new RiggedMeshScratchStruct(), normals);
+        compactArpg.add("normals", ArpgUtility.toBuffer(ArpgBufferType.INT32, normals, normals.length));
+
+        return compactArpg;
+    }
+
+    // The number each vertex takes when the written file is parsed back — corners sharing a position and influences
+    // become one vertex, in the order they first appear — or INDEX_NOT_FOUND for a vertex no face uses, or one
+    // folded into an earlier vertex
+    private static int[] resolveFileVertices(RiggedMeshStruct mesh) {
+
+        int[] fileVertices = new int[mesh.getVertexCount()];
+        Object2IntOpenHashMap<String> key2File = new Object2IntOpenHashMap<>();
+        StringBuilder key = new StringBuilder();
+
+        key2File.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        Arrays.fill(fileVertices, EngineSetting.INDEX_NOT_FOUND);
+
+        for (int f = 0; f < mesh.getFaceCount(); f++)
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+                int vertexIndex = mesh.getFaceVertex(f, c);
+
+                key.setLength(0);
+                appendVertexKey(mesh, vertexIndex, key);
+
+                String vertexKey = key.toString();
+
+                if (key2File.getInt(vertexKey) != EngineSetting.INDEX_NOT_FOUND)
+                    continue;
+
+                key2File.put(vertexKey, key2File.size());
+                fileVertices[vertexIndex] = key2File.size() - 1;
+            }
+
+        return fileVertices;
+    }
+
+    // The mesh vertex each file vertex is written from, in file order
+    private static int[] resolveFileOrder(int[] fileVertices) {
+
+        int count = 0;
+
+        for (int fileVertex : fileVertices)
+            count = Math.max(count, fileVertex + 1);
+
+        int[] vertices = new int[count];
+
+        for (int v = 0; v < fileVertices.length; v++)
+            if (fileVertices[v] != EngineSetting.INDEX_NOT_FOUND)
+                vertices[fileVertices[v]] = v;
+
+        return vertices;
+    }
+
+    private static void writeVertices(
+            RiggedMeshStruct mesh,
+            int[] vertices,
+            ObjectArrayList<String> boneNames,
+            ArpgObjectStruct compactArpg) {
+
+        float[] positions = new float[vertices.length * EngineSetting.RIGGED_MESH_POSITION_FLOATS];
+        int[] counts = new int[vertices.length];
+        int[] fileBones = new int[boneNames.size()];
+        ArpgArrayStruct bonesArpg = new ArpgArrayStruct();
+        IntArrayList bones = new IntArrayList();
+        FloatArrayList weights = new FloatArrayList();
+
+        Arrays.fill(fileBones, EngineSetting.INDEX_NOT_FOUND);
+
+        for (int i = 0; i < vertices.length; i++) {
+
+            int vertexIndex = vertices[i];
+            int base = i * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+
+            positions[base] = mesh.getX(vertexIndex);
+            positions[base + 1] = mesh.getY(vertexIndex);
+            positions[base + 2] = mesh.getZ(vertexIndex);
+            counts[i] = mesh.getInfluenceCount(vertexIndex);
+
+            for (int n = 0; n < counts[i]; n++) {
+
+                int bone = mesh.getInfluenceBone(vertexIndex, n);
+
+                if (fileBones[bone] == EngineSetting.INDEX_NOT_FOUND) {
+                    fileBones[bone] = bonesArpg.size();
+                    bonesArpg.add(boneNames.get(bone));
+                }
+
+                bones.add(fileBones[bone]);
+                weights.add(mesh.getInfluenceWeight(vertexIndex, n));
+            }
+        }
+
+        compactArpg.add("positions", ArpgUtility.toBuffer(positions, positions.length));
+        compactArpg.add("bones", bonesArpg);
+        compactArpg.add("influence_counts", ArpgUtility.toBuffer(ArpgBufferType.UINT8, counts, counts.length));
+        compactArpg.add("influence_bones", ArpgUtility.toIndexBuffer(bones.elements(), bones.size()));
+        compactArpg.add("influence_weights", ArpgUtility.toBuffer(weights.elements(), weights.size()));
+    }
+
+    private static void writeQuads(
+            RiggedMeshStruct mesh,
+            int[] fileVertices,
+            ArpgObjectStruct compactArpg) {
+
+        int faceCount = mesh.getFaceCount();
+        int[] quads = new int[faceCount * EngineSetting.QUAD_VERTEX_COUNT];
+        int[] quadTextures = new int[faceCount];
+        int[] quadZones = new int[faceCount];
+        int[] uvFlags = new int[faceCount];
+        int[] fileTextures = new int[mesh.getTextureCount()];
+        int[] fileZones = new int[MeshZone.VALUES.length];
+        ArpgArrayStruct texturesArpg = new ArpgArrayStruct();
+        ArpgArrayStruct zonesArpg = new ArpgArrayStruct();
+        FloatArrayList uvs = new FloatArrayList();
+
+        Arrays.fill(fileTextures, EngineSetting.INDEX_NOT_FOUND);
+        Arrays.fill(fileZones, EngineSetting.INDEX_NOT_FOUND);
+
+        for (int f = 0; f < faceCount; f++) {
+
+            int texture = mesh.getFaceTexture(f);
+            int zone = mesh.getFaceZone(f).ordinal();
+
+            if (fileTextures[texture] == EngineSetting.INDEX_NOT_FOUND) {
+                fileTextures[texture] = texturesArpg.size();
+                texturesArpg.add(mesh.getTextureName(texture));
+            }
+
+            if (fileZones[zone] == EngineSetting.INDEX_NOT_FOUND) {
+                fileZones[zone] = zonesArpg.size();
+                zonesArpg.add(ArpgUtility.toEnumName(mesh.getFaceZone(f)));
+            }
+
+            quadTextures[f] = fileTextures[texture];
+            quadZones[f] = fileZones[zone];
+            uvFlags[f] = mesh.hasAuthoredUVs(f) ? 1 : 0;
+
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+                quads[f * EngineSetting.QUAD_VERTEX_COUNT + c] = fileVertices[mesh.getFaceVertex(f, c)];
+
+                if (mesh.hasAuthoredUVs(f)) {
+                    uvs.add(mesh.getFaceU(f, c));
+                    uvs.add(mesh.getFaceV(f, c));
+                }
+            }
+        }
+
+        compactArpg.add("quads", ArpgUtility.toIndexBuffer(quads, quads.length));
+        compactArpg.add("textures", texturesArpg);
+        compactArpg.add("quad_textures", ArpgUtility.toIndexBuffer(quadTextures, faceCount));
+        compactArpg.add("zones", zonesArpg);
+        compactArpg.add("quad_zones", ArpgUtility.toIndexBuffer(quadZones, faceCount));
+        compactArpg.add("quad_uv_flags", ArpgUtility.toBuffer(ArpgBufferType.UINT8, uvFlags, faceCount));
+        compactArpg.add("quad_uvs", ArpgUtility.toBuffer(uvs.elements(), uvs.size()));
+    }
+
+    private static ArpgObjectStruct writeMasks(RiggedMeshStruct mesh, int[] fileVertices) {
+
+        ArpgObjectStruct masksArpg = new ArpgObjectStruct();
+        IntArrayList vertices = new IntArrayList();
+        FloatArrayList values = new FloatArrayList();
+
+        for (int channel = 0; channel < EngineSetting.RIGGED_MESH_MASK_CHANNELS.length; channel++) {
+
+            vertices.clear();
+            values.clear();
+
+            for (int v = 0; v < mesh.getVertexCount(); v++) {
+
+                float value = mesh.getMask(v, channel);
+
+                if (fileVertices[v] == EngineSetting.INDEX_NOT_FOUND || value <= 0f)
+                    continue;
+
+                vertices.add(fileVertices[v]);
+                values.add(value);
+            }
+
+            if (vertices.isEmpty())
+                continue;
+
+            ArpgObjectStruct channelArpg = new ArpgObjectStruct();
+            channelArpg.add("vertices", ArpgUtility.toIndexBuffer(vertices.elements(), vertices.size()));
+            channelArpg.add("values", ArpgUtility.toBuffer(values.elements(), values.size()));
+            masksArpg.add(EngineSetting.RIGGED_MESH_MASK_CHANNELS[channel], channelArpg);
+        }
+
+        return masksArpg;
+    }
+
+    private static ArpgObjectStruct writeMorphs(RiggedMeshStruct mesh, int[] fileVertices) {
+
+        ArpgObjectStruct morphsArpg = new ArpgObjectStruct();
+        IntArrayList vertices = new IntArrayList();
+        FloatArrayList deltas = new FloatArrayList();
+
+        for (int m = 0; m < mesh.getMorphCount(); m++) {
+
+            vertices.clear();
+            deltas.clear();
+
+            for (int e = 0; e < mesh.getMorphEntryCount(m); e++) {
+
+                int fileVertex = fileVertices[mesh.getMorphVertex(m, e)];
+
+                if (fileVertex == EngineSetting.INDEX_NOT_FOUND)
+                    continue;
+
+                vertices.add(fileVertex);
+
+                for (int a = 0; a < EngineSetting.RIGGED_MESH_POSITION_FLOATS; a++)
+                    deltas.add(mesh.getMorphDelta(m, e, a));
+            }
+
+            ArpgObjectStruct morphArpg = new ArpgObjectStruct();
+            morphArpg.add("vertices", ArpgUtility.toIndexBuffer(vertices.elements(), vertices.size()));
+            morphArpg.add("deltas", ArpgUtility.toBuffer(deltas.elements(), deltas.size()));
+            morphsArpg.add(mesh.getMorphName(m), morphArpg);
+        }
+
+        return morphsArpg;
+    }
+
+    // Upgrade \\
+
+    // A file in the quad layout rewritten in the compact one: its quad entries parsed against the bone names they use
+    // rather than a rig, then written as any mesh is
+    static ArpgObjectStruct upgrade(ArpgObjectStruct meshArpg, String sourceName) {
+
+        ArpgArrayStruct vboArpg = ArpgUtility.validateArray(meshArpg, "vbo");
+        RiggedMeshStruct mesh = new RiggedMeshStruct((RigHandle) null);
+        ObjectArrayList<String> boneNames = new ObjectArrayList<>();
         Object2IntOpenHashMap<String> corner2Vertex = new Object2IntOpenHashMap<>();
         StringBuilder cornerKey = new StringBuilder();
         int[] cornerVertices = new int[EngineSetting.QUAD_VERTEX_COUNT];
@@ -64,18 +616,30 @@ class RiggedMeshArpgUtility extends EngineUtility {
                 throwException("Rigged mesh vertex data must be quad entries — a raw vertex array cannot carry "
                         + "bone weights. File: " + sourceName);
 
-            parseQuad(mesh, element.getAsObject(), corner2Vertex, cornerKey, cornerVertices, sourceName);
+            parseQuad(mesh, element.getAsObject(), boneNames, corner2Vertex, cornerKey, cornerVertices, sourceName);
         }
 
-        parseMasks(mesh, meshArpg, sourceName);
-        parseMorphs(mesh, meshArpg, sourceName);
+        parseQuadMasks(mesh, meshArpg, sourceName);
+        parseQuadMorphs(mesh, meshArpg, sourceName);
 
-        return mesh;
+        return write(mesh, boneNames, meshArpg);
+    }
+
+    private static int resolveName(ObjectArrayList<String> names, String name) {
+
+        int index = names.indexOf(name);
+
+        if (index != EngineSetting.INDEX_NOT_FOUND)
+            return index;
+
+        names.add(name);
+        return names.size() - 1;
     }
 
     private static void parseQuad(
             RiggedMeshStruct mesh,
             ArpgObjectStruct quadArpg,
+            ObjectArrayList<String> boneNames,
             Object2IntOpenHashMap<String> corner2Vertex,
             StringBuilder cornerKey,
             int[] cornerVertices,
@@ -108,6 +672,7 @@ class RiggedMeshArpgUtility extends EngineUtility {
                     corners.get(c).getAsArray(),
                     c,
                     perCorner ? bonesArray.get(c).getAsArray() : bonesArray,
+                    boneNames,
                     corner2Vertex,
                     cornerKey,
                     sourceName);
@@ -143,6 +708,7 @@ class RiggedMeshArpgUtility extends EngineUtility {
             ArpgArrayStruct cornerArpg,
             int corner,
             ArpgArrayStruct influencesArpg,
+            ObjectArrayList<String> boneNames,
             Object2IntOpenHashMap<String> corner2Vertex,
             StringBuilder cornerKey,
             String sourceName) {
@@ -156,7 +722,7 @@ class RiggedMeshArpgUtility extends EngineUtility {
         float z = cornerArpg.get(2).getAsFloat();
         int vertexIndex = mesh.addVertex(x, y, z);
 
-        parseInfluences(mesh, vertexIndex, influencesArpg, sourceName);
+        parseQuadInfluences(mesh, vertexIndex, influencesArpg, boneNames, sourceName);
 
         cornerKey.setLength(0);
         appendVertexKey(mesh, vertexIndex, cornerKey);
@@ -184,14 +750,14 @@ class RiggedMeshArpgUtility extends EngineUtility {
                     .append(Float.floatToIntBits(mesh.getInfluenceWeight(vertexIndex, i)));
     }
 
-    private static void parseInfluences(
+    private static void parseQuadInfluences(
             RiggedMeshStruct mesh,
             int vertexIndex,
             ArpgArrayStruct influencesArpg,
+            ObjectArrayList<String> boneNames,
             String sourceName) {
 
         int influenceCount = influencesArpg.size();
-        RigHandle rigHandle = mesh.getRigHandle();
 
         if (influenceCount == 0 || influenceCount > EngineSetting.MAX_BONE_INFLUENCES)
             throwException("Quad \"bones\" must declare between 1 and "
@@ -206,15 +772,11 @@ class RiggedMeshArpgUtility extends EngineUtility {
             String boneName = ArpgUtility.validateString(entry, "bone");
             float weight = entry.has("weight") ? entry.get("weight").getAsFloat() : 1f;
 
-            if (!rigHandle.hasBone(boneName))
-                throwException("Quad references unknown bone \"" + boneName
-                        + "\" for rig in file: " + sourceName);
-
             if (weight < 0f)
                 throwException("Bone weight cannot be negative for bone \"" + boneName
                         + "\" in file: " + sourceName);
 
-            mesh.addInfluence(vertexIndex, rigHandle.getBoneIndex(boneName), weight);
+            mesh.addInfluence(vertexIndex, resolveName(boneNames, boneName), weight);
             weightSum += weight;
         }
 
@@ -223,9 +785,7 @@ class RiggedMeshArpgUtility extends EngineUtility {
                     + " in file: " + sourceName);
     }
 
-    // Masks \\
-
-    private static void parseMasks(RiggedMeshStruct mesh, ArpgObjectStruct meshArpg, String sourceName) {
+    private static void parseQuadMasks(RiggedMeshStruct mesh, ArpgObjectStruct meshArpg, String sourceName) {
 
         if (!ArpgUtility.hasObject(meshArpg, "masks"))
             return;
@@ -254,18 +814,8 @@ class RiggedMeshArpgUtility extends EngineUtility {
         }
     }
 
-    private static int findMaskChannel(String channelName) {
 
-        for (int i = 0; i < EngineSetting.RIGGED_MESH_MASK_CHANNELS.length; i++)
-            if (EngineSetting.RIGGED_MESH_MASK_CHANNELS[i].equals(channelName))
-                return i;
-
-        return EngineSetting.INDEX_NOT_FOUND;
-    }
-
-    // Morphs \\
-
-    private static void parseMorphs(RiggedMeshStruct mesh, ArpgObjectStruct meshArpg, String sourceName) {
+    private static void parseQuadMorphs(RiggedMeshStruct mesh, ArpgObjectStruct meshArpg, String sourceName) {
 
         if (!ArpgUtility.hasObject(meshArpg, "morphs"))
             return;
@@ -302,223 +852,4 @@ class RiggedMeshArpgUtility extends EngineUtility {
         }
     }
 
-    private static int validateVertex(RiggedMeshStruct mesh, int vertexIndex, String sourceName) {
-
-        if (vertexIndex < 0 || vertexIndex >= mesh.getVertexCount())
-            throwException("Rigged mesh names vertex " + vertexIndex + " but holds " + mesh.getVertexCount()
-                    + " vertices. File: " + sourceName);
-
-        return vertexIndex;
-    }
-
-    // Write \\
-
-    // The source file's fields in their order, its quads, masks and morphs replaced by the mesh's own
-    static ArpgObjectStruct write(RiggedMeshStruct mesh, ArpgObjectStruct sourceArpg) {
-
-        ArpgObjectStruct meshArpg = new ArpgObjectStruct();
-        int[] fileVertices = resolveFileVertices(mesh);
-
-        for (String key : sourceArpg.keySet())
-            if (!key.equals("masks") && !key.equals("morphs"))
-                meshArpg.add(key, key.equals("vbo") ? writeQuads(mesh) : sourceArpg.get(key).deepCopy());
-
-        if (!meshArpg.has("vbo"))
-            meshArpg.add("vbo", writeQuads(mesh));
-
-        ArpgObjectStruct masksArpg = writeMasks(mesh, fileVertices);
-        ArpgObjectStruct morphsArpg = writeMorphs(mesh, fileVertices);
-
-        if (masksArpg.size() > 0)
-            meshArpg.add("masks", masksArpg);
-
-        if (morphsArpg.size() > 0)
-            meshArpg.add("morphs", morphsArpg);
-
-        return meshArpg;
-    }
-
-    // The number each vertex takes when the written file is parsed back — corners sharing a position and influences
-    // become one vertex, in the order they first appear — or INDEX_NOT_FOUND for a vertex no face uses, or one
-    // folded into an earlier vertex
-    private static int[] resolveFileVertices(RiggedMeshStruct mesh) {
-
-        int[] fileVertices = new int[mesh.getVertexCount()];
-        Object2IntOpenHashMap<String> key2File = new Object2IntOpenHashMap<>();
-        StringBuilder key = new StringBuilder();
-
-        key2File.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
-        Arrays.fill(fileVertices, EngineSetting.INDEX_NOT_FOUND);
-
-        for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
-
-                int vertexIndex = mesh.getFaceVertex(f, c);
-
-                key.setLength(0);
-                appendVertexKey(mesh, vertexIndex, key);
-
-                String vertexKey = key.toString();
-
-                if (key2File.getInt(vertexKey) != EngineSetting.INDEX_NOT_FOUND)
-                    continue;
-
-                key2File.put(vertexKey, key2File.size());
-                fileVertices[vertexIndex] = key2File.size() - 1;
-            }
-
-        return fileVertices;
-    }
-
-    private static ArpgObjectStruct writeMasks(RiggedMeshStruct mesh, int[] fileVertices) {
-
-        ArpgObjectStruct masksArpg = new ArpgObjectStruct();
-
-        for (int channel = 0; channel < EngineSetting.RIGGED_MESH_MASK_CHANNELS.length; channel++) {
-
-            ArpgArrayStruct vertices = new ArpgArrayStruct();
-            ArpgArrayStruct values = new ArpgArrayStruct();
-
-            for (int v = 0; v < mesh.getVertexCount(); v++) {
-
-                float value = mesh.getMask(v, channel);
-
-                if (fileVertices[v] == EngineSetting.INDEX_NOT_FOUND || value <= 0f)
-                    continue;
-
-                vertices.add(fileVertices[v]);
-                values.add(value);
-            }
-
-            if (vertices.size() == 0)
-                continue;
-
-            ArpgObjectStruct channelArpg = new ArpgObjectStruct();
-            channelArpg.add("vertices", vertices);
-            channelArpg.add("values", values);
-            masksArpg.add(EngineSetting.RIGGED_MESH_MASK_CHANNELS[channel], channelArpg);
-        }
-
-        return masksArpg;
-    }
-
-    private static ArpgObjectStruct writeMorphs(RiggedMeshStruct mesh, int[] fileVertices) {
-
-        ArpgObjectStruct morphsArpg = new ArpgObjectStruct();
-
-        for (int m = 0; m < mesh.getMorphCount(); m++) {
-
-            ArpgArrayStruct vertices = new ArpgArrayStruct();
-            ArpgArrayStruct deltas = new ArpgArrayStruct();
-
-            for (int e = 0; e < mesh.getMorphEntryCount(m); e++) {
-
-                int fileVertex = fileVertices[mesh.getMorphVertex(m, e)];
-
-                if (fileVertex == EngineSetting.INDEX_NOT_FOUND)
-                    continue;
-
-                vertices.add(fileVertex);
-
-                for (int a = 0; a < EngineSetting.RIGGED_MESH_POSITION_FLOATS; a++)
-                    deltas.add(mesh.getMorphDelta(m, e, a));
-            }
-
-            ArpgObjectStruct morphArpg = new ArpgObjectStruct();
-            morphArpg.add("vertices", vertices);
-            morphArpg.add("deltas", deltas);
-            morphsArpg.add(mesh.getMorphName(m), morphArpg);
-        }
-
-        return morphsArpg;
-    }
-
-    private static ArpgArrayStruct writeQuads(RiggedMeshStruct mesh) {
-
-        ArpgArrayStruct quadsArpg = new ArpgArrayStruct();
-
-        for (int f = 0; f < mesh.getFaceCount(); f++)
-            quadsArpg.add(writeQuad(mesh, f));
-
-        return quadsArpg;
-    }
-
-    private static ArpgObjectStruct writeQuad(RiggedMeshStruct mesh, int faceIndex) {
-
-        ArpgObjectStruct quadArpg = new ArpgObjectStruct();
-        ArpgArrayStruct cornersArpg = new ArpgArrayStruct();
-
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
-
-            int vertexIndex = mesh.getFaceVertex(faceIndex, c);
-            ArpgArrayStruct cornerArpg = new ArpgArrayStruct();
-
-            cornerArpg.add(mesh.getX(vertexIndex));
-            cornerArpg.add(mesh.getY(vertexIndex));
-            cornerArpg.add(mesh.getZ(vertexIndex));
-            cornersArpg.add(cornerArpg);
-        }
-
-        quadArpg.add("quad", cornersArpg);
-        quadArpg.add("bones", writeBones(mesh, faceIndex));
-        quadArpg.addProperty("texture", mesh.getTextureName(mesh.getFaceTexture(faceIndex)));
-
-        if (mesh.hasAuthoredUVs(faceIndex))
-            quadArpg.add("uvs", writeUVs(mesh, faceIndex));
-
-        if (mesh.getFaceZone(faceIndex) != MeshZone.SKIN)
-            quadArpg.addProperty("zone", ArpgUtility.toEnumName(mesh.getFaceZone(faceIndex)));
-
-        return quadArpg;
-    }
-
-    // One influence list for the quad when its corners agree, one per corner when they do not
-    private static ArpgArrayStruct writeBones(RiggedMeshStruct mesh, int faceIndex) {
-
-        if (mesh.hasUniformInfluences(faceIndex))
-            return writeInfluences(mesh, mesh.getFaceVertex(faceIndex, 0));
-
-        ArpgArrayStruct bonesArpg = new ArpgArrayStruct();
-
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
-            bonesArpg.add(writeInfluences(mesh, mesh.getFaceVertex(faceIndex, c)));
-
-        return bonesArpg;
-    }
-
-    private static ArpgArrayStruct writeInfluences(RiggedMeshStruct mesh, int vertexIndex) {
-
-        ArpgArrayStruct influencesArpg = new ArpgArrayStruct();
-        int influenceCount = mesh.getInfluenceCount(vertexIndex);
-        RigHandle rigHandle = mesh.getRigHandle();
-
-        for (int i = 0; i < influenceCount; i++) {
-
-            ArpgObjectStruct entry = new ArpgObjectStruct();
-            entry.addProperty("bone", rigHandle.getBone(mesh.getInfluenceBone(vertexIndex, i)).getName());
-
-            if (influenceCount > 1)
-                entry.addProperty("weight", mesh.getInfluenceWeight(vertexIndex, i));
-
-            influencesArpg.add(entry);
-        }
-
-        return influencesArpg;
-    }
-
-    private static ArpgArrayStruct writeUVs(RiggedMeshStruct mesh, int faceIndex) {
-
-        ArpgArrayStruct uvsArpg = new ArpgArrayStruct();
-
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
-
-            ArpgArrayStruct pair = new ArpgArrayStruct();
-
-            pair.add(mesh.getFaceU(faceIndex, c));
-            pair.add(mesh.getFaceV(faceIndex, c));
-            uvsArpg.add(pair);
-        }
-
-        return uvsArpg;
-    }
 }

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
+import application.bootstrap.geometrypipeline.meshmanager.MeshLayoutUtility;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.root.UtilityPackage.InternalException;
@@ -99,6 +100,35 @@ class Lwjgl3ArpgUtility extends EngineUtility {
 
         for (File arpgFile : collect(directory, EngineSetting.ARPG_FILE_EXTENSIONS))
             passed &= decode(arpgFile, toSibling(arpgFile, EngineSetting.ARPG_TEXT_FILE_EXTENSION));
+
+        return passed;
+    }
+
+    // Compact \\
+
+    // Rewrites every mesh below the directory that is still in quad entries; files in any other shape are left alone
+    static boolean compact(File directory) {
+
+        if (!directory.isDirectory())
+            return fail(directory, new InternalException("Not a directory"));
+
+        boolean passed = true;
+
+        for (File arpgFile : collect(directory, EngineSetting.ARPG_FILE_EXTENSIONS)) {
+
+            try {
+
+                ArpgObjectStruct object = ArpgUtility.readObject(arpgFile);
+
+                if (!MeshLayoutUtility.isQuadLayout(object))
+                    continue;
+
+                sealVerified(MeshLayoutUtility.upgrade(object, arpgFile.getName()), arpgFile);
+                report("compacted", arpgFile);
+            } catch (InternalException e) {
+                passed = fail(arpgFile, e);
+            }
+        }
 
         return passed;
     }

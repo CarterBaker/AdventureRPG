@@ -327,6 +327,12 @@ One line per session that changed this file: the date, what was added or removed
   and the ten schemas `Words`, `Intents`, `Replies`, `Phrases`, `Topics`, `Traits`, `Moods`, `Relations`, `Verdicts`
   and `Scenarios`; regenerated the four NPCs (`traits`, `trait_pool`, `trait_draws`, `bonds`) and `schemas/Npcs.arpg`
   for the generative dialogue pipeline.
+- 2026-11-15: Compact mesh layout. Rewrote, with the ARPG tool's `compact` and no change to what they hold or build,
+  the eight rigged meshes under `mesh/characters/humanoid/` (`HumanoidFemaleMesh`, `HumanoidMaleMesh`,
+  `HumanoidEyesMesh`, `HumanoidTeethMesh` and the four `hair/` meshes) and the six static quad meshes
+  `mesh/editor/CharacterViewGrid`, `CharacterViewMarker`, `EditorViewportQuad`, `ItemEditorCursor`, `ItemEditorGrid`
+  and `mesh/shipwright/ShipwrightQuad`, from one object per quad to typed arrays (shared vertices, quad indices,
+  stored normals), so they are smaller and load faster. Entries unchanged.
 
 ---
 

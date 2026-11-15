@@ -353,6 +353,7 @@ public class EngineSetting {
     public static final String ARPG_TOOL_COMMAND_CONVERT = "convert";
     public static final String ARPG_TOOL_COMMAND_EXPORT = "export";
     public static final String ARPG_TOOL_COMMAND_VERIFY = "verify";
+    public static final String ARPG_TOOL_COMMAND_COMPACT = "compact";
     public static final int ARPG_TOOL_EXIT_SUCCESS = 0;
     public static final int ARPG_TOOL_EXIT_FAILURE = 1;
     public static final String ARPG_TOOL_USAGE = String.join("\n",
@@ -360,6 +361,7 @@ public class EngineSetting {
             "  encode <text.json> [file.arpg]  Seal one text file (default target: same name, .arpg).",
             "  decode <file.arpg> [text.json]  Open one sealed file as text (default: print it).",
             "  convert <directory>             Seal every .json below the directory and delete the .json.",
+            "  compact <directory>             Rewrite every quad-entry mesh below the directory in the compact layout.",
             "  export <directory>              Write a .json text copy beside every .arpg below the directory.",
             "  verify <file-or-directory>      Open every .arpg and report any that fail.");
 
@@ -901,6 +903,7 @@ public class EngineSetting {
     public static final String ORTHO_DATA_UBO = "OrthoData";
     public static final String PLAYER_POSITION_UBO = "PlayerPositionData";
     public static final int QUAD_INDEX_COUNT = 6;
+    public static final int[] QUAD_INDEX_CORNERS = { 0, 1, 2, 2, 3, 0 };
     public static final int QUAD_TRIANGLE_COUNT = 2;
     public static final int QUAD_VERTEX_COUNT = 4;
     public static final String SHADER_ALIAS_ALBEDO = "Albedo";

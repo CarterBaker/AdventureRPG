@@ -38,6 +38,7 @@ public class Lwjgl3LauncherArpg {
             case EngineSetting.ARPG_TOOL_COMMAND_CONVERT -> Lwjgl3ArpgUtility.convert(source);
             case EngineSetting.ARPG_TOOL_COMMAND_EXPORT -> Lwjgl3ArpgUtility.export(source);
             case EngineSetting.ARPG_TOOL_COMMAND_VERIFY -> Lwjgl3ArpgUtility.verify(source);
+            case EngineSetting.ARPG_TOOL_COMMAND_COMPACT -> Lwjgl3ArpgUtility.compact(source);
             default -> false;
         };
     }
@@ -47,6 +48,7 @@ public class Lwjgl3LauncherArpg {
                 || command.equals(EngineSetting.ARPG_TOOL_COMMAND_DECODE)
                 || command.equals(EngineSetting.ARPG_TOOL_COMMAND_CONVERT)
                 || command.equals(EngineSetting.ARPG_TOOL_COMMAND_EXPORT)
-                || command.equals(EngineSetting.ARPG_TOOL_COMMAND_VERIFY);
+                || command.equals(EngineSetting.ARPG_TOOL_COMMAND_VERIFY)
+                || command.equals(EngineSetting.ARPG_TOOL_COMMAND_COMPACT);
     }
 }

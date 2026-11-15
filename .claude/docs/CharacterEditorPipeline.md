@@ -197,10 +197,21 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   each gender's `mesh`, `rig`, `material`, `animation_tree` and `features`, and every other reference are choice rows
   stepping through what they may name. Make, duplicate, save, revert and delete them through the File menu; copy a
   gender to add one (its Copy button names the new gender). Every gender of a race must still name the same rig.
-- **Mesh format** (`RiggedMeshArpgUtility`): every quad may name its `zone` (`MeshZone`: skin, eye, brow, lash, hair,
-  cloth, mouth, teeth); `masks` (channels `EngineSetting.RIGGED_MESH_MASK_CHANNELS`) and `morphs` name vertices by the
-  number the parse gives them, corners merged by position and influences in the order they first appear. Writing
-  renumbers through `resolveFileVertices`, so never index masks or morphs by `RiggedMeshStruct` order in a file.
+- **Mesh format** (`RiggedMeshArpgUtility`): a rigged mesh file holds a `mesh` object of typed arrays (see
+  `.claude/docs/ARPG.md`), quads still the unit: `positions` (each distinct vertex once), `bones` (the bone names the
+  file uses, resolved against the rig by name at load) with `influence_counts`, `influence_bones` and
+  `influence_weights`, `quads` (four vertex numbers a face) beside `quad_textures` and `quad_zones` (numbers into the
+  `textures` and `zones` name lists; `MeshZone`: skin, eye, brow, lash, hair, cloth, mouth, teeth), `quad_uv_flags`
+  with the eight `quad_uvs` floats of each face that authors them, sparse `masks` (channels
+  `EngineSetting.RIGGED_MESH_MASK_CHANNELS`) and `morphs` (`vertices` beside `values` or three `deltas` each), and
+  `normals`, every corner's packed smooth normal. Vertices are numbered as corners first appear, merged by position
+  and influences; writing renumbers through `resolveFileVertices`, so never index masks or morphs by
+  `RiggedMeshStruct` order in a file. Only this layout is written (the character tools' save, the ARPG tool's
+  `compact`); a file still in quad entries (`vbo`) is read by `upgrade`, which rewrites its tree first. Stored normals
+  serve the load only (`MeshManager.parseRiggedNormals`); any rebuild of an edited mesh computes them. The finished
+  GPU blocks are never stored: they hold tile IDs and bone numbers assigned at run time, and building them takes a
+  few milliseconds. Static quad meshes take the same idea through `MeshLayoutUtility`: `mesh.vertices` (every float
+  of each distinct vertex) and `mesh.quads`.
 - **GPU path.** `RiggedMeshGeometryUtility` packs every corner into `RIGGED_MESH_VERTEX_INTS` words (44 bytes: float
   position, normalised-short UV, byte bone indices, normalised-byte weights summing to one, a 10-bit-per-axis normal,
   the morph entry run, zone with tile, normalised-byte masks; `EngineSetting.RIGGED_MESH_ATTRIBUTE_SIZES`, `TYPES` and

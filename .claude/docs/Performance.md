@@ -20,7 +20,8 @@ Performance is the top priority. Lag spikes, GC pauses and memory growth are bug
   `EngineSetting`); never duplicate per-quad data per vertex; never keep a CPU copy the GPU already holds.
 - **Rigged vertex data is shared and packed.** A rigged mesh stores a vertex once however many quads meet at it and
   packs each attribute into the smallest type that holds its range (`RiggedMeshGeometryUtility`, the typed layouts of
-  `VAOData`); never expand a mesh to one float vertex per corner.
+  `VAOData`); never expand a mesh to one float vertex per corner. In their files, rigged and static quad meshes hold
+  typed arrays with each vertex stored once (the compact layout), never one object per quad.
 - **All generated mesh is greedily merged.** Terrain, partial blocks, water, items, trees and structures go through
   a greedy mesher and merge as far as their shared attributes allow. Never emit one quad per face.
 - **Measure before and after.** A change that affects memory or frame time states its numbers.

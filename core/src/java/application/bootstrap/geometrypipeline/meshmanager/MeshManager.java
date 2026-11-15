@@ -226,7 +226,7 @@ public class MeshManager extends ManagerPackage {
         return RiggedMeshArpgUtility.parse(meshArpg, rigHandle, sourceName);
     }
 
-    // The source file with its quad entries rewritten from the mesh, every other field kept
+    // The source file with its geometry rewritten from the mesh in the compact layout, every other field kept
     public ArpgObjectStruct toRiggedMeshArpg(RiggedMeshStruct mesh, ArpgObjectStruct sourceArpg) {
         return RiggedMeshArpgUtility.write(mesh, sourceArpg);
     }
@@ -236,16 +236,22 @@ public class MeshManager extends ManagerPackage {
         return mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT <= EngineSetting.RIGGED_MESH_VERT_LIMIT;
     }
 
+    // The normals a rigged mesh file stores for the mesh just parsed from it, or null when they must be computed
+    int[] parseRiggedNormals(ArpgObjectStruct meshArpg, RiggedMeshStruct mesh) {
+        return RiggedMeshArpgUtility.parseNormals(meshArpg, mesh);
+    }
+
     // Builds a rigged mesh into the manager's reusable vertex, index and morph entry lists, which the methods below
-    // upload and measure until the next build
-    void buildRiggedGeometry(RiggedMeshStruct mesh) {
+    // upload and measure until the next build; stored normals are those its file holds for it exactly as parsed
+    void buildRiggedGeometry(RiggedMeshStruct mesh, int[] storedNormals) {
 
         if (mesh.getRigHandle().getBoneCount() > EngineSetting.RIGGED_MESH_BONE_LIMIT)
             throwException("Rig \"" + mesh.getRigHandle().getRigName() + "\" has more than "
                     + EngineSetting.RIGGED_MESH_BONE_LIMIT + " bones — a rigged vertex names its bones in a byte.");
 
         RiggedMeshGeometryUtility.build(
-                mesh, resolveTextureTiles(mesh), riggedScratch, riggedVertices, riggedIndices, riggedMorphEntries);
+                mesh, resolveTextureTiles(mesh), riggedScratch, storedNormals,
+                riggedVertices, riggedIndices, riggedMorphEntries);
     }
 
     boolean hasRiggedIndices() {
@@ -358,7 +364,7 @@ public class MeshManager extends ManagerPackage {
         if (meshHandle.getRigHandle() != mesh.getRigHandle())
             throwException("Mesh \"" + meshHandle.getMeshName() + "\" cannot be rebuilt on a different rig.");
 
-        buildRiggedGeometry(mesh);
+        buildRiggedGeometry(mesh, null);
 
         VAOInstance vaoInstance = meshHandle.getVAOInstance();
         VBOHandle vboHandle = vboManager.updateVBOHandle(vaoInstance, meshHandle.getVBOHandle(), riggedVertices);

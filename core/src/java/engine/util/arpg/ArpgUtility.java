@@ -140,6 +140,21 @@ public class ArpgUtility extends EngineUtility {
         return new ArpgBufferStruct(bufferType, values, count);
     }
 
+    // Whole values that are never negative, in the smallest type that holds the largest of them
+    public static ArpgBufferStruct toIndexBuffer(int[] values, int count) {
+
+        int largest = 0;
+
+        for (int i = 0; i < count; i++)
+            largest = Math.max(largest, values[i]);
+
+        ArpgBufferType bufferType = ArpgBufferType.UINT8.holds(largest) ? ArpgBufferType.UINT8
+                : ArpgBufferType.UINT16.holds(largest) ? ArpgBufferType.UINT16
+                        : ArpgBufferType.INT32;
+
+        return new ArpgBufferStruct(bufferType, values, count);
+    }
+
     // Required field accessors — throw if missing \\
 
     public static String validateString(ArpgObjectStruct object, String key) {

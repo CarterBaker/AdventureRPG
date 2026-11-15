@@ -23,7 +23,8 @@ class RiggedMeshGeometryUtility extends EngineUtility {
      * vertex, so a vertex is stored once however many quads meet at it. The
      * normal is the sum of the face normals meeting at the corner's exact
      * position within the smoothing angle, so a low-poly body shades as one
-     * continuous surface; authored winding is free to vary, so each face is
+     * continuous surface (a mesh file that stores its corners' normals hands
+     * them in and none are computed); authored winding is free to vary, so each face is
      * turned to the corner's own side before it is added and only the line of
      * the result is kept, which the shader turns toward the face it shades.
      * The morph entries — a delta and the morph it belongs to, grouped vertex
@@ -38,6 +39,7 @@ class RiggedMeshGeometryUtility extends EngineUtility {
             RiggedMeshStruct mesh,
             int[] textureTiles,
             RiggedMeshScratchStruct scratch,
+            int[] storedNormals,
             IntArrayList vertices,
             IntArrayList indices,
             FloatArrayList morphEntries) {
@@ -50,8 +52,11 @@ class RiggedMeshGeometryUtility extends EngineUtility {
         vertices.ensureCapacity(cornerCount * EngineSetting.RIGGED_MESH_VERTEX_INTS);
         indices.ensureCapacity(faceCount * EngineSetting.QUAD_INDEX_COUNT);
 
-        resolveFaceNormals(mesh, scratch.faceNormals);
-        resolvePositionGroups(mesh, scratch);
+        if (storedNormals == null) {
+            resolveFaceNormals(mesh, scratch.faceNormals);
+            resolvePositionGroups(mesh, scratch);
+        }
+
         resolveMorphEntries(mesh, scratch.vertexMorphStarts, morphEntries);
         clearVertexTable(scratch, cornerCount);
 
@@ -60,7 +65,7 @@ class RiggedMeshGeometryUtility extends EngineUtility {
         for (int f = 0; f < faceCount; f++) {
 
             for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
-                packCorner(mesh, f, c, textureTiles, scratch);
+                packCorner(mesh, f, c, textureTiles, storedNormals, scratch);
                 quad[c] = shareVertex(scratch, vertices);
             }
 
@@ -73,6 +78,18 @@ class RiggedMeshGeometryUtility extends EngineUtility {
         }
     }
 
+    // Every corner's packed smooth normal, face by face, as a mesh file stores them
+    static void packNormals(RiggedMeshStruct mesh, RiggedMeshScratchStruct scratch, int[] normals) {
+
+        resolveFaceNormals(mesh, scratch.faceNormals);
+        resolvePositionGroups(mesh, scratch);
+
+        for (int f = 0; f < mesh.getFaceCount(); f++)
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                normals[f * EngineSetting.QUAD_VERTEX_COUNT + c] = packSmoothNormal(
+                        f, scratch.vertexGroups.getInt(mesh.getFaceVertex(f, c)), scratch);
+    }
+
     // Packing \\
 
     private static void packCorner(
@@ -80,6 +97,7 @@ class RiggedMeshGeometryUtility extends EngineUtility {
             int faceIndex,
             int corner,
             int[] textureTiles,
+            int[] storedNormals,
             RiggedMeshScratchStruct scratch) {
 
         int[] packed = scratch.corner;
@@ -103,7 +121,9 @@ class RiggedMeshGeometryUtility extends EngineUtility {
         packed[3] = u | v << Short.SIZE;
         packed[4] = packBones(mesh, vertexIndex);
         packed[5] = packWeights(mesh, vertexIndex);
-        packed[6] = packSmoothNormal(faceIndex, scratch.vertexGroups.getInt(vertexIndex), scratch);
+        packed[6] = storedNormals != null
+                ? storedNormals[faceIndex * EngineSetting.QUAD_VERTEX_COUNT + corner]
+                : packSmoothNormal(faceIndex, scratch.vertexGroups.getInt(vertexIndex), scratch);
         packed[7] = morphStart;
         packed[8] = scratch.vertexMorphStarts.getInt(vertexIndex + 1) - morphStart;
         packed[9] = mesh.getFaceZone(faceIndex).ordinal() | textureTiles[tile] << Short.SIZE;

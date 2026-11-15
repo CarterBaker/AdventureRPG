@@ -133,7 +133,7 @@ declare are shown as ignored and never block a save.
 | AnimationTrees, Animations, Architectures, Behaviors, Biomes, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Instruments, Materials, NoteSets, Passes, Races, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, Songs, SoundCues, Sounds, Sprites, StructureLists, Structures, TextureAliases, UBOs, Vehicles, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
 | Blocks, FBOs, Items, Threads, Tools | `blocks`, `application/fbos`, `items`, `application/threads`, `tools` | an array (`blocks`, `fbos`, `items`, `threads`, `tools`) of entries, each named by its `name` field |
 | Words, Intents, Replies, Phrases, Topics, Traits, Moods, Relations, Verdicts, Scenarios | the same name in lower case (`words`, `intents`, ...) | an array under that same key, each entry named by its `name` field (see `.claude/docs/Dialogue.md`) |
-| (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `CommandBuilder`, `SubVoxelArpgUtility`) |
+| (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `RiggedMeshArpgUtility`, `MeshLayoutUtility`, `CommandBuilder`, `SubVoxelArpgUtility`) |
 | (no schema, baked) Baked textures | `bakedtextures` | written only by the bake tool (`TextureBakeUtility`), never by hand: see Baked textures below |
 | (no schema) Lessons | `lessons` | written only by the dialogue trainer (`DialogueManager.saveLessons`), never by hand |
 
@@ -179,6 +179,7 @@ gradlew lwjgl3:arpg --args="encode draft.json assets/clouds/standard/Mist.arpg" 
 gradlew lwjgl3:arpg --args="convert <directory>"   seal every .json below the directory, then delete the .json
 gradlew lwjgl3:arpg --args="export <directory>"    write a .json copy beside every .arpg (for bulk edits)
 gradlew lwjgl3:arpg --args="verify <file-or-dir>"  open every .arpg and report failures (non-zero exit on any)
+gradlew lwjgl3:arpg --args="compact <directory>"   rewrite every quad-entry mesh below it in the compact layout
 ```
 
 Wrap a path containing spaces in single quotes inside `--args`
