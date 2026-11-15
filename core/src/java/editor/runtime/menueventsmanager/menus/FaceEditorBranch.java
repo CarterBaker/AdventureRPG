@@ -9,7 +9,7 @@ public class FaceEditorBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the Character Editor's Face layer's File and
-     * Edit menu actions, and the face rows of the Face Outliner and the
+     * Edit menu actions, and the face rows of the Character Outliner and the
      * Properties tab. Every action works on the face of the character the
      * Character Editor has open. Save and Revert keep the template's face,
      * meshes and rig together; undo and redo step the face's history. Panel

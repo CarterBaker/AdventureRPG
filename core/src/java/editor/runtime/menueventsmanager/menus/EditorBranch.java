@@ -94,16 +94,8 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterOutliner(window.getGLWindow());
     }
 
-    public void openFaceOutliner(WindowInstance window) {
-        tabManager.openFaceOutliner(window.getGLWindow());
-    }
-
     public void openAnimationEditor(WindowInstance window) {
         tabManager.openAnimationEditor(window.getGLWindow());
-    }
-
-    public void openAnimationOutliner(WindowInstance window) {
-        tabManager.openAnimationOutliner(window.getGLWindow());
     }
 
     public void openAnimationTimeline(WindowInstance window) {

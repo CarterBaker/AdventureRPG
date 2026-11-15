@@ -6,6 +6,7 @@ import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
@@ -43,7 +44,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterEditorContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, PropertiesProvider,
-        CharacterViewRowSource, FileMenuProvider, LayersProvider {
+        OutlinerProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider {
 
     /*
      * The one editor tab for every part of making a character, worked as a
@@ -221,6 +222,40 @@ public class CharacterEditorContext extends ContextPackage
             faceEditorManager.step(key, steps);
         else
             characterEditorManager.step(key, steps);
+    }
+
+    // Outliner \\
+
+    @Override
+    public int getOutlinerRevision() {
+        return faceEditorManager.getRevision();
+    }
+
+    @Override
+    public String getOutlinerTitle() {
+        return isFace()
+                ? EditorSetting.FACE_OUTLINER_TITLE
+                : EditorSetting.CHARACTER_OUTLINER_TITLE + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
+                        + characterEditorManager.getMode().getLabel();
+    }
+
+    @Override
+    public void buildOutlinerRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (isFace())
+            faceEditorManager.buildListRows(rows);
+        else
+            characterEditorManager.buildListRows(rows);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getOutlinerTemplates() {
+        return getRowTemplates();
+    }
+
+    @Override
+    public void stepOutlinerRow(String key, int steps) {
+        stepRow(key, steps);
     }
 
     // Camera \\

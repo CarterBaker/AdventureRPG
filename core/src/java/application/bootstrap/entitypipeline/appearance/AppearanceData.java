@@ -176,13 +176,34 @@ public class AppearanceData extends DataPackage {
         return shapeMorphs[bodyIndex][shapeIndex];
     }
 
-    // The value a slider starts at for a gender: its preset's, else the slider's default
+    // The value a slider starts at for a gender: its preset's, else the slider's default, held to the gender's range
     public float getStartingShapeValue(short genderID, int shapeIndex) {
 
         AppearanceGenderStruct preset = genderID2Preset.get(genderID);
         float value = preset != null ? preset.getShapeValue(shapeIndex) : Float.NaN;
 
-        return Float.isNaN(value) ? shapes[shapeIndex].getDefaultValue() : shapes[shapeIndex].clamp(value);
+        return Math.clamp(
+                Float.isNaN(value) ? shapes[shapeIndex].getDefaultValue() : value,
+                getShapeMin(genderID, shapeIndex),
+                getShapeMax(genderID, shapeIndex));
+    }
+
+    // The low end a gender may slide a slider to: its preset's range where it gives one, else the slider's own
+    public float getShapeMin(short genderID, int shapeIndex) {
+
+        AppearanceGenderStruct preset = genderID2Preset.get(genderID);
+        float min = preset != null ? preset.getShapeMin(shapeIndex) : Float.NaN;
+
+        return Float.isNaN(min) ? shapes[shapeIndex].getMin() : min;
+    }
+
+    // The high end a gender may slide a slider to: its preset's range where it gives one, else the slider's own
+    public float getShapeMax(short genderID, int shapeIndex) {
+
+        AppearanceGenderStruct preset = genderID2Preset.get(genderID);
+        float max = preset != null ? preset.getShapeMax(shapeIndex) : Float.NaN;
+
+        return Float.isNaN(max) ? shapes[shapeIndex].getMax() : max;
     }
 
     // The index of the slider of a name, INDEX_NOT_FOUND when no slider has it

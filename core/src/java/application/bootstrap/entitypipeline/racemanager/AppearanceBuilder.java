@@ -1,5 +1,7 @@
 package application.bootstrap.entitypipeline.racemanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.entitypipeline.appearance.AppearanceBoneTargetStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceExpression;
@@ -369,7 +371,8 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Genders \\
 
-    // Each gender's starting look: the body it wears and the "shapes" (by name) and "features" it starts with
+    // Each gender's starting look: the body it wears, the "shapes" (by name) and "features" it starts with, and the
+    // "ranges" (by name, each a "min" below its "max", within the slider's own) the player may slide its sliders across
     private Int2ObjectOpenHashMap<AppearanceGenderStruct> parseGenders(
             ArpgObjectStruct gendersArpg,
             RaceGenderStruct[] genders,
@@ -397,16 +400,71 @@ class AppearanceBuilder extends BuilderPackage {
                     throwException("Race gender \"" + genderName + "\" sets \"" + shapeName
                             + "\", which is not a shape slider. Source: " + sourceName);
 
+            float[] shapeMins = new float[shapes.length];
+            float[] shapeMaxes = new float[shapes.length];
+
+            parseRanges(presetArpg, genderName, shapes, shapeMins, shapeMaxes, sourceName);
             genderID2Preset.put(
                     gender.getGenderID(),
                     new AppearanceGenderStruct(
                             resolveBodyIndex(gender.getMeshHandle(), bodyMeshes),
                             shapeValues,
+                            shapeMins,
+                            shapeMaxes,
                             parseFeatures(presetArpg, sourceName),
                             parseNamedFeatures(presetArpg)));
         }
 
         return genderID2Preset;
+    }
+
+    // A gender's own range for each slider it names in "ranges", NaN ends for every other
+    private void parseRanges(
+            ArpgObjectStruct presetArpg,
+            String genderName,
+            AppearanceShapeStruct[] shapes,
+            float[] shapeMins,
+            float[] shapeMaxes,
+            String sourceName) {
+
+        Arrays.fill(shapeMins, Float.NaN);
+        Arrays.fill(shapeMaxes, Float.NaN);
+
+        if (!ArpgUtility.hasObject(presetArpg, "ranges"))
+            return;
+
+        ArpgObjectStruct rangesArpg = presetArpg.getAsObject("ranges");
+
+        for (String shapeName : rangesArpg.keySet()) {
+
+            int shapeIndex = findShapeIndex(shapes, shapeName);
+            ArpgObjectStruct rangeArpg = rangesArpg.getAsObject(shapeName);
+
+            if (shapeIndex == EngineSetting.INDEX_NOT_FOUND)
+                throwException("Race gender \"" + genderName + "\" ranges \"" + shapeName
+                        + "\", which is not a shape slider. Source: " + sourceName);
+
+            AppearanceShapeStruct shape = shapes[shapeIndex];
+            float min = ArpgUtility.validateFloat(rangeArpg, "min");
+            float max = ArpgUtility.validateFloat(rangeArpg, "max");
+
+            if (min >= max || min < shape.getMin() || max > shape.getMax())
+                throwException("Race gender \"" + genderName + "\" ranges \"" + shapeName + "\" from " + min + " to "
+                        + max + ", which must rise within the slider's own " + shape.getMin() + " to "
+                        + shape.getMax() + ". Source: " + sourceName);
+
+            shapeMins[shapeIndex] = min;
+            shapeMaxes[shapeIndex] = max;
+        }
+    }
+
+    private int findShapeIndex(AppearanceShapeStruct[] shapes, String shapeName) {
+
+        for (int i = 0; i < shapes.length; i++)
+            if (shapes[i].getShapeName().equals(shapeName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
     }
 
     // The body a gender wears among the bodies parsed

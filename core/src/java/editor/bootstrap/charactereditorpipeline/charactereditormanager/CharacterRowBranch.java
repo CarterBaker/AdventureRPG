@@ -26,8 +26,10 @@ class CharacterRowBranch extends BranchPackage {
      * Lists the rows of the character editor's two panels for its mode. The
      * left panel holds how the preview stands and what can be picked — in
      * Appearance everything the player is offered in the game's creator, the
-     * features worn and every slider under its group, each sliding across
-     * its own range with that range's two ends beneath it, the bones in
+     * features and marks worn, every color with its tones, the details, and
+     * every slider under its group, each sliding across the previewed
+     * gender's range with that range's two ends beneath it (Blink alone, a
+     * preview control, stays on the right), the bones in
      * Build, the anchors in Equipment,
      * the worn parts and the bones in Mesh and Weights, the worn parts in
      * Sculpt and the rig's bones in Rig — and the right panel the values of
@@ -90,6 +92,7 @@ class CharacterRowBranch extends BranchPackage {
         switch (mode) {
             case APPEARANCE -> {
                 addFeatureRows(document, rows);
+                addColorRows(document, rows);
                 addShapeRows(document, rows);
             }
             case BUILD -> addBoneRows(rigHandle, rows);
@@ -193,8 +196,10 @@ class CharacterRowBranch extends BranchPackage {
                 shape.getShapeName(),
                 characterPropertyBranch.getValueText(document, key),
                 characterPropertyBranch.getNumber(document, key),
-                shape.getMin(),
-                shape.getMax(),
+                document.getPreviewData().getAppearanceData().getShapeMin(
+                        characterEditorManager.getPreviewGenderID(), shapeIndex),
+                document.getPreviewData().getAppearanceData().getShapeMax(
+                        characterEditorManager.getPreviewGenderID(), shapeIndex),
                 characterPropertyBranch.getStep(key)));
 
         String minKey = CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN, shapeIndex);
@@ -251,7 +256,7 @@ class CharacterRowBranch extends BranchPackage {
             return;
 
         switch (characterEditorManager.getMode()) {
-            case APPEARANCE -> addColorRows(document, rows);
+            case APPEARANCE -> addPreviewRows(document, rows);
             case BUILD -> addBuildRows(document, rows);
             case EQUIPMENT -> addAnchorPropertyRows(document, rows);
             case MESH -> characterMeshRowBranch.buildMeshRows(rows);
@@ -262,6 +267,7 @@ class CharacterRowBranch extends BranchPackage {
         }
     }
 
+    // Every color the player picks, with the race's tones, then every detail amount, as the creator offers them
     private void addColorRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         if (characterPropertyBranch.getAppearanceArpg() == null)
@@ -295,6 +301,10 @@ class CharacterRowBranch extends BranchPackage {
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_DETAIL, skinnedDetail.ordinal()),
                     EditorSetting.CHARACTER_EDITOR_DETAIL_LABELS[skinnedDetail.ordinal()]);
 
+    }
+
+    // How the preview plays while the look is set, nothing the player is given
+    private void addPreviewRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
         addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_BLINK, EditorSetting.CHARACTER_EDITOR_LABEL_BLINK);
     }

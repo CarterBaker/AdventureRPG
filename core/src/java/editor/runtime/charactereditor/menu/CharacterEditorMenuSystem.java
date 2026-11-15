@@ -21,7 +21,7 @@ public class CharacterEditorMenuSystem extends SystemPackage {
      * the Face layer, the character editor's on every other, rewritten only
      * when either editor's state moves or the window turns to or from the
      * face. The layers are picked in the Layers tab; the editor's panels are
-     * the Character and Face Outliner docker windows and the Properties tab.
+     * the Character Outliner docker window and the Properties tab.
      */
 
     // Internal

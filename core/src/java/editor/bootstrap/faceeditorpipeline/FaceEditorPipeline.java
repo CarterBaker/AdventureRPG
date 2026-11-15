@@ -7,7 +7,7 @@ public class FaceEditorPipeline extends PipelinePackage {
 
     /*
      * Registers the face editor's shared state, so the Character Editor's
-     * Face layer, the Face Outliner window and the Properties tab work on the
+     * Face layer, the Character Outliner window and the Properties tab work on the
      * same face control of the character open in the Character Editor.
      */
 

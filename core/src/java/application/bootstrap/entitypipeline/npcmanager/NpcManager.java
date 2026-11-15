@@ -8,7 +8,6 @@ import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
 import application.bootstrap.dialoguepipeline.dialoguemanager.DialogueManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
-import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
@@ -370,11 +369,12 @@ public class NpcManager extends ManagerPackage {
 
         for (int i = 0; i < appearanceData.getShapeCount(); i++) {
 
-            AppearanceShapeStruct shape = appearanceData.getShape(i);
-            float spread = (shape.getMax() - shape.getMin()) * EngineSetting.NPC_SHAPE_VARIATION;
+            float min = appearanceData.getShapeMin(entity.getGenderID(), i);
+            float max = appearanceData.getShapeMax(entity.getGenderID(), i);
+            float spread = (max - min) * EngineSetting.NPC_SHAPE_VARIATION;
             float offset = (ThreadLocalRandom.current().nextFloat() * 2f - 1f) * spread;
 
-            appearanceHandle.setShapeValue(i, appearanceHandle.getShapeValue(i) + offset);
+            appearanceHandle.setShapeValue(i, Math.clamp(appearanceHandle.getShapeValue(i) + offset, min, max));
         }
     }
 

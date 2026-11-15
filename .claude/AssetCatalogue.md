@@ -346,6 +346,9 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-15: Layers from rig parts. Rewrote `rigs/HumanoidRig.arpg` (its `parts` a list of named parts, the head
   showing hair, eyes and teeth and taking the face, the eyes and mouth holding the eyes and teeth) and
   `schemas/Rigs.arpg` (the parts list: name, bones, holds, shows, face). Entries unchanged.
+- 2026-11-15: One Character Outliner and per-gender ranges. Regenerated `menus/editor/EditorWindow.arpg` (the Face and
+  Animation Outliners leave the Characters menu, its panel shorter) and `schemas/Races.arpg` (a gender's `ranges`, a
+  `min` and `max` per shape slider). Entries unchanged.
 
 ---
 

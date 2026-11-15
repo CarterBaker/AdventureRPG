@@ -263,7 +263,8 @@ public class CreatorBodyBranch extends BranchPackage {
             case HEIGHT -> player.getEntityData().getSizeMin().y;
             case WEIGHT -> player.getEntityData().getWeightMin();
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> RuntimeSetting.CREATOR_HEAD_PROPORTION_MIN;
-            case SHAPE -> player.getEntityData().getRaceData().getAppearanceData().getShape(index).getMin();
+            case SHAPE -> player.getEntityData().getRaceData().getAppearanceData()
+                    .getShapeMin(player.getGenderID(), index);
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_MIN[index];
             case COLOR_HUE, COLOR_SATURATION, COLOR_BRIGHTNESS -> 0f;
         };
@@ -274,7 +275,8 @@ public class CreatorBodyBranch extends BranchPackage {
             case HEIGHT -> player.getEntityData().getSizeMax().y;
             case WEIGHT -> player.getEntityData().getWeightMax();
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> RuntimeSetting.CREATOR_HEAD_PROPORTION_MAX;
-            case SHAPE -> player.getEntityData().getRaceData().getAppearanceData().getShape(index).getMax();
+            case SHAPE -> player.getEntityData().getRaceData().getAppearanceData()
+                    .getShapeMax(player.getGenderID(), index);
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_MAX[index];
             case COLOR_HUE, COLOR_SATURATION, COLOR_BRIGHTNESS -> 1f;
         };
@@ -341,7 +343,9 @@ public class CreatorBodyBranch extends BranchPackage {
         for (int i = 0; i < appearanceData.getShapeCount(); i++)
             player.getAppearanceHandle().setShapeValue(
                     i,
-                    randomBetween(appearanceData.getShape(i).getMin(), appearanceData.getShape(i).getMax()));
+                    randomBetween(
+                            appearanceData.getShapeMin(player.getGenderID(), i),
+                            appearanceData.getShapeMax(player.getGenderID(), i)));
     }
 
     private float randomBetween(float min, float max) {

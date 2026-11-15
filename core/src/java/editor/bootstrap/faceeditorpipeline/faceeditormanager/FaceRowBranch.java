@@ -13,7 +13,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class FaceRowBranch extends BranchPackage {
 
     /*
-     * Lists the rows of the face editor's two panels. The Face Outliner holds
+     * Lists the rows of the face editor's two panels. The Character Outliner holds
      * how the preview is made — its gender, when the race has more than
      * one — then every face
      * control under the group a creator lists it in, groups in the order the

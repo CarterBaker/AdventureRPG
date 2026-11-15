@@ -111,6 +111,29 @@ class CharacterEditBranch extends BranchPackage {
                 .addProperty(shapeName, value));
     }
 
+    // The range a gender's player may slide a slider across, within the slider's own
+    void setGenderRange(
+            CharacterDocumentInstance document,
+            String genderName,
+            String shapeName,
+            float min,
+            float max) {
+        edit(document, race -> {
+
+            ArpgObjectStruct rangeArpg = new ArpgObjectStruct();
+
+            rangeArpg.addProperty(EditorSetting.CHARACTER_EDITOR_FIELD_MIN, min);
+            rangeArpg.addProperty(EditorSetting.CHARACTER_EDITOR_FIELD_MAX, max);
+            ArpgObjectStruct genders = CharacterViewUtility.requireObject(
+                    race, EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS);
+
+            CharacterViewUtility.requireObject(
+                            CharacterViewUtility.requireObject(genders, genderName),
+                            EditorSetting.CHARACTER_EDITOR_FIELD_RANGES)
+                    .add(shapeName, rangeArpg);
+        });
+    }
+
     // Overlays \\
 
     // The style an overlay starts in on a gender's model

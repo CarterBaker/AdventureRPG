@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 85
-Task: CharacterLayersFromBones
+Delivery: 86
+Task: CharacterOutlinerMerge
 Applied: 2026-11-15
 
 ## Log
@@ -95,3 +95,4 @@ Applied: 2026-11-15
 - 83, 2026-11-15, CharacterEditorFixes
 - 84, 2026-11-15, CharacterRigWorkflow
 - 85, 2026-11-15, CharacterLayersFromBones
+- 86, 2026-11-15, CharacterOutlinerMerge

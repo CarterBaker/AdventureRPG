@@ -8,7 +8,9 @@ public class AppearanceGenderStruct extends StructPackage {
     /*
      * The look one gender starts with: the body it wears, by its index
      * among the race's body meshes, a value per shape slider (NaN keeps the
-     * race's default) and, for each slot it names, the feature it wears
+     * race's default), the range the player may slide each across (NaN
+     * ends keep the slider's own, a gender's within it) and, for each slot
+     * it names, the feature it wears
      * there (null for none, so a gender can go bald); a slot it does not
      * name keeps the race's. Each gender may be its own mesh, so a man and
      * a woman are modelled apart and share the rig, the sliders and the
@@ -20,6 +22,8 @@ public class AppearanceGenderStruct extends StructPackage {
 
     // Shapes — indexed like the race's shape sliders
     private final float[] shapeValues;
+    private final float[] shapeMins;
+    private final float[] shapeMaxes;
 
     // Features — indexed by FeatureSlot ordinal
     private final FeatureHandle[] features;
@@ -30,6 +34,8 @@ public class AppearanceGenderStruct extends StructPackage {
     public AppearanceGenderStruct(
             int bodyIndex,
             float[] shapeValues,
+            float[] shapeMins,
+            float[] shapeMaxes,
             FeatureHandle[] features,
             boolean[] namedFeatures) {
 
@@ -38,6 +44,8 @@ public class AppearanceGenderStruct extends StructPackage {
 
         // Shapes
         this.shapeValues = shapeValues;
+        this.shapeMins = shapeMins;
+        this.shapeMaxes = shapeMaxes;
 
         // Features
         this.features = features;
@@ -52,6 +60,16 @@ public class AppearanceGenderStruct extends StructPackage {
 
     public float getShapeValue(int shapeIndex) {
         return shapeValues[shapeIndex];
+    }
+
+    // The low end of the gender's own range for a slider, NaN where it keeps the slider's
+    public float getShapeMin(int shapeIndex) {
+        return shapeMins[shapeIndex];
+    }
+
+    // The high end of the gender's own range for a slider, NaN where it keeps the slider's
+    public float getShapeMax(int shapeIndex) {
+        return shapeMaxes[shapeIndex];
     }
 
     public FeatureHandle getFeature(int slotIndex) {

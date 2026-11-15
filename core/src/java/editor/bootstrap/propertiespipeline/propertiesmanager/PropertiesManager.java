@@ -1,6 +1,7 @@
 package editor.bootstrap.propertiespipeline.propertiesmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import engine.root.ManagerPackage;
@@ -17,7 +18,8 @@ public class PropertiesManager extends ManagerPackage {
      * Every window that provides properties opens itself here for as long as
      * it lives, through openWindow() and closeWindow(), the one pair that
      * owns them; a closed target leaves the tab with none until another is
-     * focused.
+     * focused. The Character Outliner follows the same way the window worked
+     * in last among those that also list outliner rows.
      */
 
     // Internal
@@ -25,6 +27,7 @@ public class PropertiesManager extends ManagerPackage {
 
     // Windows
     private Object2ObjectOpenHashMap<WindowInstance, PropertiesProvider> window2Provider;
+    private Object2ObjectOpenHashMap<WindowInstance, OutlinerProvider> window2Outliner;
 
     // Base \\
 
@@ -33,6 +36,7 @@ public class PropertiesManager extends ManagerPackage {
 
         // Windows
         this.window2Provider = new Object2ObjectOpenHashMap<>();
+        this.window2Outliner = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -43,11 +47,16 @@ public class PropertiesManager extends ManagerPackage {
     // Windows \\
 
     public void openWindow(WindowInstance window, PropertiesProvider provider) {
+
         window2Provider.put(window, provider);
+
+        if (provider instanceof OutlinerProvider outliner)
+            window2Outliner.put(window, outliner);
     }
 
     public void closeWindow(WindowInstance window) {
         window2Provider.remove(window);
+        window2Outliner.remove(window);
     }
 
     // Accessible \\
@@ -58,5 +67,13 @@ public class PropertiesManager extends ManagerPackage {
         WindowInstance targetWindow = activeWindowManager.findRecent(window2Provider);
 
         return targetWindow != null ? window2Provider.get(targetWindow) : null;
+    }
+
+    // What the window worked in last that lists outliner rows shows in the Character Outliner, null before any is
+    public OutlinerProvider getOutliner() {
+
+        WindowInstance targetWindow = activeWindowManager.findRecent(window2Outliner);
+
+        return targetWindow != null ? window2Outliner.get(targetWindow) : null;
     }
 }

@@ -429,7 +429,6 @@ public class EditorSetting {
     public static final String TAB_TITLE_ARPG_VIEWER = "ARPG Viewer";
     public static final String TAB_TITLE_ANIMATION_EDITOR = "Animation Editor";
     public static final String TAB_TITLE_ANIMATION_TREE_EDITOR = "Animation Tree Editor";
-    public static final String TAB_TITLE_ANIMATION_OUTLINER = "Animation Outliner";
     public static final String TAB_TITLE_ANIMATION_TIMELINE = "Animation Timeline";
     public static final String TAB_TITLE_BIOME_OUTLINER = "Biome Outliner";
     public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
@@ -437,7 +436,6 @@ public class EditorSetting {
     public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
     public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
-    public static final String TAB_TITLE_FACE_OUTLINER = "Face Outliner";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
@@ -797,6 +795,9 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_FIELD_APPEARANCE = "appearance";
     public static final String CHARACTER_EDITOR_FIELD_FEATURES = "features";
     public static final String CHARACTER_EDITOR_FIELD_GENDERS = "genders";
+    public static final String CHARACTER_EDITOR_FIELD_RANGES = "ranges";
+    public static final String CHARACTER_EDITOR_FIELD_MIN = "min";
+    public static final String CHARACTER_EDITOR_FIELD_MAX = "max";
     public static final String CHARACTER_EDITOR_FIELD_SHAPES = "shapes";
     public static final String CHARACTER_EDITOR_FIELD_OVERLAYS = "overlays";
     public static final String CHARACTER_EDITOR_FIELD_DEFAULT = "default";

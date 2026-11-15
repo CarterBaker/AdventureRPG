@@ -19,10 +19,8 @@ and restored by layouts like any other.
 | Window | Context | Shows |
 |---|---|---|
 | Character Editor | `CharacterEditorContext` | the layer picked: the live preview in a look mode, or the region framed and shown alone in a mode that takes tools (a tool canvas) |
-| Character Outliner | `CharacterOutlinerContext` | `CharacterEditorManager.buildListRows` |
-| Face Outliner | `FaceOutlinerContext` | `FaceEditorManager.buildListRows` |
+| Character Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `FaceEditorManager.buildListRows` on the Face layer, `AnimationEditorManager.buildListRows` |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
-| Animation Outliner | `AnimationOutlinerContext` | `AnimationEditorManager.buildListRows` |
 | Animation Timeline | `AnimationTimelineContext` | transport, summary track and a dope sheet lane per bone |
 | Properties | `PropertiesContext` | the value rows of the character, face or animation tab worked in last |
 
@@ -45,18 +43,22 @@ and restored by layouts like any other.
   other. Its keys are one file, `shortcuts/CharacterEditor.arpg`, kept to their layers by `canvases`; Undo, Redo and
   Save run the File menu's action (`FileMenuBranch.run`), so they act on the face on the Face layer.
 
-- **The Appearance outliner is the player's creator.** In Appearance the Character Outliner lists what the game's
-  creator offers the player: the gender, the features worn (Hair: the race default, none, or any style that fits),
-  then every shape slider under its group in the order the race first lists each, each a ranged row
-  (`CharacterViewRowStruct.ranged`) holding the value the game starts the previewed gender at, across the shape's
-  own `min` to `max`: the gender preset's `shapes` value where it names the shape (`CharacterEditBranch.setGenderShape`),
-  the race's `default` otherwise (`FaceEditorManager.setDefault`, the Face layer's default row path), the preview's
-  override cleared so it shows the new start, with one pair row (`CharacterViewRowStruct.pair`, two typed value boxes side by side, no slider) for
-  its Min and Max beneath it. Those ends are written through `FaceEditorManager.setRangeEnd`, the path the Face
-  Editor's range rows take (a step apart, the default carried inside, one face history step), so the slider follows a
-  new range the moment the preview rebuilds. Appearance lists no pose: a mode names the pose it stands in (`CharacterEditorMode.getStandingPose`,
-  Appearance idles as the creator shows the player) or lets its outliner pick one (`picksPose`: Build, Equipment,
-  Weights). Colors, tones, details and Blink stay in the Properties tab.
+- **The Appearance outliner is the player's creator.** In Appearance the Character Outliner lists everything the
+  game's creator offers the player: the gender, the features worn (Hair: the race default, none, or any style that
+  fits), the marks (overlay styles), every color with the race's tones, the detail amounts, then every shape slider under
+  its group in the order the race first lists each, each a ranged row (`CharacterViewRowStruct.ranged`) holding the value
+  the game starts the previewed gender at, across the range that gender's player may slide it: the gender preset's
+  `shapes` value where it names the shape (`CharacterEditBranch.setGenderShape`), the race's `default` otherwise
+  (`FaceEditorManager.setDefault`), the preview's override cleared so it shows the new start, with one pair row
+  (`CharacterViewRowStruct.pair`, two typed value boxes side by side, no slider) for its Min and Max beneath it. Those ends
+  are the gender's own (`genders.<g>.ranges.<shape>`, `min` below `max`, within the slider's own `min` to `max`;
+  `AppearanceGenderStruct.getShapeMin` / `getShapeMax`, read only through `AppearanceData.getShapeMin(genderID, i)` /
+  `getShapeMax`, which fall back to the slider's own), written through `CharacterPropertyBranch.setGenderRangeEnd` (a step
+  apart, within the slider's range), so each race and each gender has its own range; the game's creator, its randomise
+  and NPC variation read the same two methods. The Face layer's range rows still set the slider's own range, the outer
+  bound every gender's range sits in. Appearance lists no pose: a mode names the pose it stands in
+  (`CharacterEditorMode.getStandingPose`, Appearance idles as the creator shows the player) or lets its outliner pick one
+  (`picksPose`: Build, Equipment, Weights). Only Blink, a preview control, stays in the Properties tab.
 - **Values live in the shared Properties tab.** The character, face and animation viewport contexts implement
   `PropertiesProvider` (content `ROWS`) and `CharacterViewRowSource` (their manager's `buildPropertyRows`) and create a
   `PropertiesSourceSystem`; the Properties tab (`RowPropertiesSystem`) shows the rows of the one focused last and hands
@@ -68,9 +70,13 @@ and restored by layouts like any other.
   step buttons take; the value box still opens for typing. A ranged row spans its declared range instead, its knob set
   where the value stands on every refill and refresh, a drag still handing over whole steps of the row's own step. A number row template carries the track and knob ids in
   its `CharacterViewTemplateStruct`.
-- An outliner docker context implements `CharacterViewRowSource` and creates `CharacterViewPanelSystem`,
+- **One outliner.** There is one Character Outliner (`CharacterOutlinerContext`), never one per tool: a viewport that
+  lists outliner rows implements `OutlinerProvider` (`editor.bootstrap.propertiespipeline.properties`) beside
+  `PropertiesProvider`, and `PropertiesManager.getOutliner` names the one worked in last, the way the Properties tab
+  follows. The outliner implements `CharacterViewRowSource` over it and creates `CharacterViewPanelSystem`,
   `CharacterViewDockSystem` and `ToolCanvasSystem`; the dock system opens `menus/editor/CharacterDock.arpg` and
-  refills it only when the source's revision moves. Row templates stay in the tool's own menu
+  refills it only when the source's revision moves (the outliner's own, moved when the window followed changes or its
+  list does). Row templates stay in the tool's own menu
   (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `FACE_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
   their buttons route to the tool's branch. A tool without a text row template must never list a `TEXT` row.
 - Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_SCULPT`, `CHARACTER_WEIGHTS`,
