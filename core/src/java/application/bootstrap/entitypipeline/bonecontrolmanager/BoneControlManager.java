@@ -56,8 +56,19 @@ public class BoneControlManager extends ManagerPackage {
 
     // Accessible \\
 
-    // The controls of a rig, null for a rig with none
+    // The controls of a rig, loaded on demand while the loader still holds its file; null for a rig with none
     public BoneControlHandle getBoneControlHandle(String rigName) {
-        return RegistryUtility.getHandle(rigName2BoneControlID, boneControlID2BoneControlHandle, rigName);
+
+        BoneControlHandle handle = RegistryUtility.getHandle(
+                rigName2BoneControlID,
+                boneControlID2BoneControlHandle,
+                rigName);
+
+        if (handle == null && internalLoader != null) {
+            ((BoneControlLoader) internalLoader).request(rigName);
+            handle = RegistryUtility.getHandle(rigName2BoneControlID, boneControlID2BoneControlHandle, rigName);
+        }
+
+        return handle;
     }
 }
