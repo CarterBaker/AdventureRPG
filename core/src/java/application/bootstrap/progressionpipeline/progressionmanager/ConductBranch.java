@@ -22,7 +22,8 @@ class ConductBranch extends BranchPackage {
      * the killer: slaying the good darkens, slaying the wicked lightens.
      * Affinity is what one being thinks of another by identity; gains are
      * multiplied by the persuasion of whoever is liked, and an opinion adds a
-     * sway toward those whose morality lies near one's own.
+     * sway toward those whose morality lies near one's own and the bond of
+     * whatever the other is to the being — its young, its mate, its fellow.
      */
 
     // Internal
@@ -119,14 +120,17 @@ class ConductBranch extends BranchPackage {
         conductHandle.setAffinity(identity, clampAffinity(conductHandle.getAffinity(identity) + scaled));
     }
 
-    // What one being thinks of another — its own regard plus a sway toward a morality like its own
+    // What one being thinks of another — its own regard plus a sway toward a morality like its own and the bond of
+    // what the other is to it
     float resolveOpinion(EntityInstance entity, EntityInstance other) {
 
+        long identity = other.getConductHandle().getIdentity();
         float gap = Math.abs(entity.getConductHandle().getMorality().getValue()
                 - other.getConductHandle().getMorality().getValue()) / EngineSetting.MORALITY_MAX;
         float sway = EngineSetting.AFFINITY_MORALITY_SWAY * (1f - gap);
 
-        return clampAffinity(entity.getConductHandle().getAffinity(other.getConductHandle().getIdentity()) + sway);
+        return clampAffinity(entity.getConductHandle().getAffinity(identity) + sway
+                + entity.getDispositionHandle().getBond(identity));
     }
 
     private float clampAffinity(float affinity) {

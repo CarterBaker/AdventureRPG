@@ -21,8 +21,10 @@ public class NpcInstance extends InstancePackage {
      * to fight, for as long as that cause lasts; it looks about whenever its
      * perception comes due. It walks every way it goes by its path, and keeps
      * the fight in progress in its combat struct; a new mind or a new foe
-     * starts both afresh. A fallen NPC remembers what felled it, whose luck
-     * its loot is drawn by.
+     * starts both afresh. While a being talks with it, it stands and attends
+     * to that talker, and a foe it has been frightened of is fled rather than
+     * fought for as long as it stays its foe. A fallen NPC remembers what
+     * felled it, whose luck its loot is drawn by.
      */
 
     // Internal
@@ -47,6 +49,10 @@ public class NpcInstance extends InstancePackage {
     private EntityInstance provoker;
     private float provokedSeconds;
     private float perceptionSeconds;
+    private boolean frightened;
+
+    // Talk
+    private EntityInstance talker;
 
     // Way
     private PathStruct pathStruct;
@@ -106,6 +112,10 @@ public class NpcInstance extends InstancePackage {
         this.provoker = null;
         this.provokedSeconds = 0f;
         this.perceptionSeconds = 0f;
+        this.frightened = false;
+
+        // Talk
+        this.talker = null;
 
         // Way
         this.pathStruct.clear();
@@ -156,13 +166,14 @@ public class NpcInstance extends InstancePackage {
         npcCombatStruct.reset();
     }
 
-    // A new foe, or none, forgets the way it was walking and the fight it was in
+    // A new foe, or none, forgets the way it was walking, the fight it was in and any fright of the last
     public void setFoe(EntityInstance foe) {
 
         if (this.foe == foe)
             return;
 
         this.foe = foe;
+        frightened = false;
         pathStruct.clear();
         npcCombatStruct.reset();
     }
@@ -256,6 +267,26 @@ public class NpcInstance extends InstancePackage {
 
     public boolean isPerceptionDue() {
         return perceptionSeconds <= 0f;
+    }
+
+    public boolean isFrightened() {
+        return frightened;
+    }
+
+    public void setFrightened(boolean frightened) {
+        this.frightened = frightened;
+    }
+
+    public EntityInstance getTalker() {
+        return talker;
+    }
+
+    public void setTalker(EntityInstance talker) {
+        this.talker = talker;
+    }
+
+    public boolean isTalking() {
+        return talker != null;
     }
 
     public PathStruct getPathStruct() {

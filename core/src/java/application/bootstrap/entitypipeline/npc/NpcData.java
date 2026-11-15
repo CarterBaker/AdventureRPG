@@ -9,8 +9,10 @@ public class NpcData extends DataPackage {
      * the world as, the loot tables it is dressed and armed from as it comes
      * into the world, the loot table it drops when it falls, how far from its
      * spot it wanders, the temper it fights with, the profession it holds and
-     * the range of levels a resident of it is drawn from. Owned by NpcHandle
-     * for the engine lifetime.
+     * the range of levels a resident of it is drawn from, the traits every
+     * resident of it has, the pool more are drawn from and how many, and the
+     * bonds it holds residents of other NPCs by. Owned by NpcHandle for the
+     * engine lifetime.
      */
 
     // Identity
@@ -33,6 +35,12 @@ public class NpcData extends DataPackage {
     private final int levelMin;
     private final int levelMax;
 
+    // Nature
+    private final short[] traitIDs;
+    private final short[] traitPoolIDs;
+    private final int traitDraws;
+    private final NpcBondStruct[] bonds;
+
     // Constructor \\
 
     public NpcData(
@@ -45,7 +53,11 @@ public class NpcData extends DataPackage {
             NpcTemperamentStruct temperament,
             short professionID,
             int levelMin,
-            int levelMax) {
+            int levelMax,
+            short[] traitIDs,
+            short[] traitPoolIDs,
+            int traitDraws,
+            NpcBondStruct[] bonds) {
 
         // Identity
         this.npcName = npcName;
@@ -66,6 +78,12 @@ public class NpcData extends DataPackage {
         this.professionID = professionID;
         this.levelMin = levelMin;
         this.levelMax = levelMax;
+
+        // Nature
+        this.traitIDs = traitIDs;
+        this.traitPoolIDs = traitPoolIDs;
+        this.traitDraws = traitDraws;
+        this.bonds = bonds;
     }
 
     // Accessible \\
@@ -108,5 +126,21 @@ public class NpcData extends DataPackage {
 
     public int getLevelMax() {
         return levelMax;
+    }
+
+    public short[] getTraitIDs() {
+        return traitIDs;
+    }
+
+    public short[] getTraitPoolIDs() {
+        return traitPoolIDs;
+    }
+
+    public int getTraitDraws() {
+        return traitDraws;
+    }
+
+    public NpcBondStruct[] getBonds() {
+        return bonds;
     }
 }

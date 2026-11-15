@@ -320,6 +320,14 @@ One line per session that changed this file: the date, what was added or removed
   regenerated every texture alias, `schemas/TextureAliases.arpg`, `ubos/SettingsData.arpg`, the materials that named a
   texture pack, every item mesh (the sub-voxel layout) and the shaders that sampled the old atlas, so every texture
   streams from fixed block-compressed pools.
+- 2026-11-15: Dialogue. Added the dictionary under `words/` (six files), `intents/Intents.arpg`,
+  `replies/Replies.arpg` and `replies/Beasts.arpg`, `phrases/Phrases.arpg`, `topics/Topics.arpg`,
+  `traits/Traits.arpg`, `moods/Moods.arpg`, `relations/Relations.arpg`, `verdicts/Verdicts.arpg`,
+  `scenarios/Scenarios.arpg`, the empty `lessons/Lessons.arpg` the trainer writes, the menu `menus/Dialogue.arpg`
+  and the ten schemas `Words`, `Intents`, `Replies`, `Phrases`, `Topics`, `Traits`, `Moods`, `Relations`, `Verdicts`
+  and `Scenarios`; regenerated the four NPCs (`traits`, `trait_pool`, `trait_draws`, `bonds`) and `schemas/Npcs.arpg`
+  for the generative dialogue pipeline.
+
 ---
 
 ## Textures and Sprites (2400 files)
@@ -1700,7 +1708,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3592 files)
+## Data Files (3620 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2379,6 +2387,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `TenorSaxophone.arpg`, `Timpani.arpg`, `Trombone.arpg`, `Trumpet.arpg`, `Tuba.arpg`, `TubularBells.arpg`,
 `UprightPiano.arpg`, `Vibraphone.arpg`, `ViolaSection.arpg`, `Violin.arpg`, `ViolinSection.arpg`, `Xylophone.arpg`
 
+### `assets/intents/`
+
+`Intents.arpg`
+
 ### `assets/items/armor/`
 
 `Armor.arpg`
@@ -2430,6 +2442,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/items/weapons/`
 
 `Cannons.arpg`, `Weapons.arpg`
+
+### `assets/lessons/`
+
+`Lessons.arpg`
 
 ### `assets/loottables/containers/`
 
@@ -2515,8 +2531,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/menus/`
 
-`Character.arpg`, `CharacterCreator.arpg`, `HUD.arpg`, `Inventory.arpg`, `Launcher.arpg`, `MainMenu.arpg`,
-`PauseMenu.arpg`, `Settings.arpg`, `Shipwright.arpg`, `SongbookMenu.arpg`
+`Character.arpg`, `CharacterCreator.arpg`, `Dialogue.arpg`, `HUD.arpg`, `Inventory.arpg`, `Launcher.arpg`,
+`MainMenu.arpg`, `PauseMenu.arpg`, `Settings.arpg`, `Shipwright.arpg`, `SongbookMenu.arpg`
 
 ### `assets/menus/editor/`
 
@@ -2646,9 +2662,17 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `ChunkVAO.arpg`, `DockChromeVAO.arpg`, `ItemVAO.arpg`, `LabelVAO.arpg`, `MacroVAO.arpg`, `MacroWaterVAO.arpg`,
 `QuadVAO.arpg`, `SubVoxelVAO.arpg`
 
+### `assets/moods/`
+
+`Moods.arpg`
+
 ### `assets/npcs/`
 
 `Guard.arpg`, `Miner.arpg`, `Smuggler.arpg`, `Villager.arpg`
+
+### `assets/phrases/`
+
+`Phrases.arpg`
 
 ### `assets/processingpasses/`
 
@@ -2664,6 +2688,14 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `Human.arpg`
 
+### `assets/relations/`
+
+`Relations.arpg`
+
+### `assets/replies/`
+
+`Beasts.arpg`, `Replies.arpg`
+
 ### `assets/rigs/`
 
 `HumanoidRig.arpg`
@@ -2672,17 +2704,22 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `CobbleRoad.arpg`, `CobbleStreet.arpg`, `DirtPath.arpg`, `FlagstoneStreet.arpg`
 
+### `assets/scenarios/`
+
+`Scenarios.arpg`
+
 ### `assets/schemas/`
 
 `Animations.arpg`, `AnimationTrees.arpg`, `Architectures.arpg`, `Attributes.arpg`, `Behaviors.arpg`, `Biomes.arpg`,
 `Blocks.arpg`, `Brushes.arpg`, `Calendars.arpg`, `CaveBiomes.arpg`, `Clouds.arpg`, `Contents.arpg`, `Coverings.arpg`,
 `DamageTypes.arpg`, `Deeds.arpg`, `Entities.arpg`, `FBOs.arpg`, `Features.arpg`, `Furnishings.arpg`, `Genders.arpg`,
-`Instruments.arpg`, `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `NoteSets.arpg`, `Npcs.arpg`, `Passes.arpg`,
-`Professions.arpg`, `Races.arpg`, `Rigs.arpg`, `Roads.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`,
-`Shortcuts.arpg`, `Skills.arpg`, `Songs.arpg`,
-`SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`, `Structures.arpg`,
-`TextureAliases.arpg`, `Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Trades.arpg`, `Transitions.arpg`, `Trees.arpg`,
-`UBOs.arpg`, `Vehicles.arpg`, `Weapons.arpg`, `Weathers.arpg`, `Worlds.arpg`
+`Instruments.arpg`, `Intents.arpg`, `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Moods.arpg`, `NoteSets.arpg`,
+`Npcs.arpg`, `Passes.arpg`, `Phrases.arpg`, `Professions.arpg`, `Races.arpg`, `Relations.arpg`, `Replies.arpg`,
+`Rigs.arpg`, `Roads.arpg`, `Scenarios.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Shortcuts.arpg`,
+`Skills.arpg`, `Songs.arpg`, `SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`,
+`Structures.arpg`, `TextureAliases.arpg`, `Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Topics.arpg`, `Trades.arpg`,
+`Traits.arpg`, `Transitions.arpg`, `Trees.arpg`, `UBOs.arpg`, `Vehicles.arpg`, `Verdicts.arpg`, `Weapons.arpg`,
+`Weathers.arpg`, `Words.arpg`, `Worlds.arpg`
 
 ### `assets/seasons/`
 
@@ -3160,9 +3197,17 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `Standard.arpg`
 
+### `assets/topics/`
+
+`Topics.arpg`
+
 ### `assets/trades/`
 
 `Trades.arpg`
+
+### `assets/traits/`
+
+`Traits.arpg`
 
 ### `assets/transitions/`
 
@@ -3210,6 +3255,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `Galleon.arpg`
 
+### `assets/verdicts/`
+
+`Verdicts.arpg`
+
 ### `assets/weapons/`
 
 `Axe.arpg`, `Dagger.arpg`, `Improvised.arpg`, `Pickaxe.arpg`, `Shovel.arpg`, `Staff.arpg`, `Sword.arpg`, `Unarmed.arpg`
@@ -3219,6 +3268,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `BlizzardWeather.arpg`, `ClearWeather.arpg`, `CloudyWeather.arpg`, `DownpourWeather.arpg`, `DrizzleWeather.arpg`,
 `FoggyWeather.arpg`, `HeatwaveWeather.arpg`, `HighCirrusWeather.arpg`, `OvercastWeather.arpg`,
 `PartlyCloudyWeather.arpg`, `RainWeather.arpg`, `StormyWeather.arpg`, `SunnyWeather.arpg`, `WindyWeather.arpg`
+
+### `assets/words/`
+
+`Adjectives.arpg`, `Beasts.arpg`, `Function.arpg`, `Names.arpg`, `Nouns.arpg`, `Verbs.arpg`
 
 ### `assets/worlds/`
 

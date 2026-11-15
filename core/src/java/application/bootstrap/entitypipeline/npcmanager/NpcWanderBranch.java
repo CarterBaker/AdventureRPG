@@ -70,6 +70,11 @@ class NpcWanderBranch extends BranchPackage {
         resident.getEntityInstance().getEntityInputHandle().setWalk(true);
     }
 
+    // A resident in talk stands where it is, turned to whoever talks with it
+    void attend(NpcInstance resident) {
+        npcSteerBranch.face(resident.getEntityInstance(), resident.getTalker());
+    }
+
     // A point drawn evenly over the disc of the resident's wander reach about home
     private void beginWalk(NpcInstance resident) {
 

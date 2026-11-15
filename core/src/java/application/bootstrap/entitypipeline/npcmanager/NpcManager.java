@@ -5,6 +5,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.combatpipeline.projectilemanager.ProjectileManager;
+import application.bootstrap.dialoguepipeline.dialoguemanager.DialogueManager;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
@@ -50,8 +51,10 @@ public class NpcManager extends ManagerPackage {
      * its template, known by an identity drawn from its spot, its level drawn
      * from its definition's range and its gender from its race's, both by that
      * identity so it is the same each time it returns; it is raised to that
-     * level in its profession through ProgressionManager, its skin and hair
-     * drawn from its race's palettes, and dressed and armed from its gear
+     * level in its profession through ProgressionManager, given its traits,
+     * name and resting moods through DialogueManager, bound to every resident
+     * already in the world that its definition or theirs binds it to, its
+     * skin and hair drawn from its race's palettes, and dressed and armed from its gear
      * tables at its own level and luck, anything drawn that no free slot is
      * made for left behind. Each frame every resident whose chunk has
      * generated takes stock of the beings about it through
@@ -63,7 +66,13 @@ public class NpcManager extends ManagerPackage {
      * PathfindingManager finds. It then moves, animates and fights exactly as
      * the player does, through MovementManager and CombatManager.control().
      * alarm() hears every blow that lands from a source, provoking the struck
-     * resident and any near enough that defends the struck. A resident brought
+     * resident and any near enough that defends the struck, and overhear()
+     * hears every word that moves a resident's regard for whoever spoke it,
+     * moving the regard of those in earshot who think well of that resident.
+     * A resident a being talks with, between beginTalk() and endTalk(),
+     * stands and attends to it while calm; confront() turns it on that being
+     * and frighten() sets it running from it, as its own reply decides.
+     * A resident brought
      * to no health falls through defeat(): at the end of the frame it scatters
      * everything it carried and one draw of its loot table at its level and by
      * the luck of whatever felled it, and leaves the world, its spot left
@@ -85,6 +94,7 @@ public class NpcManager extends ManagerPackage {
     private ProgressionManager progressionManager;
     private StatManager statManager;
     private ClockManager clockManager;
+    private DialogueManager dialogueManager;
 
     // Branches
     private NpcSteerBranch npcSteerBranch;
@@ -150,6 +160,7 @@ public class NpcManager extends ManagerPackage {
         this.progressionManager = get(ProgressionManager.class);
         this.statManager = get(StatManager.class);
         this.clockManager = get(ClockManager.class);
+        this.dialogueManager = get(DialogueManager.class);
     }
 
     @Override
@@ -200,11 +211,22 @@ public class NpcManager extends ManagerPackage {
 
     private void think(NpcInstance resident, float deltaTime) {
         switch (resident.getMind()) {
-            case CALM -> npcWanderBranch.wander(resident, deltaTime);
+            case CALM -> rest(resident, deltaTime);
             case FIGHT -> npcCombatBranch.fight(resident, deltaTime);
             case FLEE -> npcCombatBranch.flee(resident, deltaTime);
             case RETURN -> npcWanderBranch.returnHome(resident, deltaTime);
         }
+    }
+
+    // A calm resident attends to whoever talks with it, and wanders otherwise
+    private void rest(NpcInstance resident, float deltaTime) {
+
+        if (resident.isTalking()) {
+            npcWanderBranch.attend(resident);
+            return;
+        }
+
+        npcWanderBranch.wander(resident, deltaTime);
     }
 
     // True while the chunk the entity stands in has generated, so it has ground to walk on
@@ -304,10 +326,14 @@ public class NpcManager extends ManagerPackage {
         NpcInstance resident = create(NpcInstance.class);
         resident.constructor(npcHandle, entity, chunkInstance.getCoordinate(), palette, spawn);
 
+        for (int i = 0; i < residents.size(); i++)
+            npcPerceptionBranch.bond(resident, residents.get(i));
+
         residents.add(resident);
     }
 
-    // Known by its spawn's identity, its gender and level drawn by that identity, and raised in its profession
+    // Known by its spawn's identity, its gender and level drawn by that identity, raised in its profession and
+    // given its nature
     private void raise(EntityInstance entity, NpcHandle npcHandle, long identity) {
 
         RaceData raceData = entity.getEntityData().getRaceData();
@@ -323,6 +349,8 @@ public class NpcManager extends ManagerPackage {
         progressionManager.identify(entity, identity);
         entity.setGenderID(raceData.getGenderID(genderIndex));
         progressionManager.raiseBeing(entity, level, npcHandle.getProfessionID());
+        dialogueManager.disposeBeing(
+                entity, npcHandle.getTraitIDs(), npcHandle.getTraitPoolIDs(), npcHandle.getTraitDraws(), identity);
     }
 
     // Every color drawn from the race's palettes and every shape nudged off its gender's start, so no two residents look
@@ -487,7 +515,40 @@ public class NpcManager extends ManagerPackage {
         }
     }
 
-    private NpcInstance findResident(EntityInstance entityInstance) {
+    // Talk \\
+
+    public void beginTalk(NpcInstance resident, EntityInstance talker) {
+        resident.setTalker(talker);
+    }
+
+    public void endTalk(NpcInstance resident) {
+        resident.setTalker(null);
+    }
+
+    // The resident turns on the being it was talking with
+    public void confront(NpcInstance resident, EntityInstance talker) {
+        npcPerceptionBranch.confront(resident, talker);
+    }
+
+    // The resident runs from the being it was talking with
+    public void frighten(NpcInstance resident, EntityInstance talker) {
+        npcPerceptionBranch.frighten(resident, talker);
+    }
+
+    // Something said by a speaker to a listener that moved the listener's regard for the speaker by an amount —
+    // every other resident in earshot that thinks well of the listener is moved the same way, by less
+    public void overhear(EntityInstance speaker, EntityInstance listener, float amount) {
+
+        if (amount == 0f)
+            return;
+
+        for (int i = 0; i < residents.size(); i++)
+            if (!residents.get(i).isFallen())
+                npcPerceptionBranch.overhear(residents.get(i), speaker, listener, amount);
+    }
+
+    // The resident an entity is, none when it is no resident
+    public NpcInstance findResident(EntityInstance entityInstance) {
 
         for (int i = 0; i < residents.size(); i++)
             if (residents.get(i).getEntityInstance() == entityInstance)

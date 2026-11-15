@@ -155,6 +155,26 @@ class NpcSteerBranch extends BranchPackage {
         return headingScratch.set(goal);
     }
 
+    // Face \\
+
+    // The NPC turned where it stands toward another being, walking nowhere
+    void face(EntityInstance entity, EntityInstance other) {
+
+        Vector3 position = other.getWorldPositionStruct().getPosition();
+        Vector3 size = other.getSize();
+        Vector3 offset = resolveOffset(
+                entity,
+                other.getWorldPositionStruct().getChunkCoordinate(),
+                position.x + size.x * 0.5f,
+                position.y,
+                position.z + size.z * 0.5f,
+                headingScratch);
+        float distance = (float) Math.sqrt(offset.x * offset.x + offset.z * offset.z);
+
+        if (distance > EngineSetting.DIVISION_EPSILON)
+            entity.getEntityInputHandle().setFacingDirection(offset.x / distance, 0f, offset.z / distance);
+    }
+
     // Offset \\
 
     // From the middle of the NPC's footprint, at its feet, to a point given in a chunk's frame, in blocks

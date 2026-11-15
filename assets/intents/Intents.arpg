@@ -1,0 +1,70 @@
+ARPGÊ‹¦Æä	intentsname
+greetdescriptionSaying hello.examples
+hellohihey therehello theregood morninggood daygood eveninggreetingswell methail, friend"hi, how do you dogood day to youheymorningevening to youhello friendexcuse me@pardon me, a moment of your timeaffinity
+moods
+happyrepliesgreet_warmgreet_plaingreet_coldbeast_approachbeast_warybeast_ignorefarewellSaying goodbye.goodbyebyesee you lateri must go now"i should be goinguntil next timetake caresafe travels"i'll be on my waybye for nowgood nighti have to leaveso long,we'll talk again later&that's all, goodbyefarewell_warmfarewell_plainfarewell_cold
+thankGiving thanks.thank youthanksmany thanks&thank you very muchi appreciate it(thanks for your helpi'm gratefulmuch obligedthanks a lot$you have my thanks thank you kindly"i am in your debt:that was a great help, thankswelcome_warmwelcome_plainapologizeSaying sorry.i'm sorry
+sorryi apologizeforgive memy apologies i didn't mean it4i am sorry for what i said"please forgive me(that was wrong of me"i beg your pardon sorry about that>i spoke out of turn, forgive me6i should not have said that"i regret my words
+angryforgive forgive_grudgingrefuse_forgivebeast_calminsult.Insulting the listener.you are a fool
+idiotyou stupid oafyou're ugly you filthy swine"you are worthless"shut up you idiot(you smell like a pig<what a pathetic wretch you areyou cowardyou're a liar2go rot, you miserable curyou disgust meyou are scumstupid peasant*your mother was a pigyou're uselessi hate youyou dumb loutdamn youyou are a joke2curse you and your familysadretortwarnignore_insult
+cowerlaugh_offattack_insultbeast_growlbeast_attackthreatenFThreatening the listener with harm.i will kill you*i'm going to hurt youyou're dead(i'll cut your throat,do as i say or you diei will gut you say your prayers(you will regret this2i'll burn your house down:i am going to beat you bloody8one more word and i stab you,i will make you sufferprepare to die.i'll smash your face in:you won't live to see morningwatch your backFi'll kill you and your whole familyafraiddefyflee_threatattack_threatbeast_fleecomplimentSincere praise."you are very kind8that's a fine sword you have you do good work$you are a good manwell done$you're a brave onenice workyou seem wise2you are very good at thisi like you*you have a kind heart4you're honest, i like thatthat was clever*you are a good friend&i admire your skillyou did wellgood doggood boygood girlthank_warmthank_modest(suspicious_of_praisebaskflatterBLavish praise meant to win favor.Xyour majesty is the wisest ruler in the landZyou are the greatest warrior i have ever seenFi am not worthy to stand before youJthere is no one as magnificent as youNyou are the finest smith in the kingdom>truly you are glorious, my lord4none can match your wisdomLall the realm speaks of your greatnessBi have never met anyone so mighty.your radiance blinds me>you are the best there ever wasJno king was ever so generous and wiseFi would kiss the ground you walk onZeveryone says you are the most skilled of allBi live only to serve one so great dismiss_flattery
+flirtSweet talk..you have beautiful eyeshello, handsome.you look lovely tonighthey gorgeous&you are very pretty8i can't take my eyes off youRhas anyone told you how beautiful you are.you have a lovely smile:care for some company tonightZyou are the fairest thing i have seen all day,i like the look of you2your smile warms my heartFwhat's a beauty like you doing here you are charmingHi could look at you all day, darling hello sweethearttenderamusedflirt_back
+blushrebuff_gentlerebuff_harshproposition&A romantic advance.kiss mei love youmarry me"will you marry me&come to bed with mei want you.spend the night with mebe minelet me kiss you*i want to be with youi desire you&will you be my wife,will you be my husband(i'm in love with you2come home with me tonight$i want to hold youaccept_advancedefer_advanceask_name6Asking who the listener is."what is your namewho are you what's your name*what do they call you&may i ask your nameyour name"tell me your name&what are you called(who am i speaking to0i didn't catch your nameand you are,what should i call you$do you have a nametell_namerefuse_nameask_profession<Asking what the listener does.what do you do$what is your tradewhat's your job6what do you do for a living&what work do you do.what is your profession4how do you earn your bread&what do you do hereare you a guardare you a miner2what's your business here2how do you make your coin"what is it you dotell_workrefuse_curtask_wellbeing6Asking how the listener is.how are you"how are you doinghow do you fareare you wellhow goes ithow are thingshow's your dayare you alright"how have you been8you look tired, are you well.is everything all righthow do you feelwhat's wrongare you okaytell_moodask_aboutlAsking what the listener knows or thinks of something.,tell me about the king@what do you know about the minesJwhat can you tell me about the guards8what do you think of the war4tell me about this villageDdo you know anything about the sea8what do you know of the gods8tell me more about the roads*what about the wolves>what do you make of the weatherDi want to know about the smugglers0tell me about the tavernBwhat is your opinion of the crown2know anything about bears what do you know tell me about it2speak to me of the temple:what do you think about taxes8have you heard of the castletell_topicdont_knowask_whatrefuse_tellask_whereAsking the way.&where is the tavern:where can i find a blacksmith4how do i get to the castle.which way to the market2where is the nearest town.where can i buy a sword4i'm looking for the temple:do you know where the mine iswhere am i<can you point me to the harbor,which road leads north>i am lost, where is the village<where would i find the captain,is there an inn nearby.where does this road go&how far is the citygive_directionsdont_know_whereask_rumor Asking for news.any news heard any rumors8what's happening around here0what's the latest gossip:anything interesting going on.what news from the road.have you heard anything tell me the news,any word from the city(what are folk sayinggot any stories6what's the talk of the town,anything i should know8hear anything strange latelytell_rumorno_rumorask_trade,Asking to buy or sell..i want to buy something2what do you have for sale&do you sell weapons(can i see your wares"i'd like to trade(what are you selling(i have goods to sell"will you buy this,how much for the swordlet's trade*show me what you have$i need to buy food8do you have anything to sell"what does it cost8i'm looking to sell some oredecline_tradeask_work2Asking for a job or task.6do you have any work for me(i'm looking for work.is there a job i can do2need any help around here2any tasks that need doing2i need coin, got any work$can i work for you4do you have a quest for me is anyone hiring@looking for an honest day's work2anything that needs doing got a job for me2who is hiring around hereno_workask_help Asking for help.can you help me i need your helpplease help me.could you do me a favori need a hand will you help mehelp me, please*i could use some help6can you do something for me"i need assistance would you aid me<i have a problem, can you helplend me a handoffer_helpdecline_helpdemand:Demanding something by force.$give me your money&hand over your coinyour purse, now6give me everything you have(hand it over or else$give me your sword,your gold or your life$empty your pockets(i'm taking your coingive me thatpay up&hand over the goods2give me all your gold now@i will take what i want from yourefuse_demandyield_demandbeg(Begging for charity.spare a coin(please, i'm starving.can you spare some foodNi have nothing, please help a poor soul"alms for the poor spare some bread.i haven't eaten in daysZcould you spare a coin for a hungry traveller6please, just a little moneyhave pity on me,anything you can spare0a coin for a poor beggargive_pityrefuse_begjokeTelling a joke.&want to hear a jokeDwhy did the chicken cross the road8i have a funny story for you.here's a riddle for youHdid you hear the one about the minerthat's funnyi'm only jokingjust kidding,let me tell you a joke6a guard walks into a tavern(you'll laugh at thisha ha, good one$i was only jestinglaugh_jokegroan_jokeunamused
+agreeAgreeing.yesi agreeyou're rightthat's trueindeedayeof coursefair enoughi think so toovery wellagreedsure&you speak the truthalrightokayacknowledge
+gruntdisagreeDisagreeing.noi disagreeyou're wrongthat's not true i don't think sononsense&i don't believe youthat is a lie
+never you are mistakennot at all&that can't be righti doubt thatshrug_off
+arguesmall_talkIdle talk.$nice weather today(lovely day, isn't itit's cold todaylooks like rain.what a storm last night,the sun is out at last:terrible weather we're havingquiet day todaybusy day(it is a fine morning6the nights are getting cold@winter is coming early this year*this wind never stops small_talk_replybragBoasting.Bi killed a bear with my own handsNi am the greatest swordsman in the land4i have slain a hundred men:no one can beat me in a fight>i once fought ten bandits alonei am very richHi'm the best hunter you'll ever meet@i have travelled the whole world<i saved a village from raiders6i'm stronger than any guard0they sing songs about me2i have never lost a fightimpressedunimpressedask_familyFAsking after the listener's family.(do you have a familyare you married(do you have children2tell me about your family$do you have a wife*do you have a husbandany kids(where is your family>do you have brothers or sisters(is your mother alive"do you live alone who are your kintell_familyask_opinion^Asking what the listener thinks of the speaker..what do you think of medo you like meare we friendsdo you trust me what am i to you0how do you feel about me am i your frienddo you hate me2what's your opinion of me&have i offended you(are we on good termstell_regardask_followDAsking the listener to come along.come with mefollow mejoin metravel with me&will you come along4i need you to come with me"let's go togetherwalk with mecome along4you should join my journeyride with merefuse_followbeast_obeydismiss@Telling the listener to go away.go awayleave me aloneget lostbe gone&get out of my sight$stop talking to meshut up.i'm done talking to you
+leave get away from me"that's enough, goshoo(i don't want to talkleave_talkoffended_leavecommand Giving an order.sitstaykneel before me"get out of my waymovestand asidedo as i saydownheelcome here stop right therewait hereobey mesit down
+fetchstay thererefuse_orderobey_ordercalm,Soothing the listener.calm downeasy now$i mean you no harmpeace, friend0i don't want any trouble0there's no need for that
+relaxsteady now2i'm not going to hurt youi come in peaceeasy, easylet's not fight$i'm not your enemydon't be afraidit's all rightsettle downwarycalm_downstay_angryconfused‚What the engine falls back on when it cannot tell what was meant.confused_reply B
+$ "$&(*,.0
+2468:<>@BDF
+ HJDLNPRTVXZ\^`bd6fhjBln
+prtvxz|~€‚„†ˆ0 24
+6ŠŒB
+’”–˜šœ ¢¤¦¨ª¬0 2®6
+°²´¶@¸º
+,¼¾ÀÂÄÆÈÊÌÎĞÒÔÖØÚÜŞàâäæ0 2®Fè
+6êìîğòôöø@úü
+"ş€‚„†ˆŠŒ’”–˜šœ0 2® 6¢ìğ¤¦öø¨ª¬
+&®°²´¶¸º¼¾ÀÂÄÆÈÊÌÎĞÒ0 246ÔÖØÚ>BÜŞ
+àâäæèêìîğòôöøúü024
+6ÚØÖş€‚
+ „†ˆŠŒ’”–˜šœ ¢0 2¤¦
+6
+¨ª¬®B°²
+ ´¶¸º¼¾ÀÂÄÆÈÊÌÎĞÒ0
+2¤6ÔÖ¬®ªBØÚ
+ÜŞàâäæèêìîğòô6öøBúü
+ş€‚„†ˆŠŒ’”–6˜šB
+œ
+ ¢¤¦¨ª¬®°²´¶¸º0
+6¼šB¾À
+&ÂÄÆÈÊÌÎĞÒÔÖØÚÜŞàâäæ6
+èêìîBğò
+ ôöøúüş€‚„†ˆŠŒ’6”–šB˜š
+œ ¢¤¦¨ª¬®°²´¶6¸ºšB¼¾
+ÀÂÄÆÈÊÌÎĞÒÔÖØÚÜ6ŞšBàâ
+äæèêìîğòôöøúü6şšB€‚
+„†ˆŠŒ’”–˜šœ6 B¢¤
+¦¨ª¬®°²´¶¸º¼¾À0	 2® 6ÂÄì¦¤ö¨ÆÈ
+ÊÌÎĞÒÔÖØÚÜŞà6âäBæè
+êìîğòôöøúüş€‚0
+2¦26„†ˆBŠŒ
+’”–˜šœ ¢¤¦¨ª6¬®B°²
+´¶¸º¼¾ÀÂÄÆÈÊÌ6ÎĞ®B
+ÒÔ
+ÖØÚÜŞàâäæèêìî0
+6ğ®Bòô
+öøúüş€‚„†ˆŠŒ6B’”
+–˜šœ ¢¤¦¨ª¬6®šB°²
+´¶¸º¼¾ÀÂÄÆÈ6ÊBÌÎ
+ĞÒÔÖØÚÜŞàâä6æèB@êì
+îğòôöøúüş€	‚	„	†	02®6
+ˆ	Š	B@¨
+Œ		
+ 	’	”	–	˜	š	œ		 	¢	¤	¦	¨	ª	¬	®	0 6
+°	²	èB@´	¶	
+ ¸	º	¼	¾	À	Â	Ä	Æ	È	Ê	Ì	Î	Ğ	Ò	Ô	Ö	02®1 1Ø	6
+Ú	Ü	¶@öŞ	à	
+ 6â	B@

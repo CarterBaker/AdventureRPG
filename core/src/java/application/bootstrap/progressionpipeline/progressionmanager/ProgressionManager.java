@@ -139,6 +139,7 @@ public class ProgressionManager extends ManagerPackage {
         entity.getProficiencyHandle().reset(time);
         entity.getConductHandle().reset(identity, time);
         entity.getCareerHandle().reset();
+        entity.getDispositionHandle().reset(time);
         entity.getStatisticsHandle().resetVitality();
 
         experienceBranch.setLevel(entity, EngineSetting.LEVEL_START);

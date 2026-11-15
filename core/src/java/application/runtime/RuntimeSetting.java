@@ -214,6 +214,22 @@ public class RuntimeSetting {
     public static final String MENU_HUD_ACTIVATE = "HUD/Activate";
     public static final int ENTRY_HUD_ACTIVATE_KEY = 0;
 
+    // Dialogue — the talk menu and its entry points, how near a resident must be faced to be spoken to, how the
+    // lines are written and how long they may run, how the caret blinks, and how long a talk's last words linger
+    public static final String MENU_DIALOGUE = "Dialogue/Talk";
+    public static final int ENTRY_DIALOGUE_SAID = 0;
+    public static final int ENTRY_DIALOGUE_HEARD = 3;
+    public static final int ENTRY_DIALOGUE_TYPED = 4;
+    public static final String DIALOGUE_CARET = "_";
+    public static final float DIALOGUE_CARET_BLINK_SECONDS = 0.5f;
+    public static final float DIALOGUE_END_SECONDS = 2f;
+    public static final String DIALOGUE_HEARD_PREFIX = "You: ";
+    public static final int DIALOGUE_LINE_LENGTH = 58;
+    public static final float DIALOGUE_REACH_BLOCKS = 3.5f;
+    public static final int DIALOGUE_SAID_LINES = 3;
+    public static final int DIALOGUE_TYPED_MAX_LENGTH = 96;
+    public static final String DIALOGUE_TYPED_PREFIX = "> ";
+
     // Character Creator Menus
     public static final String MENU_CREATOR = "CharacterCreator/Creator";
     public static final String MENU_CREATOR_TAB = "CharacterCreator/creator_tab";

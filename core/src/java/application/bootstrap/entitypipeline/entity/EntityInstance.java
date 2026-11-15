@@ -8,6 +8,7 @@ import application.bootstrap.entitypipeline.behavior.BehaviorHandle;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.progression.CareerHandle;
 import application.bootstrap.entitypipeline.progression.ConductHandle;
+import application.bootstrap.entitypipeline.progression.DispositionHandle;
 import application.bootstrap.entitypipeline.progression.ProficiencyHandle;
 import application.bootstrap.entitypipeline.progression.ProgressionHandle;
 import application.bootstrap.entitypipeline.race.RaceData;
@@ -61,6 +62,7 @@ public class EntityInstance extends InstancePackage {
     private ProficiencyHandle proficiencyHandle;
     private ConductHandle conductHandle;
     private CareerHandle careerHandle;
+    private DispositionHandle dispositionHandle;
 
     // Input
     private EntityInputHandle EntityInputHandle;
@@ -110,6 +112,7 @@ public class EntityInstance extends InstancePackage {
         this.proficiencyHandle = create(ProficiencyHandle.class);
         this.conductHandle = create(ConductHandle.class);
         this.careerHandle = create(CareerHandle.class);
+        this.dispositionHandle = create(DispositionHandle.class);
 
         // Input
         this.EntityInputHandle = create(EntityInputHandle.class);
@@ -301,6 +304,10 @@ public class EntityInstance extends InstancePackage {
 
     public CareerHandle getCareerHandle() {
         return careerHandle;
+    }
+
+    public DispositionHandle getDispositionHandle() {
+        return dispositionHandle;
     }
 
     public EntityInputHandle getEntityInputHandle() {

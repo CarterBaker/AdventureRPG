@@ -53,6 +53,18 @@ do IFS=: read TR PIC OUT LV <<< "$T"; O=""
 done
 ```
 
+## Dialogue Trainer
+
+`gradlew lwjgl3:trainer` (or `Trainer.bat`) holds practice talks over the console and records verdicts as lessons
+(see `.claude/docs/Dialogue.md`). Directly, after the direct compile and the natives above, with the
+`-natives-linux` jars in `$S/libs` and a virtual display in a cloud session; commands can be piped in:
+
+```
+cd assets && printf 'hello\n/good\n/quit\n' | xvfb-run -a java -cp "$S/out:$N/natives:$CP" lwjgl3.Lwjgl3LauncherTrainer
+```
+
+`/quit` writes `assets/lessons/Lessons.arpg`: restore that file after a test run, it is the owner's training.
+
 ## Benchmark
 
 `gradlew lwjgl3:benchmark` times world generation (through the kernels) and meshing over a fixed corpus behind a

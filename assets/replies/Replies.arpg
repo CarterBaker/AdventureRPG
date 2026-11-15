@@ -1,0 +1,160 @@
+ARPGaOîyÆrepliesnamegreet_warmdescription A glad greeting.whenaffinity_min
+leansaffinitytonetraitscheerfulkindtalkativegrumpytaciturn
+moods
+happy
+angrywary
+linestext,{greeting}, {address}!F{greeting}, {address}. {pleasantry}6Ah, {address}! {pleasantry}greet_plain:A civil greeting and no more.weight{greeting}.,{greeting}, {address}.Yes?greet_coldBA greeting with no welcome in it.affinity_maxsuspicious
+proud"What do you want?Speak, then.:{scoff}. State your business. Hmph. You again.farewell_warmA fond parting.*{parting}, {address}.2{parting}! Come by again.>Until we meet again, {address}.action
+leavefarewell_plain A plain parting.{parting}.*Be on your way, then.farewell_cold\A parting glad to see the back of the speaker.About time.Go, then.{scoff}.Good riddance.welcome_warm.Thanks gladly received.6You are welcome, {address}.(Think nothing of it.Glad to help.welcome_plain(Thanks shrugged off.It was nothing.{agreement}.forgive(An apology accepted.patienthot_tempered6It is forgotten, {address}.No harm done.@We all speak in haste sometimes. forgive_grudging8An apology accepted, barely.0Fine. But mind yourself.V{scoff}. See that it does not happen again.<I will let it pass, this once.refuse_forgive.An apology thrown back.
+cruel Words are cheap..Sorry does not mend it.Save it.retort6An insult answered in kind.
+crude
+bravecowardlyhumbleafraid {insult_phrase}!JLook who is talking, {insult_phrase}.DI have heard better from children.warn$A warning to stop.
+loyal$Watch your tongue.$Careful. {threat}.6Say that again. I dare you.ignore_insult&An insult let pass.lazy2I have been called worse.If you say so.Hm.
+cower6Shrinking from the speaker.6Please, I meant no offence.4I do not want any trouble.,Forgive me, I will go.laugh_off.An insult laughed away.amusedF{laugh}! Is that the best you have?B{laugh}. You have a mouth on you.ZI like you. You are an idiot, but I like you.attack_insult>An insult answered with a blow.not_traitsRThat is the last thing you will ever say!&Enough! Draw steel!I warned you!attackdefy*A threat stood up to..You do not frighten me.Try it.JBetter than you have tried. {threat}.flee_threat,Running from a threat.$Stay away from me!&Help! Someone help!Guards! Guards!fleeattack_threat<A threat answered with a blow.4Then let us settle it now!<You should not have said that.Come on, then!refuse_demand"A demand refused.greedy{refusal}.:You will get nothing from me.0{refusal}. And {threat}.yield_demand,Giving in to a demand.:Take it, just do not hurt me.PAll right, all right! I want no trouble.0Please. I have a family.thank_warm(Praise gladly taken.vainR{thanks}, {address}. That is kind of you."You are too kind.>Well now, that has made my day.thank_modest(Praise turned aside.*It is nothing, truly.You flatter me.*I only do what I can.(suspicious_of_praise2Praise taken for a trick.trusting&What are you after?BFine words. What do they cost me?${scoff}. Flattery.bask"Praise soaked up.*I know. But do go on.(You have a good eye.TIt is true, and I am glad someone noticed. dismiss_flattery(Flattery waved away.honest
+noblePSave your honey for someone it works on.:Flattery is a poor coin here.Enough of that.flirt_back"A flirt returned.flirtatiousprudishtenderbCareful, {address}. I might start to believe you.@And you are not so bad yourself.bKeep talking like that and see where it gets you.
+blush0Flustered by sweet talk.,Oh! I, well. {thanks}.>You should not say such things.@Stop, you will have me blushing.rebuff_gentle<Sweet talk turned down kindly.,You are sweet, but no.<I am flattered. Truly. But no.`Save that for someone who will thank you for it.rebuff_harsh8Sweet talk turned down hard.ZNot if you were the last soul in the kingdom.6Keep your eyes to yourself.N{scoff}. Try that on someone desperate.accept_advance(An advance welcomed.relationsmate<I thought you would never ask. Come here, then.D{agreement}. A hundred times, yes.defer_advance:An advance put off for later.rNot yet. But ask me again when we know each other better.VYou move fast. Slow down, and we shall see.Earn it.tell_name Giving its name.I am <name>.(They call me <name>.6<name>, a <title> by trade.N<name>. And you are <player>, I gather.refuse_name6Keeping its name to itself.Who is asking?6My name is my own business.0Why do you want to know?tell_workBSaying what it does for a living.{work_line}.>{work_line}. It is honest work.0{work_line}. What of it?refuse_curt*A question shut down.8That is no concern of yours.Why do you ask?.I do not answer to you.tell_mood(Saying how it fares.{mood_report}.2{mood_report}, {address}..{mood_report}. And you?tell_topic:Speaking of the topic raised.
+topic
+known{topic}.Well, {topic}..The <subject>? {topic}.8{topic}. That is all I know.dont_knowHKnowing nothing of the topic raised.unknown0The <subject>? {unsure}.^{unsure}. Ask someone who deals in such things..I know nothing of that.ask_whatLAsking what the speaker wants to know.none(About what, exactly?LYou will have to be plainer than that.<Ask me something I can answer.refuse_tell<Refusing to speak of anything.:I have nothing to say to you.8Find someone else to pester.give_directions"Pointing the way.{directions}."Hm. {directions}.8The <subject>? {directions}.dont_know_where(Not knowing the way.D{unsure}. I do not get about much.:You are asking the wrong one.tell_rumor&Passing on a rumor.curiousWell, {rumor}.RYou did not hear it from me, but {rumor}.D{rumor}. Make of it what you will.no_rumor4Having no news to pass on.4Nothing worth the telling.FIt has been quiet. I like it quiet.2I keep my ears to myself.decline_trade0Having nothing to trade..I have nothing to sell.>Try the market. I do not trade.lMy stall is not set out today. Come back another time.professionsmerchantpeddlerblacksmithno_work.Having no work to give..I have no work for you.BNot today. Ask around the market.HNothing I would trust to a stranger.bIf I hear of anything, I will remember you asked.offer_help Willing to help.generous"What do you need?<If I can. What is the trouble?8Go on, then. I am listening.decline_help$Unwilling to help.BI have troubles enough of my own.Not my concern.>Ask someone with time to spare.give_pity$Pity for a beggar.„The temple feeds whoever asks. Go there, and tell them I sent you.LI wish I had something to give. Truly.refuse_beg*No pity for a beggar..I have nothing for you.HEarn your bread like the rest of us.Away with you.tell_family.Speaking of its family.{family_line}.refuse_follow.Refusing to come along.4I have my own place to be. My duty is here.
+guardcaptainknight.And leave all this? No.*Not today, {address}.tell_regardJSaying what it thinks of the speaker.>I would trust you with my life.*I count you a friend..You seem decent enough.JI do not know you well enough to say.6I do not much care for you.NI would be glad never to see you again.laugh_jokeA joke enjoyed.8{laugh}! That is a good one.<{laugh}. I must remember that.$Oh, stop. {laugh}!groan_joke$A joke groaned at.$That was terrible.\I have heard it before. It was not funny then.LDo not give up your trade for jesting.unamused,A joke that fell flat.sad6Was that meant to be funny?*I am not in the mood.acknowledge Agreement noted.
+Good.<Then we understand each other.shrug_off(Disagreement let be.Suit yourself.,Believe what you like.
+argue*Disagreement pressed.&I know what I know.JYou are wrong, and time will show it.VThen you are a fool, and I cannot help you. small_talk_reply$Idle talk kept up.<{agreement}. {weather_remark}."{weather_remark}.
+grunt6Idle talk met with a grunt.impressed&Taken with a boast.bTruly? You must tell me the whole of it sometime.VI would not have guessed it to look at you.HThen we are lucky to have you about.unimpressed&Unmoved by a boast.$Of course you did.@And I am the queen's own sister."Deeds, not words.leave_talk"Leaving as asked.As you wish.2Then I will leave you be.offended_leave$Leaving in a huff.Gladly.0{scoff}. You came to me.>With pleasure, {insult_phrase}.refuse_order"An order refused.<I do not take orders from you.2Who do you think you are?obey_order An order obeyed.
+liegeAt once.As you say.Yes. Of course.calm_downSoothed.JAll right. All right. I am listening.*Fine. Say your piece.hVery well. But keep your hands where I can see them.stay_angryNot soothed.4Do not tell me to be calm!(Easy for you to say.BI will be calm when you are gone.confused_reply8Not following what was said.(I do not follow you.Come again?
+What?8You have lost me, {address}. 
+
+
+
+
+	 "$&(*,*.*0
+ "
+246
+
+(*8*:*<
+>@
+B(6	DF $&(*H*J*L*N
+BPR
+
+ "$(*T*V*XZ\
+^`6
+(*b*dZ\fh
+B(6	 $(*j*l*n*p
+BZ\
+rt "$(*v*x*z
+|~6
+(*€*‚„†
+ˆ
+FŠ	 $(*Œ** $’”6F(*–*˜*š
+ $œ
+B  FŠ $(*¢*¤*¦	
+¨ªFŠ¬
+®
+°²	 $´(*¶*¸*º ¼¾6®À° $´(*Â*Ä*Æ
+®	 $ÈÊˆ²Ì
+ŠF $(*Î*Ğ*Ò
+ÔÖ°²
+®F ´(*Ø*Ú*Ü ´Şàˆ
+Š â"$(*ä*æ*è
+(
+ âêì
+BO $î°6Š ®
+ˆ $(*ğ*ò*ôZöøú®F° $´(*ü*ş*€
+‚„6	°® ´2(*†*ˆ*ŠZŒ
+B16
+®Š °1ˆ $´(*’*”*–Zö˜š6
+®Fœ° $
+(** *¢
+¤¦6	°® ´2(*¨*ª*¬ ´
+®°
+
+²
+D "(*´*¶*¸
+º¼²
+²F	(*¾*À*ÂÄÆD$È² &(*Ê*Ì*Î  &
+ĞÒ²F² "
+(*Ô*Ö*Ø
+ÚÜ
+Şà
+Fˆ²(*â*ä*æ	èê
+ì
+îÀ	 ğ"
+$(*ò*ô*ö ğøú6²°ì	 ğ(*ü*ş*€
+ ğ‚„6
+Àˆ
+î(*†*ˆ*ŠŒ
+B(î F
+ $&
+(**’*” $–˜
+x
+6	ìî ğšœ(** *¢  ğ"¤¦
+2B–6
+
+ˆ
+(*¨*ª*¬
+®°6
+È
+D &(*²*´*¶*¸
+
+º¼
+B6	D
+ &$(*¾*À*ÂÄÆ6(*È*Ê
+Ş*Ì
+ $&
+ÎĞ
+B 6D $&(*Ò*Ô*ÖØÚ6(*Ü*Ş*à
+î
+âä
+æè16
+	(*ê*ì*î*ğ
+òô
+æö6(*ø*ú*ü
+ş€
+æ‚6(*„*†*ˆ
+ŠŒ
+B6
+ $(**’”6
+
+
+(*–*˜*šœ6(* *¢¤¦6¨
+(*ª*¬*®°²6Ş(*´*¶*¸º¼6(*¾*À*Â
+ÄÆÈÊÌÎ6(*Ğ*Ò*Ô
+B*Ö
+
+ØÚ
+6
+Ü
+ÀÌ	(*Ş*à*âäæ
+Ì 
+D
+(*è*ê*ìîğÜœ (*ò*ôöø6œ (*ú*ü*ş
+€‚
+	6(*„†ˆ6(*Š*Œ
+Ä’*”
+ â*–
+<˜š6(*œ
+x*
+<Bx* 
+B<*¢
+B*¤
+OB*¦
+BO¨ª â"$(*¬*®*°  "
+²´6ˆ(*¶*¸*º¼¾
+F $À(*n*Â*ÄÆÈ6(*‚*Ê*ÌÎĞ6ˆÌ²
+(*Ò*ÔÖØFŠˆ $(*Ú*Ü*Ş
+B àâ6
+
+(*ä*æèêÌ
+(*Ò*‚*Ğ
+ìîÈ¨(*ğ*ò*ô 
+öø6DFŞ(*ú*ü*ş	
+€‚6ˆ
+²
+(*„*†*bZ\ˆŠFŠ
+ $(*Œ**
+¬ Z\’”6F®
+ $(*–*˜*šœ6°²F ´š(* *¢*¤
+¦¨6
+ˆÈ
+ŠD(*ª*¬*®
+ &´ $´°²6ŠF
+D
+ $(*´*¶*¸º¼6(*¾*À*Â*Ä

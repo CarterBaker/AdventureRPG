@@ -755,6 +755,25 @@ public class PlayerManager extends ManagerPackage {
         return placementManager.findTargetItem(player, eyePosition, camera.getDirection());
     }
 
+    // The being the window's player looks at within a reach, none when it faces no one that near
+    public EntityInstance findFacedEntityForWindow(int windowID, float reach) {
+
+        EntityInstance player = windowID2Player.get(windowID);
+        CameraInstance camera = windowID2Camera.get(windowID);
+
+        if (player == null || camera == null)
+            return null;
+
+        resolveEyePosition(player);
+
+        return combatManager.findTarget(
+                player,
+                player.getWorldPositionStruct().getChunkCoordinate(),
+                eyePosition,
+                camera.getDirection(),
+                reach);
+    }
+
     // Zoom \\
 
     private float updateZoom(int windowID, RawInputHandle raw) {

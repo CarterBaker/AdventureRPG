@@ -3,7 +3,9 @@ package application.bootstrap.entitypipeline.npcmanager;
 import java.util.concurrent.ThreadLocalRandom;
 
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
+import application.bootstrap.dialoguepipeline.dialoguemanager.DialogueManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.npc.NpcBondStruct;
 import application.bootstrap.entitypipeline.npc.NpcInstance;
 import application.bootstrap.entitypipeline.npc.NpcMind;
 import application.bootstrap.entitypipeline.npc.NpcTemperamentStruct;
@@ -33,6 +35,12 @@ class NpcPerceptionBranch extends BranchPackage {
      * leash gives the fight up, forgets its provocation and walks home,
      * heeding nothing on the way but a fresh blow. With a foe it fights,
      * unless its health has fallen to its flee share, when it runs instead.
+     * confront() turns a resident on a being its own words set it against,
+     * and frighten() sets it running from one instead, for as long as that
+     * being stays its foe. bond() binds two residents as either's definition
+     * binds the other's
+     * kind, through DialogueManager, and overhear() moves a resident's regard
+     * for a speaker by what it heard said to one it thinks well of.
      */
 
     // Internal
@@ -40,6 +48,7 @@ class NpcPerceptionBranch extends BranchPackage {
     private ProgressionManager progressionManager;
     private RaycastManager raycastManager;
     private NpcSteerBranch npcSteerBranch;
+    private DialogueManager dialogueManager;
 
     // Scratch
     private Vector3 offsetScratch;
@@ -69,6 +78,7 @@ class NpcPerceptionBranch extends BranchPackage {
         this.progressionManager = get(ProgressionManager.class);
         this.raycastManager = get(RaycastManager.class);
         this.npcSteerBranch = get(NpcSteerBranch.class);
+        this.dialogueManager = get(DialogueManager.class);
     }
 
     // Perceive \\
@@ -227,7 +237,8 @@ class NpcPerceptionBranch extends BranchPackage {
         NpcTemperamentStruct temperament = resident.getNpcHandle().getTemperament();
         float health = resident.getEntityInstance().getStatisticsHandle().getHealth();
 
-        resident.setMind(health <= temperament.getFleeHealth() ? NpcMind.FLEE : NpcMind.FIGHT);
+        resident.setMind(
+                resident.isFrightened() || health <= temperament.getFleeHealth() ? NpcMind.FLEE : NpcMind.FIGHT);
     }
 
     // Provocation \\
@@ -264,6 +275,66 @@ class NpcPerceptionBranch extends BranchPackage {
         progressionManager.shiftAffinity(entity, source, -share * EngineSetting.AFFINITY_PER_WOUND
                 * EngineSetting.NPC_DEFEND_AFFINITY_SHARE);
         take(resident, source);
+    }
+
+    // Talk \\
+
+    // The resident turns on a being it has cause to fight by its own word
+    void confront(NpcInstance resident, EntityInstance source) {
+        take(resident, source);
+    }
+
+    // The resident runs from a being for as long as it stays its foe
+    void frighten(NpcInstance resident, EntityInstance source) {
+        take(resident, source);
+        resident.setFrightened(resident.getFoe() == source);
+        settleMind(resident);
+    }
+
+    // Bonds \\
+
+    // Each of two residents takes the other as whatever its definition binds that kind of NPC as, when they stand
+    // within that bond's reach
+    void bond(NpcInstance resident, NpcInstance other) {
+        bind(resident, other);
+        bind(other, resident);
+    }
+
+    private void bind(NpcInstance resident, NpcInstance other) {
+
+        NpcBondStruct[] bonds = resident.getNpcHandle().getBonds();
+
+        for (int i = 0; i < bonds.length; i++) {
+
+            float blocks = bonds[i].getBlocks();
+
+            if (bonds[i].getNpcID() != other.getNpcHandle().getNpcID()
+                    || resolveDistanceSquared(resident, other.getEntityInstance()) > blocks * blocks)
+                continue;
+
+            dialogueManager.relateBeings(
+                    resident.getEntityInstance(), other.getEntityInstance(), bonds[i].getRelationID());
+            return;
+        }
+    }
+
+    // Words in earshot that moved the listener's regard for the speaker move the resident's too, by as much as it
+    // thinks of the listener
+    void overhear(NpcInstance resident, EntityInstance speaker, EntityInstance listener, float amount) {
+
+        EntityInstance entity = resident.getEntityInstance();
+        float earshot = EngineSetting.NPC_EARSHOT_BLOCKS;
+
+        if (entity == speaker || entity == listener || resolveDistanceSquared(resident, listener) > earshot * earshot)
+            return;
+
+        float regard = progressionManager.getOpinion(entity, listener);
+
+        if (regard <= 0f)
+            return;
+
+        progressionManager.shiftAffinity(
+                entity, speaker, amount * EngineSetting.NPC_OVERHEAR_SHARE * regard / EngineSetting.AFFINITY_MAX);
     }
 
     // The source becomes the provoker, and the foe too unless the resident already fights one that provoked it

@@ -4,6 +4,7 @@ import application.bootstrap.animationpipeline.AnimationPipeline;
 import application.bootstrap.calendarpipeline.CalendarPipeline;
 import application.bootstrap.combatpipeline.CombatPipeline;
 import application.bootstrap.contentpipeline.ContentPipeline;
+import application.bootstrap.dialoguepipeline.DialoguePipeline;
 import application.bootstrap.entitypipeline.EntityPipeline;
 import application.bootstrap.furnishingpipeline.FurnishingPipeline;
 import application.bootstrap.geometrypipeline.GeometryPipeline;
@@ -43,6 +44,7 @@ public class ApplicationBootstrapAssembly extends AssemblyPackage {
         create(SoundPipeline.class);
         create(MusicPipeline.class);
         create(ProgressionPipeline.class);
+        create(DialoguePipeline.class);
         create(ItemPipeline.class);
         create(FurnishingPipeline.class);
         create(LootPipeline.class);

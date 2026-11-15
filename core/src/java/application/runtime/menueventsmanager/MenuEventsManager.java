@@ -14,6 +14,7 @@ import application.runtime.menueventsmanager.menus.charactercreator.CreatorAppea
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorBodyBranch;
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorNameBranch;
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorProgressionBranch;
+import application.runtime.menueventsmanager.menus.dialogue.DialogueBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryContainerBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryDragBranch;
@@ -58,6 +59,7 @@ public class MenuEventsManager extends ManagerPackage {
         create(CharacterAttributeBranch.class);
         create(CharacterProficiencyBranch.class);
         create(CharacterProfessionBranch.class);
+        create(DialogueBranch.class);
         create(HUDBranch.class);
         create(DefeatBranch.class);
         create(GenericButtonBranch.class);

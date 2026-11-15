@@ -113,6 +113,22 @@ tasks.register('bake', JavaExec) {
   }
 }
 
+// Runs the dialogue trainer behind a hidden window: practice talks held over the
+// console with the game's own dictionary, replies and models, each verdict kept
+// as a lesson under assets/lessons.
+tasks.register('trainer', JavaExec) {
+  group = 'application'
+  description = 'Holds practice talks over the console and records verdicts as lessons.'
+  workingDir = rootProject.file('assets').path
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'lwjgl3.Lwjgl3LauncherTrainer'
+  standardInput = System.in
+  jvmArgs += gameJvmArgs
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+
 // Runs the benchmark tool behind a hidden window with the game's JVM arguments:
 // times world generation and meshing over a fixed corpus of chunks, prints the
 // report, and exits non-zero when a version of a routine differs from Java's.

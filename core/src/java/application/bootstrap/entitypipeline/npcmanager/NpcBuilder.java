@@ -2,12 +2,16 @@ package application.bootstrap.entitypipeline.npcmanager;
 
 import java.io.File;
 
+import application.bootstrap.dialoguepipeline.relationmanager.RelationManager;
+import application.bootstrap.dialoguepipeline.traitmanager.TraitManager;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
+import application.bootstrap.entitypipeline.npc.NpcBondStruct;
 import application.bootstrap.entitypipeline.npc.NpcData;
 import application.bootstrap.entitypipeline.npc.NpcHandle;
 import application.bootstrap.entitypipeline.npc.NpcTemperamentStruct;
 import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
 import application.bootstrap.progressionpipeline.professionmanager.ProfessionManager;
+import application.bootstrap.progressionpipeline.util.ProgressionArpgUtility;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
@@ -30,8 +34,15 @@ class NpcBuilder extends BuilderPackage {
      * whether it "defends" those it likes, and how it fights — the
      * "reaction_seconds" it answers a blow in, the "guard_chance" it reads the
      * blow's side, its "aggression", and its "combo_chance" and
-     * "feint_chance". Every template, table and profession is resolved here,
-     * so an NPC naming an unknown one fails at boot.
+     * "feint_chance". Its nature is optional as well: the "traits" every
+     * resident of it has, the "trait_pool" more are drawn from and the
+     * "trait_draws" each resident takes from it, and the "bonds" it holds
+     * residents of other NPCs by — each the "npc" it names, the "relation" a
+     * resident of that NPC is to one of this, and the "blocks" apart the two
+     * may come into the world and still be bound. Every template, table,
+     * profession, trait and relation is resolved here, so an NPC naming an
+     * unknown one fails at boot; an NPC a bond names is registered by name
+     * as it is read, so two NPCs may name each other.
      */
 
     // Internal
@@ -39,6 +50,8 @@ class NpcBuilder extends BuilderPackage {
     private EntityManager entityManager;
     private LootTableManager lootTableManager;
     private ProfessionManager professionManager;
+    private TraitManager traitManager;
+    private RelationManager relationManager;
 
     // Base \\
 
@@ -48,6 +61,8 @@ class NpcBuilder extends BuilderPackage {
         this.entityManager = get(EntityManager.class);
         this.lootTableManager = get(LootTableManager.class);
         this.professionManager = get(ProfessionManager.class);
+        this.traitManager = get(TraitManager.class);
+        this.relationManager = get(RelationManager.class);
     }
 
     // Build \\
@@ -70,6 +85,10 @@ class NpcBuilder extends BuilderPackage {
                 ArpgUtility.getString(arpg, "profession", EngineSetting.NPC_DEFAULT_PROFESSION));
         int levelMin = ArpgUtility.getInt(arpg, "level_min", EngineSetting.LEVEL_START);
         int levelMax = ArpgUtility.getInt(arpg, "level_max", levelMin);
+        short[] traitIDs = ProgressionArpgUtility.parseNames(arpg, "traits", traitManager::getTraitIDFromTraitName);
+        short[] traitPoolIDs = ProgressionArpgUtility.parseNames(
+                arpg, "trait_pool", traitManager::getTraitIDFromTraitName);
+        int traitDraws = ArpgUtility.getInt(arpg, "trait_draws", EngineSetting.DEFAULT_NPC_TRAIT_DRAWS);
 
         if (wanderBlocks < 0f)
             throwException("NPC \"" + npcName + "\" must wander 0 blocks or more. File: " + file.getName());
@@ -79,9 +98,17 @@ class NpcBuilder extends BuilderPackage {
                     + " — levels must start at " + EngineSetting.LEVEL_START + " or more and never fall. File: "
                     + file.getName());
 
+        if (traitDraws < 0 || traitDraws > traitPoolIDs.length
+                || traitIDs.length + traitDraws > EngineSetting.DIALOGUE_TRAIT_MAX)
+            throwException("NPC \"" + npcName + "\" draws " + traitDraws + " traits from a pool of "
+                    + traitPoolIDs.length + " beside " + traitIDs.length + " of its own — it may draw no more than "
+                    + "its pool holds and hold no more than " + EngineSetting.DIALOGUE_TRAIT_MAX + " in all. File: "
+                    + file.getName());
+
         NpcData npcData = new NpcData(
                 npcName, npcID, entityTemplateID, gearTableIDs, lootTableID, wanderBlocks, temperament,
-                professionID, levelMin, levelMax);
+                professionID, levelMin, levelMax, traitIDs, traitPoolIDs, traitDraws,
+                parseBonds(arpg, npcName, file));
 
         NpcHandle npcHandle = create(NpcHandle.class);
         npcHandle.constructor(npcData);
@@ -123,6 +150,32 @@ class NpcBuilder extends BuilderPackage {
         return new NpcTemperamentStruct(
                 sightBlocks, leashBlocks, hostility, fleeHealth, defends,
                 reactionSeconds, guardChance, aggression, comboChance, feintChance);
+    }
+
+    private NpcBondStruct[] parseBonds(ArpgObjectStruct arpg, String npcName, File file) {
+
+        if (!ArpgUtility.hasArray(arpg, "bonds"))
+            return new NpcBondStruct[0];
+
+        ArpgArrayStruct bondsArpg = arpg.getAsArray("bonds");
+        NpcBondStruct[] bonds = new NpcBondStruct[bondsArpg.size()];
+
+        for (int i = 0; i < bonds.length; i++) {
+
+            ArpgObjectStruct bondArpg = bondsArpg.get(i).getAsObject();
+            float blocks = ArpgUtility.getFloat(bondArpg, "blocks", EngineSetting.DEFAULT_NPC_BOND_BLOCKS);
+
+            if (blocks <= 0f)
+                throwException("NPC \"" + npcName + "\" must bind within more than 0 blocks. File: "
+                        + file.getName());
+
+            bonds[i] = new NpcBondStruct(
+                    npcManager.registerNpcName(ArpgUtility.validateString(bondArpg, "npc")),
+                    relationManager.getRelationIDFromRelationName(ArpgUtility.validateString(bondArpg, "relation")),
+                    blocks);
+        }
+
+        return bonds;
     }
 
     private boolean isShare(float value) {

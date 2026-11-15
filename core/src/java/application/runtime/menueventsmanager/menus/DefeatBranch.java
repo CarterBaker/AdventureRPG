@@ -6,6 +6,7 @@ import application.bootstrap.progressionpipeline.progressionmanager.ProgressionM
 import application.bootstrap.soundpipeline.soundcuemanager.SoundCueManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.menueventsmanager.menus.dialogue.DialogueBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryBranch;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -14,8 +15,8 @@ public class DefeatBranch extends BranchPackage {
 
     /*
      * Ends play for this context's window the frame its player is defeated.
-     * Whatever menu stands open over play — the inventory or the pause menu —
-     * is closed, and the character leaves through the main menu's own way
+     * Whatever menu stands open over play — the inventory, a talk or the pause
+     * menu — is closed, and the character leaves through the main menu's own way
      * back, saved where it fell. The player standing in for the menu is then
      * started over, alive, so a defeat ends play exactly once.
      */
@@ -26,6 +27,7 @@ public class DefeatBranch extends BranchPackage {
     private MainMenuBranch mainMenuBranch;
     private PauseMenuBranch pauseMenuBranch;
     private InventoryBranch inventoryBranch;
+    private DialogueBranch dialogueBranch;
     private SoundCueManager soundCueManager;
 
     // Cues
@@ -40,6 +42,7 @@ public class DefeatBranch extends BranchPackage {
         this.mainMenuBranch = get(MainMenuBranch.class);
         this.pauseMenuBranch = get(PauseMenuBranch.class);
         this.inventoryBranch = get(InventoryBranch.class);
+        this.dialogueBranch = get(DialogueBranch.class);
         this.soundCueManager = get(SoundCueManager.class);
     }
 
@@ -66,6 +69,7 @@ public class DefeatBranch extends BranchPackage {
 
         soundCueManager.playCue(defeatCueID);
         inventoryBranch.closeMenu();
+        dialogueBranch.closeMenu();
 
         if (pauseMenuBranch.isOpen())
             pauseMenuBranch.closeMenu();

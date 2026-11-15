@@ -52,6 +52,7 @@ Per-being state lives in `entitypipeline/progression/`:
 | `ProficiencyHandle` | Trades and skills as `ProficiencyStruct`s, revision |
 | `ConductHandle` | Identity, morality, affinity list, deed counts |
 | `CareerHandle` | Unlocked and granted professions, the active profession, revision |
+| `DispositionHandle` | Name, traits, moods and relations; only `DialogueManager` changes it (`.claude/docs/DialoguePipeline.md`) |
 
 `StatisticsHandle` holds the cached stat totals and the revisions they were built at, plus health, bleed, the
 regeneration delay and the defeated flag.

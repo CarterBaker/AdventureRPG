@@ -2,6 +2,7 @@ package application.bootstrap.savepipeline.savemanager;
 
 import java.io.File;
 
+import application.bootstrap.dialoguepipeline.dialoguemanager.DialogueManager;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
@@ -33,6 +34,7 @@ public class SaveManager extends ManagerPackage {
     private WindowManager windowManager;
     private PlayerManager playerManager;
     private ProgressionManager progressionManager;
+    private DialogueManager dialogueManager;
     private PlayerSaveBranch playerSaveBranch;
     private PlayerRestoreBranch playerRestoreBranch;
 
@@ -62,6 +64,7 @@ public class SaveManager extends ManagerPackage {
         this.windowManager = get(WindowManager.class);
         this.playerManager = get(PlayerManager.class);
         this.progressionManager = get(ProgressionManager.class);
+        this.dialogueManager = get(DialogueManager.class);
     }
 
     // Management \\
@@ -147,6 +150,7 @@ public class SaveManager extends ManagerPackage {
         ArpgObjectStruct characterArpg = ArpgUtility.tryLoadObject(characterFile);
 
         progressionManager.resetBeing(player, IdentityUtility.fromName(FileUtility.getFileName(characterFile)));
+        dialogueManager.nameBeing(player, FileUtility.getFileName(characterFile));
 
         if (characterArpg != null && playerRestoreBranch.restore(characterArpg, player)) {
             playerManager.verifyPlayerPositionForWindow(windowID);

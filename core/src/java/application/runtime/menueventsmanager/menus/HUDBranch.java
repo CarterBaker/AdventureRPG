@@ -5,6 +5,7 @@ import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
+import application.runtime.menueventsmanager.menus.dialogue.DialogueBranch;
 import application.runtime.menueventsmanager.menus.inventory.InventoryBranch;
 import engine.input.InputNameUtility;
 import engine.root.BranchPackage;
@@ -17,8 +18,9 @@ public class HUDBranch extends BranchPackage {
      * centre of the screen for as long as the player is in play, and under it
      * the activate key cap while the player faces something the activate
      * binding acts on — a container it can open where it lies, as
-     * InventoryBranch decides, or a vehicle's helm, sails or anchor, or while
-     * it holds a helm it can let go. The key cap carries the binding's current
+     * InventoryBranch decides, a resident it can talk to, as DialogueBranch
+     * decides, or a vehicle's helm, sails or anchor, or while it holds a helm
+     * it can let go. The key cap carries the binding's current
      * name, so a rebound key shows at once. Neither menu ever takes input.
      */
 
@@ -26,6 +28,7 @@ public class HUDBranch extends BranchPackage {
     private MenuManager menuManager;
     private PlayerManager playerManager;
     private InventoryBranch inventoryBranch;
+    private DialogueBranch dialogueBranch;
 
     // State
     private MenuInstance crosshairMenu;
@@ -39,6 +42,7 @@ public class HUDBranch extends BranchPackage {
         this.menuManager = get(MenuManager.class);
         this.playerManager = get(PlayerManager.class);
         this.inventoryBranch = get(InventoryBranch.class);
+        this.dialogueBranch = get(DialogueBranch.class);
     }
 
     @Override
@@ -47,6 +51,7 @@ public class HUDBranch extends BranchPackage {
         WindowInstance window = context.getWindow();
         boolean playing = playerManager.isPlayingForWindow(window.getWindowID());
         boolean activatable = playing && (inventoryBranch.findOpenableContainer(window)
+                || dialogueBranch.findPartner(window) != null
                 || playerManager.isFacingVehicleControlForWindow(window.getWindowID()));
 
         this.crosshairMenu = showMenu(crosshairMenu, RuntimeSetting.MENU_HUD_CROSSHAIR, playing, window);

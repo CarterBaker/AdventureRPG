@@ -209,6 +209,7 @@ public class EngineSetting {
     public static final String LOG_SESSION_EDITOR = "Editor";
     public static final String LOG_SESSION_GAME = "Game";
     public static final String LOG_SESSION_LAUNCHER = "Launcher";
+    public static final String LOG_SESSION_TRAINER = "Trainer";
     public static final String LOG_TIME_PATTERN = "HH:mm:ss.SSS";
 
     // File Paths & Extensions
@@ -243,17 +244,24 @@ public class EngineSetting {
     public static final ObjectArraySet<String> INCLUDE_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "glsl",
         "inc", "glslinc" });
     public static final String GENDER_PATH = "genders";
+    public static final String INTENT_PATH = "intents";
     public static final String ITEM_PATH = "items";
+    public static final String LESSON_PATH = "lessons";
     public static final String LOOT_TABLE_PATH = "loottables";
     public static final String MATERIAL_PATH = "materials";
     public static final String MENU_PATH = "menus";
     public static final String MESH_PATH = "mesh";
+    public static final String MOOD_PATH = "moods";
     public static final String NPC_PATH = "npcs";
     public static final String PASS_PATH = "processingpasses";
+    public static final String PHRASE_PATH = "phrases";
     public static final String PROFESSION_PATH = "professions";
     public static final String RACE_PATH = "races";
+    public static final String RELATION_PATH = "relations";
+    public static final String REPLY_PATH = "replies";
     public static final String RIG_PATH = "rigs";
     public static final String ROAD_PATH = "roads";
+    public static final String SCENARIO_PATH = "scenarios";
     public static final String SEASON_PATH = "seasons";
     public static final String SETTLEMENT_PATH = "settlements";
     public static final String SHADER_PATH = "shaders";
@@ -276,12 +284,16 @@ public class EngineSetting {
         "jpg", "jpeg", "tga", "bmp" });
     public static final String THREAD_CATALOG_PATH = "application/threads";
     public static final String TOOL_TYPE_PATH = "tools";
+    public static final String TOPIC_PATH = "topics";
+    public static final String TRAIT_PATH = "traits";
     public static final String UBO_PATH = "ubos";
     public static final String VEHICLE_PATH = "vehicles";
+    public static final String VERDICT_PATH = "verdicts";
     public static final ObjectArraySet<String> VERT_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "vsh",
         "vert", "vs", "vertex" });
     public static final String WEAPON_PATH = "weapons";
     public static final String WEATHER_PATH = "weathers";
+    public static final String WORD_PATH = "words";
     public static final String WORLD_TEXTURE_PATH = "worlds";
 
     // ARPG Files
@@ -370,6 +382,9 @@ public class EngineSetting {
     public static final String BENCHMARK_WINDOW_TITLE = "AdventureRPG — Benchmark";
     public static final int BENCHMARK_WINDOW_WIDTH = 640;
     public static final int BENCHMARK_WINDOW_HEIGHT = 360;
+
+    // Trainer
+    public static final String TRAINER_WINDOW_TITLE = "AdventureRPG — Dialogue Trainer";
 
     // Threading & Frame Rate
     public static final int AUTO_THREAD_POOL_RESERVED_CORES = 2;
@@ -2905,7 +2920,11 @@ public class EngineSetting {
 
     // Residents — how far an NPC wanders from its spot and how near counts as arrived, how long it idles and how
     // long it walks before giving up, how far off it is drawn, how what it drops is thrown clear of it, the profession
-    // it holds unless it names one, and the salts its level and gender are drawn from its spawn with
+    // it holds unless it names one, the salts its level and gender are drawn from its spawn with, how many traits it
+    // draws and how far apart it is bound to another unless it says, and how far off it overhears what is said and
+    // how much of it moves it
+    public static final float DEFAULT_NPC_BOND_BLOCKS = 32f;
+    public static final int DEFAULT_NPC_TRAIT_DRAWS = 0;
     public static final float DEFAULT_NPC_WANDER_BLOCKS = 4f;
     public static final String NPC_DEFAULT_PROFESSION = "villager";
     public static final long NPC_GENDER_SALT = 0x5BE0CD19137E2179L;
@@ -2915,8 +2934,10 @@ public class EngineSetting {
     public static final float NPC_DROP_LIFT_SPEED = 3f;
     public static final float NPC_DROP_SPIN_RATE = 4f;
     public static final float NPC_DROP_SPREAD_SPEED = 1.5f;
+    public static final float NPC_EARSHOT_BLOCKS = 12f;
     public static final float NPC_IDLE_MAX_SECONDS = 8f;
     public static final float NPC_IDLE_MIN_SECONDS = 2f;
+    public static final float NPC_OVERHEAR_SHARE = 0.5f;
     public static final int NPC_RENDER_CHUNK_RADIUS = 8;
     public static final float NPC_WALK_MAX_SECONDS = 10f;
 
@@ -2965,6 +2986,97 @@ public class EngineSetting {
     public static final float NPC_STRIKE_REACH_SHARE = 0.7f;
     public static final float NPC_THREAT_REACH_SCALE = 1.15f;
     public static final float NPC_TRADE_MARGIN_SECONDS = 0.08f;
+
+    // Dialogue — how a talk is read, answered and worded: the affinity a being's regard is banded at and how far
+    // its morality and a sentence's tone must lean to count, how sure an intent must be before it is acted on, how
+    // deep phrases expand, how short a word may be and still be matched one letter off, how long a sentence may be
+    // and how many features it and a turn may raise, the names the engine reserves, the brackets and marks of a
+    // line, what a mood and a trait default to, how hard kind or harsh words land, how much a repeated wording is
+    // marked down, how many wordings a reply is tried in, and the salts and tries a being's name and traits are
+    // drawn from its identity with
+    public static final float[] DIALOGUE_AFFINITY_BANDS = { -50f, -15f, 15f, 50f };
+    public static final float DIALOGUE_CONFIDENCE_MIN = 0.3f;
+    public static final int DIALOGUE_EXPANSION_DEPTH_MAX = 8;
+    public static final int DIALOGUE_FUZZY_FORM_MIN_LENGTH = 5;
+    public static final int DIALOGUE_FUZZY_MIN_LENGTH = 4;
+    public static final int DIALOGUE_HEARD_FEATURE_CAPACITY = 512;
+    public static final int DIALOGUE_HEARD_MAX_LENGTH = 160;
+    public static final String DIALOGUE_INTENT_CONFUSED = "confused";
+    public static final String DIALOGUE_LESSON_FILE = "Lessons";
+    public static final String DIALOGUE_LINE_CLOSINGS = "}]>";
+    public static final String DIALOGUE_LINE_OPENINGS = "{[<";
+    public static final char DIALOGUE_LINE_PHRASE_OPEN = '{';
+    public static final float DIALOGUE_LINE_WEIGHT_DEFAULT = 1f;
+    public static final char DIALOGUE_LINE_WORD_OPEN = '[';
+    public static final String DIALOGUE_MARKS = ",.!?;:";
+    public static final String DIALOGUE_MOOD_CALM = "calm";
+    public static final float DIALOGUE_MOOD_HALF_LIFE_SECONDS = 600f;
+    public static final float DIALOGUE_MOOD_THRESHOLD = 0.25f;
+    public static final float DIALOGUE_MORALITY_BAND = 0.3f;
+    public static final long DIALOGUE_NAME_SALT = 0xBB67AE8584CAA73BL;
+    public static final String DIALOGUE_PHRASE_TOPIC = "topic";
+    public static final String DIALOGUE_RELATION_STRANGER = "stranger";
+    public static final float DIALOGUE_REPEAT_PENALTY = 4f;
+    public static final int DIALOGUE_RESPONSE_FEATURE_CAPACITY = 64;
+    public static final char DIALOGUE_SENTENCE_CLOSE = '.';
+    public static final String DIALOGUE_SENTENCE_ENDS = ".!?";
+    public static final String DIALOGUE_SENTENCE_MARKS = "?!";
+    public static final String DIALOGUE_SPEAKER_NAME_DEFAULT = "traveller";
+    public static final String DIALOGUE_TAG_NAME = "name";
+    public static final String DIALOGUE_TAG_SEPARATOR = " +";
+    public static final String DIALOGUE_TEXT_NONE = "";
+    public static final float DIALOGUE_TONE_AFFINITY = 1f;
+    public static final float DIALOGUE_TONE_BAND = 0.2f;
+    public static final int DIALOGUE_TRAIT_DRAW_TRIES = 4;
+    public static final int DIALOGUE_TRAIT_MAX = 8;
+    public static final long DIALOGUE_TRAIT_SALT = 0x6A09E667F3BCC908L;
+    public static final float DIALOGUE_TRAIT_SCALE_DEFAULT = 1f;
+    public static final String DIALOGUE_VOWELS = "aeiou";
+    public static final int DIALOGUE_WORDING_CANDIDATES = 4;
+    public static final int DIALOGUE_WORDING_FEATURE_CAPACITY = 256;
+    public static final String DIALOGUE_WORD_JOINERS = "'-";
+
+    // Dialogue Models — the three weight tables built at every boot from the content and the lessons: how many
+    // feature buckets each holds, how fast each learns and how sharply it chooses, how many times the examples are
+    // passed over and how many steps one new lesson is given at once, the bound no weight passes, the numbers
+    // features are hashed with and the salt of each kind of feature, and the numbers an exchange's rolls are drawn
+    // with
+    public static final int DIALOGUE_HASH_MIX_FIRST = 0x85EBCA6B;
+    public static final int DIALOGUE_HASH_MIX_SECOND = 0xC2B2AE35;
+    public static final int DIALOGUE_HASH_MULTIPLIER = 0x9E3779B1;
+    public static final int DIALOGUE_RESPONSE_BUCKETS = 1 << 11;
+    public static final float DIALOGUE_RESPONSE_RATE = 0.5f;
+    public static final float DIALOGUE_RESPONSE_TEMPERATURE = 0.7f;
+    public static final long DIALOGUE_ROLL_MULTIPLIER = 0x2545F4914F6CDD1DL;
+    public static final float DIALOGUE_ROLL_SCALE = 1f / (1 << 24);
+    public static final long DIALOGUE_ROLL_SEED = 0x9E3779B97F4A7C15L;
+    public static final int DIALOGUE_SALT_AFFINITY = 0x1B873593;
+    public static final int DIALOGUE_SALT_BIAS = 0x27D4EB2F;
+    public static final int DIALOGUE_SALT_BIGRAM = 0x165667B1;
+    public static final int DIALOGUE_SALT_DRAW = 0x2C1B3C6D;
+    public static final int DIALOGUE_SALT_FIRST = 0x297A2D39;
+    public static final int DIALOGUE_SALT_INTENT = 0x3C6EF372;
+    public static final int DIALOGUE_SALT_LINE = 0x510E527F;
+    public static final int DIALOGUE_SALT_MARK = 0x1F83D9AB;
+    public static final int DIALOGUE_SALT_MOOD = 0x5BE0CD19;
+    public static final int DIALOGUE_SALT_MORALITY = 0x428A2F98;
+    public static final int DIALOGUE_SALT_PAIR = 0x71374491;
+    public static final int DIALOGUE_SALT_PROFESSION = 0x3956C25B;
+    public static final int DIALOGUE_SALT_RELATION = 0x59F111F1;
+    public static final int DIALOGUE_SALT_TAG = 0x12835B01;
+    public static final int DIALOGUE_SALT_TONE = 0x243185BE;
+    public static final int DIALOGUE_SALT_TOPIC = 0x550C7DC3;
+    public static final int DIALOGUE_SALT_TRAIT = 0x72BE5D74;
+    public static final int DIALOGUE_SALT_UNKNOWN = 0x0FC19DC6;
+    public static final int DIALOGUE_SALT_WORD = 0x240CA1CC;
+    public static final int DIALOGUE_UNDERSTANDING_BUCKETS = 1 << 14;
+    public static final int DIALOGUE_UNDERSTANDING_PASSES = 30;
+    public static final float DIALOGUE_UNDERSTANDING_RATE = 2f;
+    public static final int DIALOGUE_UNDERSTANDING_STEPS = 4;
+    public static final float DIALOGUE_WEIGHT_MAX = 8f;
+    public static final int DIALOGUE_WORDING_BUCKETS = 1 << 15;
+    public static final float DIALOGUE_WORDING_RATE = 0.5f;
+    public static final float DIALOGUE_WORDING_TEMPERATURE = 0.5f;
 
     // Pathfinding — how many searches a frame may run, how many nodes one may open and hold and how far it may
     // reach, how many waypoints and obstacle layers are kept, how far a body climbs and drops between columns, how

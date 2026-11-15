@@ -70,4 +70,20 @@ public class NpcHandle extends HandlePackage {
     public int getLevelMax() {
         return npcData.getLevelMax();
     }
+
+    public short[] getTraitIDs() {
+        return npcData.getTraitIDs();
+    }
+
+    public short[] getTraitPoolIDs() {
+        return npcData.getTraitPoolIDs();
+    }
+
+    public int getTraitDraws() {
+        return npcData.getTraitDraws();
+    }
+
+    public NpcBondStruct[] getBonds() {
+        return npcData.getBonds();
+    }
 }
