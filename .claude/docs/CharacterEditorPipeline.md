@@ -150,6 +150,26 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
   `CHARACTER_MESH_MIRROR_REACH` (`pairNearest`, binned by reach-sized cells), so a mesh not modelled exactly
   symmetric still mirrors every stroke. `CharacterViewUtility.round` rounds half away from zero, so a point and its
   mirror always round alike.
+- **Canvas options.** Mirror, X-Ray and Bones are `ToolOption`s marked canvas-wide (`isCanvasWide`): every tool on a
+  canvas that honours one lists it under its own options, last, in the Tools panel. Mirror (on by default) is honoured
+  by the mesh, sculpt, weights, rig and face canvases, X-Ray by the mesh and weights, Bones (`CharacterBoneDisplay`:
+  joints, sticks from each joint to its parent's, both, or hidden) by the mesh, weights and rig.
+  `CharacterEditorManager.isMirror` / `isXray` / `getBoneDisplay` and `FaceEditorManager.isMirror` read them from
+  `ToolManager` for the mode's canvas; never keep a copy, and never list them as Properties rows.
+- **Hide and Reveal.** The Selection group's Hide (H), Hide Unselected (Shift+H) and Reveal (Alt+H)
+  (`CharacterSelectionBranch.hide` / `reveal`) put vertices out of the way, as Blender hides geometry to reach tight
+  spaces: the document's hidden flags (`CharacterMeshDocumentInstance.isHidden`, carried through `removeOrphans`,
+  cleared when an undo or revert renumbers the mesh) keep a vertex out of every pick, box, brush and selection
+  (`CharacterEditorMeshViewSystem.isInRegion`, `CharacterSelectionBranch.changed`), its faces out of occlusion
+  (`isFaceShown`) and out of the preview (`CharacterMeshBranch.upload` uploads a copy without them). The file always
+  keeps them. Something must stay shown.
+- **Pick and Pose.** The mesh and weights canvases take Pick (the bone whose joint is clicked, or the bone weighing most
+  on the vertex clicked, becomes the bone every weight action works on) and Pose (turns a bone about its joint, about
+  the line of sight, so what it carries follows), run by `CharacterEditorBoneSystem`. Pose writes the edit pose
+  (`CharacterEditorManager.setEditPoseTurn`, a turn per bone in its own frame, mirrored onto the twin while mirroring,
+  never saved; Reset Pose, Alt+R, clears it); `CharacterEditorPreviewSystem.applyEditPose` lays it on the preview as
+  `AnimationStateHandle` postures, which every pose (the tree, a struck clip, the rest) now carries. A layer with an
+  edit pose counts as posed: select and weigh in it, Reset Pose before moving vertices.
 - **Sculpt tools.** Brush, Smooth, Relax (even spacing along the surface without shrinking), Inflate, Pinch, Crease
   (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
   in `CharacterShapeBranch.resolveMove`.

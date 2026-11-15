@@ -12,6 +12,7 @@ import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
+import editor.runtime.charactereditor.bone.CharacterEditorBoneSystem;
 import editor.runtime.charactereditor.menu.CharacterEditorMenuSystem;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
@@ -77,6 +78,7 @@ public class CharacterEditorContext extends ContextPackage
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private CharacterEditorSculptSystem characterEditorSculptSystem;
     private CharacterEditorRigSystem characterEditorRigSystem;
+    private CharacterEditorBoneSystem characterEditorBoneSystem;
     private CharacterEditorPaintSystem characterEditorPaintSystem;
     private CharacterEditorOverlaySystem characterEditorOverlaySystem;
     private FaceEditorGestureSystem faceEditorGestureSystem;
@@ -102,6 +104,7 @@ public class CharacterEditorContext extends ContextPackage
         this.characterEditorMeshViewSystem = create(CharacterEditorMeshViewSystem.class);
         this.characterEditorSculptSystem = create(CharacterEditorSculptSystem.class);
         this.characterEditorRigSystem = create(CharacterEditorRigSystem.class);
+        this.characterEditorBoneSystem = create(CharacterEditorBoneSystem.class);
         this.characterEditorPaintSystem = create(CharacterEditorPaintSystem.class);
         this.characterEditorOverlaySystem = create(CharacterEditorOverlaySystem.class);
         this.faceEditorGestureSystem = create(FaceEditorGestureSystem.class);

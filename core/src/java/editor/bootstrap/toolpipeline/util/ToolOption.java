@@ -11,9 +11,14 @@ public enum ToolOption {
      * far, in degrees, a swirl turns what lies at its centre; Snap is the
      * grid notes are placed and moved on, Note Length how long a note is
      * drawn, Velocity how hard a drawn or typed note is played, and Scale
-     * Lock whether notes keep to the song's key. Each canvas
-     * declares the range, step and starting value of every option it
-     * honours, since each measures in its own units.
+     * Lock whether notes keep to the song's key. Mirror makes every edit to
+     * one side of a character to its twin across the body as well, X-Ray
+     * picks through the surface as if it were glass, and Bones chooses how
+     * the rig's bones are drawn. Each canvas declares the range, step and
+     * starting value of every option it honours, since each measures in its
+     * own units. Most options belong to the tools that carry them; a canvas
+     * option belongs to every tool on the canvases that honour it, and is
+     * listed under the tool's own.
      */
 
     SIZE(EditorSetting.TOOL_OPTION_SIZE),
@@ -22,23 +27,37 @@ public enum ToolOption {
     SNAP(EditorSetting.TOOL_OPTION_SNAP),
     NOTE_LENGTH(EditorSetting.TOOL_OPTION_NOTE_LENGTH),
     VELOCITY(EditorSetting.TOOL_OPTION_VELOCITY),
-    SCALE_LOCK(EditorSetting.TOOL_OPTION_SCALE_LOCK);
+    SCALE_LOCK(EditorSetting.TOOL_OPTION_SCALE_LOCK),
+    MIRROR(EditorSetting.TOOL_OPTION_MIRROR, true),
+    XRAY(EditorSetting.TOOL_OPTION_XRAY, true),
+    BONES(EditorSetting.TOOL_OPTION_BONES, true);
 
     // Values
     public static final ToolOption[] VALUES = values();
 
     // Internal
     private final String label;
+    private final boolean canvasWide;
 
     // Constructor \\
 
     ToolOption(String label) {
+        this(label, false);
+    }
+
+    ToolOption(String label, boolean canvasWide) {
         this.label = label;
+        this.canvasWide = canvasWide;
     }
 
     // Accessible \\
 
     public String getLabel() {
         return label;
+    }
+
+    // Whether every tool on a canvas that honours the option takes it, rather than only the tools that carry it
+    public boolean isCanvasWide() {
+        return canvasWide;
     }
 }

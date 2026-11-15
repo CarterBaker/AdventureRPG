@@ -14,6 +14,7 @@ import editor.runtime.viewcamera.ViewCameraSubject;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.vectors.Vector3;
 
 public class CharacterViewPoseSystem extends SystemPackage implements ViewCameraSubject {
 
@@ -132,6 +133,13 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
         }
 
         animationStateHandle.poseRest();
+    }
+
+    // A turn in Euler degrees laid over every pose of a bone until it is set again
+    public void setPosture(int boneIndex, Vector3 turn) {
+
+        if (animationStateHandle != null)
+            animationStateHandle.setBonePosture(boneIndex, turn.x, turn.y, turn.z);
     }
 
     public void poseClip(AnimationClipHandle clip, float time) {

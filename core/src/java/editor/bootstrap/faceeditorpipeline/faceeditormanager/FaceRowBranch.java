@@ -15,7 +15,7 @@ class FaceRowBranch extends BranchPackage {
     /*
      * Lists the rows of the face editor's two panels. The Face Outliner holds
      * how the preview is made — its gender, when the race has more than
-     * one, and whether edits mirror across the face — then every face
+     * one — then every face
      * control under the group a creator lists it in, groups in the order the
      * race first names them, and every face bone to pick. Face
      * Properties holds the picked control: its name, group, morph and
@@ -58,8 +58,6 @@ class FaceRowBranch extends BranchPackage {
 
         if (faceEditorManager.getPreviewData().getGenderCount() > 1)
             addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_GENDER, EditorSetting.CHARACTER_EDITOR_LABEL_GENDER);
-
-        addChoice(rows, EditorSetting.FACE_EDITOR_KEY_MIRROR, EditorSetting.FACE_EDITOR_LABEL_MIRROR);
 
         if (faceEditBranch.getAppearanceArpg() == null) {
             rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_NO_APPEARANCE));

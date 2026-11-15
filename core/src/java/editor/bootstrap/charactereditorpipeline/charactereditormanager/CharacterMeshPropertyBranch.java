@@ -79,9 +79,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
 
     private boolean isChoiceKey(String keyName) {
         return switch (keyName) {
-            case EditorSetting.CHARACTER_EDITOR_KEY_MESH_MIRROR,
-                    EditorSetting.CHARACTER_EDITOR_KEY_MESH_XRAY,
-                    EditorSetting.CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL,
+            case EditorSetting.CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL,
                     EditorSetting.CHARACTER_EDITOR_KEY_PART_SHAPE,
                     EditorSetting.CHARACTER_EDITOR_KEY_PART_TEXTURE,
                     EditorSetting.CHARACTER_EDITOR_KEY_FACE_TEXTURE,
@@ -98,6 +96,10 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_HIDE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_HIDE_UNSELECTED,
+                    EditorSetting.CHARACTER_EDITOR_KEY_REVEAL,
+                    EditorSetting.CHARACTER_EDITOR_KEY_POSE_RESET,
                     EditorSetting.CHARACTER_EDITOR_KEY_GRAB,
                     EditorSetting.CHARACTER_EDITOR_KEY_ROTATE,
                     EditorSetting.CHARACTER_EDITOR_KEY_SCALE,
@@ -271,10 +273,6 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             return;
 
         switch (CharacterViewUtility.getKeyName(key)) {
-            case EditorSetting.CHARACTER_EDITOR_KEY_MESH_MIRROR -> characterEditorManager.setMirror(
-                    !characterEditorManager.isMirror());
-            case EditorSetting.CHARACTER_EDITOR_KEY_MESH_XRAY -> characterEditorManager.setXray(
-                    !characterEditorManager.isXray());
             case EditorSetting.CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL -> characterEditorManager.setProportional(
                     !characterEditorManager.isProportional());
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_SHAPE -> characterEditorManager.setPartShape(
@@ -291,8 +289,6 @@ class CharacterMeshPropertyBranch extends BranchPackage {
 
     private String getChoiceText(String keyName) {
         return switch (keyName) {
-            case EditorSetting.CHARACTER_EDITOR_KEY_MESH_MIRROR -> toYesNo(characterEditorManager.isMirror());
-            case EditorSetting.CHARACTER_EDITOR_KEY_MESH_XRAY -> toYesNo(characterEditorManager.isXray());
             case EditorSetting.CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL -> toYesNo(
                     characterEditorManager.isProportional());
             case EditorSetting.CHARACTER_EDITOR_KEY_PART_SHAPE -> characterEditorManager.getPartShape().getLabel();
@@ -405,6 +401,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_SAVE_MESH -> characterEditorManager.saveMesh(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_REVERT_MESH -> characterEditorManager.revertMesh(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_ADD_SHAPE -> characterMeshBranch.addShape(document);
+            case EditorSetting.CHARACTER_EDITOR_KEY_POSE_RESET -> characterEditorManager.resetEditPose();
             default -> {
                 if (isSelectionAction(keyName))
                     actSelection(document, keyName);
@@ -423,7 +420,10 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_INVERT,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR,
-                    EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE -> true;
+                    EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_HIDE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_HIDE_UNSELECTED,
+                    EditorSetting.CHARACTER_EDITOR_KEY_REVEAL -> true;
             default -> false;
         };
     }
@@ -439,8 +439,21 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_INVERT -> characterSelectionBranch.invert(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED -> characterSelectionBranch.selectLinked(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR -> characterSelectionBranch.selectMirror(document);
+            case EditorSetting.CHARACTER_EDITOR_KEY_HIDE -> showHidden(document,
+                    characterSelectionBranch.hide(document, true));
+            case EditorSetting.CHARACTER_EDITOR_KEY_HIDE_UNSELECTED -> showHidden(document,
+                    characterSelectionBranch.hide(document, false));
+            case EditorSetting.CHARACTER_EDITOR_KEY_REVEAL -> showHidden(document,
+                    characterSelectionBranch.reveal(document));
             default -> characterSelectionBranch.selectBone(document, characterEditorManager.getSelectedBoneIndex());
         }
+    }
+
+    // The preview rebuilt without the faces now hidden, or with them back, when what is hidden changed
+    private void showHidden(CharacterMeshDocumentInstance document, boolean changed) {
+
+        if (changed)
+            characterMeshBranch.upload(document);
     }
 
     private void actWeight(CharacterMeshDocumentInstance document, String keyName) {

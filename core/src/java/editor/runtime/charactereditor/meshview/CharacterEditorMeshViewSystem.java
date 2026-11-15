@@ -33,8 +33,9 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
      * brush preset's tip at the strength it has there, and — unless X-Ray is on
      * — leaves out any a worn face hides from the camera. Only the vertices of
      * the tab's region are picked, and a brush reaches each by the share it
-     * belongs to the region; a tab whose region's part is not worn edits
-     * nothing. Positions are
+     * belongs to the region; a hidden vertex is never reached and its faces
+     * hide nothing; a tab whose region's part is not worn edits nothing.
+     * Positions are
      * refreshed each frame and again on demand after an edit; their storage
      * only ever grows. Occlusion is answered from the frame's own snapshot:
      * the first test of a frame bins every worn face into the window cells
@@ -290,7 +291,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
                     brushManager.getActiveBrush(), screenScratch.x - pixelX, screenScratch.y - pixelY, radius)
                     * characterEditorManager.getRegionShare(activeDocument, characterEditorModeSystem.getRegion(), v);
 
-            if (falloff > 0f && characterEditorManager.isOnRegionSide(activeDocument, v) && isVisible(v)) {
+            if (falloff > 0f && isReachable(v) && isVisible(v)) {
                 vertices.add(v);
                 strengths.add(falloff * strength);
             }
@@ -352,23 +353,32 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
     // Region \\
 
-    // Whether a vertex of the active part is one the tab's region picks and selects, on the side it shows
+    // Whether a vertex of the active part is one the tab's region picks and selects, on the side it shows and not
+    // hidden
     public boolean isInRegion(int vertexIndex) {
         return characterEditorManager.isInRegion(activeDocument, characterEditorModeSystem.getRegion(), vertexIndex)
+                && isReachable(vertexIndex);
+    }
+
+    // Whether a vertex stands on the side the tab shows and is not hidden, so a pick or the brush may reach it
+    private boolean isReachable(int vertexIndex) {
+        return !activeDocument.isHidden(vertexIndex)
                 && characterEditorManager.isOnRegionSide(activeDocument, vertexIndex);
     }
 
-    // Whether a worn face is drawn in the tab, so it hides what lies behind it: every face for the whole character, a
-    // face of the active part with a corner the region shows, and the faces of the parts worn with a region that
-    // holds a feature beside the body
+    // Whether a worn face is drawn in the tab, so it hides what lies behind it: never a face on a hidden vertex, every
+    // other face for the whole character, a face of the active part with a corner the region shows, and the faces of
+    // the parts worn with a region that holds a feature beside the body
     private boolean isFaceShown(int documentIndex, int faceIndex) {
 
         CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+        CharacterMeshDocumentInstance document = wornDocuments.get(documentIndex);
+
+        if (document.isFaceHidden(faceIndex))
+            return false;
 
         if (region.isWhole())
             return true;
-
-        CharacterMeshDocumentInstance document = wornDocuments.get(documentIndex);
 
         if (document != activeDocument)
             return region.holdsFeature();

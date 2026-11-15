@@ -340,6 +340,9 @@ One line per session that changed this file: the date, what was added or removed
   (the root at the strand image's top, so the owner's `Hair_A.png` stands right side up), `CharacterHair.glsl` (reads
   the strand from the root at v 1) and `CharacterSurface.glsl` (an overlay's amount is its opacity, no longer a cut of
   its alpha that hid faint body hair). Entries unchanged.
+- 2026-11-15: Character editor rigging workflow. Regenerated `shortcuts/CharacterEditor.arpg` (Hide H, Hide
+  Unselected Shift+H, Reveal Alt+H, Reset Pose Alt+R on the mesh and weights layers) and `shortcuts/Tools.arpg` (Pose
+  tool on Y). Entries unchanged.
 
 ---
 

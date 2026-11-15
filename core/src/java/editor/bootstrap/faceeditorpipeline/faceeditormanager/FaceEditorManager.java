@@ -11,6 +11,7 @@ import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
+import editor.bootstrap.toolpipeline.util.ToolOption;
 import editor.runtime.characterview.history.CharacterViewHistoryStruct;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.EditorSetting;
@@ -53,7 +54,6 @@ public class FaceEditorManager extends ManagerPackage {
     // Selection
     private int selectedShapeIndex;
     private int selectedBoneIndex;
-    private boolean mirror;
 
     // Gesture — the target the drag began from on the bone it shapes
     private Vector3 gestureMove;
@@ -80,7 +80,6 @@ public class FaceEditorManager extends ManagerPackage {
         // Selection
         this.selectedShapeIndex = EngineSetting.INDEX_NOT_FOUND;
         this.selectedBoneIndex = EngineSetting.INDEX_NOT_FOUND;
-        this.mirror = true;
 
         // Gesture
         this.gestureMove = new Vector3();
@@ -162,12 +161,6 @@ public class FaceEditorManager extends ManagerPackage {
             return;
 
         this.selectedBoneIndex = boneIndex;
-        notifyChanged();
-    }
-
-    void setMirror(boolean mirror) {
-
-        this.mirror = mirror;
         notifyChanged();
     }
 
@@ -279,7 +272,7 @@ public class FaceEditorManager extends ManagerPackage {
             return;
 
         faceEditBranch.writeTarget(getActiveDocument(), selectedShapeIndex, getBoneName(selectedBoneIndex),
-                move, turn, scale, mirror ? resolveMirrorBoneName(selectedBoneIndex) : null);
+                move, turn, scale, isMirror() ? resolveMirrorBoneName(selectedBoneIndex) : null);
     }
 
     public void endGesture() {
@@ -464,8 +457,10 @@ public class FaceEditorManager extends ManagerPackage {
         return selectedBoneIndex;
     }
 
+    // The Tools panel's Mirror on the face canvas
     public boolean isMirror() {
-        return mirror;
+        return Math.round(toolManager.getOption(ToolCanvas.CHARACTER_FACE, ToolOption.MIRROR))
+                == EditorSetting.TOOL_OPTION_SWITCH_ON;
     }
 
     // The picked control's value in the preview, the Character Editor's own slider

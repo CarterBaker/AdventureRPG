@@ -18,6 +18,7 @@ import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -31,7 +32,8 @@ class CharacterMeshBranch extends BranchPackage {
      * at once. A mesh opens once and stays open with its edits and history
      * until saved or reverted. An edit is finished here: refused when it
      * would leave the mesh empty or past the vertex limit, committed to the
-     * history otherwise.
+     * history otherwise. The preview leaves out every face standing on a
+     * hidden vertex; the file always keeps them.
      */
 
     // Internal
@@ -47,6 +49,10 @@ class CharacterMeshBranch extends BranchPackage {
     private Object2ObjectOpenHashMap<String, CharacterMeshDocumentInstance> meshName2MeshDocument;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<String>> arrayName2TextureNames;
 
+    // Preview — the mesh as shown while vertices are hidden, made again only for another rig
+    private RiggedMeshStruct shownMesh;
+    private BooleanArrayList hiddenFaces;
+
     // Base \\
 
     @Override
@@ -58,6 +64,9 @@ class CharacterMeshBranch extends BranchPackage {
         // Palette
         this.meshName2MeshDocument = new Object2ObjectOpenHashMap<>();
         this.arrayName2TextureNames = new Object2ObjectOpenHashMap<>();
+
+        // Preview
+        this.hiddenFaces = new BooleanArrayList();
     }
 
     @Override
@@ -256,10 +265,32 @@ class CharacterMeshBranch extends BranchPackage {
         upload(document);
     }
 
+    // The mesh rebuilt for the preview, without the faces standing on a hidden vertex
     void upload(CharacterMeshDocumentInstance document) {
 
-        if (!document.getMesh().isEmpty())
+        if (document.getMesh().isEmpty())
+            return;
+
+        if (!document.hasHidden()) {
             meshManager.updateRiggedMesh(document.getMeshHandle(), document.getMesh());
+            return;
+        }
+
+        RiggedMeshStruct mesh = document.getMesh();
+
+        if (shownMesh == null || shownMesh.getRigHandle() != mesh.getRigHandle())
+            this.shownMesh = new RiggedMeshStruct(mesh);
+        else
+            shownMesh.set(mesh);
+
+        hiddenFaces.clear();
+        hiddenFaces.size(mesh.getFaceCount());
+
+        for (int f = 0; f < mesh.getFaceCount(); f++)
+            hiddenFaces.set(f, document.isFaceHidden(f));
+
+        shownMesh.removeFaces(hiddenFaces);
+        meshManager.updateRiggedMesh(document.getMeshHandle(), shownMesh);
     }
 
     // Textures \\

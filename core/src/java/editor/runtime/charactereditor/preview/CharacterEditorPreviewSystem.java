@@ -3,11 +3,13 @@ package editor.runtime.charactereditor.preview;
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
+import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
@@ -34,10 +36,13 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * editor's state moves; and each frame the preview is posed — in the
      * bind pose, one of the poses the rig names, or played in the chosen
      * movement, held in the exact bind pose while its rig is edited, and
-     * played with its springs simulated while Preview Springs is on — and
-     * given the markers of the mode: the joints in
-     * Build, Mesh and Weights, the rig's bones as they are being edited in
-     * Rig, every equipment anchor in Equipment, the selected one highlighted.
+     * played with its springs simulated while Preview Springs is on — with
+     * the edit pose's turns laid over it on the mesh and weights layers, and
+     * given the markers of the mode: the bones in Build, Mesh and Weights,
+     * the rig's bones as they are being edited in Rig, each drawn as the
+     * Tools panel's Bones says (joints, sticks from each joint to its
+     * parent's, both or none), every equipment anchor in Equipment, the
+     * selected one highlighted.
      * The window's own mode decides all of it, so two Character Editor
      * windows each show the character their own way side by side.
      */
@@ -57,6 +62,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     // Scratch
     private Vector3 heldSize;
+    private Vector3 restTurn;
 
     // Base \\
 
@@ -69,6 +75,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         // Scratch
         float size = CharacterEditorSetting.HELD_ANCHOR_MARKER_SIZE;
         this.heldSize = new Vector3(size, size, size);
+        this.restTurn = new Vector3();
     }
 
     @Override
@@ -105,12 +112,19 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
                 || characterEditorModeSystem.getMode() != lookMode)
             applyLook();
 
+        applyEditPose(characterEditorModeSystem.getMode().isMeshMode()
+                && characterEditorModeSystem.getMode().picksPose());
         strikePose();
         pushMarkers();
     }
 
-    // Let go while another system drives the viewport, so the preview is bound and dressed again on return
+    // Let go while another system drives the viewport, so the preview is bound and dressed again on return, with no
+    // edit pose left on it
     private void unbind() {
+
+        if (boundDocument != null && characterViewPoseSystem.hasSubject())
+            applyEditPose(false);
+
         this.boundDocument = null;
         this.lookRevision = EngineSetting.INDEX_NOT_FOUND;
     }
@@ -178,6 +192,15 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
             characterViewPoseSystem.poseRest();
     }
 
+    // The edit pose's turn on every bone where the layer takes it, none elsewhere, laid over whatever pose is struck
+    private void applyEditPose(boolean posed) {
+
+        int boneCount = characterViewPoseSystem.getRaceData().getRigHandle().getBoneCount();
+
+        for (int i = 0; i < boneCount; i++)
+            characterViewPoseSystem.setPosture(i, posed ? characterEditorManager.getEditPoseTurn(i) : restTurn);
+    }
+
     // One of the rig's own poses, its clip struck at its start, unshaped while a model is edited; false when the rig
     // names a clip that is not loaded or moves another rig
     private boolean strikeClip(int clipIndex, boolean unshaped) {
@@ -219,29 +242,63 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
         }
     }
 
+    // Every shown bone as posed, its joint and the stick to its shown parent's as the Bones option says; a stick from
+    // the selected joint is highlighted with it
     private void pushJointMarkers() {
 
         RigHandle rigHandle = characterViewPoseSystem.getRaceData().getRigHandle();
+        AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
         CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+        CharacterBoneDisplay display = characterEditorManager.getBoneDisplay();
+        int selected = characterEditorManager.getSelectedBoneIndex();
 
-        for (int i = 0; i < rigHandle.getBoneCount(); i++)
-            if (characterEditorManager.isBoneShown(region, rigHandle, i))
-                characterViewRenderSystem.addJointMarker(i, i == characterEditorManager.getSelectedBoneIndex());
+        for (int i = 0; i < rigHandle.getBoneCount(); i++) {
+
+            if (!characterEditorManager.isBoneShown(region, rigHandle, i))
+                continue;
+
+            if (display.drawsJoints())
+                characterViewRenderSystem.addJointMarker(i, i == selected);
+
+            int parent = rigHandle.getBone(i).getParentIndex();
+
+            if (display.drawsSticks() && parent != EngineSetting.INDEX_NOT_FOUND
+                    && characterEditorManager.isBoneShown(region, rigHandle, parent))
+                characterViewRenderSystem.addStickMarker(
+                        state.getWorldMatrix(parent), state.getWorldMatrix(i), parent == selected);
+        }
     }
 
-    // Every bone of the rig as it is being edited, at its bind joint, and the selected one's size about its joint
+    // Every bone of the rig as it is being edited, at its bind joint, drawn as the Bones option says, and the selected
+    // one's size about its joint
     private void pushRigMarkers() {
 
         int boneCount = characterEditorManager.getRigBoneCount();
         int selected = characterEditorManager.getSelectedRigBoneIndex();
+        CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+        CharacterBoneDisplay display = characterEditorManager.getBoneDisplay();
 
-        for (int i = 0; i < boneCount; i++)
-            if (characterEditorManager.isRigBoneShown(characterEditorModeSystem.getRegion(), i))
+        for (int i = 0; i < boneCount; i++) {
+
+            if (!characterEditorManager.isRigBoneShown(region, i))
+                continue;
+
+            if (display.drawsJoints())
                 characterViewRenderSystem.addWorldMarker(
                         characterEditorManager.getRigBoneWorldMatrix(i),
                         i == selected ? EditorSetting.CHARACTER_VIEW_JOINT_SELECTED_SIZE
                                 : EditorSetting.CHARACTER_VIEW_JOINT_SIZE,
                         i == selected);
+
+            int parent = characterEditorManager.getRigBoneParent(i);
+
+            if (display.drawsSticks() && parent != EngineSetting.INDEX_NOT_FOUND
+                    && characterEditorManager.isRigBoneShown(region, parent))
+                characterViewRenderSystem.addStickMarker(
+                        characterEditorManager.getRigBoneWorldMatrix(parent),
+                        characterEditorManager.getRigBoneWorldMatrix(i),
+                        parent == selected);
+        }
 
         if (selected != EngineSetting.INDEX_NOT_FOUND)
             characterViewRenderSystem.addWorldBoxMarker(

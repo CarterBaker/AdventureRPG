@@ -29,7 +29,10 @@ class CharacterSelectionBranch extends BranchPackage {
      * centre plane, and for a vertex with no such twin the nearest one
      * likewise left alone across x within the mirror reach, so a mesh not
      * modelled exactly symmetric still mirrors every edit — again whenever
-     * the geometry has changed.
+     * the geometry has changed. Hides the selected or the unselected
+     * vertices out of the way and reveals them again, as a modelling tool
+     * hides geometry to reach into tight spaces; a hidden vertex never
+     * stays selected.
      */
 
     // Internal
@@ -278,17 +281,71 @@ class CharacterSelectionBranch extends BranchPackage {
     }
 
     // A changed selection kept to the region of the tab worked in last, then marked changed
+    // The selection kept to the region and to the vertices shown, then told to every view
     private void changed(CharacterMeshDocumentInstance document) {
 
         BooleanArrayList selection = document.getSelection();
+        boolean whole = characterEditorManager.getRegion().isWhole();
 
-        if (!characterEditorManager.getRegion().isWhole())
+        if (!whole || document.hasHidden())
             for (int i = 0; i < selection.size(); i++)
-                if (selection.getBoolean(i) && !characterEditorManager.isInRegion(document, i))
+                if (selection.getBoolean(i)
+                        && (document.isHidden(i) || !whole && !characterEditorManager.isInRegion(document, i)))
                     selection.set(i, false);
 
         document.markSelectionChanged();
         characterEditorManager.notifyChanged();
+    }
+
+    // Hide \\
+
+    // Hides every selected vertex, or every unselected one, so long as something stays shown; false, after saying
+    // why, when nothing would be hidden or nothing left
+    boolean hide(CharacterMeshDocumentInstance document, boolean selected) {
+
+        int vertexCount = document.getMesh().getVertexCount();
+        int hiding = 0;
+
+        for (int i = 0; i < vertexCount; i++)
+            if (!document.isHidden(i) && document.isSelected(i) == selected)
+                hiding++;
+
+        if (hiding == 0) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_HIDE_NONE);
+            return false;
+        }
+
+        if (document.getHiddenCount() + hiding >= vertexCount) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_HIDE_ALL);
+            return false;
+        }
+
+        for (int i = 0; i < vertexCount; i++)
+            if (!document.isHidden(i) && document.isSelected(i) == selected)
+                document.setHidden(i, true);
+
+        changed(document);
+        return true;
+    }
+
+    // Shows every hidden vertex again, selected, as it comes back; false when nothing was hidden
+    boolean reveal(CharacterMeshDocumentInstance document) {
+
+        if (!document.hasHidden())
+            return false;
+
+        BooleanArrayList selection = document.getSelection();
+
+        setAll(document, false);
+
+        for (int i = 0; i < selection.size(); i++)
+            if (document.isHidden(i)) {
+                document.setHidden(i, false);
+                selection.set(i, true);
+            }
+
+        changed(document);
+        return true;
     }
 
     // Mirror \\

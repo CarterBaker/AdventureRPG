@@ -61,6 +61,7 @@ class CharacterSculptBranch extends BranchPackage {
     private BooleanArrayList vertexFlags;
     private BooleanArrayList selectionScratch;
     private FloatArrayList selectionWeightScratch;
+    private BooleanArrayList hiddenScratch;
     private Long2IntOpenHashMap edge2Value;
     private float[] cornerScratch;
 
@@ -89,6 +90,7 @@ class CharacterSculptBranch extends BranchPackage {
         this.vertexFlags = new BooleanArrayList();
         this.selectionScratch = new BooleanArrayList();
         this.selectionWeightScratch = new FloatArrayList();
+        this.hiddenScratch = new BooleanArrayList();
         this.edge2Value = new Long2IntOpenHashMap();
         this.edge2Value.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
         this.cornerScratch = new float[EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.RIGGED_MESH_POSITION_FLOATS];
@@ -1126,6 +1128,7 @@ class CharacterSculptBranch extends BranchPackage {
         RiggedMeshStruct mesh = document.getMesh();
         BooleanArrayList selection = document.getSelection();
         FloatArrayList weights = document.getSelectionWeights();
+        BooleanArrayList hidden = document.getHidden();
         int vertexCount = mesh.getVertexCount();
 
         vertexFlags.clear();
@@ -1144,11 +1147,14 @@ class CharacterSculptBranch extends BranchPackage {
         selectionScratch.size(mesh.getVertexCount());
         selectionWeightScratch.clear();
         selectionWeightScratch.size(mesh.getVertexCount());
+        hiddenScratch.clear();
+        hiddenScratch.size(mesh.getVertexCount());
 
         for (int i = 0; i < vertexCount; i++)
             if (vertexRemap.getInt(i) != EngineSetting.INDEX_NOT_FOUND) {
                 selectionScratch.set(vertexRemap.getInt(i), selection.getBoolean(i));
                 selectionWeightScratch.set(vertexRemap.getInt(i), weights.getFloat(i));
+                hiddenScratch.set(vertexRemap.getInt(i), hidden.getBoolean(i));
             }
 
         int activeVertex = document.getActiveVertex();
@@ -1160,6 +1166,9 @@ class CharacterSculptBranch extends BranchPackage {
         selection.addAll(selectionScratch);
         weights.clear();
         weights.addAll(selectionWeightScratch);
+        hidden.clear();
+        hidden.addAll(hiddenScratch);
+        document.markHiddenRemapped();
     }
 
     private void collectSelected(CharacterMeshDocumentInstance document, IntArrayList vertices) {

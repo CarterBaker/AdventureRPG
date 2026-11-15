@@ -13,24 +13,29 @@ public enum ToolCanvas {
      * takes, the first being the one it starts with, the actions it lists
      * under them in titled groups — one-off operations such as a mesh's
      * selection and geometry edits, run by its window — whether what it
-     * holds can blend between values, and every tool option it honours with
-     * its range there: a brush is sized in image pixels on the world's
-     * layers and in window pixels on a character. A tool shows only the
-     * options both it and the canvas have, and a canvas without Size takes
-     * no brush; on one with it, every tool that carries Size strokes with
-     * the brush, so a mesh's Select sweeps the brush over its vertices.
-     * Biome colors name biomes, so they never blend; heights, bone weights
-     * and a sculpted surface do. The world's heights are their own canvas,
-     * raised, lowered, smoothed, flattened and erased back to level with
-     * the brush, never painted from a palette. A character's rig, its face
-     * and an animation's pose take the tools that pick and drag its joints;
-     * the face drags a bone into the face control selected. The recorder's
-     * Timeline selects and cuts clips, and nests the selection or opens a
-     * nested clip, and exports its video. A Music file's Timeline draws
-     * notes clips too, opens the song a clip lays, and exports as MIDI or
-     * renders to a sound; the Piano Roll selects, draws, erases and cuts the
-     * notes of the clip selected there on its Snap grid, and edits them by
-     * its Notes actions.
+     * holds can blend between values, and every tool option it honours
+     * with its range there: a brush is sized in image pixels on the
+     * world's layers and in window pixels on a character. A tool shows
+     * only the options both it and the canvas have, and a canvas without
+     * Size takes no brush; on one with it, every tool that carries Size
+     * strokes with the brush, so a mesh's Select sweeps the brush over its
+     * vertices. Biome colors name biomes, so they never blend; heights,
+     * bone weights and a sculpted surface do. The world's heights are
+     * their own canvas, raised, lowered, smoothed, flattened and erased
+     * back to level with the brush, never painted from a palette. A
+     * character's rig, its face and an animation's pose take the tools
+     * that pick and drag its joints; the face drags a bone into the face
+     * control selected. A character's mesh and weights also take Pick,
+     * which picks the bone under the pointer to weigh, and Pose, which
+     * turns a bone out of the way while the mesh follows; every modelling
+     * canvas of a character mirrors, and its mesh, weights and rig choose
+     * how the bones are drawn. The recorder's Timeline selects and cuts
+     * clips, and nests the selection or opens a nested clip, and exports
+     * its video. A Music file's Timeline draws notes clips too, opens the
+     * song a clip lays, and exports as MIDI or renders to a sound; the
+     * Piano Roll selects, draws, erases and cuts the notes of the clip
+     * selected there on its Snap grid, and edits them by its Notes
+     * actions.
      */
 
     BIOMES(
@@ -59,10 +64,15 @@ public enum ToolCanvas {
             false),
     CHARACTER_MESH(
             EditorSetting.TOOL_CANVAS_CHARACTER_MESH,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
-            new ToolActionGroupStruct[] { meshTransform(), meshGeometry(), meshSelection() },
+            new EditorTool[] {
+                    EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PICK,
+                    EditorTool.POSE },
+            new ToolActionGroupStruct[] { meshTransform(), meshGeometry(), meshSelection(), meshPose() },
             false,
-            screenSize()),
+            screenSize(),
+            mirror(),
+            xray(),
+            bones()),
     CHARACTER_SCULPT(
             EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
             new EditorTool[] {
@@ -70,14 +80,20 @@ public enum ToolCanvas {
                     EditorTool.CREASE, EditorTool.FLATTEN, EditorTool.NUDGE },
             true,
             screenSize(),
-            strength(EditorSetting.TOOL_SCULPT_STRENGTH_DEFAULT)),
+            strength(EditorSetting.TOOL_SCULPT_STRENGTH_DEFAULT),
+            mirror()),
     CHARACTER_WEIGHTS(
             EditorSetting.TOOL_CANVAS_CHARACTER_WEIGHTS,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH },
-            new ToolActionGroupStruct[] { meshWeights(), meshSelection() },
+            new EditorTool[] {
+                    EditorTool.SELECT, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.PICK,
+                    EditorTool.POSE },
+            new ToolActionGroupStruct[] { meshWeights(), meshSelection(), meshPose() },
             true,
             screenSize(),
-            strength(EditorSetting.TOOL_WEIGHT_STRENGTH_DEFAULT)),
+            strength(EditorSetting.TOOL_WEIGHT_STRENGTH_DEFAULT),
+            mirror(),
+            xray(),
+            bones()),
     CHARACTER_PAINT(
             EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
             new EditorTool[] {
@@ -91,12 +107,15 @@ public enum ToolCanvas {
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.PLACE, EditorTool.ERASE },
             new ToolActionGroupStruct[] { rigActions(), colliderActions(), hairActions() },
-            false),
+            false,
+            mirror(),
+            bones()),
     CHARACTER_FACE(
             EditorSetting.TOOL_CANVAS_CHARACTER_FACE,
             new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
             new ToolActionGroupStruct[] { faceControls() },
-            false),
+            false,
+            mirror()),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
             new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK },
@@ -241,7 +260,18 @@ public enum ToolCanvas {
                         EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR),
                 action(
                         EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_BONE,
-                        EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE));
+                        EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE),
+                action(EditorSetting.CHARACTER_EDITOR_LABEL_HIDE, EditorSetting.CHARACTER_EDITOR_KEY_HIDE),
+                action(
+                        EditorSetting.CHARACTER_EDITOR_LABEL_HIDE_UNSELECTED,
+                        EditorSetting.CHARACTER_EDITOR_KEY_HIDE_UNSELECTED),
+                action(EditorSetting.CHARACTER_EDITOR_LABEL_REVEAL, EditorSetting.CHARACTER_EDITOR_KEY_REVEAL));
+    }
+
+    private static ToolActionGroupStruct meshPose() {
+        return new ToolActionGroupStruct(
+                EditorSetting.CHARACTER_EDITOR_HEADER_POSE,
+                action(EditorSetting.CHARACTER_EDITOR_LABEL_POSE_RESET, EditorSetting.CHARACTER_EDITOR_KEY_POSE_RESET));
     }
 
     private static ToolActionGroupStruct rigActions() {
@@ -379,6 +409,18 @@ public enum ToolCanvas {
                 EngineSetting.NOTE_VELOCITY_MAX,
                 1f,
                 EditorSetting.PIANO_ROLL_VELOCITY_DEFAULT);
+    }
+
+    private static ToolOptionStruct mirror() {
+        return named(ToolOption.MIRROR, EditorSetting.TOOL_OPTION_SWITCH_NAMES, EditorSetting.TOOL_OPTION_SWITCH_ON);
+    }
+
+    private static ToolOptionStruct xray() {
+        return named(ToolOption.XRAY, EditorSetting.TOOL_OPTION_SWITCH_NAMES, EditorSetting.TOOL_OPTION_SWITCH_OFF);
+    }
+
+    private static ToolOptionStruct bones() {
+        return named(ToolOption.BONES, EditorSetting.TOOL_BONE_DISPLAY_NAMES, EditorSetting.TOOL_BONE_DISPLAY_DEFAULT);
     }
 
     private static ToolOptionStruct twist() {

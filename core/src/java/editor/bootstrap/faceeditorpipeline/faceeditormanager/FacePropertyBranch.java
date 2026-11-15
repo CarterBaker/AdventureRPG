@@ -79,9 +79,6 @@ class FacePropertyBranch extends BranchPackage {
         if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_GENDER))
             return characterEditorManager.getValueText(key);
 
-        if (keyName.equals(EditorSetting.FACE_EDITOR_KEY_MIRROR))
-            return faceEditorManager.isMirror() ? EditorSetting.CHARACTER_VIEW_YES : EditorSetting.CHARACTER_VIEW_NO;
-
         if (!faceEditBranch.hasShape(document, shapeIndex))
             return "";
 
@@ -302,11 +299,6 @@ class FacePropertyBranch extends BranchPackage {
 
         if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_GENDER)) {
             characterEditorManager.cycle(key, direction);
-            return;
-        }
-
-        if (keyName.equals(EditorSetting.FACE_EDITOR_KEY_MIRROR)) {
-            faceEditorManager.setMirror(!faceEditorManager.isMirror());
             return;
         }
 

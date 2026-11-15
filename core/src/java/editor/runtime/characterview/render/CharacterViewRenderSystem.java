@@ -31,7 +31,8 @@ public class CharacterViewRenderSystem extends SystemPackage {
      * copies of theirs, so it never batches with a game view's characters or
      * another viewport's, standing on a floor grid in this window's scene
      * target. The markers its tool asks for during update — bone joints,
-     * oriented boxes on a bone and cubes or boxes placed by any matrix — go to
+     * sticks between two joints, oriented boxes on a bone and cubes or
+     * boxes placed by any matrix — go to
      * an overlay above the scene, so they
      * show through the body. Marker models are pooled and only ever grow.
      * Tools drawing more of their own into the viewport use the same scene
@@ -72,6 +73,9 @@ public class CharacterViewRenderSystem extends SystemPackage {
     private Matrix4 matrixScratchA;
     private Matrix4 matrixScratchB;
     private Vector3 sizeScratch;
+    private Vector3 stickAlong;
+    private Vector3 stickSide;
+    private Vector3 stickNormal;
 
     // Base \\
 
@@ -93,6 +97,9 @@ public class CharacterViewRenderSystem extends SystemPackage {
         this.matrixScratchA = new Matrix4();
         this.matrixScratchB = new Matrix4();
         this.sizeScratch = new Vector3();
+        this.stickAlong = new Vector3();
+        this.stickSide = new Vector3();
+        this.stickNormal = new Vector3();
     }
 
     @Override
@@ -153,6 +160,43 @@ public class CharacterViewRenderSystem extends SystemPackage {
         markerScratch.set(worldMatrix).multiply(matrixScratchA);
 
         pushMarker(false);
+    }
+
+    // A thin box from one joint to another, the stick a bone draws from its parent's joint to its own; nothing for two
+    // joints on one spot
+    public void addStickMarker(Matrix4 fromWorld, Matrix4 toWorld, boolean selected) {
+
+        float[] from = fromWorld.val;
+        float[] to = toWorld.val;
+        float dx = to[12] - from[12];
+        float dy = to[13] - from[13];
+        float dz = to[14] - from[14];
+        float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (length <= EditorSetting.CHARACTER_VIEW_STICK_MIN_LENGTH)
+            return;
+
+        float width = selected
+                ? EditorSetting.CHARACTER_VIEW_STICK_SELECTED_WIDTH
+                : EditorSetting.CHARACTER_VIEW_STICK_WIDTH;
+        boolean upright = Math.abs(dy / length) > EditorSetting.CHARACTER_VIEW_STICK_PARALLEL;
+
+        stickAlong.set(dx / length, dy / length, dz / length);
+        cross(upright ? 1f : 0f, upright ? 0f : 1f, 0f, stickAlong, stickSide);
+        stickSide.normalize();
+        cross(stickAlong.x, stickAlong.y, stickAlong.z, stickSide, stickNormal);
+        markerScratch.set(
+                stickSide.x * width, dx, stickNormal.x * width, from[12] + dx * 0.5f,
+                stickSide.y * width, dy, stickNormal.y * width, from[13] + dy * 0.5f,
+                stickSide.z * width, dz, stickNormal.z * width, from[14] + dz * 0.5f,
+                0f, 0f, 0f, 1f);
+
+        pushMarker(selected);
+    }
+
+    // The cross product of a direction and a vector
+    private void cross(float x, float y, float z, Vector3 other, Vector3 out) {
+        out.set(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
     }
 
     // A box placed on a bone in the character's bind pose, as an equipment anchor places what it holds

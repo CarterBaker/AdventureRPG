@@ -620,6 +620,10 @@ public class EditorSetting {
     // Character View — markers, sizes in blocks
     public static final float CHARACTER_VIEW_JOINT_SIZE = 0.035f;
     public static final float CHARACTER_VIEW_JOINT_SELECTED_SIZE = 0.06f;
+    public static final float CHARACTER_VIEW_STICK_WIDTH = 0.012f;
+    public static final float CHARACTER_VIEW_STICK_SELECTED_WIDTH = 0.022f;
+    public static final float CHARACTER_VIEW_STICK_MIN_LENGTH = 0.0001f;
+    public static final float CHARACTER_VIEW_STICK_PARALLEL = 0.9f;
 
     // Character View — the preview's build between thin (0) and heavy (1)
     public static final float CHARACTER_VIEW_WEIGHT_RATIO = 0.5f;
@@ -953,8 +957,6 @@ public class EditorSetting {
 
     // Character Editor — mesh panel keys
     public static final String CHARACTER_EDITOR_KEY_MESH_PART = "mesh_part";
-    public static final String CHARACTER_EDITOR_KEY_MESH_MIRROR = "mesh_mirror";
-    public static final String CHARACTER_EDITOR_KEY_MESH_XRAY = "mesh_xray";
     public static final String CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL = "mesh_proportional";
     public static final String CHARACTER_EDITOR_KEY_MESH_RADIUS = "mesh_radius";
     public static final String CHARACTER_EDITOR_KEY_MESH_SNAP = "mesh_snap";
@@ -967,6 +969,10 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_SELECT_LINKED = "select_linked";
     public static final String CHARACTER_EDITOR_KEY_SELECT_MIRROR = "select_mirror";
     public static final String CHARACTER_EDITOR_KEY_SELECT_BONE = "select_bone";
+    public static final String CHARACTER_EDITOR_KEY_HIDE = "hide";
+    public static final String CHARACTER_EDITOR_KEY_HIDE_UNSELECTED = "hide_unselected";
+    public static final String CHARACTER_EDITOR_KEY_REVEAL = "reveal";
+    public static final String CHARACTER_EDITOR_KEY_POSE_RESET = "pose_reset";
     public static final String CHARACTER_EDITOR_KEY_GRAB = "grab";
     public static final String CHARACTER_EDITOR_KEY_ROTATE = "rotate";
     public static final String CHARACTER_EDITOR_KEY_SCALE = "scale";
@@ -1046,6 +1052,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_HEADER_NO_MESH = "This part has no mesh file to edit";
     public static final String CHARACTER_EDITOR_HEADER_OPTIONS = "Options";
     public static final String CHARACTER_EDITOR_HEADER_SELECTION = "Selection";
+    public static final String CHARACTER_EDITOR_HEADER_POSE = "Pose";
     public static final String CHARACTER_EDITOR_HEADER_TRANSFORM = "Transform";
     public static final String CHARACTER_EDITOR_HEADER_GEOMETRY = "Geometry";
     public static final String CHARACTER_EDITOR_HEADER_WEIGHTS = "Weights";
@@ -1056,8 +1063,6 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_VERTICES = " vertices";
     public static final String CHARACTER_EDITOR_LABEL_FACES = " faces";
     public static final String CHARACTER_EDITOR_LABEL_SELECTED = " selected";
-    public static final String CHARACTER_EDITOR_LABEL_MIRROR = "Mirror X";
-    public static final String CHARACTER_EDITOR_LABEL_XRAY = "X-Ray";
     public static final String CHARACTER_EDITOR_LABEL_PROPORTIONAL = "Proportional";
     public static final String CHARACTER_EDITOR_LABEL_RADIUS = "Radius";
     public static final String CHARACTER_EDITOR_LABEL_SNAP = "Snap (Ctrl)";
@@ -1069,6 +1074,10 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_SELECT_LINKED = "Select Linked  (L)";
     public static final String CHARACTER_EDITOR_LABEL_SELECT_MIRROR = "Select Mirror";
     public static final String CHARACTER_EDITOR_LABEL_SELECT_BONE = "Select Weighted to Bone";
+    public static final String CHARACTER_EDITOR_LABEL_HIDE = "Hide  (H)";
+    public static final String CHARACTER_EDITOR_LABEL_HIDE_UNSELECTED = "Hide Unselected  (Shift+H)";
+    public static final String CHARACTER_EDITOR_LABEL_REVEAL = "Reveal  (Alt+H)";
+    public static final String CHARACTER_EDITOR_LABEL_POSE_RESET = "Reset Pose  (Alt+R)";
     public static final String CHARACTER_EDITOR_LABEL_GRAB = "Grab  (G)";
     public static final String CHARACTER_EDITOR_LABEL_ROTATE = "Rotate  (R)";
     public static final String CHARACTER_EDITOR_LABEL_SCALE = "Scale  (S)";
@@ -1111,11 +1120,13 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_STATUS_TRANSFORM_HINT = "X Y Z hold to an axis, Ctrl snaps, click or "
             + "Enter confirms, right click or Esc cancels";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_EMPTY = "A mesh needs at least one face";
+    public static final String CHARACTER_EDITOR_MESSAGE_HIDE_NONE = "Nothing to hide";
+    public static final String CHARACTER_EDITOR_MESSAGE_HIDE_ALL = "Something must stay shown: Reveal shows it all";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_LIMIT = "That edit would pass the mesh vertex limit";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED = "A mesh file could not be written";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_REVERTED = "The mesh file could not be read";
     public static final String CHARACTER_EDITOR_MESSAGE_POSED =
-            "Vertices move only in the Bind pose: pick Bind under Pose";
+            "Vertices move only in the Bind pose: pick Bind under Pose and Reset Pose";
     public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_EXTRUDE = "Select faces or edges to extrude";
     public static final String CHARACTER_EDITOR_MESSAGE_NO_FACES = "Select whole faces first";
     public static final String CHARACTER_EDITOR_MESSAGE_FACE_VERTICES = "Select 3 or 4 vertices to make a face";
@@ -1429,7 +1440,6 @@ public class EditorSetting {
     // Face Editor — panel keys, and the tool actions the Tools window lists under the face's tools
     public static final String FACE_EDITOR_KEY_CONTROL = "face_control";
     public static final String FACE_EDITOR_KEY_BONE = "face_bone";
-    public static final String FACE_EDITOR_KEY_MIRROR = "face_mirror";
     public static final String FACE_EDITOR_KEY_NAME = "face_name";
     public static final String FACE_EDITOR_KEY_GROUP = "face_group";
     public static final String FACE_EDITOR_KEY_MORPH = "face_morph";
@@ -1498,7 +1508,6 @@ public class EditorSetting {
     public static final String FACE_EDITOR_HEADER_STARTS = "Gender Starts";
     public static final String FACE_EDITOR_HEADER_TARGETS = "Bones Driven";
     public static final String FACE_EDITOR_HEADER_NO_CONTROL = "No control selected";
-    public static final String FACE_EDITOR_LABEL_MIRROR = "Mirror";
     public static final String FACE_EDITOR_LABEL_NAME = "Name";
     public static final String FACE_EDITOR_LABEL_GROUP = "Group";
     public static final String FACE_EDITOR_LABEL_MORPH = "Morph";
@@ -1933,6 +1942,7 @@ public class EditorSetting {
     public static final String TOOL_CUT = "Cut";
     public static final String TOOL_IK = "IK Handle";
     public static final String TOOL_DRAW = "Draw";
+    public static final String TOOL_POSE = "Pose";
     public static final String TOOL_INFLATE = "Inflate";
     public static final String TOOL_PINCH = "Pinch";
     public static final String TOOL_CREASE = "Crease";
@@ -1970,6 +1980,14 @@ public class EditorSetting {
     public static final String TOOL_OPTION_NOTE_LENGTH = "Note Length";
     public static final String TOOL_OPTION_VELOCITY = "Velocity";
     public static final String TOOL_OPTION_SCALE_LOCK = "Scale Lock";
+    public static final String TOOL_OPTION_MIRROR = "Mirror";
+    public static final String TOOL_OPTION_XRAY = "X-Ray";
+    public static final String TOOL_OPTION_BONES = "Bones";
+    public static final String[] TOOL_OPTION_SWITCH_NAMES = { "Off", "On" };
+    public static final String[] TOOL_BONE_DISPLAY_NAMES = { "Joints", "Sticks", "Joints and Sticks", "Hidden" };
+    public static final int TOOL_BONE_DISPLAY_DEFAULT = 2;
+    public static final int TOOL_OPTION_SWITCH_OFF = 0;
+    public static final int TOOL_OPTION_SWITCH_ON = 1;
     public static final float TOOL_OPTION_PRECISION = 100f;
     public static final float TOOL_IMAGE_SIZE_MIN = 0f;
     public static final float TOOL_IMAGE_SIZE_MAX = 32f;

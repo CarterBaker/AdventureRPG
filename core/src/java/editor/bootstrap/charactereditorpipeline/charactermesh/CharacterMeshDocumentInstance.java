@@ -18,7 +18,11 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
      * written, the mesh being edited, its vertex selection with how much of
      * each vertex it holds (a whole vertex 1, one the brush's soft edge
      * took in less, every vertex outside it held whole so it joins whole)
-     * and its active vertex, the vertex each mirrors across x, its undo
+     * and its active vertex, the vertices hidden out of the way (never
+     * drawn, picked, reached or selected, their faces left out of the
+     * preview, kept through edits that keep the vertex count, and every
+     * one shown again when an undo or a revert renumbers the mesh), the
+     * vertex each mirrors across x, its undo
      * history, and the shape key being sculpted with the base positions it
      * was lifted from. The revision moves on every change of geometry or
      * selection so viewports know to redraw; dirty marks changes not yet
@@ -37,6 +41,10 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
     private BooleanArrayList selection;
     private FloatArrayList selectionWeights;
     private int activeVertex;
+
+    // Hidden
+    private BooleanArrayList hidden;
+    private int hiddenCount;
 
     // Mirror
     private IntArrayList mirrorVertices;
@@ -67,6 +75,9 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         this.selection = new BooleanArrayList();
         this.selectionWeights = new FloatArrayList();
 
+        // Hidden
+        this.hidden = new BooleanArrayList();
+
         // Mirror
         this.mirrorVertices = new IntArrayList();
 
@@ -96,6 +107,7 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         shapeBase.clear();
         selection.clear();
         selectionWeights.clear();
+        hidden.clear();
         syncSelection();
     }
 
@@ -115,7 +127,13 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
     // Puts one side of an undo step back: its mesh, its selection and whether it held unsaved changes
     public void restore(CharacterMeshHistoryStruct step) {
 
+        int vertexCount = mesh.getVertexCount();
+
         mesh.set(step.getMesh());
+
+        if (mesh.getVertexCount() != vertexCount)
+            hidden.clear();
+
         selection.clear();
         selection.addAll(step.getSelection());
         selectionWeights.clear();
@@ -132,18 +150,25 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         this.revision++;
     }
 
-    // Keeps one selection flag and weight per vertex, new vertices unselected, after the vertex count changes; every
-    // vertex outside the selection is held whole again
+    // Keeps one selection flag, weight and hidden flag per vertex, new vertices unselected and shown, after the vertex
+    // count changes; every vertex outside the selection is held whole again
     public void syncSelection() {
 
         int vertexCount = mesh.getVertexCount();
 
         selection.size(vertexCount);
         selectionWeights.size(vertexCount);
+        hidden.size(vertexCount);
+        this.hiddenCount = 0;
 
-        for (int i = 0; i < vertexCount; i++)
+        for (int i = 0; i < vertexCount; i++) {
+
             if (!selection.getBoolean(i))
                 selectionWeights.set(i, 1f);
+
+            if (hidden.getBoolean(i))
+                hiddenCount++;
+        }
 
         if (activeVertex >= vertexCount)
             this.activeVertex = EngineSetting.INDEX_NOT_FOUND;
@@ -151,6 +176,25 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
     public void setActiveVertex(int activeVertex) {
         this.activeVertex = activeVertex;
+    }
+
+    // Hides a vertex or shows it again; a hidden vertex leaves the selection
+    public void setHidden(int vertexIndex, boolean hide) {
+
+        if (hidden.getBoolean(vertexIndex) == hide)
+            return;
+
+        hidden.set(vertexIndex, hide);
+        hiddenCount += hide ? 1 : -1;
+
+        if (hide)
+            selection.set(vertexIndex, false);
+    }
+
+    // The hidden flags just written in place over a renumbering, counted again
+    public void markHiddenRemapped() {
+        syncSelection();
+        this.revision++;
     }
 
     public void setOpenStep(CharacterMeshHistoryStruct openStep) {
@@ -204,6 +248,35 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
     public int getActiveVertex() {
         return activeVertex;
+    }
+
+    public BooleanArrayList getHidden() {
+        return hidden;
+    }
+
+    public boolean isHidden(int vertexIndex) {
+        return hidden.getBoolean(vertexIndex);
+    }
+
+    public boolean hasHidden() {
+        return hiddenCount > 0;
+    }
+
+    public int getHiddenCount() {
+        return hiddenCount;
+    }
+
+    // Whether a face stands on a hidden vertex, so it is left out of the preview and hides nothing behind it
+    public boolean isFaceHidden(int faceIndex) {
+
+        if (hiddenCount == 0)
+            return false;
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            if (hidden.getBoolean(mesh.getFaceVertex(faceIndex, c)))
+                return true;
+
+        return false;
     }
 
     public IntArrayList getMirrorVertices() {

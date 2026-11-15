@@ -29,7 +29,7 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   also runs S. Two pressed shortcuts of one tool on the same chord fail at load.
 - **Shared tool keys.** `assets/shortcuts/Tools.arpg` names `ToolsContext` and is marked `"shared": true`: its keys
   choose the editor's generic tools (`V` Select, `B` Brush, `E` Erase, `S` Smooth, `Q` Swirl, `J` Scatter, `F` Fill, `I`
-  Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut, `D` Draw, `O` Inflate, `K` Pinch, `Shift+C`
+  Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut, `D` Draw, `Y` Pose, `O` Inflate, `K` Pinch, `Shift+C`
   Crease, `Shift+S` Relax, `Shift+F` Flatten, `N` Nudge, `R` Raise, `L` Lower), resize the brush (`[` and `]`) and step
   through the brushes (`-` and `=`). Besides the Tools tab, they work in every window `ToolManager` counts as a tool
   window — each canvas (World Editor, Item Editor, Character Editor, Animation Editor, Timeline), the Brushes tab, the

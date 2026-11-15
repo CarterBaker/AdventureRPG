@@ -31,8 +31,10 @@ public class AnimationStateHandle extends HandlePackage {
      * place, and the layer fades out of it from a captured pose, so a weapon
      * brings its own moves to any tree that maps the action. A posture —
      * rotations set per bone by whoever poses the body by hand, as the first
-     * person view bends and twists the chest after the look — is laid over
-     * the blended tree and stays until it is set again. The appearance's
+     * person view bends and twists the chest after the look, or an editor
+     * turns a bone out of the way — is laid over the blended tree, a clip
+     * struck still and the rest pose alike, and stays until it is set
+     * again. The appearance's
      * shaping — a move and a turn per bone, as face sliders drive a face rig
      * — sits on the bind pose under all of it. The rig's spring chains are
      * simulated over the finished pose every update, in the frame the body
@@ -603,20 +605,21 @@ public class AnimationStateHandle extends HandlePackage {
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
             AnimationClipUtility.sampleClip(clip, phase, i, positionScratch, eulerScratch, scaleScratch);
-            RigMathUtility.toQuaternion(eulerScratch, rotationScratch);
+            RigMathUtility.toQuaternion(eulerScratch, rotationScratch)
+                    .multiply(RigMathUtility.toQuaternion(bonePostures[i], turnScratch));
             composeBone(i);
         }
 
         springs.reset();
     }
 
-    // Poses the rig in its bind pose, keeping its proportions
+    // Poses the rig in its bind pose, keeping its proportions and its posture
     public void poseRest() {
 
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
             positionScratch.set(0f, 0f, 0f);
-            rotationScratch.set(1f, 0f, 0f, 0f);
+            RigMathUtility.toQuaternion(bonePostures[i], rotationScratch);
             scaleScratch.set(1f, 1f, 1f);
 
             composeBone(i);

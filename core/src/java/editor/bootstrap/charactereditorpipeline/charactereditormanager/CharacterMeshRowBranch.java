@@ -16,9 +16,9 @@ class CharacterMeshRowBranch extends BranchPackage {
      * names every part the character wears a mesh for, the active one
      * selected; the right panel holds the active part's options, the
      * selection's numbers, the selected faces' texture, new parts and file in
-     * Mesh mode, its shape keys, mirror, x-ray and file in Sculpt mode, and
-     * the selected bone's weight target, options, the active vertex's weights
-     * and file in Weights mode. Every tool and action — transform, geometry,
+     * Mesh mode, its shape keys and file in Sculpt mode, and the selected
+     * bone's weight target, the active vertex's weights and file in Weights
+     * mode; Mirror and X-Ray are the Tools panel's. Every tool and action — transform, geometry,
      * weight and selection — is the Tools panel's, listed by the mode's tool
      * canvas. Every value shown is read through CharacterMeshPropertyBranch,
      * the same path that edits it.
@@ -103,7 +103,6 @@ class CharacterMeshRowBranch extends BranchPackage {
         boolean selected = characterSelectionBranch.getSelectedCount(document) > 0;
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_OPTIONS));
-        addViewOptions(rows);
         addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_PROPORTIONAL,
                 EditorSetting.CHARACTER_EDITOR_LABEL_PROPORTIONAL);
 
@@ -151,8 +150,6 @@ class CharacterMeshRowBranch extends BranchPackage {
         addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_EDIT_SHAPE, EditorSetting.CHARACTER_EDITOR_LABEL_EDIT_SHAPE);
         addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_ADD_SHAPE, EditorSetting.CHARACTER_EDITOR_LABEL_ADD_SHAPE);
 
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_OPTIONS));
-        addViewOptions(rows);
         addFileRows(rows);
     }
 
@@ -168,8 +165,6 @@ class CharacterMeshRowBranch extends BranchPackage {
         rows.add(CharacterViewRowStruct.header(characterEditorManager.getSelectedBoneName()));
         addNumber(rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT_TARGET, EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT);
 
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_OPTIONS));
-        addViewOptions(rows);
         addInfluenceRows(document, rows);
         addFileRows(rows);
     }
@@ -209,11 +204,6 @@ class CharacterMeshRowBranch extends BranchPackage {
         rows.add(CharacterViewRowStruct.header(characterMeshPropertyBranch.getStatsText(document)));
 
         return true;
-    }
-
-    private void addViewOptions(ObjectArrayList<CharacterViewRowStruct> rows) {
-        addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_MIRROR, EditorSetting.CHARACTER_EDITOR_LABEL_MIRROR);
-        addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_MESH_XRAY, EditorSetting.CHARACTER_EDITOR_LABEL_XRAY);
     }
 
     private void addFileRows(ObjectArrayList<CharacterViewRowStruct> rows) {

@@ -11,6 +11,7 @@ import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocum
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStampStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
+import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
@@ -19,6 +20,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
+import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
@@ -109,6 +111,12 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterEditorPose pose;
     private int poseClipIndex;
     private boolean springPreview;
+
+    // Edit Pose — a turn per bone in Euler degrees within its own frame, laid over the pose of every modelling layer
+    // to move what a bone carries out of the way; never saved
+    private ObjectArrayList<Vector3> editPoseTurns;
+    private boolean editPosed;
+    private Vector3 restTurn;
     private int genderIndex;
     private float weightRatio;
     private Vector3 headProportion;
@@ -120,8 +128,6 @@ public class CharacterEditorManager extends ManagerPackage {
     private String activePartKey;
     private CharacterEditorRegion region;
     private CharacterEditorSide[] region2Side;
-    private boolean mirror;
-    private boolean xray;
     private boolean proportional;
     private float proportionalRadius;
     private float snapStep;
@@ -191,6 +197,10 @@ public class CharacterEditorManager extends ManagerPackage {
         // Preview
         this.pose = CharacterEditorPose.REST;
         this.poseClipIndex = EngineSetting.INDEX_NOT_FOUND;
+
+        // Edit Pose
+        this.editPoseTurns = new ObjectArrayList<>();
+        this.restTurn = new Vector3();
         this.weightRatio = EditorSetting.CHARACTER_VIEW_WEIGHT_RATIO;
         this.headProportion = new Vector3(1f, 1f, 1f);
         this.toneIndices = new int[CharacterEditorColor.VALUES.length];
@@ -202,7 +212,6 @@ public class CharacterEditorManager extends ManagerPackage {
         this.region = CharacterEditorRegion.WHOLE;
         this.region2Side = new CharacterEditorSide[CharacterEditorRegion.VALUES.length];
         Arrays.fill(region2Side, CharacterEditorSide.LEFT);
-        this.mirror = true;
         this.proportionalRadius = EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_DEFAULT;
         this.snapStep = EditorSetting.CHARACTER_EDITOR_MESH_SNAP_DEFAULT;
 
@@ -301,6 +310,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
         this.activeDocument = document;
         this.selectedBoneIndex = 0;
+        clearEditPose();
         this.selectedAnchorIndex = EngineSetting.INDEX_NOT_FOUND;
         this.activePartKey = EditorSetting.CHARACTER_EDITOR_PART_BODY;
         this.genderIndex = 0;
@@ -1180,18 +1190,6 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Options \\
 
-    void setMirror(boolean mirror) {
-
-        this.mirror = mirror;
-        notifyChanged();
-    }
-
-    void setXray(boolean xray) {
-
-        this.xray = xray;
-        notifyChanged();
-    }
-
     void setProportional(boolean proportional) {
 
         this.proportional = proportional;
@@ -1412,7 +1410,76 @@ public class CharacterEditorManager extends ManagerPackage {
     // Whether a modelling mode shows the character out of its bind pose, so its vertices may not be moved
     public boolean isPosed() {
         return mode.isMeshMode() && mode.picksPose()
-                && (pose != CharacterEditorPose.REST || getPoseClipIndex() != EngineSetting.INDEX_NOT_FOUND);
+                && (pose != CharacterEditorPose.REST || getPoseClipIndex() != EngineSetting.INDEX_NOT_FOUND
+                || editPosed);
+    }
+
+    // Edit Pose \\
+
+    // The turn the edit pose lays on a bone, none for a bone it never turned
+    public Vector3 getEditPoseTurn(int boneIndex) {
+        return boneIndex < editPoseTurns.size() ? editPoseTurns.get(boneIndex) : restTurn;
+    }
+
+    public boolean hasEditPose() {
+        return editPosed;
+    }
+
+    // Turns a bone in the edit pose, and its twin across the body the mirrored way while mirroring
+    public void setEditPoseTurn(int boneIndex, Vector3 turn) {
+
+        if (activeDocument == null || !activeDocument.hasPreview())
+            return;
+
+        RigHandle rigHandle = activeDocument.getPreviewData().getRigHandle();
+
+        while (editPoseTurns.size() < rigHandle.getBoneCount())
+            editPoseTurns.add(new Vector3());
+
+        editPoseTurns.get(boneIndex).set(turn);
+
+        String twinName = CharacterMeshUtility.toMirrorBoneName(rigHandle.getBone(boneIndex).getName());
+
+        if (isMirror() && rigHandle.hasBone(twinName) && rigHandle.getBoneIndex(twinName) != boneIndex)
+            editPoseTurns.get(rigHandle.getBoneIndex(twinName)).set(turn.x, -turn.y, -turn.z);
+
+        resolveEditPosed();
+        notifyChanged();
+    }
+
+    // Every bone back in the pose chosen
+    void resetEditPose() {
+
+        if (!editPosed)
+            return;
+
+        clearEditPose();
+        notifyChanged();
+    }
+
+    private void clearEditPose() {
+
+        for (int i = 0; i < editPoseTurns.size(); i++)
+            editPoseTurns.get(i).set(0f, 0f, 0f);
+
+        this.editPosed = false;
+    }
+
+    private void resolveEditPosed() {
+
+        this.editPosed = false;
+
+        for (int i = 0; i < editPoseTurns.size() && !editPosed; i++) {
+
+            Vector3 turn = editPoseTurns.get(i);
+
+            this.editPosed = turn.x != 0f || turn.y != 0f || turn.z != 0f;
+        }
+    }
+
+    // The bone the Pick tool picked, the one every weight action works on
+    public void pickBone(int boneIndex) {
+        selectBone(boneIndex);
     }
 
     public boolean isSpringPreview() {
@@ -1493,13 +1560,34 @@ public class CharacterEditorManager extends ManagerPackage {
         return activePartKey;
     }
 
-    // Mirror is held on in a sided region, so an edit to the side shown is always made to its twin
+    // The Tools panel's Mirror on the mode's canvas, held on in a sided region so an edit to the side shown is always
+    // made to its twin
     public boolean isMirror() {
-        return mirror || isSided(region);
+        return isCanvasSwitchOn(ToolOption.MIRROR) || isSided(region);
     }
 
+    // The Tools panel's X-Ray on the mode's canvas
     public boolean isXray() {
-        return xray;
+        return isCanvasSwitchOn(ToolOption.XRAY);
+    }
+
+    // How the viewport draws the bones: the Tools panel's Bones on the mode's canvas, joints where it has none
+    public CharacterBoneDisplay getBoneDisplay() {
+
+        ToolCanvas canvas = mode.getToolCanvas();
+
+        return canvas != null && canvas.findOption(ToolOption.BONES) != null
+                ? CharacterBoneDisplay.fromOption(toolManager.getOption(canvas, ToolOption.BONES))
+                : CharacterBoneDisplay.JOINTS;
+    }
+
+    // Whether an on-or-off option of the mode's canvas is on; off on a canvas that has none
+    private boolean isCanvasSwitchOn(ToolOption option) {
+
+        ToolCanvas canvas = mode.getToolCanvas();
+
+        return canvas != null && canvas.findOption(option) != null
+                && Math.round(toolManager.getOption(canvas, option)) == EditorSetting.TOOL_OPTION_SWITCH_ON;
     }
 
     public boolean isProportional() {
@@ -1561,6 +1649,23 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     // The transform the mesh's tool drags, null while the tool in use is not one
+    // True while a modelling mode's tool works on the bones rather than the vertices: Pick and Pose, never Paint's
+    // Pick, which takes a colour
+    public boolean isBoneTool() {
+
+        if (!mode.isMeshMode() || mode.paintsMaps())
+            return false;
+
+        EditorTool tool = toolManager.getTool(mode.getToolCanvas());
+
+        return tool == EditorTool.PICK || tool == EditorTool.POSE;
+    }
+
+    // True while a modelling mode's tool is Pose
+    public boolean isPoseTool() {
+        return isBoneTool() && toolManager.getTool(mode.getToolCanvas()) == EditorTool.POSE;
+    }
+
     public CharacterEditorTransform getToolTransform() {
         return mode == CharacterEditorMode.MESH
                 ? CharacterEditorTransform.forTool(toolManager.getTool(ToolCanvas.CHARACTER_MESH))
@@ -1578,6 +1683,11 @@ public class CharacterEditorManager extends ManagerPackage {
     // A bone's joint in the world as the rig is being edited
     public Matrix4 getRigBoneWorldMatrix(int boneIndex) {
         return characterRigBranch.getWorldMatrix(boneIndex);
+    }
+
+    // The bone a bone of the rig being edited hangs from, INDEX_NOT_FOUND for a root
+    public int getRigBoneParent(int boneIndex) {
+        return characterRigBranch.getParent(boneIndex);
     }
 
     public Vector3 getRigBoneSize(int boneIndex) {

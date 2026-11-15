@@ -177,24 +177,31 @@ public class ToolsMenuSystem extends SystemPackage {
 
     // Options \\
 
-    // Every option both the tool and the canvas have
+    // Every option both the tool and the canvas have, then every canvas option the canvas honours, last
     private void refreshOptions(ToolCanvas canvas, EditorTool tool) {
 
         ToolOption[] options = tool.getOptions();
 
-        for (int i = 0; i < options.length; i++) {
+        for (int i = 0; i < options.length; i++)
+            showOption(canvas, options[i]);
 
-            ToolOptionStruct range = canvas.findOption(options[i]);
+        for (int i = 0; i < ToolOption.VALUES.length; i++)
+            if (ToolOption.VALUES[i].isCanvasWide())
+                showOption(canvas, ToolOption.VALUES[i]);
+    }
 
-            if (range == null)
-                continue;
+    private void showOption(ToolCanvas canvas, ToolOption option) {
 
-            ElementInstance row = injectOption(options[i]);
+        ToolOptionStruct range = canvas.findOption(option);
 
-            optionElements.add(row);
-            shownOptions.add(options[i]);
-            fillValue(row, range, toolManager.getOption(canvas, options[i]));
-        }
+        if (range == null)
+            return;
+
+        ElementInstance row = injectOption(option);
+
+        optionElements.add(row);
+        shownOptions.add(option);
+        fillValue(row, range, toolManager.getOption(canvas, option));
     }
 
     private ElementInstance injectOption(ToolOption option) {
