@@ -150,7 +150,7 @@ class CharacterRegionBranch extends BranchPackage {
             for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
 
                 int vertexIndex = mesh.getFaceVertex(f, c);
-                float along = mesh.hasAuthoredUVs(f) ? Math.clamp(mesh.getFaceV(f, c), 0f, 1f) : 1f;
+                float along = mesh.hasAuthoredUVs(f) ? Math.clamp(mesh.getFaceStrand(f, c), 0f, 1f) : 1f;
 
                 shares.set(vertexIndex, Math.max(shares.getFloat(vertexIndex), along));
             }

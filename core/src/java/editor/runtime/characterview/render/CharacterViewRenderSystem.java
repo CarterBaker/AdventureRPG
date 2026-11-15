@@ -20,14 +20,16 @@ import editor.runtime.EditorSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterViewRenderSystem extends SystemPackage {
 
     /*
      * Draws a character viewport: the character CharacterViewPoseSystem holds,
-     * lit by the viewport's own material so it never batches with a game
-     * view's characters, standing on a floor grid in this window's scene
+     * lit by the viewport's own material, and its eyes and teeth by its own
+     * copies of theirs, so it never batches with a game view's characters or
+     * another viewport's, standing on a floor grid in this window's scene
      * target. The markers its tool asks for during update — bone joints,
      * oriented boxes on a bone and cubes or boxes placed by any matrix — go to
      * an overlay above the scene, so they
@@ -54,6 +56,7 @@ public class CharacterViewRenderSystem extends SystemPackage {
     // Models
     private ModelInstance gridModel;
     private MaterialInstance characterMaterial;
+    private Object2ObjectOpenHashMap<MaterialInstance, MaterialInstance> featureMaterial2ViewMaterial;
     private AppearanceIsolationStruct isolation;
 
     // Markers
@@ -76,6 +79,7 @@ public class CharacterViewRenderSystem extends SystemPackage {
     protected void create() {
 
         // Models
+        this.featureMaterial2ViewMaterial = new Object2ObjectOpenHashMap<>();
         this.isolation = new AppearanceIsolationStruct();
 
         // Markers
@@ -200,6 +204,7 @@ public class CharacterViewRenderSystem extends SystemPackage {
                     modelMatrix,
                     characterMaterial,
                     isolation,
+                    featureMaterial2ViewMaterial,
                     sceneFbo,
                     window);
 

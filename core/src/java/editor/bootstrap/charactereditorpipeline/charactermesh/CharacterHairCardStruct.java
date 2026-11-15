@@ -10,10 +10,11 @@ public class CharacterHairCardStruct extends StructPackage {
 
     /*
      * One hair card found in a hair mesh: the line it hangs along in the bind
-     * pose, one point per row of its strands from root to tip with the raw v
-     * each row stands at and how far along the line it lies, and every vertex
-     * it is made of with the v it stands at, so a point anywhere along the
-     * card, and how far down the card a vertex grows, can be read back.
+     * pose, one point per row of its strands from root to tip with the
+     * strand place (root 0, tip 1) each row stands at and how far along the
+     * line it lies, and every vertex it is made of with the place it stands
+     * at, so a point anywhere along the card, and how far down the card a
+     * vertex grows, can be read back.
      */
 
     // Line — root to tip
@@ -77,7 +78,7 @@ public class CharacterHairCardStruct extends StructPackage {
         return out.set(points.get(last));
     }
 
-    // How far along the line the row at a raw v lies, read between the rows about it
+    // How far along the line the row at a strand place lies, read between the rows about it
     public float reachAt(float v) {
 
         int last = rowVs.size() - 1;

@@ -335,6 +335,11 @@ One line per session that changed this file: the date, what was added or removed
   stored normals), so they are smaller and load faster. Entries unchanged.
 - 2026-11-15: Model Import and Export. Regenerated `menus/editor/EditorWindow.arpg` (the File menu gains Import Model
   and Export Model below Delete, its panel taller to hold them). Entry unchanged.
+- 2026-11-15: Character editor fixes. Rewrote `mesh/characters/humanoid/hair/MaleShortHairMesh.arpg`,
+  `MaleMediumHairMesh.arpg`, `FemaleMediumHairMesh.arpg` and `FemaleLongHairMesh.arpg` with every card's v flipped
+  (the root at the strand image's top, so the owner's `Hair_A.png` stands right side up), `CharacterHair.glsl` (reads
+  the strand from the root at v 1) and `CharacterSurface.glsl` (an overlay's amount is its opacity, no longer a cut of
+  its alpha that hid faint body hair). Entries unchanged.
 
 ---
 

@@ -118,7 +118,7 @@ class CharacterHairBranch extends BranchPackage {
                 int corner = i * EngineSetting.QUAD_VERTEX_COUNT + c;
 
                 cornerVertices[corner] = mesh.getFaceVertex(faces.getInt(i), c);
-                cornerVs[corner] = mesh.getFaceV(faces.getInt(i), c);
+                cornerVs[corner] = mesh.getFaceStrand(faces.getInt(i), c);
                 low = Math.min(low, cornerVs[corner]);
                 high = Math.max(high, cornerVs[corner]);
             }

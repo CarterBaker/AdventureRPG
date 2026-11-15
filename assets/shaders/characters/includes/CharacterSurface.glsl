@@ -40,7 +40,6 @@ const float CHARACTER_PUPIL_RATIO    = 0.42;
 const float CHARACTER_IRIS_DEPTH     = 0.0015;
 const float CHARACTER_EYE_SPECULAR_FAR = 0.55;
 
-const float CHARACTER_OVERLAY_SOFTNESS = 0.3;
 const int   CHARACTER_RELIEF_STEPS_MIN = 4;
 const int   CHARACTER_RELIEF_STEPS_MAX = 16;
 const float CHARACTER_RELIEF_GRAZING   = 0.25;
@@ -138,7 +137,7 @@ vec3 shadeOverlays(int instance, vec3 skin, vec2 rawUV, vec3 viewPosition, Chara
             viewTS.xy / max(viewTS.z, CHARACTER_RELIEF_GRAZING) * relief * frame.uvPerMeter / size, frame.detail);
 
         vec4  image = sampleTileAlbedo(tile, clamp(local, 0.0, 1.0), dx, dy);
-        float cover = smoothstep(1.0 - amount, 1.0 - amount + CHARACTER_OVERLAY_SOFTNESS, image.a) * image.a;
+        float cover = image.a * amount;
 
         skin = mix(skin, fetchCharacterColor(instance, CHARACTER_OVERLAY_COLOR[i]) * image.rgb, cover);
 

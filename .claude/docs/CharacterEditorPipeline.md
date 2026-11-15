@@ -226,7 +226,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   then its morph weights. The shaders read them through `characters/includes/CharacterAppearance.glsl` and shade by
   zone in `CharacterSurface.glsl`; keep the GLSL constants in step with the enums.
 - **Eyes and teeth are worn parts.** `FeatureSlot` holds `HAIR`, `EYES` and `TEETH`; each feature may name its own
-  `material` (`FeatureData.getMaterial`), drawn with it by `EntityRenderSystem.pushBody`, the body's otherwise. A
+  `material` (`FeatureData.getMaterial`), drawn with it by `EntityRenderSystem.pushBody`, the body's otherwise; an editor
+  viewport draws it with its own copy (`CharacterViewRenderSystem`'s `featureMaterial2ViewMaterial`, cloned on first
+  use), since skinned batches are keyed by mesh and material and a shared one would draw every viewport's eyes and
+  teeth in every other viewport. A
   removable slot (`FeatureSlot.isRemovable`, hair) is offered bare in the game's creator; eyes and teeth are not, and a
   save that names none for them keeps the gender's. The head's sockets, lids, lips and mouth cavity are the body's.
 - **Bone masks.** A skinned draw's palette row carries a `SkinnedBoneMaskStruct` and its `SkinnedMaskMode`
@@ -241,8 +244,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `default`; `RaceGenderStruct.getOverlay`), written into each draw as three texels: the tile of the style worn, the
   region and the relief (`SkinnedOverlayStruct.write`, `AppearanceHandle.getOverlayStyle`, `INDEX_NOT_FOUND` for the
   model's default). The shader maps the corner UV into the region and samples the style's layers there
-  (`shadeOverlays`), tinted by the overlay's `SkinnedColor` (`BROWS`, `NIPPLES`, `BODY_HAIR`) and shown as far as its
-  `SkinnedDetail`. A style with relief (the nipples) rises from the skin through its height map by parallax occlusion
+  (`shadeOverlays`), tinted by the overlay's `SkinnedColor` (`BROWS`, `NIPPLES`, `BODY_HAIR`) and laid over at its
+  image's alpha times its `SkinnedDetail` amount, a layer's opacity. A style with relief (the nipples) rises from the skin through its height map by parallax occlusion
   (`marchOverlayRelief`: the ray enters the relief's top and marches down to the skin, so bare skin never shifts) and
   bends the normal through its normal map, both faded by the Character Detail distance. An overlay's images cover only
   its region, so a style is a small image; paint a new style in the body's layout, crop it to the region, and every
@@ -344,11 +347,12 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   pole's side, keying root and middle together through `AnimationEditorManager.beginChainPose` /
   `writeChainPose`, one undo step.
 - **Hair is cards.** A hair mesh is a scalp cap and layered cards two quads wide, textured with the strand tile
-  `characters/standard/Hair` (its alpha cuts the locks out); each card's raw UV runs across it in u and from root
-  (0) to tip (1) in v. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`:
+  `characters/standard/Hair` (its alpha cuts the locks out); each card's raw UV runs across it in u and hangs as the
+  image does in v, the root at the image's top (v 1) and the tip at its foot (v 0). Code reads how far along its strand
+  a corner stands, root 0 to tip 1, only through `RiggedMeshStruct.getFaceStrand`. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`:
   slow gusts, a phase per lock read off where it grows in the bind pose, the tip trailing its root, a flutter across
   the wind and a lift on gusts), after skinning and in the world, so it adds to whatever bones carry the lock; keep v
-  running root to tip on any card you add, and keep the root at the scalp.
+  running from 1 at the root to 0 at the tip on any card you add, and keep the root at the scalp.
 - **Long hair rides spring chains; short hair is the shader's.** A rig's `springs` (`RigSpringChainStruct`) each name
   at least two `bones`, each the child of the one before, the first hung from a bone the body moves, none in another
   chain or an IK handle, with `stiffness` (pull back to the pose, 1/s²), `damping` (settles a joint's swing against

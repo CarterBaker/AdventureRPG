@@ -34,6 +34,7 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class EntityRenderSystem extends SystemPackage {
@@ -49,8 +50,9 @@ public class EntityRenderSystem extends SystemPackage {
      * each feature with its own material when it names one; seen from its own
      * eyes, its head and everything the head carries is masked away.
      * pushPreview() draws a posed character outside any world for editors,
-     * as much of it as the editor isolates. Runtime code never touches the
-     * skinned buffers directly.
+     * as much of it as the editor isolates, every feature material swapped
+     * for the viewport's own copy so no two viewports share a skinned batch.
+     * Runtime code never touches the skinned buffers directly.
      */
 
     // Internal
@@ -158,6 +160,7 @@ public class EntityRenderSystem extends SystemPackage {
                 raceGender.getMaterial(),
                 hideHead && entity.hasAppearance() ? raceData.getAppearanceData().getHeadMask() : noMask,
                 wholeIsolation,
+                null,
                 skinningMatrices,
                 targetFbo,
                 window);
@@ -166,7 +169,8 @@ public class EntityRenderSystem extends SystemPackage {
 
     // A posed character outside any world — an editor's preview — at its own model matrix and without equipment,
     // wearing the model of the gender given and drawn with its own material so it never batches with the
-    // characters of a game view, the body and features the editor isolates drawn through its mask
+    // characters of a game view, the body and features the editor isolates drawn through its mask, and each feature
+    // that names its own material drawn with the viewport's copy of it, made on first use
     public void pushPreview(
             RaceGenderStruct raceGender,
             AppearanceHandle appearance,
@@ -174,6 +178,7 @@ public class EntityRenderSystem extends SystemPackage {
             Matrix4 modelMatrix,
             MaterialInstance material,
             AppearanceIsolationStruct isolation,
+            Object2ObjectOpenHashMap<MaterialInstance, MaterialInstance> featureMaterial2ViewMaterial,
             FBOInstance targetFbo,
             WindowInstance window) {
 
@@ -186,20 +191,22 @@ public class EntityRenderSystem extends SystemPackage {
                 material,
                 isolation.getBoneMask(),
                 isolation,
+                featureMaterial2ViewMaterial,
                 skinningMatrices,
                 targetFbo,
                 window);
     }
 
     // The body the gender wears through the mask, then every feature its appearance wears that the isolation
-    // shows, through the mask where it masks that feature, each with its own material when it names one and in the
-    // variant the appearance picks
+    // shows, through the mask where it masks that feature, each with its own material when it names one (a
+    // viewport's copy of it in a preview) and in the variant the appearance picks
     private void pushBody(
             RaceGenderStruct raceGender,
             AppearanceHandle appearance,
             MaterialInstance material,
             SkinnedBoneMaskStruct boneMask,
             AppearanceIsolationStruct isolation,
+            Object2ObjectOpenHashMap<MaterialInstance, MaterialInstance> featureMaterial2ViewMaterial,
             Matrix4[] skinningMatrices,
             FBOInstance targetFbo,
             WindowInstance window) {
@@ -224,11 +231,31 @@ public class EntityRenderSystem extends SystemPackage {
             appearanceScratch.setVariant(feature.getVariants(), appearance.getFeatureVariant(featureSlot));
             pushCharacterPart(
                     feature.getMeshHandle(),
-                    feature.hasMaterial() ? feature.getMaterial() : material,
+                    feature.hasMaterial()
+                            ? resolveFeatureMaterial(feature.getMaterial(), featureMaterial2ViewMaterial)
+                            : material,
                     skinningMatrices,
                     targetFbo,
                     window);
         }
+    }
+
+    // A feature's own material in the world, or the viewport's copy of it in a preview
+    private MaterialInstance resolveFeatureMaterial(
+            MaterialInstance featureMaterial,
+            Object2ObjectOpenHashMap<MaterialInstance, MaterialInstance> featureMaterial2ViewMaterial) {
+
+        if (featureMaterial2ViewMaterial == null)
+            return featureMaterial;
+
+        MaterialInstance viewMaterial = featureMaterial2ViewMaterial.get(featureMaterial);
+
+        if (viewMaterial == null) {
+            viewMaterial = materialManager.cloneMaterial(featureMaterial.getMaterialID());
+            featureMaterial2ViewMaterial.put(featureMaterial, viewMaterial);
+        }
+
+        return viewMaterial;
     }
 
     private void pushCharacterPart(

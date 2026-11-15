@@ -558,6 +558,12 @@ public class RiggedMeshStruct extends StructPackage {
         return faceUVs.getFloat(toUVBase(faceIndex, corner) + 1);
     }
 
+    // How far along its strand a hair card's corner stands, root 0 to tip 1: a card hangs as its strand image does,
+    // the root at the image's top (v 1) and the tip at its foot (v 0)
+    public float getFaceStrand(int faceIndex, int corner) {
+        return 1f - getFaceV(faceIndex, corner);
+    }
+
     // Authors one corner's UV, marking the face's UVs as its own
     public void setFaceUV(int faceIndex, int corner, float u, float v) {
 
