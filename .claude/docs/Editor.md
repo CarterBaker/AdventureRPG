@@ -19,15 +19,16 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
   and edited in the Properties tab; the Character Editor holds every part of making a race's character as layers (see
-  `.claude/docs/CharacterEditorPipeline.md`), with the Character Outliner beside it (also the Animation Editor's); the
-  Recorder is its transport (record, play, loop range, clock, what is open with Back) and the Timeline its clips, with
-  Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside them, each opening its own menu through a
-  shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act on; the
-  Recordings tab lists the Videos and the Songs (Music files) and its rows drag onto the Timeline to lay; a Music file's
-  Timeline shows its lanes with a mixer strip each, the lane and clip selected edited in the Properties tab, and the
-  Recorder its tempo, meter, key and metronome, set in the Properties tab; the Piano Roll edits the notes of the notes
-  clip selected on the Timeline with the Tools tab's Select, Draw, Erase and Cut and its Notes actions, the selected
-  notes in the Properties tab, and plays and records them with Musical Typing.
+  `.claude/docs/CharacterEditorPipeline.md`), with the Outliner beside it (also the Animation Editor's), the Color Wheel
+  holding the paint colour and Texture Maps the map painted; the Recorder is its transport (record, play, loop range,
+  clock, what is open with Back) and the Timeline its clips, with Recorder Keys, Recorder Bin, Recorder Assets and
+  Recorder Settings beside them, each opening its own menu through a shared `RecorderRowSystem`, and the pane tab worked
+  in last being the one the recorder's deletes act on; the Recordings tab lists the Videos and the Songs (Music files)
+  and its rows drag onto the Timeline to lay; a Music file's Timeline shows its lanes with a mixer strip each, the lane
+  and clip selected edited in the Properties tab, and the Recorder its tempo, meter, key and metronome, set in the
+  Properties tab; the Piano Roll edits the notes of the notes clip selected on the Timeline with the Tools tab's Select,
+  Draw, Erase and Cut and its Notes actions, the selected notes in the Properties tab, and plays and records them with
+  Musical Typing.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 
 ## Layers
@@ -83,8 +84,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The File and Edit menus
 
 - **Every file action lives in the editor's File and Edit menus**, never as a tool's own button: New, New File,
-  Duplicate, Save, Save All, Revert, Delete, Import Model and Export Model under File, Undo and Redo under Edit. They act on the window worked in
-  last (`editor.bootstrap.filemenupipeline`, `FileMenuManager`), name it at their head and mute what it does not take.
+  Duplicate, Save, Save All, Revert, Delete, Import Model, Export Model and Generate Maps under File, Undo and Redo
+  under Edit. They act on the window worked in last (`editor.bootstrap.filemenupipeline`, `FileMenuManager`), name it
+  at their head and mute what it does not take.
 - **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
   `FileMenuTableStruct` constant from `EditorSetting` (the branch and, per `FileMenuAction`, the method its own keys
   already run) and creates a `FileMenuSourceSystem`. Every item runs through `ElementHitSystem.executeAction` on the

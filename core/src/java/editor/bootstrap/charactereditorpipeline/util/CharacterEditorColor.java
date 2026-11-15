@@ -23,7 +23,9 @@ public enum CharacterEditorColor {
     CLOTH(SkinnedColor.CLOTH),
     NIPPLES(SkinnedColor.NIPPLES),
     BODY_HAIR(SkinnedColor.BODY_HAIR),
-    TEETH(SkinnedColor.TEETH);
+    TEETH(SkinnedColor.TEETH),
+    EYESHADOW(SkinnedColor.EYESHADOW),
+    LINER(SkinnedColor.LINER);
 
     // Values
     public static final CharacterEditorColor[] VALUES = values();

@@ -1,5 +1,6 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
@@ -21,6 +22,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
+import editor.bootstrap.imagepipeline.util.MapGenerateOption;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
@@ -81,6 +83,9 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterLookBranch characterLookBranch;
     private CharacterColliderBranch characterColliderBranch;
     private CharacterPaintBranch characterPaintBranch;
+    private CharacterPaintPropertyBranch characterPaintPropertyBranch;
+    private CharacterPaintRowBranch characterPaintRowBranch;
+    private CharacterMapBranch characterMapBranch;
     private CharacterPropertyBranch characterPropertyBranch;
     private CharacterRowBranch characterRowBranch;
     private CharacterHistoryBranch characterHistoryBranch;
@@ -177,8 +182,9 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterRigBranch = create(CharacterRigBranch.class);
         this.characterColliderBranch = create(CharacterColliderBranch.class);
         this.characterPaintBranch = create(CharacterPaintBranch.class);
-        create(CharacterPaintPropertyBranch.class);
-        create(CharacterPaintRowBranch.class);
+        this.characterPaintPropertyBranch = create(CharacterPaintPropertyBranch.class);
+        this.characterPaintRowBranch = create(CharacterPaintRowBranch.class);
+        this.characterMapBranch = create(CharacterMapBranch.class);
         this.characterRigPropertyBranch = create(CharacterRigPropertyBranch.class);
         this.characterRigRowBranch = create(CharacterRigRowBranch.class);
         this.characterMeshPropertyBranch = create(CharacterMeshPropertyBranch.class);
@@ -494,6 +500,103 @@ public class CharacterEditorManager extends ManagerPackage {
             characterRowBranch.buildPropertyRows(activeDocument, rows);
     }
 
+    // The paint colour's rows, as the Color Wheel lists them
+    public void buildColorRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (activeDocument != null)
+            characterPaintRowBranch.buildColorRows(rows);
+    }
+
+    // The maps of the texture painted, as Texture Maps lists them
+    public void buildMapRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (activeDocument != null)
+            characterPaintRowBranch.buildMapRows(rows);
+    }
+
+    // The paint colour's hue, saturation or brightness, 0 to 1
+    public float getPaintHSB(int index) {
+        return characterPaintPropertyBranch.getHSB(index);
+    }
+
+    // The paint colour from a hue, saturation and brightness, as the Color Wheel picks it
+    public void setPaintHSB(float hue, float saturation, float brightness) {
+
+        if (!characterPaintBranch.isStroking())
+            characterPaintPropertyBranch.setHSB(hue, saturation, brightness);
+    }
+
+    // The paint colour's red, green or blue, 0 to 1
+    public float getPaintColor(int channel) {
+        return characterPaintBranch.getColor(channel);
+    }
+
+    // Map Generation \\
+
+    // Opens map generation on the active part's texture, in Paint mode only; false, with the status saying why,
+    // otherwise
+    public boolean openMapGeneration() {
+
+        if (!mode.paintsMaps()) {
+            setStatusMessage(EditorSetting.MAP_GENERATE_MESSAGE_NO_TEXTURE);
+            return false;
+        }
+
+        return characterMapBranch.open(getActiveMeshDocument());
+    }
+
+    public void closeMapGeneration() {
+        characterMapBranch.close();
+    }
+
+    public boolean isMapGenerationOpen() {
+        return characterMapBranch.isOpen();
+    }
+
+    public float getMapOption(MapGenerateOption option) {
+        return characterMapBranch.getValue(option);
+    }
+
+    public void setMapOption(MapGenerateOption option, float value) {
+        characterMapBranch.setValue(option, value);
+    }
+
+    public void stepMapOption(MapGenerateOption option, int direction) {
+        characterMapBranch.step(option, direction);
+    }
+
+    public void stepMapPreview(int direction) {
+        characterMapBranch.stepPreview(direction);
+    }
+
+    public int getMapPreview() {
+        return characterMapBranch.getPreviewMap();
+    }
+
+    public int getMapRevision() {
+        return characterMapBranch.getRevision();
+    }
+
+    public String getMapTextureName() {
+        return characterMapBranch.getTextureName();
+    }
+
+    public int getMapPreviewWidth() {
+        return characterMapBranch.getPreviewWidth();
+    }
+
+    public int getMapPreviewRows() {
+        return characterMapBranch.getPreviewRows();
+    }
+
+    public void renderMapPreview(ByteBuffer out) {
+        characterMapBranch.renderPreview(out);
+    }
+
+    public void generateMaps() {
+        characterMapBranch.generate();
+    }
+
     // Parts \\
 
     void selectPart(String partKey) {
@@ -764,12 +867,14 @@ public class CharacterEditorManager extends ManagerPackage {
         return requestedAxis;
     }
 
-    public boolean beginTransform() {
+    // A transform of the selection, on the cage the view poses it on while posed (skinningMatrices, the pose struck
+    // this frame), in the bind pose otherwise
+    public boolean beginTransform(Matrix4[] skinningMatrices) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
-        if (document == null || mode != CharacterEditorMode.MESH || refusePosedEdit()
-                || !characterSculptBranch.beginTransform(document))
+        if (document == null || mode != CharacterEditorMode.MESH
+                || !characterSculptBranch.beginTransform(document, isPosed() ? skinningMatrices : null))
             return false;
 
         notifyChanged();
@@ -788,8 +893,8 @@ public class CharacterEditorManager extends ManagerPackage {
         characterSculptBranch.cancelTransform();
     }
 
-    // Vertices are moved only in the bind pose, where they stand as the mesh file holds them; struck in any other
-    // pose, the edit is refused and the status says why
+    // Sculpt strokes work only in the bind pose, where vertices stand as the mesh file holds them; struck in any other
+    // pose, a stroke is refused and the status says why (transforms work posed, through the skinning)
     private boolean refusePosedEdit() {
 
         if (!isPosed())
@@ -1030,6 +1135,12 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (characterRigBranch.isGesturing())
             characterRigBranch.moveGesture(worldMove);
+    }
+
+    public void rotateRigBone(Matrix4 worldTurn) {
+
+        if (characterRigBranch.isGesturing())
+            characterRigBranch.rotateGesture(worldTurn, isMirror());
     }
 
     public void scaleRigBone(float factor) {
@@ -1578,6 +1689,14 @@ public class CharacterEditorManager extends ManagerPackage {
     // made to its twin
     public boolean isMirror() {
         return isCanvasSwitchOn(ToolOption.MIRROR) || isSided(region);
+    }
+
+    // Each vertex's twin across the body on the part worked on while mirroring, null otherwise
+    public IntArrayList getMirrorVertices() {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        return document != null && isMirror() ? characterSelectionBranch.resolveMirror(document) : null;
     }
 
     // The Tools panel's X-Ray on the mode's canvas

@@ -79,6 +79,7 @@ class AppearanceBuilder extends BuilderPackage {
 
         MeshHandle[] bodyMeshes = parseBodies(genders);
         AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, rigHandle, sourceName);
+        FeatureHandle[] defaultFeatures = parseFeatures(appearanceArpg, sourceName);
         AppearanceData appearanceData = new AppearanceData(
                 rigHandle,
                 rigHandle.getBoneIndex(headBoneName),
@@ -89,8 +90,8 @@ class AppearanceBuilder extends BuilderPackage {
                 shapes,
                 resolveShapeMorphs(bodyMeshes, shapes, sourceName),
                 parseExpressions(appearanceArpg, bodyMeshes, sourceName),
-                parseFeatures(appearanceArpg, sourceName),
-                parseGenders(gendersArpg, genders, bodyMeshes, shapes, sourceName),
+                defaultFeatures,
+                parseGenders(gendersArpg, genders, bodyMeshes, shapes, defaultFeatures, sourceName),
                 ArpgUtility.getFloat(buildArpg, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
                 ArpgUtility.getFloat(buildArpg, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
                 parseGirthInfluence(buildArpg, rigHandle, sourceName));
@@ -371,13 +372,15 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Genders \\
 
-    // Each gender's starting look: the body it wears, the "shapes" (by name) and "features" it starts with, and the
-    // "ranges" (by name, each a "min" below its "max", within the slider's own) the player may slide its sliders across
+    // Each gender's starting look: the body it wears, the "shapes" (by name) and "features" it starts with, the variant
+    // of each feature it starts in ("feature_variants", by slot), and the "ranges" (by name, each a "min" below its
+    // "max", within the slider's own) the player may slide its sliders across
     private Int2ObjectOpenHashMap<AppearanceGenderStruct> parseGenders(
             ArpgObjectStruct gendersArpg,
             RaceGenderStruct[] genders,
             MeshHandle[] bodyMeshes,
             AppearanceShapeStruct[] shapes,
+            FeatureHandle[] defaultFeatures,
             String sourceName) {
 
         Int2ObjectOpenHashMap<AppearanceGenderStruct> genderID2Preset = new Int2ObjectOpenHashMap<>();
@@ -403,6 +406,9 @@ class AppearanceBuilder extends BuilderPackage {
             float[] shapeMins = new float[shapes.length];
             float[] shapeMaxes = new float[shapes.length];
 
+            FeatureHandle[] features = parseFeatures(presetArpg, sourceName);
+            boolean[] namedFeatures = parseNamedFeatures(presetArpg);
+
             parseRanges(presetArpg, genderName, shapes, shapeMins, shapeMaxes, sourceName);
             genderID2Preset.put(
                     gender.getGenderID(),
@@ -411,8 +417,10 @@ class AppearanceBuilder extends BuilderPackage {
                             shapeValues,
                             shapeMins,
                             shapeMaxes,
-                            parseFeatures(presetArpg, sourceName),
-                            parseNamedFeatures(presetArpg)));
+                            features,
+                            namedFeatures,
+                            parseFeatureVariants(
+                                    presetArpg, features, namedFeatures, defaultFeatures, genderName, sourceName)));
         }
 
         return genderID2Preset;
@@ -522,6 +530,51 @@ class AppearanceBuilder extends BuilderPackage {
         }
 
         return features;
+    }
+
+    // The variant a gender starts each worn feature in, by its place among the variants the feature it starts with
+    // offers; INDEX_NOT_FOUND keeps the feature's own default
+    private int[] parseFeatureVariants(
+            ArpgObjectStruct presetArpg,
+            FeatureHandle[] features,
+            boolean[] namedFeatures,
+            FeatureHandle[] defaultFeatures,
+            String genderName,
+            String sourceName) {
+
+        int[] featureVariants = new int[FeatureSlot.VALUES.length];
+
+        Arrays.fill(featureVariants, EngineSetting.INDEX_NOT_FOUND);
+
+        if (!ArpgUtility.hasObject(presetArpg, "feature_variants"))
+            return featureVariants;
+
+        ArpgObjectStruct variantsArpg = presetArpg.getAsObject("feature_variants");
+
+        validateKeys(variantsArpg, FeatureSlot.class, "feature_variants", sourceName);
+
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
+
+            String key = ArpgUtility.toEnumName(featureSlot);
+
+            if (!ArpgUtility.hasString(variantsArpg, key))
+                continue;
+
+            int slotIndex = featureSlot.ordinal();
+            FeatureHandle featureHandle = namedFeatures[slotIndex] ? features[slotIndex] : defaultFeatures[slotIndex];
+            String variantName = variantsArpg.get(key).getAsString();
+            int variantIndex = featureHandle != null && featureHandle.hasVariants()
+                    ? featureHandle.getVariants().find(variantName)
+                    : EngineSetting.INDEX_NOT_FOUND;
+
+            if (variantIndex == EngineSetting.INDEX_NOT_FOUND)
+                throwException("Race gender \"" + genderName + "\" starts its " + key + " in variant \""
+                        + variantName + "\", which the " + key + " it wears does not offer. Source: " + sourceName);
+
+            featureVariants[slotIndex] = variantIndex;
+        }
+
+        return featureVariants;
     }
 
     // Which slots a look names for itself, a feature or none

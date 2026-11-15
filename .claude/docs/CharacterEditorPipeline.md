@@ -14,12 +14,15 @@ one window, the Character Editor, its tasks layers picked in the Layers tab (see
 tab holds the status bar and the viewport; saving, reverting, copying, deleting, undoing and redoing are the editor's
 File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`, `FILE_MENU_FACE` on the Face layer, `FILE_MENU_ANIMATION`),
 shared by each tool's viewport and docker tabs; everything else is its own tab, opened from the editor's Characters menu
-and restored by layouts like any other.
+(its Tools section holds the Outliner, above the Character and Animation sections), the Content menu (Color Wheel,
+beside Layers) or the Textures menu (Texture Maps), and restored by layouts like any other.
 
 | Window | Context | Shows |
 |---|---|---|
 | Character Editor | `CharacterEditorContext` | the layer picked: the live preview in a look mode, or the region framed and shown alone in a mode that takes tools (a tool canvas) |
-| Character Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `FaceEditorManager.buildListRows` on the Face layer, `AnimationEditorManager.buildListRows` |
+| Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `FaceEditorManager.buildListRows` on the Face layer, `AnimationEditorManager.buildListRows` |
+| Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), then Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) |
+| Texture Maps | `TextureMapsContext` | every map of the texture painted (`CharacterEditorManager.buildMapRows`), the one painted selected |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
 | Animation Timeline | `AnimationTimelineContext` | transport, summary track and a dope sheet lane per bone |
 | Properties | `PropertiesContext` | the value rows of the character, face or animation tab worked in last |
@@ -43,22 +46,26 @@ and restored by layouts like any other.
   other. Its keys are one file, `shortcuts/CharacterEditor.arpg`, kept to their layers by `canvases`; Undo, Redo and
   Save run the File menu's action (`FileMenuBranch.run`), so they act on the face on the Face layer.
 
-- **The Appearance outliner is the player's creator.** In Appearance the Character Outliner lists everything the
-  game's creator offers the player: the gender, the features worn (Hair: the race default, none, or any style that
-  fits), the marks (overlay styles), every color with the race's tones, the detail amounts, then every shape slider under
-  its group in the order the race first lists each, each a ranged row (`CharacterViewRowStruct.ranged`) holding the value
-  the game starts the previewed gender at, across the range that gender's player may slide it: the gender preset's
-  `shapes` value where it names the shape (`CharacterEditBranch.setGenderShape`), the race's `default` otherwise
-  (`FaceEditorManager.setDefault`), the preview's override cleared so it shows the new start, with one pair row
-  (`CharacterViewRowStruct.pair`, two typed value boxes side by side, no slider) for its Min and Max beneath it. Those ends
-  are the gender's own (`genders.<g>.ranges.<shape>`, `min` below `max`, within the slider's own `min` to `max`;
+- **The Appearance outliner is the player's creator.** In Appearance the Outliner lists everything the game's creator
+  offers the player: the gender, the features worn (Hair: the race default, none, or any style that fits), under each
+  worn feature that offers variants the variant the previewed gender starts it in (eyes, teeth: the feature's own
+  default, then each variant; `CharacterPropertyBranch.cycleFeatureVariant`, written as
+  `genders.<g>.feature_variants.<slot>` by `CharacterEditBranch.setFeatureVariant`, cleared when the gender's feature in
+  that slot changes), the marks (overlay styles), every color with the race's tones, the detail amounts, then every
+  shape slider under its group in the order the race first lists each, each a ranged row
+  (`CharacterViewRowStruct.ranged`) holding the value the game starts the previewed gender at, across the range that
+  gender's player may slide it: the gender preset's `shapes` value where it names the shape
+  (`CharacterEditBranch.setGenderShape`), the race's `default` otherwise (`FaceEditorManager.setDefault`), the preview's
+  override cleared so it shows the new start, with one pair row (`CharacterViewRowStruct.pair`, two typed value boxes
+  side by side, no slider) for its Min and Max beneath it. Those ends are the gender's own
+  (`genders.<g>.ranges.<shape>`, `min` below `max`, within the slider's own `min` to `max`;
   `AppearanceGenderStruct.getShapeMin` / `getShapeMax`, read only through `AppearanceData.getShapeMin(genderID, i)` /
-  `getShapeMax`, which fall back to the slider's own), written through `CharacterPropertyBranch.setGenderRangeEnd` (a step
-  apart, within the slider's range), so each race and each gender has its own range; the game's creator, its randomise
-  and NPC variation read the same two methods. The Face layer's range rows still set the slider's own range, the outer
-  bound every gender's range sits in. Appearance lists no pose: a mode names the pose it stands in
-  (`CharacterEditorMode.getStandingPose`, Appearance idles as the creator shows the player) or lets its outliner pick one
-  (`picksPose`: Build, Equipment, Weights). Only Blink, a preview control, stays in the Properties tab.
+  `getShapeMax`, which fall back to the slider's own), written through `CharacterPropertyBranch.setGenderRangeEnd` (a
+  step apart, within the slider's range), so each race and each gender has its own range; the game's creator, its
+  randomise and NPC variation read the same two methods. The Face layer's range rows still set the slider's own range,
+  the outer bound every gender's range sits in. Appearance lists no pose: a mode names the pose it stands in
+  (`CharacterEditorMode.getStandingPose`, Appearance idles as the creator shows the player) or lets its outliner pick
+  one (`picksPose`: Build, Equipment, Weights). Only Blink, a preview control, stays in the Properties tab.
 - **Values live in the shared Properties tab.** The character, face and animation viewport contexts implement
   `PropertiesProvider` (content `ROWS`) and `CharacterViewRowSource` (their manager's `buildPropertyRows`) and create a
   `PropertiesSourceSystem`; the Properties tab (`RowPropertiesSystem`) shows the rows of the one focused last and hands
@@ -70,7 +77,7 @@ and restored by layouts like any other.
   step buttons take; the value box still opens for typing. A ranged row spans its declared range instead, its knob set
   where the value stands on every refill and refresh, a drag still handing over whole steps of the row's own step. A number row template carries the track and knob ids in
   its `CharacterViewTemplateStruct`.
-- **One outliner.** There is one Character Outliner (`CharacterOutlinerContext`), never one per tool: a viewport that
+- **One outliner.** There is one Outliner (`CharacterOutlinerContext`), never one per tool: a viewport that
   lists outliner rows implements `OutlinerProvider` (`editor.bootstrap.propertiespipeline.properties`) beside
   `PropertiesProvider`, and `PropertiesManager.getOutliner` names the one worked in last, the way the Properties tab
   follows. The outliner implements `CharacterViewRowSource` over it and creates `CharacterViewPanelSystem`,
@@ -92,7 +99,9 @@ and restored by layouts like any other.
   face control's operations (add, duplicate, remove, drive the picked bone, mirror, reset the preview) are the face
   canvas's, run by `CharacterEditorContext.runToolAction` on the Face layer through `FaceEditorManager.act`.
   Properties keeps values only.
-- Every viewport (Character, Face, Animation, Animation Tree Editor) looks through the editor's `ViewCameraSystem`,
+- Every viewport (Character, Face, Animation, Animation Tree Editor) looks through the editor's `ViewCameraSystem`
+  (zoomed in as far as it goes, the wheel dollies the pivot forward, and the near plane follows the distance, so close
+  detail is never clipped),
   framing `CharacterViewPoseSystem` (the Character Editor frames its region through `CharacterRegionFrameSystem` on
   every layer, the Face layer's on the Head). A viewport
   system takes a click only when it acts on something (a vertex, a joint, the mesh under the brush) and claims it with
@@ -151,9 +160,16 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
 - **Poses.** Every mode that picks a pose (Build, Equipment, Mesh, Sculpt, Weights) lists one Pose row, stepped by
   `CharacterEditorManager.stepPose` through Bind (the default: the mesh exactly as its file holds it in a mesh mode),
   each clip the rig names in `poses` (struck still at its start, `CharacterEditorPreviewSystem.strikeClip`, labelled
-  by `CharacterViewUtility.toResourceLabel`), then Idle, Walk and Run played. Rig holds the bind pose. Vertices are
-  moved only in Bind: a sculpt stroke or a transform while posed is refused with `CHARACTER_EDITOR_MESSAGE_POSED`
-  (`isPosed`); selecting and painting weights work in any pose, the mesh view skinning every vertex by it. A pose is a
+  by `CharacterViewUtility.toResourceLabel`), then Idle, Walk and Run played. Rig holds the bind pose. Grab, Rotate
+  and Scale work in any pose, on the cage as the view shows it (Maya's and Blender's on-cage editing of a skinned mesh):
+  `CharacterEditorSculptSystem` hands `CharacterEditorManager.beginTransform` the pose's skinning matrices
+  (`CharacterEditorMeshViewSystem.getSkinningMatrices`) while `isPosed`, and `CharacterSculptBranch.holdVertex` keeps
+  each held vertex's posed start and the inverse of its blended matrix B = Σ wᵢ Mᵢ (`resolveBlend`; affine under
+  linear blend skinning, so exact); the pivot is the weighted centre of the posed starts, every move is made posed and
+  written back to the bind pose through B⁻¹ (`toBindPose`) before rounding, and twins are then placed mirrored in the
+  bind pose, so symmetry holds whatever the pose. Numeric transforms (typed Move, Size, Rotate) stay in the bind pose.
+  Sculpt strokes work only in Bind: one struck posed is refused with `CHARACTER_EDITOR_MESSAGE_POSED`; selecting and
+  painting weights work in any pose, the mesh view skinning every vertex by it. A pose is a
   plain clip on the rig (`animations/humanoid/poses/`); add one by naming it in the rig's `poses`.
 - **Mirror pairs.** `CharacterSelectionBranch.resolveMirror` pairs each vertex with the one at its mirrored position
   on the decimal grid, then pairs every vertex left without a twin with the nearest one likewise left across x within
@@ -162,9 +178,9 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
   mirror always round alike.
 - **Canvas options.** Mirror, X-Ray and Bones are `ToolOption`s marked canvas-wide (`isCanvasWide`): every tool on a
   canvas that honours one lists it under its own options, last, in the Tools panel. Mirror (on by default) is honoured
-  by the mesh, sculpt, weights, rig and face canvases, X-Ray by the mesh and weights, Bones (`CharacterBoneDisplay`:
-  joints, sticks from each joint to its parent's, both, or hidden) by the mesh, weights and rig.
-  `CharacterEditorManager.isMirror` / `isXray` / `getBoneDisplay` and `FaceEditorManager.isMirror` read them from
+  by the mesh, sculpt, weights, paint, rig and face canvases, X-Ray by the mesh and weights, Bones
+  (`CharacterBoneDisplay`: joints, sticks from each joint to its parent's, both, or hidden) by the mesh, weights and
+  rig. `CharacterEditorManager.isMirror` / `isXray` / `getBoneDisplay` and `FaceEditorManager.isMirror` read them from
   `ToolManager` for the mode's canvas; never keep a copy, and never list them as Properties rows.
 - **Hide and Reveal.** The Selection group's Hide (H), Hide Unselected (Shift+H) and Reveal (Alt+H)
   (`CharacterSelectionBranch.hide` / `reveal`) put vertices out of the way, as Blender hides geometry to reach tight
@@ -179,7 +195,8 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
   (`CharacterEditorManager.setEditPoseTurn`, a turn per bone in its own frame, mirrored onto the twin while mirroring,
   never saved; Reset Pose, Alt+R, clears it); `CharacterEditorPreviewSystem.applyEditPose` lays it on the preview as
   `AnimationStateHandle` postures, which every pose (the tree, a struck clip, the rest) now carries. A layer with an
-  edit pose counts as posed: select and weigh in it, Reset Pose before moving vertices.
+  edit pose counts as posed: select, weigh and transform in it (pose a thumb out of the way to reach the fingers),
+  Reset Pose before sculpting.
 - **Sculpt tools.** Brush, Smooth, Relax (even spacing along the surface without shrinking), Inflate, Pinch, Crease
   (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
   in `CharacterShapeBranch.resolveMove`.
@@ -196,6 +213,12 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
   paints each texel by the tip's coverage where the same barycentrics place it on the window, so strokes cross UV
   seams; texels within `CHARACTER_PAINT_BLEED_PIXELS` of an island edge are painted too. Fill covers the island of
   faces joined corner to corner around the face clicked (`pickFace`), Pick takes the flattened map's colour there.
+- **Symmetry painting** (Substance Painter's and Blender's object-space symmetry): with the paint canvas's Mirror on,
+  `CharacterEditorPaintSystem.resolveFaceMirrors` finds each face's twin once a stroke (the face whose corners are its
+  corners' twins, `CharacterEditorManager.getMirrorVertices`, keyed by the sorted corners), and every stamp lays each
+  covered face again on its twin with the twin's corners placed where their own twins show on the window
+  (`addMirroredFaces`), so the same coverage lands on the twin's texels; the stroke stays one undo step. Islands shared
+  across the centre line (head, torso) mirror within the island. Fill and Pick do not mirror.
 - **Canvases** (`CharacterPaintCanvasStruct`): one per texture and map (albedo, normal, height, AO, metallic,
   roughness, tint; `CHARACTER_PAINT_MAP_*`), opened on first use from `<Name>_<suffix>.png` beside the texture or the
   alias's default colour. Its layers are image documents of `ImageManager` (`beginPaint` / `paintPixel` /
@@ -203,10 +226,24 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
   of the layer it touched (the before colours of the pixels it changed), and each change is laid flat and uploaded
   into the atlas layer the map fills, only its rectangle, rows bottom first (`TextureManager.updateTextureArrayLayer`,
   `glTexSubImage3D`). The base keeps its own alpha; Erase wears the base to the default and a layer to nothing.
-- **Values** (Map, Layer, Opacity, Red, Green, Blue) live in the Properties tab (`CharacterPaintPropertyBranch`,
-  `CharacterPaintRowBranch`); Add Layer and Remove Layer are the canvas's tool actions. Save (File) writes every
+- **Values.** The Properties tab holds Layer and Opacity; the colour lives in the Color Wheel tab (Hue, Saturation and
+  Brightness, `CHARACTER_PAINT_KEY_HSB`, a grey keeping the hue last chosen in `CharacterPaintBranch.getHue`; Red,
+  Green and Blue, `CHARACTER_PAINT_KEY_COLOR`) and the map painted is picked in the Texture Maps tab
+  (`CHARACTER_PAINT_KEY_MAP_ITEM`, `CharacterPaintBranch.setMapIndex`), every key read and written through
+  `CharacterPaintPropertyBranch` and listed by `CharacterPaintRowBranch`; Add Layer and Remove Layer are the canvas's
+  tool actions. Save (File) writes every
   changed map flat into its image, Revert puts the atlas back as the images hold it, Undo and Redo (Edit) step the
   paint history in Paint mode. Painted maps are the owner's art: never catalogue them.
+- **Generate Maps** (File menu, `FileMenuAction.GENERATE_MAPS`, Paint mode only; as Materialize or Bitmap2Material
+  generate maps): `GenerateMapsDialogBranch` opens a dialog over the window on the albedo of the part painted (layers
+  and all), listing every `MapGenerateOption` (height detail, softness, contrast and Dark Is High; normal strength;
+  occlusion strength and radius; roughness and its variation; metallic; which maps are written) beside a preview
+  worked out at `MAP_GENERATE_PREVIEW_SIZE` whenever a setting moves (`CharacterMapBranch.renderPreview`): the result
+  lit through the generated normal and occlusion, or any one map. `MapGenerateUtility` holds the image work
+  (luminance, a high-pass height, Sobel normals with green up, occlusion from the height's hollows, roughness from the
+  darks; running box blurs, so any radius costs the same). Generate works every map out at the texture's own size and
+  paints each over its map's layer as one undo step (`CharacterPaintBranch.writeMap`), so Save writes and bakes them
+  and Undo takes each back; radii are in the texture's pixels and shrink with the preview.
 - **Not industry standard:** layers above the base last the editor session and are flattened into the image on save;
   a painting tool keeps them in a layered project file (Substance, Krita) beside the exported maps.
 
@@ -267,8 +304,9 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   from its own eyes: `AppearanceData.getHeadMask`, the head and everything below it, eyes and teeth included), `SHOW`
   keeps only fragments they carry at least half of (part isolation). A rig may hold at most
   `SKINNED_BONE_MASK_CAPACITY` bones.
-- **Overlays.** Brows, nipples and body hair (`SkinnedOverlay`: chest, stomach, pubic, underarm, arm, leg) are images
-  painted over the skin in the body's own UV layout, never geometry: UV-space decal layers. Each gender's model places
+- **Overlays.** Makeup (`SkinnedOverlay`: blush, eyeshadow, lips, eyeliner), brows, nipples and body hair (chest,
+  stomach, pubic, underarm, arm, leg) are images painted over the skin in the body's own UV layout, never geometry:
+  UV-space decal layers, each laid over the ones before it in enum order. Each gender's model places
   them (`genders.<g>.overlays`: the `region` of its UV layout the images cover, u0 v0 u1 v1, the `styles` it offers,
   each a `name`, a `texture` in the character atlas and an optional `relief` in blocks, and the style worn by
   `default`; `RaceGenderStruct.getOverlay`), written into each draw as three texels: the tile of the style worn, the
@@ -280,20 +318,33 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   bends the normal through its normal map, both faded by the Character Detail distance. An overlay's images cover only
   its region, so a style is a small image; paint a new style in the body's layout, crop it to the region, and every
   map it carries (A, h, n, ...) goes beside it by suffix. Saves keep a chosen style by name (`overlay_styles`); the
-  creator lists a style row and an amount per overlay, and the Character Appearance outliner's Marks rows set the
-  previewed gender's `default`.
-- **Eyes.** An eye is its variant's image set (`features/humanoid/eyes/HumanoidEyes`: Anime, Realistic, Cat, Ringed)
-  on the eye zone's raw UVs, the iris centred at `CHARACTER_IRIS_CENTRE` (`shadeEye`): Iris Size scales the image about
-  the iris, Pupil Size dilates the pupil by a radial remap inside it, and the iris, `CHARACTER_IRIS_DEPTH` behind the
-  cornea, shifts against the view (refraction); the eye color reaches what the tint mask allows. The eye writes a
-  specular falling from `CHARACTER_EYE_SPECULAR` toward `CHARACTER_EYE_SPECULAR_FAR` across the Character Detail
-  distance, and the lighting pass (and the editor viewport) mirrors the sky on every glossy character pixel by that
-  specular, weighted by Fresnel and occlusion (`SkyReflection.glsl`). **Not yet industry standard:** the environment
+  creator lists a style row and an amount per overlay (Lips under Lip Color, Blush, Eyeshadow and Eyeliner under
+  Makeup), and the Appearance outliner's Marks rows set the previewed gender's `default`. Each overlay's `region` is the
+  tight UV box of what its styles cover, so its image (at most 512 texels a side, the bake's top tier) spends its
+  texels on the mark; the head's UV shell gives the face few body texels, so face marks belong in overlays.
+- **Makeup** replaced the vertex-mask lip colour, blush and liner: the `blush`, `lips` and `liner` mask channels stay
+  in the mesh format but are no longer shaded (freckles still read theirs). Lips take `SkinnedColor.LIPS` and
+  `SkinnedDetail.LIPS` (Natural, Full, Thin, Defined, Ombre), blush `BLUSH` (Apples, Sculpted, Sunkissed), eyeshadow
+  its own `EYESHADOW` colour and detail (Soft, Smoky, Halo), eyeliner the `LINER` colour and `SkinnedDetail.LINER`
+  (Thin, Bold, Winged, Smudged); liner and eyeshadow start at 0, so a character wears none unless given it. The lid's
+  `lash` zone is shaded as skin (it was a band of brow colour that read as mascara); real lashes would be alpha cards,
+  not modelled yet.
+- **Eyes.** An eye is its variant's image set (`features/humanoid/eyes/HumanoidEyes`: Realistic, the default, Cat,
+  Ringed) on the eye zone's raw UVs, the iris centred at `CHARACTER_IRIS_CENTRE` (`shadeEye`): Iris Size scales the
+  image about the iris, Pupil Size dilates the pupil by a radial remap inside it, and the iris, `CHARACTER_IRIS_DEPTH`
+  behind the cornea, shifts against the view (refraction); the eye color reaches what the tint mask allows. The eye
+  writes a specular falling from `CHARACTER_EYE_SPECULAR` toward `CHARACTER_EYE_SPECULAR_FAR` across the Character
+  Detail distance, and the lighting pass (and the editor viewport) mirrors the sky on every glossy character pixel by
+  that specular, weighted by Fresnel and occlusion (`SkyReflection.glsl`), and lays the light's own crisp catchlight on
+  a cornea (`resolveCorneaHighlight`, specular past `CORNEA_GLOSS_START`), as a wet eye shows it. The editor viewport's
+  highlight uses the lighting pass's specular power, so both look alike. **Not yet industry standard:** the environment
   is the analytic sky the sky shader paints, not a captured reflection probe of the surroundings.
 - **Material variants.** A look offering several image sets is a `SkinnedVariantStruct` (names, tiles, reliefs,
   default), parsed for overlays' `styles` and features' `variants` alike by `SkinnedVariantUtility.parse`. A feature
   naming `variants` and a `default` is worn in the one its appearance picks (`AppearanceHandle.getFeatureVariant`,
-  INDEX_NOT_FOUND for the default, cleared when the feature changes): `EntityRenderSystem.pushBody` writes the
+  INDEX_NOT_FOUND for the default, cleared when the feature changes, and set from the gender's `feature_variants` when
+  an appearance takes its gender's preset: `AppearanceGenderStruct.getFeatureVariant`, parsed and checked against the
+  feature the gender starts with by `AppearanceBuilder.parseFeatureVariants`): `EntityRenderSystem.pushBody` writes the
   variant's tile into the draw's variant texel (`SkinnedAppearanceStruct.setVariant`, none for the body) and the shader
   lays the corner's raw UV into that tile for every layer (`resolveCharacterUV`), a texture swap on one mesh. Saves keep
   the variant by name (`feature_variants`); the creator lists a variant row under the feature row.
@@ -360,7 +411,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `poses` (`animations/humanoid/poses/`). All are generated (catalogued); the character tools edit a rigged
   mesh of at most `RIGGED_MESH_VERT_LIMIT` corners (their overlays draw every corner). Each hand is one bone: hanging at the side its palm faces the thigh with the
   thumb forward (+z), so `hand_l` is a left hand at +x; keep that chirality on any hand you model or mirror.
-- **Features are the gender's.** The Character Outliner's Features rows (Appearance mode) read and write the previewed
+- **Features are the gender's.** The Outliner's Features rows (Appearance mode) read and write the previewed
   gender's `genders.<gender>.features`, the features it is made with; a gender naming none wears the race's
   `appearance.features` default, shown with `CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX`. A row steps through the default
   (the gender's own removed), then `none` (`EngineSetting.APPEARANCE_FEATURE_NONE`, `""`: the gender wears nothing
@@ -380,10 +431,12 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Hair is cards.** A hair mesh is a scalp cap and layered cards two quads wide, textured with the strand tile
   `characters/standard/Hair` (its alpha cuts the locks out); each card's raw UV runs across it in u and hangs as the
   image does in v, the root at the image's top (v 1) and the tip at its foot (v 0). Code reads how far along its strand
-  a corner stands, root 0 to tip 1, only through `RiggedMeshStruct.getFaceStrand`. The character vertex shader sways hair-zone vertices in the wind by v (`CharacterHair.glsl`:
-  slow gusts, a phase per lock read off where it grows in the bind pose, the tip trailing its root, a flutter across
-  the wind and a lift on gusts), after skinning and in the world, so it adds to whatever bones carry the lock; keep v
-  running from 1 at the root to 0 at the tip on any card you add, and keep the root at the scalp.
+  a corner stands, root 0 to tip 1, only through `RiggedMeshStruct.getFaceStrand`. The strand image fades to nothing at
+  its side columns and pads its colour under transparent texels (edge padding), so filtering never shows a card's
+  straight edge or the opposite edge wrapping in. The character vertex shader sways hair-zone vertices in the wind by v
+  (`CharacterHair.glsl`: slow gusts, a phase per lock read off where it grows in the bind pose, the tip trailing its
+  root, a flutter across the wind and a lift on gusts), after skinning and in the world, so it adds to whatever bones
+  carry the lock; keep v running from 1 at the root to 0 at the tip on any card you add, and keep the root at the scalp.
 - **Long hair rides spring chains; short hair is the shader's.** A rig's `springs` (`RigSpringChainStruct`) each name
   at least two `bones`, each the child of the one before, the first hung from a bone the body moves, none in another
   chain or an IK handle, with `stiffness` (pull back to the pose, 1/s²), `damping` (settles a joint's swing against
@@ -459,7 +512,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   carries them over a renumbering.
 - Rig: `CharacterRigBranch` owns the draft read from the rig's InfoManager entry, every rig edit (`edit`), its
   history and the live apply (`RigManager.updateRig`). Values and actions: `CharacterRigPropertyBranch`; rows:
-  `CharacterRigRowBranch`; viewport: `CharacterEditorRigSystem`.
+  `CharacterRigRowBranch`; viewport: `CharacterEditorRigSystem`. Rig mode's tools are Select, Move, Rotate (turns the
+  selected bone's bind `rotation` about the line of sight, children carried, the twin turned the mirrored way while
+  mirroring: `CharacterRigBranch.rotateGesture`, one undo step), Scale, Place and Erase. A bind edit never moves the
+  mesh, as a rig tool keeps the skin where it is; Pose on the mesh and weights layers moves what a bone carries.
 - Clip edits: `AnimationEditBranch.edit` records every edit in the clip's `CharacterViewHistoryStruct`; pose drags
   go through `AnimationEditorManager.beginPose / writePose / endPose / cancelPose`; viewport:
   `AnimationEditorPoseSystem`.
@@ -509,8 +565,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   move, turn or growth it makes by the control's preview value; a control previewed near nothing is first taken to the
   far end of its range. A control must always drive a morph or a bone, or the builder refuses the template: its last
   bone is let go only while it has a morph, and its morph cleared only while it drives a bone.
-- **Vertices move only in Bind.** A modelling layer struck in any other pose refuses sculpt strokes and transforms;
-  the preview poses on the GPU and the mesh view skins on the CPU, but edits are written to the bind-pose file.
+- **Posed transforms map back through the skinning.** A transform held posed writes bind positions through each
+  vertex's inverse blended matrix, taken when it begins; a vertex weighed onto no bone moves as it is. Sculpt strokes
+  stay bind-only and are refused posed: the preview poses on the GPU and the mesh view skins on the CPU, but edits are
+  written to the bind-pose file.
 - **Part layers need rig parts.** A rig without `parts` lists only the Body and Hair; name the parts in the rig (or with
   Add Layer From Bone), never in code. Region keys are part names, so renaming a part moves a window picked on it back
   to the Body.

@@ -10,11 +10,11 @@ public class AppearanceGenderStruct extends StructPackage {
      * among the race's body meshes, a value per shape slider (NaN keeps the
      * race's default), the range the player may slide each across (NaN
      * ends keep the slider's own, a gender's within it) and, for each slot
-     * it names, the feature it wears
-     * there (null for none, so a gender can go bald); a slot it does not
-     * name keeps the race's. Each gender may be its own mesh, so a man and
-     * a woman are modelled apart and share the rig, the sliders and the
-     * features.
+     * it names, the feature it wears there (null for none, so a gender can
+     * go bald) and the variant of each worn feature it starts in; a slot it
+     * does not name keeps the race's. Each gender may be its own mesh, so a
+     * man and a woman are modelled apart and share the rig, the sliders and
+     * the features.
      */
 
     // Body
@@ -28,6 +28,7 @@ public class AppearanceGenderStruct extends StructPackage {
     // Features — indexed by FeatureSlot ordinal
     private final FeatureHandle[] features;
     private final boolean[] namedFeatures;
+    private final int[] featureVariants;
 
     // Constructor \\
 
@@ -37,7 +38,8 @@ public class AppearanceGenderStruct extends StructPackage {
             float[] shapeMins,
             float[] shapeMaxes,
             FeatureHandle[] features,
-            boolean[] namedFeatures) {
+            boolean[] namedFeatures,
+            int[] featureVariants) {
 
         // Body
         this.bodyIndex = bodyIndex;
@@ -50,6 +52,7 @@ public class AppearanceGenderStruct extends StructPackage {
         // Features
         this.features = features;
         this.namedFeatures = namedFeatures;
+        this.featureVariants = featureVariants;
     }
 
     // Accessible \\
@@ -79,5 +82,10 @@ public class AppearanceGenderStruct extends StructPackage {
     // Whether the gender names its own feature for a slot, none included, rather than keeping the race's
     public boolean namesFeature(int slotIndex) {
         return namedFeatures[slotIndex];
+    }
+
+    // The variant the gender starts its feature in a slot in, INDEX_NOT_FOUND for the feature's own default
+    public int getFeatureVariant(int slotIndex) {
+        return featureVariants[slotIndex];
     }
 }

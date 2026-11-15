@@ -5,7 +5,8 @@ public enum SkinnedColor {
     /*
      * The colors a skinned character is shaded with, one palette texel each in
      * this order (CharacterAppearance.glsl): skin, iris, hair, brows and
-     * lashes, lips, blush, freckles, clothing, nipples, body hair and teeth.
+     * lashes, lips, blush, freckles, clothing, nipples, body hair, teeth,
+     * eyeshadow and eyeliner.
      */
 
     SKIN,
@@ -18,7 +19,9 @@ public enum SkinnedColor {
     CLOTH,
     NIPPLES,
     BODY_HAIR,
-    TEETH;
+    TEETH,
+    EYESHADOW,
+    LINER;
 
     // Values
     public static final SkinnedColor[] VALUES = values();

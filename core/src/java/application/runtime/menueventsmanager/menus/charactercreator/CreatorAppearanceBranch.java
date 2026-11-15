@@ -76,7 +76,11 @@ public class CreatorAppearanceBranch extends BranchPackage {
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_TEETH_COLOR, SkinnedColor.TEETH);
         creatorBodyBranch.injectShapeGroups(session, false);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_LIP_COLOR, SkinnedColor.LIPS);
+        injectOverlaySection(session, RuntimeSetting.CREATOR_SECTION_LIPS, RuntimeSetting.CREATOR_LIP_OVERLAYS);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BLUSH_COLOR, SkinnedColor.BLUSH);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_EYESHADOW_COLOR, SkinnedColor.EYESHADOW);
+        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_LINER_COLOR, SkinnedColor.LINER);
+        injectOverlaySection(session, RuntimeSetting.CREATOR_SECTION_MAKEUP, RuntimeSetting.CREATOR_MAKEUP_OVERLAYS);
         injectColorSection(session, RuntimeSetting.CREATOR_SECTION_FRECKLE_COLOR, SkinnedColor.FRECKLES);
         injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_DETAILS, RuntimeSetting.CREATOR_APPEARANCE_DETAILS);
     }

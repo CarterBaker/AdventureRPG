@@ -14,6 +14,7 @@ import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 
@@ -23,13 +24,17 @@ public class CharacterEditorRigSystem extends SystemPackage {
      * Turns this tab's pointer into rig edits while the Rig mode is open,
      * by the rig tool in use. A click on a joint picks its bone with every
      * tool; Move then drags the joint across the plane facing the camera,
-     * its children following, Scale grows or shrinks the bone's size by how
+     * its children following, Rotate turns the bone's bind rotation about
+     * the line of sight by how far the pointer turns about the joint, its
+     * twin turned the mirrored way while mirroring, Scale grows or shrinks
+     * the bone's size by how
      * far the pointer travels from the joint, Place stands a new child of
      * the selected bone where it clicks, level with that bone's joint, and
      * Erase removes the bone clicked. A press that does none of these is
      * left to the view camera. A drag is one undo step: letting go
      * keeps it, a right click or Escape puts the rig back, and Ctrl snaps it.
-     * Edits are written only on frames the pointer moves.
+     * Edits are written only on frames the pointer moves. A bind edit never
+     * moves the mesh: the skin stays where it is, as a rig tool keeps it.
      */
 
     // Internal
@@ -49,6 +54,8 @@ public class CharacterEditorRigSystem extends SystemPackage {
     private Vector2 jointScreen;
     private Vector3 startHit;
     private float startDistance;
+    private float startMouseX;
+    private float startMouseY;
     private float lastMouseX;
     private float lastMouseY;
 
@@ -57,6 +64,8 @@ public class CharacterEditorRigSystem extends SystemPackage {
     private Vector3 rayOrigin;
     private Vector3 rayDirection;
     private Vector3 hitScratch;
+    private Vector3 axisScratch;
+    private Matrix4 turnScratch;
 
     // Base \\
 
@@ -73,6 +82,8 @@ public class CharacterEditorRigSystem extends SystemPackage {
         this.rayOrigin = new Vector3();
         this.rayDirection = new Vector3();
         this.hitScratch = new Vector3();
+        this.axisScratch = new Vector3();
+        this.turnScratch = new Matrix4();
     }
 
     @Override
@@ -149,7 +160,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
 
         characterEditorManager.selectRigBone(picked);
 
-        if (tool == EditorTool.MOVE || tool == EditorTool.SCALE)
+        if (tool == EditorTool.MOVE || tool == EditorTool.ROTATE || tool == EditorTool.SCALE)
             startDrag(tool, mouseX, mouseY);
     }
 
@@ -217,6 +228,8 @@ public class CharacterEditorRigSystem extends SystemPackage {
         this.startDistance = Math.max(
                 EditorSetting.CHARACTER_VIEW_SCALE_MIN_PIXELS,
                 (float) Math.hypot(mouseX - jointScreen.x, mouseY - jointScreen.y));
+        this.startMouseX = mouseX;
+        this.startMouseY = mouseY;
         this.lastMouseX = mouseX;
         this.lastMouseY = mouseY;
     }
@@ -249,10 +262,11 @@ public class CharacterEditorRigSystem extends SystemPackage {
 
         boolean snap = shortcutManager.isHeld(snapShortcutID, context.getWindow());
 
-        if (dragTool == EditorTool.MOVE)
-            applyMove(mouseX, mouseY, snap);
-        else
-            applyScale(mouseX, mouseY, snap);
+        switch (dragTool) {
+            case MOVE -> applyMove(mouseX, mouseY, snap);
+            case ROTATE -> applyRotate(mouseX, mouseY, snap);
+            default -> applyScale(mouseX, mouseY, snap);
+        }
     }
 
     private void applyMove(float mouseX, float mouseY, boolean snap) {
@@ -261,6 +275,22 @@ public class CharacterEditorRigSystem extends SystemPackage {
         hitScratch.subtract(startHit);
         hitScratch.set(snapValue(hitScratch.x, snap), snapValue(hitScratch.y, snap), snapValue(hitScratch.z, snap));
         characterEditorManager.moveRigJoint(hitScratch);
+    }
+
+    // The pointer's turn about the joint on screen, a turn about the line of sight
+    private void applyRotate(float mouseX, float mouseY, boolean snap) {
+
+        float angle = (float) (Math.atan2(mouseY - jointScreen.y, mouseX - jointScreen.x)
+                - Math.atan2(startMouseY - jointScreen.y, startMouseX - jointScreen.x));
+        Vector3 view = context.getWindow().getActiveCamera().getDirection();
+
+        if (snap)
+            angle = (float) Math.toRadians(Math.round(Math.toDegrees(angle) / EditorSetting.CHARACTER_VIEW_SNAP_DEGREES)
+                    * EditorSetting.CHARACTER_VIEW_SNAP_DEGREES);
+
+        axisScratch.set(-view.x, -view.y, -view.z).normalize();
+        CharacterPoseUtility.toAxisRotation(axisScratch, angle, turnScratch);
+        characterEditorManager.rotateRigBone(turnScratch);
     }
 
     private void applyScale(float mouseX, float mouseY, boolean snap) {

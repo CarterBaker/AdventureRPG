@@ -23,6 +23,7 @@ import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.runtime.charactereditor.CharacterEditorContext;
 import editor.runtime.characteroutliner.CharacterOutlinerContext;
+import editor.runtime.colorwheel.ColorWheelContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
@@ -44,6 +45,7 @@ import editor.runtime.settlementplanner.SettlementPlannerContext;
 import editor.runtime.shipviewer.ShipViewerContext;
 import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.soundlibrary.SoundLibraryContext;
+import editor.runtime.texturemaps.TextureMapsContext;
 import editor.runtime.textureviewer.TextureViewerContext;
 import editor.runtime.timeline.TimelineContext;
 import editor.runtime.tools.ToolsContext;
@@ -156,6 +158,14 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openLayers(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_LAYERS, LayersContext.class, osWindow);
+    }
+
+    public TabHandle openColorWheel(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_COLOR_WHEEL, ColorWheelContext.class, osWindow);
+    }
+
+    public TabHandle openTextureMaps(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_TEXTURE_MAPS, TextureMapsContext.class, osWindow);
     }
 
     public TabHandle openItemEditor(WindowInstance osWindow) {

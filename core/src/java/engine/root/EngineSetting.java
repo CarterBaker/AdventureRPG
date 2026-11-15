@@ -2730,7 +2730,7 @@ public class EngineSetting {
     public static final int SKINNED_INSTANCE_MODEL_FLOATS = 16;
     public static final int SKINNED_INSTANCE_FLOATS = SKINNED_INSTANCE_MODEL_FLOATS;
     public static final int SKINNED_APPEARANCE_HEADER_TEXELS = 1;
-    public static final int SKINNED_APPEARANCE_DETAIL_TEXELS = 4;
+    public static final int SKINNED_APPEARANCE_DETAIL_TEXELS = 5;
     public static final int SKINNED_BONE_MASK_TEXELS = 4;
     public static final int SKINNED_BONE_MASK_BITS = 24;
     public static final int SKINNED_BONE_MASK_CAPACITY = SKINNED_BONE_MASK_TEXELS * COLOR_CHANNEL_COUNT
@@ -2786,7 +2786,7 @@ public class EngineSetting {
     // Appearance — detail defaults in SkinnedDetail order (iris size, pupil size, hair shine, lips, blush, freckles,
     // liner, blemishes, brows, nipples, then the chest, stomach, pubic, underarm, arm and leg hair), and the range a shape slider takes when its template leaves it out
     public static final float[] APPEARANCE_DETAIL_DEFAULTS = {
-            1f, 1f, 0.6f, 0.55f, 0.3f, 0f, 0.8f, 0f, 1f, 1f, 0f, 0f, 0f, 0f, 0f, 0f };
+            1f, 1f, 0.6f, 0.55f, 0.3f, 0f, 0f, 0f, 1f, 1f, 0f, 0f, 0f, 0f, 0f, 0f, 0f };
     public static final float APPEARANCE_SHAPE_MIN = -1f;
     public static final float APPEARANCE_SHAPE_MAX = 1f;
     public static final float APPEARANCE_SHAPE_DEFAULT = 0f;

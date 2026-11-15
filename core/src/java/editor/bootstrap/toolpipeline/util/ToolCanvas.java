@@ -101,11 +101,13 @@ public enum ToolCanvas {
             new ToolActionGroupStruct[] { paintLayers() },
             true,
             screenSize(),
-            strength(EditorSetting.TOOL_PAINT_STRENGTH_DEFAULT)),
+            strength(EditorSetting.TOOL_PAINT_STRENGTH_DEFAULT),
+            mirror()),
     CHARACTER_RIG(
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
-                    EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.PLACE, EditorTool.ERASE },
+                    EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PLACE,
+                    EditorTool.ERASE },
             new ToolActionGroupStruct[] { rigActions(), rigLayers(), colliderActions(), hairActions() },
             false,
             mirror(),

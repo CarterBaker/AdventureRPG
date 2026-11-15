@@ -3,6 +3,7 @@ package editor.runtime;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.filemenupipeline.util.FileMenuAction;
+import editor.bootstrap.imagepipeline.util.MapGenerateOption;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import engine.input.Buttons;
 import engine.root.EngineSetting;
@@ -186,7 +187,8 @@ public class EditorSetting {
             "edit_undo_label",
             "edit_redo_label",
             "file_import_label",
-            "file_export_label" };
+            "file_export_label",
+            "file_generate_maps_label" };
 
     // File Menu — each tool's actions, the methods its own keys and buttons run
     public static final FileMenuTableStruct FILE_MENU_CHARACTER = new FileMenuTableStruct(
@@ -198,7 +200,8 @@ public class EditorSetting {
             .with(FileMenuAction.UNDO, "undo")
             .with(FileMenuAction.REDO, "redo")
             .with(FileMenuAction.IMPORT_MODEL, "importModel")
-            .with(FileMenuAction.EXPORT_MODEL, "exportModel");
+            .with(FileMenuAction.EXPORT_MODEL, "exportModel")
+            .with(FileMenuAction.GENERATE_MAPS, "generateMaps");
     public static final FileMenuTableStruct FILE_MENU_FACE = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.FaceEditorBranch")
             .with(FileMenuAction.SAVE, "saveCharacter")
@@ -436,11 +439,13 @@ public class EditorSetting {
     public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
     public static final String TAB_TITLE_CHARACTER_EDITOR = "Character Editor";
-    public static final String TAB_TITLE_CHARACTER_OUTLINER = "Character Outliner";
+    public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_PROPERTIES = "Properties";
     public static final String TAB_TITLE_LAYERS = "Layers";
+    public static final String TAB_TITLE_COLOR_WHEEL = "Color Wheel";
+    public static final String TAB_TITLE_TEXTURE_MAPS = "Texture Maps";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
@@ -595,9 +600,11 @@ public class EditorSetting {
     public static final int VIEW_CAMERA_BUTTON_ORBIT = Buttons.LEFT;
     public static final int VIEW_CAMERA_BUTTON_PAN = Buttons.RIGHT;
     public static final float VIEW_CAMERA_DISTANCE_DEFAULT = 2.2f;
-    public static final float VIEW_CAMERA_DISTANCE_MIN = 0.3f;
+    public static final float VIEW_CAMERA_DISTANCE_MIN = 0.15f;
     public static final float VIEW_CAMERA_DISTANCE_MAX = 8f;
     public static final float VIEW_CAMERA_ZOOM_FACTOR = 1.12f;
+    public static final float VIEW_CAMERA_NEAR_SHARE = 0.02f;
+    public static final float VIEW_CAMERA_NEAR_MIN = 0.001f;
     public static final float VIEW_CAMERA_INITIAL_YAW_DEGREES = 35f;
     public static final float VIEW_CAMERA_INITIAL_PITCH_DEGREES = 18f;
     public static final float VIEW_CAMERA_VERTICAL_LEAN = 0.02f;
@@ -794,6 +801,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_FIELD_RACE = "race";
     public static final String CHARACTER_EDITOR_FIELD_APPEARANCE = "appearance";
     public static final String CHARACTER_EDITOR_FIELD_FEATURES = "features";
+    public static final String CHARACTER_EDITOR_FIELD_FEATURE_VARIANTS = "feature_variants";
     public static final String CHARACTER_EDITOR_FIELD_GENDERS = "genders";
     public static final String CHARACTER_EDITOR_FIELD_RANGES = "ranges";
     public static final String CHARACTER_EDITOR_FIELD_MIN = "min";
@@ -822,6 +830,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_OVERLAY_STYLE = "overlay_style";
     public static final String CHARACTER_EDITOR_KEY_GENDER = "gender";
     public static final String CHARACTER_EDITOR_KEY_FEATURE = "feature";
+    public static final String CHARACTER_EDITOR_KEY_FEATURE_VARIANT = "feature_variant";
     public static final String CHARACTER_EDITOR_KEY_COLOR_PREFIX = "color_";
     public static final String CHARACTER_EDITOR_KEY_DETAIL = "detail";
     public static final String CHARACTER_EDITOR_KEY_SHAPE = "shape";
@@ -896,14 +905,16 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_HEADER_PREVIEW = "Preview";
     public static final String CHARACTER_EDITOR_HEADER_FEATURES = "Features";
     public static final String CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX = " (race default)";
+    public static final String CHARACTER_EDITOR_VARIANT_DEFAULT_SUFFIX = " (feature default)";
+    public static final String CHARACTER_EDITOR_LABEL_VARIANT_SUFFIX = "_variant";
     public static final String CHARACTER_EDITOR_HEADER_NO_APPEARANCE = "No appearance block";
     public static final String[] CHARACTER_EDITOR_COLOR_HEADERS = {
-            "Skin", "Eyes", "Hair", "Brows & Lashes", "Lips", "Blush", "Freckles", "Clothing", "Nipples",
-            "Body Hair", "Teeth" };
+            "Skin", "Eyes", "Hair", "Brows", "Lips", "Blush", "Freckles", "Clothing", "Nipples",
+            "Body Hair", "Teeth", "Eyeshadow", "Eyeliner" };
     public static final String[] CHARACTER_EDITOR_DETAIL_LABELS = {
-            "Iris Size", "Pupil Size", "Hair Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes",
+            "Iris Size", "Pupil Size", "Hair Shine", "Lips", "Blush", "Freckles", "Eyeliner", "Blemishes",
             "Brow Thickness", "Nipples", "Chest Hair", "Stomach Hair", "Pubic Hair", "Underarm Hair", "Arm Hair",
-            "Leg Hair" };
+            "Leg Hair", "Eyeshadow" };
     public static final String CHARACTER_EDITOR_HEADER_DETAILS = "Details";
     public static final String CHARACTER_EDITOR_HEADER_OVERLAYS = "Marks";
     public static final String CHARACTER_EDITOR_HEADER_SHAPE_KEYS = "Shape Keys";
@@ -1117,7 +1128,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_STATUS_PAINT_HINT = "Drag on the mesh to paint the map chosen; Fill"
             + " fills the island clicked, Pick takes its colour; drag off it to orbit, right-drag to pan";
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
-            + " Scale sizes it, Place adds a child, Erase removes one; drag off the joints to orbit";
+            + " Rotate turns its bind, Scale sizes it, Place adds a child, Erase removes one; the mesh stays put (Pose"
+            + " on the Mesh layer moves it); drag off the joints to orbit";
     public static final String CHARACTER_EDITOR_STATUS_TRANSFORM_HINT = "X Y Z hold to an axis, Ctrl snaps, click or "
             + "Enter confirms, right click or Esc cancels";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_EMPTY = "A mesh needs at least one face";
@@ -1127,7 +1139,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED = "A mesh file could not be written";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_REVERTED = "The mesh file could not be read";
     public static final String CHARACTER_EDITOR_MESSAGE_POSED =
-            "Vertices move only in the Bind pose: pick Bind under Pose and Reset Pose";
+            "Sculpt strokes work only in the Bind pose: pick Bind under Pose and Reset Pose (Grab, Rotate and Scale"
+                    + " work posed)";
     public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_EXTRUDE = "Select faces or edges to extrude";
     public static final String CHARACTER_EDITOR_MESSAGE_NO_FACES = "Select whole faces first";
     public static final String CHARACTER_EDITOR_MESSAGE_FACE_VERTICES = "Select 3 or 4 vertices to make a face";
@@ -1189,19 +1202,26 @@ public class EditorSetting {
     public static final float CHARACTER_PAINT_OPACITY_STEP = 0.05f;
     public static final float[] CHARACTER_PAINT_COLOR_DEFAULT = { 1f, 1f, 1f };
     public static final String[] CHARACTER_PAINT_COLOR_LABELS = { "Red", "Green", "Blue" };
+    public static final String[] CHARACTER_PAINT_HSB_LABELS = { "Hue", "Saturation", "Brightness" };
+    public static final float CHARACTER_PAINT_HSB_STEP = 0.01f;
+    public static final float CHARACTER_PAINT_CHANNEL_MIN = 0f;
+    public static final float CHARACTER_PAINT_CHANNEL_MAX = 1f;
 
     // Character Paint — row keys, labels and messages
-    public static final String CHARACTER_PAINT_KEY_MAP = "paint_map";
     public static final String CHARACTER_PAINT_KEY_LAYER = "paint_layer";
     public static final String CHARACTER_PAINT_KEY_OPACITY = "paint_opacity";
     public static final String CHARACTER_PAINT_KEY_COLOR = "paint_color";
+    public static final String CHARACTER_PAINT_KEY_HSB = "paint_hsb";
+    public static final String CHARACTER_PAINT_KEY_MAP_ITEM = "paint_map_item";
     public static final String CHARACTER_PAINT_KEY_LAYER_ADD = "paint_layer_add";
     public static final String CHARACTER_PAINT_KEY_LAYER_REMOVE = "paint_layer_remove";
     public static final String CHARACTER_PAINT_HEADER_PAINT = "Paint ";
     public static final String CHARACTER_PAINT_HEADER_COLOR = "Colour";
+    public static final String CHARACTER_PAINT_HEADER_HSB = "Hue, Saturation, Brightness";
+    public static final String CHARACTER_PAINT_HEADER_RGB = "Red, Green, Blue";
+    public static final String CHARACTER_PAINT_HEADER_MAPS = "Maps of ";
     public static final String CHARACTER_PAINT_HEADER_LAYERS = "Layers";
     public static final String CHARACTER_PAINT_HEADER_NO_TEXTURE = "The part worn here has no texture to paint";
-    public static final String CHARACTER_PAINT_LABEL_MAP = "Map";
     public static final String CHARACTER_PAINT_LABEL_LAYER = "Layer";
     public static final String CHARACTER_PAINT_LABEL_OPACITY = "Opacity";
     public static final String CHARACTER_PAINT_LABEL_LAYER_ADD = "Add Layer";
@@ -1874,6 +1894,55 @@ public class EditorSetting {
 
     // Image Editing
     public static final String IMAGE_FORMAT = "png";
+
+    // Map Generation — the switch's on value, how values read, the preview's longest side, the maps it can show and
+    // the light the result is shaded by
+    public static final String MENU_GENERATE_MAPS_DIALOG = "editor/GenerateMapsDialog/Dialog";
+    public static final String MENU_GENERATE_MAPS_HEADER_ROW = "editor/GenerateMapsDialog/generate_maps_header_row";
+    public static final String MENU_GENERATE_MAPS_SLIDER_ROW = "editor/GenerateMapsDialog/generate_maps_slider_row";
+    public static final String MENU_GENERATE_MAPS_OPTION_ROW = "editor/GenerateMapsDialog/generate_maps_option_row";
+    public static final int ENTRY_GENERATE_MAPS_TITLE = 0;
+    public static final int ENTRY_GENERATE_MAPS_PREVIEW = 1;
+    public static final int ENTRY_GENERATE_MAPS_PREVIEW_VALUE = 2;
+    public static final int ENTRY_GENERATE_MAPS_OPTIONS = 3;
+    public static final int ENTRY_GENERATE_MAPS_STATUS = 4;
+    public static final String ELEMENT_GENERATE_MAPS_ROW_LABEL = "generate_maps_row_label";
+    public static final String ELEMENT_GENERATE_MAPS_ROW_VALUE = "generate_maps_row_value";
+    public static final String ELEMENT_GENERATE_MAPS_ROW_PREVIOUS = "generate_maps_row_previous";
+    public static final String ELEMENT_GENERATE_MAPS_ROW_NEXT = "generate_maps_row_next";
+    public static final String ELEMENT_GENERATE_MAPS_SLIDER_TRACK = "generate_maps_slider_track";
+    public static final String ELEMENT_GENERATE_MAPS_SLIDER_KNOB = "generate_maps_slider_knob";
+    public static final String ELEMENT_GENERATE_MAPS_SLIDER_VALUE = "generate_maps_slider_value";
+    public static final String MAP_GENERATE_TITLE = "Generate Maps from the Albedo of ";
+    public static final String MAP_GENERATE_HINT = "Each map is painted over its layer as one undo step; Save writes"
+            + " them";
+    public static final MapGenerateOption[] MAP_GENERATE_GROUP_STARTS = {
+            MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.NORMAL_STRENGTH,
+            MapGenerateOption.OCCLUSION_STRENGTH, MapGenerateOption.ROUGHNESS_BASE, MapGenerateOption.WRITE_NORMAL };
+    public static final String[] MAP_GENERATE_GROUP_LABELS = {
+            "Height", "Normal", "Ambient Occlusion", "Roughness and Metallic", "Maps Written" };
+    public static final float MAP_GENERATE_TOGGLE_ON = 0.5f;
+    public static final String MAP_GENERATE_VALUE_FORMAT = "%.2f";
+    public static final int MAP_GENERATE_PREVIEW_SIZE = 256;
+    public static final String[] MAP_GENERATE_PREVIEW_LABELS = {
+            "Result", "Normal", "Height", "Ambient Occlusion", "Roughness", "Metallic" };
+    public static final int MAP_GENERATE_PREVIEW_RESULT = 0;
+    public static final int MAP_GENERATE_PREVIEW_NORMAL = 1;
+    public static final int MAP_GENERATE_PREVIEW_HEIGHT = 2;
+    public static final int MAP_GENERATE_PREVIEW_OCCLUSION = 3;
+    public static final int MAP_GENERATE_PREVIEW_ROUGHNESS = 4;
+    public static final float[] MAP_GENERATE_LIGHT = { -0.45f, 0.55f, 0.7f };
+    public static final float MAP_GENERATE_AMBIENT = 0.35f;
+    public static final int MAP_GENERATE_SOURCE_MAP = 0;
+    public static final int MAP_GENERATE_NORMAL_MAP = 1;
+    public static final int MAP_GENERATE_HEIGHT_MAP = 2;
+    public static final int MAP_GENERATE_OCCLUSION_MAP = 3;
+    public static final int MAP_GENERATE_METALLIC_MAP = 4;
+    public static final int MAP_GENERATE_ROUGHNESS_MAP = 5;
+    public static final String MAP_GENERATE_MESSAGE_NO_TEXTURE = "Generate Maps reads the albedo of the part painted:"
+            + " open a part with a texture in Paint mode";
+    public static final String MAP_GENERATE_MESSAGE_DONE = "Maps generated from the albedo; Save writes them, Undo"
+            + " takes each back";
     public static final String IMAGE_TEMP_SUFFIX = ".tmp";
     public static final int IMAGE_HISTORY_MAX_STEPS = 64;
     public static final long IMAGE_HISTORY_MAX_PIXELS = 16777216L;

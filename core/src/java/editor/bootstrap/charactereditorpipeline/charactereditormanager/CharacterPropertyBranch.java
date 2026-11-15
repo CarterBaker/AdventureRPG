@@ -11,6 +11,7 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantStruct;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
@@ -80,6 +81,8 @@ class CharacterPropertyBranch extends BranchPackage {
             characterMeshPropertyBranch.select(key);
         else if (characterRigPropertyBranch.handles(keyName))
             characterRigPropertyBranch.select(key);
+        else if (characterPaintPropertyBranch.handles(keyName))
+            characterPaintPropertyBranch.select(key);
 
         else if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BONE))
             characterEditorManager.selectBone(index);
@@ -517,6 +520,9 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE -> cycleFeature(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class),
                     direction);
+            case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE_VARIANT -> cycleFeatureVariant(
+                    document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class),
+                    direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_SLOT -> cycleAnchorSlot(document, direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_BONE -> cycleAnchorBone(document, direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_HOLD -> toggleAnchorHold(document);
@@ -544,6 +550,8 @@ class CharacterPropertyBranch extends BranchPackage {
                     .getGenderHandleFromGenderID(characterEditorManager.getPreviewGenderID())
                     .getDisplayName();
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE -> getFeatureText(CharacterViewUtility.getKeyArgument(key));
+            case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE_VARIANT -> getFeatureVariantText(
+                    document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class));
             case EditorSetting.CHARACTER_EDITOR_KEY_OVERLAY_STYLE -> getOverlayStyleText(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), SkinnedOverlay.class));
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_SLOT -> anchor != null
@@ -698,6 +706,74 @@ class CharacterPropertyBranch extends BranchPackage {
 
         return features != null && ArpgUtility.hasString(features, slotKey)
                 ? features.get(slotKey).getAsString()
+                : null;
+    }
+
+    // Feature Variants \\
+
+    // Whether the feature the previewed gender starts with in a slot offers variants to start it in
+    boolean hasFeatureVariants(CharacterDocumentInstance document, FeatureSlot featureSlot) {
+
+        FeatureHandle featureHandle = resolveStartingFeature(document, featureSlot);
+        return featureHandle != null && featureHandle.hasVariants();
+    }
+
+    // The variant the previewed gender starts its feature in stepped through the feature's own default, then each
+    // variant it offers, written as the gender's
+    private void cycleFeatureVariant(CharacterDocumentInstance document, FeatureSlot featureSlot, int direction) {
+
+        FeatureHandle featureHandle = resolveStartingFeature(document, featureSlot);
+
+        if (featureHandle == null || !featureHandle.hasVariants())
+            return;
+
+        SkinnedVariantStruct variants = featureHandle.getVariants();
+        String variantName = getGenderVariantName(featureSlot);
+        int current = variantName != null ? variants.find(variantName) : EngineSetting.INDEX_NOT_FOUND;
+        int next = Math.floorMod(current + 1 + direction, variants.getCount() + 1) - 1;
+
+        characterEditBranch.setFeatureVariant(
+                document, getPreviewGenderName(), featureSlot,
+                next == EngineSetting.INDEX_NOT_FOUND ? null : variants.getName(next));
+    }
+
+    // The previewed gender's own variant, else the feature's default marked as such
+    private String getFeatureVariantText(CharacterDocumentInstance document, FeatureSlot featureSlot) {
+
+        FeatureHandle featureHandle = resolveStartingFeature(document, featureSlot);
+
+        if (featureHandle == null || !featureHandle.hasVariants())
+            return EditorSetting.CHARACTER_VIEW_NONE;
+
+        String variantName = getGenderVariantName(featureSlot);
+        SkinnedVariantStruct variants = featureHandle.getVariants();
+
+        return variantName != null
+                ? variantName
+                : variants.getName(variants.getDefault()) + EditorSetting.CHARACTER_EDITOR_VARIANT_DEFAULT_SUFFIX;
+    }
+
+    private FeatureHandle resolveStartingFeature(CharacterDocumentInstance document, FeatureSlot featureSlot) {
+        return document.hasPreview() && document.getPreviewData().hasAppearance()
+                ? document.getPreviewData().getAppearanceData()
+                        .getStartingFeature(characterEditorManager.getPreviewGenderID(), featureSlot)
+                : null;
+    }
+
+    // The variant the previewed gender names for itself in a slot, null when it keeps the feature's default
+    private String getGenderVariantName(FeatureSlot featureSlot) {
+
+        ArpgObjectStruct variants = CharacterViewUtility.findObject(
+                CharacterViewUtility.findObject(
+                        CharacterViewUtility.findObject(
+                                characterEditorManager.getTemplateArpg(),
+                                EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
+                        getPreviewGenderName()),
+                EditorSetting.CHARACTER_EDITOR_FIELD_FEATURE_VARIANTS);
+        String slotKey = ArpgUtility.toEnumName(featureSlot);
+
+        return variants != null && ArpgUtility.hasString(variants, slotKey)
+                ? variants.get(slotKey).getAsString()
                 : null;
     }
 

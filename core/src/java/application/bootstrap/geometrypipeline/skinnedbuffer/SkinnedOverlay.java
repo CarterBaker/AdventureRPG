@@ -5,12 +5,17 @@ public enum SkinnedOverlay {
     /*
      * The marks painted over a skinned character's skin rather than modelled
      * into it, each tinted by its color and shown as far as its detail
-     * amount, in this order (CharacterAppearance.glsl): the brows, the
-     * nipples, and the body hair of the chest, stomach, groin, underarms,
-     * arms and legs. Where each lies on a body is its model's, written beside
-     * the colors and details of every draw.
+     * amount, in this order (CharacterAppearance.glsl), each laid over the
+     * ones before: the makeup (blush, eyeshadow, lips and eyeliner), the
+     * brows, the nipples, and the body hair of the chest, stomach, groin,
+     * underarms, arms and legs. Where each lies on a body is its model's,
+     * written beside the colors and details of every draw.
      */
 
+    BLUSH(SkinnedColor.BLUSH, SkinnedDetail.BLUSH),
+    EYESHADOW(SkinnedColor.EYESHADOW, SkinnedDetail.EYESHADOW),
+    LIPS(SkinnedColor.LIPS, SkinnedDetail.LIPS),
+    EYELINER(SkinnedColor.LINER, SkinnedDetail.LINER),
     BROWS(SkinnedColor.BROWS, SkinnedDetail.BROWS),
     NIPPLES(SkinnedColor.NIPPLES, SkinnedDetail.NIPPLES),
     CHEST_HAIR(SkinnedColor.BODY_HAIR, SkinnedDetail.CHEST_HAIR),

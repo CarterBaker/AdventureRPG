@@ -17,7 +17,10 @@ public class ViewCameraSystem extends SystemPackage {
      * turns the view, a drag with the pan button slides the point it turns
      * about so what is shown follows the pointer, and each notch of the wheel
      * zooms by one factor, the distance measured in the subject's bounding
-     * radius so the frame holds as it grows, shrinks or changes. A drag
+     * radius so the frame holds as it grows, shrinks or changes; zoomed in as
+     * far as it goes, the wheel dollies the point it turns about forward along
+     * the view, as Blender's dolly does, and the near plane follows the
+     * distance so nothing close to the lens is clipped. A drag
      * begins only on a press over the view that no tool of the window claimed
      * that frame, made with no other button held, so it reads input late,
      * after every tool has had the press. A view can be snapped to look back
@@ -100,12 +103,29 @@ public class ViewCameraSystem extends SystemPackage {
             slide(rawInput.getDeltaX(), rawInput.getDeltaY());
 
         if (editorInputSystem.isPointerOver() && rawInput.getScrollY() != 0f)
-            distance = Math.clamp(
-                    distance * (float) Math.pow(EditorSetting.VIEW_CAMERA_ZOOM_FACTOR, -rawInput.getScrollY()),
-                    EditorSetting.VIEW_CAMERA_DISTANCE_MIN,
-                    EditorSetting.VIEW_CAMERA_DISTANCE_MAX);
+            zoom(rawInput.getScrollY());
 
         placeCamera();
+    }
+
+    // Zoom \\
+
+    // The distance scaled by one factor a notch; past the nearest distance the rest of the step carries the point the
+    // view turns about forward along the view instead
+    private void zoom(float notches) {
+
+        float zoomed = distance * (float) Math.pow(EditorSetting.VIEW_CAMERA_ZOOM_FACTOR, -notches);
+
+        if (zoomed < EditorSetting.VIEW_CAMERA_DISTANCE_MIN) {
+
+            Vector3 view = context.getWindow().getActiveCamera().getDirection();
+            float dolly = (Math.max(distance, EditorSetting.VIEW_CAMERA_DISTANCE_MIN) - zoomed)
+                    * viewCameraSubject.getBoundingRadius();
+
+            pan.add(view.x * dolly, view.y * dolly, view.z * dolly);
+        }
+
+        distance = Math.clamp(zoomed, EditorSetting.VIEW_CAMERA_DISTANCE_MIN, EditorSetting.VIEW_CAMERA_DISTANCE_MAX);
     }
 
     // Drag \\
@@ -189,6 +209,10 @@ public class ViewCameraSystem extends SystemPackage {
                 viewCameraSubject.getCenter(EngineSetting.AXIS_Z)).add(pan);
         position.set(target).subtract(view.x * reach, view.y * reach, view.z * reach);
         camera.setPosition(position);
+        camera.setNearPlane(Math.clamp(
+                reach * EditorSetting.VIEW_CAMERA_NEAR_SHARE,
+                EditorSetting.VIEW_CAMERA_NEAR_MIN,
+                EngineSetting.CAMERA_NEAR_PLANE));
     }
 
     // right = view × world up, up = right × view

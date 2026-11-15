@@ -6,11 +6,12 @@
 #include "characters/includes/CharacterZone.glsl"
 
 // A character's surface is shaded by the zone its face is made of, from the colors and amounts in its palette row.
-// Skin takes its tile tinted by the skin color, then blemishes, blush, freckles, lip color and eyeliner where the
-// mesh's masks paint them; freckles and blemishes are cells fixed to the bind-pose surface, so they stay put as the
-// face moves. Over the skin go the overlays the model places — the brows, the nipples and the body hair — each an image
-// painted in the body's UV layout over one region of it, so it stays on the same skin however the body is shaped or
-// posed, tinted by its color and shown as far as its detail amount; an overlay with relief rises from the skin through
+// Skin takes its tile tinted by the skin color, then blemishes, and freckles where the mesh's freckle mask paints them;
+// freckles and blemishes are cells fixed to the bind-pose surface, so they stay put as the face moves. The lid's lash
+// line is skin too. Over the skin go the overlays the model places — the makeup (blush, eyeshadow, lips, eyeliner), the
+// brows, the nipples and the body hair — each an image painted in the body's UV layout over one region of it, so it
+// stays on the same skin however the body is shaped or posed, tinted by its color and shown as far as its detail
+// amount; an overlay with relief rises from the skin through
 // its height map (parallax occlusion) and bends the normal through its normal map, within the Character Detail
 // distance. The eye is its variant's image laid on its raw corner UVs, the iris sized, the pupil dilated and the iris
 // seen through the cornea (shadeEye). Hair is its cards' strand texture with a root-to-tip grade and a broken band of
@@ -32,7 +33,6 @@ const float CHARACTER_TWO_PI         = 6.28318530718;
 const float CHARACTER_FRECKLE_CELLS  = 420.0;
 const float CHARACTER_BLEMISH_CELLS  = 160.0;
 const vec3  CHARACTER_BLEMISH_TINT   = vec3(0.86, 0.68, 0.64);
-const float CHARACTER_LINER_SHADE    = 0.45;
 
 const vec2  CHARACTER_IRIS_RADIUS    = vec2(0.255, 0.30);
 const vec2  CHARACTER_IRIS_CENTRE    = vec2(0.5, 0.47);
@@ -45,7 +45,6 @@ const int   CHARACTER_RELIEF_STEPS_MAX = 16;
 const float CHARACTER_RELIEF_GRAZING   = 0.25;
 
 const float CHARACTER_MOUTH_SHADE    = 0.35;
-const float CHARACTER_LASH_SHADE     = 0.25;
 
 float characterHash(vec3 cell) {
     return fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
@@ -158,19 +157,12 @@ vec3 shadeSkin(int instance, vec3 base, vec4 masks, vec3 surfacePosition) {
     skin = mix(skin, skin * CHARACTER_BLEMISH_TINT,
         0.6 * characterSpots(surfacePosition, CHARACTER_BLEMISH_CELLS, blemishes * 0.35));
 
-    skin = mix(skin, fetchCharacterColor(instance, CHARACTER_COLOR_BLUSH),
-        clamp(masks.y * fetchCharacterDetail(instance, CHARACTER_DETAIL_BLUSH), 0.0, 1.0));
-
     float freckles = masks.x * fetchCharacterDetail(instance, CHARACTER_DETAIL_FRECKLES);
     if (freckles > 0.001)
     skin = mix(skin, fetchCharacterColor(instance, CHARACTER_COLOR_FRECKLES),
         0.75 * characterSpots(surfacePosition, CHARACTER_FRECKLE_CELLS, clamp(freckles, 0.0, 1.0) * 0.55));
 
-    skin = mix(skin, fetchCharacterColor(instance, CHARACTER_COLOR_LIPS),
-        clamp(masks.z * fetchCharacterDetail(instance, CHARACTER_DETAIL_LIPS), 0.0, 1.0));
-
-    return mix(skin, fetchCharacterColor(instance, CHARACTER_COLOR_BROWS) * CHARACTER_LINER_SHADE,
-        clamp(masks.w * fetchCharacterDetail(instance, CHARACTER_DETAIL_LINER), 0.0, 1.0));
+    return skin;
 }
 
 // The eye from its image set: the image scaled about the iris by the iris size, the pupil dilated inside the iris by
@@ -257,8 +249,6 @@ CharacterSurface resolveCharacterSurface(
         surface.specular = CHARACTER_HAIR_SPECULAR;
     } else if (zone == CHARACTER_ZONE_BROW) {
         surface.albedo = fetchCharacterColor(instance, CHARACTER_COLOR_BROWS);
-    } else if (zone == CHARACTER_ZONE_LASH) {
-        surface.albedo = fetchCharacterColor(instance, CHARACTER_COLOR_BROWS) * CHARACTER_LASH_SHADE;
     } else if (zone == CHARACTER_ZONE_TEETH) {
         surface.albedo = base * fetchCharacterColor(instance, CHARACTER_COLOR_TEETH);
     } else if (zone == CHARACTER_ZONE_MOUTH) {

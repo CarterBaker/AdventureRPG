@@ -278,7 +278,11 @@ public class RuntimeSetting {
     public static final String CREATOR_SECTION_SKIN = "Skin Tone";
     public static final String CREATOR_SECTION_EYE_COLOR = "Eye Color";
     public static final String CREATOR_SECTION_LIP_COLOR = "Lip Color";
-    public static final String CREATOR_SECTION_DETAILS = "Skin & Makeup";
+    public static final String CREATOR_SECTION_DETAILS = "Skin";
+    public static final String CREATOR_SECTION_LIPS = "Lips";
+    public static final String CREATOR_SECTION_MAKEUP = "Makeup";
+    public static final String CREATOR_SECTION_EYESHADOW_COLOR = "Eyeshadow Color";
+    public static final String CREATOR_SECTION_LINER_COLOR = "Eyeliner Color";
     public static final String CREATOR_SECTION_HAIRSTYLE = "Hairstyle";
     public static final String CREATOR_SECTION_FACE_FEATURES = "Eyes & Teeth";
     public static final String CREATOR_SECTION_NIPPLE_COLOR = "Nipple Color";
@@ -290,7 +294,7 @@ public class RuntimeSetting {
     public static final String CREATOR_SECTION_NIPPLES = "Nipples";
     public static final String CREATOR_SECTION_BODY_HAIR = "Body Hair";
     public static final String CREATOR_SECTION_HAIR_COLOR = "Hair Color";
-    public static final String CREATOR_SECTION_BROW_COLOR = "Brow & Lash Color";
+    public static final String CREATOR_SECTION_BROW_COLOR = "Brow Color";
     public static final String CREATOR_SECTION_HAIR_DETAILS = "Hair Finish";
     public static final String CREATOR_SECTION_BUILD = "Build";
     public static final String CREATOR_SECTION_HEAD_SHAPE = "Head Shape";
@@ -332,14 +336,14 @@ public class RuntimeSetting {
     public static final String CREATOR_SHAPE_GROUP_BODY = "body";
     public static final String CREATOR_SHAPE_NAME_SEPARATOR = "_";
     public static final String[] CREATOR_DETAIL_LABELS = {
-            "Iris Size", "Pupil Size", "Shine", "Lip Color", "Blush", "Freckles", "Eyeliner", "Blemishes",
+            "Iris Size", "Pupil Size", "Shine", "Lips", "Blush", "Freckles", "Eyeliner", "Blemishes",
             "Brow Thickness", "Nipples", "Chest Hair", "Stomach Hair", "Pubic Hair", "Underarm Hair", "Arm Hair",
-            "Leg Hair" };
+            "Leg Hair", "Eyeshadow" };
     public static final float[] CREATOR_DETAIL_MIN = { 0.75f, 0.6f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f,
-            0f, 0f };
+            0f, 0f, 0f };
     public static final float[] CREATOR_DETAIL_MAX = { 1.3f, 1.4f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f,
-            1f, 1f };
-    public static final int[] CREATOR_APPEARANCE_DETAILS = { 0, 1, 3, 4, 5, 6, 7 };
+            1f, 1f, 1f };
+    public static final int[] CREATOR_APPEARANCE_DETAILS = { 0, 1, 5, 7 };
     public static final int[] CREATOR_HAIR_DETAILS = { 2 };
 
     // Character Creator — the worn parts each tab offers
@@ -349,6 +353,9 @@ public class RuntimeSetting {
     // Character Creator — the overlays each section offers, each with its style and amount, and the sliders under
     // every color's swatches
     public static final SkinnedOverlay[] CREATOR_BROW_OVERLAYS = { SkinnedOverlay.BROWS };
+    public static final SkinnedOverlay[] CREATOR_LIP_OVERLAYS = { SkinnedOverlay.LIPS };
+    public static final SkinnedOverlay[] CREATOR_MAKEUP_OVERLAYS = {
+            SkinnedOverlay.BLUSH, SkinnedOverlay.EYESHADOW, SkinnedOverlay.EYELINER };
     public static final SkinnedOverlay[] CREATOR_NIPPLE_OVERLAYS = { SkinnedOverlay.NIPPLES };
     public static final SkinnedOverlay[] CREATOR_BODY_HAIR_OVERLAYS = {
             SkinnedOverlay.CHEST_HAIR, SkinnedOverlay.STOMACH_HAIR, SkinnedOverlay.PUBIC_HAIR,

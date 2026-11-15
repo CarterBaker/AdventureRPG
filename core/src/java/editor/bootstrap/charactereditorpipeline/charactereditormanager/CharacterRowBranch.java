@@ -121,6 +121,11 @@ class CharacterRowBranch extends BranchPackage {
 
             addChoice(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_FEATURE, slotName),
                     slotName);
+
+            if (characterPropertyBranch.hasFeatureVariants(document, featureSlot))
+                addChoice(document, rows,
+                        CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_FEATURE_VARIANT, slotName),
+                        slotName + EditorSetting.CHARACTER_EDITOR_LABEL_VARIANT_SUFFIX);
         }
 
         addOverlayRows(document, rows);

@@ -86,7 +86,8 @@ void main() {
     vec3  fragDir      = toFragment / max(fragDistance, LIGHTING_DISTANCE_EPSILON);
 
     if (isSmoothNormal(storedNormal))
-    lit += resolveSkyReflection(normal, -fragDir, specular, ao);
+    lit += resolveSkyReflection(normal, -fragDir, specular, ao)
+        + resolveCorneaHighlight(normalView, sunHalf, specular, u_sunColor * u_sunIntensity * sunVisibility);
 
     float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
 

@@ -8,12 +8,19 @@
 // horizon band up to the zenith with the sun-side glow, dimmed below the horizon where the ground would be. How much
 // a surface mirrors comes from the specular it stored past REFLECTION_GLOSS_START, weighted by Fresnel and held back by
 // its occlusion. Characters write that specular falling with the Character Detail distance, so their reflections fade
-// with it.
+// with it. A cornea — specular past CORNEA_GLOSS_START, the wet eye up close — also mirrors the light itself as a
+// small sharp catchlight, as a real eye does, fading with the same specular.
 
 const float REFLECTION_GLOSS_START = 0.5;
 const float REFLECTION_FRESNEL_BASE = 0.04;
 const float REFLECTION_GROUND_SHADE = 0.3;
 const float REFLECTION_GLOW_POWER = 8.0;
+const float CORNEA_GLOSS_START = 0.8;
+const float CORNEA_GLOSS_FULL = 0.92;
+const float CORNEA_POWER = 1200.0;
+const float CORNEA_EDGE_LOW = 0.3;
+const float CORNEA_EDGE_HIGH = 0.55;
+const float CORNEA_STRENGTH = 1.4;
 
 vec3 resolveSkyEnvironment(vec3 direction) {
     float up   = direction.y;
@@ -35,6 +42,18 @@ vec3 resolveSkyReflection(vec3 normal, vec3 toEye, float specular, float occlusi
     float fresnel = REFLECTION_FRESNEL_BASE + (1.0 - REFLECTION_FRESNEL_BASE) * pow(1.0 - facing, 5.0);
 
     return resolveSkyEnvironment(reflect(-toEye, normal)) * gloss * mix(0.25, 1.0, fresnel) * occlusion;
+}
+
+// The light's own reflection on a cornea, a crisp catchlight, as bright as the light it mirrors
+vec3 resolveCorneaHighlight(vec3 normalView, vec3 halfway, float specular, vec3 light) {
+    float gloss = smoothstep(CORNEA_GLOSS_START, CORNEA_GLOSS_FULL, specular);
+
+    if (gloss <= 0.0)
+    return vec3(0.0);
+
+    float spot = pow(max(dot(normalView, halfway), 0.0), CORNEA_POWER);
+
+    return light * smoothstep(CORNEA_EDGE_LOW, CORNEA_EDGE_HIGH, spot) * gloss * CORNEA_STRENGTH;
 }
 
 #endif

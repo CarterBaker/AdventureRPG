@@ -81,7 +81,9 @@ class CharacterRigBranch extends BranchPackage {
 
     // Gesture
     private Vector3 gesturePosition;
+    private Vector3 gestureRotation;
     private Vector3 gestureSize;
+    private Matrix4 gestureParentRotation;
     private Matrix4 gestureParentInverse;
 
     // Scratch
@@ -113,7 +115,9 @@ class CharacterRigBranch extends BranchPackage {
 
         // Gesture
         this.gesturePosition = new Vector3();
+        this.gestureRotation = new Vector3();
         this.gestureSize = new Vector3();
+        this.gestureParentRotation = new Matrix4();
         this.gestureParentInverse = new Matrix4();
 
         // Scratch
@@ -350,9 +354,10 @@ class CharacterRigBranch extends BranchPackage {
 
         history.begin(rigArpg);
         gesturePosition.set(positions.get(selectedBone));
+        gestureRotation.set(rotations.get(selectedBone));
         gestureSize.set(sizes.get(selectedBone));
-        resolveParentRotation(selectedBone, gestureParentInverse);
-        gestureParentInverse.inverse();
+        resolveParentRotation(selectedBone, gestureParentRotation);
+        gestureParentInverse.set(gestureParentRotation).inverse();
 
         return true;
     }
@@ -367,6 +372,28 @@ class CharacterRigBranch extends BranchPackage {
         vectorScratch.add(gesturePosition);
         edit(bones -> writeVector(bones.get(boneIndex).getAsObject(), EditorSetting.CHARACTER_EDITOR_FIELD_POSITION,
                 vectorScratch));
+    }
+
+    // The selected bone's bind rotation turned in the world about its joint from where the drag began, its children
+    // carried with it; the twin across the body turned the mirrored way while mirroring
+    void rotateGesture(Matrix4 worldTurn, boolean mirror) {
+
+        int boneIndex = selectedBone;
+        int twin = mirror ? findTwin(boneIndex) : EngineSetting.INDEX_NOT_FOUND;
+
+        CharacterPoseUtility.toRotation(gestureRotation, localScratch);
+        CharacterPoseUtility.applyWorldTurn(
+                gestureParentRotation, worldTurn, localScratch, matrixScratchA, matrixScratchB);
+        CharacterPoseUtility.toEuler(matrixScratchA, gestureRotation, vectorScratch);
+        edit(bones -> {
+
+            writeVector(bones.get(boneIndex).getAsObject(), EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION,
+                    vectorScratch);
+
+            if (twin != EngineSetting.INDEX_NOT_FOUND && twin != boneIndex)
+                writeVector(bones.get(twin).getAsObject(), EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION,
+                        vectorScratch.set(vectorScratch.x, -vectorScratch.y, -vectorScratch.z));
+        });
     }
 
     // The selected bone's size grown or shrunk from what it was when the drag began

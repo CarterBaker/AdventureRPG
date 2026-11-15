@@ -472,7 +472,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         if (requestedAxis)
             axisVector.set(characterEditorManager.getRequestedAxis());
 
-        if (!characterEditorManager.beginTransform())
+        if (!characterEditorManager.beginTransform(characterEditorMeshViewSystem.getSkinningMatrices()))
             return;
 
         this.transform = requested;

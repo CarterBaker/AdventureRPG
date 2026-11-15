@@ -54,6 +54,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openLayers(window.getGLWindow());
     }
 
+    public void openColorWheel(WindowInstance window) {
+        tabManager.openColorWheel(window.getGLWindow());
+    }
+
     public void openArpgViewer(WindowInstance window) {
         tabManager.openArpgViewer(window.getGLWindow());
     }
@@ -82,6 +86,12 @@ public class EditorBranch extends BranchPackage {
 
     public void openShipViewer(WindowInstance window) {
         tabManager.openShipViewer(window.getGLWindow());
+    }
+
+    // Textures Dropdown \\
+
+    public void openTextureMaps(WindowInstance window) {
+        tabManager.openTextureMaps(window.getGLWindow());
     }
 
     // Characters Dropdown \\

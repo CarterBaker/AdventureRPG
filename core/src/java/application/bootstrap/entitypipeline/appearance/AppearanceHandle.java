@@ -187,9 +187,13 @@ public class AppearanceHandle extends HandlePackage {
             if (!Float.isNaN(preset.getShapeValue(i)))
                 writeShapeValue(i, preset.getShapeValue(i));
 
-        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
+
             if (preset.namesFeature(featureSlot.ordinal()))
                 features[featureSlot.ordinal()] = preset.getFeature(featureSlot.ordinal());
+
+            featureVariants[featureSlot.ordinal()] = preset.getFeatureVariant(featureSlot.ordinal());
+        }
     }
 
     // Colors \\

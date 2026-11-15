@@ -1,11 +1,14 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
+import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -22,7 +25,10 @@ class CharacterSculptBranch extends BranchPackage {
     /*
      * Performs every change to the geometry of a character mesh. A
      * transform holds the selection's start and moves, turns or scales it
-     * from there each time it is updated, each vertex as far as it is
+     * from there each time it is updated; held on a posed mesh it works on
+     * the skinned cage as the view shows it and writes each vertex back to
+     * the bind pose through the inverse of its blended skinning matrix (as
+     * Maya and Blender edit a skinned mesh on its cage), each vertex as far as it is
      * selected, so a soft brush's selection fades out at its edge, easing
      * unselected vertices within the proportional radius along by their
      * distance; with mirror on, a vertex whose mirror moves too follows it
@@ -49,6 +55,8 @@ class CharacterSculptBranch extends BranchPackage {
     private BooleanArrayList transformFollowers;
     private IntArrayList vertex2Slot;
     private Vector3 transformPivot;
+    private FloatArrayList transformInverses;
+    private Matrix4[] transformSkinning;
 
     // Scratch
     private Vector3 pointScratch;
@@ -64,6 +72,7 @@ class CharacterSculptBranch extends BranchPackage {
     private BooleanArrayList hiddenScratch;
     private Long2IntOpenHashMap edge2Value;
     private float[] cornerScratch;
+    private Matrix4 blendScratch;
 
     // Base \\
 
@@ -78,6 +87,7 @@ class CharacterSculptBranch extends BranchPackage {
         this.transformFollowers = new BooleanArrayList();
         this.vertex2Slot = new IntArrayList();
         this.transformPivot = new Vector3();
+        this.transformInverses = new FloatArrayList();
 
         // Scratch
         this.pointScratch = new Vector3();
@@ -94,6 +104,7 @@ class CharacterSculptBranch extends BranchPackage {
         this.edge2Value = new Long2IntOpenHashMap();
         this.edge2Value.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
         this.cornerScratch = new float[EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.RIGGED_MESH_POSITION_FLOATS];
+        this.blendScratch = new Matrix4();
     }
 
     @Override
@@ -107,8 +118,9 @@ class CharacterSculptBranch extends BranchPackage {
 
     // Transform \\
 
-    // Holds the selection's start for a transform; false when nothing is selected or a transform is already held
-    boolean beginTransform(CharacterMeshDocumentInstance document) {
+    // Holds the selection's start for a transform, on the cage the skinning matrices pose when given and in the bind
+    // pose otherwise; false when nothing is selected or a transform is already held
+    boolean beginTransform(CharacterMeshDocumentInstance document, Matrix4[] skinningMatrices) {
 
         if (transformDocument != null || !characterSelectionBranch.resolveCenter(document, transformPivot))
             return false;
@@ -116,17 +128,22 @@ class CharacterSculptBranch extends BranchPackage {
         RiggedMeshStruct mesh = document.getMesh();
         int vertexCount = mesh.getVertexCount();
 
+        this.transformSkinning = skinningMatrices;
         characterHistoryBranch.begin(document);
         transformVertices.clear();
         transformStarts.clear();
         transformFactors.clear();
         transformMirrors.clear();
         transformFollowers.clear();
+        transformInverses.clear();
         fill(vertex2Slot, vertexCount, EngineSetting.INDEX_NOT_FOUND);
 
         for (int i = 0; i < vertexCount; i++)
             if (document.isSelected(i))
                 holdVertex(mesh, i, document.getSelectionWeight(i));
+
+        if (skinningMatrices != null)
+            resolvePosedPivot();
 
         if (characterEditorManager.isProportional())
             holdProportional(document);
@@ -137,14 +154,95 @@ class CharacterSculptBranch extends BranchPackage {
         return true;
     }
 
+    // A vertex held where it starts, posed by its blended skinning matrix when the transform works on the posed cage,
+    // its inverse kept to write the moved point back to the bind pose
     private void holdVertex(RiggedMeshStruct mesh, int vertexIndex, float factor) {
 
         vertex2Slot.set(vertexIndex, transformVertices.size());
         transformVertices.add(vertexIndex);
-        transformStarts.add(mesh.getX(vertexIndex));
-        transformStarts.add(mesh.getY(vertexIndex));
-        transformStarts.add(mesh.getZ(vertexIndex));
         transformFactors.add(factor);
+
+        if (transformSkinning == null) {
+            transformStarts.add(mesh.getX(vertexIndex));
+            transformStarts.add(mesh.getY(vertexIndex));
+            transformStarts.add(mesh.getZ(vertexIndex));
+            return;
+        }
+
+        resolveBlend(mesh, vertexIndex, blendScratch);
+        CharacterPoseUtility.transformPoint(
+                blendScratch, mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex), pointScratch);
+        transformStarts.add(pointScratch.x);
+        transformStarts.add(pointScratch.y);
+        transformStarts.add(pointScratch.z);
+        blendScratch.inverse();
+
+        for (int i = 0; i < blendScratch.val.length; i++)
+            transformInverses.add(blendScratch.val[i]);
+    }
+
+    // B = Σ wᵢ Mᵢ, a vertex's skinning matrices blended by its weights: affine under linear blend skinning, so its
+    // inverse carries a posed point back to the bind pose exactly
+    private void resolveBlend(RiggedMeshStruct mesh, int vertexIndex, Matrix4 out) {
+
+        int influenceCount = mesh.getInfluenceCount(vertexIndex);
+
+        if (influenceCount == 0) {
+            out.set(1f);
+            return;
+        }
+
+        Arrays.fill(out.val, 0f);
+
+        for (int i = 0; i < influenceCount; i++) {
+
+            float[] m = transformSkinning[mesh.getInfluenceBone(vertexIndex, i)].val;
+            float w = mesh.getInfluenceWeight(vertexIndex, i);
+
+            for (int k = 0; k < out.val.length; k++)
+                out.val[k] += m[k] * w;
+        }
+
+        out.val[3] = 0f;
+        out.val[7] = 0f;
+        out.val[11] = 0f;
+        out.val[15] = 1f;
+    }
+
+    // The pivot the posed selection turns and scales about: its weighted centre on the posed cage
+    private void resolvePosedPivot() {
+
+        float total = 0f;
+
+        transformPivot.set(0f, 0f, 0f);
+
+        for (int s = 0; s < transformVertices.size(); s++) {
+
+            int base = s * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+            float weight = transformFactors.getFloat(s);
+
+            transformPivot.add(
+                    transformStarts.getFloat(base) * weight,
+                    transformStarts.getFloat(base + 1) * weight,
+                    transformStarts.getFloat(base + 2) * weight);
+            total += weight;
+        }
+
+        if (total > 0f)
+            transformPivot.divide(total);
+    }
+
+    // Where a vertex stands on the cage the transform works on
+    private void resolveStart(RiggedMeshStruct mesh, int vertexIndex, Vector3 out) {
+
+        if (transformSkinning == null) {
+            out.set(mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex));
+            return;
+        }
+
+        resolveBlend(mesh, vertexIndex, blendScratch);
+        CharacterPoseUtility.transformPoint(
+                blendScratch, mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex), out);
     }
 
     // Unselected vertices within the radius of the nearest selected one, eased by their distance to it
@@ -161,12 +259,14 @@ class CharacterSculptBranch extends BranchPackage {
 
             float nearest = Float.MAX_VALUE;
 
+            resolveStart(mesh, i, normalScratch);
+
             for (int s = 0; s < selectedCount; s++) {
 
                 int base = s * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
-                float dx = mesh.getX(i) - transformStarts.getFloat(base);
-                float dy = mesh.getY(i) - transformStarts.getFloat(base + 1);
-                float dz = mesh.getZ(i) - transformStarts.getFloat(base + 2);
+                float dx = normalScratch.x - transformStarts.getFloat(base);
+                float dy = normalScratch.y - transformStarts.getFloat(base + 1);
+                float dz = normalScratch.z - transformStarts.getFloat(base + 2);
 
                 nearest = Math.min(nearest, dx * dx + dy * dy + dz * dz);
             }
@@ -242,12 +342,27 @@ class CharacterSculptBranch extends BranchPackage {
 
         float factor = transformFactors.getFloat(slot);
 
-        CharacterMeshUtility.setRoundedPosition(
-                mesh,
-                transformVertices.getInt(slot),
+        pointScratch.set(
                 x + (pointScratch.x - x) * factor,
                 y + (pointScratch.y - y) * factor,
                 z + (pointScratch.z - z) * factor);
+
+        if (transformSkinning != null)
+            toBindPose(slot, pointScratch);
+
+        CharacterMeshUtility.setRoundedPosition(
+                mesh, transformVertices.getInt(slot), pointScratch.x, pointScratch.y, pointScratch.z);
+    }
+
+    // A point on the posed cage carried back to the bind pose through its vertex's inverse blended matrix
+    private void toBindPose(int slot, Vector3 point) {
+
+        int base = slot * blendScratch.val.length;
+
+        for (int i = 0; i < blendScratch.val.length; i++)
+            blendScratch.val[i] = transformInverses.getFloat(base + i);
+
+        CharacterPoseUtility.transformPoint(blendScratch, point.x, point.y, point.z, point);
     }
 
     // Keeps a held vertex's mirror opposite it, and a vertex on the centre plane on it
@@ -347,7 +462,7 @@ class CharacterSculptBranch extends BranchPackage {
             Vector3 vector,
             float amount) {
 
-        if (!beginTransform(document))
+        if (!beginTransform(document, null))
             return;
 
         updateTransform(transform, vector, amount);

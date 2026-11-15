@@ -49,11 +49,12 @@ void main() {
     vec3  lightView = normalize(mat3(u_view) * -u_lightDirection);
     vec3  halfway   = normalize(lightView + viewDir);
     float diffuse   = max(dot(normalView, lightView), 0.0);
-    float highlight = specular * pow(max(dot(normalView, halfway), 0.0), 32.0);
+    float highlight = specular * pow(max(dot(normalView, halfway), 0.0), mix(4.0, 256.0, specular));
     vec3  light     = vec3(1.0 - u_ambient);
 
     vec3 reflection = resolveSkyReflection(mat3(u_inverseView) * normalView, mat3(u_inverseView) * viewDir, specular,
-                                           material.ao);
+                                           material.ao)
+                    + resolveCorneaHighlight(normalView, halfway, specular, light);
 
     FragColor = vec4(resolveToonLight(albedo, normalView, viewDir, diffuse, 1.0, highlight, 0.0,
                                       u_ambient * material.ao, light, vec3(0.0)) + reflection, 1.0);

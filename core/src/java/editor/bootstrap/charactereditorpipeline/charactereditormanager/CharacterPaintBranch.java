@@ -62,9 +62,11 @@ class CharacterPaintBranch extends BranchPackage {
     private ImageManager imageManager;
     private BrushManager brushManager;
 
-    // Paint — the map painted, by its place in CHARACTER_PAINT_MAP_LABELS, and the colour, 0 to 1 per channel
+    // Paint — the map painted, by its place in CHARACTER_PAINT_MAP_LABELS, the colour, 0 to 1 per channel, and the
+    // hue last chosen, which a grey keeps
     private int mapIndex;
     private float[] color;
+    private float hue;
 
     // Canvases — per texture one slot per map, those a stroke has begun on, and whether one is under way
     private Object2ObjectOpenHashMap<String, CharacterPaintCanvasStruct[]> textureName2Canvases;
@@ -142,6 +144,11 @@ class CharacterPaintBranch extends BranchPackage {
 
     // The canvas of a texture's map being painted, opened from its image on first use
     private CharacterPaintCanvasStruct resolveCanvas(String textureName) {
+        return resolveCanvas(textureName, mapIndex);
+    }
+
+    // The canvas of any map of a texture, opened from its image on first use
+    CharacterPaintCanvasStruct resolveCanvas(String textureName, int map) {
 
         CharacterPaintCanvasStruct[] canvases = textureName2Canvases.get(textureName);
 
@@ -150,10 +157,10 @@ class CharacterPaintBranch extends BranchPackage {
             textureName2Canvases.put(textureName, canvases);
         }
 
-        if (canvases[mapIndex] == null)
-            canvases[mapIndex] = openCanvas(textureName, mapIndex);
+        if (canvases[map] == null)
+            canvases[map] = openCanvas(textureName, map);
 
-        return canvases[mapIndex];
+        return canvases[map];
     }
 
     // The canvas the Properties tab shows: the active part's first texture under the map being painted
@@ -417,6 +424,26 @@ class CharacterPaintBranch extends BranchPackage {
         this.stroking = false;
         flushPreviews(true);
         characterEditorManager.notifyChanged();
+    }
+
+    // Whole Maps \\
+
+    // A map's every texel written at once over its layer, RGBA8888 rows top first, as one undo step
+    void writeMap(String textureName, int map, int[] pixels) {
+
+        CharacterPaintCanvasStruct canvas = resolveCanvas(textureName, map);
+        int width = canvas.getWidth();
+
+        beginStroke();
+
+        ImageDocumentInstance layer = beginCanvas(canvas);
+
+        for (int y = 0; y < canvas.getHeight(); y++)
+            for (int x = 0; x < width; x++)
+                imageManager.paintPixel(layer, x, y, pixels[y * width + x]);
+
+        imageManager.flushPaint(layer);
+        endStroke();
     }
 
     // Fill \\
@@ -866,8 +893,8 @@ class CharacterPaintBranch extends BranchPackage {
 
     // Values \\
 
-    void stepMap(int direction) {
-        this.mapIndex = Math.floorMod(mapIndex + direction, EditorSetting.CHARACTER_PAINT_MAP_LABELS.length);
+    void setMapIndex(int mapIndex) {
+        this.mapIndex = Math.clamp(mapIndex, 0, EditorSetting.CHARACTER_PAINT_MAP_LABELS.length - 1);
         characterEditorManager.notifyChanged();
     }
 
@@ -876,8 +903,22 @@ class CharacterPaintBranch extends BranchPackage {
         characterEditorManager.notifyChanged();
     }
 
+    // The whole colour and the hue it was chosen at, together
+    void setColor(float red, float green, float blue, float hue) {
+
+        color[0] = Math.clamp(red, 0f, 1f);
+        color[1] = Math.clamp(green, 0f, 1f);
+        color[2] = Math.clamp(blue, 0f, 1f);
+        this.hue = hue - (float) Math.floor(hue);
+        characterEditorManager.notifyChanged();
+    }
+
     int getMapIndex() {
         return mapIndex;
+    }
+
+    float getHue() {
+        return hue;
     }
 
     float getColor(int channel) {

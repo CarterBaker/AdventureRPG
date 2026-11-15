@@ -1,5 +1,7 @@
 package editor.runtime.charactereditor.paint;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
@@ -14,6 +16,8 @@ import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 
 public class CharacterEditorPaintSystem extends SystemPackage {
 
@@ -25,9 +29,13 @@ public class CharacterEditorPaintSystem extends SystemPackage {
      * region the brush may cover that the camera sees, its corners where the
      * window shows them, so the brush is laid over exactly the texels the
      * screen shows under it. Fill and Pick work on the face clicked, at its
-     * UV there. A press beside the part is left to the view camera. The
-     * part's vertices are placed on the window once a frame, whatever the
-     * number of stamps.
+     * UV there. With Mirror on, every face a stamp covers is laid again on
+     * its twin across the body (the face whose corners are its corners'
+     * twins), the twin's corners placed where their twins show, so the same
+     * coverage lands on the twin's texels, as symmetry painting in object
+     * space does; the stroke stays one undo step. A press beside the part
+     * is left to the view camera. The part's vertices are placed on the
+     * window once a frame, whatever the number of stamps.
      */
 
     // Internal
@@ -42,6 +50,12 @@ public class CharacterEditorPaintSystem extends SystemPackage {
     private float strokeX;
     private float strokeY;
     private CharacterPaintStampStruct stamp;
+
+    // Mirror — each vertex's twin while the stroke mirrors, null otherwise, and each face's twin face
+    private IntArrayList mirrorVertices;
+    private IntArrayList face2Mirror;
+    private Long2IntOpenHashMap corners2Face;
+    private int[] cornerScratch;
 
     // Screen — the active part's vertices in window pixels this frame, NaN behind the camera
     private FloatArrayList screens;
@@ -58,6 +72,12 @@ public class CharacterEditorPaintSystem extends SystemPackage {
 
         // Stroke
         this.stamp = new CharacterPaintStampStruct();
+
+        // Mirror
+        this.face2Mirror = new IntArrayList();
+        this.corners2Face = new Long2IntOpenHashMap();
+        this.corners2Face.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        this.cornerScratch = new int[EngineSetting.QUAD_VERTEX_COUNT];
 
         // Screen
         this.screens = new FloatArrayList();
@@ -134,6 +154,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
 
     private void beginStroke(float mouseX, float mouseY) {
 
+        resolveFaceMirrors();
         collectStamp(mouseX, mouseY);
 
         if (stamp.isEmpty() || !characterEditorManager.beginPaint())
@@ -204,6 +225,85 @@ public class CharacterEditorPaintSystem extends SystemPackage {
                     stamp.addCorner(screens.getFloat(vertex * 2), screens.getFloat(vertex * 2 + 1));
                 }
             }
+
+        if (mirrorVertices != null)
+            addMirroredFaces(mesh);
+    }
+
+    // Every face covered laid again on its twin, each twin corner where its own twin shows on the window
+    private void addMirroredFaces(RiggedMeshStruct mesh) {
+
+        int covered = stamp.getFaceCount();
+
+        for (int i = 0; i < covered; i++) {
+
+            int twinFace = face2Mirror.getInt(stamp.getFace(i));
+
+            if (twinFace == EngineSetting.INDEX_NOT_FOUND || !isTwinShown(mesh, twinFace))
+                continue;
+
+            stamp.addFace(twinFace);
+
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+                int twin = mirrorVertices.getInt(mesh.getFaceVertex(twinFace, c));
+                stamp.addCorner(screens.getFloat(twin * 2), screens.getFloat(twin * 2 + 1));
+            }
+        }
+    }
+
+    // Whether every corner's twin shows on the window, so the twin face can take the covered face's place there
+    private boolean isTwinShown(RiggedMeshStruct mesh, int twinFace) {
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            if (Float.isNaN(screens.getFloat(mirrorVertices.getInt(mesh.getFaceVertex(twinFace, c)) * 2)))
+                return false;
+
+        return true;
+    }
+
+    // Each face's twin across the body, found once a stroke while it mirrors: the face whose corners are its
+    // corners' twins
+    private void resolveFaceMirrors() {
+
+        this.mirrorVertices = characterEditorManager.getMirrorVertices();
+
+        if (mirrorVertices == null)
+            return;
+
+        RiggedMeshStruct mesh = characterEditorMeshViewSystem.getActiveDocument().getMesh();
+        int faceCount = mesh.getFaceCount();
+
+        corners2Face.clear();
+        face2Mirror.size(faceCount);
+
+        for (int f = 0; f < faceCount; f++)
+            corners2Face.put(toCornerKey(mesh, f, false), f);
+
+        for (int f = 0; f < faceCount; f++)
+            face2Mirror.set(f, corners2Face.get(toCornerKey(mesh, f, true)));
+    }
+
+    // A face's corners, or their twins, as one key whatever their order: sorted, sixteen bits each
+    private long toCornerKey(RiggedMeshStruct mesh, int faceIndex, boolean twins) {
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+            int vertex = mesh.getFaceVertex(faceIndex, c);
+            cornerScratch[c] = twins ? mirrorVertices.getInt(vertex) : vertex;
+
+            if (cornerScratch[c] == EngineSetting.INDEX_NOT_FOUND)
+                return EngineSetting.INDEX_NOT_FOUND;
+        }
+
+        Arrays.sort(cornerScratch);
+
+        long key = 0L;
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            key = (key << Short.SIZE) | cornerScratch[c];
+
+        return key;
     }
 
     // Whether a face's corners all show on the window and their bounds meet the brush's

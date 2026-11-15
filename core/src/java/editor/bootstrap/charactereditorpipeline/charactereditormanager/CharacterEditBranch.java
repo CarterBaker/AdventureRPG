@@ -96,7 +96,53 @@ class CharacterEditBranch extends BranchPackage {
                 features.remove(slotKey);
             else
                 features.addProperty(slotKey, featureName);
+
+            removeFeatureVariant(race, genderName, slotKey);
         });
+    }
+
+    // The variant a gender starts the feature in a slot in, null for the feature's own default
+    void setFeatureVariant(
+            CharacterDocumentInstance document,
+            String genderName,
+            FeatureSlot featureSlot,
+            String variantName) {
+
+        edit(document, race -> {
+
+            String slotKey = ArpgUtility.toEnumName(featureSlot);
+
+            if (variantName == null) {
+                removeFeatureVariant(race, genderName, slotKey);
+                return;
+            }
+
+            CharacterViewUtility.requireObject(
+                            CharacterViewUtility.requireObject(
+                                    CharacterViewUtility.requireObject(
+                                            race, EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
+                                    genderName),
+                            EditorSetting.CHARACTER_EDITOR_FIELD_FEATURE_VARIANTS)
+                    .addProperty(slotKey, variantName);
+        });
+    }
+
+    // A gender's own variant for a slot let go, the block with it once empty
+    private void removeFeatureVariant(ArpgObjectStruct race, String genderName, String slotKey) {
+
+        ArpgObjectStruct gender = CharacterViewUtility.findObject(
+                CharacterViewUtility.findObject(race, EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
+                genderName);
+        ArpgObjectStruct variants = CharacterViewUtility.findObject(
+                gender, EditorSetting.CHARACTER_EDITOR_FIELD_FEATURE_VARIANTS);
+
+        if (variants == null)
+            return;
+
+        variants.remove(slotKey);
+
+        if (variants.size() == 0)
+            gender.remove(EditorSetting.CHARACTER_EDITOR_FIELD_FEATURE_VARIANTS);
     }
 
     // Shapes \\

@@ -349,10 +349,26 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-15: One Character Outliner and per-gender ranges. Regenerated `menus/editor/EditorWindow.arpg` (the Face and
   Animation Outliners leave the Characters menu, its panel shorter) and `schemas/Races.arpg` (a gender's `ranges`, a
   `min` and `max` per shape slider). Entries unchanged.
+- 2026-11-15: Character look and editor tools. Added the makeup overlay sets `MaleBlush*`, `FemaleBlush*` (Apples,
+  Sculpted, Sunkissed), `*Eyeshadow*` (Halo, Smoky, Soft), `*Lips*` (Defined, Full, Natural, Ombre, Thin) and
+  `*Eyeliner*` (Bold, Smudged, Thin, Winged), each drawn on the face's bind-pose surface through its UV layout at up to
+  512 texels; regenerated every `*Brows*` and body hair image (`*ChestHair*`, `*StomachHair*`, `*PubicHair*`,
+  `*UnderarmHair*`, `*ArmHair*`, `*LegHair*`) as full-strength strands at up to 512 texels over regions cut to what
+  they cover, and `Hair_A.png` (side columns faded to nothing, colour padded under transparent texels, so card edges
+  no longer show); removed `EyeAnime` (A, n, tint) and its baked files (the owner wants every eye realistic);
+  regenerated `races/Human.arpg` (makeup overlays and regions, eyeshadow and eyeliner colors and palettes, liner and
+  eyeshadow amounts 0), `schemas/Races.arpg` (makeup overlays, colors and the eyeshadow detail, a gender's
+  `feature_variants`), `schemas/Shortcuts.arpg` (the `pose`, `crease` and `relax` tools and the `character_paint`
+  canvas, which flagged `shortcuts/CharacterEditor` red in the Hierarchy), `features/humanoid/eyes/HumanoidEyes.arpg`
+  (Realistic the default), `menus/editor/EditorWindow.arpg` (Outliner under a Tools section, Color Wheel, a Textures
+  menu, File > Generate Maps), the shaders `CharacterAppearance.glsl`, `CharacterSurface.glsl`, `SkyReflection.glsl`,
+  `LightingShader.fsh` and `CharacterViewCharacterShader.fsh` (makeup overlays, the lash line as skin, a cornea
+  catchlight) and the baked files of every changed image; added `menus/editor/ColorWheel.arpg` and
+  `menus/editor/GenerateMapsDialog.arpg`.
 
 ---
 
-## Textures and Sprites (2400 files)
+## Textures and Sprites (2427 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -556,12 +572,14 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/textures/characters/standard/`
 
-- `EyeAnime`: A, n, tint
 - `EyeCat`: A, n, tint
 - `EyeRealistic`: A, n, tint
 - `EyeRinged`: A, n, tint
 - `FemaleArmHairFull`: A
 - `FemaleArmHairLight`: A
+- `FemaleBlushApples`: A
+- `FemaleBlushSculpted`: A
+- `FemaleBlushSunkissed`: A
 - `FemaleBody`: A, ao, n
 - `FemaleBrowsArched`: A
 - `FemaleBrowsStraight`: A
@@ -570,8 +588,20 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `FemaleChestHairCenter`: A
 - `FemaleChestHairFull`: A
 - `FemaleChestHairLight`: A
+- `FemaleEyelinerBold`: A
+- `FemaleEyelinerSmudged`: A
+- `FemaleEyelinerThin`: A
+- `FemaleEyelinerWinged`: A
+- `FemaleEyeshadowHalo`: A
+- `FemaleEyeshadowSmoky`: A
+- `FemaleEyeshadowSoft`: A
 - `FemaleLegHairFull`: A
 - `FemaleLegHairLight`: A
+- `FemaleLipsDefined`: A
+- `FemaleLipsFull`: A
+- `FemaleLipsNatural`: A
+- `FemaleLipsOmbre`: A
+- `FemaleLipsThin`: A
 - `FemaleNipplesLarge`: A, h, n
 - `FemaleNipplesMedium`: A, h, n
 - `FemaleNipplesSmall`: A, h, n
@@ -585,6 +615,9 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Hair`: A
 - `MaleArmHairFull`: A
 - `MaleArmHairLight`: A
+- `MaleBlushApples`: A
+- `MaleBlushSculpted`: A
+- `MaleBlushSunkissed`: A
 - `MaleBody`: A, ao, n
 - `MaleBrowsArched`: A
 - `MaleBrowsStraight`: A
@@ -593,8 +626,20 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `MaleChestHairCenter`: A
 - `MaleChestHairFull`: A
 - `MaleChestHairLight`: A
+- `MaleEyelinerBold`: A
+- `MaleEyelinerSmudged`: A
+- `MaleEyelinerThin`: A
+- `MaleEyelinerWinged`: A
+- `MaleEyeshadowHalo`: A
+- `MaleEyeshadowSmoky`: A
+- `MaleEyeshadowSoft`: A
 - `MaleLegHairFull`: A
 - `MaleLegHairLight`: A
+- `MaleLipsDefined`: A
+- `MaleLipsFull`: A
+- `MaleLipsNatural`: A
+- `MaleLipsOmbre`: A
+- `MaleLipsThin`: A
 - `MaleNipplesLarge`: A, h, n
 - `MaleNipplesMedium`: A, h, n
 - `MaleNipplesSmall`: A, h, n
@@ -1730,14 +1775,14 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3620 files)
+## Data Files (3798 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
 ### `assets/bakedtextures/`
 
-Every file below `tiles/`, `tier128/`, `tier256/` and `tier512/` (1724 files: one definition per tile and one file
-per tier it fills, 844 tiles across `characters/standard/`, `items/standard/` and `surface/standard/`), generated by
+Every file below `tiles/`, `tier128/`, `tier256/` and `tier512/` (1900 files: one definition per tile and one file
+per tier it fills, 873 tiles across `characters/standard/`, `items/standard/` and `surface/standard/`), generated by
 the texture bake from the images under `assets/textures/`. Each baked tile follows its source images: once the owner's
 images replace a tile's and it is baked again, its baked files are the owner's too.
 
@@ -2560,7 +2605,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
-`CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
+`ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
+`GenerateMapsDialog.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
 `PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Timeline.arpg`,
 `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`

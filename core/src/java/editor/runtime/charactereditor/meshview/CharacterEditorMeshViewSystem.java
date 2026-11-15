@@ -161,7 +161,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     // Each vertex moved by its bones' skinning matrices in proportion to their weights
     private void skin(RiggedMeshStruct mesh, FloatArrayList positions) {
 
-        Matrix4[] skinningMatrices = characterViewPoseSystem.getAnimationStateHandle().getSkinningMatrices();
+        Matrix4[] skinningMatrices = getSkinningMatrices();
         int vertexCount = mesh.getVertexCount();
 
         positions.clear();
@@ -199,6 +199,11 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
             positions.add(sy);
             positions.add(sz);
         }
+    }
+
+    // The skinning matrices of the pose struck this frame, the ones every vertex shown is skinned by
+    public Matrix4[] getSkinningMatrices() {
+        return characterViewPoseSystem.getAnimationStateHandle().getSkinningMatrices();
     }
 
     // Screen \\

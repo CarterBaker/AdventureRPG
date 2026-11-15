@@ -37,7 +37,7 @@ public class CameraData extends DataPackage {
 
     // Lens
     private float fov;
-    private final float nearPlane;
+    private float nearPlane;
     private final float farPlane;
 
     // Shake — radians the view turns about its own axes
@@ -117,6 +117,15 @@ public class CameraData extends DataPackage {
 
     public void setFOV(float fov) {
         this.fov = fov;
+        this.dirty = true;
+    }
+
+    public void setNearPlane(float nearPlane) {
+
+        if (this.nearPlane == nearPlane)
+            return;
+
+        this.nearPlane = nearPlane;
         this.dirty = true;
     }
 

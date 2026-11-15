@@ -22,6 +22,7 @@ public class CharacterEditorBranch extends BranchPackage {
     // Internal
     private CharacterEditorManager characterEditorManager;
     private NameDialogBranch nameDialogBranch;
+    private GenerateMapsDialogBranch generateMapsDialogBranch;
     private CharacterModelBranch characterModelBranch;
 
     // Base \\
@@ -30,6 +31,7 @@ public class CharacterEditorBranch extends BranchPackage {
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
+        this.generateMapsDialogBranch = get(GenerateMapsDialogBranch.class);
         this.characterModelBranch = get(CharacterModelBranch.class);
     }
 
@@ -83,6 +85,11 @@ public class CharacterEditorBranch extends BranchPackage {
 
     public void exportModel() {
         characterModelBranch.exportModel();
+    }
+
+    // Opens the Generate Maps dialog on the albedo of the part painted
+    public void generateMaps(WindowInstance window) {
+        generateMapsDialogBranch.open(window);
     }
 
     // Asks for the .glb's name in the Models folder, then for whatever the model leaves open, one dialog at a time
