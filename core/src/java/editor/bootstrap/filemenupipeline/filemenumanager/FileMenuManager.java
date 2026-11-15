@@ -105,6 +105,6 @@ public class FileMenuManager extends ManagerPackage {
         WindowInstance targetWindow = getTargetWindow();
         TabHandle tab = targetWindow != null ? tabManager.getTabHandleForContentWindow(targetWindow) : null;
 
-        return tab != null ? tab.getTabTitle() : EditorSetting.FILE_MENU_NO_TARGET;
+        return tab != null ? tab.getBaseTitle() : EditorSetting.FILE_MENU_NO_TARGET;
     }
 }

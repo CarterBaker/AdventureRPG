@@ -6,9 +6,10 @@ import engine.root.DataPackage;
 public class TabData extends DataPackage {
 
     /*
-     * Immutable tab definition. Holds the user-facing tab title, the ID the tab
-     * manager registered it under, and the child ContextPackage class that the
-     * tab manager will mount inside a TabContext shell when the tab is opened.
+     * Immutable tab definition. Holds the base title the tab shows, the unique
+     * numbered title and ID the tab manager registered it under, and the child
+     * ContextPackage class that the tab manager will mount inside a TabContext
+     * shell when the tab is opened.
      */
 
     // Identity

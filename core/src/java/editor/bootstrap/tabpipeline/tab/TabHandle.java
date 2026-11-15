@@ -36,6 +36,10 @@ public class TabHandle extends HandlePackage {
         return tabData;
     }
 
+    public String getBaseTitle() {
+        return tabData.getBaseTitle();
+    }
+
     public String getTabTitle() {
         return tabData.getTabTitle();
     }

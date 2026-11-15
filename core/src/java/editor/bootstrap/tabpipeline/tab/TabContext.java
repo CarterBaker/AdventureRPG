@@ -271,7 +271,7 @@ public class TabContext extends ContextPackage {
                 chromeMenu, EditorSetting.TAB_ENTRY_STRIP, EditorSetting.MENU_TAB_STRIP_ENTRY,
                 entry -> {
                     entry.setOnDragArgOverride(tab.getTabTitle());
-                    entry.findChildById(EditorSetting.ELEMENT_TAB_STRIP_LABEL).setFontText(tab.getTabTitle());
+                    entry.findChildById(EditorSetting.ELEMENT_TAB_STRIP_LABEL).setFontText(tab.getBaseTitle());
                     entry.findChildById(EditorSetting.ELEMENT_TAB_STRIP_CLOSE).setActionArgOverride(tab.getTabTitle());
 
                     if (tab != ownerHandle)
