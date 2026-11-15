@@ -333,6 +333,8 @@ One line per session that changed this file: the date, what was added or removed
   `mesh/editor/CharacterViewGrid`, `CharacterViewMarker`, `EditorViewportQuad`, `ItemEditorCursor`, `ItemEditorGrid`
   and `mesh/shipwright/ShipwrightQuad`, from one object per quad to typed arrays (shared vertices, quad indices,
   stored normals), so they are smaller and load faster. Entries unchanged.
+- 2026-11-15: Model Import and Export. Regenerated `menus/editor/EditorWindow.arpg` (the File menu gains Import Model
+  and Export Model below Delete, its panel taller to hold them). Entry unchanged.
 
 ---
 

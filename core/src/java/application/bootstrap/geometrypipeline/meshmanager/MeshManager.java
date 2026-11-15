@@ -236,6 +236,11 @@ public class MeshManager extends ManagerPackage {
         return mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT <= EngineSetting.RIGGED_MESH_VERT_LIMIT;
     }
 
+    // Every corner's packed smooth normal, face by face, as a mesh file stores them and an export reads them
+    public void packRiggedNormals(RiggedMeshStruct mesh, int[] normals) {
+        RiggedMeshGeometryUtility.packNormals(mesh, riggedScratch, normals);
+    }
+
     // The normals a rigged mesh file stores for the mesh just parsed from it, or null when they must be computed
     int[] parseRiggedNormals(ArpgObjectStruct meshArpg, RiggedMeshStruct mesh) {
         return RiggedMeshArpgUtility.parseNormals(meshArpg, mesh);

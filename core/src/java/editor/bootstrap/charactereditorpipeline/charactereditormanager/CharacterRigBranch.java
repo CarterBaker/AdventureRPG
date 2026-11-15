@@ -433,6 +433,51 @@ class CharacterRigBranch extends BranchPackage {
         characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_ADDED + boneName);
     }
 
+    // Bones a model brought with it, each a child of the parent named for it at its point in the world, all in one
+    // edit. A parent the rig lacks and the list does not add before its child gives way to the rig's first bone
+    void addBones(ObjectArrayList<String> names, ObjectArrayList<String> parents, float[] worldPoints) {
+
+        ObjectArrayList<ArpgObjectStruct> added = new ObjectArrayList<>(names.size());
+        ObjectArrayList<Vector3> anchorPoints = new ObjectArrayList<>(names.size());
+        int[] anchors = new int[names.size()];
+        float size = EditorSetting.CHARACTER_RIG_NEW_BONE_SIZE;
+
+        for (int i = 0; i < names.size(); i++) {
+
+            int addedParent = names.indexOf(parents.get(i));
+            boolean underAdded = addedParent != EngineSetting.INDEX_NOT_FOUND && addedParent < i;
+            int anchor = underAdded ? anchors[addedParent] : Math.max(0, findBone(parents.get(i)));
+            Vector3 anchorPoint = new Vector3();
+            Vector3 position = new Vector3();
+            ArpgObjectStruct boneArpg = new ArpgObjectStruct();
+
+            matrixScratchA.set(worldMatrices.get(anchor)).inverse();
+            CharacterPoseUtility.transformPoint(
+                    matrixScratchA, worldPoints[i * 3], worldPoints[i * 3 + 1], worldPoints[i * 3 + 2], anchorPoint);
+            position.set(anchorPoint);
+
+            if (underAdded)
+                position.set(
+                        anchorPoint.x - anchorPoints.get(addedParent).x,
+                        anchorPoint.y - anchorPoints.get(addedParent).y,
+                        anchorPoint.z - anchorPoints.get(addedParent).z);
+
+            anchors[i] = anchor;
+            anchorPoints.add(anchorPoint);
+            boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, names.get(i));
+            boneArpg.addProperty(
+                    EditorSetting.CHARACTER_RIG_FIELD_PARENT, underAdded ? parents.get(i) : boneNames.get(anchor));
+            writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, position);
+            writeVector(boneArpg, EditorSetting.CHARACTER_EDITOR_FIELD_SIZE, vectorScratch.set(size, size, size));
+            added.add(boneArpg);
+        }
+
+        edit(bones -> {
+            for (ArpgObjectStruct boneArpg : added)
+                bones.add(boneArpg);
+        });
+    }
+
     // A chain of bones on every digit found below each of a region's bones in a body mesh, the digits already rigged
     // left as they are, all in one edit
     void addDigits(RiggedMeshStruct mesh, CharacterEditorRegion region) {

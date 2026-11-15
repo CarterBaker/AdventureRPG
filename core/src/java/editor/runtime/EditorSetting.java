@@ -184,7 +184,9 @@ public class EditorSetting {
             "file_revert_label",
             "file_delete_label",
             "edit_undo_label",
-            "edit_redo_label" };
+            "edit_redo_label",
+            "file_import_label",
+            "file_export_label" };
 
     // File Menu — each tool's actions, the methods its own keys and buttons run
     public static final FileMenuTableStruct FILE_MENU_CHARACTER = new FileMenuTableStruct(
@@ -194,7 +196,9 @@ public class EditorSetting {
             .with(FileMenuAction.REVERT, "revertCharacter")
             .with(FileMenuAction.DELETE, "deleteCharacter")
             .with(FileMenuAction.UNDO, "undo")
-            .with(FileMenuAction.REDO, "redo");
+            .with(FileMenuAction.REDO, "redo")
+            .with(FileMenuAction.IMPORT_MODEL, "importModel")
+            .with(FileMenuAction.EXPORT_MODEL, "exportModel");
     public static final FileMenuTableStruct FILE_MENU_FACE = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.FaceEditorBranch")
             .with(FileMenuAction.SAVE, "saveCharacter")
@@ -730,6 +734,59 @@ public class EditorSetting {
     public static final float CHARACTER_VIEW_GIMBAL_LIMIT = 0.99999f;
     public static final float CHARACTER_VIEW_HALF_TURN_DEGREES = 180f;
     public static final int CHARACTER_VIEW_HISTORY_MAX_STEPS = 64;
+
+    // glTF — the binary container, component and accessor codes of the glTF 2.0 subset Import and Export use
+    public static final String GLTF_FILE_EXTENSION = "glb";
+    public static final int GLTF_MAGIC = 0x46546C67;
+    public static final int GLTF_VERSION = 2;
+    public static final int GLTF_CHUNK_JSON = 0x4E4F534A;
+    public static final int GLTF_CHUNK_BIN = 0x004E4942;
+    public static final int GLTF_HEADER_BYTES = 12;
+    public static final int GLTF_CHUNK_HEADER_BYTES = 8;
+    public static final int GLTF_ALIGNMENT = 4;
+    public static final String GLTF_ASSET_VERSION = "2.0";
+    public static final String GLTF_GENERATOR = "AdventureRPG";
+    public static final String GLTF_EXTENSION_NGON = "FB_ngon_encoding";
+    public static final String GLTF_ATTRIBUTE_MASKS = "_MASKS";
+    public static final int GLTF_COMPONENT_BYTE = 5120;
+    public static final int GLTF_COMPONENT_UNSIGNED_BYTE = 5121;
+    public static final int GLTF_COMPONENT_SHORT = 5122;
+    public static final int GLTF_COMPONENT_UNSIGNED_SHORT = 5123;
+    public static final int GLTF_COMPONENT_UNSIGNED_INT = 5125;
+    public static final int GLTF_COMPONENT_FLOAT = 5126;
+    public static final int GLTF_TARGET_ARRAY_BUFFER = 34962;
+    public static final int GLTF_TARGET_ELEMENT_ARRAY_BUFFER = 34963;
+    public static final int GLTF_MODE_TRIANGLES = 4;
+    public static final String GLTF_TYPE_SCALAR = "SCALAR";
+    public static final String GLTF_TYPE_VEC2 = "VEC2";
+    public static final String GLTF_TYPE_VEC3 = "VEC3";
+    public static final String GLTF_TYPE_VEC4 = "VEC4";
+    public static final String GLTF_TYPE_MAT4 = "MAT4";
+    public static final int GLTF_MATRIX_FLOATS = 16;
+    public static final float GLTF_QUAD_FLAT_COSINE = 0.9f;
+    public static final float GLTF_QUAD_NEIGHBOUR_COSINE = -1f;
+    public static final int[] GLTF_QUAD_FAN_CORNERS = { 0, 1, 2, 0, 2, 3 };
+    public static final String GLTF_MORPH_NAME_PREFIX = "target_";
+
+    // Model Import and Export — the folder under the user's game folder .glb files are read from and written to, the
+    // dialogs Import Model asks through and what both report
+    public static final String MODEL_USER_DIRECTORY = "Models";
+    public static final String MODEL_CONFIRM_ADD_BONES = "add";
+    public static final String MODEL_DIALOG_FILE = "Import Model: type the .glb's name in ";
+    public static final String MODEL_DIALOG_ADD_BONES_PREFIX = "The rig lacks ";
+    public static final String MODEL_DIALOG_ADD_BONES_SUFFIX = ". Type add to add them to the rig";
+    public static final String MODEL_DIALOG_HANG_BONE = "The model has no skin. Type the bone it hangs from";
+    public static final String MODEL_DIALOG_TEXTURE_PREFIX = "Type the texture for material ";
+    public static final String MODEL_DIALOG_ZONE_PREFIX = "Type the zone (skin, eye, brow, lash, hair, cloth, mouth, "
+            + "teeth) for material ";
+    public static final String MODEL_MESSAGE_NO_MESH = "Open a character's mesh first";
+    public static final String MODEL_MESSAGE_EXPORTED = "Exported ";
+    public static final String MODEL_MESSAGE_EXPORT_FAILED = "The model could not be written to ";
+    public static final String MODEL_MESSAGE_REFUSED = "Import refused: ";
+    public static final String MODEL_MESSAGE_BONES_ADDED = " bones added to the rig. Run Import Model again";
+    public static final String MODEL_MESSAGE_IMPORTED = "Imported ";
+    public static final String MODEL_MESSAGE_IMPORTED_QUADS = " quads from ";
+    public static final String MODEL_UNNAMED_MATERIAL = "(unnamed)";
 
     // Character Editor — race fields, and the field naming an entity's race
     public static final String CHARACTER_EDITOR_FIELD_RACE = "race";

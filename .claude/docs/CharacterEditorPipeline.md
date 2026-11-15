@@ -212,6 +212,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   GPU blocks are never stored: they hold tile IDs and bone numbers assigned at run time, and building them takes a
   few milliseconds. Static quad meshes take the same idea through `MeshLayoutUtility`: `mesh.vertices` (every float
   of each distinct vertex) and `mesh.quads`.
+- **Import and Export.** The File menu's Import Model and Export Model move the mesh being edited to and from a
+  `.glb` (`CharacterModelBranch`; see `.claude/docs/GLTF.md`). Import replaces the open mesh as one edit; Save writes it.
 - **GPU path.** `RiggedMeshGeometryUtility` packs every corner into `RIGGED_MESH_VERTEX_INTS` words (44 bytes: float
   position, normalised-short UV, byte bone indices, normalised-byte weights summing to one, a 10-bit-per-axis normal,
   the morph entry run, zone with tile, normalised-byte masks; `EngineSetting.RIGGED_MESH_ATTRIBUTE_SIZES`, `TYPES` and

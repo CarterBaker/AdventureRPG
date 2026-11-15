@@ -163,6 +163,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterRowBranch = create(CharacterRowBranch.class);
         this.characterHistoryBranch = create(CharacterHistoryBranch.class);
         this.characterMeshBranch = create(CharacterMeshBranch.class);
+        create(CharacterModelBranch.class);
         this.characterSelectionBranch = create(CharacterSelectionBranch.class);
         this.characterWeightBranch = create(CharacterWeightBranch.class);
         this.characterSculptBranch = create(CharacterSculptBranch.class);
@@ -1036,6 +1037,13 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (syncRig() && !characterRigBranch.isGesturing())
             characterRigBranch.removeBone(boneIndex);
+    }
+
+    // Bones a model brought with it, added to the rig in one edit
+    void addRigBones(ObjectArrayList<String> names, ObjectArrayList<String> parents, float[] worldPoints) {
+
+        if (syncRig() && !characterRigBranch.isGesturing())
+            characterRigBranch.addBones(names, parents, worldPoints);
     }
 
     // Digits \\

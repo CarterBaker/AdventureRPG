@@ -1,3 +1,4 @@
 * text=auto eol=lf
 *.bat text=auto eol=crlf
 *.arpg binary
+*.glb binary

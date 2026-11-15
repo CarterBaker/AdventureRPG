@@ -2,6 +2,7 @@ package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterModelBranch;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 
@@ -21,6 +22,7 @@ public class CharacterEditorBranch extends BranchPackage {
     // Internal
     private CharacterEditorManager characterEditorManager;
     private NameDialogBranch nameDialogBranch;
+    private CharacterModelBranch characterModelBranch;
 
     // Base \\
 
@@ -28,6 +30,7 @@ public class CharacterEditorBranch extends BranchPackage {
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
+        this.characterModelBranch = get(CharacterModelBranch.class);
     }
 
     // Characters \\
@@ -74,6 +77,83 @@ public class CharacterEditorBranch extends BranchPackage {
 
     public void redo() {
         characterEditorManager.redo();
+    }
+
+    // Models \\
+
+    public void exportModel() {
+        characterModelBranch.exportModel();
+    }
+
+    // Asks for the .glb's name in the Models folder, then for whatever the model leaves open, one dialog at a time
+    public void importModel(WindowInstance window) {
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.MODEL_DIALOG_FILE + characterModelBranch.getModelDirectory(),
+                "",
+                characterModelBranch::isModelFile,
+                name -> {
+                    characterModelBranch.beginImport(name);
+                    continueImport(window);
+                });
+    }
+
+    private void continueImport(WindowInstance window) {
+
+        if (!characterModelBranch.isImporting())
+            return;
+
+        if (characterModelBranch.hasMissingBones()) {
+            nameDialogBranch.openText(
+                    window,
+                    EditorSetting.MODEL_DIALOG_ADD_BONES_PREFIX + characterModelBranch.describeMissingBones()
+                            + EditorSetting.MODEL_DIALOG_ADD_BONES_SUFFIX,
+                    "",
+                    EditorSetting.MODEL_CONFIRM_ADD_BONES::equalsIgnoreCase,
+                    confirmed -> characterModelBranch.addMissingBones());
+            return;
+        }
+
+        if (characterModelBranch.needsHangBone()) {
+            nameDialogBranch.openText(
+                    window,
+                    EditorSetting.MODEL_DIALOG_HANG_BONE,
+                    "",
+                    characterModelBranch::isBone,
+                    boneName -> {
+                        characterModelBranch.setHangBone(boneName);
+                        continueImport(window);
+                    });
+            return;
+        }
+
+        if (characterModelBranch.needsTexture()) {
+            nameDialogBranch.openText(
+                    window,
+                    EditorSetting.MODEL_DIALOG_TEXTURE_PREFIX + characterModelBranch.getOpenMaterialName(),
+                    "",
+                    characterModelBranch::isTexture,
+                    textureName -> {
+                        characterModelBranch.setTexture(textureName);
+                        continueImport(window);
+                    });
+            return;
+        }
+
+        if (characterModelBranch.needsZone()) {
+            nameDialogBranch.openText(
+                    window,
+                    EditorSetting.MODEL_DIALOG_ZONE_PREFIX + characterModelBranch.getOpenMaterialName(),
+                    "",
+                    characterModelBranch::isZone,
+                    zoneName -> {
+                        characterModelBranch.setZone(zoneName);
+                        continueImport(window);
+                    });
+            return;
+        }
+
+        characterModelBranch.finishImport();
     }
 
     // Rows \\

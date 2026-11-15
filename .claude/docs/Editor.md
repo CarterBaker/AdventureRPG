@@ -83,7 +83,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The File and Edit menus
 
 - **Every file action lives in the editor's File and Edit menus**, never as a tool's own button: New, New File,
-  Duplicate, Save, Save All, Revert and Delete under File, Undo and Redo under Edit. They act on the window worked in
+  Duplicate, Save, Save All, Revert, Delete, Import Model and Export Model under File, Undo and Redo under Edit. They act on the window worked in
   last (`editor.bootstrap.filemenupipeline`, `FileMenuManager`), name it at their head and mute what it does not take.
 - **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
   `FileMenuTableStruct` constant from `EditorSetting` (the branch and, per `FileMenuAction`, the method its own keys

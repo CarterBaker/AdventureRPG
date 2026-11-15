@@ -5,9 +5,10 @@ public enum FileMenuAction {
     /*
      * Every operation the editor's File and Edit menus offer, each run on
      * the window worked in last exactly as that tool's own key or button for
-     * it runs it. The File menu holds the first seven, the Edit menu Undo
-     * and Redo. The ordinal indexes each tool's table and the menu's labels,
-     * so the order is fixed.
+     * it runs it. The File menu holds the first seven and the two model
+     * actions, the Edit menu Undo and Redo. The ordinal indexes each tool's
+     * table and the menu's labels, so the order is fixed and new actions are
+     * added at the end.
      */
 
     NEW,
@@ -18,7 +19,9 @@ public enum FileMenuAction {
     REVERT,
     DELETE,
     UNDO,
-    REDO;
+    REDO,
+    IMPORT_MODEL,
+    EXPORT_MODEL;
 
     // Values
     public static final FileMenuAction[] VALUES = values();
