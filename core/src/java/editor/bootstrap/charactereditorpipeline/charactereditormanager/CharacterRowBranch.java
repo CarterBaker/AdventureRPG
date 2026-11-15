@@ -50,6 +50,7 @@ class CharacterRowBranch extends BranchPackage {
     private CharacterRigRowBranch characterRigRowBranch;
     private CharacterPaintRowBranch characterPaintRowBranch;
     private CharacterUVBranch characterUVBranch;
+    private CharacterSliderBranch characterSliderBranch;
 
     // Base \\
 
@@ -61,6 +62,7 @@ class CharacterRowBranch extends BranchPackage {
         this.characterRigRowBranch = get(CharacterRigRowBranch.class);
         this.characterPaintRowBranch = get(CharacterPaintRowBranch.class);
         this.characterUVBranch = get(CharacterUVBranch.class);
+        this.characterSliderBranch = get(CharacterSliderBranch.class);
     }
 
     // List \\
@@ -95,9 +97,9 @@ class CharacterRowBranch extends BranchPackage {
             case APPEARANCE -> {
                 addFeatureRows(document, rows);
                 addColorRows(document, rows);
-                addShapeRows(document, rows);
+                characterSliderBranch.buildRows(document, rows);
+                addBuildRows(document, rows);
             }
-            case BUILD -> addBoneRows(rigHandle, rows);
             case EQUIPMENT -> addAnchorRows(rows);
             case MESH, WEIGHTS -> {
                 characterMeshRowBranch.addPartRows(document, rows);
@@ -157,70 +159,6 @@ class CharacterRowBranch extends BranchPackage {
         }
     }
 
-    // Every slider the player is given, under its group in the order the race first lists each, as the creator shows
-    private void addShapeRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        if (!document.getPreviewData().hasAppearance())
-            return;
-
-        AppearanceData appearanceData = document.getPreviewData().getAppearanceData();
-
-        for (int i = 0; i < appearanceData.getShapeCount(); i++) {
-
-            String groupName = appearanceData.getShape(i).getGroupName();
-
-            if (isGroupListedBefore(appearanceData, groupName, i))
-                continue;
-
-            rows.add(CharacterViewRowStruct.header(groupName));
-
-            for (int j = i; j < appearanceData.getShapeCount(); j++)
-                if (appearanceData.getShape(j).getGroupName().equals(groupName))
-                    addShape(document, rows, appearanceData.getShape(j), j);
-        }
-    }
-
-    private boolean isGroupListedBefore(AppearanceData appearanceData, String groupName, int shapeIndex) {
-
-        for (int i = 0; i < shapeIndex; i++)
-            if (appearanceData.getShape(i).getGroupName().equals(groupName))
-                return true;
-
-        return false;
-    }
-
-    // A slider setting the default the game starts the player at across their range, the range's two ends beneath it
-    private void addShape(
-            CharacterDocumentInstance document,
-            ObjectArrayList<CharacterViewRowStruct> rows,
-            AppearanceShapeStruct shape,
-            int shapeIndex) {
-
-        String key = CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE, shapeIndex);
-
-        rows.add(CharacterViewRowStruct.ranged(
-                key,
-                shape.getShapeName(),
-                characterPropertyBranch.getValueText(document, key),
-                characterPropertyBranch.getNumber(document, key),
-                document.getPreviewData().getAppearanceData().getShapeMin(
-                        characterEditorManager.getPreviewGenderID(), shapeIndex),
-                document.getPreviewData().getAppearanceData().getShapeMax(
-                        characterEditorManager.getPreviewGenderID(), shapeIndex),
-                characterPropertyBranch.getStep(key)));
-
-        String minKey = CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN, shapeIndex);
-        String maxKey = CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX, shapeIndex);
-
-        rows.add(CharacterViewRowStruct.pair(
-                minKey,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_MIN,
-                characterPropertyBranch.getValueText(document, minKey),
-                maxKey,
-                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_MAX,
-                characterPropertyBranch.getValueText(document, maxKey)));
-    }
-
     private void addBoneRows(RigHandle rigHandle, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_BONES));
@@ -264,7 +202,6 @@ class CharacterRowBranch extends BranchPackage {
 
         switch (characterEditorManager.getMode()) {
             case APPEARANCE -> addPreviewRows(document, rows);
-            case BUILD -> addBuildRows(document, rows);
             case EQUIPMENT -> addAnchorPropertyRows(document, rows);
             case MESH -> characterMeshRowBranch.buildMeshRows(rows);
             case SCULPT -> characterMeshRowBranch.buildSculptRows(rows);
@@ -311,10 +248,14 @@ class CharacterRowBranch extends BranchPackage {
 
     }
 
-    // How the preview plays while the look is set, nothing the player is given
+    // How the preview plays and stands while the look is set, nothing the player is given
     private void addPreviewRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW));
         addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_BLINK, EditorSetting.CHARACTER_EDITOR_LABEL_BLINK);
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW_BODY));
+        addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT,
+                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT);
+        addAxes(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_HEAD, EditorSetting.CHARACTER_EDITOR_LABEL_HEAD);
     }
 
     private void addChannels(
@@ -328,32 +269,23 @@ class CharacterRowBranch extends BranchPackage {
                     labelPrefix + EditorSetting.CHARACTER_VIEW_CHANNEL_LABELS[channel]);
     }
 
+    // The build curve the player's weight slides across, then the girth the selected bone takes from it, the bone
+    // picked in the Rig or Weights tab
     private void addBuildRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
-        boolean appearance = characterPropertyBranch.getAppearanceArpg() != null;
-
-        if (appearance) {
-            rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_BUILD_CURVE));
-            addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_THIN,
-                    EditorSetting.CHARACTER_EDITOR_LABEL_THIN);
-            addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_HEAVY,
-                    EditorSetting.CHARACTER_EDITOR_LABEL_HEAVY);
-        }
-
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_PREVIEW_BODY));
-        addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT,
-                EditorSetting.CHARACTER_EDITOR_LABEL_WEIGHT);
-        addAxes(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_HEAD, EditorSetting.CHARACTER_EDITOR_LABEL_HEAD);
-
-        if (!appearance)
+        if (characterPropertyBranch.getAppearanceArpg() == null)
             return;
 
-        RigHandle rigHandle = characterPropertyBranch.resolveRig(document);
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_BUILD_CURVE));
+        addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_THIN, EditorSetting.CHARACTER_EDITOR_LABEL_THIN);
+        addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_HEAVY,
+                EditorSetting.CHARACTER_EDITOR_LABEL_HEAVY);
 
+        RigHandle rigHandle = characterPropertyBranch.resolveRig(document);
         String boneName = rigHandle.getBone(characterEditorManager.getSelectedBoneIndex()).getName();
 
-        rows.add(CharacterViewRowStruct.header(boneName));
-        addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_GIRTH, EditorSetting.CHARACTER_EDITOR_LABEL_GIRTH);
+        addNumber(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_GIRTH,
+                EditorSetting.CHARACTER_EDITOR_LABEL_GIRTH + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR + boneName);
     }
 
     private void addAnchorPropertyRows(

@@ -2,7 +2,6 @@ package editor.runtime.charactereditor;
 
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
-import editor.bootstrap.faceeditorpipeline.faceeditormanager.FaceEditorManager;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
@@ -31,8 +30,6 @@ import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
-import editor.runtime.faceeditor.gesture.FaceEditorGestureSystem;
-import editor.runtime.faceeditor.preview.FaceEditorPreviewSystem;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.layerssource.LayersSourceSystem;
@@ -52,31 +49,29 @@ public abstract class CharacterToolContext extends ContextPackage
     /*
      * The base of every character tool tab, each working the character in the
      * one mode it names, so the owner lays the tools out as they wish:
-     * Appearance, Build and Equipment shape how it looks on the live preview;
-     * Mesh, Sculpt, Weights and Rig model the meshes it wears and the rig it
-     * is built on in the region picked in the Layers tab, shared by all four,
-     * framed and shown alone, every pick, box, stroke and mirror held to it;
-     * Paint paints the maps of the part open, its paint layers listed in the
-     * Layers tab; Face shapes the face's controls on the Head. Each tool tab
-     * is a tool canvas worked with the Tools and Brushes tabs, its actions
-     * listed in the Tools tab and its values and those of what is picked in
-     * the Properties tab while the tab is worked in; the File and Edit menus
-     * act on the character, or on its face in the Face tab. All state lives
-     * in CharacterEditorManager and FaceEditorManager, the region, the bone
-     * and the vertices selected shared by every tab; a tab keeps its mode,
-     * reads input, orbits the camera, poses and draws the preview, and shows
-     * the status bar.
+     * Appearance and Equipment shape how it looks on the live preview, the
+     * Appearance outliner holding every slider the creator offers with the
+     * build; Mesh, Sculpt, Weights, Rig and UV model the meshes it wears and
+     * the rig it is built on in the region picked in the Layers tab, shared
+     * by all of them, framed and shown alone, every pick, box, stroke and
+     * mirror held to it; Paint paints the maps of the part open, its paint
+     * layers listed in the Layers tab. Each tool tab is a tool canvas worked
+     * with the Tools and Brushes tabs, its actions listed in the Tools tab
+     * and its values and those of what is picked in the Properties tab while
+     * the tab is worked in; the File and Edit menus act on the character.
+     * All state lives in CharacterEditorManager, the region, the bone and the
+     * vertices selected shared by every tab; a tab keeps its mode, reads
+     * input, orbits the camera, poses and draws the preview, and shows the
+     * status bar.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
-    private FaceEditorManager faceEditorManager;
     private EditorInputSystem editorInputSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private ViewCameraSystem viewCameraSystem;
     private CharacterEditorModeSystem characterEditorModeSystem;
     private CharacterEditorPreviewSystem characterEditorPreviewSystem;
-    private FaceEditorPreviewSystem faceEditorPreviewSystem;
     private CharacterRegionFrameSystem characterRegionFrameSystem;
     private CharacterRegionIsolationSystem characterRegionIsolationSystem;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
@@ -85,7 +80,6 @@ public abstract class CharacterToolContext extends ContextPackage
     private CharacterEditorBoneSystem characterEditorBoneSystem;
     private CharacterEditorPaintSystem characterEditorPaintSystem;
     private CharacterEditorOverlaySystem characterEditorOverlaySystem;
-    private FaceEditorGestureSystem faceEditorGestureSystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
     private CharacterEditorMenuSystem characterEditorMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
@@ -102,7 +96,6 @@ public abstract class CharacterToolContext extends ContextPackage
         this.viewCameraSystem = create(ViewCameraSystem.class);
         this.characterEditorModeSystem = create(CharacterEditorModeSystem.class);
         this.characterEditorPreviewSystem = create(CharacterEditorPreviewSystem.class);
-        this.faceEditorPreviewSystem = create(FaceEditorPreviewSystem.class);
         this.characterRegionFrameSystem = create(CharacterRegionFrameSystem.class);
         this.characterRegionIsolationSystem = create(CharacterRegionIsolationSystem.class);
         this.characterEditorMeshViewSystem = create(CharacterEditorMeshViewSystem.class);
@@ -111,7 +104,6 @@ public abstract class CharacterToolContext extends ContextPackage
         this.characterEditorBoneSystem = create(CharacterEditorBoneSystem.class);
         this.characterEditorPaintSystem = create(CharacterEditorPaintSystem.class);
         this.characterEditorOverlaySystem = create(CharacterEditorOverlaySystem.class);
-        this.faceEditorGestureSystem = create(FaceEditorGestureSystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterEditorMenuSystem = create(CharacterEditorMenuSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
@@ -125,7 +117,6 @@ public abstract class CharacterToolContext extends ContextPackage
     @Override
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
-        this.faceEditorManager = get(FaceEditorManager.class);
     }
 
     @Override
@@ -169,29 +160,18 @@ public abstract class CharacterToolContext extends ContextPackage
         characterEditorModeSystem.toggleVisible(layerKey);
     }
 
-    // True for the Face tab, whose tools, rows and file actions are the face editor's
-    private boolean isFace() {
-        return getMode().shapesFace();
-    }
-
     // Tools \\
 
-    // The tools of the tab's mode, the face's only while the character has a face to shape
     @Override
     public ToolCanvas getToolCanvas() {
-        return isFace() ? faceEditorManager.getToolCanvas() : characterEditorModeSystem.getMode().getToolCanvas();
+        return characterEditorModeSystem.getMode().getToolCanvas();
     }
 
     // The tab's actions run exactly as their keys and panel rows run them, in this window's region and mode
     @Override
     public void runToolAction(String actionKey) {
-
         characterEditorModeSystem.adopt();
-
-        if (isFace())
-            faceEditorManager.act(actionKey);
-        else
-            characterEditorManager.act(actionKey);
+        characterEditorManager.act(actionKey);
     }
 
     // Properties \\
@@ -201,65 +181,48 @@ public abstract class CharacterToolContext extends ContextPackage
         return PropertiesContent.ROWS;
     }
 
-    // The face editor's revision moves with every change of either editor, so the rows follow both
     @Override
     public int getRowRevision() {
-        return faceEditorManager.getRevision();
+        return characterEditorManager.getRevision();
     }
 
     @Override
     public String getRowTitle() {
-        return isFace()
-                ? EditorSetting.FACE_PROPERTIES_TITLE
-                : EditorSetting.CHARACTER_PROPERTIES_TITLE + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
-                        + characterEditorManager.getMode().getLabel();
+        return EditorSetting.CHARACTER_PROPERTIES_TITLE + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
+                + characterEditorManager.getMode().getLabel();
     }
 
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        if (isFace())
-            faceEditorManager.buildPropertyRows(rows);
-        else
-            characterEditorManager.buildPropertyRows(rows);
+        characterEditorManager.buildPropertyRows(rows);
     }
 
     @Override
     public CharacterViewTemplateStruct getRowTemplates() {
-        return isFace() ? EditorSetting.FACE_EDITOR_ROW_TEMPLATES : EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES;
+        return EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES;
     }
 
     @Override
     public void stepRow(String key, int steps) {
-
-        if (isFace())
-            faceEditorManager.step(key, steps);
-        else
-            characterEditorManager.step(key, steps);
+        characterEditorManager.step(key, steps);
     }
 
     // Outliner \\
 
     @Override
     public int getOutlinerRevision() {
-        return faceEditorManager.getRevision();
+        return characterEditorManager.getRevision();
     }
 
     @Override
     public String getOutlinerTitle() {
-        return isFace()
-                ? EditorSetting.FACE_OUTLINER_TITLE
-                : EditorSetting.CHARACTER_OUTLINER_TITLE + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
-                        + characterEditorManager.getMode().getLabel();
+        return EditorSetting.CHARACTER_OUTLINER_TITLE + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
+                + characterEditorManager.getMode().getLabel();
     }
 
     @Override
     public void buildOutlinerRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        if (isFace())
-            faceEditorManager.buildListRows(rows);
-        else
-            characterEditorManager.buildListRows(rows);
+        characterEditorManager.buildListRows(rows);
     }
 
     @Override
@@ -283,6 +246,6 @@ public abstract class CharacterToolContext extends ContextPackage
 
     @Override
     public FileMenuTableStruct getFileMenuTable() {
-        return isFace() ? EditorSetting.FILE_MENU_FACE : EditorSetting.FILE_MENU_CHARACTER;
+        return EditorSetting.FILE_MENU_CHARACTER;
     }
 }

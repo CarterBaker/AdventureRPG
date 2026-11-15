@@ -1,9 +1,9 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the character
-tool tabs (Appearance, Build, Equipment, Mesh, Sculpt, Weights, Paint, Rig, Face, UV), the UV Editor, the Animation
-Editor, their docker windows, races and their genders' models, or a character's appearance (morphs, face controls,
-zones, masks, overlays, shaders). `.claude/CLAUDE.md` still applies in full.
+tool tabs (Appearance, Equipment, Mesh, Sculpt, Weights, Paint, Rig, UV), the UV Editor, the Animation Editor, their
+docker windows, races and their genders' models, or a character's appearance (morphs, sliders, bone controls, zones,
+masks, overlays, shaders). `.claude/CLAUDE.md` still applies in full.
 
 ---
 
@@ -12,25 +12,24 @@ zones, masks, overlays, shaders). `.claude/CLAUDE.md` still applies in full.
 Every character tool is split into windows, the way Krita splits its dockers: every part of making a character is its
 own tool tab, laid out however the owner likes, each working the one character through the shared state (see
 `.claude/docs/Editor.md`). A viewport tab holds the status bar and the viewport; saving, reverting, copying, deleting,
-undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`, `FILE_MENU_FACE` in the
-Face tab, `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
+undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`,
+`FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
 from the editor's Characters menu (its Tools section holds the Outliner, above the Character section's tool tabs and the
 Animation section), the Content menu (Color Wheel, beside Layers) or the Textures menu (Texture Maps), and restored by
 layouts like any other.
 
 | Window | Context | Shows |
 |---|---|---|
-| Character Appearance, Build, Equipment | `CharacterAppearanceContext`, `CharacterBuildContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
+| Character Appearance, Equipment | `CharacterAppearanceContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
 | Character Mesh, Sculpt, Weights, Rig, UV | `CharacterMeshContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext`, `CharacterUVContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
-| Character Face | `CharacterFaceContext` | the face's region (the Head) framed, the face controls' canvas, no layers |
-| Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `FaceEditorManager.buildListRows` in the Face tab, `AnimationEditorManager.buildListRows` |
+| Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows` |
 | Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), then Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) |
 | Texture Maps | `TextureMapsContext` | every map of the texture painted (`CharacterEditorManager.buildMapRows`), the one painted selected |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
 | Animation Timeline | `AnimationTimelineContext` | transport, summary track and a dope sheet lane per bone |
-| Properties | `PropertiesContext` | the value rows of the character, face or animation tab worked in last |
+| Properties | `PropertiesContext` | the value rows of the character or animation tab worked in last |
 
 - **One tab per tool.** Every tool tab extends `CharacterToolContext` and names its `CharacterEditorMode` (`getMode`)
   and title (`getTabTitle`, `EditorSetting.TAB_TITLE_CHARACTER_*`); each opens from its own Characters menu button
@@ -42,47 +41,64 @@ layouts like any other.
   region nested under it by `getParent`, keyed by region key; Paint lists the paint layers of the map painted, top
   first, keyed by number, each above the base with an eye (`CharacterPaintCanvasStruct.isLayerVisible`; a hidden layer
   stays out of the composite, so Save writes only what is shown), as Substance Painter and Krita list theirs. The look
-  tabs and Face list none. Add a region as a rig part, never in code.
+  tabs list none. Add a region as a rig part, never in code.
 - **Shared choices.** The region picked is one choice for every tab that takes regions
   (`CharacterEditorManager.pickRegion` / `getPickedRegion`, kept by key and found again whenever the regions are made
-  again); the Face tab works in `getFaceRegion` (the first region that takes the face), the look tabs and Paint on the
-  whole character. The bone selected is one choice too: the weights' bone (`CharacterEditorManager.selectBone`) and
-  the rig's (`CharacterRigBranch.pickBone`) follow each other by name (`followRigBone`, `followBone`), so a bone
-  selected in the Rig tab is the bone the Weights tab paints. The vertex selection lives in the part's mesh document,
-  shared by every tab.
+  again); the look tabs and Paint work on the whole character. A face is a region like any other, the rig's part that
+  takes it, so every tab reaches it through the Layers tab. The bone selected is one choice too: the weights' bone
+  (`CharacterEditorManager.selectBone`) and the rig's (`CharacterRigBranch.pickBone`) follow each other by name
+  (`followRigBone`, `followBone`), so a bone selected in the Rig tab is the bone the Weights tab paints. The vertex
+  selection lives in the part's mesh document, shared by every tab.
 - **One window, one manager.** Each tab draws its preview in its own mode (`CharacterEditorPreviewSystem` reads the
   window's mode, never the manager's); while it is the active window, and when a layer is picked for it, it hands its
   region and mode to `CharacterEditorManager.setRegion` / `setMode`, so the Outliner and the Properties tab follow the
   window worked in last. The context creates every viewport system; the mesh view, sculpt, rig, paint and overlay
-  systems act only in the modes their flags name, and in the Face tab `FaceEditorPreviewSystem` and
-  `FaceEditorGestureSystem` drive the viewport instead of the character preview (each binds afresh when it takes
-  over). `CharacterToolContext` answers its tool canvas, tool actions, Properties rows, templates and File and Edit
-  table for its mode: the face editor's in Face, the character editor's in every other. The keys of every tool tab are
-  one file, `shortcuts/CharacterEditor.arpg`, naming `CharacterToolContext` (a shortcut file naming a base context keys
-  every tab built on it, `ShortcutManager.findShortcuts`) and kept to their tools by `canvases`; Undo, Redo and Save run
-  the File menu's action (`FileMenuBranch.run`), so they act on the face in the Face tab.
+  systems act only in the modes their flags name. `CharacterToolContext` answers its tool canvas, tool actions,
+  Properties rows, templates and File and Edit table for its mode, all the character editor's. The keys of every tool
+  tab are one file, `shortcuts/CharacterEditor.arpg`, naming `CharacterToolContext` (a shortcut file naming a base
+  context keys every tab built on it, `ShortcutManager.findShortcuts`) and kept to their tools by `canvases`; Undo, Redo
+  and Save run the File menu's action (`FileMenuBranch.run`).
 
 - **The Appearance outliner is the player's creator.** In Appearance the Outliner lists everything the game's creator
   offers the player: the gender, the features worn (Hair: the race default, none, or any style that fits), under each
   worn feature that offers variants the variant the previewed gender starts it in (eyes, teeth: the feature's own
   default, then each variant; `CharacterPropertyBranch.cycleFeatureVariant`, written as
   `genders.<g>.feature_variants.<slot>` by `CharacterEditBranch.setFeatureVariant`, cleared when the gender's feature in
-  that slot changes), the marks (overlay styles), every color with the race's tones, the detail amounts, then every
-  shape slider under its group in the order the race first lists each, each a ranged row
-  (`CharacterViewRowStruct.ranged`) holding the value the game starts the previewed gender at, across the range that
-  gender's player may slide it: the gender preset's `shapes` value where it names the shape
-  (`CharacterEditBranch.setGenderShape`), the race's `default` otherwise (`FaceEditorManager.setDefault`), the preview's
-  override cleared so it shows the new start, with one pair row (`CharacterViewRowStruct.pair`, two typed value boxes
-  side by side, no slider) for its Min and Max beneath it. Those ends are the gender's own
-  (`genders.<g>.ranges.<shape>`, `min` below `max`, within the slider's own `min` to `max`;
-  `AppearanceGenderStruct.getShapeMin` / `getShapeMax`, read only through `AppearanceData.getShapeMin(genderID, i)` /
-  `getShapeMax`, which fall back to the slider's own), written through `CharacterPropertyBranch.setGenderRangeEnd` (a
-  step apart, within the slider's range), so each race and each gender has its own range; the game's creator, its
-  randomise and NPC variation read the same two methods. The Face tab's range rows still set the slider's own range,
-  the outer bound every gender's range sits in. Appearance lists no pose: a mode names the pose it stands in
-  (`CharacterEditorMode.getStandingPose`, Appearance idles as the creator shows the player) or lets its outliner pick
-  one (`picksPose`: Build, Equipment, Weights). Only Blink, a preview control, stays in the Properties tab.
-- **Values live in the shared Properties tab.** The character, face and animation viewport contexts implement
+  that slot changes), the marks (overlay styles), every color with the race's tones, the detail amounts, every slider
+  (below) and the body build of the bone selected (Thin, Heavy, Girth). Appearance lists no pose: a mode names the pose
+  it stands in (`CharacterEditorMode.getStandingPose`, Appearance idles as the creator shows the player) or lets its
+  outliner pick one (`picksPose`: Equipment, Weights). Only Blink, Weight and Head, preview controls, stay in the
+  Properties tab.
+- **Sliders are derived, never listed by hand.** `CharacterSliderBranch` owns every slider row. The race's sliders are
+  whatever its rig and bodies offer (see Appearance below): a bone slider per channel the Rig tab ticks on a bone, a
+  control per control of the rig's bone controls, a shape key per morph no expression plays. Each is listed under its
+  group in the order the race's `appearance.sliders` names it, the rest after, as a ranged row
+  (`CharacterViewRowStruct.ranged`) holding the value the game starts the previewed gender at (the gender preset's
+  `shapes` value where it names the slider, `CharacterEditBranch.setGenderShape`; the race's `default` otherwise,
+  `CharacterEditBranch.setSliderField`), then a pair row for the gender's Min and Max
+  (`genders.<g>.ranges.<slider>`, read only through `AppearanceData.getShapeMin(genderID, i)` / `getShapeMax`, which
+  fall back to the slider's own; an end typed past the slider's own range widens it, `setRangeEnd`), then whether the
+  player is offered it (`player`, `setSliderPlayer`; one the player is not offered, NPC variation skips too, and it
+  stands at its default, moved only by the controls that drive it: the converted Human's bone sliders are all so).
+  Adding or removing a bone, a tick or a morph changes the list the next time the race is built; nothing else to edit.
+- **Controls.** A control is one slider that moves several bone sliders, the Set Driven Key of Maya and the driver of
+  Blender, kept per rig in `assets/bonecontrols/<Rig>.arpg` (`BoneControlManager`, `entitypipeline.bonecontrolmanager`;
+  schema `BoneControls`). Each bone slider row carries Pick For Control; Add Control at the foot of the outliner makes a
+  control over the two or more picked (`CharacterControlBranch.addControl`, named `control_<n>`, in the default group
+  until the race's `sliders` gives it one; rename and regroup it in the Info Panel). Under a control each bone slider it
+  drives lists an adjust slider (where the bone stands on the preview now: its own value plus every control's push, held
+  to its range), its Increase choice (on by default: the control raises the bone slider; off, it lowers it) and the bone
+  slider's own Min and Max, the same values as the bone slider's rows. Dragging the adjust slider keys the drive's
+  hidden curve where the control stands (`CharacterSliderBranch.adjustDrive` solves the share,
+  `CharacterControlBranch.setKey` keeps at most `BONE_CONTROL_MAX_KEYS`, moving the key within
+  `CHARACTER_CONTROL_KEY_REACH` or else the nearest); the curve is a monotone cubic through (0, 0), the keys and (1, 1)
+  (`BoneControlCurveUtility`, Fritsch–Carlson), so it never overshoots; there is no curve view, the face shows it. A
+  push is measured from control value 0 and scaled by the bone slider's own range, added on top of the bone slider's
+  value and held within its range, so a key cannot be set at zero. Every change, here or in the Info Panel, goes to
+  `BoneControlManager.updateBoneControls` and the preview is built again
+  (`CharacterEditorManager.rebuildActivePreview`); Save and Revert of the character take the rig's controls document
+  with them.
+- **Values live in the shared Properties tab.** The character and animation viewport contexts implement
   `PropertiesProvider` (content `ROWS`) and `CharacterViewRowSource` (their manager's `buildPropertyRows`) and create a
   `PropertiesSourceSystem`; the Properties tab (`RowPropertiesSystem`) shows the rows of the one focused last and hands
   its sliders' steps back to it. There are no per-tool Properties windows.
@@ -100,26 +116,23 @@ layouts like any other.
   `CharacterViewDockSystem` and `ToolCanvasSystem`; the dock system opens `menus/editor/CharacterDock.arpg` and
   refills it only when the source's revision moves (the outliner's own, moved when the window followed changes or its
   list does). Row templates stay in the tool's own menu
-  (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `FACE_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
+  (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
   their buttons route to the tool's branch. A tool without a text row template must never list a `TEXT` row.
-- Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_SCULPT`, `CHARACTER_WEIGHTS`,
-  `CHARACTER_RIG`, `CHARACTER_FACE`, `ANIMATION_POSE`); brushes the Brushes window's. A tool strokes the brush where
-  the canvas sizes one and the tool carries Size (`ToolCanvas.strokes`), so on the mesh and the weights Select sweeps
-  the brush over vertices, each selected as much as the tip covers it (a hard brush whole, a soft one fading at its
-  edge; Shift adds, Ctrl takes away, a press where the brush covers nothing still clears or boxes). Move, Rotate,
-  Scale and the numeric transforms carry each vertex as far as it is selected, and Assign, Add, Subtract and Smooth
-  weights reach it as far. Add a tool to a canvas in
-  `ToolCanvas`, never as a panel button. The mesh's one-off operations (transform, geometry, weights, selection) are
-  the canvas's action groups (`ToolActionGroupStruct`), shown in the Tools window under the tools and run by
-  `CharacterToolContext.runToolAction` through `CharacterEditorManager.act`, the same key their shortcuts carry; a
-  face control's operations (add, duplicate, remove, drive the picked bone, mirror, reset the preview) are the face
-  canvas's, run by `CharacterToolContext.runToolAction` in the Face tab through `FaceEditorManager.act`.
-  Properties keeps values only.
-- Every viewport (Character, Face, Animation, Animation Tree Editor) looks through the editor's `ViewCameraSystem`
+- Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_SCULPT`, `CHARACTER_WEIGHTS`, `CHARACTER_RIG`,
+  `CHARACTER_UV`, `UV_EDITOR`, `ANIMATION_POSE`); brushes the Brushes window's. A tool strokes the brush where the
+  canvas sizes one and the tool carries Size (`ToolCanvas.strokes`), so on the mesh and the weights Select sweeps the
+  brush over vertices, each selected as much as the tip covers it (a hard brush whole, a soft one fading at its edge;
+  Shift adds, Ctrl takes away, a press where the brush covers nothing still clears or boxes). Move, Rotate, Scale and
+  the numeric transforms carry each vertex as far as it is selected, and Assign, Add, Subtract and Smooth weights reach
+  it as far. Add a tool to a canvas in `ToolCanvas`, never as a panel button. The mesh's one-off operations (transform,
+  geometry, weights, selection) are the canvas's action groups (`ToolActionGroupStruct`), shown in the Tools window
+  under the tools and run by `CharacterToolContext.runToolAction` through `CharacterEditorManager.act`, the same key
+  their shortcuts carry. Properties keeps values only.
+- Every viewport (Character, Animation, Animation Tree Editor) looks through the editor's `ViewCameraSystem`
   (zoomed in as far as it goes, the wheel dollies the pivot forward, and the near plane follows the distance, so close
   detail is never clipped),
-  framing `CharacterViewPoseSystem` (every character tool tab frames its region through `CharacterRegionFrameSystem`,
-  the Face tab's on the Head). A viewport
+  framing `CharacterViewPoseSystem` (every character tool tab frames its region through `CharacterRegionFrameSystem`).
+  A viewport
   system takes a click only when it acts on something (a vertex, a joint, the mesh under the brush) and claims it with
   `EditorInputSystem.claim`; any other left press orbits and a right press pans. Cancel clicks
   (`CHARACTER_VIEW_BUTTON_CANCEL`) are claimed too. Test `ViewCameraSystem.isDragging`, never a held button, to stay
@@ -173,7 +186,7 @@ layouts like any other.
 the bind pose, whether it draws vertices, and its status hint. Check those flags, never `mode == X`, except where a
 mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
 
-- **Poses.** Every mode that picks a pose (Build, Equipment, Mesh, Sculpt, Weights) lists one Pose row, stepped by
+- **Poses.** Every mode that picks a pose (Equipment, Mesh, Sculpt, Weights) lists one Pose row, stepped by
   `CharacterEditorManager.stepPose` through Bind (the default: the mesh exactly as its file holds it in a mesh mode),
   each clip the rig names in `poses` (struck still at its start, `CharacterEditorPreviewSystem.strikeClip`, labelled
   by `CharacterViewUtility.toResourceLabel`), then Idle, Walk and Run played. Rig holds the bind pose. Grab, Rotate
@@ -194,9 +207,9 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
   mirror always round alike.
 - **Canvas options.** Mirror, X-Ray and Bones are `ToolOption`s marked canvas-wide (`isCanvasWide`): every tool on a
   canvas that honours one lists it under its own options, last, in the Tools panel. Mirror (on by default) is honoured
-  by the mesh, sculpt, weights, paint, rig and face canvases, X-Ray by the mesh and weights, Bones
+  by the mesh, sculpt, weights, paint and rig canvases, X-Ray by the mesh and weights, Bones
   (`CharacterBoneDisplay`: joints, sticks from each joint to its parent's, both, or hidden) by the mesh, weights and
-  rig. `CharacterEditorManager.isMirror` / `isXray` / `getBoneDisplay` and `FaceEditorManager.isMirror` read them from
+  rig. `CharacterEditorManager.isMirror` / `isXray` / `getBoneDisplay` read them from
   `ToolManager` for the mode's canvas; never keep a copy, and never list them as Properties rows.
 - **Hide and Reveal.** The Selection group's Hide (H), Hide Unselected (Shift+H) and Reveal (Alt+H)
   (`CharacterSelectionBranch.hide` / `reveal`) put vertices out of the way, as Blender hides geometry to reach tight
@@ -425,14 +438,22 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Colors in the creator.** Every color section lists the race's palette swatches, then Hue, Saturation and
   Brightness sliders (`CreatorSlider.COLOR_*`, `Color.setHSB`) for any color between. Teeth take `SkinnedColor.TEETH`.
 - **Appearance.** `AppearanceData` holds the race's body meshes (each gender's `mesh`, in the race's order),
-  colors, palettes, details, shape sliders and the morphs each `AppearanceExpression` plays, the morphs resolved on
-  every body (`getShapeMorph`, `getExpressionMorph`). A slider (`AppearanceShapeStruct`) is known by its `name` (its
-  morph's when it gives none) and drives a `morph`, the `bones` it moves, turns and scales per unit of its value
-  (`AppearanceBoneTargetStruct`), or both: that is a face control. `AppearanceHandle` keeps slider values as morph
-  weights of the body worn and sums the bone targets into each bone's shaping (`AnimationStateHandle.setBoneShape`,
-  laid on the bind pose under every pose) and proportion in `applyProportions`, plays the blink (`updateFace`, through
-  the half shape) and hands everything to a draw in `writeAppearance`. The creator lists shapes by group (the body
-  group on the Body tab); saves and gender presets store shapes by name.
+  colors, palettes, details, sliders and the morphs each `AppearanceExpression` plays, the morphs resolved on every
+  body (`getShapeMorph`, `getExpressionMorph`). `AppearanceBuilder.parseShapes` derives the sliders
+  (`AppearanceShapeStruct`, three kinds): a bone slider per channel a rig bone offers in its `sliders`
+  (`BoneSliderChannel`: move, turn and size on x, y and z; named `<bone>/<channel>`, a `_l`/`_r` pair one slider named
+  without its side, the right twin taking the channel's mirror sign, `getMirrorSign`) moving its bones
+  (`AppearanceBoneTargetStruct`) a block, a degree or its whole size per unit; a control per control of the rig's bone
+  controls, its drives (`AppearanceDriveStruct`) naming the bone sliders it pushes; a shape key per morph of the bodies
+  that no expression plays (blinks stay expressions). The race's `appearance.sliders` map gives each its `group`,
+  `min`, `max`, `default` and `player` by name, and its order; a slider it does not name takes the defaults (a bone
+  slider its channel's range either way of zero, `getDefaultRange`). `AppearanceHandle` keeps shape key values as morph
+  weights of the body worn, totals each bone slider's own value with every control's push
+  (`AppearanceData.resolvePush`) held to the slider's range, sums the bone targets into each bone's shaping
+  (`AnimationStateHandle.setBoneShape`, laid on the bind pose under every pose) and proportion in `applyProportions`,
+  plays the blink (`updateFace`, through the half shape) and hands everything to a draw in `writeAppearance`. The
+  creator and NPC variation list only sliders the player is offered, by group (the body group on the Body tab); saves
+  and gender presets store values by name.
 - **Shape keys in the editor.** Sculpt mode's Shape Keys rows pick the morph being sculpted
   (`CharacterMeshBranch.editShape`): the morph is lifted into the positions so every tool works unchanged, and baked
   back into deltas when sculpting returns to the base, the mode or part changes, or the mesh is saved. Mesh modes
@@ -578,12 +599,16 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - Clip edits: `AnimationEditBranch.edit` records every edit in the clip's `CharacterViewHistoryStruct`; pose drags
   go through `AnimationEditorManager.beginPose / writePose / endPose / cancelPose`; viewport:
   `AnimationEditorPoseSystem`.
-- Face controls: `FaceEditBranch` performs every edit of the template's shapes through InfoManager, recorded in the
-  template's face history (`FaceEditorManager.getHistory`); values and actions: `FacePropertyBranch`; rows:
-  `FaceRowBranch`. Bone drags go through `FaceEditorManager.beginGesture / writeGesture / endGesture / cancelGesture`;
-  viewport: `FaceEditorGestureSystem` in the Face tab. The face editor always works on the character tools' active race,
-  saves and reverts through it, and takes its preview gender and slider values from it. Gender starts live under the
-  race's `genders`, the controls under its `appearance`.
+- Sliders: `CharacterSliderBranch` lists, reads, steps, types, cycles and acts on every slider row (keys
+  `CHARACTER_EDITOR_KEY_SHAPE*`, `DRIVE_*`, `CONTROL_*`; a drive's key index is its control's slider number times
+  `CHARACTER_EDITOR_DRIVE_KEY_STRIDE` plus the drive's place), writing the race through `CharacterEditBranch`
+  (`setSliderField`, `setSliderPlayer`, `setGenderShape`) and the controls through `CharacterControlBranch`, which owns
+  the rig's Bone Controls document (`INFO_SCHEMA_BONE_CONTROLS`, made the first time a control is added) and the picks.
+- Slider channels: the Rig tab lists, under the selected bone's Sliders header, a choice per `BoneSliderChannel`
+  (`CharacterRigRowBranch.addSliderRows`); `CharacterRigBranch.toggleSlider` writes the bone's `sliders` and its twin's,
+  since a pair offers one slider, as one rig edit. The rig applies live, and `CharacterRigBranch.refreshEntry` builds
+  the race's preview again only when the channels' signature (`resolveSliderSignature`) moved, so a joint drag never
+  rebuilds the race.
 - The preview look (gender, tones, sliders, blink, build, head) is put on any viewport's appearance by
   `CharacterEditorManager.applyLook` (`CharacterLookBranch`); never set it piece by piece in a viewport.
 - Rotation and projection math shared by every viewport gesture: `CharacterPoseUtility`.

@@ -23,9 +23,8 @@ public enum ToolCanvas {
      * bone weights and a sculpted surface do. The world's heights are
      * their own canvas, raised, lowered, smoothed, flattened and erased
      * back to level with the brush, never painted from a palette. A
-     * character's rig, its face and an animation's pose take the tools
-     * that pick and drag its joints; the face drags a bone into the face
-     * control selected. A character's UV tab selects the vertices whose
+     * character's rig and an animation's pose take the tools that pick and
+     * drag its joints. A character's UV tab selects the vertices whose
      * edges it marks as seams and whose faces it unwraps; the UV Editor
      * selects, moves, turns and scales their UVs and packs, evens,
      * stitches and pins their islands. A character's mesh and weights
@@ -115,12 +114,6 @@ public enum ToolCanvas {
             false,
             mirror(),
             bones()),
-    CHARACTER_FACE(
-            EditorSetting.TOOL_CANVAS_CHARACTER_FACE,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
-            new ToolActionGroupStruct[] { faceControls() },
-            false,
-            mirror()),
     CHARACTER_UV(
             EditorSetting.TOOL_CANVAS_CHARACTER_UV,
             new EditorTool[] { EditorTool.SELECT },
@@ -367,19 +360,6 @@ public enum ToolCanvas {
                 action(
                         EditorSetting.CHARACTER_RIG_LABEL_SPRING_PREVIEW,
                         EditorSetting.CHARACTER_RIG_KEY_SPRING_PREVIEW));
-    }
-
-    private static ToolActionGroupStruct faceControls() {
-        return new ToolActionGroupStruct(
-                EditorSetting.FACE_EDITOR_HEADER_ACTIONS,
-                action(EditorSetting.FACE_EDITOR_LABEL_ADD_CONTROL, EditorSetting.FACE_EDITOR_KEY_ADD_CONTROL),
-                action(
-                        EditorSetting.FACE_EDITOR_LABEL_DUPLICATE_CONTROL,
-                        EditorSetting.FACE_EDITOR_KEY_DUPLICATE_CONTROL),
-                action(EditorSetting.FACE_EDITOR_LABEL_REMOVE_CONTROL, EditorSetting.FACE_EDITOR_KEY_REMOVE_CONTROL),
-                action(EditorSetting.FACE_EDITOR_LABEL_ADD_TARGET, EditorSetting.FACE_EDITOR_KEY_ADD_TARGET),
-                action(EditorSetting.FACE_EDITOR_LABEL_MIRROR_TARGETS, EditorSetting.FACE_EDITOR_KEY_MIRROR_TARGETS),
-                action(EditorSetting.FACE_EDITOR_LABEL_RESET_PREVIEW, EditorSetting.FACE_EDITOR_KEY_RESET_PREVIEW));
     }
 
     private static ToolActionGroupStruct timelineNesting() {

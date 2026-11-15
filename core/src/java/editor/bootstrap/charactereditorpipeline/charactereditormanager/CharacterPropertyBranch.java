@@ -17,7 +17,6 @@ import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
-import editor.bootstrap.faceeditorpipeline.faceeditormanager.FaceEditorManager;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -53,7 +52,7 @@ class CharacterPropertyBranch extends BranchPackage {
     private CharacterRigPropertyBranch characterRigPropertyBranch;
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
     private CharacterUVBranch characterUVBranch;
-    private FaceEditorManager faceEditorManager;
+    private CharacterSliderBranch characterSliderBranch;
     private FeatureManager featureManager;
     private GenderManager genderManager;
 
@@ -67,7 +66,7 @@ class CharacterPropertyBranch extends BranchPackage {
         this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
         this.characterPaintPropertyBranch = get(CharacterPaintPropertyBranch.class);
         this.characterUVBranch = get(CharacterUVBranch.class);
-        this.faceEditorManager = get(FaceEditorManager.class);
+        this.characterSliderBranch = get(CharacterSliderBranch.class);
         this.featureManager = get(FeatureManager.class);
         this.genderManager = get(GenderManager.class);
     }
@@ -85,6 +84,8 @@ class CharacterPropertyBranch extends BranchPackage {
             characterRigPropertyBranch.select(key);
         else if (characterPaintPropertyBranch.handles(keyName))
             characterPaintPropertyBranch.select(key);
+        else if (characterSliderBranch.handles(keyName))
+            characterSliderBranch.select(key);
 
         else if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BONE))
             characterEditorManager.selectBone(index);
@@ -108,6 +109,9 @@ class CharacterPropertyBranch extends BranchPackage {
         if (isUVKey(key))
             return characterUVBranch.getValueText(key);
 
+        if (isSliderKey(key))
+            return characterSliderBranch.getValueText(key);
+
         if (isNumberKey(key))
             return CharacterViewUtility.formatNumber(getNumber(document, key));
 
@@ -127,6 +131,9 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isUVKey(key))
             return characterUVBranch.isValueValid(key, text);
+
+        if (isSliderKey(key))
+            return characterSliderBranch.isValueValid(key, text);
 
         return isNumberKey(key) && hasTarget(document, key) && CharacterViewUtility.isNumber(text);
     }
@@ -150,6 +157,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isUVKey(key)) {
             characterUVBranch.setValue(key, text);
+            return;
+        }
+
+        if (isSliderKey(key)) {
+            characterSliderBranch.setValue(key, text);
             return;
         }
 
@@ -178,6 +190,11 @@ class CharacterPropertyBranch extends BranchPackage {
             return;
         }
 
+        if (isSliderKey(key)) {
+            characterSliderBranch.step(key, direction);
+            return;
+        }
+
         if (isNumberKey(key) && hasTarget(document, key))
             writeNumber(document, key, getNumber(document, key) + direction * getStep(key));
     }
@@ -196,6 +213,10 @@ class CharacterPropertyBranch extends BranchPackage {
 
     private boolean isUVKey(String key) {
         return characterUVBranch.handles(CharacterViewUtility.getKeyName(key));
+    }
+
+    private boolean isSliderKey(String key) {
+        return characterSliderBranch.handles(CharacterViewUtility.getKeyName(key));
     }
 
     // Numbers \\
@@ -240,9 +261,6 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_THIN,
                     EditorSetting.CHARACTER_EDITOR_KEY_HEAVY,
                     EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> appearance;
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE,
-                    EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN,
-                    EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> resolveShape(key) != null;
             case EditorSetting.CHARACTER_EDITOR_KEY_GIRTH -> appearance && resolveRig(document) != null;
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT,
                     EditorSetting.CHARACTER_EDITOR_KEY_HEAD,
@@ -272,11 +290,6 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_THIN -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_THIN);
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> getBuildFactor(EditorSetting.CHARACTER_EDITOR_FIELD_HEAVY);
             case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> getDetail(SkinnedDetail.VALUES[axis]);
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> getStartingShape(resolveShape(key));
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN -> resolveAppearanceData().getShapeMin(
-                    characterEditorManager.getPreviewGenderID(), axis);
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> resolveAppearanceData().getShapeMax(
-                    characterEditorManager.getPreviewGenderID(), axis);
             case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.getBlink();
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT -> characterEditorManager.getWeightRatio();
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAD -> getAxis(characterEditorManager.getHeadProportion(), axis);
@@ -321,9 +334,6 @@ class CharacterPropertyBranch extends BranchPackage {
                             value,
                             EditorSetting.CHARACTER_EDITOR_DETAIL_MIN,
                             EditorSetting.CHARACTER_EDITOR_DETAIL_MAX));
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE -> setShapeDefault(axis, value);
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN -> setGenderRangeEnd(axis, false, value);
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> setGenderRangeEnd(axis, true, value);
             case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> characterEditorManager.setBlink(
                     CharacterViewUtility.round(channel));
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT -> characterEditorManager.setWeightRatio(
@@ -355,73 +365,6 @@ class CharacterPropertyBranch extends BranchPackage {
         }
     }
 
-    // One end of the range the previewed gender's player may slide a slider across moved, held within the slider's own
-    // and a step from the other end, the default carried inside it
-    private void setGenderRangeEnd(int shapeIndex, boolean upper, float value) {
-
-        AppearanceData appearanceData = resolveAppearanceData();
-        AppearanceShapeStruct shape = appearanceData.getShape(shapeIndex);
-        short genderID = characterEditorManager.getPreviewGenderID();
-        float step = EditorSetting.FACE_EDITOR_RANGE_STEP;
-        float min = appearanceData.getShapeMin(genderID, shapeIndex);
-        float max = appearanceData.getShapeMax(genderID, shapeIndex);
-
-        if (upper)
-            max = CharacterViewUtility.round(CharacterViewUtility.clamp(value, min + step, shape.getMax()));
-        else
-            min = CharacterViewUtility.round(CharacterViewUtility.clamp(value, shape.getMin(), max - step));
-
-        characterEditBranch.setGenderRange(
-                characterEditorManager.getActiveDocument(), getPreviewGenderName(), shape.getShapeName(), min, max);
-        characterEditorManager.setShapeValue(shapeIndex, Float.NaN);
-    }
-
-    // The value the game starts the previewed gender's slider at moved, the preview following it: the gender's own
-    // where its preset names the shape, the race's default otherwise
-    private void setShapeDefault(int shapeIndex, float value) {
-
-        AppearanceData appearanceData = resolveAppearanceData();
-        AppearanceShapeStruct shape = appearanceData.getShape(shapeIndex);
-        short genderID = characterEditorManager.getPreviewGenderID();
-        float rounded = CharacterViewUtility.round(CharacterViewUtility.clamp(
-                value,
-                appearanceData.getShapeMin(genderID, shapeIndex),
-                appearanceData.getShapeMax(genderID, shapeIndex)));
-
-        if (findGenderShapes(shape) != null)
-            characterEditBranch.setGenderShape(
-                    characterEditorManager.getActiveDocument(), getPreviewGenderName(), shape.getShapeName(), rounded);
-        else
-            faceEditorManager.setDefault(shapeIndex, rounded);
-
-        characterEditorManager.setShapeValue(shapeIndex, Float.NaN);
-    }
-
-    // The value the game starts the previewed gender at on a slider: its preset's where it names the shape, else the
-    // race's default
-    private float getStartingShape(AppearanceShapeStruct shape) {
-
-        ArpgObjectStruct shapes = findGenderShapes(shape);
-
-        return shapes != null
-                ? ArpgUtility.getFloat(shapes, shape.getShapeName(), shape.getDefaultValue())
-                : shape.getDefaultValue();
-    }
-
-    // The previewed gender's preset shapes where they name the shape, null otherwise
-    private ArpgObjectStruct findGenderShapes(AppearanceShapeStruct shape) {
-
-        ArpgObjectStruct shapes = CharacterViewUtility.findObject(
-                CharacterViewUtility.findObject(
-                        CharacterViewUtility.findObject(
-                                characterEditorManager.getTemplateArpg(),
-                                EditorSetting.CHARACTER_EDITOR_FIELD_GENDERS),
-                        getPreviewGenderName()),
-                EditorSetting.CHARACTER_EDITOR_FIELD_SHAPES);
-
-        return shapes != null && ArpgUtility.hasNumber(shapes, shape.getShapeName()) ? shapes : null;
-    }
-
     float getStep(String key) {
 
         String keyName = CharacterViewUtility.getKeyName(key);
@@ -434,10 +377,7 @@ class CharacterPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_HEAVY -> EditorSetting.CHARACTER_EDITOR_BUILD_FACTOR_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_WEIGHT -> EditorSetting.CHARACTER_EDITOR_WEIGHT_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_DETAIL -> EditorSetting.CHARACTER_EDITOR_DETAIL_STEP;
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE,
-                    EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> EditorSetting.CHARACTER_EDITOR_SHAPE_STEP;
-            case EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MIN,
-                    EditorSetting.CHARACTER_EDITOR_KEY_SHAPE_MAX -> EditorSetting.FACE_EDITOR_RANGE_STEP;
+            case EditorSetting.CHARACTER_EDITOR_KEY_BLINK -> EditorSetting.CHARACTER_EDITOR_SHAPE_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_HEAD -> EditorSetting.CHARACTER_EDITOR_HEAD_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_GIRTH -> EditorSetting.CHARACTER_EDITOR_GIRTH_STEP;
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_POSITION -> EditorSetting.CHARACTER_EDITOR_POSITION_STEP;
@@ -476,17 +416,6 @@ class CharacterPropertyBranch extends BranchPackage {
                 : defaultValue;
     }
 
-    // The slider a shape key names, null when the preview's race has none at that index
-    private AppearanceShapeStruct resolveShape(String key) {
-
-        AppearanceData appearanceData = resolveAppearanceData();
-        int shapeIndex = CharacterViewUtility.getKeyIndex(key);
-
-        return appearanceData != null && shapeIndex >= 0 && shapeIndex < appearanceData.getShapeCount()
-                ? appearanceData.getShape(shapeIndex)
-                : null;
-    }
-
     private float getGirth(CharacterDocumentInstance document) {
 
         ArpgObjectStruct bones = CharacterViewUtility.findObject(
@@ -512,6 +441,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isRigKey(key)) {
             characterRigPropertyBranch.cycle(key, direction);
+            return;
+        }
+
+        if (isSliderKey(key)) {
+            characterSliderBranch.cycle(key);
             return;
         }
 
@@ -824,7 +758,7 @@ class CharacterPropertyBranch extends BranchPackage {
                 : null;
     }
 
-    private String getPreviewGenderName() {
+    String getPreviewGenderName() {
         return genderManager.getGenderHandleFromGenderID(characterEditorManager.getPreviewGenderID()).getGenderName();
     }
 
@@ -997,6 +931,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isUVKey(key)) {
             characterUVBranch.act(key);
+            return;
+        }
+
+        if (isSliderKey(key)) {
+            characterSliderBranch.act(key);
             return;
         }
 

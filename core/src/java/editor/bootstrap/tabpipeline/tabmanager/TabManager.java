@@ -22,9 +22,7 @@ import editor.bootstrap.tabpipeline.tab.TabData;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.runtime.charactereditor.CharacterAppearanceContext;
-import editor.runtime.charactereditor.CharacterBuildContext;
 import editor.runtime.charactereditor.CharacterEquipmentContext;
-import editor.runtime.charactereditor.CharacterFaceContext;
 import editor.runtime.charactereditor.CharacterMeshContext;
 import editor.runtime.charactereditor.CharacterPaintContext;
 import editor.runtime.charactereditor.CharacterRigContext;
@@ -186,10 +184,6 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_APPEARANCE, CharacterAppearanceContext.class, osWindow);
     }
 
-    public TabHandle openCharacterBuild(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_BUILD, CharacterBuildContext.class, osWindow);
-    }
-
     public TabHandle openCharacterEquipment(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_EQUIPMENT, CharacterEquipmentContext.class, osWindow);
     }
@@ -212,10 +206,6 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openCharacterRig(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_RIG, CharacterRigContext.class, osWindow);
-    }
-
-    public TabHandle openCharacterFace(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_FACE, CharacterFaceContext.class, osWindow);
     }
 
     public TabHandle openCharacterUV(WindowInstance osWindow) {

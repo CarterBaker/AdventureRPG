@@ -26,9 +26,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CharacterEditorPreviewSystem extends SystemPackage {
 
     /*
-     * Drives the Character Editor window's viewport from the character
-     * editor on every layer but the face's, which FaceEditorPreviewSystem
-     * drives; coming back from it the preview is bound afresh. A new
+     * Drives a character tool tab's viewport from the character editor. A new
      * preview of the active race is put on the animation tree of the gender
      * it is made as; that gender — the model it requires, moving by its own
      * tree, and the features it wears — the sliders,
@@ -38,13 +36,13 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * movement, held in the exact bind pose while its rig is edited, and
      * played with its springs simulated while Preview Springs is on — with
      * the edit pose's turns laid over it on the mesh and weights layers, and
-     * given the markers of the mode: the bones in Build, Mesh and Weights,
+     * given the markers of the mode: the bones in Mesh and Weights,
      * the rig's bones as they are being edited in Rig, each drawn as the
      * Tools panel's Bones says (joints, sticks from each joint to its
      * parent's, both or none), every equipment anchor in Equipment, the
      * selected one highlighted.
-     * The window's own mode decides all of it, so two Character Editor
-     * windows each show the character their own way side by side.
+     * The window's own mode decides all of it, so two tool tabs each show
+     * the character their own way side by side.
      */
 
     // Internal
@@ -92,11 +90,6 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        if (characterEditorModeSystem.getMode().shapesFace()) {
-            unbind();
-            return;
-        }
-
         CharacterDocumentInstance document = characterEditorManager.getActiveDocument();
 
         if (document == null || !document.hasPreview()) {
@@ -116,17 +109,6 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
                 && characterEditorModeSystem.getMode().picksPose());
         strikePose();
         pushMarkers();
-    }
-
-    // Let go while another system drives the viewport, so the preview is bound and dressed again on return, with no
-    // edit pose left on it
-    private void unbind() {
-
-        if (boundDocument != null && characterViewPoseSystem.hasSubject())
-            applyEditPose(false);
-
-        this.boundDocument = null;
-        this.lookRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
     private void bind(CharacterDocumentInstance document) {
@@ -234,7 +216,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     private void pushMarkers() {
 
         switch (characterEditorModeSystem.getMode()) {
-            case BUILD, MESH, WEIGHTS -> pushJointMarkers();
+            case MESH, WEIGHTS -> pushJointMarkers();
             case RIG -> pushRigMarkers();
             case EQUIPMENT -> pushAnchorMarkers();
             default -> {

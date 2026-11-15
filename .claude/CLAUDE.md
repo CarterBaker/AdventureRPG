@@ -75,7 +75,7 @@ root.
   `.claude/docs/Dialogue.md`).
   Before touching the character tool tabs (Appearance to UV), the UV Editor, the Animation Editor, their docker
   windows, sculpting, rigging, posing, races and their genders' models, or a character's appearance (morphs, shape
-  sliders, zones, masks, the character shaders), read `.claude/docs/CharacterEditorPipeline.md`.
+  sliders, bone controls, zones, masks, the character shaders), read `.claude/docs/CharacterEditorPipeline.md`.
 
 @docs/Engine.md
 

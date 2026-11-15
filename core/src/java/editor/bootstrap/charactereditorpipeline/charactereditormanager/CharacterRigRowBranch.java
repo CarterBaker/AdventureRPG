@@ -1,10 +1,13 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import application.bootstrap.geometrypipeline.rig.BoneSliderChannel;
+import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
-import editor.runtime.EditorSetting;
+import editor.runtime.label.LabelUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CharacterRigRowBranch extends BranchPackage {
@@ -106,10 +109,27 @@ class CharacterRigRowBranch extends BranchPackage {
         addAxes(rows, EditorSetting.CHARACTER_RIG_KEY_POSITION, EditorSetting.CHARACTER_EDITOR_LABEL_POSITION);
         addAxes(rows, EditorSetting.CHARACTER_RIG_KEY_ROTATION, EditorSetting.CHARACTER_EDITOR_LABEL_ROTATION);
         addAxes(rows, EditorSetting.CHARACTER_RIG_KEY_SIZE, EditorSetting.CHARACTER_EDITOR_LABEL_SIZE);
+        addSliderRows(rows);
         addSpringRows(rows);
         addColliderRows(rows, boneIndex);
         addStructureRows(rows, boneIndex);
         addFileRows(rows);
+    }
+
+    // Each channel the selected bone may offer the Appearance outliner as a slider, with its twin across the body
+    private void addSliderRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_RIG_HEADER_SLIDERS));
+
+        for (BoneSliderChannel channel : BoneSliderChannel.VALUES) {
+
+            String key = CharacterViewUtility.toKey(EditorSetting.CHARACTER_RIG_KEY_SLIDER, channel.ordinal());
+
+            rows.add(CharacterViewRowStruct.choice(
+                    key,
+                    LabelUtility.toWords(ArpgUtility.toEnumName(channel)),
+                    characterRigPropertyBranch.getValueText(key)));
+        }
     }
 
     // The settings of the spring chain the selected bone belongs to, none for a bone in no chain

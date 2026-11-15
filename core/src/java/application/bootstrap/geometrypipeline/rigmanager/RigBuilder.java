@@ -2,6 +2,7 @@ package application.bootstrap.geometrypipeline.rigmanager;
 
 import java.io.File;
 
+import application.bootstrap.geometrypipeline.rig.BoneSliderChannel;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigColliderShape;
 import application.bootstrap.geometrypipeline.rig.RigColliderStruct;
@@ -112,7 +113,30 @@ class RigBuilder extends BuilderPackage {
 
         boneName2Index.put(name, boneIndex);
 
-        return new RigBoneStruct(name, parentIndex, position, rotation, size);
+        return new RigBoneStruct(name, parentIndex, position, rotation, size, parseSliders(boneArpg, name, sourceName));
+    }
+
+    // The channels a bone offers as character sliders, each named once in "sliders"
+    private int parseSliders(ArpgObjectStruct boneArpg, String boneName, String sourceName) {
+
+        if (!ArpgUtility.hasArray(boneArpg, "sliders"))
+            return 0;
+
+        ArpgArrayStruct slidersArpg = boneArpg.getAsArray("sliders");
+        int channels = 0;
+
+        for (int i = 0; i < slidersArpg.size(); i++) {
+
+            BoneSliderChannel channel = ArpgUtility.toEnum(slidersArpg.get(i).getAsString(), BoneSliderChannel.class);
+
+            if ((channels & channel.getBit()) != 0)
+                throwException("Bone \"" + boneName + "\" names slider \"" + ArpgUtility.toEnumName(channel)
+                        + "\" twice in rig: " + sourceName);
+
+            channels |= channel.getBit();
+        }
+
+        return channels;
     }
 
     private int parseParentIndex(

@@ -27,7 +27,8 @@ public class AppearanceHandle extends HandlePackage {
      * the weights of the body's morphs, beside the expression weights the
      * face plays — a blink at an interval of its own, passing through the
      * half-closed shape, while the face is animated — and as the moves, turns
-     * and scales of the bones they drive. applyProportions() is the one path
+     * and scales of the bones they drive, each bone slider taking every
+     * control's push along its curve on top of its own value. applyProportions() is the one path
      * that writes bone proportions and shaping and re-poses the entity,
      * writeAppearance() the one path that hands the lot to a skinned draw,
      * and resetToDefaults() returns everything to the race and the
@@ -72,10 +73,13 @@ public class AppearanceHandle extends HandlePackage {
     private float weightRatio;
     private Vector3 headProportion;
 
-    // Bone Shaping — per bone, what the sliders driving it add up to
+    // Bone Shaping — per bone, what the sliders driving it add up to, and per slider, its own value with every
+    // control's push on it
     private Vector3[] boneMoves;
     private Vector3[] boneTurns;
     private Vector3[] boneScales;
+    private float[] sliderTotals;
+    private float[] curveScratch;
 
     // Constructor \\
 
@@ -126,6 +130,9 @@ public class AppearanceHandle extends HandlePackage {
             boneTurns[i] = new Vector3();
             boneScales[i] = new Vector3(1f, 1f, 1f);
         }
+
+        this.sliderTotals = new float[appearanceData.getShapeCount()];
+        this.curveScratch = new float[EngineSetting.BONE_CONTROL_CURVE_SCRATCH_FLOATS];
 
         resetToDefaults();
     }
@@ -239,7 +246,7 @@ public class AppearanceHandle extends HandlePackage {
 
         writeShapeValue(shapeIndex, value);
 
-        if (appearanceData.getShape(shapeIndex).hasBoneTargets())
+        if (appearanceData.getShape(shapeIndex).shapesBones())
             applyProportions();
     }
 
@@ -449,8 +456,8 @@ public class AppearanceHandle extends HandlePackage {
         animationStateHandle.refreshPose();
     }
 
-    // Each bone's move, turn and scale summed over the sliders driving it, each at its value; a scale is held above
-    // the least a bone may shrink to
+    // Each bone's move, turn and scale summed over the bone sliders driving it, each at its own value with every
+    // control's push added and held to its range; a scale is held above the least a bone may shrink to
     private void accumulateBoneShaping() {
 
         for (int i = 0; i < boneMoves.length; i++) {
@@ -459,10 +466,16 @@ public class AppearanceHandle extends HandlePackage {
             boneScales[i].set(1f, 1f, 1f);
         }
 
+        System.arraycopy(shapeValues, 0, sliderTotals, 0, shapeValues.length);
+
+        for (int s = 0; s < shapeValues.length; s++)
+            if (appearanceData.getShape(s).isControl())
+                pushControl(s);
+
         for (int s = 0; s < shapeValues.length; s++) {
 
             AppearanceShapeStruct shape = appearanceData.getShape(s);
-            float value = shapeValues[s];
+            float value = shape.clamp(sliderTotals[s]);
 
             for (int t = 0; t < shape.getBoneTargetCount(); t++) {
 
@@ -485,5 +498,15 @@ public class AppearanceHandle extends HandlePackage {
                     Math.max(least, boneScales[i].x),
                     Math.max(least, boneScales[i].y),
                     Math.max(least, boneScales[i].z));
+    }
+
+    // Every push a control makes, at the value it stands at, on the bone sliders it drives
+    private void pushControl(int controlIndex) {
+
+        AppearanceShapeStruct control = appearanceData.getShape(controlIndex);
+
+        for (int d = 0; d < control.getDriveCount(); d++)
+            sliderTotals[control.getDrive(d).getSliderIndex()] += appearanceData.resolvePush(
+                    controlIndex, d, shapeValues[controlIndex], curveScratch);
     }
 }

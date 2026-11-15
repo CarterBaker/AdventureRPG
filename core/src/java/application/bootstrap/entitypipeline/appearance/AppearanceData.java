@@ -2,6 +2,7 @@ package application.bootstrap.entitypipeline.appearance;
 
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.entitypipeline.util.BoneControlCurveUtility;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
@@ -204,6 +205,39 @@ public class AppearanceData extends DataPackage {
         float max = preset != null ? preset.getShapeMax(shapeIndex) : Float.NaN;
 
         return Float.isNaN(max) ? shapes[shapeIndex].getMax() : max;
+    }
+
+    // A control's push on one bone slider it drives, at a value of the control: how far the drive's curve has carried,
+    // across the control's own range, from zero to the value, as a share of the slider's own range, down that range
+    // for a slider that falls with the control; scratch holds BONE_CONTROL_CURVE_SCRATCH_FLOATS floats
+    public float resolvePush(int controlIndex, int driveIndex, float controlValue, float[] scratch) {
+
+        AppearanceShapeStruct control = shapes[controlIndex];
+        AppearanceDriveStruct drive = control.getDrive(driveIndex);
+        AppearanceShapeStruct slider = shapes[drive.getSliderIndex()];
+        float span = control.getMax() - control.getMin();
+
+        if (span <= 0f)
+            return 0f;
+
+        float share = BoneControlCurveUtility.evaluate(drive.getKeys(), toPlace(controlIndex, controlValue), scratch)
+                - BoneControlCurveUtility.evaluate(drive.getKeys(), getZeroPlace(controlIndex), scratch);
+
+        return (drive.isIncrease() ? share : -share) * (slider.getMax() - slider.getMin());
+    }
+
+    // Where a value of a slider stands along its own range, 0 at its low end to 1 at its high end
+    public float toPlace(int shapeIndex, float value) {
+
+        AppearanceShapeStruct shape = shapes[shapeIndex];
+        float span = shape.getMax() - shape.getMin();
+
+        return span > 0f ? Math.clamp((value - shape.getMin()) / span, 0f, 1f) : 0f;
+    }
+
+    // Where zero stands along a control's range, the place it pushes nothing from
+    public float getZeroPlace(int shapeIndex) {
+        return toPlace(shapeIndex, 0f);
     }
 
     // The index of the slider of a name, INDEX_NOT_FOUND when no slider has it

@@ -1,5 +1,6 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import application.bootstrap.geometrypipeline.rig.BoneSliderChannel;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
@@ -46,9 +47,15 @@ class CharacterRigPropertyBranch extends BranchPackage {
                 || keyName.equals(EditorSetting.CHARACTER_RIG_KEY_NAME)
                 || keyName.equals(EditorSetting.CHARACTER_RIG_KEY_PARENT)
                 || keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SPRING)
+                || keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SLIDER)
                 || isColliderKey(keyName)
                 || toField(keyName) != null
                 || isActionKey(keyName);
+    }
+
+    // The slider channel a key names by its number
+    private BoneSliderChannel toChannel(String key) {
+        return BoneSliderChannel.VALUES[CharacterViewUtility.getKeyIndex(key)];
     }
 
     // The bone field a number row edits, null for a key that edits none
@@ -134,6 +141,11 @@ class CharacterRigPropertyBranch extends BranchPackage {
 
         if (isColliderKey(keyName))
             return getColliderText(keyName, CharacterViewUtility.getKeyIndex(key));
+
+        if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SLIDER))
+            return characterRigBranch.offersSlider(boneIndex, toChannel(key))
+                    ? EditorSetting.CHARACTER_EDITOR_SWITCH_ON
+                    : EditorSetting.CHARACTER_EDITOR_SWITCH_OFF;
 
         return switch (keyName) {
             case EditorSetting.CHARACTER_RIG_KEY_NAME -> characterRigBranch.getBoneName(boneIndex);
@@ -342,6 +354,8 @@ class CharacterRigPropertyBranch extends BranchPackage {
 
         if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_PARENT))
             characterRigBranch.cycleParent(boneIndex, direction);
+        else if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_SLIDER))
+            characterRigBranch.toggleSlider(boneIndex, toChannel(key));
         else if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_COLLIDER_SHAPE) && isCollider(index))
             characterColliderBranch.cycleShape(index);
         else if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_COLLIDER_CHAINS) && isCollider(index))

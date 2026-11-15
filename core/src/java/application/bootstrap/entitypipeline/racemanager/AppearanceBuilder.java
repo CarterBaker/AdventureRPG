@@ -4,14 +4,21 @@ import java.util.Arrays;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceBoneTargetStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
+import application.bootstrap.entitypipeline.appearance.AppearanceDriveStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceExpression;
 import application.bootstrap.entitypipeline.appearance.AppearanceGenderStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
+import application.bootstrap.entitypipeline.bonecontrol.BoneControlDriveStruct;
+import application.bootstrap.entitypipeline.bonecontrol.BoneControlHandle;
+import application.bootstrap.entitypipeline.bonecontrol.BoneControlStruct;
+import application.bootstrap.entitypipeline.bonecontrolmanager.BoneControlManager;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.rig.BoneSliderChannel;
+import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
@@ -31,11 +38,14 @@ class AppearanceBuilder extends BuilderPackage {
      * Parses a race's "appearance" block into an AppearanceData, resolved
      * against the race's rig and the body mesh each of its genders wears.
      * "colors", "palettes" and "details" are keyed by the lower-case
-     * SkinnedColor and SkinnedDetail names; "shapes" lists the sliders,
-     * each known by its "name" (its morph's name when it gives none) and
-     * driving a "morph", the "bones" it moves, turns and scales per unit of
-     * its value, or both, with its group and range; "expressions" names the
-     * morph each AppearanceExpression plays. The race's "genders" give each
+     * SkinnedColor and SkinnedDetail names. The sliders come from the
+     * character itself: a bone slider for each channel the rig's bones
+     * offer, a control for each of the rig's controls (BoneControlManager)
+     * and a shape key for each morph of the bodies that no expression plays;
+     * "sliders" gives any of them, by name, its "group", "min", "max",
+     * "default" and whether the "player" is offered it, and lists them in
+     * the order a creator shows them. "expressions" names the morph each
+     * AppearanceExpression plays. The race's "genders" give each
      * gender its starting "shapes", by name, and "features", on the body it
      * wears; a feature named "" wears nothing in its slot, so a gender can
      * go bald under a race whose default gives hair. Every body must carry
@@ -49,12 +59,14 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Internal
     private FeatureManager featureManager;
+    private BoneControlManager boneControlManager;
 
     // Base \\
 
     @Override
     protected void get() {
         this.featureManager = get(FeatureManager.class);
+        this.boneControlManager = get(BoneControlManager.class);
     }
 
     // Build \\
@@ -78,7 +90,7 @@ class AppearanceBuilder extends BuilderPackage {
                 : new ArpgObjectStruct();
 
         MeshHandle[] bodyMeshes = parseBodies(genders);
-        AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, rigHandle, sourceName);
+        AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, rigHandle, bodyMeshes, sourceName);
         FeatureHandle[] defaultFeatures = parseFeatures(appearanceArpg, sourceName);
         AppearanceData appearanceData = new AppearanceData(
                 rigHandle,
@@ -220,104 +232,297 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Shapes \\
 
+    // Every slider the race offers: a bone slider per channel its rig's bones offer (a left and right pair as one),
+    // a control per control of the rig, and a shape key per morph of the bodies that no expression plays; those the
+    // race's "sliders" name first, in its order, then the rest in that order, each taking its "group", range and
+    // "player" from the race where it names them
     private AppearanceShapeStruct[] parseShapes(
             ArpgObjectStruct appearanceArpg,
             RigHandle rigHandle,
+            MeshHandle[] bodyMeshes,
             String sourceName) {
 
-        if (!ArpgUtility.hasArray(appearanceArpg, "shapes"))
-            return new AppearanceShapeStruct[0];
+        ArpgObjectStruct slidersArpg = ArpgUtility.hasObject(appearanceArpg, "sliders")
+                ? appearanceArpg.getAsObject("sliders")
+                : new ArpgObjectStruct();
+        ObjectArrayList<String> names = new ObjectArrayList<>();
+        ObjectArrayList<AppearanceBoneTargetStruct[]> targets = new ObjectArrayList<>();
+        ObjectArrayList<BoneControlStruct> controls = new ObjectArrayList<>();
+        ObjectArrayList<String> morphs = new ObjectArrayList<>();
 
-        ArpgArrayStruct shapesArpg = appearanceArpg.getAsArray("shapes");
-        AppearanceShapeStruct[] shapes = new AppearanceShapeStruct[shapesArpg.size()];
+        collectBoneSliders(rigHandle, names, targets, controls, morphs);
+        collectControls(rigHandle, names, targets, controls, morphs);
+        collectShapeKeys(appearanceArpg, bodyMeshes, names, targets, controls, morphs);
+
+        for (String key : slidersArpg.keySet())
+            if (!names.contains(key))
+                throwException("Appearance \"sliders\" names \"" + key + "\", which is no bone slider, control or "
+                        + "shape key of this character. Source: " + sourceName);
+
+        int[] order = resolveOrder(slidersArpg, names);
+        AppearanceShapeStruct[] shapes = new AppearanceShapeStruct[order.length];
+
+        for (int i = 0; i < order.length; i++)
+            shapes[i] = buildShape(
+                    slidersArpg,
+                    names.get(order[i]),
+                    targets.get(order[i]),
+                    controls.get(order[i]),
+                    morphs.get(order[i]),
+                    sourceName);
+
+        return resolveDrives(shapes, controls, order, sourceName);
+    }
+
+    // A slider per channel each bone offers, named "<bone>/<channel>"; a bone whose twin across the body offers the
+    // same channel shares its slider under the name they share, the right side taking the channel's mirror
+    private void collectBoneSliders(
+            RigHandle rigHandle,
+            ObjectArrayList<String> names,
+            ObjectArrayList<AppearanceBoneTargetStruct[]> targets,
+            ObjectArrayList<BoneControlStruct> controls,
+            ObjectArrayList<String> morphs) {
+
+        for (int b = 0; b < rigHandle.getBoneCount(); b++) {
+
+            RigBoneStruct bone = rigHandle.getBone(b);
+            String boneName = bone.getName();
+            int twin = findTwin(rigHandle, boneName);
+            boolean right = boneName.endsWith(EngineSetting.BONE_SIDE_SUFFIX_RIGHT);
+
+            for (BoneSliderChannel channel : BoneSliderChannel.VALUES) {
+
+                if (!bone.offersSlider(channel))
+                    continue;
+
+                boolean paired = twin != EngineSetting.INDEX_NOT_FOUND && rigHandle.getBone(twin).offersSlider(channel);
+
+                if (paired && right)
+                    continue;
+
+                String baseName = paired ? boneName.substring(0, boneName.length()
+                        - EngineSetting.BONE_SIDE_SUFFIX_LEFT.length()) : boneName;
+                AppearanceBoneTargetStruct[] boneTargets = paired
+                        ? new AppearanceBoneTargetStruct[] {
+                                toChannelTarget(b, channel, 1f),
+                                toChannelTarget(twin, channel, channel.getMirrorSign()) }
+                        : new AppearanceBoneTargetStruct[] { toChannelTarget(b, channel, 1f) };
+
+                addCandidate(names, targets, controls, morphs,
+                        baseName + EngineSetting.BONE_SLIDER_NAME_SEPARATOR + ArpgUtility.toEnumName(channel),
+                        boneTargets, null, null);
+            }
+        }
+    }
+
+    // The right twin of a left bone, or the left of a right one; INDEX_NOT_FOUND for a bone with no side or no twin
+    private int findTwin(RigHandle rigHandle, String boneName) {
+
+        String left = EngineSetting.BONE_SIDE_SUFFIX_LEFT;
+        String right = EngineSetting.BONE_SIDE_SUFFIX_RIGHT;
+        String twinName = boneName.endsWith(left)
+                ? boneName.substring(0, boneName.length() - left.length()) + right
+                : boneName.endsWith(right) ? boneName.substring(0, boneName.length() - right.length()) + left : null;
+
+        return twinName != null && rigHandle.hasBone(twinName)
+                ? rigHandle.getBoneIndex(twinName)
+                : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // One unit of a channel on one bone: a block moved, a degree turned or the whole of its size added on the axis
+    private AppearanceBoneTargetStruct toChannelTarget(int boneIndex, BoneSliderChannel channel, float sign) {
+
+        int axis = channel.getAxis();
+        Vector3 unit = new Vector3(axis == 0 ? sign : 0f, axis == 1 ? sign : 0f, axis == 2 ? sign : 0f);
+        int kind = channel.getKind();
+
+        return new AppearanceBoneTargetStruct(
+                boneIndex,
+                kind == BoneSliderChannel.KIND_MOVE ? unit : new Vector3(),
+                kind == BoneSliderChannel.KIND_TURN ? unit : new Vector3(),
+                kind == BoneSliderChannel.KIND_SIZE ? unit : new Vector3());
+    }
+
+    private void collectControls(
+            RigHandle rigHandle,
+            ObjectArrayList<String> names,
+            ObjectArrayList<AppearanceBoneTargetStruct[]> targets,
+            ObjectArrayList<BoneControlStruct> controls,
+            ObjectArrayList<String> morphs) {
+
+        BoneControlHandle handle = boneControlManager.getBoneControlHandle(rigHandle.getRigName());
+
+        if (handle == null)
+            return;
+
+        for (int c = 0; c < handle.getControlCount(); c++)
+            addCandidate(names, targets, controls, morphs, handle.getControl(c).getControlName(),
+                    new AppearanceBoneTargetStruct[0], handle.getControl(c), null);
+    }
+
+    // Every morph of the first body no expression plays; every body carries the same morphs
+    private void collectShapeKeys(
+            ArpgObjectStruct appearanceArpg,
+            MeshHandle[] bodyMeshes,
+            ObjectArrayList<String> names,
+            ObjectArrayList<AppearanceBoneTargetStruct[]> targets,
+            ObjectArrayList<BoneControlStruct> controls,
+            ObjectArrayList<String> morphs) {
+
+        ArpgObjectStruct expressionsArpg = ArpgUtility.hasObject(appearanceArpg, "expressions")
+                ? appearanceArpg.getAsObject("expressions")
+                : new ArpgObjectStruct();
+        MeshHandle body = bodyMeshes[0];
+
+        for (int m = 0; m < body.getMorphCount(); m++) {
+
+            String morphName = body.getMorphName(m);
+
+            if (!playsExpression(expressionsArpg, morphName))
+                addCandidate(names, targets, controls, morphs, morphName, new AppearanceBoneTargetStruct[0], null,
+                        morphName);
+        }
+    }
+
+    private boolean playsExpression(ArpgObjectStruct expressionsArpg, String morphName) {
+
+        for (String key : expressionsArpg.keySet())
+            if (ArpgUtility.hasString(expressionsArpg, key) && expressionsArpg.get(key).getAsString().equals(morphName))
+                return true;
+
+        return false;
+    }
+
+    private void addCandidate(
+            ObjectArrayList<String> names,
+            ObjectArrayList<AppearanceBoneTargetStruct[]> targets,
+            ObjectArrayList<BoneControlStruct> controls,
+            ObjectArrayList<String> morphs,
+            String name,
+            AppearanceBoneTargetStruct[] boneTargets,
+            BoneControlStruct control,
+            String morphName) {
+
+        if (names.contains(name))
+            throwException("Appearance slider \"" + name + "\" is offered twice: a control or shape key shares its "
+                    + "name with another slider");
+
+        names.add(name);
+        targets.add(boneTargets);
+        controls.add(control);
+        morphs.add(morphName);
+    }
+
+    // The sliders the race names, in its order, then every other in the order they were found
+    private int[] resolveOrder(ArpgObjectStruct slidersArpg, ObjectArrayList<String> names) {
+
+        int[] order = new int[names.size()];
+        boolean[] placed = new boolean[names.size()];
+        int count = 0;
+
+        for (String key : slidersArpg.keySet()) {
+
+            int index = names.indexOf(key);
+            order[count++] = index;
+            placed[index] = true;
+        }
+
+        for (int i = 0; i < names.size(); i++)
+            if (!placed[i])
+                order[count++] = i;
+
+        return order;
+    }
+
+    // A slider with the group, range and player choice the race gives it, else its own defaults: a bone slider spans
+    // its channel's default range either way of zero, a control and a shape key the appearance defaults
+    private AppearanceShapeStruct buildShape(
+            ArpgObjectStruct slidersArpg,
+            String name,
+            AppearanceBoneTargetStruct[] boneTargets,
+            BoneControlStruct control,
+            String morphName,
+            String sourceName) {
+
+        ArpgObjectStruct sliderArpg = ArpgUtility.hasObject(slidersArpg, name)
+                ? slidersArpg.getAsObject(name)
+                : new ArpgObjectStruct();
+        float range = boneTargets.length > 0 ? resolveChannelRange(name) : 0f;
+        float min = ArpgUtility.getFloat(sliderArpg, "min",
+                boneTargets.length > 0 ? -range : EngineSetting.APPEARANCE_SHAPE_MIN);
+        float max = ArpgUtility.getFloat(sliderArpg, "max",
+                boneTargets.length > 0 ? range : EngineSetting.APPEARANCE_SHAPE_MAX);
+        float defaultValue = ArpgUtility.getFloat(sliderArpg, "default", EngineSetting.APPEARANCE_SHAPE_DEFAULT);
+        String defaultGroup = control != null ? control.getGroupName() : EngineSetting.APPEARANCE_SHAPE_GROUP_DEFAULT;
+
+        if (max <= min || defaultValue < min || defaultValue > max)
+            throwException("Appearance slider \"" + name + "\" must have min below max and its default between them. "
+                    + "Source: " + sourceName);
+
+        return new AppearanceShapeStruct(
+                name,
+                ArpgUtility.getString(sliderArpg, "group", defaultGroup),
+                morphName,
+                boneTargets,
+                new AppearanceDriveStruct[0],
+                min,
+                max,
+                defaultValue,
+                ArpgUtility.getBoolean(sliderArpg, "player", true));
+    }
+
+    // The default range of a bone slider, read from the channel its name ends in
+    private float resolveChannelRange(String name) {
+
+        String channelName = name.substring(name.lastIndexOf(EngineSetting.BONE_SLIDER_NAME_SEPARATOR)
+                + EngineSetting.BONE_SLIDER_NAME_SEPARATOR.length());
+
+        return ArpgUtility.toEnum(channelName, BoneSliderChannel.class).getDefaultRange();
+    }
+
+    // Every control given the bone sliders it drives, each found among the race's sliders by name
+    private AppearanceShapeStruct[] resolveDrives(
+            AppearanceShapeStruct[] shapes,
+            ObjectArrayList<BoneControlStruct> controls,
+            int[] order,
+            String sourceName) {
 
         for (int i = 0; i < shapes.length; i++) {
 
-            ArpgObjectStruct shapeArpg = shapesArpg.get(i).getAsObject();
-            String morphName = ArpgUtility.hasString(shapeArpg, "morph") ? shapeArpg.get("morph").getAsString() : null;
-            String shapeName = ArpgUtility.getString(shapeArpg, "name", morphName);
-            float min = ArpgUtility.getFloat(shapeArpg, "min", EngineSetting.APPEARANCE_SHAPE_MIN);
-            float max = ArpgUtility.getFloat(shapeArpg, "max", EngineSetting.APPEARANCE_SHAPE_MAX);
-            float defaultValue = ArpgUtility.getFloat(shapeArpg, "default", EngineSetting.APPEARANCE_SHAPE_DEFAULT);
+            BoneControlStruct control = controls.get(order[i]);
 
-            if (shapeName == null || shapeName.isEmpty())
-                throwException("Appearance shape " + i + " has neither a \"name\" nor a \"morph\" to be known by. "
-                        + "Source: " + sourceName);
+            if (control == null)
+                continue;
 
-            if (max <= min || defaultValue < min || defaultValue > max)
-                throwException("Appearance shape \"" + shapeName + "\" must have min below max and its default "
-                        + "between them. Source: " + sourceName);
+            AppearanceDriveStruct[] drives = new AppearanceDriveStruct[control.getDriveCount()];
 
-            for (int j = 0; j < i; j++)
-                if (shapes[j].getShapeName().equals(shapeName))
-                    throwException("Appearance shape \"" + shapeName + "\" is listed twice. Source: " + sourceName);
+            for (int d = 0; d < drives.length; d++) {
 
-            AppearanceBoneTargetStruct[] boneTargets = parseBoneTargets(shapeArpg, rigHandle, shapeName, sourceName);
+                BoneControlDriveStruct drive = control.getDrive(d);
+                int sliderIndex = findShapeIndex(shapes, drive.getSliderName());
 
-            if (morphName == null && boneTargets.length == 0)
-                throwException("Appearance shape \"" + shapeName + "\" drives nothing — give it a \"morph\" or "
-                        + "\"bones\". Source: " + sourceName);
+                if (sliderIndex == EngineSetting.INDEX_NOT_FOUND || !shapes[sliderIndex].hasBoneTargets())
+                    throwException("Control \"" + control.getControlName() + "\" drives \"" + drive.getSliderName()
+                            + "\", which is no bone slider of this character's rig. Source: " + sourceName);
+
+                drives[d] = new AppearanceDriveStruct(sliderIndex, drive.isIncrease(), drive.getKeys());
+            }
+
+            AppearanceShapeStruct shape = shapes[i];
 
             shapes[i] = new AppearanceShapeStruct(
-                    shapeName,
-                    ArpgUtility.getString(shapeArpg, "group", EngineSetting.APPEARANCE_SHAPE_GROUP_DEFAULT),
-                    morphName,
-                    boneTargets,
-                    min,
-                    max,
-                    defaultValue);
+                    shape.getShapeName(),
+                    shape.getGroupName(),
+                    shape.getMorphName(),
+                    new AppearanceBoneTargetStruct[0],
+                    drives,
+                    shape.getMin(),
+                    shape.getMax(),
+                    shape.getDefaultValue(),
+                    shape.isShownToPlayer());
         }
 
         return shapes;
-    }
-
-    // "bones" lists what one unit of the slider does to each bone it drives, every bone at most once
-    private AppearanceBoneTargetStruct[] parseBoneTargets(
-            ArpgObjectStruct shapeArpg,
-            RigHandle rigHandle,
-            String shapeName,
-            String sourceName) {
-
-        if (!ArpgUtility.hasArray(shapeArpg, "bones"))
-            return new AppearanceBoneTargetStruct[0];
-
-        ArpgArrayStruct bonesArpg = shapeArpg.getAsArray("bones");
-        AppearanceBoneTargetStruct[] targets = new AppearanceBoneTargetStruct[bonesArpg.size()];
-
-        for (int i = 0; i < targets.length; i++) {
-
-            ArpgObjectStruct targetArpg = bonesArpg.get(i).getAsObject();
-            String boneName = ArpgUtility.validateString(targetArpg, "bone");
-
-            if (!rigHandle.hasBone(boneName))
-                throwException("Appearance shape \"" + shapeName + "\" drives unknown bone \"" + boneName
-                        + "\". Source: " + sourceName);
-
-            int boneIndex = rigHandle.getBoneIndex(boneName);
-
-            for (int j = 0; j < i; j++)
-                if (targets[j].getBoneIndex() == boneIndex)
-                    throwException("Appearance shape \"" + shapeName + "\" drives bone \"" + boneName
-                            + "\" twice. Source: " + sourceName);
-
-            targets[i] = new AppearanceBoneTargetStruct(
-                    boneIndex,
-                    parseAmount(targetArpg, "move"),
-                    parseAmount(targetArpg, "turn"),
-                    parseAmount(targetArpg, "scale"));
-        }
-
-        return targets;
-    }
-
-    private Vector3 parseAmount(ArpgObjectStruct targetArpg, String key) {
-
-        if (!ArpgUtility.hasArray(targetArpg, key))
-            return new Vector3();
-
-        ArpgArrayStruct amount = ArpgUtility.validateArray(targetArpg, key, 3);
-
-        return new Vector3(amount.get(0).getAsFloat(), amount.get(1).getAsFloat(), amount.get(2).getAsFloat());
     }
 
     // The morph each slider weighs on every body, INDEX_NOT_FOUND for a slider that drives only bones

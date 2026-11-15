@@ -157,6 +157,22 @@ class CharacterEditBranch extends BranchPackage {
                 .addProperty(shapeName, value));
     }
 
+    // One field of a slider in the race's "sliders", the entry made the first time it is given one
+    void setSliderField(CharacterDocumentInstance document, String sliderName, String field, float value) {
+        editAppearance(document, appearance -> CharacterViewUtility.requireObject(
+                        CharacterViewUtility.requireObject(appearance, EditorSetting.CHARACTER_EDITOR_FIELD_SLIDERS),
+                        sliderName)
+                .addProperty(field, value));
+    }
+
+    // Whether the player's creator and NPC variation offer a slider
+    void setSliderPlayer(CharacterDocumentInstance document, String sliderName, boolean player) {
+        editAppearance(document, appearance -> CharacterViewUtility.requireObject(
+                        CharacterViewUtility.requireObject(appearance, EditorSetting.CHARACTER_EDITOR_FIELD_SLIDERS),
+                        sliderName)
+                .addProperty(EditorSetting.CHARACTER_EDITOR_FIELD_PLAYER, player));
+    }
+
     // The range a gender's player may slide a slider across, within the slider's own
     void setGenderRange(
             CharacterDocumentInstance document,

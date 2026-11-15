@@ -373,6 +373,13 @@ One line per session that changed this file: the date, what was added or removed
   `shortcuts/UVEditor.arpg` for the new UV Editor; regenerated `menus/editor/EditorWindow.arpg` (UV and UV Editor
   buttons), `shortcuts/CharacterEditor.arpg` (the UV tab's selection, Unwrap and seam keys) and `schemas/Shortcuts.arpg`
   (the `character_uv` and `uv_editor` canvases).
+- 2026-11-15: Bone controls. Added `bonecontrols/HumanoidRig.arpg` (the 28 composite face and body sliders of the old
+  Human race as controls over bone sliders, keys matching their old pushes) and `schemas/BoneControls.arpg`;
+  regenerated `rigs/HumanoidRig.arpg` (each shaped bone's slider channels), `races/Human.arpg` (`appearance.sliders`
+  in place of `shapes`: the 37 old sliders' groups, ranges and defaults kept, every bone slider hidden from the
+  player), the schemas `Races.arpg` (`sliders`), `Rigs.arpg` (a bone's `sliders`) and `Shortcuts.arpg` (no
+  `character_face` canvas), `menus/editor/EditorWindow.arpg` (no Build or Face button) and
+  `shortcuts/CharacterEditor.arpg` (no Face canvas); deleted `menus/editor/FaceEditor.arpg` with the Face tab.
 
 ---
 
@@ -1788,7 +1795,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3798 files)
+## Data Files (3799 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2328,6 +2335,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `TerraArcanaBlocks.arpg`
 
+### `assets/bonecontrols/`
+
+`HumanoidRig.arpg`
+
 ### `assets/brushes/`
 
 `Airbrush.arpg`, `Basic.arpg`, `Blender.arpg`, `Calligraphy.arpg`, `CalligraphyBack.arpg`, `Chalk.arpg`,
@@ -2619,7 +2630,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
-`ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `FaceEditor.arpg`,
+`ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
 `GenerateMapsDialog.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
 `PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Timeline.arpg`,
@@ -2793,7 +2804,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/schemas/`
 
 `Animations.arpg`, `AnimationTrees.arpg`, `Architectures.arpg`, `Attributes.arpg`, `Behaviors.arpg`, `Biomes.arpg`,
-`Blocks.arpg`, `Brushes.arpg`, `Calendars.arpg`, `CaveBiomes.arpg`, `Clouds.arpg`, `Contents.arpg`, `Coverings.arpg`,
+`Blocks.arpg`, `BoneControls.arpg`, `Brushes.arpg`, `Calendars.arpg`, `CaveBiomes.arpg`, `Clouds.arpg`, `Contents.arpg`, `Coverings.arpg`,
 `DamageTypes.arpg`, `Deeds.arpg`, `Entities.arpg`, `FBOs.arpg`, `Features.arpg`, `Furnishings.arpg`, `Genders.arpg`,
 `Instruments.arpg`, `Intents.arpg`, `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Moods.arpg`, `NoteSets.arpg`,
 `Npcs.arpg`, `Passes.arpg`, `Phrases.arpg`, `Professions.arpg`, `Races.arpg`, `Relations.arpg`, `Replies.arpg`,

@@ -13,7 +13,9 @@ public class RigBoneStruct extends StructPackage {
      * rotation (Euler degrees, XYZ order) — normally zero for a rest pose.
      * size is the reference cuboid dimensions of the body part rigidly
      * associated with this bone, used only for mesh authoring and debug
-     * visualization — never read during pose evaluation.
+     * visualization — never read during pose evaluation. sliderChannels
+     * holds a bit per BoneSliderChannel the bone offers as a character
+     * slider.
      */
 
     // Identity
@@ -25,6 +27,9 @@ public class RigBoneStruct extends StructPackage {
     private final Vector3 rotation;
     private final Vector3 size;
 
+    // Sliders
+    private final int sliderChannels;
+
     // Constructor \\
 
     public RigBoneStruct(
@@ -32,7 +37,8 @@ public class RigBoneStruct extends StructPackage {
             int parentIndex,
             Vector3 position,
             Vector3 rotation,
-            Vector3 size) {
+            Vector3 size,
+            int sliderChannels) {
 
         // Identity
         this.name = name;
@@ -42,6 +48,9 @@ public class RigBoneStruct extends StructPackage {
         this.position = position;
         this.rotation = rotation;
         this.size = size;
+
+        // Sliders
+        this.sliderChannels = sliderChannels;
     }
 
     // Accessible \\
@@ -68,5 +77,13 @@ public class RigBoneStruct extends StructPackage {
 
     public Vector3 getSize() {
         return size;
+    }
+
+    public boolean offersSlider(BoneSliderChannel channel) {
+        return (sliderChannels & channel.getBit()) != 0;
+    }
+
+    public int getSliderChannels() {
+        return sliderChannels;
     }
 }

@@ -100,10 +100,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterAppearance(window.getGLWindow());
     }
 
-    public void openCharacterBuild(WindowInstance window) {
-        tabManager.openCharacterBuild(window.getGLWindow());
-    }
-
     public void openCharacterEquipment(WindowInstance window) {
         tabManager.openCharacterEquipment(window.getGLWindow());
     }
@@ -126,10 +122,6 @@ public class EditorBranch extends BranchPackage {
 
     public void openCharacterRig(WindowInstance window) {
         tabManager.openCharacterRig(window.getGLWindow());
-    }
-
-    public void openCharacterFace(WindowInstance window) {
-        tabManager.openCharacterFace(window.getGLWindow());
     }
 
     public void openCharacterUV(WindowInstance window) {

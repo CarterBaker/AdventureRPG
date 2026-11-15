@@ -5,14 +5,17 @@ import engine.root.StructPackage;
 public class AppearanceShapeStruct extends StructPackage {
 
     /*
-     * One slider of a character's appearance: the name saves and presets
-     * know it by, the group a creator lists it under, what it drives — a
-     * morph target of the body meshes, the bones it moves, turns and scales,
-     * or both, the way a face control drives a face rig — and the range and
-     * default of its value, the weight the morph is applied at and the share
-     * of every bone target taken, so a negative value pushes the shape the
-     * other way. The morph is named here and resolved per body mesh by
-     * AppearanceData.
+     * One slider of a character's appearance, of one of three kinds: a bone
+     * slider, one channel of a bone the rig offers (both bones of a left and
+     * right pair, the right mirrored), its value moving, turning or sizing
+     * them in the channel's own unit; a control, one of the rig's controls,
+     * driving several bone sliders along their curves; or a shape key, a
+     * morph target of the body meshes weighed by its value. Each is known by
+     * the name saves and presets know it by, listed under a group, held to
+     * its range around its default, and either offered to the player by the
+     * creator and NPC variation or kept for the race's author alone, as the
+     * bone sliders under a race's controls usually are. The morph is named
+     * here and resolved per body mesh by AppearanceData.
      */
 
     // Identity
@@ -20,13 +23,17 @@ public class AppearanceShapeStruct extends StructPackage {
     private final String groupName;
     private final String morphName;
 
-    // Targets
+    // Targets — the bones a bone slider moves per unit, and the bone sliders a control drives
     private final AppearanceBoneTargetStruct[] boneTargets;
+    private final AppearanceDriveStruct[] drives;
 
     // Range
     private final float min;
     private final float max;
     private final float defaultValue;
+
+    // Player
+    private final boolean shownToPlayer;
 
     // Constructor \\
 
@@ -35,9 +42,11 @@ public class AppearanceShapeStruct extends StructPackage {
             String groupName,
             String morphName,
             AppearanceBoneTargetStruct[] boneTargets,
+            AppearanceDriveStruct[] drives,
             float min,
             float max,
-            float defaultValue) {
+            float defaultValue,
+            boolean shownToPlayer) {
 
         // Identity
         this.shapeName = shapeName;
@@ -46,11 +55,15 @@ public class AppearanceShapeStruct extends StructPackage {
 
         // Targets
         this.boneTargets = boneTargets;
+        this.drives = drives;
 
         // Range
         this.min = min;
         this.max = max;
         this.defaultValue = defaultValue;
+
+        // Player
+        this.shownToPlayer = shownToPlayer;
     }
 
     // Utility \\
@@ -69,7 +82,7 @@ public class AppearanceShapeStruct extends StructPackage {
         return groupName;
     }
 
-    // Null for a slider that drives only bones
+    // Null for a slider that weighs no morph
     public String getMorphName() {
         return morphName;
     }
@@ -90,6 +103,23 @@ public class AppearanceShapeStruct extends StructPackage {
         return boneTargets.length > 0;
     }
 
+    public int getDriveCount() {
+        return drives.length;
+    }
+
+    public AppearanceDriveStruct getDrive(int driveIndex) {
+        return drives[driveIndex];
+    }
+
+    public boolean isControl() {
+        return drives.length > 0;
+    }
+
+    // Whether moving it re-poses the bones, as a bone slider and a control do
+    public boolean shapesBones() {
+        return hasBoneTargets() || isControl();
+    }
+
     public float getMin() {
         return min;
     }
@@ -100,5 +130,10 @@ public class AppearanceShapeStruct extends StructPackage {
 
     public float getDefaultValue() {
         return defaultValue;
+    }
+
+    // Whether the player's creator and NPC variation offer it
+    public boolean isShownToPlayer() {
+        return shownToPlayer;
     }
 }

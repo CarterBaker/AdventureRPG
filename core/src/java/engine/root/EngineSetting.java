@@ -258,6 +258,7 @@ public class EngineSetting {
     public static final String PHRASE_PATH = "phrases";
     public static final String PROFESSION_PATH = "professions";
     public static final String RACE_PATH = "races";
+    public static final String BONE_CONTROL_PATH = "bonecontrols";
     public static final String RELATION_PATH = "relations";
     public static final String REPLY_PATH = "replies";
     public static final String RIG_PATH = "rigs";
@@ -2697,6 +2698,19 @@ public class EngineSetting {
     public static final float SKINNED_NORMAL_SMOOTH_COSINE = 0.5f;
     public static final int RIGGED_MESH_POSITION_FLOATS = 3;
     public static final int RIGGED_MESH_UV_FLOATS = 2;
+    // Bone sliders — how far either way a new bone channel slider slides: blocks moved, degrees turned, share sized
+    public static final float BONE_SLIDER_MOVE_RANGE = 0.01f;
+    public static final float BONE_SLIDER_TURN_RANGE = 15f;
+    public static final float BONE_SLIDER_SIZE_RANGE = 0.25f;
+    // Bone sliders — a sided bone's suffixes, and what joins a bone slider's bone and channel in its name
+    public static final String BONE_SIDE_SUFFIX_LEFT = "_l";
+    public static final String BONE_SIDE_SUFFIX_RIGHT = "_r";
+    public static final String BONE_SLIDER_NAME_SEPARATOR = "/";
+    // Bone controls — the most keys one drive's curve may hold
+    public static final int BONE_CONTROL_MAX_KEYS = 2;
+    // Bone control curves — the most points one holds (both ends and every key) and the scratch it is worked in
+    public static final int BONE_CONTROL_CURVE_POINTS = 4;
+    public static final int BONE_CONTROL_CURVE_SCRATCH_FLOATS = BONE_CONTROL_CURVE_POINTS * 4;
     // A face's UV flag in a mesh file: the lowest bit marks the UVs as its own, the four above it its pinned corners
     public static final int RIGGED_MESH_UV_AUTHORED_BIT = 1;
     public static final int RIGGED_MESH_UV_PIN_SHIFT = 1;

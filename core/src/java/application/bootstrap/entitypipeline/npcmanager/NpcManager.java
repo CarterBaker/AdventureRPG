@@ -369,6 +369,9 @@ public class NpcManager extends ManagerPackage {
 
         for (int i = 0; i < appearanceData.getShapeCount(); i++) {
 
+            if (!appearanceData.getShape(i).isShownToPlayer())
+                continue;
+
             float min = appearanceData.getShapeMin(entity.getGenderID(), i);
             float max = appearanceData.getShapeMax(entity.getGenderID(), i);
             float spread = (max - min) * EngineSetting.NPC_SHAPE_VARIATION;

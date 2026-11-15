@@ -86,6 +86,8 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterPaintBranch characterPaintBranch;
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
     private CharacterUVBranch characterUVBranch;
+    private CharacterControlBranch characterControlBranch;
+    private CharacterSliderBranch characterSliderBranch;
     private CharacterPaintRowBranch characterPaintRowBranch;
     private CharacterMapBranch characterMapBranch;
     private CharacterPropertyBranch characterPropertyBranch;
@@ -193,6 +195,8 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterPaintBranch = create(CharacterPaintBranch.class);
         this.characterPaintPropertyBranch = create(CharacterPaintPropertyBranch.class);
         this.characterUVBranch = create(CharacterUVBranch.class);
+        this.characterControlBranch = create(CharacterControlBranch.class);
+        this.characterSliderBranch = create(CharacterSliderBranch.class);
         this.characterPaintRowBranch = create(CharacterPaintRowBranch.class);
         this.characterMapBranch = create(CharacterMapBranch.class);
         this.characterRigPropertyBranch = create(CharacterRigPropertyBranch.class);
@@ -262,6 +266,7 @@ public class CharacterEditorManager extends ManagerPackage {
         infoManager.addSelectionListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::openEntityRace);
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_ENTITIES, this::openEntityRace);
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_RIGS, characterRigBranch::refreshEntry);
+        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_BONE_CONTROLS, characterControlBranch::refreshEntry);
     }
 
     // Races \\
@@ -314,6 +319,21 @@ public class CharacterEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
+    // The active race's preview built again, as its rig's slider channels or controls now stand
+    void rebuildActivePreview() {
+
+        if (activeDocument == null)
+            return;
+
+        InfoEntryStruct raceEntry = infoManager.findEntry(
+                EditorSetting.INFO_SCHEMA_RACES,
+                activeDocument.getRaceName(),
+                activeDocument.getRaceName());
+
+        if (raceEntry != null)
+            refreshEntry(raceEntry);
+    }
+
     private void closeEntry(InfoEntryStruct entry) {
 
         CharacterDocumentInstance document = raceName2CharacterDocument.remove(entry.getEntryName());
@@ -363,6 +383,11 @@ public class CharacterEditorManager extends ManagerPackage {
         if (!saveRigFile())
             return;
 
+        if (!characterControlBranch.save()) {
+            setStatusMessage(infoManager.getRefusal());
+            return;
+        }
+
         if (!characterPaintBranch.save()) {
             setStatusMessage(EditorSetting.CHARACTER_PAINT_MESSAGE_NOT_SAVED);
             return;
@@ -381,6 +406,7 @@ public class CharacterEditorManager extends ManagerPackage {
         infoManager.revertDocument(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName());
         revertDirtyMeshes();
         revertRigFile();
+        characterControlBranch.revert();
         characterPaintBranch.revert();
         setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + activeDocument.getRaceName());
     }
@@ -748,18 +774,6 @@ public class CharacterEditorManager extends ManagerPackage {
         return characterRegionBranch.resolveRegions(resolveRegionRig());
     }
 
-    // The first region the face is shaped in, the one the Face tab frames and shows alone; the Body for a rig
-    // naming none
-    public CharacterRegionStruct getFaceRegion() {
-
-        ObjectArrayList<CharacterRegionStruct> regions = getRegions();
-
-        for (int i = 0; i < regions.size(); i++)
-            if (regions.get(i).takesFace())
-                return regions.get(i);
-
-        return CharacterRegionStruct.WHOLE;
-    }
 
     // A region of the active race's rig by its layer key, the Body for one the rig no longer names
     public CharacterRegionStruct findRegion(String key) {
@@ -818,6 +832,13 @@ public class CharacterEditorManager extends ManagerPackage {
             return false;
 
         return !isSided(region) || getSide(region).namesBone(characterRigBranch.getBoneName(boneIndex));
+    }
+
+    // The name of the rig the active race is built on, null before one is open
+    String getActiveRigName() {
+
+        RigHandle rigHandle = resolveRegionRig();
+        return rigHandle != null ? rigHandle.getRigName() : null;
     }
 
     private RigHandle resolveRegionRig() {
@@ -2058,6 +2079,7 @@ public class CharacterEditorManager extends ManagerPackage {
         if (infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName())
                 || hasDirtyWornMesh()
                 || syncRig() && characterRigBranch.isDirty()
+                || characterControlBranch.isDirty()
                 || characterPaintBranch.isDirty())
             status.append(EditorSetting.CHARACTER_VIEW_DIRTY_MARKER);
 

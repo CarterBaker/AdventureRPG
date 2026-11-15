@@ -2,6 +2,7 @@ package application.bootstrap.entitypipeline;
 
 import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeManager;
 import application.bootstrap.entitypipeline.behaviormanager.BehaviorManager;
+import application.bootstrap.entitypipeline.bonecontrolmanager.BoneControlManager;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.npcmanager.NpcManager;
@@ -15,10 +16,10 @@ public class EntityPipeline extends PipelinePackage {
     /*
      * Registers all entity pipeline managers in dependency order. BehaviorManager
      * and EntityManager are registered before PlayerManager since player spawn
-     * depends on both being available. FeatureManager and
-     * AnimationTreeManager are registered before RaceManager, since every
-     * race resolves its default appearance features and each of its genders'
-     * animation trees while it loads, and RaceManager is registered before
+     * depends on both being available. FeatureManager, AnimationTreeManager
+     * and BoneControlManager are registered before RaceManager, since every
+     * race resolves its default appearance features, each of its genders'
+     * animation trees and its rig's controls while it loads, and RaceManager is registered before
      * EntityManager for the same reason — every entity template resolves
      * its race while it loads. PathfindingManager is registered before
      * NpcManager, so the search budget it renews each frame is fresh before
@@ -32,6 +33,7 @@ public class EntityPipeline extends PipelinePackage {
         create(BehaviorManager.class);
         create(FeatureManager.class);
         create(AnimationTreeManager.class);
+        create(BoneControlManager.class);
         create(RaceManager.class);
         create(EntityManager.class);
         create(PlayerManager.class);

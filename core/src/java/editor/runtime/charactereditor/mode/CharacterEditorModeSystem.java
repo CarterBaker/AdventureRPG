@@ -15,8 +15,8 @@ public class CharacterEditorModeSystem extends SystemPackage {
      * Keeps the mode a character tool tab works in, the one its context names
      * (CharacterModeProvider; the UV Editor works in UV), and the region it
      * works on there: the region picked in the Layers tab
-     * for every tab that takes regions, shared by all of them, the Head for
-     * the Face, and the whole character for the rest. The Layers tab lists
+     * for every tab that takes regions, shared by all of them, and the whole
+     * character for the rest. The Layers tab lists
      * the regions of the race's rig for a tab that takes them, the Body
      * holding every region nested under it, and the paint layers of the map
      * painted, top first, for the Paint tab. While the window is the active
@@ -134,13 +134,9 @@ public class CharacterEditorModeSystem extends SystemPackage {
         return mode;
     }
 
-    // The region picked for a tab that takes regions, the face's region for the Face, the whole character otherwise
+    // The region picked for a tab that takes regions, the whole character otherwise
     public CharacterRegionStruct getRegion() {
-
-        if (mode.takesRegions())
-            return characterEditorManager.getPickedRegion();
-
-        return mode.shapesFace() ? characterEditorManager.getFaceRegion() : CharacterRegionStruct.WHOLE;
+        return mode.takesRegions() ? characterEditorManager.getPickedRegion() : CharacterRegionStruct.WHOLE;
     }
 
     // Moves whenever the layers listed or the layer picked change

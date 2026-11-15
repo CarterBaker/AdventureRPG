@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.rig.BoneSliderChannel;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterDigitStruct;
@@ -79,6 +80,9 @@ class CharacterRigBranch extends BranchPackage {
     private int boneCount;
     private int selectedBone;
 
+    // Sliders — every bone's slider channels folded together as the race was last previewed with them
+    private long sliderSignature;
+
     // Gesture
     private Vector3 gesturePosition;
     private Vector3 gestureRotation;
@@ -151,13 +155,15 @@ class CharacterRigBranch extends BranchPackage {
 
         this.rigHandle = activeRig;
         this.selectedBone = activeRig != null ? 0 : EngineSetting.INDEX_NOT_FOUND;
+        this.sliderSignature = activeRig != null ? resolveSliderSignature() : 0L;
         this.structureChanged = false;
         this.refusal = null;
         history.clear();
         reload();
     }
 
-    // A change to a rig entry, made here or in the Info Panel: the draft read again and the bind pose applied
+    // A change to a rig entry, made here or in the Info Panel: the draft read again and the bind pose applied, the race
+    // previewed again when a bone's slider channels changed, so they show at once
     void refreshEntry(InfoEntryStruct entry) {
 
         if (rigHandle == null || !entry.getEntryName().equals(rigHandle.getRigName()))
@@ -165,7 +171,27 @@ class CharacterRigBranch extends BranchPackage {
 
         reload();
         apply(entry.getArpg());
+
+        long sliderSignature = resolveSliderSignature();
+
+        if (sliderSignature != this.sliderSignature) {
+            this.sliderSignature = sliderSignature;
+            characterEditorManager.rebuildActivePreview();
+        }
+
         characterEditorManager.notifyChanged();
+    }
+
+    // Every bone's slider channels folded into one number, so a change to them is told from a joint dragged
+    private long resolveSliderSignature() {
+
+        long signature = 0L;
+
+        for (int i = 0; i < rigHandle.getBoneCount(); i++)
+            signature = signature * EditorSetting.CHARACTER_RIG_SLIDER_SIGNATURE_PRIME
+                    + rigHandle.getBone(i).getSliderChannels() + 1;
+
+        return signature;
     }
 
     private void apply(ArpgObjectStruct rigArpg) {
@@ -1183,6 +1209,61 @@ class CharacterRigBranch extends BranchPackage {
     // A bone's twin across the body, INDEX_NOT_FOUND for a bone with no side
     int findTwinBone(int boneIndex) {
         return findTwin(boneIndex);
+    }
+
+    // Sliders \\
+
+    // Whether a bone of the draft offers a channel as a character slider
+    boolean offersSlider(int boneIndex, BoneSliderChannel channel) {
+
+        ArpgArrayStruct bones = getBonesArpg();
+
+        if (bones == null || boneIndex < 0 || boneIndex >= bones.size())
+            return false;
+
+        ArpgObjectStruct boneArpg = bones.get(boneIndex).getAsObject();
+
+        if (!ArpgUtility.hasArray(boneArpg, EditorSetting.CHARACTER_RIG_FIELD_SLIDERS))
+            return false;
+
+        ArpgArrayStruct sliders = boneArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_SLIDERS);
+        String channelName = ArpgUtility.toEnumName(channel);
+
+        for (int i = 0; i < sliders.size(); i++)
+            if (sliders.get(i).getAsString().equals(channelName))
+                return true;
+
+        return false;
+    }
+
+    // A channel offered as a slider or no longer, on a bone and on its twin across the body, since a pair offers one
+    // slider between them; the channels kept in their order
+    void toggleSlider(int boneIndex, BoneSliderChannel channel) {
+
+        boolean offer = !offersSlider(boneIndex, channel);
+        int twin = findTwin(boneIndex);
+
+        edit(bones -> {
+
+            writeSliders(bones.get(boneIndex).getAsObject(), boneIndex, channel, offer);
+
+            if (twin != EngineSetting.INDEX_NOT_FOUND)
+                writeSliders(bones.get(twin).getAsObject(), twin, channel, offer);
+        });
+    }
+
+    private void writeSliders(ArpgObjectStruct boneArpg, int boneIndex, BoneSliderChannel toggled, boolean offer) {
+
+        ArpgArrayStruct sliders = new ArpgArrayStruct();
+
+        for (BoneSliderChannel channel : BoneSliderChannel.VALUES)
+            if (channel == toggled ? offer : offersSlider(boneIndex, channel))
+                sliders.add(ArpgUtility.toEnumName(channel));
+
+        if (sliders.size() == 0)
+            boneArpg.remove(EditorSetting.CHARACTER_RIG_FIELD_SLIDERS);
+        else
+            boneArpg.add(EditorSetting.CHARACTER_RIG_FIELD_SLIDERS, sliders);
     }
 
     private int findTwin(int boneIndex) {

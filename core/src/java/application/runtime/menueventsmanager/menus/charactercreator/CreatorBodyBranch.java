@@ -71,8 +71,8 @@ public class CreatorBodyBranch extends BranchPackage {
         injectShapeGroups(session, true);
     }
 
-    // Every shape slider of the body group, or of every other group, under a header per group in the order the
-    // race first lists each
+    // Every shape slider offered to the player of the body group, or of every other group, under a header per group
+    // in the order the race first lists each
     void injectShapeGroups(CreatorSessionStruct session, boolean bodyGroup) {
 
         AppearanceData appearanceData = session.getPlayer().getEntityData().getRaceData().getAppearanceData();
@@ -81,14 +81,16 @@ public class CreatorBodyBranch extends BranchPackage {
 
             String groupName = appearanceData.getShape(i).getGroupName();
 
-            if (groupName.equals(RuntimeSetting.CREATOR_SHAPE_GROUP_BODY) != bodyGroup
+            if (!appearanceData.getShape(i).isShownToPlayer()
+                    || groupName.equals(RuntimeSetting.CREATOR_SHAPE_GROUP_BODY) != bodyGroup
                     || isGroupListedBefore(appearanceData, groupName, i))
                 continue;
 
             characterCreatorBranch.injectSectionHeader(session, toTitle(groupName));
 
             for (int j = i; j < appearanceData.getShapeCount(); j++)
-                if (appearanceData.getShape(j).getGroupName().equals(groupName))
+                if (appearanceData.getShape(j).isShownToPlayer()
+                        && appearanceData.getShape(j).getGroupName().equals(groupName))
                     injectSlider(session, CreatorSlider.SHAPE, j);
         }
     }
@@ -96,7 +98,8 @@ public class CreatorBodyBranch extends BranchPackage {
     private boolean isGroupListedBefore(AppearanceData appearanceData, String groupName, int shapeIndex) {
 
         for (int i = 0; i < shapeIndex; i++)
-            if (appearanceData.getShape(i).getGroupName().equals(groupName))
+            if (appearanceData.getShape(i).isShownToPlayer()
+                    && appearanceData.getShape(i).getGroupName().equals(groupName))
                 return true;
 
         return false;

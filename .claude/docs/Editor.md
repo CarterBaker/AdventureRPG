@@ -19,7 +19,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
   and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
-  Build, Equipment, Mesh, Sculpt, Weights, Paint, Rig, Face and UV, see `.claude/docs/CharacterEditorPipeline.md`),
+  Equipment, Mesh, Sculpt, Weights, Paint, Rig and UV, see `.claude/docs/CharacterEditorPipeline.md`; the Appearance
+  outliner holds every slider and control, the Rig tab marks which bone channels are sliders),
   sharing the region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with
   the Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour and Texture Maps the
   map painted; the Recorder is its transport (record, play, loop range, clock, what is open with Back) and the Timeline
