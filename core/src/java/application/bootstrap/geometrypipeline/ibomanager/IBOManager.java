@@ -8,6 +8,7 @@ import application.bootstrap.geometrypipeline.vao.VAOInstance;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
@@ -67,6 +68,21 @@ public class IBOManager extends ManagerPackage {
         return handle;
     }
 
+    public IBOHandle addIBOFromData(
+            String resourceName,
+            int[] indices,
+            VAOInstance vaoInstance) {
+
+        IBOHandle handle = IBOGLSLUtility.uploadIndexData(
+                vaoInstance,
+                create(IBOHandle.class),
+                indices);
+
+        registerIBO(resourceName, handle);
+
+        return handle;
+    }
+
     // Accessible \\
 
     public boolean hasIBO(String iboName) {
@@ -109,6 +125,10 @@ public class IBOManager extends ManagerPackage {
 
     // Respecifies a registered buffer in place, so every VAO already built over it stays valid
     public IBOHandle updateIBOHandle(IBOHandle iboHandle, ShortArrayList indices) {
+        return IBOGLSLUtility.updateIndexData(iboHandle, indices.elements(), indices.size());
+    }
+
+    public IBOHandle updateIBOHandle(IBOHandle iboHandle, IntArrayList indices) {
         return IBOGLSLUtility.updateIndexData(iboHandle, indices.elements(), indices.size());
     }
 

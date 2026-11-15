@@ -62,4 +62,8 @@ public class ModelInstance extends InstancePackage {
     public int getIndexCount() {
         return meshData.getIndexCount();
     }
+
+    public int getIndexType() {
+        return meshData.getIndexType();
+    }
 }

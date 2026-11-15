@@ -126,7 +126,7 @@ public class VAOManager extends ManagerPackage {
             return cachedVAO;
 
         int clonedVAO = VAOGLSLUtility.cloneVAO(
-                meshData.getVAOData().getAttrSizes(),
+                meshData.getVAOData(),
                 meshData.getVertexHandle(),
                 meshData.getIndexHandle());
 

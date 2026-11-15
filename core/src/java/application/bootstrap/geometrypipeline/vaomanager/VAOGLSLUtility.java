@@ -20,13 +20,13 @@ class VAOGLSLUtility extends EngineUtility {
 
     static VAOInstance createVAOInstance(VAOInstance vaoInstance, VAOHandle template) {
 
-        VAOData vaoData = createData(template.getVAOData().getAttrSizes());
+        VAOData vaoData = createData(template.getVAOData());
         vaoInstance.constructor(vaoData);
 
         return vaoInstance;
     }
 
-    static int cloneVAO(int[] attrSizes, int vertexHandle, int indexHandle) {
+    static int cloneVAO(VAOData layout, int vertexHandle, int indexHandle) {
 
         GL30 gl30 = EngineContext.gl30;
         GL20 gl20 = EngineContext.gl20;
@@ -36,17 +36,7 @@ class VAOGLSLUtility extends EngineUtility {
         gl30.glBindVertexArray(vao);
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vertexHandle);
 
-        int strideBytes = 0;
-        for (int size : attrSizes)
-            strideBytes += size * Float.BYTES;
-
-        int byteOffset = 0;
-        for (int i = 0; i < attrSizes.length; i++) {
-            gl20.glEnableVertexAttribArray(i);
-            gl20.glVertexAttribPointer(i, attrSizes[i], EngineSetting.GL_FLOAT, false, strideBytes,
-                    byteOffset);
-            byteOffset += attrSizes[i] * Float.BYTES;
-        }
+        VAOAttributeUtility.pointAttributes(layout);
 
         gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, indexHandle);
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
@@ -55,9 +45,10 @@ class VAOGLSLUtility extends EngineUtility {
         return vao;
     }
 
-    private static VAOData createData(int[] attrSizes) {
+    private static VAOData createData(VAOData layout) {
 
         GL30 gl30 = EngineContext.gl30;
+        int[] attrSizes = layout.getAttrSizes();
 
         int vao = gl30.glGenVertexArray();
 
@@ -68,7 +59,7 @@ class VAOGLSLUtility extends EngineUtility {
 
         gl30.glBindVertexArray(0);
 
-        return new VAOData(vao, attrSizes);
+        return new VAOData(vao, attrSizes, layout.getAttrTypes(), layout.getAttrNormalized());
     }
 
     // Removal \\

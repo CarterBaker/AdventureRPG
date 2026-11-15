@@ -166,6 +166,10 @@ public class MeshHandle extends HandlePackage {
         return meshData.getIndexCount();
     }
 
+    public int getIndexType() {
+        return meshData.getIndexType();
+    }
+
     public TextureTileSetStruct getTiles() {
         return tiles;
     }

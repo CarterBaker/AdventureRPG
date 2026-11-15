@@ -18,6 +18,9 @@ Performance is the top priority. Lag spikes, GC pauses and memory growth are bug
   back when it populates, so streaming frees nothing to the collector; storage of the same kind does the same.
 - **Smallest footprint.** Pack data into the fewest bits that hold its range (see the Quad Records group in
   `EngineSetting`); never duplicate per-quad data per vertex; never keep a CPU copy the GPU already holds.
+- **Rigged vertex data is shared and packed.** A rigged mesh stores a vertex once however many quads meet at it and
+  packs each attribute into the smallest type that holds its range (`RiggedMeshGeometryUtility`, the typed layouts of
+  `VAOData`); never expand a mesh to one float vertex per corner.
 - **All generated mesh is greedily merged.** Terrain, partial blocks, water, items, trees and structures go through
   a greedy mesher and merge as far as their shared attributes allow. Never emit one quad per face.
 - **Measure before and after.** A change that affects memory or frame time states its numbers.

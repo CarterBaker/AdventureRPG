@@ -36,6 +36,7 @@ public class EngineSetting {
     public static final int GL_FRAMEBUFFER = 0x8D40;
     public static final int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
     public static final int GL_FRONT = 0x0404;
+    public static final int GL_INT_2_10_10_10_REV = 0x8D9F;
     public static final int GL_LEQUAL = 0x0203;
     public static final int GL_LINEAR = 0x2601;
     public static final int GL_LINEAR_MIPMAP_LINEAR = 0x2703;
@@ -2693,12 +2694,23 @@ public class EngineSetting {
     public static final int RIGGED_MESH_DETAIL_FLOATS = 2;
     public static final String[] RIGGED_MESH_MASK_CHANNELS = { "freckles", "blush", "lips", "liner" };
     public static final int RIGGED_MESH_MASK_FLOATS = 4;
-    public static final int[] RIGGED_MESH_TRAILING_ATTRIBUTE_SIZES = {
-            MAX_BONE_INFLUENCES, MAX_BONE_INFLUENCES, SKINNED_NORMAL_FLOATS,
-            RIGGED_MESH_MORPH_FLOATS, RIGGED_MESH_DETAIL_FLOATS, RIGGED_MESH_MASK_FLOATS };
-    public static final int RIGGED_MESH_VERTEX_STRIDE = RIGGED_MESH_POSITION_FLOATS + RIGGED_MESH_UV_FLOATS
-            + MAX_BONE_INFLUENCES * 2 + SKINNED_NORMAL_FLOATS + RIGGED_MESH_MORPH_FLOATS + RIGGED_MESH_DETAIL_FLOATS
-            + RIGGED_MESH_MASK_FLOATS;
+    public static final int RIGGED_MESH_NORMAL_COMPONENTS = 4;
+    public static final int[] RIGGED_MESH_ATTRIBUTE_SIZES = {
+            RIGGED_MESH_POSITION_FLOATS, RIGGED_MESH_UV_FLOATS, MAX_BONE_INFLUENCES, MAX_BONE_INFLUENCES,
+            RIGGED_MESH_NORMAL_COMPONENTS, RIGGED_MESH_MORPH_FLOATS, RIGGED_MESH_DETAIL_FLOATS, RIGGED_MESH_MASK_FLOATS };
+    public static final int[] RIGGED_MESH_ATTRIBUTE_TYPES = {
+            GL_FLOAT, GL_UNSIGNED_SHORT, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE,
+            GL_INT_2_10_10_10_REV, GL_UNSIGNED_INT, GL_UNSIGNED_SHORT, GL_UNSIGNED_BYTE };
+    public static final boolean[] RIGGED_MESH_ATTRIBUTE_NORMALIZED = {
+            false, true, false, true, true, false, false, true };
+    public static final int RIGGED_MESH_VERTEX_INTS = 11;
+    public static final int RIGGED_MESH_UV_SCALE = 65535;
+    public static final int RIGGED_MESH_BYTE_SCALE = 255;
+    public static final int RIGGED_MESH_NORMAL_SCALE = 511;
+    public static final int RIGGED_MESH_NORMAL_MASK = 0x3FF;
+    public static final int RIGGED_MESH_NORMAL_BITS = 10;
+    public static final int RIGGED_MESH_TILE_LIMIT = 65536;
+    public static final int RIGGED_MESH_BONE_LIMIT = 256;
     public static final int RIGGED_MESH_TILE_INTS = 2;
     public static final int RIGGED_MESH_VERT_LIMIT = 65536;
     public static final int RIGGED_MESH_MORPH_ENTRY_FLOATS = 4;

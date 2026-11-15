@@ -5,6 +5,8 @@ import java.nio.FloatBuffer;
 
 import org.lwjgl.glfw.GLFW;
 
+import application.bootstrap.geometrypipeline.vao.VAOData;
+import application.bootstrap.geometrypipeline.vaomanager.VAOAttributeUtility;
 import engine.root.EngineContext;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -109,8 +111,8 @@ class RenderGLSLUtility extends EngineUtility {
 
     // Draw \\
 
-    static void drawElements(int indexCount) {
-        EngineContext.gl20.glDrawElements(EngineSetting.GL_TRIANGLES, indexCount, EngineSetting.GL_UNSIGNED_SHORT,
+    static void drawElements(int indexCount, int indexType) {
+        EngineContext.gl20.glDrawElements(EngineSetting.GL_TRIANGLES, indexCount, indexType,
                 EngineSetting.GL_HANDLE_NONE);
     }
 
@@ -158,7 +160,7 @@ class RenderGLSLUtility extends EngineUtility {
 
     static int createInstancedVAO(
             int meshVBOHandle,
-            int[] meshAttrSizes,
+            VAOData meshLayout,
             int meshIBOHandle,
             int instanceVBOHandle,
             int[] instanceAttrSizes) {
@@ -168,18 +170,9 @@ class RenderGLSLUtility extends EngineUtility {
         EngineContext.gl30.glBindVertexArray(vao);
         EngineContext.gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, meshVBOHandle);
 
-        int meshStride = 0;
-        for (int i = 0; i < meshAttrSizes.length; i++)
-            meshStride += meshAttrSizes[i];
-        int meshStrideBytes = meshStride * Float.BYTES;
+        VAOAttributeUtility.pointAttributes(meshLayout);
 
-        int meshOffsetBytes = 0;
-        for (int i = 0; i < meshAttrSizes.length; i++) {
-            EngineContext.gl20.glEnableVertexAttribArray(i);
-            EngineContext.gl20.glVertexAttribPointer(
-                    i, meshAttrSizes[i], EngineSetting.GL_FLOAT, false, meshStrideBytes, meshOffsetBytes);
-            meshOffsetBytes += meshAttrSizes[i] * Float.BYTES;
-        }
+        int meshAttributeCount = meshLayout.getAttrSizes().length;
 
         int instanceStride = 0;
         for (int i = 0; i < instanceAttrSizes.length; i++)
@@ -190,7 +183,7 @@ class RenderGLSLUtility extends EngineUtility {
 
         int instanceOffsetBytes = 0;
         for (int i = 0; i < instanceAttrSizes.length; i++) {
-            int location = meshAttrSizes.length + i;
+            int location = meshAttributeCount + i;
             EngineContext.gl20.glEnableVertexAttribArray(location);
             EngineContext.gl20.glVertexAttribPointer(
                     location, instanceAttrSizes[i], EngineSetting.GL_FLOAT, false,
@@ -214,9 +207,9 @@ class RenderGLSLUtility extends EngineUtility {
         EngineContext.gl30.glDeleteVertexArray(handle);
     }
 
-    static void drawElementsInstanced(int indexCount, int instanceCount) {
+    static void drawElementsInstanced(int indexCount, int indexType, int instanceCount) {
         EngineContext.gl30.glDrawElementsInstanced(
-                EngineSetting.GL_TRIANGLES, indexCount, EngineSetting.GL_UNSIGNED_SHORT,
+                EngineSetting.GL_TRIANGLES, indexCount, indexType,
                 EngineSetting.GL_HANDLE_NONE, instanceCount);
     }
 

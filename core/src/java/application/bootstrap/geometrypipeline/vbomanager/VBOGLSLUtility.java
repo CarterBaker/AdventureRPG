@@ -1,10 +1,12 @@
 package application.bootstrap.geometrypipeline.vbomanager;
 
-import java.nio.ByteBuffer;
+import java.nio.Buffer;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 
 import application.bootstrap.geometrypipeline.vao.VAOData;
 import application.bootstrap.geometrypipeline.vao.VAOInstance;
+import application.bootstrap.geometrypipeline.vaomanager.VAOAttributeUtility;
 import application.bootstrap.geometrypipeline.vbo.VBOData;
 import application.bootstrap.geometrypipeline.vbo.VBOHandle;
 import application.bootstrap.geometrypipeline.vbo.VBOInstance;
@@ -22,15 +24,28 @@ class VBOGLSLUtility extends EngineUtility {
      * the same buffer handle so VAOs referencing it stay valid, and every
      * upload goes through one reusable direct scratch buffer, read straight
      * from the caller's backing array up to its live count so no upload ever
-     * copies onto the heap. Package-private.
+     * copies onto the heap. Vertex data arrives as floats, or as the whole
+     * 4-byte words of a packed layout. Package-private.
      */
 
     // Scratch
     private static FloatBuffer floatScratch;
+    private static IntBuffer intScratch;
 
-    private static FloatBuffer acquireFloatScratch(int floatCount) {
+    private static FloatBuffer fillScratch(float[] vertices, int floatCount) {
+
         floatScratch = BufferUtility.ensureCapacity(floatScratch, floatCount);
+        floatScratch.put(vertices, 0, floatCount).flip();
+
         return floatScratch;
+    }
+
+    private static IntBuffer fillScratch(int[] vertices, int intCount) {
+
+        intScratch = BufferUtility.ensureCapacity(intScratch, intCount);
+        intScratch.put(vertices, 0, intCount).flip();
+
+        return intScratch;
     }
 
     // Upload \\
@@ -40,7 +55,19 @@ class VBOGLSLUtility extends EngineUtility {
             VBOHandle vboHandle,
             float[] vertices) {
 
-        VBOData vboData = upload(vaoInstance, vertices, vertices.length);
+        VBOData vboData = upload(vaoInstance, fillScratch(vertices, vertices.length), vertices.length);
+        vboHandle.constructor(vboData);
+
+        return vboHandle;
+    }
+
+    // Packed vertex data: whole 4-byte words, as many per vertex as the layout's stride
+    static VBOHandle uploadVertexData(
+            VAOInstance vaoInstance,
+            VBOHandle vboHandle,
+            int[] vertices) {
+
+        VBOData vboData = upload(vaoInstance, fillScratch(vertices, vertices.length), vertices.length);
         vboHandle.constructor(vboData);
 
         return vboHandle;
@@ -52,44 +79,31 @@ class VBOGLSLUtility extends EngineUtility {
             float[] vertices,
             int floatCount) {
 
-        VBOData vboData = upload(vaoInstance, vertices, floatCount);
+        VBOData vboData = upload(vaoInstance, fillScratch(vertices, floatCount), floatCount);
         vboInstance.constructor(vboData);
 
         return vboInstance;
     }
 
-    private static VBOData upload(VAOInstance vaoInstance, float[] vertices, int floatCount) {
+    private static VBOData upload(VAOInstance vaoInstance, Buffer buffer, int wordCount) {
 
         GL30 gl30 = EngineContext.gl30;
         GL20 gl20 = EngineContext.gl20;
         VAOData vaoData = vaoInstance.getVAOData();
-        int size = floatCount * Float.BYTES;
+        int size = wordCount * Float.BYTES;
 
         gl30.glBindVertexArray(vaoData.getAttributeHandle());
 
         int vbo = gl20.glGenBuffer();
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
 
-        FloatBuffer buffer = acquireFloatScratch(floatCount);
-        buffer.put(vertices, 0, floatCount).flip();
-
         gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
-
-        int strideBytes = vaoData.getVertStride() * Float.BYTES;
-        int[] attrSizes = vaoData.getAttrSizes();
-        int byteOffset = 0;
-
-        for (int i = 0; i < attrSizes.length; i++) {
-            gl20.glEnableVertexAttribArray(i);
-            gl20.glVertexAttribPointer(i, attrSizes[i], EngineSetting.GL_FLOAT, false, strideBytes,
-                    byteOffset);
-            byteOffset += attrSizes[i] * Float.BYTES;
-        }
+        VAOAttributeUtility.pointAttributes(vaoData);
 
         gl30.glBindVertexArray(0);
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
-        return new VBOData(vbo, floatCount / vaoData.getVertStride());
+        return new VBOData(vbo, wordCount / vaoData.getVertStride());
     }
 
     // Update \\
@@ -102,7 +116,8 @@ class VBOGLSLUtility extends EngineUtility {
 
         VBOData oldData = vboInstance.getVBOData();
         int vertStride = vaoInstance.getVAOData().getVertStride();
-        VBOData newData = reupload(oldData.getVertexHandle(), vertices, floatCount, vertStride);
+        VBOData newData = reupload(
+                oldData.getVertexHandle(), fillScratch(vertices, floatCount), floatCount, vertStride);
         vboInstance.constructor(newData);
 
         return vboInstance;
@@ -116,26 +131,37 @@ class VBOGLSLUtility extends EngineUtility {
 
         VBOData oldData = vboHandle.getVBOData();
         int vertStride = vaoInstance.getVAOData().getVertStride();
-        VBOData newData = reupload(oldData.getVertexHandle(), vertices, floatCount, vertStride);
+        VBOData newData = reupload(
+                oldData.getVertexHandle(), fillScratch(vertices, floatCount), floatCount, vertStride);
         vboHandle.constructor(newData);
 
         return vboHandle;
     }
 
-    private static VBOData reupload(int vbo, float[] vertices, int floatCount, int vertStride) {
+    static VBOHandle updateVertexData(
+            VAOInstance vaoInstance,
+            VBOHandle vboHandle,
+            int[] vertices,
+            int intCount) {
+
+        VBOData oldData = vboHandle.getVBOData();
+        int vertStride = vaoInstance.getVAOData().getVertStride();
+        VBOData newData = reupload(oldData.getVertexHandle(), fillScratch(vertices, intCount), intCount, vertStride);
+        vboHandle.constructor(newData);
+
+        return vboHandle;
+    }
+
+    private static VBOData reupload(int vbo, Buffer buffer, int wordCount, int vertStride) {
 
         GL20 gl20 = EngineContext.gl20;
-        int size = floatCount * Float.BYTES;
+        int size = wordCount * Float.BYTES;
 
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, vbo);
-
-        FloatBuffer buffer = acquireFloatScratch(floatCount);
-        buffer.put(vertices, 0, floatCount).flip();
-
         gl20.glBufferData(EngineSetting.GL_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);
         gl20.glBindBuffer(EngineSetting.GL_ARRAY_BUFFER, 0);
 
-        return new VBOData(vbo, floatCount / vertStride);
+        return new VBOData(vbo, wordCount / vertStride);
     }
 
     // Removal \\

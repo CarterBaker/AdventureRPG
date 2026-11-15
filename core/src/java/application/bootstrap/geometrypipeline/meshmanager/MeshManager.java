@@ -23,6 +23,7 @@ import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
@@ -37,8 +38,9 @@ public class MeshManager extends ManagerPackage {
      * operations to VAOManager, VBOManager, and IBOManager. createMeshHandle()
      * registers a mesh generated at runtime under a name, exactly like a
      * loaded one. Rigged meshes pass through RiggedMeshStruct: parsed from
-     * and written to ARPG, built into skinned vertex data with one reusable
-     * scratch, and rebuilt in place on their registered handle when an editor
+     * and written to ARPG, built into shared, packed skinned vertex data with
+     * one reusable scratch (indexed by unsigned shorts unless the mesh has
+     * more vertices than they reach), and rebuilt in place on their registered handle when an editor
      * changes one, so every view drawing it shows the change at once; their
      * morph targets ride along in a texture on the handle.
      */
@@ -52,8 +54,9 @@ public class MeshManager extends ManagerPackage {
 
     // Rigged
     private RiggedMeshScratchStruct riggedScratch;
-    private FloatArrayList riggedVertices;
-    private ShortArrayList riggedIndices;
+    private IntArrayList riggedVertices;
+    private IntArrayList riggedIndices;
+    private ShortArrayList riggedShortIndices;
     private FloatArrayList riggedMorphEntries;
 
     // Palette
@@ -71,8 +74,9 @@ public class MeshManager extends ManagerPackage {
 
         // Rigged
         this.riggedScratch = new RiggedMeshScratchStruct();
-        this.riggedVertices = new FloatArrayList();
-        this.riggedIndices = new ShortArrayList();
+        this.riggedVertices = new IntArrayList();
+        this.riggedIndices = new IntArrayList();
+        this.riggedShortIndices = new ShortArrayList();
         this.riggedMorphEntries = new FloatArrayList();
         create(MeshLoader.class);
     }
@@ -227,23 +231,100 @@ public class MeshManager extends ManagerPackage {
         return RiggedMeshArpgUtility.write(mesh, sourceArpg);
     }
 
-    // Every corner is its own vertex, indexed by an unsigned short
+    // The most quads the character tools edit: their overlays draw every corner, indexed by an unsigned short
     public boolean fitsRiggedMeshLimit(RiggedMeshStruct mesh) {
         return mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT <= EngineSetting.RIGGED_MESH_VERT_LIMIT;
     }
 
-    void buildRiggedGeometry(
-            RiggedMeshStruct mesh,
-            FloatArrayList vertices,
-            ShortArrayList indices,
-            FloatArrayList morphEntries) {
+    // Builds a rigged mesh into the manager's reusable vertex, index and morph entry lists, which the methods below
+    // upload and measure until the next build
+    void buildRiggedGeometry(RiggedMeshStruct mesh) {
+
+        if (mesh.getRigHandle().getBoneCount() > EngineSetting.RIGGED_MESH_BONE_LIMIT)
+            throwException("Rig \"" + mesh.getRigHandle().getRigName() + "\" has more than "
+                    + EngineSetting.RIGGED_MESH_BONE_LIMIT + " bones — a rigged vertex names its bones in a byte.");
+
         RiggedMeshGeometryUtility.build(
-                mesh, resolveTextureTiles(mesh), riggedScratch, vertices, indices, morphEntries);
+                mesh, resolveTextureTiles(mesh), riggedScratch, riggedVertices, riggedIndices, riggedMorphEntries);
     }
 
-    // Gives a rigged mesh's handle the morph texture built from its entries, releasing the one it held, and the bones
-    // its vertices weigh onto
-    void applyRiggedMesh(MeshHandle meshHandle, RiggedMeshStruct mesh, FloatArrayList morphEntries) {
+    boolean hasRiggedIndices() {
+        return !riggedIndices.isEmpty();
+    }
+
+    VBOHandle addRiggedVBO(String meshName, VAOInstance vaoInstance) {
+        return vboManager.addVBOFromData(meshName, riggedVertices.toIntArray(), vaoInstance);
+    }
+
+    IBOHandle addRiggedIBO(String meshName, VAOInstance vaoInstance) {
+
+        if (fitsShortIndices())
+            return iboManager.addIBOFromData(meshName, narrowRiggedIndices().toShortArray(), vaoInstance);
+
+        return iboManager.addIBOFromData(meshName, riggedIndices.toIntArray(), vaoInstance);
+    }
+
+    private IBOHandle updateRiggedIBO(IBOHandle iboHandle) {
+
+        if (fitsShortIndices())
+            return iboManager.updateIBOHandle(iboHandle, narrowRiggedIndices());
+
+        return iboManager.updateIBOHandle(iboHandle, riggedIndices);
+    }
+
+    private boolean fitsShortIndices() {
+        return riggedVertices.size() / EngineSetting.RIGGED_MESH_VERTEX_INTS <= EngineSetting.RIGGED_MESH_VERT_LIMIT;
+    }
+
+    private ShortArrayList narrowRiggedIndices() {
+
+        int indexCount = riggedIndices.size();
+        int[] indices = riggedIndices.elements();
+
+        riggedShortIndices.size(indexCount);
+
+        short[] narrowed = riggedShortIndices.elements();
+
+        for (int i = 0; i < indexCount; i++)
+            narrowed[i] = (short) indices[i];
+
+        return riggedShortIndices;
+    }
+
+    // The extent of the built vertices' positions, the first words of each
+    void computeRiggedBounds(Vector3 outMin, Vector3 outMax) {
+
+        int[] vertices = riggedVertices.elements();
+        int intCount = riggedVertices.size();
+
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float minZ = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        float maxZ = -Float.MAX_VALUE;
+
+        for (int base = 0; base < intCount; base += EngineSetting.RIGGED_MESH_VERTEX_INTS) {
+
+            float x = Float.intBitsToFloat(vertices[base]);
+            float y = Float.intBitsToFloat(vertices[base + 1]);
+            float z = Float.intBitsToFloat(vertices[base + 2]);
+
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            minZ = Math.min(minZ, z);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+            maxZ = Math.max(maxZ, z);
+        }
+
+        outMin.set(minX, minY, minZ);
+        outMax.set(maxX, maxY, maxZ);
+    }
+
+    // Gives a rigged mesh's handle the morph texture made from the entries just built, releasing the one it held, and
+    // the bones its vertices weigh onto
+    void applyRiggedMesh(MeshHandle meshHandle, RiggedMeshStruct mesh) {
 
         String[] morphNames = new String[mesh.getMorphCount()];
 
@@ -251,7 +332,7 @@ public class MeshManager extends ManagerPackage {
             morphNames[m] = mesh.getMorphName(m);
 
         RiggedMeshGLSLUtility.deleteTexture(meshHandle.getMorphTexture());
-        meshHandle.setMorphTargets(RiggedMeshGLSLUtility.createMorphTexture(morphEntries), morphNames);
+        meshHandle.setMorphTargets(RiggedMeshGLSLUtility.createMorphTexture(riggedMorphEntries), morphNames);
         meshHandle.setWeighedBones(resolveWeighedBones(mesh));
         meshHandle.getTiles().clear();
 
@@ -277,15 +358,15 @@ public class MeshManager extends ManagerPackage {
         if (meshHandle.getRigHandle() != mesh.getRigHandle())
             throwException("Mesh \"" + meshHandle.getMeshName() + "\" cannot be rebuilt on a different rig.");
 
-        buildRiggedGeometry(mesh, riggedVertices, riggedIndices, riggedMorphEntries);
+        buildRiggedGeometry(mesh);
 
         VAOInstance vaoInstance = meshHandle.getVAOInstance();
         VBOHandle vboHandle = vboManager.updateVBOHandle(vaoInstance, meshHandle.getVBOHandle(), riggedVertices);
-        IBOHandle iboHandle = iboManager.updateIBOHandle(meshHandle.getIBOHandle(), riggedIndices);
+        IBOHandle iboHandle = updateRiggedIBO(meshHandle.getIBOHandle());
         Vector3 boundsMin = new Vector3();
         Vector3 boundsMax = new Vector3();
 
-        computeBounds(riggedVertices, vaoInstance.getVAOData().getVertStride(), boundsMin, boundsMax);
+        computeRiggedBounds(boundsMin, boundsMax);
         meshHandle.constructor(
                 meshHandle.getMeshName(),
                 vaoInstance,
@@ -294,7 +375,7 @@ public class MeshManager extends ManagerPackage {
                 meshHandle.getRigHandle(),
                 boundsMin,
                 boundsMax);
-        applyRiggedMesh(meshHandle, mesh, riggedMorphEntries);
+        applyRiggedMesh(meshHandle, mesh);
     }
 
     // Each palette texture's tile ID and size, in the scratch's reusable array
@@ -311,6 +392,10 @@ public class MeshManager extends ManagerPackage {
 
             TextureHandle textureHandle = textureManager.getTextureHandleFromTextureName(mesh.getTextureName(t));
             int base = t * EngineSetting.RIGGED_MESH_TILE_INTS;
+
+            if (textureHandle.getTileID() >= EngineSetting.RIGGED_MESH_TILE_LIMIT)
+                throwException("Texture \"" + mesh.getTextureName(t) + "\" has tile " + textureHandle.getTileID()
+                        + " — a rigged vertex names its tile in an unsigned short.");
 
             tiles[base] = textureHandle.getTileID();
             tiles[base + 1] = textureHandle.getTileWidth();

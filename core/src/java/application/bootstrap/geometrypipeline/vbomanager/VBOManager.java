@@ -9,6 +9,7 @@ import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -67,6 +68,21 @@ public class VBOManager extends ManagerPackage {
         return handle;
     }
 
+    public VBOHandle addVBOFromData(
+            String resourceName,
+            int[] vertices,
+            VAOInstance vaoInstance) {
+
+        VBOHandle handle = VBOGLSLUtility.uploadVertexData(
+                vaoInstance,
+                create(VBOHandle.class),
+                vertices);
+
+        registerVBO(resourceName, handle);
+
+        return handle;
+    }
+
     // Accessible \\
 
     public boolean hasVBO(String vboName) {
@@ -109,6 +125,10 @@ public class VBOManager extends ManagerPackage {
 
     // Respecifies a registered buffer in place, so every VAO already built over it stays valid
     public VBOHandle updateVBOHandle(VAOInstance vaoInstance, VBOHandle vboHandle, FloatArrayList vertices) {
+        return VBOGLSLUtility.updateVertexData(vaoInstance, vboHandle, vertices.elements(), vertices.size());
+    }
+
+    public VBOHandle updateVBOHandle(VAOInstance vaoInstance, VBOHandle vboHandle, IntArrayList vertices) {
         return VBOGLSLUtility.updateVertexData(vaoInstance, vboHandle, vertices.elements(), vertices.size());
     }
 

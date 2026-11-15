@@ -1,6 +1,7 @@
 package application.bootstrap.geometrypipeline.ibomanager;
 
-import java.nio.ByteBuffer;
+import java.nio.Buffer;
+import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 
 import application.bootstrap.geometrypipeline.ibo.IBOData;
@@ -21,15 +22,28 @@ class IBOGLSLUtility extends EngineUtility {
      * the same buffer handle so VAOs referencing it stay valid, and every
      * upload goes through one reusable direct scratch buffer, read straight
      * from the caller's backing array up to its live count so no upload ever
-     * copies onto the heap. Package-private.
+     * copies onto the heap. Indices are unsigned shorts, or unsigned ints for
+     * a mesh with more vertices than a short reaches. Package-private.
      */
 
     // Scratch
     private static ShortBuffer shortScratch;
+    private static IntBuffer intScratch;
 
-    private static ShortBuffer acquireShortScratch(int shortCount) {
-        shortScratch = BufferUtility.ensureCapacity(shortScratch, shortCount);
+    private static ShortBuffer fillScratch(short[] indices, int indexCount) {
+
+        shortScratch = BufferUtility.ensureCapacity(shortScratch, indexCount);
+        shortScratch.put(indices, 0, indexCount).flip();
+
         return shortScratch;
+    }
+
+    private static IntBuffer fillScratch(int[] indices, int indexCount) {
+
+        intScratch = BufferUtility.ensureCapacity(intScratch, indexCount);
+        intScratch.put(indices, 0, indexCount).flip();
+
+        return intScratch;
     }
 
     // Upload \\
@@ -39,7 +53,20 @@ class IBOGLSLUtility extends EngineUtility {
             IBOHandle iboHandle,
             short[] indices) {
 
-        IBOData iboData = upload(vaoInstance, indices, indices.length);
+        IBOData iboData = upload(
+                vaoInstance, fillScratch(indices, indices.length), indices.length, EngineSetting.GL_UNSIGNED_SHORT);
+        iboHandle.constructor(iboData);
+
+        return iboHandle;
+    }
+
+    static IBOHandle uploadIndexData(
+            VAOInstance vaoInstance,
+            IBOHandle iboHandle,
+            int[] indices) {
+
+        IBOData iboData = upload(
+                vaoInstance, fillScratch(indices, indices.length), indices.length, EngineSetting.GL_UNSIGNED_INT);
         iboHandle.constructor(iboData);
 
         return iboHandle;
@@ -51,30 +78,32 @@ class IBOGLSLUtility extends EngineUtility {
             short[] indices,
             int indexCount) {
 
-        IBOData iboData = upload(vaoInstance, indices, indexCount);
+        IBOData iboData = upload(
+                vaoInstance, fillScratch(indices, indexCount), indexCount, EngineSetting.GL_UNSIGNED_SHORT);
         iboInstance.constructor(iboData);
 
         return iboInstance;
     }
 
-    private static IBOData upload(VAOInstance vaoInstance, short[] indices, int indexCount) {
+    private static IBOData upload(VAOInstance vaoInstance, Buffer buffer, int indexCount, int indexType) {
 
         GL30 gl30 = EngineContext.gl30;
         GL20 gl20 = EngineContext.gl20;
-        int size = indexCount * Short.BYTES;
+        int size = indexCount * resolveIndexBytes(indexType);
 
         gl30.glBindVertexArray(vaoInstance.getVAOData().getAttributeHandle());
 
         int ibo = gl20.glGenBuffer();
         gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, ibo);
 
-        ShortBuffer buffer = acquireShortScratch(indexCount);
-        buffer.put(indices, 0, indexCount).flip();
-
         gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_STATIC_DRAW);
         gl30.glBindVertexArray(0);
 
-        return new IBOData(ibo, indexCount);
+        return new IBOData(ibo, indexCount, indexType);
+    }
+
+    private static int resolveIndexBytes(int indexType) {
+        return indexType == EngineSetting.GL_UNSIGNED_INT ? Integer.BYTES : Short.BYTES;
     }
 
     // Update \\
@@ -82,7 +111,9 @@ class IBOGLSLUtility extends EngineUtility {
     static IBOInstance updateIndexData(IBOInstance iboInstance, short[] indices, int indexCount) {
 
         IBOData oldData = iboInstance.getIBOData();
-        IBOData newData = reupload(oldData.getIndexHandle(), indices, indexCount);
+        IBOData newData = reupload(
+                oldData.getIndexHandle(), fillScratch(indices, indexCount), indexCount,
+                EngineSetting.GL_UNSIGNED_SHORT);
         iboInstance.constructor(newData);
 
         return iboInstance;
@@ -91,26 +122,35 @@ class IBOGLSLUtility extends EngineUtility {
     static IBOHandle updateIndexData(IBOHandle iboHandle, short[] indices, int indexCount) {
 
         IBOData oldData = iboHandle.getIBOData();
-        IBOData newData = reupload(oldData.getIndexHandle(), indices, indexCount);
+        IBOData newData = reupload(
+                oldData.getIndexHandle(), fillScratch(indices, indexCount), indexCount,
+                EngineSetting.GL_UNSIGNED_SHORT);
         iboHandle.constructor(newData);
 
         return iboHandle;
     }
 
-    private static IBOData reupload(int ibo, short[] indices, int indexCount) {
+    static IBOHandle updateIndexData(IBOHandle iboHandle, int[] indices, int indexCount) {
+
+        IBOData oldData = iboHandle.getIBOData();
+        IBOData newData = reupload(
+                oldData.getIndexHandle(), fillScratch(indices, indexCount), indexCount,
+                EngineSetting.GL_UNSIGNED_INT);
+        iboHandle.constructor(newData);
+
+        return iboHandle;
+    }
+
+    private static IBOData reupload(int ibo, Buffer buffer, int indexCount, int indexType) {
 
         GL20 gl20 = EngineContext.gl20;
-        int size = indexCount * Short.BYTES;
+        int size = indexCount * resolveIndexBytes(indexType);
 
         gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, ibo);
-
-        ShortBuffer buffer = acquireShortScratch(indexCount);
-        buffer.put(indices, 0, indexCount).flip();
-
         gl20.glBufferData(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, size, buffer, EngineSetting.GL_DYNAMIC_DRAW);
         gl20.glBindBuffer(EngineSetting.GL_ELEMENT_ARRAY_BUFFER, 0);
 
-        return new IBOData(ibo, indexCount);
+        return new IBOData(ibo, indexCount, indexType);
     }
 
     // Removal \\

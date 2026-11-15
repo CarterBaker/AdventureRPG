@@ -82,6 +82,10 @@ public class MeshData extends DataPackage {
         return iboData.getIndexCount();
     }
 
+    public int getIndexType() {
+        return iboData.getIndexType();
+    }
+
     public Vector3 getBoundsMin() {
         return boundsMin;
     }

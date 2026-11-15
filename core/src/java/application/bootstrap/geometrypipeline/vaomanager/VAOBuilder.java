@@ -17,11 +17,12 @@ public class VAOBuilder extends BuilderPackage {
      * Parses the 'vao' field from mesh ARPG and constructs a VAOHandle layout
      * template. Supports direct attribute size arrays and string references to
      * other registered VAOs; an empty array is an attribute-less layout, for
-     * meshes whose shader pulls its data by vertex index. When the mesh ARPG declares a "rig", the
-     * trailing attributes RIGGED_MESH_TRAILING_ATTRIBUTE_SIZES lists are
-     * appended after the declared attributes — bone indices and bone weights,
-     * the smooth normal, the morph entry run, the zone with its raw UV and
-     * the mask channels MeshBuilder bakes for every corner.
+     * meshes whose shader pulls its data by vertex index. A mesh ARPG that declares a "rig" names
+     * the position and UV it authors and takes the packed skinned layout
+     * RIGGED_MESH_ATTRIBUTE_SIZES, TYPES and NORMALIZED describe: the
+     * position, the UV, bone indices and bone weights, the smooth normal,
+     * the morph entry run, the zone with its tile and the mask channels
+     * MeshManager builds for every shared vertex.
      * Bootstrap-only.
      */
 
@@ -109,9 +110,7 @@ public class VAOBuilder extends BuilderPackage {
     private VAOHandle buildLayout(ArpgArrayStruct arpgArray, File file, boolean hasBones) {
 
         int declaredCount = arpgArray.size();
-        int[] trailing = EngineSetting.RIGGED_MESH_TRAILING_ATTRIBUTE_SIZES;
-        int totalCount = hasBones ? declaredCount + trailing.length : declaredCount;
-        int[] attrSizes = new int[totalCount];
+        int[] attrSizes = new int[declaredCount];
 
         for (int i = 0; i < declaredCount; i++) {
             attrSizes[i] = arpgArray.get(i).getAsInt();
@@ -119,11 +118,24 @@ public class VAOBuilder extends BuilderPackage {
                 throwException("VAO attribute size must be positive in file: " + file.getName());
         }
 
-        if (hasBones)
-            System.arraycopy(trailing, 0, attrSizes, declaredCount, trailing.length);
-
         VAOHandle handle = create(VAOHandle.class);
-        handle.constructor(attrSizes);
+
+        if (!hasBones) {
+            handle.constructor(attrSizes);
+            return handle;
+        }
+
+        if (declaredCount != 2
+                || attrSizes[0] != EngineSetting.RIGGED_MESH_POSITION_FLOATS
+                || attrSizes[1] != EngineSetting.RIGGED_MESH_UV_FLOATS)
+            throwException("Rigged mesh must declare the \"vao\" [" + EngineSetting.RIGGED_MESH_POSITION_FLOATS
+                    + ", " + EngineSetting.RIGGED_MESH_UV_FLOATS + "] — a position and a UV for every corner. File: "
+                    + file.getName());
+
+        handle.constructor(
+                EngineSetting.RIGGED_MESH_ATTRIBUTE_SIZES,
+                EngineSetting.RIGGED_MESH_ATTRIBUTE_TYPES,
+                EngineSetting.RIGGED_MESH_ATTRIBUTE_NORMALIZED);
 
         return handle;
     }

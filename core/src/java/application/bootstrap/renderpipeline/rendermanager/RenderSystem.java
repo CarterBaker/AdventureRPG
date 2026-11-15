@@ -313,7 +313,7 @@ class RenderSystem extends SystemPackage {
             triangles = meshData.getVertexCount() / EngineSetting.QUAD_VERTEX_COUNT
                     * (EngineSetting.QUAD_INDEX_COUNT / EngineSetting.TRIANGLE_VERTEX_COUNT);
         } else {
-            RenderGLSLUtility.drawElements(model.getIndexCount());
+            RenderGLSLUtility.drawElements(model.getIndexCount(), model.getIndexType());
             triangles = model.getIndexCount() / EngineSetting.TRIANGLE_VERTEX_COUNT;
         }
 
@@ -545,6 +545,7 @@ class RenderSystem extends SystemPackage {
             RenderGLSLUtility.bindVAO(vao);
             RenderGLSLUtility.drawElementsInstanced(
                     skinnedBuffer.getMeshHandle().getIndexCount(),
+                    skinnedBuffer.getMeshHandle().getIndexType(),
                     skinnedBuffer.getInstanceCount());
             RenderGLSLUtility.unbindVAO();
 
@@ -611,7 +612,7 @@ class RenderSystem extends SystemPackage {
 
         vao = RenderGLSLUtility.createInstancedVAO(
                 skinnedBuffer.getMeshHandle().getVertexHandle(),
-                skinnedBuffer.getMeshHandle().getAttrSizes(),
+                skinnedBuffer.getMeshHandle().getMeshData().getVAOData(),
                 skinnedBuffer.getMeshHandle().getIndexHandle(),
                 skinnedBuffer.getInstanceVBO(),
                 EngineSetting.SKINNED_INSTANCE_ATTRIBUTE_SIZES);

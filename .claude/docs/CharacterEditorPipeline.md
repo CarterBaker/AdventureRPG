@@ -201,8 +201,13 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   cloth, mouth, teeth); `masks` (channels `EngineSetting.RIGGED_MESH_MASK_CHANNELS`) and `morphs` name vertices by the
   number the parse gives them, corners merged by position and influences in the order they first appear. Writing
   renumbers through `resolveFileVertices`, so never index masks or morphs by `RiggedMeshStruct` order in a file.
-- **GPU path.** `RiggedMeshGeometryUtility` writes per corner its morph entry run, zone with raw UV and masks (the
-  trailing attributes `EngineSetting.RIGGED_MESH_TRAILING_ATTRIBUTE_SIZES`); the morph deltas live in the mesh's morph
+- **GPU path.** `RiggedMeshGeometryUtility` packs every corner into `RIGGED_MESH_VERTEX_INTS` words (44 bytes: float
+  position, normalised-short UV, byte bone indices, normalised-byte weights summing to one, a 10-bit-per-axis normal,
+  the morph entry run, zone with tile, normalised-byte masks; `EngineSetting.RIGGED_MESH_ATTRIBUTE_SIZES`, `TYPES` and
+  `NORMALIZED`) and shares one indexed vertex between corners whose words all match, so never count on one vertex per
+  corner. The shaders still declare float attributes: GL converts. Indices are unsigned shorts unless a mesh has more
+  than `RIGGED_MESH_VERT_LIMIT` shared vertices (`MeshHandle.getIndexType`). Every VAO over a mesh's buffer points its
+  attributes through `VAOAttributeUtility.pointAttributes`. The morph deltas live in the mesh's morph
   texture (`MeshHandle.getMorphTexture`). Each instance's palette row (`SkinnedBufferData`) holds its bones, then the
   appearance texels (`SkinnedAppearanceStruct`: hidden bone, one texel per `SkinnedColor`, `SkinnedDetail` amounts),
   then its morph weights. The shaders read them through `characters/includes/CharacterAppearance.glsl` and shade by
@@ -305,8 +310,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   row of teeth, the upper on the head in front of the lower on the jaw, and the tongue; `CharacterTeethMaterial`; nine
   variants, from Standard to Braces, each an image set whose tint mask keeps metal from taking the teeth color).
   `HumanoidRig` names its `parts` (head, ears, eyes, mouth, hands, feet) and seven
-  `poses` (`animations/humanoid/poses/`). All are generated (catalogued); a rigged mesh may hold at most
-  `RIGGED_MESH_VERT_LIMIT` corners. Each hand is one bone: hanging at the side its palm faces the thigh with the
+  `poses` (`animations/humanoid/poses/`). All are generated (catalogued); the character tools edit a rigged
+  mesh of at most `RIGGED_MESH_VERT_LIMIT` corners (their overlays draw every corner). Each hand is one bone: hanging at the side its palm faces the thigh with the
   thumb forward (+z), so `hand_l` is a left hand at +x; keep that chirality on any hand you model or mirror.
 - **Features are the gender's.** The Character Outliner's Features rows (Appearance mode) read and write the previewed
   gender's `genders.<gender>.features`, the features it is made with; a gender naming none wears the race's

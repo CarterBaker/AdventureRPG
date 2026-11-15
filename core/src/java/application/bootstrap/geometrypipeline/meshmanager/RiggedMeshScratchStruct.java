@@ -14,8 +14,10 @@ class RiggedMeshScratchStruct extends StructPackage {
      * Reusable working storage for building a rigged mesh's vertex data: each
      * face's area-weighted normal, the position group every vertex falls in,
      * and the corners of each group laid out group by group, so the normals
-     * smoothed across a shared position are summed without allocating, and
-     * where each vertex's morph entries start. One
+     * smoothed across a shared position are summed without allocating,
+     * where each vertex's morph entries start, the corner being packed, the
+     * shared vertices of the quad being indexed and the table that finds a
+     * packed corner's shared vertex. One
      * lives on MeshManager; every array is cleared and refilled per build,
      * and the position keys only ever grow.
      */
@@ -35,6 +37,11 @@ class RiggedMeshScratchStruct extends StructPackage {
 
     // Morphs
     final IntArrayList vertexMorphStarts;
+
+    // Sharing
+    final int[] corner;
+    final int[] quadVertices;
+    int[] vertexTable;
 
     // Textures
     int[] textureTiles;
@@ -59,6 +66,11 @@ class RiggedMeshScratchStruct extends StructPackage {
 
         // Morphs
         this.vertexMorphStarts = new IntArrayList();
+
+        // Sharing
+        this.corner = new int[EngineSetting.RIGGED_MESH_VERTEX_INTS];
+        this.quadVertices = new int[EngineSetting.QUAD_VERTEX_COUNT];
+        this.vertexTable = new int[0];
 
         // Textures
         this.textureTiles = new int[0];
