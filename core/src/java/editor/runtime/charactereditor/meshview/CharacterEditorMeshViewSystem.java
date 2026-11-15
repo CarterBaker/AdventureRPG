@@ -3,7 +3,7 @@ package editor.runtime.charactereditor.meshview;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.runtime.charactereditor.CharacterEditorSetting;
@@ -371,7 +371,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     // the parts worn with a region that holds a feature beside the body
     private boolean isFaceShown(int documentIndex, int faceIndex) {
 
-        CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+        CharacterRegionStruct region = characterEditorModeSystem.getRegion();
         CharacterMeshDocumentInstance document = wornDocuments.get(documentIndex);
 
         if (document.isFaceHidden(faceIndex))

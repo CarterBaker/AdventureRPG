@@ -12,7 +12,7 @@ import editor.bootstrap.charactereditorpipeline.charactereditormanager.Character
 import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.EditorSetting;
@@ -248,7 +248,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         RigHandle rigHandle = characterViewPoseSystem.getRaceData().getRigHandle();
         AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
-        CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+        CharacterRegionStruct region = characterEditorModeSystem.getRegion();
         CharacterBoneDisplay display = characterEditorManager.getBoneDisplay();
         int selected = characterEditorManager.getSelectedBoneIndex();
 
@@ -275,7 +275,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
         int boneCount = characterEditorManager.getRigBoneCount();
         int selected = characterEditorManager.getSelectedRigBoneIndex();
-        CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+        CharacterRegionStruct region = characterEditorModeSystem.getRegion();
         CharacterBoneDisplay display = characterEditorManager.getBoneDisplay();
 
         for (int i = 0; i < boneCount; i++) {

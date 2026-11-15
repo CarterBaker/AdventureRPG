@@ -9,7 +9,7 @@ import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterDigitStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterHairCardStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterHairLockStruct;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
@@ -480,12 +480,12 @@ class CharacterRigBranch extends BranchPackage {
 
     // A chain of bones on every digit found below each of a region's bones in a body mesh, the digits already rigged
     // left as they are, all in one edit
-    void addDigits(RiggedMeshStruct mesh, CharacterEditorRegion region) {
+    void addDigits(RiggedMeshStruct mesh, CharacterRegionStruct region) {
 
         ObjectArrayList<ArpgObjectStruct> added = new ObjectArrayList<>();
         ObjectArrayList<CharacterDigitStruct> digits = new ObjectArrayList<>();
 
-        int[] partBones = mesh.getRigHandle().getPartBones(region.getRigPart());
+        int[] partBones = region.getPartBones();
 
         for (int p = 0; p < partBones.length; p++) {
 
@@ -970,6 +970,100 @@ class CharacterRigBranch extends BranchPackage {
         characterEditorManager.setStatusMessage(found + EditorSetting.CHARACTER_RIG_MESSAGE_IK_REMOVED);
     }
 
+    // Layers \\
+
+    // A part of the rig named after a bone, its side left off, holding it and its twin across the body, so the
+    // Character Editor lists it as a layer; none where a part already holds the bone or bears the name
+    void addPart(int boneIndex) {
+
+        String boneName = boneNames.get(boneIndex);
+        String heldBy = findPartName(boneName);
+
+        if (heldBy != null) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_PART_HELD + heldBy);
+            return;
+        }
+
+        String partName = boneName.substring(
+                0, boneName.length() - CharacterMeshUtility.toSideSuffix(boneName).length());
+
+        if (partName.equals(EngineSetting.RIG_PART_RESERVED_WHOLE)
+                || partName.equals(EngineSetting.RIG_PART_RESERVED_HAIR)
+                || findPartIndex(partName) != EngineSetting.INDEX_NOT_FOUND) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_PART_NAMED + partName);
+            return;
+        }
+
+        int twin = findTwin(boneIndex);
+        ArpgObjectStruct partArpg = new ArpgObjectStruct();
+        ArpgArrayStruct bones = new ArpgArrayStruct();
+
+        bones.add(boneName);
+
+        if (twin != EngineSetting.INDEX_NOT_FOUND)
+            bones.add(boneNames.get(twin));
+
+        partArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, partName);
+        partArpg.add(EditorSetting.CHARACTER_RIG_FIELD_BONES, bones);
+        editRig(rig -> CharacterViewUtility.requireArray(rig, EditorSetting.CHARACTER_RIG_FIELD_PARTS).add(partArpg));
+        characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_PART_ADDED + partName);
+    }
+
+    // The part holding a bone removed, so its layer leaves the Character Editor
+    void removePart(int boneIndex) {
+
+        String partName = findPartName(boneNames.get(boneIndex));
+
+        if (partName == null) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_PART_NONE);
+            return;
+        }
+
+        int partIndex = findPartIndex(partName);
+
+        editRig(rig -> rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_PARTS).remove(partIndex));
+        characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_PART_REMOVED + partName);
+    }
+
+    // The name of the part holding a bone by its name, null when none does
+    private String findPartName(String boneName) {
+
+        ArpgArrayStruct parts = getPartsArpg();
+
+        for (int p = 0; parts != null && p < parts.size(); p++) {
+
+            ArpgObjectStruct partArpg = parts.get(p).getAsObject();
+            ArpgArrayStruct bones = partArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+
+            for (int b = 0; b < bones.size(); b++)
+                if (bones.get(b).getAsString().equals(boneName))
+                    return partArpg.getAsValue(EditorSetting.CHARACTER_RIG_FIELD_NAME).getAsString();
+        }
+
+        return null;
+    }
+
+    private int findPartIndex(String partName) {
+
+        ArpgArrayStruct parts = getPartsArpg();
+
+        for (int p = 0; parts != null && p < parts.size(); p++)
+            if (parts.get(p).getAsObject().getAsValue(EditorSetting.CHARACTER_RIG_FIELD_NAME).getAsString()
+                    .equals(partName))
+                return p;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private ArpgArrayStruct getPartsArpg() {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        return rigArpg != null && ArpgUtility.hasArray(rigArpg, EditorSetting.CHARACTER_RIG_FIELD_PARTS)
+                ? rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_PARTS)
+                : null;
+    }
+
     private void layIkChain(int end, ObjectArrayList<ArpgObjectStruct> added) {
 
         if (end == EngineSetting.INDEX_NOT_FOUND || countIkChains(end) > 0)
@@ -1078,7 +1172,7 @@ class CharacterRigBranch extends BranchPackage {
     private String resolveNewName(String parentName) {
 
         String side = resolveSide(parentName);
-        CharacterEditorRegion region = characterEditorManager.getRegion();
+        CharacterRegionStruct region = characterEditorManager.getRegion();
         String stem = region.hasBonePrefix() ? region.getBonePrefix() : EditorSetting.CHARACTER_RIG_NEW_BONE_NAME;
 
         for (int number = 1;; number++) {

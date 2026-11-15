@@ -106,7 +106,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.PLACE, EditorTool.ERASE },
-            new ToolActionGroupStruct[] { rigActions(), colliderActions(), hairActions() },
+            new ToolActionGroupStruct[] { rigActions(), rigLayers(), colliderActions(), hairActions() },
             false,
             mirror(),
             bones()),
@@ -280,6 +280,13 @@ public enum ToolCanvas {
                 action(EditorSetting.CHARACTER_RIG_LABEL_DIGITS, EditorSetting.CHARACTER_RIG_KEY_DIGITS),
                 action(EditorSetting.CHARACTER_RIG_LABEL_IK_ADD, EditorSetting.CHARACTER_RIG_KEY_IK_ADD),
                 action(EditorSetting.CHARACTER_RIG_LABEL_IK_REMOVE, EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE));
+    }
+
+    private static ToolActionGroupStruct rigLayers() {
+        return new ToolActionGroupStruct(
+                EditorSetting.CHARACTER_RIG_HEADER_LAYERS,
+                action(EditorSetting.CHARACTER_RIG_LABEL_PART_ADD, EditorSetting.CHARACTER_RIG_KEY_PART_ADD),
+                action(EditorSetting.CHARACTER_RIG_LABEL_PART_REMOVE, EditorSetting.CHARACTER_RIG_KEY_PART_REMOVE));
     }
 
     private static ToolActionGroupStruct paintLayers() {

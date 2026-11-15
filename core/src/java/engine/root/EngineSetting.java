@@ -2773,6 +2773,10 @@ public class EngineSetting {
     public static final float RIG_COLLIDER_RADIUS_MAX = 2f;
     public static final float RIG_COLLIDER_SEGMENT_SHARE_MIN = 0.25f;
 
+    // Rig Parts — names the editor keeps for its own layers
+    public static final String RIG_PART_RESERVED_WHOLE = "whole";
+    public static final String RIG_PART_RESERVED_HAIR = "hair";
+
     // Face Animation — blinks fall at a pseudo-random interval per character, each closing and opening the lids
     public static final float FACE_BLINK_INTERVAL_MIN = 2.2f;
     public static final float FACE_BLINK_INTERVAL_MAX = 6.0f;

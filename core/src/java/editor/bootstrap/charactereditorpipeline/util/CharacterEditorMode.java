@@ -163,10 +163,9 @@ public enum CharacterEditorMode {
         return toolCanvas != null;
     }
 
-    // Whether a region's layers list this mode: a mode that takes tools, the rig and the face only where it takes them
-    public boolean isHeldBy(CharacterEditorRegion region) {
-        return isModeling() && (toolCanvas != ToolCanvas.CHARACTER_RIG || region.takesRig())
-                && (!shapesFace() || region.takesFace());
+    // Whether a region's layers list this mode: a mode that takes tools, the face only where the region takes it
+    public boolean isHeldBy(CharacterRegionStruct region) {
+        return isModeling() && (!shapesFace() || region.takesFace());
     }
 
     // What the status bar tells the pointer to do in this mode, null for a mode with nothing to say

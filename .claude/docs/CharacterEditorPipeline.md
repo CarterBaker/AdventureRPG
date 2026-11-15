@@ -27,12 +27,13 @@ and restored by layouts like any other.
 | Properties | `PropertiesContext` | the value rows of the character, face or animation tab worked in last |
 
 - **Layers.** The Character Editor's layers are a region and a mode (`CharacterEditorModeSystem`, the window's own
-  state, keyed `region/mode`): the Character group holds the look modes (Appearance, Build, Equipment) on the whole
-  character, then the Body (`CharacterEditorRegion.WHOLE`) and every region nested under it by `getParent` — Head
-  (with Hair, Ears, Eyes and Mouth), Hands, Feet — each a group holding every mode `CharacterEditorMode.isHeldBy` gives
-  it: Mesh, Sculpt, Weights, Paint and Rig on every region, and Face (`CharacterEditorMode.FACE`, the face controls) on
-  the Head alone. Every region has the same tools; a region is only the closer, isolated view. Picking a group keeps the
-  mode where the region holds it, Mesh otherwise. Add a region or a mode as enum data, never as a window.
+  state, keyed `region/mode`, the region kept by its key and found again whenever the regions are made again): the
+  Character group holds the look modes (Appearance, Build, Equipment) on the whole character, then the Body
+  (`CharacterRegionStruct.WHOLE`) and every region nested under it by `getParent`, each a group holding every mode
+  `CharacterEditorMode.isHeldBy` gives it: Mesh, Sculpt, Weights, Paint and Rig on every region, and Face
+  (`CharacterEditorMode.FACE`, the face controls) where the region takes the face. Every region has the same tools; a
+  region is only the closer, isolated view. Picking a group keeps the mode where the region holds it, Mesh otherwise.
+  Add a region as a rig part, a mode as enum data, never as a window.
 - **One window, one manager.** Each Character Editor window remembers its own layer and draws its preview in it
   (`CharacterEditorPreviewSystem` reads the window's mode, never the manager's); while it is the active window, and
   when a layer is picked for it, it hands its region and mode to `CharacterEditorManager.setRegion` / `setMode`, so the
@@ -95,15 +96,18 @@ and restored by layouts like any other.
 
 ## Regions
 
-- **Regions.** `CharacterEditorRegion` is data: its label, the region it nests under, the feature it holds, the
-  `RigPart` it holds on the body, whether it pins roots, takes the rig and the face, its bone prefix and the worn parts
-  it shows beside its own (`showsFeature`). Whole, Head, Hair, Ears, Eyes, Mouth, Hands and Feet.
-- **A region is data, its bones the rig's.** `CharacterEditorRegion` names the worn feature it holds (Hair: `HAIR`,
-  Eyes: `EYES`, Mouth: `TEETH`) and the `RigPart` whose bones it holds on the body with every bone below them (Head,
-  Ears, Hands, Feet, Eyes, Mouth). The bones come from the rig's own `parts` (`RigData.getPartBones`), never from names
-  in code, so any creature's rig gets every part layer by naming its parts; a rig that names no such part leaves that
-  layer empty. Hair also names its own bones by prefix (`hair_`, and the head they hang from). Bone membership is read
-  only through `CharacterRegionBranch.holdsBone` / `holdsRigBone`. The active window hands its region to
+- **Regions are the rig's parts.** A rig's `parts` (`RigPartStruct`, a list in the rig file, the way a rig groups its
+  bones into collections) each name a `name`, the `bones` they hold with every bone below them, and optionally the worn
+  slot they `holds` (eyes, teeth), the worn slots they `shows` (hair, eyes, teeth) and whether the `face` is shaped
+  there; `RigBuilder` refuses an unknown bone, an empty part, a repeated name and the editor's own names (`whole`,
+  `hair`). `CharacterRegionBranch.resolveRegions` makes the regions (`CharacterRegionStruct`) once per rig data: the
+  Body, one per part in the rig's order (labelled by `LabelUtility.toWords`, sided when every bone has a `_l`/`_r` twin,
+  listed under the part holding the nearest bone above its own), then Hair (the worn hair, its roots pinned, its own
+  bones named by prefix, `hair_`, and the head they hang from, listed under the part that shows hair). Any creature's
+  rig gets its layers by naming its parts; Rig mode's **Add Layer From Bone** (`CharacterRigBranch.addPart`) makes a
+  part of the selected bone and its twin, named after the bone without its side, and **Remove Layer** drops the part
+  holding it; the rig applies live, so the Layers tab follows at once. Bone membership is read only through
+  `CharacterRegionBranch.holdsBone` / `holdsRigBone`. The active window hands its region to
   `CharacterEditorManager.setRegion`, which keeps the part picked while the region holds it, else picks its body, else
   its feature. A region holding both lists only those two in the outliner's Parts (`holdsPartKey`), so the Eyes layers
   sculpt the socket on the head and the eye itself, and the Mouth layers the lips and the teeth.
@@ -345,7 +349,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `CharacterEyeMaterial`) and `features/humanoid/teeth/HumanoidTeeth` (`HumanoidTeethMesh`: a UV-mapped strip per
   row of teeth, the upper on the head in front of the lower on the jaw, and the tongue; `CharacterTeethMaterial`; nine
   variants, from Standard to Braces, each an image set whose tint mask keeps metal from taking the teeth color).
-  `HumanoidRig` names its `parts` (head, ears, eyes, mouth, hands, feet) and seven
+  `HumanoidRig` names its `parts` (head showing hair, eyes and teeth and taking the face; ears; eyes holding the eyes;
+  mouth holding the teeth; hands; feet) and seven
   `poses` (`animations/humanoid/poses/`). All are generated (catalogued); the character tools edit a rigged
   mesh of at most `RIGGED_MESH_VERT_LIMIT` corners (their overlays draw every corner). Each hand is one bone: hanging at the side its palm faces the thigh with the
   thumb forward (+z), so `hand_l` is a left hand at +x; keep that chirality on any hand you model or mirror.
@@ -500,8 +505,9 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   bone is let go only while it has a morph, and its morph cleared only while it drives a bone.
 - **Vertices move only in Bind.** A modelling layer struck in any other pose refuses sculpt strokes and transforms;
   the preview poses on the GPU and the mesh view skins on the CPU, but edits are written to the bind-pose file.
-- **Part layers need rig parts.** A rig without `parts` leaves the Head, Ears, Hands, Feet, Eyes and Mouth layers
-  showing nothing; name the bones there, not in code.
+- **Part layers need rig parts.** A rig without `parts` lists only the Body and Hair; name the parts in the rig (or with
+  Add Layer From Bone), never in code. Region keys are part names, so renaming a part moves a window picked on it back
+  to the Body.
 - **Quaternion poses, Euler keys.** Clips keep Euler-degree curves (as DCC tools author them); `AnimationStateHandle`
   turns every sampled turn into a unit quaternion (`RigMathUtility.toQuaternion`, the `Rz * Ry * Rx` order), blends
   brackets, cross-fades and override layers by slerp, multiplies additive layers on, and composes each bone as bind

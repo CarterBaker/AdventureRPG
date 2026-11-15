@@ -98,8 +98,12 @@ public class RigHandle extends HandlePackage {
         return rigData.getCollider(colliderIndex);
     }
 
-    public int[] getPartBones(RigPart rigPart) {
-        return rigData.getPartBones(rigPart);
+    public int getPartCount() {
+        return rigData.getPartCount();
+    }
+
+    public RigPartStruct getPart(int partIndex) {
+        return rigData.getPart(partIndex);
     }
 
     public int getPoseCount() {

@@ -1,17 +1,23 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.geometrypipeline.rig.RigPartStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.runtime.EditorSetting;
+import editor.runtime.label.LabelUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CharacterRegionBranch extends BranchPackage {
 
@@ -30,21 +36,25 @@ class CharacterRegionBranch extends BranchPackage {
      * region's bones are the ones below its part's, or the ones it names as
      * its own, the hair's spring chains and the head they hang from; a part
      * whose every bone has a twin across the body is sided, shown and framed
-     * one side at a time.
+     * one side at a time. The regions themselves are the rig's: the whole
+     * character, one for every part the rig names, in its order, and the
+     * worn hair, made again only once the rig's data is replaced.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private CharacterRigBranch characterRigBranch;
 
-    // Shares — one list per region, by ordinal
-    private FloatArrayList[] region2Shares;
-    private CharacterMeshDocumentInstance[] region2Document;
-    private int[] region2Revision;
+    // Regions — the rig's, made for the rig data named, the whole character first; moves whenever they are made again
+    private ObjectArrayList<CharacterRegionStruct> regions;
+    private RigData regionsRig;
+    private int regionsRevision;
 
-    // Sides — per region, whether its part is sided on the rig data it was worked out for
-    private boolean[] region2Sided;
-    private RigData[] region2SidedRig;
+    // Shares — one list per region, by its index, with the region, mesh and revision it was worked out for
+    private ObjectArrayList<FloatArrayList> region2Shares;
+    private ObjectArrayList<CharacterRegionStruct> region2SharesRegion;
+    private ObjectArrayList<CharacterMeshDocumentInstance> region2Document;
+    private IntArrayList region2Revision;
 
     // Scratch
     private BooleanArrayList regionBones;
@@ -54,19 +64,15 @@ class CharacterRegionBranch extends BranchPackage {
     @Override
     protected void create() {
 
-        int regionCount = CharacterEditorRegion.VALUES.length;
+        // Regions
+        this.regions = new ObjectArrayList<>();
+        this.regions.add(CharacterRegionStruct.WHOLE);
 
         // Shares
-        this.region2Shares = new FloatArrayList[regionCount];
-        this.region2Document = new CharacterMeshDocumentInstance[regionCount];
-        this.region2Revision = new int[regionCount];
-
-        for (int i = 0; i < regionCount; i++)
-            region2Shares[i] = new FloatArrayList();
-
-        // Sides
-        this.region2Sided = new boolean[regionCount];
-        this.region2SidedRig = new RigData[regionCount];
+        this.region2Shares = new ObjectArrayList<>();
+        this.region2SharesRegion = new ObjectArrayList<>();
+        this.region2Document = new ObjectArrayList<>();
+        this.region2Revision = new IntArrayList();
 
         // Scratch
         this.regionBones = new BooleanArrayList();
@@ -78,15 +84,129 @@ class CharacterRegionBranch extends BranchPackage {
         this.characterRigBranch = get(CharacterRigBranch.class);
     }
 
+    // Regions \\
+
+    // The rig's regions, the whole character alone without a rig, made again only once the rig's data is replaced
+    ObjectArrayList<CharacterRegionStruct> resolveRegions(RigHandle rigHandle) {
+
+        RigData rigData = rigHandle != null ? rigHandle.getRigData() : null;
+
+        if (rigData == regionsRig)
+            return regions;
+
+        this.regionsRig = rigData;
+        this.regionsRevision++;
+        regions.clear();
+        regions.add(CharacterRegionStruct.WHOLE);
+
+        if (rigHandle == null)
+            return regions;
+
+        for (int p = 0; p < rigHandle.getPartCount(); p++)
+            regions.add(buildPartRegion(rigHandle, rigHandle.getPart(p), regions.size()));
+
+        regions.add(buildHairRegion(regions.size()));
+
+        for (int i = 1; i < regions.size(); i++)
+            regions.get(i).setParent(resolveParent(rigHandle, regions.get(i)));
+
+        return regions;
+    }
+
+    private CharacterRegionStruct buildPartRegion(RigHandle rigHandle, RigPartStruct part, int index) {
+
+        String[] shownSlots = part.getShownSlots();
+        FeatureSlot[] shownFeatures = new FeatureSlot[shownSlots.length];
+
+        for (int i = 0; i < shownSlots.length; i++)
+            shownFeatures[i] = ArpgUtility.toEnum(shownSlots[i], FeatureSlot.class);
+
+        return new CharacterRegionStruct(
+                part.getName(),
+                LabelUtility.toWords(part.getName()),
+                index,
+                part.holdsSlot() ? ArpgUtility.toEnum(part.getHeldSlot(), FeatureSlot.class) : null,
+                part.getBones(),
+                false,
+                resolveSided(rigHandle, part.getBones()),
+                part.takesFace(),
+                EditorSetting.CHARACTER_REGION_NO_PREFIX,
+                shownFeatures);
+    }
+
+    private CharacterRegionStruct buildHairRegion(int index) {
+        return new CharacterRegionStruct(
+                EngineSetting.RIG_PART_RESERVED_HAIR,
+                EditorSetting.CHARACTER_REGION_LABEL_HAIR,
+                index,
+                FeatureSlot.HAIR,
+                new int[0],
+                true,
+                false,
+                false,
+                EditorSetting.CHARACTER_HAIR_LOCK_PREFIX,
+                new FeatureSlot[0]);
+    }
+
+    // The region a region is listed under: the part holding the nearest bone above its own, the part showing the hair
+    // for the hair, the whole character otherwise
+    private CharacterRegionStruct resolveParent(RigHandle rigHandle, CharacterRegionStruct region) {
+
+        if (!region.holdsBody()) {
+
+            for (int i = 1; i < regions.size(); i++)
+                if (regions.get(i) != region && regions.get(i).showsFeature(region.getFeatureSlot()))
+                    return regions.get(i);
+
+            return CharacterRegionStruct.WHOLE;
+        }
+
+        for (int bone = rigHandle.getBone(region.getPartBones()[0]).getParentIndex();
+                bone != EngineSetting.INDEX_NOT_FOUND;
+                bone = rigHandle.getBone(bone).getParentIndex())
+            for (int i = 1; i < regions.size(); i++)
+                if (regions.get(i) != region && namesPartBone(regions.get(i), bone))
+                    return regions.get(i);
+
+        return CharacterRegionStruct.WHOLE;
+    }
+
+    private boolean namesPartBone(CharacterRegionStruct region, int boneIndex) {
+
+        int[] partBones = region.getPartBones();
+
+        for (int i = 0; i < partBones.length; i++)
+            if (partBones[i] == boneIndex)
+                return true;
+
+        return false;
+    }
+
+    // A region of the rig by its key, the whole character for a key the rig no longer names
+    CharacterRegionStruct findRegion(RigHandle rigHandle, String key) {
+
+        ObjectArrayList<CharacterRegionStruct> listed = resolveRegions(rigHandle);
+
+        for (int i = 0; i < listed.size(); i++)
+            if (listed.get(i).getKey().equals(key))
+                return listed.get(i);
+
+        return CharacterRegionStruct.WHOLE;
+    }
+
+    int getRegionsRevision() {
+        return regionsRevision;
+    }
+
     // Shares \\
 
     // How far a vertex belongs to a region, every vertex wholly to the whole character
-    float getShare(CharacterMeshDocumentInstance document, CharacterEditorRegion region, int vertexIndex) {
+    float getShare(CharacterMeshDocumentInstance document, CharacterRegionStruct region, int vertexIndex) {
         return region.isWhole() ? 1f : resolveShares(document, region).getFloat(vertexIndex);
     }
 
     // Whether a vertex is picked and selected in a region
-    boolean holds(CharacterMeshDocumentInstance document, CharacterEditorRegion region, int vertexIndex) {
+    boolean holds(CharacterMeshDocumentInstance document, CharacterRegionStruct region, int vertexIndex) {
 
         if (region.isWhole())
             return true;
@@ -96,17 +216,27 @@ class CharacterRegionBranch extends BranchPackage {
         return region.isRootPinned() ? share >= 0f : share >= EditorSetting.CHARACTER_REGION_PICK_SHARE;
     }
 
-    private FloatArrayList resolveShares(CharacterMeshDocumentInstance document, CharacterEditorRegion region) {
+    private FloatArrayList resolveShares(CharacterMeshDocumentInstance document, CharacterRegionStruct region) {
 
-        int slot = region.ordinal();
-        FloatArrayList shares = region2Shares[slot];
+        int slot = region.getIndex();
 
-        if (region2Document[slot] == document && region2Revision[slot] == document.getRevision()
+        while (region2Shares.size() <= slot) {
+            region2Shares.add(new FloatArrayList());
+            region2SharesRegion.add(null);
+            region2Document.add(null);
+            region2Revision.add(EngineSetting.INDEX_NOT_FOUND);
+        }
+
+        FloatArrayList shares = region2Shares.get(slot);
+
+        if (region2SharesRegion.get(slot) == region && region2Document.get(slot) == document
+                && region2Revision.getInt(slot) == document.getRevision()
                 && shares.size() == document.getMesh().getVertexCount())
             return shares;
 
-        region2Document[slot] = document;
-        region2Revision[slot] = document.getRevision();
+        region2SharesRegion.set(slot, region);
+        region2Document.set(slot, document);
+        region2Revision.set(slot, document.getRevision());
         fillShares(document, region, shares);
 
         return shares;
@@ -114,7 +244,7 @@ class CharacterRegionBranch extends BranchPackage {
 
     private void fillShares(
             CharacterMeshDocumentInstance document,
-            CharacterEditorRegion region,
+            CharacterRegionStruct region,
             FloatArrayList shares) {
 
         RiggedMeshStruct mesh = document.getMesh();
@@ -161,7 +291,7 @@ class CharacterRegionBranch extends BranchPackage {
     }
 
     // The weight each vertex puts on the region's bones and every bone below them
-    private void fillBoneShares(RiggedMeshStruct mesh, CharacterEditorRegion region, FloatArrayList shares) {
+    private void fillBoneShares(RiggedMeshStruct mesh, CharacterRegionStruct region, FloatArrayList shares) {
 
         resolveRegionBones(mesh.getRigHandle(), region);
 
@@ -180,7 +310,7 @@ class CharacterRegionBranch extends BranchPackage {
     // Bones \\
 
     // Every bone of a rig the region holds: one of its part's, or any bone below one, parents standing before children
-    private void resolveRegionBones(RigHandle rigHandle, CharacterEditorRegion region) {
+    private void resolveRegionBones(RigHandle rigHandle, CharacterRegionStruct region) {
 
         regionBones.clear();
 
@@ -195,7 +325,7 @@ class CharacterRegionBranch extends BranchPackage {
 
     // Whether a bone of a loaded rig is the region's: named as its own, or lying below one of its part's bones, read up
     // its parents
-    boolean holdsBone(CharacterEditorRegion region, RigHandle rigHandle, int boneIndex) {
+    boolean holdsBone(CharacterRegionStruct region, RigHandle rigHandle, int boneIndex) {
 
         if (region.isWhole() || region.namesBone(rigHandle.getBone(boneIndex).getName()))
             return true;
@@ -214,7 +344,7 @@ class CharacterRegionBranch extends BranchPackage {
 
     // Whether a bone of the rig being edited is the region's: named as its own, or lying below one of its part's bones
     // as the loaded rig names them
-    boolean holdsRigBone(CharacterEditorRegion region, int boneIndex) {
+    boolean holdsRigBone(CharacterRegionStruct region, int boneIndex) {
 
         if (region.isWhole() || region.namesBone(characterRigBranch.getBoneName(boneIndex)))
             return true;
@@ -232,12 +362,12 @@ class CharacterRegionBranch extends BranchPackage {
     }
 
     // Whether a bone, by name, is one the rig names for the region's part
-    private boolean isRoot(CharacterEditorRegion region, RigHandle rigHandle, String boneName) {
+    private boolean isRoot(CharacterRegionStruct region, RigHandle rigHandle, String boneName) {
 
         if (!region.holdsBody())
             return false;
 
-        int[] partBones = rigHandle.getPartBones(region.getRigPart());
+        int[] partBones = region.getPartBones();
 
         for (int i = 0; i < partBones.length; i++)
             if (rigHandle.getBone(partBones[i]).getName().equals(boneName))
@@ -248,29 +378,8 @@ class CharacterRegionBranch extends BranchPackage {
 
     // Sides \\
 
-    // Whether every bone of the region's part has a twin across the body, a left or right bone by its name, worked out
-    // again only once the rig's data is replaced
-    boolean isSided(CharacterEditorRegion region, RigHandle rigHandle) {
-
-        int slot = region.ordinal();
-
-        if (region2SidedRig[slot] != rigHandle.getRigData()) {
-            region2SidedRig[slot] = rigHandle.getRigData();
-            region2Sided[slot] = resolveSided(region, rigHandle);
-        }
-
-        return region2Sided[slot];
-    }
-
-    private boolean resolveSided(CharacterEditorRegion region, RigHandle rigHandle) {
-
-        if (!region.holdsBody())
-            return false;
-
-        int[] partBones = rigHandle.getPartBones(region.getRigPart());
-
-        if (partBones.length == 0)
-            return false;
+    // Whether every bone of a part has a twin across the body, a left or right bone by its name
+    private boolean resolveSided(RigHandle rigHandle, int[] partBones) {
 
         for (int i = 0; i < partBones.length; i++)
             if (CharacterMeshUtility.toSideSuffix(rigHandle.getBone(partBones[i]).getName()).isEmpty())
@@ -280,7 +389,7 @@ class CharacterRegionBranch extends BranchPackage {
     }
 
     // The bone a region is framed about: its part's first bone on the side shown, or the bone its own bones hang from
-    int resolveFrameBone(CharacterEditorRegion region, CharacterEditorSide side, RigHandle rigHandle) {
+    int resolveFrameBone(CharacterRegionStruct region, CharacterEditorSide side, RigHandle rigHandle) {
 
         if (region.hasBonePrefix())
             return rigHandle.getBoneIndex(EditorSetting.CHARACTER_REGION_HAIR_FRAME);
@@ -288,8 +397,8 @@ class CharacterRegionBranch extends BranchPackage {
         if (!region.holdsBody())
             return EngineSetting.INDEX_NOT_FOUND;
 
-        int[] partBones = rigHandle.getPartBones(region.getRigPart());
-        boolean sided = isSided(region, rigHandle);
+        int[] partBones = region.getPartBones();
+        boolean sided = region.isSided();
 
         for (int i = 0; i < partBones.length; i++)
             if (!sided || side.namesBone(rigHandle.getBone(partBones[i]).getName()))

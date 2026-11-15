@@ -15,7 +15,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
@@ -126,8 +126,8 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Mesh
     private String activePartKey;
-    private CharacterEditorRegion region;
-    private CharacterEditorSide[] region2Side;
+    private CharacterRegionStruct region;
+    private Object2ObjectOpenHashMap<String, CharacterEditorSide> regionKey2Side;
     private boolean proportional;
     private float proportionalRadius;
     private float snapStep;
@@ -209,9 +209,8 @@ public class CharacterEditorManager extends ManagerPackage {
 
         // Mesh
         this.activePartKey = EditorSetting.CHARACTER_EDITOR_PART_BODY;
-        this.region = CharacterEditorRegion.WHOLE;
-        this.region2Side = new CharacterEditorSide[CharacterEditorRegion.VALUES.length];
-        Arrays.fill(region2Side, CharacterEditorSide.LEFT);
+        this.region = CharacterRegionStruct.WHOLE;
+        this.regionKey2Side = new Object2ObjectOpenHashMap<>();
         this.proportionalRadius = EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_DEFAULT;
         this.snapStep = EditorSetting.CHARACTER_EDITOR_MESH_SNAP_DEFAULT;
 
@@ -510,7 +509,7 @@ public class CharacterEditorManager extends ManagerPackage {
     // Regions \\
 
     // The region of the layer worked in last, its part picked whenever the character wears it
-    public void setRegion(CharacterEditorRegion region) {
+    public void setRegion(CharacterRegionStruct region) {
 
         if (region != this.region) {
             this.region = region;
@@ -525,7 +524,7 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     // The part a region edits: the part picked while it is one the region holds, else its body, else its feature
-    private String resolveRegionPartKey(CharacterEditorRegion region) {
+    private String resolveRegionPartKey(CharacterRegionStruct region) {
 
         if (region.isWhole() || holdsPartKey(region, activePartKey))
             return activePartKey;
@@ -536,7 +535,7 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     // Whether a part, by its key, is one a region holds: the body where it holds a part of the rig, or its feature
-    boolean holdsPartKey(CharacterEditorRegion region, String partKey) {
+    boolean holdsPartKey(CharacterRegionStruct region, String partKey) {
 
         if (region.isWhole())
             return true;
@@ -548,7 +547,7 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     // Whether a mesh is the part a region edits, the active part when that is one the region holds
-    boolean isRegionPart(CharacterMeshDocumentInstance document, CharacterEditorRegion region) {
+    boolean isRegionPart(CharacterMeshDocumentInstance document, CharacterRegionStruct region) {
 
         if (region.isWhole())
             return true;
@@ -558,17 +557,17 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     // Whether the open part is the region's feature rather than its body
-    boolean isRegionFeatureOpen(CharacterEditorRegion region) {
+    boolean isRegionFeatureOpen(CharacterRegionStruct region) {
         return region.holdsFeature() && activePartKey.equals(ArpgUtility.toEnumName(region.getFeatureSlot()));
     }
 
     // How far a vertex of a mesh belongs to a region, the share each stroke reaching it is held to
-    public float getRegionShare(CharacterMeshDocumentInstance document, CharacterEditorRegion region, int vertexIndex) {
+    public float getRegionShare(CharacterMeshDocumentInstance document, CharacterRegionStruct region, int vertexIndex) {
         return Math.max(characterRegionBranch.getShare(document, region, vertexIndex), 0f);
     }
 
     // Whether a vertex of a mesh is picked and selected in a region
-    public boolean isInRegion(CharacterMeshDocumentInstance document, CharacterEditorRegion region, int vertexIndex) {
+    public boolean isInRegion(CharacterMeshDocumentInstance document, CharacterRegionStruct region, int vertexIndex) {
         return characterRegionBranch.holds(document, region, vertexIndex);
     }
 
@@ -578,43 +577,58 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     // Whether the region's part is the one open, so a tab of a part the character does not wear edits nothing
-    public boolean isRegionOpen(CharacterEditorRegion region) {
+    public boolean isRegionOpen(CharacterRegionStruct region) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
         return document != null && isRegionPart(document, region);
     }
 
-    public boolean isBoneInRegion(CharacterEditorRegion region, RigHandle rigHandle, int boneIndex) {
+    public boolean isBoneInRegion(CharacterRegionStruct region, RigHandle rigHandle, int boneIndex) {
         return characterRegionBranch.holdsBone(region, rigHandle, boneIndex);
     }
 
-    public boolean isRigBoneInRegion(CharacterEditorRegion region, int boneIndex) {
+    public boolean isRigBoneInRegion(CharacterRegionStruct region, int boneIndex) {
         return syncRig() && characterRegionBranch.holdsRigBone(region, boneIndex);
     }
 
-    public CharacterEditorRegion getRegion() {
+    public CharacterRegionStruct getRegion() {
         return region;
+    }
+
+    // The regions of the active race's rig, the Body first, each a group in the Character Editor's Layers tab
+    public ObjectArrayList<CharacterRegionStruct> getRegions() {
+        return characterRegionBranch.resolveRegions(resolveRegionRig());
+    }
+
+    // A region of the active race's rig by its layer key, the Body for one the rig no longer names
+    public CharacterRegionStruct findRegion(String key) {
+        return characterRegionBranch.findRegion(resolveRegionRig(), key);
+    }
+
+    // Moves whenever the regions are made again for another rig or a rig changed in place
+    public int getRegionsRevision() {
+        characterRegionBranch.resolveRegions(resolveRegionRig());
+        return characterRegionBranch.getRegionsRevision();
     }
 
     // Sides \\
 
     // Whether a region's part has a twin across the body, so it is shown and framed one side at a time
-    public boolean isSided(CharacterEditorRegion region) {
-
-        RigHandle rigHandle = resolveRegionRig();
-        return rigHandle != null && characterRegionBranch.isSided(region, rigHandle);
+    public boolean isSided(CharacterRegionStruct region) {
+        return region.isSided();
     }
 
-    public CharacterEditorSide getSide(CharacterEditorRegion region) {
-        return region2Side[region.ordinal()];
+    // The side a region shows, kept by its key, the left until another is picked
+    public CharacterEditorSide getSide(CharacterRegionStruct region) {
+        return regionKey2Side.getOrDefault(region.getKey(), CharacterEditorSide.LEFT);
     }
 
-    void setSide(CharacterEditorRegion region, CharacterEditorSide side) {
+    void setSide(CharacterRegionStruct region, CharacterEditorSide side) {
 
-        if (region2Side[region.ordinal()] == side)
+        if (getSide(region) == side)
             return;
 
-        region2Side[region.ordinal()] = side;
+        regionKey2Side.put(region.getKey(), side);
         notifyChanged();
     }
 
@@ -625,19 +639,19 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // The bone a region is framed about: the first bone of its part on the side shown, the bone its own bones hang
     // from for one that names them, INDEX_NOT_FOUND for the whole character or a rig that names no such part
-    public int getRegionFrameBone(CharacterEditorRegion region, RigHandle rigHandle) {
+    public int getRegionFrameBone(CharacterRegionStruct region, RigHandle rigHandle) {
         return characterRegionBranch.resolveFrameBone(region, getSide(region), rigHandle);
     }
 
     // Whether a bone of a loaded rig is shown in a region: one it holds, on the side shown where it is sided
-    public boolean isBoneShown(CharacterEditorRegion region, RigHandle rigHandle, int boneIndex) {
+    public boolean isBoneShown(CharacterRegionStruct region, RigHandle rigHandle, int boneIndex) {
         return characterRegionBranch.holdsBone(region, rigHandle, boneIndex)
-                && (!characterRegionBranch.isSided(region, rigHandle)
+                && (!region.isSided()
                 || getSide(region).namesBone(rigHandle.getBone(boneIndex).getName()));
     }
 
     // Whether a bone of the rig being edited is shown in a region: one it holds, on the side shown where it is sided
-    public boolean isRigBoneShown(CharacterEditorRegion region, int boneIndex) {
+    public boolean isRigBoneShown(CharacterRegionStruct region, int boneIndex) {
 
         if (!isRigBoneInRegion(region, boneIndex))
             return false;

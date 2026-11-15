@@ -83,6 +83,8 @@ class CharacterRigPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_RIG_KEY_DIGITS,
                     EditorSetting.CHARACTER_RIG_KEY_IK_ADD,
                     EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE,
+                    EditorSetting.CHARACTER_RIG_KEY_PART_ADD,
+                    EditorSetting.CHARACTER_RIG_KEY_PART_REMOVE,
                     EditorSetting.CHARACTER_RIG_KEY_HAIR,
                     EditorSetting.CHARACTER_RIG_KEY_SPRING_ADD,
                     EditorSetting.CHARACTER_RIG_KEY_SPRING_REMOVE,
@@ -379,6 +381,8 @@ class CharacterRigPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_RIG_KEY_DIGITS -> characterEditorManager.rigDigits();
             case EditorSetting.CHARACTER_RIG_KEY_IK_ADD -> characterRigBranch.addIkChain(boneIndex);
             case EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE -> characterRigBranch.removeIkChain(boneIndex);
+            case EditorSetting.CHARACTER_RIG_KEY_PART_ADD -> characterRigBranch.addPart(boneIndex);
+            case EditorSetting.CHARACTER_RIG_KEY_PART_REMOVE -> characterRigBranch.removePart(boneIndex);
             case EditorSetting.CHARACTER_RIG_KEY_HAIR -> characterEditorManager.rigHairLocks();
             case EditorSetting.CHARACTER_RIG_KEY_SPRING_ADD -> characterRigBranch.addSpringChain(boneIndex);
             case EditorSetting.CHARACTER_RIG_KEY_SPRING_REMOVE -> characterRigBranch.removeSpringChain(boneIndex);

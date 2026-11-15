@@ -6,7 +6,7 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedMaskMode;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
@@ -35,7 +35,7 @@ public class CharacterRegionIsolationSystem extends SystemPackage {
 
     // Bound
     private int builtRevision;
-    private CharacterEditorRegion builtRegion;
+    private CharacterRegionStruct builtRegion;
     private RigHandle builtRig;
 
     // Base \\
@@ -60,7 +60,7 @@ public class CharacterRegionIsolationSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+        CharacterRegionStruct region = characterEditorModeSystem.getRegion();
         RigHandle rigHandle = characterViewPoseSystem.hasSubject()
                 ? characterViewPoseSystem.getRaceData().getRigHandle()
                 : null;
@@ -74,7 +74,7 @@ public class CharacterRegionIsolationSystem extends SystemPackage {
         isolate(region, rigHandle, characterViewRenderSystem.getIsolation());
     }
 
-    private void isolate(CharacterEditorRegion region, RigHandle rigHandle, AppearanceIsolationStruct isolation) {
+    private void isolate(CharacterRegionStruct region, RigHandle rigHandle, AppearanceIsolationStruct isolation) {
 
         isolation.clear();
 

@@ -8,7 +8,7 @@ import application.bootstrap.geometrypipeline.rig.RigSpringChainStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterDigitStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterHairCardStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
@@ -243,7 +243,7 @@ class CharacterWeightBranch extends BranchPackage {
     // Digits \\
 
     // Every vertex of the region's hand or foot bones weighed onto the digit bones laid below them; false when none are
-    boolean weighDigits(CharacterMeshDocumentInstance document, CharacterEditorRegion region) {
+    boolean weighDigits(CharacterMeshDocumentInstance document, CharacterRegionStruct region) {
 
         RiggedMeshStruct mesh = document.getMesh();
         RigHandle rigHandle = mesh.getRigHandle();
@@ -252,7 +252,7 @@ class CharacterWeightBranch extends BranchPackage {
         int weighed = 0;
         boolean begun = false;
 
-        int[] partBones = rigHandle.getPartBones(region.getRigPart());
+        int[] partBones = region.getPartBones();
 
         for (int p = 0; p < partBones.length; p++) {
 

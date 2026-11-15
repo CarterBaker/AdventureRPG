@@ -8,7 +8,7 @@ import application.bootstrap.geometrypipeline.rig.RigColliderStruct;
 import application.bootstrap.geometrypipeline.rig.RigData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
-import application.bootstrap.geometrypipeline.rig.RigPart;
+import application.bootstrap.geometrypipeline.rig.RigPartStruct;
 import application.bootstrap.geometrypipeline.rig.RigSpringChainStruct;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
@@ -17,6 +17,7 @@ import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 class RigBuilder extends BuilderPackage {
 
@@ -37,8 +38,12 @@ class RigBuilder extends BuilderPackage {
      * against. Its optional "colliders" each name the "bone" they ride, a
      * "shape" — a sphere about its "offset", or a capsule from its "start"
      * to its "end", in the bone's bind frame — and a positive "radius",
-     * every name its own. Its optional "parts" name, per RigPart, the bones that part holds, and its optional
-     * "poses" the animation clips its editors strike as poses.
+     * every name its own. Its optional "parts" list the parts of the body its
+     * editors work on closely, each a "name" of its own (never "whole" or
+     * "hair", the editor's own layers), the "bones" it holds, and optionally
+     * the worn slot it "holds", the worn slots it "shows" and whether the
+     * "face" is shaped there; its optional "poses" the animation clips its
+     * editors strike as poses.
      */
 
     // Build \\
@@ -466,37 +471,76 @@ class RigBuilder extends BuilderPackage {
 
     // Parts \\
 
-    private int[][] parseParts(ArpgObjectStruct arpg, Object2IntOpenHashMap<String> boneName2Index, String sourceName) {
+    private RigPartStruct[] parseParts(
+            ArpgObjectStruct arpg,
+            Object2IntOpenHashMap<String> boneName2Index,
+            String sourceName) {
 
-        int[][] part2Bones = new int[RigPart.VALUES.length][];
+        if (!ArpgUtility.hasArray(arpg, "parts"))
+            return new RigPartStruct[0];
 
-        for (RigPart rigPart : RigPart.VALUES)
-            part2Bones[rigPart.ordinal()] = new int[0];
+        ArpgArrayStruct partsArray = arpg.getAsArray("parts");
+        RigPartStruct[] parts = new RigPartStruct[partsArray.size()];
+        ObjectOpenHashSet<String> names = new ObjectOpenHashSet<>();
 
-        if (!ArpgUtility.hasObject(arpg, "parts"))
-            return part2Bones;
+        for (int p = 0; p < parts.length; p++) {
 
-        ArpgObjectStruct partsArpg = arpg.getAsObject("parts");
+            ArpgObjectStruct partArpg = partsArray.get(p).getAsObject();
+            String name = ArpgUtility.validateString(partArpg, "name");
 
-        for (String key : partsArpg.keySet()) {
+            if (name.equals(EngineSetting.RIG_PART_RESERVED_WHOLE)
+                    || name.equals(EngineSetting.RIG_PART_RESERVED_HAIR)
+                    || !names.add(name))
+                throwException("Rig part \"" + name + "\" is reserved or named twice in rig: " + sourceName);
 
-            RigPart rigPart = ArpgUtility.toEnum(key, RigPart.class);
-            ArpgArrayStruct boneNames = partsArpg.getAsArray(key);
-            int[] boneIndices = new int[boneNames.size()];
-
-            for (int i = 0; i < boneNames.size(); i++) {
-
-                boneIndices[i] = boneName2Index.getInt(boneNames.get(i).getAsString());
-
-                if (boneIndices[i] == EngineSetting.INDEX_NOT_FOUND)
-                    throwException("Rig part \"" + key + "\" names unknown bone \""
-                            + boneNames.get(i).getAsString() + "\": " + sourceName);
-            }
-
-            part2Bones[rigPart.ordinal()] = boneIndices;
+            parts[p] = new RigPartStruct(
+                    name,
+                    parsePartBones(partArpg, name, boneName2Index, sourceName),
+                    ArpgUtility.getString(partArpg, "holds", ""),
+                    parseNames(partArpg, "shows"),
+                    ArpgUtility.getBoolean(partArpg, "face", false));
         }
 
-        return part2Bones;
+        return parts;
+    }
+
+    private int[] parsePartBones(
+            ArpgObjectStruct partArpg,
+            String partName,
+            Object2IntOpenHashMap<String> boneName2Index,
+            String sourceName) {
+
+        ArpgArrayStruct boneNames = ArpgUtility.validateArray(partArpg, "bones");
+        int[] boneIndices = new int[boneNames.size()];
+
+        if (boneIndices.length == 0)
+            throwException("Rig part \"" + partName + "\" names no bones in rig: " + sourceName);
+
+        for (int i = 0; i < boneNames.size(); i++) {
+
+            boneIndices[i] = boneName2Index.getInt(boneNames.get(i).getAsString());
+
+            if (boneIndices[i] == EngineSetting.INDEX_NOT_FOUND)
+                throwException("Rig part \"" + partName + "\" names unknown bone \""
+                        + boneNames.get(i).getAsString() + "\": " + sourceName);
+        }
+
+        return boneIndices;
+    }
+
+    // An optional list of names, empty when absent
+    private String[] parseNames(ArpgObjectStruct arpg, String key) {
+
+        if (!ArpgUtility.hasArray(arpg, key))
+            return new String[0];
+
+        ArpgArrayStruct namesArray = arpg.getAsArray(key);
+        String[] names = new String[namesArray.size()];
+
+        for (int i = 0; i < names.length; i++)
+            names[i] = namesArray.get(i).getAsString();
+
+        return names;
     }
 
     private String[] parsePoses(ArpgObjectStruct arpg) {

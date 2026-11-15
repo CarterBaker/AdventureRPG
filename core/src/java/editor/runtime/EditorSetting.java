@@ -1326,6 +1326,8 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_KEY_DIGITS = "rig_digits";
     public static final String CHARACTER_RIG_KEY_IK_ADD = "rig_ik_add";
     public static final String CHARACTER_RIG_KEY_IK_REMOVE = "rig_ik_remove";
+    public static final String CHARACTER_RIG_KEY_PART_ADD = "rig_part_add";
+    public static final String CHARACTER_RIG_KEY_PART_REMOVE = "rig_part_remove";
     public static final String CHARACTER_RIG_KEY_HAIR = "rig_hair";
     public static final String CHARACTER_RIG_KEY_SPRING = "rig_spring";
     public static final String CHARACTER_RIG_KEY_SPRING_ADD = "rig_spring_add";
@@ -1356,6 +1358,8 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_LABEL_DIGITS = "Rig Digits";
     public static final String CHARACTER_RIG_LABEL_IK_ADD = "Add IK Handle";
     public static final String CHARACTER_RIG_LABEL_IK_REMOVE = "Remove IK Handle";
+    public static final String CHARACTER_RIG_LABEL_PART_ADD = "Add Layer From Bone";
+    public static final String CHARACTER_RIG_LABEL_PART_REMOVE = "Remove Layer";
     public static final String CHARACTER_RIG_LABEL_HAIR = "Rig Hair Locks";
     public static final String CHARACTER_RIG_LABEL_SPRING_ADD = "Add Spring Chain";
     public static final String CHARACTER_RIG_LABEL_SPRING_REMOVE = "Remove Spring Chain";
@@ -1376,6 +1380,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_HEADER_HAIR = "Hair";
     public static final String CHARACTER_RIG_HEADER_SPRING = "Spring Chain ";
     public static final String CHARACTER_RIG_HEADER_ACTIONS = "Rig";
+    public static final String CHARACTER_RIG_HEADER_LAYERS = "Layers";
     public static final String CHARACTER_RIG_LABEL_REVERT = "Revert Rig";
 
     // Character Rig — status text
@@ -1410,6 +1415,12 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_MESSAGE_IK_NONE =
             "Pick the bone a handle drags, two bones below a limb's root, that has none yet";
     public static final String CHARACTER_RIG_MESSAGE_REMOVED = "Removed ";
+    public static final String CHARACTER_RIG_MESSAGE_PART_ADDED = "Added the layer ";
+    public static final String CHARACTER_RIG_MESSAGE_PART_REMOVED = "Removed the layer ";
+    public static final String CHARACTER_RIG_MESSAGE_PART_HELD = "A layer already holds the selected bone: ";
+    public static final String CHARACTER_RIG_MESSAGE_PART_NAMED = "A layer of that name already exists: ";
+    public static final String CHARACTER_RIG_MESSAGE_PART_NONE = "No layer holds the selected bone";
+    public static final String CHARACTER_RIG_FIELD_PARTS = "parts";
     public static final String CHARACTER_RIG_MESSAGE_MIRRORED = "Mirrored ";
     public static final String CHARACTER_RIG_MESSAGE_LOADED_BONE = "Only bones added since the editor started can be"
             + " renamed or removed";

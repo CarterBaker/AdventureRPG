@@ -16,8 +16,9 @@ public class RigData extends DataPackage {
      * its tools pose limbs and digits through and the spring chains the
      * runtime simulates in place of any key — every bone a chain turns, and
      * the chain each bone belongs to, found once here, and the colliders
-     * its bones carry for those chains to rest against. It names the bones
-     * each body part holds and the clips its editors strike as poses.
+     * its bones carry for those chains to rest against. It names the parts
+     * of the body its editors work on closely, any the rig chooses, each by
+     * the bones it holds, and the clips its editors strike as poses.
      * Bind-pose world matrices and their inverses are baked once per rig
      * whenever it is built.
      */
@@ -40,8 +41,8 @@ public class RigData extends DataPackage {
     // Colliders — the shapes bones carry, which spring chains are kept out of
     private final RigColliderStruct[] colliders;
 
-    // Parts — the bones each part names, by RigPart ordinal; the clips struck as editor poses
-    private final int[][] part2Bones;
+    // Parts — in the order the rig names them; the clips struck as editor poses
+    private final RigPartStruct[] parts;
     private final String[] poseNames;
 
     // Bind Pose — baked
@@ -57,7 +58,7 @@ public class RigData extends DataPackage {
             RigIkChainStruct[] ikChains,
             RigSpringChainStruct[] springChains,
             RigColliderStruct[] colliders,
-            int[][] part2Bones,
+            RigPartStruct[] parts,
             String[] poseNames) {
 
         // Identity
@@ -79,7 +80,7 @@ public class RigData extends DataPackage {
         this.colliders = colliders;
 
         // Parts
-        this.part2Bones = part2Bones;
+        this.parts = parts;
         this.poseNames = poseNames;
 
         // Bind Pose — baked
@@ -267,9 +268,12 @@ public class RigData extends DataPackage {
         return null;
     }
 
-    // The bones a part names, empty for a part the rig does not name
-    public int[] getPartBones(RigPart rigPart) {
-        return part2Bones[rigPart.ordinal()];
+    public int getPartCount() {
+        return parts.length;
+    }
+
+    public RigPartStruct getPart(int partIndex) {
+        return parts[partIndex];
     }
 
     public int getPoseCount() {

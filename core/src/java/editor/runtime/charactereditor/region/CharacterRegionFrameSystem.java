@@ -4,7 +4,7 @@ import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
-import editor.bootstrap.charactereditorpipeline.util.CharacterEditorRegion;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.runtime.EditorSetting;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
@@ -76,7 +76,7 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
     @Override
     protected void update() {
 
-        CharacterEditorRegion region = characterEditorModeSystem.getRegion();
+        CharacterRegionStruct region = characterEditorModeSystem.getRegion();
         int frameBone = !characterViewPoseSystem.hasSubject()
                 ? EngineSetting.INDEX_NOT_FOUND
                 : characterEditorManager.getRegionFrameBone(region, characterViewPoseSystem.getRaceData().getRigHandle());

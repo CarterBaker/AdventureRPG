@@ -343,6 +343,9 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-15: Character editor rigging workflow. Regenerated `shortcuts/CharacterEditor.arpg` (Hide H, Hide
   Unselected Shift+H, Reveal Alt+H, Reset Pose Alt+R on the mesh and weights layers) and `shortcuts/Tools.arpg` (Pose
   tool on Y). Entries unchanged.
+- 2026-11-15: Layers from rig parts. Rewrote `rigs/HumanoidRig.arpg` (its `parts` a list of named parts, the head
+  showing hair, eyes and teeth and taking the face, the eyes and mouth holding the eyes and teeth) and
+  `schemas/Rigs.arpg` (the parts list: name, bones, holds, shows, face). Entries unchanged.
 
 ---
 

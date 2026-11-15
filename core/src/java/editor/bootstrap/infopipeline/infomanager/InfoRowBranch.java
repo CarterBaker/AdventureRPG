@@ -5,6 +5,7 @@ import editor.bootstrap.infopipeline.infoschema.InfoFieldStruct;
 import editor.bootstrap.infopipeline.util.InfoFieldType;
 import editor.bootstrap.infopipeline.util.InfoRowKind;
 import editor.runtime.EditorSetting;
+import editor.runtime.label.LabelUtility;
 import engine.root.BranchPackage;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgElementStruct;
@@ -97,12 +98,12 @@ class InfoRowBranch extends BranchPackage {
 
         if (value == null) {
             rows.add(new InfoRowStruct(
-                    path, toFieldLabel(field.getKey()), depth, InfoRowKind.MISSING, "", Float.NaN,
+                    path, LabelUtility.toWords(field.getKey()), depth, InfoRowKind.MISSING, "", Float.NaN,
                     false, false, false, false, errorPaths.contains(path), false));
             return;
         }
 
-        addValueRows(value, objectField, field, false, path, toFieldLabel(field.getKey()), depth, rows);
+        addValueRows(value, objectField, field, false, path, LabelUtility.toWords(field.getKey()), depth, rows);
     }
 
     private void addValueRows(
@@ -196,29 +197,6 @@ class InfoRowBranch extends BranchPackage {
     }
 
     // Labels \\
-
-    // A field's key read as words, each begun in upper case: "animation_tree" reads "Animation Tree"
-    private String toFieldLabel(String key) {
-
-        StringBuilder label = new StringBuilder(key.length());
-        boolean wordStart = true;
-
-        for (int i = 0; i < key.length(); i++) {
-
-            char character = key.charAt(i);
-
-            if (character == EditorSetting.INFO_KEY_WORD_SEPARATOR) {
-                label.append(EditorSetting.INFO_LABEL_WORD_SEPARATOR);
-                wordStart = true;
-                continue;
-            }
-
-            label.append(wordStart ? Character.toUpperCase(character) : character);
-            wordStart = false;
-        }
-
-        return label.toString();
-    }
 
     private String toIndexLabel(int index, ArpgElementStruct element) {
 
