@@ -18,18 +18,18 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Split so far:** the World Editor paints the biomes and places settlements and cameras on its Biomes layer and raises
   and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
-  and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance, Build, Equipment,
-  Mesh, Sculpt, Weights, Paint, Rig and Face, see `.claude/docs/CharacterEditorPipeline.md`), sharing the region, bone
-  and vertices selected, with the Outliner beside them (also the Animation Editor's), the Color Wheel
-  holding the paint colour and Texture Maps the map painted; the Recorder is its transport (record, play, loop range,
-  clock, what is open with Back) and the Timeline its clips, with Recorder Keys, Recorder Bin, Recorder Assets and
-  Recorder Settings beside them, each opening its own menu through a shared `RecorderRowSystem`, and the pane tab worked
-  in last being the one the recorder's deletes act on; the Recordings tab lists the Videos and the Songs (Music files)
-  and its rows drag onto the Timeline to lay; a Music file's Timeline shows its lanes with a mixer strip each, the lane
-  and clip selected edited in the Properties tab, and the Recorder its tempo, meter, key and metronome, set in the
-  Properties tab; the Piano Roll edits the notes of the notes clip selected on the Timeline with the Tools tab's Select,
-  Draw, Erase and Cut and its Notes actions, the selected notes in the Properties tab, and plays and records them with
-  Musical Typing.
+  and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
+  Build, Equipment, Mesh, Sculpt, Weights, Paint, Rig, Face and UV, see `.claude/docs/CharacterEditorPipeline.md`),
+  sharing the region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with
+  the Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour and Texture Maps the
+  map painted; the Recorder is its transport (record, play, loop range, clock, what is open with Back) and the Timeline
+  its clips, with Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside them, each opening its own
+  menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act
+  on; the Recordings tab lists the Videos and the Songs (Music files) and its rows drag onto the Timeline to lay; a
+  Music file's Timeline shows its lanes with a mixer strip each, the lane and clip selected edited in the Properties
+  tab, and the Recorder its tempo, meter, key and metronome, set in the Properties tab; the Piano Roll edits the notes
+  of the notes clip selected on the Timeline with the Tools tab's Select, Draw, Erase and Cut and its Notes actions, the
+  selected notes in the Properties tab, and plays and records them with Musical Typing.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 
 ## Layers
@@ -45,9 +45,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   enum's name, `region/mode`), never IDs. The window keeps the layer picked itself and every system reads it there;
   a layer picked hands its tool canvas, Properties rows and File and Edit table to the shared tabs through the
   window's own providers, which answer for the layer picked.
-- **So far:** the World Editor (Heights over Biomes, each with an eye), the character Mesh, Sculpt, Weights and Rig tabs
-  (the Body and every region within it, one region picked for all four; no eyes) and the character Paint tab (the
-  paint layers of the map painted, each above the base with an eye).
+- **So far:** the World Editor (Heights over Biomes, each with an eye), the character Mesh, Sculpt, Weights, Rig and UV
+  tabs (the Body and every region within it, one region picked for all of them; no eyes) and the character Paint tab
+  (the paint layers of the map painted, each above the base with an eye).
 
 ## The active window
 

@@ -5,12 +5,9 @@ import engine.input.Buttons;
 public class TextureViewerSetting {
 
     /*
-     * Constants used only by TextureViewerContext — its viewport mesh and
-     * material, atlas layout, mouse binding, and status menu.
+     * Constants used only by TextureViewerContext — its viewport material,
+     * atlas layout, mouse binding, and status menu.
      */
-
-    // Meshes
-    public static final String MESH_QUAD = "editor/EditorViewportQuad";
 
     // Materials
     public static final String MATERIAL_ATLAS = "editor/TextureViewerAtlasMaterial";

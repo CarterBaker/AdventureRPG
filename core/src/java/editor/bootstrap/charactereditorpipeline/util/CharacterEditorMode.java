@@ -12,7 +12,9 @@ public enum CharacterEditorMode {
      * vertices and faces of a worn part, Sculpt that part's surface under the
      * brush, Weights the bones each of its vertices follows, Paint the
      * texture maps it is coloured by, Rig the bones themselves, and Face the
-     * controls that shape the face through its bones. Each mode that takes
+     * controls that shape the face through its bones, and UV the seams that
+     * cut the part's surface and the faces unwrapped flat, their UVs laid
+     * out in the UV Editor beside it. Each mode that takes
      * viewport input is its own tool canvas; the mesh modes edit the part's
      * mesh file, Rig holds the bind pose so the character stands exactly as
      * its mesh and rig are authored, and those that show the vertices draw
@@ -76,7 +78,15 @@ public enum CharacterEditorMode {
             false,
             false,
             CharacterEditorPose.REST,
-            null);
+            null),
+    UV(
+            EditorSetting.CHARACTER_EDITOR_MODE_UV,
+            ToolCanvas.CHARACTER_UV,
+            true,
+            false,
+            true,
+            null,
+            EditorSetting.CHARACTER_EDITOR_STATUS_UV_HINT);
 
     // Values
     public static final CharacterEditorMode[] VALUES = values();

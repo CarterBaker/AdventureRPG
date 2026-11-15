@@ -368,6 +368,11 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-15: Character tool tabs. Regenerated `menus/editor/EditorWindow.arpg` (the Character Editor button replaced
   by one button per character tool tab, Appearance to Face, the Characters menu grown to hold them) and
   `shortcuts/CharacterEditor.arpg` (keys every tab built on `CharacterToolContext`).
+- 2026-11-15: UV tools. Added the shaders `UVEditorBackgroundShader` and `UVEditorOverlayShader` (`.vsh`, `.fsh`,
+  `.arpg`), the materials `UVEditorBackgroundMaterial.arpg` and `UVEditorOverlayMaterial.arpg` and
+  `shortcuts/UVEditor.arpg` for the new UV Editor; regenerated `menus/editor/EditorWindow.arpg` (UV and UV Editor
+  buttons), `shortcuts/CharacterEditor.arpg` (the UV tab's selection, Unwrap and seam keys) and `schemas/Shortcuts.arpg`
+  (the `character_uv` and `uv_editor` canvases).
 
 ---
 
@@ -1509,6 +1514,11 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 `TreeViewerBarkShader.fsh`, `TreeViewerLeafShader.fsh`, `TreeViewerLight.glsl`
 
+### `assets/shaders/editor/uveditor/`
+
+`UVEditorBackgroundShader.fsh`, `UVEditorBackgroundShader.vsh`, `UVEditorOverlayShader.fsh`,
+`UVEditorOverlayShader.vsh`
+
 ### `assets/shaders/editor/worldeditor/`
 
 `WorldEditorBrushShader.fsh`, `WorldEditorHeightShader.fsh`
@@ -2546,7 +2556,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
 `ItemEditorModelMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
 `ShipViewerMaterial.arpg`, `TextureViewerAtlasMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
-`TreeViewerLeafMaterial.arpg`, `WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
+`TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`, `UVEditorOverlayMaterial.arpg`,
+`WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
 `WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
 
 ### `assets/materials/fonts/`
@@ -2841,6 +2852,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `TreeViewerBarkShader.arpg`, `TreeViewerLeafShader.arpg`
 
+### `assets/shaders/editor/uveditor/`
+
+`UVEditorBackgroundShader.arpg`, `UVEditorOverlayShader.arpg`
+
 ### `assets/shaders/editor/worldeditor/`
 
 `WorldEditorBrushShader.arpg`, `WorldEditorHeightShader.arpg`
@@ -2941,7 +2956,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ItemEditor.arpg`, `PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `RecorderBin.arpg`,
-`RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `WorldEditor.arpg`
+`RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `UVEditor.arpg`, `WorldEditor.arpg`
 
 ### `assets/skills/`
 

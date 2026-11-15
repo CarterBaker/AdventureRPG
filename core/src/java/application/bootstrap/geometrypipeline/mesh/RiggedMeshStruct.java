@@ -1,11 +1,14 @@
 package application.bootstrap.geometrypipeline.mesh;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RiggedMeshStruct extends StructPackage {
@@ -16,7 +19,9 @@ public class RiggedMeshStruct extends StructPackage {
      * with up to MAX_BONE_INFLUENCES weighted bones, shared by every quad
      * corner standing on it with the same influences; a face is four vertices
      * in winding order, a texture from the mesh's palette and, when authored,
-     * its own corner UVs and the zone it is made of. Each vertex also carries
+     * its own corner UVs, which of its corners are pinned for unwrapping,
+     * and the zone it is made of. Edges marked as seams, each a pair of
+     * vertices, cut the surface into UV islands. Each vertex also carries
      * its mask channels, and named morph targets move vertices by sparse
      * deltas, so one mesh holds every face shape and expression a character
      * slides between. MeshBuilder builds the game's meshes from it and the
@@ -40,7 +45,11 @@ public class RiggedMeshStruct extends StructPackage {
     private final IntArrayList faceTextures;
     private final FloatArrayList faceUVs;
     private final BooleanArrayList faceAuthoredUVs;
+    private final IntArrayList faceUVPins;
     private final IntArrayList faceZones;
+
+    // Seams — every edge cut for unwrapping, keyed by its two vertices, the lower first
+    private final LongOpenHashSet seams;
 
     // Morphs — per target its name, the vertices it moves and three delta floats per vertex
     private final ObjectArrayList<String> morphNames;
@@ -68,7 +77,11 @@ public class RiggedMeshStruct extends StructPackage {
         this.faceTextures = new IntArrayList();
         this.faceUVs = new FloatArrayList();
         this.faceAuthoredUVs = new BooleanArrayList();
+        this.faceUVPins = new IntArrayList();
         this.faceZones = new IntArrayList();
+
+        // Seams
+        this.seams = new LongOpenHashSet();
 
         // Morphs
         this.morphNames = new ObjectArrayList<>();
@@ -107,8 +120,12 @@ public class RiggedMeshStruct extends StructPackage {
         faceUVs.addAll(source.faceUVs);
         faceAuthoredUVs.clear();
         faceAuthoredUVs.addAll(source.faceAuthoredUVs);
+        faceUVPins.clear();
+        faceUVPins.addAll(source.faceUVPins);
         faceZones.clear();
         faceZones.addAll(source.faceZones);
+        seams.clear();
+        seams.addAll(source.seams);
         setMorphs(source);
     }
 
@@ -251,6 +268,8 @@ public class RiggedMeshStruct extends StructPackage {
 
             faceVertices.set(i, vertexIndex);
         }
+
+        remapSeams(remap);
     }
 
     // Drops the vertex added last, before any face stands on it
@@ -498,6 +517,7 @@ public class RiggedMeshStruct extends StructPackage {
         faceTextures.add(textureIndex);
         faceUVs.addElements(faceUVs.size(), EngineSetting.MESH_QUAD_DEFAULT_UVS);
         faceAuthoredUVs.add(false);
+        faceUVPins.add(0);
         faceZones.add(MeshZone.SKIN.ordinal());
 
         return getFaceCount() - 1;
@@ -586,6 +606,30 @@ public class RiggedMeshStruct extends StructPackage {
         }
 
         faceAuthoredUVs.set(toFace, faceAuthoredUVs.getBoolean(fromFace));
+        faceUVPins.set(toFace, faceUVPins.getInt(fromFace));
+    }
+
+    // UV Pins \\
+
+    // Whether a corner's UV is pinned, held where it stands while its island is unwrapped
+    public boolean isCornerPinned(int faceIndex, int corner) {
+        return (faceUVPins.getInt(faceIndex) & 1 << corner) != 0;
+    }
+
+    public void setCornerPinned(int faceIndex, int corner, boolean pinned) {
+
+        int pins = faceUVPins.getInt(faceIndex);
+
+        faceUVPins.set(faceIndex, pinned ? pins | 1 << corner : pins & ~(1 << corner));
+    }
+
+    // The face's pinned corners, one bit a corner, the first corner lowest
+    public int getFacePins(int faceIndex) {
+        return faceUVPins.getInt(faceIndex);
+    }
+
+    public void setFacePins(int faceIndex, int pins) {
+        faceUVPins.set(faceIndex, pins & EngineSetting.RIGGED_MESH_UV_PIN_MASK);
     }
 
     // Removes every face flagged, keeping the rest in order
@@ -609,6 +653,7 @@ public class RiggedMeshStruct extends StructPackage {
         faceTextures.size(kept);
         faceUVs.size(kept * EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.RIGGED_MESH_UV_FLOATS);
         faceAuthoredUVs.size(kept);
+        faceUVPins.size(kept);
         faceZones.size(kept);
     }
 
@@ -642,6 +687,66 @@ public class RiggedMeshStruct extends StructPackage {
                 return false;
 
         return true;
+    }
+
+    // Seams \\
+
+    // Whether the edge between two vertices is cut for unwrapping
+    public boolean isSeam(int vertexA, int vertexB) {
+        return seams.contains(toEdgeKey(vertexA, vertexB));
+    }
+
+    public void setSeam(int vertexA, int vertexB, boolean seam) {
+
+        if (vertexA == vertexB)
+            return;
+
+        if (seam)
+            seams.add(toEdgeKey(vertexA, vertexB));
+        else
+            seams.remove(toEdgeKey(vertexA, vertexB));
+    }
+
+    public int getSeamCount() {
+        return seams.size();
+    }
+
+    // Every seam's key in ascending order, so a written file is the same for the same seams
+    public long[] getSortedSeams() {
+
+        long[] sorted = seams.toLongArray();
+
+        Arrays.sort(sorted);
+        return sorted;
+    }
+
+    public static int getSeamVertex(long seamKey, int end) {
+        return end == 0 ? (int) (seamKey >>> Integer.SIZE) : (int) seamKey;
+    }
+
+    // An edge's key, its lower vertex in the high half
+    public static long toEdgeKey(int vertexA, int vertexB) {
+        return (long) Math.min(vertexA, vertexB) << Integer.SIZE | Math.max(vertexA, vertexB);
+    }
+
+    // Every seam renumbered after a removal, the seams of a removed vertex dropped
+    private void remapSeams(IntArrayList remap) {
+
+        if (seams.isEmpty())
+            return;
+
+        long[] previous = seams.toLongArray();
+
+        seams.clear();
+
+        for (long seamKey : previous) {
+
+            int vertexA = remap.getInt(getSeamVertex(seamKey, 0));
+            int vertexB = remap.getInt(getSeamVertex(seamKey, 1));
+
+            if (vertexA != EngineSetting.INDEX_NOT_FOUND && vertexB != EngineSetting.INDEX_NOT_FOUND)
+                setSeam(vertexA, vertexB, true);
+        }
     }
 
     private int toUVBase(int faceIndex, int corner) {

@@ -447,6 +447,8 @@ public class EditorSetting {
     public static final String TAB_TITLE_CHARACTER_PAINT = "Character Paint";
     public static final String TAB_TITLE_CHARACTER_RIG = "Character Rig";
     public static final String TAB_TITLE_CHARACTER_FACE = "Character Face";
+    public static final String TAB_TITLE_CHARACTER_UV = "Character UV";
+    public static final String TAB_TITLE_UV_EDITOR = "UV Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
@@ -601,6 +603,8 @@ public class EditorSetting {
     // Viewports
     public static final String FBO_EDITOR_SCENE = "EditorScene";
     public static final String FBO_EDITOR_OVERLAY = "EditorOverlay";
+    public static final String MESH_EDITOR_VIEWPORT_QUAD = "editor/EditorViewportQuad";
+    public static final String MESH_EDITOR_OVERLAY_VAO = "editor/CharacterMeshOverlayVAO";
 
     // View Camera — the one camera of every 3D viewport: the orbit button turns it and the pan button slides it, a
     // drag begun on a press no tool claimed; each notch of the wheel zooms by a factor; distances are in the bounding
@@ -904,6 +908,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
     public static final String CHARACTER_EDITOR_MODE_PAINT = "Paint";
     public static final String CHARACTER_EDITOR_MODE_FACE = "Face";
+    public static final String CHARACTER_EDITOR_MODE_UV = "UV";
     public static final String CHARACTER_EDITOR_POSE_REST = "Bind";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
@@ -1135,6 +1140,8 @@ public class EditorSetting {
             + " Ctrl inverts the stroke; drag off it to orbit, right-drag to pan";
     public static final String CHARACTER_EDITOR_STATUS_PAINT_HINT = "Drag on the mesh to paint the map chosen; Fill"
             + " fills the island clicked, Pick takes its colour; drag off it to orbit, right-drag to pan";
+    public static final String CHARACTER_EDITOR_STATUS_UV_HINT = "Select the vertices of the edges to cut and Mark"
+            + " Seam, then select the faces and Unwrap; their UVs show in the UV Editor; drag off the mesh to orbit";
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
             + " Rotate turns its bind, Scale sizes it, Place adds a child, Erase removes one; the mesh stays put (Pose"
             + " on the Mesh layer moves it); drag off the joints to orbit";
@@ -1528,6 +1535,71 @@ public class EditorSetting {
     public static final String CHARACTER_REGION_LABEL_MOUTH = "Mouth";
     public static final String CHARACTER_REGION_LABEL_HANDS = "Hands";
     public static final String CHARACTER_REGION_LABEL_FEET = "Feet";
+
+    // UV Editing — the keys and labels of every UV action, the action groups they are listed under, and the status
+    // the UV tabs report
+    public static final String UV_KEY_MARK_SEAM = "uv_mark_seam";
+    public static final String UV_KEY_CLEAR_SEAM = "uv_clear_seam";
+    public static final String UV_KEY_SEAMS_FROM_ISLANDS = "uv_seams_from_islands";
+    public static final String UV_KEY_UNWRAP = "uv_unwrap";
+    public static final String UV_KEY_PACK = "uv_pack";
+    public static final String UV_KEY_AVERAGE_SCALE = "uv_average_scale";
+    public static final String UV_KEY_STITCH = "uv_stitch";
+    public static final String UV_KEY_PIN = "uv_pin";
+    public static final String UV_KEY_UNPIN = "uv_unpin";
+    public static final String UV_KEY_FLIP_U = "uv_flip_u";
+    public static final String UV_KEY_FLIP_V = "uv_flip_v";
+    public static final String UV_KEY_SELECT_ALL = "uv_select_all";
+    public static final String UV_KEY_SELECT_LINKED = "uv_select_linked";
+    public static final String UV_KEY_CENTER = "uv_center";
+    public static final String UV_LABEL_MARK_SEAM = "Mark Seam";
+    public static final String UV_LABEL_CLEAR_SEAM = "Clear Seam";
+    public static final String UV_LABEL_SEAMS_FROM_ISLANDS = "Seams From Islands";
+    public static final String UV_LABEL_UNWRAP = "Unwrap";
+    public static final String UV_LABEL_PACK = "Pack Islands";
+    public static final String UV_LABEL_AVERAGE_SCALE = "Average Island Scale";
+    public static final String UV_LABEL_STITCH = "Stitch";
+    public static final String UV_LABEL_PIN = "Pin";
+    public static final String UV_LABEL_UNPIN = "Unpin";
+    public static final String UV_LABEL_FLIP_U = "Flip U";
+    public static final String UV_LABEL_FLIP_V = "Flip V";
+    public static final String UV_LABEL_SELECT_ALL = "Select All";
+    public static final String UV_LABEL_SELECT_LINKED = "Select Linked";
+    public static final String UV_HEADER_SEAMS = "Seams";
+    public static final String UV_HEADER_UNWRAP = "Unwrap";
+    public static final String UV_HEADER_ISLANDS = "Islands";
+    public static final String UV_HEADER_SELECTION = "Selection";
+    public static final String UV_HEADER_SELECTED = "UVs selected: ";
+    public static final String[] UV_CENTER_LABELS = { "U", "V" };
+    public static final float UV_CENTER_STEP = 0.001f;
+    public static final String UV_MESSAGE_NO_EDGES = "Select the vertices of the edges to cut";
+    public static final String UV_MESSAGE_NO_ISLAND_EDGES = "No edge between two UV islands is shown";
+    public static final String UV_MESSAGE_SEAMS_MARKED = "Seams marked: ";
+    public static final String UV_MESSAGE_SEAMS_CLEARED = "Seams cleared: ";
+    public static final String UV_MESSAGE_NO_FACES = "Select the faces to unwrap";
+    public static final String UV_MESSAGE_UNWRAPPED = "Islands unwrapped: ";
+    public static final String UV_MESSAGE_UNWRAP_FAILED = "Islands with no area or no boundary, left as they were: ";
+    public static final String UV_MESSAGE_NO_CORNERS = "Select UVs in the UV Editor first";
+    public static final String UV_MESSAGE_NO_STITCH = "No selected UV meets a neighbouring island";
+    public static final String UV_MESSAGE_STITCHED = "Islands stitched: ";
+    public static final String UV_MESSAGE_PINNED = "UVs pinned: ";
+    public static final String UV_MESSAGE_UNPINNED = "UVs unpinned: ";
+
+    // UV Unwrap — the least squares solve: terms of one conformality row and of one triangle (three gradients and
+    // the area weight), the conjugate gradient limits, and the area below which a triangle counts as none
+    public static final int UV_UNWRAP_ROW_TERMS = 6;
+    public static final int UV_UNWRAP_TRIANGLE_TERMS = 7;
+    public static final int UV_UNWRAP_TRIANGLE_CORNERS = 3;
+    public static final int UV_UNWRAP_MIN_ITERATIONS = 500;
+    public static final int UV_UNWRAP_ITERATIONS_PER_UNKNOWN = 2;
+    public static final double UV_UNWRAP_TOLERANCE = 1e-9;
+    public static final double UV_UNWRAP_EPSILON = 1e-12;
+
+    // UV Islands — how near two UVs must lie to count as one, the margin packed islands keep as a share of the tile,
+    // and how much wider than the islands' area suggests the packing shelves run
+    public static final float UV_WELD_EPSILON = 1e-5f;
+    public static final float UV_PACK_MARGIN = 0.01f;
+    public static final float UV_PACK_SHELF_WIDTH = 1.1f;
 
     // Face Editor — a drag below this preview value first takes the control to its end
     public static final float FACE_EDITOR_DRAG_VALUE_MIN = 0.05f;
@@ -2042,6 +2114,8 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_RIG = "Character Rig";
     public static final String TOOL_CANVAS_CHARACTER_PAINT = "Character Paint";
     public static final String TOOL_CANVAS_CHARACTER_FACE = "Character Face";
+    public static final String TOOL_CANVAS_CHARACTER_UV = "Character UV";
+    public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";

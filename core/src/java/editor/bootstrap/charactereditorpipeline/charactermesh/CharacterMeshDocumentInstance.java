@@ -18,13 +18,14 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
      * written, the mesh being edited, its vertex selection with how much of
      * each vertex it holds (a whole vertex 1, one the brush's soft edge
      * took in less, every vertex outside it held whole so it joins whole)
-     * and its active vertex, the vertices hidden out of the way (never
-     * drawn, picked, reached or selected, their faces left out of the
-     * preview, kept through edits that keep the vertex count, and every
-     * one shown again when an undo or a revert renumbers the mesh), the
-     * vertex each mirrors across x, its undo
-     * history, and the shape key being sculpted with the base positions it
-     * was lifted from. The revision moves on every change of geometry or
+     * and its active vertex, the face corners selected in the UV Editor
+     * (cleared whenever the faces are renumbered), the vertices hidden out
+     * of the way (never drawn, picked, reached or selected, their faces
+     * left out of the preview, kept through edits that keep the vertex
+     * count, and every one shown again when an undo or a revert renumbers
+     * the mesh), the vertex each mirrors across x, its undo history, and
+     * the shape key being sculpted with the base positions it was lifted
+     * from. The revision moves on every change of geometry or
      * selection so viewports know to redraw; dirty marks changes not yet
      * saved.
      */
@@ -41,6 +42,9 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
     private BooleanArrayList selection;
     private FloatArrayList selectionWeights;
     private int activeVertex;
+
+    // UV Selection — one flag per face corner, four a face
+    private BooleanArrayList cornerSelection;
 
     // Hidden
     private BooleanArrayList hidden;
@@ -75,6 +79,9 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         this.selection = new BooleanArrayList();
         this.selectionWeights = new FloatArrayList();
 
+        // UV Selection
+        this.cornerSelection = new BooleanArrayList();
+
         // Hidden
         this.hidden = new BooleanArrayList();
 
@@ -107,6 +114,7 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         shapeBase.clear();
         selection.clear();
         selectionWeights.clear();
+        cornerSelection.clear();
         hidden.clear();
         syncSelection();
     }
@@ -138,6 +146,7 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
         selection.addAll(step.getSelection());
         selectionWeights.clear();
         selectionWeights.addAll(step.getSelectionWeights());
+        cornerSelection.clear();
         syncSelection();
 
         this.dirty = step.isDirty();
@@ -172,6 +181,30 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
         if (activeVertex >= vertexCount)
             this.activeVertex = EngineSetting.INDEX_NOT_FOUND;
+
+        syncCornerSelection();
+    }
+
+    // One flag per face corner; a change in the face count renumbers the faces, so the corners selected are dropped
+    private void syncCornerSelection() {
+
+        int cornerCount = mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT;
+
+        if (cornerSelection.size() == cornerCount)
+            return;
+
+        cornerSelection.clear();
+        cornerSelection.size(cornerCount);
+    }
+
+    public void setCornerSelected(int faceIndex, int corner, boolean selected) {
+        cornerSelection.set(faceIndex * EngineSetting.QUAD_VERTEX_COUNT + corner, selected);
+    }
+
+    public void clearCornerSelection() {
+
+        for (int i = 0; i < cornerSelection.size(); i++)
+            cornerSelection.set(i, false);
     }
 
     public void setActiveVertex(int activeVertex) {
@@ -235,6 +268,10 @@ public class CharacterMeshDocumentInstance extends InstancePackage {
 
     public boolean isSelected(int vertexIndex) {
         return selection.getBoolean(vertexIndex);
+    }
+
+    public boolean isCornerSelected(int faceIndex, int corner) {
+        return cornerSelection.getBoolean(faceIndex * EngineSetting.QUAD_VERTEX_COUNT + corner);
     }
 
     public FloatArrayList getSelectionWeights() {

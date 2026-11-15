@@ -41,7 +41,6 @@ public class CharacterEditorSetting {
     public static final byte VISIBILITY_HIDDEN = 2;
 
     // Overlay — a vertex holds its position, the other end of its line, its offset in pixels and its colour
-    public static final String MESH_OVERLAY_VAO = "editor/CharacterMeshOverlayVAO";
     public static final String MATERIAL_OVERLAY = "editor/CharacterMeshOverlayMaterial";
     public static final String UNIFORM_DEPTH_BIAS = "u_depthBias";
     public static final int OVERLAY_VERTEX_FLOATS = 12;
@@ -56,6 +55,7 @@ public class CharacterEditorSetting {
     public static final float WEIGHT_HALF_PIXELS = 3f;
     public static final float WEIGHT_SELECTED_HALF_PIXELS = 4.5f;
     public static final float EDGE_HALF_PIXELS = 0.75f;
+    public static final float SEAM_HALF_PIXELS = 1.5f;
     public static final float GUIDE_HALF_PIXELS = 1f;
 
     // Overlay — guides; screen guides sit this many near planes from the camera, an axis runs this far each way
@@ -76,6 +76,7 @@ public class CharacterEditorSetting {
     public static final float[] COLOR_ACTIVE = { 1f, 1f, 1f, 1f };
     public static final float[] COLOR_EDGE = { 0.08f, 0.08f, 0.1f, 0.75f };
     public static final float[] COLOR_EDGE_SELECTED = { 1f, 0.6f, 0.15f, 1f };
+    public static final float[] COLOR_SEAM = { 0.95f, 0.15f, 0.15f, 1f };
     public static final float[] COLOR_HEAT_NONE = { 0.1f, 0.2f, 0.85f, 1f };
     public static final float[] COLOR_HEAT_HALF = { 0.15f, 0.85f, 0.2f, 1f };
     public static final float[] COLOR_HEAT_FULL = { 0.95f, 0.15f, 0.1f, 1f };

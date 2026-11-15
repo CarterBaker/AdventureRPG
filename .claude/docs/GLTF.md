@@ -81,6 +81,8 @@ One vertex set is shared by every primitive. The same mesh always writes the sam
 - **Face order follows the primitives**, so faces come back grouped by material.
 - **Every imported face authors its UVs**, and a flipped v comes back within one float step, not bit for bit.
 - **Only a self-contained `.glb` is read.** External buffers, data URIs, Draco and meshopt compression are refused.
+- **Seams and UV pins stay in the `.arpg` mesh.** glTF has no place for them: Export writes neither and Import brings
+  none, so mark seams again after an import.
 - **Bone transforms are written, never read.** Import takes joint names and, for bones it adds, their positions.
 - **Not done yet, only when the owner asks:** animation clips, sub-voxel item export, writing a new mesh file from
   an import, and a file browser.

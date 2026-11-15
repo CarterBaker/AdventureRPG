@@ -2697,6 +2697,10 @@ public class EngineSetting {
     public static final float SKINNED_NORMAL_SMOOTH_COSINE = 0.5f;
     public static final int RIGGED_MESH_POSITION_FLOATS = 3;
     public static final int RIGGED_MESH_UV_FLOATS = 2;
+    // A face's UV flag in a mesh file: the lowest bit marks the UVs as its own, the four above it its pinned corners
+    public static final int RIGGED_MESH_UV_AUTHORED_BIT = 1;
+    public static final int RIGGED_MESH_UV_PIN_SHIFT = 1;
+    public static final int RIGGED_MESH_UV_PIN_MASK = 0xF;
     public static final int RIGGED_MESH_MORPH_FLOATS = 2;
     public static final int RIGGED_MESH_DETAIL_FLOATS = 2;
     public static final String[] RIGGED_MESH_MASK_CHANNELS = { "freckles", "blush", "lips", "liner" };

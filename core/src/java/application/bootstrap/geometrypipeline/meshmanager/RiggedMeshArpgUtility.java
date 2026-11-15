@@ -29,8 +29,10 @@ class RiggedMeshArpgUtility extends EngineUtility {
      * and "influence_weights"; "quads" indexes four vertices per face beside
      * "quad_textures" and "quad_zones", indices into the "textures" and
      * "zones" name lists, "quad_uv_flags" marking the faces that author the
-     * eight floats they take in "quad_uvs"; "masks" and "morphs" are sparse,
-     * each channel and target listing the "vertices" it touches beside their
+     * eight floats they take in "quad_uvs" (and, in the bits above, the
+     * corners pinned for unwrapping), the optional "seams" the edges cut for
+     * unwrapping as vertex pairs; "masks" and "morphs" are sparse, each
+     * channel and target listing the "vertices" it touches beside their
      * "values" or three "deltas" each; and "normals" stores every corner's
      * smoothed normal, packed as the vertex buffer holds it, so loading does
      * not compute them. A file still in the first layout, a "vbo" of quad
@@ -154,7 +156,9 @@ class RiggedMeshArpgUtility extends EngineUtility {
 
             mesh.setFaceZone(faceIndex, zones[zone]);
 
-            if (uvFlags.getInt(f) == 0)
+            int uvFlag = uvFlags.getInt(f);
+
+            if ((uvFlag & EngineSetting.RIGGED_MESH_UV_AUTHORED_BIT) == 0)
                 continue;
 
             if (uvBase + uvFloats > uvs.size())
@@ -167,8 +171,29 @@ class RiggedMeshArpgUtility extends EngineUtility {
                         uvs.getFloat(uvBase + c * EngineSetting.RIGGED_MESH_UV_FLOATS),
                         uvs.getFloat(uvBase + c * EngineSetting.RIGGED_MESH_UV_FLOATS + 1));
 
+            mesh.setFacePins(faceIndex, uvFlag >> EngineSetting.RIGGED_MESH_UV_PIN_SHIFT);
             uvBase += uvFloats;
         }
+
+        parseSeams(mesh, compactArpg, sourceName);
+    }
+
+    // The optional seams, two vertex numbers each
+    private static void parseSeams(RiggedMeshStruct mesh, ArpgObjectStruct compactArpg, String sourceName) {
+
+        ArpgBufferStruct seams = ArpgUtility.getBuffer(compactArpg, "seams");
+
+        if (seams == null)
+            return;
+
+        if (seams.size() % 2 != 0)
+            throwException("Rigged mesh seams must come in vertex pairs. File: " + sourceName);
+
+        for (int i = 0; i < seams.size(); i += 2)
+            mesh.setSeam(
+                    validateVertex(mesh, seams.getInt(i), sourceName),
+                    validateVertex(mesh, seams.getInt(i + 1), sourceName),
+                    true);
     }
 
     private static void parseInfluences(RiggedMeshStruct mesh, ArpgObjectStruct compactArpg, String sourceName) {
@@ -506,7 +531,10 @@ class RiggedMeshArpgUtility extends EngineUtility {
 
             quadTextures[f] = fileTextures[texture];
             quadZones[f] = fileZones[zone];
-            uvFlags[f] = mesh.hasAuthoredUVs(f) ? 1 : 0;
+            uvFlags[f] = mesh.hasAuthoredUVs(f)
+                    ? EngineSetting.RIGGED_MESH_UV_AUTHORED_BIT
+                            | mesh.getFacePins(f) << EngineSetting.RIGGED_MESH_UV_PIN_SHIFT
+                    : 0;
 
             for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
 
@@ -526,6 +554,32 @@ class RiggedMeshArpgUtility extends EngineUtility {
         compactArpg.add("quad_zones", ArpgUtility.toIndexBuffer(quadZones, faceCount));
         compactArpg.add("quad_uv_flags", ArpgUtility.toBuffer(ArpgBufferType.UINT8, uvFlags, faceCount));
         compactArpg.add("quad_uvs", ArpgUtility.toBuffer(uvs.elements(), uvs.size()));
+        writeSeams(mesh, fileVertices, compactArpg);
+    }
+
+    // Every seam between two vertices the file keeps apart, as file vertex pairs; written only when there are any
+    private static void writeSeams(RiggedMeshStruct mesh, int[] fileVertices, ArpgObjectStruct compactArpg) {
+
+        if (mesh.getSeamCount() == 0)
+            return;
+
+        IntArrayList seams = new IntArrayList();
+
+        for (long seamKey : mesh.getSortedSeams()) {
+
+            int vertexA = fileVertices[RiggedMeshStruct.getSeamVertex(seamKey, 0)];
+            int vertexB = fileVertices[RiggedMeshStruct.getSeamVertex(seamKey, 1)];
+
+            if (vertexA == EngineSetting.INDEX_NOT_FOUND || vertexB == EngineSetting.INDEX_NOT_FOUND
+                    || vertexA == vertexB)
+                continue;
+
+            seams.add(vertexA);
+            seams.add(vertexB);
+        }
+
+        if (!seams.isEmpty())
+            compactArpg.add("seams", ArpgUtility.toIndexBuffer(seams.elements(), seams.size()));
     }
 
     private static ArpgObjectStruct writeMasks(RiggedMeshStruct mesh, int[] fileVertices) {

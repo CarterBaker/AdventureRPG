@@ -85,6 +85,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterColliderBranch characterColliderBranch;
     private CharacterPaintBranch characterPaintBranch;
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
+    private CharacterUVBranch characterUVBranch;
     private CharacterPaintRowBranch characterPaintRowBranch;
     private CharacterMapBranch characterMapBranch;
     private CharacterPropertyBranch characterPropertyBranch;
@@ -191,6 +192,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterColliderBranch = create(CharacterColliderBranch.class);
         this.characterPaintBranch = create(CharacterPaintBranch.class);
         this.characterPaintPropertyBranch = create(CharacterPaintPropertyBranch.class);
+        this.characterUVBranch = create(CharacterUVBranch.class);
         this.characterPaintRowBranch = create(CharacterPaintRowBranch.class);
         this.characterMapBranch = create(CharacterMapBranch.class);
         this.characterRigPropertyBranch = create(CharacterRigPropertyBranch.class);
@@ -1109,6 +1111,65 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public void togglePaintLayerVisible(int layerIndex) {
         characterPaintPropertyBranch.toggleLayerVisible(layerIndex);
+    }
+
+    // UV \\
+
+    // The faces the UV Editor shows, every face of the part open whose four vertices are selected
+    public void collectUVFaces(IntArrayList faces) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document != null)
+            characterUVBranch.collectShownFaces(document, faces);
+        else
+            faces.clear();
+    }
+
+    // A corner picked in the UV Editor, or none to clear, combined with its selection by mode
+    public void pickUV(int faceIndex, int corner, CharacterEditorSelection mode) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document != null && !characterUVBranch.isTransforming())
+            characterUVBranch.pick(document, faceIndex, corner, mode);
+    }
+
+    public void boxSelectUV(float minU, float minV, float maxU, float maxV, CharacterEditorSelection mode) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document != null && !characterUVBranch.isTransforming())
+            characterUVBranch.box(document, minU, minV, maxU, maxV, mode);
+    }
+
+    // The UV Editor's Move, Rotate or Scale taking the selected corners from a point in UV; false with none selected
+    public boolean beginUVTransform(float u, float v) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        return document != null && !characterUVBranch.isTransforming()
+                && characterUVBranch.beginTransform(document, getUVTool(), u, v);
+    }
+
+    public void updateUVTransform(float u, float v) {
+        characterUVBranch.updateTransform(u, v);
+    }
+
+    public void endUVTransform() {
+        characterUVBranch.endTransform();
+    }
+
+    public void cancelUVTransform() {
+        characterUVBranch.cancelTransform();
+    }
+
+    public boolean isUVTransforming() {
+        return characterUVBranch.isTransforming();
+    }
+
+    public EditorTool getUVTool() {
+        return toolManager.getTool(ToolCanvas.UV_EDITOR);
     }
 
     // History \\

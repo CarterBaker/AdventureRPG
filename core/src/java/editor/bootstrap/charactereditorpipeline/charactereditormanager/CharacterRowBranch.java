@@ -49,6 +49,7 @@ class CharacterRowBranch extends BranchPackage {
     private CharacterMeshRowBranch characterMeshRowBranch;
     private CharacterRigRowBranch characterRigRowBranch;
     private CharacterPaintRowBranch characterPaintRowBranch;
+    private CharacterUVBranch characterUVBranch;
 
     // Base \\
 
@@ -59,6 +60,7 @@ class CharacterRowBranch extends BranchPackage {
         this.characterMeshRowBranch = get(CharacterMeshRowBranch.class);
         this.characterRigRowBranch = get(CharacterRigRowBranch.class);
         this.characterPaintRowBranch = get(CharacterPaintRowBranch.class);
+        this.characterUVBranch = get(CharacterUVBranch.class);
     }
 
     // List \\
@@ -101,7 +103,7 @@ class CharacterRowBranch extends BranchPackage {
                 characterMeshRowBranch.addPartRows(document, rows);
                 addBoneRows(rigHandle, rows);
             }
-            case SCULPT, PAINT -> characterMeshRowBranch.addPartRows(document, rows);
+            case SCULPT, PAINT, UV -> characterMeshRowBranch.addPartRows(document, rows);
             case RIG -> characterRigRowBranch.addBoneRows(rows);
         }
     }
@@ -269,6 +271,7 @@ class CharacterRowBranch extends BranchPackage {
             case WEIGHTS -> characterMeshRowBranch.buildWeightRows(rows);
             case PAINT -> characterPaintRowBranch.buildPropertyRows(rows);
             case RIG -> characterRigRowBranch.buildPropertyRows(rows);
+            case UV -> characterUVBranch.buildPropertyRows(rows);
         }
     }
 

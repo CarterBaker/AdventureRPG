@@ -6,15 +6,15 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
-import editor.runtime.charactereditor.CharacterToolContext;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterEditorModeSystem extends SystemPackage {
 
     /*
-     * Keeps the mode a character tool tab works in, the one its context names,
-     * and the region it works on there: the region picked in the Layers tab
+     * Keeps the mode a character tool tab works in, the one its context names
+     * (CharacterModeProvider; the UV Editor works in UV), and the region it
+     * works on there: the region picked in the Layers tab
      * for every tab that takes regions, shared by all of them, the Head for
      * the Face, and the whole character for the rest. The Layers tab lists
      * the regions of the race's rig for a tab that takes them, the Body
@@ -44,7 +44,7 @@ public class CharacterEditorModeSystem extends SystemPackage {
     protected void get() {
         this.activeWindowManager = get(ActiveWindowManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
-        this.mode = ((CharacterToolContext) context).getMode();
+        this.mode = ((CharacterModeProvider) context).getMode();
     }
 
     // Update \\

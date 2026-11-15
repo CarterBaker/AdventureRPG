@@ -17,6 +17,7 @@ import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
+import editor.runtime.EditorSetting;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.sculpt.CharacterEditorSculptSystem;
@@ -33,12 +34,14 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
     /*
      * Draws the active part's vertices and edges over this tab's character
-     * while Mesh or Weights mode is open, as one mesh of dots and lines the
-     * overlay shader keeps a fixed number of pixels wide however far the
-     * camera orbits. In Mesh mode the selection and the active vertex stand
-     * out, each selected vertex shaded toward the selection's colour as far
-     * as it is selected, so a soft brush's falloff shows; in Weights mode
-     * each vertex is coloured by the selected bone's weight on it. With
+     * while the Mesh, Weights or UV tab is open, as one mesh of dots and
+     * lines the overlay shader keeps a fixed number of pixels wide however
+     * far the camera orbits. In Mesh and UV the selection and the active
+     * vertex stand out, each selected vertex shaded toward the selection's
+     * colour as far as it is selected, so a soft brush's falloff shows, and
+     * the edges marked as seams are drawn wider in red, as Blender draws
+     * them; in Weights each vertex is coloured by the selected bone's
+     * weight on it. With
      * X-Ray off the overlay is depth tested against the character, nudged
      * toward the camera, so hidden vertices stay hidden; with it on it
      * draws over everything. The box being dragged, the brush of any mesh
@@ -148,7 +151,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
     @Override
     protected void awake() {
-        this.overlayVAO = vaoManager.getVAOHandleFromVAOName(CharacterEditorSetting.MESH_OVERLAY_VAO);
+        this.overlayVAO = vaoManager.getVAOHandleFromVAOName(EditorSetting.MESH_EDITOR_OVERLAY_VAO);
         this.overlayMaterialID = materialManager.getMaterialIDFromMaterialName(CharacterEditorSetting.MATERIAL_OVERLAY);
     }
 
@@ -457,7 +460,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                 half);
     }
 
-    // Every edge of every face once, brighter where both of its ends are selected
+    // Every edge of every face once, brighter where both of its ends are selected, a seam in its own colour and wider
     private void appendEdges(CharacterMeshDocumentInstance document, boolean weights) {
 
         RiggedMeshStruct mesh = document.getMesh();
@@ -472,12 +475,17 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
                 if (a == b || !characterEditorMeshViewSystem.isInRegion(a)
                         || !characterEditorMeshViewSystem.isInRegion(b)
-                        || !edges.add((long) Math.min(a, b) << Integer.SIZE | Math.max(a, b)))
+                        || !edges.add(RiggedMeshStruct.toEdgeKey(a, b)))
                     continue;
 
-                setColor(!weights && document.isSelected(a) && document.isSelected(b)
-                        ? CharacterEditorSetting.COLOR_EDGE_SELECTED
-                        : CharacterEditorSetting.COLOR_EDGE);
+                boolean seam = !weights && mesh.isSeam(a, b);
+
+                if (seam)
+                    setColor(CharacterEditorSetting.COLOR_SEAM);
+                else
+                    setColor(!weights && document.isSelected(a) && document.isSelected(b)
+                            ? CharacterEditorSetting.COLOR_EDGE_SELECTED
+                            : CharacterEditorSetting.COLOR_EDGE);
 
                 if (!appendLine(
                         vertices,
@@ -488,7 +496,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                         characterEditorMeshViewSystem.getX(b),
                         characterEditorMeshViewSystem.getY(b),
                         characterEditorMeshViewSystem.getZ(b),
-                        CharacterEditorSetting.EDGE_HALF_PIXELS))
+                        seam ? CharacterEditorSetting.SEAM_HALF_PIXELS : CharacterEditorSetting.EDGE_HALF_PIXELS))
                     return;
             }
     }

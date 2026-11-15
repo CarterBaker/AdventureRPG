@@ -72,7 +72,7 @@ public class TextureViewerRenderSystem extends SystemPackage {
 
         this.sceneFbo = fboManager.cloneFbo(EditorSetting.FBO_EDITOR_SCENE, context.getWindow());
         this.atlasModel = modelManager.createModel(
-                meshManager.getMeshHandleFromMeshName(TextureViewerSetting.MESH_QUAD),
+                meshManager.getMeshHandleFromMeshName(EditorSetting.MESH_EDITOR_VIEWPORT_QUAD),
                 materialManager.getMaterialIDFromMaterialName(TextureViewerSetting.MATERIAL_ATLAS));
 
         MaterialInstance material = atlasModel.getMaterial();

@@ -29,6 +29,7 @@ import editor.runtime.charactereditor.CharacterMeshContext;
 import editor.runtime.charactereditor.CharacterPaintContext;
 import editor.runtime.charactereditor.CharacterRigContext;
 import editor.runtime.charactereditor.CharacterSculptContext;
+import editor.runtime.charactereditor.CharacterUVContext;
 import editor.runtime.charactereditor.CharacterWeightsContext;
 import editor.runtime.characteroutliner.CharacterOutlinerContext;
 import editor.runtime.colorwheel.ColorWheelContext;
@@ -60,6 +61,7 @@ import editor.runtime.tools.ToolsContext;
 import editor.runtime.transitions.TransitionsContext;
 import editor.runtime.treeplanner.TreePlannerContext;
 import editor.runtime.treeviewer.TreeViewerContext;
+import editor.runtime.uveditor.UVEditorContext;
 import editor.runtime.worldeditor.WorldEditorContext;
 import editor.runtime.worldmap.WorldMapContext;
 import engine.root.ContextPackage;
@@ -214,6 +216,14 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openCharacterFace(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_FACE, CharacterFaceContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterUV(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_UV, CharacterUVContext.class, osWindow);
+    }
+
+    public TabHandle openUVEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_UV_EDITOR, UVEditorContext.class, osWindow);
     }
 
     public TabHandle openCharacterOutliner(WindowInstance osWindow) {

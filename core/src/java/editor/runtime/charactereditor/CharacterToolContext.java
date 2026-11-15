@@ -18,6 +18,7 @@ import editor.runtime.charactereditor.bone.CharacterEditorBoneSystem;
 import editor.runtime.charactereditor.menu.CharacterEditorMenuSystem;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
+import editor.runtime.charactereditor.mode.CharacterModeProvider;
 import editor.runtime.charactereditor.overlay.CharacterEditorOverlaySystem;
 import editor.runtime.charactereditor.paint.CharacterEditorPaintSystem;
 import editor.runtime.charactereditor.preview.CharacterEditorPreviewSystem;
@@ -45,7 +46,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public abstract class CharacterToolContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, PropertiesProvider,
-        OutlinerProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider {
+        OutlinerProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider,
+        CharacterModeProvider {
 
     /*
      * The base of every character tool tab, each working the character in the
@@ -134,6 +136,7 @@ public abstract class CharacterToolContext extends ContextPackage
     // Tool \\
 
     // The one mode this tab works the character in
+    @Override
     public abstract CharacterEditorMode getMode();
 
     // The tab's title, naming the tool at the Layers tab's head

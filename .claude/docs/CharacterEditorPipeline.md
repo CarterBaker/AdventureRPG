@@ -1,9 +1,9 @@
 # CharacterEditorPipeline
 
-Where the character tools live, which method owns each operation, and the traps. Read it before working in the
-character tool tabs (Appearance, Build, Equipment, Mesh, Sculpt, Weights, Paint, Rig, Face), the Animation Editor, their
-docker windows, races and their genders' models, or a character's appearance (morphs, face controls, zones, masks,
-overlays, shaders). `.claude/CLAUDE.md` still applies in full.
+Where the character tools live, which method owns each operation, and the traps. Read it before working in the character
+tool tabs (Appearance, Build, Equipment, Mesh, Sculpt, Weights, Paint, Rig, Face, UV), the UV Editor, the Animation
+Editor, their docker windows, races and their genders' models, or a character's appearance (morphs, face controls,
+zones, masks, overlays, shaders). `.claude/CLAUDE.md` still applies in full.
 
 ---
 
@@ -21,7 +21,8 @@ layouts like any other.
 | Window | Context | Shows |
 |---|---|---|
 | Character Appearance, Build, Equipment | `CharacterAppearanceContext`, `CharacterBuildContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
-| Character Mesh, Sculpt, Weights, Rig | `CharacterMeshContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
+| Character Mesh, Sculpt, Weights, Rig, UV | `CharacterMeshContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext`, `CharacterUVContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
+| UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
 | Character Face | `CharacterFaceContext` | the face's region (the Head) framed, the face controls' canvas, no layers |
 | Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `FaceEditorManager.buildListRows` in the Face tab, `AnimationEditorManager.buildListRows` |
@@ -37,7 +38,7 @@ layouts like any other.
   context naming it and a menu button, never as a mode switch inside a tab. `CharacterEditorModeSystem` holds the
   tab's mode, read from its context, and its region (`getRegion`).
 - **Layers.** A tab lists layers only where its mode `listsLayers`, and creates its `LayersSourceSystem` only then:
-  a mode that `takesRegions` (Mesh, Sculpt, Weights, Rig) lists the Body (`CharacterRegionStruct.WHOLE`) and every
+  a mode that `takesRegions` (Mesh, Sculpt, Weights, Rig, UV) lists the Body (`CharacterRegionStruct.WHOLE`) and every
   region nested under it by `getParent`, keyed by region key; Paint lists the paint layers of the map painted, top
   first, keyed by number, each above the base with an eye (`CharacterPaintCanvasStruct.isLayerVisible`; a hidden layer
   stays out of the composite, so Save writes only what is shown), as Substance Painter and Krita list theirs. The look
@@ -216,6 +217,45 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
   (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
   in `CharacterShapeBranch.resolveMove`.
 
+## UV
+
+The UV tool is two tabs that work together, as Blender's UV Editing workspace pairs its 3D view with its UV Editor:
+the Character UV tab (`CharacterEditorMode.UV`, `ToolCanvas.CHARACTER_UV`: Select with the brush, the Seams, Unwrap and
+Selection groups) and the UV Editor (`UVEditorContext`, `ToolCanvas.UV_EDITOR`: Select, Move, Rotate, Scale, the
+Unwrap, Islands and Selection groups). Both work in the UV mode on the region picked for the modelling tabs
+(`CharacterModeProvider`), so the Outliner lists the parts and the Properties tab the UVs selected.
+
+- **Data.** UVs are per face corner (`RiggedMeshStruct.getFaceU` / `setFaceUV`); seams are vertex pairs
+  (`isSeam` / `setSeam`, keyed by `toEdgeKey`, renumbered by `removeVertices`); pins are four bits a face
+  (`isCornerPinned` / `setCornerPinned`). All three are saved with the mesh and are part of every undo step.
+- **What the UV Editor shows** (`CharacterUVBranch.collectShownFaces`): the faces whose four vertices are selected and
+  shown, as Blender shows the faces selected in Edit Mode. Its own selection is of face corners
+  (`CharacterMeshDocumentInstance.isCornerSelected`, cleared whenever the faces are renumbered, never in the history);
+  a pick takes every corner of the same vertex at the same place. Islands are faces joined across an edge both meet at
+  in UV (`UV_WELD_EPSILON`); unwrap islands are faces joined across every edge that is no seam.
+- **One branch owns every UV edit:** `CharacterUVBranch` (Mark and Clear Seam on the edges between selected vertices,
+  Seams From Islands, Unwrap, Pack, Average Island Scale, Stitch, Pin, Unpin, Flip U and V, Select All and Linked, the
+  Move, Rotate and Scale drags, and the Properties rows: the U and V of the selection's centre). Every key routes
+  through `CharacterPropertyBranch` like any other; each change to the mesh is one undo step through
+  `CharacterHistoryBranch.begin` and `CharacterMeshBranch.finishEdit`.
+- **Unwrap** is least squares conformal mapping (`CharacterUnwrapUtility`, Lévy et al. 2002): each quad split into two
+  triangles, the Cauchy-Riemann conditions of each weighted by its area, two vertices pinned (the island's own pinned
+  corners where at least two vertices are pinned, else its two farthest along its longest side), solved by Jacobi
+  preconditioned conjugate gradients. Unwrap then evens the islands' scale and packs them. An island with no
+  boundary (a closed surface with no seam) or no area is left as it was and counted in the status line.
+- **Pack** lays the islands in shelves, tallest first, `UV_PACK_MARGIN` of the tile apart, scaled together to fit the
+  unit square; islands are not turned. **Average Island Scale** gives every island the same UV area per surface area,
+  keeping their total. **Stitch** carries each island holding selected corners onto the neighbours those vertices
+  also stand on, by the least squares similarity (turn, uniform scale, move), then welds the corners there.
+- **Drawing.** The Character UV tab's overlay draws seams red and wider (`COLOR_SEAM`); the UV Editor
+  (`UVEditorRenderSystem`) draws the tile of the first face shown over the unit square (`UVEditorBackgroundShader`,
+  a checker without one) and the UVs as one overlay mesh in UV space (`UVEditorOverlayShader`, fixed pixel widths),
+  rebuilt only when the mesh, the selection, the editor or the box moves. `UVEditorViewSystem` fits the square, zooms
+  about the pointer and pans with the right button; `UVEditorToolSystem` picks, boxes and drags, and runs the keys of
+  `shortcuts/UVEditor.arpg`.
+- **Not done yet, only when the owner asks:** island rotation while packing, UV snapping, and showing every face of
+  the region when none is selected (Blender's UV Sync Selection).
+
 ## Paint
 
 The Paint tab (`CharacterEditorMode.PAINT`, `ToolCanvas.CHARACTER_PAINT`: Brush, Erase, Smooth, Fill, Pick, the Brushes
@@ -285,7 +325,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   file uses, resolved against the rig by name at load) with `influence_counts`, `influence_bones` and
   `influence_weights`, `quads` (four vertex numbers a face) beside `quad_textures` and `quad_zones` (numbers into the
   `textures` and `zones` name lists; `MeshZone`: skin, eye, brow, lash, hair, cloth, mouth, teeth), `quad_uv_flags`
-  with the eight `quad_uvs` floats of each face that authors them, sparse `masks` (channels
+  (bit 0 the face authors its UVs, bits 1 to 4 its corners pinned for unwrapping,
+  `EngineSetting.RIGGED_MESH_UV_*`; a build older than the pins reads any non-zero flag as authored) with the eight
+  `quad_uvs` floats of each face that authors them, the optional `seams` (vertex pairs, the edges cut for unwrapping,
+  written only when there are any), sparse `masks` (channels
   `EngineSetting.RIGGED_MESH_MASK_CHANNELS`) and `morphs` (`vertices` beside `values` or three `deltas` each), and
   `normals`, every corner's packed smooth normal. Vertices are numbered as corners first appear, merged by position
   and influences; writing renumbers through `resolveFileVertices`, so never index masks or morphs by
@@ -538,9 +581,9 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - Face controls: `FaceEditBranch` performs every edit of the template's shapes through InfoManager, recorded in the
   template's face history (`FaceEditorManager.getHistory`); values and actions: `FacePropertyBranch`; rows:
   `FaceRowBranch`. Bone drags go through `FaceEditorManager.beginGesture / writeGesture / endGesture / cancelGesture`;
-  viewport: `FaceEditorGestureSystem` in the Face tab. The face editor always works on the character tools' active race, saves
-  and reverts through it, and takes its preview gender and slider values from it. Gender starts live under the race's
-  `genders`, the controls under its `appearance`.
+  viewport: `FaceEditorGestureSystem` in the Face tab. The face editor always works on the character tools' active race,
+  saves and reverts through it, and takes its preview gender and slider values from it. Gender starts live under the
+  race's `genders`, the controls under its `appearance`.
 - The preview look (gender, tones, sliders, blink, build, head) is put on any viewport's appearance by
   `CharacterEditorManager.applyLook` (`CharacterLookBranch`); never set it piece by piece in a viewport.
 - Rotation and projection math shared by every viewport gesture: `CharacterPoseUtility`.

@@ -25,11 +25,14 @@ public enum ToolCanvas {
      * back to level with the brush, never painted from a palette. A
      * character's rig, its face and an animation's pose take the tools
      * that pick and drag its joints; the face drags a bone into the face
-     * control selected. A character's mesh and weights also take Pick,
-     * which picks the bone under the pointer to weigh, and Pose, which
-     * turns a bone out of the way while the mesh follows; every modelling
-     * canvas of a character mirrors, and its mesh, weights and rig choose
-     * how the bones are drawn. The recorder's Timeline selects and cuts
+     * control selected. A character's UV tab selects the vertices whose
+     * edges it marks as seams and whose faces it unwraps; the UV Editor
+     * selects, moves, turns and scales their UVs and packs, evens,
+     * stitches and pins their islands. A character's mesh and weights
+     * also take Pick, which picks the bone under the pointer to weigh, and
+     * Pose, which turns a bone out of the way while the mesh follows;
+     * every modelling canvas of a character mirrors, and its mesh, weights
+     * and rig choose how the bones are drawn. The recorder's Timeline selects and cuts
      * clips, and nests the selection or opens a nested clip, and exports
      * its video. A Music file's Timeline draws notes clips too, opens the
      * song a clip lays, and exports as MIDI or renders to a sound; the
@@ -118,6 +121,19 @@ public enum ToolCanvas {
             new ToolActionGroupStruct[] { faceControls() },
             false,
             mirror()),
+    CHARACTER_UV(
+            EditorSetting.TOOL_CANVAS_CHARACTER_UV,
+            new EditorTool[] { EditorTool.SELECT },
+            new ToolActionGroupStruct[] { uvSeams(), uvUnwrap(), meshSelection() },
+            false,
+            screenSize(),
+            mirror(),
+            xray()),
+    UV_EDITOR(
+            EditorSetting.TOOL_CANVAS_UV_EDITOR,
+            new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
+            new ToolActionGroupStruct[] { uvUnwrap(), uvIslands(), uvSelection() },
+            false),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
             new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK },
@@ -298,6 +314,39 @@ public enum ToolCanvas {
                 action(
                         EditorSetting.CHARACTER_PAINT_LABEL_LAYER_REMOVE,
                         EditorSetting.CHARACTER_PAINT_KEY_LAYER_REMOVE));
+    }
+
+    private static ToolActionGroupStruct uvSeams() {
+        return new ToolActionGroupStruct(
+                EditorSetting.UV_HEADER_SEAMS,
+                action(EditorSetting.UV_LABEL_MARK_SEAM, EditorSetting.UV_KEY_MARK_SEAM),
+                action(EditorSetting.UV_LABEL_CLEAR_SEAM, EditorSetting.UV_KEY_CLEAR_SEAM),
+                action(EditorSetting.UV_LABEL_SEAMS_FROM_ISLANDS, EditorSetting.UV_KEY_SEAMS_FROM_ISLANDS));
+    }
+
+    private static ToolActionGroupStruct uvUnwrap() {
+        return new ToolActionGroupStruct(
+                EditorSetting.UV_HEADER_UNWRAP,
+                action(EditorSetting.UV_LABEL_UNWRAP, EditorSetting.UV_KEY_UNWRAP));
+    }
+
+    private static ToolActionGroupStruct uvIslands() {
+        return new ToolActionGroupStruct(
+                EditorSetting.UV_HEADER_ISLANDS,
+                action(EditorSetting.UV_LABEL_PACK, EditorSetting.UV_KEY_PACK),
+                action(EditorSetting.UV_LABEL_AVERAGE_SCALE, EditorSetting.UV_KEY_AVERAGE_SCALE),
+                action(EditorSetting.UV_LABEL_STITCH, EditorSetting.UV_KEY_STITCH),
+                action(EditorSetting.UV_LABEL_PIN, EditorSetting.UV_KEY_PIN),
+                action(EditorSetting.UV_LABEL_UNPIN, EditorSetting.UV_KEY_UNPIN),
+                action(EditorSetting.UV_LABEL_FLIP_U, EditorSetting.UV_KEY_FLIP_U),
+                action(EditorSetting.UV_LABEL_FLIP_V, EditorSetting.UV_KEY_FLIP_V));
+    }
+
+    private static ToolActionGroupStruct uvSelection() {
+        return new ToolActionGroupStruct(
+                EditorSetting.UV_HEADER_SELECTION,
+                action(EditorSetting.UV_LABEL_SELECT_ALL, EditorSetting.UV_KEY_SELECT_ALL),
+                action(EditorSetting.UV_LABEL_SELECT_LINKED, EditorSetting.UV_KEY_SELECT_LINKED));
     }
 
     private static ToolActionGroupStruct colliderActions() {

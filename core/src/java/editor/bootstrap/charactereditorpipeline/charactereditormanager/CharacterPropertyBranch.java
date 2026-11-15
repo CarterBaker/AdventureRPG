@@ -52,6 +52,7 @@ class CharacterPropertyBranch extends BranchPackage {
     private CharacterMeshPropertyBranch characterMeshPropertyBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
+    private CharacterUVBranch characterUVBranch;
     private FaceEditorManager faceEditorManager;
     private FeatureManager featureManager;
     private GenderManager genderManager;
@@ -65,6 +66,7 @@ class CharacterPropertyBranch extends BranchPackage {
         this.characterMeshPropertyBranch = get(CharacterMeshPropertyBranch.class);
         this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
         this.characterPaintPropertyBranch = get(CharacterPaintPropertyBranch.class);
+        this.characterUVBranch = get(CharacterUVBranch.class);
         this.faceEditorManager = get(FaceEditorManager.class);
         this.featureManager = get(FeatureManager.class);
         this.genderManager = get(GenderManager.class);
@@ -103,6 +105,9 @@ class CharacterPropertyBranch extends BranchPackage {
         if (isPaintKey(key))
             return characterPaintPropertyBranch.getValueText(key);
 
+        if (isUVKey(key))
+            return characterUVBranch.getValueText(key);
+
         if (isNumberKey(key))
             return CharacterViewUtility.formatNumber(getNumber(document, key));
 
@@ -119,6 +124,9 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isPaintKey(key))
             return characterPaintPropertyBranch.isValueValid(key, text);
+
+        if (isUVKey(key))
+            return characterUVBranch.isValueValid(key, text);
 
         return isNumberKey(key) && hasTarget(document, key) && CharacterViewUtility.isNumber(text);
     }
@@ -137,6 +145,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isPaintKey(key)) {
             characterPaintPropertyBranch.setValue(key, text);
+            return;
+        }
+
+        if (isUVKey(key)) {
+            characterUVBranch.setValue(key, text);
             return;
         }
 
@@ -160,6 +173,11 @@ class CharacterPropertyBranch extends BranchPackage {
             return;
         }
 
+        if (isUVKey(key)) {
+            characterUVBranch.step(key, direction);
+            return;
+        }
+
         if (isNumberKey(key) && hasTarget(document, key))
             writeNumber(document, key, getNumber(document, key) + direction * getStep(key));
     }
@@ -174,6 +192,10 @@ class CharacterPropertyBranch extends BranchPackage {
 
     private boolean isPaintKey(String key) {
         return characterPaintPropertyBranch.handles(CharacterViewUtility.getKeyName(key));
+    }
+
+    private boolean isUVKey(String key) {
+        return characterUVBranch.handles(CharacterViewUtility.getKeyName(key));
     }
 
     // Numbers \\
@@ -970,6 +992,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isPaintKey(key)) {
             characterPaintPropertyBranch.act(key);
+            return;
+        }
+
+        if (isUVKey(key)) {
+            characterUVBranch.act(key);
             return;
         }
 
