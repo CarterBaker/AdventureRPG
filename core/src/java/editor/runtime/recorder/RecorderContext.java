@@ -30,7 +30,7 @@ public class RecorderContext extends ContextPackage
      * recording uses; and the Recorder Settings, the channels armed and the
      * export. The recordings themselves are made and opened in the
      * Recordings tool. All state lives in RecorderManager; this tab only
-     * shows it and hands clicks to RecorderBranch. With a Music file open the
+     * shows it and hands clicks to RecorderBranch. With a media file open the
      * Properties tab sets its tempo, meter and key.
      */
 

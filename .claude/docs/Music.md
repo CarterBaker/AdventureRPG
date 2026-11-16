@@ -58,7 +58,7 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
   their own, as clips that play together do in a video editor. Under the hood a note clip is a notes clip holding one
   note, so playback, MIDI and Render are unchanged. Deliberately there is no piano roll and no playing notes in from
   the computer keyboard: the owner composes by laying notes, not by playing them.
-- **Nested recordings** work like Premiere's nested sequences: a recording or song laid inside another is a reference,
+- **Nested recordings** work like Premiere's nested sequences: a media file laid inside another is a reference,
   so editing it changes every place it is laid. Any loop, direct or through other files, is refused, naming the loop.
   A recording's clip plays a take, a nested recording, a song or a notes clip; a nested clip's span is kept as asked and
   held within the child's current length only when read. A nested recording showing a picture must share its parent's
@@ -138,13 +138,18 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   into a `SongHandle` kept by name apart from the palette (no song ID), and `releaseUserSong` lets it go with the last
   play that holds it; an unreadable file is logged and plays nothing. Project songs keep assigned IDs and load on
   demand. The game and editor launchers create `Songs/` with their other required directories.
-- Songs the owner makes are Music files, saved by the editor straight into `assets/songs/` through the song codec and
-  listed under Songs in the Recordings tab; New asks Video or Music. The Timeline shows a Music file's
-  `SONG_LANE_COUNT` lanes with a mixer strip each, a bars-and-beats ruler and a beat grid it snaps to, refuses takes and
-  nested recordings, takes note clips dragged from the Note Library tab, and exports through its Export MIDI and Render
-  actions. A Music file records nothing.
-- Songs the owner makes are saved by the editor straight into `assets/songs/`. Exported MIDI goes to
-  `Documents/My Games/AdventureRPG/Songs/`, where player songs live. Video recordings stay in `Recordings/`.
+- **Media files.** Songs and videos the owner makes are one kind of file, a media file, saved by the recorder in
+  `Documents/My Games/AdventureRPG/Media/` (`RECORDER_MEDIA_DIRECTORY`, beside the player's saves) and listed together
+  in the Media tab. Both record, nest and edit the same way; a media file any clip of which shows a picture is a video,
+  one with none is music, decided by what is laid on it, never chosen. The Timeline shows `SONG_LANE_COUNT` lanes with
+  a mixer strip each, its ruler in bars and beats and a beat grid it snaps to while the file is music, in seconds once it
+  shows a picture.
+- **Export** (the Timeline's Export action) sends a video through the export dialog to a movie file, and exports music
+  at once as the game's own: the song (`.arpg`, through the song codec) and its rendered sound (`.ogg` with its `music`
+  companion), both under `Media/Export/`, laid out as `assets/` is (`songs/<Name>.arpg`, `sounds/music/<Name>.ogg`)
+  so the owner drags them into the project when they are ready. Nothing the editor makes is written into `assets/`. A
+  nested media file and a take of the world have no place in a song and are left out of it. Export MIDI writes
+  `Documents/My Games/AdventureRPG/Songs/<Name>.mid`, where player songs live.
 - Constants: `EngineSetting` (`// Music ...` groups) for anything the game uses; `EditorSetting` for the editor.
 
 ## Playing in the game

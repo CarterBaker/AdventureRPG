@@ -289,10 +289,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_RENAME_LAYER = "Rename Layer";
     public static final String DIALOG_TITLE_NEW_NODE = "New Node";
     public static final String DIALOG_TITLE_RENAME_NODE = "Rename Node";
-    public static final String DIALOG_TITLE_NEW_RECORDING = "New: type Video or Music";
-    public static final String DIALOG_TITLE_NEW_KIND_PREFIX = "New ";
-    public static final String DIALOG_TITLE_OVERWRITE_PREFIX = "Overwrite ";
-    public static final String DIALOG_TITLE_OVERWRITE_SUFFIX = "? Type the Music file's name to confirm";
+    public static final String DIALOG_TITLE_NEW_RECORDING = "New media file: type its name";
     public static final String DIALOG_TITLE_RENAME_RECORDING = "Rename Recording";
     public static final String DIALOG_TITLE_DUPLICATE_RECORDING = "Copy Recording As";
     public static final String DIALOG_TITLE_RENAME_TAKE = "Rename Take";
@@ -451,7 +448,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_RECORDER_BIN = "Recorder Bin";
     public static final String TAB_TITLE_RECORDER_ASSETS = "Recorder Assets";
     public static final String TAB_TITLE_RECORDER_SETTINGS = "Recorder Settings";
-    public static final String TAB_TITLE_RECORDINGS = "Recordings";
+    public static final String TAB_TITLE_RECORDINGS = "Media";
     public static final String TAB_TITLE_SOUND_LIBRARY = "Sound Library";
     public static final String TAB_TITLE_NOTE_LIBRARY = "Note Library";
     public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
@@ -2037,14 +2034,12 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";
-    public static final String TOOL_CANVAS_MUSIC = "Music Timeline";
     public static final String TOOL_ACTION_HEADER_NESTING = "Nesting";
     public static final String TOOL_ACTION_LABEL_NEST_SELECTION = "Nest Selection";
     public static final String TOOL_ACTION_LABEL_OPEN_NESTED = "Open Nested";
     public static final String TOOL_ACTION_HEADER_EXPORT = "Export";
-    public static final String TOOL_ACTION_LABEL_EXPORT_VIDEO = "Export Video";
+    public static final String TOOL_ACTION_LABEL_EXPORT = "Export";
     public static final String TOOL_ACTION_LABEL_EXPORT_MIDI = "Export MIDI";
-    public static final String TOOL_ACTION_LABEL_RENDER = "Render";
     public static final String TOOL_OPTION_SIZE = "Size";
     public static final String TOOL_OPTION_STRENGTH = "Strength";
     public static final String TOOL_OPTION_TWIST = "Twist";
@@ -2342,9 +2337,12 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_MESSAGE_LAST_PART = "An item needs at least one part";
     public static final String ITEM_EDITOR_MESSAGE_PART_LIMIT = "An item cannot hold any more parts";
 
-    // Recorder — files, in the game's own directory; videos go in their own folder beside the recordings
-    public static final String RECORDER_DIRECTORY = "Recordings";
-    public static final String RECORDER_VIDEO_DIRECTORY = "Videos";
+    // Recorder — media files, video and music alike, in the game's own directory beside the player's saves; what they
+    // export goes in a folder beside them, music laid out as the project's assets are so it is dragged in as it lies
+    public static final String RECORDER_MEDIA_DIRECTORY = "Media";
+    public static final String RECORDER_EXPORT_DIRECTORY = "Export";
+    public static final String RECORDER_EXPORT_SONG_DIRECTORY = "songs";
+    public static final String RECORDER_EXPORT_SOUND_DIRECTORY = "sounds/music";
     public static final String RECORDER_DEFAULT_NAME_PREFIX = "Recording";
     public static final String RECORDER_TAKE_NAME_PREFIX = "Take ";
     public static final String RECORDER_PLAYER_DISPLAY_NAME = "Player";
@@ -2353,7 +2351,7 @@ public class EditorSetting {
     public static final int RECORDER_LABEL_MAX_LENGTH = 48;
     public static final String RECORDER_VIDEO_NAME_SEPARATOR = "_";
     public static final String RECORDER_EXTENSION_SEPARATOR = ".";
-    public static final int RECORDER_FILE_VERSION = 3;
+    public static final int RECORDER_FILE_VERSION = 4;
     public static final int RECORDER_SOUND_TAKE_FIRST_NUMBER = 2;
     public static final float RECORDER_SOUND_JUMP_SECONDS = 0.25f;
     public static final String RECORDER_SOUND_TAKE_NAME_SEPARATOR = " ";
@@ -2378,6 +2376,7 @@ public class EditorSetting {
     public static final String RECORDER_FILE_TRANSITION_PREFIX = "transition_";
     public static final String RECORDER_FILE_OWNER_PREFIX = "Recording ";
     public static final String RECORDER_FILE_CLIP_OWNER = " clip ";
+    public static final String RECORDER_FILE_LANE_OWNER = " lane ";
 
     // Recorder — clip sources, as the Assets tab and the clip panel name them; a recording keeps a tempo map and a
     // meter, one tempo throughout until it is given more, and a nested clip is opened by two clicks this close
@@ -2412,39 +2411,24 @@ public class EditorSetting {
             null,
             null);
 
-    // Recorder Music — a recording is a Video or a Music file; a Music file is read and written as a song, records
-    // nothing, holds note clips laid from the Note Library, each struck this hard and named by its instrument and its
-    // note, and turns its clips into MIDI and a rendered sound
-    public static final String RECORDER_KIND_LABEL_VIDEO = "Video";
-    public static final String RECORDER_KIND_LABEL_MUSIC = "Music";
+    // Recorder Music — a media file with no picture is music: it holds note clips laid from the Note Library, each
+    // struck this hard and named by its instrument and its note, and turns its clips into MIDI and the game's song and
+    // rendered sound
     public static final int RECORDER_QUARTERS_PER_WHOLE = 4;
     public static final float RECORDER_NOTES_SOURCE_SECONDS = Float.MAX_VALUE;
-    public static final String RECORDER_MUSIC_OWNER_PREFIX = "Music file ";
-    public static final String RECORDER_MUSIC_LANE_OWNER = " lane ";
-    public static final String RECORDER_MUSIC_WORLD_NONE = "";
-    public static final String RECORDER_MESSAGE_SOUND_MISSING = "Recorder: a Music file's sound is missing: ";
-    public static final String RECORDER_STATUS_MUSIC_REFUSES =
-            "A Music file holds notes, songs and sounds alone, refused: ";
-    public static final String RECORDER_STATUS_MUSIC_RECORDS_NOTHING =
-            "A Music file records nothing: drag notes onto the Timeline from the Note Library";
-    public static final String RECORDER_STATUS_SONG_REFUSED = "The game refuses the song: ";
     public static final String RECORDER_STATUS_NOTE_PLACED = "Note laid: ";
     public static final int RECORDER_NOTE_VELOCITY = 100;
     public static final String RECORDER_NOTE_LABEL_SEPARATOR = " ";
-    public static final String RECORDER_STATUS_EXPORT_MUSIC =
-            "A Music file is exported with Export MIDI or Render, not as a video";
-    public static final String RECORDER_STATUS_MIDI_MUSIC_ONLY = "Export MIDI needs a Music file open";
     public static final String RECORDER_STATUS_MIDI_EXPORTED = "MIDI exported: ";
     public static final String RECORDER_STATUS_MIDI_EXPORTED_FORMAT =
             "MIDI exported: %s (%d sound clips left out: MIDI holds no sounds)";
     public static final String RECORDER_STATUS_MIDI_FAILED = "MIDI export failed: ";
-    public static final String RECORDER_STATUS_RENDER_MUSIC_ONLY = "Render needs a Music file open";
     public static final String RECORDER_STATUS_RENDER_RUNNING = "A render is already running";
     public static final String RECORDER_STATUS_RENDERING_FORMAT = "Rendering: %d%%";
     public static final float RECORDER_BPM_PRECISION = 1000f;
 
-    // Recorder Music — the Properties rows of a Music file's time, key, lane mix and clip, each by its key
-    public static final String RECORDER_ROWS_NO_MUSIC = "Open a Music file to set its time, key and mix";
+    // Recorder Music — the Properties rows of a media file's time, key, lane mix and clip, each by its key
+    public static final String RECORDER_ROWS_NO_MUSIC = "Open a media file to set its time, key and mix";
     public static final String RECORDER_ROWS_HEADER_TIME = "Time";
     public static final String RECORDER_ROWS_HEADER_KEY = "Key";
     public static final String RECORDER_ROWS_HEADER_LANE_FORMAT = "Lane %d";
@@ -2482,12 +2466,12 @@ public class EditorSetting {
     public static final String RECORDER_ROW_WORD_SEPARATOR = " ";
     public static final String RECORDER_ROW_KEY_OCTAVE = "4";
 
-    // Recorder Render — a Music file mixed offline past its end for its release, a stretch at a time, into a raw file
-    // encoded to a music sound
+    // Recorder Render — a media file's music mixed offline past its end for its release, a stretch at a time, into a
+    // raw file encoded to a music sound
     public static final String RECORDER_STATUS_FFMPEG_MISSING =
             "Render needs ffmpeg: run .claude/Delivery.bat once to fetch it";
     public static final String RECORDER_STATUS_RENDER_EMPTY =
-            "Nothing to render: the Music file holds no notes, songs or sounds that play";
+            "Nothing to render: the media file holds no notes, songs or sounds that play";
     public static final String RECORDER_STATUS_RENDER_FAILED = "Render failed: ";
     public static final String RECORDER_STATUS_RENDERED = "Rendered: ";
     public static final float RECORDER_RENDER_TAIL_SECONDS = 3f;
@@ -2496,7 +2480,6 @@ public class EditorSetting {
     public static final int RECORDER_RENDER_PERCENT_MAX = 100;
     public static final int RECORDER_RENDER_MIXED_PERCENT = 90;
     public static final String RECORDER_RENDER_CATEGORY = "music";
-    public static final String RECORDER_RENDER_DIRECTORY = "music";
 
     // ffmpeg — found on the PATH or as Delivery.bat's portable copy, run with Delivery.bat's sound settings
     public static final String FFMPEG_PATH_VARIABLE = "PATH";
@@ -2590,7 +2573,6 @@ public class EditorSetting {
 
     // Recorder — the timeline; clips stack on a fixed number of lanes, the highest playing over the rest, and the
     // timeline runs on past the recording's end so there is room to lay a clip after it
-    public static final int RECORDER_LANE_COUNT = 6;
     public static final float RECORDER_MIN_TIMELINE_SECONDS = 1f;
     public static final float RECORDER_TIMELINE_TAIL_SECONDS = 2f;
     public static final float RECORDER_TIMELINE_TAIL_SHARE = 0.1f;
@@ -3056,7 +3038,6 @@ public class EditorSetting {
     public static final String RECORDER_KEY_EXPORT = "export";
     public static final String RECORDER_KEY_CANCEL_EXPORT = "cancel_export";
     public static final String RECORDER_KEY_EXPORT_MIDI = "export_midi";
-    public static final String RECORDER_KEY_RENDER = "render";
 
     // Commands — Recorder
     public static final String COMMAND_RECORD = "record";

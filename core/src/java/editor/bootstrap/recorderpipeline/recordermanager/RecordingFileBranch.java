@@ -20,7 +20,6 @@ import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
-import editor.bootstrap.recorderpipeline.recording.RecordingKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayStreamStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
@@ -43,9 +42,9 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 class RecordingFileBranch extends BranchPackage {
 
     /*
-     * Writes a recording to its ARPG file and reads one back. The file keeps
+     * Writes a media file to its ARPG file and reads one back. The file keeps
      * the world it was made in, its tempo map and meter through the song
-     * codec, the movement states and actions by name so a
+     * codec, its key and every lane's mix, the movement states and actions by name so a
      * recording outlives either list changing, how it exports, its bin of
      * takes with their tracks — each track's samples packed into one block by
      * RecordingArpgUtility, a character's identity, clips and looks written
@@ -57,8 +56,9 @@ class RecordingFileBranch extends BranchPackage {
      * song codec, with the span, channels and transition on each edge it was
      * given, kept as asked; a clip written before transitions were laid reads
      * with none, one written before clips named their source plays a take,
-     * and a file written before recordings kept a tempo map plays at
-     * RECORDER_DEFAULT_BPM in four four. Beside each track lie the curves it
+     * a file written before recordings kept a tempo map plays at
+     * RECORDER_DEFAULT_BPM in four four, and one written before they kept a
+     * key and lanes plays in C major with every lane at its default mix. Beside each track lie the curves it
      * has been given, each naming its property and part with its keys packed
      * into one block, their modes named once for the whole file as the states
      * and actions are. A file written before sounds were recorded reads with
@@ -84,6 +84,9 @@ class RecordingFileBranch extends BranchPackage {
         recordingArpg.add("tempos", SongArpgUtility.writeTempo(recording.getTempo()));
         recordingArpg.addProperty("beats_per_bar", recording.getBeatsPerBar());
         recordingArpg.addProperty("beat_unit", recording.getBeatUnit());
+        recordingArpg.addProperty("key_root", recording.getKeyRoot());
+        recordingArpg.addProperty("key_scale", ArpgUtility.toEnumName(recording.getKeyScale()));
+        recordingArpg.add("lanes", buildLanes(recording));
         recordingArpg.add("states", buildEnumNames(EntityState.VALUES));
         recordingArpg.add("actions", buildEnumNames(EntityAction.VALUES));
         recordingArpg.add("key_modes", buildEnumNames(RecorderKeyMode.VALUES));
@@ -92,6 +95,16 @@ class RecordingFileBranch extends BranchPackage {
         recordingArpg.add("clips", buildClips(recording));
 
         return ArpgUtility.tryWriteObject(file, recordingArpg);
+    }
+
+    private ArpgArrayStruct buildLanes(RecordingInstance recording) {
+
+        ArpgArrayStruct lanesArpg = new ArpgArrayStruct();
+
+        for (int i = 0; i < recording.getLaneCount(); i++)
+            lanesArpg.add(SongArpgUtility.writeLane(recording.getLane(i).toSongLane()));
+
+        return lanesArpg;
     }
 
     private ArpgArrayStruct buildEnumNames(Enum<?>[] values) {
@@ -565,13 +578,14 @@ class RecordingFileBranch extends BranchPackage {
 
         int beatsPerBar = ArpgUtility.getInt(recordingArpg, "beats_per_bar", EngineSetting.DEFAULT_SONG_BEATS_PER_BAR);
         int beatUnit = ArpgUtility.getInt(recordingArpg, "beat_unit", EngineSetting.DEFAULT_SONG_BEAT_UNIT);
+        int keyRoot = ArpgUtility.getInt(recordingArpg, "key_root", EngineSetting.DEFAULT_SONG_KEY_ROOT);
         String owner = EditorSetting.RECORDER_FILE_OWNER_PREFIX + recordingName;
 
         SongArpgUtility.validateMeter(beatsPerBar, beatUnit, owner);
+        SongArpgUtility.validateKeyRoot(keyRoot, owner);
 
         RecordingInstance recording = create(RecordingInstance.class);
         recording.constructor(
-                RecordingKind.VIDEO,
                 recordingName,
                 recordingArpg.get("world").getAsString(),
                 ArpgUtility.hasArray(recordingArpg, "tempos")
@@ -579,9 +593,12 @@ class RecordingFileBranch extends BranchPackage {
                         : SongArpgUtility.createTempo(EditorSetting.RECORDER_DEFAULT_BPM),
                 beatsPerBar,
                 beatUnit,
-                EngineSetting.DEFAULT_SONG_KEY_ROOT,
-                NoteScale.MAJOR,
+                keyRoot,
+                ArpgUtility.getEnum(recordingArpg, "key_scale", NoteScale.class, NoteScale.MAJOR),
                 parseExport(recordingArpg));
+
+        if (ArpgUtility.hasArray(recordingArpg, "lanes"))
+            parseLanes(recordingArpg.getAsArray("lanes"), recording, owner);
 
         IntArrayList states = resolveEnumOrdinals(recordingArpg.getAsArray("states"), EntityState.VALUES);
         IntArrayList actions = resolveEnumOrdinals(recordingArpg.getAsArray("actions"), EntityAction.VALUES);
@@ -597,6 +614,17 @@ class RecordingFileBranch extends BranchPackage {
                                 || parseClips(recordingArpg.getAsArray("clips"), recording, owner));
 
         return parsed ? recording : rejectFile(recordingName);
+    }
+
+    // Every lane's mix the file keeps, read through the song codec; lanes past the recording's count are refused
+    private void parseLanes(ArpgArrayStruct lanesArpg, RecordingInstance recording, String owner) {
+
+        if (lanesArpg.size() > recording.getLaneCount())
+            throwException(owner + " has " + lanesArpg.size() + " lanes, more than " + recording.getLaneCount() + ".");
+
+        for (int i = 0; i < lanesArpg.size(); i++)
+            recording.getLane(i).readFrom(SongArpgUtility.readLane(lanesArpg.get(i).getAsObject(),
+                    owner + EditorSetting.RECORDER_FILE_LANE_OWNER + i));
     }
 
     private RecordingInstance rejectFile(String recordingName) {
@@ -694,7 +722,7 @@ class RecordingFileBranch extends BranchPackage {
                     recording,
                     clipArpg.get("in").getAsFloat(),
                     clipArpg.get("out").getAsFloat(),
-                    Math.clamp(ArpgUtility.getInt(clipArpg, "lane", 0), 0, EditorSetting.RECORDER_LANE_COUNT - 1),
+                    Math.clamp(ArpgUtility.getInt(clipArpg, "lane", 0), 0, EngineSetting.SONG_LANE_COUNT - 1),
                     clipArpg.get("start").getAsFloat(),
                     parseChannels(clipArpg.getAsArray("channels")),
                     owner + EditorSetting.RECORDER_FILE_CLIP_OWNER + i);
@@ -805,7 +833,7 @@ class RecordingFileBranch extends BranchPackage {
                     take,
                     0f,
                     take.getDuration(),
-                    Math.min(i, EditorSetting.RECORDER_LANE_COUNT - 1),
+                    Math.min(i, EngineSetting.SONG_LANE_COUNT - 1),
                     start,
                     take.getChannelMask());
 

@@ -16,7 +16,7 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 | Sampler | `samplermanager/SamplerManager`, `sampler/SamplerNoteStruct` |
 | Songs | `songmanager/` (`SongManager`, `SongLoader`, `SongBuilder`), `song/` (`SongData`, `SongHandle`, `SongClipStruct`, `SongTempoStruct`, `SongLaneStruct`, `SongClipKind`, `SongCursorStruct`, `SongPlaybackInstance`) |
 | Shared logic | `util/NoteUtility` (names, pitch ratios, gains, scales), `util/NoteScale`, `util/NoteEnvelopeUtility` (the one envelope curve), `util/SongArpgUtility` (the tempo, meter, clip and note codec), `util/SongFlattenUtility` (a song laid out flat), `util/SongMidiUtility` (MIDI read and write), `util/SamplerMixUtility` (the one offline sampler render), `sampler/SamplerPcmStruct` (a sample decoded for it) |
-| Recorder music side | `editor/bootstrap/recorderpipeline/`: `recording/RecordingKind` (Video or Music), `RecordingLaneStruct` (a Music file's lane mix), `RecordingSourceKind`, `RecordingClipStruct` (sources, codec clip), `RecordingPlayingStruct`, `RecordingInstance` (kind, tempo, meter, key, lanes, grid, `findPlaying`); `recordermanager/RecordingSourceBranch` (binding, child cache, loops, worlds), `RecordingFileBranch` (Video, version 3), `RecordingMusicBranch` (Music file read, write, `toSong`), `RecordingRowBranch` (Properties rows), `RecordingRenderBranch` (Render), `RecordingMixBranch` (video export); `util/FfmpegUtility`; `editor/runtime/dev/recorder/DevRecorderSoundSystem` (live) |
+| Recorder music side | `editor/bootstrap/recorderpipeline/`: `recording/RecordingLaneStruct` (a lane's mix), `RecordingSourceKind`, `RecordingClipStruct` (sources, codec clip), `RecordingPlayingStruct`, `RecordingInstance` (tempo, meter, key, lanes, grid, `hasPicture`, `findPlaying`); `recordermanager/RecordingSourceBranch` (binding, child cache, loops, worlds), `RecordingFileBranch` (every media file, version 4), `RecordingMusicBranch` (`toSong`, `writeSong` for export), `RecordingRowBranch` (Properties rows), `RecordingRenderBranch` (Render), `RecordingMixBranch` (video export); `util/FfmpegUtility`; `editor/runtime/dev/recorder/DevRecorderSoundSystem` (live) |
 | Note Library | `editor/bootstrap/notelibrarypipeline/` (`NoteLibraryPipeline`, `notelibrarymanager/NoteLibraryManager`); tab `editor/runtime/notelibrary/` (`NoteLibraryContext`, `NoteLibrarySetting`, `panel/NoteLibraryPanelSystem`); `menueventsmanager/menus/NoteLibraryBranch`; menu `assets/menus/editor/NoteLibrary.arpg`; the music row templates live in `assets/menus/editor/Recorder.arpg` |
 | Performance | `performance/PerformanceInstance` (an entity playing its held instrument: keys, octave, velocity, a song part, the PLAY stance); play mode `application/runtime/music/InstrumentSystem`; Songbook `menueventsmanager/menus/music/SongbookBranch`, menu `assets/menus/SongbookMenu.arpg` (Songbook, Playing panel, Notice) |
 | Clips and items | `assets/animations/humanoid/instruments/Humanoid<Pipe/Flute/Harp/Lute/Fiddle/Cradle/Drum><Hold/Play>`, the tree's `perform` layer (`play` action, arms, hands and fingers); items `assets/items/instruments/Instruments.arpg`, meshes `assets/mesh/items/instruments/` |
@@ -94,19 +94,14 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 - **Offline render:** `SamplerMixUtility.collectSamples` names every sample a cursor can sound (the caller decodes each
   once into a `SamplerPcmStruct`), `mixCursor` adds a cursor over a frame window; each stretch is computed from the
   notes alone, round robin turned by the note's index, a note let go at its end or when its pitch is struck again.
-- **Music files:** a Music file is a `RecordingInstance` of `RecordingKind.MUSIC`, so the Timeline, the transport and
-  live playback are the recorder's own. `RecorderManager.createRecording(name, kind)`, `openSong`, `saveRecording` and
-  the rest pick the file by kind (`getRecordingFile(name, kind)`: Videos beside the recordings, Music files through
-  `SongManager.resolveSongFile`). `RecordingMusicBranch.read` turns each song clip into a timeline clip where its ticks
-  fall (a notes clip keeps its notes as its codec clip, a song clip its song, volume and transpose through
-  `RecordingClipStruct.ofSongClip`, a sound clip becomes the bin's take of that sound via
-  `RecordingSoundBranch.requireSoundTake`); `write` goes through `toSong(recording, false)` and
-  `SongArpgUtility.writeSong`, notes clips normalised to offset 0 holding only the notes heard. Saving calls
-  `SongManager.rebuildSong`, which reads the song again into the handle it already has, so every song laying it hears
-  the change.
-- **Codec clips:** a clip carrying `getSongClip()` (a notes clip, a Music file's song clip) is timed by the recording's
-  tempo map where it lies (`resolveSongOrigin`), bound by `RecordingSourceBranch.layNotes` / `laySong` to a one-lane
-  song, and is replaced whole by every edit through `RecorderManager.replaceSongClip` (rebind, sound revision, unsaved);
+- **Media files:** every recording is a media file (`RecordingInstance`), read and written by `RecordingFileBranch`
+  (version 4 adds `key_root`, `key_scale` and `lanes`; older files read with C major and default lanes and are saved as 4
+  when opened) in `RECORDER_MEDIA_DIRECTORY` (`RecorderManager.getRecordingFile(name)`). `RecordingInstance.hasPicture`
+  (any clip showing a picture) is the one test of video against music: it routes Export
+  (`RecorderBranch.exportMedia`), the Dev window's world check (`bindDevContext`), the ruler, and the beat-grid snap
+  (`RecordingTimelineBranch.snapTime`). There is no kind and no per-kind lane count.
+- **Codec clips:** a clip carrying `getSongClip()` (a notes clip) is timed by the recording's tempo map where it lies
+  (`resolveSongOrigin`), bound by `RecordingSourceBranch.layNotes` to a one-lane song, and is replaced whole by every edit through `RecorderManager.replaceSongClip` (rebind, sound revision, unsaved);
   never change one in place.
 - **Tempo, meter, key, mixer:** `RecorderManager.setTempo` retimes every clip so it keeps its bars and beats,
   `setMeter`, `setKey` and the lane setters. `RecordingInstance.resolveLaneGain` is the one lane mix, read by `DevRecorderSoundSystem` and
@@ -122,12 +117,14 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 - **A note fills its clip:** after every trim (`trimClipTo`, `trimClip`) and cut (`cutClip`, both pieces),
   `RecorderManager.fitNoteClip` sets the clip's span back to 0 and replaces its codec clip with the note running its
   whole length, volume and transpose kept. A notes clip of many notes (from MIDI or an older song) is windowed as before.
-- **Recording:** `record()` on a Music file refuses with a status; `isTaking()` is true for every recording session.
+- **Recording:** `record()` records a take into any media file; `isTaking()` is true for every recording session.
 - **Export:** `RecorderManager.exportMidi` writes `SongMidiUtility.write(toSong(recording, true))` to
-  `Documents/My Games/AdventureRPG/Songs/<Name>.mid`. `renderMusic` hands the same song to `RecordingRenderBranch`,
+  `Documents/My Games/AdventureRPG/Songs/<Name>.mid`. `exportMusic` writes `RecordingMusicBranch.writeSong` to
+  `Media/Export/songs/<Name>.arpg` and hands `toSong(recording, true)` to `RecordingRenderBranch.begin(soundFile, song)`,
   which flattens it, decodes and mixes it on the General thread through `SamplerMixUtility` (lane pan by equal power,
   `RECORDER_RENDER_TAIL_SECONDS` past the end) and encodes it through `FfmpegUtility.encodeVorbis` to
-  `assets/sounds/music/<Name>.ogg`; the main thread writes the `music` companion.
+  `Media/Export/sounds/music/<Name>.ogg`; the main thread writes the `music` companion. A video's movie goes to
+  `Media/Export/<Name>_<n>.<ext>`.
 - **Loops and worlds:** `RecordingSourceBranch.findLoopLaying` (laying) and `findLoopIn` (saving) walk nested recordings
   by name and name the loop; `isWorldShared` refuses a nested picture from another world.
 
@@ -214,8 +211,8 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 - **No percussion instrument yet.** None is marked `percussion`, so a MIDI file's channel 10 plays on the default
   instrument, and `Test/Scale`'s drum line is sound clips. Converting a VCSL drum kit (with `--percussion`) fixes both.
 - **Lifecycle names.** Managers and branches inherit `render()`, `release()`, `draw()` and the rest; a public method of
-  that name overrides the engine's hook and runs every frame. Render is `renderMusic`.
-- **Lane mute and solo are live; pan is heard only in Render**, not in live playback (see Pan is not live).
+  that name overrides the engine's hook and runs every frame. Music export is `exportMusic`, never `render`.
+- **Lane mute and solo are live; pan is heard only in the rendered sound**, not in live playback (see Pan is not live).
 - **Schema rules for songs** are editor vocabulary added for this pipeline: `record` (the notes), `ascending_from`
   (tempo ticks), `one_of` (`beat_unit`), `index_into` (a clip's `lane`) and `acyclic` (a song clip's `song`), built in
   `InfoSchemaBuilder.parseRule`/`verifyEntryRules` and checked in `InfoValidationBranch`.

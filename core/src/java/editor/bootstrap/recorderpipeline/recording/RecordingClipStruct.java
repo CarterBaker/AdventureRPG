@@ -17,8 +17,7 @@ public class RecordingClipStruct extends StructPackage {
      * of its own, timed by the recording's tempo map where it lies; a
      * recording or a song is bound to what it names once it is resolved, and
      * a notes clip to the song its notes play as. A clip may carry its source
-     * as the song codec writes it — a notes clip's instrument and notes, or
-     * in a Music file a song clip's song with its volume and transpose — and
+     * as the song codec writes it — a notes clip's instrument and notes — and
      * is then timed by the recording's tempo map where it lies, as a DAW's
      * region is; edits replace that codec clip whole, never change it in
      * place, so a copy keeps its own. A notes clip's notes run as long as the
@@ -124,18 +123,6 @@ public class RecordingClipStruct extends StructPackage {
     public static RecordingClipStruct ofSong(String songName, float inPoint, float outPoint, int lane, float start) {
         return new RecordingClipStruct(RecordingSourceKind.SONG, null, songName, null, inPoint, outPoint, lane,
                 start, RecorderChannel.SOUND.getBit());
-    }
-
-    // A span of a project song laid in a Music file, its volume and transpose in its codec clip, timed by the
-    // recording's tempo map where it lies
-    public static RecordingClipStruct ofSongClip(
-            SongClipStruct songClip,
-            float inPoint,
-            float outPoint,
-            int lane,
-            float start) {
-        return new RecordingClipStruct(RecordingSourceKind.SONG, null, songClip.getSongName(), songClip, inPoint,
-                outPoint, lane, start, RecorderChannel.SOUND.getBit());
     }
 
     // A span of the clip's own notes on an instrument, timed by the recording's tempo map
@@ -311,7 +298,7 @@ public class RecordingClipStruct extends StructPackage {
         return sourceKind == RecordingSourceKind.RECORDING ? sourceName : null;
     }
 
-    // The source as the song codec writes it — a notes clip's notes, a Music file's song clip — null for any other
+    // The source as the song codec writes it — a notes clip's notes — null for any other
     public SongClipStruct getSongClip() {
         return songClip;
     }

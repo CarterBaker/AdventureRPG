@@ -10,14 +10,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecordingInstance extends InstancePackage {
 
     /*
-     * One recording open in the recorder, or laid inside another: its kind,
-     * a Video or a Music file, its name, the world it was made in, its tempo
-     * map and meter — which time its notes clips and the music grid of its
-     * timeline — its key, which Scale Lock keeps notes on, its lanes as a
-     * Music file mixes them, each heard at its volume, none while muted or
+     * One media file open in the recorder, or laid inside another: its name,
+     * the world it was made in, its tempo map and meter — which time its
+     * notes clips and the music grid of its timeline — its key, its
+     * SONG_LANE_COUNT lanes, each heard at its volume, none while muted or
      * while another is soloed, its bin of takes in
      * the order they were recorded, the clips laid on its timeline, and how
-     * it exports. It runs as long as its last clip reaches. For each channel
+     * it exports. It is a video while any clip of it shows a picture, and
+     * music otherwise. It runs as long as its last clip reaches. For each channel
      * the clip on the highest lane covering a moment is the one that plays
      * it, the later laid of two on the same lane; a nested recording is
      * walked down into at the moment mapped into it, by the same rule at
@@ -28,7 +28,6 @@ public class RecordingInstance extends InstancePackage {
      */
 
     // Identity
-    private RecordingKind kind;
     private String recordingName;
     private String displayName;
     private String worldName;
@@ -69,7 +68,6 @@ public class RecordingInstance extends InstancePackage {
     // Constructor \\
 
     public void constructor(
-            RecordingKind kind,
             String recordingName,
             String worldName,
             SongTempoStruct tempo,
@@ -80,7 +78,6 @@ public class RecordingInstance extends InstancePackage {
             RecordingExportStruct exportStruct) {
 
         // Identity
-        this.kind = kind;
         this.recordingName = recordingName;
         this.displayName = EngineSetting.SONG_DISPLAY_NAME_NONE;
         this.worldName = worldName;
@@ -95,7 +92,7 @@ public class RecordingInstance extends InstancePackage {
         this.keyScale = keyScale;
 
         // Lanes
-        this.lanes = new RecordingLaneStruct[kind.getLaneCount()];
+        this.lanes = new RecordingLaneStruct[EngineSetting.SONG_LANE_COUNT];
 
         for (int i = 0; i < lanes.length; i++)
             lanes[i] = new RecordingLaneStruct();
@@ -161,6 +158,16 @@ public class RecordingInstance extends InstancePackage {
                 channelMask |= clips.get(i).getChannelMask();
 
         return channelMask;
+    }
+
+    // True for a video: a media file any clip of which shows a picture, muted or not; false for music
+    public boolean hasPicture() {
+
+        for (int i = 0; i < clips.size(); i++)
+            if ((clips.get(i).getChannelMask() & RecorderChannel.PICTURE) != 0)
+                return true;
+
+        return false;
     }
 
     // What plays the channel at the time, walked down through nested recordings, as the timeline plays without one
@@ -325,10 +332,6 @@ public class RecordingInstance extends InstancePackage {
 
     // Accessible \\
 
-    public RecordingKind getKind() {
-        return kind;
-    }
-
     public int getLaneCount() {
         return lanes.length;
     }
@@ -369,7 +372,7 @@ public class RecordingInstance extends InstancePackage {
         this.recordingName = recordingName;
     }
 
-    // The name a Music file's song is shown under in the game, none to show its file's
+    // The name the song a media file exports is shown under in the game, none to show its file's
     public String getDisplayName() {
         return displayName;
     }

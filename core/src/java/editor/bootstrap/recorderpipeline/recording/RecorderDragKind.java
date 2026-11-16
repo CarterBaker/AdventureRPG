@@ -7,8 +7,8 @@ public enum RecorderDragKind {
      * picked up from the bin to lay on the timeline, a sound picked up from
      * the sound library to lay as a take of its own or to add to the Sounds
      * layer of the Keys pane, a saved recording picked up from the
-     * Recordings tab to lay nested in the open one, a project song picked up
-     * from the same tab to lay in it, a note picked up from the Note Library
+     * Recordings tab to lay nested in the open one, a note picked up from the
+     * Note Library
      * to lay as a note clip, a sound on that layer being retimed along its
      * row, a clip already on it
      * being moved along its lanes, the start or the end of a clip being
@@ -29,7 +29,6 @@ public enum RecorderDragKind {
     TAKE,
     SOUND,
     RECORDING,
-    SONG,
     NOTE,
     CLIP,
     TRIM_START,
@@ -53,7 +52,7 @@ public enum RecorderDragKind {
 
     // True for what carries a whole span to lay on the lanes
     public boolean isSpan() {
-        return this == TAKE || this == SOUND || this == RECORDING || this == SONG || this == NOTE || this == CLIP;
+        return this == TAKE || this == SOUND || this == RECORDING || this == NOTE || this == CLIP;
     }
 
     // True for what is let go at a single moment of the timeline

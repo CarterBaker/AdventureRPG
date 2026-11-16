@@ -5,7 +5,6 @@ import java.io.File;
 import application.bootstrap.musicpipeline.song.SongHandle;
 import engine.root.EngineSetting;
 import engine.root.LoaderPackage;
-import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -16,9 +15,7 @@ class SongLoader extends LoaderPackage {
      * Scans the song ARPG directory, when there is one, and remembers every
      * file by name, queueing none: a song loads only when something names it — a song clip
      * of another song, a player, a tool — at bootstrap or while the game
-     * runs, so the loader persists for the engine lifetime. A song the
-     * editor saves is remembered by name as it is written, and read again
-     * into its handle when it has loaded already.
+     * runs, so the loader persists for the engine lifetime.
      */
 
     // Internal
@@ -94,27 +91,5 @@ class SongLoader extends LoaderPackage {
     void collectNames(ObjectArrayList<String> songNames) {
         songNames.addAll(songName2File.keySet());
         songNames.sort(null);
-    }
-
-    File resolveFile(String songName) {
-        return ArpgUtility.resolveFile(root, songName);
-    }
-
-    // Live Edit \\
-
-    // The song just written under the name remembered, and read again into its handle when it has loaded
-    void rebuild(String songName, SongHandle handle) {
-
-        File file = resolveFile(songName);
-
-        songName2File.put(songName, file);
-
-        if (handle != null)
-            internalBuilder.rebuild(file, songName, handle);
-    }
-
-    // A song file deleted is no longer offered; a handle already loaded keeps playing what it held
-    void forget(String songName) {
-        songName2File.remove(songName);
     }
 }

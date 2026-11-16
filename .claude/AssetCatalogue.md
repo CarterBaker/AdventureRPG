@@ -386,6 +386,8 @@ One line per session that changed this file: the date, what was added or removed
   Library in place of Piano Roll), `menus/editor/Timeline.arpg` (hint), `shortcuts/Recorder.arpg` (no loop toggle,
   range hints), `shortcuts/Tools.arpg` (no Draw tool) and `schemas/Shortcuts.arpg` (no Piano Roll canvas or Draw
   tool); deleted `menus/editor/PianoRoll.arpg` and `shortcuts/PianoRoll.arpg` with the Piano Roll.
+- 2026-11-16: One Media folder. Regenerated `menus/editor/Recordings.arpg` (one list of media files, no song rows),
+  `menus/editor/EditorWindow.arpg` (the tab named Media) and `schemas/Shortcuts.arpg` (no Music Timeline canvas).
 
 ---
 

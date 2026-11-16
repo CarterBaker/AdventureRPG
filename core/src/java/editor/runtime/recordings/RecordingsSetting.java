@@ -14,8 +14,6 @@ public class RecordingsSetting {
     public static final String TEMPLATE_DETAIL_ROW = "editor/Recordings/recordings_detail_row";
     public static final String TEMPLATE_RECORDING_ROW = "editor/Recordings/recordings_recording_row";
     public static final String TEMPLATE_RECORDING_ROW_SELECTED = "editor/Recordings/recordings_recording_row_selected";
-    public static final String TEMPLATE_SONG_ROW = "editor/Recordings/recordings_song_row";
-    public static final String TEMPLATE_SONG_ROW_SELECTED = "editor/Recordings/recordings_song_row_selected";
 
     // Elements
     public static final String ELEMENT_ROW_LABEL = "recordings_row_label";
@@ -28,10 +26,11 @@ public class RecordingsSetting {
     public static final int ENTRY_LIST_TITLE = 3;
 
     // Text
-    public static final String TEXT_NO_RECORDINGS = "No videos yet: press New and type Video";
-    public static final String TEXT_NO_SONGS = "No songs yet: press New and type Music";
-    public static final String TEXT_KIND = "Kind";
-    public static final String TEXT_NO_RECORDING = "No recording open: click one to open it";
+    public static final String TEXT_NO_RECORDINGS = "No media yet: press New, or Record in the Recorder";
+    public static final String TEXT_KIND = "Exports as";
+    public static final String TEXT_KIND_VIDEO = "Video (it shows a picture)";
+    public static final String TEXT_KIND_MUSIC = "Music (song and sound)";
+    public static final String TEXT_NO_RECORDING = "No media file open: click one to open it";
     public static final String TEXT_OPEN = "Open";
     public static final String TEXT_EMPTY_VALUE = "";
     public static final String TEXT_UNSAVED = "Unsaved changes";
@@ -42,14 +41,11 @@ public class RecordingsSetting {
     public static final String TEXT_TRANSITIONS = "Transitions";
     public static final String TEXT_LENGTH = "Length";
     public static final String TEXT_STATE = "State";
-    public static final String TEXT_OPEN_HINT = "Click a recording to open it in every Recorder tab";
-    public static final String TEXT_EDIT_HINT =
-            "Drag a recording or a song onto the Timeline to lay it in the open one";
+    public static final String TEXT_OPEN_HINT = "Click a media file to open it in every Recorder tab";
+    public static final String TEXT_EDIT_HINT = "Drag a media file onto the Timeline to lay it in the open one";
 
     // Formats
-    public static final String FORMAT_LIST_TITLE = "Recordings (%d)";
-    public static final String FORMAT_VIDEOS_HEADER = "Videos (%d)";
-    public static final String FORMAT_SONGS_HEADER = "Songs (%d)";
+    public static final String FORMAT_LIST_TITLE = "Media (%d)";
     public static final String FORMAT_TIME = "%d:%05.2f";
     public static final int SECONDS_PER_MINUTE = 60;
 }

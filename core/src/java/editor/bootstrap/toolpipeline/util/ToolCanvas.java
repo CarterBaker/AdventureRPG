@@ -31,12 +31,8 @@ public enum ToolCanvas {
      * Pose, which turns a bone out of the way while the mesh follows;
      * every modelling canvas of a character mirrors, and its mesh, weights
      * and rig choose how the bones are drawn. The recorder's Timeline selects and cuts
-     * clips, and nests the selection or opens a nested clip, and exports
-     * its video. A Music file's Timeline draws notes clips too, opens the
-     * song a clip lays, and exports as MIDI or renders to a sound; the
-     * Piano Roll selects, draws, erases and cuts the notes of the clip
-     * selected there on its Snap grid, and edits them by its Notes
-     * actions.
+     * clips, nests the selection or opens a nested clip, and exports the
+     * media file, as a video or as music, or as MIDI.
      */
 
     BIOMES(
@@ -137,12 +133,7 @@ public enum ToolCanvas {
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
-            new ToolActionGroupStruct[] { timelineNesting(), videoExport() },
-            false),
-    MUSIC(
-            EditorSetting.TOOL_CANVAS_MUSIC,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
-            new ToolActionGroupStruct[] { musicNesting(), musicExport() },
+            new ToolActionGroupStruct[] { timelineNesting(), timelineExport() },
             false);
 
     // Values
@@ -358,23 +349,11 @@ public enum ToolCanvas {
                 action(EditorSetting.TOOL_ACTION_LABEL_OPEN_NESTED, EditorSetting.RECORDER_KEY_CLIP_OPEN));
     }
 
-    private static ToolActionGroupStruct videoExport() {
+    private static ToolActionGroupStruct timelineExport() {
         return new ToolActionGroupStruct(
                 EditorSetting.TOOL_ACTION_HEADER_EXPORT,
-                action(EditorSetting.TOOL_ACTION_LABEL_EXPORT_VIDEO, EditorSetting.RECORDER_KEY_EXPORT));
-    }
-
-    private static ToolActionGroupStruct musicNesting() {
-        return new ToolActionGroupStruct(
-                EditorSetting.TOOL_ACTION_HEADER_NESTING,
-                action(EditorSetting.TOOL_ACTION_LABEL_OPEN_NESTED, EditorSetting.RECORDER_KEY_CLIP_OPEN));
-    }
-
-    private static ToolActionGroupStruct musicExport() {
-        return new ToolActionGroupStruct(
-                EditorSetting.TOOL_ACTION_HEADER_EXPORT,
-                action(EditorSetting.TOOL_ACTION_LABEL_EXPORT_MIDI, EditorSetting.RECORDER_KEY_EXPORT_MIDI),
-                action(EditorSetting.TOOL_ACTION_LABEL_RENDER, EditorSetting.RECORDER_KEY_RENDER));
+                action(EditorSetting.TOOL_ACTION_LABEL_EXPORT, EditorSetting.RECORDER_KEY_EXPORT),
+                action(EditorSetting.TOOL_ACTION_LABEL_EXPORT_MIDI, EditorSetting.RECORDER_KEY_EXPORT_MIDI));
     }
 
     private static ToolActionStruct action(String label, String key) {

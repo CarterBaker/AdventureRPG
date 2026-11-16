@@ -7,10 +7,10 @@ import engine.root.StructPackage;
 public class RecordingLaneStruct extends StructPackage {
 
     /*
-     * One lane of a recording's timeline as a Music file mixes it, a DAW's
+     * One lane of a media file's timeline as its mixer strip mixes it, a DAW's
      * track strip: the name it is shown under, how loud everything on it
      * plays, 0 to 1, where it sits from left (-1) to right (1), whether it is
-     * muted and whether it is soloed. A Video's lanes keep every default.
+     * muted and whether it is soloed.
      * Read from and written to the song's own lane through the song codec.
      */
 

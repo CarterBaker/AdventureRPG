@@ -73,12 +73,6 @@ class SongBuilder extends BuilderPackage {
         return handle;
     }
 
-    // The song saved again by the editor read into the handle it already has, so every clip laying it plays it as it
-    // now stands; the handle keeps what it held when the file is refused
-    void rebuild(File file, String songName, SongHandle handle) {
-        handle.constructor(read(file, songName, handle.getSongID()));
-    }
-
     private SongData read(File file, String songName, short songID) {
 
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);

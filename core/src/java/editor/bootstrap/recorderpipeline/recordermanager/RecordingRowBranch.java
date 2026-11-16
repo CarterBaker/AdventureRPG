@@ -18,7 +18,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RecordingRowBranch extends BranchPackage {
 
     /*
-     * The Properties tab's rows for a Music file. The Recorder tab's are its
+     * The Properties tab's rows for a media file. The Recorder tab's are its
      * tempo, the beats of its bar and the note value of a beat, its key's
      * root and scale; the Timeline tab's the mix of the
      * lane selected — its name, volume, pan, mute and solo — and the clip
@@ -56,7 +56,7 @@ class RecordingRowBranch extends BranchPackage {
 
         RecordingInstance recording = recorderManager.getRecording();
 
-        if (recording == null || recording.getKind().isFilmed()) {
+        if (recording == null) {
             rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_NO_MUSIC));
             return;
         }
@@ -84,7 +84,7 @@ class RecordingRowBranch extends BranchPackage {
 
         RecordingInstance recording = recorderManager.getRecording();
 
-        if (recording == null || recording.getKind().isFilmed()) {
+        if (recording == null) {
             rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_NO_MUSIC));
             return;
         }
@@ -130,7 +130,7 @@ class RecordingRowBranch extends BranchPackage {
                 1f));
     }
 
-    // The clip selected when it carries its codec clip — a notes clip, or a song a Music file lays — null otherwise
+    // The clip selected when it carries its codec clip, as a notes clip does; null otherwise
     private RecordingClipStruct findMusicClip() {
 
         RecordingInstance recording = recorderManager.getRecording();
@@ -203,7 +203,7 @@ class RecordingRowBranch extends BranchPackage {
 
         RecordingInstance recording = recorderManager.getRecording();
 
-        if (recording == null || recording.getKind().isFilmed())
+        if (recording == null)
             return;
 
         int laneIndex = Math.max(0, recorderManager.getSelectedLane());
@@ -239,7 +239,7 @@ class RecordingRowBranch extends BranchPackage {
 
         RecordingInstance recording = recorderManager.getRecording();
 
-        if (recording == null || recording.getKind().isFilmed() || direction == 0)
+        if (recording == null || direction == 0)
             return;
 
         int laneIndex = Math.max(0, recorderManager.getSelectedLane());
@@ -304,7 +304,7 @@ class RecordingRowBranch extends BranchPackage {
 
         RecordingInstance recording = recorderManager.getRecording();
 
-        if (recording == null || recording.getKind().isFilmed() || !isValueValid(key, text))
+        if (recording == null || !isValueValid(key, text))
             return;
 
         int laneIndex = Math.max(0, recorderManager.getSelectedLane());

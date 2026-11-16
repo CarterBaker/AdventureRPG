@@ -28,12 +28,11 @@ public class RecorderBranch extends BranchPackage {
      * works on the one recorder all tabs share; the recordings themselves are
      * made, renamed, copied and deleted from the Recordings tool, where a row
      * pressed is picked up and laid nested in the open recording when let go
-     * over the Timeline's lanes, or opened when let go where it was pressed;
-     * a song row is picked up and laid, or opened as a Music file, the same
-     * way. A Music file's lane strips select, mute and solo their lanes, its
-     * Properties rows step, cycle and take typed values, and its Timeline's
-     * Export MIDI and Render run as the video export does, Render asking for
-     * the file's name typed back before it overwrites a sound.
+     * over the Timeline's lanes, or opened when let go where it was pressed.
+     * The lane strips select, mute and solo their lanes, the Properties rows
+     * step, cycle and take typed values, and Export sends a video through the
+     * export dialog and exports music at once; Export MIDI writes the music
+     * among the player's songs.
      * The export range's ends are set at the playhead, and Back returns to
      * the recording the open one was opened inside. A note pressed in the
      * Note Library is picked up and laid as a note clip the same way.
@@ -560,22 +559,6 @@ public class RecorderBranch extends BranchPackage {
         dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
     }
 
-    // A project song is picked up on the press in the Recordings tab, and carried over the Timeline's lanes under the
-    // cursor until let go
-    public void dragSong(String songName, WindowInstance window) {
-
-        if (!recorderManager.getDrag().isActive())
-            recorderManager.beginSongDrag(
-                    songName,
-                    window,
-                    inputManager.getHoverMouseX(window),
-                    inputManager.getHoverMouseY(window));
-
-        WindowInstance hovered = windowManager.getHoveredWindow();
-
-        dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
-    }
-
     // The selected clips nested into a new recording of the name typed
     private void openNestSelection(WindowInstance window) {
 
@@ -787,25 +770,16 @@ public class RecorderBranch extends BranchPackage {
 
     // Music \\
 
-    // The open Music file rendered to its music sound, asking for its name typed back before a render overwrites one
-    private void renderMusic(WindowInstance window) {
+    // A video exports through the export dialog, frame by frame; music exports at once as the game's song and sound
+    private void exportMedia(WindowInstance window) {
 
-        if (!recorderManager.hasRecording() || !recorderManager.getRenderFile().exists()) {
-            recorderManager.renderMusic();
-            return;
-        }
-
-        String recordingName = recorderManager.getRecording().getRecordingName();
-
-        nameDialogBranch.open(
-                window,
-                EditorSetting.DIALOG_TITLE_OVERWRITE_PREFIX + recorderManager.getRenderFile().getName()
-                        + EditorSetting.DIALOG_TITLE_OVERWRITE_SUFFIX,
-                recordingName::equals,
-                confirmedName -> recorderManager.renderMusic());
+        if (recorderManager.hasPicture())
+            exportDialogBranch.export(window);
+        else
+            recorderManager.exportMusic();
     }
 
-    // A lane's strip on a Music file's timeline selects it, its mix then shown in the Properties tab; its M and S
+    // A lane's strip on the timeline selects it, its mix then shown in the Properties tab; its M and S
     // mute and solo it
     public void selectLane(String laneKey) {
         recorderManager.selectLane(Integer.parseInt(laneKey));
@@ -905,9 +879,8 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStart();
             case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEnd();
             case EditorSetting.RECORDER_KEY_RANGE_CLEAR -> recorderManager.clearRange();
-            case EditorSetting.RECORDER_KEY_EXPORT -> exportDialogBranch.export(window);
+            case EditorSetting.RECORDER_KEY_EXPORT -> exportMedia(window);
             case EditorSetting.RECORDER_KEY_EXPORT_MIDI -> recorderManager.exportMidi();
-            case EditorSetting.RECORDER_KEY_RENDER -> renderMusic(window);
             case EditorSetting.RECORDER_KEY_CANCEL_EXPORT -> recorderManager.stop();
             default -> throwException("Unknown recorder setting: " + settingKey);
         }

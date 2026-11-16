@@ -9,10 +9,7 @@ import application.bootstrap.entitypipeline.npcmanager.NpcManager;
 import application.bootstrap.musicpipeline.instrumentmanager.InstrumentManager;
 import application.bootstrap.musicpipeline.song.SongClipKind;
 import application.bootstrap.musicpipeline.song.SongClipStruct;
-import application.bootstrap.musicpipeline.song.SongData;
-import application.bootstrap.musicpipeline.song.SongHandle;
 import application.bootstrap.musicpipeline.song.SongTempoStruct;
-import application.bootstrap.musicpipeline.songmanager.SongManager;
 import application.bootstrap.musicpipeline.util.NoteScale;
 import application.bootstrap.musicpipeline.util.SongArpgUtility;
 import application.bootstrap.musicpipeline.util.SongMidiUtility;
@@ -40,11 +37,9 @@ import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
-import editor.bootstrap.recorderpipeline.recording.RecordingKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingPlayingStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
-import editor.bootstrap.recorderpipeline.recording.RecordingSourceKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTransitionStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
@@ -74,8 +69,8 @@ import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 public class RecorderManager extends ManagerPackage {
 
     /*
-     * Owns the recorder: the recordings saved in the game's own directory, the
-     * one open, its transport, and the editing of its bin and timeline. A
+     * Owns the recorder: the media files saved in the media directory beside
+     * the player's saves, video and music alike, the one open, its transport, and the editing of its bin and timeline. A
      * session — recording, playing, paused or exporting — drives the first Dev
      * window that has not crashed, found among TabManager's open tabs as
      * console commands find it, and that window's DevRecorderSystem carries
@@ -163,9 +158,11 @@ public class RecorderManager extends ManagerPackage {
      * way down shown as a breadcrumb. Any number of clips are selected at
      * once — picked alone, or added and taken away with Shift — and move and
      * are deleted together, and Nest Selection moves them into a new
-     * recording laid where they were as one clip. Playing loops round the
-     * export's range, the whole recording while none is set, when the loop
-     * is on.
+     * recording laid where they were as one clip. A note dragged from the
+     * Note Library is laid as a note clip whose note always fills it. A media
+     * file any clip of which shows a picture is a video and exports as one,
+     * frame by frame; one with none is music and exports as the game's own
+     * song and rendered sound; both land in the export directory.
      */
 
     // Internal
@@ -190,20 +187,18 @@ public class RecorderManager extends ManagerPackage {
     private RecordingMusicBranch recordingMusicBranch;
     private RecordingRowBranch recordingRowBranch;
     private RecordingRenderBranch recordingRenderBranch;
-    private SongManager songManager;
     private InstrumentManager instrumentManager;
 
-    // Directory
-    private File recordingDirectory;
-    private File videoDirectory;
+    // Directory — the media files beside the player's saves, and what they export to
+    private File mediaDirectory;
+    private File exportDirectory;
 
     // Recording
     private RecordingInstance recording;
     private boolean unsaved;
 
-    // Nesting — the recordings opened on the way down to the open one, outermost first, with the kind of each
+    // Nesting — the recordings opened on the way down to the open one, outermost first
     private ObjectArrayList<String> parentNames;
-    private ObjectArrayList<RecordingKind> parentKinds;
 
     // Transport
     private RecorderState state;
@@ -317,13 +312,12 @@ public class RecorderManager extends ManagerPackage {
         this.recordingRenderBranch = create(RecordingRenderBranch.class);
 
         // Directory
-        this.recordingDirectory = new File(internal.path, EditorSetting.RECORDER_DIRECTORY);
-        this.videoDirectory = new File(recordingDirectory, EditorSetting.RECORDER_VIDEO_DIRECTORY);
-        recordingSourceBranch.setRecordingDirectory(recordingDirectory);
+        this.mediaDirectory = new File(internal.path, EditorSetting.RECORDER_MEDIA_DIRECTORY);
+        this.exportDirectory = new File(mediaDirectory, EditorSetting.RECORDER_EXPORT_DIRECTORY);
+        recordingSourceBranch.setRecordingDirectory(mediaDirectory);
 
         // Nesting
         this.parentNames = new ObjectArrayList<>();
-        this.parentKinds = new ObjectArrayList<>();
 
         // Transport
         this.state = RecorderState.IDLE;
@@ -396,7 +390,6 @@ public class RecorderManager extends ManagerPackage {
         this.vehicleManager = get(VehicleManager.class);
         this.soundManager = get(SoundManager.class);
         this.transitionManager = get(TransitionManager.class);
-        this.songManager = get(SongManager.class);
         this.instrumentManager = get(InstrumentManager.class);
     }
 
@@ -503,11 +496,10 @@ public class RecorderManager extends ManagerPackage {
 
     // Session \\
 
-    // Binds the session to the first Dev window still running, in the world a Video was made in; a Music file is of
-    // no world
+    // Binds the session to the first Dev window still running, in the world a video was made in; music plays in any
     private boolean bindDevContext() {
 
-        if (recording.getKind().isFilmed()
+        if (recording.hasPicture()
                 && !recording.getWorldName().equals(worldManager.getActiveWorld().getWorldName())) {
             setStatus(EditorSetting.RECORDER_STATUS_WRONG_WORLD + recording.getWorldName());
             return false;
@@ -539,17 +531,11 @@ public class RecorderManager extends ManagerPackage {
 
     // Transport \\
 
-    // A Video records a take of every armed channel; a Music file records nothing, its notes are laid from the Note
-    // Library
+    // Records a take of every armed channel, in a new media file when none is open
     public void record() {
 
         if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING)
             return;
-
-        if (recording != null && !recording.getKind().isFilmed()) {
-            setStatus(EditorSetting.RECORDER_STATUS_MUSIC_RECORDS_NOTHING);
-            return;
-        }
 
         if (armedChannels == RecorderChannel.NONE) {
             setStatus(EditorSetting.RECORDER_STATUS_NOTHING_ARMED);
@@ -769,16 +755,11 @@ public class RecorderManager extends ManagerPackage {
 
     // Recordings \\
 
-    // A new Video, as a take recorded with nothing open makes
+    // A new media file opened in place of the open one and saved at once, made in the active world, in four four at
+    // RECORDER_DEFAULT_BPM in C major
     public boolean createRecording(String recordingName) {
-        return createRecording(recordingName, RecordingKind.VIDEO);
-    }
 
-    // A new recording of the kind opened in place of the open one and saved at once: a Video in the active world, or
-    // a Music file, a song of no world in four four at RECORDER_DEFAULT_BPM in C major
-    public boolean createRecording(String recordingName, RecordingKind kind) {
-
-        if (!isNameAvailable(recordingName, kind)) {
+        if (!isRecordingNameAvailable(recordingName)) {
             setStatus(EditorSetting.RECORDER_STATUS_NAME_TAKEN + recordingName);
             return false;
         }
@@ -787,11 +768,8 @@ public class RecorderManager extends ManagerPackage {
 
         RecordingInstance created = create(RecordingInstance.class);
         created.constructor(
-                kind,
                 recordingName,
-                kind.isFilmed()
-                        ? worldManager.getActiveWorld().getWorldName()
-                        : EditorSetting.RECORDER_MUSIC_WORLD_NONE,
+                worldManager.getActiveWorld().getWorldName(),
                 SongArpgUtility.createTempo(EditorSetting.RECORDER_DEFAULT_BPM),
                 EngineSetting.DEFAULT_SONG_BEATS_PER_BAR,
                 EngineSetting.DEFAULT_SONG_BEAT_UNIT,
@@ -806,44 +784,35 @@ public class RecorderManager extends ManagerPackage {
         return true;
     }
 
-    // The Video opened from the list, every recording it was opened inside let go
+    // The media file opened from the list, every recording it was opened inside let go
     public void openRecording(String recordingName) {
-        openFromList(recordingName, RecordingKind.VIDEO);
-    }
 
-    // The project song opened from the list as a Music file, every recording it was opened inside let go
-    public void openSong(String songName) {
-        openFromList(songName, RecordingKind.MUSIC);
-    }
-
-    private void openFromList(String recordingName, RecordingKind kind) {
-
-        if (isOpen(recordingName, kind))
+        if (isOpen(recordingName))
             return;
 
         clearParents();
-        switchRecording(recordingName, kind);
+        switchRecording(recordingName);
     }
 
     // The one way a saved recording is opened in place of the open one, read and bound to all it nests; an older
     // file is saved in the new form at once
-    private boolean switchRecording(String recordingName, RecordingKind kind) {
+    private boolean switchRecording(String recordingName) {
 
-        File file = getRecordingFile(recordingName, kind);
+        File file = getRecordingFile(recordingName);
 
         if (!file.isFile()) {
             setStatus(EditorSetting.RECORDER_STATUS_MISSING + recordingName);
             return false;
         }
 
-        RecordingInstance opened = readRecording(file, recordingName, kind);
+        RecordingInstance opened = recordingFileBranch.read(file, recordingName);
 
         if (opened == null) {
             setStatus(EditorSetting.RECORDER_STATUS_UNREADABLE + recordingName);
             return false;
         }
 
-        boolean upgraded = kind.isFilmed() && recordingFileBranch.isUpgraded();
+        boolean upgraded = recordingFileBranch.isUpgraded();
 
         closeRecording();
         activateRecording(opened);
@@ -860,8 +829,7 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // The open recording written to its file, refused while it nests itself at any depth; every recording kept
-    // for nesting it is read again, and a Music file's song read again wherever it lies, so it is nested as it now
-    // stands
+    // for nesting it is read again, so it is nested as it now stands
     public void saveRecording() {
 
         if (recording == null || !unsaved)
@@ -874,11 +842,11 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
-        File file = getRecordingFile(recording.getRecordingName(), recording.getKind());
+        File file = getRecordingFile(recording.getRecordingName());
 
         file.getParentFile().mkdirs();
 
-        if (!writeRecording(file, recording)) {
+        if (!recordingFileBranch.write(file, recording)) {
             setStatus(EditorSetting.RECORDER_STATUS_SAVE_FAILED + recording.getRecordingName());
             return;
         }
@@ -886,18 +854,6 @@ public class RecorderManager extends ManagerPackage {
         recordingSourceBranch.forget(recording.getRecordingName());
         this.unsaved = false;
         revision++;
-
-        if (!recording.getKind().isFilmed())
-            rebuildSong(recording.getRecordingName());
-    }
-
-    // A song just written read again into the handle every song laying it holds; the game's own refusal is shown
-    private void rebuildSong(String songName) {
-        try {
-            songManager.rebuildSong(songName);
-        } catch (InternalException e) {
-            setStatus(EditorSetting.RECORDER_STATUS_SONG_REFUSED + e.getMessage());
-        }
     }
 
     public void renameRecording(String recordingName) {
@@ -907,22 +863,15 @@ public class RecorderManager extends ManagerPackage {
 
         saveRecording();
 
-        RecordingKind kind = recording.getKind();
         String previousName = recording.getRecordingName();
 
-        if (!getRecordingFile(previousName, kind).renameTo(getRecordingFile(recordingName, kind))) {
+        if (!getRecordingFile(previousName).renameTo(getRecordingFile(recordingName))) {
             setStatus(EditorSetting.RECORDER_STATUS_RENAME_FAILED + previousName);
             return;
         }
 
         recordingSourceBranch.forget(previousName);
         recording.setRecordingName(recordingName);
-
-        if (!kind.isFilmed()) {
-            songManager.forgetSong(previousName);
-            rebuildSong(recordingName);
-        }
-
         setStatus(EditorSetting.RECORDER_STATUS_RENAMED + recordingName);
     }
 
@@ -934,9 +883,8 @@ public class RecorderManager extends ManagerPackage {
 
         saveRecording();
 
-        RecordingKind kind = recording.getKind();
         String sourceName = recording.getRecordingName();
-        RecordingInstance copy = readRecording(getRecordingFile(sourceName, kind), recordingName, kind);
+        RecordingInstance copy = recordingFileBranch.read(getRecordingFile(sourceName), recordingName);
 
         if (copy == null) {
             setStatus(EditorSetting.RECORDER_STATUS_UNREADABLE + sourceName);
@@ -959,7 +907,7 @@ public class RecorderManager extends ManagerPackage {
         stop();
 
         String recordingName = recording.getRecordingName();
-        File file = getRecordingFile(recordingName, recording.getKind());
+        File file = getRecordingFile(recordingName);
 
         if (file.exists() && !file.delete()) {
             setStatus(EditorSetting.RECORDER_STATUS_DELETE_FAILED + recordingName);
@@ -967,10 +915,6 @@ public class RecorderManager extends ManagerPackage {
         }
 
         recordingSourceBranch.forget(recordingName);
-
-        if (!recording.getKind().isFilmed())
-            songManager.forgetSong(recordingName);
-
         clearParents();
         this.recording = null;
         this.unsaved = false;
@@ -983,27 +927,13 @@ public class RecorderManager extends ManagerPackage {
         setStatus(EditorSetting.RECORDER_STATUS_DELETED + recordingName);
     }
 
-    // A recording of the kind read from its file: a Video by the recorder's own form, a Music file by the song codec
-    private RecordingInstance readRecording(File file, String recordingName, RecordingKind kind) {
-        return kind.isFilmed()
-                ? recordingFileBranch.read(file, recordingName)
-                : recordingMusicBranch.read(file, recordingName);
-    }
-
-    private boolean writeRecording(File file, RecordingInstance written) {
-        return written.getKind().isFilmed()
-                ? recordingFileBranch.write(file, written)
-                : recordingMusicBranch.write(file, written);
-    }
-
-    private boolean isOpen(String recordingName, RecordingKind kind) {
-        return recording != null && recording.getKind() == kind && recording.getRecordingName().equals(recordingName);
+    private boolean isOpen(String recordingName) {
+        return recording != null && recording.getRecordingName().equals(recordingName);
     }
 
     // Every recording the open one was opened inside let go
     private void clearParents() {
         parentNames.clear();
-        parentKinds.clear();
     }
 
     // Saves and lets go of the open recording, ending any session on it
@@ -1092,11 +1022,6 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         RecordingTakeStruct placed = recording.getTakes().get(takeIndex);
-
-        if (!recording.getKind().isFilmed() && !placed.isSoundAlone()) {
-            setStatus(EditorSetting.RECORDER_STATUS_MUSIC_REFUSES + placed.getName());
-            return;
-        }
 
         pickClip(recordingTimelineBranch.placeTake(recording, placed, start, lane));
         markUnsaved();
@@ -1421,32 +1346,26 @@ public class RecorderManager extends ManagerPackage {
 
     // Nesting \\
 
-    // The recording the clip nests opened in place of the open one, which it is opened inside, so Back returns to
-    // it — a nested recording as a Video, a song as a Music file; true when it was opened
+    // The media file the clip nests opened in place of the open one, which it is opened inside, so Back returns to
+    // it; true when it was opened
     public boolean openNested(int clipIndex) {
 
         if (!isClipIndex(clipIndex) || state.isSession())
             return false;
 
-        RecordingClipStruct clip = recording.getClips().get(clipIndex);
-        RecordingKind nestedKind = clip.getSourceKind() == RecordingSourceKind.SONG
-                ? RecordingKind.MUSIC
-                : RecordingKind.VIDEO;
-        String nestedName = nestedKind == RecordingKind.MUSIC ? clip.getSourceName() : clip.getNestedName();
+        String nestedName = recording.getClips().get(clipIndex).getNestedName();
 
         if (nestedName == null)
             return false;
 
         String parentName = recording.getRecordingName();
-        RecordingKind parentKind = recording.getKind();
 
         saveRecording();
 
-        if (!switchRecording(nestedName, nestedKind))
+        if (!switchRecording(nestedName))
             return false;
 
         parentNames.add(parentName);
-        parentKinds.add(parentKind);
         revision++;
         return true;
     }
@@ -1458,10 +1377,9 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         String parentName = parentNames.pop();
-        RecordingKind parentKind = parentKinds.pop();
 
         saveRecording();
-        switchRecording(parentName, parentKind);
+        switchRecording(parentName);
         revision++;
     }
 
@@ -1473,11 +1391,6 @@ public class RecorderManager extends ManagerPackage {
 
         if (focused == null)
             return;
-
-        if (!recording.getKind().isFilmed()) {
-            setStatus(EditorSetting.RECORDER_STATUS_MUSIC_REFUSES + recordingName);
-            return;
-        }
 
         if (!isRecordingNameAvailable(recordingName)) {
             setStatus(EditorSetting.RECORDER_STATUS_NAME_TAKEN + recordingName);
@@ -1495,9 +1408,9 @@ public class RecorderManager extends ManagerPackage {
             lane = Math.min(lane, clip.getLane());
         }
 
-        recordingDirectory.mkdirs();
+        mediaDirectory.mkdirs();
 
-        if (!recordingFileBranch.write(getRecordingFile(recordingName, RecordingKind.VIDEO),
+        if (!recordingFileBranch.write(getRecordingFile(recordingName),
                 collectSelection(recordingName, start, lane))) {
             setStatus(EditorSetting.RECORDER_STATUS_SAVE_FAILED + recordingName);
             return;
@@ -1516,7 +1429,6 @@ public class RecorderManager extends ManagerPackage {
         RecordingInstance nested = create(RecordingInstance.class);
 
         nested.constructor(
-                RecordingKind.VIDEO,
                 recordingName,
                 recording.getWorldName(),
                 recording.getTempo(),
@@ -1556,18 +1468,6 @@ public class RecorderManager extends ManagerPackage {
         drag.carry(recordingName);
     }
 
-    // A project song picked up from the Recordings tab, to be laid where it is let go over the lanes, or opened as a
-    // Music file when it is let go where it was pressed
-    public void beginSongDrag(String songName, WindowInstance window, float pressX, float pressY) {
-
-        if (drag.isActive() || state == RecorderState.RECORDING || state == RecorderState.EXPORTING)
-            return;
-
-        beginDrag(RecorderDragKind.SONG, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
-                window, pressX, pressY, 0f, 0f);
-        drag.carry(songName);
-    }
-
     // A note of an instrument picked up from the Note Library, to be laid where it is let go over the lanes as a note
     // clip a beat long; nothing is picked up while no recording is open to lay it on
     public void beginNoteDrag(String instrumentName, int pitch, WindowInstance window, float pressX, float pressY) {
@@ -1592,11 +1492,6 @@ public class RecorderManager extends ManagerPackage {
 
     // The one way a nested recording is laid; true when it was, after saying why not when it was not
     private boolean layRecording(String recordingName, float start, int lane) {
-
-        if (!recording.getKind().isFilmed()) {
-            setStatus(EditorSetting.RECORDER_STATUS_MUSIC_REFUSES + recordingName);
-            return false;
-        }
 
         RecordingInstance child = recordingSourceBranch.requireChild(recordingName);
 
@@ -1816,7 +1711,7 @@ public class RecorderManager extends ManagerPackage {
         float tolerance = snapping ? EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel : 0f;
 
         switch (drag.getKind()) {
-            case TAKE, SOUND, RECORDING, SONG, NOTE, CLIP -> landSpan(overLanes, time, lane, tolerance);
+            case TAKE, SOUND, RECORDING, NOTE, CLIP -> landSpan(overLanes, time, lane, tolerance);
             case TRIM_START, TRIM_END -> landEdge(time, tolerance);
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
@@ -1965,12 +1860,6 @@ public class RecorderManager extends ManagerPackage {
                 else if (!moved)
                     openRecording(carriedName);
             }
-            case SONG -> {
-                if (dropped)
-                    placeSong(carriedName, landingStart, landingLane);
-                else if (!moved)
-                    openSong(carriedName);
-            }
             case NOTE -> {
                 if (dropped)
                     placeNote(carriedName, index, landingStart, landingLane);
@@ -2074,7 +1963,6 @@ public class RecorderManager extends ManagerPackage {
             case TAKE -> recording.getTakes().get(drag.getIndex()).getDuration();
             case SOUND -> soundManager.getSoundHandleFromSoundID(drag.getIndex()).getPlayedLength();
             case RECORDING -> resolveRecordingLength(drag.getName());
-            case SONG -> resolveSongLength(drag.getName());
             case NOTE -> (float) recording.getTempo().toSeconds(recording.getBeatTicks());
             case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
             case TRIM_START, TRIM_END, CUT, NODE, PAN, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS,
@@ -2225,112 +2113,6 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // Music \\
-
-    // The project song laid on the timeline from the moment: in a Music file as a song clip timed by the file's tempo,
-    // refused when it would reach the file again at any depth, naming the loop; in a Video as the song at its own
-    // tempo
-    public void placeSong(String songName, float start, int lane) {
-
-        if (!canEditTimeline())
-            return;
-
-        SongHandle handle;
-
-        try {
-            handle = songManager.getSongHandleFromSongName(songName);
-        } catch (InternalException e) {
-            setStatus(EditorSetting.RECORDER_STATUS_SONG_REFUSED + e.getMessage());
-            return;
-        }
-
-        String loop = findSongLoop(handle.getSongData());
-
-        if (loop != null) {
-            setStatus(EditorSetting.RECORDER_STATUS_LOOP_REFUSED + loop);
-            return;
-        }
-
-        RecordingClipStruct clip = recording.getKind().isFilmed()
-                ? RecordingClipStruct.ofSong(songName, 0f, (float) handle.getSongData().getTempo().toSeconds(
-                        handle.getSongData().getLength()), lane, start)
-                : RecordingClipStruct.ofSongClip(createSongClip(songName), 0f, resolveSongLength(songName), lane,
-                        start);
-
-        recordingSourceBranch.bindClip(recording, clip);
-        pickClip(recordingTimelineBranch.placeClip(recording, clip));
-        this.assetsStale = true;
-        soundRevision++;
-        markUnsaved();
-        setStatus(EditorSetting.RECORDER_STATUS_PLACED + songName);
-    }
-
-    // A Music file's codec clip laying the whole song, at full volume and its own pitch
-    private SongClipStruct createSongClip(String songName) {
-        return new SongClipStruct(
-                SongClipKind.SONG,
-                0,
-                0,
-                1,
-                EngineSetting.DEFAULT_SONG_CLIP_OFFSET,
-                EngineSetting.DEFAULT_SONG_CLIP_MUTED,
-                EngineSetting.DEFAULT_SONG_CLIP_VOLUME,
-                EngineSetting.DEFAULT_SONG_CLIP_TRANSPOSE,
-                EngineSetting.SONG_REFERENCE_NONE,
-                SongArpgUtility.NO_NOTES,
-                songName,
-                EngineSetting.SONG_REFERENCE_NONE);
-    }
-
-    // How long the song runs where it would be laid: at a Music file's tempo, or its own in a Video; nothing when it
-    // cannot be loaded
-    private float resolveSongLength(String songName) {
-
-        if (recording == null || !songManager.resolveSongFile(songName).isFile())
-            return 0f;
-
-        SongData song = songManager.getSongHandleFromSongName(songName).getSongData();
-        SongTempoStruct tempo = recording.getKind().isFilmed() ? song.getTempo() : recording.getTempo();
-
-        return (float) tempo.toSeconds(song.getLength());
-    }
-
-    // The loop laying the song in the open Music file would make — the file itself, or a song reaching it through its
-    // own song clips — named from the file round to itself; null for none, and always for a Video
-    private String findSongLoop(SongData song) {
-
-        if (recording.getKind().isFilmed())
-            return null;
-
-        ObjectArrayList<String> path = new ObjectArrayList<>();
-
-        path.add(recording.getRecordingName());
-        return findSongLoop(song, path);
-    }
-
-    private String findSongLoop(SongData song, ObjectArrayList<String> path) {
-
-        path.add(song.getSongName());
-
-        if (song.getSongName().equals(path.get(0)))
-            return String.join(EngineSetting.SONG_LOOP_SEPARATOR, path);
-
-        for (int i = 0; i < song.getClipCount(); i++) {
-
-            SongClipStruct clip = song.getClip(i);
-
-            if (clip.getKind() != SongClipKind.SONG || clip.getSongHandle() == null
-                    || path.contains(clip.getSongName()) && !clip.getSongName().equals(path.get(0)))
-                continue;
-
-            String loop = findSongLoop(clip.getSongHandle().getSongData(), path);
-
-            if (loop != null)
-                return loop;
-        }
-
-        path.pop();
-        return null;
-    }
 
     // A note clip laid from the moment on the lane: one note of the instrument at the pitch, a beat long, struck at
     // RECORDER_NOTE_VELOCITY; it is stretched and cut on the timeline like any clip, its note always filling it
@@ -2558,12 +2340,12 @@ public class RecorderManager extends ManagerPackage {
 
     // Export \\
 
-    // The open Music file written as a Standard MIDI File among the player's songs; the sound clips MIDI cannot hold
-    // are counted in the status
+    // The open media file's music written as a Standard MIDI File among the player's songs; the sound clips MIDI
+    // cannot hold are counted in the status
     public void exportMidi() {
 
-        if (recording == null || recording.getKind().isFilmed()) {
-            setStatus(EditorSetting.RECORDER_STATUS_MIDI_MUSIC_ONLY);
+        if (recording == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_RECORDING);
             return;
         }
 
@@ -2585,17 +2367,14 @@ public class RecorderManager extends ManagerPackage {
         }
     }
 
-    // The music sound a render of the open Music file is written to, whether or not it exists yet
-    public File getRenderFile() {
-        return recordingRenderBranch.resolveSoundFile(recording.getRecordingName());
-    }
+    // Music — a media file with no picture — exported as the game's own: its song written by the song codec and its
+    // sound rendered offline beside it, under the export directory laid out as the project's assets are, so both are
+    // dragged into the project as they lie; the render runs through the thread pipeline, its progress shown in the
+    // status line
+    public void exportMusic() {
 
-    // The open Music file mixed offline and encoded to the music sound named after it, through the thread pipeline,
-    // its progress shown in the status line
-    public void renderMusic() {
-
-        if (recording == null || recording.getKind().isFilmed()) {
-            setStatus(EditorSetting.RECORDER_STATUS_RENDER_MUSIC_ONLY);
+        if (recording == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_NO_RECORDING);
             return;
         }
 
@@ -2606,8 +2385,18 @@ public class RecorderManager extends ManagerPackage {
 
         saveRecording();
 
-        String refusal = recordingRenderBranch.begin(recording.getRecordingName(),
-                recordingMusicBranch.toSong(recording, true));
+        String recordingName = recording.getRecordingName();
+        File songFile = ArpgUtility.resolveFile(
+                new File(exportDirectory, EditorSetting.RECORDER_EXPORT_SONG_DIRECTORY), recordingName);
+        File soundFile = new File(new File(exportDirectory, EditorSetting.RECORDER_EXPORT_SOUND_DIRECTORY),
+                recordingName + EditorSetting.RECORDER_EXTENSION_SEPARATOR + EngineSetting.SOUND_FILE_EXTENSION);
+
+        if (!recordingMusicBranch.writeSong(songFile, recording)) {
+            setStatus(EditorSetting.RECORDER_STATUS_SAVE_FAILED + songFile.getAbsolutePath());
+            return;
+        }
+
+        String refusal = recordingRenderBranch.begin(soundFile, recordingMusicBranch.toSong(recording, true));
 
         setStatus(refusal != null ? refusal : EditorSetting.RECORDER_STATUS_RENDERING_FORMAT.formatted(0));
     }
@@ -4257,11 +4046,6 @@ public class RecorderManager extends ManagerPackage {
 
         this.exportResult = RecorderExportResult.REFUSED;
 
-        if (recording != null && !recording.getKind().isFilmed()) {
-            setStatus(EditorSetting.RECORDER_STATUS_EXPORT_MUSIC);
-            return;
-        }
-
         if (state == RecorderState.RECORDING) {
             setStatus(EditorSetting.RECORDER_STATUS_EXPORT_WHILE_RECORDING);
             return;
@@ -4279,7 +4063,7 @@ public class RecorderManager extends ManagerPackage {
 
         cancelDrag();
         saveRecording();
-        videoDirectory.mkdirs();
+        exportDirectory.mkdirs();
 
         float duration = recording.getDuration();
         float span = exportStruct.resolveEnd(duration) - exportStruct.resolveStart(duration);
@@ -4341,7 +4125,7 @@ public class RecorderManager extends ManagerPackage {
         File file;
 
         do {
-            file = new File(videoDirectory, recording.getRecordingName()
+            file = new File(exportDirectory, recording.getRecordingName()
                     + EditorSetting.RECORDER_VIDEO_NAME_SEPARATOR + number
                     + EditorSetting.RECORDER_EXTENSION_SEPARATOR + format.getExtension());
             number++;
@@ -4372,25 +4156,22 @@ public class RecorderManager extends ManagerPackage {
         return EditorSetting.RECORDER_TAKE_NAME_PREFIX + number;
     }
 
-    // Whether a recording of the open one's kind may take the name, a Video's while none is open
+    // Whether a new media file may take the name
     public boolean isRecordingNameAvailable(String recordingName) {
-        return isNameAvailable(recordingName, recording != null ? recording.getKind() : RecordingKind.VIDEO);
-    }
-
-    public boolean isNameAvailable(String recordingName, RecordingKind kind) {
         return FileUtility.isValidFileName(recordingName, EditorSetting.RECORDER_NAME_MAX_LENGTH)
-                && !getRecordingFile(recordingName, kind).exists();
+                && !getRecordingFile(recordingName).exists();
     }
 
     public boolean isLabelValid(String label) {
         return !label.isBlank() && label.length() <= EditorSetting.RECORDER_LABEL_MAX_LENGTH;
     }
 
-    // Every recording saved in the game's directory, most recently changed first
+    // Every media file in the media directory beside the player's saves, video and music alike, most recently
+    // changed first
     public ObjectArrayList<String> getRecordingNames() {
 
         ObjectArrayList<File> recordingFiles = new ObjectArrayList<>();
-        File[] files = recordingDirectory.listFiles();
+        File[] files = mediaDirectory.listFiles();
 
         if (files != null)
             for (File file : files)
@@ -4407,20 +4188,8 @@ public class RecorderManager extends ManagerPackage {
         return recordingNames;
     }
 
-    // A Video's file beside the recordings, a Music file's among the project's songs
-    private File getRecordingFile(String recordingName, RecordingKind kind) {
-        return kind.isFilmed()
-                ? ArpgUtility.resolveFile(recordingDirectory, recordingName)
-                : songManager.resolveSongFile(recordingName);
-    }
-
-    // Every project song by name, sorted by name
-    public ObjectArrayList<String> getSongNames() {
-
-        ObjectArrayList<String> songNames = new ObjectArrayList<>();
-
-        songManager.collectSongNames(songNames);
-        return songNames;
+    private File getRecordingFile(String recordingName) {
+        return ArpgUtility.resolveFile(mediaDirectory, recordingName);
     }
 
     // Utility \\
@@ -4485,14 +4254,14 @@ public class RecorderManager extends ManagerPackage {
     // The channels a session plays from the timeline — every one the recording's kind plays but what a take records
     // live
     public int getPlayedChannels() {
-        return state.isSession() ? recording.getKind().getChannelMask() & ~getLiveChannels() : RecorderChannel.NONE;
+        return state.isSession() ? RecorderChannel.ALL & ~getLiveChannels() : RecorderChannel.NONE;
     }
 
     public int getLiveChannels() {
         return isTaking() ? take.getChannelMask() : RecorderChannel.NONE;
     }
 
-    // True while a take records the world live; a Music file never records
+    // True while a take records the world live
     public boolean isTaking() {
         return state == RecorderState.RECORDING;
     }
@@ -4561,9 +4330,9 @@ public class RecorderManager extends ManagerPackage {
         return parentNames;
     }
 
-    // How many lanes the open recording's timeline holds, a Video's while none is open
+    // How many lanes the open recording's timeline holds
     public int getLaneCount() {
-        return recording != null ? recording.getLaneCount() : EditorSetting.RECORDER_LANE_COUNT;
+        return recording != null ? recording.getLaneCount() : EngineSetting.SONG_LANE_COUNT;
     }
 
     public int getSelectedLane() {
@@ -4603,9 +4372,14 @@ public class RecorderManager extends ManagerPackage {
         return toolManager.getTool(getToolCanvas()) == EditorTool.CUT;
     }
 
-    // What the Timeline's tools work on: a Music file's clips and grid, else a Video's clips
+    // What the Timeline's tools work on: the open media file's clips
     public ToolCanvas getToolCanvas() {
-        return recording != null && !recording.getKind().isFilmed() ? ToolCanvas.MUSIC : ToolCanvas.RECORDER;
+        return ToolCanvas.RECORDER;
+    }
+
+    // True while the open media file is a video, so it exports as one; false for music, and while none is open
+    public boolean hasPicture() {
+        return recording != null && recording.hasPicture();
     }
 
     // The clip the cut tool is over, -1 for none or while it is not chosen

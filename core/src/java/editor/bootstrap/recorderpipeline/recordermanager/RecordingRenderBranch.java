@@ -31,12 +31,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RecordingRenderBranch extends BranchPackage {
 
     /*
-     * Renders a Music file to the engine's ordinary sound: the song laid out
+     * Renders a media file's music to the engine's ordinary sound: the song laid out
      * flat as playback lays it, every part mixed offline through
      * SamplerMixUtility at RECORDER_AUDIO_SAMPLE_RATE in stereo, each placed
      * by its lane's pan with equal power and played past the song's end for
-     * its notes' release, then encoded through FfmpegUtility to
-     * assets/sounds/music/<Name>.ogg with Delivery.bat's settings, and a
+     * its notes' release, then encoded through FfmpegUtility to the sound
+     * file it is given with Delivery.bat's settings, and a
      * companion of the music category written beside it through ArpgUtility,
      * ready for a music cue. The main thread names every sample once and
      * hands the song to the General thread, which decodes, mixes a stretch at
@@ -70,8 +70,8 @@ class RecordingRenderBranch extends BranchPackage {
 
     // Begin \\
 
-    // The song handed to the worker to be rendered under the name; null once it runs, else why it could not begin
-    String begin(String songName, SongData song) {
+    // The song handed to the worker to be rendered to the sound file; null once it runs, else why it could not begin
+    String begin(File soundFile, SongData song) {
 
         File ffmpeg = FfmpegUtility.findFfmpeg();
 
@@ -106,7 +106,7 @@ class RecordingRenderBranch extends BranchPackage {
                 soundName2Handle.put(soundNames.get(i), soundManager.getSoundHandleFromSoundID(soundID));
         }
 
-        this.soundFile = resolveSoundFile(songName);
+        this.soundFile = soundFile;
         this.percent = 0;
         this.finished = false;
         this.succeeded = false;
@@ -255,11 +255,5 @@ class RecordingRenderBranch extends BranchPackage {
             return EditorSetting.RECORDER_STATUS_RENDER_FAILED + soundFile.getAbsolutePath();
 
         return EditorSetting.RECORDER_STATUS_RENDERED + message;
-    }
-
-    // The music sound a song of the name renders to
-    File resolveSoundFile(String songName) {
-        return new File(new File(EngineSetting.SOUND_PATH, EditorSetting.RECORDER_RENDER_DIRECTORY),
-                songName + EditorSetting.RECORDER_EXTENSION_SEPARATOR + EngineSetting.SOUND_FILE_EXTENSION);
     }
 }

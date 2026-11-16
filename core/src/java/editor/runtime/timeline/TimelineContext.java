@@ -40,10 +40,10 @@ public class TimelineContext extends ContextPackage
      * selected. The transport is the Recorder tab beside it. All state lives
      * in RecorderManager; this tab only shows it and hands clicks, drags and
      * the wheel to RecorderBranch. The tab is a tool canvas, the timeline,
-     * for as long as it is open: a Video's clips, or a Music file's, where
-     * Draw draws a notes clip, Export MIDI and Render export it, and the
-     * Properties tab shows the mix of the lane selected and the clip
-     * selected's instrument, volume and transpose.
+     * for as long as it is open: the media file's clips, which Export sends
+     * out as a video or as music and Export MIDI as MIDI, and the Properties
+     * tab shows the mix of the lane selected and the clip selected's
+     * instrument, volume and transpose.
      */
 
     // Internal

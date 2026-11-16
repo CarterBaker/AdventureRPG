@@ -25,8 +25,8 @@ class RecordingTimelineBranch extends BranchPackage {
      * edge reaches no further than its source or the clips beside it on its
      * lane, and what is dragged snaps to the nearest edge of the timeline —
      * its start, the playhead or another clip's end — within a tolerance, and
-     * on a Music file's timeline to the nearest beat of its grid whenever no
-     * edge lies nearer.
+     * on music's timeline, a media file showing no picture, to the nearest
+     * beat of its grid whenever no edge lies nearer.
      * Nothing here marks the recording changed; RecorderManager does, once,
      * for each edit it makes through here.
      */
@@ -182,7 +182,7 @@ class RecordingTimelineBranch extends BranchPackage {
         float snapped = time;
         float nearest = tolerance;
 
-        if (!recording.getKind().isFilmed() && tolerance > 0f) {
+        if (!recording.hasPicture() && tolerance > 0f) {
             snapped = recording.snapToGrid(time, recording.getBeatTicks());
             nearest = Math.abs(snapped - time);
         }

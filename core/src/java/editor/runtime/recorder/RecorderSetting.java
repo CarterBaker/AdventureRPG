@@ -81,8 +81,8 @@ public class RecorderSetting {
     public static final String MENU_ASSETS = "editor/Recorder/RecorderAssets";
     public static final String MENU_SETTINGS = "editor/Recorder/RecorderSettings";
 
-    // Entry Points — the Timeline's menu; the clip lanes and the ruler are EditorSetting RECORDER_ENTRY_CLIP_LANES and
-    // RECORDER_ENTRY_RULER, which the drags and the wheel share
+    // Entry Points — the Timeline's menu; the clip lanes and the ruler are EditorSetting RECORDER_ENTRY_CLIP_LANES
+    // and RECORDER_ENTRY_RULER, which the drags and the wheel share
     public static final int ENTRY_STATUS = 0;
     public static final int ENTRY_TIMELINE_TITLE = 1;
     public static final int ENTRY_PLAYHEAD = 4;
@@ -125,7 +125,7 @@ public class RecorderSetting {
     public static final float RANGE_MARKER_WIDTH_PIXELS = 2f;
     public static final float RANGE_MARKER_HEIGHT_PIXELS = 30f;
 
-    // Timeline — where the ruler and the lanes stand in the tab, and a Music file's mixer strips beside them: how
+    // Timeline — where the ruler and the lanes stand in the tab, and the mixer strips beside them: how
     // wide, the gap before the lanes, and how each reads
     public static final float TIMELINE_INSET_PIXELS = 12f;
     public static final float TRACK_TOP_PIXELS = -30f;
