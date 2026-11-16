@@ -17,6 +17,8 @@ public enum EditorTool {
      * plane and an image to the value where the stroke began, and Nudge
      * drags it along with the pointer; Raise and Lower build what lies
      * under the brush up or wear it down a little more with every stamp;
+     * Topology gives a surface more faces where the brush covers it, or
+     * fewer with the stroke inverted, keeping it all quads;
      * Fill floods a run of one value and Pick takes up the value under the
      * pointer; Place stands a new thing where it clicks and Wall a thin
      * wall on the face it clicks; Move, Rotate and Scale drag what is
@@ -42,6 +44,7 @@ public enum EditorTool {
     NUDGE(EditorSetting.TOOL_NUDGE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     RAISE(EditorSetting.TOOL_RAISE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     LOWER(EditorSetting.TOOL_LOWER, true, ToolOption.SIZE, ToolOption.STRENGTH),
+    TOPOLOGY(EditorSetting.TOOL_TOPOLOGY, true, ToolOption.SIZE, ToolOption.STRENGTH),
     FILL(EditorSetting.TOOL_FILL, false),
     PICK(EditorSetting.TOOL_PICK, false),
     PLACE(EditorSetting.TOOL_PLACE, false),

@@ -394,6 +394,9 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-16: Creator laid out by the race. Regenerated `races/Human.arpg` (`playable`, the `player` flags and the
   `creator` layout of the Appearance, Hair and Body tabs), `schemas/Races.arpg` (`playable`, `appearance.player` and
   `appearance.creator`) and `menus/CharacterCreator.arpg` (race row).
+- 2026-11-16: Topology brush. Regenerated `shortcuts/Tools.arpg` (`D` Topology, brush keys for it),
+  `shortcuts/CharacterEditor.arpg` (Ctrl hinted as Fewer faces on Topology) and `schemas/Shortcuts.arpg` (the
+  topology tool).
 
 ---
 

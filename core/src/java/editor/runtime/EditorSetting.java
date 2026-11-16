@@ -1171,6 +1171,53 @@ public class EditorSetting {
     public static final float CHARACTER_SCULPT_RELAX_RATE = 0.5f;
     public static final float CHARACTER_SCULPT_FLATTEN_RATE = 0.5f;
 
+    // Character Editor — the topology brush. A face is refined when the brush covers all its corners and on average
+    // at least the face coverage; refining lays it on a lattice of thirds and splits it into nine (Schneiders'
+    // 3-refinement), and joins it to the faces about it as quads alone by the transition templates: one edge refined,
+    // two edges meeting at a corner, two opposite edges. Each template lists its quads as four lattice points (x, y),
+    // x from corner 0 toward corner 1 and y from corner 0 toward corner 3, every quad wound as its face. A reducing
+    // stroke collapses each frame the share of the covered faces given, at most the most given, the smallest first
+    // across their shorter diagonal, refusing a collapse that turns any face about it by more than the least cosine
+    // or shrinks it below the least share of its area
+    public static final float CHARACTER_TOPOLOGY_FACE_COVERAGE = 0.2f;
+    public static final int CHARACTER_TOPOLOGY_LATTICE = 3;
+    public static final int[] CHARACTER_TOPOLOGY_TEMPLATE_FULL = {
+            0, 0, 1, 0, 1, 1, 0, 1,
+            1, 0, 2, 0, 2, 1, 1, 1,
+            2, 0, 3, 0, 3, 1, 2, 1,
+            0, 1, 1, 1, 1, 2, 0, 2,
+            1, 1, 2, 1, 2, 2, 1, 2,
+            2, 1, 3, 1, 3, 2, 2, 2,
+            0, 2, 1, 2, 1, 3, 0, 3,
+            1, 2, 2, 2, 2, 3, 1, 3,
+            2, 2, 3, 2, 3, 3, 2, 3 };
+    public static final int[] CHARACTER_TOPOLOGY_TEMPLATE_SIDE = {
+            0, 0, 1, 0, 1, 1, 0, 3,
+            1, 0, 2, 0, 2, 1, 1, 1,
+            2, 0, 3, 0, 3, 3, 2, 1,
+            1, 1, 2, 1, 3, 3, 0, 3 };
+    public static final int[] CHARACTER_TOPOLOGY_TEMPLATE_CORNER = {
+            0, 0, 1, 0, 1, 1, 0, 3,
+            1, 0, 2, 0, 2, 1, 1, 1,
+            2, 0, 3, 0, 3, 1, 2, 1,
+            2, 1, 3, 1, 3, 2, 2, 2,
+            1, 1, 2, 1, 2, 2, 0, 3,
+            2, 2, 3, 2, 3, 3, 0, 3 };
+    public static final int[] CHARACTER_TOPOLOGY_TEMPLATE_STRIP = {
+            0, 0, 1, 0, 1, 3, 0, 3,
+            1, 0, 2, 0, 2, 3, 1, 3,
+            2, 0, 3, 0, 3, 3, 2, 3 };
+    public static final int CHARACTER_TOPOLOGY_MASK_FULL = 0b1111;
+    public static final int CHARACTER_TOPOLOGY_MASK_SIDE = 0b0001;
+    public static final int CHARACTER_TOPOLOGY_MASK_CORNER = 0b0011;
+    public static final int CHARACTER_TOPOLOGY_MASK_STRIP = 0b0101;
+    public static final float CHARACTER_TOPOLOGY_REDUCE_SHARE = 0.25f;
+    public static final int CHARACTER_TOPOLOGY_REDUCE_MAX = 16;
+    public static final float CHARACTER_TOPOLOGY_FLIP_COSINE = 0.2f;
+    public static final float CHARACTER_TOPOLOGY_AREA_SHARE_MIN = 0.1f;
+    public static final String CHARACTER_EDITOR_MESSAGE_TOPOLOGY_SHAPE =
+            "The topology changes only on the base shape: return to it under Shape Keys";
+
     // Character Rig — rig fields
     public static final String CHARACTER_RIG_FIELD_BONES = "bones";
     public static final String CHARACTER_RIG_FIELD_NAME = "name";
@@ -2027,6 +2074,7 @@ public class EditorSetting {
     public static final String TOOL_NUDGE = "Nudge";
     public static final String TOOL_RAISE = "Raise";
     public static final String TOOL_LOWER = "Lower";
+    public static final String TOOL_TOPOLOGY = "Topology";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";

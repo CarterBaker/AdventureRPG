@@ -233,7 +233,11 @@ public class MeshManager extends ManagerPackage {
 
     // The most quads the character tools edit: their overlays draw every corner, indexed by an unsigned short
     public boolean fitsRiggedMeshLimit(RiggedMeshStruct mesh) {
-        return mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT <= EngineSetting.RIGGED_MESH_VERT_LIMIT;
+        return fitsRiggedMeshLimit(mesh.getFaceCount());
+    }
+
+    public boolean fitsRiggedMeshLimit(int faceCount) {
+        return faceCount * EngineSetting.QUAD_VERTEX_COUNT <= EngineSetting.RIGGED_MESH_VERT_LIMIT;
     }
 
     // Every corner's packed smooth normal, face by face, as a mesh file stores them and an export reads them

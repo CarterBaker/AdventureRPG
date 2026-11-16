@@ -799,7 +799,7 @@ class CharacterWeightBranch extends BranchPackage {
 
         int neighbours = 1;
 
-        accumulate(mesh, vertexIndex);
+        accumulate(mesh, vertexIndex, 1f);
 
         for (int f = 0; f < mesh.getFaceCount(); f++) {
 
@@ -813,7 +813,7 @@ class CharacterWeightBranch extends BranchPackage {
                 if (other == vertexIndex)
                     continue;
 
-                accumulate(mesh, other);
+                accumulate(mesh, other, 1f);
                 neighbours++;
             }
         }
@@ -821,7 +821,8 @@ class CharacterWeightBranch extends BranchPackage {
         return neighbours;
     }
 
-    private void accumulate(RiggedMeshStruct mesh, int vertexIndex) {
+    // Adds a vertex's weights, each counted by a share, to the bone totals
+    private void accumulate(RiggedMeshStruct mesh, int vertexIndex, float share) {
 
         for (int i = 0; i < mesh.getInfluenceCount(vertexIndex); i++) {
 
@@ -830,7 +831,7 @@ class CharacterWeightBranch extends BranchPackage {
             if (boneTotals[bone] == 0f && !touchedBones.contains(bone))
                 touchedBones.add(bone);
 
-            boneTotals[bone] += mesh.getInfluenceWeight(vertexIndex, i);
+            boneTotals[bone] += mesh.getInfluenceWeight(vertexIndex, i) * share;
         }
     }
 
@@ -866,15 +867,38 @@ class CharacterWeightBranch extends BranchPackage {
     // Averages several vertices' weights onto one of them, keeping the heaviest bones
     void average(RiggedMeshStruct mesh, IntArrayList vertices, int targetVertex) {
 
+        beginTotals(mesh);
+
+        for (int i = 0; i < vertices.size(); i++)
+            accumulate(mesh, vertices.getInt(i), 1f);
+
+        writeTotals(mesh, targetVertex);
+    }
+
+    // Blends several vertices' weights onto another, each counted by its share, keeping the heaviest bones; the
+    // vertex written may be one of those blended, since every weight is read before any is written
+    void blend(RiggedMeshStruct mesh, IntArrayList vertices, FloatArrayList vertexShares, int targetVertex) {
+
+        beginTotals(mesh);
+
+        for (int i = 0; i < vertices.size(); i++)
+            accumulate(mesh, vertices.getInt(i), vertexShares.getFloat(i));
+
+        writeTotals(mesh, targetVertex);
+    }
+
+    private void beginTotals(RiggedMeshStruct mesh) {
+
         int boneCount = mesh.getRigHandle().getBoneCount();
 
         if (boneTotals.length < boneCount)
             this.boneTotals = new float[boneCount];
 
         touchedBones.clear();
+    }
 
-        for (int i = 0; i < vertices.size(); i++)
-            accumulate(mesh, vertices.getInt(i));
+    // The bone totals written onto a vertex, the heaviest kept where they pass the influence limit, the totals cleared
+    private void writeTotals(RiggedMeshStruct mesh, int targetVertex) {
 
         int count = 0;
 

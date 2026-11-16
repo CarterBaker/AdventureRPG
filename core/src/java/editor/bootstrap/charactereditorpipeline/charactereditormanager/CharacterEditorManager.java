@@ -98,6 +98,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterWeightBranch characterWeightBranch;
     private CharacterSculptBranch characterSculptBranch;
     private CharacterShapeBranch characterShapeBranch;
+    private CharacterTopologyBranch characterTopologyBranch;
     private CharacterRigBranch characterRigBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
     private CharacterRigRowBranch characterRigRowBranch;
@@ -190,6 +191,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterWeightBranch = create(CharacterWeightBranch.class);
         this.characterSculptBranch = create(CharacterSculptBranch.class);
         this.characterShapeBranch = create(CharacterShapeBranch.class);
+        this.characterTopologyBranch = create(CharacterTopologyBranch.class);
         this.characterRigBranch = create(CharacterRigBranch.class);
         this.characterColliderBranch = create(CharacterColliderBranch.class);
         this.characterPaintBranch = create(CharacterPaintBranch.class);
@@ -1005,7 +1007,12 @@ public class CharacterEditorManager extends ManagerPackage {
         if (isSelectStroke())
             characterSelectionBranch.beginStroke(document, selection);
         else if (mode == CharacterEditorMode.SCULPT) {
-            if (!refusePosedEdit())
+            if (refusePosedEdit())
+                return;
+
+            if (toolManager.getTool(mode.getToolCanvas()) == EditorTool.TOPOLOGY)
+                characterTopologyBranch.beginStroke(document);
+            else
                 characterShapeBranch.beginStroke(document);
         }
         else
@@ -1030,6 +1037,11 @@ public class CharacterEditorManager extends ManagerPackage {
 
         EditorTool tool = toolManager.getTool(mode.getToolCanvas());
 
+        if (characterTopologyBranch.isStroking()) {
+            characterTopologyBranch.stroke(document, vertices, strengths, stamp);
+            return;
+        }
+
         this.strokeMoved = true;
 
         if (mode == CharacterEditorMode.SCULPT) {
@@ -1046,10 +1058,14 @@ public class CharacterEditorManager extends ManagerPackage {
                 document, selectedBoneIndex, vertices, strengths, tool == EditorTool.ERASE ? 0f : weightTarget);
     }
 
-    // Every stamp a frame's stroke laid shown in one rebuild of the part, once the frame's stamps are done
+    // Every stamp a frame's stroke laid shown in one rebuild of the part, once the frame's stamps are done; a
+    // topology stroke changes the faces it covered first
     public void showStroke() {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (characterTopologyBranch.isStroking() && characterTopologyBranch.apply())
+            this.strokeMoved = true;
 
         if (!strokeMoved || document == null)
             return;
@@ -1072,7 +1088,9 @@ public class CharacterEditorManager extends ManagerPackage {
         if (document == null)
             return;
 
-        if (mode == CharacterEditorMode.SCULPT)
+        if (characterTopologyBranch.isStroking())
+            characterTopologyBranch.endStroke(document);
+        else if (mode == CharacterEditorMode.SCULPT)
             characterShapeBranch.endStroke(document);
         else
             characterWeightBranch.endStroke(document);

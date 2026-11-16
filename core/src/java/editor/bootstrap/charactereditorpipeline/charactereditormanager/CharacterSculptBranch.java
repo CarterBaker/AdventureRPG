@@ -1238,7 +1238,7 @@ class CharacterSculptBranch extends BranchPackage {
 
     // Removes every vertex no face stands on, carrying the selection, its weights and the active vertex over to the
     // new numbering
-    private void removeOrphans(CharacterMeshDocumentInstance document) {
+    void removeOrphans(CharacterMeshDocumentInstance document) {
 
         RiggedMeshStruct mesh = document.getMesh();
         BooleanArrayList selection = document.getSelection();

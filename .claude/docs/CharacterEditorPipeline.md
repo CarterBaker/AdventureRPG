@@ -245,6 +245,20 @@ mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig).
 - **Sculpt tools.** Brush, Smooth, Relax (even spacing along the surface without shrinking), Inflate, Pinch, Crease
   (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
   in `CharacterShapeBranch.resolveMove`.
+- **Topology brush.** The Sculpt canvas's Topology tool (`D`) changes the faces, not the shape
+  (`CharacterTopologyBranch`): a stroke opens one undo step, gathers how far the brush covers each vertex (and its
+  twin with Mirror on), and once a frame (`CharacterEditorManager.showStroke` calls `apply`) changes every face whose
+  corners it all covers. Plain strokes refine by Schneiders' 3-refinement, as adaptive all-quad meshing does: a face
+  splits into nine on a lattice of thirds and each face beside it takes the transition template its refined edges call
+  for (`EditorSetting.CHARACTER_TOPOLOGY_TEMPLATE_*`: one edge, two at a corner, two opposite); a face left with three
+  or four refined edges joins the refined set until none is, so the mesh stays all quads with no hanging vertex.
+  Ctrl reduces by quad-mesh simplification (Tarini et al.): the smallest covered faces collapse across their shorter
+  diagonal, refused on an open edge or UV seam, where the rings would pinch (the link condition) or a face about them
+  would fold or shrink (`CHARACTER_TOPOLOGY_FLIP_COSINE`, `AREA_SHARE_MIN`), and a vertex left between two faces that
+  share both its edges dissolves with them. New vertices blend position, weights (`CharacterWeightBranch.blend`),
+  masks and shape-key deltas from the corners they lie between; faces keep their texture, zone and interpolated UVs;
+  a refined seam stays a seam. Faces a stroke made are not refined again by it; unused vertices go when it ends
+  (`CharacterSculptBranch.removeOrphans`). Refused while a shape key is sculpted and past the mesh limit.
 
 ## UV
 
