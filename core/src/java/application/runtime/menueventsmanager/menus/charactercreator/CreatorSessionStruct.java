@@ -9,7 +9,8 @@ public class CreatorSessionStruct extends StructPackage {
 
     /*
      * One window's open character creator: the creator menu, the menu it was
-     * opened from and returns to, the player being shaped, the tab on show,
+     * opened from and returns to, the player being shaped, the tab on show
+     * (for the look, which of the race's tabs),
      * the profession the character will start out in, and the name being typed
      * with its caret state.
      */
@@ -23,6 +24,7 @@ public class CreatorSessionStruct extends StructPackage {
 
     // Tab
     private CreatorTab activeTab;
+    private int lookTabIndex;
 
     // Profession
     private short professionID;
@@ -78,6 +80,14 @@ public class CreatorSessionStruct extends StructPackage {
 
     public void setActiveTab(CreatorTab activeTab) {
         this.activeTab = activeTab;
+    }
+
+    public int getLookTabIndex() {
+        return lookTabIndex;
+    }
+
+    public void setLookTabIndex(int lookTabIndex) {
+        this.lookTabIndex = lookTabIndex;
     }
 
     public short getProfessionID() {

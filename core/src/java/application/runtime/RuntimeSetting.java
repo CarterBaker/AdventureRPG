@@ -1,7 +1,5 @@
 package application.runtime;
 
-import application.bootstrap.entitypipeline.feature.FeatureSlot;
-import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.runtime.menueventsmanager.menus.charactercreator.CreatorSlider;
 import engine.graphics.color.Color;
 import engine.util.mathematics.vectors.Vector4;
@@ -243,6 +241,7 @@ public class RuntimeSetting {
     public static final String MENU_CREATOR_ATTRIBUTE_ROW = "CharacterCreator/attribute_row";
     public static final String MENU_CREATOR_PROFESSION_ROW = "CharacterCreator/profession_row";
     public static final String MENU_CREATOR_GENDER_ROW = "CharacterCreator/gender_row";
+    public static final String MENU_CREATOR_RACE_ROW = "CharacterCreator/race_row";
     public static final String MENU_CREATOR_DETAIL_LINE = "CharacterCreator/detail_line";
     public static final String MENU_CREATOR_STAT_ROW = "CharacterCreator/stat_row";
 
@@ -268,37 +267,10 @@ public class RuntimeSetting {
     public static final String ELEMENT_CREATOR_STAT_VALUE = "stat_value";
 
     // Character Creator Tabs
-    public static final String CREATOR_TAB_APPEARANCE = "Appearance";
-    public static final String CREATOR_TAB_HAIR = "Hair";
-    public static final String CREATOR_TAB_BODY = "Body";
     public static final String CREATOR_TAB_ATTRIBUTES = "Attributes";
     public static final String CREATOR_TAB_PROFESSION = "Profession";
 
     // Character Creator Sections
-    public static final String CREATOR_SECTION_SKIN = "Skin Tone";
-    public static final String CREATOR_SECTION_EYE_COLOR = "Eye Color";
-    public static final String CREATOR_SECTION_LIP_COLOR = "Lip Color";
-    public static final String CREATOR_SECTION_DETAILS = "Skin";
-    public static final String CREATOR_SECTION_LIPS = "Lips";
-    public static final String CREATOR_SECTION_MAKEUP = "Makeup";
-    public static final String CREATOR_SECTION_EYESHADOW_COLOR = "Eyeshadow Color";
-    public static final String CREATOR_SECTION_LINER_COLOR = "Eyeliner Color";
-    public static final String CREATOR_SECTION_HAIRSTYLE = "Hairstyle";
-    public static final String CREATOR_SECTION_FACE_FEATURES = "Eyes & Teeth";
-    public static final String CREATOR_SECTION_NIPPLE_COLOR = "Nipple Color";
-    public static final String CREATOR_SECTION_BODY_HAIR_COLOR = "Body Hair Color";
-    public static final String CREATOR_SECTION_TEETH_COLOR = "Teeth Color";
-    public static final String CREATOR_SECTION_BLUSH_COLOR = "Blush Color";
-    public static final String CREATOR_SECTION_FRECKLE_COLOR = "Freckle Color";
-    public static final String CREATOR_SECTION_BROWS = "Brows";
-    public static final String CREATOR_SECTION_NIPPLES = "Nipples";
-    public static final String CREATOR_SECTION_BODY_HAIR = "Body Hair";
-    public static final String CREATOR_SECTION_HAIR_COLOR = "Hair Color";
-    public static final String CREATOR_SECTION_BROW_COLOR = "Brow Color";
-    public static final String CREATOR_SECTION_HAIR_DETAILS = "Hair Finish";
-    public static final String CREATOR_SECTION_BUILD = "Build";
-    public static final String CREATOR_SECTION_HEAD_SHAPE = "Head Shape";
-    public static final String CREATOR_SECTION_GENDER = "Gender";
     public static final String CREATOR_SECTION_PROFESSION = "Start Out As";
     public static final String CREATOR_FORMAT_POINTS = "Points to spend: %d  -  at most %d in each";
     public static final String CREATOR_FORMAT_STAT_BONUS = "%s  %+.0f%%";
@@ -330,10 +302,8 @@ public class RuntimeSetting {
     public static final float CREATOR_HEAD_PROPORTION_MIN = 0.85f;
     public static final float CREATOR_HEAD_PROPORTION_MAX = 1.15f;
 
-    // Character Creator — shapes and details: shapes in the body group are listed on the Body tab, every other group on
-    // the Appearance tab under its own name; each detail's label and range follow SkinnedDetail order, and the
-    // Appearance and Hair tabs list the details named by ordinal
-    public static final String CREATOR_SHAPE_GROUP_BODY = "body";
+    // Character Creator — shapes and details: a shape's name splits into words at its separators; each detail's label
+    // and range follow SkinnedDetail order
     public static final String CREATOR_SHAPE_NAME_SEPARATOR = "_";
     public static final String[] CREATOR_DETAIL_LABELS = {
             "Iris Size", "Pupil Size", "Shine", "Lips", "Blush", "Freckles", "Eyeliner", "Blemishes",
@@ -343,23 +313,8 @@ public class RuntimeSetting {
             0f, 0f, 0f };
     public static final float[] CREATOR_DETAIL_MAX = { 1.3f, 1.4f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f,
             1f, 1f, 1f };
-    public static final int[] CREATOR_APPEARANCE_DETAILS = { 0, 1, 5, 7 };
-    public static final int[] CREATOR_HAIR_DETAILS = { 2 };
 
-    // Character Creator — the worn parts each tab offers
-    public static final FeatureSlot[] CREATOR_HAIR_FEATURES = { FeatureSlot.HAIR };
-    public static final FeatureSlot[] CREATOR_FACE_FEATURES = { FeatureSlot.EYES, FeatureSlot.TEETH };
-
-    // Character Creator — the overlays each section offers, each with its style and amount, and the sliders under
-    // every color's swatches
-    public static final SkinnedOverlay[] CREATOR_BROW_OVERLAYS = { SkinnedOverlay.BROWS };
-    public static final SkinnedOverlay[] CREATOR_LIP_OVERLAYS = { SkinnedOverlay.LIPS };
-    public static final SkinnedOverlay[] CREATOR_MAKEUP_OVERLAYS = {
-            SkinnedOverlay.BLUSH, SkinnedOverlay.EYESHADOW, SkinnedOverlay.EYELINER };
-    public static final SkinnedOverlay[] CREATOR_NIPPLE_OVERLAYS = { SkinnedOverlay.NIPPLES };
-    public static final SkinnedOverlay[] CREATOR_BODY_HAIR_OVERLAYS = {
-            SkinnedOverlay.CHEST_HAIR, SkinnedOverlay.STOMACH_HAIR, SkinnedOverlay.PUBIC_HAIR,
-            SkinnedOverlay.UNDERARM_HAIR, SkinnedOverlay.ARM_HAIR, SkinnedOverlay.LEG_HAIR };
+    // Character Creator — the sliders under every color's swatches
     public static final CreatorSlider[] CREATOR_COLOR_SLIDERS = {
             CreatorSlider.COLOR_HUE, CreatorSlider.COLOR_SATURATION, CreatorSlider.COLOR_BRIGHTNESS };
     public static final float CREATOR_PERCENT_SCALE = 100f;

@@ -2814,6 +2814,23 @@ public class EngineSetting {
     // that gives hair
     public static final String APPEARANCE_FEATURE_NONE = "";
 
+    // Appearance Creator — the blocks of a race's "player" flags, the section a layout gains for each kind of option
+    // it leaves out while the player is offered it, and the layout a race without "creator" is shown in
+    public static final String APPEARANCE_PLAYER_COLORS = "colors";
+    public static final String APPEARANCE_PLAYER_DETAILS = "details";
+    public static final String APPEARANCE_PLAYER_OVERLAYS = "overlays";
+    public static final String APPEARANCE_PLAYER_FEATURES = "features";
+    public static final String APPEARANCE_CREATOR_SECTION_COLORS = "Colors";
+    public static final String APPEARANCE_CREATOR_SECTION_DETAILS = "Details";
+    public static final String APPEARANCE_CREATOR_SECTION_OVERLAYS = "Marks";
+    public static final String APPEARANCE_CREATOR_SECTION_FEATURES = "Features";
+    public static final String APPEARANCE_CREATOR_TAB_BODY = "Body";
+    public static final String APPEARANCE_CREATOR_TAB_LOOK = "Look";
+    public static final String APPEARANCE_CREATOR_SECTION_RACE = "Race";
+    public static final String APPEARANCE_CREATOR_SECTION_GENDER = "Gender";
+    public static final String APPEARANCE_CREATOR_SECTION_BUILD = "Build";
+    public static final String APPEARANCE_CREATOR_SECTION_HEAD = "Head Shape";
+
     // Appearance Bones — the least a face slider's scale may leave a bone at, so a bone never turns inside out
     public static final float APPEARANCE_BONE_SCALE_MIN = 0.1f;
     public static final float NPC_SHAPE_VARIATION = 0.18f;

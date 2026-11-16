@@ -15,11 +15,13 @@ public class RaceData extends DataPackage {
      * so its equipment anchors, its optional appearance — sliders, colors,
      * features and the starting look of each gender — and every clip it plays
      * are laid out by one set of bones. The model height is the default
-     * gender's mesh's, the height every gender is scaled against.
+     * gender's mesh's, the height every gender is scaled against. A
+     * playable race is one the game's creator offers the player.
      */
 
     // Identity
     private final String raceName;
+    private final boolean playable;
 
     // Rig
     private final RigHandle rigHandle;
@@ -38,6 +40,7 @@ public class RaceData extends DataPackage {
 
     public RaceData(
             String raceName,
+            boolean playable,
             RigHandle rigHandle,
             RaceGenderStruct[] genders,
             AppearanceData appearanceData,
@@ -45,6 +48,7 @@ public class RaceData extends DataPackage {
 
         // Identity
         this.raceName = raceName;
+        this.playable = playable;
 
         // Rig
         this.rigHandle = rigHandle;
@@ -102,6 +106,10 @@ public class RaceData extends DataPackage {
 
     public String getRaceName() {
         return raceName;
+    }
+
+    public boolean isPlayable() {
+        return playable;
     }
 
     public RigHandle getRigHandle() {

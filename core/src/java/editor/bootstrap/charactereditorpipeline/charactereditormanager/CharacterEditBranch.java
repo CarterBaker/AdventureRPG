@@ -173,6 +173,19 @@ class CharacterEditBranch extends BranchPackage {
                 .addProperty(EditorSetting.CHARACTER_EDITOR_FIELD_PLAYER, player));
     }
 
+    // Whether the player's creator offers a color, detail, overlay or feature, under its kind's block of "player"
+    void setOffered(CharacterDocumentInstance document, String flagBlock, String memberName, boolean offered) {
+        editAppearance(document, appearance -> CharacterViewUtility.requireObject(
+                        CharacterViewUtility.requireObject(appearance, EditorSetting.CHARACTER_EDITOR_FIELD_PLAYER),
+                        flagBlock)
+                .addProperty(memberName, offered));
+    }
+
+    // Whether the game's creator offers the race at all
+    void setPlayable(CharacterDocumentInstance document, boolean playable) {
+        edit(document, race -> race.addProperty(EditorSetting.CHARACTER_EDITOR_FIELD_PLAYABLE, playable));
+    }
+
     // The range a gender's player may slide a slider across, within the slider's own
     void setGenderRange(
             CharacterDocumentInstance document,

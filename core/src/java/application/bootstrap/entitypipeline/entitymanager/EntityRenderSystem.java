@@ -147,7 +147,7 @@ public class EntityRenderSystem extends SystemPackage {
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        RaceData raceData = entity.getEntityData().getRaceData();
+        RaceData raceData = entity.getRaceData();
         RaceGenderStruct raceGender = entity.getRaceGender();
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
@@ -284,10 +284,10 @@ public class EntityRenderSystem extends SystemPackage {
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        ObjectArrayList<EquipmentAnchorStruct> anchors = entity.getEntityData().getRaceData().getEquipmentAnchors();
+        ObjectArrayList<EquipmentAnchorStruct> anchors = entity.getRaceData().getEquipmentAnchors();
         InventoryHandle inventory = entity.getInventoryHandle();
         int hiddenBone = hideHead && entity.hasAppearance()
-                ? entity.getEntityData().getRaceData().getAppearanceData().getHeadBoneIndex()
+                ? entity.getRaceData().getAppearanceData().getHeadBoneIndex()
                 : EngineSetting.INDEX_NOT_FOUND;
 
         for (int i = 0; i < anchors.size(); i++) {
@@ -365,7 +365,7 @@ public class EntityRenderSystem extends SystemPackage {
         EntityStateHandle state = entity.getEntityStateHandle();
         Vector3 position = entity.getWorldPositionStruct().getPosition();
         Vector3 size = entity.getSize();
-        float scale = size.y / entity.getEntityData().getRaceData().getModelHeight();
+        float scale = size.y / entity.getRaceData().getModelHeight();
         long delta = WorldWrapUtility.unwrapToGridCoordinate(
                 entity.getWorldHandle(),
                 viewerChunkCoordinate,
@@ -479,7 +479,7 @@ public class EntityRenderSystem extends SystemPackage {
 
     private void collectEquipmentTiles(EntityInstance entity, TextureTileSetStruct tiles) {
 
-        ObjectArrayList<EquipmentAnchorStruct> anchors = entity.getEntityData().getRaceData().getEquipmentAnchors();
+        ObjectArrayList<EquipmentAnchorStruct> anchors = entity.getRaceData().getEquipmentAnchors();
         InventoryHandle inventory = entity.getInventoryHandle();
 
         for (int i = 0; i < anchors.size(); i++)

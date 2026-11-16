@@ -7,7 +7,11 @@ import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceDriveStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceExpression;
 import application.bootstrap.entitypipeline.appearance.AppearanceGenderStruct;
+import application.bootstrap.entitypipeline.appearance.AppearanceOptionKind;
+import application.bootstrap.entitypipeline.appearance.AppearanceOptionStruct;
+import application.bootstrap.entitypipeline.appearance.AppearanceSectionStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
+import application.bootstrap.entitypipeline.appearance.AppearanceTabStruct;
 import application.bootstrap.entitypipeline.bonecontrol.BoneControlDriveStruct;
 import application.bootstrap.entitypipeline.bonecontrol.BoneControlHandle;
 import application.bootstrap.entitypipeline.bonecontrol.BoneControlStruct;
@@ -22,10 +26,12 @@ import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import engine.graphics.color.Color;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.vectors.Vector3;
@@ -53,7 +59,14 @@ class AppearanceBuilder extends BuilderPackage {
      * must sit in the slot it is declared under and fit the rig. A color
      * left out is white, a palette left out holds only its default color, a
      * detail left out is EngineSetting's default, and the build curve
-     * defaults to a flat 1.0. Bootstrap-only, apart from an editor's
+     * defaults to a flat 1.0. "player" flags each color, detail, overlay and
+     * feature the player is offered, every one offered unless it says
+     * otherwise, and "creator" lays out the game's creator: its tabs, each
+     * with its sections, each listing options by "kind" and "name"; an
+     * offered option or slider group the layout leaves out gains a section
+     * of its kind in the last tab, so nothing the player is offered is lost,
+     * and a race without "creator" is shown a Body tab (race, gender, build,
+     * head shape) and a Look tab holding the rest. Bootstrap-only, apart from an editor's
      * preview builds.
      */
 
@@ -92,6 +105,7 @@ class AppearanceBuilder extends BuilderPackage {
         MeshHandle[] bodyMeshes = parseBodies(genders);
         AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, rigHandle, bodyMeshes, sourceName);
         FeatureHandle[] defaultFeatures = parseFeatures(appearanceArpg, sourceName);
+        boolean[][] offered = parseOffered(appearanceArpg, sourceName);
         AppearanceData appearanceData = new AppearanceData(
                 rigHandle,
                 rigHandle.getBoneIndex(headBoneName),
@@ -106,7 +120,9 @@ class AppearanceBuilder extends BuilderPackage {
                 parseGenders(gendersArpg, genders, bodyMeshes, shapes, defaultFeatures, sourceName),
                 ArpgUtility.getFloat(buildArpg, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
                 ArpgUtility.getFloat(buildArpg, "heavy", EngineSetting.DEFAULT_BUILD_FACTOR),
-                parseGirthInfluence(buildArpg, rigHandle, sourceName));
+                parseGirthInfluence(buildArpg, rigHandle, sourceName),
+                parseCreator(appearanceArpg, shapes, offered, sourceName),
+                offered);
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
@@ -803,9 +819,289 @@ class AppearanceBuilder extends BuilderPackage {
     // Keys \\
 
     // Every key of a block keyed by an enum's names must name one of its constants
+    // Creator \\
+
+    // Whether the player is offered each member of every flagged kind, by kind then member ordinal
+    private boolean[][] parseOffered(ArpgObjectStruct appearanceArpg, String sourceName) {
+
+        boolean[][] offered = new boolean[AppearanceOptionKind.VALUES.length][];
+        ArpgObjectStruct playerArpg = ArpgUtility.hasObject(appearanceArpg, "player")
+                ? appearanceArpg.getAsObject("player")
+                : new ArpgObjectStruct();
+
+        for (String key : playerArpg.keySet())
+            if (findFlaggedKind(key) == null)
+                throwException("Appearance \"player\" declares unknown block \"" + key + "\". Source: " + sourceName);
+
+        for (AppearanceOptionKind kind : AppearanceOptionKind.VALUES) {
+
+            if (!kind.isFlagged())
+                continue;
+
+            Enum<?>[] members = kind.getMembers();
+            ArpgObjectStruct blockArpg = ArpgUtility.hasObject(playerArpg, kind.getFlagBlock())
+                    ? playerArpg.getAsObject(kind.getFlagBlock())
+                    : new ArpgObjectStruct();
+
+            validateKeys(blockArpg, members, "player." + kind.getFlagBlock(), sourceName);
+
+            if (kind == AppearanceOptionKind.DETAIL)
+                validateFreeDetails(blockArpg, sourceName);
+            offered[kind.ordinal()] = new boolean[members.length];
+
+            for (int i = 0; i < members.length; i++)
+                offered[kind.ordinal()][i] = ArpgUtility.getBoolean(blockArpg, ArpgUtility.toEnumName(members[i]), true);
+        }
+
+        return offered;
+    }
+
+    // A detail an overlay shows is offered with that overlay, never flagged on its own
+    private void validateFreeDetails(ArpgObjectStruct detailsArpg, String sourceName) {
+
+        for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
+            if (detailsArpg.has(ArpgUtility.toEnumName(skinnedDetail))
+                    && SkinnedOverlay.findByDetail(skinnedDetail) != null)
+                throwException("Appearance \"player.details\" flags \"" + ArpgUtility.toEnumName(skinnedDetail)
+                        + "\", the amount of an overlay, which is offered with its overlay under \"player.overlays\". "
+                        + "Source: " + sourceName);
+    }
+
+    private AppearanceOptionKind findFlaggedKind(String flagBlock) {
+
+        for (AppearanceOptionKind kind : AppearanceOptionKind.VALUES)
+            if (kind.isFlagged() && kind.getFlagBlock().equals(flagBlock))
+                return kind;
+
+        return null;
+    }
+
+    // The creator's tabs as the race lays them out, or the Body and Look tabs, the last gaining a section for every
+    // offered option and slider group the layout leaves out
+    private AppearanceTabStruct[] parseCreator(
+            ArpgObjectStruct appearanceArpg,
+            AppearanceShapeStruct[] shapes,
+            boolean[][] offered,
+            String sourceName) {
+
+        ObjectArrayList<AppearanceTabStruct> tabs = new ObjectArrayList<>();
+
+        if (ArpgUtility.hasArray(appearanceArpg, "creator"))
+            for (ArpgElementStruct tabElement : appearanceArpg.getAsArray("creator"))
+                tabs.add(parseTab(tabElement.getAsObject(), shapes, sourceName));
+        else
+            addDefaultTabs(tabs);
+
+        if (tabs.isEmpty())
+            throwException("Appearance \"creator\" must list at least one tab. Source: " + sourceName);
+
+        ObjectArrayList<AppearanceSectionStruct> leftovers = new ObjectArrayList<>();
+
+        collectLeftoverGroups(tabs, shapes, leftovers);
+        collectLeftoverMembers(tabs, offered, leftovers);
+
+        if (leftovers.isEmpty())
+            return tabs.toArray(new AppearanceTabStruct[0]);
+
+        AppearanceTabStruct last = tabs.get(tabs.size() - 1);
+        AppearanceSectionStruct[] sections = new AppearanceSectionStruct[last.getSectionCount() + leftovers.size()];
+
+        for (int i = 0; i < last.getSectionCount(); i++)
+            sections[i] = last.getSection(i);
+
+        for (int i = 0; i < leftovers.size(); i++)
+            sections[last.getSectionCount() + i] = leftovers.get(i);
+
+        tabs.set(tabs.size() - 1, new AppearanceTabStruct(last.getTabName(), sections));
+        return tabs.toArray(new AppearanceTabStruct[0]);
+    }
+
+    private AppearanceTabStruct parseTab(ArpgObjectStruct tabArpg, AppearanceShapeStruct[] shapes, String sourceName) {
+
+        String tabName = ArpgUtility.validateString(tabArpg, "name");
+        ArpgArrayStruct sectionsArpg = ArpgUtility.validateArray(tabArpg, "sections");
+        AppearanceSectionStruct[] sections = new AppearanceSectionStruct[sectionsArpg.size()];
+
+        for (int i = 0; i < sections.length; i++)
+            sections[i] = parseSection(sectionsArpg.get(i).getAsObject(), shapes, tabName, sourceName);
+
+        return new AppearanceTabStruct(tabName, sections);
+    }
+
+    private AppearanceSectionStruct parseSection(
+            ArpgObjectStruct sectionArpg,
+            AppearanceShapeStruct[] shapes,
+            String tabName,
+            String sourceName) {
+
+        String sectionName = ArpgUtility.validateString(sectionArpg, "name");
+        ArpgArrayStruct optionsArpg = ArpgUtility.validateArray(sectionArpg, "options");
+        AppearanceOptionStruct[] options = new AppearanceOptionStruct[optionsArpg.size()];
+
+        for (int i = 0; i < options.length; i++)
+            options[i] = parseOption(optionsArpg.get(i).getAsObject(), shapes,
+                    tabName + " / " + sectionName, sourceName);
+
+        return new AppearanceSectionStruct(sectionName, options);
+    }
+
+    // An option of a kind that names a member by its lower-case enum name, a slider group by its name, or nothing
+    private AppearanceOptionStruct parseOption(
+            ArpgObjectStruct optionArpg,
+            AppearanceShapeStruct[] shapes,
+            String sectionPath,
+            String sourceName) {
+
+        AppearanceOptionKind kind = ArpgUtility.toEnum(
+                ArpgUtility.validateString(optionArpg, "kind"), AppearanceOptionKind.class);
+        String name = ArpgUtility.getString(optionArpg, "name", "");
+
+        if (kind.isFlagged())
+            return new AppearanceOptionStruct(kind, findMember(kind, name, sectionPath, sourceName), null);
+
+        if (kind != AppearanceOptionKind.SLIDERS)
+            return new AppearanceOptionStruct(kind, EngineSetting.INDEX_NOT_FOUND, null);
+
+        if (!hasGroup(shapes, name))
+            throwException("Creator section \"" + sectionPath + "\" lists slider group \"" + name
+                    + "\", which no slider of this character is in. Source: " + sourceName);
+
+        return new AppearanceOptionStruct(kind, EngineSetting.INDEX_NOT_FOUND, name);
+    }
+
+    private int findMember(AppearanceOptionKind kind, String name, String sectionPath, String sourceName) {
+
+        Enum<?>[] members = kind.getMembers();
+
+        for (int i = 0; i < members.length; i++)
+            if (ArpgUtility.toEnumName(members[i]).equals(name))
+                return i;
+
+        throwException("Creator section \"" + sectionPath + "\" lists " + ArpgUtility.toEnumName(kind) + " \""
+                + name + "\", which is not one. Source: " + sourceName);
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private boolean hasGroup(AppearanceShapeStruct[] shapes, String groupName) {
+
+        for (int i = 0; i < shapes.length; i++)
+            if (shapes[i].getGroupName().equals(groupName))
+                return true;
+
+        return false;
+    }
+
+    // The layout of a race that gives none: the body and its build first, the rest of the look after
+    private void addDefaultTabs(ObjectArrayList<AppearanceTabStruct> tabs) {
+
+        tabs.add(new AppearanceTabStruct(EngineSetting.APPEARANCE_CREATOR_TAB_BODY, new AppearanceSectionStruct[] {
+                toSingleSection(EngineSetting.APPEARANCE_CREATOR_SECTION_RACE, AppearanceOptionKind.RACE),
+                toSingleSection(EngineSetting.APPEARANCE_CREATOR_SECTION_GENDER, AppearanceOptionKind.GENDER),
+                toSingleSection(EngineSetting.APPEARANCE_CREATOR_SECTION_BUILD, AppearanceOptionKind.BUILD),
+                toSingleSection(EngineSetting.APPEARANCE_CREATOR_SECTION_HEAD, AppearanceOptionKind.HEAD) }));
+        tabs.add(new AppearanceTabStruct(EngineSetting.APPEARANCE_CREATOR_TAB_LOOK, new AppearanceSectionStruct[0]));
+    }
+
+    private AppearanceSectionStruct toSingleSection(String sectionName, AppearanceOptionKind kind) {
+        return new AppearanceSectionStruct(sectionName, new AppearanceOptionStruct[] {
+                new AppearanceOptionStruct(kind, EngineSetting.INDEX_NOT_FOUND, null) });
+    }
+
+    // A section for each group holding a slider the player is offered that no section lists, in slider order
+    private void collectLeftoverGroups(
+            ObjectArrayList<AppearanceTabStruct> tabs,
+            AppearanceShapeStruct[] shapes,
+            ObjectArrayList<AppearanceSectionStruct> leftovers) {
+
+        ObjectArrayList<String> groups = new ObjectArrayList<>();
+
+        for (int i = 0; i < shapes.length; i++) {
+
+            String groupName = shapes[i].getGroupName();
+
+            if (shapes[i].isShownToPlayer() && !groups.contains(groupName) && !listsGroup(tabs, groupName))
+                groups.add(groupName);
+        }
+
+        for (int i = 0; i < groups.size(); i++)
+            leftovers.add(new AppearanceSectionStruct(groups.get(i), new AppearanceOptionStruct[] {
+                    new AppearanceOptionStruct(AppearanceOptionKind.SLIDERS, EngineSetting.INDEX_NOT_FOUND,
+                            groups.get(i)) }));
+    }
+
+    private boolean listsGroup(ObjectArrayList<AppearanceTabStruct> tabs, String groupName) {
+
+        for (int t = 0; t < tabs.size(); t++)
+            for (int s = 0; s < tabs.get(t).getSectionCount(); s++) {
+
+                AppearanceSectionStruct section = tabs.get(t).getSection(s);
+
+                for (int o = 0; o < section.getOptionCount(); o++)
+                    if (section.getOption(o).getKind() == AppearanceOptionKind.SLIDERS
+                            && section.getOption(o).getGroupName().equals(groupName))
+                        return true;
+            }
+
+        return false;
+    }
+
+    // A section per flagged kind holding every member the player is offered that no section lists, in member order
+    private void collectLeftoverMembers(
+            ObjectArrayList<AppearanceTabStruct> tabs,
+            boolean[][] offered,
+            ObjectArrayList<AppearanceSectionStruct> leftovers) {
+
+        ObjectArrayList<AppearanceOptionStruct> options = new ObjectArrayList<>();
+
+        for (AppearanceOptionKind kind : AppearanceOptionKind.VALUES) {
+
+            if (!kind.isFlagged())
+                continue;
+
+            options.clear();
+
+            for (int i = 0; i < kind.getMembers().length; i++)
+                if (offered[kind.ordinal()][i] && !listsMember(tabs, kind, i) && !isOverlayAmount(kind, i))
+                    options.add(new AppearanceOptionStruct(kind, i, null));
+
+            if (!options.isEmpty())
+                leftovers.add(new AppearanceSectionStruct(
+                        kind.getLeftoverSection(), options.toArray(new AppearanceOptionStruct[0])));
+        }
+    }
+
+    // A detail that is an overlay's amount, offered with its overlay rather than on its own
+    private boolean isOverlayAmount(AppearanceOptionKind kind, int index) {
+        return kind == AppearanceOptionKind.DETAIL && SkinnedOverlay.findByDetail(SkinnedDetail.VALUES[index]) != null;
+    }
+
+    private boolean listsMember(ObjectArrayList<AppearanceTabStruct> tabs, AppearanceOptionKind kind, int index) {
+
+        for (int t = 0; t < tabs.size(); t++)
+            for (int s = 0; s < tabs.get(t).getSectionCount(); s++) {
+
+                AppearanceSectionStruct section = tabs.get(t).getSection(s);
+
+                for (int o = 0; o < section.getOptionCount(); o++)
+                    if (section.getOption(o).getKind() == kind && section.getOption(o).getIndex() == index)
+                        return true;
+            }
+
+        return false;
+    }
+
     private <E extends Enum<E>> void validateKeys(
             ArpgObjectStruct blockArpg,
             Class<E> enumClass,
+            String blockName,
+            String sourceName) {
+
+        validateKeys(blockArpg, enumClass.getEnumConstants(), blockName, sourceName);
+    }
+
+    private void validateKeys(
+            ArpgObjectStruct blockArpg,
+            Enum<?>[] constants,
             String blockName,
             String sourceName) {
 
@@ -813,7 +1109,7 @@ class AppearanceBuilder extends BuilderPackage {
 
             boolean known = false;
 
-            for (E constant : enumClass.getEnumConstants())
+            for (Enum<?> constant : constants)
                 known |= constant.name().equalsIgnoreCase(key);
 
             if (!known)

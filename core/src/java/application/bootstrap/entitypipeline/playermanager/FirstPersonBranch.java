@@ -92,7 +92,7 @@ class FirstPersonBranch extends BranchPackage {
         AnimationStateHandle animation = player.getAnimationStateHandle();
         Matrix4 head = animation.getSkinningMatrix(resolveHeadBone(player));
 
-        float y = entityData.getRaceData().getModelHeight() * entityData.getEyeLevel();
+        float y = player.getRaceData().getModelHeight() * entityData.getEyeLevel();
         float z = EngineSetting.CAMERA_EYE_FORWARD;
 
         float modelX = head.getM01() * y + head.getM02() * z + head.getM03();
@@ -120,7 +120,7 @@ class FirstPersonBranch extends BranchPackage {
         if (!player.hasAppearance())
             return EngineSetting.INDEX_NOT_FOUND;
 
-        return player.getEntityData().getRaceData().getAppearanceData().getHeadBoneIndex();
+        return player.getRaceData().getAppearanceData().getHeadBoneIndex();
     }
 
     private int resolveChestBone(EntityInstance player) {

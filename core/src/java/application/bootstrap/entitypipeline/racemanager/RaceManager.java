@@ -17,7 +17,7 @@ public class RaceManager extends ManagerPackage {
      * animation tree — it requires. Auto-triggers an on-demand load via
      * RaceLoader on a name-based cache miss, so templates resolve their race
      * while they load, and builds unregistered previews of a race an editor
-     * is changing.
+     * is changing. Lists the races the player may be made as.
      */
 
     // Palette
@@ -61,6 +61,16 @@ public class RaceManager extends ManagerPackage {
             throwException("Race could not be loaded: \"" + raceName + "\"");
 
         return handle;
+    }
+
+    // Every race the game's creator offers the player, in registration order
+    public void collectPlayableRaces(ObjectArrayList<RaceHandle> races) {
+
+        races.clear();
+
+        for (int i = 1; i < raceID2RaceHandle.size(); i++)
+            if (raceID2RaceHandle.get(i).getRaceData().isPlayable())
+                races.add(raceID2RaceHandle.get(i));
     }
 
     // Preview \\

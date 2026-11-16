@@ -335,7 +335,7 @@ public class NpcManager extends ManagerPackage {
     // given its nature
     private void raise(EntityInstance entity, NpcHandle npcHandle, long identity) {
 
-        RaceData raceData = entity.getEntityData().getRaceData();
+        RaceData raceData = entity.getRaceData();
         int levelSpan = npcHandle.getLevelMax() - npcHandle.getLevelMin() + 1;
         int level = npcHandle.getLevelMin()
                 + Math.min(levelSpan - 1, (int) (BiomeFieldUtility.hash01(identity ^ EngineSetting.NPC_LEVEL_SALT)
@@ -359,7 +359,7 @@ public class NpcManager extends ManagerPackage {
         if (!entity.hasAppearance())
             return;
 
-        AppearanceData appearanceData = entity.getEntityData().getRaceData().getAppearanceData();
+        AppearanceData appearanceData = entity.getRaceData().getAppearanceData();
         AppearanceHandle appearanceHandle = entity.getAppearanceHandle();
 
         for (SkinnedColor skinnedColor : SkinnedColor.VALUES) {

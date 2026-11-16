@@ -5,6 +5,8 @@ import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.race.RaceData;
+import application.bootstrap.entitypipeline.race.RaceHandle;
+import application.bootstrap.entitypipeline.racemanager.RaceManager;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.menupipeline.element.ElementInstance;
@@ -17,20 +19,23 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CreatorBodyBranch extends BranchPackage {
 
     /*
-     * Fills the Body tab with the character's gender, its build and head
-     * sliders and the body group of its shape sliders, and owns every slider
-     * the creator shows — the Appearance and Hair tabs inject theirs through
-     * injectSlider() — applying each to the player. The gender steps through
-     * only the genders the race allows. Height and weight span the ranges the
-     * entity template allows, the head sliders the creator's head proportion
-     * range, a shape slider its own range and a detail its creator range. A
-     * slider shows its value beside its name and moves its knob with the
-     * cursor while dragged.
+     * Owns the race and gender rows and every slider the creator shows — the
+     * build, the head's shape, each slider group and the detail amounts,
+     * injected wherever the race's layout lists them — applying each to the
+     * player. The race steps through the playable races (listed only when
+     * there are several), the gender through the genders the race allows.
+     * Height spans the range the entity template allows scaled to the race,
+     * weight the template's range, the head sliders the creator's head
+     * proportion range, a shape slider its own range and a detail its
+     * creator range. A slider shows its value beside its name and moves its
+     * knob with the cursor while dragged.
      */
 
     // Internal
@@ -38,8 +43,17 @@ public class CreatorBodyBranch extends BranchPackage {
     private InputManager inputManager;
     private CharacterCreatorBranch characterCreatorBranch;
     private GenderManager genderManager;
+    private RaceManager raceManager;
+
+    // Scratch
+    private ObjectArrayList<RaceHandle> playableRaces;
 
     // Base \\
+
+    @Override
+    protected void create() {
+        this.playableRaces = new ObjectArrayList<>();
+    }
 
     @Override
     protected void get() {
@@ -47,62 +61,59 @@ public class CreatorBodyBranch extends BranchPackage {
         this.inputManager = get(InputManager.class);
         this.characterCreatorBranch = get(CharacterCreatorBranch.class);
         this.genderManager = get(GenderManager.class);
+        this.raceManager = get(RaceManager.class);
     }
 
     // Populate \\
 
-    void populateBody(CreatorSessionStruct session) {
+    // The look of a race with no appearance: the race among the playable, the gender and the build
+    void populateBareBody(CreatorSessionStruct session) {
 
-        characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_GENDER);
+        if (hasRaceChoice()) {
+            characterCreatorBranch.injectSectionHeader(session, EngineSetting.APPEARANCE_CREATOR_SECTION_RACE);
+            injectRaceRow(session);
+        }
+
+        characterCreatorBranch.injectSectionHeader(session, EngineSetting.APPEARANCE_CREATOR_SECTION_GENDER);
         injectGenderRow(session);
+        characterCreatorBranch.injectSectionHeader(session, EngineSetting.APPEARANCE_CREATOR_SECTION_BUILD);
+        injectBuild(session);
+    }
 
-        characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_BUILD);
+    void injectBuild(CreatorSessionStruct session) {
         injectSlider(session, CreatorSlider.HEIGHT, 0);
         injectSlider(session, CreatorSlider.WEIGHT, 0);
+    }
 
-        if (!session.getPlayer().hasAppearance())
-            return;
-
-        characterCreatorBranch.injectSectionHeader(session, RuntimeSetting.CREATOR_SECTION_HEAD_SHAPE);
+    void injectHeadShape(CreatorSessionStruct session) {
         injectSlider(session, CreatorSlider.HEAD_WIDTH, 0);
         injectSlider(session, CreatorSlider.HEAD_LENGTH, 0);
         injectSlider(session, CreatorSlider.HEAD_DEPTH, 0);
-
-        injectShapeGroups(session, true);
     }
 
-    // Every shape slider offered to the player of the body group, or of every other group, under a header per group
-    // in the order the race first lists each
-    void injectShapeGroups(CreatorSessionStruct session, boolean bodyGroup) {
+    // Whether any slider of a group is offered to the player
+    boolean hasShapeGroup(AppearanceData appearanceData, String groupName) {
 
-        AppearanceData appearanceData = session.getPlayer().getEntityData().getRaceData().getAppearanceData();
-
-        for (int i = 0; i < appearanceData.getShapeCount(); i++) {
-
-            String groupName = appearanceData.getShape(i).getGroupName();
-
-            if (!appearanceData.getShape(i).isShownToPlayer()
-                    || groupName.equals(RuntimeSetting.CREATOR_SHAPE_GROUP_BODY) != bodyGroup
-                    || isGroupListedBefore(appearanceData, groupName, i))
-                continue;
-
-            characterCreatorBranch.injectSectionHeader(session, toTitle(groupName));
-
-            for (int j = i; j < appearanceData.getShapeCount(); j++)
-                if (appearanceData.getShape(j).isShownToPlayer()
-                        && appearanceData.getShape(j).getGroupName().equals(groupName))
-                    injectSlider(session, CreatorSlider.SHAPE, j);
-        }
-    }
-
-    private boolean isGroupListedBefore(AppearanceData appearanceData, String groupName, int shapeIndex) {
-
-        for (int i = 0; i < shapeIndex; i++)
-            if (appearanceData.getShape(i).isShownToPlayer()
-                    && appearanceData.getShape(i).getGroupName().equals(groupName))
+        for (int i = 0; i < appearanceData.getShapeCount(); i++)
+            if (isInGroup(appearanceData, i, groupName))
                 return true;
 
         return false;
+    }
+
+    // Every slider of a group offered to the player, in the order the race lists them
+    void injectShapeGroup(CreatorSessionStruct session, String groupName) {
+
+        AppearanceData appearanceData = session.getPlayer().getRaceData().getAppearanceData();
+
+        for (int i = 0; i < appearanceData.getShapeCount(); i++)
+            if (isInGroup(appearanceData, i, groupName))
+                injectSlider(session, CreatorSlider.SHAPE, i);
+    }
+
+    private boolean isInGroup(AppearanceData appearanceData, int shapeIndex, String groupName) {
+        return appearanceData.getShape(shapeIndex).isShownToPlayer()
+                && appearanceData.getShape(shapeIndex).getGroupName().equals(groupName);
     }
 
     void injectSlider(CreatorSessionStruct session, CreatorSlider slider, int index) {
@@ -120,9 +131,73 @@ public class CreatorBodyBranch extends BranchPackage {
                 });
     }
 
+    // Race \\
+
+    // Whether the player may choose among more than one race
+    boolean hasRaceChoice() {
+
+        raceManager.collectPlayableRaces(playableRaces);
+        return playableRaces.size() > 1;
+    }
+
+    void injectRaceRow(CreatorSessionStruct session) {
+
+        String raceTitle = toRaceTitle(session.getPlayer().getRaceData().getRaceName());
+
+        menuManager.inject(
+                session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_OPTIONS, RuntimeSetting.MENU_CREATOR_RACE_ROW,
+                row -> {
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_LABEL)
+                            .setFontText(EngineSetting.APPEARANCE_CREATOR_SECTION_RACE);
+                    row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_VALUE).setFontText(raceTitle);
+                });
+    }
+
+    public void previousRace(WindowInstance window) {
+        cycleRace(window, -1);
+    }
+
+    public void nextRace(WindowInstance window) {
+        cycleRace(window, 1);
+    }
+
+    // The player made as the next playable race, in its default gender and look, the tabs listed again for it
+    private void cycleRace(WindowInstance window, int step) {
+
+        CreatorSessionStruct session = characterCreatorBranch.getSession(window);
+
+        if (session == null)
+            return;
+
+        raceManager.collectPlayableRaces(playableRaces);
+
+        if (playableRaces.isEmpty())
+            return;
+
+        EntityInstance player = session.getPlayer();
+        int index = 0;
+
+        for (int i = 0; i < playableRaces.size(); i++)
+            if (playableRaces.get(i).getRaceData() == player.getRaceData())
+                index = i;
+
+        player.setRaceData(playableRaces.get(Math.floorMod(index + step, playableRaces.size())).getRaceData());
+        characterCreatorBranch.refreshTabs(session);
+    }
+
+    // A race is titled by its file name split into words
+    private String toRaceTitle(String raceName) {
+
+        String fileName = raceName.substring(raceName.lastIndexOf(RuntimeSetting.CREATOR_FEATURE_PATH_SEPARATOR) + 1);
+
+        return String.join(
+                RuntimeSetting.CREATOR_WORD_SEPARATOR,
+                fileName.split(RuntimeSetting.CREATOR_WORD_BOUNDARY_PATTERN));
+    }
+
     // Gender \\
 
-    private void injectGenderRow(CreatorSessionStruct session) {
+    void injectGenderRow(CreatorSessionStruct session) {
 
         String genderName = genderManager.getGenderHandleFromGenderID(session.getPlayer().getGenderID())
                 .getDisplayName();
@@ -131,7 +206,7 @@ public class CreatorBodyBranch extends BranchPackage {
                 session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_OPTIONS, RuntimeSetting.MENU_CREATOR_GENDER_ROW,
                 row -> {
                     row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_LABEL)
-                            .setFontText(RuntimeSetting.CREATOR_SECTION_GENDER);
+                            .setFontText(EngineSetting.APPEARANCE_CREATOR_SECTION_GENDER);
                     row.findChildById(RuntimeSetting.ELEMENT_CREATOR_ROW_VALUE).setFontText(genderName);
                 });
     }
@@ -152,7 +227,7 @@ public class CreatorBodyBranch extends BranchPackage {
             return;
 
         EntityInstance player = session.getPlayer();
-        RaceData raceData = player.getEntityData().getRaceData();
+        RaceData raceData = player.getRaceData();
         int index = 0;
 
         for (int i = 0; i < raceData.getGenderCount(); i++)
@@ -263,10 +338,10 @@ public class CreatorBodyBranch extends BranchPackage {
 
     private float resolveMin(CreatorSlider slider, int index, EntityInstance player) {
         return switch (slider) {
-            case HEIGHT -> player.getEntityData().getSizeMin().y;
+            case HEIGHT -> player.getEntityData().getSizeMin().y * player.getRaceScale();
             case WEIGHT -> player.getEntityData().getWeightMin();
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> RuntimeSetting.CREATOR_HEAD_PROPORTION_MIN;
-            case SHAPE -> player.getEntityData().getRaceData().getAppearanceData()
+            case SHAPE -> player.getRaceData().getAppearanceData()
                     .getShapeMin(player.getGenderID(), index);
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_MIN[index];
             case COLOR_HUE, COLOR_SATURATION, COLOR_BRIGHTNESS -> 0f;
@@ -275,10 +350,10 @@ public class CreatorBodyBranch extends BranchPackage {
 
     private float resolveMax(CreatorSlider slider, int index, EntityInstance player) {
         return switch (slider) {
-            case HEIGHT -> player.getEntityData().getSizeMax().y;
+            case HEIGHT -> player.getEntityData().getSizeMax().y * player.getRaceScale();
             case WEIGHT -> player.getEntityData().getWeightMax();
             case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> RuntimeSetting.CREATOR_HEAD_PROPORTION_MAX;
-            case SHAPE -> player.getEntityData().getRaceData().getAppearanceData()
+            case SHAPE -> player.getRaceData().getAppearanceData()
                     .getShapeMax(player.getGenderID(), index);
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_MAX[index];
             case COLOR_HUE, COLOR_SATURATION, COLOR_BRIGHTNESS -> 1f;
@@ -304,7 +379,7 @@ public class CreatorBodyBranch extends BranchPackage {
     private String resolveLabel(CreatorSlider slider, int index, EntityInstance player) {
         return switch (slider) {
             case SHAPE -> toTitle(
-                    player.getEntityData().getRaceData().getAppearanceData().getShape(index).getShapeName());
+                    player.getRaceData().getAppearanceData().getShape(index).getShapeName());
             case DETAIL -> RuntimeSetting.CREATOR_DETAIL_LABELS[index];
             default -> slider.getLabel();
         };
@@ -324,13 +399,15 @@ public class CreatorBodyBranch extends BranchPackage {
 
     // Randomize \\
 
+    // The gender, size and weight, the head's proportions and every slider offered to the player, each at random
+    // within its range, the size as the template allows it scaled to the race
     void randomizeBody(EntityInstance player) {
 
         EntityData entityData = player.getEntityData();
-        RaceData raceData = entityData.getRaceData();
+        RaceData raceData = player.getRaceData();
 
         player.setGenderID(raceData.getGenderID((int) (Math.random() * raceData.getGenderCount())));
-        player.setSize(entityData.getRandomSize());
+        player.setSize(entityData.getRandomSize().multiply(player.getRaceScale()));
         player.setWeight(entityData.getRandomWeight());
 
         if (!player.hasAppearance())
@@ -344,11 +421,12 @@ public class CreatorBodyBranch extends BranchPackage {
         AppearanceData appearanceData = raceData.getAppearanceData();
 
         for (int i = 0; i < appearanceData.getShapeCount(); i++)
-            player.getAppearanceHandle().setShapeValue(
-                    i,
-                    randomBetween(
-                            appearanceData.getShapeMin(player.getGenderID(), i),
-                            appearanceData.getShapeMax(player.getGenderID(), i)));
+            if (appearanceData.getShape(i).isShownToPlayer())
+                player.getAppearanceHandle().setShapeValue(
+                        i,
+                        randomBetween(
+                                appearanceData.getShapeMin(player.getGenderID(), i),
+                                appearanceData.getShapeMax(player.getGenderID(), i)));
     }
 
     private float randomBetween(float min, float max) {

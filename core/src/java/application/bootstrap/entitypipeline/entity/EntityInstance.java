@@ -42,7 +42,9 @@ public class EntityInstance extends InstancePackage {
      * as well, so its hair keeps its momentum. Its level, attributes, trades, skills, conduct
      * and professions live in their own handles, the same for a player as for
      * any NPC, and it carries one of the genders its race allows, wearing the
-     * model that gender requires and moving by its animation tree.
+     * model that gender requires and moving by its animation tree. Its race is
+     * its template's until setRaceData() makes it another, as the creator
+     * does for a player choosing among the playable races.
      */
 
     // Internal
@@ -89,6 +91,7 @@ public class EntityInstance extends InstancePackage {
     // Runtime
     private Vector3 size;
     private float weight;
+    private RaceData raceData;
     private short genderID;
     private RaceGenderStruct raceGender;
 
@@ -165,29 +168,64 @@ public class EntityInstance extends InstancePackage {
         this.springChunkCoordinate = chunkCoordinate;
         this.springPosition.set(position);
 
-        RaceData raceData = entityData.getRaceData();
-
         // Runtime
         this.size = size;
         this.weight = weight;
+
+        // Animation
+        this.animationStateHandle = create(AnimationStateHandle.class);
+
+        applyRace(entityData.getRaceData());
+    }
+
+    // Race \\
+
+    // Makes the entity of another race, its size carried over in proportion to the two races' model heights, in the
+    // race's default gender and look
+    public void setRaceData(RaceData raceData) {
+
+        if (raceData == this.raceData)
+            return;
+
+        size.multiply(raceData.getModelHeight() / this.raceData.getModelHeight());
+        applyRace(raceData);
+    }
+
+    // The one way an entity takes on a race: its default gender's model and tree, and an appearance when it has one
+    private void applyRace(RaceData raceData) {
+
+        this.raceData = raceData;
         this.genderID = raceData.getDefaultGenderID();
         this.raceGender = raceData.getGender(genderID);
 
         // Animation
-        this.animationStateHandle = create(AnimationStateHandle.class);
-        this.animationStateHandle.constructor(
+        animationStateHandle.constructor(
                 raceGender.getAnimationTreeHandle(),
                 entityStateHandle.getMovementState());
 
         // Appearance
-        if (raceData.hasAppearance()) {
-            this.appearanceHandle = create(AppearanceHandle.class);
-            this.appearanceHandle.constructor(
-                    raceData.getAppearanceData(),
-                    animationStateHandle,
-                    entityData.getWeightRatio(weight));
-            this.appearanceHandle.setGender(genderID);
+        if (!raceData.hasAppearance()) {
+            this.appearanceHandle = null;
+            return;
         }
+
+        if (appearanceHandle == null)
+            this.appearanceHandle = create(AppearanceHandle.class);
+
+        appearanceHandle.constructor(
+                raceData.getAppearanceData(),
+                animationStateHandle,
+                entityData.getWeightRatio(weight));
+        appearanceHandle.setGender(genderID);
+    }
+
+    public RaceData getRaceData() {
+        return raceData;
+    }
+
+    // How far the race's model stands against the template's own, the factor the template's sizes take for it
+    public float getRaceScale() {
+        return raceData.getModelHeight() / entityData.getRaceData().getModelHeight();
     }
 
     // Animation \\
@@ -231,7 +269,7 @@ public class EntityInstance extends InstancePackage {
         Vector3 position = worldPositionStruct.getPosition();
         long chunkCoordinate = worldPositionStruct.getChunkCoordinate();
         long delta = WorldWrapUtility.unwrapToGridCoordinate(worldHandle, springChunkCoordinate, chunkCoordinate);
-        float scale = size.y / entityData.getRaceData().getModelHeight();
+        float scale = size.y / raceData.getModelHeight();
 
         springTurn.set(0f, entityStateHandle.getBodyYaw(), 0f);
         springScale.set(scale, scale, scale);
@@ -375,8 +413,6 @@ public class EntityInstance extends InstancePackage {
     // The one way a being changes gender — it takes on the gender's model, moving by its tree from where it stands
     public void setGenderID(short genderID) {
 
-        RaceData raceData = entityData.getRaceData();
-
         if (!raceData.allowsGender(genderID))
             throwException("Race \"" + raceData.getRaceName() + "\" does not allow gender ID " + genderID + ".");
 
@@ -419,7 +455,7 @@ public class EntityInstance extends InstancePackage {
     public Vector3 getModelPoint(float modelX, float modelY, float modelZ, Vector3 out) {
 
         Vector3 position = worldPositionStruct.getPosition();
-        float scale = size.y / entityData.getRaceData().getModelHeight();
+        float scale = size.y / raceData.getModelHeight();
         double yaw = Math.toRadians(entityStateHandle.getBodyYaw());
         float cos = (float) Math.cos(yaw);
         float sin = (float) Math.sin(yaw);

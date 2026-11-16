@@ -391,6 +391,9 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-16: Scene Assets replaces Recorder Assets. Added `menus/editor/SceneAssets.arpg` (what the Dev window
   shows, section by section); regenerated `menus/editor/Recorder.arpg` (no Assets menu or asset rows) and
   `menus/editor/EditorWindow.arpg` (Scene Assets under ARPG Viewer, no Recorder Assets).
+- 2026-11-16: Creator laid out by the race. Regenerated `races/Human.arpg` (`playable`, the `player` flags and the
+  `creator` layout of the Appearance, Hair and Body tabs), `schemas/Races.arpg` (`playable`, `appearance.player` and
+  `appearance.creator`) and `menus/CharacterCreator.arpg` (race row).
 
 ---
 

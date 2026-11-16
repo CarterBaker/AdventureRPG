@@ -8,11 +8,14 @@ import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.featuremanager.FeatureManager;
 import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
+import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.race.RaceGenderStruct;
+import application.bootstrap.entitypipeline.racemanager.RaceManager;
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.itempipeline.itemmanager.ItemManager;
+import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
@@ -33,14 +36,18 @@ class PlayerRestoreBranch extends BranchPackage {
      * Applies a character save to a window's player in place. The save is fully
      * validated first, so a stale one changes nothing; the location is wrapped
      * into world bounds; inventory restores leniently, logging and skipping
-     * items that no longer exist or fit. A look — a character and inventory
-     * without a place — restores onto any being the same way.
+     * items that no longer exist or fit. The race and gender a save names
+     * are taken on first, so the appearance restores onto their model; a
+     * save older than them keeps the being's own. A look — a character and
+     * inventory without a place — restores onto any being the same way.
      */
 
     // Internal
     private FeatureManager featureManager;
     private ItemDefinitionManager itemDefinitionManager;
     private ItemManager itemManager;
+    private RaceManager raceManager;
+    private GenderManager genderManager;
 
     // Base \\
 
@@ -49,6 +56,8 @@ class PlayerRestoreBranch extends BranchPackage {
         this.featureManager = get(FeatureManager.class);
         this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.itemManager = get(ItemManager.class);
+        this.raceManager = get(RaceManager.class);
+        this.genderManager = get(GenderManager.class);
     }
 
     // Management \\
@@ -95,6 +104,11 @@ class PlayerRestoreBranch extends BranchPackage {
 
     private void restoreCharacter(ArpgObjectStruct characterArpg, EntityInstance player) {
 
+        player.setRaceData(resolveRace(characterArpg, player));
+
+        if (ArpgUtility.hasString(characterArpg, "gender"))
+            player.setGenderID(genderManager.getGenderIDFromGenderName(characterArpg.get("gender").getAsString()));
+
         player.setSize(parseVector(characterArpg, "size"));
         player.setWeight(ArpgUtility.validateFloat(characterArpg, "weight"));
 
@@ -102,7 +116,7 @@ class PlayerRestoreBranch extends BranchPackage {
             restoreAppearance(
                     ArpgUtility.validateObject(characterArpg, "appearance"),
                     player.getAppearanceHandle(),
-                    player.getEntityData().getRaceData().getAppearanceData(),
+                    player.getRaceData().getAppearanceData(),
                     player.getRaceGender());
     }
 
@@ -381,13 +395,50 @@ class PlayerRestoreBranch extends BranchPackage {
         if (!isVectorPositive(characterArpg.getAsObject("size")) || characterArpg.get("weight").getAsFloat() <= 0f)
             return false;
 
-        if (!player.hasAppearance())
+        if (!isRaceValid(characterArpg))
+            return false;
+
+        RaceData raceData = resolveRace(characterArpg, player);
+
+        if (!isGenderValid(characterArpg, raceData))
+            return false;
+
+        if (!raceData.hasAppearance())
             return !ArpgUtility.hasObject(characterArpg, "appearance");
 
         return ArpgUtility.hasObject(characterArpg, "appearance")
-                && isAppearanceValid(
-                        characterArpg.getAsObject("appearance"),
-                        player.getEntityData().getRaceData().getAppearanceData());
+                && isAppearanceValid(characterArpg.getAsObject("appearance"), raceData.getAppearanceData());
+    }
+
+    // A race the save names must still exist; a save naming none is of the being's own race
+    private boolean isRaceValid(ArpgObjectStruct characterArpg) {
+
+        if (!characterArpg.has("race"))
+            return true;
+
+        return ArpgUtility.hasString(characterArpg, "race")
+                && raceManager.hasRace(characterArpg.get("race").getAsString());
+    }
+
+    private RaceData resolveRace(ArpgObjectStruct characterArpg, EntityInstance player) {
+        return ArpgUtility.hasString(characterArpg, "race")
+                ? raceManager.getRaceHandleFromRaceName(characterArpg.get("race").getAsString()).getRaceData()
+                : player.getRaceData();
+    }
+
+    // A gender the save names must be one the race still allows; a save naming none takes the race's default
+    private boolean isGenderValid(ArpgObjectStruct characterArpg, RaceData raceData) {
+
+        if (!characterArpg.has("gender"))
+            return true;
+
+        if (!ArpgUtility.hasString(characterArpg, "gender"))
+            return false;
+
+        String genderName = characterArpg.get("gender").getAsString();
+
+        return genderManager.hasGender(genderName)
+                && raceData.allowsGender(genderManager.getGenderIDFromGenderName(genderName));
     }
 
     // A save's appearance block is valid when every entry it holds is well formed; entries it leaves out, or names the

@@ -25,8 +25,10 @@ public class CharacterCreatorBranch extends BranchPackage {
      * creator's live preview; Back returns to the menu and its own world,
      * Create names the character, spends its staged creation points, takes up
      * its chosen profession and begins play; backing out lets the staging go.
-     * The option list shows one CreatorTab at a time — this branch owns the
-     * tabs and clears the list, and the section branches fill it. Enter
+     * The option list shows one tab at a time: the race's own look tabs,
+     * laid out by its appearance, then the attributes and the profession.
+     * This branch owns the tabs and clears the list, and the section
+     * branches fill it; a race changed lists its own tabs again. Enter
      * creates and Escape backs out.
      */
 
@@ -126,7 +128,7 @@ public class CharacterCreatorBranch extends BranchPackage {
 
         creatorProgressionBranch.populateStats(session);
         creatorNameBranch.refreshName(session);
-        showTab(session, CreatorTab.VALUES[0]);
+        showTab(session, CreatorTab.LOOK, 0);
     }
 
     public void closeMenu(WindowInstance window) {
@@ -198,20 +200,30 @@ public class CharacterCreatorBranch extends BranchPackage {
 
     // Tabs \\
 
-    public void selectTab(String tabName, WindowInstance window) {
+    public void selectTab(String argument, WindowInstance window) {
 
         CreatorSessionStruct session = getSession(window);
-        CreatorTab tab = CreatorTab.valueOf(tabName);
+        String[] parts = argument.split(RuntimeSetting.CREATOR_ARGUMENT_SEPARATOR);
+        CreatorTab tab = CreatorTab.valueOf(parts[0]);
+        int lookTabIndex = Integer.parseInt(parts[1]);
 
-        if (session == null || session.getActiveTab() == tab)
+        if (session == null || session.getActiveTab() == tab && session.getLookTabIndex() == lookTabIndex)
             return;
 
-        showTab(session, tab);
+        showTab(session, tab, lookTabIndex);
     }
 
-    private void showTab(CreatorSessionStruct session, CreatorTab tab) {
+    // The tabs listed again for the race the player is now, the look tab on show held within its tabs
+    public void refreshTabs(CreatorSessionStruct session) {
+        showTab(session, session.getActiveTab(), Math.min(
+                session.getLookTabIndex(),
+                creatorAppearanceBranch.getLookTabCount(session.getPlayer()) - 1));
+    }
+
+    private void showTab(CreatorSessionStruct session, CreatorTab tab, int lookTabIndex) {
 
         session.setActiveTab(tab);
+        session.setLookTabIndex(lookTabIndex);
 
         populateTabs(session);
         refreshOptions(session);
@@ -219,24 +231,36 @@ public class CharacterCreatorBranch extends BranchPackage {
         session.getCreatorMenu().getEntryPoint(RuntimeSetting.ENTRY_CREATOR_OPTIONS).setScrollY(0f);
     }
 
+    // The race's look tabs, then every other tab
     private void populateTabs(CreatorSessionStruct session) {
 
         clearEntryPoint(session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_TABS);
 
+        for (int i = 0; i < creatorAppearanceBranch.getLookTabCount(session.getPlayer()); i++)
+            injectTab(session, CreatorTab.LOOK, i, creatorAppearanceBranch.getLookTabTitle(session.getPlayer(), i));
+
         for (CreatorTab tab : CreatorTab.VALUES)
-            menuManager.inject(
-                    session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_TABS, RuntimeSetting.MENU_CREATOR_TAB,
-                    button -> {
-                        ElementInstance label = button.findChildById(RuntimeSetting.ELEMENT_CREATOR_TAB_LABEL);
-                        button.setActionArgOverride(tab.name());
-                        label.setFontText(tab.getTitle());
+            if (tab != CreatorTab.LOOK)
+                injectTab(session, tab, 0, tab.getTitle());
+    }
 
-                        if (tab != session.getActiveTab())
-                            return;
+    private void injectTab(CreatorSessionStruct session, CreatorTab tab, int lookTabIndex, String title) {
 
-                        button.setColorOverride(activeTabColor);
-                        label.setColorOverride(activeTabLabelColor);
-                    });
+        boolean active = tab == session.getActiveTab() && lookTabIndex == session.getLookTabIndex();
+
+        menuManager.inject(
+                session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_TABS, RuntimeSetting.MENU_CREATOR_TAB,
+                button -> {
+                    ElementInstance label = button.findChildById(RuntimeSetting.ELEMENT_CREATOR_TAB_LABEL);
+                    button.setActionArgOverride(tab.name() + RuntimeSetting.CREATOR_ARGUMENT_SEPARATOR + lookTabIndex);
+                    label.setFontText(title);
+
+                    if (!active)
+                        return;
+
+                    button.setColorOverride(activeTabColor);
+                    label.setColorOverride(activeTabLabelColor);
+                });
     }
 
     // Options \\
@@ -246,12 +270,7 @@ public class CharacterCreatorBranch extends BranchPackage {
         clearEntryPoint(session.getCreatorMenu(), RuntimeSetting.ENTRY_CREATOR_OPTIONS);
 
         switch (session.getActiveTab()) {
-            case APPEARANCE -> creatorAppearanceBranch.populateAppearance(session);
-            case HAIR -> creatorAppearanceBranch.populateHair(session);
-            case BODY -> {
-                creatorBodyBranch.populateBody(session);
-                creatorAppearanceBranch.populateBodyMarks(session);
-            }
+            case LOOK -> creatorAppearanceBranch.populateLook(session);
             case ATTRIBUTES -> creatorProgressionBranch.populateAttributes(session);
             case PROFESSION -> creatorProgressionBranch.populateProfessions(session);
         }

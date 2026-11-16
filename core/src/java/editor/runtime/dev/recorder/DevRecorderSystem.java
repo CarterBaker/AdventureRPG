@@ -680,7 +680,7 @@ public class DevRecorderSystem extends SystemPackage {
 
             short genderID = genderManager.getGenderIDFromGenderName(track.getGenderName());
 
-            if (puppet.getEntityData().getRaceData().allowsGender(genderID))
+            if (puppet.getRaceData().allowsGender(genderID))
                 puppet.setGenderID(genderID);
         }
 
@@ -1103,7 +1103,7 @@ public class DevRecorderSystem extends SystemPackage {
             for (SkinnedColor skinnedColor : SkinnedColor.VALUES)
                 signature = mixColor(signature, appearance.getColor(skinnedColor));
 
-            for (int i = 0; i < entity.getEntityData().getRaceData().getAppearanceData().getShapeCount(); i++)
+            for (int i = 0; i < entity.getRaceData().getAppearanceData().getShapeCount(); i++)
                 signature = signature * EditorSetting.RECORDER_LOOK_HASH_PRIME
                         + Float.floatToIntBits(appearance.getShapeValue(i));
         }

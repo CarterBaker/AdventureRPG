@@ -41,7 +41,8 @@ class RaceBuilder extends BuilderPackage {
      * "features" it starts with. Every gender must be on one rig, the race's,
      * since its "equipment" anchors, its optional "appearance" and every clip
      * it plays are laid out by those bones. Genders naming one material share
-     * one clone. Bootstrap only, apart from the unregistered preview builds
+     * one clone. "playable" (true unless it says otherwise) offers the race
+     * in the game's creator. Bootstrap only, apart from the unregistered preview builds
      * an editor makes of a race it is changing.
      */
 
@@ -90,7 +91,13 @@ class RaceBuilder extends BuilderPackage {
                 : null;
 
         RaceHandle raceHandle = create(RaceHandle.class);
-        raceHandle.constructor(new RaceData(raceName, rigHandle, genders, appearanceData, equipmentAnchors));
+        raceHandle.constructor(new RaceData(
+                raceName,
+                ArpgUtility.getBoolean(arpg, "playable", true),
+                rigHandle,
+                genders,
+                appearanceData,
+                equipmentAnchors));
 
         return raceHandle;
     }

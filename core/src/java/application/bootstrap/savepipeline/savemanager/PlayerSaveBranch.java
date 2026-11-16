@@ -17,6 +17,7 @@ import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantStruct
 import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
+import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
@@ -30,8 +31,8 @@ class PlayerSaveBranch extends BranchPackage {
 
     /*
      * Captures a window's player as an ARPG character save and writes it to
-     * disk. The character records its body size, its weight and, when it has
-     * one, its appearance — skin and hair color, head proportion, and the
+     * disk. The character records the race it was made as and its gender, by
+     * name, its body size, its weight and, when it has one, its appearance — skin and hair color, head proportion, and the
      * feature worn in every filled slot. The location records the world, the
      * chunk coordinate, and the chunk-local position the player stands at.
      * The inventory records the item in every filled equipment slot, how
@@ -40,6 +41,16 @@ class PlayerSaveBranch extends BranchPackage {
      * nested. The look is the character and the inventory alone, without a
      * place, for copying how any being appears.
      */
+
+    // Internal
+    private GenderManager genderManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.genderManager = get(GenderManager.class);
+    }
 
     // Management \\
 
@@ -66,13 +77,16 @@ class PlayerSaveBranch extends BranchPackage {
     private ArpgObjectStruct buildCharacter(EntityInstance player) {
 
         ArpgObjectStruct characterArpg = new ArpgObjectStruct();
+        characterArpg.addProperty("race", player.getRaceData().getRaceName());
+        characterArpg.addProperty(
+                "gender", genderManager.getGenderHandleFromGenderID(player.getGenderID()).getGenderName());
         characterArpg.add("size", buildVector(player.getSize()));
         characterArpg.addProperty("weight", player.getWeight());
 
         if (player.hasAppearance())
             characterArpg.add("appearance", buildAppearance(
                     player.getAppearanceHandle(),
-                    player.getEntityData().getRaceData().getAppearanceData(),
+                    player.getRaceData().getAppearanceData(),
                     player.getRaceGender()));
 
         return characterArpg;

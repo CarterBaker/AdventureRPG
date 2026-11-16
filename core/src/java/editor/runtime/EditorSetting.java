@@ -794,6 +794,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_FIELD_BONES = "bones";
     public static final String CHARACTER_EDITOR_FIELD_SLIDERS = "sliders";
     public static final String CHARACTER_EDITOR_FIELD_PLAYER = "player";
+    public static final String CHARACTER_EDITOR_FIELD_PLAYABLE = "playable";
     public static final String CHARACTER_EDITOR_FIELD_EQUIPMENT = "equipment";
     public static final String CHARACTER_EDITOR_FIELD_SLOT = "slot";
     public static final String CHARACTER_EDITOR_FIELD_BONE = "bone";
@@ -807,6 +808,9 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_SIDE = "side";
     public static final String CHARACTER_EDITOR_KEY_OVERLAY_STYLE = "overlay_style";
     public static final String CHARACTER_EDITOR_KEY_GENDER = "gender";
+    public static final String CHARACTER_EDITOR_KEY_PLAYABLE = "playable";
+    public static final String CHARACTER_EDITOR_KEY_OFFERED = "offered";
+    public static final String CHARACTER_EDITOR_OFFERED_SEPARATOR = "/";
     public static final String CHARACTER_EDITOR_KEY_FEATURE = "feature";
     public static final String CHARACTER_EDITOR_KEY_FEATURE_VARIANT = "feature_variant";
     public static final String CHARACTER_EDITOR_KEY_COLOR_PREFIX = "color_";
@@ -888,6 +892,9 @@ public class EditorSetting {
 
     // Character Editor — panel text
     public static final String CHARACTER_EDITOR_HEADER_PREVIEW = "Preview";
+    public static final String CHARACTER_EDITOR_HEADER_CREATOR = "Creator";
+    public static final String CHARACTER_EDITOR_LABEL_PLAYABLE = "Playable";
+    public static final String CHARACTER_EDITOR_LABEL_OVERLAY_AMOUNT = "Amount";
     public static final String CHARACTER_EDITOR_HEADER_FEATURES = "Features";
     public static final String CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX = " (race default)";
     public static final String CHARACTER_EDITOR_VARIANT_DEFAULT_SUFFIX = " (feature default)";

@@ -1,6 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
+import application.bootstrap.entitypipeline.appearance.AppearanceOptionKind;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
@@ -25,8 +26,10 @@ class CharacterRowBranch extends BranchPackage {
     /*
      * Lists the rows of the character editor's two panels for its mode. The
      * left panel holds how the preview stands and what can be picked — in
-     * Appearance everything the player is offered in the game's creator, the
-     * features and marks worn, every color with its tones, the details, and
+     * Appearance everything the player is offered in the game's creator,
+     * whether the race is playable, the features and marks worn (each mark
+     * with how far it shows), every color with its tones, the details not
+     * shown by a mark, each with whether the player is offered it, and
      * every slider under its group, each sliding across the previewed
      * gender's range with that range's two ends beneath it (Blink alone, a
      * preview control, stays on the right), the bones in
@@ -95,6 +98,7 @@ class CharacterRowBranch extends BranchPackage {
 
         switch (mode) {
             case APPEARANCE -> {
+                addCreatorRows(document, rows);
                 addFeatureRows(document, rows);
                 addColorRows(document, rows);
                 characterSliderBranch.buildRows(document, rows);
@@ -108,6 +112,13 @@ class CharacterRowBranch extends BranchPackage {
             case SCULPT, PAINT, UV -> characterMeshRowBranch.addPartRows(document, rows);
             case RIG -> characterRigRowBranch.addBoneRows(rows);
         }
+    }
+
+    // Whether the game's creator offers the race at all
+    private void addCreatorRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_CREATOR));
+        addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_PLAYABLE,
+                EditorSetting.CHARACTER_EDITOR_LABEL_PLAYABLE);
     }
 
     private void addFeatureRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
@@ -130,12 +141,15 @@ class CharacterRowBranch extends BranchPackage {
                 addChoice(document, rows,
                         CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_FEATURE_VARIANT, slotName),
                         slotName + EditorSetting.CHARACTER_EDITOR_LABEL_VARIANT_SUFFIX);
+
+            addOffered(document, rows, AppearanceOptionKind.FEATURE, featureSlot.ordinal());
         }
 
         addOverlayRows(document, rows);
     }
 
-    // The style each overlay the previewed gender's model places starts in, as the creator offers it
+    // The style each overlay the previewed gender's model places starts in and how far it shows, as the creator offers
+    // them
     private void addOverlayRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         RaceGenderStruct raceGender = document.getPreviewData().getGender(characterEditorManager.getPreviewGenderID());
@@ -156,6 +170,11 @@ class CharacterRowBranch extends BranchPackage {
             addChoice(document, rows,
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_OVERLAY_STYLE, overlayName),
                     overlayName);
+            addNumber(document, rows,
+                    CharacterViewUtility.toKey(
+                            EditorSetting.CHARACTER_EDITOR_KEY_DETAIL, skinnedOverlay.getDetail().ordinal()),
+                    EditorSetting.CHARACTER_EDITOR_LABEL_OVERLAY_AMOUNT);
+            addOffered(document, rows, AppearanceOptionKind.OVERLAY, skinnedOverlay.ordinal());
         }
     }
 
@@ -221,6 +240,7 @@ class CharacterRowBranch extends BranchPackage {
         for (CharacterEditorColor color : CharacterEditorColor.VALUES) {
 
             rows.add(CharacterViewRowStruct.header(color.getLabel()));
+            addOffered(document, rows, AppearanceOptionKind.COLOR, color.getSkinnedColor().ordinal());
             addChannels(document, rows, color.getColorKey(), "");
             addChoice(document, rows, color.getToneKey(), EditorSetting.CHARACTER_EDITOR_LABEL_TONE);
 
@@ -241,11 +261,16 @@ class CharacterRowBranch extends BranchPackage {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_DETAILS));
 
-        for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES)
+        for (SkinnedDetail skinnedDetail : SkinnedDetail.VALUES) {
+
+            if (SkinnedOverlay.findByDetail(skinnedDetail) != null)
+                continue;
+
             addNumber(document, rows,
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_DETAIL, skinnedDetail.ordinal()),
                     EditorSetting.CHARACTER_EDITOR_DETAIL_LABELS[skinnedDetail.ordinal()]);
-
+            addOffered(document, rows, AppearanceOptionKind.DETAIL, skinnedDetail.ordinal());
+        }
     }
 
     // How the preview plays and stands while the look is set, nothing the player is given
@@ -345,6 +370,17 @@ class CharacterRowBranch extends BranchPackage {
             String label) {
 
         rows.add(CharacterViewRowStruct.number(key, label, characterPropertyBranch.getValueText(document, key)));
+    }
+
+    // Whether the game's creator offers the player a color, detail, overlay or feature
+    private void addOffered(
+            CharacterDocumentInstance document,
+            ObjectArrayList<CharacterViewRowStruct> rows,
+            AppearanceOptionKind kind,
+            int index) {
+
+        addChoice(document, rows, CharacterPropertyBranch.toOfferedKey(kind, index),
+                EditorSetting.CHARACTER_EDITOR_LABEL_SHAPE_PLAYER);
     }
 
     private void addChoice(

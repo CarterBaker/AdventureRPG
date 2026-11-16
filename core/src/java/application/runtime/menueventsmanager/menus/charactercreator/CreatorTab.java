@@ -5,15 +5,14 @@ import application.runtime.RuntimeSetting;
 public enum CreatorTab {
 
     /*
-     * The sections of the character creator, in the order their tabs are
-     * listed. Each tab is one page of the scrolling option list: the face and
-     * the hair, the body and gender, the attribute points creation grants, and
-     * the profession the character starts out in.
+     * The kinds of page the character creator lists, in the order their tabs
+     * are listed. The look is the race's own: one tab per tab of its creator
+     * layout, each titled and filled as the race lays it out. Then come the
+     * attribute points creation grants and the profession the character
+     * starts out in, the same for every race.
      */
 
-    APPEARANCE(RuntimeSetting.CREATOR_TAB_APPEARANCE),
-    HAIR(RuntimeSetting.CREATOR_TAB_HAIR),
-    BODY(RuntimeSetting.CREATOR_TAB_BODY),
+    LOOK(null),
     ATTRIBUTES(RuntimeSetting.CREATOR_TAB_ATTRIBUTES),
     PROFESSION(RuntimeSetting.CREATOR_TAB_PROFESSION);
 
@@ -31,6 +30,7 @@ public enum CreatorTab {
 
     // Accessible \\
 
+    // Null for the look, whose tabs the race titles
     public String getTitle() {
         return title;
     }

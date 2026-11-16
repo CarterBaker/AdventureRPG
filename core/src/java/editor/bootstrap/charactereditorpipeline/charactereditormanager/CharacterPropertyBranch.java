@@ -1,6 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
+import application.bootstrap.entitypipeline.appearance.AppearanceOptionKind;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
@@ -465,6 +466,8 @@ class CharacterPropertyBranch extends BranchPackage {
                             characterEditorManager.getSide(characterEditorManager.getRegion()).ordinal() + direction,
                             CharacterEditorSide.VALUES.length)]);
             case EditorSetting.CHARACTER_EDITOR_KEY_GENDER -> cycleGender(document, direction);
+            case EditorSetting.CHARACTER_EDITOR_KEY_PLAYABLE -> togglePlayable(document);
+            case EditorSetting.CHARACTER_EDITOR_KEY_OFFERED -> toggleOffered(document, key);
             case EditorSetting.CHARACTER_EDITOR_KEY_OVERLAY_STYLE -> cycleOverlayStyle(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), SkinnedOverlay.class),
                     direction);
@@ -500,6 +503,9 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_GENDER -> genderManager
                     .getGenderHandleFromGenderID(characterEditorManager.getPreviewGenderID())
                     .getDisplayName();
+            case EditorSetting.CHARACTER_EDITOR_KEY_PLAYABLE -> toSwitchText(
+                    document.hasPreview() && document.getPreviewData().isPlayable());
+            case EditorSetting.CHARACTER_EDITOR_KEY_OFFERED -> toSwitchText(isOffered(document, key));
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE -> getFeatureText(CharacterViewUtility.getKeyArgument(key));
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE_VARIANT -> getFeatureVariantText(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class));
@@ -516,6 +522,51 @@ class CharacterPropertyBranch extends BranchPackage {
                     : EditorSetting.CHARACTER_VIEW_NO;
             default -> "";
         };
+    }
+
+    // Creator \\
+
+    // The key of a color's, detail's, overlay's or feature's player flag
+    static String toOfferedKey(AppearanceOptionKind kind, int index) {
+        return CharacterViewUtility.toKey(
+                EditorSetting.CHARACTER_EDITOR_KEY_OFFERED,
+                kind.name() + EditorSetting.CHARACTER_EDITOR_OFFERED_SEPARATOR + index);
+    }
+
+    private boolean isOffered(CharacterDocumentInstance document, String key) {
+
+        if (!document.hasPreview() || !document.getPreviewData().hasAppearance())
+            return false;
+
+        String[] parts = CharacterViewUtility.getKeyArgument(key).split(EditorSetting.CHARACTER_EDITOR_OFFERED_SEPARATOR);
+
+        return document.getPreviewData().getAppearanceData().isOffered(
+                ArpgUtility.toEnum(parts[0], AppearanceOptionKind.class), Integer.parseInt(parts[1]));
+    }
+
+    private void toggleOffered(CharacterDocumentInstance document, String key) {
+
+        if (getAppearanceArpg() == null)
+            return;
+
+        String[] parts = CharacterViewUtility.getKeyArgument(key).split(EditorSetting.CHARACTER_EDITOR_OFFERED_SEPARATOR);
+        AppearanceOptionKind kind = ArpgUtility.toEnum(parts[0], AppearanceOptionKind.class);
+
+        characterEditBranch.setOffered(
+                document,
+                kind.getFlagBlock(),
+                ArpgUtility.toEnumName(kind.getMembers()[Integer.parseInt(parts[1])]),
+                !isOffered(document, key));
+    }
+
+    private void togglePlayable(CharacterDocumentInstance document) {
+
+        if (document.hasPreview())
+            characterEditBranch.setPlayable(document, !document.getPreviewData().isPlayable());
+    }
+
+    private String toSwitchText(boolean on) {
+        return on ? EditorSetting.CHARACTER_EDITOR_SWITCH_ON : EditorSetting.CHARACTER_EDITOR_SWITCH_OFF;
     }
 
     // Genders \\

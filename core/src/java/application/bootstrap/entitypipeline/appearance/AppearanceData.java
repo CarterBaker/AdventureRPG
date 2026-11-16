@@ -25,8 +25,11 @@ public class AppearanceData extends DataPackage {
      * SkinnedDetail, the shape sliders, the default feature per slot, each
      * gender's starting preset, the head-shape bone with the mask that hides
      * it and every bone below it from a character's own eyes, and the build
-     * curve.
-     * isCompatible() is the one rule for whether a feature can be worn.
+     * curve, with the character creator's layout (its tabs, their sections
+     * and the options each lists) and the player flags of every color,
+     * detail, overlay and feature.
+     * isCompatible() is the one rule for whether a feature can be worn, and
+     * isOffered() for whether the player is given an option.
      */
 
     // Rig
@@ -63,6 +66,11 @@ public class AppearanceData extends DataPackage {
     private final float heavyBuildFactor;
     private final float[] girthInfluence;
 
+    // Creator — the tabs in order, and whether the player is offered each member, by AppearanceOptionKind ordinal
+    // then member ordinal, null for a kind that names no member
+    private final AppearanceTabStruct[] creatorTabs;
+    private final boolean[][] offered;
+
     // Constructor \\
 
     public AppearanceData(
@@ -79,7 +87,9 @@ public class AppearanceData extends DataPackage {
             Int2ObjectOpenHashMap<AppearanceGenderStruct> genderID2Preset,
             float thinBuildFactor,
             float heavyBuildFactor,
-            float[] girthInfluence) {
+            float[] girthInfluence,
+            AppearanceTabStruct[] creatorTabs,
+            boolean[][] offered) {
 
         // Rig
         this.rigHandle = rigHandle;
@@ -116,6 +126,10 @@ public class AppearanceData extends DataPackage {
         this.thinBuildFactor = thinBuildFactor;
         this.heavyBuildFactor = heavyBuildFactor;
         this.girthInfluence = girthInfluence;
+
+        // Creator
+        this.creatorTabs = creatorTabs;
+        this.offered = offered;
     }
 
     private static int resolveMaxMorphCount(MeshHandle[] bodyMeshes) {
@@ -293,6 +307,19 @@ public class AppearanceData extends DataPackage {
 
     public int getExpressionMorph(int bodyIndex, AppearanceExpression expression) {
         return expressionMorphs[bodyIndex][expression.ordinal()];
+    }
+
+    public int getCreatorTabCount() {
+        return creatorTabs.length;
+    }
+
+    public AppearanceTabStruct getCreatorTab(int index) {
+        return creatorTabs[index];
+    }
+
+    // Whether the player is offered a member of a flagged kind; every option of an unflagged kind is
+    public boolean isOffered(AppearanceOptionKind kind, int index) {
+        return !kind.isFlagged() || offered[kind.ordinal()][index];
     }
 
     public FeatureHandle getDefaultFeature(FeatureSlot featureSlot) {

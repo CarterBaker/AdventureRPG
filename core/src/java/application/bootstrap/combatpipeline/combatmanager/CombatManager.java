@@ -248,7 +248,7 @@ public class CombatManager extends ManagerPackage {
         ItemInstance held = entity.getInventoryHandle().getMainHand();
 
         return held != null && weaponManager.getWeaponHandleFromWeaponID(resolveItemWeapon(held))
-                .hasRig(entity.getEntityData().getRaceData().getRigHandle());
+                .hasRig(entity.getRaceData().getRigHandle());
     }
 
     // The weapon an item names, the default item weapon when it names none

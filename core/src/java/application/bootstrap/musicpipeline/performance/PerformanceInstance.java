@@ -257,7 +257,7 @@ public class PerformanceInstance extends InstancePackage {
     // Utility \\
 
     private RigHandle resolveRig(EntityInstance entity) {
-        return entity.getEntityData().getRaceData().getRigHandle();
+        return entity.getRaceData().getRigHandle();
     }
 
     // Accessible \\

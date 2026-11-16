@@ -60,15 +60,31 @@ layouts like any other.
   and Save run the File menu's action (`FileMenuBranch.run`).
 
 - **The Appearance outliner is the player's creator.** In Appearance the Outliner lists everything the game's creator
-  offers the player: the gender, the features worn (Hair: the race default, none, or any style that fits), under each
+  offers the player: whether the race is Playable (`playable`, `CharacterEditBranch.setPlayable`), the gender, the
+  features worn (Hair: the race default, none, or any style that fits), under each
   worn feature that offers variants the variant the previewed gender starts it in (eyes, teeth: the feature's own
   default, then each variant; `CharacterPropertyBranch.cycleFeatureVariant`, written as
   `genders.<g>.feature_variants.<slot>` by `CharacterEditBranch.setFeatureVariant`, cleared when the gender's feature in
-  that slot changes), the marks (overlay styles), every color with the race's tones, the detail amounts, every slider
-  (below) and the body build of the bone selected (Thin, Heavy, Girth). Appearance lists no pose: a mode names the pose
+  that slot changes), the marks (each overlay's style, then its Amount, the overlay's `SkinnedDetail`), every color
+  with the race's tones, the detail amounts no mark shows, every slider (below) and the body build of the bone selected
+  (Thin, Heavy, Girth). Each feature, mark, color and detail carries a Player row, the flag in the race's
+  `appearance.player` block (`colors`, `details`, `overlays`, `features`; true unless it says otherwise,
+  `CharacterEditBranch.setOffered`, read through `AppearanceData.isOffered`); a mark's amount is offered with the mark,
+  never flagged on its own (`SkinnedOverlay.findByDetail`). Appearance lists no pose: a mode names the pose
   it stands in (`CharacterEditorMode.getStandingPose`, Appearance idles as the creator shows the player) or lets its
   outliner pick one (`picksPose`: Equipment, Weights). Only Blink, Weight and Head, preview controls, stay in the
   Properties tab.
+- **The game's creator is laid out by the race.** `appearance.creator` lists the creator's look tabs, each with its
+  sections, each listing options by `kind` (`AppearanceOptionKind`: race, gender, build, head, color, detail, overlay,
+  feature, sliders) and `name` (the member's lower-case enum name, or the slider group); `AppearanceBuilder.parseCreator`
+  makes `AppearanceTabStruct`s, and any offered member or slider group the layout leaves out gains a section of its kind
+  in the last tab, so nothing offered is lost. A race without `creator` gets a Body tab (race, gender, build, head
+  shape) and a Look tab holding the rest. The creator (`CreatorAppearanceBranch.populateLook`) lists the race's tabs,
+  then Attributes and Profession, and in each section only what this character has to offer (an overlay only where its
+  gender's model places it; a section of several options heads each color by name). Race is the race's `playable`
+  flag: the Race row lists the playable races (`RaceManager.collectPlayableRaces`) only when there are several, and
+  picking one makes the player that race in place (`EntityInstance.setRaceData`, its size carried over by the races'
+  model heights, `getRaceScale`); saves keep the race and gender by name.
 - **Sliders are derived, never listed by hand.** `CharacterSliderBranch` owns every slider row. The race's sliders are
   whatever its rig and bodies offer (see Appearance below): a bone slider per channel the Rig tab ticks on a bone, a
   control per control of the rig's bone controls, a shape key per morph no expression plays. Each is listed under its

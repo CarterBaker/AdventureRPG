@@ -39,6 +39,18 @@ public enum SkinnedOverlay {
         this.detail = detail;
     }
 
+    // Utility \\
+
+    // The overlay whose amount a detail is, null for a detail no overlay shows
+    public static SkinnedOverlay findByDetail(SkinnedDetail detail) {
+
+        for (SkinnedOverlay overlay : VALUES)
+            if (overlay.detail == detail)
+                return overlay;
+
+        return null;
+    }
+
     // Accessible \\
 
     public SkinnedColor getColor() {

@@ -4,6 +4,10 @@ import java.util.Arrays;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
+import application.bootstrap.entitypipeline.appearance.AppearanceOptionKind;
+import application.bootstrap.entitypipeline.appearance.AppearanceOptionStruct;
+import application.bootstrap.entitypipeline.appearance.AppearanceSectionStruct;
+import application.bootstrap.entitypipeline.appearance.AppearanceTabStruct;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
@@ -19,19 +23,24 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CreatorAppearanceBranch extends BranchPackage {
 
     /*
-     * Fills the Appearance and Hair tabs and applies their choices to the
-     * player's AppearanceHandle. Colors are swatch grids painted from the
-     * character's palettes; the face's shape sliders, grouped as the
-     * template groups them, and the detail amounts are sliders owned by
-     * CreatorBodyBranch. The hairstyle is a stepper over the features
+     * Fills the look tabs as the player's race lays them out — each section
+     * under its header, listing the options it has for this character — and
+     * applies their choices to the player's AppearanceHandle. Colors are
+     * swatch grids painted from the race's palettes; overlays a style row
+     * and how far they show; the slider groups, the build, the head and the
+     * detail amounts are sliders owned by CreatorBodyBranch, as are the race
+     * and gender rows. A feature is a stepper over the features
      * FeatureManager holds that fit the character, sorted by name, led by
-     * None — a new feature file shows up here with no code change.
+     * None where the slot may be bare — a new feature file shows up here
+     * with no code change. Only what the race offers the player is listed or
+     * randomized.
      */
 
     // Internal
@@ -62,59 +71,99 @@ public class CreatorAppearanceBranch extends BranchPackage {
         this.creatorBodyBranch = get(CreatorBodyBranch.class);
     }
 
+    // Tabs \\
+
+    // The look tabs the race lays out, or one for the body of a race with no appearance
+    int getLookTabCount(EntityInstance player) {
+        return player.hasAppearance() ? player.getRaceData().getAppearanceData().getCreatorTabCount() : 1;
+    }
+
+    String getLookTabTitle(EntityInstance player, int index) {
+        return creatorBodyBranch.toTitle(player.hasAppearance()
+                ? player.getRaceData().getAppearanceData().getCreatorTab(index).getTabName()
+                : EngineSetting.APPEARANCE_CREATOR_TAB_BODY);
+    }
+
     // Populate \\
 
-    void populateAppearance(CreatorSessionStruct session) {
+    // Every section of the look tab on show that has something to offer the character, under its header, a section of
+    // several options heading each color among them by name
+    void populateLook(CreatorSessionStruct session) {
 
-        if (!session.getPlayer().hasAppearance())
+        EntityInstance player = session.getPlayer();
+
+        if (!player.hasAppearance()) {
+            creatorBodyBranch.populateBareBody(session);
             return;
+        }
 
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_SKIN, SkinnedColor.SKIN);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_EYE_COLOR, SkinnedColor.EYES);
-        injectFeatureSection(
-                session, RuntimeSetting.CREATOR_SECTION_FACE_FEATURES, RuntimeSetting.CREATOR_FACE_FEATURES);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_TEETH_COLOR, SkinnedColor.TEETH);
-        creatorBodyBranch.injectShapeGroups(session, false);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_LIP_COLOR, SkinnedColor.LIPS);
-        injectOverlaySection(session, RuntimeSetting.CREATOR_SECTION_LIPS, RuntimeSetting.CREATOR_LIP_OVERLAYS);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BLUSH_COLOR, SkinnedColor.BLUSH);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_EYESHADOW_COLOR, SkinnedColor.EYESHADOW);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_LINER_COLOR, SkinnedColor.LINER);
-        injectOverlaySection(session, RuntimeSetting.CREATOR_SECTION_MAKEUP, RuntimeSetting.CREATOR_MAKEUP_OVERLAYS);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_FRECKLE_COLOR, SkinnedColor.FRECKLES);
-        injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_DETAILS, RuntimeSetting.CREATOR_APPEARANCE_DETAILS);
+        AppearanceTabStruct tab = player.getRaceData().getAppearanceData().getCreatorTab(session.getLookTabIndex());
+
+        for (int s = 0; s < tab.getSectionCount(); s++) {
+
+            AppearanceSectionStruct section = tab.getSection(s);
+            int shownCount = countShown(player, section);
+
+            if (shownCount == 0)
+                continue;
+
+            characterCreatorBranch.injectSectionHeader(session, creatorBodyBranch.toTitle(section.getSectionName()));
+
+            for (int o = 0; o < section.getOptionCount(); o++)
+                if (isShown(player, section.getOption(o)))
+                    injectOption(session, section.getOption(o), shownCount > 1);
+        }
     }
 
-    void populateHair(CreatorSessionStruct session) {
+    private int countShown(EntityInstance player, AppearanceSectionStruct section) {
 
-        if (!session.getPlayer().hasAppearance())
-            return;
+        int count = 0;
 
-        injectFeatureSection(session, RuntimeSetting.CREATOR_SECTION_HAIRSTYLE, RuntimeSetting.CREATOR_HAIR_FEATURES);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_HAIR_COLOR, SkinnedColor.HAIR);
-        injectDetailSection(session, RuntimeSetting.CREATOR_SECTION_HAIR_DETAILS, RuntimeSetting.CREATOR_HAIR_DETAILS);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BROW_COLOR, SkinnedColor.BROWS);
-        injectOverlaySection(session, RuntimeSetting.CREATOR_SECTION_BROWS, RuntimeSetting.CREATOR_BROW_OVERLAYS);
+        for (int o = 0; o < section.getOptionCount(); o++)
+            if (isShown(player, section.getOption(o)))
+                count++;
+
+        return count;
     }
 
-    // The body's own colors and the marks painted over its skin, each in the style chosen and as far as it shows,
-    // on the Body tab
-    void populateBodyMarks(CreatorSessionStruct session) {
+    // Whether an option has anything to offer this character: a member the race offers the player (an overlay only
+    // where the gender's model places it), a slider group with a slider the player is offered, a race among several
+    private boolean isShown(EntityInstance player, AppearanceOptionStruct option) {
 
-        if (!session.getPlayer().hasAppearance())
-            return;
+        AppearanceData appearanceData = player.getRaceData().getAppearanceData();
 
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_NIPPLE_COLOR, SkinnedColor.NIPPLES);
-        injectOverlaySection(session, RuntimeSetting.CREATOR_SECTION_NIPPLES, RuntimeSetting.CREATOR_NIPPLE_OVERLAYS);
-        injectColorSection(session, RuntimeSetting.CREATOR_SECTION_BODY_HAIR_COLOR, SkinnedColor.BODY_HAIR);
-        injectOverlaySection(
-                session, RuntimeSetting.CREATOR_SECTION_BODY_HAIR, RuntimeSetting.CREATOR_BODY_HAIR_OVERLAYS);
+        if (!appearanceData.isOffered(option.getKind(), option.getIndex()))
+            return false;
+
+        return switch (option.getKind()) {
+            case RACE -> creatorBodyBranch.hasRaceChoice();
+            case GENDER, BUILD, HEAD, COLOR, DETAIL, FEATURE -> true;
+            case OVERLAY -> player.getRaceGender().getOverlay(SkinnedOverlay.VALUES[option.getIndex()]) != null;
+            case SLIDERS -> creatorBodyBranch.hasShapeGroup(appearanceData, option.getGroupName());
+        };
+    }
+
+    private void injectOption(CreatorSessionStruct session, AppearanceOptionStruct option, boolean labelled) {
+        switch (option.getKind()) {
+            case RACE -> creatorBodyBranch.injectRaceRow(session);
+            case GENDER -> creatorBodyBranch.injectGenderRow(session);
+            case BUILD -> creatorBodyBranch.injectBuild(session);
+            case HEAD -> creatorBodyBranch.injectHeadShape(session);
+            case COLOR -> injectColor(session, SkinnedColor.VALUES[option.getIndex()], labelled);
+            case DETAIL -> creatorBodyBranch.injectSlider(session, CreatorSlider.DETAIL, option.getIndex());
+            case OVERLAY -> injectOverlay(session, SkinnedOverlay.VALUES[option.getIndex()]);
+            case FEATURE -> injectFeature(session, FeatureSlot.VALUES[option.getIndex()]);
+            case SLIDERS -> creatorBodyBranch.injectShapeGroup(session, option.getGroupName());
+        }
     }
 
     // A color's swatches from the race's palette, then its hue, saturation and brightness for any color between
-    private void injectColorSection(CreatorSessionStruct session, String title, SkinnedColor skinnedColor) {
+    private void injectColor(CreatorSessionStruct session, SkinnedColor skinnedColor, boolean labelled) {
 
-        characterCreatorBranch.injectSectionHeader(session, title);
+        if (labelled)
+            characterCreatorBranch.injectSectionHeader(
+                    session, creatorBodyBranch.toTitle(ArpgUtility.toEnumName(skinnedColor)));
+
         injectSwatches(session, skinnedColor, session.getPlayer().getAppearanceHandle().getColor(skinnedColor));
 
         for (CreatorSlider slider : RuntimeSetting.CREATOR_COLOR_SLIDERS)
@@ -123,27 +172,10 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
     // Overlays \\
 
-    // Each overlay the worn gender's model places: the style it is painted in, then how far it shows
-    private void injectOverlaySection(CreatorSessionStruct session, String title, SkinnedOverlay[] overlays) {
-
-        EntityInstance player = session.getPlayer();
-        boolean headed = false;
-
-        for (SkinnedOverlay skinnedOverlay : overlays) {
-
-            SkinnedOverlayStruct overlay = player.getRaceGender().getOverlay(skinnedOverlay);
-
-            if (overlay == null)
-                continue;
-
-            if (!headed) {
-                characterCreatorBranch.injectSectionHeader(session, title);
-                headed = true;
-            }
-
-            injectStyleRow(session, skinnedOverlay, overlay);
-            creatorBodyBranch.injectSlider(session, CreatorSlider.DETAIL, skinnedOverlay.getDetail().ordinal());
-        }
+    // An overlay the worn gender's model places: the style it is painted in, then how far it shows
+    private void injectOverlay(CreatorSessionStruct session, SkinnedOverlay skinnedOverlay) {
+        injectStyleRow(session, skinnedOverlay, session.getPlayer().getRaceGender().getOverlay(skinnedOverlay));
+        creatorBodyBranch.injectSlider(session, CreatorSlider.DETAIL, skinnedOverlay.getDetail().ordinal());
     }
 
     private void injectStyleRow(
@@ -202,29 +234,17 @@ public class CreatorAppearanceBranch extends BranchPackage {
         return styleIndex >= 0 && styleIndex < overlay.getStyleCount() ? styleIndex : overlay.getDefaultStyle();
     }
 
-    private void injectDetailSection(CreatorSessionStruct session, String title, int[] details) {
-
-        characterCreatorBranch.injectSectionHeader(session, title);
-
-        for (int detail : details)
-            creatorBodyBranch.injectSlider(session, CreatorSlider.DETAIL, detail);
-    }
-
     // Features \\
 
-    private void injectFeatureSection(CreatorSessionStruct session, String title, FeatureSlot[] featureSlots) {
+    // A feature slot's row, then the variant the feature worn there shows when it offers several
+    private void injectFeature(CreatorSessionStruct session, FeatureSlot featureSlot) {
 
         AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
 
-        characterCreatorBranch.injectSectionHeader(session, title);
+        injectFeatureRow(session, appearance, featureSlot);
 
-        for (FeatureSlot featureSlot : featureSlots) {
-
-            injectFeatureRow(session, appearance, featureSlot);
-
-            if (appearance.hasFeature(featureSlot) && appearance.getFeature(featureSlot).hasVariants())
-                injectVariantRow(session, appearance, featureSlot);
-        }
+        if (appearance.hasFeature(featureSlot) && appearance.getFeature(featureSlot).hasVariants())
+            injectVariantRow(session, appearance, featureSlot);
     }
 
     // The variant a worn feature shows, stepped through every variant it offers
@@ -307,7 +327,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         AppearanceHandle appearance = session.getPlayer().getAppearanceHandle();
         ObjectArrayList<FeatureHandle> options = resolveOptions(
-                session.getPlayer().getEntityData().getRaceData().getAppearanceData(), featureSlot,
+                session.getPlayer().getRaceData().getAppearanceData(), featureSlot,
                 featureSlot.isRemovable());
         int index = Math.floorMod(options.indexOf(appearance.getFeature(featureSlot)) + step, options.size());
 
@@ -347,7 +367,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
     private void injectSwatches(CreatorSessionStruct session, SkinnedColor skinnedColor, Color currentColor) {
 
-        Color[] colors = session.getPlayer().getEntityData().getRaceData().getAppearanceData().getPalette(skinnedColor);
+        Color[] colors = session.getPlayer().getRaceData().getAppearanceData().getPalette(skinnedColor);
         ElementInstance row = null;
 
         for (int i = 0; i < colors.length; i++) {
@@ -378,7 +398,7 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
         String[] parts = argument.split(RuntimeSetting.CREATOR_ARGUMENT_SEPARATOR);
         SkinnedColor skinnedColor = SkinnedColor.valueOf(parts[0]);
-        Color color = session.getPlayer().getEntityData().getRaceData().getAppearanceData()
+        Color color = session.getPlayer().getRaceData().getAppearanceData()
                 .getPalette(skinnedColor)[Integer.parseInt(parts[1])];
 
         session.getPlayer().getAppearanceHandle().setColor(skinnedColor, color.r, color.g, color.b);
@@ -393,23 +413,28 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
     // Randomize \\
 
+    // Every color, overlay style, feature and variant the race offers the player, each picked at random
     void randomizeAppearance(EntityInstance player) {
 
         if (!player.hasAppearance())
             return;
 
         AppearanceHandle appearance = player.getAppearanceHandle();
-        AppearanceData appearanceData = player.getEntityData().getRaceData().getAppearanceData();
+        AppearanceData appearanceData = player.getRaceData().getAppearanceData();
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES) {
 
             ObjectArrayList<FeatureHandle> options = resolveOptions(appearanceData, featureSlot, false);
 
-            if (!options.isEmpty())
+            if (appearanceData.isOffered(AppearanceOptionKind.FEATURE, featureSlot.ordinal()) && !options.isEmpty())
                 appearance.setFeature(options.get(randomIndex(options.size())));
         }
 
         for (SkinnedColor skinnedColor : SkinnedColor.VALUES) {
+
+            if (!appearanceData.isOffered(AppearanceOptionKind.COLOR, skinnedColor.ordinal()))
+                continue;
+
             Color[] colors = appearanceData.getPalette(skinnedColor);
             Color color = colors[randomIndex(colors.length)];
             appearance.setColor(skinnedColor, color.r, color.g, color.b);
@@ -419,12 +444,14 @@ public class CreatorAppearanceBranch extends BranchPackage {
 
             SkinnedOverlayStruct overlay = player.getRaceGender().getOverlay(skinnedOverlay);
 
-            if (overlay != null)
+            if (overlay != null && appearanceData.isOffered(AppearanceOptionKind.OVERLAY, skinnedOverlay.ordinal()))
                 appearance.setOverlayStyle(skinnedOverlay, randomIndex(overlay.getStyleCount()));
         }
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
-            if (appearance.hasFeature(featureSlot) && appearance.getFeature(featureSlot).hasVariants())
+            if (appearanceData.isOffered(AppearanceOptionKind.FEATURE, featureSlot.ordinal())
+                    && appearance.hasFeature(featureSlot)
+                    && appearance.getFeature(featureSlot).hasVariants())
                 appearance.setFeatureVariant(
                         featureSlot,
                         randomIndex(appearance.getFeature(featureSlot).getVariants().getCount()));

@@ -280,7 +280,7 @@ public class ArpgUtility extends EngineUtility {
         return throwException("Unknown " + enumClass.getSimpleName() + " value: '" + name + "'");
     }
 
-    public static <E extends Enum<E>> String toEnumName(E constant) {
+    public static String toEnumName(Enum<?> constant) {
         return constant.name().toLowerCase();
     }
 
