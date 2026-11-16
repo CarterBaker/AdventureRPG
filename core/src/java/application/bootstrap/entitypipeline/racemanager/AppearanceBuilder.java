@@ -5,7 +5,9 @@ import java.util.Arrays;
 import application.bootstrap.entitypipeline.appearance.AppearanceBoneTargetStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceDriveStruct;
-import application.bootstrap.entitypipeline.appearance.AppearanceExpression;
+import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
+import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
+import application.bootstrap.entitypipeline.appearance.AppearanceExpressionStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceGenderStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceOptionKind;
 import application.bootstrap.entitypipeline.appearance.AppearanceOptionStruct;
@@ -50,8 +52,10 @@ class AppearanceBuilder extends BuilderPackage {
      * and a shape key for each morph of the bodies that no expression plays;
      * "sliders" gives any of them, by name, its "group", "min", "max",
      * "default" and whether the "player" is offered it, and lists them in
-     * the order a creator shows them. "expressions" names the morph each
-     * AppearanceExpression plays. The race's "genders" give each
+     * the order a creator shows them. "expressions" names the clip each of
+     * the face's expressions plays, made for the race's rig, its bones the
+     * face bones it moves and its morph curves the morphs it weighs, the one
+     * named blink played by itself. The race's "genders" give each
      * gender its starting "shapes", by name, and "features", on the body it
      * wears; a feature named "" wears nothing in its slot, so a gender can
      * go bald under a race whose default gives hair. Every body must carry
@@ -73,6 +77,7 @@ class AppearanceBuilder extends BuilderPackage {
     // Internal
     private FeatureManager featureManager;
     private BoneControlManager boneControlManager;
+    private AnimationManager animationManager;
 
     // Base \\
 
@@ -80,6 +85,7 @@ class AppearanceBuilder extends BuilderPackage {
     protected void get() {
         this.featureManager = get(FeatureManager.class);
         this.boneControlManager = get(BoneControlManager.class);
+        this.animationManager = get(AnimationManager.class);
     }
 
     // Build \\
@@ -103,7 +109,8 @@ class AppearanceBuilder extends BuilderPackage {
                 : new ArpgObjectStruct();
 
         MeshHandle[] bodyMeshes = parseBodies(genders);
-        AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, rigHandle, bodyMeshes, sourceName);
+        AppearanceExpressionStruct[] expressions = parseExpressions(appearanceArpg, rigHandle, bodyMeshes, sourceName);
+        AppearanceShapeStruct[] shapes = parseShapes(appearanceArpg, rigHandle, bodyMeshes, expressions, sourceName);
         FeatureHandle[] defaultFeatures = parseFeatures(appearanceArpg, sourceName);
         boolean[][] offered = parseOffered(appearanceArpg, sourceName);
         AppearanceData appearanceData = new AppearanceData(
@@ -115,7 +122,7 @@ class AppearanceBuilder extends BuilderPackage {
                 parseDetails(appearanceArpg, sourceName),
                 shapes,
                 resolveShapeMorphs(bodyMeshes, shapes, sourceName),
-                parseExpressions(appearanceArpg, bodyMeshes, sourceName),
+                expressions,
                 defaultFeatures,
                 parseGenders(gendersArpg, genders, bodyMeshes, shapes, defaultFeatures, sourceName),
                 ArpgUtility.getFloat(buildArpg, "thin", EngineSetting.DEFAULT_BUILD_FACTOR),
@@ -256,6 +263,7 @@ class AppearanceBuilder extends BuilderPackage {
             ArpgObjectStruct appearanceArpg,
             RigHandle rigHandle,
             MeshHandle[] bodyMeshes,
+            AppearanceExpressionStruct[] expressions,
             String sourceName) {
 
         ArpgObjectStruct slidersArpg = ArpgUtility.hasObject(appearanceArpg, "sliders")
@@ -268,7 +276,7 @@ class AppearanceBuilder extends BuilderPackage {
 
         collectBoneSliders(rigHandle, names, targets, controls, morphs);
         collectControls(rigHandle, names, targets, controls, morphs);
-        collectShapeKeys(appearanceArpg, bodyMeshes, names, targets, controls, morphs);
+        collectShapeKeys(expressions, bodyMeshes, names, targets, controls, morphs);
 
         for (String key : slidersArpg.keySet())
             if (!names.contains(key))
@@ -378,32 +386,29 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Every morph of the first body no expression plays; every body carries the same morphs
     private void collectShapeKeys(
-            ArpgObjectStruct appearanceArpg,
+            AppearanceExpressionStruct[] expressions,
             MeshHandle[] bodyMeshes,
             ObjectArrayList<String> names,
             ObjectArrayList<AppearanceBoneTargetStruct[]> targets,
             ObjectArrayList<BoneControlStruct> controls,
             ObjectArrayList<String> morphs) {
 
-        ArpgObjectStruct expressionsArpg = ArpgUtility.hasObject(appearanceArpg, "expressions")
-                ? appearanceArpg.getAsObject("expressions")
-                : new ArpgObjectStruct();
         MeshHandle body = bodyMeshes[0];
 
         for (int m = 0; m < body.getMorphCount(); m++) {
 
             String morphName = body.getMorphName(m);
 
-            if (!playsExpression(expressionsArpg, morphName))
+            if (!playsExpression(expressions, morphName))
                 addCandidate(names, targets, controls, morphs, morphName, new AppearanceBoneTargetStruct[0], null,
                         morphName);
         }
     }
 
-    private boolean playsExpression(ArpgObjectStruct expressionsArpg, String morphName) {
+    private boolean playsExpression(AppearanceExpressionStruct[] expressions, String morphName) {
 
-        for (String key : expressionsArpg.keySet())
-            if (ArpgUtility.hasString(expressionsArpg, key) && expressionsArpg.get(key).getAsString().equals(morphName))
+        for (int i = 0; i < expressions.length; i++)
+            if (expressions[i].playsMorph(morphName))
                 return true;
 
         return false;
@@ -557,26 +562,40 @@ class AppearanceBuilder extends BuilderPackage {
 
     // Expressions \\
 
-    private int[][] parseExpressions(ArpgObjectStruct appearanceArpg, MeshHandle[] bodyMeshes, String sourceName) {
+    // Every expression the race names, its clip made for the race's rig and each of the clip's morph curves resolved
+    // on every body
+    private AppearanceExpressionStruct[] parseExpressions(
+            ArpgObjectStruct appearanceArpg,
+            RigHandle rigHandle,
+            MeshHandle[] bodyMeshes,
+            String sourceName) {
 
-        int[][] expressionMorphs = new int[bodyMeshes.length][AppearanceExpression.VALUES.length];
-        ArpgObjectStruct expressionsArpg = ArpgUtility.hasObject(appearanceArpg, "expressions")
-                ? appearanceArpg.getAsObject("expressions")
+        String key = EngineSetting.APPEARANCE_FIELD_EXPRESSIONS;
+        ArpgObjectStruct expressionsArpg = ArpgUtility.hasObject(appearanceArpg, key)
+                ? appearanceArpg.getAsObject(key)
                 : new ArpgObjectStruct();
+        AppearanceExpressionStruct[] expressions = new AppearanceExpressionStruct[expressionsArpg.size()];
+        int index = 0;
 
-        validateKeys(expressionsArpg, AppearanceExpression.class, "expressions", sourceName);
+        for (String expressionName : expressionsArpg.keySet()) {
 
-        for (int b = 0; b < bodyMeshes.length; b++)
-            for (AppearanceExpression expression : AppearanceExpression.VALUES) {
+            String clipName = ArpgUtility.validateString(expressionsArpg, expressionName);
+            AnimationClipHandle clip = animationManager.getClipHandleFromClipName(clipName);
 
-                String key = ArpgUtility.toEnumName(expression);
+            if (clip.getRigHandle() != rigHandle)
+                throwException("Appearance expression \"" + expressionName + "\" plays clip \"" + clipName
+                        + "\", which is made for another rig than the race's. Source: " + sourceName);
 
-                expressionMorphs[b][expression.ordinal()] = ArpgUtility.hasString(expressionsArpg, key)
-                        ? resolveMorph(bodyMeshes[b], expressionsArpg.get(key).getAsString(), sourceName)
-                        : EngineSetting.INDEX_NOT_FOUND;
-            }
+            int[][] trackMorphs = new int[bodyMeshes.length][clip.getMorphTrackCount()];
 
-        return expressionMorphs;
+            for (int b = 0; b < bodyMeshes.length; b++)
+                for (int t = 0; t < clip.getMorphTrackCount(); t++)
+                    trackMorphs[b][t] = resolveMorph(bodyMeshes[b], clip.getMorphTrack(t).getMorphName(), sourceName);
+
+            expressions[index++] = new AppearanceExpressionStruct(expressionName, clip, trackMorphs);
+        }
+
+        return expressions;
     }
 
     private int resolveMorph(MeshHandle bodyMesh, String morphName, String sourceName) {

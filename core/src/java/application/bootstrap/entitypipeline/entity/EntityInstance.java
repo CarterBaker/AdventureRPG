@@ -253,6 +253,10 @@ public class EntityInstance extends InstancePackage {
         animationStateHandle.setParameter(AnimationParameter.LOOK_PITCH, entityStateHandle.getLookPitch());
         animationStateHandle.setParameter(AnimationParameter.LOOK_YAW, entityStateHandle.getLookYaw());
         moveSprings();
+
+        if (appearanceHandle != null)
+            appearanceHandle.updateFace(deltaTime);
+
         animationStateHandle.update(
                 entityStateHandle.getMovementState(),
                 action,

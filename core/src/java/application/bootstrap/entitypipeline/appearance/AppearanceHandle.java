@@ -2,6 +2,8 @@ package application.bootstrap.entitypipeline.appearance;
 
 import java.util.Arrays;
 
+import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
+import application.bootstrap.animationpipeline.animation.AnimationClipUtility;
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
@@ -12,6 +14,7 @@ import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStr
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
@@ -24,9 +27,12 @@ public class AppearanceHandle extends HandlePackage {
      * amounts, shape slider values, worn features, the style each overlay is
      * painted in, body build and head shape. Seeded from the race and edited
      * in place. Slider values are kept as
-     * the weights of the body's morphs, beside the expression weights the
-     * face plays — a blink at an interval of its own, passing through the
-     * half-closed shape, while the face is animated — and as the moves, turns
+     * the weights of the body's morphs, beside the weights of the morphs the
+     * face's expressions play — each expression a clip of face bones and
+     * morph curves at a phase and a level, fading toward the level asked of
+     * it, the blink playing by itself once in an interval of its own while
+     * the face is animated, its bones laid on the pose as its face layer —
+     * and as the moves, turns
      * and scales of the bones they drive, each bone slider taking every
      * control's push along its curve on top of its own value. applyProportions() is the one path
      * that writes bone proportions and shaping and re-poses the entity,
@@ -56,9 +62,15 @@ public class AppearanceHandle extends HandlePackage {
     private short genderID;
     private int bodyIndex;
 
-    // Face
-    private float blinkSeed;
+    // Face — the face's own clock and this character's blink pattern, and per expression its clip, the level asked
+    // of it, the level it stands at and the phase it plays at; the clips, phases and levels are the pose's face layer
+    private float faceTime;
+    private long blinkSeed;
     private boolean faceAnimated;
+    private AnimationClipHandle[] expressionClips;
+    private float[] expressionTargets;
+    private float[] expressionLevels;
+    private float[] expressionPhases;
 
     // Features — indexed by FeatureSlot ordinal
     private FeatureHandle[] features;
@@ -106,8 +118,17 @@ public class AppearanceHandle extends HandlePackage {
         this.morphWeights = new float[appearanceData.getMaxMorphCount()];
 
         // Face
-        this.blinkSeed = (float) Math.random();
+        int expressionCount = appearanceData.getExpressionCount();
+
+        this.blinkSeed = Double.doubleToLongBits(Math.random());
         this.faceAnimated = true;
+        this.expressionClips = new AnimationClipHandle[expressionCount];
+        this.expressionTargets = new float[expressionCount];
+        this.expressionLevels = new float[expressionCount];
+        this.expressionPhases = new float[expressionCount];
+
+        for (int i = 0; i < expressionCount; i++)
+            expressionClips[i] = appearanceData.getExpression(i).getClip();
 
         // Features
         this.features = new FeatureHandle[FeatureSlot.VALUES.length];
@@ -163,6 +184,7 @@ public class AppearanceHandle extends HandlePackage {
 
         applyProportions();
         resolveSprings();
+        animationStateHandle.setExpressionLayer(expressionClips, expressionPhases, expressionLevels);
     }
 
     // Gender \\
@@ -269,23 +291,62 @@ public class AppearanceHandle extends HandlePackage {
 
     // Face \\
 
-    // Plays the face at a moment in seconds: each blink falls at a pseudo-random point in an interval of this
-    // character's own, closing through the half shape and opening back through it
-    public void updateFace(double seconds) {
+    // Plays the face on by the time passed: the blink falls once at a pseudo-random moment in every interval of this
+    // character's own, and every other expression fades toward the level asked of it, a looping clip playing on and
+    // any other held at its end; the morphs they weigh are written after
+    public void updateFace(float deltaTime) {
 
         if (!faceAnimated)
             return;
 
-        float interval = EngineSetting.FACE_BLINK_INTERVAL_MIN
-                + (EngineSetting.FACE_BLINK_INTERVAL_MAX - EngineSetting.FACE_BLINK_INTERVAL_MIN) * blinkSeed;
-        double cycle = Math.floor(seconds / interval);
-        float start = hash(cycle) * (interval - EngineSetting.FACE_BLINK_DURATION);
-        float local = (float) (seconds - cycle * interval) - start;
-        float closed = local < 0f || local > EngineSetting.FACE_BLINK_DURATION
-                ? 0f
-                : 1f - Math.abs(2f * local / EngineSetting.FACE_BLINK_DURATION - 1f);
+        this.faceTime += deltaTime;
 
-        setBlink(closed);
+        int blink = appearanceData.getBlinkExpression();
+
+        for (int i = 0; i < expressionClips.length; i++)
+            if (i != blink)
+                advanceExpression(i, deltaTime);
+
+        if (blink != EngineSetting.INDEX_NOT_FOUND)
+            placeBlink(blink);
+
+        writeExpressions();
+    }
+
+    private void advanceExpression(int expressionIndex, float deltaTime) {
+
+        float step = deltaTime / EngineSetting.FACE_EXPRESSION_FADE;
+        float level = expressionLevels[expressionIndex];
+        float target = expressionTargets[expressionIndex];
+        AnimationClipHandle clip = expressionClips[expressionIndex];
+
+        level = level < target ? Math.min(target, level + step) : Math.max(target, level - step);
+        expressionLevels[expressionIndex] = level;
+
+        if (level <= 0f) {
+            expressionPhases[expressionIndex] = 0f;
+            return;
+        }
+
+        float phase = expressionPhases[expressionIndex] + deltaTime / clip.getDuration();
+
+        expressionPhases[expressionIndex] = clip.isLooping() ? phase - (float) Math.floor(phase) : Math.min(1f, phase);
+    }
+
+    // The blink's phase where the face's clock stands within this interval, wholly on while it plays and off outside
+    private void placeBlink(int blink) {
+
+        float range = EngineSetting.FACE_BLINK_INTERVAL_MAX - EngineSetting.FACE_BLINK_INTERVAL_MIN;
+        float interval = EngineSetting.FACE_BLINK_INTERVAL_MIN + range * BiomeFieldUtility.hash01(blinkSeed);
+        float duration = expressionClips[blink].getDuration();
+        long cycle = (long) Math.floor(faceTime / interval);
+        float start = BiomeFieldUtility.hash01(blinkSeed ^ EngineSetting.FACE_BLINK_SALT ^ cycle)
+                * Math.max(0f, interval - duration);
+        float local = faceTime - cycle * interval - start;
+        boolean playing = local >= 0f && local <= duration;
+
+        expressionLevels[blink] = playing ? 1f : 0f;
+        expressionPhases[blink] = playing ? local / duration : 0f;
     }
 
     // Whether updateFace() plays the face; an editor holding a pose of the face turns it off
@@ -293,34 +354,61 @@ public class AppearanceHandle extends HandlePackage {
         this.faceAnimated = faceAnimated;
     }
 
-    // Closes both eyes by an amount: the half shape carries the first half of the way and hands over to the full one
+    // Asks an expression for a level, toward which it fades as the face plays
+    public void setExpression(int expressionIndex, float level) {
+        expressionTargets[expressionIndex] = level;
+    }
+
+    // Holds an expression at a phase and a level outright, as an editor strikes it, and weighs its morphs at once
+    public void poseExpression(int expressionIndex, float phase, float level) {
+
+        expressionTargets[expressionIndex] = level;
+        expressionLevels[expressionIndex] = level;
+        expressionPhases[expressionIndex] = Math.max(0f, Math.min(1f, phase));
+        writeExpressions();
+    }
+
+    // Closes both eyes by an amount, holding the blink where its clip closes them that far: fully at its middle
     public void setBlink(float closed) {
 
-        float half = closed < EngineSetting.FACE_BLINK_HALF
-                ? closed / EngineSetting.FACE_BLINK_HALF
-                : (1f - closed) / (1f - EngineSetting.FACE_BLINK_HALF);
-        float full = closed < EngineSetting.FACE_BLINK_HALF
-                ? 0f
-                : (closed - EngineSetting.FACE_BLINK_HALF) / (1f - EngineSetting.FACE_BLINK_HALF);
+        int blink = appearanceData.getBlinkExpression();
 
-        setExpression(AppearanceExpression.BLINK_LEFT, full);
-        setExpression(AppearanceExpression.BLINK_RIGHT, full);
-        setExpression(AppearanceExpression.BLINK_LEFT_HALF, half);
-        setExpression(AppearanceExpression.BLINK_RIGHT_HALF, half);
+        if (blink != EngineSetting.INDEX_NOT_FOUND)
+            poseExpression(blink, closed * EngineSetting.FACE_BLINK_CLOSED_PHASE, 1f);
     }
 
-    private void setExpression(AppearanceExpression expression, float weight) {
-
-        int morphIndex = appearanceData.getExpressionMorph(bodyIndex, expression);
-
-        if (morphIndex != EngineSetting.INDEX_NOT_FOUND)
-            morphWeights[morphIndex] = weight;
+    public float getExpressionLevel(int expressionIndex) {
+        return expressionLevels[expressionIndex];
     }
 
-    private float hash(double cycle) {
+    public float getExpressionPhase(int expressionIndex) {
+        return expressionPhases[expressionIndex];
+    }
 
-        double value = Math.sin(cycle * 12.9898 + blinkSeed * 78.233) * 43758.5453;
-        return (float) (value - Math.floor(value));
+    // Every morph an expression weighs set to what the expressions playing add up to there
+    private void writeExpressions() {
+
+        for (int e = 0; e < expressionClips.length; e++) {
+
+            AppearanceExpressionStruct expression = appearanceData.getExpression(e);
+
+            for (int t = 0; t < expression.getTrackCount(); t++)
+                morphWeights[expression.getTrackMorph(bodyIndex, t)] = 0f;
+        }
+
+        for (int e = 0; e < expressionClips.length; e++) {
+
+            float level = expressionLevels[e];
+
+            if (level <= 0f)
+                continue;
+
+            AppearanceExpressionStruct expression = appearanceData.getExpression(e);
+
+            for (int t = 0; t < expression.getTrackCount(); t++)
+                morphWeights[expression.getTrackMorph(bodyIndex, t)] +=
+                        AnimationClipUtility.sampleMorph(expressionClips[e], t, expressionPhases[e]) * level;
+        }
     }
 
     // Features \\

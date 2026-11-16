@@ -504,7 +504,6 @@ public class EntityRenderSystem extends SystemPackage {
         if (appearance == null)
             return;
 
-        appearance.updateFace(internal.getTime() / EngineSetting.MILLIS_PER_SECOND);
         appearance.writeAppearance(appearanceScratch);
     }
 }

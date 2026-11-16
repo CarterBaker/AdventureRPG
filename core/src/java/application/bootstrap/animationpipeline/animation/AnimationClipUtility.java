@@ -11,11 +11,35 @@ public class AnimationClipUtility extends EngineUtility {
      * sampled at a phase of the clip with Hermite curves through its
      * keyframes as offsets from the bind pose; a looping track wraps its
      * tangents across the seam, and a one-shot eases into its holds. A bone
-     * with no track samples as no offset. Writes into caller-owned vectors,
-     * so sampling never allocates.
+     * with no track samples as no offset. A morph curve is sampled linearly
+     * between its keys, holding past either end. Writes into caller-owned
+     * vectors, so sampling never allocates.
      */
 
     // Sampling \\
+
+    // A morph curve's weight at a phase of its clip
+    public static float sampleMorph(AnimationClipHandle clip, int trackIndex, float phase) {
+
+        MorphTrackStruct track = clip.getMorphTrack(trackIndex);
+        float time = phase * clip.getDuration();
+        int last = track.getKeyCount() - 1;
+
+        if (time <= track.getTime(0))
+            return track.getValue(0);
+
+        if (time >= track.getTime(last))
+            return track.getValue(last);
+
+        int key = 0;
+
+        while (track.getTime(key + 1) < time)
+            key++;
+
+        float t = (time - track.getTime(key)) / (track.getTime(key + 1) - track.getTime(key));
+
+        return track.getValue(key) + (track.getValue(key + 1) - track.getValue(key)) * t;
+    }
 
     public static void sampleClip(
             AnimationClipHandle clip,

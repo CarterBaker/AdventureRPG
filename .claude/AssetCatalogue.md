@@ -406,6 +406,9 @@ One line per session that changed this file: the date, what was added or removed
   (`,` and `.` twist the part) and `schemas/Shortcuts.arpg` (the character stamp canvas and the stamp tool).
 - 2026-11-16: Fur stamps. Added `stamps/fur/` (Short Fur and Long Fur, a strand card each with its fur patch) for
   laying fur; regenerated `schemas/Stamps.arpg` (`fur`) and `shortcuts/CharacterEditor.arpg` (`/` flips the comb).
+- 2026-11-16: Expressions as clips. Added `animations/humanoid/expressions/HumanoidBlink.arpg` (the blink as morph
+  curves); regenerated `races/Human.arpg` (`expressions` names the blink clip), `schemas/Races.arpg` (`expressions` a
+  map of clips) and `schemas/Animations.arpg` (`morphs`).
 
 ---
 
@@ -1845,6 +1848,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `HumanoidTread.arpg`, `HumanoidUnderwaterSwim.arpg`, `HumanoidUnderwaterTread.arpg`, `HumanoidWade.arpg`,
 `HumanoidWadeIdle.arpg`, `HumanoidWadeRun.arpg`, `HumanoidWadeShallow.arpg`, `HumanoidWalk.arpg`,
 `HumanoidWaterJump.arpg`, `HumanoidWaterLeap.arpg`
+
+### `assets/animations/humanoid/expressions/`
+
+`HumanoidBlink.arpg` (morph curves closing each eye through its half shape)
 
 ### `assets/animations/humanoid/poses/`
 

@@ -7,9 +7,11 @@ import application.bootstrap.animationpipeline.animation.AnimationClipData;
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.animationpipeline.animation.AnimationKeyframeStruct;
 import application.bootstrap.animationpipeline.animation.BoneTrackStruct;
+import application.bootstrap.animationpipeline.animation.MorphTrackStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
@@ -24,7 +26,10 @@ class AnimationBuilder extends BuilderPackage {
      * indices at build time, never by name at runtime. Keyframes within a
      * track must be supplied in strictly increasing time order. Duration is
      * derived, never authored — the latest keyframe time across every
-     * track. Cross-fades are authored on the animation tree nodes that play
+     * track, morph curves included. "morphs" keys the weight of morph
+     * targets by name, each a list of "time" and "value" keys, the
+     * blendshape curves a facial clip plays; the mesh that plays the clip
+     * resolves the names. Cross-fades are authored on the animation tree nodes that play
      * a clip, never on the clip itself. Bootstrap-only, apart from the
      * unregistered preview builds an editor makes of a clip it is changing.
      */
@@ -74,6 +79,11 @@ class AnimationBuilder extends BuilderPackage {
             }
         }
 
+        MorphTrackStruct[] morphTracks = parseMorphTracks(arpg, sourceName);
+
+        for (int i = 0; i < morphTracks.length; i++)
+            duration = Math.max(duration, morphTracks[i].getEndTime());
+
         if (duration <= 0f)
             throwException("Clip \"" + clipName + "\" has no keyframes past time 0 in " + sourceName);
 
@@ -82,7 +92,8 @@ class AnimationBuilder extends BuilderPackage {
                 rigHandle,
                 duration,
                 looping,
-                boneTracks);
+                boneTracks,
+                morphTracks);
 
         AnimationClipHandle handle = create(AnimationClipHandle.class);
         handle.constructor(clipData);
@@ -125,6 +136,45 @@ class AnimationBuilder extends BuilderPackage {
         }
 
         return new BoneTrackStruct(keyframes);
+    }
+
+    // Every morph curve the clip keys, in the order the file lists them
+    private MorphTrackStruct[] parseMorphTracks(ArpgObjectStruct arpg, String sourceName) {
+
+        if (!ArpgUtility.hasObject(arpg, EngineSetting.ANIMATION_FIELD_MORPHS))
+            return new MorphTrackStruct[0];
+
+        ArpgObjectStruct morphsArpg = arpg.getAsObject(EngineSetting.ANIMATION_FIELD_MORPHS);
+        MorphTrackStruct[] morphTracks = new MorphTrackStruct[morphsArpg.size()];
+        int index = 0;
+
+        for (String morphName : morphsArpg.keySet())
+            morphTracks[index++] = parseMorphTrack(morphsArpg.getAsArray(morphName), morphName, sourceName);
+
+        return morphTracks;
+    }
+
+    private MorphTrackStruct parseMorphTrack(ArpgArrayStruct keysArpg, String morphName, String sourceName) {
+
+        if (keysArpg.size() == 0)
+            throwException("Morph curve \"" + morphName + "\" has no keys in " + sourceName);
+
+        float[] times = new float[keysArpg.size()];
+        float[] values = new float[keysArpg.size()];
+
+        for (int i = 0; i < times.length; i++) {
+
+            ArpgObjectStruct keyArpg = keysArpg.get(i).getAsObject();
+
+            times[i] = ArpgUtility.validateFloat(keyArpg, EngineSetting.ANIMATION_FIELD_TIME);
+            values[i] = ArpgUtility.validateFloat(keyArpg, EngineSetting.ANIMATION_FIELD_VALUE);
+
+            if (i > 0 && times[i] <= times[i - 1])
+                throwException("Key " + i + " on morph curve \"" + morphName
+                        + "\" is out of order — keys must be strictly increasing in time. Source: " + sourceName);
+        }
+
+        return new MorphTrackStruct(morphName, times, values);
     }
 
     // Vector Parsing \\

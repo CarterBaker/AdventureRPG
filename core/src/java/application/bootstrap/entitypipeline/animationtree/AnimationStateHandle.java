@@ -34,7 +34,10 @@ public class AnimationStateHandle extends HandlePackage {
      * person view bends and twists the chest after the look, or an editor
      * turns a bone out of the way — is laid over the blended tree, a clip
      * struck still and the rest pose alike, and stays until it is set
-     * again. The appearance's
+     * again. The face's expressions — clips of face bones an appearance
+     * plays, each at its own phase and level — are laid additively over the
+     * tree, a clip struck still and the rest pose alike, beneath the
+     * posture. The appearance's
      * shaping — a move and a turn per bone, as face sliders drive a face rig
      * — sits on the bind pose under all of it. The rig's spring chains are
      * simulated over the finished pose every update, in the frame the body
@@ -96,6 +99,12 @@ public class AnimationStateHandle extends HandlePackage {
     private AnimationSpringStruct springs;
     private float springTime;
 
+    // Expressions — the face layer an appearance hands over: per expression its clip, the phase it plays at and its
+    // level; none until one is handed over
+    private AnimationClipHandle[] expressionClips;
+    private float[] expressionPhases;
+    private float[] expressionLevels;
+
     // Output — consumed by rendering
     private Matrix4[] skinningMatrices;
 
@@ -132,6 +141,11 @@ public class AnimationStateHandle extends HandlePackage {
 
         // Parameters
         this.parameters = new float[AnimationParameter.VALUES.length];
+
+        // Expressions
+        this.expressionClips = new AnimationClipHandle[0];
+        this.expressionPhases = new float[0];
+        this.expressionLevels = new float[0];
 
         int layerCount = animationTreeHandle.getLayerCount();
 
@@ -346,6 +360,37 @@ public class AnimationStateHandle extends HandlePackage {
     public void setBonePosture(int boneIndex, float x, float y, float z) {
         holdRig();
         bonePostures[boneIndex].set(x, y, z);
+    }
+
+    // Expressions \\
+
+    // The face layer laid over every pose: the arrays are the appearance's own, read at every pose, never copied
+    public void setExpressionLayer(AnimationClipHandle[] clips, float[] phases, float[] levels) {
+        this.expressionClips = clips;
+        this.expressionPhases = phases;
+        this.expressionLevels = levels;
+    }
+
+    // Every expression playing that keys the bone, its offset added on by its level
+    private void applyExpressions(int boneIndex) {
+
+        for (int e = 0; e < expressionClips.length; e++) {
+
+            float level = expressionLevels[e];
+
+            if (level <= 0f || !expressionClips[e].hasBoneTrack(boneIndex))
+                continue;
+
+            AnimationClipUtility.sampleClip(
+                    expressionClips[e],
+                    expressionPhases[e],
+                    boneIndex,
+                    clipPositionScratch,
+                    eulerScratch,
+                    clipScaleScratch);
+            RigMathUtility.toQuaternion(eulerScratch, clipRotationScratch);
+            addOffset(clipPositionScratch, clipRotationScratch, clipScaleScratch, level);
+        }
     }
 
     // Springs \\
@@ -647,6 +692,7 @@ public class AnimationStateHandle extends HandlePackage {
             for (int l = 0; l < animationTreeHandle.getLayerCount(); l++)
                 applyLayer(l, i);
 
+            applyExpressions(i);
             rotationScratch.multiply(RigMathUtility.toQuaternion(bonePostures[i], turnScratch));
             composeBone(i);
         }
@@ -683,8 +729,9 @@ public class AnimationStateHandle extends HandlePackage {
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
             AnimationClipUtility.sampleClip(clip, phase, i, positionScratch, eulerScratch, scaleScratch);
-            RigMathUtility.toQuaternion(eulerScratch, rotationScratch)
-                    .multiply(RigMathUtility.toQuaternion(bonePostures[i], turnScratch));
+            RigMathUtility.toQuaternion(eulerScratch, rotationScratch);
+            applyExpressions(i);
+            rotationScratch.multiply(RigMathUtility.toQuaternion(bonePostures[i], turnScratch));
             composeBone(i);
         }
 
@@ -699,8 +746,10 @@ public class AnimationStateHandle extends HandlePackage {
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
             positionScratch.set(0f, 0f, 0f);
-            RigMathUtility.toQuaternion(bonePostures[i], rotationScratch);
+            rotationScratch.set(1f, 0f, 0f, 0f);
             scaleScratch.set(1f, 1f, 1f);
+            applyExpressions(i);
+            rotationScratch.multiply(RigMathUtility.toQuaternion(bonePostures[i], turnScratch));
 
             composeBone(i);
         }
@@ -765,6 +814,13 @@ public class AnimationStateHandle extends HandlePackage {
             lerpInto(scaleScratch, scale, weight);
             return;
         }
+
+        addOffset(position, rotation, scale, weight);
+    }
+
+    // An additive offset laid on the pose scratch by a weight: its move added, its turn multiplied on and its scale
+    // multiplied in, each scaled toward none
+    private void addOffset(Vector3 position, Quaternion rotation, Vector3 scale, float weight) {
 
         positionScratch.add(position.x * weight, position.y * weight, position.z * weight);
         RigMathUtility.slerp(turnScratch.set(1f, 0f, 0f, 0f), rotation, weight);

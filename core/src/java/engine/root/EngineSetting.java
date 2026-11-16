@@ -2795,11 +2795,22 @@ public class EngineSetting {
     public static final String RIG_PART_RESERVED_WHOLE = "whole";
     public static final String RIG_PART_RESERVED_HAIR = "hair";
 
-    // Face Animation — blinks fall at a pseudo-random interval per character, each closing and opening the lids
+    // Face Animation — a race's expressions are clips by name: the one named blink plays by itself, once at a
+    // pseudo-random moment in every interval of a length each character draws between the two given, its clip closing
+    // the lids fully at the phase given; any other fades in and out over the fade given, a looping clip playing on and
+    // any other held at its end; the salt seeds each character's blinks
+    public static final String FACE_EXPRESSION_BLINK = "blink";
     public static final float FACE_BLINK_INTERVAL_MIN = 2.2f;
     public static final float FACE_BLINK_INTERVAL_MAX = 6.0f;
-    public static final float FACE_BLINK_DURATION = 0.16f;
-    public static final float FACE_BLINK_HALF = 0.5f;
+    public static final float FACE_BLINK_CLOSED_PHASE = 0.5f;
+    public static final float FACE_EXPRESSION_FADE = 0.25f;
+    public static final long FACE_BLINK_SALT = 0x3B9F5D27A61C48E3L;
+
+    // Animation Fields — the keys of a clip's morph curves
+    public static final String ANIMATION_FIELD_MORPHS = "morphs";
+    public static final String ANIMATION_FIELD_TIME = "time";
+    public static final String ANIMATION_FIELD_VALUE = "value";
+    public static final String APPEARANCE_FIELD_EXPRESSIONS = "expressions";
 
     // Appearance — detail defaults in SkinnedDetail order (iris size, pupil size, hair shine, lips, blush, freckles,
     // liner, blemishes, brows, nipples, then the chest, stomach, pubic, underarm, arm and leg hair), and the range a shape slider takes when its template leaves it out

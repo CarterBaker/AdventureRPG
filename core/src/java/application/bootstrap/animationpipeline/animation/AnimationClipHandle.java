@@ -52,4 +52,12 @@ public class AnimationClipHandle extends HandlePackage {
     public boolean hasBoneTrack(int boneIndex) {
         return clipData.hasBoneTrack(boneIndex);
     }
+
+    public int getMorphTrackCount() {
+        return clipData.getMorphTrackCount();
+    }
+
+    public MorphTrackStruct getMorphTrack(int trackIndex) {
+        return clipData.getMorphTrack(trackIndex);
+    }
 }

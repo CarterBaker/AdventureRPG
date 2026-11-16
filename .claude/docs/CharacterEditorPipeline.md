@@ -471,23 +471,37 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   A topology change means a new unwrap and a transfer of the painted maps; sculpting, morphs and posing keep them.
 - **Colors in the creator.** Every color section lists the race's palette swatches, then Hue, Saturation and
   Brightness sliders (`CreatorSlider.COLOR_*`, `Color.setHSB`) for any color between. Teeth take `SkinnedColor.TEETH`.
-- **Appearance.** `AppearanceData` holds the race's body meshes (each gender's `mesh`, in the race's order),
-  colors, palettes, details, sliders and the morphs each `AppearanceExpression` plays, the morphs resolved on every
-  body (`getShapeMorph`, `getExpressionMorph`). `AppearanceBuilder.parseShapes` derives the sliders
+- **Appearance.** `AppearanceData` holds the race's body meshes (each gender's `mesh`, in the race's order), colors,
+  palettes, details, sliders and the expressions its face plays, the morphs resolved on every body (`getShapeMorph`,
+  `AppearanceExpressionStruct.getTrackMorph`). `AppearanceBuilder.parseShapes` derives the sliders
   (`AppearanceShapeStruct`, three kinds): a bone slider per channel a rig bone offers in its `sliders`
   (`BoneSliderChannel`: move, turn and size on x, y and z; named `<bone>/<channel>`, a `_l`/`_r` pair one slider named
   without its side, the right twin taking the channel's mirror sign, `getMirrorSign`) moving its bones
   (`AppearanceBoneTargetStruct`) a block, a degree or its whole size per unit; a control per control of the rig's bone
   controls, its drives (`AppearanceDriveStruct`) naming the bone sliders it pushes; a shape key per morph of the bodies
-  that no expression plays (blinks stay expressions). The race's `appearance.sliders` map gives each its `group`,
-  `min`, `max`, `default` and `player` by name, and its order; a slider it does not name takes the defaults (a bone
-  slider its channel's range either way of zero, `getDefaultRange`). `AppearanceHandle` keeps shape key values as morph
-  weights of the body worn, totals each bone slider's own value with every control's push
+  that no expression's clip weighs (the blinks are the blink's). The race's `appearance.sliders` map gives each its
+  `group`, `min`, `max`, `default` and `player` by name, and its order; a slider it does not name takes the defaults (a
+  bone slider its channel's range either way of zero, `getDefaultRange`). `AppearanceHandle` keeps shape key values as
+  morph weights of the body worn, totals each bone slider's own value with every control's push
   (`AppearanceData.resolvePush`) held to the slider's range, sums the bone targets into each bone's shaping
   (`AnimationStateHandle.setBoneShape`, laid on the bind pose under every pose) and proportion in `applyProportions`,
-  plays the blink (`updateFace`, through the half shape) and hands everything to a draw in `writeAppearance`. The
-  creator and NPC variation list only sliders the player is offered, by group (the body group on the Body tab); saves
-  and gender presets store values by name.
+  plays the face (`updateFace`, below) and hands everything to a draw in `writeAppearance`. The creator and NPC
+  variation list only sliders the player is offered, by group (the body group on the Body tab); saves and gender presets
+  store values by name.
+- **Expressions are clips.** A race's `appearance.expressions` maps each expression's name to an animation clip made for
+  the race's rig (`AppearanceExpressionStruct`), the facial-clip standard: its bone tracks move face bones and its
+  `morphs` curves (`MorphTrackStruct`, keyed `time` and `value`, linear between keys,
+  `AnimationClipUtility.sampleMorph`) weigh morphs by name, resolved on every body when the race is built. The one named
+  `blink` (`EngineSetting.FACE_EXPRESSION_BLINK`) plays by itself: `AppearanceHandle.updateFace(deltaTime)`, called from
+  `EntityInstance.updateAnimation` before the tree updates, places it once at a pseudo-random moment in every interval
+  of a length each character draws (`FACE_BLINK_INTERVAL_MIN` to `MAX`, `BiomeFieldUtility.hash01`); every other
+  expression fades toward the level asked of it (`setExpression`, over `FACE_EXPRESSION_FADE`), a looping clip playing
+  on, any other held at its end. The morphs the expressions weigh are written as the levels times their curves; their
+  bones are the pose's face layer (`AnimationStateHandle.setExpressionLayer`, handed over again on every reset, laid
+  additively over the tree, a struck clip and the rest pose, beneath the posture). An editor strikes one with
+  `poseExpression(index, phase, level)`; the Blink preview row holds the blink at `closed * FACE_BLINK_CLOSED_PHASE`,
+  since a blink clip closes the lids fully at its middle. The Human's blink is
+  `animations/humanoid/expressions/HumanoidBlink`, each eye closing through its half shape and opening back.
 - **Shape keys in the editor.** Sculpt mode's Shape Keys rows pick the morph being sculpted
   (`CharacterMeshBranch.editShape`): the morph is lifted into the positions so every tool works unchanged, and baked
   back into deltas when sculpting returns to the base, the mode or part changes, or the mesh is saved. Mesh modes

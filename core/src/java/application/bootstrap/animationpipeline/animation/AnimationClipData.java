@@ -12,6 +12,8 @@ public class AnimationClipData extends DataPackage {
      * latest keyframe time across every track at build time, never authored
      * directly, so it can never drift out of sync with the data it describes.
      * A bone added to the rig after the clip was built has no track in it.
+     * morphTracks are the weight curves of the morph targets the clip keys,
+     * by name, as a facial clip keys its blendshapes.
      * How a clip blends with others is never decided here — that belongs to
      * the animation tree node that plays it.
      */
@@ -24,8 +26,9 @@ public class AnimationClipData extends DataPackage {
     private final float duration;
     private final boolean looping;
 
-    // Tracks — indexed by bone index against rigHandle
+    // Tracks — indexed by bone index against rigHandle, then the morph curves in the order the file lists them
     private final BoneTrackStruct[] boneTracks;
+    private final MorphTrackStruct[] morphTracks;
 
     // Constructor \\
 
@@ -34,7 +37,8 @@ public class AnimationClipData extends DataPackage {
             RigHandle rigHandle,
             float duration,
             boolean looping,
-            BoneTrackStruct[] boneTracks) {
+            BoneTrackStruct[] boneTracks,
+            MorphTrackStruct[] morphTracks) {
 
         // Identity
         this.clipName = clipName;
@@ -46,6 +50,7 @@ public class AnimationClipData extends DataPackage {
 
         // Tracks
         this.boneTracks = boneTracks;
+        this.morphTracks = morphTracks;
     }
 
     // Accessible \\
@@ -76,5 +81,13 @@ public class AnimationClipData extends DataPackage {
 
     public int getBoneTrackCount() {
         return boneTracks.length;
+    }
+
+    public int getMorphTrackCount() {
+        return morphTracks.length;
+    }
+
+    public MorphTrackStruct getMorphTrack(int trackIndex) {
+        return morphTracks[trackIndex];
     }
 }

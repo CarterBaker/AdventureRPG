@@ -19,8 +19,9 @@ public class AppearanceData extends DataPackage {
     /*
      * Immutable appearance of one race: the body meshes its genders wear —
      * in the order the race lists them, every one on the race's rig and
-     * carrying the same morphs — with the morph each slider weighs and
-     * each AppearanceExpression plays resolved on every body, the default
+     * carrying the same morphs — with the morph each slider weighs resolved
+     * on every body, the expressions its face plays (each a clip of face
+     * bones and morph curves, the one named blink played by itself), the default
      * color and palette of every SkinnedColor, the default amount of every
      * SkinnedDetail, the shape sliders, the default feature per slot, each
      * gender's starting preset, the head-shape bone with the mask that hides
@@ -52,8 +53,9 @@ public class AppearanceData extends DataPackage {
     private final AppearanceShapeStruct[] shapes;
     private final int[][] shapeMorphs;
 
-    // Expressions — morph index per body and AppearanceExpression ordinal, INDEX_NOT_FOUND when the body has none
-    private final int[][] expressionMorphs;
+    // Expressions — in the order the race names them, and the blink's place among them, INDEX_NOT_FOUND for none
+    private final AppearanceExpressionStruct[] expressions;
+    private final int blinkExpression;
 
     // Features — indexed by FeatureSlot ordinal
     private final FeatureHandle[] defaultFeatures;
@@ -82,7 +84,7 @@ public class AppearanceData extends DataPackage {
             float[] details,
             AppearanceShapeStruct[] shapes,
             int[][] shapeMorphs,
-            int[][] expressionMorphs,
+            AppearanceExpressionStruct[] expressions,
             FeatureHandle[] defaultFeatures,
             Int2ObjectOpenHashMap<AppearanceGenderStruct> genderID2Preset,
             float thinBuildFactor,
@@ -114,7 +116,8 @@ public class AppearanceData extends DataPackage {
         this.shapeMorphs = shapeMorphs;
 
         // Expressions
-        this.expressionMorphs = expressionMorphs;
+        this.expressions = expressions;
+        this.blinkExpression = findExpression(EngineSetting.FACE_EXPRESSION_BLINK);
 
         // Features
         this.defaultFeatures = defaultFeatures;
@@ -305,8 +308,27 @@ public class AppearanceData extends DataPackage {
         return details[skinnedDetail.ordinal()];
     }
 
-    public int getExpressionMorph(int bodyIndex, AppearanceExpression expression) {
-        return expressionMorphs[bodyIndex][expression.ordinal()];
+    public int getExpressionCount() {
+        return expressions.length;
+    }
+
+    public AppearanceExpressionStruct getExpression(int expressionIndex) {
+        return expressions[expressionIndex];
+    }
+
+    // An expression's place by its name, INDEX_NOT_FOUND when the race names none so
+    public int findExpression(String expressionName) {
+
+        for (int i = 0; i < expressions.length; i++)
+            if (expressions[i].getExpressionName().equals(expressionName))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // The expression that blinks by itself, INDEX_NOT_FOUND when the race names none
+    public int getBlinkExpression() {
+        return blinkExpression;
     }
 
     public int getCreatorTabCount() {
