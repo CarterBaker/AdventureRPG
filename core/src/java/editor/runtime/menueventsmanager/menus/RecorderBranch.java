@@ -24,7 +24,7 @@ public class RecorderBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the Recorder tabs — the transport, the
-     * Timeline, the Keys, the Bin, the Assets and the Settings. Every action
+     * Timeline, the Keys, the Bin and the Settings. Every action
      * works on the one recorder all tabs share; the recordings themselves are
      * made, renamed, copied and deleted from the Recordings tool, where a row
      * pressed is picked up and laid nested in the open recording when let go
@@ -760,12 +760,6 @@ public class RecorderBranch extends BranchPackage {
 
     private ElementInstance findEntry(MenuInstance menu, int entryPoint) {
         return menu != null ? menu.getEntryPoint(entryPoint) : null;
-    }
-
-    // Assets \\
-
-    public void toggleAssetSection(String sectionKey) {
-        recorderManager.toggleAssetSection(Integer.parseInt(sectionKey));
     }
 
     // Music \\

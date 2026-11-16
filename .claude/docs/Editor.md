@@ -24,13 +24,18 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   sharing the region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with
   the Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour and Texture Maps the
   map painted; the Recorder is its transport (Record, Play, Pause and Stop, nothing else) and the Timeline
-  its clips, with Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside them, each opening its own
+  its clips, with Recorder Keys, Recorder Bin and Recorder Settings beside them, each opening its own
   menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act
   on; the Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
   the Timeline shows its lanes with a mixer strip each, the lane and clip selected edited in the Properties tab, and
   the file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library lists the
   notes of the instrument picked in the Hierarchy, each dragged onto the Timeline as a note clip that is stretched and
-  cut like any clip. The Timeline's title names what is open; Back is a Recorder shortcut.
+  cut like any clip. The Timeline's title names what is open; Back is a Recorder shortcut. The Scene Assets tab,
+  beside the ARPG Viewer in the Content menu (`editor.bootstrap.sceneassetspipeline`), lists what the Dev window
+  shows as it runs: the block under the crosshair in full (block, biome, face hit and every face's texture with its
+  pack, material, shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
+  `DevSceneAssetsSystem` casts across the view about once a second while a Scene Assets tab is open; a row naming
+  content opens it in the Properties tab.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 
 ## Layers

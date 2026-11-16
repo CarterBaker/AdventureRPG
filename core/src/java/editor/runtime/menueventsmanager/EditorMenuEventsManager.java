@@ -22,6 +22,7 @@ import editor.runtime.menueventsmanager.menus.NoteLibraryBranch;
 import editor.runtime.menueventsmanager.menus.ProfilerBranch;
 import editor.runtime.menueventsmanager.menus.RecorderBranch;
 import editor.runtime.menueventsmanager.menus.RecordingsBranch;
+import editor.runtime.menueventsmanager.menus.SceneAssetsBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
 import editor.runtime.menueventsmanager.menus.ToolBranch;
 import editor.runtime.menueventsmanager.menus.TransitionsBranch;
@@ -83,6 +84,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(RecordingsBranch.class);
         create(SoundLibraryBranch.class);
         create(NoteLibraryBranch.class);
+        create(SceneAssetsBranch.class);
         create(TransitionsBranch.class);
     }
 }

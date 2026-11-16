@@ -388,6 +388,9 @@ One line per session that changed this file: the date, what was added or removed
   tool); deleted `menus/editor/PianoRoll.arpg` and `shortcuts/PianoRoll.arpg` with the Piano Roll.
 - 2026-11-16: One Media folder. Regenerated `menus/editor/Recordings.arpg` (one list of media files, no song rows),
   `menus/editor/EditorWindow.arpg` (the tab named Media) and `schemas/Shortcuts.arpg` (no Music Timeline canvas).
+- 2026-11-16: Scene Assets replaces Recorder Assets. Added `menus/editor/SceneAssets.arpg` (what the Dev window
+  shows, section by section); regenerated `menus/editor/Recorder.arpg` (no Assets menu or asset rows) and
+  `menus/editor/EditorWindow.arpg` (Scene Assets under ARPG Viewer, no Recorder Assets).
 
 ---
 
@@ -2641,7 +2644,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
 `GenerateMapsDialog.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
 `NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
-`Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Timeline.arpg`,
+`Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Timeline.arpg`,
 `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`

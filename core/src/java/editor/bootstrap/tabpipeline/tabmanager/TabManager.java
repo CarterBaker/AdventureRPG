@@ -41,11 +41,11 @@ import editor.runtime.notelibrary.NoteLibraryContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
 import editor.runtime.recorder.RecorderContext;
-import editor.runtime.recorderassets.RecorderAssetsContext;
 import editor.runtime.recorderbin.RecorderBinContext;
 import editor.runtime.recorderkeys.RecorderKeysContext;
 import editor.runtime.recordersettings.RecorderSettingsContext;
 import editor.runtime.recordings.RecordingsContext;
+import editor.runtime.sceneassets.SceneAssetsContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
 import editor.runtime.settlementplanner.SettlementPlannerContext;
@@ -329,10 +329,6 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_RECORDER_BIN, RecorderBinContext.class, osWindow);
     }
 
-    public TabHandle openRecorderAssets(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_RECORDER_ASSETS, RecorderAssetsContext.class, osWindow);
-    }
-
     public TabHandle openRecorderSettings(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_RECORDER_SETTINGS, RecorderSettingsContext.class, osWindow);
     }
@@ -343,6 +339,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openSoundLibrary(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_SOUND_LIBRARY, SoundLibraryContext.class, osWindow);
+    }
+
+    public TabHandle openSceneAssets(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_SCENE_ASSETS, SceneAssetsContext.class, osWindow);
     }
 
     public TabHandle openNoteLibrary(WindowInstance osWindow) {

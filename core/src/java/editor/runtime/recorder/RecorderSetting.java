@@ -4,9 +4,9 @@ public class RecorderSetting {
 
     /*
      * Constants used only by RecorderContext and the Recorder tabs beside it
-     * — Timeline, Keys, Bin, Assets and Settings, which share its systems —
+     * — Timeline, Keys, Bin and Settings, which share its systems —
      * the menus
-     * each opens, the row, clip, transition, node, timeline, Keys and Assets
+     * each opens, the row, clip, transition, node, timeline and Keys
      * templates their panels are filled from and their elements, each menu's
      * entry points, the timeline's fixed steps, its ruler's ticks, the sizes
      * the timeline and the Keys tab draw at, how often the export
@@ -48,9 +48,6 @@ public class RecorderSetting {
     public static final String TEMPLATE_GRAPH_KEY_SELECTED = "editor/Recorder/recorder_graph_key_selected";
     public static final String TEMPLATE_GRAPH_HANDLE = "editor/Recorder/recorder_graph_handle";
     public static final String TEMPLATE_GRAPH_BOX = "editor/Recorder/recorder_graph_box";
-    public static final String TEMPLATE_ASSET_SECTION_ROW = "editor/Recorder/recorder_asset_section_row";
-    public static final String TEMPLATE_ASSET_ROW = "editor/Recorder/recorder_asset_row";
-    public static final String TEMPLATE_ASSET_ROW_MISSING = "editor/Recorder/recorder_asset_row_missing";
     public static final String TEMPLATE_LANE_STRIPE = "editor/Timeline/timeline_lane_stripe";
     public static final String TEMPLATE_LANE_STRIPE_ALTERNATE = "editor/Timeline/timeline_lane_stripe_alternate";
     public static final String TEMPLATE_MIXER_ROW = "editor/Timeline/timeline_mixer_row";
@@ -78,7 +75,6 @@ public class RecorderSetting {
     // Menus — the timeline's and the Keys' are EditorSetting RECORDER_MENU and RECORDER_KEYS_MENU, which the drags
     // and the wheel look for
     public static final String MENU_BIN = "editor/Recorder/RecorderBin";
-    public static final String MENU_ASSETS = "editor/Recorder/RecorderAssets";
     public static final String MENU_SETTINGS = "editor/Recorder/RecorderSettings";
 
     // Entry Points — the Timeline's menu; the clip lanes and the ruler are EditorSetting RECORDER_ENTRY_CLIP_LANES
@@ -105,11 +101,9 @@ public class RecorderSetting {
     public static final int ENTRY_GRAPH_BOTTOM = 6;
     public static final int ENTRY_KEY_INSPECTOR = 7;
 
-    // Entry Points — the Bin's, the Assets' and the Settings' menus
+    // Entry Points — the Bin's and the Settings' menus
     public static final int ENTRY_TAKES = 0;
     public static final int ENTRY_CLIP = 1;
-    public static final int ENTRY_ASSETS_TITLE = 0;
-    public static final int ENTRY_ASSET_ROWS = 1;
     public static final int ENTRY_SETTINGS = 0;
 
     // Timeline — positions across the view as a percentage of it; a drag's ghost may reach a view's width past
@@ -261,10 +255,6 @@ public class RecorderSetting {
     public static final String TEXT_RANGE_TO_END = "Recording end";
     public static final String TEXT_CLEAR_RANGE = "Clear range";
     public static final String TEXT_EXPORT = "Export video";
-
-    // Text — Assets
-    public static final String TEXT_ASSETS_TITLE = "Assets";
-    public static final String TEXT_ASSET_MISSING = "Missing";
     public static final String TEXT_CANCEL_EXPORT = "Cancel export";
 
     // Formats
@@ -303,7 +293,5 @@ public class RecorderSetting {
     public static final String FORMAT_TRANSITION_SPAN = "On its %s   %s to %s";
     public static final String FORMAT_TRANSITION_LOOK = "%s, %s";
     public static final String FORMAT_TRANSITION_SECONDS = "%.2fs";
-    public static final String FORMAT_ASSETS_TITLE = "Assets: %s";
-    public static final String FORMAT_ASSET_OWNERS = "%s and %d more";
     public static final String FORMAT_PROGRESS = "Frame %d of %d";
 }

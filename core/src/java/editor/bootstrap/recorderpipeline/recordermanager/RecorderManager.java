@@ -19,7 +19,6 @@ import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import editor.bootstrap.recorderpipeline.recording.RecorderAssetKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveKind;
@@ -29,7 +28,6 @@ import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
-import editor.bootstrap.recorderpipeline.recording.RecordingAssetSectionStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
@@ -70,99 +68,93 @@ public class RecorderManager extends ManagerPackage {
 
     /*
      * Owns the recorder: the media files saved in the media directory beside
-     * the player's saves, video and music alike, the one open, its transport, and the editing of its bin and timeline. A
-     * session — recording, playing, paused or exporting — drives the first Dev
-     * window that has not crashed, found among TabManager's open tabs as
-     * console commands find it, and that window's DevRecorderSystem carries
-     * the session out inside its own crash boundary from what this holds:
-     * which channels play from the timeline, which the take records live, and
-     * the playhead. A take records the armed channels from the playhead until
-     * stopped, the clips beneath playing every other channel; it then joins
-     * the bin and is laid on the timeline where it was recorded, over every
-     * clip it was recorded against. Takes are laid again by dragging them from
-     * the bin, and clips are moved by dragging, trimmed by dragging an edge or
-     * at the playhead, cut in two at the playhead or, with the Cut tool
-     * chosen for the timeline in the Tools panel, wherever it is pressed,
-     * stamped, muted, given or stripped of channels,
-     * and removed, each by one method here; what is dragged snaps to the
-     * timeline's edges, and the cut tool shows where it would cut under the
-     * pointer. A press on the lanes is read once, where it began, for what it
-     * takes hold of. The nodes of every clip playing the player — what it
+     * the player's saves, video and music alike, the one open, its transport,
+     * and the editing of its bin and timeline. A session — recording, playing,
+     * paused or exporting — drives the first Dev window that has not crashed,
+     * found among TabManager's open tabs as console commands find it, and that
+     * window's DevRecorderSystem carries the session out inside its own crash
+     * boundary from what this holds: which channels play from the timeline,
+     * which the take records live, and the playhead. A take records the armed
+     * channels from the playhead until stopped, the clips beneath playing
+     * every other channel; it then joins the bin and is laid on the timeline
+     * where it was recorded, over every clip it was recorded against. Takes
+     * are laid again by dragging them from the bin, and clips are moved by
+     * dragging, trimmed by dragging an edge or at the playhead, cut in two at
+     * the playhead or, with the Cut tool chosen for the timeline in the Tools
+     * panel, wherever it is pressed, stamped, muted, given or stripped of
+     * channels, and removed, each by one method here; what is dragged snaps to
+     * the timeline's edges, and the cut tool shows where it would cut under
+     * the pointer. A press on the lanes is read once, where it began, for what
+     * it takes hold of. The nodes of every clip playing the player — what it
      * does, run by run — are rebuilt after every edit, and are retimed, moved,
      * changed and removed here too. The view of the timeline zooms and
      * scrolls, and pages along after a playing playhead. Every value a take
      * records is laid on a curve of keys as soon as the take is stopped, and
      * every take of a recording opened that has none yet, one track a frame so
      * nothing stalls, and the curves play from then on: a recording is made of
-     * keys. The Recorder Keys tab shows the selected clip's take
-     * track by track — the camera, the player, every resident, item and
-     * vehicle, the weather and the clock — with the graph of the value
-     * selected, and beneath them the take's Sounds layer, a row for each sound
-     * it heard with a bar for every time it was heard. Sounds are selected,
-     * retimed along their rows, copied to the playhead, added from the sound
-     * library, given another volume, pitch, length or sound, and removed one
-     * by one or every one of a sound at once, each by one method here, and a
-     * change to any of them stops whatever the timeline was sounding so it is
-     * heard again as it now stands. Keys are added, deleted, retimed on their
-     * rows, moved and bent by their handles on the graph, given a mode or a
-     * typed value, and a
+     * keys. The Recorder Keys tab shows the selected clip's take track by
+     * track — the camera, the player, every resident, item and vehicle, the
+     * weather and the clock — with the graph of the value selected, and
+     * beneath them the take's Sounds layer, a row for each sound it heard with
+     * a bar for every time it was heard. Sounds are selected, retimed along
+     * their rows, copied to the playhead, added from the sound library, given
+     * another volume, pitch, length or sound, and removed one by one or every
+     * one of a sound at once, each by one method here, and a change to any of
+     * them stops whatever the timeline was sounding so it is heard again as it
+     * now stands. Keys are added, deleted, retimed on their rows, moved and
+     * bent by their handles on the graph, given a mode or a typed value, and a
      * curve is laid again from the recording, each by one method here; a key
      * or handle dragged changes its curve as it moves. Any number of a curve's
-     * keys are selected at once — picked one by one or boxed on the graph or
-     * a row, added to or taken away from — and move and delete together; the
+     * keys are selected at once — picked one by one or boxed on the graph or a
+     * row, added to or taken away from — and move and delete together; the
      * last picked is the one the inspector shows and whose handles are drawn.
      * What is selected is deleted as one: the keys while the Keys were worked
-     * in last, else the sound, else the node, else the clip. The Assets tab
-     * lists
-     * every asset the whole recording uses, section by section, each section
-     * opened or closed here. A sound dragged in from the sound library, or
-     * added at the playhead, is laid as a take of its own holding that sound
-     * alone, the bin keeping one such take for each sound however often it is
-     * laid; a clip of such a take selected selects its sound, so its volume,
-     * pitch and length are changed straight from the clip. Sounds add up
-     * rather than give way: while the timeline plays or a
-     * take records, every clip covering the playhead sounds together, and an
-     * export mixes every one of them into its video's sound. The player
-     * cannot be recorded without the camera
-     * that follows it. While a session plays the world, residents, thrown
-     * items and vehicles are held. While a session runs, its Dev window is
-     * the one heard whichever window has focus, so the world is heard from its
-     * camera and its ambience and music are what a take records; while the
-     * timeline plays the sound channel, they hold silent, as the take already
-     * holds them. While the game is paused the session is
-     * suspended — the playhead waits and a take records nothing — and it
-     * carries on a few frames after the pause ends, so the pause menu never
-     * reaches a take. Stopping ends every session and the Dev window goes back
-     * to just where it was. A transition dragged in from the transitions
-     * tool is laid on the clip edge it is let go over, the end of a clip
-     * another follows on its lane handing it to the start of the one
-     * following; a press on one laid selects it, and dragging it moves its far
-     * side to make it run longer or shorter. While the timeline plays or
-     * exports, the transition the picture passes through at the playhead is
+     * in last, else the sound, else the node, else the clip. A sound dragged
+     * in from the sound library, or added at the playhead, is laid as a take
+     * of its own holding that sound alone, the bin keeping one such take for
+     * each sound however often it is laid; a clip of such a take selected
+     * selects its sound, so its volume, pitch and length are changed straight
+     * from the clip. Sounds add up rather than give way: while the timeline
+     * plays or a take records, every clip covering the playhead sounds
+     * together, and an export mixes every one of them into its video's sound.
+     * The player cannot be recorded without the camera that follows it. While
+     * a session plays the world, residents, thrown items and vehicles are
+     * held. While a session runs, its Dev window is the one heard whichever
+     * window has focus, so the world is heard from its camera and its ambience
+     * and music are what a take records; while the timeline plays the sound
+     * channel, they hold silent, as the take already holds them. While the
+     * game is paused the session is suspended — the playhead waits and a take
+     * records nothing — and it carries on a few frames after the pause ends,
+     * so the pause menu never reaches a take. Stopping ends every session and
+     * the Dev window goes back to just where it was. A transition dragged in
+     * from the transitions tool is laid on the clip edge it is let go over,
+     * the end of a clip another follows on its lane handing it to the start of
+     * the one following; a press on one laid selects it, and dragging it moves
+     * its far side to make it run longer or shorter. While the timeline plays
+     * or exports, the transition the picture passes through at the playhead is
      * read again whenever it is asked for, and the Dev window renders the
      * timeline both with and without the clip it lies on — the side it plays
-     * each frame set here — so the two can be blended; every clip's own
-     * sounds fade in and out with its transitions. The recordings themselves
-     * are listed, opened, renamed, copied and deleted from the Recordings
-     * tool. Each structural change marks the recording unsaved
-     * and moves the revision the recorder tab redraws on. Takes save the
-     * recording at once. A clip plays a take, another recording nested by
-     * name, a song or a notes clip: a saved recording dragged from the
-     * Recordings tab is laid as a clip nesting it, refused when it would
-     * reach the open recording again at any depth, naming the loop, or when
-     * it shows a picture of another world; every clip is bound to what it
-     * names whenever a recording opens, and a recording is read again
-     * wherever it is nested once it is saved, so editing it changes every
-     * place it lies. A nested clip clicked twice opens its recording inside
-     * the open one, and Back returns to the one it was opened inside, the
-     * way down shown as a breadcrumb. Any number of clips are selected at
-     * once — picked alone, or added and taken away with Shift — and move and
-     * are deleted together, and Nest Selection moves them into a new
-     * recording laid where they were as one clip. A note dragged from the
-     * Note Library is laid as a note clip whose note always fills it. A media
-     * file any clip of which shows a picture is a video and exports as one,
-     * frame by frame; one with none is music and exports as the game's own
-     * song and rendered sound; both land in the export directory.
+     * each frame set here — so the two can be blended; every clip's own sounds
+     * fade in and out with its transitions. The recordings themselves are
+     * listed, opened, renamed, copied and deleted from the Recordings tool.
+     * Each structural change marks the recording unsaved and moves the
+     * revision the recorder tab redraws on. Takes save the recording at once.
+     * A clip plays a take, another recording nested by name, a song or a notes
+     * clip: a saved recording dragged from the Recordings tab is laid as a
+     * clip nesting it, refused when it would reach the open recording again at
+     * any depth, naming the loop, or when it shows a picture of another world;
+     * every clip is bound to what it names whenever a recording opens, and a
+     * recording is read again wherever it is nested once it is saved, so
+     * editing it changes every place it lies. A nested clip clicked twice
+     * opens its recording inside the open one, and Back returns to the one it
+     * was opened inside, the way down shown as a breadcrumb. Any number of
+     * clips are selected at once — picked alone, or added and taken away with
+     * Shift — and move and are deleted together, and Nest Selection moves them
+     * into a new recording laid where they were as one clip. A note dragged
+     * from the Note Library is laid as a note clip whose note always fills it.
+     * A media file any clip of which shows a picture is a video and exports as
+     * one, frame by frame; one with none is music and exports as the game's
+     * own song and rendered sound; both land in the export directory.
      */
 
     // Internal
@@ -179,7 +171,6 @@ public class RecorderManager extends ManagerPackage {
     private RecordingTimelineBranch recordingTimelineBranch;
     private RecordingNodeBranch recordingNodeBranch;
     private RecordingCurveBranch recordingCurveBranch;
-    private RecordingAssetBranch recordingAssetBranch;
     private RecordingMixBranch recordingMixBranch;
     private RecordingSoundBranch recordingSoundBranch;
     private RecordingTransitionBranch recordingTransitionBranch;
@@ -277,10 +268,6 @@ public class RecorderManager extends ManagerPackage {
     private boolean curvesLaid;
     private boolean saveWhenLaid;
 
-    // Assets
-    private boolean[] openedAssetSections;
-    private boolean assetsStale;
-    private int assetsRevision;
 
     // Export
     private File exportFile;
@@ -302,7 +289,6 @@ public class RecorderManager extends ManagerPackage {
         this.recordingTimelineBranch = create(RecordingTimelineBranch.class);
         this.recordingNodeBranch = create(RecordingNodeBranch.class);
         this.recordingCurveBranch = create(RecordingCurveBranch.class);
-        this.recordingAssetBranch = create(RecordingAssetBranch.class);
         this.recordingMixBranch = create(RecordingMixBranch.class);
         this.recordingSoundBranch = create(RecordingSoundBranch.class);
         this.recordingTransitionBranch = create(RecordingTransitionBranch.class);
@@ -364,14 +350,6 @@ public class RecorderManager extends ManagerPackage {
         // Curves
         this.unlaidTracks = new ObjectArrayList<>();
 
-        // Assets
-        this.openedAssetSections = new boolean[RecorderAssetKind.VALUES.length];
-
-        for (int i = 0; i < openedAssetSections.length; i++)
-            openedAssetSections[i] = true;
-
-        this.assetsStale = true;
-
         // Export
         this.exportResult = RecorderExportResult.NONE;
 
@@ -403,7 +381,6 @@ public class RecorderManager extends ManagerPackage {
         updateView();
         updateKeyTracks();
         layCurves();
-        updateAssets();
         holdWorld();
         holdSound();
         updateRender();
@@ -648,7 +625,6 @@ public class RecorderManager extends ManagerPackage {
         pickClip(recordingTimelineBranch.placeRecordedTake(recording, take, takeStart));
         queueCurves(take);
         this.saveWhenLaid = true;
-        this.assetsStale = true;
         this.take = null;
         markUnsaved();
         saveRecording();
@@ -919,7 +895,6 @@ public class RecorderManager extends ManagerPackage {
         this.recording = null;
         this.unsaved = false;
         unlaidTracks.clear();
-        this.assetsStale = true;
         cancelDrag();
         clearSelection();
         transition.clear();
@@ -962,7 +937,6 @@ public class RecorderManager extends ManagerPackage {
         unlaidTracks.clear();
         this.curvesLaid = false;
         this.saveWhenLaid = false;
-        this.assetsStale = true;
 
         for (int i = 0; i < activated.getTakes().size(); i++)
             queueCurves(activated.getTakes().get(i));
@@ -1004,7 +978,6 @@ public class RecorderManager extends ManagerPackage {
         String takeName = recording.getTakes().get(takeIndex).getName();
 
         recording.removeTake(takeIndex);
-        this.assetsStale = true;
         clearSelection();
         this.playhead = Math.min(playhead, recording.getDuration());
         markUnsaved();
@@ -1049,7 +1022,6 @@ public class RecorderManager extends ManagerPackage {
 
         placeTake(recordingSoundBranch.requireSoundTake(recording, soundManager.getSoundHandleFromSoundID(soundID)),
                 start, lane);
-        this.assetsStale = true;
     }
 
     // Clips \\
@@ -1418,7 +1390,6 @@ public class RecorderManager extends ManagerPackage {
 
         removeSelectedClips();
         layRecording(recordingName, start, lane);
-        this.assetsStale = true;
         setStatus(EditorSetting.RECORDER_STATUS_NESTED + recordingName);
     }
 
@@ -1517,7 +1488,6 @@ public class RecorderManager extends ManagerPackage {
 
         clip.bindChild(child);
         pickClip(recordingTimelineBranch.placeClip(recording, clip));
-        this.assetsStale = true;
         markUnsaved();
         return true;
     }
@@ -2135,7 +2105,6 @@ public class RecorderManager extends ManagerPackage {
 
         recordingSourceBranch.bindClip(recording, clip);
         pickClip(recordingTimelineBranch.placeClip(recording, clip));
-        this.assetsStale = true;
         soundRevision++;
         markUnsaved();
         setStatus(EditorSetting.RECORDER_STATUS_NOTE_PLACED + clip.resolveLabelName());
@@ -2201,7 +2170,6 @@ public class RecorderManager extends ManagerPackage {
 
         clip.setSongClip(songClip);
         recordingSourceBranch.bindClip(recording, clip);
-        this.assetsStale = true;
         soundRevision++;
         markUnsaved();
     }
@@ -3653,10 +3621,9 @@ public class RecorderManager extends ManagerPackage {
                 : "";
     }
 
-    // Every sound edit stops what the timeline was sounding, lists the take's assets again and marks it unsaved
+    // Every sound edit stops what the timeline was sounding and marks it unsaved
     private void finishSoundEdit(String status) {
         soundRevision++;
-        this.assetsStale = true;
         markUnsaved();
         keysRevision++;
         setStatus(status);
@@ -3898,28 +3865,6 @@ public class RecorderManager extends ManagerPackage {
 
     private void clearTransitionSelection() {
         this.selectedTransition = EngineSetting.INDEX_NOT_FOUND;
-    }
-
-    // Assets \\
-
-    // The recording's assets gathered again while the Assets pane shows and something they come from has changed
-    private void updateAssets() {
-
-        if (pane != RecorderPane.ASSETS || !assetsStale)
-            return;
-
-        recordingAssetBranch.gather(recording);
-        this.assetsStale = false;
-        assetsRevision++;
-    }
-
-    public void toggleAssetSection(int sectionIndex) {
-
-        if (sectionIndex < 0 || sectionIndex >= openedAssetSections.length)
-            return;
-
-        openedAssetSections[sectionIndex] = !openedAssetSections[sectionIndex];
-        assetsRevision++;
     }
 
     // Export Settings \\
@@ -4469,18 +4414,6 @@ public class RecorderManager extends ManagerPackage {
 
     public double getGraphMaximum() {
         return graphMaximum;
-    }
-
-    public RecordingAssetSectionStruct[] getAssetSections() {
-        return recordingAssetBranch.getSections();
-    }
-
-    public boolean isAssetSectionOpened(int sectionIndex) {
-        return openedAssetSections[sectionIndex];
-    }
-
-    public int getAssetsRevision() {
-        return assetsRevision;
     }
 
     public int getKeysRevision() {

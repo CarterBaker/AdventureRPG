@@ -204,10 +204,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openRecorderBin(window.getGLWindow());
     }
 
-    public void openRecorderAssets(WindowInstance window) {
-        tabManager.openRecorderAssets(window.getGLWindow());
-    }
-
     public void openRecorderSettings(WindowInstance window) {
         tabManager.openRecorderSettings(window.getGLWindow());
     }
@@ -218,6 +214,10 @@ public class EditorBranch extends BranchPackage {
 
     public void openSoundLibrary(WindowInstance window) {
         tabManager.openSoundLibrary(window.getGLWindow());
+    }
+
+    public void openSceneAssets(WindowInstance window) {
+        tabManager.openSceneAssets(window.getGLWindow());
     }
 
     public void openNoteLibrary(WindowInstance window) {

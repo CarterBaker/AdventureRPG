@@ -10,6 +10,7 @@ import editor.runtime.dev.recorder.DevRecorderOverlaySystem;
 import editor.runtime.dev.recorder.DevRecorderSoundSystem;
 import editor.runtime.dev.recorder.DevRecorderSystem;
 import editor.runtime.dev.recorder.DevRecorderTransitionSystem;
+import editor.runtime.dev.sceneassets.DevSceneAssetsSystem;
 import editor.runtime.dev.teleport.DevTeleportSystem;
 import editor.runtime.dev.time.DevTimeSystem;
 import editor.runtime.dev.vehicle.DevVehicleSystem;
@@ -27,7 +28,8 @@ public class DevContext extends RuntimeContext {
      * recorder's systems carry out a recording session in this window —
      * capturing and playing it back, its interface, sounds and transitions
      * included, and rendering its export — which its record, play, stop and mark commands
-     * drive too.
+     * drive too. The scene assets system tells the Scene Assets tab what the
+     * window shows while that tab watches it.
      * The editor pairs it with a Dev Mode tab exactly as it does a preview.
      * Dev-only systems live beside it in the editor's runtime, never in the
      * game's.
@@ -50,6 +52,9 @@ public class DevContext extends RuntimeContext {
     private DevRecorderSoundSystem devRecorderSoundSystem;
     private DevRecorderOverlaySystem devRecorderOverlaySystem;
 
+    // Scene Assets
+    private DevSceneAssetsSystem devSceneAssetsSystem;
+
     // Internal \\
 
     @Override
@@ -71,6 +76,9 @@ public class DevContext extends RuntimeContext {
         this.devRecorderSystem = create(DevRecorderSystem.class);
         this.devRecorderSoundSystem = create(DevRecorderSoundSystem.class);
         this.devRecorderOverlaySystem = create(DevRecorderOverlaySystem.class);
+
+        // Scene Assets
+        this.devSceneAssetsSystem = create(DevSceneAssetsSystem.class);
     }
 
     // Management \\

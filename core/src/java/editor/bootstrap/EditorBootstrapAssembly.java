@@ -15,6 +15,7 @@ import editor.bootstrap.layerspipeline.LayersPipeline;
 import editor.bootstrap.notelibrarypipeline.NoteLibraryPipeline;
 import editor.bootstrap.propertiespipeline.PropertiesPipeline;
 import editor.bootstrap.recorderpipeline.RecorderPipeline;
+import editor.bootstrap.sceneassetspipeline.SceneAssetsPipeline;
 import editor.bootstrap.settlementplannerpipeline.SettlementPlannerPipeline;
 import editor.bootstrap.shipviewerpipeline.ShipViewerPipeline;
 import editor.bootstrap.shortcutpipeline.ShortcutPipeline;
@@ -78,6 +79,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(RecorderPipeline.class);
         create(SoundLibraryPipeline.class);
         create(NoteLibraryPipeline.class);
+        create(SceneAssetsPipeline.class);
         create(ShortcutPipeline.class);
         create(EditorMenuEventsManager.class);
     }

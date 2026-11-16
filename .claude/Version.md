@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 93
-Task: MediaFolder
+Delivery: 94
+Task: SceneAssets
 Applied: 2026-11-15
 
 ## Log
@@ -103,3 +103,4 @@ Applied: 2026-11-15
 - 91, 2026-11-15, BoneControlOnDemand
 - 92, 2026-11-15, NoteLibrary
 - 93, 2026-11-15, MediaFolder
+- 94, 2026-11-15, SceneAssets

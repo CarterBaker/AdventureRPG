@@ -446,11 +446,11 @@ public class EditorSetting {
     public static final String TAB_TITLE_TIMELINE = "Timeline";
     public static final String TAB_TITLE_RECORDER_KEYS = "Recorder Keys";
     public static final String TAB_TITLE_RECORDER_BIN = "Recorder Bin";
-    public static final String TAB_TITLE_RECORDER_ASSETS = "Recorder Assets";
     public static final String TAB_TITLE_RECORDER_SETTINGS = "Recorder Settings";
     public static final String TAB_TITLE_RECORDINGS = "Media";
     public static final String TAB_TITLE_SOUND_LIBRARY = "Sound Library";
     public static final String TAB_TITLE_NOTE_LIBRARY = "Note Library";
+    public static final String TAB_TITLE_SCENE_ASSETS = "Scene Assets";
     public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_SHIP_VIEWER = "Ship Viewer";
@@ -2187,6 +2187,8 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_TRANSITIONS = "Transitions";
     public static final String INFO_SCHEMA_SOUNDS = "Sounds";
     public static final String INFO_SCHEMA_INSTRUMENTS = "Instruments";
+    public static final String INFO_SCHEMA_BLOCKS = "Blocks";
+    public static final String INFO_SCHEMA_SHADERS = "Shaders";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";
@@ -2538,6 +2540,7 @@ public class EditorSetting {
     public static final String RECORDER_KEYS_MENU = "editor/Recorder/RecorderKeys";
     public static final String SOUND_LIBRARY_MENU = "editor/SoundLibrary/SoundLibrary";
     public static final String NOTE_LIBRARY_MENU = "editor/NoteLibrary/NoteLibrary";
+    public static final String SCENE_ASSETS_MENU = "editor/SceneAssets/SceneAssets";
     public static final String TRANSITIONS_MENU = "editor/Transitions/Transitions";
     public static final String RECORDINGS_MENU = "editor/Recordings/Recordings";
     public static final String SOUND_LIBRARY_STATUS_READY =
@@ -2555,6 +2558,41 @@ public class EditorSetting {
     public static final String NOTE_LIBRARY_STATUS_PLAYING = "Playing ";
     public static final String NOTE_LIBRARY_STATUS_REFUSED = "The game refuses the instrument: ";
     public static final float NOTE_LIBRARY_PREVIEW_SECONDS = 0.6f;
+
+    // Scene Assets — how long a tab keeps the scene watched and a Dev window's claim on it lasts unfed, how often the
+    // crosshair is cast and the view scanned, the grid of rays a scan casts and how far each reaches, and the words
+    // its sections and rows are named by
+    public static final float SCENE_ASSETS_WATCH_SECONDS = 0.5f;
+    public static final float SCENE_ASSETS_OWNER_SECONDS = 2f;
+    public static final float SCENE_ASSETS_PICK_SECONDS = 0.1f;
+    public static final float SCENE_ASSETS_SCAN_SECONDS = 1f;
+    public static final int SCENE_ASSETS_SCAN_COLUMNS = 32;
+    public static final int SCENE_ASSETS_SCAN_ROWS = 18;
+    public static final float SCENE_ASSETS_SCAN_DISTANCE = 256f;
+    public static final String SCENE_ASSETS_LABEL_POINTED = "Pointed at";
+    public static final String SCENE_ASSETS_LABEL_BLOCKS = "Blocks in view";
+    public static final String SCENE_ASSETS_LABEL_BIOMES = "Biomes in view";
+    public static final String SCENE_ASSETS_LABEL_TEXTURES = "Textures in view";
+    public static final String SCENE_ASSETS_LABEL_MATERIALS = "Materials in view";
+    public static final String SCENE_ASSETS_LABEL_SHADERS = "Shaders in view";
+    public static final String SCENE_ASSETS_ROW_BLOCK = "Block";
+    public static final String SCENE_ASSETS_ROW_BIOME = "Biome";
+    public static final String SCENE_ASSETS_ROW_FACE = "Face hit";
+    public static final String SCENE_ASSETS_ROW_MATERIAL = "Material";
+    public static final String SCENE_ASSETS_ROW_SHADER = "Shader";
+    public static final String SCENE_ASSETS_ROW_CELL = "Block position";
+    public static final String SCENE_ASSETS_TEXT_NOTHING_POINTED = "Nothing under the crosshair";
+    public static final String SCENE_ASSETS_TEXT_NO_TEXTURE = "untextured";
+    public static final String SCENE_ASSETS_TEXT_EMPTY = "";
+    public static final String SCENE_ASSETS_FORMAT_FACE = "%s: %s";
+    public static final String SCENE_ASSETS_FORMAT_FACE_TEXTURE = "Texture %s";
+    public static final String SCENE_ASSETS_FORMAT_TILE = "%s (%s)";
+    public static final String SCENE_ASSETS_FORMAT_CELL = "%d, %d, %d";
+    public static final String SCENE_ASSETS_FORMAT_TEXTURE_BLOCK = "%s  |  %s";
+    public static final String SCENE_ASSETS_FORMAT_TEXTURE_BLOCKS = "%s  |  %s and %d more";
+    public static final String SCENE_ASSETS_FORMAT_SHADER_MATERIALS = "%d materials";
+    public static final String SCENE_ASSETS_STATUS_NO_DEV = "no Dev window";
+    public static final String SCENE_ASSETS_STATUS_WATCHING = "watching ";
     public static final int RECORDER_ENTRY_CLIP_LANES = 2;
     public static final int RECORDER_ENTRY_RULER = 3;
     public static final int RECORDER_ENTRY_KEY_ROWS = 1;
@@ -2676,25 +2714,6 @@ public class EditorSetting {
     public static final float RECORDER_GRAPH_GRAB_PIXELS = 9f;
     public static final double RECORDER_GRAPH_MARGIN_SHARE = 0.1;
     public static final String RECORDER_KEY_STATUS_SEPARATOR = ": ";
-
-    // Recorder — asset sections, as the Assets pane names them
-    public static final String RECORDER_ASSET_LABEL_WORLD = "World";
-    public static final String RECORDER_ASSET_LABEL_CALENDAR = "Calendar";
-    public static final String RECORDER_ASSET_LABEL_CHARACTERS = "Characters";
-    public static final String RECORDER_ASSET_LABEL_GENDERS = "Genders";
-    public static final String RECORDER_ASSET_LABEL_FEATURES = "Features";
-    public static final String RECORDER_ASSET_LABEL_ITEMS = "Items";
-    public static final String RECORDER_ASSET_LABEL_VEHICLES = "Vehicles";
-    public static final String RECORDER_ASSET_LABEL_MODELS = "Models";
-    public static final String RECORDER_ASSET_LABEL_TEXTURES = "Textures";
-    public static final String RECORDER_ASSET_LABEL_MATERIALS = "Materials";
-    public static final String RECORDER_ASSET_LABEL_ANIMATION_TREES = "Animation trees";
-    public static final String RECORDER_ASSET_LABEL_ANIMATIONS = "Animations";
-    public static final String RECORDER_ASSET_LABEL_INTERFACE = "Interface";
-    public static final String RECORDER_ASSET_LABEL_SOUNDS = "Sounds";
-    public static final String RECORDER_ASSET_LABEL_RECORDINGS = "Nested recordings";
-    public static final String RECORDER_ASSET_LABEL_SONGS = "Songs";
-    public static final String RECORDER_ASSET_LABEL_INSTRUMENTS = "Instruments";
 
     // Recorder — key modes, as the Keys pane names them
     public static final String RECORDER_KEY_MODE_LABEL_AUTO = "Auto";
