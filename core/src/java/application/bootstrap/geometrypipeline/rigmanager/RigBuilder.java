@@ -59,6 +59,15 @@ class RigBuilder extends BuilderPackage {
         return handle;
     }
 
+    // A rig built from an ARPG tree and never registered, for a fragment of bones an editor carries on its own
+    RigHandle buildDetached(ArpgObjectStruct arpg, String rigName) {
+
+        RigHandle handle = create(RigHandle.class);
+        handle.constructor(buildData(arpg, rigName, rigName));
+
+        return handle;
+    }
+
     RigData buildData(ArpgObjectStruct arpg, String rigName, String sourceName) {
 
         ArpgArrayStruct bonesArray = ArpgUtility.validateArray(arpg, "bones");

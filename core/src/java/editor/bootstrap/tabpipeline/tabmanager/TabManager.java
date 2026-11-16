@@ -52,6 +52,7 @@ import editor.runtime.settlementplanner.SettlementPlannerContext;
 import editor.runtime.shipviewer.ShipViewerContext;
 import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.soundlibrary.SoundLibraryContext;
+import editor.runtime.stamps.StampsContext;
 import editor.runtime.texturemaps.TextureMapsContext;
 import editor.runtime.textureviewer.TextureViewerContext;
 import editor.runtime.timeline.TimelineContext;
@@ -272,6 +273,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openBrushes(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_BRUSHES, BrushesContext.class, osWindow);
+    }
+
+    public TabHandle openStamps(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_STAMPS, StampsContext.class, osWindow);
     }
 
     public TabHandle openBiomeOutliner(WindowInstance osWindow) {

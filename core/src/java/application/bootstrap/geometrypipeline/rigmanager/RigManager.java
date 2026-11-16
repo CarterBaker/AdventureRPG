@@ -61,6 +61,14 @@ public class RigManager extends ManagerPackage {
         return true;
     }
 
+    // Detached \\
+
+    // A rig built from an ARPG tree without registering it, as an editor's body part carries its own fragment of
+    // bones before they join a character's rig
+    public RigHandle buildDetachedRig(String rigName, ArpgObjectStruct rigArpg) {
+        return ((RigLoader) internalLoader).buildDetached(rigName, rigArpg);
+    }
+
     // Accessible \\
 
     public boolean hasRig(String rigName) {

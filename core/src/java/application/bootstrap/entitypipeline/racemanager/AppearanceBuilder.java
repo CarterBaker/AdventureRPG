@@ -850,7 +850,8 @@ class AppearanceBuilder extends BuilderPackage {
             offered[kind.ordinal()] = new boolean[members.length];
 
             for (int i = 0; i < members.length; i++)
-                offered[kind.ordinal()][i] = ArpgUtility.getBoolean(blockArpg, ArpgUtility.toEnumName(members[i]), true);
+                offered[kind.ordinal()][i] = ArpgUtility.getBoolean(
+                        blockArpg, ArpgUtility.toEnumName(members[i]), true);
         }
 
         return offered;

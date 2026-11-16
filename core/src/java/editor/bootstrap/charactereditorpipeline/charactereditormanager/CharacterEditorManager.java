@@ -187,6 +187,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterHistoryBranch = create(CharacterHistoryBranch.class);
         this.characterMeshBranch = create(CharacterMeshBranch.class);
         create(CharacterModelBranch.class);
+        create(CharacterStampBranch.class);
         this.characterSelectionBranch = create(CharacterSelectionBranch.class);
         this.characterWeightBranch = create(CharacterWeightBranch.class);
         this.characterSculptBranch = create(CharacterSculptBranch.class);

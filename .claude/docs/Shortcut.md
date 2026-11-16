@@ -29,15 +29,15 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   also runs S. Two pressed shortcuts of one tool on the same chord fail at load.
 - **Shared tool keys.** `assets/shortcuts/Tools.arpg` names `ToolsContext` and is marked `"shared": true`: its keys
   choose the editor's generic tools (`V` Select, `B` Brush, `E` Erase, `S` Smooth, `Q` Swirl, `J` Scatter, `F` Fill, `I`
-  Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut, `Y` Pose, `O` Inflate, `K`
-  Pinch, `Shift+C` Crease, `Shift+S` Relax, `Shift+F` Flatten, `N` Nudge, `R` Raise, `L` Lower, `D` Topology), resize the brush (`[`
-  and `]`) and step through the brushes (`-` and `=`). Besides the Tools tab, they work in every window `ToolManager`
-  counts as a tool window — each canvas (World Editor, Item Editor, the character tool tabs, Animation Editor,
-  Timeline), the Brushes tab, the Properties and Layers tabs and the character, face and animation docker windows
-  (Outliner, Timeline), each opened there by its `ToolCanvasSystem` — after that window's own keys, so a window's own
-  shortcut wins where both use a key (the character Mesh tab's `E` extrudes and `S` scales; the Timeline's `B` keeps its
-  own action). A tool a canvas does not take is ignored there. Rebinding one on the Settings dialog's Shortcuts page
-  rebinds it in every editor at once.
+  Pick, `P` Place, `W` Wall, `T` Move, `Shift+T` Rotate, `Ctrl+T` Scale, `C` Cut, `Y` Pose, `O` Inflate, `K` Pinch,
+  `Shift+C` Crease, `Shift+S` Relax, `Shift+F` Flatten, `N` Nudge, `R` Raise, `L` Lower, `D` Topology), resize the brush
+  (`[` and `]`) and step through the brushes (`-` and `=`). Besides the Tools tab, they work in every window
+  `ToolManager` counts as a tool window — each canvas (World Editor, Item Editor, the character tool tabs, Animation
+  Editor, Timeline), the Brushes tab, the Properties and Layers tabs and the character, face and animation docker
+  windows (Outliner, Timeline), each opened there by its `ToolCanvasSystem` — after that window's own keys, so a
+  window's own shortcut wins where both use a key (the character Mesh tab's `E` extrudes and `S` scales; the Timeline's
+  `B` keeps its own action). A tool a canvas does not take is ignored there. Rebinding one on the Settings dialog's
+  Shortcuts page rebinds it in every editor at once.
 
 ---
 

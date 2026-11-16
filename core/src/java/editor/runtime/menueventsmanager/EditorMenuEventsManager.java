@@ -24,6 +24,7 @@ import editor.runtime.menueventsmanager.menus.RecorderBranch;
 import editor.runtime.menueventsmanager.menus.RecordingsBranch;
 import editor.runtime.menueventsmanager.menus.SceneAssetsBranch;
 import editor.runtime.menueventsmanager.menus.TabBranch;
+import editor.runtime.menueventsmanager.menus.StampBranch;
 import editor.runtime.menueventsmanager.menus.ToolBranch;
 import editor.runtime.menueventsmanager.menus.TransitionsBranch;
 import editor.runtime.menueventsmanager.menus.TreePlannerBranch;
@@ -69,6 +70,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(ProfilerBranch.class);
         create(WorldMapBranch.class);
         create(ToolBranch.class);
+        create(StampBranch.class);
         create(WorldEditorBranch.class);
         create(SettlementPlannerBranch.class);
         create(CameraPlannerBranch.class);

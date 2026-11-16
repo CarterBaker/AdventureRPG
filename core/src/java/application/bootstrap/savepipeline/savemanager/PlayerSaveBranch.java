@@ -32,14 +32,15 @@ class PlayerSaveBranch extends BranchPackage {
     /*
      * Captures a window's player as an ARPG character save and writes it to
      * disk. The character records the race it was made as and its gender, by
-     * name, its body size, its weight and, when it has one, its appearance — skin and hair color, head proportion, and the
-     * feature worn in every filled slot. The location records the world, the
-     * chunk coordinate, and the chunk-local position the player stands at.
-     * The inventory records the item in every filled equipment slot, how
-     * many a stack holds, the slots left hidden, and — for any container
-     * item — everything packed inside it with where it rests, however deeply
-     * nested. The look is the character and the inventory alone, without a
-     * place, for copying how any being appears.
+     * name, its body size, its weight and, when it has one, its appearance —
+     * skin and hair color, head proportion, and the feature worn in every
+     * filled slot. The location records the world, the chunk coordinate, and
+     * the chunk-local position the player stands at. The inventory records
+     * the item in every filled equipment slot, how many a stack holds, the
+     * slots left hidden, and — for any container item — everything packed
+     * inside it with where it rests, however deeply nested. The look is the
+     * character and the inventory alone, without a place, for copying how
+     * any being appears.
      */
 
     // Internal

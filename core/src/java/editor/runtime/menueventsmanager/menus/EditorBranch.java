@@ -70,6 +70,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openBrushes(window.getGLWindow());
     }
 
+    public void openStamps(WindowInstance window) {
+        tabManager.openStamps(window.getGLWindow());
+    }
+
     // Assets Dropdown \\
 
     public void openItemEditor(WindowInstance window) {

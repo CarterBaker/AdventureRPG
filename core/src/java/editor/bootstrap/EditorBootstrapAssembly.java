@@ -20,6 +20,7 @@ import editor.bootstrap.settlementplannerpipeline.SettlementPlannerPipeline;
 import editor.bootstrap.shipviewerpipeline.ShipViewerPipeline;
 import editor.bootstrap.shortcutpipeline.ShortcutPipeline;
 import editor.bootstrap.soundlibrarypipeline.SoundLibraryPipeline;
+import editor.bootstrap.stamppipeline.StampPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
 import editor.bootstrap.toolpipeline.ToolPipeline;
 import editor.bootstrap.transitionpipeline.TransitionPipeline;
@@ -59,6 +60,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(TabPipeline.class);
         create(InfoPipeline.class);
         create(BrushPipeline.class);
+        create(StampPipeline.class);
         create(ToolPipeline.class);
         create(PropertiesPipeline.class);
         create(LayersPipeline.class);

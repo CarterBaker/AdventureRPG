@@ -538,7 +538,8 @@ class CharacterPropertyBranch extends BranchPackage {
         if (!document.hasPreview() || !document.getPreviewData().hasAppearance())
             return false;
 
-        String[] parts = CharacterViewUtility.getKeyArgument(key).split(EditorSetting.CHARACTER_EDITOR_OFFERED_SEPARATOR);
+        String[] parts = CharacterViewUtility.getKeyArgument(key)
+                .split(EditorSetting.CHARACTER_EDITOR_OFFERED_SEPARATOR);
 
         return document.getPreviewData().getAppearanceData().isOffered(
                 ArpgUtility.toEnum(parts[0], AppearanceOptionKind.class), Integer.parseInt(parts[1]));
@@ -549,7 +550,8 @@ class CharacterPropertyBranch extends BranchPackage {
         if (getAppearanceArpg() == null)
             return;
 
-        String[] parts = CharacterViewUtility.getKeyArgument(key).split(EditorSetting.CHARACTER_EDITOR_OFFERED_SEPARATOR);
+        String[] parts = CharacterViewUtility.getKeyArgument(key)
+                .split(EditorSetting.CHARACTER_EDITOR_OFFERED_SEPARATOR);
         AppearanceOptionKind kind = ArpgUtility.toEnum(parts[0], AppearanceOptionKind.class);
 
         characterEditBranch.setOffered(

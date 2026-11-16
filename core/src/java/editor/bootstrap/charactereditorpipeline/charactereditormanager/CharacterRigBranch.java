@@ -1399,8 +1399,8 @@ class CharacterRigBranch extends BranchPackage {
         });
     }
 
-    // Only a bone nothing loaded can name yet — one added since the start — takes a new name or goes; the root never
-    // does
+    // Only a bone nothing loaded can name yet — one added since the start — takes a new name or goes; the root
+    // never does
     boolean canRename(int boneIndex) {
 
         if (boneIndex <= 0 || boneIndex >= boneCount || rigHandle == null)

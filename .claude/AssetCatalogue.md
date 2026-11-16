@@ -397,6 +397,10 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-16: Topology brush. Regenerated `shortcuts/Tools.arpg` (`D` Topology, brush keys for it),
   `shortcuts/CharacterEditor.arpg` (Ctrl hinted as Fewer faces on Topology) and `schemas/Shortcuts.arpg` (the
   topology tool).
+- 2026-11-16: Stamps. Added `stamps/humanoid/` (Torso, Head, Arm, Hand, Leg and Foot, cut from the male body with
+  their bones, weights, morphs, UVs, layers, plug and sockets), `schemas/Stamps.arpg` and `menus/editor/Stamps.arpg`
+  (the Stamps tab); regenerated `menus/editor/EditorWindow.arpg` (Stamps under Characters, Save Selection As Stamp
+  under File).
 
 ---
 
@@ -2650,8 +2654,9 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
 `GenerateMapsDialog.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
 `NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
-`Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Timeline.arpg`,
-`Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
+`Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
+`TabFrame.arpg`, `TextureViewer.arpg`,
+`Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
 
@@ -2826,7 +2831,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `Instruments.arpg`, `Intents.arpg`, `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Moods.arpg`, `NoteSets.arpg`,
 `Npcs.arpg`, `Passes.arpg`, `Phrases.arpg`, `Professions.arpg`, `Races.arpg`, `Relations.arpg`, `Replies.arpg`,
 `Rigs.arpg`, `Roads.arpg`, `Scenarios.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Shortcuts.arpg`,
-`Skills.arpg`, `Songs.arpg`, `SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stats.arpg`, `StructureLists.arpg`,
+`Skills.arpg`, `Songs.arpg`, `SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stamps.arpg`, `Stats.arpg`,
+`StructureLists.arpg`,
 `Structures.arpg`, `TextureAliases.arpg`, `Threads.arpg`, `Tiers.arpg`, `Tools.arpg`, `Topics.arpg`, `Trades.arpg`,
 `Traits.arpg`, `Transitions.arpg`, `Trees.arpg`, `UBOs.arpg`, `Vehicles.arpg`, `Verdicts.arpg`, `Weapons.arpg`,
 `Weathers.arpg`, `Words.arpg`, `Worlds.arpg`
@@ -3260,6 +3266,11 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/sprites/menus/wood/`
 
 `WoodSlat.arpg`
+
+### `assets/stamps/humanoid/`
+
+`HumanoidArm.arpg`, `HumanoidFoot.arpg`, `HumanoidHand.arpg`, `HumanoidHead.arpg`, `HumanoidLeg.arpg`,
+`HumanoidTorso.arpg` (cut from `HumanoidMaleMesh` by Save Selection As Stamp's own code)
 
 ### `assets/stats/`
 

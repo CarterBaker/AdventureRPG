@@ -747,7 +747,8 @@ public class AnimationStateHandle extends HandlePackage {
     private void applyLayer(int layerIndex, int boneIndex) {
 
         AnimationLayerStruct layer = animationTreeHandle.getLayer(layerIndex);
-        float weight = layer.getWeight() * smoothStep(layerActivations[layerIndex]) * layer.resolveBoneMask(rigHandle, boneIndex);
+        float weight = layer.getWeight() * smoothStep(layerActivations[layerIndex])
+                * layer.resolveBoneMask(rigHandle, boneIndex);
 
         if (weight <= 0f)
             return;

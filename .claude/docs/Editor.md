@@ -85,6 +85,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Brushes work like Krita's presets:** soft or hard, round, square or diamond, turned and squashed, dense or
   speckled, and each listed with a thumbnail of the stroke it makes. Keep plenty of them; a new kind of tip is a new
   `assets/brushes/` file, not code.
+- **Stamps live in the Stamps tab**, as brushes live in the Brushes tab: tiles of every body part with its emblem and
+  name, the one in use tinted, its details below; the part chosen is the one placed next (see
+  `.claude/docs/CharacterEditorPipeline.md`).
 - **A tool means one thing everywhere.** Raise builds up and Lower wears down, a soft brush fades its edge and a hard
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.
@@ -92,9 +95,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The File and Edit menus
 
 - **Every file action lives in the editor's File and Edit menus**, never as a tool's own button: New, New File,
-  Duplicate, Save, Save All, Revert, Delete, Import Model, Export Model and Generate Maps under File, Undo and Redo
-  under Edit. They act on the window worked in last (`editor.bootstrap.filemenupipeline`, `FileMenuManager`), name it
-  at their head and mute what it does not take.
+  Duplicate, Save, Save All, Revert, Delete, Import Model, Export Model, Generate Maps and Save Selection As Stamp under
+  File, Undo and Redo under Edit. They act on the window worked in last (`editor.bootstrap.filemenupipeline`,
+  `FileMenuManager`), name it at their head and mute what it does not take.
 - **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
   `FileMenuTableStruct` constant from `EditorSetting` (the branch and, per `FileMenuAction`, the method its own keys
   already run) and creates a `FileMenuSourceSystem`. Every item runs through `ElementHitSystem.executeAction` on the

@@ -188,7 +188,8 @@ public class EditorSetting {
             "edit_redo_label",
             "file_import_label",
             "file_export_label",
-            "file_generate_maps_label" };
+            "file_generate_maps_label",
+            "file_save_stamp_label" };
 
     // File Menu — each tool's actions, the methods its own keys and buttons run
     public static final FileMenuTableStruct FILE_MENU_CHARACTER = new FileMenuTableStruct(
@@ -201,7 +202,8 @@ public class EditorSetting {
             .with(FileMenuAction.REDO, "redo")
             .with(FileMenuAction.IMPORT_MODEL, "importModel")
             .with(FileMenuAction.EXPORT_MODEL, "exportModel")
-            .with(FileMenuAction.GENERATE_MAPS, "generateMaps");
+            .with(FileMenuAction.GENERATE_MAPS, "generateMaps")
+            .with(FileMenuAction.SAVE_STAMP, "saveStamp");
     public static final FileMenuTableStruct FILE_MENU_ANIMATION = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.AnimationEditorBranch")
             .with(FileMenuAction.NEW, "newClip")
@@ -423,6 +425,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
     public static final String TAB_TITLE_BRUSHES = "Brushes";
+    public static final String TAB_TITLE_STAMPS = "Stamps";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
     public static final String TAB_TITLE_CHARACTER_APPEARANCE = "Character Appearance";
     public static final String TAB_TITLE_CHARACTER_EQUIPMENT = "Character Equipment";
@@ -2040,6 +2043,47 @@ public class EditorSetting {
     public static final float BRUSH_ANGLE_DEFAULT = 0f;
     public static final float BRUSH_ANGLE_MAX = 180f;
 
+    // Stamps — body parts loaded from this directory, each carrying its own bones under the host bone it joins, and
+    // drawn as a front view on a square thumbnail this many texels a side, a margin around it, shaded by how far each
+    // face turns toward the viewer from the least shade given
+    public static final String STAMP_PATH = "stamps";
+    public static final String STAMP_HOST_BONE = "host";
+    public static final String STAMP_RIG_PREFIX = "stamp:";
+    public static final String STAMP_MESSAGE_REFUSED = "Stamp not applied: ";
+    public static final int STAMP_THUMBNAIL_SIZE = 64;
+    public static final float STAMP_THUMBNAIL_MARGIN = 0.08f;
+    public static final float STAMP_THUMBNAIL_SHADE_MIN = 0.35f;
+    public static final int STAMP_TILES_PER_ROW = 3;
+    public static final String STAMP_DETAIL_CATEGORY = "Category: ";
+    public static final String STAMP_DETAIL_BONES = "Bones: ";
+    public static final String STAMP_DETAIL_FACES = "Faces: ";
+    public static final String STAMP_DETAIL_PLUG = "Joins a host at: ";
+    public static final String STAMP_DETAIL_ROOT = "Root part: placed at the centre of a blank canvas";
+    public static final String STAMP_DETAIL_SOCKETS = "Sockets: ";
+    public static final String STAMP_DETAIL_NONE = "No stamp chosen";
+    public static final String STAMP_DETAIL_SOCKET_PREFIX = "Socket: ";
+    public static final String STAMP_DETAIL_SEPARATOR = ", ";
+    public static final String STAMP_FIELD_DISPLAY_NAME = "display_name";
+    public static final String STAMP_FIELD_CATEGORY = "category";
+    public static final String STAMP_FIELD_PLUG = "plug";
+    public static final String STAMP_FIELD_SOCKETS = "sockets";
+    public static final String STAMP_FIELD_BONES = "bones";
+    public static final String STAMP_FIELD_PARTS = "parts";
+    public static final String STAMP_FIELD_NAME = "name";
+    public static final String STAMP_FIELD_BONE = "bone";
+    public static final String STAMP_FIELD_POSITION = "position";
+    public static final String STAMP_FIELD_NORMAL = "normal";
+    public static final String STAMP_FIELD_RADIUS = "radius";
+
+    // Character Stamps — cutting the selected faces into a stamp: a bone is the part's own when the part holds at
+    // least this share of the bone's whole influence over the mesh, a loop's radius is never written below this, and
+    // a socket named after a bone already naming one takes a number after this separator
+    public static final float CHARACTER_STAMP_BONE_SHARE = 0.5f;
+    public static final float CHARACTER_STAMP_RADIUS_MIN = 0.001f;
+    public static final String CHARACTER_STAMP_SOCKET_SEPARATOR = "_";
+    public static final String CHARACTER_STAMP_MESSAGE_SAVED = "Saved the selection as the stamp ";
+    public static final String DIALOG_TITLE_SAVE_STAMP = "Save Selection As Stamp";
+
     // Brush Thumbnails — a stroke of the tip along one wave across a strip this many texels, stamped at this radius,
     // its path walked in steps this many texels long
     public static final int BRUSH_THUMBNAIL_WIDTH = 96;
@@ -2239,6 +2283,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_SETTLEMENTS = "Settlements";
     public static final String INFO_SCHEMA_STRUCTURES = "Structures";
     public static final String INFO_SCHEMA_BRUSHES = "Brushes";
+    public static final String INFO_SCHEMA_STAMPS = "Stamps";
     public static final String INFO_SCHEMA_TRANSITIONS = "Transitions";
     public static final String INFO_SCHEMA_SOUNDS = "Sounds";
     public static final String INFO_SCHEMA_INSTRUMENTS = "Instruments";

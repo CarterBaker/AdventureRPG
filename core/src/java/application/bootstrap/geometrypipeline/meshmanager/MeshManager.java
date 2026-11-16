@@ -226,6 +226,11 @@ public class MeshManager extends ManagerPackage {
         return RiggedMeshArpgUtility.parse(meshArpg, rigHandle, sourceName);
     }
 
+    // A rigged mesh read against a rig given rather than the one it names, as a body part reads against its own bones
+    public RiggedMeshStruct parseRiggedMesh(ArpgObjectStruct meshArpg, RigHandle rigHandle, String sourceName) {
+        return RiggedMeshArpgUtility.parse(meshArpg, rigHandle, sourceName);
+    }
+
     // The source file with its geometry rewritten from the mesh in the compact layout, every other field kept
     public ArpgObjectStruct toRiggedMeshArpg(RiggedMeshStruct mesh, ArpgObjectStruct sourceArpg) {
         return RiggedMeshArpgUtility.write(mesh, sourceArpg);

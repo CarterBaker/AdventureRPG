@@ -76,15 +76,16 @@ layouts like any other.
   Properties tab.
 - **The game's creator is laid out by the race.** `appearance.creator` lists the creator's look tabs, each with its
   sections, each listing options by `kind` (`AppearanceOptionKind`: race, gender, build, head, color, detail, overlay,
-  feature, sliders) and `name` (the member's lower-case enum name, or the slider group); `AppearanceBuilder.parseCreator`
-  makes `AppearanceTabStruct`s, and any offered member or slider group the layout leaves out gains a section of its kind
-  in the last tab, so nothing offered is lost. A race without `creator` gets a Body tab (race, gender, build, head
-  shape) and a Look tab holding the rest. The creator (`CreatorAppearanceBranch.populateLook`) lists the race's tabs,
-  then Attributes and Profession, and in each section only what this character has to offer (an overlay only where its
-  gender's model places it; a section of several options heads each color by name). Race is the race's `playable`
-  flag: the Race row lists the playable races (`RaceManager.collectPlayableRaces`) only when there are several, and
-  picking one makes the player that race in place (`EntityInstance.setRaceData`, its size carried over by the races'
-  model heights, `getRaceScale`); saves keep the race and gender by name.
+  feature, sliders) and `name` (the member's lower-case enum name, or the slider group);
+  `AppearanceBuilder.parseCreator` makes `AppearanceTabStruct`s, and any offered member or slider group the layout
+  leaves out gains a section of its kind in the last tab, so nothing offered is lost. A race without `creator` gets a
+  Body tab (race, gender, build, head shape) and a Look tab holding the rest. The creator
+  (`CreatorAppearanceBranch.populateLook`) lists the race's tabs, then Attributes and Profession, and in each section
+  only what this character has to offer (an overlay only where its gender's model places it; a section of several
+  options heads each color by name). Race is the race's `playable` flag: the Race row lists the playable races
+  (`RaceManager.collectPlayableRaces`) only when there are several, and picking one makes the player that race in place
+  (`EntityInstance.setRaceData`, its size carried over by the races' model heights, `getRaceScale`); saves keep the race
+  and gender by name.
 - **Sliders are derived, never listed by hand.** `CharacterSliderBranch` owns every slider row. The race's sliders are
   whatever its rig and bodies offer (see Appearance below): a bone slider per channel the Rig tab ticks on a bone, a
   control per control of the rig's bone controls, a shape key per morph no expression plays. Each is listed under its
@@ -607,6 +608,36 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `MaleShortHairMesh` and `MaleMediumHairMesh` are short and stay on the head.
 - **Toon lighting.** Characters write a smooth normal (`GBufferNormal.glsl`); the lighting pass lights those pixels
   in toon tones with a rim (`ToonLighting.glsl`), and the editor viewport's character shader uses the same function.
+
+## Stamps
+
+Stamps are body parts a character is built from, the way a modular creature kit's parts are cut from finished bodies
+(`editor.bootstrap.stamppipeline`, schema `Stamps`, files under `assets/stamps/`). Each carries its own bone fragment,
+skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig layers, and its open edge loops.
+
+- **Format** (`StampBuilder`): `bones` are rig bone entries; one naming no `parent` hangs from the host bone it joins.
+  They are built into a detached rig of their own (`StampRigUtility.toRigArpg`, `RigManager.buildDetachedRig`) with
+  the placeholder `EditorSetting.STAMP_HOST_BONE` first at the origin, and `mesh` is read against it
+  (`MeshManager.parseRiggedMesh(arpg, rig, name)`); weights left to the host rest on the placeholder. `plug` (position,
+  `normal` facing out of the part toward its host, `radius`) is the loop it joins by, absent for a root part placed
+  alone at a blank canvas's centre; `sockets` are the loops other parts join it at, each named and riding one of its
+  bones. Vectors are `{x, y, z}` objects, as rig entries hold them. Positions are in the stamp's own space: the plug's
+  centre (or a root part's middle) at the origin.
+- **Manager** (`StampManager`): the palette, the stamp in use (shared, picked in the Stamps tab or the Hierarchy), live
+  rebuilds from the Info Panel, and each stamp's emblem (`StampThumbnailBranch`: a front view rasterised into a square
+  with a z-buffer, shaded by facing).
+- **Stamps tab** (`editor.runtime.stamps.StampsContext`, the Characters menu's Tools section): tiles of every stamp, a
+  row of `STAMP_TILES_PER_ROW` injected at a time with each slot filled from it (`StampsMenuSystem`), the one in use
+  tinted, then its details. Anchor a tile's emblem by its centre: an emblem anchored to the top of a tile in a stacked
+  row is placed from the panel's top instead.
+- **Save Selection As Stamp** (File menu, `FileMenuAction.SAVE_STAMP`, `CharacterStampBranch`): the whole faces selected
+  on the open part become a new stamp. A bone is the part's own when the part holds `CHARACTER_STAMP_BONE_SHARE` of its
+  influence over the whole mesh; the bone they all hang from is the host (none for a root part), and a bone mostly
+  outside the part hands its weight to its nearest own ancestor, or the host. The cut's open loops (edges the part uses
+  once where the mesh uses twice) become the plug (the loop weighing most on the host) and sockets (named after the
+  bone the cut took away beyond each). Top bones are written placed and turned in the part's space as the bind pose
+  holds them, and every layer whose bones the part holds all of comes with it. The kind is the first `StampCategory`
+  its top bone's name carries.
 
 ## Who owns what
 
