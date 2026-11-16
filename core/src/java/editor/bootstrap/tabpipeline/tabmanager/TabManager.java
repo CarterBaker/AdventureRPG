@@ -27,6 +27,7 @@ import editor.runtime.charactereditor.CharacterMeshContext;
 import editor.runtime.charactereditor.CharacterPaintContext;
 import editor.runtime.charactereditor.CharacterRigContext;
 import editor.runtime.charactereditor.CharacterSculptContext;
+import editor.runtime.charactereditor.CharacterStampContext;
 import editor.runtime.charactereditor.CharacterUVContext;
 import editor.runtime.charactereditor.CharacterWeightsContext;
 import editor.runtime.characteroutliner.CharacterOutlinerContext;
@@ -211,6 +212,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openCharacterUV(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_UV, CharacterUVContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterStamp(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_STAMP, CharacterStampContext.class, osWindow);
     }
 
     public TabHandle openUVEditor(WindowInstance osWindow) {

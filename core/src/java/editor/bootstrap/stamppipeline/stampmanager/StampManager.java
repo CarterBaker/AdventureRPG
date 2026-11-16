@@ -15,8 +15,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class StampManager extends ManagerPackage {
 
     /*
-     * Owns every stamp and the one in use, the part placed next, the way a
-     * creature kit holds its parts. A stamp is a body
+     * Owns every stamp and the one in use, the part the Character Stamp tab
+     * places next, the way a creature kit holds its parts. A stamp is a body
      * part with its own bones, weights, morphs, UVs and layers, and the loops
      * it joins by. Stamps load from ARPG, one to a file, and are listed by
      * kind and then display name. They are content like any other: the

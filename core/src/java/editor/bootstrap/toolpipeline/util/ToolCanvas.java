@@ -30,7 +30,9 @@ public enum ToolCanvas {
      * also take Pick, which picks the bone under the pointer to weigh, and
      * Pose, which turns a bone out of the way while the mesh follows;
      * every modelling canvas of a character mirrors, and its mesh, weights
-     * and rig choose how the bones are drawn. The recorder's Timeline selects and cuts
+     * and rig choose how the bones are drawn. A character's Stamp tab joins
+     * body parts to it, each scaled and twisted, and their twins across the
+     * body while mirroring. The recorder's Timeline selects and cuts
      * clips, nests the selection or opens a nested clip, and exports the
      * media file, as a video or as music, or as MIDI.
      */
@@ -117,6 +119,13 @@ public enum ToolCanvas {
             screenSize(),
             mirror(),
             xray()),
+    CHARACTER_STAMP(
+            EditorSetting.TOOL_CANVAS_CHARACTER_STAMP,
+            new EditorTool[] { EditorTool.STAMP },
+            false,
+            stampScale(),
+            stampTwist(),
+            mirror()),
     UV_EDITOR(
             EditorSetting.TOOL_CANVAS_UV_EDITOR,
             new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
@@ -412,6 +421,24 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_TWIST_MAX,
                 EditorSetting.TOOL_TWIST_STEP,
                 EditorSetting.TOOL_TWIST_DEFAULT);
+    }
+
+    private static ToolOptionStruct stampScale() {
+        return new ToolOptionStruct(
+                ToolOption.SCALE,
+                EditorSetting.TOOL_STAMP_SCALE_MIN,
+                EditorSetting.TOOL_STAMP_SCALE_MAX,
+                EditorSetting.TOOL_STAMP_SCALE_STEP,
+                EditorSetting.TOOL_STAMP_SCALE_DEFAULT);
+    }
+
+    private static ToolOptionStruct stampTwist() {
+        return new ToolOptionStruct(
+                ToolOption.TWIST,
+                -EditorSetting.TOOL_STAMP_TWIST_MAX,
+                EditorSetting.TOOL_STAMP_TWIST_MAX,
+                EditorSetting.TOOL_TWIST_STEP,
+                EditorSetting.TOOL_STAMP_TWIST_DEFAULT);
     }
 
     // Support \\

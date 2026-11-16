@@ -2,6 +2,7 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Objects;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
@@ -12,6 +13,7 @@ import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocum
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintCanvasStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStampStruct;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPartPlacementStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
@@ -26,6 +28,8 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.bootstrap.imagepipeline.util.MapGenerateOption;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
+import editor.bootstrap.stamppipeline.stamp.StampHandle;
+import editor.bootstrap.stamppipeline.stampmanager.StampManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
@@ -67,8 +71,9 @@ public class CharacterEditorManager extends ManagerPackage {
      * strokes with BrushManager's brush in use, Brush drawing toward the
      * target weight, Erase toward none and Smooth blending between
      * neighbours, and on the rig the tools pick, drag, size, add and remove
-     * bones. Save and Revert carry every open mesh's changes and the rig's
-     * with the race's. The rig's spring chains — the hair's laid on the locks
+     * bones; the Stamp mode joins body parts from the Stamps tab to the
+     * body, their bones grafted onto the rig. Save and Revert carry every
+     * open mesh's changes and the rig's with the race's. The rig's spring chains — the hair's laid on the locks
      * its cards are found in — are previewed live on the modelling layers while
      * Preview Springs is on, the preview then playing the pose chosen and
      * travelling at its pace. Edits, previews, mesh files, selection,
@@ -107,6 +112,9 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterRegionBranch characterRegionBranch;
     private CharacterDigitBranch characterDigitBranch;
     private CharacterHairBranch characterHairBranch;
+    private CharacterPlacementBranch characterPlacementBranch;
+    private CharacterGraftBranch characterGraftBranch;
+    private StampManager stampManager;
 
     // Palette
     private Object2ObjectOpenHashMap<String, CharacterDocumentInstance> raceName2CharacterDocument;
@@ -171,6 +179,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Status
     private String statusMessage;
+    private String placementMessage;
     private int revision;
 
     // Base \\
@@ -209,6 +218,8 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterRegionBranch = create(CharacterRegionBranch.class);
         this.characterDigitBranch = create(CharacterDigitBranch.class);
         this.characterHairBranch = create(CharacterHairBranch.class);
+        this.characterPlacementBranch = create(CharacterPlacementBranch.class);
+        this.characterGraftBranch = create(CharacterGraftBranch.class);
 
         // Palette
         this.raceName2CharacterDocument = new Object2ObjectOpenHashMap<>();
@@ -259,6 +270,7 @@ public class CharacterEditorManager extends ManagerPackage {
     protected void get() {
         this.infoManager = get(InfoManager.class);
         this.toolManager = get(ToolManager.class);
+        this.stampManager = get(StampManager.class);
     }
 
     @Override
@@ -700,8 +712,12 @@ public class CharacterEditorManager extends ManagerPackage {
             selectPart(partKey);
     }
 
-    // The part a region edits: the part picked while it is one the region holds, else its body, else its feature
+    // The part a region edits: the part picked while it is one the region holds, else its body, else its feature;
+    // parts are joined to the body alone
     private String resolveRegionPartKey(CharacterRegionStruct region) {
+
+        if (mode.placesParts())
+            return EditorSetting.CHARACTER_EDITOR_PART_BODY;
 
         if (region.isWhole() || holdsPartKey(region, activePartKey))
             return activePartKey;
@@ -1349,6 +1365,100 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (syncRig() && !characterRigBranch.isGesturing())
             characterRigBranch.addBones(names, parents, worldPoints);
+    }
+
+    // Stamps \\
+
+    // The part chosen in the Stamps tab, the one the Stamp tool places, null when none is
+    public StampHandle getActiveStamp() {
+        return stampManager.getActiveStamp();
+    }
+
+    // The attach points the Stamp tab shows on the body: every joint of the rig, then every open loop's centre
+    public int getAttachPointCount() {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (!mode.placesParts() || document == null || !syncRig())
+            return 0;
+
+        characterPlacementBranch.sync(document);
+
+        return characterPlacementBranch.getAttachPointCount();
+    }
+
+    public void getAttachPoint(int attachPoint, Vector3 out) {
+        characterPlacementBranch.getAttachPoint(attachPoint, out);
+    }
+
+    // Whether an attach point is an open loop's centre, which a part snaps to and joins, rather than a joint
+    public boolean isLoopAttachPoint(int attachPoint) {
+        return characterPlacementBranch.isLoopPoint(attachPoint);
+    }
+
+    // Where the part chosen would join: at an open loop by its attach point, or where a ray met a face of the body,
+    // tilted as the pointer turned it once set down; nothing is shown without a part or a body
+    public void resolvePlacement(
+            int attachPoint,
+            int faceIndex,
+            Vector3 point,
+            Vector3 normal,
+            Matrix4 tilt,
+            CharacterPartPlacementStruct out) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+        StampHandle stampHandle = getActiveStamp();
+
+        if (!mode.placesParts() || document == null || stampHandle == null || !syncRig()) {
+            out.clear();
+            return;
+        }
+
+        characterPlacementBranch.resolve(document, stampHandle, attachPoint, faceIndex, point, normal, tilt, out);
+    }
+
+    // Whether a placement joins its twin across the body too: while mirroring, for a part placed off the centre
+    public boolean placesTwin(CharacterPartPlacementStruct placement) {
+        return isMirror() && placement.isShown() && !placement.isRoot() && !placement.getSide().isEmpty();
+    }
+
+    public void resolvePlacementTwin(CharacterPartPlacementStruct placement, CharacterPartPlacementStruct out) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document != null)
+            characterPlacementBranch.resolveTwin(document, placement, out);
+    }
+
+    // Joins the part where it is placed, and its twin with it when one is given, as one edit of the body and rig
+    public void placeStamp(CharacterPartPlacementStruct placement, CharacterPartPlacementStruct twin) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document == null || !placement.isValid() || twin != null && !twin.isValid() || !syncRig()
+                || characterRigBranch.isGesturing())
+            return;
+
+        characterSculptBranch.cancelTransform();
+        characterMeshBranch.endShapeEdits();
+        characterGraftBranch.graft(document, placement, twin);
+    }
+
+    // What the Stamp tab says about the part it aims, said only when it changes and taken back once there is nothing
+    // to say, unless something else has been said since
+    public void showPlacementMessage(String message) {
+
+        if (Objects.equals(message, placementMessage))
+            return;
+
+        boolean showing = placementMessage != null && placementMessage.equals(statusMessage);
+
+        this.placementMessage = message;
+
+        if (message != null)
+            setStatusMessage(message);
+        else if (showing)
+            setStatusMessage(null);
     }
 
     // Digits \\

@@ -7,8 +7,9 @@ public class StampBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the Stamps tab. Choosing a stamp makes it the
-     * stamp in use, the part placed next, and shows it in the Info Panel; stepping moves through the stamps in the order they are listed.
-     * Tiles carry their stamp's name.
+     * stamp in use, the part the Character Stamp tab places next, and shows
+     * it in the Info Panel; stepping moves through the stamps in the order
+     * they are listed. Tiles carry their stamp's name.
      */
 
     // Internal

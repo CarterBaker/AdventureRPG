@@ -14,9 +14,10 @@ public class StampsContext extends ContextPackage implements PropertiesProvider 
      * and as the Tools and Brushes tabs lay themselves out: a tile for every
      * body part with its emblem and name, sorted by kind, the one in use
      * highlighted, then the stamp's details below. Choosing one makes it the
-     * stamp in use, the part placed next, and shows it in the Info Panel. Stamps are content, made in the Character tabs (Save Selection
-     * As Stamp) and changed in the Hierarchy and Info Panel. The shared tool
-     * keys work while this tab is focused.
+     * stamp in use, the part the Character Stamp tab places next, and shows
+     * it in the Info Panel. Stamps are content, made in the character tool
+     * tabs (Save Selection As Stamp) and changed in the Hierarchy and Info
+     * Panel. The shared tool keys work while this tab is focused.
      */
 
     // Internal

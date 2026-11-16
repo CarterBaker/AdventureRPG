@@ -4,6 +4,7 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocum
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshHistoryStruct;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CharacterHistoryBranch extends BranchPackage {
@@ -13,15 +14,41 @@ class CharacterHistoryBranch extends BranchPackage {
      * of the mesh as it stood; committing it clears the redo history and
      * drops the oldest steps past the limit, and cancelling it puts the copy
      * back. Undo and redo swap the mesh with the step on top of one stack and
-     * move the side they replaced onto the other.
+     * move the side they replaced onto the other. A step that joined a part
+     * puts the rig back with the mesh while the rig still stands as the
+     * joining left it, the rig first so the mesh comes back to the bones it
+     * names, the open mesh's other steps held out of the rig's relay
+     * meanwhile, since each was recorded against the rig it will come back
+     * to; once the rig has changed some other way the mesh alone is undone,
+     * the part's bones left unused, and a joining waiting to be redone can no
+     * longer be.
      */
+
+    // Internal
+    private CharacterRigBranch characterRigBranch;
+    private CharacterMeshBranch characterMeshBranch;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.characterRigBranch = get(CharacterRigBranch.class);
+        this.characterMeshBranch = get(CharacterMeshBranch.class);
+    }
 
     // Step \\
 
     void begin(CharacterMeshDocumentInstance document) {
 
         if (!document.hasOpenStep())
-            document.setOpenStep(snapshot(document));
+            document.setOpenStep(snapshot(document, null, null));
+    }
+
+    // Opens the step of a part being joined, the rig as it stood before and as the joining leaves it
+    void begin(CharacterMeshDocumentInstance document, ArpgObjectStruct rigBefore, ArpgObjectStruct rigAfter) {
+
+        if (!document.hasOpenStep())
+            document.setOpenStep(snapshot(document, rigBefore, rigAfter));
     }
 
     void commit(CharacterMeshDocumentInstance document) {
@@ -70,9 +97,25 @@ class CharacterHistoryBranch extends BranchPackage {
         if (document.hasOpenStep() || from.isEmpty())
             return false;
 
-        CharacterMeshHistoryStruct step = from.pop();
+        CharacterMeshHistoryStruct step = from.top();
+        boolean paired = step.holdsRig() && characterRigBranch.matchesRig(step.getRigExpected());
 
-        to.push(snapshot(document));
+        if (step.holdsRig() && !paired && from == document.getRedoSteps()) {
+            from.clear();
+            return false;
+        }
+
+        from.pop();
+        to.push(paired
+                ? snapshot(document, step.getRigExpected(), step.getRigRestore())
+                : snapshot(document, null, null));
+
+        if (paired) {
+            characterMeshBranch.holdHistory(document);
+            characterRigBranch.replaceRig(step.getRigRestore());
+            characterMeshBranch.releaseHistory();
+        }
+
         document.restore(step);
         document.markEdited();
 
@@ -87,12 +130,17 @@ class CharacterHistoryBranch extends BranchPackage {
         document.getRedoSteps().clear();
     }
 
-    private CharacterMeshHistoryStruct snapshot(CharacterMeshDocumentInstance document) {
+    private CharacterMeshHistoryStruct snapshot(
+            CharacterMeshDocumentInstance document,
+            ArpgObjectStruct rigRestore,
+            ArpgObjectStruct rigExpected) {
         return new CharacterMeshHistoryStruct(
                 document.getMesh(),
                 document.getSelection(),
                 document.getSelectionWeights(),
-                document.isDirty());
+                document.isDirty(),
+                rigRestore,
+                rigExpected);
     }
 
     // Accessible \\

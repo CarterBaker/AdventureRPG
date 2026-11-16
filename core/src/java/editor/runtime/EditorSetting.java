@@ -435,6 +435,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_CHARACTER_PAINT = "Character Paint";
     public static final String TAB_TITLE_CHARACTER_RIG = "Character Rig";
     public static final String TAB_TITLE_CHARACTER_UV = "Character UV";
+    public static final String TAB_TITLE_CHARACTER_STAMP = "Character Stamp";
     public static final String TAB_TITLE_UV_EDITOR = "UV Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
@@ -888,6 +889,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
     public static final String CHARACTER_EDITOR_MODE_PAINT = "Paint";
     public static final String CHARACTER_EDITOR_MODE_UV = "UV";
+    public static final String CHARACTER_EDITOR_MODE_STAMP = "Stamp";
     public static final String CHARACTER_EDITOR_POSE_REST = "Bind";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
@@ -1137,6 +1139,9 @@ public class EditorSetting {
             + " fills the island clicked, Pick takes its colour; drag off it to orbit, right-drag to pan";
     public static final String CHARACTER_EDITOR_STATUS_UV_HINT = "Select the vertices of the edges to cut and Mark"
             + " Seam, then select the faces and Unwrap; their UVs show in the UV Editor; drag off the mesh to orbit";
+    public static final String CHARACTER_EDITOR_STATUS_STAMP_HINT = "Point at the body or a yellow attach point:"
+            + " green places the part chosen in the Stamps tab, red cannot; click to set it down, move to turn it,"
+            + " click again to join it, right click or Esc cancels";
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
             + " Rotate turns its bind, Scale sizes it, Place adds a child, Erase removes one; the mesh stays put (Pose"
             + " on the Mesh layer moves it); drag off the joints to orbit";
@@ -2084,6 +2089,37 @@ public class EditorSetting {
     public static final String CHARACTER_STAMP_MESSAGE_SAVED = "Saved the selection as the stamp ";
     public static final String DIALOG_TITLE_SAVE_STAMP = "Save Selection As Stamp";
 
+    // Character Stamp Placement — a part attaches where an attach point (the joint of a bone carrying the body and at
+    // least the second share of the rig's height across, or an open loop's centre) lies within the first share of
+    // the rig's height of the point aimed at, or snaps to an open loop whose centre projects within the pixels given
+    // of the pointer; a hole is cut from the faces within the plug's radius times the hole share, the two loops
+    // welded where they hold as many vertices pairing within the weld share of the plug's radius, bridged otherwise,
+    // both rims stepping on together while their next vertices lie within the pace share of the shorter step;
+    // a part stands on the mirror plane, joining no side, within the centre share of the rig's height; a set-down
+    // part turns the degrees given for every pixel the pointer moves; a plug facing straight away from the body is
+    // turned half round about the side axis unless it lies within the cosine given of it; a mirrored part's faces
+    // take their corners in the mirrored order; a joined part's names take the first number past every name taken
+    public static final float CHARACTER_STAMP_ATTACH_REACH_SHARE = 0.12f;
+    public static final float CHARACTER_STAMP_JOINT_SIZE_SHARE = 0.05f;
+    public static final float CHARACTER_STAMP_LOOP_SNAP_PIXELS = 24f;
+    public static final float CHARACTER_STAMP_HOLE_SHARE = 1f;
+    public static final float CHARACTER_STAMP_WELD_SHARE = 0.5f;
+    public static final float CHARACTER_STAMP_PACE_SHARE = 0.5f;
+    public static final float CHARACTER_STAMP_CENTRE_SHARE = 0.02f;
+    public static final float CHARACTER_STAMP_TURN_DEGREES_PER_PIXEL = 0.5f;
+    public static final float CHARACTER_STAMP_PARALLEL_COSINE = 0.9999f;
+    public static final int[] CHARACTER_STAMP_CORNERS = { 0, 1, 2, 3 };
+    public static final int[] CHARACTER_STAMP_MIRRORED_CORNERS = { 0, 3, 2, 1 };
+    public static final String CHARACTER_STAMP_NUMBER_SEPARATOR = "_";
+    public static final int CHARACTER_STAMP_FIRST_NUMBER = 2;
+    public static final String CHARACTER_STAMP_MESSAGE_PLACED = "Joined the part ";
+    public static final String CHARACTER_STAMP_MESSAGE_NO_STAMP = "Choose a part in the Stamps tab to place";
+    public static final String CHARACTER_STAMP_MESSAGE_FAR = "A part attaches near a joint or a yellow attach point";
+    public static final String CHARACTER_STAMP_MESSAGE_ROOT = "A root part starts the body over at its centre;"
+            + " click to replace the body with it (Undo brings it back)";
+    public static final String CHARACTER_STAMP_MESSAGE_NO_LOOP = "The part's plug loop is not open in its mesh";
+    public static final String CHARACTER_STAMP_MESSAGE_NO_HOLE = "No faces to open a hole in there";
+
     // Brush Thumbnails — a stroke of the tip along one wave across a strip this many texels, stamped at this radius,
     // its path walked in steps this many texels long
     public static final int BRUSH_THUMBNAIL_WIDTH = 96;
@@ -2119,6 +2155,7 @@ public class EditorSetting {
     public static final String TOOL_RAISE = "Raise";
     public static final String TOOL_LOWER = "Lower";
     public static final String TOOL_TOPOLOGY = "Topology";
+    public static final String TOOL_STAMP = "Stamp";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
@@ -2129,6 +2166,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_RIG = "Character Rig";
     public static final String TOOL_CANVAS_CHARACTER_PAINT = "Character Paint";
     public static final String TOOL_CANVAS_CHARACTER_UV = "Character UV";
+    public static final String TOOL_CANVAS_CHARACTER_STAMP = "Character Stamp";
     public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
@@ -2142,6 +2180,7 @@ public class EditorSetting {
     public static final String TOOL_OPTION_SIZE = "Size";
     public static final String TOOL_OPTION_STRENGTH = "Strength";
     public static final String TOOL_OPTION_TWIST = "Twist";
+    public static final String TOOL_OPTION_SCALE = "Scale";
     public static final String TOOL_OPTION_MIRROR = "Mirror";
     public static final String TOOL_OPTION_XRAY = "X-Ray";
     public static final String TOOL_OPTION_BONES = "Bones";
@@ -2167,6 +2206,12 @@ public class EditorSetting {
     public static final float TOOL_TWIST_STEP = 15f;
     public static final float TOOL_TWIST_MAX = 360f;
     public static final float TOOL_TWIST_DEFAULT = 90f;
+    public static final float TOOL_STAMP_SCALE_MIN = 0.25f;
+    public static final float TOOL_STAMP_SCALE_MAX = 4f;
+    public static final float TOOL_STAMP_SCALE_STEP = 0.05f;
+    public static final float TOOL_STAMP_SCALE_DEFAULT = 1f;
+    public static final float TOOL_STAMP_TWIST_MAX = 180f;
+    public static final float TOOL_STAMP_TWIST_DEFAULT = 0f;
     public static final String TOOL_STATUS_SIZE = "Size ";
 
     // Tool State — the tools as they were left, kept beside the layouts in the editor's bin directory

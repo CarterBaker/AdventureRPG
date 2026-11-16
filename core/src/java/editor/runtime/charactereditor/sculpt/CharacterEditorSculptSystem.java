@@ -157,8 +157,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
 
-        if (!characterEditorManager.getMode().isMeshMode() || characterEditorManager.getMode().paintsMaps()
-                || !characterEditorMeshViewSystem.hasActiveDocument()) {
+        if (!characterEditorManager.getMode().editsVertices() || !characterEditorMeshViewSystem.hasActiveDocument()) {
             abandon();
             return;
         }
@@ -231,8 +230,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     // A shortcut acts only with the pointer over the view while nothing is pressed, painted, held or orbited
     private boolean isReady() {
-        return characterEditorManager.getMode().isMeshMode() && !characterEditorManager.getMode().paintsMaps()
-                && characterEditorMeshViewSystem.hasActiveDocument()
+        return characterEditorManager.getMode().editsVertices() && characterEditorMeshViewSystem.hasActiveDocument()
                 && transform == null && !stroking && !pressed && editorInputSystem.isPointerActive()
                 && !viewCameraSystem.isDragging();
     }

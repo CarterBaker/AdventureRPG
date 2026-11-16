@@ -73,7 +73,7 @@ root.
   Before touching talk with NPCs, the dictionary, intents, replies, phrases, topics, traits, moods, relations,
   lessons, the dialogue models, the trainer or the talk menu, read `.claude/docs/DialoguePipeline.md` (design:
   `.claude/docs/Dialogue.md`).
-  Before touching the character tool tabs (Appearance to UV), the UV Editor, the Animation Editor, their docker
+  Before touching the character tool tabs (Appearance to Stamp), the UV Editor, the Animation Editor, their docker
   windows, sculpting, rigging, posing, races and their genders' models, or a character's appearance (morphs, shape
   sliders, bone controls, zones, masks, the character shaders), read `.claude/docs/CharacterEditorPipeline.md`.
 

@@ -887,6 +887,17 @@ class CharacterWeightBranch extends BranchPackage {
         }
     }
 
+    // Whether every bone a mesh weighs onto is one of the first count bones
+    boolean fitsBones(RiggedMeshStruct mesh, int boneCount) {
+
+        for (int v = 0; v < mesh.getVertexCount(); v++)
+            for (int i = 0; i < mesh.getInfluenceCount(v); i++)
+                if (mesh.getInfluenceBone(v, i) >= boneCount)
+                    return false;
+
+        return true;
+    }
+
     // Averages several vertices' weights onto one of them, keeping the heaviest bones
     void average(RiggedMeshStruct mesh, IntArrayList vertices, int targetVertex) {
 

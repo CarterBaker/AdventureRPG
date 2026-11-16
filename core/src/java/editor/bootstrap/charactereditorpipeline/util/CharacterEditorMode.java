@@ -14,7 +14,9 @@ public enum CharacterEditorMode {
      * texture maps it is coloured by, Rig the bones themselves and the
      * slider channels they offer, and UV the seams that cut the part's
      * surface and the faces unwrapped flat, their UVs laid out in the UV
-     * Editor beside it. Each mode that takes viewport input is its own tool
+     * Editor beside it; Stamp joins body parts to the whole character in the
+     * bind pose, each part's bones grafted onto the rig and its mesh merged
+     * into the body. Each mode that takes viewport input is its own tool
      * canvas; the mesh modes edit the part's mesh file, Rig holds the bind
      * pose so the character stands exactly as its mesh and rig are authored,
      * and those that show the vertices draw them over the body. Each carries
@@ -77,7 +79,15 @@ public enum CharacterEditorMode {
             false,
             true,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_UV_HINT);
+            EditorSetting.CHARACTER_EDITOR_STATUS_UV_HINT),
+    STAMP(
+            EditorSetting.CHARACTER_EDITOR_MODE_STAMP,
+            ToolCanvas.CHARACTER_STAMP,
+            true,
+            true,
+            false,
+            null,
+            EditorSetting.CHARACTER_EDITOR_STATUS_STAMP_HINT);
 
     // Values
     public static final CharacterEditorMode[] VALUES = values();
@@ -144,6 +154,16 @@ public enum CharacterEditorMode {
         return toolCanvas == ToolCanvas.CHARACTER_PAINT;
     }
 
+    // True for the mode that joins body parts to the character rather than editing its vertices
+    public boolean placesParts() {
+        return toolCanvas == ToolCanvas.CHARACTER_STAMP;
+    }
+
+    // True for a mesh mode whose tools select and shape the part's vertices: every one but Paint and Stamp
+    public boolean editsVertices() {
+        return meshMode && !paintsMaps() && !placesParts();
+    }
+
     // True for the mode that edits the rig, which draws the colliders its bones carry
     public boolean showsColliders() {
         return toolCanvas == ToolCanvas.CHARACTER_RIG;
@@ -161,7 +181,7 @@ public enum CharacterEditorMode {
 
     // True for a mode whose tab lists the regions as its layers, every edit held to the region picked
     public boolean takesRegions() {
-        return isModeling() && !paintsMaps();
+        return isModeling() && !paintsMaps() && !placesParts();
     }
 
     // True for a mode whose tab lists layers in the Layers tab: the regions, or the paint layers

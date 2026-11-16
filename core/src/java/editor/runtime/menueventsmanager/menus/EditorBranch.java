@@ -132,6 +132,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterUV(window.getGLWindow());
     }
 
+    public void openCharacterStamp(WindowInstance window) {
+        tabManager.openCharacterStamp(window.getGLWindow());
+    }
+
     public void openUVEditor(WindowInstance window) {
         tabManager.openUVEditor(window.getGLWindow());
     }

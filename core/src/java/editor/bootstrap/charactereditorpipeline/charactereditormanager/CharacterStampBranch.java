@@ -550,9 +550,10 @@ public class CharacterStampBranch extends BranchPackage {
             loopArpg.addProperty(EditorSetting.STAMP_FIELD_BONE, boneName);
         }
 
-        loopArpg.add(EditorSetting.STAMP_FIELD_POSITION, toVector(
+        loopArpg.add(EditorSetting.STAMP_FIELD_POSITION, CharacterViewUtility.toVector(
                 loopCenter.x - origin.x, loopCenter.y - origin.y, loopCenter.z - origin.z));
-        loopArpg.add(EditorSetting.STAMP_FIELD_NORMAL, toVector(loopNormal.x, loopNormal.y, loopNormal.z));
+        loopArpg.add(EditorSetting.STAMP_FIELD_NORMAL,
+                CharacterViewUtility.toVector(loopNormal.x, loopNormal.y, loopNormal.z));
         loopArpg.addProperty(
                 EditorSetting.STAMP_FIELD_RADIUS,
                 CharacterViewUtility.round(Math.max(radius, EditorSetting.CHARACTER_STAMP_RADIUS_MIN)));
@@ -665,9 +666,9 @@ public class CharacterStampBranch extends BranchPackage {
                 CharacterPoseUtility.toEuler(rotationScratch, eulerScratch.set(0f, 0f, 0f), eulerScratch);
 
                 boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_PARENT, "");
-                boneArpg.add(EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, toVector(
+                boneArpg.add(EditorSetting.CHARACTER_EDITOR_FIELD_POSITION, CharacterViewUtility.toVector(
                         jointScratch.x - origin.x, jointScratch.y - origin.y, jointScratch.z - origin.z));
-                boneArpg.add(EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION, toVector(
+                boneArpg.add(EditorSetting.CHARACTER_EDITOR_FIELD_ROTATION, CharacterViewUtility.toVector(
                         eulerScratch.x, eulerScratch.y, eulerScratch.z));
             }
 
@@ -829,19 +830,5 @@ public class CharacterStampBranch extends BranchPackage {
                         mesh.getMorphDelta(m, e, 1),
                         mesh.getMorphDelta(m, e, 2));
             }
-    }
-
-    // Utility \\
-
-    // A vector as rig entries hold one, an object of its axes, each rounded to the editor's precision
-    private ArpgObjectStruct toVector(float x, float y, float z) {
-
-        ArpgObjectStruct vector = new ArpgObjectStruct();
-
-        vector.addProperty(EditorSetting.CHARACTER_VIEW_AXIS_NAMES[0], CharacterViewUtility.round(x));
-        vector.addProperty(EditorSetting.CHARACTER_VIEW_AXIS_NAMES[1], CharacterViewUtility.round(y));
-        vector.addProperty(EditorSetting.CHARACTER_VIEW_AXIS_NAMES[2], CharacterViewUtility.round(z));
-
-        return vector;
     }
 }

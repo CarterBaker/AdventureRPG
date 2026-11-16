@@ -70,6 +70,24 @@ public class CharacterMeshUtility extends EngineUtility {
         return Math.round(value * EditorSetting.CHARACTER_VIEW_DECIMAL_SCALE) & EditorSetting.CHARACTER_MESH_KEY_MASK;
     }
 
+    public static float distanceSquared(RiggedMeshStruct mesh, int vertexA, int vertexB) {
+
+        float dx = mesh.getX(vertexA) - mesh.getX(vertexB);
+        float dy = mesh.getY(vertexA) - mesh.getY(vertexB);
+        float dz = mesh.getZ(vertexA) - mesh.getZ(vertexB);
+
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    public static float distanceSquared(Vector3 a, Vector3 b) {
+
+        float dx = a.x - b.x;
+        float dy = a.y - b.y;
+        float dz = a.z - b.z;
+
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     public static void setRoundedPosition(RiggedMeshStruct mesh, int vertexIndex, float x, float y, float z) {
         mesh.setPosition(
                 vertexIndex,

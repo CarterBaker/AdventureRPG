@@ -128,6 +128,18 @@ public class CharacterPoseUtility extends EngineUtility {
         return length > EditorSetting.CHARACTER_VIEW_RAY_EPSILON ? length : 1f;
     }
 
+    // A matrix mirrored across the x plane on both sides, M * matrix * M with M flipping x: a turn stays a turn and a
+    // frame is carried to its twin across the body; out may be the source
+    public static void reflectX(Matrix4 source, Matrix4 out) {
+
+        float[] s = source.val;
+        float[] o = out.val;
+
+        for (int column = 0; column < 4; column++)
+            for (int row = 0; row < 4; row++)
+                o[column * 4 + row] = (column == 0) != (row == 0) ? -s[column * 4 + row] : s[column * 4 + row];
+    }
+
     // Rotation \\
 
     // The turn of Euler degrees, composed Z, then Y, then X as the rig composes a bone's local rotation

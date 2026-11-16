@@ -94,12 +94,13 @@ public class ToolBranch extends BranchPackage {
                 text -> toolManager.setTargetOption(option, range.parse(text)));
     }
 
-    public void shrinkBrush() {
-        toolManager.stepOption(ToolOption.SIZE, -1);
+    // The brush made smaller, or the part placed, on a canvas that places parts
+    public void shrinkSize() {
+        toolManager.stepSize(-1);
     }
 
-    public void growBrush() {
-        toolManager.stepOption(ToolOption.SIZE, 1);
+    public void growSize() {
+        toolManager.stepSize(1);
     }
 
     // Brushes \\

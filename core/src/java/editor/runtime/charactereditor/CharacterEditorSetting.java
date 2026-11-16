@@ -70,6 +70,12 @@ public class CharacterEditorSetting {
     public static final float COLLIDER_GUIDE_EPSILON = 0.0001f;
     public static final float COLLIDER_GUIDE_UP_COSINE = 0.9f;
 
+    // Overlay — stamps: every attach point is a dot this many pixels across each way from its centre, the one a part
+    // joins nearest larger, and a part's ghost is drawn in edges this wide
+    public static final float ATTACH_HALF_PIXELS = 3.5f;
+    public static final float ATTACH_ACTIVE_HALF_PIXELS = 6f;
+    public static final float STAMP_EDGE_HALF_PIXELS = 0.75f;
+
     // Overlay — colours
     public static final float[] COLOR_VERTEX = { 0.05f, 0.05f, 0.08f, 1f };
     public static final float[] COLOR_SELECTED = { 1f, 0.55f, 0.1f, 1f };
@@ -83,6 +89,10 @@ public class CharacterEditorSetting {
     public static final float[] COLOR_GUIDE = { 1f, 1f, 1f, 0.85f };
     public static final float[] COLOR_COLLIDER = { 0.35f, 0.85f, 1f, 0.9f };
     public static final float[] COLOR_AXIS_NORMAL = { 1f, 0.85f, 0.2f, 1f };
+    public static final float[] COLOR_ATTACH = { 1f, 0.85f, 0.1f, 0.9f };
+    public static final float[] COLOR_ATTACH_ACTIVE = { 1f, 1f, 0.45f, 1f };
+    public static final float[] COLOR_STAMP_VALID = { 0.2f, 0.95f, 0.35f, 0.55f };
+    public static final float[] COLOR_STAMP_INVALID = { 0.95f, 0.2f, 0.2f, 0.55f };
     public static final float[][] COLOR_AXES = {
             { 0.95f, 0.25f, 0.25f, 1f },
             { 0.3f, 0.9f, 0.3f, 1f },

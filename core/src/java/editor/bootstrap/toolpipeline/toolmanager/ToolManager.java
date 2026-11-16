@@ -197,6 +197,16 @@ public class ToolManager extends ManagerPackage {
             setOption(canvas, option, range.step(getOption(canvas, option), direction));
     }
 
+    // The size the target canvas's tools work at stepped: the brush's tip where the canvas takes a brush, otherwise
+    // the scale a part is placed at
+    public void stepSize(int direction) {
+
+        ToolCanvas canvas = getCanvas();
+
+        if (canvas != null)
+            stepOption(canvas.takesBrush() ? ToolOption.SIZE : ToolOption.SCALE, direction);
+    }
+
     // One of the target canvas's options set outright, by a slider or a typed value, when the canvas honours it
     public void setTargetOption(ToolOption option, float value) {
 

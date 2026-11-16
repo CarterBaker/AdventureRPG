@@ -401,6 +401,9 @@ One line per session that changed this file: the date, what was added or removed
   their bones, weights, morphs, UVs, layers, plug and sockets), `schemas/Stamps.arpg` and `menus/editor/Stamps.arpg`
   (the Stamps tab); regenerated `menus/editor/EditorWindow.arpg` (Stamps under Characters, Save Selection As Stamp
   under File).
+- 2026-11-16: Stamp placement. Regenerated `menus/editor/EditorWindow.arpg` (the Character Stamp tab under
+  Characters), `shortcuts/Tools.arpg` (`[` and `]` size the brush or scale the part), `shortcuts/CharacterEditor.arpg`
+  (`,` and `.` twist the part) and `schemas/Shortcuts.arpg` (the character stamp canvas and the stamp tool).
 
 ---
 

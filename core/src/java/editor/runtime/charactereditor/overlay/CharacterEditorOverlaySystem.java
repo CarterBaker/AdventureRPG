@@ -16,17 +16,23 @@ import editor.bootstrap.brushpipeline.brush.BrushHandle;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPartPlacementStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
+import editor.bootstrap.stamppipeline.stamp.StampHandle;
+import editor.bootstrap.stamppipeline.stampmanager.StampManager;
 import editor.runtime.EditorSetting;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.sculpt.CharacterEditorSculptSystem;
+import editor.runtime.charactereditor.stamp.CharacterEditorStampSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
+import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
@@ -48,8 +54,12 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
      * mode, Sculpt's included, and the axis a transform is held to are
      * drawn on top as guides. In Rig mode the colliders the rig's bones
      * carry are drawn over the body as wire spheres and capsules, the one
-     * selected in the selection's colour. The overlay is rebuilt in place
-     * only when what it shows has moved.
+     * selected in the selection's colour. In Stamp mode every attach point
+     * shows as a yellow dot, the one the part joins nearest larger, and the
+     * part aimed, with its twin while mirroring, as a ghost of its edges
+     * where it would join, green where it can and red where it cannot, drawn
+     * over everything. The overlay is rebuilt in place only when what it
+     * shows has moved.
      */
 
     // Internal
@@ -58,6 +68,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private BrushManager brushManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private CharacterEditorSculptSystem characterEditorSculptSystem;
+    private CharacterEditorStampSystem characterEditorStampSystem;
+    private StampManager stampManager;
     private CharacterViewRenderSystem characterViewRenderSystem;
     private MeshManager meshManager;
     private ModelManager modelManager;
@@ -76,6 +88,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private ModelInstance guideModel;
     private MeshInstance colliderOverlay;
     private ModelInstance colliderModel;
+    private MeshInstance stampOverlay;
+    private ModelInstance stampModel;
 
     // Geometry
     private FloatArrayList vertices;
@@ -84,13 +98,23 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private ShortArrayList guideIndices;
     private FloatArrayList colliderVertices;
     private ShortArrayList colliderIndices;
+    private FloatArrayList stampVertices;
+    private ShortArrayList stampIndices;
     private LongOpenHashSet edges;
+
+    // Ghost — the stamp whose edges are held, each edge's two vertices
+    private StampHandle ghostStamp;
+    private int ghostStampRevision;
+    private IntArrayList ghostEdges;
 
     // State
     private CharacterMeshDocumentInstance builtDocument;
     private int builtRevision;
     private int builtManagerRevision;
     private int builtColliderRevision;
+    private int builtStampRevision;
+    private int builtStampManagerRevision;
+    private int builtStampDocumentRevision;
 
     // Scratch
     private float[] colorScratch;
@@ -115,12 +139,18 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         this.guideIndices = new ShortArrayList();
         this.colliderVertices = new FloatArrayList();
         this.colliderIndices = new ShortArrayList();
+        this.stampVertices = new FloatArrayList();
+        this.stampIndices = new ShortArrayList();
         this.edges = new LongOpenHashSet();
+
+        // Ghost
+        this.ghostEdges = new IntArrayList();
 
         // State
         this.builtRevision = EngineSetting.INDEX_NOT_FOUND;
         this.builtManagerRevision = EngineSetting.INDEX_NOT_FOUND;
         this.builtColliderRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.builtStampRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Scratch
         this.colorScratch = new float[CharacterEditorSetting.OVERLAY_COLOR_FLOATS];
@@ -141,6 +171,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         this.brushManager = get(BrushManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
         this.characterEditorSculptSystem = get(CharacterEditorSculptSystem.class);
+        this.characterEditorStampSystem = get(CharacterEditorStampSystem.class);
+        this.stampManager = get(StampManager.class);
         this.characterViewRenderSystem = get(CharacterViewRenderSystem.class);
         this.meshManager = get(MeshManager.class);
         this.modelManager = get(ModelManager.class);
@@ -166,6 +198,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         if (colliderOverlay != null)
             modelManager.removeMesh(colliderOverlay);
+
+        if (stampOverlay != null)
+            modelManager.removeMesh(stampOverlay);
     }
 
     // Update \\
@@ -185,6 +220,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         if (characterEditorManager.getMode().showsVertices())
             pushMeshOverlay(window, xray);
+
+        if (characterEditorManager.getMode().placesParts())
+            pushStampOverlay(window);
 
         if (buildGuides())
             renderManager.pushRenderCall(
@@ -369,6 +407,144 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                 colliderEnd.y + side.y * reach,
                 colliderEnd.z + side.z * reach,
                 CharacterEditorSetting.GUIDE_HALF_PIXELS);
+    }
+
+    // Stamp Overlay \\
+
+    private void pushStampOverlay(WindowInstance window) {
+
+        syncStampOverlay();
+
+        if (stampModel != null && !stampIndices.isEmpty())
+            renderManager.pushRenderCall(
+                    stampModel,
+                    characterViewRenderSystem.getOverlayFbo(),
+                    CharacterEditorSetting.DEPTH_GUIDES,
+                    window);
+    }
+
+    // Rebuilds when the placement, the editor's state or the body has moved
+    private void syncStampOverlay() {
+
+        int documentRevision = characterEditorMeshViewSystem.getActiveDocument().getRevision();
+
+        if (characterEditorStampSystem.getRevision() == builtStampRevision
+                && characterEditorManager.getRevision() == builtStampManagerRevision
+                && documentRevision == builtStampDocumentRevision)
+            return;
+
+        this.builtStampRevision = characterEditorStampSystem.getRevision();
+        this.builtStampManagerRevision = characterEditorManager.getRevision();
+        this.builtStampDocumentRevision = documentRevision;
+
+        stampVertices.clear();
+        stampIndices.clear();
+
+        CharacterPartPlacementStruct placement = characterEditorStampSystem.getPlacement();
+        CharacterPartPlacementStruct twin = characterEditorStampSystem.getTwin();
+
+        appendAttachPoints(placement);
+
+        if (placement.isShown())
+            appendGhost(placement);
+
+        if (twin != null)
+            appendGhost(twin);
+
+        if (stampIndices.isEmpty())
+            return;
+
+        if (stampOverlay == null) {
+            this.stampOverlay = meshManager.createMesh(overlayVAO, stampVertices, stampIndices);
+            this.stampModel = modelManager.createModel(stampOverlay, overlayMaterialID);
+            stampModel.getMaterial().setUniform(CharacterEditorSetting.UNIFORM_DEPTH_BIAS, 0f);
+            return;
+        }
+
+        meshManager.updateMesh(stampOverlay, stampVertices, stampIndices);
+        stampModel.updateMeshData(stampOverlay.getMeshData());
+    }
+
+    // Every attach point as a yellow dot, the one the part aimed joins nearest larger
+    private void appendAttachPoints(CharacterPartPlacementStruct placement) {
+
+        int active = placement.isShown() ? placement.getAttachPoint() : EngineSetting.INDEX_NOT_FOUND;
+
+        for (int i = 0; i < characterEditorManager.getAttachPointCount(); i++) {
+
+            characterEditorManager.getAttachPoint(i, pointA);
+            setColor(i == active ? CharacterEditorSetting.COLOR_ATTACH_ACTIVE : CharacterEditorSetting.COLOR_ATTACH);
+            appendDot(
+                    stampVertices,
+                    stampIndices,
+                    pointA.x,
+                    pointA.y,
+                    pointA.z,
+                    i == active
+                            ? CharacterEditorSetting.ATTACH_ACTIVE_HALF_PIXELS
+                            : CharacterEditorSetting.ATTACH_HALF_PIXELS);
+        }
+    }
+
+    // The part's edges carried to where it would join, green where it can and red where it cannot
+    private void appendGhost(CharacterPartPlacementStruct placement) {
+
+        RiggedMeshStruct stampMesh = placement.getStampHandle().getMesh();
+
+        syncGhostEdges(placement.getStampHandle());
+        setColor(placement.isValid()
+                ? CharacterEditorSetting.COLOR_STAMP_VALID
+                : CharacterEditorSetting.COLOR_STAMP_INVALID);
+
+        for (int i = 0; i < ghostEdges.size(); i += 2) {
+
+            int a = ghostEdges.getInt(i);
+            int b = ghostEdges.getInt(i + 1);
+
+            CharacterPoseUtility.transformPoint(
+                    placement.getTransform(), stampMesh.getX(a), stampMesh.getY(a), stampMesh.getZ(a), pointA);
+            CharacterPoseUtility.transformPoint(
+                    placement.getTransform(), stampMesh.getX(b), stampMesh.getY(b), stampMesh.getZ(b), pointB);
+
+            if (!appendLine(
+                    stampVertices,
+                    stampIndices,
+                    pointA.x,
+                    pointA.y,
+                    pointA.z,
+                    pointB.x,
+                    pointB.y,
+                    pointB.z,
+                    CharacterEditorSetting.STAMP_EDGE_HALF_PIXELS))
+                return;
+        }
+    }
+
+    // Every edge of a stamp's mesh once, found again only for another stamp or one rebuilt
+    private void syncGhostEdges(StampHandle stampHandle) {
+
+        if (stampHandle == ghostStamp && stampManager.getRevision() == ghostStampRevision)
+            return;
+
+        this.ghostStamp = stampHandle;
+        this.ghostStampRevision = stampManager.getRevision();
+
+        RiggedMeshStruct stampMesh = stampHandle.getMesh();
+
+        edges.clear();
+        ghostEdges.clear();
+
+        for (int f = 0; f < stampMesh.getFaceCount(); f++)
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+                int a = stampMesh.getFaceVertex(f, c);
+                int b = stampMesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+
+                if (a != b && edges.add(RiggedMeshStruct.toEdgeKey(a, b))) {
+                    ghostEdges.add(a);
+                    ghostEdges.add(b);
+                }
+            }
     }
 
     // Mesh Overlay \\

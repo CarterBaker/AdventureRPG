@@ -34,7 +34,12 @@ class CharacterMeshBranch extends BranchPackage {
      * until saved or reverted. An edit is finished here: refused when it
      * would leave the mesh empty or past the vertex limit, committed to the
      * history otherwise. The preview leaves out every face standing on a
-     * hidden vertex; the file always keeps them.
+     * hidden vertex; the file always keeps them. When a rig's bones change,
+     * every open mesh on it follows them by name, its history with it, except
+     * the history of a mesh whose joined part is being undone or redone with
+     * the rig, held out while that happens; a step waiting to be redone that
+     * names a bone the rig no longer holds cannot be redone, and the steps
+     * waiting are dropped.
      */
 
     // Internal
@@ -50,6 +55,9 @@ class CharacterMeshBranch extends BranchPackage {
     // Palette
     private Object2ObjectOpenHashMap<String, CharacterMeshDocumentInstance> meshName2MeshDocument;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<String>> arrayName2TextureNames;
+
+    // History — the mesh whose undo and redo steps a rig change leaves as they are while it is held
+    private CharacterMeshDocumentInstance heldDocument;
 
     // Preview — the mesh as shown while vertices are hidden, made again only for another rig
     private RiggedMeshStruct shownMesh;
@@ -336,14 +344,36 @@ class CharacterMeshBranch extends BranchPackage {
 
             characterWeightBranch.remapBones(document.getMesh(), remap);
 
-            for (int i = 0; i < document.getUndoSteps().size(); i++)
-                characterWeightBranch.remapBones(document.getUndoSteps().get(i).getMesh(), remap);
-
-            for (int i = 0; i < document.getRedoSteps().size(); i++)
-                characterWeightBranch.remapBones(document.getRedoSteps().get(i).getMesh(), remap);
+            if (document != heldDocument)
+                relayHistory(document, remap);
 
             upload(document);
         }
+    }
+
+    private void relayHistory(CharacterMeshDocumentInstance document, int[] remap) {
+
+        for (int i = 0; i < document.getUndoSteps().size(); i++)
+            characterWeightBranch.remapBones(document.getUndoSteps().get(i).getMesh(), remap);
+
+        for (int i = 0; i < document.getRedoSteps().size(); i++)
+            if (!characterWeightBranch.fitsBones(document.getRedoSteps().get(i).getMesh(), remap.length)) {
+                document.getRedoSteps().clear();
+                return;
+            }
+
+        for (int i = 0; i < document.getRedoSteps().size(); i++)
+            characterWeightBranch.remapBones(document.getRedoSteps().get(i).getMesh(), remap);
+    }
+
+    // A mesh's undo and redo steps left as they are by rig changes until released, while its joined part is undone
+    // or redone with the rig the steps were recorded against
+    void holdHistory(CharacterMeshDocumentInstance document) {
+        this.heldDocument = document;
+    }
+
+    void releaseHistory() {
+        this.heldDocument = null;
     }
 
     // Accessible \\

@@ -177,6 +177,18 @@ public class CharacterViewUtility extends EngineUtility {
 
     // Vectors \\
 
+    // A vector as rig entries hold one, an object of its axes, each rounded to the editor's precision
+    public static ArpgObjectStruct toVector(float x, float y, float z) {
+
+        ArpgObjectStruct vector = new ArpgObjectStruct();
+
+        vector.addProperty(EditorSetting.CHARACTER_VIEW_AXIS_NAMES[0], round(x));
+        vector.addProperty(EditorSetting.CHARACTER_VIEW_AXIS_NAMES[1], round(y));
+        vector.addProperty(EditorSetting.CHARACTER_VIEW_AXIS_NAMES[2], round(z));
+
+        return vector;
+    }
+
     public static float getComponent(ArpgObjectStruct arpg, String key, int axis, float defaultValue) {
 
         if (arpg == null)

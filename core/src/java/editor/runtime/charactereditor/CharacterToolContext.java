@@ -25,6 +25,7 @@ import editor.runtime.charactereditor.region.CharacterRegionFrameSystem;
 import editor.runtime.charactereditor.region.CharacterRegionIsolationSystem;
 import editor.runtime.charactereditor.rig.CharacterEditorRigSystem;
 import editor.runtime.charactereditor.sculpt.CharacterEditorSculptSystem;
+import editor.runtime.charactereditor.stamp.CharacterEditorStampSystem;
 import editor.runtime.characterview.panel.CharacterViewRowSource;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
@@ -55,7 +56,8 @@ public abstract class CharacterToolContext extends ContextPackage
      * the rig it is built on in the region picked in the Layers tab, shared
      * by all of them, framed and shown alone, every pick, box, stroke and
      * mirror held to it; Paint paints the maps of the part open, its paint
-     * layers listed in the Layers tab. Each tool tab is a tool canvas worked
+     * layers listed in the Layers tab; Stamp joins the parts chosen in the
+     * Stamps tab to the body. Each tool tab is a tool canvas worked
      * with the Tools and Brushes tabs, its actions listed in the Tools tab
      * and its values and those of what is picked in the Properties tab while
      * the tab is worked in; the File and Edit menus act on the character.
@@ -79,6 +81,7 @@ public abstract class CharacterToolContext extends ContextPackage
     private CharacterEditorRigSystem characterEditorRigSystem;
     private CharacterEditorBoneSystem characterEditorBoneSystem;
     private CharacterEditorPaintSystem characterEditorPaintSystem;
+    private CharacterEditorStampSystem characterEditorStampSystem;
     private CharacterEditorOverlaySystem characterEditorOverlaySystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
     private CharacterEditorMenuSystem characterEditorMenuSystem;
@@ -103,6 +106,7 @@ public abstract class CharacterToolContext extends ContextPackage
         this.characterEditorRigSystem = create(CharacterEditorRigSystem.class);
         this.characterEditorBoneSystem = create(CharacterEditorBoneSystem.class);
         this.characterEditorPaintSystem = create(CharacterEditorPaintSystem.class);
+        this.characterEditorStampSystem = create(CharacterEditorStampSystem.class);
         this.characterEditorOverlaySystem = create(CharacterEditorOverlaySystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterEditorMenuSystem = create(CharacterEditorMenuSystem.class);

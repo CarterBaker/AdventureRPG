@@ -73,10 +73,13 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     private int faceMinRow;
     private int faceMaxRow;
 
-    // Hit — how far along the last ray met a triangle, and where on it from its first corner
+    // Hit — how far along the last ray met a triangle, and where on it from its first corner, and the corners of the
+    // nearest face's triangle the last cast met
     private float hitDistance;
     private float hitU;
     private float hitV;
+    private int castCornerB;
+    private int castCornerC;
 
     // Scratch
     private Vector2 screenScratch;
@@ -307,12 +310,42 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     // INDEX_NOT_FOUND where the ray meets none of the region's faces
     public int pickFace(float pixelX, float pixelY, Vector2 uvOut) {
 
+        int picked = castFace(pixelX, pixelY);
+
+        if (picked != EngineSetting.INDEX_NOT_FOUND)
+            uvOut.set(
+                    resolveHitUV(activeDocument.getMesh(), picked, castCornerB, castCornerC, true),
+                    resolveHitUV(activeDocument.getMesh(), picked, castCornerB, castCornerC, false));
+
+        return picked;
+    }
+
+    // The active part's face the ray through a window pixel meets first, the point it meets it at and the face's
+    // outward normal written out, as the view shows it; INDEX_NOT_FOUND where it meets none of the region's faces
+    public int pickSurface(float pixelX, float pixelY, Vector3 pointOut, Vector3 normalOut) {
+
+        int picked = castFace(pixelX, pixelY);
+
+        if (picked == EngineSetting.INDEX_NOT_FOUND)
+            return picked;
+
+        pointOut.set(rayDirection).multiply(hitDistance).add(rayOrigin);
+        resolveFaceNormal(activeDocument.getMesh(), picked, normalOut);
+
+        return picked;
+    }
+
+    // The face the ray through a pixel meets first, the hit's distance, triangle and place on it kept
+    private int castFace(float pixelX, float pixelY) {
+
         if (activeDocument == null)
             return EngineSetting.INDEX_NOT_FOUND;
 
         RiggedMeshStruct mesh = activeDocument.getMesh();
         int picked = EngineSetting.INDEX_NOT_FOUND;
         float nearest = Float.POSITIVE_INFINITY;
+        float nearestU = 0f;
+        float nearestV = 0f;
 
         resolveRay(pixelX, pixelY, rayOrigin, rayDirection);
 
@@ -331,14 +364,42 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
                     continue;
 
                 nearest = hitDistance;
+                nearestU = hitU;
+                nearestV = hitV;
                 picked = f;
-                uvOut.set(
-                        resolveHitUV(mesh, f, b, c, true),
-                        resolveHitUV(mesh, f, b, c, false));
+                this.castCornerB = b;
+                this.castCornerC = c;
             }
         }
 
+        this.hitDistance = nearest;
+        this.hitU = nearestU;
+        this.hitV = nearestV;
+
         return picked;
+    }
+
+    // A face's Newell normal from its corners as the view places them, made unit
+    private void resolveFaceNormal(RiggedMeshStruct mesh, int faceIndex, Vector3 out) {
+
+        float[] p = activePositions.elements();
+
+        out.set(0f, 0f, 0f);
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+            int a = mesh.getFaceVertex(faceIndex, c) * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+            int b = mesh.getFaceVertex(faceIndex, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT)
+                    * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+
+            out.add(
+                    (p[a + 1] - p[b + 1]) * (p[a + 2] + p[b + 2]),
+                    (p[a + 2] - p[b + 2]) * (p[a] + p[b]),
+                    (p[a] - p[b]) * (p[a + 1] + p[b + 1]));
+        }
+
+        if (out.length() > EditorSetting.CHARACTER_VIEW_RAY_EPSILON)
+            out.normalize();
     }
 
     // A face's UV where the last ray met its triangle from the first corner through two others

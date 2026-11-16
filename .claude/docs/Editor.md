@@ -19,8 +19,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
   and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
-  Equipment, Mesh, Sculpt, Weights, Paint, Rig and UV, see `.claude/docs/CharacterEditorPipeline.md`; the Appearance
-  outliner holds every slider and control, the Rig tab marks which bone channels are sliders),
+  Equipment, Mesh, Sculpt, Weights, Paint, Rig, UV and Stamp, see `.claude/docs/CharacterEditorPipeline.md`; the
+  Appearance outliner holds every slider and control, the Rig tab marks which bone channels are sliders),
   sharing the region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with
   the Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour and Texture Maps the
   map painted; the Recorder is its transport (Record, Play, Pause and Stop, nothing else) and the Timeline
@@ -86,8 +86,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   speckled, and each listed with a thumbnail of the stroke it makes. Keep plenty of them; a new kind of tip is a new
   `assets/brushes/` file, not code.
 - **Stamps live in the Stamps tab**, as brushes live in the Brushes tab: tiles of every body part with its emblem and
-  name, the one in use tinted, its details below; the part chosen is the one placed next (see
-  `.claude/docs/CharacterEditorPipeline.md`).
+  name, the one in use tinted, its details below; the part chosen is the one the Character Stamp tab's Stamp tool
+  places next, at its own Scale and Twist (see `.claude/docs/CharacterEditorPipeline.md`).
 - **A tool means one thing everywhere.** Raise builds up and Lower wears down, a soft brush fades its edge and a hard
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.

@@ -1632,6 +1632,37 @@ class CharacterRigBranch extends BranchPackage {
         return true;
     }
 
+    // Whole Rig \\
+
+    // A copy of the rig's whole entry as it stands, null without a rig
+    ArpgObjectStruct copyRig() {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        return rigArpg != null ? rigArpg.deepCopy() : null;
+    }
+
+    // Whether the rig's entry stands exactly as a copy of it holds
+    boolean matchesRig(ArpgObjectStruct snapshot) {
+
+        ArpgObjectStruct rigArpg = getRigArpg();
+
+        return rigArpg != null && rigArpg.equals(snapshot);
+    }
+
+    // The rig's entry set to a copy of a whole entry and applied live, outside the rig's own history: a part joined
+    // to the body, or that joining undone with the body's mesh
+    void replaceRig(ArpgObjectStruct snapshot) {
+
+        if (getRigArpg() != null)
+            replace(snapshot.deepCopy());
+    }
+
+    // Why the rig as it stands could not be applied, null when it was
+    String getRefusal() {
+        return refusal;
+    }
+
     // File \\
 
     boolean isDirty() {

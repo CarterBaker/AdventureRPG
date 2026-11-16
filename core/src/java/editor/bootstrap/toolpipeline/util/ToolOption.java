@@ -8,7 +8,9 @@ public enum ToolOption {
      * The settings a tool works with, shown under it in the Tools panel the
      * way a paint program's tool options are. Size is the brush tip's radius,
      * Strength how far each stamp takes what lies under it, and Twist how
-     * far, in degrees, a swirl turns what lies at its centre. Mirror makes every edit to
+     * far, in degrees, a swirl turns what lies at its centre or a placed part
+     * turns about the loop it joins by; Scale is how large a part is placed.
+     * Mirror makes every edit to
      * one side of a character to its twin across the body as well, X-Ray
      * picks through the surface as if it were glass, and Bones chooses how
      * the rig's bones are drawn. Each canvas declares the range, step and
@@ -21,6 +23,7 @@ public enum ToolOption {
     SIZE(EditorSetting.TOOL_OPTION_SIZE),
     STRENGTH(EditorSetting.TOOL_OPTION_STRENGTH),
     TWIST(EditorSetting.TOOL_OPTION_TWIST),
+    SCALE(EditorSetting.TOOL_OPTION_SCALE),
     MIRROR(EditorSetting.TOOL_OPTION_MIRROR, true),
     XRAY(EditorSetting.TOOL_OPTION_XRAY, true),
     BONES(EditorSetting.TOOL_OPTION_BONES, true);
