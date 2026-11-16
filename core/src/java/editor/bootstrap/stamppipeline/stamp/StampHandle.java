@@ -84,4 +84,13 @@ public class StampHandle extends HandlePackage {
     public StampSocketStruct getSocket(int index) {
         return stampData.getSocket(index);
     }
+
+    // Whether the stamp is fur, its card laid over the body rather than joined to it
+    public boolean hasFur() {
+        return stampData.hasFur();
+    }
+
+    public StampFurStruct getFur() {
+        return stampData.getFur();
+    }
 }

@@ -31,8 +31,8 @@ public enum ToolCanvas {
      * Pose, which turns a bone out of the way while the mesh follows;
      * every modelling canvas of a character mirrors, and its mesh, weights
      * and rig choose how the bones are drawn. A character's Stamp tab joins
-     * body parts to it, each scaled and twisted, and their twins across the
-     * body while mirroring. The recorder's Timeline selects and cuts
+     * body parts to it, each scaled and twisted, and lays fur combed one way
+     * or the other, with their twins across the body while mirroring. The recorder's Timeline selects and cuts
      * clips, nests the selection or opens a nested clip, and exports the
      * media file, as a video or as music, or as MIDI.
      */
@@ -125,6 +125,7 @@ public enum ToolCanvas {
             false,
             stampScale(),
             stampTwist(),
+            comb(),
             mirror()),
     UV_EDITOR(
             EditorSetting.TOOL_CANVAS_UV_EDITOR,
@@ -412,6 +413,10 @@ public enum ToolCanvas {
 
     private static ToolOptionStruct bones() {
         return named(ToolOption.BONES, EditorSetting.TOOL_BONE_DISPLAY_NAMES, EditorSetting.TOOL_BONE_DISPLAY_DEFAULT);
+    }
+
+    private static ToolOptionStruct comb() {
+        return named(ToolOption.COMB, EditorSetting.TOOL_COMB_NAMES, EditorSetting.TOOL_COMB_DEFAULT);
     }
 
     private static ToolOptionStruct twist() {

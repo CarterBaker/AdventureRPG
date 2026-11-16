@@ -5,6 +5,9 @@ import engine.root.EngineSetting;
 import engine.root.StructPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterPartPlacementStruct extends StructPackage {
 
@@ -16,8 +19,11 @@ public class CharacterPartPlacementStruct extends StructPackage {
      * carrying the stamp's space into the bind pose, its turn and scale kept
      * apart for the bones. A part joins either an open loop already in the
      * body or a hole cut where it is aimed; a root part starts the body over.
-     * The refusal says why a placement cannot join, null when it can. One
-     * placement is kept per viewport and filled again as the pointer moves.
+     * A fur stamp's placement holds instead the cards it lays, each card's
+     * frame in the bind pose and the face it roots on with where on it. The
+     * refusal says why a placement cannot join, null when it can. One
+     * placement is kept per viewport and filled again as the pointer moves;
+     * its cards' storage only grows.
      */
 
     // Stamp
@@ -39,6 +45,12 @@ public class CharacterPartPlacementStruct extends StructPackage {
     private float scale;
     private boolean mirrored;
 
+    // Fur — each card's frame, the face it roots on and its place there (u then v), as many as the count
+    private final ObjectArrayList<Matrix4> furFrames;
+    private final IntArrayList furFaces;
+    private final FloatArrayList furShares;
+    private int furCount;
+
     // State
     private String refusal;
     private boolean shown;
@@ -57,6 +69,11 @@ public class CharacterPartPlacementStruct extends StructPackage {
         this.transform = new Matrix4();
         this.rotation = new Matrix4();
         this.scale = 1f;
+
+        // Fur
+        this.furFrames = new ObjectArrayList<>();
+        this.furFaces = new IntArrayList();
+        this.furShares = new FloatArrayList();
     }
 
     // Management \\
@@ -72,6 +89,7 @@ public class CharacterPartPlacementStruct extends StructPackage {
         this.hostBoneName = null;
         this.side = "";
         this.attachPoint = EngineSetting.INDEX_NOT_FOUND;
+        clearFur();
     }
 
     public void begin(StampHandle stampHandle, float scale) {
@@ -81,7 +99,7 @@ public class CharacterPartPlacementStruct extends StructPackage {
         this.shown = true;
     }
 
-    // Takes every value of another placement
+    // Takes every value of another placement but its fur cards, which are found again where it lies
     public void set(CharacterPartPlacementStruct other) {
         this.stampHandle = other.stampHandle;
         this.point.set(other.point);
@@ -126,6 +144,47 @@ public class CharacterPartPlacementStruct extends StructPackage {
 
         if (this.refusal == null)
             this.refusal = refusal;
+    }
+
+    // Fur \\
+
+    public void clearFur() {
+        this.furCount = 0;
+        furFaces.clear();
+        furShares.clear();
+    }
+
+    // A card rooted on a face at a place on it, its frame handed back to be filled
+    public Matrix4 addFurCard(int faceIndex, float u, float v) {
+
+        if (furFrames.size() == furCount)
+            furFrames.add(new Matrix4());
+
+        furFaces.add(faceIndex);
+        furShares.add(u);
+        furShares.add(v);
+
+        return furFrames.get(furCount++);
+    }
+
+    public int getFurCount() {
+        return furCount;
+    }
+
+    public Matrix4 getFurFrame(int card) {
+        return furFrames.get(card);
+    }
+
+    public int getFurFace(int card) {
+        return furFaces.getInt(card);
+    }
+
+    public float getFurU(int card) {
+        return furShares.getFloat(card * 2);
+    }
+
+    public float getFurV(int card) {
+        return furShares.getFloat(card * 2 + 1);
     }
 
     // Accessible \\
@@ -192,5 +251,10 @@ public class CharacterPartPlacementStruct extends StructPackage {
 
     public boolean isValid() {
         return shown && refusal == null;
+    }
+
+    // Whether the placement joins at the first click rather than being set down and turned: a root part, or fur
+    public boolean joinsAtOnce() {
+        return root || stampHandle != null && stampHandle.hasFur();
     }
 }

@@ -32,7 +32,8 @@ public class CharacterEditorStampSystem extends SystemPackage {
      * left and right about the view's up and up and down about its side, a
      * second click joins it to the body, and a right click or Escape lifts
      * it again. A root part stands at the rig's root and joins at the first
-     * click. The placement is worked out again only when the pointer, the
+     * click; fur follows the pointer anywhere on the body, never snapping,
+     * and is laid at the first click. The placement is worked out again only when the pointer, the
      * view, the part, the tool's options or the body have moved.
      */
 
@@ -158,7 +159,7 @@ public class CharacterEditorStampSystem extends SystemPackage {
 
         editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
 
-        if (placement.isRoot()) {
+        if (placement.joinsAtOnce()) {
             join();
             return;
         }
@@ -255,7 +256,11 @@ public class CharacterEditorStampSystem extends SystemPackage {
         if (!hasMoved(mouseX, mouseY))
             return;
 
-        this.aimAttachPoint = findSnappedLoop(mouseX, mouseY);
+        StampHandle stampHandle = characterEditorManager.getActiveStamp();
+
+        this.aimAttachPoint = stampHandle != null && stampHandle.hasFur()
+                ? EngineSetting.INDEX_NOT_FOUND
+                : findSnappedLoop(mouseX, mouseY);
         this.aimFace = aimAttachPoint == EngineSetting.INDEX_NOT_FOUND
                 ? characterEditorMeshViewSystem.pickSurface(mouseX, mouseY, aimPoint, aimNormal)
                 : EngineSetting.INDEX_NOT_FOUND;
@@ -309,7 +314,7 @@ public class CharacterEditorStampSystem extends SystemPackage {
             return;
         }
 
-        if (stampHandle.hasPlug() && aimAttachPoint == EngineSetting.INDEX_NOT_FOUND
+        if ((stampHandle.hasPlug() || stampHandle.hasFur()) && aimAttachPoint == EngineSetting.INDEX_NOT_FOUND
                 && aimFace == EngineSetting.INDEX_NOT_FOUND) {
             placement.clear();
             this.twinShown = false;

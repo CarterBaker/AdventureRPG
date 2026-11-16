@@ -72,8 +72,9 @@ public class CharacterEditorManager extends ManagerPackage {
      * target weight, Erase toward none and Smooth blending between
      * neighbours, and on the rig the tools pick, drag, size, add and remove
      * bones; the Stamp mode joins body parts from the Stamps tab to the
-     * body, their bones grafted onto the rig. Save and Revert carry every
-     * open mesh's changes and the rig's with the race's. The rig's spring chains — the hair's laid on the locks
+     * body, their bones grafted onto the rig, and lays fur. Save and Revert
+     * carry every open mesh's changes and the rig's with the race's. The
+     * rig's spring chains — the hair's laid on the locks
      * its cards are found in — are previewed live on the modelling layers while
      * Preview Springs is on, the preview then playing the pose chosen and
      * travelling at its pace. Edits, previews, mesh files, selection,
@@ -114,6 +115,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterHairBranch characterHairBranch;
     private CharacterPlacementBranch characterPlacementBranch;
     private CharacterGraftBranch characterGraftBranch;
+    private CharacterFurBranch characterFurBranch;
     private StampManager stampManager;
 
     // Palette
@@ -220,6 +222,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterHairBranch = create(CharacterHairBranch.class);
         this.characterPlacementBranch = create(CharacterPlacementBranch.class);
         this.characterGraftBranch = create(CharacterGraftBranch.class);
+        this.characterFurBranch = create(CharacterFurBranch.class);
 
         // Palette
         this.raceName2CharacterDocument = new Object2ObjectOpenHashMap<>();
@@ -1430,7 +1433,7 @@ public class CharacterEditorManager extends ManagerPackage {
             characterPlacementBranch.resolveTwin(document, placement, out);
     }
 
-    // Joins the part where it is placed, and its twin with it when one is given, as one edit of the body and rig
+    // Joins the part where it is placed, or lays the fur, and its twin with it when one is given, as one edit
     public void placeStamp(CharacterPartPlacementStruct placement, CharacterPartPlacementStruct twin) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
@@ -1441,7 +1444,11 @@ public class CharacterEditorManager extends ManagerPackage {
 
         characterSculptBranch.cancelTransform();
         characterMeshBranch.endShapeEdits();
-        characterGraftBranch.graft(document, placement, twin);
+
+        if (placement.getStampHandle().hasFur())
+            characterFurBranch.lay(document, placement, twin);
+        else
+            characterGraftBranch.graft(document, placement, twin);
     }
 
     // What the Stamp tab says about the part it aims, said only when it changes and taken back once there is nothing

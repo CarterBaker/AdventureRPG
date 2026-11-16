@@ -404,6 +404,8 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-16: Stamp placement. Regenerated `menus/editor/EditorWindow.arpg` (the Character Stamp tab under
   Characters), `shortcuts/Tools.arpg` (`[` and `]` size the brush or scale the part), `shortcuts/CharacterEditor.arpg`
   (`,` and `.` twist the part) and `schemas/Shortcuts.arpg` (the character stamp canvas and the stamp tool).
+- 2026-11-16: Fur stamps. Added `stamps/fur/` (Short Fur and Long Fur, a strand card each with its fur patch) for
+  laying fur; regenerated `schemas/Stamps.arpg` (`fur`) and `shortcuts/CharacterEditor.arpg` (`/` flips the comb).
 
 ---
 
@@ -3269,6 +3271,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/sprites/menus/wood/`
 
 `WoodSlat.arpg`
+
+### `assets/stamps/fur/`
+
+`LongFur.arpg`, `ShortFur.arpg` (one strand card each, laid by the Stamp tool as fur)
 
 ### `assets/stamps/humanoid/`
 

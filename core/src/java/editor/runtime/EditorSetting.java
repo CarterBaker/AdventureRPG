@@ -2079,6 +2079,11 @@ public class EditorSetting {
     public static final String STAMP_FIELD_POSITION = "position";
     public static final String STAMP_FIELD_NORMAL = "normal";
     public static final String STAMP_FIELD_RADIUS = "radius";
+    public static final String STAMP_FIELD_MESH = "mesh";
+    public static final String STAMP_FIELD_FUR = "fur";
+    public static final String STAMP_FIELD_SPACING = "spacing";
+    public static final String STAMP_FIELD_JITTER = "jitter";
+    public static final float STAMP_FUR_JITTER_DEFAULT = 0.25f;
 
     // Character Stamps — cutting the selected faces into a stamp: a bone is the part's own when the part holds at
     // least this share of the bone's whole influence over the mesh, a loop's radius is never written below this, and
@@ -2119,6 +2124,23 @@ public class EditorSetting {
             + " click to replace the body with it (Undo brings it back)";
     public static final String CHARACTER_STAMP_MESSAGE_NO_LOOP = "The part's plug loop is not open in its mesh";
     public static final String CHARACTER_STAMP_MESSAGE_NO_HOLE = "No faces to open a hole in there";
+
+    // Character Fur — a fur stamp lays one card for every square of the spacing the faces facing it hold, each turned
+    // by up to the degrees given times the stamp's jitter, combed along the surface toward the comb (down and back,
+    // the character facing +z) or away from it when flipped, the fallback taken where the surface faces the comb; the
+    // salt seeds where each card roots and how it varies, each card drawing its channels from its own run of hashes
+    public static final float[] CHARACTER_FUR_COMB = { 0f, -1f, -1f };
+    public static final float[] CHARACTER_FUR_COMB_FALLBACK = { 0f, 0f, -1f };
+    public static final float CHARACTER_FUR_TURN_JITTER_DEGREES = 30f;
+    public static final long CHARACTER_FUR_SALT = 0x5E3D9A17C42B6F81L;
+    public static final int CHARACTER_FUR_COMB_FLIPPED = 1;
+    public static final int CHARACTER_FUR_HASH_CHANNELS = 4;
+    public static final int CHARACTER_FUR_CHANNEL_U = 0;
+    public static final int CHARACTER_FUR_CHANNEL_V = 1;
+    public static final int CHARACTER_FUR_CHANNEL_LENGTH = 2;
+    public static final int CHARACTER_FUR_CHANNEL_TURN = 3;
+    public static final String CHARACTER_FUR_MESSAGE_LAID = "Laid fur cards: ";
+    public static final String CHARACTER_FUR_MESSAGE_NONE = "No faces face the fur there";
 
     // Brush Thumbnails — a stroke of the tip along one wave across a strip this many texels, stamped at this radius,
     // its path walked in steps this many texels long
@@ -2181,6 +2203,9 @@ public class EditorSetting {
     public static final String TOOL_OPTION_STRENGTH = "Strength";
     public static final String TOOL_OPTION_TWIST = "Twist";
     public static final String TOOL_OPTION_SCALE = "Scale";
+    public static final String TOOL_OPTION_COMB = "Comb";
+    public static final String[] TOOL_COMB_NAMES = { "Back and Down", "Forward and Up" };
+    public static final int TOOL_COMB_DEFAULT = 0;
     public static final String TOOL_OPTION_MIRROR = "Mirror";
     public static final String TOOL_OPTION_XRAY = "X-Ray";
     public static final String TOOL_OPTION_BONES = "Bones";

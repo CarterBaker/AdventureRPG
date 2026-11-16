@@ -531,8 +531,9 @@ class CharacterGraftBranch extends BranchPackage {
 
     // Hole \\
 
-    // The faces facing out where the part joins, flooded across edges from the one nearest the point while within
-    // the hole's radius of it, and any face left with only cut faces about it, removed; false where no face faces it
+    // The faces facing out where the part joins, flooded across edges from the surface face nearest the point while
+    // within the hole's radius of it, any face left with only cut faces about it and any card standing in the hole,
+    // removed; false where no face faces it
     private boolean cutHole(RiggedMeshStruct mesh, CharacterPartPlacementStruct placement) {
 
         Vector3 point = placement.getPoint();
@@ -556,7 +557,7 @@ class CharacterGraftBranch extends BranchPackage {
 
             float distance = measureFace(mesh, f, point);
 
-            if (distance < nearest && normalScratch.dot(normal) > 0f) {
+            if (distance < nearest && normalScratch.dot(normal) > 0f && CharacterLoopUtility.isSurface(mesh, f)) {
                 nearest = distance;
                 start = f;
             }
@@ -585,9 +586,18 @@ class CharacterGraftBranch extends BranchPackage {
             }
 
         closeHole(mesh);
+        flagCards(mesh, point, reach);
         mesh.removeFaces(faceFlags);
 
         return true;
+    }
+
+    // Every card (hair or fur) standing within the hole's reach, cut with the surface it grew from
+    private void flagCards(RiggedMeshStruct mesh, Vector3 point, float reach) {
+
+        for (int f = 0; f < mesh.getFaceCount(); f++)
+            if (!CharacterLoopUtility.isSurface(mesh, f) && measureFace(mesh, f, point) <= reach)
+                faceFlags.set(f, true);
     }
 
     // Any face whose every neighbour is cut is cut with them, until none is left inside the hole

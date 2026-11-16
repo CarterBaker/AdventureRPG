@@ -30,6 +30,7 @@ import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -57,7 +58,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
      * selected in the selection's colour. In Stamp mode every attach point
      * shows as a yellow dot, the one the part joins nearest larger, and the
      * part aimed, with its twin while mirroring, as a ghost of its edges
-     * where it would join, green where it can and red where it cannot, drawn
+     * where it would join (every card of fur where it would lie), green where it can and red where it cannot, drawn
      * over everything. The overlay is rebuilt in place only when what it
      * shows has moved.
      */
@@ -486,15 +487,27 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         }
     }
 
-    // The part's edges carried to where it would join, green where it can and red where it cannot
+    // The part's edges carried to where it would join, or every fur card's where it would lie, green where it can and
+    // red where it cannot
     private void appendGhost(CharacterPartPlacementStruct placement) {
-
-        RiggedMeshStruct stampMesh = placement.getStampHandle().getMesh();
 
         syncGhostEdges(placement.getStampHandle());
         setColor(placement.isValid()
                 ? CharacterEditorSetting.COLOR_STAMP_VALID
                 : CharacterEditorSetting.COLOR_STAMP_INVALID);
+
+        if (!placement.getStampHandle().hasFur()) {
+            appendGhostEdges(placement.getStampHandle().getMesh(), placement.getTransform());
+            return;
+        }
+
+        for (int c = 0; c < placement.getFurCount(); c++)
+            if (!appendGhostEdges(placement.getStampHandle().getMesh(), placement.getFurFrame(c)))
+                return;
+    }
+
+    // A stamp's edges carried by a transform; false once the overlay is full
+    private boolean appendGhostEdges(RiggedMeshStruct stampMesh, Matrix4 transform) {
 
         for (int i = 0; i < ghostEdges.size(); i += 2) {
 
@@ -502,9 +515,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
             int b = ghostEdges.getInt(i + 1);
 
             CharacterPoseUtility.transformPoint(
-                    placement.getTransform(), stampMesh.getX(a), stampMesh.getY(a), stampMesh.getZ(a), pointA);
+                    transform, stampMesh.getX(a), stampMesh.getY(a), stampMesh.getZ(a), pointA);
             CharacterPoseUtility.transformPoint(
-                    placement.getTransform(), stampMesh.getX(b), stampMesh.getY(b), stampMesh.getZ(b), pointB);
+                    transform, stampMesh.getX(b), stampMesh.getY(b), stampMesh.getZ(b), pointB);
 
             if (!appendLine(
                     stampVertices,
@@ -516,8 +529,10 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                     pointB.y,
                     pointB.z,
                     CharacterEditorSetting.STAMP_EDGE_HALF_PIXELS))
-                return;
+                return false;
         }
+
+        return true;
     }
 
     // Every edge of a stamp's mesh once, found again only for another stamp or one rebuilt

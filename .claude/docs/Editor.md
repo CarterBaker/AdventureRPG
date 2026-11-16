@@ -87,7 +87,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   `assets/brushes/` file, not code.
 - **Stamps live in the Stamps tab**, as brushes live in the Brushes tab: tiles of every body part with its emblem and
   name, the one in use tinted, its details below; the part chosen is the one the Character Stamp tab's Stamp tool
-  places next, at its own Scale and Twist (see `.claude/docs/CharacterEditorPipeline.md`).
+  places next, at its own Scale and Twist, or the fur it lays, combed by its Comb (see
+  `.claude/docs/CharacterEditorPipeline.md`).
 - **A tool means one thing everywhere.** Raise builds up and Lower wears down, a soft brush fades its edge and a hard
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.

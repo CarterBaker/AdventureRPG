@@ -65,6 +65,11 @@ public class ToolBranch extends BranchPackage {
         toolManager.stepOption(ArpgUtility.toEnum(optionName, ToolOption.class), 1);
     }
 
+    // A named option turned over to its next name, the last back to the first
+    public void cycleOption(String optionName) {
+        toolManager.cycleOption(ArpgUtility.toEnum(optionName, ToolOption.class));
+    }
+
     // The option set to the share of its range under the pointer, on the nearest step
     public void dragOption(String optionName, WindowInstance window, ElementInstance track) {
 

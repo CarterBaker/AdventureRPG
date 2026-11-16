@@ -625,7 +625,10 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   `normal` facing out of the part toward its host, `radius`) is the loop it joins by, absent for a root part, which
   starts the body over; `sockets` are the loops other parts join it at, each named and riding one of its
   bones. Vectors are `{x, y, z}` objects, as rig entries hold them. Positions are in the stamp's own space: the plug's
-  centre (or a root part's middle) at the origin.
+  centre (or a root part's middle) at the origin. A fur stamp names `fur` instead of a plug (`StampFurStruct`: the
+  patch `radius`, the `spacing` between roots and the `jitter` its cards vary by), its mesh one strand card rooted at
+  the origin, standing along +y and bent toward +z at its two inner rows, hair-zone faces textured with the strand tile,
+  v running from 1 at the root to 0 at the tip (`stamps/fur/`: Short Fur and Long Fur).
 - **Manager** (`StampManager`): the palette, the stamp in use (shared, picked in the Stamps tab or the Hierarchy), live
   rebuilds from the Info Panel, and each stamp's emblem (`StampThumbnailBranch`: a front view rasterised into a square
   with a z-buffer, shaded by facing).
@@ -642,24 +645,25 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   holds them, and every layer whose bones the part holds all of comes with it. The kind is the first `StampCategory`
   its top bone's name carries.
 - **Placing** (the Character Stamp tab, `CharacterEditorMode.STAMP`, `ToolCanvas.CHARACTER_STAMP`, tool `STAMP` with
-  Scale, Twist and Mirror; `CharacterEditorStampSystem` in every character tool tab, acting only in that mode): the
-  stamp in use follows the pointer over the body in the bind pose, snapping to an open loop whose centre projects within
-  `CHARACTER_STAMP_LOOP_SNAP_PIXELS`, otherwise aimed at the face under it (`CharacterEditorMeshViewSystem.pickSurface`:
-  the hit point and the face's Newell normal). `CharacterPlacementBranch.resolve` works the placement out
-  (`CharacterPartPlacementStruct`): it must lie within `CHARACTER_STAMP_ATTACH_REACH_SHARE` of the rig's height of an
-  attach point (the joint of a bone that carries the body and is at least `CHARACTER_STAMP_JOINT_SIZE_SHARE` of that
-  height across, or an open loop's centre: the yellow dots), and fit the mesh limit, or it is red with the reason in the
-  status line. Its bones hang from the bone weighing most on the face aimed at, or on the loop. The side is the sign of
-  x past `CHARACTER_STAMP_CENTRE_SHARE`; a part whose first sided top bone names the other side is mirrored (the
-  stamp's space reflected in x, its faces wound back), so a left arm joins the right shoulder facing forward. The
-  matrix carrying the stamp's space into the bind pose is T(point) · tilt · twist · align · scale · mirror: align turns
-  the plug's normal onto the surface's inward normal by the shortest arc, twist turns about that axis by Twist (`,` and
-  `.`), scale is Scale (`[` and `]`, `ToolManager.stepSize`), tilt is the pointer's turn once set down. A click where it
-  is green sets it down, moving the pointer turns it (`CHARACTER_STAMP_TURN_DEGREES_PER_PIXEL`, about the view's up and
-  side), a second click joins it, a right click or Escape lifts it. While mirroring, an off-centre part's twin
-  (`resolveTwin`, the matrix reflected in x) is shown and joined with it. A root part stands at the rig's root and
-  joins at once, replacing the whole body (Undo brings it back). The overlay draws the attach points and the part's
-  edges where it would join, green or red, over everything (`CharacterEditorOverlaySystem.syncStampOverlay`).
+  Scale, Twist, Comb and Mirror; `CharacterEditorStampSystem` in every character tool tab, acting only in that mode):
+  the stamp in use follows the pointer over the body in the bind pose, snapping to an open loop whose centre projects
+  within `CHARACTER_STAMP_LOOP_SNAP_PIXELS`, otherwise aimed at the face under it
+  (`CharacterEditorMeshViewSystem.pickSurface`: the hit point and the face's Newell normal).
+  `CharacterPlacementBranch.resolve` works the placement out (`CharacterPartPlacementStruct`): it must lie within
+  `CHARACTER_STAMP_ATTACH_REACH_SHARE` of the rig's height of an attach point (the joint of a bone that carries the body
+  and is at least `CHARACTER_STAMP_JOINT_SIZE_SHARE` of that height across, or an open loop's centre: the yellow dots),
+  and fit the mesh limit, or it is red with the reason in the status line. Its bones hang from the bone weighing most on
+  the face aimed at, or on the loop. The side is the sign of x past `CHARACTER_STAMP_CENTRE_SHARE`; a part whose first
+  sided top bone names the other side is mirrored (the stamp's space reflected in x, its faces wound back), so a left
+  arm joins the right shoulder facing forward. The matrix carrying the stamp's space into the bind pose is T(point) ·
+  tilt · twist · align · scale · mirror: align turns the plug's normal onto the surface's inward normal by the shortest
+  arc, twist turns about that axis by Twist (`,` and `.`), scale is Scale (`[` and `]`, `ToolManager.stepSize`), tilt is
+  the pointer's turn once set down. A click where it is green sets it down, moving the pointer turns it
+  (`CHARACTER_STAMP_TURN_DEGREES_PER_PIXEL`, about the view's up and side), a second click joins it, a right click or
+  Escape lifts it. While mirroring, an off-centre part's twin (`resolveTwin`, the matrix reflected in x) is shown and
+  joined with it. A root part stands at the rig's root and joins at once, replacing the whole body (Undo brings it
+  back). The overlay draws the attach points and the part's edges where it would join, green or red, over everything
+  (`CharacterEditorOverlaySystem.syncStampOverlay`).
 - **Joining** (`CharacterGraftBranch.graft`, one edit of the body and its rig): every stamp bone is added to a copy of
   the rig entry where the placement carries it (its frame the placement's turn times its own, reflected when mirrored,
   its joint carried by the whole matrix, sizes scaled), its top bones under the host bone, each renamed for the side it
@@ -674,7 +678,20 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   keys blended, the rim marked as a seam; any others are bridged, walked along both rims by length, quads where they
   keep pace (`CHARACTER_STAMP_PACE_SHARE`) and triangles held as quads with one corner doubled where one steps alone,
   the strip textured and laid out in UV as the body's face beside it, the part's rim marked as a seam. A part cut from
-  the same body back into its own hole welds exactly.
+  the same body back into its own hole welds exactly. Cards (hair-zone faces) are strands over the surface, never the
+  surface: their rims are never loops (`CharacterLoopUtility.isSurface`), a hole never starts on one, and a hole cuts
+  away every card standing in it.
+- **Fur** (`CharacterFurBranch`, the hair-card standard applied to a body): a fur stamp follows the pointer over any
+  surface face, never snapping, and lays at the first click. `resolveCards` scatters roots over the surface faces
+  facing it within its patch, one per square of the spacing each face's area holds, each placed on its face by a hash
+  of the face and the card (`BiomeFieldUtility.hash01`, `CHARACTER_FUR_SALT`), so the same aim lays the same fur. Each
+  card stands along its face's normal, combs along the surface toward `CHARACTER_FUR_COMB` (down and back on a body
+  facing +z; the tool's Comb, flipped by `/`, sends it forward and up), turned about the normal by Twist (the other way
+  for a mirrored twin) and its jitter, sized by Scale and its jitter; its frame and root are kept in the placement for
+  the ghost and the laying. `lay` brings every card in as one plain mesh edit, each weighed as its root is (the root's
+  face corners blended bilinearly through `CharacterWeightBranch.blend`) and moved by every shape key as far as its root
+  is, its faces the card's. The bends are modelled into the card, as game hair cards are; `CharacterHair.glsl` sways
+  fur in the wind as it sways hair, coloured by the hair colour. While mirroring the twin lays with it.
 
 ## Who owns what
 

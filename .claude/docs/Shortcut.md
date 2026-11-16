@@ -38,7 +38,7 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   there by its `ToolCanvasSystem` — after that window's own keys, so a window's own shortcut wins where both use a key
   (the character Mesh tab's `E` extrudes and `S` scales; the Timeline's `B` keeps its own action). A tool a canvas does
   not take is ignored there. Rebinding one on the Settings dialog's Shortcuts page rebinds it in every editor at once.
-  The character tool tabs' own `,` and `.` twist the Stamp tool's part.
+  The character tool tabs' own `,` and `.` twist the Stamp tool's part, and `/` flips its fur's comb.
 
 ---
 

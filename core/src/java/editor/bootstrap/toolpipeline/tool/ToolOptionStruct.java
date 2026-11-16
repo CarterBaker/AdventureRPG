@@ -61,6 +61,14 @@ public class ToolOptionStruct extends StructPackage {
         return clamp(value + direction * step);
     }
 
+    // The value one step on from another, past the high end back to the low, as a flip turns over
+    public float cycle(float value) {
+
+        float next = value + step;
+
+        return next > max ? min : clamp(next);
+    }
+
     public float clamp(float value) {
         return Math.max(min, Math.min(max, value));
     }

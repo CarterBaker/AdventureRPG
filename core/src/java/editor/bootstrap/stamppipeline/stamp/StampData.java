@@ -17,7 +17,8 @@ public class StampData extends DataPackage {
      * the file holds them, to be written into a character's rig when the part
      * joins it; its skinned mesh on that rig, in the stamp's own space; the
      * plug it joins a host by, null for a root part placed alone; the
-     * sockets other parts may join it at; and the bounds of its mesh.
+     * sockets other parts may join it at; how a fur stamp lays its card,
+     * null for any other; and the bounds of its mesh.
      */
 
     // Identity
@@ -40,6 +41,9 @@ public class StampData extends DataPackage {
     private final StampSocketStruct plug;
     private final StampSocketStruct[] sockets;
 
+    // Fur
+    private final StampFurStruct fur;
+
     // Constructor \\
 
     public StampData(
@@ -52,7 +56,8 @@ public class StampData extends DataPackage {
             ArpgArrayStruct partsArpg,
             RiggedMeshStruct mesh,
             StampSocketStruct plug,
-            StampSocketStruct[] sockets) {
+            StampSocketStruct[] sockets,
+            StampFurStruct fur) {
 
         // Identity
         this.stampName = stampName;
@@ -74,6 +79,9 @@ public class StampData extends DataPackage {
         // Sockets
         this.plug = plug;
         this.sockets = sockets;
+
+        // Fur
+        this.fur = fur;
     }
 
     private void resolveBounds() {
@@ -152,5 +160,13 @@ public class StampData extends DataPackage {
 
     public StampSocketStruct getSocket(int index) {
         return sockets[index];
+    }
+
+    public boolean hasFur() {
+        return fur != null;
+    }
+
+    public StampFurStruct getFur() {
+        return fur;
     }
 }

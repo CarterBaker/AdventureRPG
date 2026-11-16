@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import editor.bootstrap.stamppipeline.stamp.StampData;
+import editor.bootstrap.stamppipeline.stamp.StampFurStruct;
 import editor.bootstrap.stamppipeline.stamp.StampSocketStruct;
 import editor.bootstrap.stamppipeline.util.StampCategory;
 import editor.bootstrap.stamppipeline.util.StampRigUtility;
@@ -28,8 +29,11 @@ class StampBuilder extends BuilderPackage {
      * "parts" are the rig layers it brings. The optional "plug" is the open
      * loop it joins a host by — its "position", the way it faces out of the
      * part ("normal") and its "radius" — and "sockets" the loops other parts
-     * may join it at, each named and riding one of its bones. An empty or
-     * missing display name falls back to the stamp's name.
+     * may join it at, each named and riding one of its bones. A fur stamp
+     * instead names "fur", the patch "radius", the "spacing" between roots
+     * and the "jitter" its cards vary by, its mesh the one strand card laid
+     * at every root; it never has a plug. An empty or missing display name
+     * falls back to the stamp's name.
      */
 
     // Internal
@@ -50,36 +54,47 @@ class StampBuilder extends BuilderPackage {
 
     StampData build(String stampName, ArpgObjectStruct stampArpg) {
 
-        ArpgArrayStruct bonesArpg = ArpgUtility.validateArray(stampArpg, "bones");
-        ArpgArrayStruct partsArpg = ArpgUtility.hasArray(stampArpg, "parts")
-                ? stampArpg.getAsArray("parts").deepCopy()
+        ArpgArrayStruct bonesArpg = ArpgUtility.validateArray(stampArpg, EditorSetting.STAMP_FIELD_BONES);
+        ArpgArrayStruct partsArpg = ArpgUtility.hasArray(stampArpg, EditorSetting.STAMP_FIELD_PARTS)
+                ? stampArpg.getAsArray(EditorSetting.STAMP_FIELD_PARTS).deepCopy()
                 : new ArpgArrayStruct();
+        boolean plugged = ArpgUtility.hasObject(stampArpg, EditorSetting.STAMP_FIELD_PLUG);
+        boolean fur = ArpgUtility.hasObject(stampArpg, EditorSetting.STAMP_FIELD_FUR);
+
+        if (plugged && fur)
+            throwException("Stamp names both a plug and fur; fur is laid over a body, never joined to it. Source: "
+                    + stampName);
+
         RigHandle rigHandle = rigManager.buildDetachedRig(
                 EditorSetting.STAMP_RIG_PREFIX + stampName, StampRigUtility.toRigArpg(bonesArpg, stampName));
         RiggedMeshStruct mesh = meshManager.parseRiggedMesh(stampArpg, rigHandle, stampName);
-        String displayName = ArpgUtility.getString(stampArpg, "display_name", "");
+        String displayName = ArpgUtility.getString(stampArpg, EditorSetting.STAMP_FIELD_DISPLAY_NAME, "");
 
         return new StampData(
                 stampName,
                 stampManager.registerStampName(stampName),
                 displayName.isEmpty() ? stampName : displayName,
-                ArpgUtility.getEnum(stampArpg, "category", StampCategory.class, StampCategory.OTHER),
+                ArpgUtility.getEnum(stampArpg, EditorSetting.STAMP_FIELD_CATEGORY, StampCategory.class,
+                        StampCategory.OTHER),
                 rigHandle,
                 bonesArpg.deepCopy(),
                 partsArpg,
                 mesh,
-                ArpgUtility.hasObject(stampArpg, "plug")
-                        ? parseSocket(stampArpg.getAsObject("plug"), rigHandle, false, stampName)
-                        : null,
-                parseSockets(stampArpg, rigHandle, stampName));
+                plugged ? parsePlug(stampArpg, rigHandle, stampName) : null,
+                parseSockets(stampArpg, rigHandle, stampName),
+                fur ? parseFur(stampArpg.getAsObject(EditorSetting.STAMP_FIELD_FUR), stampName) : null);
+    }
+
+    private StampSocketStruct parsePlug(ArpgObjectStruct stampArpg, RigHandle rigHandle, String stampName) {
+        return parseSocket(stampArpg.getAsObject(EditorSetting.STAMP_FIELD_PLUG), rigHandle, false, stampName);
     }
 
     private StampSocketStruct[] parseSockets(ArpgObjectStruct stampArpg, RigHandle rigHandle, String stampName) {
 
-        if (!ArpgUtility.hasArray(stampArpg, "sockets"))
+        if (!ArpgUtility.hasArray(stampArpg, EditorSetting.STAMP_FIELD_SOCKETS))
             return new StampSocketStruct[0];
 
-        ArpgArrayStruct socketsArpg = stampArpg.getAsArray("sockets");
+        ArpgArrayStruct socketsArpg = stampArpg.getAsArray(EditorSetting.STAMP_FIELD_SOCKETS);
         StampSocketStruct[] sockets = new StampSocketStruct[socketsArpg.size()];
 
         for (int i = 0; i < sockets.length; i++)
@@ -95,20 +110,24 @@ class StampBuilder extends BuilderPackage {
             boolean socket,
             String stampName) {
 
-        String socketName = socket ? ArpgUtility.validateString(socketArpg, "name") : EditorSetting.STAMP_HOST_BONE;
-        String boneName = socket ? ArpgUtility.validateString(socketArpg, "bone") : EditorSetting.STAMP_HOST_BONE;
+        String socketName = socket
+                ? ArpgUtility.validateString(socketArpg, EditorSetting.STAMP_FIELD_NAME)
+                : EditorSetting.STAMP_HOST_BONE;
+        String boneName = socket
+                ? ArpgUtility.validateString(socketArpg, EditorSetting.STAMP_FIELD_BONE)
+                : EditorSetting.STAMP_HOST_BONE;
 
         if (!rigHandle.hasBone(boneName))
             throwException("Stamp socket \"" + socketName + "\" rides \"" + boneName
                     + "\", which is not one of its bones. Source: " + stampName);
 
-        Vector3 normal = toVector(ArpgUtility.validateObject(socketArpg, "normal"));
+        Vector3 normal = toVector(ArpgUtility.validateObject(socketArpg, EditorSetting.STAMP_FIELD_NORMAL));
 
         if (normal.length() <= 0f)
             throwException("Stamp socket \"" + socketName + "\" faces no way: its normal has no length. Source: "
                     + stampName);
 
-        float radius = ArpgUtility.validateFloat(socketArpg, "radius");
+        float radius = ArpgUtility.validateFloat(socketArpg, EditorSetting.STAMP_FIELD_RADIUS);
 
         if (radius <= 0f)
             throwException("Stamp socket \"" + socketName + "\" needs a radius above 0. Source: " + stampName);
@@ -116,15 +135,32 @@ class StampBuilder extends BuilderPackage {
         return new StampSocketStruct(
                 socketName,
                 rigHandle.getBoneIndex(boneName),
-                toVector(ArpgUtility.validateObject(socketArpg, "position")),
+                toVector(ArpgUtility.validateObject(socketArpg, EditorSetting.STAMP_FIELD_POSITION)),
                 normal.normalize(),
                 radius);
     }
 
+    // How a fur stamp lays its card: a patch and a spacing above nothing, a jitter from none to all
+    private StampFurStruct parseFur(ArpgObjectStruct furArpg, String stampName) {
+
+        float radius = ArpgUtility.validateFloat(furArpg, EditorSetting.STAMP_FIELD_RADIUS);
+        float spacing = ArpgUtility.validateFloat(furArpg, EditorSetting.STAMP_FIELD_SPACING);
+        float jitter = ArpgUtility.getFloat(furArpg, EditorSetting.STAMP_FIELD_JITTER,
+                EditorSetting.STAMP_FUR_JITTER_DEFAULT);
+
+        if (radius <= 0f || spacing <= 0f)
+            throwException("Stamp fur needs a radius and a spacing above 0. Source: " + stampName);
+
+        if (jitter < 0f || jitter > 1f)
+            throwException("Stamp fur jitter must lie from 0 to 1. Source: " + stampName);
+
+        return new StampFurStruct(radius, spacing, jitter);
+    }
+
     private Vector3 toVector(ArpgObjectStruct vectorArpg) {
         return new Vector3(
-                ArpgUtility.validateFloat(vectorArpg, "x"),
-                ArpgUtility.validateFloat(vectorArpg, "y"),
-                ArpgUtility.validateFloat(vectorArpg, "z"));
+                ArpgUtility.validateFloat(vectorArpg, EditorSetting.CHARACTER_VIEW_AXIS_NAMES[0]),
+                ArpgUtility.validateFloat(vectorArpg, EditorSetting.CHARACTER_VIEW_AXIS_NAMES[1]),
+                ArpgUtility.validateFloat(vectorArpg, EditorSetting.CHARACTER_VIEW_AXIS_NAMES[2]));
     }
 }

@@ -2,6 +2,7 @@ package editor.bootstrap.charactereditorpipeline.util;
 
 import java.util.Arrays;
 
+import application.bootstrap.geometrypipeline.mesh.MeshZone;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -20,7 +21,9 @@ public class CharacterLoopUtility extends EngineUtility {
      * every loop runs the way the faces beside it wind; its centre, its
      * Newell normal (pointing into a hole the surrounding faces open, out of
      * a rim a part's faces end at) and its mean radius are measured from the
-     * vertices' positions. Callers hand in the scratch the walk needs.
+     * vertices' positions. Cards (hair-zone faces: hair, fur) are strands
+     * over a surface, never the surface itself, so their rims are never
+     * loops. Callers hand in the scratch the walk needs.
      */
 
     // Loops \\
@@ -42,7 +45,7 @@ public class CharacterLoopUtility extends EngineUtility {
             next.set(v, EngineSetting.INDEX_NOT_FOUND);
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            if (faces == null || faces.getBoolean(f))
+            if (isLooped(mesh, faces, f))
                 for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
 
                     int a = mesh.getFaceVertex(f, c);
@@ -53,7 +56,7 @@ public class CharacterLoopUtility extends EngineUtility {
                 }
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            if (faces == null || faces.getBoolean(f))
+            if (isLooped(mesh, faces, f))
                 for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
 
                     int a = mesh.getFaceVertex(f, c);
@@ -78,6 +81,16 @@ public class CharacterLoopUtility extends EngineUtility {
         }
 
         return count;
+    }
+
+    // Whether a face's edges count toward loops: one flagged (or any for null) that is the surface, not a card
+    private static boolean isLooped(RiggedMeshStruct mesh, BooleanArrayList faces, int faceIndex) {
+        return (faces == null || faces.getBoolean(faceIndex)) && isSurface(mesh, faceIndex);
+    }
+
+    // Whether a face is the surface itself rather than a card laid over it
+    public static boolean isSurface(RiggedMeshStruct mesh, int faceIndex) {
+        return mesh.getFaceZone(faceIndex) != MeshZone.HAIR;
     }
 
     // One loop from a vertex along the open edges, each edge taken once; false when it does not close

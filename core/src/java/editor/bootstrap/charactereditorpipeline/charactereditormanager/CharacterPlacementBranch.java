@@ -43,13 +43,15 @@ class CharacterPlacementBranch extends BranchPackage {
      * the body from the side its bones were cut on is mirrored, so a left arm
      * joins the right shoulder still facing forward, its bones named for the
      * side it joins. A root part, which has no plug, starts the body over at
-     * the rig's root. A placement's twin is the same part mirrored across the
-     * body. The body's open loops are found once per edit.
+     * the rig's root. Fur is laid over a patch about the point aimed at,
+     * anywhere on the body, its cards found by CharacterFurBranch. A
+     * placement's twin is the same part mirrored across the body. The body's open loops are found once per edit.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private CharacterRigBranch characterRigBranch;
+    private CharacterFurBranch characterFurBranch;
     private ToolManager toolManager;
     private MeshManager meshManager;
 
@@ -117,6 +119,7 @@ class CharacterPlacementBranch extends BranchPackage {
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterRigBranch = get(CharacterRigBranch.class);
+        this.characterFurBranch = get(CharacterFurBranch.class);
         this.toolManager = get(ToolManager.class);
         this.meshManager = get(MeshManager.class);
     }
@@ -287,6 +290,11 @@ class CharacterPlacementBranch extends BranchPackage {
         sync(document);
         out.begin(stampHandle, toolManager.getOption(ToolCanvas.CHARACTER_STAMP, ToolOption.SCALE));
 
+        if (stampHandle.hasFur()) {
+            resolveFur(document.getMesh(), point, normal, out);
+            return;
+        }
+
         if (!stampHandle.hasPlug()) {
             resolveRoot(stampHandle, out);
             return;
@@ -335,7 +343,7 @@ class CharacterPlacementBranch extends BranchPackage {
                 || resolveDistance(nearest, out.getPoint()) > reach))
             out.refuse(EditorSetting.CHARACTER_STAMP_MESSAGE_FAR);
 
-        refuseOverLimit(mesh.getFaceCount(), stampHandle, 1, out);
+        refuseOverLimit(mesh.getFaceCount() + stampHandle.getMesh().getFaceCount(), out);
 
         String stampSide = resolveStampSide(stampHandle);
 
@@ -364,7 +372,7 @@ class CharacterPlacementBranch extends BranchPackage {
         }
 
         out.setRoot(true);
-        refuseOverLimit(0, stampHandle, 1, out);
+        refuseOverLimit(stampHandle.getMesh().getFaceCount(), out);
         out.setTarget(jointScratch.x, jointScratch.y, jointScratch.z, 0f, 1f, 0f, 0f, false);
         out.setHost(characterRigBranch.getBoneName(0), "", 0);
         out.getRotation().set(1f);
@@ -409,7 +417,14 @@ class CharacterPlacementBranch extends BranchPackage {
                 CharacterMeshUtility.toMirrorBoneName(placement.getSide()),
                 placement.getAttachPoint());
         out.setMirrored(!placement.isMirrored());
-        refuseOverLimit(mesh.getFaceCount(), placement.getStampHandle(), 2, out);
+
+        if (placement.getStampHandle().hasFur()) {
+            characterFurBranch.resolveCards(mesh, out);
+            refuseFur(mesh, out, placement.getFurCount());
+            return;
+        }
+
+        refuseOverLimit(mesh.getFaceCount() + placement.getStampHandle().getMesh().getFaceCount() * 2, out);
         CharacterPoseUtility.reflectX(placement.getRotation(), out.getRotation());
 
         float[] m = out.getTransform().val;
@@ -418,11 +433,39 @@ class CharacterPlacementBranch extends BranchPackage {
             m[column * 4] = -m[column * 4];
     }
 
-    // A placement refused when the body with the part brought in this many times would pass the mesh's limit; the
-    // joining itself is held to the limit exactly, with the hole cut and the bridge laid
-    private void refuseOverLimit(int bodyFaces, StampHandle stampHandle, int copies, CharacterPartPlacementStruct out) {
+    // Fur laid over the patch about the point aimed at, its side the point's, no bone hosting it
+    private void resolveFur(RiggedMeshStruct mesh, Vector3 point, Vector3 normal, CharacterPartPlacementStruct out) {
 
-        if (!meshManager.fitsRiggedMeshLimit(bodyFaces + stampHandle.getMesh().getFaceCount() * copies))
+        out.setTarget(
+                point.x,
+                point.y,
+                point.z,
+                normal.x,
+                normal.y,
+                normal.z,
+                out.getStampHandle().getFur().getRadius() * out.getScale(),
+                false);
+        out.setHost("", resolveSide(point.x), EngineSetting.INDEX_NOT_FOUND);
+        characterFurBranch.resolveCards(mesh, out);
+        refuseFur(mesh, out, 0);
+    }
+
+    // Fur refused where it lays no card, or where its cards, with any its twin lays, would pass the mesh's limit
+    private void refuseFur(RiggedMeshStruct mesh, CharacterPartPlacementStruct out, int twinCards) {
+
+        if (out.getFurCount() == 0)
+            out.refuse(EditorSetting.CHARACTER_FUR_MESSAGE_NONE);
+
+        int cardFaces = out.getStampHandle().getMesh().getFaceCount();
+
+        refuseOverLimit(mesh.getFaceCount() + (out.getFurCount() + twinCards) * cardFaces, out);
+    }
+
+    // A placement refused when the body would hold more faces than the mesh's limit; the joining itself is held to
+    // the limit exactly, with the hole cut and the bridge laid
+    private void refuseOverLimit(int faces, CharacterPartPlacementStruct out) {
+
+        if (!meshManager.fitsRiggedMeshLimit(faces))
             out.refuse(EditorSetting.CHARACTER_EDITOR_MESSAGE_MESH_LIMIT);
     }
 
