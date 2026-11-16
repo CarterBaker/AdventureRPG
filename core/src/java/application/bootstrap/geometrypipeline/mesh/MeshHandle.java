@@ -121,7 +121,7 @@ public class MeshHandle extends HandlePackage {
 
     // Whether any vertex of the mesh weighs onto a bone of its rig
     public boolean weighsOnto(int boneIndex) {
-        return weighedBones != null && weighedBones[boneIndex];
+        return weighedBones != null && boneIndex < weighedBones.length && weighedBones[boneIndex];
     }
 
     // Accessible \\

@@ -18,9 +18,11 @@ public class RigManager extends ManagerPackage {
      * here. Rig IDs are assigned in registration order. Auto-triggers an
      * on-demand load via RigLoader on a name-based cache miss. A rig's bind
      * pose — where its joints sit, how they turn and how large its parts are
-     * — can be rebuilt in place from its ARPG while it keeps its bones by
-     * name, order and parent, since every clip, mask, mesh and pose built on
-     * it is laid out by those bones.
+     * — can be rebuilt in place from its ARPG while it keeps the bones it was
+     * loaded with by name, order and parent, since every clip, mask, mesh
+     * and pose loaded on it is laid out by those bones; bones after them may
+     * be added, renamed or removed in place, as a skeleton merges new bones,
+     * and whatever is laid out by bones grows or shrinks to match.
      */
 
     // Palette
@@ -47,15 +49,15 @@ public class RigManager extends ManagerPackage {
 
     // Update \\
 
-    // Rebuilds a rig's bind pose in place; false, with nothing changed, when its bones themselves would change
+    // Rebuilds a rig in place; false, with nothing changed, when the bones it was loaded with would change
     public boolean updateRig(RigHandle rigHandle, ArpgObjectStruct rigArpg) {
 
         RigData rigData = ((RigLoader) internalLoader).rebuild(rigHandle, rigArpg);
 
-        if (!rigData.hasSameStructure(rigHandle.getRigData()))
+        if (!rigData.keepsBones(rigHandle.getRigData(), rigHandle.getLoadedBoneCount()))
             return false;
 
-        rigHandle.constructor(rigData);
+        rigHandle.replace(rigData);
         return true;
     }
 

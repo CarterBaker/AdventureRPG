@@ -78,7 +78,7 @@ public class SkinnedBufferInstance extends InstancePackage {
 
     // Frame Lifecycle \\
 
-    // Empties the draw for a new frame, laying its palette row out again if its mesh's morphs changed
+    // Empties the draw for a new frame, laying its palette row out again if its mesh's morphs or rig's bones changed
     public void clear() {
 
         skinnedBufferData.setInstanceCount(0);
@@ -115,7 +115,7 @@ public class SkinnedBufferInstance extends InstancePackage {
 
         float[] paletteData = skinnedBufferData.getPaletteData();
         int base = index * skinnedBufferData.getRowFloats();
-        int boneCount = skinningMatrices.length;
+        int boneCount = Math.min(skinningMatrices.length, skinnedBufferData.getBoneCapacity());
 
         appearance.write(paletteData, base
                 + skinnedBufferData.getAppearanceBase() * EngineSetting.COLOR_CHANNEL_COUNT);

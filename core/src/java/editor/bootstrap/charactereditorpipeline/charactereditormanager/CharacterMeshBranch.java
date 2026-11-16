@@ -8,6 +8,7 @@ import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
@@ -41,6 +42,7 @@ class CharacterMeshBranch extends BranchPackage {
     private TextureManager textureManager;
     private CharacterEditorManager characterEditorManager;
     private CharacterHistoryBranch characterHistoryBranch;
+    private CharacterWeightBranch characterWeightBranch;
 
     // Directory
     private File meshRoot;
@@ -75,6 +77,7 @@ class CharacterMeshBranch extends BranchPackage {
         this.textureManager = get(TextureManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterHistoryBranch = get(CharacterHistoryBranch.class);
+        this.characterWeightBranch = get(CharacterWeightBranch.class);
     }
 
     // Parts \\
@@ -318,6 +321,29 @@ class CharacterMeshBranch extends BranchPackage {
 
     private File getMeshFile(String meshName) {
         return ArpgUtility.resolveFile(meshRoot, meshName);
+    }
+
+    // Bones \\
+
+    // Every open mesh on a rig whose bones changed, its undo steps with it, weighed onto its bones where they now
+    // stand, and shown again
+    void relayBones(RigHandle rigHandle, int[] remap) {
+
+        for (CharacterMeshDocumentInstance document : meshName2MeshDocument.values()) {
+
+            if (document.getMesh().getRigHandle() != rigHandle)
+                continue;
+
+            characterWeightBranch.remapBones(document.getMesh(), remap);
+
+            for (int i = 0; i < document.getUndoSteps().size(); i++)
+                characterWeightBranch.remapBones(document.getUndoSteps().get(i).getMesh(), remap);
+
+            for (int i = 0; i < document.getRedoSteps().size(); i++)
+                characterWeightBranch.remapBones(document.getRedoSteps().get(i).getMesh(), remap);
+
+            upload(document);
+        }
     }
 
     // Accessible \\

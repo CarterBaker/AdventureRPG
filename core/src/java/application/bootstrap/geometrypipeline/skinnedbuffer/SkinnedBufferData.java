@@ -23,11 +23,11 @@ public class SkinnedBufferData extends DataPackage {
     // Mesh / Rig
     private final MeshHandle meshHandle;
     private final RigHandle rigHandle;
-    private final int boneCapacity;
+    private int boneCapacity;
 
     // Palette Layout — texel offsets inside one row, and its width
-    private final int appearanceBase;
-    private final int morphBase;
+    private int appearanceBase;
+    private int morphBase;
     private int morphCount;
     private int rowTexels;
 
@@ -52,11 +52,8 @@ public class SkinnedBufferData extends DataPackage {
         // Mesh / Rig
         this.meshHandle = meshHandle;
         this.rigHandle = meshHandle.getRigHandle();
-        this.boneCapacity = rigHandle.getBoneCount();
 
         // Palette Layout
-        this.appearanceBase = boneCapacity * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE;
-        this.morphBase = appearanceBase + SkinnedAppearanceStruct.getTexelCount();
         resolveRowTexels();
 
         // Counts
@@ -73,12 +70,12 @@ public class SkinnedBufferData extends DataPackage {
 
     // Layout \\
 
-    // Whether the mesh still holds the morphs the row was laid out for; an editor can add or remove them
+    // Whether the mesh still holds the morphs and its rig the bones the row was laid out for; an editor can change both
     public boolean matchesMesh() {
-        return morphCount == meshHandle.getMorphCount();
+        return morphCount == meshHandle.getMorphCount() && boneCapacity == rigHandle.getBoneCount();
     }
 
-    // Lays the row out again for the mesh's morphs, its storage reallocated empty
+    // Lays the row out again for the rig's bones and the mesh's morphs, its storage reallocated empty
     public void relayout() {
 
         resolveRowTexels();
@@ -87,6 +84,9 @@ public class SkinnedBufferData extends DataPackage {
     }
 
     private void resolveRowTexels() {
+        this.boneCapacity = rigHandle.getBoneCount();
+        this.appearanceBase = boneCapacity * EngineSetting.SKINNED_BONE_TEXELS_PER_BONE;
+        this.morphBase = appearanceBase + SkinnedAppearanceStruct.getTexelCount();
         this.morphCount = meshHandle.getMorphCount();
         this.rowTexels = morphBase + (morphCount + EngineSetting.SKINNED_MORPH_WEIGHTS_PER_TEXEL - 1)
                 / EngineSetting.SKINNED_MORPH_WEIGHTS_PER_TEXEL;

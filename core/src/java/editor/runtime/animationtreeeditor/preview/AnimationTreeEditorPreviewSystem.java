@@ -5,6 +5,7 @@ import java.util.Objects;
 import application.bootstrap.entitypipeline.animationtree.AnimationLayerStruct;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.race.RaceData;
 import editor.bootstrap.animationtreeeditorpipeline.animationtreeeditormanager.AnimationTreeEditorManager;
@@ -100,9 +101,9 @@ public class AnimationTreeEditorPreviewSystem extends SystemPackage {
             return;
 
         AnimationLayerStruct layer = tree.getLayer(layerIndex);
-        int boneCount = tree.getRigHandle().getBoneCount();
+        RigHandle rigHandle = tree.getRigHandle();
 
-        for (int i = 0; i < boneCount; i++)
-            characterViewRenderSystem.addJointMarker(i, layer.getBoneMask(i) > 0f);
+        for (int i = 0; i < rigHandle.getBoneCount(); i++)
+            characterViewRenderSystem.addJointMarker(i, layer.resolveBoneMask(rigHandle, i) > 0f);
     }
 }

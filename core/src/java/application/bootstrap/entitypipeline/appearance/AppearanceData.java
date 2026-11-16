@@ -331,6 +331,12 @@ public class AppearanceData extends DataPackage {
         return genderID2Preset.get(genderID);
     }
 
+    // How many of the rig's bones the appearance was built against, those it shapes; a bone added after stands as
+    // the rig places it
+    public int getBoneCount() {
+        return girthInfluence.length;
+    }
+
     public float getGirthInfluence(int boneIndex) {
         return girthInfluence[boneIndex];
     }

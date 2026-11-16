@@ -193,8 +193,8 @@ layouts like any other.
   `CHARACTER_RIG_BALL_SHARE` of its length. The Rig tab's **Rig Digits** lays a chain of `CHARACTER_RIG_DIGIT_SHARES`
   joints on each (`CharacterRigBranch.addDigits`, named `<digit>_<n>_<side>`, a toe `toe_<side>`); the Weights tab's
   **Weigh Onto Digits** (`CharacterWeightBranch.weighDigits`) then hands each vertex of the hand or foot bone to them,
-  a digit's own vertices wholly, blended across each joint, the palm near each digit's root partly. Bones are
-  structure, so save the rig and restart between the two.
+  a digit's own vertices wholly, blended across each joint, the palm near each digit's root partly. The digits are
+  added bones, so they apply live and the two run one after the other.
 
 ## Modes
 
@@ -561,8 +561,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   preview travelling forward at the pace it plays. `poseRest` and `poseClip` never simulate and start the springs
   afresh. A chain runs only while something worn weighs onto it (`AppearanceHandle.resolveSprings`, reading
   `MeshHandle.weighsOnto`, set for every rigged mesh in `MeshManager.applyRiggedMesh`), so a bald or short-haired
-  character simulates nothing. Settings apply live (`RigManager.updateRig` keeps a rig in place while its chains keep
-  their bones); a new or changed chain is structure and takes hold at the next start.
+  character simulates nothing. Settings apply live, and so does a new or changed chain: a change of structure moves
+  the rig's structure revision and every pose lays its springs out again.
 - **Springs rest against colliders bound to bones** (the physics-asset / spring-bone collider approach). A rig's
   `colliders` (`RigColliderStruct`, at most `RIG_COLLIDER_MAX`) each name a `name`, the `bone` it rides, a `shape`
   (`RigColliderShape`: `sphere` about its `offset`, or `capsule` from `start` to `end`, all in the bone's bind frame)
@@ -585,7 +585,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   (`CharacterWeightBranch.weighLocks`) hands each long card to the hair chain whose joints lie nearest its line
   (`CharacterHairBranch.findChain`, roots within `CHARACTER_HAIR_WEIGHT_REACH`), by how far down the card each vertex
   grows: the head near the root, then each segment's bone, blended at joints; spring weights held before are let go
-  first. The chains are bones, so save the rig and restart between the two. The selected bone's chain lists its five
+  first. The chains are added bones, so they apply live and the two run one after the other. The selected bone's
+  chain lists its five
   settings (stiffness, damping, gravity, drag, radius) in the Properties tab (`CharacterRigRowBranch.addSpringRows`),
   stepped and typed live, then a Yes or No per rig collider it rests against. **Add Collider** and **Remove Collider**
   (The Rig tab's Colliders group, `CharacterColliderBranch`) add a sphere on the selected bone, halfway to its first
@@ -659,11 +660,20 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   anchors, clips and every skinned buffer are laid out by those bones. Genders may differ in mesh, material and tree.
 - **Model height is the default gender's.** `RaceData.getModelHeight` is the first gender's mesh height, the height
   every gender is scaled against, so a smaller body stays smaller.
-- **Bones are structure.** Clips, masks, skinned buffers, appearances and live poses are all laid out by a rig's bones
-  at load. `RigManager.updateRig` applies a rig in place only while its bone names, order and parents are unchanged
-  (joint placement, bind rotation, size); adding, renaming, reparenting or mirroring bones is written to the rig and
-  takes hold on the next start. Only bones added since the start (`CharacterRigBranch.canRename`) may be renamed or
-  removed, because nothing loaded names them yet.
+- **Bones load frozen; added bones are live.** Clips, masks, skinned buffers, appearances and live poses are laid out
+  by a rig's bones at load. `RigManager.updateRig` applies a rig in place while the bones it was loaded with keep
+  their names, places and parents (`RigData.keepsBones`, `RigHandle.getLoadedBoneCount`); bones after them may come,
+  go, be renamed and reparented live, as a skeleton merges new bones (Unreal's Skeleton tree), each change moving
+  `RigHandle.getStructureRevision`. Everything laid out by bones follows: `AnimationStateHandle.holdRig` lays its
+  per-bone arrays out again (bones it held keep their state), `SkinnedBufferData.matchesMesh` relays the palette row,
+  a clip built before has no track for an added bone (`AnimationClipData.getBoneTrack`), a layer's mask reaches it
+  through its nearest known ancestor (`AnimationLayerStruct.resolveBoneMask`), an appearance shapes only the bones it
+  was built with (`AppearanceData.getBoneCount`), and the editor moves every open mesh's weights, undo steps
+  included, onto their bones by name (`CharacterRigBranch.resolveBoneRemap`, `CharacterMeshBranch.relayBones`; a bone
+  gone hands its weight to its nearest ancestor) and previews the race again. A change to a loaded bone (reparenting
+  or mirroring one) is written to the rig and takes hold on the next start. Only added bones
+  (`CharacterRigBranch.canRename`, `RigHandle.isAddedBone`) may be renamed or removed, because nothing loaded names
+  them.
 - **`throwException` halts the process** unless an isolation boundary is open. Editor actions, shortcuts and tab
   updates run inside one, which is why `CharacterRigBranch.apply` and `CharacterPreviewBranch.rebuild` can catch
   `InternalException`. Never call a builder that can refuse from outside an isolated path.

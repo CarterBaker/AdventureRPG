@@ -119,7 +119,7 @@ public class AppearanceHandle extends HandlePackage {
         this.headProportion = new Vector3();
 
         // Bone Shaping
-        int boneCount = appearanceData.getRigHandle().getBoneCount();
+        int boneCount = appearanceData.getBoneCount();
 
         this.boneMoves = new Vector3[boneCount];
         this.boneTurns = new Vector3[boneCount];
@@ -432,7 +432,7 @@ public class AppearanceHandle extends HandlePackage {
 
         float buildFactor = appearanceData.getBuildFactor(weightRatio);
         int headBoneIndex = appearanceData.getHeadBoneIndex();
-        int boneCount = appearanceData.getRigHandle().getBoneCount();
+        int boneCount = appearanceData.getBoneCount();
 
         accumulateBoneShaping();
 

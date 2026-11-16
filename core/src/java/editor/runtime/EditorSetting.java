@@ -1459,20 +1459,19 @@ public class EditorSetting {
     // Character Rig — status text
     public static final String CHARACTER_RIG_MESSAGE_ADDED = "Added ";
     public static final String CHARACTER_RIG_MESSAGE_DIGITS =
-            " digit bones added; save the rig and restart to weigh onto them";
+            " digit bones added; weigh onto them with Weigh Onto Digits";
     public static final String CHARACTER_RIG_MESSAGE_NO_DIGITS = "No new digits found under this region's bones";
     public static final String CHARACTER_RIG_MESSAGE_NO_REGION = "Rig and weigh digits on the Hands or Feet layers";
     public static final String CHARACTER_RIG_MESSAGE_WEIGHED = " vertices weighed onto the digits";
-    public static final String CHARACTER_RIG_MESSAGE_UNRIGGED = "Rig the digits, save the rig and restart first";
+    public static final String CHARACTER_RIG_MESSAGE_UNRIGGED = "Rig the digits first";
     public static final String CHARACTER_RIG_MESSAGE_IK_ADDED = " IK handles added";
     public static final String CHARACTER_RIG_MESSAGE_IK_REMOVED = " IK handles removed";
     public static final String CHARACTER_RIG_MESSAGE_HAIR =
-            " hair locks rigged on spring chains; save the rig and restart to weigh onto them";
+            " hair locks rigged on spring chains; weigh onto them with Weigh Onto Locks";
     public static final String CHARACTER_RIG_MESSAGE_NO_HAIR = "No new hair locks long enough for spring bones";
     public static final String CHARACTER_RIG_MESSAGE_HAIR_REGION = "Rig and weigh hair locks on the Hair layers";
     public static final String CHARACTER_RIG_MESSAGE_HAIR_WEIGHED = " hair vertices weighed onto the locks";
-    public static final String CHARACTER_RIG_MESSAGE_HAIR_UNRIGGED =
-            "Rig the hair locks, save the rig and restart first";
+    public static final String CHARACTER_RIG_MESSAGE_HAIR_UNRIGGED = "Rig the hair locks first";
     public static final String CHARACTER_RIG_MESSAGE_SPRING_ADDED = "Spring chain added: ";
     public static final String CHARACTER_RIG_MESSAGE_SPRING_REMOVED = "Spring chain removed: ";
     public static final String CHARACTER_RIG_MESSAGE_SPRING_NONE =
@@ -1499,7 +1498,8 @@ public class EditorSetting {
             + " renamed or removed";
     public static final String CHARACTER_RIG_MESSAGE_NO_SIDE = "Every bone to mirror must end in _l or _r";
     public static final String CHARACTER_RIG_MESSAGE_REFUSED = "Rig not applied: ";
-    public static final String CHARACTER_RIG_MESSAGE_RESTART = "Bone changes take hold when the editor next starts";
+    public static final String CHARACTER_RIG_MESSAGE_RESTART =
+            "Changes to the bones loaded at the start take hold when the editor next starts";
 
     // Character Regions — the bones each part layer of the Character Editor works on, with every bone below them,
     // and the bone it frames with every bone below it; a vertex weighing on a region's bones at least this much is

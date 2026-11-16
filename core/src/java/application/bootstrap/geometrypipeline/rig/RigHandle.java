@@ -10,11 +10,18 @@ public class RigHandle extends HandlePackage {
      * by RigManager for the engine lifetime. Delegates all bone lookups
      * through RigData — used as the shared bind-pose source every
      * AnimationStateHandle evaluates its runtime pose against. Its data is
-     * replaced in place when the rig's bind pose is edited, its bones kept.
+     * replaced in place when the rig is edited: the bones it was loaded with
+     * always kept by name, parent and place, bones after them free to come,
+     * go and change, each such change counted in the structure revision so
+     * whatever is laid out by the bones lays itself out again.
      */
 
     // Internal
     private RigData rigData;
+
+    // Structure — how many bones the rig was loaded with, and how many times its bones have changed since
+    private int loadedBoneCount;
+    private int structureRevision;
 
     // Constructor \\
 
@@ -22,12 +29,40 @@ public class RigHandle extends HandlePackage {
 
         // Internal
         this.rigData = rigData;
+
+        // Structure
+        this.loadedBoneCount = rigData.getBoneCount();
+        this.structureRevision = 0;
+    }
+
+    // Update \\
+
+    // Takes new data in place, counting a change of structure
+    public void replace(RigData rigData) {
+
+        if (!rigData.hasSameStructure(this.rigData))
+            this.structureRevision++;
+
+        this.rigData = rigData;
     }
 
     // Accessible \\
 
     public RigData getRigData() {
         return rigData;
+    }
+
+    public int getLoadedBoneCount() {
+        return loadedBoneCount;
+    }
+
+    public int getStructureRevision() {
+        return structureRevision;
+    }
+
+    // Whether a bone was added since the rig was loaded, so nothing loaded from a file names it
+    public boolean isAddedBone(int boneIndex) {
+        return boneIndex >= loadedBoneCount;
     }
 
     public String getRigName() {

@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.animationtree;
 
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
@@ -78,8 +79,16 @@ public class AnimationLayerStruct extends StructPackage {
         return blendDuration;
     }
 
-    public float getBoneMask(int boneIndex) {
-        return boneMask[boneIndex];
+    // The mask on a bone of the rig, a bone added after the tree was built taking its nearest ancestor's the mask
+    // was laid out for, as a branch filter carries a bone's children
+    public float resolveBoneMask(RigHandle rigHandle, int boneIndex) {
+
+        int bone = boneIndex;
+
+        while (bone >= boneMask.length)
+            bone = rigHandle.getBone(bone).getParentIndex();
+
+        return boneMask[bone];
     }
 
     public int getNodeCount() {

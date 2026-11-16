@@ -864,6 +864,29 @@ class CharacterWeightBranch extends BranchPackage {
         }
     }
 
+    // Every influence moved onto the bone its own now is, by the remap from the bones as they were, weights falling on
+    // one bone joined
+    void remapBones(RiggedMeshStruct mesh, int[] remap) {
+
+        beginTotals(mesh);
+
+        for (int v = 0; v < mesh.getVertexCount(); v++) {
+
+            for (int i = 0; i < mesh.getInfluenceCount(v); i++) {
+
+                int bone = remap[mesh.getInfluenceBone(v, i)];
+
+                if (boneTotals[bone] == 0f && !touchedBones.contains(bone))
+                    touchedBones.add(bone);
+
+                boneTotals[bone] += mesh.getInfluenceWeight(v, i);
+            }
+
+            writeTotals(mesh, v);
+            touchedBones.clear();
+        }
+    }
+
     // Averages several vertices' weights onto one of them, keeping the heaviest bones
     void average(RiggedMeshStruct mesh, IntArrayList vertices, int targetVertex) {
 

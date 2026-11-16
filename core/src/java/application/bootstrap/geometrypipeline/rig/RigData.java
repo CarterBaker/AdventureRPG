@@ -171,6 +171,21 @@ public class RigData extends DataPackage {
         return true;
     }
 
+    // True when another rig keeps this one's first bones by name and parent at the same places, whatever follows them,
+    // so everything laid out by those bones still reads them where it did
+    public boolean keepsBones(RigData other, int keptCount) {
+
+        if (other.bones.length < keptCount || bones.length < keptCount)
+            return false;
+
+        for (int i = 0; i < keptCount; i++)
+            if (!bones[i].getName().equals(other.bones[i].getName())
+                    || bones[i].getParentIndex() != other.bones[i].getParentIndex())
+                return false;
+
+        return true;
+    }
+
     private static boolean hasSameBones(RigSpringChainStruct a, RigSpringChainStruct b) {
 
         if (a.getBoneCount() != b.getBoneCount())

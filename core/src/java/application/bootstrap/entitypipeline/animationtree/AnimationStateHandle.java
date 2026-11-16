@@ -46,9 +46,10 @@ public class AnimationStateHandle extends HandlePackage {
      * constructor(), so updates never allocate.
      */
 
-    // Rig
+    // Rig — and the structure revision of the rig the per-bone arrays are laid out for
     private RigHandle rigHandle;
     private AnimationTreeHandle animationTreeHandle;
+    private int rigRevision;
 
     // Parameters — indexed by AnimationParameter ordinal
     private float[] parameters;
@@ -132,7 +133,6 @@ public class AnimationStateHandle extends HandlePackage {
         // Parameters
         this.parameters = new float[AnimationParameter.VALUES.length];
 
-        int boneCount = rigHandle.getBoneCount();
         int layerCount = animationTreeHandle.getLayerCount();
 
         // Layers
@@ -152,49 +152,29 @@ public class AnimationStateHandle extends HandlePackage {
         this.layerMoveClips = new AnimationClipHandle[layerCount];
 
         // Layer Pose and Capture
-        this.layerPositions = new Vector3[layerCount][boneCount];
-        this.layerRotations = new Quaternion[layerCount][boneCount];
-        this.layerScales = new Vector3[layerCount][boneCount];
-        this.capturePositions = new Vector3[layerCount][boneCount];
-        this.captureRotations = new Quaternion[layerCount][boneCount];
-        this.captureScales = new Vector3[layerCount][boneCount];
+        this.layerPositions = new Vector3[layerCount][];
+        this.layerRotations = new Quaternion[layerCount][];
+        this.layerScales = new Vector3[layerCount][];
+        this.capturePositions = new Vector3[layerCount][];
+        this.captureRotations = new Quaternion[layerCount][];
+        this.captureScales = new Vector3[layerCount][];
 
         for (int l = 0; l < layerCount; l++) {
-
             layerNodePhases[l] = new float[animationTreeHandle.getLayer(l).getNodeCount()];
             layerCurrentNodes[l] = EngineSetting.INDEX_NOT_FOUND;
             layerPreviousNodes[l] = EngineSetting.INDEX_NOT_FOUND;
             layerPendingNodes[l] = EngineSetting.INDEX_NOT_FOUND;
-
-            for (int i = 0; i < boneCount; i++) {
-                layerPositions[l][i] = new Vector3();
-                layerRotations[l][i] = new Quaternion(1f, 0f, 0f, 0f);
-                layerScales[l][i] = new Vector3(1f, 1f, 1f);
-                capturePositions[l][i] = new Vector3();
-                captureRotations[l][i] = new Quaternion(1f, 0f, 0f, 0f);
-                captureScales[l][i] = new Vector3(1f, 1f, 1f);
-            }
         }
 
         // Output
-        this.boneProportions = new Vector3[boneCount];
-        this.boneShapePositions = new Vector3[boneCount];
-        this.boneShapeRotations = new Vector3[boneCount];
-        this.bonePostures = new Vector3[boneCount];
-        this.skinningMatrices = new Matrix4[boneCount];
-        this.currentWorldMatrices = new Matrix4[boneCount];
+        this.boneProportions = null;
+        this.boneShapePositions = null;
+        this.boneShapeRotations = null;
+        this.bonePostures = null;
+        this.skinningMatrices = null;
+        this.currentWorldMatrices = null;
 
-        for (int i = 0; i < boneCount; i++) {
-            boneProportions[i] = new Vector3(1f, 1f, 1f);
-            boneShapePositions[i] = new Vector3();
-            boneShapeRotations[i] = new Vector3();
-            bonePostures[i] = new Vector3();
-            skinningMatrices[i] = new Matrix4();
-            currentWorldMatrices[i] = new Matrix4();
-        }
-
-        // Springs
-        this.springs = new AnimationSpringStruct(rigHandle);
+        layBones();
 
         // Scratch
         this.localScratch = new Matrix4();
@@ -233,6 +213,91 @@ public class AnimationStateHandle extends HandlePackage {
         }
     }
 
+    // Bones \\
+
+    // Lays the per-bone arrays out again whenever the rig's bones changed since they were laid
+    private void holdRig() {
+
+        if (rigRevision != rigHandle.getStructureRevision())
+            layBones();
+    }
+
+    // Every per-bone array sized to the rig's bones, each bone already held keeping its entries and each new one at
+    // rest, the springs started again on the rig's chains; the pose follows at the next update or pose
+    private void layBones() {
+
+        int boneCount = rigHandle.getBoneCount();
+
+        for (int l = 0; l < layerPositions.length; l++) {
+            layerPositions[l] = resizeVectors(layerPositions[l], boneCount, 0f);
+            layerRotations[l] = resizeQuaternions(layerRotations[l], boneCount);
+            layerScales[l] = resizeVectors(layerScales[l], boneCount, 1f);
+            capturePositions[l] = resizeVectors(capturePositions[l], boneCount, 0f);
+            captureRotations[l] = resizeQuaternions(captureRotations[l], boneCount);
+            captureScales[l] = resizeVectors(captureScales[l], boneCount, 1f);
+        }
+
+        this.boneProportions = resizeVectors(boneProportions, boneCount, 1f);
+        this.boneShapePositions = resizeVectors(boneShapePositions, boneCount, 0f);
+        this.boneShapeRotations = resizeVectors(boneShapeRotations, boneCount, 0f);
+        this.bonePostures = resizeVectors(bonePostures, boneCount, 0f);
+        this.skinningMatrices = resizeMatrices(skinningMatrices, boneCount);
+        this.currentWorldMatrices = resizeMatrices(currentWorldMatrices, boneCount);
+        this.springs = new AnimationSpringStruct(rigHandle);
+        this.rigRevision = rigHandle.getStructureRevision();
+    }
+
+    private static Vector3[] resizeVectors(Vector3[] vectors, int count, float fill) {
+
+        if (vectors != null && vectors.length == count)
+            return vectors;
+
+        Vector3[] resized = new Vector3[count];
+        int kept = vectors != null ? Math.min(vectors.length, count) : 0;
+
+        if (kept > 0)
+            System.arraycopy(vectors, 0, resized, 0, kept);
+
+        for (int i = kept; i < count; i++)
+            resized[i] = new Vector3(fill, fill, fill);
+
+        return resized;
+    }
+
+    private static Quaternion[] resizeQuaternions(Quaternion[] quaternions, int count) {
+
+        if (quaternions != null && quaternions.length == count)
+            return quaternions;
+
+        Quaternion[] resized = new Quaternion[count];
+        int kept = quaternions != null ? Math.min(quaternions.length, count) : 0;
+
+        if (kept > 0)
+            System.arraycopy(quaternions, 0, resized, 0, kept);
+
+        for (int i = kept; i < count; i++)
+            resized[i] = new Quaternion(1f, 0f, 0f, 0f);
+
+        return resized;
+    }
+
+    private static Matrix4[] resizeMatrices(Matrix4[] matrices, int count) {
+
+        if (matrices != null && matrices.length == count)
+            return matrices;
+
+        Matrix4[] resized = new Matrix4[count];
+        int kept = matrices != null ? Math.min(matrices.length, count) : 0;
+
+        if (kept > 0)
+            System.arraycopy(matrices, 0, resized, 0, kept);
+
+        for (int i = kept; i < count; i++)
+            resized[i] = new Matrix4();
+
+        return resized;
+    }
+
     // Parameters \\
 
     public void setParameter(AnimationParameter parameter, float value) {
@@ -242,10 +307,12 @@ public class AnimationStateHandle extends HandlePackage {
     // Proportions \\
 
     public void setBoneProportion(int boneIndex, float x, float y, float z) {
+        holdRig();
         boneProportions[boneIndex].set(x, y, z);
     }
 
     public Vector3 getBoneProportion(int boneIndex) {
+        holdRig();
         return boneProportions[boneIndex];
     }
 
@@ -253,26 +320,31 @@ public class AnimationStateHandle extends HandlePackage {
 
     // How the appearance shapes a bone's bind pose under every pose: its joint moved and its turn added to
     public void setBoneShape(int boneIndex, Vector3 position, Vector3 rotation) {
+        holdRig();
         boneShapePositions[boneIndex].set(position);
         boneShapeRotations[boneIndex].set(rotation);
     }
 
     public void clearBoneShape(int boneIndex) {
+        holdRig();
         boneShapePositions[boneIndex].set(0f, 0f, 0f);
         boneShapeRotations[boneIndex].set(0f, 0f, 0f);
     }
 
     public Vector3 getBoneShapePosition(int boneIndex) {
+        holdRig();
         return boneShapePositions[boneIndex];
     }
 
     public Vector3 getBoneShapeRotation(int boneIndex) {
+        holdRig();
         return boneShapeRotations[boneIndex];
     }
 
     // Posture \\
 
     public void setBonePosture(int boneIndex, float x, float y, float z) {
+        holdRig();
         bonePostures[boneIndex].set(x, y, z);
     }
 
@@ -286,6 +358,7 @@ public class AnimationStateHandle extends HandlePackage {
 
     // Whether a spring chain runs, off for one nothing worn weighs onto
     public void setSpringActive(int chainIndex, boolean active) {
+        holdRig();
         springs.setActive(chainIndex, active);
     }
 
@@ -298,6 +371,8 @@ public class AnimationStateHandle extends HandlePackage {
             float actionPhase,
             int actionSequence,
             float deltaTime) {
+
+        holdRig();
 
         this.actionPhase = actionPhase;
         AnimationClipHandle moveClip = resolveMoveClip(actionClip);
@@ -320,6 +395,7 @@ public class AnimationStateHandle extends HandlePackage {
     }
 
     public void refreshPose() {
+        holdRig();
         evaluatePose();
     }
 
@@ -600,6 +676,8 @@ public class AnimationStateHandle extends HandlePackage {
         if (clip.getRigHandle() != rigHandle)
             throwException("Clip \"" + clip.getClipName() + "\" targets a different rig than this pose.");
 
+        holdRig();
+
         float phase = Math.max(0f, Math.min(1f, time / clip.getDuration()));
 
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
@@ -615,6 +693,8 @@ public class AnimationStateHandle extends HandlePackage {
 
     // Poses the rig in its bind pose, keeping its proportions and its posture
     public void poseRest() {
+
+        holdRig();
 
         for (int i = 0; i < rigHandle.getBoneCount(); i++) {
 
@@ -667,7 +747,7 @@ public class AnimationStateHandle extends HandlePackage {
     private void applyLayer(int layerIndex, int boneIndex) {
 
         AnimationLayerStruct layer = animationTreeHandle.getLayer(layerIndex);
-        float weight = layer.getWeight() * smoothStep(layerActivations[layerIndex]) * layer.getBoneMask(boneIndex);
+        float weight = layer.getWeight() * smoothStep(layerActivations[layerIndex]) * layer.resolveBoneMask(rigHandle, boneIndex);
 
         if (weight <= 0f)
             return;
@@ -802,14 +882,17 @@ public class AnimationStateHandle extends HandlePackage {
     }
 
     public Matrix4[] getSkinningMatrices() {
+        holdRig();
         return skinningMatrices;
     }
 
     public Matrix4 getSkinningMatrix(int boneIndex) {
+        holdRig();
         return skinningMatrices[boneIndex];
     }
 
     public Matrix4 getWorldMatrix(int boneIndex) {
+        holdRig();
         return currentWorldMatrices[boneIndex];
     }
 }

@@ -63,6 +63,7 @@ class CharacterRigBranch extends BranchPackage {
     private CharacterDigitBranch characterDigitBranch;
     private CharacterHairBranch characterHairBranch;
     private CharacterColliderBranch characterColliderBranch;
+    private CharacterMeshBranch characterMeshBranch;
 
     // Rig
     private RigHandle rigHandle;
@@ -99,6 +100,8 @@ class CharacterRigBranch extends BranchPackage {
     private Matrix4 matrixScratchC;
     private BooleanArrayList subtree;
     private IntArrayList orderScratch;
+    private ObjectArrayList<String> previousNames;
+    private IntArrayList previousParents;
 
     // Base \\
 
@@ -133,6 +136,8 @@ class CharacterRigBranch extends BranchPackage {
         this.matrixScratchC = new Matrix4();
         this.subtree = new BooleanArrayList();
         this.orderScratch = new IntArrayList();
+        this.previousNames = new ObjectArrayList<>();
+        this.previousParents = new IntArrayList();
     }
 
     @Override
@@ -143,6 +148,7 @@ class CharacterRigBranch extends BranchPackage {
         this.characterDigitBranch = get(CharacterDigitBranch.class);
         this.characterHairBranch = get(CharacterHairBranch.class);
         this.characterColliderBranch = get(CharacterColliderBranch.class);
+        this.characterMeshBranch = get(CharacterMeshBranch.class);
     }
 
     // Rig \\
@@ -194,7 +200,13 @@ class CharacterRigBranch extends BranchPackage {
         return signature;
     }
 
+    // The rig applied live; bones added since the start change in place, the open meshes' weights following their
+    // bones by name and the race previewed again, while a change to a bone loaded at the start waits for the next
     private void apply(ArpgObjectStruct rigArpg) {
+
+        int revision = rigHandle.getStructureRevision();
+
+        holdPreviousBones();
 
         try {
             this.structureChanged = !rigManager.updateRig(rigHandle, rigArpg);
@@ -203,6 +215,42 @@ class CharacterRigBranch extends BranchPackage {
             errorLog(e.getMessage());
             this.refusal = e.getMessage();
         }
+
+        if (rigHandle.getStructureRevision() == revision)
+            return;
+
+        characterMeshBranch.relayBones(rigHandle, resolveBoneRemap());
+        characterEditorManager.rebuildActivePreview();
+    }
+
+    private void holdPreviousBones() {
+
+        previousNames.clear();
+        previousParents.clear();
+
+        for (int i = 0; i < rigHandle.getBoneCount(); i++) {
+            previousNames.add(rigHandle.getBone(i).getName());
+            previousParents.add(rigHandle.getBone(i).getParentIndex());
+        }
+    }
+
+    // Where each bone the rig held before stands now, by name; a bone gone hands its place to its nearest ancestor
+    // still there
+    private int[] resolveBoneRemap() {
+
+        int[] remap = new int[previousNames.size()];
+
+        for (int i = 0; i < remap.length; i++) {
+
+            int bone = i;
+
+            while (!rigHandle.hasBone(previousNames.get(bone)))
+                bone = previousParents.getInt(bone);
+
+            remap[i] = rigHandle.getBoneIndex(previousNames.get(bone));
+        }
+
+        return remap;
     }
 
     private ArpgObjectStruct getRigArpg() {
@@ -1351,10 +1399,16 @@ class CharacterRigBranch extends BranchPackage {
         });
     }
 
-    // Only a bone nothing loaded can name yet takes a new name or goes; the root never does
+    // Only a bone nothing loaded can name yet — one added since the start — takes a new name or goes; the root never
+    // does
     boolean canRename(int boneIndex) {
-        return boneIndex > 0 && boneIndex < boneCount && rigHandle != null
-                && !rigHandle.hasBone(boneNames.get(boneIndex));
+
+        if (boneIndex <= 0 || boneIndex >= boneCount || rigHandle == null)
+            return false;
+
+        String boneName = boneNames.get(boneIndex);
+
+        return !rigHandle.hasBone(boneName) || rigHandle.isAddedBone(rigHandle.getBoneIndex(boneName));
     }
 
     // Parent \\

@@ -11,6 +11,7 @@ public class AnimationClipData extends DataPackage {
      * with no authored motion in this clip. duration is derived from the
      * latest keyframe time across every track at build time, never authored
      * directly, so it can never drift out of sync with the data it describes.
+     * A bone added to the rig after the clip was built has no track in it.
      * How a clip blends with others is never decided here — that belongs to
      * the animation tree node that plays it.
      */
@@ -66,11 +67,11 @@ public class AnimationClipData extends DataPackage {
     }
 
     public BoneTrackStruct getBoneTrack(int boneIndex) {
-        return boneTracks[boneIndex];
+        return boneIndex < boneTracks.length ? boneTracks[boneIndex] : null;
     }
 
     public boolean hasBoneTrack(int boneIndex) {
-        return boneTracks[boneIndex] != null;
+        return getBoneTrack(boneIndex) != null;
     }
 
     public int getBoneTrackCount() {
