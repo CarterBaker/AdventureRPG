@@ -1,6 +1,8 @@
 package editor.bootstrap.imagepipeline.imagemanager;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,8 +23,10 @@ class ImageLibraryBranch extends BranchPackage {
      * the image and moves it into place, so a failed save never leaves a
      * broken image, and the same write serves any pixels its owner flattens
      * into a file; reloading reads the file back into the document's own
-     * pixels, which only works while the file keeps the image's size. Both
-     * report failure instead of stopping the editor.
+     * pixels, which only works while the file keeps the image's size. An
+     * image held inside another file is encoded to and decoded from the same
+     * format's bytes. All of them report failure instead of stopping the
+     * editor.
      */
 
     // Save \\
@@ -76,5 +80,38 @@ class ImageLibraryBranch extends BranchPackage {
 
         PixmapUtility.copyPixels(PixmapUtility.fromBufferedImage(image, false), document.getPixmap());
         return true;
+    }
+
+    // Bytes \\
+
+    byte[] encode(Pixmap pixmap) {
+
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+
+        try {
+
+            if (!ImageIO.write(PixmapUtility.toBufferedImage(pixmap), EditorSetting.IMAGE_FORMAT, bytes)) {
+                errorLog("No image writer for format '" + EditorSetting.IMAGE_FORMAT + "'");
+                return null;
+            }
+
+            return bytes.toByteArray();
+        } catch (IOException e) {
+            errorLog("Failed to encode an image", e);
+            return null;
+        }
+    }
+
+    Pixmap decode(byte[] bytes) {
+
+        try {
+
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
+
+            return image != null ? PixmapUtility.fromBufferedImage(image, false) : null;
+        } catch (IOException e) {
+            errorLog("Failed to decode an image", e);
+            return null;
+        }
     }
 }

@@ -1,6 +1,5 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -25,7 +24,6 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
-import editor.bootstrap.imagepipeline.util.MapGenerateOption;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.stamppipeline.stamp.StampHandle;
@@ -95,7 +93,6 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterControlBranch characterControlBranch;
     private CharacterSliderBranch characterSliderBranch;
     private CharacterPaintRowBranch characterPaintRowBranch;
-    private CharacterMapBranch characterMapBranch;
     private CharacterPropertyBranch characterPropertyBranch;
     private CharacterRowBranch characterRowBranch;
     private CharacterHistoryBranch characterHistoryBranch;
@@ -212,7 +209,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterControlBranch = create(CharacterControlBranch.class);
         this.characterSliderBranch = create(CharacterSliderBranch.class);
         this.characterPaintRowBranch = create(CharacterPaintRowBranch.class);
-        this.characterMapBranch = create(CharacterMapBranch.class);
+        create(CharacterMapBranch.class);
         this.characterRigPropertyBranch = create(CharacterRigPropertyBranch.class);
         this.characterRigRowBranch = create(CharacterRigRowBranch.class);
         this.characterMeshPropertyBranch = create(CharacterMeshPropertyBranch.class);
@@ -515,7 +512,9 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public void step(String key, int direction) {
 
-        if (activeDocument != null)
+        if (isColorKey(key))
+            characterPaintPropertyBranch.step(key, direction);
+        else if (activeDocument != null)
             characterPropertyBranch.step(activeDocument, key, direction);
     }
 
@@ -532,17 +531,36 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     public String getValueText(String key) {
+
+        if (isColorKey(key))
+            return characterPaintPropertyBranch.getValueText(key);
+
         return activeDocument != null ? characterPropertyBranch.getValueText(activeDocument, key) : "";
     }
 
     public boolean isValueValid(String key, String text) {
+
+        if (isColorKey(key))
+            return characterPaintPropertyBranch.isValueValid(key, text);
+
         return activeDocument != null && characterPropertyBranch.isValueValid(activeDocument, key, text);
     }
 
     public void setValue(String key, String text) {
 
-        if (isValueValid(key, text))
+        if (isColorKey(key))
+            characterPaintPropertyBranch.setValue(key, text);
+        else if (isValueValid(key, text))
             characterPropertyBranch.setValue(activeDocument, key, text);
+    }
+
+    // The paint colour is every painting window's, the Image Editor's too, so its keys work with no character open
+    private boolean isColorKey(String key) {
+
+        String keyName = CharacterViewUtility.getKeyName(key);
+
+        return keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_COLOR)
+                || keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_HSB);
     }
 
     public void buildListRows(ObjectArrayList<CharacterViewRowStruct> rows) {
@@ -557,14 +575,13 @@ public class CharacterEditorManager extends ManagerPackage {
             characterRowBranch.buildPropertyRows(activeDocument, rows);
     }
 
-    // The paint colour's rows, as the Color Wheel lists them
+    // The paint colour's rows, as the Color Wheel lists them; the colour is every painting window's, so it lists
+    // whether or not a character is open
     public void buildColorRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        if (activeDocument != null)
-            characterPaintRowBranch.buildColorRows(rows);
+        characterPaintRowBranch.buildColorRows(rows);
     }
 
-    // The maps of the texture painted, as Texture Maps lists them
+    // The maps of the texture painted and the settings of the one painted, as the Maps tab lists them
     public void buildMapRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         if (activeDocument != null)
@@ -586,72 +603,6 @@ public class CharacterEditorManager extends ManagerPackage {
     // The paint colour's red, green or blue, 0 to 1
     public float getPaintColor(int channel) {
         return characterPaintBranch.getColor(channel);
-    }
-
-    // Map Generation \\
-
-    // Opens map generation on the active part's texture, in Paint mode only; false, with the status saying why,
-    // otherwise
-    public boolean openMapGeneration() {
-
-        if (!mode.paintsMaps()) {
-            setStatusMessage(EditorSetting.MAP_GENERATE_MESSAGE_NO_TEXTURE);
-            return false;
-        }
-
-        return characterMapBranch.open(getActiveMeshDocument());
-    }
-
-    public void closeMapGeneration() {
-        characterMapBranch.close();
-    }
-
-    public boolean isMapGenerationOpen() {
-        return characterMapBranch.isOpen();
-    }
-
-    public float getMapOption(MapGenerateOption option) {
-        return characterMapBranch.getValue(option);
-    }
-
-    public void setMapOption(MapGenerateOption option, float value) {
-        characterMapBranch.setValue(option, value);
-    }
-
-    public void stepMapOption(MapGenerateOption option, int direction) {
-        characterMapBranch.step(option, direction);
-    }
-
-    public void stepMapPreview(int direction) {
-        characterMapBranch.stepPreview(direction);
-    }
-
-    public int getMapPreview() {
-        return characterMapBranch.getPreviewMap();
-    }
-
-    public int getMapRevision() {
-        return characterMapBranch.getRevision();
-    }
-
-    public String getMapTextureName() {
-        return characterMapBranch.getTextureName();
-    }
-
-    public int getMapPreviewWidth() {
-        return characterMapBranch.getPreviewWidth();
-    }
-
-    public int getMapPreviewRows() {
-        return characterMapBranch.getPreviewRows();
-    }
-
-    public void renderMapPreview(ByteBuffer out) {
-        characterMapBranch.renderPreview(out);
-    }
-
-    public void generateMaps() {
-        characterMapBranch.generate();
     }
 
     // Parts \\

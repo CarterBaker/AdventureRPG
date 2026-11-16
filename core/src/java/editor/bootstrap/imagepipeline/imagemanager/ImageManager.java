@@ -5,7 +5,9 @@ import java.util.function.Consumer;
 
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
+import editor.bootstrap.imagepipeline.imagelayer.ImageLayerStackStruct;
 import editor.bootstrap.imagepipeline.imageregion.ImageRegionStruct;
+import editor.bootstrap.imagepipeline.util.ImageMap;
 import engine.assets.image.Pixmap;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -22,7 +24,9 @@ public class ImageManager extends ManagerPackage {
      * draw, and hands the region to the image's edit listeners. Strokes and
      * fills each make one undo step, and so does a paint, whose tool writes
      * its pixels one by one and hands them over a stamp at a time. Edits,
-     * history, disk access and the texture each live in their own branch.
+     * history, disk access and the texture each live in their own branch,
+     * and so do the two things every layered image shares: laying its layers
+     * flat and working its maps out of it.
      */
 
     // Internal
@@ -30,6 +34,8 @@ public class ImageManager extends ManagerPackage {
     private ImageHistoryBranch imageHistoryBranch;
     private ImageLibraryBranch imageLibraryBranch;
     private ImageTextureBranch imageTextureBranch;
+    private ImageLayerBranch imageLayerBranch;
+    private ImageMapBranch imageMapBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<String, ImageDocumentInstance> imageName2ImageDocument;
@@ -48,6 +54,8 @@ public class ImageManager extends ManagerPackage {
         this.imageHistoryBranch = create(ImageHistoryBranch.class);
         this.imageLibraryBranch = create(ImageLibraryBranch.class);
         this.imageTextureBranch = create(ImageTextureBranch.class);
+        this.imageLayerBranch = create(ImageLayerBranch.class);
+        this.imageMapBranch = create(ImageMapBranch.class);
 
         // Palette
         this.imageName2ImageDocument = new Object2ObjectOpenHashMap<>();
@@ -222,6 +230,16 @@ public class ImageManager extends ManagerPackage {
         return imageLibraryBranch.write(file, pixmap);
     }
 
+    // Pixels as the bytes of an image file, for a file that holds images inside it; null when they cannot be
+    public byte[] encodeImage(Pixmap pixmap) {
+        return imageLibraryBranch.encode(pixmap);
+    }
+
+    // The pixels of an image file's bytes, RGBA8888; null when they are not an image
+    public Pixmap decodeImage(byte[] bytes) {
+        return imageLibraryBranch.decode(bytes);
+    }
+
     // A document no tool edits any longer let go, with its texture and listeners
     public void closeImage(String imageName) {
 
@@ -231,6 +249,24 @@ public class ImageManager extends ManagerPackage {
 
         if (document != null)
             imageTextureBranch.delete(document);
+    }
+
+    // Layers \\
+
+    // A rectangle of a layered image laid flat into its composite
+    public void compositeLayers(ImageLayerStackStruct stack, int minX, int minY, int maxX, int maxY) {
+        imageLayerBranch.composite(stack, minX, minY, maxX, maxY);
+    }
+
+    public void compositeLayers(ImageLayerStackStruct stack) {
+        imageLayerBranch.composite(stack, 0, 0, stack.getWidth() - 1, stack.getHeight() - 1);
+    }
+
+    // Maps \\
+
+    // A map worked out of an image by the map's settings, RGBA8888 rows top first, the image's size
+    public void generateMap(ImageMap map, Pixmap source, float[] settings, int[] out) {
+        imageMapBranch.generate(map, source, settings, out);
     }
 
     // Texture \\

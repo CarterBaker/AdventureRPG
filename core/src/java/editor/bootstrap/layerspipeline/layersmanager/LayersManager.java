@@ -3,6 +3,7 @@ package editor.bootstrap.layerspipeline.layersmanager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -19,8 +20,9 @@ public class LayersManager extends ManagerPackage {
      * here for as long as it lives, through openWindow() and closeWindow(),
      * the one pair that owns them, and keeps here the groups turned from how
      * they start, so every Layers tab folds alike. Picking, showing and
-     * hiding a layer go to the target window; the revision moves whenever a
-     * group is folded or opened.
+     * hiding a layer go to the target window, and so do the New Layer and
+     * Delete Layer icons, run as the window's own tool actions; the revision
+     * moves whenever a group is folded or opened.
      */
 
     // Internal
@@ -76,6 +78,28 @@ public class LayersManager extends ManagerPackage {
 
         if (provider != null)
             provider.toggleLayerVisible(layerKey);
+    }
+
+    // The New Layer or Delete Layer icon, run as the target window's tool action of that name, where it has one
+    public void addLayer() {
+
+        LayersProvider provider = getProvider();
+
+        if (provider != null)
+            runLayerAction(provider, provider.getAddLayerKey());
+    }
+
+    public void removeLayer() {
+
+        LayersProvider provider = getProvider();
+
+        if (provider != null)
+            runLayerAction(provider, provider.getRemoveLayerKey());
+    }
+
+    private void runLayerAction(LayersProvider provider, String actionKey) {
+        if (!actionKey.isEmpty() && provider instanceof ToolActionProvider actions)
+            actions.runToolAction(actionKey);
     }
 
     // Groups \\

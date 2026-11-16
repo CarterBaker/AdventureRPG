@@ -2,8 +2,8 @@ package editor.runtime.uveditor.view;
 
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.runtime.EditorSetting;
 import editor.runtime.input.EditorInputSystem;
-import editor.runtime.uveditor.UVEditorSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector4;
 
@@ -15,7 +15,8 @@ public class UVEditorViewSystem extends SystemPackage {
      * pointer and dragging the pan button moves the view, unless the tool
      * system took the press. UV runs up and right, as window pixels do, so
      * a UV and a window position map by one scale and offset, handed to the
-     * shaders as one vector.
+     * shaders as one vector. The Image Editor looks at its image the same
+     * way, its longer side spanning the unit square.
      */
 
     // Internal
@@ -60,7 +61,7 @@ public class UVEditorViewSystem extends SystemPackage {
         if (!fitted) {
             this.centerU = 0.5;
             this.centerV = 0.5;
-            this.pixelsPerUnit = Math.min(window.getWidth(), window.getHeight()) * UVEditorSetting.FIT_SHARE;
+            this.pixelsPerUnit = Math.min(window.getWidth(), window.getHeight()) * EditorSetting.FLAT_VIEW_FIT_SHARE;
             this.fitted = true;
         }
 
@@ -83,9 +84,9 @@ public class UVEditorViewSystem extends SystemPackage {
             return;
 
         double zoomed = Math.max(
-                UVEditorSetting.MIN_PIXELS_PER_UNIT,
-                Math.min(UVEditorSetting.MAX_PIXELS_PER_UNIT,
-                        pixelsPerUnit * Math.pow(UVEditorSetting.ZOOM_STEP, scroll)));
+                EditorSetting.FLAT_VIEW_MIN_PIXELS_PER_UNIT,
+                Math.min(EditorSetting.FLAT_VIEW_MAX_PIXELS_PER_UNIT,
+                        pixelsPerUnit * Math.pow(EditorSetting.FLAT_VIEW_ZOOM_STEP, scroll)));
         double pointerU = screenToU(rawInput.getMouseX());
         double pointerV = screenToV(rawInput.getMouseY());
 
@@ -100,11 +101,11 @@ public class UVEditorViewSystem extends SystemPackage {
         float mouseX = rawInput.getMouseX();
         float mouseY = rawInput.getMouseY();
 
-        if (editorInputSystem.isClicked(UVEditorSetting.BUTTON_PAN)
-                && !editorInputSystem.isClaimed(UVEditorSetting.BUTTON_PAN))
+        if (editorInputSystem.isClicked(EditorSetting.FLAT_VIEW_BUTTON_PAN)
+                && !editorInputSystem.isClaimed(EditorSetting.FLAT_VIEW_BUTTON_PAN))
             this.panning = true;
 
-        if (!rawInput.isButtonHeld(UVEditorSetting.BUTTON_PAN))
+        if (!rawInput.isButtonHeld(EditorSetting.FLAT_VIEW_BUTTON_PAN))
             this.panning = false;
 
         if (panning) {

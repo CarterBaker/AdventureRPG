@@ -8,6 +8,7 @@ import editor.bootstrap.cameraplannerpipeline.CameraPlannerPipeline;
 import editor.bootstrap.charactereditorpipeline.CharacterEditorPipeline;
 import editor.bootstrap.commandpipeline.CommandPipeline;
 import editor.bootstrap.filemenupipeline.FileMenuPipeline;
+import editor.bootstrap.imageeditorpipeline.ImageEditorPipeline;
 import editor.bootstrap.imagepipeline.ImagePipeline;
 import editor.bootstrap.infopipeline.InfoPipeline;
 import editor.bootstrap.itemeditorpipeline.ItemEditorPipeline;
@@ -43,8 +44,8 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
      * out from, the biome planner pipeline whose small world the biome viewer
      * flies over, the tree planner pipeline whose row of a species at every
      * detail the tree viewer shows, the character, face, animation and
-     * animation tree editor pipelines, the command pipeline that routes console
-     * commands to every Dev window, the recorder pipeline that records,
+     * animation tree editor pipelines, the Image Editor's layered images, the
+     * command pipeline that routes console commands to every Dev window, the recorder pipeline that records,
      * plays back and exports from a Dev window, the transitions every tool
      * that cuts footage together lays between its clips, the shortcut
      * pipeline that runs every tool's keys, the tool the File and Edit menus
@@ -74,6 +75,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(TreePlannerPipeline.class);
         create(ShipViewerPipeline.class);
         create(CharacterEditorPipeline.class);
+        create(ImageEditorPipeline.class);
         create(AnimationEditorPipeline.class);
         create(AnimationTreeEditorPipeline.class);
         create(CommandPipeline.class);

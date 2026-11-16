@@ -76,6 +76,8 @@ root.
   Before touching the character tool tabs (Appearance to Stamp), the UV Editor, the Animation Editor, their docker
   windows, sculpting, rigging, posing, races and their genders' models, or a character's appearance (morphs, shape
   sliders, bone controls, zones, masks, the character shaders), read `.claude/docs/CharacterEditorPipeline.md`.
+  Before touching the Image Editor, the Maps tab, map generation, layered images or the New Image dialog, read
+  `.claude/docs/ImageEditorPipeline.md`.
 
 @docs/Engine.md
 

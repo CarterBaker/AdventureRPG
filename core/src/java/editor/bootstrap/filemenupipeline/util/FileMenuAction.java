@@ -5,8 +5,8 @@ public enum FileMenuAction {
     /*
      * Every operation the editor's File and Edit menus offer, each run on
      * the window worked in last exactly as that tool's own key or button for
-     * it runs it. The File menu holds the first seven, the two model actions,
-     * Generate Maps and Save Selection As Stamp, the Edit menu Undo and Redo. The ordinal indexes each tool's
+     * it runs it. The File menu holds the first seven, the two model actions
+     * and Save Selection As Stamp, the Edit menu Undo and Redo. The ordinal indexes each tool's
      * table and the menu's labels, so the order is fixed and new actions are
      * added at the end.
      */
@@ -22,7 +22,6 @@ public enum FileMenuAction {
     REDO,
     IMPORT_MODEL,
     EXPORT_MODEL,
-    GENERATE_MAPS,
     SAVE_STAMP;
 
     // Values

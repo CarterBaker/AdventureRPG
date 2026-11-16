@@ -20,20 +20,22 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
   and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
   Equipment, Mesh, Sculpt, Weights, Paint, Rig, UV and Stamp, see `.claude/docs/CharacterEditorPipeline.md`; the
-  Appearance outliner holds every slider and control, the Rig tab marks which bone channels are sliders),
-  sharing the region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with
-  the Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour and Texture Maps the
-  map painted; the Recorder is its transport (Record, Play, Pause and Stop, nothing else) and the Timeline
-  its clips, with Recorder Keys, Recorder Bin and Recorder Settings beside them, each opening its own
-  menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act
-  on; the Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
-  the Timeline shows its lanes with a mixer strip each, the lane and clip selected edited in the Properties tab, and
-  the file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library lists the
+  Appearance outliner holds every slider and control, the Rig tab marks which bone channels are sliders), sharing the
+  region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with the
+  Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting window
+  shares and the Maps tab the maps of the image worked (the texture painted, or the Image Editor's image); the Image
+  Editor under Textures paints layered images as Krita does, its layers in the Layers tab and its maps in the Maps tab
+  (see `.claude/docs/ImageEditorPipeline.md`); the Recorder is its transport (Record, Play, Pause and Stop, nothing
+  else) and the Timeline its clips, with Recorder Keys, Recorder Bin and Recorder Settings beside them, each opening its
+  own menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes
+  act on; the Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
+  the Timeline shows its lanes with a mixer strip each, the lane and clip selected edited in the Properties tab, and the
+  file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library lists the
   notes of the instrument picked in the Hierarchy, each dragged onto the Timeline as a note clip that is stretched and
-  cut like any clip. The Timeline's title names what is open; Back is a Recorder shortcut. The Scene Assets tab,
-  beside the ARPG Viewer in the Content menu (`editor.bootstrap.sceneassetspipeline`), lists what the Dev window
-  shows as it runs: the block under the crosshair in full (block, biome, face hit and every face's texture with its
-  pack, material, shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
+  cut like any clip. The Timeline's title names what is open; Back is a Recorder shortcut. The Scene Assets tab, beside
+  the ARPG Viewer in the Content menu (`editor.bootstrap.sceneassetspipeline`), lists what the Dev window shows as it
+  runs: the block under the crosshair in full (block, biome, face hit and every face's texture with its pack, material,
+  shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
   `DevSceneAssetsSystem` casts across the view about once a second while a Scene Assets tab is open; a row naming
   content opens it in the Properties tab.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
@@ -47,13 +49,18 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   last that has layers. This is the standard for putting several tools in one window, and the base the editor's
   image editing is built on.
 - **A window that has layers** implements `LayersProvider` (its revision, title, the stack as `LayerNodeStruct`s top
-  first, `selectLayer` and `toggleLayerVisible`) and creates a `LayersSourceSystem`. Layer keys are stable names (an
-  enum's name, `region/mode`), never IDs. The window keeps the layer picked itself and every system reads it there;
-  a layer picked hands its tool canvas, Properties rows and File and Edit table to the shared tabs through the
-  window's own providers, which answer for the layer picked.
+  first, `selectLayer`, `toggleLayerVisible`, and the tool action keys the tab's New Layer and Delete Layer icons run,
+  `getAddLayerKey` / `getRemoveLayerKey`, empty where the stack takes none) and creates a `LayersSourceSystem`. Layer
+  keys are stable names (an enum's name, `region/mode`, a layer document's name), never IDs. The window keeps the layer
+  picked itself and every system reads it there; a layer picked hands its tool canvas, Properties rows and File and Edit
+  table to the shared tabs through the window's own providers, which answer for the layer picked.
 - **So far:** the World Editor (Heights over Biomes, each with an eye), the character Mesh, Sculpt, Weights, Rig and UV
-  tabs (the Body and every region within it, one region picked for all of them; no eyes) and the character Paint tab
-  (the paint layers of the map painted, each above the base with an eye).
+  tabs (the Body and every region within it, one region picked for all of them; no eyes), the character Paint tab
+  (the paint layers of the map painted, each above the base with an eye) and the Image Editor (every layer of the
+  image, each with an eye; its maps are listed in the Maps tab, never here).
+- **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers
+  dockers have them; each runs the window's own tool action through `LayersManager.addLayer` / `removeLayer`, so the
+  icon, the Tools tab's action and its shortcut do one thing.
 
 ## The active window
 
@@ -96,8 +103,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The File and Edit menus
 
 - **Every file action lives in the editor's File and Edit menus**, never as a tool's own button: New, New File,
-  Duplicate, Save, Save All, Revert, Delete, Import Model, Export Model, Generate Maps and Save Selection As Stamp under
-  File, Undo and Redo under Edit. They act on the window worked in last (`editor.bootstrap.filemenupipeline`,
+  Duplicate, Save, Save All, Revert, Delete, Import Model, Export Model and Save Selection As Stamp under File, Undo
+  and Redo under Edit. Generating maps is not a file action: Generate and Clear live under the map's settings in the
+  Maps tab. They act on the window worked in last (`editor.bootstrap.filemenupipeline`,
   `FileMenuManager`), name it at their head and mute what it does not take.
 - **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
   `FileMenuTableStruct` constant from `EditorSetting` (the branch and, per `FileMenuAction`, the method its own keys

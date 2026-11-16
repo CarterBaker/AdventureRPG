@@ -6,6 +6,7 @@ import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imageregion.ImageRegionStruct;
+import editor.bootstrap.imagepipeline.util.ImageColorUtility;
 import editor.runtime.EditorSetting;
 import engine.assets.image.Pixmap;
 import engine.graphics.color.PackedColorUtility;
@@ -145,7 +146,12 @@ class ImageEditBranch extends BranchPackage {
         boolean blending = brush.isBlending();
 
         return switch (brush.getStroke()) {
-            case PAINT -> blend(before, brush.getColor(), strength, blending);
+            case PAINT -> brush.isTransparent()
+                    ? ImageColorUtility.over(before, brush.getColor(), strength)
+                    : blend(before, brush.getColor(), strength, blending);
+            case ERASE -> brush.isTransparent()
+                    ? ImageColorUtility.wear(before, strength)
+                    : blend(before, brush.getColor(), strength, blending);
             case SMOOTH -> blend(
                     before,
                     blending ? averagePixel(document, x, y) : commonestPixel(document, x, y),

@@ -15,7 +15,7 @@ own tool tab, laid out however the owner likes, each working the one character t
 undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`,
 `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
 from the editor's Characters menu (its Tools section holds the Outliner, above the Character section's tool tabs and the
-Animation section), the Content menu (Color Wheel, beside Layers) or the Textures menu (Texture Maps), and restored by
+Animation section), the Content menu (Color Wheel, beside Layers) or the Textures menu (Maps), and restored by
 layouts like any other.
 
 | Window | Context | Shows |
@@ -27,7 +27,7 @@ layouts like any other.
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
 | Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows` |
 | Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), then Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) |
-| Texture Maps | `TextureMapsContext` | every map of the texture painted (`CharacterEditorManager.buildMapRows`), the one painted selected |
+| Maps | `editor.runtime.maps.MapsContext` | the maps of the texture painted while a character tab or the UV Editor was worked in last (`MapsProvider`, `CharacterEditorManager.buildMapRows`): the one painted selected, its settings, Generate and Clear |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
 | Animation Timeline | `AnimationTimelineContext` | transport, summary track and a dope sheet lane per bone |
 | Properties | `PropertiesContext` | the value rows of the character or animation tab worked in last |
@@ -331,22 +331,24 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
 - **Values.** The Layers tab picks the layer painted and shows or hides each above the base; the Properties tab names
   it and holds its Opacity; the colour lives in the Color Wheel tab (Hue, Saturation and
   Brightness, `CHARACTER_PAINT_KEY_HSB`, a grey keeping the hue last chosen in `CharacterPaintBranch.getHue`; Red,
-  Green and Blue, `CHARACTER_PAINT_KEY_COLOR`) and the map painted is picked in the Texture Maps tab
+  Green and Blue, `CHARACTER_PAINT_KEY_COLOR`, which work with no character open, since the Image Editor paints with
+  the same colour) and the map painted is picked in the Maps tab
   (`CHARACTER_PAINT_KEY_MAP_ITEM`, `CharacterPaintBranch.setMapIndex`), every key read and written through
   `CharacterPaintPropertyBranch` and listed by `CharacterPaintRowBranch`; Add Layer and Remove Layer are the canvas's
   tool actions. Save (File) writes every
   changed map flat into its image, Revert puts the atlas back as the images hold it, Undo and Redo (Edit) step the
   paint history in the Paint tab. Painted maps are the owner's art: never catalogue them.
-- **Generate Maps** (File menu, `FileMenuAction.GENERATE_MAPS`, Paint tab only; as Materialize or Bitmap2Material
-  generate maps): `GenerateMapsDialogBranch` opens a dialog over the window on the albedo of the part painted (layers
-  and all), listing every `MapGenerateOption` (height detail, softness, contrast and Dark Is High; normal strength;
-  occlusion strength and radius; roughness and its variation; metallic; which maps are written) beside a preview
-  worked out at `MAP_GENERATE_PREVIEW_SIZE` whenever a setting moves (`CharacterMapBranch.renderPreview`): the result
-  lit through the generated normal and occlusion, or any one map. `MapGenerateUtility` holds the image work
-  (luminance, a high-pass height, Sobel normals with green up, occlusion from the height's hollows, roughness from the
-  darks; running box blurs, so any radius costs the same). Generate works every map out at the texture's own size and
-  paints each over its map's layer as one undo step (`CharacterPaintBranch.writeMap`), so Save writes and bakes them
-  and Undo takes each back; radii are in the texture's pixels and shrink with the preview.
+- **Maps** (the Maps tab, as Materialize or Bitmap2Material generate maps; the same tab and generators as the Image
+  Editor's, see `.claude/docs/ImageEditorPipeline.md`): the texture's maps are `CHARACTER_PAINT_IMAGE_MAPS`, the
+  `ImageMap`s its aliases fill. Picking one makes it the map painted; below it are that map's own settings
+  (`MapGenerateOption`, each map its own copy per texture for the session, `CharacterMapBranch.getSettings`), then
+  Generate, which works the map out of the albedo as painted (layers and all) through `ImageManager.generateMap` at the
+  texture's own size, and Clear, which lays the alias's default back; each paints over the map's layer as one undo step
+  (`CharacterPaintBranch.writeMap`), so Save writes and bakes it and Undo takes it back. Keys:
+  `CHARACTER_PAINT_KEY_MAP_SETTING`, `_GENERATE`, `_CLEAR` in `CharacterPaintPropertyBranch`; rows through
+  `MapRowUtility`, shared with the Image Editor.
+- **One layered model.** `CharacterPaintCanvasStruct` extends `ImageLayerStackStruct`, the Image Editor's layered
+  image, and both are laid flat by `ImageManager.compositeLayers` (a canvas keeps its base's alpha, an image does not).
 - **Not industry standard:** layers above the base last the editor session and are flattened into the image on save;
   a painting tool keeps them in a layered project file (Substance, Krita) beside the exported maps.
 

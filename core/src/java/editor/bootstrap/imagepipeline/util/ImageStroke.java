@@ -13,10 +13,12 @@ public enum ImageStroke {
      * pixels as they stood before the stamp. Raise brightens every channel
      * under the brush and Lower darkens it, a little more with each stamp, so
      * on a height layer they build the ground up and wear it down; they only
-     * work where the image blends.
+     * work where the image blends. Erase wears a layer that holds alpha
+     * clear and lays the image's clear value down on one that does not.
      */
 
     PAINT(false),
+    ERASE(false),
     SMOOTH(false),
     SWIRL(true),
     SCATTER(true),

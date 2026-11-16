@@ -21,6 +21,7 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintCanv
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStampStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
+import editor.bootstrap.imagepipeline.util.ImageColorUtility;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.EditorSetting;
 import engine.assets.image.Pixmap;
@@ -244,29 +245,7 @@ class CharacterPaintBranch extends BranchPackage {
     // A rectangle of the canvas laid flat, each layer shown over the base by its alpha and opacity, and queued for
     // preview
     private void recomposite(CharacterPaintCanvasStruct canvas, int minX, int minY, int maxX, int maxY) {
-
-        Pixmap composite = canvas.getComposite();
-
-        for (int y = minY; y <= maxY; y++)
-            for (int x = minX; x <= maxX; x++) {
-
-                int flat = canvas.getLayer(0).getPixmap().getPixel(x, y);
-
-                for (int l = 1; l < canvas.getLayerCount(); l++) {
-
-                    if (!canvas.isLayerVisible(l))
-                        continue;
-
-                    int over = canvas.getLayer(l).getPixmap().getPixel(x, y);
-                    float share = (over & EngineSetting.PACKED_COLOR_CHANNEL_MASK)
-                            / EngineSetting.COLOR_CHANNEL_BYTE_MAX * canvas.getOpacity(l);
-
-                    flat = mixColor(flat, over | EngineSetting.PACKED_COLOR_CHANNEL_MASK, share, false);
-                }
-
-                composite.drawPixel(x, y, flat);
-            }
-
+        imageManager.compositeLayers(canvas, minX, minY, maxX, maxY);
         upload(canvas);
     }
 
@@ -549,7 +528,7 @@ class CharacterPaintBranch extends BranchPackage {
         int picked = canvas.getComposite().getPixel(x, y);
 
         for (int channel = 0; channel < color.length; channel++)
-            color[channel] = toChannel(picked, channel) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+            color[channel] = ImageColorUtility.toChannel(picked, channel) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
 
         characterEditorManager.notifyChanged();
     }
@@ -648,10 +627,10 @@ class CharacterPaintBranch extends BranchPackage {
         boolean base = canvas.getActiveLayer() == 0;
         int after = switch (tool) {
             case ERASE -> base
-                    ? mixColor(before, canvas.getDefaultColor(), amount, false)
-                    : mixColor(before, before & ~EngineSetting.PACKED_COLOR_CHANNEL_MASK, amount, true);
-            case SMOOTH -> mixColor(before, averageTexel(layer, x, y), amount, !base);
-            default -> mixColor(before, toRGBA(), amount, !base);
+                    ? ImageColorUtility.mix(before, canvas.getDefaultColor(), amount, false)
+                    : ImageColorUtility.mix(before, before & ~EngineSetting.PACKED_COLOR_CHANNEL_MASK, amount, true);
+            case SMOOTH -> ImageColorUtility.mix(before, averageTexel(layer, x, y), amount, !base);
+            default -> ImageColorUtility.mix(before, toRGBA(), amount, !base);
         };
 
         imageManager.paintPixel(layer, x, y, after);
@@ -671,7 +650,7 @@ class CharacterPaintBranch extends BranchPackage {
                 int sample = imageManager.pickColor(layer, x + dx, y + dy);
 
                 for (int channel = 0; channel < sums.length; channel++)
-                    sums[channel] += toChannel(sample, channel);
+                    sums[channel] += ImageColorUtility.toChannel(sample, channel);
 
                 count++;
             }
@@ -682,27 +661,6 @@ class CharacterPaintBranch extends BranchPackage {
             average |= Math.round(sums[channel] / (float) count) << toShift(channel);
 
         return average;
-    }
-
-    // Two RGBA8888 colours mixed a share of the way, alpha only where it is asked for
-    private int mixColor(int from, int to, float share, boolean alpha) {
-
-        int mixed = 0;
-        float t = Math.clamp(share, 0f, 1f);
-
-        for (int channel = 0; channel < EngineSetting.COLOR_CHANNEL_COUNT; channel++) {
-
-            int a = toChannel(from, channel);
-            int b = channel == EngineSetting.COLOR_CHANNEL_COUNT - 1 && !alpha ? a : toChannel(to, channel);
-
-            mixed |= Math.round(a + (b - a) * t) << toShift(channel);
-        }
-
-        return mixed;
-    }
-
-    private int toChannel(int rgba, int channel) {
-        return (rgba >>> toShift(channel)) & EngineSetting.PACKED_COLOR_CHANNEL_MASK;
     }
 
     private int toShift(int channel) {

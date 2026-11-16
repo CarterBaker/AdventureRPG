@@ -1,6 +1,7 @@
 package editor.bootstrap.propertiespipeline.propertiesmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.propertiespipeline.properties.MapsProvider;
 import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
@@ -19,7 +20,8 @@ public class PropertiesManager extends ManagerPackage {
      * it lives, through openWindow() and closeWindow(), the one pair that
      * owns them; a closed target leaves the tab with none until another is
      * focused. The Character Outliner follows the same way the window worked
-     * in last among those that also list outliner rows.
+     * in last among those that also list outliner rows, and the Maps tab the
+     * one among those whose image carries maps.
      */
 
     // Internal
@@ -28,6 +30,7 @@ public class PropertiesManager extends ManagerPackage {
     // Windows
     private Object2ObjectOpenHashMap<WindowInstance, PropertiesProvider> window2Provider;
     private Object2ObjectOpenHashMap<WindowInstance, OutlinerProvider> window2Outliner;
+    private Object2ObjectOpenHashMap<WindowInstance, MapsProvider> window2Maps;
 
     // Base \\
 
@@ -37,6 +40,7 @@ public class PropertiesManager extends ManagerPackage {
         // Windows
         this.window2Provider = new Object2ObjectOpenHashMap<>();
         this.window2Outliner = new Object2ObjectOpenHashMap<>();
+        this.window2Maps = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -52,11 +56,15 @@ public class PropertiesManager extends ManagerPackage {
 
         if (provider instanceof OutlinerProvider outliner)
             window2Outliner.put(window, outliner);
+
+        if (provider instanceof MapsProvider maps)
+            window2Maps.put(window, maps);
     }
 
     public void closeWindow(WindowInstance window) {
         window2Provider.remove(window);
         window2Outliner.remove(window);
+        window2Maps.remove(window);
     }
 
     // Accessible \\
@@ -75,5 +83,11 @@ public class PropertiesManager extends ManagerPackage {
         WindowInstance targetWindow = activeWindowManager.findRecent(window2Outliner);
 
         return targetWindow != null ? window2Outliner.get(targetWindow) : null;
+    }
+
+    // What the window worked in last whose image carries maps shows in the Maps tab, null before any is
+    public MapsProvider getMaps() {
+        WindowInstance targetWindow = activeWindowManager.findRecent(window2Maps);
+        return targetWindow != null ? window2Maps.get(targetWindow) : null;
     }
 }

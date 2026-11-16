@@ -11,7 +11,8 @@ still applies in full.
 Every data file the engine reads or writes is an **`.arpg` file**: all content under `assets/` (blocks, biomes,
 meshes, menus, materials, editor schemas, ...), world and sprite companions beside their PNGs, and the user files
 under `Documents/My Games/AdventureRPG/` (`Settings.arpg`, `EditorSettings.arpg`, `Saves/Characters/*.arpg`,
-`bin/editorLayout/*.arpg`). The engine ignores `.json` files entirely.
+`Images/*.arpg`, the Image Editor's layered images, `bin/editorLayout/*.arpg`). The engine ignores `.json` files
+entirely.
 
 ## The file on disk
 

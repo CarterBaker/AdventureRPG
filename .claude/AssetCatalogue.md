@@ -401,6 +401,13 @@ One line per session that changed this file: the date, what was added or removed
   their bones, weights, morphs, UVs, layers, plug and sockets), `schemas/Stamps.arpg` and `menus/editor/Stamps.arpg`
   (the Stamps tab); regenerated `menus/editor/EditorWindow.arpg` (Stamps under Characters, Save Selection As Stamp
   under File).
+- 2026-11-16: Image Editor. Added the sprites `menus/NewLayerIcon` and `menus/DeleteLayerIcon` (the Layers tab's
+  New Layer and Delete Layer icons), the menus `menus/editor/ImageEditor.arpg` (the Image Editor's row templates) and
+  `menus/editor/NewImageDialog.arpg` (File, New: name, size, background), the shader `editor/imageeditor/ImageEditorShader`
+  (`.fsh`, `.arpg`), the material `editor/ImageEditorMaterial.arpg` and `shortcuts/ImageEditor.arpg`; regenerated
+  `menus/editor/Layers.arpg` (the icon footer) and `menus/editor/EditorWindow.arpg` (Image Editor and Maps under
+  Textures, no Generate Maps in the File menu); deleted `menus/editor/GenerateMapsDialog.arpg` (Generate moved to the
+  Maps tab).
 - 2026-11-16: Stamp placement. Regenerated `menus/editor/EditorWindow.arpg` (the Character Stamp tab under
   Characters), `shortcuts/Tools.arpg` (`[` and `]` size the brush or scale the part), `shortcuts/CharacterEditor.arpg`
   (`,` and `.` twist the part) and `schemas/Shortcuts.arpg` (the character stamp canvas and the stamp tool).
@@ -412,7 +419,7 @@ One line per session that changed this file: the date, what was added or removed
 
 ---
 
-## Textures and Sprites (2427 files)
+## Textures and Sprites (2429 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -424,6 +431,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `CloseIcon`
 - `CursorStretchIconHorizontal`
 - `CursorStretchIconVertical`
+- `DeleteLayerIcon`
 - `DialFace`
 - `DialNeedle`
 - `DialRing`
@@ -433,6 +441,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `LoopIcon`
 - `MaximizeIcon`
 - `MinimizeIcon`
+- `NewLayerIcon`
 - `Panel`
 - `PanelHeader`
 - `PanelOutline`
@@ -1500,7 +1509,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (179 files)
+## Shaders (180 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1549,6 +1558,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/editor/treeviewer/`
 
 `TreeViewerBarkShader.fsh`, `TreeViewerLeafShader.fsh`, `TreeViewerLight.glsl`
+
+### `assets/shaders/editor/imageeditor/`
+
+`ImageEditorShader.fsh`
 
 ### `assets/shaders/editor/uveditor/`
 
@@ -1824,7 +1837,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3799 files)
+## Data Files (3803 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2598,7 +2611,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `CharacterMeshOverlayMaterial.arpg`, `CharacterViewCharacterMaterial.arpg`, `CharacterViewGridMaterial.arpg`,
 `CharacterViewMarkerMaterial.arpg`, `CharacterViewMarkerSelectedMaterial.arpg`, `ItemEditorCursorEraseMaterial.arpg`,
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
-`ItemEditorModelMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
+`ItemEditorModelMaterial.arpg`, `ImageEditorMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
 `ShipViewerMaterial.arpg`, `TextureViewerAtlasMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
 `TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`, `UVEditorOverlayMaterial.arpg`,
 `WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
@@ -2664,8 +2677,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
-`GenerateMapsDialog.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
-`NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
+`NewImageDialog.arpg`, `NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
 `TabFrame.arpg`, `TextureViewer.arpg`,
 `Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
@@ -2898,6 +2911,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `TreeViewerBarkShader.arpg`, `TreeViewerLeafShader.arpg`
 
+### `assets/shaders/editor/imageeditor/`
+
+`ImageEditorShader.arpg`
+
 ### `assets/shaders/editor/uveditor/`
 
 `UVEditorBackgroundShader.arpg`, `UVEditorOverlayShader.arpg`
@@ -3000,7 +3017,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/shortcuts/`
 
-`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ImageEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `RecorderBin.arpg`,
 `RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `UVEditor.arpg`, `WorldEditor.arpg`
 

@@ -148,12 +148,12 @@ public class UVEditorRenderSystem extends SystemPackage {
         syncOverlay();
 
         backgroundModel.getMaterial().setUniform(
-                UVEditorSetting.UNIFORM_UV_TO_CLIP, uvEditorViewSystem.getUVToClip());
+                EditorSetting.FLAT_VIEW_UNIFORM_UV_TO_CLIP, uvEditorViewSystem.getUVToClip());
         renderManager.pushRenderCall(backgroundModel, sceneFbo, UVEditorSetting.DEPTH_BACKGROUND, window);
 
         if (overlayModel != null && !indices.isEmpty()) {
             overlayModel.getMaterial().setUniform(
-                    UVEditorSetting.UNIFORM_UV_TO_CLIP, uvEditorViewSystem.getUVToClip());
+                    EditorSetting.FLAT_VIEW_UNIFORM_UV_TO_CLIP, uvEditorViewSystem.getUVToClip());
             overlayModel.getMaterial().setUniform(UVEditorSetting.UNIFORM_VIEW_SIZE, viewSize);
             renderManager.pushRenderCall(overlayModel, sceneFbo, UVEditorSetting.DEPTH_OVERLAY, window);
         }

@@ -1,6 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintCanvasStruct;
+import editor.bootstrap.imagepipeline.util.MapRowUtility;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
@@ -14,20 +15,23 @@ class CharacterPaintRowBranch extends BranchPackage {
      * painted and the layer painted, picked in the Layers tab, with its
      * opacity above the base; in the
      * Color Wheel its hue, saturation and brightness and its red, green and
-     * blue, each a slider across 0 to 1; in Texture Maps every map of the
-     * texture, the one painted selected. Every value is read through
+     * blue, each a slider across 0 to 1; in the Maps tab every map of the
+     * texture, the one painted selected, with its settings, Generate and
+     * Clear below it. Every value is read through
      * CharacterPaintPropertyBranch, the same path that edits it. A part with
      * no texture lists only why.
      */
 
     // Internal
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
+    private CharacterMapBranch characterMapBranch;
 
     // Base \\
 
     @Override
     protected void get() {
         this.characterPaintPropertyBranch = get(CharacterPaintPropertyBranch.class);
+        this.characterMapBranch = get(CharacterMapBranch.class);
     }
 
     // Properties \\
@@ -85,7 +89,7 @@ class CharacterPaintRowBranch extends BranchPackage {
         }
     }
 
-    // Every map of the texture painted, as Texture Maps lists them, the one painted selected
+    // Every map of the texture painted, as the Maps tab lists them, the one painted selected, and its settings
     void buildMapRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         CharacterPaintCanvasStruct canvas = characterPaintPropertyBranch.getCanvas();
@@ -97,11 +101,18 @@ class CharacterPaintRowBranch extends BranchPackage {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_PAINT_HEADER_MAPS
                 + CharacterViewUtility.toResourceLabel(canvas.getTextureName())));
-
-        for (int map = 0; map < EditorSetting.CHARACTER_PAINT_MAP_LABELS.length; map++)
-            rows.add(CharacterViewRowStruct.item(
-                    CharacterViewUtility.toKey(EditorSetting.CHARACTER_PAINT_KEY_MAP_ITEM, map),
-                    EditorSetting.CHARACTER_PAINT_MAP_LABELS[map],
-                    map == canvas.getMapIndex()));
+        MapRowUtility.addMapItems(
+                rows,
+                EditorSetting.CHARACTER_PAINT_KEY_MAP_ITEM,
+                EditorSetting.CHARACTER_PAINT_IMAGE_MAPS,
+                characterMapBranch.getPaintedMap(),
+                0L);
+        MapRowUtility.addSettingRows(
+                rows,
+                characterMapBranch.getPaintedMap(),
+                characterMapBranch.getSettings(canvas.getTextureName()),
+                EditorSetting.CHARACTER_PAINT_KEY_MAP_SETTING,
+                EditorSetting.CHARACTER_PAINT_KEY_MAP_GENERATE,
+                EditorSetting.CHARACTER_PAINT_KEY_MAP_CLEAR);
     }
 }

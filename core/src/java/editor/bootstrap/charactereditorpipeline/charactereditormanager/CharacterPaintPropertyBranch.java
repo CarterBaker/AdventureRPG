@@ -1,6 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintCanvasStruct;
+import editor.bootstrap.imagepipeline.util.MapGenerateOption;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.graphics.color.Color;
@@ -15,13 +16,15 @@ class CharacterPaintPropertyBranch extends BranchPackage {
      * opacity of the layer painted on the canvas of the active part's
      * texture, the layer itself picked in the Layers tab, and the colour's red, green and blue and its hue, saturation
      * and brightness (a grey keeps the hue last chosen, as a colour wheel
-     * does); a map picked from the list; the actions add and remove layers.
-     * Nothing here acts while a stroke is under way.
+     * does); a map picked from the list, the settings of the map painted and
+     * its Generate and Clear in the Maps tab; the actions add and remove
+     * layers. Nothing here acts while a stroke is under way.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private CharacterPaintBranch characterPaintBranch;
+    private CharacterMapBranch characterMapBranch;
 
     // Scratch
     private Color colorScratch;
@@ -37,6 +40,7 @@ class CharacterPaintPropertyBranch extends BranchPackage {
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterPaintBranch = get(CharacterPaintBranch.class);
+        this.characterMapBranch = get(CharacterMapBranch.class);
     }
 
     // Keys \\
@@ -47,6 +51,9 @@ class CharacterPaintPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_PAINT_KEY_COLOR,
                     EditorSetting.CHARACTER_PAINT_KEY_HSB,
                     EditorSetting.CHARACTER_PAINT_KEY_MAP_ITEM,
+                    EditorSetting.CHARACTER_PAINT_KEY_MAP_SETTING,
+                    EditorSetting.CHARACTER_PAINT_KEY_MAP_GENERATE,
+                    EditorSetting.CHARACTER_PAINT_KEY_MAP_CLEAR,
                     EditorSetting.CHARACTER_PAINT_KEY_LAYER_ADD,
                     EditorSetting.CHARACTER_PAINT_KEY_LAYER_REMOVE -> true;
             default -> false;
@@ -67,6 +74,10 @@ class CharacterPaintPropertyBranch extends BranchPackage {
                     characterPaintBranch.getColor(CharacterViewUtility.getKeyIndex(key)));
             case EditorSetting.CHARACTER_PAINT_KEY_HSB -> CharacterViewUtility.formatNumber(
                     getHSB(CharacterViewUtility.getKeyIndex(key)));
+            case EditorSetting.CHARACTER_PAINT_KEY_MAP_SETTING -> canvas != null
+                    ? CharacterViewUtility.formatNumber(toOption(key).get(
+                            characterMapBranch.getSettings(canvas.getTextureName())))
+                    : "";
             default -> "";
         };
     }
@@ -98,7 +109,9 @@ class CharacterPaintPropertyBranch extends BranchPackage {
         return isIdle() && CharacterViewUtility.isNumber(text)
                 && (keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_COLOR)
                         || keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_HSB)
-                        || keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_OPACITY) && getCanvas() != null);
+                        || (keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_OPACITY)
+                                || keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_MAP_SETTING))
+                                && getCanvas() != null);
     }
 
     void setValue(String key, String text) {
@@ -126,10 +139,13 @@ class CharacterPaintPropertyBranch extends BranchPackage {
         else if (keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_OPACITY) && canvas != null)
             write(key, canvas.getOpacity(canvas.getActiveLayer())
                     + direction * EditorSetting.CHARACTER_PAINT_OPACITY_STEP);
+        else if (keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_MAP_SETTING) && canvas != null)
+            write(key, toOption(key).get(characterMapBranch.getSettings(canvas.getTextureName()))
+                    + direction * toOption(key).getStep());
     }
 
-    // A colour channel, a hue, saturation or brightness, or the layer's opacity, through the one setter its slider,
-    // steps and typed value share; the hue wraps round the wheel
+    // A colour channel, a hue, saturation or brightness, the layer's opacity or a map's setting, through the one
+    // setter its slider, steps and typed value share; the hue wraps round the wheel
     private void write(String key, float value) {
 
         String keyName = CharacterViewUtility.getKeyName(key);
@@ -139,6 +155,8 @@ class CharacterPaintPropertyBranch extends BranchPackage {
             characterPaintBranch.setColor(index, value);
         else if (keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_HSB))
             setHSB(index == 0 ? value : getHSB(0), index == 1 ? value : getHSB(1), index == 2 ? value : getHSB(2));
+        else if (keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_MAP_SETTING))
+            characterMapBranch.setValue(getCanvas().getTextureName(), toOption(key), value);
         else
             characterPaintBranch.setOpacity(getCanvas(), value);
     }
@@ -184,6 +202,8 @@ class CharacterPaintPropertyBranch extends BranchPackage {
         switch (CharacterViewUtility.getKeyName(key)) {
             case EditorSetting.CHARACTER_PAINT_KEY_LAYER_ADD -> characterPaintBranch.addLayer(canvas);
             case EditorSetting.CHARACTER_PAINT_KEY_LAYER_REMOVE -> characterPaintBranch.removeLayer(canvas);
+            case EditorSetting.CHARACTER_PAINT_KEY_MAP_GENERATE -> characterMapBranch.generate(canvas.getTextureName());
+            case EditorSetting.CHARACTER_PAINT_KEY_MAP_CLEAR -> characterMapBranch.clear(canvas.getTextureName());
             default -> {
             }
         }
@@ -194,6 +214,10 @@ class CharacterPaintPropertyBranch extends BranchPackage {
     // The canvas of the active part's texture under the map painted, null with no part or texture open
     CharacterPaintCanvasStruct getCanvas() {
         return characterPaintBranch.resolveActiveCanvas(characterEditorManager.getActiveMeshDocument());
+    }
+
+    private MapGenerateOption toOption(String key) {
+        return MapGenerateOption.VALUES[CharacterViewUtility.getKeyIndex(key)];
     }
 
     private boolean isIdle() {

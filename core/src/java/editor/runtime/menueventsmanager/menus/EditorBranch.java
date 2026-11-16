@@ -94,8 +94,12 @@ public class EditorBranch extends BranchPackage {
 
     // Textures Dropdown \\
 
-    public void openTextureMaps(WindowInstance window) {
-        tabManager.openTextureMaps(window.getGLWindow());
+    public void openImageEditor(WindowInstance window) {
+        tabManager.openImageEditor(window.getGLWindow());
+    }
+
+    public void openMaps(WindowInstance window) {
+        tabManager.openMaps(window.getGLWindow());
     }
 
     // Characters Dropdown \\

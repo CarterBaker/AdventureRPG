@@ -14,8 +14,11 @@ public class ImageBrushStruct extends StructPackage {
      * how far in degrees a swirl turns there, and whether the image's colors
      * can blend. On an image whose colors name things, as a biome map's do,
      * every stroke only ever writes a color already there or the brush's own,
-     * dithering where it would fade. Owned and kept current by the tool that
-     * paints with it.
+     * dithering where it would fade. On a layer that holds alpha, as an
+     * image editor's do, paint is laid over what is there by its strength and
+     * erase wears the alpha away; elsewhere erase lays the brush's color, the
+     * image's clear value, down like paint. Owned and kept current by the
+     * tool that paints with it.
      */
 
     // Brush
@@ -26,6 +29,7 @@ public class ImageBrushStruct extends StructPackage {
     private float strength;
     private float twist;
     private boolean blending;
+    private boolean transparent;
 
     // Management \\
 
@@ -45,7 +49,12 @@ public class ImageBrushStruct extends StructPackage {
         this.blending = blending;
     }
 
-    // The color a painting stroke lays down; no other stroke reads it
+    // Whether the image painted holds alpha, so paint lays over it and erase clears it
+    public void setTransparent(boolean transparent) {
+        this.transparent = transparent;
+    }
+
+    // The color a painting or erasing stroke lays down; no other stroke reads it
     public void setColor(int color) {
         this.color = color;
     }
@@ -78,5 +87,9 @@ public class ImageBrushStruct extends StructPackage {
 
     public boolean isBlending() {
         return blending;
+    }
+
+    public boolean isTransparent() {
+        return transparent;
     }
 }

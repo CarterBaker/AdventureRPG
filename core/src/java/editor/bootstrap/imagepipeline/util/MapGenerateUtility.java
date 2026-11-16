@@ -1,21 +1,31 @@
 package editor.bootstrap.imagepipeline.util;
 
+import editor.bootstrap.imagepipeline.imagemap.MapGenerateScratchStruct;
+import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
 public class MapGenerateUtility extends EngineUtility {
 
     /*
-     * Turns an albedo into its material maps the way a map generator does,
-     * on float images held by the caller, rows top first: the height is the
+     * Turns an image into its material maps the way a map generator does,
+     * on float images held in a scratch, rows top first: the height is the
      * image's brightness with the forms larger than the detail size taken
      * away (a high pass), softened, stretched by its contrast and turned over
-     * when dark is high; the normal is the height's slope (Sobel) bent by the
-     * strength, written with green up as tangent-space maps are; occlusion
-     * darkens where the height sits below its blurred surroundings, its
-     * hollows; roughness rises from its base where the image is dark;
-     * metallic is one value. Blurs are two passes of a running box, so their
-     * cost holds whatever the radius, and edges clamp. Nothing allocates.
+     * when dark is high; displacement is the height about its mid level and
+     * bump the finest detail alone; the normal is the height's slope (Sobel)
+     * bent by the strength, green up for OpenGL and down for DirectX;
+     * occlusion and cavity darken where the height sits below its blurred
+     * surroundings, widely and closely; curvature is the height's Laplacian,
+     * ridges bright and creases dark; thickness is bright where the
+     * surroundings sit low; roughness rises from its base where the image is
+     * dark and glossiness is its inverse; metallic and tint are one value;
+     * the specular colour runs from the dielectric level to the image's
+     * colour as metallic rises and diffuse loses what metal takes; emissive
+     * keeps the image's colour where it is brighter than the threshold; and
+     * opacity is the image's alpha or brightness, cut when asked. Blurs are
+     * two passes of a running box, so their cost holds whatever the radius,
+     * and edges clamp. Nothing allocates.
      */
 
     // Height \\
@@ -162,6 +172,233 @@ public class MapGenerateUtility extends EngineUtility {
                 sum += in[Math.min(y + radius + 1, rows - 1) * width + x] - in[Math.max(y - radius, 0) * width + x];
             }
         }
+    }
+
+    // Generators \\
+
+    public static void generateNormal(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        writeNormal(scratch, settings, out, false);
+    }
+
+    public static void generateNormalDirectX(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        writeNormal(scratch, settings, out, true);
+    }
+
+    private static void writeNormal(
+            MapGenerateScratchStruct scratch,
+            float[] settings,
+            int[] out,
+            boolean greenDown) {
+
+        int width = scratch.getWidth();
+        int rows = scratch.getRows();
+        float[] normal = scratch.getNormal();
+        float strength = MapGenerateOption.NORMAL_STRENGTH.get(settings);
+
+        resolveHeight(scratch, settings);
+
+        for (int y = 0; y < rows; y++)
+            for (int x = 0; x < width; x++) {
+                resolveNormal(scratch.getHeight(), width, rows, x, y, strength, normal);
+                out[y * width + x] = toColor(normal[0], greenDown ? 1f - normal[1] : normal[1], normal[2]);
+            }
+    }
+
+    public static void generateHeight(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        resolveHeight(scratch, settings);
+        writeGreys(scratch.getHeight(), out, scratch.getCount());
+    }
+
+    public static void generateDisplacement(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+
+        float[] height = scratch.getHeight();
+        float offset = MapGenerateOption.MID_LEVEL.get(settings) - 0.5f;
+
+        resolveHeight(scratch, settings);
+
+        for (int i = 0; i < scratch.getCount(); i++)
+            out[i] = toGrey(height[i] + offset);
+    }
+
+    public static void generateBump(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+
+        float[] luminance = scratch.getLuminance();
+        float[] work = scratch.getWork();
+        float contrast = MapGenerateOption.HEIGHT_CONTRAST.get(settings);
+        boolean invert = MapGenerateOption.HEIGHT_INVERT.isOn(settings);
+
+        blur(luminance, work, scratch.getScratch(), scratch.getWidth(), scratch.getRows(),
+                Math.round(MapGenerateOption.BUMP_DETAIL.get(settings)));
+
+        for (int i = 0; i < scratch.getCount(); i++) {
+            float value = (luminance[i] - work[i]) * contrast + 0.5f;
+            out[i] = toGrey(invert ? 1f - value : value);
+        }
+    }
+
+    public static void generateOcclusion(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        writeOcclusion(scratch, settings, out, MapGenerateOption.OCCLUSION_RADIUS.get(settings));
+    }
+
+    public static void generateCavity(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        writeOcclusion(scratch, settings, out, MapGenerateOption.CAVITY_RADIUS.get(settings));
+    }
+
+    private static void writeOcclusion(
+            MapGenerateScratchStruct scratch,
+            float[] settings,
+            int[] out,
+            float radius) {
+
+        resolveHeight(scratch, settings);
+        resolveOcclusion(
+                scratch.getHeight(), scratch.getWork(), scratch.getScratch(), scratch.getWidth(), scratch.getRows(),
+                Math.max(1, Math.round(radius)), MapGenerateOption.OCCLUSION_STRENGTH.get(settings));
+        writeGreys(scratch.getWork(), out, scratch.getCount());
+    }
+
+    public static void generateCurvature(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+
+        int width = scratch.getWidth();
+        int rows = scratch.getRows();
+        float[] height = scratch.getHeight();
+        float strength = MapGenerateOption.CURVATURE_STRENGTH.get(settings);
+
+        resolveHeight(scratch, settings);
+
+        for (int y = 0; y < rows; y++)
+            for (int x = 0; x < width; x++) {
+
+                float around = sample(height, width, rows, x - 1, y) + sample(height, width, rows, x + 1, y)
+                        + sample(height, width, rows, x, y - 1) + sample(height, width, rows, x, y + 1);
+
+                out[y * width + x] = toGrey(0.5f + (height[y * width + x] * 4f - around) * strength);
+            }
+    }
+
+    public static void generateThickness(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+
+        float[] work = scratch.getWork();
+
+        resolveHeight(scratch, settings);
+        blur(scratch.getHeight(), work, scratch.getScratch(), scratch.getWidth(), scratch.getRows(),
+                Math.round(MapGenerateOption.THICKNESS_RADIUS.get(settings)));
+
+        for (int i = 0; i < scratch.getCount(); i++)
+            out[i] = toGrey(1f - work[i]);
+    }
+
+    public static void generateRoughness(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        writeRoughness(scratch, settings, out, false);
+    }
+
+    public static void generateGlossiness(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        writeRoughness(scratch, settings, out, true);
+    }
+
+    private static void writeRoughness(
+            MapGenerateScratchStruct scratch,
+            float[] settings,
+            int[] out,
+            boolean glossy) {
+
+        float[] luminance = scratch.getLuminance();
+        float base = MapGenerateOption.ROUGHNESS_BASE.get(settings);
+        float variation = MapGenerateOption.ROUGHNESS_VARIATION.get(settings);
+
+        for (int i = 0; i < scratch.getCount(); i++) {
+            float roughness = resolveRoughness(luminance[i], base, variation);
+            out[i] = toGrey(glossy ? 1f - roughness : roughness);
+        }
+    }
+
+    public static void generateMetallic(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        writeLevel(MapGenerateOption.METALLIC.get(settings), out, scratch.getCount());
+    }
+
+    public static void generateTint(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+        writeLevel(MapGenerateOption.TINT_AMOUNT.get(settings), out, scratch.getCount());
+    }
+
+    // The dielectric level, at most the strongest non-metal reflects, carried to the image's colour by metallic
+    public static void generateSpecular(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+
+        int[] pixels = scratch.getPixels();
+        float dielectric = MapGenerateOption.SPECULAR_LEVEL.get(settings) * EditorSetting.MAP_GENERATE_MAX_DIELECTRIC_SPECULAR;
+        float metallic = MapGenerateOption.METALLIC.get(settings);
+
+        for (int i = 0; i < scratch.getCount(); i++)
+            out[i] = toColor(
+                    dielectric + (toChannel(pixels[i], 0) - dielectric) * metallic,
+                    dielectric + (toChannel(pixels[i], 1) - dielectric) * metallic,
+                    dielectric + (toChannel(pixels[i], 2) - dielectric) * metallic);
+    }
+
+    public static void generateDiffuse(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+
+        int[] pixels = scratch.getPixels();
+        float kept = 1f - MapGenerateOption.METALLIC.get(settings);
+
+        for (int i = 0; i < scratch.getCount(); i++)
+            out[i] = toColor(
+                    toChannel(pixels[i], 0) * kept, toChannel(pixels[i], 1) * kept, toChannel(pixels[i], 2) * kept);
+    }
+
+    public static void generateEmissive(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+
+        int[] pixels = scratch.getPixels();
+        float[] luminance = scratch.getLuminance();
+        float threshold = MapGenerateOption.GLOW_THRESHOLD.get(settings);
+        float softness = Math.max(MapGenerateOption.GLOW_SOFTNESS.get(settings), EditorSetting.MAP_GENERATE_MIN_GLOW_SOFTNESS);
+        float strength = MapGenerateOption.GLOW_STRENGTH.get(settings);
+
+        for (int i = 0; i < scratch.getCount(); i++) {
+
+            float t = Math.clamp((luminance[i] - threshold + softness) / (softness * 2f), 0f, 1f);
+            float glow = t * t * (3f - 2f * t) * strength;
+
+            out[i] = toColor(
+                    toChannel(pixels[i], 0) * glow, toChannel(pixels[i], 1) * glow, toChannel(pixels[i], 2) * glow);
+        }
+    }
+
+    public static void generateOpacity(MapGenerateScratchStruct scratch, float[] settings, int[] out) {
+
+        int[] pixels = scratch.getPixels();
+        float[] luminance = scratch.getLuminance();
+        boolean fromBrightness = MapGenerateOption.OPACITY_FROM_BRIGHTNESS.isOn(settings);
+        float cutoff = MapGenerateOption.OPACITY_CUTOFF.get(settings);
+
+        for (int i = 0; i < scratch.getCount(); i++) {
+
+            float opacity = fromBrightness ? luminance[i] : toChannel(pixels[i], EngineSetting.COLOR_CHANNEL_COUNT - 1);
+
+            out[i] = toGrey(cutoff > 0f ? (opacity >= cutoff ? 1f : 0f) : opacity);
+        }
+    }
+
+    // The height of the scratch's image by a map's settings
+    private static void resolveHeight(MapGenerateScratchStruct scratch, float[] settings) {
+        resolveHeight(
+                scratch.getLuminance(), scratch.getHeight(), scratch.getBlurred(), scratch.getScratch(),
+                scratch.getWidth(), scratch.getRows(),
+                Math.max(1, Math.round(MapGenerateOption.HEIGHT_DETAIL.get(settings))),
+                Math.round(MapGenerateOption.HEIGHT_SOFTNESS.get(settings)),
+                MapGenerateOption.HEIGHT_CONTRAST.get(settings),
+                MapGenerateOption.HEIGHT_INVERT.isOn(settings));
+    }
+
+    private static void writeGreys(float[] values, int[] out, int count) {
+        for (int i = 0; i < count; i++)
+            out[i] = toGrey(values[i]);
+    }
+
+    private static void writeLevel(float value, int[] out, int count) {
+
+        int grey = toGrey(value);
+
+        for (int i = 0; i < count; i++)
+            out[i] = grey;
     }
 
     // Utility \\

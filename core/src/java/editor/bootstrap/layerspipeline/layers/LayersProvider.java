@@ -11,7 +11,9 @@ public interface LayersProvider {
      * moves; a click on a layer makes it the one the window's tools work on,
      * a click on a group opens what the group holds, and a click on a
      * layer's eye shows or hides it in the window. The title names the
-     * window at the tab's head.
+     * window at the tab's head. A stack that takes new layers names the tool
+     * actions the tab's New Layer and Delete Layer icons run, the same keys
+     * its Tools tab actions carry; one that takes none names none.
      */
 
     int getLayerRevision();
@@ -23,4 +25,8 @@ public interface LayersProvider {
     void selectLayer(String layerKey);
 
     void toggleLayerVisible(String layerKey);
+
+    String getAddLayerKey();
+
+    String getRemoveLayerKey();
 }

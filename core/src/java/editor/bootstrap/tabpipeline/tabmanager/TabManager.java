@@ -36,8 +36,10 @@ import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
 import editor.runtime.hierarchy.HierarchyContext;
+import editor.runtime.imageeditor.ImageEditorContext;
 import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.layers.LayersContext;
+import editor.runtime.maps.MapsContext;
 import editor.runtime.notelibrary.NoteLibraryContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
@@ -54,7 +56,6 @@ import editor.runtime.shipviewer.ShipViewerContext;
 import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.soundlibrary.SoundLibraryContext;
 import editor.runtime.stamps.StampsContext;
-import editor.runtime.texturemaps.TextureMapsContext;
 import editor.runtime.textureviewer.TextureViewerContext;
 import editor.runtime.timeline.TimelineContext;
 import editor.runtime.tools.ToolsContext;
@@ -174,8 +175,12 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_COLOR_WHEEL, ColorWheelContext.class, osWindow);
     }
 
-    public TabHandle openTextureMaps(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_TEXTURE_MAPS, TextureMapsContext.class, osWindow);
+    public TabHandle openMaps(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_MAPS, MapsContext.class, osWindow);
+    }
+
+    public TabHandle openImageEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_IMAGE_EDITOR, ImageEditorContext.class, osWindow);
     }
 
     public TabHandle openItemEditor(WindowInstance osWindow) {

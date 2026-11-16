@@ -3,7 +3,7 @@ package editor.runtime;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.filemenupipeline.util.FileMenuAction;
-import editor.bootstrap.imagepipeline.util.MapGenerateOption;
+import editor.bootstrap.imagepipeline.util.ImageMap;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import engine.input.Buttons;
 import engine.root.EngineSetting;
@@ -188,7 +188,6 @@ public class EditorSetting {
             "edit_redo_label",
             "file_import_label",
             "file_export_label",
-            "file_generate_maps_label",
             "file_save_stamp_label" };
 
     // File Menu — each tool's actions, the methods its own keys and buttons run
@@ -202,7 +201,6 @@ public class EditorSetting {
             .with(FileMenuAction.REDO, "redo")
             .with(FileMenuAction.IMPORT_MODEL, "importModel")
             .with(FileMenuAction.EXPORT_MODEL, "exportModel")
-            .with(FileMenuAction.GENERATE_MAPS, "generateMaps")
             .with(FileMenuAction.SAVE_STAMP, "saveStamp");
     public static final FileMenuTableStruct FILE_MENU_ANIMATION = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.AnimationEditorBranch")
@@ -222,6 +220,16 @@ public class EditorSetting {
             "editor.runtime.menueventsmanager.menus.WorldEditorBranch")
             .with(FileMenuAction.SAVE, "saveImage")
             .with(FileMenuAction.REVERT, "reloadImage")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
+    public static final FileMenuTableStruct FILE_MENU_IMAGE_EDITOR = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.ImageEditorBranch")
+            .with(FileMenuAction.NEW, "newImage")
+            .with(FileMenuAction.DUPLICATE, "copyImage")
+            .with(FileMenuAction.SAVE, "saveImage")
+            .with(FileMenuAction.SAVE_ALL, "saveAllImages")
+            .with(FileMenuAction.REVERT, "revertImage")
+            .with(FileMenuAction.DELETE, "deleteImage")
             .with(FileMenuAction.UNDO, "undo")
             .with(FileMenuAction.REDO, "redo");
     public static final FileMenuTableStruct FILE_MENU_ITEM = new FileMenuTableStruct(
@@ -285,6 +293,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_COPY_SUFFIX = " as";
     public static final String DIALOG_TITLE_UNIQUE_PREFIX = "Unique ";
     public static final String DIALOG_TITLE_EDIT_VALUE = "Edit Value";
+    public static final String DIALOG_TITLE_NEW_IMAGE = "Name the New Image";
     public static final String DIALOG_TITLE_NEW_CLIP = "New Clip";
     public static final String DIALOG_TITLE_NEW_TREE = "New Animation Tree";
     public static final String DIALOG_TITLE_NEW_LAYER = "New Layer";
@@ -443,7 +452,8 @@ public class EditorSetting {
     public static final String TAB_TITLE_PROPERTIES = "Properties";
     public static final String TAB_TITLE_LAYERS = "Layers";
     public static final String TAB_TITLE_COLOR_WHEEL = "Color Wheel";
-    public static final String TAB_TITLE_TEXTURE_MAPS = "Texture Maps";
+    public static final String TAB_TITLE_MAPS = "Maps";
+    public static final String TAB_TITLE_IMAGE_EDITOR = "Image Editor";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
@@ -595,6 +605,16 @@ public class EditorSetting {
     public static final String MESH_EDITOR_VIEWPORT_QUAD = "editor/EditorViewportQuad";
     public static final String MESH_EDITOR_OVERLAY_VAO = "editor/CharacterMeshOverlayVAO";
 
+    // Flat View — the view of the UV Editor and the Image Editor over their unit square: the share of the window the
+    // square fills when fitted, the zoom step per wheel notch, how far in and out it may zoom in window pixels per
+    // unit, the button that pans it and the uniform its mapping is handed to the shaders by
+    public static final float FLAT_VIEW_FIT_SHARE = 0.85f;
+    public static final float FLAT_VIEW_ZOOM_STEP = 1.15f;
+    public static final float FLAT_VIEW_MIN_PIXELS_PER_UNIT = 32f;
+    public static final float FLAT_VIEW_MAX_PIXELS_PER_UNIT = 65536f;
+    public static final int FLAT_VIEW_BUTTON_PAN = Buttons.RIGHT;
+    public static final String FLAT_VIEW_UNIFORM_UV_TO_CLIP = "u_uvToClip";
+
     // View Camera — the one camera of every 3D viewport: the orbit button turns it and the pan button slides it, a
     // drag begun on a press no tool claimed; each notch of the wheel zooms by a factor; distances are in the bounding
     // radius of what is framed; a view snapped straight up or down leans this far so the camera keeps its heading
@@ -690,6 +710,25 @@ public class EditorSetting {
             "character_editor_row_pair_label",
             "character_editor_row_pair_value",
             "character_editor_row_pair_value_button");
+    public static final CharacterViewTemplateStruct IMAGE_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            "editor/ImageEditor/image_editor_header_row",
+            "editor/ImageEditor/image_editor_item_row",
+            "editor/ImageEditor/image_editor_item_row_selected",
+            "editor/ImageEditor/image_editor_number_row",
+            "editor/ImageEditor/image_editor_text_row",
+            "editor/ImageEditor/image_editor_choice_row",
+            "editor/ImageEditor/image_editor_action_row",
+            "editor/ImageEditor/image_editor_pair_row",
+            "image_editor_row_label",
+            "image_editor_row_value",
+            "image_editor_row_value_button",
+            "image_editor_row_decrease",
+            "image_editor_row_increase",
+            "image_editor_row_track",
+            "image_editor_row_knob",
+            "image_editor_row_pair_label",
+            "image_editor_row_pair_value",
+            "image_editor_row_pair_value_button");
     public static final CharacterViewTemplateStruct ANIMATION_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/AnimationEditor/animation_editor_header_row",
             "editor/AnimationEditor/animation_editor_item_row",
@@ -1252,6 +1291,9 @@ public class EditorSetting {
     public static final String[] CHARACTER_PAINT_MAP_ALIASES = {
             "albedo", "normal", "height", "ao", "metallic", "roughness", "tint" };
     public static final String[] CHARACTER_PAINT_MAP_SUFFIXES = { "A", "n", "h", "ao", "m", "rough", "tint" };
+    public static final ImageMap[] CHARACTER_PAINT_IMAGE_MAPS = {
+            ImageMap.ALBEDO, ImageMap.NORMAL, ImageMap.HEIGHT, ImageMap.AMBIENT_OCCLUSION, ImageMap.METALLIC,
+            ImageMap.ROUGHNESS, ImageMap.TINT };
     public static final String CHARACTER_PAINT_SUFFIX_SEPARATOR = "_";
     public static final String CHARACTER_PAINT_EXTENSION_SEPARATOR = ".";
     public static final int CHARACTER_PAINT_MAX_LAYERS = 8;
@@ -1274,6 +1316,9 @@ public class EditorSetting {
     public static final String CHARACTER_PAINT_KEY_COLOR = "paint_color";
     public static final String CHARACTER_PAINT_KEY_HSB = "paint_hsb";
     public static final String CHARACTER_PAINT_KEY_MAP_ITEM = "paint_map_item";
+    public static final String CHARACTER_PAINT_KEY_MAP_SETTING = "paint_map_setting";
+    public static final String CHARACTER_PAINT_KEY_MAP_GENERATE = "paint_map_generate";
+    public static final String CHARACTER_PAINT_KEY_MAP_CLEAR = "paint_map_clear";
     public static final String CHARACTER_PAINT_KEY_LAYER_ADD = "paint_layer_add";
     public static final String CHARACTER_PAINT_KEY_LAYER_REMOVE = "paint_layer_remove";
     public static final String CHARACTER_PAINT_HEADER_PAINT = "Paint ";
@@ -1946,54 +1991,126 @@ public class EditorSetting {
     // Image Editing
     public static final String IMAGE_FORMAT = "png";
 
-    // Map Generation — the switch's on value, how values read, the preview's longest side, the maps it can show and
-    // the light the result is shaded by
-    public static final String MENU_GENERATE_MAPS_DIALOG = "editor/GenerateMapsDialog/Dialog";
-    public static final String MENU_GENERATE_MAPS_HEADER_ROW = "editor/GenerateMapsDialog/generate_maps_header_row";
-    public static final String MENU_GENERATE_MAPS_SLIDER_ROW = "editor/GenerateMapsDialog/generate_maps_slider_row";
-    public static final String MENU_GENERATE_MAPS_OPTION_ROW = "editor/GenerateMapsDialog/generate_maps_option_row";
-    public static final int ENTRY_GENERATE_MAPS_TITLE = 0;
-    public static final int ENTRY_GENERATE_MAPS_PREVIEW = 1;
-    public static final int ENTRY_GENERATE_MAPS_PREVIEW_VALUE = 2;
-    public static final int ENTRY_GENERATE_MAPS_OPTIONS = 3;
-    public static final int ENTRY_GENERATE_MAPS_STATUS = 4;
-    public static final String ELEMENT_GENERATE_MAPS_ROW_LABEL = "generate_maps_row_label";
-    public static final String ELEMENT_GENERATE_MAPS_ROW_VALUE = "generate_maps_row_value";
-    public static final String ELEMENT_GENERATE_MAPS_ROW_PREVIOUS = "generate_maps_row_previous";
-    public static final String ELEMENT_GENERATE_MAPS_ROW_NEXT = "generate_maps_row_next";
-    public static final String ELEMENT_GENERATE_MAPS_SLIDER_TRACK = "generate_maps_slider_track";
-    public static final String ELEMENT_GENERATE_MAPS_SLIDER_KNOB = "generate_maps_slider_knob";
-    public static final String ELEMENT_GENERATE_MAPS_SLIDER_VALUE = "generate_maps_slider_value";
-    public static final String MAP_GENERATE_TITLE = "Generate Maps from the Albedo of ";
-    public static final String MAP_GENERATE_HINT = "Each map is painted over its layer as one undo step; Save writes"
-            + " them";
-    public static final MapGenerateOption[] MAP_GENERATE_GROUP_STARTS = {
-            MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.NORMAL_STRENGTH,
-            MapGenerateOption.OCCLUSION_STRENGTH, MapGenerateOption.ROUGHNESS_BASE, MapGenerateOption.WRITE_NORMAL };
-    public static final String[] MAP_GENERATE_GROUP_LABELS = {
-            "Height", "Normal", "Ambient Occlusion", "Roughness and Metallic", "Maps Written" };
+    // Map Generation — the switch's on value, how values read, the most a non-metal reflects, and the narrowest a
+    // glow's edge fades
     public static final float MAP_GENERATE_TOGGLE_ON = 0.5f;
     public static final String MAP_GENERATE_VALUE_FORMAT = "%.2f";
-    public static final int MAP_GENERATE_PREVIEW_SIZE = 256;
-    public static final String[] MAP_GENERATE_PREVIEW_LABELS = {
-            "Result", "Normal", "Height", "Ambient Occlusion", "Roughness", "Metallic" };
-    public static final int MAP_GENERATE_PREVIEW_RESULT = 0;
-    public static final int MAP_GENERATE_PREVIEW_NORMAL = 1;
-    public static final int MAP_GENERATE_PREVIEW_HEIGHT = 2;
-    public static final int MAP_GENERATE_PREVIEW_OCCLUSION = 3;
-    public static final int MAP_GENERATE_PREVIEW_ROUGHNESS = 4;
-    public static final float[] MAP_GENERATE_LIGHT = { -0.45f, 0.55f, 0.7f };
-    public static final float MAP_GENERATE_AMBIENT = 0.35f;
-    public static final int MAP_GENERATE_SOURCE_MAP = 0;
-    public static final int MAP_GENERATE_NORMAL_MAP = 1;
-    public static final int MAP_GENERATE_HEIGHT_MAP = 2;
-    public static final int MAP_GENERATE_OCCLUSION_MAP = 3;
-    public static final int MAP_GENERATE_METALLIC_MAP = 4;
-    public static final int MAP_GENERATE_ROUGHNESS_MAP = 5;
-    public static final String MAP_GENERATE_MESSAGE_NO_TEXTURE = "Generate Maps reads the albedo of the part painted:"
-            + " open a part with a texture in Paint mode";
-    public static final String MAP_GENERATE_MESSAGE_DONE = "Maps generated from the albedo; Save writes them, Undo"
-            + " takes each back";
+    public static final float MAP_GENERATE_MAX_DIELECTRIC_SPECULAR = 0.08f;
+    public static final float MAP_GENERATE_MIN_GLOW_SOFTNESS = 0.001f;
+
+    // Maps — the Maps tab's rows and status, shared by every window whose image carries maps
+    public static final String MAPS_HEADER_NONE = "No image with maps worked in yet";
+    public static final String MAPS_HEADER_SETTINGS_SUFFIX = " Settings";
+    public static final String MAPS_HEADER_ALBEDO = "The albedo is the image's own layers";
+    public static final String MAPS_GENERATED_SUFFIX = " (generated)";
+    public static final String MAPS_LABEL_GENERATE = "Generate";
+    public static final String MAPS_LABEL_CLEAR = "Clear";
+    public static final String MAPS_MESSAGE_ALBEDO = "The albedo is the layers themselves: pick another map to"
+            + " generate";
+    public static final String MAPS_MESSAGE_NOT_GENERATED = "This map is not there yet: Generate makes it";
+    public static final String MAPS_MESSAGE_GENERATED = "Generated ";
+    public static final String MAPS_MESSAGE_CLEARED = "Cleared ";
+
+    // Image Editor — its folder beside the saves, the keys of its files, the names of its documents in ImageManager,
+    // its layers, sizes and backgrounds
+    public static final String IMAGE_EDITOR_USER_DIRECTORY = "Images";
+    public static final String IMAGE_FILE_KEY_WIDTH = "width";
+    public static final String IMAGE_FILE_KEY_HEIGHT = "height";
+    public static final String IMAGE_FILE_KEY_ACTIVE_LAYER = "active_layer";
+    public static final String IMAGE_FILE_KEY_NEXT_LAYER = "next_layer";
+    public static final String IMAGE_FILE_KEY_LAYERS = "layers";
+    public static final String IMAGE_FILE_KEY_NAME = "name";
+    public static final String IMAGE_FILE_KEY_OPACITY = "opacity";
+    public static final String IMAGE_FILE_KEY_VISIBLE = "visible";
+    public static final String IMAGE_FILE_KEY_PIXELS = "pixels";
+    public static final String IMAGE_FILE_KEY_MAPS = "maps";
+    public static final String IMAGE_FILE_KEY_SETTINGS = "settings";
+    public static final String IMAGE_EDITOR_DOCUMENT_PREFIX = "image_editor/";
+    public static final String IMAGE_EDITOR_DOCUMENT_SEPARATOR = "/";
+    public static final String IMAGE_EDITOR_DOCUMENT_COMPOSITE = "composite";
+    public static final String IMAGE_EDITOR_DOCUMENT_LAYER = "layer";
+    public static final String IMAGE_EDITOR_NAME_PATTERN = "[A-Za-z0-9][A-Za-z0-9 _-]*";
+    public static final int IMAGE_EDITOR_MAX_LAYERS = 64;
+    public static final String IMAGE_EDITOR_LAYER_NAME = "Layer ";
+    public static final String IMAGE_EDITOR_LAYER_BACKGROUND = "Background";
+    public static final int IMAGE_EDITOR_SIZE_MIN = 1;
+    public static final int IMAGE_EDITOR_SIZE_MAX = 8192;
+    public static final int IMAGE_EDITOR_SIZE_STEP = 16;
+    public static final int IMAGE_EDITOR_SIZE_DEFAULT = 1024;
+    public static final String[] IMAGE_EDITOR_BACKGROUND_LABELS = { "Transparent", "White", "Black", "Paint Colour" };
+    public static final int[] IMAGE_EDITOR_BACKGROUND_COLORS = { 0x00000000, 0xFFFFFFFF, 0x000000FF, 0x00000000 };
+    public static final int IMAGE_EDITOR_BACKGROUND_PAINT = 3;
+    public static final int IMAGE_EDITOR_BACKGROUND_DEFAULT = 1;
+    public static final float IMAGE_EDITOR_OPACITY_MIN = 0f;
+    public static final float IMAGE_EDITOR_OPACITY_MAX = 1f;
+    public static final float IMAGE_EDITOR_OPACITY_STEP = 0.05f;
+
+    // Image Editor — row keys, labels and status
+    public static final String IMAGE_EDITOR_KEY_IMAGE = "image_editor_image";
+    public static final String IMAGE_EDITOR_KEY_LAYER_NAME = "image_editor_layer_name";
+    public static final String IMAGE_EDITOR_KEY_OPACITY = "image_editor_opacity";
+    public static final String IMAGE_EDITOR_KEY_MAP_ITEM = "image_editor_map_item";
+    public static final String IMAGE_EDITOR_KEY_MAP_SETTING = "image_editor_map_setting";
+    public static final String IMAGE_EDITOR_KEY_MAP_GENERATE = "image_editor_map_generate";
+    public static final String IMAGE_EDITOR_KEY_MAP_CLEAR = "image_editor_map_clear";
+    public static final String IMAGE_EDITOR_KEY_LAYER_ADD = "image_editor_layer_add";
+    public static final String IMAGE_EDITOR_KEY_LAYER_REMOVE = "image_editor_layer_remove";
+    public static final String IMAGE_EDITOR_LABEL_IMAGE = "Image";
+    public static final String IMAGE_EDITOR_LABEL_LAYER_NAME = "Name";
+    public static final String IMAGE_EDITOR_LABEL_OPACITY = "Opacity";
+    public static final String IMAGE_EDITOR_LABEL_LAYER_ADD = "New Layer";
+    public static final String IMAGE_EDITOR_LABEL_LAYER_REMOVE = "Delete Layer";
+    public static final String IMAGE_EDITOR_VALUE_NO_IMAGE = "None";
+    public static final String IMAGE_EDITOR_HEADER_NO_IMAGE = "No image open: File, New makes one";
+    public static final String IMAGE_EDITOR_HEADER_SIZE = "Size ";
+    public static final String IMAGE_EDITOR_SIZE_SEPARATOR = " x ";
+    public static final String IMAGE_EDITOR_UNSAVED_SUFFIX = " (unsaved)";
+    public static final String IMAGE_EDITOR_HEADER_LAYER = "Layer";
+    public static final String IMAGE_EDITOR_HEADER_LAYERS = "Layers";
+    public static final String IMAGE_EDITOR_HEADER_MAPS = "Maps of ";
+    public static final String IMAGE_EDITOR_MESSAGE_NONE = "File, New makes an image; the Image row steps through those"
+            + " saved";
+    public static final String IMAGE_EDITOR_MESSAGE_NO_IMAGE = "No image open: File, New makes one";
+    public static final String IMAGE_EDITOR_MESSAGE_CREATED = "Image made: ";
+    public static final String IMAGE_EDITOR_MESSAGE_SAVED = "Image saved: ";
+    public static final String IMAGE_EDITOR_MESSAGE_NOT_SAVED = "Image could not be saved: ";
+    public static final String IMAGE_EDITOR_MESSAGE_NOT_READ = "Image could not be read: ";
+    public static final String IMAGE_EDITOR_MESSAGE_REVERTED = "Image reverted: ";
+    public static final String IMAGE_EDITOR_MESSAGE_DELETED = "Image deleted: ";
+    public static final String IMAGE_EDITOR_MESSAGE_NOT_DELETED = "Image could not be deleted: ";
+    public static final String IMAGE_EDITOR_MESSAGE_LAYER_ADDED = "Layer added: ";
+    public static final String IMAGE_EDITOR_MESSAGE_LAYER_REMOVED = "Layer deleted: ";
+    public static final String IMAGE_EDITOR_MESSAGE_LAYER_LAST = "An image keeps at least one layer";
+    public static final String IMAGE_EDITOR_MESSAGE_LAYER_FULL = "An image holds at most " + IMAGE_EDITOR_MAX_LAYERS
+            + " layers";
+
+    // New Image Dialog — its menu, rows and entry points, the fields its rows hand back, and its text
+    public static final String MENU_NEW_IMAGE_DIALOG = "editor/NewImageDialog/Dialog";
+    public static final String MENU_NEW_IMAGE_HEADER_ROW = "editor/NewImageDialog/new_image_header_row";
+    public static final String MENU_NEW_IMAGE_SLIDER_ROW = "editor/NewImageDialog/new_image_slider_row";
+    public static final String MENU_NEW_IMAGE_OPTION_ROW = "editor/NewImageDialog/new_image_option_row";
+    public static final String MENU_NEW_IMAGE_TEXT_ROW = "editor/NewImageDialog/new_image_text_row";
+    public static final int ENTRY_NEW_IMAGE_TITLE = 0;
+    public static final int ENTRY_NEW_IMAGE_OPTIONS = 1;
+    public static final int ENTRY_NEW_IMAGE_STATUS = 2;
+    public static final String ELEMENT_NEW_IMAGE_ROW_LABEL = "new_image_row_label";
+    public static final String ELEMENT_NEW_IMAGE_ROW_VALUE = "new_image_row_value";
+    public static final String ELEMENT_NEW_IMAGE_ROW_VALUE_BUTTON = "new_image_row_value_button";
+    public static final String ELEMENT_NEW_IMAGE_ROW_PREVIOUS = "new_image_row_previous";
+    public static final String ELEMENT_NEW_IMAGE_ROW_NEXT = "new_image_row_next";
+    public static final String ELEMENT_NEW_IMAGE_SLIDER_TRACK = "new_image_slider_track";
+    public static final String ELEMENT_NEW_IMAGE_SLIDER_KNOB = "new_image_slider_knob";
+    public static final String NEW_IMAGE_FIELD_NAME = "name";
+    public static final String NEW_IMAGE_FIELD_WIDTH = "width";
+    public static final String NEW_IMAGE_FIELD_HEIGHT = "height";
+    public static final String NEW_IMAGE_FIELD_BACKGROUND = "background";
+    public static final String NEW_IMAGE_TITLE = "New Image";
+    public static final String NEW_IMAGE_HINT = "The first layer is filled with the background";
+    public static final String NEW_IMAGE_HEADER = "Image";
+    public static final String NEW_IMAGE_LABEL_NAME = "Name";
+    public static final String NEW_IMAGE_LABEL_WIDTH = "Width";
+    public static final String NEW_IMAGE_LABEL_HEIGHT = "Height";
+    public static final String NEW_IMAGE_LABEL_BACKGROUND = "Background";
     public static final String IMAGE_TEMP_SUFFIX = ".tmp";
     public static final int IMAGE_HISTORY_MAX_STEPS = 64;
     public static final long IMAGE_HISTORY_MAX_PIXELS = 16777216L;
@@ -2190,6 +2307,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_UV = "Character UV";
     public static final String TOOL_CANVAS_CHARACTER_STAMP = "Character Stamp";
     public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
+    public static final String TOOL_CANVAS_IMAGE_EDITOR = "Image Editor";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";

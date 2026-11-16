@@ -23,7 +23,6 @@ public class CharacterEditorBranch extends BranchPackage {
     // Internal
     private CharacterEditorManager characterEditorManager;
     private NameDialogBranch nameDialogBranch;
-    private GenerateMapsDialogBranch generateMapsDialogBranch;
     private CharacterModelBranch characterModelBranch;
     private CharacterStampBranch characterStampBranch;
 
@@ -33,7 +32,6 @@ public class CharacterEditorBranch extends BranchPackage {
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
-        this.generateMapsDialogBranch = get(GenerateMapsDialogBranch.class);
         this.characterModelBranch = get(CharacterModelBranch.class);
         this.characterStampBranch = get(CharacterStampBranch.class);
     }
@@ -88,11 +86,6 @@ public class CharacterEditorBranch extends BranchPackage {
 
     public void exportModel() {
         characterModelBranch.exportModel();
-    }
-
-    // Opens the Generate Maps dialog on the albedo of the part painted
-    public void generateMaps(WindowInstance window) {
-        generateMapsDialogBranch.open(window);
     }
 
     // Asks for the new stamp's name, then cuts the selected faces of the open part into it

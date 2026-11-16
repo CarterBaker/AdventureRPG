@@ -138,6 +138,17 @@ public class WorldEditorContext extends ContextPackage
         worldEditorLayerSystem.toggleShown(layerKey);
     }
 
+    // The world's layers are fixed: none is added or deleted
+    @Override
+    public String getAddLayerKey() {
+        return "";
+    }
+
+    @Override
+    public String getRemoveLayerKey() {
+        return "";
+    }
+
     // Properties \\
 
     // The biome chosen to paint while the World Editor paints, the placement chosen to place while it places

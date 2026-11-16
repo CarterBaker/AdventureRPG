@@ -6,6 +6,7 @@ import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.propertiespipeline.properties.MapsProvider;
 import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
@@ -44,7 +45,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public abstract class CharacterToolContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, PropertiesProvider,
-        OutlinerProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider,
+        OutlinerProvider, MapsProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider,
         CharacterModeProvider {
 
     /*
@@ -60,7 +61,8 @@ public abstract class CharacterToolContext extends ContextPackage
      * Stamps tab to the body. Each tool tab is a tool canvas worked
      * with the Tools and Brushes tabs, its actions listed in the Tools tab
      * and its values and those of what is picked in the Properties tab while
-     * the tab is worked in; the File and Edit menus act on the character.
+     * the tab is worked in, the maps of the part's texture in the Maps tab;
+     * the File and Edit menus act on the character.
      * All state lives in CharacterEditorManager, the region, the bone and the
      * vertices selected shared by every tab; a tab keeps its mode, reads
      * input, orbits the camera, poses and draws the preview, and shows the
@@ -164,6 +166,17 @@ public abstract class CharacterToolContext extends ContextPackage
         characterEditorModeSystem.toggleVisible(layerKey);
     }
 
+    // Only Paint's stack takes new layers, through its own Add Layer and Remove Layer actions
+    @Override
+    public String getAddLayerKey() {
+        return getMode().paintsMaps() ? EditorSetting.CHARACTER_PAINT_KEY_LAYER_ADD : "";
+    }
+
+    @Override
+    public String getRemoveLayerKey() {
+        return getMode().paintsMaps() ? EditorSetting.CHARACTER_PAINT_KEY_LAYER_REMOVE : "";
+    }
+
     // Tools \\
 
     @Override
@@ -209,6 +222,33 @@ public abstract class CharacterToolContext extends ContextPackage
     @Override
     public void stepRow(String key, int steps) {
         characterEditorManager.step(key, steps);
+    }
+
+    // Maps \\
+
+    @Override
+    public int getMapsRevision() {
+        return characterEditorManager.getRevision();
+    }
+
+    @Override
+    public String getMapsTitle() {
+        return EditorSetting.TAB_TITLE_MAPS + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR + getTabTitle();
+    }
+
+    @Override
+    public void buildMapsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        characterEditorManager.buildMapRows(rows);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getMapsTemplates() {
+        return getRowTemplates();
+    }
+
+    @Override
+    public void stepMapsRow(String key, int steps) {
+        stepRow(key, steps);
     }
 
     // Outliner \\

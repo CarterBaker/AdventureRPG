@@ -26,8 +26,10 @@ public enum ToolCanvas {
      * drag its joints. A character's UV tab selects the vertices whose
      * edges it marks as seams and whose faces it unwraps; the UV Editor
      * selects, moves, turns and scales their UVs and packs, evens,
-     * stitches and pins their islands. A character's mesh and weights
-     * also take Pick, which picks the bone under the pointer to weigh, and
+     * stitches and pins their islands. The Image Editor paints an image's
+     * layers and maps as the world's images are painted, its brush sized
+     * in image pixels, and adds and deletes layers. A character's mesh and
+     * weights also take Pick, which picks the bone under the pointer to weigh, and
      * Pose, which turns a bone out of the way while the mesh follows;
      * every modelling canvas of a character mirrors, and its mesh, weights
      * and rig choose how the bones are drawn. A character's Stamp tab joins
@@ -132,6 +134,16 @@ public enum ToolCanvas {
             new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
             new ToolActionGroupStruct[] { uvUnwrap(), uvIslands(), uvSelection() },
             false),
+    IMAGE_EDITOR(
+            EditorSetting.TOOL_CANVAS_IMAGE_EDITOR,
+            new EditorTool[] {
+                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.SWIRL, EditorTool.SCATTER,
+                    EditorTool.FILL, EditorTool.PICK },
+            new ToolActionGroupStruct[] { imageLayers() },
+            true,
+            imageSize(),
+            strength(EditorSetting.TOOL_PAINT_STRENGTH_DEFAULT),
+            twist()),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
             new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK },
@@ -297,6 +309,13 @@ public enum ToolCanvas {
                 action(
                         EditorSetting.CHARACTER_PAINT_LABEL_LAYER_REMOVE,
                         EditorSetting.CHARACTER_PAINT_KEY_LAYER_REMOVE));
+    }
+
+    private static ToolActionGroupStruct imageLayers() {
+        return new ToolActionGroupStruct(
+                EditorSetting.IMAGE_EDITOR_HEADER_LAYERS,
+                action(EditorSetting.IMAGE_EDITOR_LABEL_LAYER_ADD, EditorSetting.IMAGE_EDITOR_KEY_LAYER_ADD),
+                action(EditorSetting.IMAGE_EDITOR_LABEL_LAYER_REMOVE, EditorSetting.IMAGE_EDITOR_KEY_LAYER_REMOVE));
     }
 
     private static ToolActionGroupStruct uvSeams() {
