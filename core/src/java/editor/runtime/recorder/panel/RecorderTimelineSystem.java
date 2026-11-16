@@ -550,7 +550,7 @@ public class RecorderTimelineSystem extends SystemPackage {
                 });
 
         bar.findChildById(RecorderSetting.ELEMENT_CLIP_LABEL).setFontText(String.format(
-                RecorderSetting.FORMAT_CLIP_LABELS[clip.getSourceKind().ordinal()], clip.getSourceName()));
+                RecorderSetting.FORMAT_CLIP_LABELS[clip.getSourceKind().ordinal()], clip.resolveLabelName()));
     }
 
     // A mark across each transition laid on the clip, over the part of it in view, named after the transition; too

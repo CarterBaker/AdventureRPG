@@ -14,8 +14,7 @@ public class ShortcutData extends DataPackage {
      * its tool reads it while a press or a drag is under way. A shortcut with
      * a hint is listed on the hint bar while its window is active, on the
      * canvases and with the tools its masks name, every one for an empty mask.
-     * A claimed shortcut runs only while its window claims its keys, as the
-     * Piano Roll's Musical Typing does.
+     * A claimed shortcut runs only while its window claims its keys.
      */
 
     // Identity

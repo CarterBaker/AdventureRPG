@@ -51,8 +51,13 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
     map, then a track per lane with a channel per instrument it plays (its program, lane volume and pan at tick 0;
     percussion on channel 10; more than 15 other parts is refused). It writes exactly what playback plays, nested songs
     laid flat; sound clips cannot go into MIDI and are counted for the caller. Clip volumes are not written.
-- **A piano roll** edits notes (pitch rows down the side, time across, notes as bars), inside the recorder's timeline,
-  which edits clips. Musical Typing plays notes from the computer keyboard, using the layout DAWs use.
+- **Notes are laid as clips**, the way a DAW's arrangement view lays one-shot sample clips (FL Studio's playlist): the
+  Note Library lists the notes of the instrument picked in the Hierarchy, a note dragged onto the Timeline becomes a
+  note clip a beat long, and stretching or cutting it like any clip changes how long its note is held; when it ends the
+  note is let go and fades by the instrument's release, as playing it would. Notes that sound together lie on lanes of
+  their own, as clips that play together do in a video editor. Under the hood a note clip is a notes clip holding one
+  note, so playback, MIDI and Render are unchanged. Deliberately there is no piano roll and no playing notes in from
+  the computer keyboard: the owner composes by laying notes, not by playing them.
 - **Nested recordings** work like Premiere's nested sequences: a recording or song laid inside another is a reference,
   so editing it changes every place it is laid. Any loop, direct or through other files, is refused, naming the loop.
   A recording's clip plays a take, a nested recording, a song or a notes clip; a nested clip's span is kept as asked and
@@ -136,8 +141,8 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
 - Songs the owner makes are Music files, saved by the editor straight into `assets/songs/` through the song codec and
   listed under Songs in the Recordings tab; New asks Video or Music. The Timeline shows a Music file's
   `SONG_LANE_COUNT` lanes with a mixer strip each, a bars-and-beats ruler and a beat grid it snaps to, refuses takes and
-  nested recordings, draws notes clips with Draw, and exports through its Export MIDI and Render actions. The Piano Roll
-  tab edits the notes clip selected there; Musical Typing plays and records into it.
+  nested recordings, takes note clips dragged from the Note Library tab, and exports through its Export MIDI and Render
+  actions. A Music file records nothing.
 - Songs the owner makes are saved by the editor straight into `assets/songs/`. Exported MIDI goes to
   `Documents/My Games/AdventureRPG/Songs/`, where player songs live. Video recordings stay in `Recordings/`.
 - Constants: `EngineSetting` (`// Music ...` groups) for anything the game uses; `EditorSetting` for the editor.
@@ -150,10 +155,10 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   binding reads its keys), and the instrument's `hold` clip loops through the PLAY stance; the `play` clip loops while
   any note sounds and a moment after. Leave (Escape) or Play Instrument puts it down, as does another menu taking the
   window or the instrument leaving the hand.
-- **Keys.** The thirteen note keys are Musical Typing's layout (A W S E D F T G Y H U J K, C to C), Octave Down/Up
-  Z and X, Softer/Louder C and V, each rebindable under Music on the Controls page. Music bindings are read only in
-  play mode, so they may share keys with movement; rebinding swaps keys only between bindings read in one scope.
-  Notes are placed at the player, heard by distance, and moved into the instrument's `low`..`high` by octaves.
+- **Keys.** The thirteen note keys follow the layout DAWs use for typing notes (A W S E D F T G Y H U J K, C to C),
+  Octave Down/Up Z and X, Softer/Louder C and V, each rebindable under Music on the Controls page. Music bindings are
+  read only in play mode, so they may share keys with movement; rebinding swaps keys only between bindings read in one
+  scope. Notes are placed at the player, heard by distance, and moved into the instrument's `low`..`high` by octaves.
 - **Songbook** (N in play mode): the shipped songs by display name under Songs and the player's `.mid` files under My
   Songs, then a chosen song's parts (its lanes that sound notes). A part plays on the held instrument, the whole part
   moved by the octaves that centre it in the instrument's range and any note still outside moved in by octaves, placed
@@ -175,6 +180,6 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   fixed int arrays. Playing the test song measured 0 bytes allocated by `play` on a reused instance and 0 bytes across
   265 frame updates (and across 1,057 updates driven in one frame).
 - A song's clock starts only once every instrument it plays has its samples, so its first notes are never lost.
-- Musical Typing and the Piano Roll's playhead allocate nothing per frame (fixed arrays, positions built once); a note
-  written, drawn or edited is an edit and builds one new codec clip. Render decodes and mixes on the General thread in
+- A note laid, stretched or cut is an edit and builds one new codec clip; the Note Library's preview allocates nothing
+  per frame. Render decodes and mixes on the General thread in
   stretches of `RECORDER_RENDER_STRETCH_FRAMES`.

@@ -13,7 +13,6 @@ import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.recorder.panel.RecorderRowSystem;
-import editor.runtime.recorder.panel.RecorderTransportSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -22,24 +21,21 @@ public class RecorderContext extends ContextPackage
 
     /*
      * Editor tab for the recorder's transport: record, play, pause and stop
-     * in the Dev window, to the start and to the end, the loop range and
-     * whether playing loops round it, the clock, and what is open — the
-     * recording, and the recordings it was opened inside, with Back to
-     * return to the one before. Its other work is in the tabs beside it: the
-     * Timeline, where clips are laid and edited; the Recorder Keys, where
+     * in the Dev window, and nothing else. Its other work is in the tabs
+     * beside it: the Timeline, where clips are laid and edited, which names
+     * what is open and the recordings it was opened inside; the Recorder
+     * Keys, where
      * every value a take recorded is a curve of keys; the Recorder Bin of
      * takes beside the selected clip's edits; the Recorder Assets the
      * recording uses; and the Recorder Settings, the channels armed and the
      * export. The recordings themselves are made and opened in the
      * Recordings tool. All state lives in RecorderManager; this tab only
-     * shows it and hands clicks to RecorderBranch. With a Music file open it
-     * shows its tempo, meter and key and the metronome, and the Properties
-     * tab sets them.
+     * shows it and hands clicks to RecorderBranch. With a Music file open the
+     * Properties tab sets its tempo, meter and key.
      */
 
     // Internal
     private RecorderRowSystem recorderRowSystem;
-    private RecorderTransportSystem recorderTransportSystem;
     private FileMenuSourceSystem fileMenuSourceSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
     private RecorderManager recorderManager;
@@ -49,7 +45,6 @@ public class RecorderContext extends ContextPackage
     @Override
     protected void create() {
         this.recorderRowSystem = create(RecorderRowSystem.class);
-        this.recorderTransportSystem = create(RecorderTransportSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }

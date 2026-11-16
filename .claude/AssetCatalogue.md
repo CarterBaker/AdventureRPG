@@ -380,6 +380,12 @@ One line per session that changed this file: the date, what was added or removed
   player), the schemas `Races.arpg` (`sliders`), `Rigs.arpg` (a bone's `sliders`) and `Shortcuts.arpg` (no
   `character_face` canvas), `menus/editor/EditorWindow.arpg` (no Build or Face button) and
   `shortcuts/CharacterEditor.arpg` (no Face canvas); deleted `menus/editor/FaceEditor.arpg` with the Face tab.
+- 2026-11-16: Note Library replaces the Piano Roll. Added `menus/editor/NoteLibrary.arpg` (the instrument's notes, each
+  dragged onto the Timeline as a note clip); regenerated `menus/editor/Recorder.arpg` (the transport is Record, Play,
+  Pause and Stop alone; the music row templates moved in from the Piano Roll), `menus/editor/EditorWindow.arpg` (Note
+  Library in place of Piano Roll), `menus/editor/Timeline.arpg` (hint), `shortcuts/Recorder.arpg` (no loop toggle,
+  range hints), `shortcuts/Tools.arpg` (no Draw tool) and `schemas/Shortcuts.arpg` (no Piano Roll canvas or Draw
+  tool); deleted `menus/editor/PianoRoll.arpg` and `shortcuts/PianoRoll.arpg` with the Piano Roll.
 
 ---
 
@@ -2632,7 +2638,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
 `GenerateMapsDialog.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
-`PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `TabFrame.arpg`, `TextureViewer.arpg`, `Timeline.arpg`,
 `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
@@ -2965,7 +2971,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/shortcuts/`
 
-`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ItemEditor.arpg`, `PianoRoll.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `RecorderBin.arpg`,
 `RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `UVEditor.arpg`, `WorldEditor.arpg`
 

@@ -196,10 +196,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openTimeline(window.getGLWindow());
     }
 
-    public void openPianoRoll(WindowInstance window) {
-        tabManager.openPianoRoll(window.getGLWindow());
-    }
-
     public void openRecorderKeys(WindowInstance window) {
         tabManager.openRecorderKeys(window.getGLWindow());
     }
@@ -222,6 +218,10 @@ public class EditorBranch extends BranchPackage {
 
     public void openSoundLibrary(WindowInstance window) {
         tabManager.openSoundLibrary(window.getGLWindow());
+    }
+
+    public void openNoteLibrary(WindowInstance window) {
+        tabManager.openNoteLibrary(window.getGLWindow());
     }
 
     public void openTransitions(WindowInstance window) {

@@ -140,7 +140,7 @@ public class RecorderBinSystem extends SystemPackage {
         int sourceChannels = clip.resolveSourceChannelMask();
         String sourceLabel = clip.getSourceKind().getLabel();
 
-        recorderRowSystem.injectHeader(entryPoint, clip.getSourceName());
+        recorderRowSystem.injectHeader(entryPoint, clip.resolveLabelName());
         recorderRowSystem.injectText(entryPoint, String.format(RecorderSetting.FORMAT_CLIP_PLACE,
                 clip.getLane() + 1,
                 recorderRowSystem.formatTime(clip.getStart()),

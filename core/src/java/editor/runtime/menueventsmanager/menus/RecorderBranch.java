@@ -34,8 +34,9 @@ public class RecorderBranch extends BranchPackage {
      * Properties rows step, cycle and take typed values, and its Timeline's
      * Export MIDI and Render run as the video export does, Render asking for
      * the file's name typed back before it overwrites a sound.
-     * The transport plays round the loop range, sets its ends at the
-     * playhead and returns to the recording the open one was opened inside.
+     * The export range's ends are set at the playhead, and Back returns to
+     * the recording the open one was opened inside. A note pressed in the
+     * Note Library is picked up and laid as a note clip the same way.
      * Nest Selection names its new recording through the name dialog. Takes are named
      * through the text dialog, and deleting a take asks for its name to be
      * typed back. Dragging along the ruler
@@ -270,10 +271,6 @@ public class RecorderBranch extends BranchPackage {
 
     public void toEnd() {
         recorderManager.toEnd();
-    }
-
-    public void toggleLoop() {
-        recorderManager.toggleLoop();
     }
 
     public void setRangeStart() {
@@ -546,6 +543,23 @@ public class RecorderBranch extends BranchPackage {
         dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
     }
 
+    // A note of an instrument is picked up on the press in the Note Library, and carried over the Timeline's lanes
+    // under the cursor until let go
+    public void dragNote(String instrumentName, int pitch, WindowInstance window) {
+
+        if (!recorderManager.getDrag().isActive())
+            recorderManager.beginNoteDrag(
+                    instrumentName,
+                    pitch,
+                    window,
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window));
+
+        WindowInstance hovered = windowManager.getHoveredWindow();
+
+        dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
+    }
+
     // A project song is picked up on the press in the Recordings tab, and carried over the Timeline's lanes under the
     // cursor until let go
     public void dragSong(String songName, WindowInstance window) {
@@ -789,10 +803,6 @@ public class RecorderBranch extends BranchPackage {
                         + EditorSetting.DIALOG_TITLE_OVERWRITE_SUFFIX,
                 recordingName::equals,
                 confirmedName -> recorderManager.renderMusic());
-    }
-
-    public void toggleMetronome() {
-        recorderManager.toggleMetronome();
     }
 
     // A lane's strip on a Music file's timeline selects it, its mix then shown in the Properties tab; its M and S

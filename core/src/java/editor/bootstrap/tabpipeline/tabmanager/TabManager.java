@@ -37,7 +37,7 @@ import editor.runtime.dev.DevContext;
 import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.layers.LayersContext;
-import editor.runtime.pianoroll.PianoRollContext;
+import editor.runtime.notelibrary.NoteLibraryContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
 import editor.runtime.recorder.RecorderContext;
@@ -321,10 +321,6 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_TIMELINE, TimelineContext.class, osWindow);
     }
 
-    public TabHandle openPianoRoll(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_PIANO_ROLL, PianoRollContext.class, osWindow);
-    }
-
     public TabHandle openRecorderKeys(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_RECORDER_KEYS, RecorderKeysContext.class, osWindow);
     }
@@ -347,6 +343,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openSoundLibrary(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_SOUND_LIBRARY, SoundLibraryContext.class, osWindow);
+    }
+
+    public TabHandle openNoteLibrary(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_NOTE_LIBRARY, NoteLibraryContext.class, osWindow);
     }
 
     public TabHandle openTransitions(WindowInstance osWindow) {

@@ -20,7 +20,7 @@ class RecordingRowBranch extends BranchPackage {
     /*
      * The Properties tab's rows for a Music file. The Recorder tab's are its
      * tempo, the beats of its bar and the note value of a beat, its key's
-     * root and scale, and the metronome; the Timeline tab's the mix of the
+     * root and scale; the Timeline tab's the mix of the
      * lane selected — its name, volume, pan, mute and solo — and the clip
      * selected's instrument, volume and transpose. Every row is read and
      * changed here by its key: a number stepped, slid across its range or
@@ -78,8 +78,6 @@ class RecordingRowBranch extends BranchPackage {
                 EditorSetting.RECORDER_ROW_LABEL_KEY_ROOT, getValueText(EditorSetting.RECORDER_ROW_KEY_ROOT)));
         rows.add(CharacterViewRowStruct.choice(EditorSetting.RECORDER_ROW_KEY_SCALE,
                 EditorSetting.RECORDER_ROW_LABEL_KEY_SCALE, getValueText(EditorSetting.RECORDER_ROW_KEY_SCALE)));
-        rows.add(CharacterViewRowStruct.choice(EditorSetting.RECORDER_ROW_METRONOME,
-                EditorSetting.RECORDER_ROW_LABEL_METRONOME, getValueText(EditorSetting.RECORDER_ROW_METRONOME)));
     }
 
     void buildTimelineRows(ObjectArrayList<CharacterViewRowStruct> rows) {
@@ -165,7 +163,6 @@ class RecordingRowBranch extends BranchPackage {
             case EditorSetting.RECORDER_ROW_KEY_ROOT -> EngineSetting.NOTE_NAMES[recording.getKeyRoot()];
             case EditorSetting.RECORDER_ROW_KEY_SCALE -> CharacterViewUtility.toResourceLabel(
                     toWords(recording.getKeyScale()));
-            case EditorSetting.RECORDER_ROW_METRONOME -> toOnOff(recorderManager.isMetronomeOn());
             case EditorSetting.RECORDER_ROW_LANE_NAME -> lane.getName();
             case EditorSetting.RECORDER_ROW_LANE_VOLUME -> CharacterViewUtility.formatNumber(lane.getVolume());
             case EditorSetting.RECORDER_ROW_LANE_PAN -> CharacterViewUtility.formatNumber(lane.getPan());
@@ -256,7 +253,6 @@ class RecordingRowBranch extends BranchPackage {
             case EditorSetting.RECORDER_ROW_KEY_SCALE -> recorderManager.setKey(recording.getKeyRoot(),
                     NoteScale.VALUES[Math.floorMod(recording.getKeyScale().ordinal() + direction,
                             NoteScale.VALUES.length)]);
-            case EditorSetting.RECORDER_ROW_METRONOME -> recorderManager.toggleMetronome();
             case EditorSetting.RECORDER_ROW_LANE_MUTED -> recorderManager.toggleLaneMute(laneIndex);
             case EditorSetting.RECORDER_ROW_LANE_SOLO -> recorderManager.toggleLaneSolo(laneIndex);
             case EditorSetting.RECORDER_ROW_CLIP_INSTRUMENT -> {
@@ -299,8 +295,7 @@ class RecordingRowBranch extends BranchPackage {
                     text.trim() + EditorSetting.RECORDER_ROW_KEY_OCTAVE) != EngineSetting.INDEX_NOT_FOUND;
             case EditorSetting.RECORDER_ROW_KEY_SCALE -> findScale(text) != null;
             case EditorSetting.RECORDER_ROW_CLIP_INSTRUMENT -> findInstrument(text) != null;
-            case EditorSetting.RECORDER_ROW_METRONOME, EditorSetting.RECORDER_ROW_LANE_MUTED,
-                    EditorSetting.RECORDER_ROW_LANE_SOLO -> isOnOff(text);
+            case EditorSetting.RECORDER_ROW_LANE_MUTED, EditorSetting.RECORDER_ROW_LANE_SOLO -> isOnOff(text);
             default -> CharacterViewUtility.isNumber(text);
         };
     }
@@ -327,10 +322,6 @@ class RecordingRowBranch extends BranchPackage {
                     text.trim() + EditorSetting.RECORDER_ROW_KEY_OCTAVE), recording.getKeyScale());
             case EditorSetting.RECORDER_ROW_KEY_SCALE -> recorderManager.setKey(recording.getKeyRoot(),
                     findScale(text));
-            case EditorSetting.RECORDER_ROW_METRONOME -> {
-                if (isOn(text) != recorderManager.isMetronomeOn())
-                    recorderManager.toggleMetronome();
-            }
             case EditorSetting.RECORDER_ROW_LANE_NAME -> recorderManager.setLaneName(laneIndex, text.trim());
             case EditorSetting.RECORDER_ROW_LANE_VOLUME -> recorderManager.setLaneVolume(laneIndex, number);
             case EditorSetting.RECORDER_ROW_LANE_PAN -> recorderManager.setLanePan(laneIndex, number);

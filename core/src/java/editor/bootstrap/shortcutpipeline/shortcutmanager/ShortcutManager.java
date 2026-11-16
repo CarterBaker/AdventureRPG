@@ -44,7 +44,7 @@ public class ShortcutManager extends ManagerPackage {
      * two share one. The shortcuts that carry a hint are read out for the
      * hint bar through appendHints(), the window's own first, and a rebind
      * moves the revision so the bar reads them again. A window may claim the
-     * keys of some of its shortcuts, as Musical Typing does: while it does,
+     * keys of some of its shortcuts, as a played keyboard would: while it does,
      * the one check at dispatch skips every other shortcut on the same chord
      * there, and a shortcut marked claimed runs only while its window claims
      * it.

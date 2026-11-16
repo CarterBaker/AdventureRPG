@@ -2,7 +2,9 @@ package editor.bootstrap.recorderpipeline.recording;
 
 import application.bootstrap.musicpipeline.song.SongClipStruct;
 import application.bootstrap.musicpipeline.song.SongData;
+import application.bootstrap.musicpipeline.util.NoteUtility;
 import editor.runtime.EditorSetting;
+import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
 public class RecordingClipStruct extends StructPackage {
@@ -226,6 +228,21 @@ public class RecordingClipStruct extends StructPackage {
     // The moment of the timeline the source's own first tick falls on
     public float getOrigin() {
         return start - inPoint;
+    }
+
+    // True for a note clip: a notes clip holding a single note, laid from the Note Library, whose note fills it
+    public boolean isNoteClip() {
+        return sourceKind == RecordingSourceKind.NOTES && songClip.getNoteCount() == 1;
+    }
+
+    // The name the clip is shown by: its source's, and for a note clip the note it sounds after it
+    public String resolveLabelName() {
+        return isNoteClip()
+                ? sourceName + EditorSetting.RECORDER_NOTE_LABEL_SEPARATOR + NoteUtility.toNoteName(Math.clamp(
+                        songClip.getNotePitch(0) + songClip.getTranspose(),
+                        EngineSetting.NOTE_PITCH_MIN,
+                        EngineSetting.NOTE_PITCH_MAX))
+                : sourceName;
     }
 
     // Source \\

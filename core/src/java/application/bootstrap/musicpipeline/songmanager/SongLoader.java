@@ -13,8 +13,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class SongLoader extends LoaderPackage {
 
     /*
-     * Scans the song ARPG directory and remembers every file by name,
-     * queueing none: a song loads only when something names it — a song clip
+     * Scans the song ARPG directory, when there is one, and remembers every
+     * file by name, queueing none: a song loads only when something names it — a song clip
      * of another song, a player, a tool — at bootstrap or while the game
      * runs, so the loader persists for the engine lifetime. A song the
      * editor saves is remembered by name as it is written, and read again
@@ -37,7 +37,8 @@ class SongLoader extends LoaderPackage {
         this.root = new File(EngineSetting.SONG_PATH);
         this.songName2File = new Object2ObjectOpenHashMap<>();
 
-        FileUtility.verifyDirectory(root, "Song ARPG directory not found: " + root.getAbsolutePath());
+        if (!root.isDirectory())
+            return;
 
         for (File file : FileUtility.collectFiles(root, EngineSetting.ARPG_FILE_EXTENSIONS))
             songName2File.put(FileUtility.getPathWithFileNameWithoutExtension(root, file), file);

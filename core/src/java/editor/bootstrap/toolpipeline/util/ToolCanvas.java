@@ -4,7 +4,6 @@ import editor.bootstrap.toolpipeline.tool.ToolActionGroupStruct;
 import editor.bootstrap.toolpipeline.tool.ToolActionStruct;
 import editor.bootstrap.toolpipeline.tool.ToolOptionStruct;
 import editor.runtime.EditorSetting;
-import engine.root.EngineSetting;
 
 public enum ToolCanvas {
 
@@ -142,19 +141,9 @@ public enum ToolCanvas {
             false),
     MUSIC(
             EditorSetting.TOOL_CANVAS_MUSIC,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.DRAW, EditorTool.CUT },
+            new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
             new ToolActionGroupStruct[] { musicNesting(), musicExport() },
-            false),
-    PIANO_ROLL(
-            EditorSetting.TOOL_CANVAS_PIANO_ROLL,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.DRAW, EditorTool.ERASE, EditorTool.CUT },
-            new ToolActionGroupStruct[] { pianoRollNotes() },
-            false,
-            named(ToolOption.SNAP, EditorSetting.PIANO_ROLL_GRID_NAMES, EditorSetting.PIANO_ROLL_SNAP_DEFAULT),
-            named(ToolOption.NOTE_LENGTH, EditorSetting.PIANO_ROLL_GRID_NAMES,
-                    EditorSetting.PIANO_ROLL_NOTE_LENGTH_DEFAULT),
-            velocity(),
-            named(ToolOption.SCALE_LOCK, EditorSetting.PIANO_ROLL_SCALE_LOCK_NAMES, 0));
+            false);
 
     // Values
     public static final ToolCanvas[] VALUES = values();
@@ -388,21 +377,6 @@ public enum ToolCanvas {
                 action(EditorSetting.TOOL_ACTION_LABEL_RENDER, EditorSetting.RECORDER_KEY_RENDER));
     }
 
-    private static ToolActionGroupStruct pianoRollNotes() {
-        return new ToolActionGroupStruct(
-                EditorSetting.PIANO_ROLL_HEADER_NOTES,
-                action(EditorSetting.PIANO_ROLL_LABEL_QUANTIZE, EditorSetting.PIANO_ROLL_KEY_QUANTIZE),
-                action(EditorSetting.PIANO_ROLL_LABEL_TRANSPOSE_UP, EditorSetting.PIANO_ROLL_KEY_TRANSPOSE_UP),
-                action(EditorSetting.PIANO_ROLL_LABEL_TRANSPOSE_DOWN, EditorSetting.PIANO_ROLL_KEY_TRANSPOSE_DOWN),
-                action(EditorSetting.PIANO_ROLL_LABEL_OCTAVE_UP, EditorSetting.PIANO_ROLL_KEY_OCTAVE_UP),
-                action(EditorSetting.PIANO_ROLL_LABEL_OCTAVE_DOWN, EditorSetting.PIANO_ROLL_KEY_OCTAVE_DOWN),
-                action(EditorSetting.PIANO_ROLL_LABEL_DOUBLE_LENGTH, EditorSetting.PIANO_ROLL_KEY_DOUBLE_LENGTH),
-                action(EditorSetting.PIANO_ROLL_LABEL_HALF_LENGTH, EditorSetting.PIANO_ROLL_KEY_HALF_LENGTH),
-                action(EditorSetting.PIANO_ROLL_LABEL_DUPLICATE, EditorSetting.PIANO_ROLL_KEY_DUPLICATE),
-                action(EditorSetting.PIANO_ROLL_LABEL_SELECT_ALL, EditorSetting.PIANO_ROLL_KEY_SELECT_ALL),
-                action(EditorSetting.PIANO_ROLL_LABEL_LEGATO, EditorSetting.PIANO_ROLL_KEY_LEGATO));
-    }
-
     private static ToolActionStruct action(String label, String key) {
         return new ToolActionStruct(label, key);
     }
@@ -438,15 +412,6 @@ public enum ToolCanvas {
 
     private static ToolOptionStruct named(ToolOption option, String[] names, int defaultIndex) {
         return new ToolOptionStruct(option, names, defaultIndex);
-    }
-
-    private static ToolOptionStruct velocity() {
-        return new ToolOptionStruct(
-                ToolOption.VELOCITY,
-                EngineSetting.NOTE_VELOCITY_MIN,
-                EngineSetting.NOTE_VELOCITY_MAX,
-                1f,
-                EditorSetting.PIANO_ROLL_VELOCITY_DEFAULT);
     }
 
     private static ToolOptionStruct mirror() {

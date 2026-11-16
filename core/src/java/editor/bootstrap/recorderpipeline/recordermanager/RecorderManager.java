@@ -213,14 +213,9 @@ public class RecorderManager extends ManagerPackage {
     private float takeStart;
     private int takeCount;
     private DevContext devContext;
-    private boolean looping;
 
-    // Music — the lane whose mix the Properties tab shows, whether the metronome clicks, the beat it clicked last,
-    // its sound, and the share of a render last shown
+    // Music — the lane whose mix the Properties tab shows, and the share of a render last shown
     private int selectedLane;
-    private boolean metronome;
-    private int metronomeBeat;
-    private int metronomeSoundID;
     private int renderPercent;
 
     // Suspension
@@ -335,8 +330,6 @@ public class RecorderManager extends ManagerPackage {
         this.armedChannels = RecorderChannel.ALL;
 
         // Music
-        this.metronomeBeat = EngineSetting.INDEX_NOT_FOUND;
-        this.metronomeSoundID = EngineSetting.INDEX_NOT_FOUND;
         this.renderPercent = EngineSetting.INDEX_NOT_FOUND;
 
         // Selection
@@ -420,7 +413,6 @@ public class RecorderManager extends ManagerPackage {
         updateAssets();
         holdWorld();
         holdSound();
-        tickMetronome();
         updateRender();
     }
 
@@ -450,9 +442,7 @@ public class RecorderManager extends ManagerPackage {
 
     private String resolveRunningStatus() {
         return switch (state) {
-            case RECORDING -> take != null
-                    ? EditorSetting.RECORDER_STATUS_RECORDING + take.getName()
-                    : EditorSetting.RECORDER_STATUS_RECORDING_NOTES;
+            case RECORDING -> EditorSetting.RECORDER_STATUS_RECORDING + take.getName();
             case PLAYING -> EditorSetting.RECORDER_STATUS_PLAYING;
             case PAUSED -> EditorSetting.RECORDER_STATUS_PAUSED;
             case EXPORTING -> EditorSetting.RECORDER_STATUS_EXPORTING + exportFile.getName();
@@ -467,30 +457,11 @@ public class RecorderManager extends ManagerPackage {
 
         playhead += internal.getDeltaTime();
 
-        if (state == RecorderState.PLAYING && looping && wrapLoop())
-            return;
-
         if (state == RecorderState.PLAYING && playhead >= recording.getDuration()) {
             playhead = recording.getDuration();
             state = RecorderState.PAUSED;
             revision++;
         }
-    }
-
-    // A playhead playing past the loop range's end goes back to its start; true when it did
-    private boolean wrapLoop() {
-
-        RecordingExportStruct exportStruct = recording.getExportStruct();
-        float duration = recording.getDuration();
-        float loopStart = exportStruct.resolveStart(duration);
-        float loopEnd = exportStruct.resolveEnd(duration);
-
-        if (loopEnd - loopStart < EditorSetting.RECORDER_MIN_TAKE_SECONDS || playhead < loopEnd)
-            return false;
-
-        this.playhead = loopStart;
-        revision++;
-        return true;
     }
 
     // The view keeps to the timeline as it grows and shrinks, and pages along after a running playhead
@@ -568,15 +539,15 @@ public class RecorderManager extends ManagerPackage {
 
     // Transport \\
 
-    // A Video records a take of every armed channel; a Music file runs the transport from the playhead while the
-    // notes typed are written into the notes clip selected, one laid at the playhead when none is
+    // A Video records a take of every armed channel; a Music file records nothing, its notes are laid from the Note
+    // Library
     public void record() {
 
         if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING)
             return;
 
         if (recording != null && !recording.getKind().isFilmed()) {
-            recordNotes();
+            setStatus(EditorSetting.RECORDER_STATUS_MUSIC_RECORDS_NOTHING);
             return;
         }
 
@@ -599,21 +570,6 @@ public class RecorderManager extends ManagerPackage {
         setStatus(EditorSetting.RECORDER_STATUS_RECORDING + take.getName());
     }
 
-    private void recordNotes() {
-
-        if (!beginSession())
-            return;
-
-        cancelDrag();
-
-        if (findNotesClip() == null)
-            drawNotesClip(playhead, playhead + (float) (recording.getTempo().toSeconds(
-                    toTick(playhead) + recording.getBarTicks()) - playhead), Math.max(0, selectedLane));
-
-        this.state = RecorderState.RECORDING;
-        setStatus(EditorSetting.RECORDER_STATUS_RECORDING_NOTES);
-    }
-
     public void play() {
 
         if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING || !hasClips())
@@ -623,7 +579,7 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         if (playhead >= recording.getDuration())
-            playhead = looping ? recording.getExportStruct().resolveStart(recording.getDuration()) : 0f;
+            playhead = 0f;
 
         this.state = RecorderState.PLAYING;
         setStatus(EditorSetting.RECORDER_STATUS_PLAYING);
@@ -668,13 +624,13 @@ public class RecorderManager extends ManagerPackage {
         if (!state.isSession())
             return;
 
-        if (state == RecorderState.RECORDING && take != null)
+        if (state == RecorderState.RECORDING)
             finishTake();
 
         if (state == RecorderState.EXPORTING) {
             this.exportResult = RecorderExportResult.CANCELLED;
             setStatus(EditorSetting.RECORDER_STATUS_EXPORT_CANCELLED);
-        } else if (state != RecorderState.RECORDING || take == null)
+        } else if (state != RecorderState.RECORDING)
             setStatus(EditorSetting.RECORDER_STATUS_READY);
 
         endSession();
@@ -790,13 +746,6 @@ public class RecorderManager extends ManagerPackage {
     public void scrollView(float share) {
         if (view.scrollTo(view.getStart() + share * view.getSpan(), resolveTimelineSpan()))
             viewRevision++;
-    }
-
-    // Plays round the loop range, the export's start to its end, the whole recording while none is set, or stops
-    // doing so
-    public void toggleLoop() {
-        this.looping = !looping;
-        revision++;
     }
 
     // Arming \\
@@ -1274,6 +1223,7 @@ public class RecorderManager extends ManagerPackage {
         else
             recordingTimelineBranch.trimEndTo(clip, recordingTimelineBranch.resolveTrimEnd(recording, clip, time));
 
+        fitNoteClip(clip);
         focusClip(clipIndex);
         this.playhead = Math.min(playhead, recording.getDuration());
         markUnsaved();
@@ -1368,6 +1318,8 @@ public class RecorderManager extends ManagerPackage {
         if (cut == EngineSetting.INDEX_NOT_FOUND)
             return false;
 
+        fitNoteClip(clip);
+        fitNoteClip(recording.getClips().get(cut));
         clearNodeSelection();
         pickClip(cut);
         markUnsaved();
@@ -1419,6 +1371,7 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
+        fitNoteClip(clip);
         markUnsaved();
         setStatus(EditorSetting.RECORDER_STATUS_TRIMMED + clip.getSourceName());
     }
@@ -1615,6 +1568,17 @@ public class RecorderManager extends ManagerPackage {
         drag.carry(songName);
     }
 
+    // A note of an instrument picked up from the Note Library, to be laid where it is let go over the lanes as a note
+    // clip a beat long; nothing is picked up while no recording is open to lay it on
+    public void beginNoteDrag(String instrumentName, int pitch, WindowInstance window, float pressX, float pressY) {
+
+        if (drag.isActive() || !canEditTimeline())
+            return;
+
+        beginDrag(RecorderDragKind.NOTE, pitch, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
+        drag.carry(instrumentName);
+    }
+
     // The saved recording laid inside the open one from the moment, on the lane asked for or the nearest clear one;
     // refused when it would nest the open recording in itself, at any depth, or shows a picture of another world
     public void placeRecording(String recordingName, float start, int lane) {
@@ -1732,13 +1696,6 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         int clipIndex = canEditTimeline() ? recording.findClipAt(time, lane) : EngineSetting.INDEX_NOT_FOUND;
-
-        if (isDrawing() && canEditTimeline() && clipIndex == EngineSetting.INDEX_NOT_FOUND) {
-            beginDrag(RecorderDragKind.DRAW, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
-                    window, pressX, pressY, time, 0f);
-            landDraw(time, lane);
-            return;
-        }
 
         if (isCutting() && clipIndex != EngineSetting.INDEX_NOT_FOUND) {
             beginDrag(RecorderDragKind.CUT, clipIndex, EngineSetting.INDEX_NOT_FOUND,
@@ -1859,8 +1816,7 @@ public class RecorderManager extends ManagerPackage {
         float tolerance = snapping ? EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel : 0f;
 
         switch (drag.getKind()) {
-            case TAKE, SOUND, RECORDING, SONG, CLIP -> landSpan(overLanes, time, lane, tolerance);
-            case DRAW -> landDraw(time, drag.getLandingLane());
+            case TAKE, SOUND, RECORDING, SONG, NOTE, CLIP -> landSpan(overLanes, time, lane, tolerance);
             case TRIM_START, TRIM_END -> landEdge(time, tolerance);
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
@@ -1902,21 +1858,6 @@ public class RecorderManager extends ManagerPackage {
 
         drag.land(overLanes, start,
                 recordingTimelineBranch.resolveLane(recording, start, start + length, lane, ignored));
-    }
-
-    // A notes clip being drawn runs from the bar line before the press to the bar line after the cursor, on the lane
-    // pressed, at least a bar long
-    private void landDraw(float time, int lane) {
-
-        float pressed = drag.getPressTime();
-        int barTicks = recording.getBarTicks();
-        int fromTick = Math.floorDiv(toTick(Math.min(pressed, time)), barTicks) * barTicks;
-        int toTickEnd = Math.max(fromTick + barTicks,
-                Math.ceilDiv(toTick(Math.max(pressed, time)), barTicks) * barTicks);
-        float from = (float) recording.getTempo().toSeconds(fromTick);
-
-        drag.land(true, from, Math.clamp(lane, 0, recording.getLaneCount() - 1));
-        drag.reach((float) recording.getTempo().toSeconds(toTickEnd), 0.0);
     }
 
     private void landEdge(float time, float tolerance) {
@@ -2030,7 +1971,10 @@ public class RecorderManager extends ManagerPackage {
                 else if (!moved)
                     openSong(carriedName);
             }
-            case DRAW -> drawNotesClip(landingStart, reachTime, landingLane);
+            case NOTE -> {
+                if (dropped)
+                    placeNote(carriedName, index, landingStart, landingLane);
+            }
             case SOUND -> {
                 if (dropped)
                     placeSound(index, landingStart, landingLane);
@@ -2131,7 +2075,7 @@ public class RecorderManager extends ManagerPackage {
             case SOUND -> soundManager.getSoundHandleFromSoundID(drag.getIndex()).getPlayedLength();
             case RECORDING -> resolveRecordingLength(drag.getName());
             case SONG -> resolveSongLength(drag.getName());
-            case DRAW -> drag.getReachTime() - drag.getLandingStart();
+            case NOTE -> (float) recording.getTempo().toSeconds(recording.getBeatTicks());
             case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
             case TRIM_START, TRIM_END, CUT, NODE, PAN, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS,
                     KEYS_BOX, GRAPH_BOX, SOUND_EVENT, TRANSITION, TRANSITION_LENGTH, NONE -> 0f;
@@ -2388,39 +2332,82 @@ public class RecorderManager extends ManagerPackage {
         return null;
     }
 
-    // The notes clip selected, null while the clip selected is anything else
-    public RecordingClipStruct findNotesClip() {
-        return isClipIndex(selectedClip) && recording.getClips().get(selectedClip).getSourceKind()
-                == RecordingSourceKind.NOTES ? recording.getClips().get(selectedClip) : null;
-    }
+    // A note clip laid from the moment on the lane: one note of the instrument at the pitch, a beat long, struck at
+    // RECORDER_NOTE_VELOCITY; it is stretched and cut on the timeline like any clip, its note always filling it
+    public void placeNote(String instrumentName, int pitch, float start, int lane) {
 
-    // A new notes clip on SONG_DEFAULT_INSTRUMENT laid over the span, holding no notes, and selected
-    public void drawNotesClip(float start, float end, int lane) {
-
-        if (!canEditTimeline() || recording.getKind().isFilmed() || end <= start)
+        if (!canEditTimeline())
             return;
 
-        SongClipStruct notes = new SongClipStruct(
-                SongClipKind.NOTES,
-                0,
-                0,
-                Math.max(1, toTick(end) - toTick(start)),
-                EngineSetting.DEFAULT_SONG_CLIP_OFFSET,
-                EngineSetting.DEFAULT_SONG_CLIP_MUTED,
+        int startTick = toTick(start);
+        float from = (float) recording.getTempo().toSeconds(startTick);
+        float to = (float) recording.getTempo().toSeconds(startTick + recording.getBeatTicks());
+        SongClipStruct note = createNoteClip(
+                instrumentName,
+                pitch,
+                EditorSetting.RECORDER_NOTE_VELOCITY,
+                recording.getBeatTicks(),
                 EngineSetting.DEFAULT_SONG_CLIP_VOLUME,
-                EngineSetting.DEFAULT_SONG_CLIP_TRANSPOSE,
-                EngineSetting.SONG_DEFAULT_INSTRUMENT,
-                SongArpgUtility.NO_NOTES,
-                EngineSetting.SONG_REFERENCE_NONE,
-                EngineSetting.SONG_REFERENCE_NONE);
-        RecordingClipStruct clip = RecordingClipStruct.ofNotes(notes, 0f, end - start, lane, start);
+                EngineSetting.DEFAULT_SONG_CLIP_TRANSPOSE);
+        RecordingClipStruct clip = RecordingClipStruct.ofNotes(note, 0f, to - from, lane, from);
 
         recordingSourceBranch.bindClip(recording, clip);
         pickClip(recordingTimelineBranch.placeClip(recording, clip));
         this.assetsStale = true;
         soundRevision++;
         markUnsaved();
-        setStatus(EditorSetting.RECORDER_STATUS_NOTES_DRAWN + notes.getInstrumentName());
+        setStatus(EditorSetting.RECORDER_STATUS_NOTE_PLACED + clip.resolveLabelName());
+    }
+
+    // A note clip's note made to run its whole length again from its first tick, after its span changed: stretched,
+    // it holds the note longer and fades on release where it ends; cut, each piece strikes a note of its own
+    private void fitNoteClip(RecordingClipStruct clip) {
+
+        if (!clip.isNoteClip())
+            return;
+
+        SongClipStruct note = clip.getSongClip();
+        int length = Math.max(1, toTick(clip.getEnd()) - toTick(clip.getStart()));
+
+        clip.setSpan(0f, clip.getLength());
+        replaceSongClip(clip, createNoteClip(
+                note.getInstrumentName(),
+                note.getNotePitch(0),
+                note.getNoteVelocity(0),
+                length,
+                note.getVolume(),
+                note.getTranspose()));
+    }
+
+    // The one way a note clip's codec clip is made: a notes clip holding one note from its first tick to its end
+    private SongClipStruct createNoteClip(
+            String instrumentName,
+            int pitch,
+            int velocity,
+            int length,
+            float volume,
+            int transpose) {
+
+        int[] notes = new int[EngineSetting.SONG_NOTE_STRIDE];
+
+        notes[EngineSetting.SONG_NOTE_START] = 0;
+        notes[EngineSetting.SONG_NOTE_LENGTH] = length;
+        notes[EngineSetting.SONG_NOTE_PITCH] = pitch;
+        notes[EngineSetting.SONG_NOTE_VELOCITY] = velocity;
+
+        return new SongClipStruct(
+                SongClipKind.NOTES,
+                0,
+                0,
+                length,
+                EngineSetting.DEFAULT_SONG_CLIP_OFFSET,
+                EngineSetting.DEFAULT_SONG_CLIP_MUTED,
+                volume,
+                transpose,
+                instrumentName,
+                notes,
+                EngineSetting.SONG_REFERENCE_NONE,
+                EngineSetting.SONG_REFERENCE_NONE);
     }
 
     // The clip's codec clip replaced whole by an edit — its notes, instrument, volume or transpose — the clip bound
@@ -2434,16 +2421,6 @@ public class RecorderManager extends ManagerPackage {
         recordingSourceBranch.bindClip(recording, clip);
         this.assetsStale = true;
         soundRevision++;
-        markUnsaved();
-    }
-
-    // A notes clip's end moved on to the moment, so notes recorded past it are kept
-    public void extendClip(RecordingClipStruct clip, float time) {
-
-        if (recording == null || time <= clip.getEnd())
-            return;
-
-        clip.setOutPoint(clip.toChildTime(time));
         markUnsaved();
     }
 
@@ -2579,42 +2556,6 @@ public class RecorderManager extends ManagerPackage {
         return recording != null && lane >= 0 && lane < recording.getLaneCount();
     }
 
-    // Metronome \\
-
-    public void toggleMetronome() {
-        this.metronome = !metronome;
-        this.metronomeSoundID = soundManager.findSoundID(EditorSetting.RECORDER_METRONOME_SOUND);
-        revision++;
-    }
-
-    // While a Music file plays or records with the metronome on, a click on every beat the playhead crosses, the
-    // first of each bar accented
-    private void tickMetronome() {
-
-        if (!metronome || recording == null || recording.getKind().isFilmed() || !isSoundPlayed()) {
-            this.metronomeBeat = EngineSetting.INDEX_NOT_FOUND;
-            return;
-        }
-
-        int beat = Math.floorDiv(toTick(playhead), recording.getBeatTicks());
-
-        if (beat == metronomeBeat)
-            return;
-
-        this.metronomeBeat = beat;
-
-        if (metronomeSoundID == EngineSetting.INDEX_NOT_FOUND)
-            return;
-
-        soundManager.playSound(
-                metronomeSoundID,
-                EditorSetting.RECORDER_METRONOME_VOLUME,
-                Math.floorMod(beat, recording.getBeatsPerBar()) == 0
-                        ? EditorSetting.RECORDER_METRONOME_ACCENT_PITCH
-                        : EditorSetting.RECORDER_METRONOME_PITCH,
-                0f);
-    }
-
     // Export \\
 
     // The open Music file written as a Standard MIDI File among the player's songs; the sound clips MIDI cannot hold
@@ -2692,7 +2633,7 @@ public class RecorderManager extends ManagerPackage {
 
     // Rows \\
 
-    // The rows a Recorder or Timeline tab shows in the Properties tab: the tempo, meter, key and metronome; or the
+    // The rows a Recorder or Timeline tab shows in the Properties tab: the tempo, meter and key; or the
     // lane selected's mix and the clip selected's instrument, volume and transpose
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows, boolean timeline) {
         if (timeline)
@@ -4551,9 +4492,9 @@ public class RecorderManager extends ManagerPackage {
         return isTaking() ? take.getChannelMask() : RecorderChannel.NONE;
     }
 
-    // True while a take records the world live; a Music file records notes, never a take
+    // True while a take records the world live; a Music file never records
     public boolean isTaking() {
-        return state == RecorderState.RECORDING && take != null;
+        return state == RecorderState.RECORDING;
     }
 
     public RecorderState getState() {
@@ -4629,14 +4570,6 @@ public class RecorderManager extends ManagerPackage {
         return selectedLane;
     }
 
-    public boolean isMetronomeOn() {
-        return metronome;
-    }
-
-    public boolean isLooping() {
-        return looping;
-    }
-
     public int getSelectedNode() {
         return selectedNode;
     }
@@ -4668,11 +4601,6 @@ public class RecorderManager extends ManagerPackage {
     // True while the Cut tool is chosen for the timeline; a press on a clip then cuts it instead of taking hold of it
     public boolean isCutting() {
         return toolManager.getTool(getToolCanvas()) == EditorTool.CUT;
-    }
-
-    // True while the Draw tool is chosen on a Music file's timeline, where a drag on an empty lane draws a notes clip
-    public boolean isDrawing() {
-        return toolManager.getTool(getToolCanvas()) == EditorTool.DRAW;
     }
 
     // What the Timeline's tools work on: a Music file's clips and grid, else a Video's clips

@@ -23,14 +23,14 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   outliner holds every slider and control, the Rig tab marks which bone channels are sliders),
   sharing the region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with
   the Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour and Texture Maps the
-  map painted; the Recorder is its transport (record, play, loop range, clock, what is open with Back) and the Timeline
+  map painted; the Recorder is its transport (Record, Play, Pause and Stop, nothing else) and the Timeline
   its clips, with Recorder Keys, Recorder Bin, Recorder Assets and Recorder Settings beside them, each opening its own
   menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes act
   on; the Recordings tab lists the Videos and the Songs (Music files) and its rows drag onto the Timeline to lay; a
   Music file's Timeline shows its lanes with a mixer strip each, the lane and clip selected edited in the Properties
-  tab, and the Recorder its tempo, meter, key and metronome, set in the Properties tab; the Piano Roll edits the notes
-  of the notes clip selected on the Timeline with the Tools tab's Select, Draw, Erase and Cut and its Notes actions, the
-  selected notes in the Properties tab, and plays and records them with Musical Typing.
+  tab, and its tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library lists
+  the notes of the instrument picked in the Hierarchy, each dragged onto the Timeline as a note clip that is stretched
+  and cut like any clip. The Timeline's title names what is open; Back is a Recorder shortcut.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 
 ## Layers
