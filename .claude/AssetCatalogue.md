@@ -441,6 +441,8 @@ One line per session that changed this file: the date, what was added or removed
   `schemas/Animations.arpg` (`parts`, each joined part's tracks kept apart in the clip).
 - 2026-11-17: Workspace. Regenerated `menus/editor/EditorWindow.arpg` (File's New File replaced by Open; Import Model
   and Export Model named Import and Export).
+- 2026-11-17: Boot fix. Regenerated `shortcuts/Tools.arpg` (Smaller and Larger no longer name the removed Stamp tool,
+  which stopped the editor at startup).
 
 ---
 
