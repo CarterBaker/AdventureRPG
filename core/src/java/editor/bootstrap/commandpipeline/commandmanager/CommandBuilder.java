@@ -4,6 +4,7 @@ import java.io.File;
 
 import editor.bootstrap.commandpipeline.command.CommandData;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
+import editor.bootstrap.commandpipeline.command.CommandTarget;
 import editor.runtime.EditorSetting;
 import engine.root.BuilderPackage;
 import engine.util.arpg.ArpgArrayStruct;
@@ -20,7 +21,9 @@ class CommandBuilder extends BuilderPackage {
      * the argument names in the order they are typed. A command that takes
      * no arguments runs with one click from the command console's tree. A
      * command marked "shared" acts on state every window shares, such as the
-     * world's clock, so it runs in one Dev window instead of each.
+     * world's clock, so it runs in one Dev window instead of each. A
+     * command's "target" names the editor tool it runs in, the Dev windows
+     * unless it names another.
      */
 
     // Build \\
@@ -54,7 +57,8 @@ class CommandBuilder extends BuilderPackage {
                 groupName,
                 argumentNames,
                 buildUsage(commandName, argumentNames),
-                ArpgUtility.getBoolean(commandArpg, "shared", false));
+                ArpgUtility.getBoolean(commandArpg, "shared", false),
+                ArpgUtility.getEnum(commandArpg, "target", CommandTarget.class, CommandTarget.DEV));
 
         CommandHandle commandHandle = create(CommandHandle.class);
         commandHandle.constructor(commandData);

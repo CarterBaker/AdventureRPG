@@ -4,8 +4,10 @@ import java.util.Arrays;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.command.CommandStruct;
+import editor.bootstrap.commandpipeline.command.CommandTarget;
 import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.dev.DevContext;
@@ -17,21 +19,19 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CommandManager extends ManagerPackage {
 
     /*
-     * Owns every console command and is the one route from the command
-     * console to every open Dev window. Commands load from ARPG, one group per
-     * file, and groups are listed in name order. A submitted line is echoed to
-     * the log, parsed once into a CommandStruct, checked against its command's
-     * definition, and queued on every Dev window that has not crashed, each of
-     * which runs it inside its own frame — or on one Dev window alone, when a
-     * command is dropped onto it or acts on what every window shares. Commands carried between windows belong to
-     * the drag branch. TabManager's open tabs are the only record of which Dev
-     * windows exist, so nothing registers here. A command name being typed
-     * completes as far as every command it could still be agrees, and lists
-     * them when that is no further.
+     * Owns every console command and is the one route from the command console to every open Dev window. Commands load
+     * from ARPG, one group per file, and groups are listed in name order. A submitted line is echoed to the log, parsed
+     * once into a CommandStruct, checked against its command's definition, and queued on every Dev window that has not
+     * crashed, each of which runs it inside its own frame — or on one Dev window alone, when a command is dropped onto
+     * it or acts on what every window shares. A command whose target is the character tabs runs there instead, on the
+     * character open in them. Commands carried between windows belong to the drag branch. TabManager's open tabs are
+     * the only record of which Dev windows exist, so nothing registers here. A command name being typed completes as
+     * far as every command it could still be agrees, and lists them when that is no further.
      */
 
     // Internal
     private TabManager tabManager;
+    private CharacterEditorManager characterEditorManager;
     private CommandDragBranch commandDragBranch;
 
     // Palette
@@ -64,6 +64,7 @@ public class CommandManager extends ManagerPackage {
     @Override
     protected void get() {
         this.tabManager = get(TabManager.class);
+        this.characterEditorManager = get(CharacterEditorManager.class);
     }
 
     @Override
@@ -201,8 +202,15 @@ public class CommandManager extends ManagerPackage {
 
     private int dispatchCommand(CommandStruct command) {
 
+        CommandHandle commandHandle = commandName2CommandHandle.get(command.getCommandName());
+
+        if (commandHandle.getTarget() == CommandTarget.CHARACTER) {
+            characterEditorManager.executeCommand(command);
+            return 1;
+        }
+
         ObjectArrayList<TabHandle> openTabs = tabManager.getOpenTabs();
-        boolean shared = commandName2CommandHandle.get(command.getCommandName()).isShared();
+        boolean shared = commandHandle.isShared();
         int receivers = 0;
 
         for (int i = 0; i < openTabs.size(); i++) {

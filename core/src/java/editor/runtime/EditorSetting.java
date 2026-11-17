@@ -556,6 +556,15 @@ public class EditorSetting {
             ": cannot move the clock past the last day of age ";
     public static final String COMMAND_MESSAGE_TIME_MOVED = ": the clock now reads ";
 
+    // Commands — Character, run in the character tabs on the character open there; left is +x
+    public static final String COMMAND_MIRROR_BODY_LEFT = "mirrorbodyleft";
+    public static final String COMMAND_MIRROR_BODY_RIGHT = "mirrorbodyright";
+    public static final String COMMAND_MIRROR_HAIR_LEFT = "mirrorhairleft";
+    public static final String COMMAND_MIRROR_HAIR_RIGHT = "mirrorhairright";
+    public static final String COMMAND_MESSAGE_NO_CHARACTER_ACTION = "The character tabs have no action for command: ";
+    public static final String COMMAND_MESSAGE_NO_PART_MESH =
+            "No character is open in the character tabs, or it wears no mesh of its own for its ";
+
     // Dev Time — units, the groups the command console's dials sit in, and how the clock is described
     public static final String DEV_TIME_UNIT_HOUR = "hour";
     public static final String DEV_TIME_UNIT_MINUTE = "minute";
@@ -1078,7 +1087,6 @@ public class EditorSetting {
     public static final int CHARACTER_MESH_KEY_BITS = 21;
     public static final long CHARACTER_MESH_KEY_MASK = (1L << CHARACTER_MESH_KEY_BITS) - 1L;
     public static final float CHARACTER_MESH_CENTER_TOLERANCE = 0.001f;
-    public static final float CHARACTER_MESH_SYMMETRIZE_REACH = 0.02f;
     public static final float CHARACTER_MESH_MIRROR_REACH = 0.003f;
     public static final float CHARACTER_MESH_SPAN_EPSILON = 0.0001f;
     public static final float CHARACTER_MESH_WEIGHT_EPSILON = 0.0001f;
@@ -1251,6 +1259,25 @@ public class EditorSetting {
     public static final float CHARACTER_TOPOLOGY_AREA_SHARE_MIN = 0.1f;
     public static final String CHARACTER_EDITOR_MESSAGE_TOPOLOGY_SHAPE =
             "The topology changes only on the base shape: return to it under Shape Keys";
+
+    // Character Symmetry — the centre plane is x = 0; corners within CHARACTER_MESH_CENTER_TOLERANCE lie on it
+    public static final int CHARACTER_SYMMETRY_SIDE_KEPT = 1;
+    public static final int CHARACTER_SYMMETRY_SIDE_CENTRE = 0;
+    public static final int CHARACTER_SYMMETRY_SIDE_REMOVED = -1;
+    public static final float CHARACTER_SYMMETRY_HALF = 0.5f;
+    public static final float CHARACTER_SYMMETRY_BONE_REACH = 0.02f;
+    public static final float CHARACTER_SYMMETRY_AXIS_SPREAD_MIN = 0.0001f;
+    public static final float CHARACTER_SYMMETRY_AXIS_WELD = 0.01f;
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRIZED = "Symmetrized ";
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_SEPARATOR = ": ";
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_FACES = " faces, ";
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_CUT = " edges cut at the centre, ";
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_LAID = " vertices laid on it";
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_OVERLAP_START = ", ";
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_OVERLAP =
+            " UV islands mirrored in place, with no twin island on the side removed to take";
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_UNMATCHED = " bones off the centre have no twin, so the"
+            + " mirrored side weighs onto them too: Rig Hair Locks then Weigh Onto Locks give it chains of its own";
 
     // Character Rig — rig fields
     public static final String CHARACTER_RIG_FIELD_BONES = "bones";

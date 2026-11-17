@@ -445,6 +445,8 @@ One line per session that changed this file: the date, what was added or removed
   which stopped the editor at startup).
 
 ---
+- 2026-11-17: Added `commands/Character.arpg`, the command console's Character group (Mirror Body and Mirror
+  Hair, each way), run in the character tabs.
 
 ## Textures and Sprites (2429 files)
 
@@ -2435,7 +2437,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/commands/`
 
-`Camera.arpg`, `Items.arpg`, `Recorder.arpg`, `Teleport.arpg`, `Time.arpg`, `Vehicles.arpg`
+`Camera.arpg`, `Character.arpg`, `Items.arpg`, `Recorder.arpg`, `Teleport.arpg`, `Time.arpg`, `Vehicles.arpg`
 
 ### `assets/contents/ores/`
 

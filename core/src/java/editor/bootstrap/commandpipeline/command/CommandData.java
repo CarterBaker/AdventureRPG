@@ -8,8 +8,9 @@ public class CommandData extends DataPackage {
      * Immutable definition of one console command: the name typed to run it,
      * the label the command console's tree shows for it, the group it is
      * listed under, the names of the arguments it takes, the usage line
-     * reported when it is typed with the wrong number of them, and whether it
-     * acts on what every window shares, so it runs in one Dev window only.
+     * reported when it is typed with the wrong number of them, whether it
+     * acts on what every window shares, so it runs in one Dev window only,
+     * and the editor tool it runs in.
      */
 
     // Identity
@@ -23,6 +24,7 @@ public class CommandData extends DataPackage {
 
     // Scope
     private final boolean shared;
+    private final CommandTarget target;
 
     // Constructor \\
 
@@ -32,7 +34,8 @@ public class CommandData extends DataPackage {
             String groupName,
             String[] argumentNames,
             String usage,
-            boolean shared) {
+            boolean shared,
+            CommandTarget target) {
 
         // Identity
         this.commandName = commandName;
@@ -45,6 +48,7 @@ public class CommandData extends DataPackage {
 
         // Scope
         this.shared = shared;
+        this.target = target;
     }
 
     // Accessible \\
@@ -75,5 +79,9 @@ public class CommandData extends DataPackage {
 
     public boolean isShared() {
         return shared;
+    }
+
+    public CommandTarget getTarget() {
+        return target;
     }
 }

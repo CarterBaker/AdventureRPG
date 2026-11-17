@@ -427,7 +427,7 @@ class CharacterTopologyBranch extends BranchPackage {
     }
 
     // A new vertex the given share of the way from one vertex to another
-    private int addBetween(RiggedMeshStruct mesh, int from, int to, float share) {
+    int addBetween(RiggedMeshStruct mesh, int from, int to, float share) {
 
         blendVertices.clear();
         blendShares.clear();

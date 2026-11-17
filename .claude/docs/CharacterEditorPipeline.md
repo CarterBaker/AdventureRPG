@@ -226,6 +226,26 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   `CHARACTER_MESH_MIRROR_REACH` (`pairNearest`, binned by reach-sized cells), so a mesh not modelled exactly
   symmetric still mirrors every stroke. `CharacterViewUtility.round` rounds half away from zero, so a point and its
   mirror always round alike.
+- **Symmetrize** (Blender's Mesh > Symmetrize, Maya's Symmetrize): `CharacterSymmetryBranch.symmetrize(document,
+  positiveToNegative)` is the one operation that makes a mesh exactly symmetric, the Mesh canvas's two Symmetrize
+  actions (+X to -X, -X to +X) and the command console's Character group (`assets/commands/Character.arpg`, target
+  `character`: Mirror Body and Mirror Hair, Left onto Right or Right onto Left, left being +x, run by
+  `CharacterCommandBranch` on the open character's body or worn hair through `CharacterEditorManager.executeCommand`)
+  both calling it. It never moves one side's vertices onto the other's: the side given up is removed and the side kept
+  is mirrored and welded on x = 0, so every vertex gets an exact twin and every face a twin wound back. A face crossing
+  the plane along two edges is cut there (`CharacterTopologyBranch.addBetween`, the cut shared by both faces beside the
+  edge); one crossing any other way first has the corners on the side it holds fewer of laid on the plane. Twins take
+  their side's weights with sided bones swapped (`CharacterWeightBranch.copyMirrored`; an unsided bone off the plane,
+  a hair chain, swaps with the unsided bone whose joint is nearest its mirror within `CHARACTER_SYMMETRY_BONE_REACH`,
+  and the status line counts those left without one), so the rig and every clip stay as they are; a `_l`/`_r` shape
+  key swaps with its twin and the rest mirror; vertices on the plane take the even blend of their weights and deltas
+  and their mirror's (`symmetrizeWeights`); masks, seams, pins, textures and zones carry over. UV islands stay whole,
+  fitted from each kept face's old twin face (the face on the side removed over its corners' old twins,
+  `CharacterSelectionBranch.resolveMirror` taken before the edit): an island that crossed the plane is reflected
+  across the line fitted to its old pairs, its centre corners within `CHARACTER_SYMMETRY_AXIS_WELD` laid on it; any
+  other is laid where its old twin island stood, by a glide reflection or, for a layout that shared one, a move,
+  whichever fits; with no old twin it is mirrored in place and counted. One undo step, refused on a shape key and past
+  the mesh limit. Run on its own result it changes nothing.
 - **Canvas options.** Mirror, X-Ray and Bones are `ToolOption`s marked canvas-wide (`isCanvasWide`): every tool on a
   canvas that honours one lists it under its own options, last, in the Tools panel. Mirror (on by default) is honoured
   by the mesh, sculpt, weights, paint and rig canvases, X-Ray by the mesh and weights, Bones
@@ -857,6 +877,9 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   vertex's inverse blended matrix, taken when it begins; a vertex weighed onto no bone moves as it is. Sculpt strokes
   stay bind-only and are refused posed: the preview poses on the GPU and the mesh view skins on the CPU, but edits are
   written to the bind-pose file.
+- **Symmetrize after a lopsided hair rig.** Hair chains laid on asymmetric cards have no mirrored twin chain, so a
+  symmetrized hair's new side weighs onto the kept side's chains (the status line counts them); run Rig Hair Locks and
+  Weigh Onto Locks on the symmetric hair to give it chains of its own.
 - **Part layers need rig parts.** A rig without `parts` lists only the Body and Hair; name the parts in the rig (or with
   Add Layer From Bone), never in code. Region keys are part names, so renaming a part moves a window picked on it back
   to the Body.

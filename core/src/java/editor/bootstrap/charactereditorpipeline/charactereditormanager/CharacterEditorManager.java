@@ -26,6 +26,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorShape;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSide;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
+import editor.bootstrap.commandpipeline.command.CommandStruct;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.stamppipeline.stamp.StampHandle;
@@ -105,6 +106,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterSculptBranch characterSculptBranch;
     private CharacterShapeBranch characterShapeBranch;
     private CharacterTopologyBranch characterTopologyBranch;
+    private CharacterCommandBranch characterCommandBranch;
     private CharacterRigBranch characterRigBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
     private CharacterRigRowBranch characterRigRowBranch;
@@ -206,6 +208,8 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterSculptBranch = create(CharacterSculptBranch.class);
         this.characterShapeBranch = create(CharacterShapeBranch.class);
         this.characterTopologyBranch = create(CharacterTopologyBranch.class);
+        create(CharacterSymmetryBranch.class);
+        this.characterCommandBranch = create(CharacterCommandBranch.class);
         this.characterRigBranch = create(CharacterRigBranch.class);
         this.characterColliderBranch = create(CharacterColliderBranch.class);
         this.characterPaintBranch = create(CharacterPaintBranch.class);
@@ -1035,6 +1039,14 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public boolean hasActiveMeshDocument() {
         return getActiveMeshDocument() != null;
+    }
+
+    // The open mesh of one part the character wears, null without a character or when the part has no rigged mesh
+    // file of its own
+    CharacterMeshDocumentInstance getPartMeshDocument(String partKey) {
+        return activeDocument != null
+                ? characterMeshBranch.open(characterMeshBranch.resolvePartMesh(activeDocument, partKey))
+                : null;
     }
 
     // The open mesh of every part the character wears that has a rigged mesh file of its own
@@ -1937,6 +1949,17 @@ public class CharacterEditorManager extends ManagerPackage {
 
         this.statusMessage = statusMessage;
         notifyChanged();
+    }
+
+    String getStatusMessage() {
+        return statusMessage;
+    }
+
+    // Commands \\
+
+    // Runs a command the command console sends the character tabs
+    public void executeCommand(CommandStruct command) {
+        characterCommandBranch.executeCommand(command);
     }
 
     // Accessible \\

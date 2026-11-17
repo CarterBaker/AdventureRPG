@@ -359,16 +359,28 @@ public class RiggedMeshStruct extends StructPackage {
     public void setMorphDelta(int morphIndex, int vertexIndex, float dx, float dy, float dz) {
 
         int entry = findMorphEntry(morphIndex, vertexIndex);
+
+        if (entry == EngineSetting.INDEX_NOT_FOUND)
+            addMorphDelta(morphIndex, vertexIndex, dx, dy, dz);
+        else
+            setMorphEntryDelta(morphIndex, entry, dx, dy, dz);
+    }
+
+    // Adds a vertex the morph does not move yet, with how far it moves it
+    public void addMorphDelta(int morphIndex, int vertexIndex, float dx, float dy, float dz) {
+
         FloatArrayList deltas = morphDeltas.get(morphIndex);
 
-        if (entry == EngineSetting.INDEX_NOT_FOUND) {
-            morphVertices.get(morphIndex).add(vertexIndex);
-            deltas.add(dx);
-            deltas.add(dy);
-            deltas.add(dz);
-            return;
-        }
+        morphVertices.get(morphIndex).add(vertexIndex);
+        deltas.add(dx);
+        deltas.add(dy);
+        deltas.add(dz);
+    }
 
+    // Sets how far one of a morph's entries moves its vertex
+    public void setMorphEntryDelta(int morphIndex, int entry, float dx, float dy, float dz) {
+
+        FloatArrayList deltas = morphDeltas.get(morphIndex);
         int base = entry * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
 
         deltas.set(base, dx);

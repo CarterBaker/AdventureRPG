@@ -24,8 +24,10 @@ public class CommandConsoleContext extends ContextPackage {
      * time command from a round dial per unit of the clock, turned by
      * dragging around it or stepped by its minus and plus buttons. The
      * command line recalls what was sent with Up and Down and completes a
-     * command's name with Tab. What each command reports lands in the log,
-     * shown by the Console tab.
+     * command's name with Tab. A command whose target is another editor
+     * tool, such as the Character group's Mirror commands, runs there
+     * instead of in the Dev windows. What each command reports lands in the
+     * log, shown by the Console tab.
      */
 
     // Internal

@@ -823,16 +823,16 @@ class CharacterWeightBranch extends BranchPackage {
 
     // Adds a vertex's weights, each counted by a share, to the bone totals
     private void accumulate(RiggedMeshStruct mesh, int vertexIndex, float share) {
+        for (int i = 0; i < mesh.getInfluenceCount(vertexIndex); i++)
+            addTotal(mesh.getInfluenceBone(vertexIndex, i), mesh.getInfluenceWeight(vertexIndex, i) * share);
+    }
 
-        for (int i = 0; i < mesh.getInfluenceCount(vertexIndex); i++) {
+    private void addTotal(int bone, float weight) {
 
-            int bone = mesh.getInfluenceBone(vertexIndex, i);
+        if (boneTotals[bone] == 0f && !touchedBones.contains(bone))
+            touchedBones.add(bone);
 
-            if (boneTotals[bone] == 0f && !touchedBones.contains(bone))
-                touchedBones.add(bone);
-
-            boneTotals[bone] += mesh.getInfluenceWeight(vertexIndex, i) * share;
-        }
+        boneTotals[bone] += weight;
     }
 
     // Writes the recorded blend of every changed vertex back, so no vertex's new weights feed a neighbour's blend in
@@ -975,6 +975,24 @@ class CharacterWeightBranch extends BranchPackage {
 
         for (int i = 0; i < count; i++)
             mesh.addInfluence(toVertex, boneScratch[i], weightScratch[i]);
+    }
+
+    // A vertex on the centre plane given the even blend of its weights and their mirror, so each sided bone shares
+    // its weight with its twin
+    void symmetrizeWeights(RiggedMeshStruct mesh, int vertexIndex, int[] mirrorBones) {
+
+        beginTotals(mesh);
+
+        for (int i = 0; i < mesh.getInfluenceCount(vertexIndex); i++) {
+
+            int bone = mesh.getInfluenceBone(vertexIndex, i);
+            float half = mesh.getInfluenceWeight(vertexIndex, i) * EditorSetting.CHARACTER_SYMMETRY_HALF;
+
+            addTotal(bone, half);
+            addTotal(mirrorBones[bone], half);
+        }
+
+        writeTotals(mesh, vertexIndex);
     }
 
     // Each bone's twin across the rig's centre by name, or itself

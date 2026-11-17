@@ -361,7 +361,7 @@ class CharacterUVBranch extends BranchPackage {
 
     // The islands of a set of faces, each face's island written in order of first appearance: faces join across an
     // edge they share where its two corners meet in UV, or, unwrapping, where it is no seam; the island count
-    private int resolveIslands(RiggedMeshStruct mesh, IntArrayList faces, boolean byUV, int[] islands) {
+    int resolveIslands(RiggedMeshStruct mesh, IntArrayList faces, boolean byUV, int[] islands) {
 
         Long2IntOpenHashMap edge2Corner = new Long2IntOpenHashMap();
         int[] parents = new int[faces.size()];
@@ -451,7 +451,7 @@ class CharacterUVBranch extends BranchPackage {
     }
 
     // The faces of each island, island by island
-    private ObjectArrayList<IntArrayList> groupIslands(IntArrayList faces, int[] islands, int islandCount) {
+    ObjectArrayList<IntArrayList> groupIslands(IntArrayList faces, int[] islands, int islandCount) {
 
         ObjectArrayList<IntArrayList> islandFaces = new ObjectArrayList<>(islandCount);
 

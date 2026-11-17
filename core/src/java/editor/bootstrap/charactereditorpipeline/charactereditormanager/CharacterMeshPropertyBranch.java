@@ -28,6 +28,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
     private CharacterMeshBranch characterMeshBranch;
     private CharacterSelectionBranch characterSelectionBranch;
     private CharacterSculptBranch characterSculptBranch;
+    private CharacterSymmetryBranch characterSymmetryBranch;
     private CharacterWeightBranch characterWeightBranch;
 
     // Scratch
@@ -54,6 +55,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
         this.characterMeshBranch = get(CharacterMeshBranch.class);
         this.characterSelectionBranch = get(CharacterSelectionBranch.class);
         this.characterSculptBranch = get(CharacterSculptBranch.class);
+        this.characterSymmetryBranch = get(CharacterSymmetryBranch.class);
         this.characterWeightBranch = get(CharacterWeightBranch.class);
     }
 
@@ -497,9 +499,9 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_MAKE_FACE -> characterSculptBranch.makeFace(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_MERGE -> characterSculptBranch.merge(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE -> characterSculptBranch.subdivide(document);
-            case EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_POSITIVE -> characterSculptBranch.symmetrize(
+            case EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_POSITIVE -> characterSymmetryBranch.symmetrize(
                     document, true);
-            case EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_NEGATIVE -> characterSculptBranch.symmetrize(
+            case EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_NEGATIVE -> characterSymmetryBranch.symmetrize(
                     document, false);
             case EditorSetting.CHARACTER_EDITOR_KEY_ADD_PART -> addPart(document);
             default -> {

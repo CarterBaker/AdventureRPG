@@ -60,6 +60,10 @@ public class CommandHandle extends HandlePackage {
         return commandData.isShared();
     }
 
+    public CommandTarget getTarget() {
+        return commandData.getTarget();
+    }
+
     public boolean isArgumentFree() {
         return commandData.getArgumentCount() == 0;
     }

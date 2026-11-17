@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 113
-Task: CharacterModels
+Delivery: 114
+Task: EnforceMirror
 Applied: 2026-11-17
 
 ## Log
@@ -123,3 +123,4 @@ Applied: 2026-11-17
 - 111, 2026-11-17, ImageExportImport
 - 112, 2026-11-17, ImageStamps
 - 113, 2026-11-17, CharacterModels
+- 114, 2026-11-17, EnforceMirror
