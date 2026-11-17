@@ -22,8 +22,9 @@ public class InstrumentManager extends ManagerPackage {
      * the reserved sentinel for an item that names none. Auto-triggers an
      * on-demand load via InstrumentLoader on a name-based cache miss. A MIDI
      * file names instruments by General MIDI program, and its channel 10 by
-     * percussion; the first lookup by either loads every instrument and
-     * indexes them once, the first in order of name winning a program two
+     * percussion, and an editor's note library by the note set picked; the
+     * first lookup by any of them loads every instrument and indexes them
+     * once, the first in order of name winning a program or a note set two
      * instruments share.
      */
 
@@ -34,6 +35,9 @@ public class InstrumentManager extends ManagerPackage {
     // MIDI — the instrument each General MIDI program plays on, and the one marked percussion
     private short[] midiProgram2InstrumentID;
     private short percussionInstrumentID;
+
+    // Note Sets — the instrument each note set is played as
+    private Object2IntOpenHashMap<String> noteSetName2InstrumentID;
 
     // Base \\
 
@@ -100,18 +104,25 @@ public class InstrumentManager extends ManagerPackage {
     // The instrument a General MIDI program plays on, INSTRUMENT_NONE when no instrument names it
     public short getInstrumentIDFromMidiProgram(int midiProgram) {
 
-        indexMidiPrograms();
+        indexInstruments();
         return midiProgram2InstrumentID[midiProgram];
     }
 
     // The instrument that plays MIDI channel 10's drums, INSTRUMENT_NONE when none is marked percussion
     public short getPercussionInstrumentID() {
 
-        indexMidiPrograms();
+        indexInstruments();
         return percussionInstrumentID;
     }
 
-    private void indexMidiPrograms() {
+    // The instrument a note set is played as, INSTRUMENT_NONE when no instrument names it
+    public short getInstrumentIDFromNoteSetName(String noteSetName) {
+
+        indexInstruments();
+        return (short) noteSetName2InstrumentID.getInt(noteSetName);
+    }
+
+    private void indexInstruments() {
 
         if (midiProgram2InstrumentID != null)
             return;
@@ -124,6 +135,8 @@ public class InstrumentManager extends ManagerPackage {
         this.midiProgram2InstrumentID = new short[EngineSetting.INSTRUMENT_MIDI_PROGRAM_MAX + 1];
         this.percussionInstrumentID = EngineSetting.INSTRUMENT_NONE;
         Arrays.fill(midiProgram2InstrumentID, EngineSetting.INSTRUMENT_NONE);
+        this.noteSetName2InstrumentID = new Object2IntOpenHashMap<>();
+        noteSetName2InstrumentID.defaultReturnValue(EngineSetting.INSTRUMENT_NONE);
 
         for (int i = 0; i < instrumentNames.size(); i++) {
 
@@ -136,6 +149,8 @@ public class InstrumentManager extends ManagerPackage {
 
             if (handle.isPercussion() && percussionInstrumentID == EngineSetting.INSTRUMENT_NONE)
                 this.percussionInstrumentID = handle.getInstrumentID();
+
+            noteSetName2InstrumentID.putIfAbsent(handle.getNoteSetHandle().getNoteSetName(), handle.getInstrumentID());
         }
     }
 }

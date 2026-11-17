@@ -14,8 +14,10 @@ public class NoteLibraryManager extends ManagerPackage {
 
     /*
      * Owns the note library every Note Library tab shows: the instrument
-     * picked in the Hierarchy, every note it plays from its lowest to its
-     * highest, the note picked last, and the one preview that sounds it.
+     * picked in the Hierarchy, or the instrument a note set picked there is
+     * played as, every note it plays from its lowest to its highest, the
+     * note picked last, and the one preview that sounds it. Nothing is
+     * listed until one is picked.
      * Picking an instrument loads its samples, so its notes sound at once
      * when previewed or laid; a note previewed sounds for a moment through
      * the sampler and is then let go, fading as the instrument fades. Notes
@@ -69,6 +71,8 @@ public class NoteLibraryManager extends ManagerPackage {
     protected void awake() {
         infoManager.addSelectionListener(
                 EditorSetting.INFO_SCHEMA_INSTRUMENTS, entry -> selectInstrument(entry.getEntryName()));
+        infoManager.addSelectionListener(
+                EditorSetting.INFO_SCHEMA_NOTE_SETS, entry -> selectNoteSet(entry.getEntryName()));
     }
 
     // Update \\
@@ -100,6 +104,25 @@ public class NoteLibraryManager extends ManagerPackage {
             setStatus(EditorSetting.NOTE_LIBRARY_STATUS_REFUSED + e.getMessage());
             return;
         }
+
+        choose(chosenID);
+    }
+
+    // The instrument the note set named is played as becomes the one listed; with none, the status says so
+    public void selectNoteSet(String noteSetName) {
+
+        short chosenID = instrumentManager.getInstrumentIDFromNoteSetName(noteSetName);
+
+        if (chosenID == EngineSetting.INSTRUMENT_NONE) {
+            setStatus(EditorSetting.NOTE_LIBRARY_STATUS_UNPLAYED + noteSetName);
+            return;
+        }
+
+        choose(chosenID);
+    }
+
+    // The one way the instrument listed changes: its samples asked for, any preview of the last let go
+    private void choose(short chosenID) {
 
         if (chosenID == instrumentID)
             return;

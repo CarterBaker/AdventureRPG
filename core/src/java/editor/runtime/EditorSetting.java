@@ -307,6 +307,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_NEST_SELECTION = "Nest Selection As";
     public static final String DIALOG_TITLE_KEY_VALUE = "Key Value";
     public static final String DIALOG_TITLE_SOUND_VOLUME = "Sound Volume (%)";
+    public static final String DIALOG_TITLE_LANE_NAME = "Lane Name (empty for its number)";
     public static final String DIALOG_TITLE_SOUND_PITCH = "Sound Pitch (%)";
     public static final String DIALOG_TITLE_SOUND_LENGTH = "Sound Length (seconds)";
     public static final String DIALOG_TITLE_TRANSITION_LENGTH = "Transition Length (seconds)";
@@ -2475,6 +2476,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_TRANSITIONS = "Transitions";
     public static final String INFO_SCHEMA_SOUNDS = "Sounds";
     public static final String INFO_SCHEMA_INSTRUMENTS = "Instruments";
+    public static final String INFO_SCHEMA_NOTE_SETS = "NoteSets";
     public static final String INFO_SCHEMA_BLOCKS = "Blocks";
     public static final String INFO_SCHEMA_SHADERS = "Shaders";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
@@ -2669,12 +2671,14 @@ public class EditorSetting {
     public static final String RECORDER_FILE_LANE_OWNER = " lane ";
 
     // Recorder — clip sources, as the Assets tab and the clip panel name them; a recording keeps a tempo map and a
-    // meter, one tempo throughout until it is given more, and a nested clip is opened by two clicks this close
+    // meter, one tempo throughout until it is given more, its timeline shows at least this many lanes, and a nested
+    // clip is opened by two clicks this close
     public static final String RECORDER_SOURCE_LABEL_TAKE = "Take";
     public static final String RECORDER_SOURCE_LABEL_RECORDING = "Nested recording";
     public static final String RECORDER_SOURCE_LABEL_SONG = "Song";
     public static final String RECORDER_SOURCE_LABEL_NOTES = "Notes";
     public static final float RECORDER_DEFAULT_BPM = 120f;
+    public static final int RECORDER_SHOWN_LANES = 5;
     public static final long RECORDER_DOUBLE_CLICK_MILLIS = 400L;
 
     // Recorder Music — the Properties tab's titles for the Recorder's and the Timeline's rows, and the templates they
@@ -2841,10 +2845,12 @@ public class EditorSetting {
     public static final String SOUND_LIBRARY_STATUS_NO_SOUND = "Select a sound first";
     public static final String SOUND_LIBRARY_STATUS_SILENT = "No audio device is open, so nothing can play";
     public static final String SOUND_LIBRARY_STATUS_ADDED = "Laid on the Timeline: ";
-    public static final String NOTE_LIBRARY_STATUS_READY = "Pick an instrument in the Hierarchy to list its notes";
+    public static final String NOTE_LIBRARY_STATUS_READY =
+            "Pick an instrument or a note set in the Hierarchy to list its notes";
     public static final String NOTE_LIBRARY_STATUS_SELECTED = "Notes of ";
     public static final String NOTE_LIBRARY_STATUS_PLAYING = "Playing ";
     public static final String NOTE_LIBRARY_STATUS_REFUSED = "The game refuses the instrument: ";
+    public static final String NOTE_LIBRARY_STATUS_UNPLAYED = "No instrument plays the note set ";
     public static final float NOTE_LIBRARY_PREVIEW_SECONDS = 0.6f;
 
     // Scene Assets — how long a tab keeps the scene watched and a Dev window's claim on it lasts unfed, how often the

@@ -416,6 +416,10 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-16: Expressions as clips. Added `animations/humanoid/expressions/HumanoidBlink.arpg` (the blink as morph
   curves); regenerated `races/Human.arpg` (`expressions` names the blink clip), `schemas/Races.arpg` (`expressions` a
   map of clips) and `schemas/Animations.arpg` (`morphs`).
+- 2026-11-17: Media tools. Regenerated `menus/editor/Recorder.arpg` (the transport's clock and status line, so a
+  refused Record or Play says why), `menus/editor/Timeline.arpg` (lane strips show only their number and name, ...
+  renames; mute, solo, volume and pan left to the Properties tab) and `menus/editor/EditorWindow.arpg` (Note Library
+  under Library in the Media menu).
 
 ---
 

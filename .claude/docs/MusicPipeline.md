@@ -68,7 +68,8 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 - **MIDI:** `SongMidiUtility.read(file, instrumentManager)` and `write(songData, file, instrumentManager)`, both
   throwing a catchable `InternalException` for a file they cannot handle. Program and percussion lookups go through
   `InstrumentManager.getInstrumentIDFromMidiProgram` / `getPercussionInstrumentID`, indexed once
-  (`indexMidiPrograms`, which loads every instrument through `InstrumentLoader.requestEvery`).
+  (`indexInstruments`, which loads every instrument through `InstrumentLoader.requestEvery` and also indexes each note
+  set to the instrument it is played as, `getInstrumentIDFromNoteSetName`).
 - **Player songs:** `SongManager.getUserSongNames`, `loadUserSong` (holds one more play; reads through
   `SongMidiUtility.read` when none holds it), `releaseUserSong`, `isUserSongHeld`. `SongPlaybackInstance` loads on
   `playUserSong` and releases on `stop`, so a user song lives exactly as long as something plays it.
@@ -103,14 +104,20 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 - **Codec clips:** a clip carrying `getSongClip()` (a notes clip) is timed by the recording's tempo map where it lies
   (`resolveSongOrigin`), bound by `RecordingSourceBranch.layNotes` to a one-lane song, and is replaced whole by every edit through `RecorderManager.replaceSongClip` (rebind, sound revision, unsaved);
   never change one in place.
+- **Lanes shown:** a recording always holds `SONG_LANE_COUNT` lanes (mix, files, songs and MIDI see all of them);
+  `RecordingInstance.getShownLaneCount` (at least `RECORDER_SHOWN_LANES`, one clear lane above the highest holding a
+  clip, every named lane) is what the Timeline draws and `RecorderManager.getLaneCount` answers for picking a row.
+  `RecorderTimelineSystem` caches lane positions by row, never by lane, so the count can move freely.
 - **Tempo, meter, key, mixer:** `RecorderManager.setTempo` retimes every clip so it keeps its bars and beats,
   `setMeter`, `setKey` and the lane setters. `RecordingInstance.resolveLaneGain` is the one lane mix, read by `DevRecorderSoundSystem` and
   `RecordingMixBranch`. Rows: `RecordingRowBranch` behind `RecorderManager.buildRows`/`stepRow`/`cycleRow`/
   `setRowValue`.
-- **Laying notes:** `NoteLibraryManager` holds the instrument picked in the Hierarchy (a selection listener on
-  `Instruments`), prepares its note set, and previews a note through `SamplerManager.noteOn`, letting it go after
+- **Laying notes:** `NoteLibraryManager` holds the instrument picked in the Hierarchy (selection listeners on
+  `Instruments` and `NoteSets`, a note set played as its instrument; `choose` is the one place it changes), prepares its
+  note set, and previews a note through `SamplerManager.noteOn`, letting it go after
   `NOTE_LIBRARY_PREVIEW_SECONDS`. A row's drag goes through `RecorderBranch.dragNote` to
-  `RecorderManager.beginNoteDrag` (`RecorderDragKind.NOTE`, the pitch as its index, the instrument carried); it lands as
+  `RecorderManager.beginNoteDrag` (`RecorderDragKind.NOTE`, the pitch as its index, the instrument carried; like
+  `beginSoundDrag` and `record` it opens a new media file through `ensureRecording` when none is open); it lands as
   every span does and `placeNote` lays it a beat long from the tick it falls on. `createNoteClip` is the one place a note
   clip's codec clip is made; `RecordingClipStruct.isNoteClip` (a notes clip holding one note) is the one test, and
   `resolveLabelName` names it with its note.

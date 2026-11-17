@@ -13,6 +13,7 @@ import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.recorder.panel.RecorderRowSystem;
+import editor.runtime.recorder.panel.RecorderTransportSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -21,7 +22,8 @@ public class RecorderContext extends ContextPackage
 
     /*
      * Editor tab for the recorder's transport: record, play, pause and stop
-     * in the Dev window, and nothing else. Its other work is in the tabs
+     * in the Dev window, with the status saying what they did or why they
+     * could not and the clock beside them. Its other work is in the tabs
      * beside it: the Timeline, where clips are laid and edited, which names
      * what is open and the recordings it was opened inside; the Recorder
      * Keys, where
@@ -36,6 +38,7 @@ public class RecorderContext extends ContextPackage
 
     // Internal
     private RecorderRowSystem recorderRowSystem;
+    private RecorderTransportSystem recorderTransportSystem;
     private FileMenuSourceSystem fileMenuSourceSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
     private RecorderManager recorderManager;
@@ -45,6 +48,7 @@ public class RecorderContext extends ContextPackage
     @Override
     protected void create() {
         this.recorderRowSystem = create(RecorderRowSystem.class);
+        this.recorderTransportSystem = create(RecorderTransportSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }

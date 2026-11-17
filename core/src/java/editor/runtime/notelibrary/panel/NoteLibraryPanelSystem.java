@@ -20,8 +20,10 @@ public class NoteLibraryPanelSystem extends SystemPackage {
      * Binds this window to a UI render target and shows the note library.
      * When the library's revision moves it refills the list — a head for
      * every octave and beneath it a row for each note the instrument plays,
-     * named and numbered, with a button to sound it, the note picked last
-     * marked — the instrument's details and the status line.
+     * named and numbered, picked up to drag it onto the Timeline, with a
+     * button to sound it, the note picked last marked — the instrument's
+     * details and the status line. Both lists stay empty until an instrument
+     * or a note set is picked.
      */
 
     // Internal
@@ -102,7 +104,6 @@ public class NoteLibraryPanelSystem extends SystemPackage {
 
         if (!noteLibraryManager.hasInstrument()) {
             listTitle.setFontText(NoteLibrarySetting.TEXT_LIST_TITLE);
-            injectText(NoteLibrarySetting.ENTRY_NOTES, NoteLibrarySetting.TEXT_NO_INSTRUMENT);
             return;
         }
 
@@ -145,11 +146,8 @@ public class NoteLibraryPanelSystem extends SystemPackage {
 
         menuManager.ejectAll(libraryMenu, NoteLibrarySetting.ENTRY_DETAILS);
 
-        if (!noteLibraryManager.hasInstrument()) {
-            injectText(NoteLibrarySetting.ENTRY_DETAILS, NoteLibrarySetting.TEXT_NO_INSTRUMENT);
-            injectText(NoteLibrarySetting.ENTRY_DETAILS, NoteLibrarySetting.TEXT_DRAG_HINT);
+        if (!noteLibraryManager.hasInstrument())
             return;
-        }
 
         InstrumentHandle instrument = noteLibraryManager.getInstrument();
 

@@ -52,7 +52,7 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
     percussion on channel 10; more than 15 other parts is refused). It writes exactly what playback plays, nested songs
     laid flat; sound clips cannot go into MIDI and are counted for the caller. Clip volumes are not written.
 - **Notes are laid as clips**, the way a DAW's arrangement view lays one-shot sample clips (FL Studio's playlist): the
-  Note Library lists the notes of the instrument picked in the Hierarchy, a note dragged onto the Timeline becomes a
+  Note Library lists the notes of the instrument, or the note set, picked in the Hierarchy, a note dragged onto the Timeline becomes a
   note clip a beat long, and stretching or cutting it like any clip changes how long its note is held; when it ends the
   note is let go and fades by the instrument's release, as playing it would. Notes that sound together lie on lanes of
   their own, as clips that play together do in a video editor. Under the hood a note clip is a notes clip holding one
@@ -141,8 +141,8 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
 - **Media files.** Songs and videos the owner makes are one kind of file, a media file, saved by the recorder in
   `Documents/My Games/AdventureRPG/Media/` (`RECORDER_MEDIA_DIRECTORY`, beside the player's saves) and listed together
   in the Media tab. Both record, nest and edit the same way; a media file any clip of which shows a picture is a video,
-  one with none is music, decided by what is laid on it, never chosen. The Timeline shows `SONG_LANE_COUNT` lanes with
-  a mixer strip each, its ruler in bars and beats and a beat grid it snaps to while the file is music, in seconds once it
+  one with none is music, decided by what is laid on it, never chosen. The Timeline shows five lanes, one more each time
+  the highest takes a clip, up to `SONG_LANE_COUNT`, each strip its number and name, its ruler in bars and beats and a beat grid it snaps to while the file is music, in seconds once it
   shows a picture.
 - **Export** (the Timeline's Export action) sends a video through the export dialog to a movie file, and exports music
   at once as the game's own: the song (`.arpg`, through the song codec) and its rendered sound (`.ogg` with its `music`

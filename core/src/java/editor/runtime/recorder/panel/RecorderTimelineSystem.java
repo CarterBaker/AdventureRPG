@@ -15,7 +15,6 @@ import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
-import editor.bootstrap.recorderpipeline.recording.RecordingLaneStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
 import editor.runtime.recorder.RecorderSetting;
@@ -51,9 +50,9 @@ public class RecorderTimelineSystem extends SystemPackage {
      * playback nor a drag allocates; the Cut tool shows the same line where
      * it would cut under the pointer. A timeline still growing under a take
      * and a resized timeline refresh a few times a second. It shows
-     * SONG_LANE_COUNT lanes, each with its mixer strip beside it — its name,
-     * volume, pan and whether it is muted or soloed, the lane selected marked
-     * — and its ruler counts bars and beats while the file is music, seconds
+     * the lanes the media file shows, a few at first and one more each time
+     * the highest takes a clip, each with its strip beside it — its number
+     * and name, the lane selected marked, its ... renaming it — and its ruler counts bars and beats while the file is music, seconds
      * once it shows a picture.
      */
 
@@ -76,10 +75,11 @@ public class RecorderTimelineSystem extends SystemPackage {
     private ElementInstance clipLanes;
     private ElementInstance mixerRows;
 
-    // Layout — every lane's row and key, the lanes laid beside their mixer strips
+    // Layout — every lane's row and key, the lanes laid beside their strips, and how many are shown
     private DimensionVector2Struct[] rowPositions;
     private String[] laneKeys;
     private StringBuilder textScratch;
+    private int shownLaneCount;
 
     // Timeline
     private DimensionVector2Struct[] timelinePositions;
@@ -157,6 +157,7 @@ public class RecorderTimelineSystem extends SystemPackage {
         }
 
         this.textScratch = new StringBuilder();
+        this.shownLaneCount = EngineSetting.INDEX_NOT_FOUND;
 
         // Ghost
         this.edgeGhostSize = new DimensionVector2Struct(
@@ -200,11 +201,10 @@ public class RecorderTimelineSystem extends SystemPackage {
         applyLayout();
     }
 
-    // The ruler and the lanes placed beside the mixer strips, every lane its row
+    // The ruler and the lanes placed beside the lane strips
     private void applyLayout() {
 
         float mixer = RecorderSetting.MIXER_PIXELS;
-        float height = EngineSetting.SONG_LANE_COUNT * EditorSetting.RECORDER_LANE_PIXELS;
 
         timelineTrack.setPositionOverride(new DimensionVector2Struct(
                 DimensionValueStruct.ofAbsolute(RecorderSetting.TIMELINE_INSET_PIXELS + mixer),
@@ -216,6 +216,19 @@ public class RecorderTimelineSystem extends SystemPackage {
         clipLanes.setPositionOverride(new DimensionVector2Struct(
                 DimensionValueStruct.ofAbsolute(RecorderSetting.TIMELINE_INSET_PIXELS + mixer),
                 DimensionValueStruct.ofAbsolute(RecorderSetting.LANES_TOP_PIXELS)));
+        applyLaneCount(EditorSetting.RECORDER_SHOWN_LANES);
+    }
+
+    // The lanes and their strips as tall as the lanes shown, set again only when that count moves
+    private void applyLaneCount(int laneCount) {
+
+        if (laneCount == shownLaneCount)
+            return;
+
+        float mixer = RecorderSetting.MIXER_PIXELS;
+        float height = laneCount * EditorSetting.RECORDER_LANE_PIXELS;
+
+        this.shownLaneCount = laneCount;
         clipLanes.setSizeOverride(new DimensionVector2Struct(
                 DimensionValueStruct.ofPercentWithOffset(RecorderSetting.TIMELINE_PERCENT,
                         -2f * RecorderSetting.TIMELINE_INSET_PIXELS - mixer),
@@ -289,6 +302,7 @@ public class RecorderTimelineSystem extends SystemPackage {
 
         RecordingInstance recording = recorderManager.getRecording();
 
+        applyLaneCount(recorderManager.getLaneCount());
         injectLaneStripes();
         RecordingViewStruct view = recorderManager.getView();
         float lanesWidth = resolveLanesWidth();
@@ -340,9 +354,9 @@ public class RecorderTimelineSystem extends SystemPackage {
 
     // Layout \\
 
-    // A stripe along every lane, alternately shaded
+    // A stripe along every lane shown, alternately shaded
     private void injectLaneStripes() {
-        for (int row = 0; row < EngineSetting.SONG_LANE_COUNT; row++) {
+        for (int row = 0; row < shownLaneCount; row++) {
 
             DimensionVector2Struct position = rowPositions[row];
 
@@ -355,13 +369,13 @@ public class RecorderTimelineSystem extends SystemPackage {
         }
     }
 
-    // A mixer strip beside every lane, the highest at the top: its number and name, volume, pan and whether it is
-    // muted or soloed, pressed to select it, with its M and S
+    // A strip beside every lane shown, the highest at the top: its number and name, pressed to select it, with its
+    // ... to rename it
     private void injectMixerRows(RecordingInstance recording) {
 
-        for (int lane = recording.getLaneCount() - 1; lane >= 0; lane--) {
+        for (int lane = shownLaneCount - 1; lane >= 0; lane--) {
 
-            DimensionVector2Struct position = rowPositions[recording.getLaneCount() - 1 - lane];
+            DimensionVector2Struct position = rowPositions[shownLaneCount - 1 - lane];
             String laneKey = laneKeys[lane];
             ElementInstance row = menuManager.inject(recorderMenu, RecorderSetting.ENTRY_MIXER_ROWS,
                     lane == recorderManager.getSelectedLane()
@@ -372,30 +386,21 @@ public class RecorderTimelineSystem extends SystemPackage {
                         injected.setActionArgOverride(laneKey);
                     });
 
-            row.findChildById(RecorderSetting.ELEMENT_MIXER_MUTE).setActionArgOverride(laneKey);
-            row.findChildById(RecorderSetting.ELEMENT_MIXER_SOLO).setActionArgOverride(laneKey);
+            row.findChildById(RecorderSetting.ELEMENT_MIXER_RENAME).setActionArgOverride(laneKey);
             row.findChildById(RecorderSetting.ELEMENT_MIXER_NAME).setFontText(describeLane(recording, lane));
         }
     }
 
+    // A lane's number, and its name once it is given one
     private String describeLane(RecordingInstance recording, int lane) {
 
-        RecordingLaneStruct mixed = recording.getLane(lane);
+        String name = recording.getLane(lane).getName();
 
         textScratch.setLength(0);
-        textScratch.append(lane + 1).append(RecorderSetting.TEXT_MIXER_SEPARATOR);
+        textScratch.append(lane + 1);
 
-        if (!mixed.getName().isEmpty())
-            textScratch.append(mixed.getName()).append(RecorderSetting.TEXT_MIXER_SEPARATOR);
-
-        textScratch.append(String.format(RecorderSetting.FORMAT_MIXER_MIX,
-                mixed.getVolume() * RecorderSetting.MIXER_PERCENT, mixed.getPan()));
-
-        if (mixed.isMuted())
-            textScratch.append(RecorderSetting.TEXT_MIXER_MUTED);
-
-        if (mixed.isSolo())
-            textScratch.append(RecorderSetting.TEXT_MIXER_SOLO);
+        if (!name.isEmpty())
+            textScratch.append(RecorderSetting.TEXT_MIXER_SEPARATOR).append(name);
 
         return textScratch.toString();
     }
@@ -674,7 +679,7 @@ public class RecorderTimelineSystem extends SystemPackage {
 
         int step = toGhostStep(dragShown ? drag.getLandingStart() : recorderManager.getCutHoverTime());
         int lane = Math.clamp(dragShown ? drag.getLandingLane() : recording.getClips().get(cutClip).getLane(),
-                0, EngineSetting.SONG_LANE_COUNT - 1);
+                0, shownLaneCount - 1);
 
         if (step == ghostStep && lane == ghostLane)
             return;
@@ -684,24 +689,22 @@ public class RecorderTimelineSystem extends SystemPackage {
         dragGhost.setPositionOverride(resolveLanePosition(lane, step));
     }
 
-    // The place a bar starts on a lane, the highest lane drawn at the top, built the first time it is needed; a step
-    // may lie a view's width to either side, where only a ghost is drawn
+    // The place a bar starts on a lane, the highest lane shown drawn at the top, built the first time its row is
+    // needed; a step may lie a view's width to either side, where only a ghost is drawn
     private DimensionVector2Struct resolveLanePosition(int lane, int step) {
 
-        int clampedLane = Math.clamp(lane, 0, EngineSetting.SONG_LANE_COUNT - 1);
+        int row = shownLaneCount - 1 - Math.clamp(lane, 0, shownLaneCount - 1);
         int slot = step + RecorderSetting.GHOST_OVERHANG_STEPS;
-        DimensionVector2Struct position = lanePositions[clampedLane][slot];
+        DimensionVector2Struct position = lanePositions[row][slot];
 
         if (position != null)
             return position;
-
-        int row = EngineSetting.SONG_LANE_COUNT - 1 - clampedLane;
 
         position = new DimensionVector2Struct(
                 DimensionValueStruct.ofPercent(toPercent(step)),
                 DimensionValueStruct.ofAbsolute(-(row * EditorSetting.RECORDER_LANE_PIXELS
                         + EditorSetting.RECORDER_CLIP_BAR_INSET_PIXELS)));
-        lanePositions[clampedLane][slot] = position;
+        lanePositions[row][slot] = position;
         return position;
     }
 

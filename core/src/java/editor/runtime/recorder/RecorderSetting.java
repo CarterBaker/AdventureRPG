@@ -69,8 +69,7 @@ public class RecorderSetting {
     public static final String ELEMENT_GRAPH_LINES = "recorder_key_graph_lines";
     public static final String ELEMENT_GRAPH_POINTS = "recorder_key_graph_points";
     public static final String ELEMENT_MIXER_NAME = "timeline_mixer_name";
-    public static final String ELEMENT_MIXER_MUTE = "timeline_mixer_mute";
-    public static final String ELEMENT_MIXER_SOLO = "timeline_mixer_solo";
+    public static final String ELEMENT_MIXER_RENAME = "timeline_mixer_rename";
 
     // Menus — the timeline's and the Keys' are EditorSetting RECORDER_MENU and RECORDER_KEYS_MENU, which the drags
     // and the wheel look for
@@ -91,6 +90,10 @@ public class RecorderSetting {
     public static final int ENTRY_MIXER_ROWS = 11;
     public static final int ENTRY_TIMELINE_TRACK = 12;
     public static final int ENTRY_LANE_AREA = 13;
+
+    // Entry Points — the transport's menu
+    public static final int ENTRY_TRANSPORT_STATUS = 0;
+    public static final int ENTRY_TRANSPORT_CLOCK = 1;
 
     // Entry Points — the Keys' menu; its rows and graph are EditorSetting RECORDER_ENTRY_KEY_ROWS and
     // RECORDER_ENTRY_KEY_GRAPH, which the drags and the wheel share
@@ -119,19 +122,15 @@ public class RecorderSetting {
     public static final float RANGE_MARKER_WIDTH_PIXELS = 2f;
     public static final float RANGE_MARKER_HEIGHT_PIXELS = 30f;
 
-    // Timeline — where the ruler and the lanes stand in the tab, and the mixer strips beside them: how
-    // wide, the gap before the lanes, and how each reads
+    // Timeline — where the ruler and the lanes stand in the tab, and the lane strips beside them: how wide, the gap
+    // before the lanes, and how each reads
     public static final float TIMELINE_INSET_PIXELS = 12f;
     public static final float TRACK_TOP_PIXELS = -30f;
     public static final float TRACK_HEIGHT_PIXELS = 20f;
     public static final float LANES_TOP_PIXELS = -56f;
-    public static final float MIXER_PIXELS = 190f;
+    public static final float MIXER_PIXELS = 110f;
     public static final float MIXER_GAP_PIXELS = 6f;
-    public static final float MIXER_PERCENT = 100f;
     public static final String TEXT_MIXER_SEPARATOR = "  ";
-    public static final String FORMAT_MIXER_MIX = "%.0f%%  pan %.2f";
-    public static final String TEXT_MIXER_MUTED = "  muted";
-    public static final String TEXT_MIXER_SOLO = "  solo";
     public static final String FORMAT_BAR_BEAT = "%d.%d";
 
     // Keys — a mark set aside is moved this far off the window; a key's diamond is a square turned on its corner,
@@ -260,6 +259,7 @@ public class RecorderSetting {
     // Formats
     public static final String FORMAT_TIME = "%d:%05.2f";
     public static final String FORMAT_TIMELINE_TITLE = "Timeline: %s";
+    public static final String FORMAT_CLOCK = "%s / %s";
 
     // Formats — a clip's name on its bar, by the kind of its source in RecordingSourceKind order: a take's, a nested
     // recording's, a song's and a notes clip's instrument

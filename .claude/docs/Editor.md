@@ -25,14 +25,16 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting window
   shares and the Maps tab the maps of the image worked (the texture painted, or the Image Editor's image); the Image
   Editor under Textures paints layered images as Krita does, its layers in the Layers tab and its maps in the Maps tab
-  (see `.claude/docs/ImageEditorPipeline.md`); the Recorder is its transport (Record, Play, Pause and Stop, nothing
-  else) and the Timeline its clips, with Recorder Keys, Recorder Bin and Recorder Settings beside them, each opening its
+  (see `.claude/docs/ImageEditorPipeline.md`); the Recorder is its transport (Record, Play, Pause and Stop, with the
+  clock and the status line that says what they did or why they could not, nothing else) and the Timeline its clips, with Recorder Keys, Recorder Bin and Recorder Settings beside them, each opening its
   own menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes
   act on; the Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
-  the Timeline shows its lanes with a mixer strip each, the lane and clip selected edited in the Properties tab, and the
-  file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library lists the
-  notes of the instrument picked in the Hierarchy, each dragged onto the Timeline as a note clip that is stretched and
-  cut like any clip. The Timeline's title names what is open; Back is a Recorder shortcut. The Scene Assets tab, beside
+  the Timeline shows its lanes as Premiere does, five at first and one more each time the highest takes a clip, each
+  strip only its number and the name its ... gives it, the lane and clip selected edited in the Properties tab (its mix
+  too), and the file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library,
+  under Library in the Media menu with the Sound Library, stays empty until an instrument or a note set is picked in the
+  Hierarchy and then lists the notes it plays, each sounded by its button and dragged onto the Timeline as a note clip
+  that is stretched and cut like any clip. A library's drag, like Record, makes a media file when none is open. The Timeline's title names what is open; Back is a Recorder shortcut. The Scene Assets tab, beside
   the ARPG Viewer in the Content menu (`editor.bootstrap.sceneassetspipeline`), lists what the Dev window shows as it
   runs: the block under the crosshair in full (block, biome, face hit and every face's texture with its pack, material,
   shader, position) and every block, biome, texture, material and shader in view, from a grid of rays

@@ -773,18 +773,26 @@ public class RecorderBranch extends BranchPackage {
             recorderManager.exportMusic();
     }
 
-    // A lane's strip on the timeline selects it, its mix then shown in the Properties tab; its M and S
-    // mute and solo it
+    // A lane's strip on the timeline selects it, its mix then shown in the Properties tab; its ... renames it
     public void selectLane(String laneKey) {
         recorderManager.selectLane(Integer.parseInt(laneKey));
     }
 
-    public void toggleLaneMute(String laneKey) {
-        recorderManager.toggleLaneMute(Integer.parseInt(laneKey));
-    }
+    public void renameLane(String laneKey, WindowInstance window) {
 
-    public void toggleLaneSolo(String laneKey) {
-        recorderManager.toggleLaneSolo(Integer.parseInt(laneKey));
+        int lane = Integer.parseInt(laneKey);
+
+        recorderManager.selectLane(lane);
+
+        if (recorderManager.getSelectedLane() != lane)
+            return;
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.DIALOG_TITLE_LANE_NAME,
+                recorderManager.formatLaneNameInput(),
+                recorderManager::isLaneNameValid,
+                recorderManager::setSelectedLaneName);
     }
 
     // Rows \\

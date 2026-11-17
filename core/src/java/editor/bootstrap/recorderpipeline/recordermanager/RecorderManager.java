@@ -519,7 +519,7 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
-        if (recording == null && !createRecording(resolveDefaultRecordingName()))
+        if (!ensureRecording())
             return;
 
         if (!beginSession())
@@ -1443,7 +1443,7 @@ public class RecorderManager extends ManagerPackage {
     // clip a beat long; nothing is picked up while no recording is open to lay it on
     public void beginNoteDrag(String instrumentName, int pitch, WindowInstance window, float pressX, float pressY) {
 
-        if (drag.isActive() || !canEditTimeline())
+        if (drag.isActive() || !ensureRecording() || !canEditTimeline())
             return;
 
         beginDrag(RecorderDragKind.NOTE, pitch, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
@@ -1507,6 +1507,11 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // Nothing on the timeline changes under a take or an export
+    // The media file a take or a library's drag lays into: the one open, or a new one made for it
+    private boolean ensureRecording() {
+        return recording != null || createRecording(resolveDefaultRecordingName());
+    }
+
     private boolean canEditTimeline() {
         return recording != null && state != RecorderState.RECORDING && state != RecorderState.EXPORTING;
     }
@@ -1526,7 +1531,7 @@ public class RecorderManager extends ManagerPackage {
     // is picked up while no recording is open to lay it on
     public void beginSoundDrag(int soundID, WindowInstance window, float pressX, float pressY) {
 
-        if (drag.isActive() || !canEditTimeline())
+        if (drag.isActive() || !ensureRecording() || !canEditTimeline())
             return;
 
         beginDrag(RecorderDragKind.SOUND, soundID, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
@@ -2300,6 +2305,19 @@ public class RecorderManager extends ManagerPackage {
             recording.getLane(lane).setSolo(!recording.getLane(lane).isSolo());
             markUnsaved();
         }
+    }
+
+    // The selected lane's name as the rename dialog opens on it
+    public String formatLaneNameInput() {
+        return recording.getLane(selectedLane).getName();
+    }
+
+    public boolean isLaneNameValid(String text) {
+        return isLaneIndex(selectedLane);
+    }
+
+    public void setSelectedLaneName(String text) {
+        setLaneName(selectedLane, text.trim());
     }
 
     private boolean isLaneIndex(int lane) {
@@ -4275,9 +4293,9 @@ public class RecorderManager extends ManagerPackage {
         return parentNames;
     }
 
-    // How many lanes the open recording's timeline holds
+    // How many lanes the open recording's timeline shows
     public int getLaneCount() {
-        return recording != null ? recording.getLaneCount() : EngineSetting.SONG_LANE_COUNT;
+        return recording != null ? recording.getShownLaneCount() : EditorSetting.RECORDER_SHOWN_LANES;
     }
 
     public int getSelectedLane() {

@@ -31,7 +31,6 @@ public class NoteLibrarySetting {
     public static final int NOTES_PER_OCTAVE = 12;
 
     // Text
-    public static final String TEXT_NO_INSTRUMENT = "Pick an instrument in the Hierarchy to list its notes";
     public static final String TEXT_LIST_TITLE = "Notes";
     public static final String TEXT_INSTRUMENT = "Instrument";
     public static final String TEXT_NOTE_SET = "Note set";

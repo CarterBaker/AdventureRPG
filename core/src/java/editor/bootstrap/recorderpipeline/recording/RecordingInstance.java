@@ -14,7 +14,8 @@ public class RecordingInstance extends InstancePackage {
      * the world it was made in, its tempo map and meter — which time its
      * notes clips and the music grid of its timeline — its key, its
      * SONG_LANE_COUNT lanes, each heard at its volume, none while muted or
-     * while another is soloed, its bin of takes in
+     * while another is soloed, of which the timeline shows a few and one
+     * more each time the highest shown takes a clip, its bin of takes in
      * the order they were recorded, the clips laid on its timeline, and how
      * it exports. It is a video while any clip of it shows a picture, and
      * music otherwise. It runs as long as its last clip reaches. For each channel
@@ -334,6 +335,22 @@ public class RecordingInstance extends InstancePackage {
 
     public int getLaneCount() {
         return lanes.length;
+    }
+
+    // The lanes the timeline shows: never fewer than RECORDER_SHOWN_LANES, always one clear lane above the highest
+    // holding a clip, and every named lane, up to every lane the file holds
+    public int getShownLaneCount() {
+
+        int shown = EditorSetting.RECORDER_SHOWN_LANES;
+
+        for (int i = 0; i < clips.size(); i++)
+            shown = Math.max(shown, clips.get(i).getLane() + 2);
+
+        for (int lane = 0; lane < lanes.length; lane++)
+            if (!lanes[lane].getName().isEmpty())
+                shown = Math.max(shown, lane + 1);
+
+        return Math.min(shown, lanes.length);
     }
 
     public RecordingLaneStruct getLane(int lane) {
