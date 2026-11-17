@@ -75,6 +75,13 @@ public class MusicSoundSystem extends SystemPackage {
         this.nightCueID = soundCueManager.getCueIDFromCueName(RuntimeSetting.SOUND_CUE_MUSIC_NIGHT);
     }
 
+    // A window closed, or its layout swapped for another, takes its music with it
+    @Override
+    protected void dispose() {
+        menuTheme.stop();
+        stopPiece();
+    }
+
     // Update \\
 
     @Override

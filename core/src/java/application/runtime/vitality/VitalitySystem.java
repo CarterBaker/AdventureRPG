@@ -92,6 +92,11 @@ public class VitalitySystem extends SystemPackage {
     }
 
     @Override
+    protected void dispose() {
+        heartbeat.stop();
+    }
+
+    @Override
     protected void update() {
 
         float deltaTime = internal.getDeltaTime();

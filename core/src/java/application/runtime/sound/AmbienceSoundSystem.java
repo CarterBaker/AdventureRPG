@@ -93,6 +93,13 @@ public class AmbienceSoundSystem extends SystemPackage {
         this.gustSeconds = RuntimeSetting.SOUND_GUST_SECONDS_MIN;
     }
 
+    // A window closed, or its layout swapped for another, takes its ambience with it
+    @Override
+    protected void dispose() {
+        for (int i = 0; i < loops.length; i++)
+            loops[i].stop();
+    }
+
     // Update \\
 
     @Override

@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 105
-Task: FreeFileNames
+Delivery: 106
+Task: StopClosedWindowSound
 Applied: 2026-11-16
 
 ## Log
@@ -115,3 +115,4 @@ Applied: 2026-11-16
 - 103, 2026-11-16, MediaTools
 - 104, 2026-11-16, TopologyOnMesh
 - 105, 2026-11-16, FreeFileNames
+- 106, 2026-11-16, StopClosedWindowSound
