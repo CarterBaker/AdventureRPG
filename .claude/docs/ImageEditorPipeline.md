@@ -13,7 +13,8 @@ sets its size and background; its layers are listed in the Layers tab (New Layer
 the same keys as the Tools tab's actions); the Tools tab's tools (Brush, Erase, Smooth, Swirl, Scatter, Fill, Pick),
 the Brushes tab's brush and the Color Wheel's colour paint the layer picked; the Maps tab lists every map the image may
 carry, and Generate and Clear under the picked map's settings make and erase it. An image is one `.arpg` file in
-`Documents/My Games/AdventureRPG/Images/`.
+the workspace, `Documents/My Games/AdventureRPG/Assets/Images/`: New names it, sets its size and writes it at once,
+and File, Open picks one there in the system's file dialog.
 
 ## One model for every painted image
 

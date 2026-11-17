@@ -2825,6 +2825,8 @@ public class EngineSetting {
     public static final long FACE_BLINK_SALT = 0x3B9F5D27A61C48E3L;
 
     // Animation Fields — the keys of a clip's morph curves
+    public static final String ANIMATION_FIELD_TRACKS = "tracks";
+    public static final String ANIMATION_FIELD_PARTS = "parts";
     public static final String ANIMATION_FIELD_MORPHS = "morphs";
     public static final String ANIMATION_FIELD_TIME = "time";
     public static final String ANIMATION_FIELD_VALUE = "value";

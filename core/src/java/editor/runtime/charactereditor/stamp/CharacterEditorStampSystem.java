@@ -23,9 +23,9 @@ import engine.util.mathematics.vectors.Vector3;
 public class CharacterEditorStampSystem extends SystemPackage {
 
     /*
-     * Turns this tab's pointer into the Stamp tool while the Stamp tab is
-     * open: the part chosen in the Stamps tab follows the pointer over the
-     * body, snapping to an open loop whose centre lies near the pointer,
+     * Turns the Sculpt Brush into a placing tool while a part is chosen in
+     * the Stamps tab: the part follows the pointer over the body in the
+     * bind pose, snapping to an open loop whose centre lies near the pointer,
      * green where it can join and red where it cannot, its twin across the
      * body shown with it while mirroring. A click where it is green sets it
      * down; moving the pointer then turns it about the point it joins at,
@@ -33,8 +33,10 @@ public class CharacterEditorStampSystem extends SystemPackage {
      * second click joins it to the body, and a right click or Escape lifts
      * it again. A root part stands at the rig's root and joins at the first
      * click; fur follows the pointer anywhere on the body, never snapping,
-     * and is laid at the first click. The placement is worked out again only when the pointer, the
-     * view, the part, the tool's options or the body have moved.
+     * and is laid at the first click. Once joined the part is put down, and
+     * Escape puts it down unplaced, so the Brush strokes again. The placement
+     * is worked out again only when the pointer, the view, the part, the
+     * tool's options or the body have moved.
      */
 
     // Internal
@@ -125,7 +127,7 @@ public class CharacterEditorStampSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        if (!characterEditorManager.getMode().placesParts() || !characterViewPoseSystem.hasSubject()
+        if (!characterEditorManager.armsStamp() || !characterViewPoseSystem.hasSubject()
                 || !characterEditorMeshViewSystem.hasActiveDocument()) {
             lift();
             hide();
@@ -136,6 +138,19 @@ public class CharacterEditorStampSystem extends SystemPackage {
 
         if (setDown) {
             updateSetDown(rawInput);
+            return;
+        }
+
+        if (editorInputSystem.isPointerActive() && rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)) {
+            hide();
+            characterEditorManager.showPlacementMessage(null);
+            characterEditorManager.disarmStamp();
+            return;
+        }
+
+        if (!characterEditorManager.placesStamp()) {
+            hide();
+            characterEditorManager.showPlacementMessage(EditorSetting.CHARACTER_STAMP_MESSAGE_BODY_ONLY);
             return;
         }
 
@@ -258,7 +273,7 @@ public class CharacterEditorStampSystem extends SystemPackage {
 
         StampHandle stampHandle = characterEditorManager.getActiveStamp();
 
-        this.aimAttachPoint = stampHandle != null && stampHandle.hasFur()
+        this.aimAttachPoint = stampHandle.hasFur()
                 ? EngineSetting.INDEX_NOT_FOUND
                 : findSnappedLoop(mouseX, mouseY);
         this.aimFace = aimAttachPoint == EngineSetting.INDEX_NOT_FOUND
@@ -306,13 +321,6 @@ public class CharacterEditorStampSystem extends SystemPackage {
 
         hold(mouseX, mouseY);
         revision++;
-
-        if (stampHandle == null) {
-            placement.clear();
-            this.twinShown = false;
-            characterEditorManager.showPlacementMessage(EditorSetting.CHARACTER_STAMP_MESSAGE_NO_STAMP);
-            return;
-        }
 
         if ((stampHandle.hasPlug() || stampHandle.hasFur()) && aimAttachPoint == EngineSetting.INDEX_NOT_FOUND
                 && aimFace == EngineSetting.INDEX_NOT_FOUND) {

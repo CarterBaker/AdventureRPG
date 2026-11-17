@@ -13,7 +13,8 @@ public class InfoSchemaData extends DataPackage {
      * chosen; without one every file is a single entry. Entries of an array
      * layout are referenced by their file and name, or by their name alone
      * when the game registers them so, and required names are the entries the
-     * game cannot start without. Unique keys name the top-level fields
+     * game cannot start without. Fixed entries are the game's own: they are
+     * edited and deleted, but no new one is made or copied. Unique keys name the top-level fields
      * no two entries may share, and the schemas and resource directories its
      * fields reference are what its entries depend on.
      */
@@ -30,6 +31,7 @@ public class InfoSchemaData extends DataPackage {
     private final String defaultFile;
     private final boolean referencedByName;
     private final ObjectArrayList<String> requiredNames;
+    private final boolean fixedEntries;
 
     // Fields
     private final InfoFieldStruct rootField;
@@ -51,6 +53,7 @@ public class InfoSchemaData extends DataPackage {
             String defaultFile,
             boolean referencedByName,
             ObjectArrayList<String> requiredNames,
+            boolean fixedEntries,
             InfoFieldStruct rootField,
             ObjectArrayList<String> uniqueKeys,
             ObjectArrayList<String> referencedSchemaNames,
@@ -68,6 +71,7 @@ public class InfoSchemaData extends DataPackage {
         this.defaultFile = defaultFile;
         this.referencedByName = referencedByName;
         this.requiredNames = requiredNames;
+        this.fixedEntries = fixedEntries;
 
         // Fields
         this.rootField = rootField;
@@ -114,6 +118,10 @@ public class InfoSchemaData extends DataPackage {
 
     public ObjectArrayList<String> getRequiredNames() {
         return requiredNames;
+    }
+
+    public boolean hasFixedEntries() {
+        return fixedEntries;
     }
 
     public InfoFieldStruct getRootField() {

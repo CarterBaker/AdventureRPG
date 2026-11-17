@@ -47,7 +47,8 @@ class CharacterGraftBranch extends BranchPackage {
      * strip takes the body's texture and UVs, and the edge where the part's
      * own UV island begins is marked as a seam. A root part replaces the whole
      * body. A twin across the body joins in the same edit. Undo takes back
-     * the rig and the mesh together.
+     * the rig and the mesh together. The part's animations then join the
+     * rig's clips of their names, through CharacterClipBranch.
      */
 
     // Internal
@@ -57,6 +58,7 @@ class CharacterGraftBranch extends BranchPackage {
     private CharacterMeshBranch characterMeshBranch;
     private CharacterSculptBranch characterSculptBranch;
     private CharacterWeightBranch characterWeightBranch;
+    private CharacterClipBranch characterClipBranch;
 
     // Rig — the number every grafted name takes, the names the rig holds, each grafted bone's frame in the bind pose,
     // each stamp bone's bone in the rig, and the layers made for the part
@@ -145,6 +147,7 @@ class CharacterGraftBranch extends BranchPackage {
         this.characterMeshBranch = get(CharacterMeshBranch.class);
         this.characterSculptBranch = get(CharacterSculptBranch.class);
         this.characterWeightBranch = get(CharacterWeightBranch.class);
+        this.characterClipBranch = get(CharacterClipBranch.class);
     }
 
     // Graft \\
@@ -192,8 +195,14 @@ class CharacterGraftBranch extends BranchPackage {
             return false;
         }
 
-        characterEditorManager.setStatusMessage(
-                EditorSetting.CHARACTER_STAMP_MESSAGE_PLACED + stampHandle.getDisplayName());
+        int animated = characterClipBranch.join(stampHandle, placement, boneName -> rename(boneName, placement));
+
+        if (twin != null)
+            characterClipBranch.join(stampHandle, twin, boneName -> rename(boneName, twin));
+
+        characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_STAMP_MESSAGE_PLACED
+                + stampHandle.getDisplayName()
+                + (animated > 0 ? EditorSetting.CHARACTER_STAMP_MESSAGE_ANIMATED + animated : ""));
 
         return true;
     }

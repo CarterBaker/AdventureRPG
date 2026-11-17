@@ -64,6 +64,7 @@ class CharacterRigBranch extends BranchPackage {
     private CharacterHairBranch characterHairBranch;
     private CharacterColliderBranch characterColliderBranch;
     private CharacterMeshBranch characterMeshBranch;
+    private CharacterClipBranch characterClipBranch;
 
     // Rig
     private RigHandle rigHandle;
@@ -149,6 +150,7 @@ class CharacterRigBranch extends BranchPackage {
         this.characterHairBranch = get(CharacterHairBranch.class);
         this.characterColliderBranch = get(CharacterColliderBranch.class);
         this.characterMeshBranch = get(CharacterMeshBranch.class);
+        this.characterClipBranch = get(CharacterClipBranch.class);
     }
 
     // Rig \\
@@ -220,6 +222,7 @@ class CharacterRigBranch extends BranchPackage {
             return;
 
         characterMeshBranch.relayBones(rigHandle, resolveBoneRemap());
+        characterClipBranch.refresh();
         characterEditorManager.rebuildActivePreview();
     }
 

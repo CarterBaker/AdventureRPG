@@ -419,14 +419,11 @@ class AnimationPropertyBranch extends BranchPackage {
         selectedTimes.clear();
         otherTimes.clear();
 
-        ArpgObjectStruct tracks = CharacterViewUtility.findObject(
-                animationEditorManager.getClipArpg(),
-                EditorSetting.ANIMATION_EDITOR_FIELD_TRACKS);
-
-        if (tracks == null || !document.hasRig())
+        if (!document.hasRig())
             return;
 
-        String selectedBone = document.getRigHandle().getBone(animationEditorManager.getSelectedBoneIndex()).getName();
+        RigHandle rigHandle = document.getRigHandle();
+        String selectedBone = rigHandle.getBone(animationEditorManager.getSelectedBoneIndex()).getName();
         ArpgArrayStruct selectedTrack = animationEditBranch.findTrack(
                 animationEditorManager.getClipArpg(),
                 selectedBone);
@@ -435,8 +432,9 @@ class AnimationPropertyBranch extends BranchPackage {
             for (int i = 0; i < selectedTrack.size(); i++)
                 selectedTimes.add(animationEditBranch.getKeyTime(selectedTrack, i));
 
-        for (String boneName : tracks.keySet()) {
+        for (int b = 0; b < rigHandle.getBoneCount(); b++) {
 
+            String boneName = rigHandle.getBone(b).getName();
             ArpgArrayStruct track = animationEditBranch.findTrack(animationEditorManager.getClipArpg(), boneName);
 
             if (track == null || boneName.equals(selectedBone))

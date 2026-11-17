@@ -2,6 +2,7 @@ package editor.bootstrap.imageeditorpipeline.imageeditormanager;
 
 import java.io.File;
 
+import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
 import editor.bootstrap.imageeditorpipeline.imageproject.ImageProjectInstance;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagelayer.ImageLayerStackStruct;
@@ -22,7 +23,7 @@ class ImageProjectBranch extends BranchPackage {
 
     /*
      * Reads and writes the Image Editor's images, one .arpg file each in the
-     * Images folder beside the player's saves, as a painting tool keeps its
+     * workspace's Images folder beside the player's saves, as a painting tool keeps its
      * layered project file: the image's size, its layers bottom first (name,
      * opacity, whether shown, and the pixels as the bytes of an image file),
      * the layer painted, and per map its own settings and, once generated,
@@ -41,7 +42,7 @@ class ImageProjectBranch extends BranchPackage {
 
     @Override
     protected void create() {
-        this.imageRoot = new File(internal.path, EditorSetting.IMAGE_EDITOR_USER_DIRECTORY);
+        this.imageRoot = WorkspaceUtility.resolveFolder(internal.path, EditorSetting.IMAGE_EDITOR_USER_DIRECTORY);
     }
 
     @Override
@@ -52,6 +53,10 @@ class ImageProjectBranch extends BranchPackage {
     }
 
     // Files \\
+
+    File getFolder() {
+        return imageRoot;
+    }
 
     File resolveFile(String imageName) {
         return ArpgUtility.resolveFile(imageRoot, imageName);

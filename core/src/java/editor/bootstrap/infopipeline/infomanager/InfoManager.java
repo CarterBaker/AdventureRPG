@@ -476,9 +476,31 @@ public class InfoManager extends ManagerPackage {
         return activeSchema != null;
     }
 
-    public boolean isNewEntryNameValid(String entryName) {
+    // The one New: a new file when a folder is picked in a schema that keeps its entries in files, else a new entry,
+    // a file of its own in a schema that keeps one entry to a file
+    public boolean isNewNameValid(String name) {
+        return activeSchema != null && (createsFile() ? isNewFileNameValid(name) : isNewEntryNameValid(name));
+    }
 
-        if (activeSchema == null || !FileUtility.isValidFileName(entryName, EditorSetting.NAME_INPUT_MAX_LENGTH))
+    public void createNew(String name) {
+
+        if (!isNewNameValid(name))
+            return;
+
+        if (createsFile())
+            createFile(name);
+        else
+            createEntry(name);
+    }
+
+    private boolean createsFile() {
+        return activeSchema.isArrayLayout() && selectedFolderName != null;
+    }
+
+    private boolean isNewEntryNameValid(String entryName) {
+
+        if (activeSchema == null || activeSchema.hasFixedEntries()
+                || !FileUtility.isValidFileName(entryName, EditorSetting.NAME_INPUT_MAX_LENGTH))
             return false;
 
         if (!activeSchema.isArrayLayout())
@@ -488,13 +510,13 @@ public class InfoManager extends ManagerPackage {
         return document == null || document.findEntryIndex(entryName) == EngineSetting.INDEX_NOT_FOUND;
     }
 
-    public boolean isNewFileNameValid(String fileName) {
-        return activeSchema != null
+    private boolean isNewFileNameValid(String fileName) {
+        return activeSchema != null && !activeSchema.hasFixedEntries()
                 && FileUtility.isValidFileName(fileName, EditorSetting.NAME_INPUT_MAX_LENGTH)
                 && !isDefinitionNameTaken(activeSchema, resolveFolderPrefix() + fileName);
     }
 
-    public void createEntry(String entryName) {
+    private void createEntry(String entryName) {
 
         if (!isNewEntryNameValid(entryName))
             return;
@@ -538,7 +560,7 @@ public class InfoManager extends ManagerPackage {
         setStatusMessage(EditorSetting.INFO_MESSAGE_CREATED + entryName);
     }
 
-    public void createFile(String fileName) {
+    private void createFile(String fileName) {
 
         if (!isNewFileNameValid(fileName))
             return;
@@ -639,7 +661,8 @@ public class InfoManager extends ManagerPackage {
 
     public boolean isCopyNameValid(String copyName) {
 
-        if (!isCopySourceValid() || !FileUtility.isValidFileName(copyName, EditorSetting.NAME_INPUT_MAX_LENGTH))
+        if (!isCopySourceValid() || copySchema.hasFixedEntries()
+                || !FileUtility.isValidFileName(copyName, EditorSetting.NAME_INPUT_MAX_LENGTH))
             return false;
 
         return copySchema.isArrayLayout()

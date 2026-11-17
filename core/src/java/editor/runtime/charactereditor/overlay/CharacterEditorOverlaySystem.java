@@ -222,7 +222,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         if (characterEditorManager.getMode().showsVertices())
             pushMeshOverlay(window, xray);
 
-        if (characterEditorManager.getMode().placesParts())
+        if (characterEditorManager.placesStamp())
             pushStampOverlay(window);
 
         if (buildGuides())

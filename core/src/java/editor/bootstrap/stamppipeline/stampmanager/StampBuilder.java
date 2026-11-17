@@ -26,7 +26,10 @@ class StampBuilder extends BuilderPackage {
      * child. They are built into a rig of their own under the host
      * placeholder, and "mesh", a rigged mesh in the compact layout, is read
      * against it, weights the part leaves to its host on the placeholder.
-     * "parts" are the rig layers it brings. The optional "plug" is the open
+     * "parts" are the rig layers it brings, and "animations" the motion it
+     * brings to its host's clips: each clip by name, its "tracks" keyed on
+     * the stamp's own bones for either side, and its "left" and "right" for
+     * a side that moves its own way. The optional "plug" is the open
      * loop it joins a host by — its "position", the way it faces out of the
      * part ("normal") and its "radius" — and "sockets" the loops other parts
      * may join it at, each named and riding one of its bones. A fur stamp
@@ -79,10 +82,43 @@ class StampBuilder extends BuilderPackage {
                 rigHandle,
                 bonesArpg.deepCopy(),
                 partsArpg,
+                parseAnimations(stampArpg, rigHandle, stampName),
                 mesh,
                 plugged ? parsePlug(stampArpg, rigHandle, stampName) : null,
                 parseSockets(stampArpg, rigHandle, stampName),
                 fur ? parseFur(stampArpg.getAsObject(EditorSetting.STAMP_FIELD_FUR), stampName) : null);
+    }
+
+    // The stamp's animations as the file holds them, every bone each names checked to be one of the stamp's own
+    private ArpgObjectStruct parseAnimations(ArpgObjectStruct stampArpg, RigHandle rigHandle, String stampName) {
+
+        if (!ArpgUtility.hasObject(stampArpg, EditorSetting.STAMP_FIELD_ANIMATIONS))
+            return new ArpgObjectStruct();
+
+        ArpgObjectStruct animationsArpg = stampArpg.getAsObject(EditorSetting.STAMP_FIELD_ANIMATIONS).deepCopy();
+
+        for (String clipName : animationsArpg.keySet()) {
+
+            ArpgObjectStruct animationArpg = animationsArpg.getAsObject(clipName);
+
+            for (int i = 0; i < EditorSetting.STAMP_ANIMATION_GROUPS.length; i++)
+                if (ArpgUtility.hasObject(animationArpg, EditorSetting.STAMP_ANIMATION_GROUPS[i]))
+                    checkTrackBones(
+                            animationArpg.getAsObject(EditorSetting.STAMP_ANIMATION_GROUPS[i]),
+                            rigHandle,
+                            clipName,
+                            stampName);
+        }
+
+        return animationsArpg;
+    }
+
+    private void checkTrackBones(ArpgObjectStruct tracksArpg, RigHandle rigHandle, String clipName, String stampName) {
+
+        for (String boneName : tracksArpg.keySet())
+            if (boneName.equals(EditorSetting.STAMP_HOST_BONE) || !rigHandle.hasBone(boneName))
+                throwException("Stamp animation \"" + clipName + "\" keys \"" + boneName
+                        + "\", which is not one of its bones. Source: " + stampName);
     }
 
     private StampSocketStruct parsePlug(ArpgObjectStruct stampArpg, RigHandle rigHandle, String stampName) {

@@ -25,15 +25,23 @@ public enum EditorTool {
      * selected; Cut cuts a clip in two where it clicks; IK Handle drags the
      * end of a limb or digit the rig carries a handle for, and the joints
      * above it bend the way the handle's pole says; Pose turns a bone by its
-     * joint so what it carries follows, a pose held only to work in; Stamp
-     * joins a body part where it clicks, at its own scale and twist, or lays
-     * fur combed the way it is set. The
+     * joint so what it carries follows, a pose held only to work in. While a
+     * body part is chosen in the Stamps tab, the Brush joins it where it
+     * clicks, at its Scale and Turn, or lays fur combed the way it is set,
+     * on the canvases that declare those options. The
      * stroking tools work along a drag with a brush and carry the options
      * that shape their strokes; the rest act once per press.
      */
 
     SELECT(EditorSetting.TOOL_SELECT, false, ToolOption.SIZE),
-    BRUSH(EditorSetting.TOOL_BRUSH, true, ToolOption.SIZE, ToolOption.STRENGTH),
+    BRUSH(
+            EditorSetting.TOOL_BRUSH,
+            true,
+            ToolOption.SIZE,
+            ToolOption.STRENGTH,
+            ToolOption.SCALE,
+            ToolOption.TURN,
+            ToolOption.COMB),
     ERASE(EditorSetting.TOOL_ERASE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     SMOOTH(EditorSetting.TOOL_SMOOTH, true, ToolOption.SIZE, ToolOption.STRENGTH),
     SWIRL(EditorSetting.TOOL_SWIRL, true, ToolOption.SIZE, ToolOption.STRENGTH, ToolOption.TWIST),
@@ -56,8 +64,7 @@ public enum EditorTool {
     SCALE(EditorSetting.TOOL_SCALE, false),
     CUT(EditorSetting.TOOL_CUT, false),
     IK(EditorSetting.TOOL_IK, false),
-    POSE(EditorSetting.TOOL_POSE, false),
-    STAMP(EditorSetting.TOOL_STAMP, false, ToolOption.SCALE, ToolOption.TWIST, ToolOption.COMB);
+    POSE(EditorSetting.TOOL_POSE, false);
 
     // Values
     public static final EditorTool[] VALUES = values();

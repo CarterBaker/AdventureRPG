@@ -24,7 +24,9 @@ class AnimationEditBranch extends BranchPackage {
      * key written where the bone has none is inserted in its place, holding
      * the pose it is given. A key writes its rotation always, and position
      * and scale only once they leave their defaults, as authored clips do;
-     * a track left with no key is removed. Changes that touch several bones
+     * a track left with no key is removed. A bone a joined part keys is
+     * edited in that part's tracks, so each part's motion stays its own
+     * within the one clip. Changes that touch several bones
      * go through as one edit. Every edit is recorded in the clip's history
      * first, and undo and redo put a recorded clip back whole.
      */
@@ -157,7 +159,7 @@ class AnimationEditBranch extends BranchPackage {
     void deleteKey(AnimationDocumentInstance document, String boneName, int keyIndex) {
         edit(document, clip -> {
 
-            ArpgObjectStruct tracks = clip.getAsObject(EditorSetting.ANIMATION_EDITOR_FIELD_TRACKS);
+            ArpgObjectStruct tracks = findBoneTracks(clip, boneName);
             ArpgArrayStruct track = tracks.getAsArray(boneName);
 
             track.remove(keyIndex);
@@ -176,8 +178,11 @@ class AnimationEditBranch extends BranchPackage {
 
     private ArpgObjectStruct requireKey(ArpgObjectStruct clip, String boneName, float time, float[] pose) {
 
+        ArpgObjectStruct partTracks = findBoneTracks(clip, boneName);
         ArpgArrayStruct track = CharacterViewUtility.requireArray(
-                CharacterViewUtility.requireObject(clip, EditorSetting.ANIMATION_EDITOR_FIELD_TRACKS),
+                partTracks != null && ArpgUtility.hasArray(partTracks, boneName)
+                        ? partTracks
+                        : CharacterViewUtility.requireObject(clip, EditorSetting.ANIMATION_EDITOR_FIELD_TRACKS),
                 boneName);
         int keyIndex = findKeyIndex(track, time);
 
@@ -234,9 +239,29 @@ class AnimationEditBranch extends BranchPackage {
 
     ArpgArrayStruct findTrack(ArpgObjectStruct clip, String boneName) {
 
-        ArpgObjectStruct tracks = CharacterViewUtility.findObject(clip, EditorSetting.ANIMATION_EDITOR_FIELD_TRACKS);
+        ArpgObjectStruct tracks = findBoneTracks(clip, boneName);
 
         return tracks != null && ArpgUtility.hasArray(tracks, boneName) ? tracks.getAsArray(boneName) : null;
+    }
+
+    // The tracks a bone is keyed in: those of the joined part that keys it, so an edit stays with its part, else the
+    // clip's own
+    private ArpgObjectStruct findBoneTracks(ArpgObjectStruct clip, String boneName) {
+
+        ArpgObjectStruct parts = CharacterViewUtility.findObject(clip, EditorSetting.ANIMATION_EDITOR_FIELD_PARTS);
+
+        if (parts != null)
+            for (String partName : parts.keySet()) {
+
+                ArpgObjectStruct tracks = CharacterViewUtility.findObject(
+                        parts.getAsObject(partName),
+                        EditorSetting.ANIMATION_EDITOR_FIELD_TRACKS);
+
+                if (tracks != null && ArpgUtility.hasArray(tracks, boneName))
+                    return tracks;
+            }
+
+        return CharacterViewUtility.findObject(clip, EditorSetting.ANIMATION_EDITOR_FIELD_TRACKS);
     }
 
     int findKeyIndex(ArpgArrayStruct track, float time) {

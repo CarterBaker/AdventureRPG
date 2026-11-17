@@ -63,6 +63,11 @@ public class InfoSchemaHandle extends HandlePackage {
         return infoSchemaData.getRequiredNames();
     }
 
+    // True for content the game owns outright: no new entry is made or copied
+    public boolean hasFixedEntries() {
+        return infoSchemaData.hasFixedEntries();
+    }
+
     public InfoFieldStruct getRootField() {
         return infoSchemaData.getRootField();
     }

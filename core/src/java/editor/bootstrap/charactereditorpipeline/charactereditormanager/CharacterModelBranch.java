@@ -14,6 +14,7 @@ import editor.bootstrap.charactereditorpipeline.util.GltfExportUtility;
 import editor.bootstrap.charactereditorpipeline.util.GltfImportStruct;
 import editor.bootstrap.charactereditorpipeline.util.GltfImportUtility;
 import editor.bootstrap.charactereditorpipeline.util.GltfReadUtility;
+import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -23,9 +24,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CharacterModelBranch extends BranchPackage {
 
     /*
-     * Import Model and Export Model for the mesh being edited (see
+     * Import and Export for the mesh being edited (see
      * .claude/docs/GLTF.md). Export writes the open mesh, its rig and its
-     * morphs as a .glb in the Models folder of the user's game folder.
+     * morphs as a .glb in the workspace's Models folder beside the saves.
      * Import reads a .glb from that folder in steps the File menu's dialogs
      * walk: the file is inspected, bones the rig lacks are added only when
      * the user says so, a model with no skin is given the bone it hangs
@@ -58,7 +59,7 @@ public class CharacterModelBranch extends BranchPackage {
     protected void create() {
 
         // Directory
-        this.modelRoot = new File(internal.path, EditorSetting.MODEL_USER_DIRECTORY);
+        this.modelRoot = WorkspaceUtility.resolveFolder(internal.path, EditorSetting.MODEL_USER_DIRECTORY);
     }
 
     @Override

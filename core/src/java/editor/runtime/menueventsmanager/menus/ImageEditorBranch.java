@@ -1,6 +1,9 @@
 package editor.runtime.menueventsmanager.menus;
 
+import java.io.File;
+
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
 import editor.bootstrap.imageeditorpipeline.imageeditormanager.ImageEditorManager;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -38,6 +41,17 @@ public class ImageEditorBranch extends BranchPackage {
                 EditorSetting.DIALOG_TITLE_NEW_IMAGE,
                 imageEditorManager::isImageNameAvailable,
                 imageName -> newImageDialogBranch.open(window, imageName));
+    }
+
+    // An image picked in the system's open dialog, which starts in the workspace's Images folder
+    public void openImage() {
+
+        File file = WorkspaceUtility.chooseFile(
+                EditorSetting.WORKSPACE_DIALOG_OPEN_IMAGE,
+                imageEditorManager.getImageFolder());
+
+        if (file != null)
+            imageEditorManager.openImageFile(file);
     }
 
     public void copyImage(WindowInstance window) {

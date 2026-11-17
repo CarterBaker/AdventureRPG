@@ -5,14 +5,15 @@ public enum FileMenuAction {
     /*
      * Every operation the editor's File and Edit menus offer, each run on
      * the window worked in last exactly as that tool's own key or button for
-     * it runs it. The File menu holds the first seven, the two model actions
-     * and Save Selection As Stamp, the Edit menu Undo and Redo. The ordinal indexes each tool's
-     * table and the menu's labels, so the order is fixed and new actions are
-     * added at the end.
+     * it runs it. The File menu holds the first seven and the two model
+     * actions, the Edit menu Undo and Redo. New is the one way to make
+     * something, Open picks a workspace file in the system's own dialog. The
+     * ordinal indexes each tool's table and the menu's labels, so the order
+     * here and in EditorSetting.FILE_MENU_LABELS is one.
      */
 
     NEW,
-    NEW_FILE,
+    OPEN,
     DUPLICATE,
     SAVE,
     SAVE_ALL,
@@ -20,9 +21,8 @@ public enum FileMenuAction {
     DELETE,
     UNDO,
     REDO,
-    IMPORT_MODEL,
-    EXPORT_MODEL,
-    SAVE_STAMP;
+    IMPORT,
+    EXPORT;
 
     // Values
     public static final FileMenuAction[] VALUES = values();

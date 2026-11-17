@@ -63,6 +63,7 @@ class InfoSchemaBuilder extends BuilderPackage {
         boolean referencedByName = parseReferenceForm(arpg, entriesKey != null, schemaName);
         ObjectArrayList<String> requiredNames = parseStrings(
                 arpg, "required_names", "Info schema '" + schemaName + "'");
+        boolean fixedEntries = ArpgUtility.getBoolean(arpg, "fixed_entries", false);
 
         InfoFieldStruct rootField = new InfoFieldStruct(
                 null,
@@ -104,6 +105,7 @@ class InfoSchemaBuilder extends BuilderPackage {
                 defaultFile,
                 referencedByName,
                 requiredNames,
+                fixedEntries,
                 rootField,
                 collectUniqueKeys(rootField),
                 referencedSchemaNames,

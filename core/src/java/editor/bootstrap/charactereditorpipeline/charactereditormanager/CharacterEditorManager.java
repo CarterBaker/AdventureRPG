@@ -91,6 +91,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
     private CharacterUVBranch characterUVBranch;
     private CharacterControlBranch characterControlBranch;
+    private CharacterClipBranch characterClipBranch;
     private CharacterSliderBranch characterSliderBranch;
     private CharacterPaintRowBranch characterPaintRowBranch;
     private CharacterPropertyBranch characterPropertyBranch;
@@ -195,7 +196,6 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterHistoryBranch = create(CharacterHistoryBranch.class);
         this.characterMeshBranch = create(CharacterMeshBranch.class);
         create(CharacterModelBranch.class);
-        create(CharacterStampBranch.class);
         this.characterSelectionBranch = create(CharacterSelectionBranch.class);
         this.characterWeightBranch = create(CharacterWeightBranch.class);
         this.characterSculptBranch = create(CharacterSculptBranch.class);
@@ -207,6 +207,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterPaintPropertyBranch = create(CharacterPaintPropertyBranch.class);
         this.characterUVBranch = create(CharacterUVBranch.class);
         this.characterControlBranch = create(CharacterControlBranch.class);
+        this.characterClipBranch = create(CharacterClipBranch.class);
         this.characterSliderBranch = create(CharacterSliderBranch.class);
         this.characterPaintRowBranch = create(CharacterPaintRowBranch.class);
         create(CharacterMapBranch.class);
@@ -398,7 +399,7 @@ public class CharacterEditorManager extends ManagerPackage {
         if (!saveRigFile())
             return;
 
-        if (!characterControlBranch.save()) {
+        if (!characterControlBranch.save() || !characterClipBranch.save()) {
             setStatusMessage(infoManager.getRefusal());
             return;
         }
@@ -422,6 +423,7 @@ public class CharacterEditorManager extends ManagerPackage {
         revertDirtyMeshes();
         revertRigFile();
         characterControlBranch.revert();
+        characterClipBranch.revert();
         characterPaintBranch.revert();
         setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + activeDocument.getRaceName());
     }
@@ -666,12 +668,8 @@ public class CharacterEditorManager extends ManagerPackage {
             selectPart(partKey);
     }
 
-    // The part a region edits: the part picked while it is one the region holds, else its body, else its feature;
-    // parts are joined to the body alone
+    // The part a region edits: the part picked while it is one the region holds, else its body, else its feature
     private String resolveRegionPartKey(CharacterRegionStruct region) {
-
-        if (mode.placesParts())
-            return EditorSetting.CHARACTER_EDITOR_PART_BODY;
 
         if (region.isWhole() || holdsPartKey(region, activePartKey))
             return activePartKey;
@@ -1322,17 +1320,36 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Stamps \\
 
-    // The part chosen in the Stamps tab, the one the Stamp tool places, null when none is
+    // The part chosen in the Stamps tab, the one the Brush places in place of a stroke, null when none is
     public StampHandle getActiveStamp() {
         return stampManager.getActiveStamp();
     }
 
-    // The attach points the Stamp tab shows on the body: every joint of the rig, then every open loop's centre
+    // True while the Brush places the part chosen in the Stamps tab rather than stroking: a part is chosen and the
+    // Brush is the tool of the mode that places parts
+    public boolean armsStamp() {
+        return mode.placesParts() && toolManager.getTool(mode.getToolCanvas()) == EditorTool.BRUSH
+                && getActiveStamp() != null;
+    }
+
+    // True while the part armed can be placed: parts join the body alone in the bind pose, so the body must be the
+    // part open and the view unposed
+    public boolean placesStamp() {
+        return armsStamp() && activePartKey.equals(EditorSetting.CHARACTER_EDITOR_PART_BODY) && !isPosed();
+    }
+
+    // The part let go once it is placed, or when Escape puts it down, so the Brush strokes again
+    public void disarmStamp() {
+        stampManager.clearActiveStamp();
+    }
+
+    // The attach points shown on the body while a part is armed: every joint of the rig, then every open loop's
+    // centre
     public int getAttachPointCount() {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
-        if (!mode.placesParts() || document == null || !syncRig())
+        if (!placesStamp() || document == null || !syncRig())
             return 0;
 
         characterPlacementBranch.sync(document);
@@ -1362,7 +1379,7 @@ public class CharacterEditorManager extends ManagerPackage {
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
         StampHandle stampHandle = getActiveStamp();
 
-        if (!mode.placesParts() || document == null || stampHandle == null || !syncRig()) {
+        if (!placesStamp() || document == null || stampHandle == null || !syncRig()) {
             out.clear();
             return;
         }
@@ -1399,9 +1416,11 @@ public class CharacterEditorManager extends ManagerPackage {
             characterFurBranch.lay(document, placement, twin);
         else
             characterGraftBranch.graft(document, placement, twin);
+
+        disarmStamp();
     }
 
-    // What the Stamp tab says about the part it aims, said only when it changes and taken back once there is nothing
+    // What the Brush says about the part it aims, said only when it changes and taken back once there is nothing
     // to say, unless something else has been said since
     public void showPlacementMessage(String message) {
 
@@ -2166,6 +2185,7 @@ public class CharacterEditorManager extends ManagerPackage {
                 || hasDirtyWornMesh()
                 || syncRig() && characterRigBranch.isDirty()
                 || characterControlBranch.isDirty()
+                || characterClipBranch.isDirty()
                 || characterPaintBranch.isDirty())
             status.append(EditorSetting.CHARACTER_VIEW_DIRTY_MARKER);
 

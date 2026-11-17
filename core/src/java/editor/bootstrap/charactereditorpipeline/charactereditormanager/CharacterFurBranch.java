@@ -140,7 +140,7 @@ class CharacterFurBranch extends BranchPackage {
         float size = placement.getScale()
                 * (1f + jitter * (hash(faceIndex, channel + EditorSetting.CHARACTER_FUR_CHANNEL_LENGTH) * 2f - 1f));
         float turn = (float) Math.toRadians(
-                toolManager.getOption(ToolCanvas.CHARACTER_STAMP, ToolOption.TWIST)
+                toolManager.getOption(ToolCanvas.CHARACTER_SCULPT, ToolOption.TURN)
                         + EditorSetting.CHARACTER_FUR_TURN_JITTER_DEGREES * jitter
                                 * (hash(faceIndex, channel + EditorSetting.CHARACTER_FUR_CHANNEL_TURN) * 2f - 1f));
 
@@ -152,7 +152,7 @@ class CharacterFurBranch extends BranchPackage {
     private void writeFrame(Matrix4 frame, float turn, float size) {
 
         float[] comb = EditorSetting.CHARACTER_FUR_COMB;
-        float sign = toolManager.getOption(ToolCanvas.CHARACTER_STAMP, ToolOption.COMB)
+        float sign = toolManager.getOption(ToolCanvas.CHARACTER_SCULPT, ToolOption.COMB)
                 == EditorSetting.CHARACTER_FUR_COMB_FLIPPED ? -1f : 1f;
 
         projectComb(comb, sign);

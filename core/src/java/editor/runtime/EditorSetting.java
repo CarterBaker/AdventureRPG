@@ -170,7 +170,7 @@ public class EditorSetting {
     public static final String FILE_MENU_NO_TARGET = "No tool worked in yet";
     public static final String[] FILE_MENU_LABELS = {
             "file_new_label",
-            "file_new_file_label",
+            "file_open_label",
             "file_duplicate_label",
             "file_save_label",
             "file_save_all_label",
@@ -179,8 +179,7 @@ public class EditorSetting {
             "edit_undo_label",
             "edit_redo_label",
             "file_import_label",
-            "file_export_label",
-            "file_save_stamp_label" };
+            "file_export_label" };
 
     // File Menu — each tool's actions, the methods its own keys and buttons run
     public static final FileMenuTableStruct FILE_MENU_CHARACTER = new FileMenuTableStruct(
@@ -191,9 +190,8 @@ public class EditorSetting {
             .with(FileMenuAction.DELETE, "deleteCharacter")
             .with(FileMenuAction.UNDO, "undo")
             .with(FileMenuAction.REDO, "redo")
-            .with(FileMenuAction.IMPORT_MODEL, "importModel")
-            .with(FileMenuAction.EXPORT_MODEL, "exportModel")
-            .with(FileMenuAction.SAVE_STAMP, "saveStamp");
+            .with(FileMenuAction.IMPORT, "importModel")
+            .with(FileMenuAction.EXPORT, "exportModel");
     public static final FileMenuTableStruct FILE_MENU_ANIMATION = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.AnimationEditorBranch")
             .with(FileMenuAction.NEW, "newClip")
@@ -217,6 +215,7 @@ public class EditorSetting {
     public static final FileMenuTableStruct FILE_MENU_IMAGE_EDITOR = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.ImageEditorBranch")
             .with(FileMenuAction.NEW, "newImage")
+            .with(FileMenuAction.OPEN, "openImage")
             .with(FileMenuAction.DUPLICATE, "copyImage")
             .with(FileMenuAction.SAVE, "saveImage")
             .with(FileMenuAction.SAVE_ALL, "saveAllImages")
@@ -233,7 +232,6 @@ public class EditorSetting {
     public static final FileMenuTableStruct FILE_MENU_INFO = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.InfoPanelBranch")
             .with(FileMenuAction.NEW, "newEntry")
-            .with(FileMenuAction.NEW_FILE, "newFile")
             .with(FileMenuAction.DUPLICATE, "copySelection")
             .with(FileMenuAction.SAVE, "save")
             .with(FileMenuAction.SAVE_ALL, "saveAll")
@@ -272,8 +270,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_NEW_ITEM = "New Item";
     public static final String DIALOG_TITLE_NEW_PART = "New Part";
     public static final String DIALOG_TITLE_RENAME_PART = "Rename Part";
-    public static final String DIALOG_TITLE_NEW_ENTRY = "New Entry";
-    public static final String DIALOG_TITLE_NEW_FILE = "New File";
+    public static final String DIALOG_TITLE_NEW_ENTRY = "New";
     public static final String DIALOG_TITLE_NEW_KEY = "New Key";
     public static final String DIALOG_TITLE_DUPLICATE_KEY = "Duplicate As";
     public static final String DIALOG_TITLE_EDIT_PREFIX = "Edit ";
@@ -429,15 +426,14 @@ public class EditorSetting {
     public static final String TAB_TITLE_BRUSHES = "Brushes";
     public static final String TAB_TITLE_STAMPS = "Stamps";
     public static final String TAB_TITLE_CAMERA_PLANNER = "Camera Planner";
-    public static final String TAB_TITLE_CHARACTER_APPEARANCE = "Character Appearance";
-    public static final String TAB_TITLE_CHARACTER_EQUIPMENT = "Character Equipment";
-    public static final String TAB_TITLE_CHARACTER_MESH = "Character Mesh";
-    public static final String TAB_TITLE_CHARACTER_SCULPT = "Character Sculpt";
-    public static final String TAB_TITLE_CHARACTER_WEIGHTS = "Character Weights";
-    public static final String TAB_TITLE_CHARACTER_PAINT = "Character Paint";
-    public static final String TAB_TITLE_CHARACTER_RIG = "Character Rig";
-    public static final String TAB_TITLE_CHARACTER_UV = "Character UV";
-    public static final String TAB_TITLE_CHARACTER_STAMP = "Character Stamp";
+    public static final String TAB_TITLE_CHARACTER_APPEARANCE = "Appearance";
+    public static final String TAB_TITLE_CHARACTER_EQUIPMENT = "Equipment";
+    public static final String TAB_TITLE_CHARACTER_MESH = "Mesh";
+    public static final String TAB_TITLE_CHARACTER_SCULPT = "Sculpt";
+    public static final String TAB_TITLE_CHARACTER_WEIGHTS = "Weights";
+    public static final String TAB_TITLE_CHARACTER_PAINT = "Paint";
+    public static final String TAB_TITLE_CHARACTER_RIG = "Rig";
+    public static final String TAB_TITLE_CHARACTER_UV = "UV";
     public static final String TAB_TITLE_UV_EDITOR = "UV Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
@@ -788,11 +784,11 @@ public class EditorSetting {
     public static final int[] GLTF_QUAD_FAN_CORNERS = { 0, 1, 2, 0, 2, 3 };
     public static final String GLTF_MORPH_NAME_PREFIX = "target_";
 
-    // Model Import and Export — the folder under the user's game folder .glb files are read from and written to, the
-    // dialogs Import Model asks through and what both report
+    // Model Import and Export — the workspace folder .glb files are read from and written to, the
+    // dialogs Import asks through and what both report
     public static final String MODEL_USER_DIRECTORY = "Models";
     public static final String MODEL_CONFIRM_ADD_BONES = "add";
-    public static final String MODEL_DIALOG_FILE = "Import Model: type the .glb's name in ";
+    public static final String MODEL_DIALOG_FILE = "Import: type the .glb's name in ";
     public static final String MODEL_DIALOG_ADD_BONES_PREFIX = "The rig lacks ";
     public static final String MODEL_DIALOG_ADD_BONES_SUFFIX = ". Type add to add them to the rig";
     public static final String MODEL_DIALOG_HANG_BONE = "The model has no skin. Type the bone it hangs from";
@@ -803,7 +799,7 @@ public class EditorSetting {
     public static final String MODEL_MESSAGE_EXPORTED = "Exported ";
     public static final String MODEL_MESSAGE_EXPORT_FAILED = "The model could not be written to ";
     public static final String MODEL_MESSAGE_REFUSED = "Import refused: ";
-    public static final String MODEL_MESSAGE_BONES_ADDED = " bones added to the rig. Run Import Model again";
+    public static final String MODEL_MESSAGE_BONES_ADDED = " bones added to the rig. Run Import again";
     public static final String MODEL_MESSAGE_IMPORTED = "Imported ";
     public static final String MODEL_MESSAGE_IMPORTED_QUADS = " quads from ";
     public static final String MODEL_UNNAMED_MATERIAL = "(unnamed)";
@@ -920,7 +916,6 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
     public static final String CHARACTER_EDITOR_MODE_PAINT = "Paint";
     public static final String CHARACTER_EDITOR_MODE_UV = "UV";
-    public static final String CHARACTER_EDITOR_MODE_STAMP = "Stamp";
     public static final String CHARACTER_EDITOR_POSE_REST = "Bind";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
@@ -1170,9 +1165,6 @@ public class EditorSetting {
             + " fills the island clicked, Pick takes its colour; drag off it to orbit, right-drag to pan";
     public static final String CHARACTER_EDITOR_STATUS_UV_HINT = "Select the vertices of the edges to cut and Mark"
             + " Seam, then select the faces and Unwrap; their UVs show in the UV Editor; drag off the mesh to orbit";
-    public static final String CHARACTER_EDITOR_STATUS_STAMP_HINT = "Point at the body or a yellow attach point:"
-            + " green places the part chosen in the Stamps tab, red cannot; click to set it down, move to turn it,"
-            + " click again to join it, right click or Esc cancels";
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
             + " Rotate turns its bind, Scale sizes it, Place adds a child, Erase removes one; the mesh stays put (Pose"
             + " on the Mesh layer moves it); drag off the joints to orbit";
@@ -1665,6 +1657,7 @@ public class EditorSetting {
     public static final String ANIMATION_EDITOR_FIELD_RIG = "rig";
     public static final String ANIMATION_EDITOR_FIELD_LOOP = "loop";
     public static final String ANIMATION_EDITOR_FIELD_TRACKS = "tracks";
+    public static final String ANIMATION_EDITOR_FIELD_PARTS = "parts";
     public static final String ANIMATION_EDITOR_FIELD_TIME = "time";
     public static final String ANIMATION_EDITOR_FIELD_ROTATION = "rotation";
     public static final String ANIMATION_EDITOR_FIELD_POSITION = "position";
@@ -2001,7 +1994,15 @@ public class EditorSetting {
     public static final String MAPS_MESSAGE_GENERATED = "Generated ";
     public static final String MAPS_MESSAGE_CLEARED = "Cleared ";
 
-    // Image Editor — its folder beside the saves, the keys of its files, the names of its documents in ImageManager,
+    // Workspace — the folder beside the saves new work is made and kept in until it is imported, the file kind its
+    // open dialog lists, and the titles that dialog takes
+    public static final String WORKSPACE_DIRECTORY = "Assets";
+    public static final String WORKSPACE_FILE_PATTERN = "*.arpg";
+    public static final String WORKSPACE_FILE_DESCRIPTION = "AdventureRPG files (*.arpg)";
+    public static final String WORKSPACE_DIALOG_OPEN_IMAGE = "Open Image";
+    public static final String WORKSPACE_MESSAGE_OUTSIDE = "Open takes a file from ";
+
+    // Image Editor — its folder in the workspace, the keys of its files, the names of its documents in ImageManager,
     // its layers, sizes and backgrounds
     public static final String IMAGE_EDITOR_USER_DIRECTORY = "Images";
     public static final String IMAGE_FILE_KEY_WIDTH = "width";
@@ -2189,16 +2190,17 @@ public class EditorSetting {
     public static final String STAMP_FIELD_FUR = "fur";
     public static final String STAMP_FIELD_SPACING = "spacing";
     public static final String STAMP_FIELD_JITTER = "jitter";
+    public static final String STAMP_FIELD_ANIMATIONS = "animations";
+    public static final String STAMP_FIELD_TRACKS = "tracks";
+    public static final String STAMP_FIELD_LEFT = "left";
+    public static final String STAMP_FIELD_RIGHT = "right";
+
+    // Stamp Animations — the track groups an animation may hold: either side's, then the left's and the right's
+    public static final String[] STAMP_ANIMATION_GROUPS = { STAMP_FIELD_TRACKS, STAMP_FIELD_LEFT, STAMP_FIELD_RIGHT };
     public static final float STAMP_FUR_JITTER_DEFAULT = 0.25f;
 
-    // Character Stamps — cutting the selected faces into a stamp: a bone is the part's own when the part holds at
-    // least this share of the bone's whole influence over the mesh, a loop's radius is never written below this, and
-    // a socket named after a bone already naming one takes a number after this separator
-    public static final float CHARACTER_STAMP_BONE_SHARE = 0.5f;
+    // Character Stamps — the plug loop a part joins by is looked for at no less than this radius
     public static final float CHARACTER_STAMP_RADIUS_MIN = 0.001f;
-    public static final String CHARACTER_STAMP_SOCKET_SEPARATOR = "_";
-    public static final String CHARACTER_STAMP_MESSAGE_SAVED = "Saved the selection as the stamp ";
-    public static final String DIALOG_TITLE_SAVE_STAMP = "Save Selection As Stamp";
 
     // Character Stamp Placement — a part attaches where an attach point (the joint of a bone carrying the body and at
     // least the second share of the rig's height across, or an open loop's centre) lies within the first share of
@@ -2224,7 +2226,9 @@ public class EditorSetting {
     public static final String CHARACTER_STAMP_NUMBER_SEPARATOR = "_";
     public static final int CHARACTER_STAMP_FIRST_NUMBER = 2;
     public static final String CHARACTER_STAMP_MESSAGE_PLACED = "Joined the part ";
-    public static final String CHARACTER_STAMP_MESSAGE_NO_STAMP = "Choose a part in the Stamps tab to place";
+    public static final String CHARACTER_STAMP_MESSAGE_ANIMATED = "; its animations joined clips: ";
+    public static final String CHARACTER_STAMP_MESSAGE_BODY_ONLY = "A part joins the body in the Bind pose: pick the"
+            + " Body or a body layer and Bind under Pose, or press Esc to put the part down";
     public static final String CHARACTER_STAMP_MESSAGE_FAR = "A part attaches near a joint or a yellow attach point";
     public static final String CHARACTER_STAMP_MESSAGE_ROOT = "A root part starts the body over at its centre;"
             + " click to replace the body with it (Undo brings it back)";
@@ -2283,18 +2287,16 @@ public class EditorSetting {
     public static final String TOOL_RAISE = "Raise";
     public static final String TOOL_LOWER = "Lower";
     public static final String TOOL_TOPOLOGY = "Topology";
-    public static final String TOOL_STAMP = "Stamp";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
     public static final String TOOL_CANVAS_CAMERAS = "World Cameras";
-    public static final String TOOL_CANVAS_CHARACTER_MESH = "Character Mesh";
-    public static final String TOOL_CANVAS_CHARACTER_WEIGHTS = "Character Weights";
-    public static final String TOOL_CANVAS_CHARACTER_SCULPT = "Character Sculpt";
-    public static final String TOOL_CANVAS_CHARACTER_RIG = "Character Rig";
-    public static final String TOOL_CANVAS_CHARACTER_PAINT = "Character Paint";
-    public static final String TOOL_CANVAS_CHARACTER_UV = "Character UV";
-    public static final String TOOL_CANVAS_CHARACTER_STAMP = "Character Stamp";
+    public static final String TOOL_CANVAS_CHARACTER_MESH = "Mesh";
+    public static final String TOOL_CANVAS_CHARACTER_WEIGHTS = "Weights";
+    public static final String TOOL_CANVAS_CHARACTER_SCULPT = "Sculpt";
+    public static final String TOOL_CANVAS_CHARACTER_RIG = "Rig";
+    public static final String TOOL_CANVAS_CHARACTER_PAINT = "Paint";
+    public static final String TOOL_CANVAS_CHARACTER_UV = "UV";
     public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
     public static final String TOOL_CANVAS_IMAGE_EDITOR = "Image Editor";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
@@ -2311,6 +2313,7 @@ public class EditorSetting {
     public static final String TOOL_OPTION_TWIST = "Twist";
     public static final String TOOL_OPTION_SCALE = "Scale";
     public static final String TOOL_OPTION_COMB = "Comb";
+    public static final String TOOL_OPTION_TURN = "Turn";
     public static final String[] TOOL_COMB_NAMES = { "Back and Down", "Forward and Up" };
     public static final int TOOL_COMB_DEFAULT = 0;
     public static final String TOOL_OPTION_MIRROR = "Mirror";
@@ -2343,8 +2346,8 @@ public class EditorSetting {
     public static final float TOOL_STAMP_SCALE_MAX = 4f;
     public static final float TOOL_STAMP_SCALE_STEP = 0.05f;
     public static final float TOOL_STAMP_SCALE_DEFAULT = 1f;
-    public static final float TOOL_STAMP_TWIST_MAX = 180f;
-    public static final float TOOL_STAMP_TWIST_DEFAULT = 0f;
+    public static final float TOOL_STAMP_TURN_MAX = 180f;
+    public static final float TOOL_STAMP_TURN_DEFAULT = 0f;
     public static final String TOOL_STATUS_SIZE = "Size ";
 
     // Tool State — the tools as they were left, kept beside the layouts in the editor's bin directory

@@ -1,7 +1,7 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the character
-tool tabs (Appearance, Equipment, Mesh, Sculpt, Weights, Paint, Rig, UV, Stamp), the UV Editor, the Animation Editor,
+tool tabs (Appearance, Equipment, Mesh, Sculpt, Weights, Paint, Rig, UV), the UV Editor, the Animation Editor,
 their docker windows, races and their genders' models, or a character's appearance (morphs, sliders, bone controls,
 zones, masks, overlays, shaders). `.claude/CLAUDE.md` still applies in full.
 
@@ -22,7 +22,6 @@ like any other.
 |---|---|---|
 | Character Appearance, Equipment | `CharacterAppearanceContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
 | Character Mesh, Sculpt, Weights, Rig, UV | `CharacterMeshContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext`, `CharacterUVContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
-| Character Stamp | `CharacterStampContext` | the whole character in the bind pose, the Stamp canvas: the part chosen in the Stamps tab aimed at the body and joined (see Stamps below), no layers |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
 | Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows` |
@@ -33,7 +32,8 @@ like any other.
 | Properties | `PropertiesContext` | the value rows of the character or animation tab worked in last |
 
 - **One tab per tool.** Every tool tab extends `CharacterToolContext` and names its `CharacterEditorMode` (`getMode`)
-  and title (`getTabTitle`, `EditorSetting.TAB_TITLE_CHARACTER_*`); each opens from its own Characters menu button
+  and title (`getTabTitle`, `EditorSetting.TAB_TITLE_CHARACTER_*`: the tool's own name, Mesh or Sculpt, never
+  "Character Mesh"); each opens from its own Characters menu button
   (`EditorBranch.openCharacter<Tool>`, `TabManager.openCharacter<Tool>`). Add a tool as a mode with its flags, a
   context naming it and a menu button, never as a mode switch inside a tab. `CharacterEditorModeSystem` holds the
   tab's mode, read from its context, and its region (`getRegion`).
@@ -137,7 +137,7 @@ like any other.
   (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
   their buttons route to the tool's branch. A tool without a text row template must never list a `TEXT` row.
 - Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_SCULPT`, `CHARACTER_WEIGHTS`, `CHARACTER_RIG`,
-  `CHARACTER_UV`, `CHARACTER_STAMP`, `UV_EDITOR`, `ANIMATION_POSE`); brushes the Brushes window's. A tool strokes the
+  `CHARACTER_UV`, `UV_EDITOR`, `ANIMATION_POSE`); brushes the Brushes window's. A tool strokes the
   brush where the canvas sizes one and the tool carries Size (`ToolCanvas.strokes`), so on the mesh and the weights Select sweeps the
   brush over vertices, each selected as much as the tip covers it (a hard brush whole, a soft one fading at its edge;
   Shift adds, Ctrl takes away, a press where the brush covers nothing still clears or boxes). Move, Rotate, Scale and
@@ -203,8 +203,9 @@ like any other.
 `CharacterEditorMode` carries its behaviour as data: its tool canvas, whether it edits a worn mesh, whether it holds
 the bind pose, whether it draws vertices, and its status hint. Check those flags, never `mode == X`, except where a
 mode's own branch is chosen (`SCULPT` strokes the shape, `RIG` undoes the rig). `editsVertices` is every mesh mode but
-Paint and Stamp, the modes whose tools select and shape vertices (`CharacterEditorSculptSystem` acts only there);
-`placesParts` is Stamp, which works on the body alone (`resolveRegionPartKey`) and takes no regions.
+Paint, the modes whose tools select and shape vertices (`CharacterEditorSculptSystem` acts only there); `placesParts`
+is Sculpt, whose Brush places the part chosen in the Stamps tab instead of stroking
+(`CharacterEditorManager.armsStamp`; see Stamps below).
 
 - **Poses.** Every mode that picks a pose (Equipment, Mesh, Sculpt, Weights) lists one Pose row, stepped by
   `CharacterEditorManager.stepPose` through Bind (the default: the mesh exactly as its file holds it in a mesh mode),
@@ -227,7 +228,7 @@ Paint and Stamp, the modes whose tools select and shape vertices (`CharacterEdit
   mirror always round alike.
 - **Canvas options.** Mirror, X-Ray and Bones are `ToolOption`s marked canvas-wide (`isCanvasWide`): every tool on a
   canvas that honours one lists it under its own options, last, in the Tools panel. Mirror (on by default) is honoured
-  by the mesh, sculpt, weights, paint, rig and stamp canvases, X-Ray by the mesh and weights, Bones
+  by the mesh, sculpt, weights, paint and rig canvases, X-Ray by the mesh and weights, Bones
   (`CharacterBoneDisplay`: joints, sticks from each joint to its parent's, both, or hidden) by the mesh, weights and
   rig. `CharacterEditorManager.isMirror` / `isXray` / `getBoneDisplay` read them from
   `ToolManager` for the mode's canvas; never keep a copy, and never list them as Properties rows.
@@ -388,7 +389,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   GPU blocks are never stored: they hold tile IDs and bone numbers assigned at run time, and building them takes a
   few milliseconds. Static quad meshes take the same idea through `MeshLayoutUtility`: `mesh.vertices` (every float
   of each distinct vertex) and `mesh.quads`.
-- **Import and Export.** The File menu's Import Model and Export Model move the mesh being edited to and from a
+- **Import and Export.** The File menu's Import and Export move the mesh being edited to and from a
   `.glb` (`CharacterModelBranch`; see `.claude/docs/GLTF.md`). Import replaces the open mesh as one edit; Save writes it.
 - **GPU path.** `RiggedMeshGeometryUtility` packs every corner into `RIGGED_MESH_VERTEX_INTS` words (44 bytes: float
   position, normalised-short UV, byte bone indices, normalised-byte weights summing to one, a 10-bit-per-axis normal,
@@ -645,7 +646,11 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   centre (or a root part's middle) at the origin. A fur stamp names `fur` instead of a plug (`StampFurStruct`: the
   patch `radius`, the `spacing` between roots and the `jitter` its cards vary by), its mesh one strand card rooted at
   the origin, standing along +y and bent toward +z at its two inner rows, hair-zone faces textured with the strand tile,
-  v running from 1 at the root to 0 at the tip (`stamps/fur/`: Short Fur and Long Fur).
+  v running from 1 at the root to 0 at the tip (`stamps/fur/`: Short Fur and Long Fur). `animations` are the motion
+  the part brings, by the clip each joins (`humanoid/HumanoidWalk`): `tracks` keyed on the stamp's own bones for either
+  side, and `left` and `right` for a part whose sides move their own way (an arm swings against the other). The
+  humanoid parts carry every Humanoid clip that keys their bones, their `left` and `right` taken from the clip's
+  `_l` and `_r` tracks.
 - **Manager** (`StampManager`): the palette, the stamp in use (shared, picked in the Stamps tab or the Hierarchy), live
   rebuilds from the Info Panel, and each stamp's emblem (`StampThumbnailBranch`: a front view rasterised into a square
   with a z-buffer, shaded by facing).
@@ -653,17 +658,14 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   row of `STAMP_TILES_PER_ROW` injected at a time with each slot filled from it (`StampsMenuSystem`), the one in use
   tinted, then its details. Anchor a tile's emblem by its centre: an emblem anchored to the top of a tile in a stacked
   row is placed from the panel's top instead.
-- **Save Selection As Stamp** (File menu, `FileMenuAction.SAVE_STAMP`, `CharacterStampBranch`): the whole faces selected
-  on the open part become a new stamp. A bone is the part's own when the part holds `CHARACTER_STAMP_BONE_SHARE` of its
-  influence over the whole mesh; the bone they all hang from is the host (none for a root part), and a bone mostly
-  outside the part hands its weight to its nearest own ancestor, or the host. The cut's open loops (edges the part uses
-  once where the mesh uses twice) become the plug (the loop weighing most on the host) and sockets (named after the
-  bone the cut took away beyond each). Top bones are written placed and turned in the part's space as the bind pose
-  holds them, and every layer whose bones the part holds all of comes with it. The kind is the first `StampCategory`
-  its top bone's name carries.
-- **Placing** (the Character Stamp tab, `CharacterEditorMode.STAMP`, `ToolCanvas.CHARACTER_STAMP`, tool `STAMP` with
-  Scale, Twist, Comb and Mirror; `CharacterEditorStampSystem` in every character tool tab, acting only in that mode):
-  the stamp in use follows the pointer over the body in the bind pose, snapping to an open loop whose centre projects
+- **Fixed.** The Stamps schema sets `fixed_entries`: the Hierarchy edits and deletes the game's stamps but makes and
+  copies none, and nothing cuts a new one yet. Stamp tools come later, as their own work.
+- **Placing** (the Sculpt tab's Brush, `CharacterEditorMode.placesParts`, while a stamp is in use:
+  `CharacterEditorManager.armsStamp`; its Scale, Turn and Comb are the Brush's options on the Sculpt canvas, shown with
+  Mirror; `CharacterEditorStampSystem` in every character tool tab, acting only while armed). No stamp is in use until
+  one is picked in the Stamps tab or the Hierarchy; joining puts it down (`disarmStamp`), and so does Escape before it
+  is set down, so the Brush sculpts again. It places only on the Body in the Bind pose (`placesStamp`), and says so
+  otherwise. The stamp in use follows the pointer over the body in the bind pose, snapping to an open loop whose centre projects
   within `CHARACTER_STAMP_LOOP_SNAP_PIXELS`, otherwise aimed at the face under it
   (`CharacterEditorMeshViewSystem.pickSurface`: the hit point and the face's Newell normal).
   `CharacterPlacementBranch.resolve` works the placement out (`CharacterPartPlacementStruct`): it must lie within
@@ -674,7 +676,7 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   sided top bone names the other side is mirrored (the stamp's space reflected in x, its faces wound back), so a left
   arm joins the right shoulder facing forward. The matrix carrying the stamp's space into the bind pose is T(point) ·
   tilt · twist · align · scale · mirror: align turns the plug's normal onto the surface's inward normal by the shortest
-  arc, twist turns about that axis by Twist (`,` and `.`), scale is Scale (`[` and `]`, `ToolManager.stepSize`), tilt is
+  arc, twist turns about that axis by Turn (`,` and `.`), scale is Scale, tilt is
   the pointer's turn once set down. A click where it is green sets it down, moving the pointer turns it
   (`CHARACTER_STAMP_TURN_DEGREES_PER_PIXEL`, about the view's up and side), a second click joins it, a right click or
   Escape lifts it. While mirroring, an off-centre part's twin (`resolveTwin`, the matrix reflected in x) is shown and
@@ -698,12 +700,20 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   the same body back into its own hole welds exactly. Cards (hair-zone faces) are strands over the surface, never the
   surface: their rims are never loops (`CharacterLoopUtility.isSurface`), a hole never starts on one, and a hole cuts
   away every card standing in it.
+- **Animations** (`CharacterClipBranch`, the modular kit's animation layers): once joined, each clip the part names
+  that plays on the character's rig gains one entry under `parts`, named after the part's top bone as it joined
+  (`upper_arm_2_l`), holding its tracks on the renamed bones: the side's own group where the part brings one,
+  otherwise `tracks`, mirrored (a turn's y and z and a move's x negated) when the part was. The clip plays as one
+  (`AnimationBuilder` lays every part's tracks in with the clip's own; a bone may be keyed only once across them),
+  and the Animation Editor edits a part's bones in that part (`AnimationEditBranch.findBoneTracks`), so each part's
+  motion can be adjusted apart later. Joined clips are built again live (`AnimationManager.updateClip`) at once and
+  whenever the rig's bones change (`CharacterRigBranch.apply`), and are saved and reverted with the character.
 - **Fur** (`CharacterFurBranch`, the hair-card standard applied to a body): a fur stamp follows the pointer over any
   surface face, never snapping, and lays at the first click. `resolveCards` scatters roots over the surface faces
   facing it within its patch, one per square of the spacing each face's area holds, each placed on its face by a hash
   of the face and the card (`BiomeFieldUtility.hash01`, `CHARACTER_FUR_SALT`), so the same aim lays the same fur. Each
   card stands along its face's normal, combs along the surface toward `CHARACTER_FUR_COMB` (down and back on a body
-  facing +z; the tool's Comb, flipped by `/`, sends it forward and up), turned about the normal by Twist (the other way
+  facing +z; the tool's Comb, flipped by `/`, sends it forward and up), turned about the normal by Turn (the other way
   for a mirrored twin) and its jitter, sized by Scale and its jitter; its frame and root are kept in the placement for
   the ghost and the laying. `lay` brings every card in as one plain mesh edit, each weighed as its root is (the root's
   face corners blended bilinearly through `CharacterWeightBranch.blend`) and moved by every shape key as far as its root
@@ -759,6 +769,9 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   the rig still stands exactly as the joining left it: after another rig edit, undo takes back the mesh alone, the
   part's added bones left unused for the Rig tab to remove, and a joining waiting to be redone is dropped, as is any
   step waiting to be redone whose weights name bones the rig no longer holds.
+- **A part taken back leaves its clip parts behind.** Undo takes the part's bones out of the rig, but its entries
+  under the clips' `parts` stay; a part naming a bone the rig does not hold is left out of the clip whole, so it plays
+  nothing, and a part joined again under the same top bone name replaces it.
 - **The body is near the mesh limit.** The Human body holds about 15,000 of the 16,383 quads a rigged mesh takes, so
   only small parts join it whole; cut parts away first (Mesh tab) or join them to a smaller body.
 

@@ -1,7 +1,7 @@
 # glTF Import and Export
 
 The glTF subset the editor reads and writes, how it maps to a rigged `.arpg` mesh both ways, and the traps. Read it
-before touching Import Model, Export Model or any `Gltf*` class. `.claude/CLAUDE.md` still applies in full.
+before touching Import, Export or any `Gltf*` class. `.claude/CLAUDE.md` still applies in full.
 
 ---
 
@@ -10,7 +10,7 @@ before touching Import Model, Export Model or any `Gltf*` class. `.claude/CLAUDE
 - **Only at the editor's edge.** `.arpg` stays the only format the engine and the tools read and write. A `.glb` is
   something the character tool tabs import from and export to so models can move to and from Blender, Maya, ZBrush or
   an asset store. The game never reads one, none goes under `assets/`, and `.gitattributes` marks `*.glb binary`.
-- **Outside art is the owner's.** A model brought in through Import Model is not AI-generated: never catalogue it.
+- **Outside art is the owner's.** A model brought in through Import is not AI-generated: never catalogue it.
 - **The specification is the authority:** glTF 2.0 (registry.khronos.org/glTF/specs/2.0/glTF-2.0.html).
 
 ## Code
@@ -23,18 +23,18 @@ All of it is in `editor.bootstrap.charactereditorpipeline`:
   `GltfImportStruct`), `findMissingBones`, `build` (a `RiggedMeshStruct` against a rig).
 - `util/GltfExportUtility`: `export(mesh, rig, name, normals)`, the `.glb` bytes.
 - `charactereditormanager/CharacterModelBranch`: the two actions and the steps Import walks.
-  `CharacterEditorBranch.importModel` / `exportModel` are the File menu's methods (`FileMenuAction.IMPORT_MODEL`,
-  `EXPORT_MODEL`, in `EditorSetting.FILE_MENU_CHARACTER`).
+  `CharacterEditorBranch.importModel` / `exportModel` are the File menu's methods (`FileMenuAction.IMPORT`,
+  `EXPORT`, in `EditorSetting.FILE_MENU_CHARACTER`).
 - Constants: the `// glTF` and `// Model Import and Export` groups of `EditorSetting`.
 - Refusals are catchable `InternalException`s whose message is shown in the status line. Never `throwException`
   for a bad file: that halts the editor.
 
 ## The File menu actions
 
-- **Files live in `Documents/My Games/AdventureRPG/Models/`.** Export Model writes `<MeshName>.glb` there. Import
+- **Files live in `Documents/My Games/AdventureRPG/Assets/Models/`.** Export writes `<MeshName>.glb` there. Import
   Model asks for a file name in that folder through the editor's text dialog. There is no file browser yet.
-- **Export Model** writes the mesh being edited, its rig and its morphs.
-- **Import Model** replaces the mesh being edited, as one edit: Undo brings the old mesh back and Save writes it
+- **Export** writes the mesh being edited, its rig and its morphs.
+- **Import** replaces the mesh being edited, as one edit: Undo brings the old mesh back and Save writes it
   (compact layout). It never writes a file itself and never makes a new mesh file. It refuses a model past the
   character tools' quad limit like any other edit.
 - **Nothing is assumed silently.** Bones the rig lacks are listed and added only when the user types `add` (through

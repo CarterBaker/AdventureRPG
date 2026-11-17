@@ -15,17 +15,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class StampManager extends ManagerPackage {
 
     /*
-     * Owns every stamp and the one in use, the part the Character Stamp tab
-     * places next, the way a creature kit holds its parts. A stamp is a body
-     * part with its own bones, weights, morphs, UVs and layers, and the loops
-     * it joins by. Stamps load from ARPG, one to a file, and are listed by
-     * kind and then display name. They are content like any other: the
-     * Hierarchy and Info Panel edit, create, copy and delete them, and every
+     * Owns every stamp and the one in use, the part the Sculpt Brush places
+     * in place of a stroke, the way a creature kit holds its parts. A stamp
+     * is a body part with its own bones, weights, morphs, UVs and layers, and
+     * the loops it joins by. Stamps load from ARPG, one to a file, and are
+     * listed by kind and then display name. The game's stamps are fixed: the
+     * Hierarchy and Info Panel edit and delete them but make none, and every
      * change reaches here live, rebuilding the stamp in place under its ID. A
      * stamp picked in the Hierarchy becomes the stamp in use, and one chosen
      * in the Stamps tab is shown in the Info Panel. Every stamp has an emblem,
-     * kept through StampThumbnailBranch. The stamp in use falls back to the
-     * first listed when it is deleted, and is null while there are none.
+     * kept through StampThumbnailBranch. No stamp is in use until one is
+     * chosen; placing it, Escape, or deleting it puts it down again.
      */
 
     // Internal
@@ -65,7 +65,6 @@ public class StampManager extends ManagerPackage {
     protected void awake() {
 
         internalLoader.requestAll();
-        this.activeStamp = stamps.isEmpty() ? null : stamps.get(0);
 
         infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_STAMPS, this::rebuildStamp);
         infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_STAMPS, this::retireStamp);
@@ -99,9 +98,6 @@ public class StampManager extends ManagerPackage {
                 ? a.getCategory().compareTo(b.getCategory())
                 : String.CASE_INSENSITIVE_ORDER.compare(a.getDisplayName(), b.getDisplayName()));
 
-        if (activeStamp == null)
-            this.activeStamp = stampHandle;
-
         notifyChanged();
     }
 
@@ -116,7 +112,7 @@ public class StampManager extends ManagerPackage {
         }
     }
 
-    // A deleted stamp leaves the list; the one in use moves to the first left
+    // A deleted stamp leaves the list, put down if it was in use
     private void retireStamp(InfoEntryStruct entry) {
 
         StampHandle stampHandle = RegistryUtility.getHandle(
@@ -128,7 +124,7 @@ public class StampManager extends ManagerPackage {
         stampThumbnailBranch.release(stampHandle.getStampID());
 
         if (stampHandle == activeStamp)
-            this.activeStamp = stamps.isEmpty() ? null : stamps.get(0);
+            this.activeStamp = null;
 
         notifyChanged();
     }
@@ -149,9 +145,20 @@ public class StampManager extends ManagerPackage {
         notifyChanged();
     }
 
+    // The stamp in use put down, so no part is armed
+    public void clearActiveStamp() {
+
+        if (activeStamp == null)
+            return;
+
+        this.activeStamp = null;
+        notifyChanged();
+    }
+
+    // The next stamp along, the first or last when none is in use
     public void cycleStamp(int step) {
 
-        int index = stamps.indexOf(activeStamp);
+        int index = activeStamp != null ? stamps.indexOf(activeStamp) : step > 0 ? -1 : stamps.size();
 
         if (!stamps.isEmpty())
             selectStamp(stamps.get(Math.floorMod(index + step, stamps.size())).getStampName());
@@ -203,7 +210,7 @@ public class StampManager extends ManagerPackage {
         return stamps;
     }
 
-    // Null while there are no stamps
+    // Null while no stamp is in use
     public StampHandle getActiveStamp() {
         return activeStamp;
     }

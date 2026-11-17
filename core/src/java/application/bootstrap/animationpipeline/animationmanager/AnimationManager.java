@@ -71,4 +71,12 @@ public class AnimationManager extends ManagerPackage {
     public AnimationClipHandle buildPreviewClip(String clipName, ArpgObjectStruct clipArpg) {
         return ((AnimationLoader) internalLoader).buildPreview(clipName, clipArpg);
     }
+
+    // A registered clip built again in place from an edited tree, so every state playing it plays the edit at once,
+    // the way a rig applies live
+    public void updateClip(String clipName, ArpgObjectStruct clipArpg) {
+
+        if (hasClip(clipName))
+            getClipHandleFromClipName(clipName).constructor(buildPreviewClip(clipName, clipArpg).getClipData());
+    }
 }

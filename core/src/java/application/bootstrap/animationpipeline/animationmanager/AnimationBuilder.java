@@ -1,7 +1,6 @@
 package application.bootstrap.animationpipeline.animationmanager;
 
 import java.io.File;
-import java.util.Set;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipData;
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
@@ -29,9 +28,15 @@ class AnimationBuilder extends BuilderPackage {
      * track, morph curves included. "morphs" keys the weight of morph
      * targets by name, each a list of "time" and "value" keys, the
      * blendshape curves a facial clip plays; the mesh that plays the clip
-     * resolves the names. Cross-fades are authored on the animation tree nodes that play
-     * a clip, never on the clip itself. Bootstrap-only, apart from the
-     * unregistered preview builds an editor makes of a clip it is changing.
+     * resolves the names. "parts" groups the tracks a joined body part
+     * brought, each under its own name, so a part's motion is edited apart
+     * from the rest and plays as one clip with it; a bone is keyed once,
+     * in the clip's own tracks or in one part, and a part naming a bone the
+     * rig no longer holds is left out whole, since that part was taken back.
+     * Cross-fades are authored on the animation tree nodes that play a clip,
+     * never on the clip itself. Bootstrap-only, apart from the unregistered
+     * preview builds an editor makes of a clip it is changing and the live
+     * rebuilds of a clip a part joined.
      */
 
     // Internal
@@ -59,23 +64,30 @@ class AnimationBuilder extends BuilderPackage {
         BoneTrackStruct[] boneTracks = new BoneTrackStruct[rigHandle.getBoneCount()];
         float duration = 0f;
 
-        if (arpg.has("tracks") && !arpg.get("tracks").isNull()) {
+        if (ArpgUtility.hasObject(arpg, EngineSetting.ANIMATION_FIELD_TRACKS)) {
 
-            ArpgObjectStruct tracksArpg = arpg.getAsObject("tracks");
-            Set<String> boneNames = tracksArpg.keySet();
+            ArpgObjectStruct tracksArpg = arpg.getAsObject(EngineSetting.ANIMATION_FIELD_TRACKS);
 
-            for (String boneName : boneNames) {
-
+            for (String boneName : tracksArpg.keySet())
                 if (!rigHandle.hasBone(boneName))
                     throwException("Clip \"" + clipName + "\" references unknown bone \"" + boneName
                             + "\" for rig \"" + rigName + "\" in " + sourceName);
 
-                int boneIndex = rigHandle.getBoneIndex(boneName);
-                ArpgArrayStruct keyframesArpg = tracksArpg.getAsArray(boneName);
-                BoneTrackStruct track = parseTrack(keyframesArpg, boneName, sourceName);
+            duration = parseTracks(tracksArpg, rigHandle, boneTracks, clipName, sourceName);
+        }
 
-                boneTracks[boneIndex] = track;
-                duration = Math.max(duration, track.getKeyframe(track.getKeyframeCount() - 1).getTime());
+        if (ArpgUtility.hasObject(arpg, EngineSetting.ANIMATION_FIELD_PARTS)) {
+
+            ArpgObjectStruct partsArpg = arpg.getAsObject(EngineSetting.ANIMATION_FIELD_PARTS);
+
+            for (String partName : partsArpg.keySet()) {
+
+                ArpgObjectStruct tracksArpg = ArpgUtility.validateObject(
+                        partsArpg.getAsObject(partName),
+                        EngineSetting.ANIMATION_FIELD_TRACKS);
+
+                if (holdsBones(tracksArpg, rigHandle))
+                    duration = Math.max(duration, parseTracks(tracksArpg, rigHandle, boneTracks, clipName, sourceName));
             }
         }
 
@@ -102,6 +114,44 @@ class AnimationBuilder extends BuilderPackage {
     }
 
     // Track Parsing \\
+
+    // Every track of one group laid into the clip's tracks by bone; a bone keyed twice is refused; the latest key
+    // time is returned
+    private float parseTracks(
+            ArpgObjectStruct tracksArpg,
+            RigHandle rigHandle,
+            BoneTrackStruct[] boneTracks,
+            String clipName,
+            String sourceName) {
+
+        float duration = 0f;
+
+        for (String boneName : tracksArpg.keySet()) {
+
+            int boneIndex = rigHandle.getBoneIndex(boneName);
+
+            if (boneTracks[boneIndex] != null)
+                throwException("Clip \"" + clipName + "\" keys bone \"" + boneName
+                        + "\" more than once across its tracks and parts in " + sourceName);
+
+            BoneTrackStruct track = parseTrack(tracksArpg.getAsArray(boneName), boneName, sourceName);
+
+            boneTracks[boneIndex] = track;
+            duration = Math.max(duration, track.getKeyframe(track.getKeyframeCount() - 1).getTime());
+        }
+
+        return duration;
+    }
+
+    // Whether the rig holds every bone a part keys, so the part still stands on it
+    private static boolean holdsBones(ArpgObjectStruct tracksArpg, RigHandle rigHandle) {
+
+        for (String boneName : tracksArpg.keySet())
+            if (!rigHandle.hasBone(boneName))
+                return false;
+
+        return true;
+    }
 
     private BoneTrackStruct parseTrack(ArpgArrayStruct keyframesArpg, String boneName, String sourceName) {
 

@@ -4,6 +4,7 @@ import java.io.File;
 
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
 import editor.bootstrap.imageeditorpipeline.imageproject.ImageProjectInstance;
 import editor.bootstrap.imagepipeline.imagebrush.ImageBrushStruct;
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
@@ -134,7 +135,26 @@ public class ImageEditorManager extends ManagerPackage {
         imageEditorLayerBranch.recompositeAll(project);
         project.getStack().markLayersChanged(true);
         activate(project);
+        save(project);
         setStatusMessage(EditorSetting.IMAGE_EDITOR_MESSAGE_CREATED + imageName);
+    }
+
+    // The image a file chosen in the open dialog holds, when it lies in the workspace's Images folder
+    public void openImageFile(File file) {
+
+        String imageName = WorkspaceUtility.toName(imageProjectBranch.getFolder(), file);
+
+        if (imageName == null) {
+            setStatusMessage(EditorSetting.WORKSPACE_MESSAGE_OUTSIDE + imageProjectBranch.getFolder().getPath());
+            return;
+        }
+
+        openImage(imageName);
+    }
+
+    // The workspace folder every image is kept in, where the open dialog starts
+    public File getImageFolder() {
+        return imageProjectBranch.getFolder();
     }
 
     // An image by name, the open one or its file read; the status says why when it cannot be

@@ -6,7 +6,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class GltfImportStruct extends StructPackage {
 
     /*
-     * What a .glb file holds for Import Model, read before anything is made
+     * What a .glb file holds for Import, read before anything is made
      * from it so the user can confirm the choices it needs: the model's name,
      * its materials with the texture and zone each one names in its extras
      * (null where it names none, as outside art does), the joints its skin

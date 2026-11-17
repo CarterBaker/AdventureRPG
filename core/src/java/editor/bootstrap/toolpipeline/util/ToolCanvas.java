@@ -83,6 +83,9 @@ public enum ToolCanvas {
             true,
             screenSize(),
             strength(EditorSetting.TOOL_SCULPT_STRENGTH_DEFAULT),
+            stampScale(),
+            stampTurn(),
+            comb(),
             mirror()),
     CHARACTER_WEIGHTS(
             EditorSetting.TOOL_CANVAS_CHARACTER_WEIGHTS,
@@ -122,14 +125,6 @@ public enum ToolCanvas {
             screenSize(),
             mirror(),
             xray()),
-    CHARACTER_STAMP(
-            EditorSetting.TOOL_CANVAS_CHARACTER_STAMP,
-            new EditorTool[] { EditorTool.STAMP },
-            false,
-            stampScale(),
-            stampTwist(),
-            comb(),
-            mirror()),
     UV_EDITOR(
             EditorSetting.TOOL_CANVAS_UV_EDITOR,
             new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
@@ -462,13 +457,13 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_STAMP_SCALE_DEFAULT);
     }
 
-    private static ToolOptionStruct stampTwist() {
+    private static ToolOptionStruct stampTurn() {
         return new ToolOptionStruct(
-                ToolOption.TWIST,
-                -EditorSetting.TOOL_STAMP_TWIST_MAX,
-                EditorSetting.TOOL_STAMP_TWIST_MAX,
+                ToolOption.TURN,
+                -EditorSetting.TOOL_STAMP_TURN_MAX,
+                EditorSetting.TOOL_STAMP_TURN_MAX,
                 EditorSetting.TOOL_TWIST_STEP,
-                EditorSetting.TOOL_STAMP_TWIST_DEFAULT);
+                EditorSetting.TOOL_STAMP_TURN_DEFAULT);
     }
 
     // Support \\

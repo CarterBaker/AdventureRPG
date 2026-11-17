@@ -8,9 +8,9 @@ public enum ToolOption {
      * The settings a tool works with, shown under it in the Tools panel the
      * way a paint program's tool options are. Size is the brush tip's radius,
      * Strength how far each stamp takes what lies under it, and Twist how
-     * far, in degrees, a swirl turns what lies at its centre or a placed part
-     * turns about the loop it joins by; Scale is how large a part is placed,
-     * and Comb which way laid fur lies along the surface.
+     * far, in degrees, a swirl turns what lies at its centre; Scale is how
+     * large a body part is placed, Turn how far it turns about the loop it
+     * joins by, and Comb which way laid fur lies along the surface.
      * Mirror makes every edit to
      * one side of a character to its twin across the body as well, X-Ray
      * picks through the surface as if it were glass, and Bones chooses how
@@ -26,6 +26,7 @@ public enum ToolOption {
     TWIST(EditorSetting.TOOL_OPTION_TWIST),
     SCALE(EditorSetting.TOOL_OPTION_SCALE),
     COMB(EditorSetting.TOOL_OPTION_COMB),
+    TURN(EditorSetting.TOOL_OPTION_TURN),
     MIRROR(EditorSetting.TOOL_OPTION_MIRROR, true),
     XRAY(EditorSetting.TOOL_OPTION_XRAY, true),
     BONES(EditorSetting.TOOL_OPTION_BONES, true);

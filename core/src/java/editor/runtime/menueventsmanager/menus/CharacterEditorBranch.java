@@ -3,7 +3,6 @@ package editor.runtime.menueventsmanager.menus;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterModelBranch;
-import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterStampBranch;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 
@@ -24,7 +23,6 @@ public class CharacterEditorBranch extends BranchPackage {
     private CharacterEditorManager characterEditorManager;
     private NameDialogBranch nameDialogBranch;
     private CharacterModelBranch characterModelBranch;
-    private CharacterStampBranch characterStampBranch;
 
     // Base \\
 
@@ -33,7 +31,6 @@ public class CharacterEditorBranch extends BranchPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
         this.characterModelBranch = get(CharacterModelBranch.class);
-        this.characterStampBranch = get(CharacterStampBranch.class);
     }
 
     // Characters \\
@@ -86,15 +83,6 @@ public class CharacterEditorBranch extends BranchPackage {
 
     public void exportModel() {
         characterModelBranch.exportModel();
-    }
-
-    // Asks for the new stamp's name, then cuts the selected faces of the open part into it
-    public void saveStamp(WindowInstance window) {
-        nameDialogBranch.open(
-                window,
-                EditorSetting.DIALOG_TITLE_SAVE_STAMP,
-                characterStampBranch::isStampNameAvailable,
-                characterStampBranch::saveSelection);
     }
 
     // Asks for the .glb's name in the Models folder, then for whatever the model leaves open, one dialog at a time

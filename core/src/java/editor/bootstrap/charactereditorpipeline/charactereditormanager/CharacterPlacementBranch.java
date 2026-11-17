@@ -288,7 +288,7 @@ class CharacterPlacementBranch extends BranchPackage {
             CharacterPartPlacementStruct out) {
 
         sync(document);
-        out.begin(stampHandle, toolManager.getOption(ToolCanvas.CHARACTER_STAMP, ToolOption.SCALE));
+        out.begin(stampHandle, toolManager.getOption(ToolCanvas.CHARACTER_SCULPT, ToolOption.SCALE));
 
         if (stampHandle.hasFur()) {
             resolveFur(document.getMesh(), point, normal, out);
@@ -482,7 +482,7 @@ class CharacterPlacementBranch extends BranchPackage {
         target.set(-normal.x, -normal.y, -normal.z);
         resolveAlignment(plugNormal, target, align);
         CharacterPoseUtility.toAxisRotation(target, (float) Math.toRadians(
-                toolManager.getOption(ToolCanvas.CHARACTER_STAMP, ToolOption.TWIST)), twist);
+                toolManager.getOption(ToolCanvas.CHARACTER_SCULPT, ToolOption.TURN)), twist);
 
         Matrix4 rotation = out.getRotation();
 

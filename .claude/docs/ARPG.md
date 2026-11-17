@@ -11,7 +11,7 @@ still applies in full.
 Every data file the engine reads or writes is an **`.arpg` file**: all content under `assets/` (blocks, biomes,
 meshes, menus, materials, editor schemas, ...), world and sprite companions beside their PNGs, and the user files
 under `Documents/My Games/AdventureRPG/` (`Settings.arpg`, `EditorSettings.arpg`, `Saves/Characters/*.arpg`,
-`Images/*.arpg`, the Image Editor's layered images, `bin/editorLayout/*.arpg`). The engine ignores `.json` files
+`Assets/Images/*.arpg`, the Image Editor's layered images in the workspace, `bin/editorLayout/*.arpg`). The engine ignores `.json` files
 entirely.
 
 ## The file on disk
@@ -125,8 +125,9 @@ element holds that value, each later one is above the one before). Lists take `m
 read as `record`s (`{"slots": [{"key", bounds}...], "span": {"start", "length", "within"}}`: whole records only, each
 slot in its bounds, each record's start plus length within a sibling number). Fields take `required_unless`,
 `required_when` (`{"key", "values"}`), `conflicts_with`, `distinct` (inside array elements) and `unique` (top level).
-A schema may set `reference_form: "name"` (entries registered by bare name) and `required_names` (entries the game
-cannot start without). When a Builder gains a rule, add it to the schema in the same change. Keys a schema does not
+A schema may set `reference_form: "name"` (entries registered by bare name), `required_names` (entries the game
+cannot start without) and `fixed_entries: true` (the game's own entries: edited and deleted, never made or copied in
+the Hierarchy). When a Builder gains a rule, add it to the schema in the same change. Keys a schema does not
 declare are shown as ignored and never block a save.
 
 | Schema | Directory under `assets/` | Layout |

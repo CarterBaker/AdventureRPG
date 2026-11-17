@@ -433,6 +433,14 @@ One line per session that changed this file: the date, what was added or removed
   Media's Tools; Dev Mode renamed Preview and the old Preview entry removed); removed the Texture Viewer's
   `menus/editor/TextureViewer.arpg`, `materials/editor/TextureViewerAtlasMaterial.arpg` and
   `shaders/editor/textureviewer/` (`TextureViewerAtlasShader.arpg`, `.fsh`, `.vsh`) with the tool.
+- 2026-11-17: Stamps on the Sculpt Brush. Regenerated `menus/editor/EditorWindow.arpg` (no Stamp tab, no Save
+  Selection As Stamp), `shortcuts/CharacterEditor.arpg` (`,` `.` turn and `/` comb on the Sculpt Brush),
+  `schemas/Shortcuts.arpg` (no Stamp canvas or tool) and `schemas/Stamps.arpg` (`fixed_entries`).
+- 2026-11-17: Stamp animations. Regenerated every `stamps/humanoid/` stamp (`animations` taken from the Humanoid clips
+  that key their bones, `left` and `right` from the `_l` and `_r` tracks), `schemas/Stamps.arpg` (`animations`) and
+  `schemas/Animations.arpg` (`parts`, each joined part's tracks kept apart in the clip).
+- 2026-11-17: Workspace. Regenerated `menus/editor/EditorWindow.arpg` (File's New File replaced by Open; Import Model
+  and Export Model named Import and Export).
 
 ---
 

@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.stamppipeline.util.StampCategory;
 import engine.root.HandlePackage;
 import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
 
 public class StampHandle extends HandlePackage {
@@ -55,6 +56,12 @@ public class StampHandle extends HandlePackage {
 
     public ArpgArrayStruct getPartsArpg() {
         return stampData.getPartsArpg();
+    }
+
+    // Each clip the part brings motion to, by name: its "tracks" for either side, and its "left" and "right" where a
+    // side moves its own way
+    public ArpgObjectStruct getAnimationsArpg() {
+        return stampData.getAnimationsArpg();
     }
 
     public RiggedMeshStruct getMesh() {

@@ -21,6 +21,7 @@ dependencies {
   api "org.lwjgl:lwjgl-opengl"
   api "org.lwjgl:lwjgl-openal"
   api "org.lwjgl:lwjgl-stb"
+  api "org.lwjgl:lwjgl-tinyfd"
 
   implementation 'it.unimi.dsi:fastutil:8.5.15'
   implementation 'org.jcodec:jcodec:0.2.5'

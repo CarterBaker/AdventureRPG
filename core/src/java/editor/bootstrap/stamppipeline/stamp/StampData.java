@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.stamppipeline.util.StampCategory;
 import engine.root.DataPackage;
 import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.vectors.Vector3;
 
 public class StampData extends DataPackage {
@@ -15,7 +16,9 @@ public class StampData extends DataPackage {
      * it is listed by and its kind; its own rig, the host placeholder first
      * and the stamp's bones under it, with the bones' and layers' entries as
      * the file holds them, to be written into a character's rig when the part
-     * joins it; its skinned mesh on that rig, in the stamp's own space; the
+     * joins it; the partial animations it brings, by the clip each joins,
+     * keyed on its own bones; its skinned mesh on that rig, in the stamp's
+     * own space; the
      * plug it joins a host by, null for a root part placed alone; the
      * sockets other parts may join it at; how a fur stamp lays its card,
      * null for any other; and the bounds of its mesh.
@@ -31,6 +34,9 @@ public class StampData extends DataPackage {
     private final RigHandle rigHandle;
     private final ArpgArrayStruct bonesArpg;
     private final ArpgArrayStruct partsArpg;
+
+    // Animations
+    private final ArpgObjectStruct animationsArpg;
 
     // Mesh
     private final RiggedMeshStruct mesh;
@@ -54,6 +60,7 @@ public class StampData extends DataPackage {
             RigHandle rigHandle,
             ArpgArrayStruct bonesArpg,
             ArpgArrayStruct partsArpg,
+            ArpgObjectStruct animationsArpg,
             RiggedMeshStruct mesh,
             StampSocketStruct plug,
             StampSocketStruct[] sockets,
@@ -69,6 +76,9 @@ public class StampData extends DataPackage {
         this.rigHandle = rigHandle;
         this.bonesArpg = bonesArpg;
         this.partsArpg = partsArpg;
+
+        // Animations
+        this.animationsArpg = animationsArpg;
 
         // Mesh
         this.mesh = mesh;
@@ -132,6 +142,10 @@ public class StampData extends DataPackage {
 
     public ArpgArrayStruct getPartsArpg() {
         return partsArpg;
+    }
+
+    public ArpgObjectStruct getAnimationsArpg() {
+        return animationsArpg;
     }
 
     public RiggedMeshStruct getMesh() {

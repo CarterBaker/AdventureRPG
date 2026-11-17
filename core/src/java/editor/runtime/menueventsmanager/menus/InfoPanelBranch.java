@@ -41,20 +41,8 @@ public class InfoPanelBranch extends BranchPackage {
         nameDialogBranch.open(
                 window,
                 EditorSetting.DIALOG_TITLE_NEW_ENTRY,
-                infoManager::isNewEntryNameValid,
-                infoManager::createEntry);
-    }
-
-    public void newFile(WindowInstance window) {
-
-        if (!infoManager.hasActiveSchema())
-            return;
-
-        nameDialogBranch.open(
-                window,
-                EditorSetting.DIALOG_TITLE_NEW_FILE,
-                infoManager::isNewFileNameValid,
-                infoManager::createFile);
+                infoManager::isNewNameValid,
+                infoManager::createNew);
     }
 
     public void copySelection(WindowInstance window) {

@@ -25,7 +25,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
   and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
-  Equipment, Mesh, Sculpt, Weights, Paint, Rig, UV and Stamp, see `.claude/docs/CharacterEditorPipeline.md`; the
+  Equipment, Mesh, Sculpt, Weights, Paint, Rig and UV, see `.claude/docs/CharacterEditorPipeline.md`; the
   Appearance outliner holds every slider and control, the Rig tab marks which bone channels are sliders), sharing the
   region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with the
   Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting window
@@ -105,18 +105,22 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   speckled, and each listed with a thumbnail of the stroke it makes. Keep plenty of them; a new kind of tip is a new
   `assets/brushes/` file, not code.
 - **Stamps live in the Stamps tab**, as brushes live in the Brushes tab: tiles of every body part with its emblem and
-  name, the one in use tinted, its details below; the part chosen is the one the Character Stamp tab's Stamp tool
-  places next, at its own Scale and Twist, or the fur it lays, combed by its Comb (see
-  `.claude/docs/CharacterEditorPipeline.md`).
+  name, the one in use tinted, its details below. A part chosen arms the Sculpt tab's Brush: the Brush places it
+  instead of stroking, at the Brush's Scale and Turn, or lays its fur combed by Comb, and puts it down once placed or
+  on Escape (see `.claude/docs/CharacterEditorPipeline.md`). There is no Stamp tool and no tab of its own. The game's
+  stamps are fixed entries: nothing makes a new one yet.
 - **A tool means one thing everywhere.** Raise builds up and Lower wears down, a soft brush fades its edge and a hard
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.
 
 ## The File and Edit menus
 
-- **Every file action lives in the editor's File and Edit menus**, never as a tool's own button: New, New File,
-  Duplicate, Save, Save All, Revert, Delete, Import Model, Export Model and Save Selection As Stamp under File, Undo
-  and Redo under Edit. Generating maps is not a file action: Generate and Clear live under the map's settings in the
+- **Every file action lives in the editor's File and Edit menus**, never as a tool's own button: New, Open,
+  Duplicate, Save, Save All, Revert, Delete, Import and Export under File, Undo and Redo under Edit. New is the one way
+  to make anything: it names what it makes, and a workspace file is written at once (in the Hierarchy, New makes a new
+  file when a folder is picked in a schema that keeps its entries in files, a new entry otherwise). Open picks a workspace file in the system's own
+  file dialog (`WorkspaceUtility.chooseFile`, LWJGL's tinyfd), listing only `.arpg` files and taking only one in the
+  folder of the window's kind. Generating maps is not a file action: Generate and Clear live under the map's settings in the
   Maps tab. They act on the window worked in last (`editor.bootstrap.filemenupipeline`,
   `FileMenuManager`), name it at their head and mute what it does not take.
 - **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
@@ -126,6 +130,13 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   table; it never adds a Save, New, Revert, Undo or Redo button.
 - **The Shipwright keeps its own buttons** because the game shares its table; the File and Edit menus reach it all the
   same through `EditorSetting.FILE_MENU_SHIPWRIGHT`.
+
+## The workspace
+
+- **New work lives in the workspace**, `Documents/My Games/AdventureRPG/Assets/` beside the saves, one folder to each
+  kind (`Images`, `Models`), resolved only through `WorkspaceUtility.resolveFolder`. A workspace file is not game
+  content: the Hierarchy never lists it, and it reaches the game only through Import, as a painting or modelling
+  tool's project file reaches an engine through its export.
 
 ## Values
 
