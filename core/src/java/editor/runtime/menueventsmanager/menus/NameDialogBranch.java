@@ -13,15 +13,18 @@ import engine.input.Input;
 import engine.input.InputListener;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.io.FileUtility;
 
 public class NameDialogBranch extends BranchPackage implements InputListener {
 
     /*
      * The editor's one text-entry dialog. Callers supply a title, a validation
-     * rule, and a confirm action. A name dialog starts empty and typed keys
-     * only ever produce valid file-name characters; a text dialog starts from
-     * the given text and accepts any character the editor font can draw, read
-     * from the dialog window's typed characters for as long as it is open.
+     * rule, and a confirm action. Both forms read the dialog window's typed
+     * characters, so every key layout, Shift and dead key types what it
+     * should: a name dialog starts empty and takes any character the editor
+     * font can draw that a file name may hold (spaces and underscores
+     * included), a text dialog starts from the given text and takes any
+     * character the font can draw.
      */
 
     // Internal
@@ -31,6 +34,7 @@ public class NameDialogBranch extends BranchPackage implements InputListener {
     // Dialog
     private MenuInstance dialog;
     private Input textInput;
+    private boolean freeText;
     private int maxLength;
     private StringBuilder nameBuffer;
     private Predicate<String> nameValidator;
@@ -95,6 +99,7 @@ public class NameDialogBranch extends BranchPackage implements InputListener {
 
         this.nameValidator = nameValidator;
         this.confirmAction = confirmAction;
+        this.freeText = freeText;
         this.maxLength = freeText ? EditorSetting.TEXT_INPUT_MAX_LENGTH : EditorSetting.NAME_INPUT_MAX_LENGTH;
         nameBuffer.setLength(0);
         nameBuffer.append(initialText, 0, Math.min(initialText.length(), maxLength));
@@ -102,9 +107,6 @@ public class NameDialogBranch extends BranchPackage implements InputListener {
         dialog = menuManager.openMenuWindow(EditorSetting.MENU_EDITOR_NAME_DIALOG, window.getGLWindow());
         setEntryText(EditorSetting.ENTRY_NAME_DIALOG_TITLE, title);
         refreshNameLabel();
-
-        if (!freeText)
-            return;
 
         this.textInput = inputManager.getRawInput(dialog.getWindow());
         textInput.addListener(this);
@@ -169,46 +171,17 @@ public class NameDialogBranch extends BranchPackage implements InputListener {
             return;
         }
 
-        if (rawInput.isKeyClicked(EditorSetting.KEY_BACKSPACE)) {
+        if (rawInput.isKeyClicked(EditorSetting.KEY_BACKSPACE))
             removeNameCharacter();
-            return;
-        }
-
-        if (textInput != null)
-            return;
-
-        char typed = resolveTypedCharacter(rawInput);
-
-        if (typed != 0)
-            appendNameCharacter(typed);
-    }
-
-    private char resolveTypedCharacter(Input rawInput) {
-
-        if (rawInput.isKeyClicked(EditorSetting.KEY_SPACE))
-            return '_';
-
-        if (rawInput.isKeyClicked(EditorSetting.KEY_MINUS))
-            return '-';
-
-        boolean shift = rawInput.isKeyDown(EditorSetting.KEY_LEFT_SHIFT)
-                || rawInput.isKeyDown(EditorSetting.KEY_RIGHT_SHIFT);
-
-        for (int key = EditorSetting.KEY_A; key <= EditorSetting.KEY_Z; key++)
-            if (rawInput.isKeyClicked(key))
-                return shift ? (char) key : Character.toLowerCase((char) key);
-
-        for (int key = EditorSetting.KEY_0; key <= EditorSetting.KEY_9; key++)
-            if (rawInput.isKeyClicked(key))
-                return (char) key;
-
-        return 0;
     }
 
     @Override
     public void onChar(char character) {
 
-        if (textInput != null && EngineSetting.FONT_DEFAULT_CHARSET.indexOf(character) != EngineSetting.INDEX_NOT_FOUND)
+        if (textInput == null || EngineSetting.FONT_DEFAULT_CHARSET.indexOf(character) == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        if (freeText || FileUtility.isFileNameCharacter(character))
             appendNameCharacter(character);
     }
 

@@ -298,6 +298,15 @@ public class EngineSetting {
     public static final String WORD_PATH = "words";
     public static final String WORLD_TEXTURE_PATH = "worlds";
 
+    // File Names — a name any operating system the game runs on can store: none of the characters Windows forbids
+    // (nor a control character), no space or dot at its end, and none of Windows' reserved device names, in any case
+    public static final String FILE_NAME_FORBIDDEN_CHARACTERS = "<>:\"/\\|?*";
+    public static final char FILE_NAME_CONTROL_LIMIT = ' ';
+    public static final String FILE_NAME_TRAILING_FORBIDDEN = " .";
+    public static final ObjectArraySet<String> FILE_NAME_RESERVED = new ObjectArraySet<>(new String[] { "con", "prn",
+        "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3",
+        "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9" });
+
     // ARPG Files
     public static final String ARPG_FILE_EXTENSION = "arpg";
     public static final ObjectArraySet<String> ARPG_FILE_EXTENSIONS = new ObjectArraySet<>(new String[] { "arpg" });

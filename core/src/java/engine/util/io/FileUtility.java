@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.stream.Stream;
 
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
@@ -186,6 +188,8 @@ public class FileUtility extends EngineUtility {
 
     // Name Validation \\
 
+    // A name the operating system can store as a file: spaces, underscores and every other character are allowed but
+    // those no supported system accepts, so the editor names files as freely as the system beneath it
     public static boolean isValidFileName(String name, int maxLength) {
 
         if (name == null || name.isEmpty() || name.length() > maxLength)
@@ -195,15 +199,20 @@ public class FileUtility extends EngineUtility {
             if (!isFileNameCharacter(name.charAt(i)))
                 return false;
 
-        return true;
+        char last = name.charAt(name.length() - 1);
+
+        if (EngineSetting.FILE_NAME_TRAILING_FORBIDDEN.indexOf(last) != EngineSetting.INDEX_NOT_FOUND)
+            return false;
+
+        int dot = name.indexOf('.');
+        String stem = dot == EngineSetting.INDEX_NOT_FOUND ? name : name.substring(0, dot);
+
+        return !EngineSetting.FILE_NAME_RESERVED.contains(stem.toLowerCase(Locale.ROOT));
     }
 
     public static boolean isFileNameCharacter(char character) {
-        return (character >= 'a' && character <= 'z')
-                || (character >= 'A' && character <= 'Z')
-                || (character >= '0' && character <= '9')
-                || character == '_'
-                || character == '-';
+        return character >= EngineSetting.FILE_NAME_CONTROL_LIMIT
+                && EngineSetting.FILE_NAME_FORBIDDEN_CHARACTERS.indexOf(character) == EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Name Format Conversion \\

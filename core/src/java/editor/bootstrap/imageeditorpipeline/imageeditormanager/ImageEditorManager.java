@@ -25,6 +25,7 @@ import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
+import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -584,7 +585,7 @@ public class ImageEditorManager extends ManagerPackage {
 
     // A name a new image can take: a plain file name no image saved or open has
     public boolean isImageNameAvailable(String imageName) {
-        return imageName != null && imageName.matches(EditorSetting.IMAGE_EDITOR_NAME_PATTERN)
+        return FileUtility.isValidFileName(imageName, EditorSetting.NAME_INPUT_MAX_LENGTH)
                 && !imageName2Project.containsKey(imageName) && !imageProjectBranch.hasFile(imageName);
     }
 

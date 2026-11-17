@@ -145,14 +145,6 @@ public class EditorSetting {
     public static final int KEY_ENTER = 257;
     public static final int KEY_ENTER_NUMPAD = 335;
     public static final int KEY_ESCAPE = 256;
-    public static final int KEY_SPACE = 32;
-    public static final int KEY_MINUS = 45;
-    public static final int KEY_0 = 48;
-    public static final int KEY_9 = 57;
-    public static final int KEY_A = 65;
-    public static final int KEY_Z = 90;
-    public static final int KEY_LEFT_SHIFT = 340;
-    public static final int KEY_RIGHT_SHIFT = 344;
 
     // Entry point indices
     public static final int ENTRY_LAYOUTS_LIST = 0;
@@ -2030,7 +2022,6 @@ public class EditorSetting {
     public static final String IMAGE_EDITOR_DOCUMENT_SEPARATOR = "/";
     public static final String IMAGE_EDITOR_DOCUMENT_COMPOSITE = "composite";
     public static final String IMAGE_EDITOR_DOCUMENT_LAYER = "layer";
-    public static final String IMAGE_EDITOR_NAME_PATTERN = "[A-Za-z0-9][A-Za-z0-9 _-]*";
     public static final int IMAGE_EDITOR_MAX_LAYERS = 64;
     public static final String IMAGE_EDITOR_LAYER_NAME = "Layer ";
     public static final String IMAGE_EDITOR_LAYER_BACKGROUND = "Background";
