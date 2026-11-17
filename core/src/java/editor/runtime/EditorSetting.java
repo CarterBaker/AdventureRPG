@@ -2011,6 +2011,9 @@ public class EditorSetting {
     // Image Export and Import — the workspace folder exports are written to, each PNG named for its image and map's
     // suffix after the separator a texture's alias follows, the pack first offered, the dialogs and what they report
     public static final String IMAGE_EXPORT_DIRECTORY = "Exports";
+    public static final String IMAGE_STAMP_DIRECTORY = "Stamps";
+    public static final String IMAGE_STAMP_MESSAGE_NOT_READ = "A stamp picture could not be read: ";
+    public static final String IMAGE_STAMP_MESSAGE_PRESSED = "Pressed the stamp ";
     public static final String IMAGE_EXPORT_EXTENSION = ".png";
     public static final String IMAGE_IMPORT_ALIAS_SEPARATOR = "_";
     public static final String IMAGE_IMPORT_DEFAULT_PACK = "surface/standard";
@@ -2193,6 +2196,9 @@ public class EditorSetting {
     public static final String STAMP_DETAIL_ROOT = "Root part: placed at the centre of a blank canvas";
     public static final String STAMP_DETAIL_SOCKETS = "Sockets: ";
     public static final String STAMP_DETAIL_NONE = "No stamp chosen";
+    public static final String IMAGE_STAMP_DETAIL_EMPTY = "No pictures: put PNG files in the workspace's Stamps folder";
+    public static final String IMAGE_STAMP_DETAIL_SIZE = "Picture: ";
+    public static final String IMAGE_STAMP_DETAIL_BY = " x ";
     public static final String STAMP_DETAIL_SOCKET_PREFIX = "Socket: ";
     public static final String STAMP_DETAIL_SEPARATOR = ", ";
     public static final String STAMP_FIELD_DISPLAY_NAME = "display_name";

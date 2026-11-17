@@ -156,6 +156,9 @@ public class EngineSetting {
     public static final int PACKED_COLOR_GREEN_SHIFT = 8;
     public static final int PACKED_COLOR_RED_SHIFT = 16;
     public static final int PACKED_COLOR_WHITE = 0xFFFFFF;
+    public static final int RGBA_RED_SHIFT = 24;
+    public static final int RGBA_GREEN_SHIFT = 16;
+    public static final int RGBA_BLUE_SHIFT = 8;
     public static final int FNV_OFFSET_BASIS = 0x811c9dc5;
     public static final int FNV_PRIME = 0x01000193;
     public static final long FNV64_OFFSET_BASIS = 0xcbf29ce484222325L;

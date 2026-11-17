@@ -74,6 +74,18 @@ The workspace-to-game flow a texturing tool and an engine share (`ImageExchangeB
   exports from the workspace. The image's own `.arpg` stays to be worked and imported again. Imported textures are the
   owner's work: never catalogue them.
 
+## Stamps
+
+Pictures pressed onto the image, as a painting tool's stamp library presses them (`StampManager`'s picture side,
+`StampImageBranch`):
+
+- **The library** is every PNG in the workspace's `Stamps` folder, read again each time the Stamps tab turns to
+  pictures (when the Image Editor becomes the canvas worked last), each tile the picture fitted to a square.
+- **Pressing.** A picture chosen arms the Brush (`ImageEditorManager.armsStamp`): the next click presses it centred
+  there on the layer or map worked, sized by the Brush's Scale and turned by its Turn (the image canvas declares both),
+  every pixel laid over what lies beneath by its alpha (`ImageEditBranch.press`, the over operator, nearest pixel), as
+  one undo step. Pressing or Escape puts it down, so the Brush paints again.
+
 ## Traps
 
 - **Strokes on a layer are transparent strokes** (`ImageBrushStruct.setTransparent`): paint lays over by alpha, Erase

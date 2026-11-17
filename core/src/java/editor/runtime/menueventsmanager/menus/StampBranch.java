@@ -7,9 +7,10 @@ public class StampBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the Stamps tab. Choosing a stamp makes it the
-     * stamp in use, the part the Character Stamp tab places next, and shows
-     * it in the Info Panel; stepping moves through the stamps in the order
-     * they are listed. Tiles carry their stamp's name.
+     * stamp in use: a part the Sculpt Brush places next, shown in the Info
+     * Panel, or a picture the Image Editor's Brush presses next, by the
+     * stamps the tab shows; stepping moves through them in the order they
+     * are listed. Tiles carry their stamp's name.
      */
 
     // Internal
@@ -25,17 +26,14 @@ public class StampBranch extends BranchPackage {
     // Stamps \\
 
     public void selectStamp(String stampName) {
-        stampManager.selectStamp(stampName);
-        stampManager.showActiveStamp();
+        stampManager.chooseStamp(stampName);
     }
 
     public void previousStamp() {
-        stampManager.cycleStamp(-1);
-        stampManager.showActiveStamp();
+        stampManager.stepStamp(-1);
     }
 
     public void nextStamp() {
-        stampManager.cycleStamp(1);
-        stampManager.showActiveStamp();
+        stampManager.stepStamp(1);
     }
 }

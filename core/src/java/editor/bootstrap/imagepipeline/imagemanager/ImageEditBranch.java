@@ -343,6 +343,67 @@ class ImageEditBranch extends BranchPackage {
 
     // Pixels \\
 
+    // A picture pressed over the image, its centre at the point, sized by the scale and turned by the angle in
+    // degrees, each pixel laid over what lies beneath by its own alpha, nearest pixel
+    void press(
+            ImageDocumentInstance document,
+            Pixmap picture,
+            int centerX,
+            int centerY,
+            float scale,
+            float turnDegrees,
+            ImageRegionStruct region) {
+
+        float radians = (float) Math.toRadians(turnDegrees);
+        float cos = (float) Math.cos(radians);
+        float sin = (float) Math.sin(radians);
+        float halfWidth = picture.getWidth() * 0.5f;
+        float halfHeight = picture.getHeight() * 0.5f;
+        int reach = (int) Math.ceil(Math.sqrt(halfWidth * halfWidth + halfHeight * halfHeight) * scale);
+
+        for (int y = centerY - reach; y <= centerY + reach; y++)
+            for (int x = centerX - reach; x <= centerX + reach; x++) {
+
+                float dx = x - centerX;
+                float dy = y - centerY;
+                int u = (int) Math.floor((cos * dx + sin * dy) / scale + halfWidth);
+                int v = (int) Math.floor((cos * dy - sin * dx) / scale + halfHeight);
+
+                if (u < 0 || v < 0 || u >= picture.getWidth() || v >= picture.getHeight())
+                    continue;
+
+                int color = picture.getPixel(u, v);
+
+                if ((color & EngineSetting.PACKED_COLOR_CHANNEL_MASK) != 0)
+                    writePixel(document, x, y, over(color, readPixel(document, x, y)), region);
+            }
+    }
+
+    // One RGBA pixel laid over another by its alpha, the standard over operator
+    private static int over(int source, int target) {
+
+        int mask = EngineSetting.PACKED_COLOR_CHANNEL_MASK;
+        float alpha = (source & mask) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
+        int red = mixChannel(source >>> EngineSetting.RGBA_RED_SHIFT, target >>> EngineSetting.RGBA_RED_SHIFT, alpha);
+        int green = mixChannel(source >>> EngineSetting.RGBA_GREEN_SHIFT, target >>> EngineSetting.RGBA_GREEN_SHIFT,
+                alpha);
+        int blue = mixChannel(source >>> EngineSetting.RGBA_BLUE_SHIFT, target >>> EngineSetting.RGBA_BLUE_SHIFT,
+                alpha);
+        int outAlpha = Math.round((source & mask) + (target & mask) * (1f - alpha));
+
+        return red << EngineSetting.RGBA_RED_SHIFT
+                | green << EngineSetting.RGBA_GREEN_SHIFT
+                | blue << EngineSetting.RGBA_BLUE_SHIFT
+                | Math.min(mask, outAlpha);
+    }
+
+    private static int mixChannel(int source, int target, float alpha) {
+
+        int mask = EngineSetting.PACKED_COLOR_CHANNEL_MASK;
+
+        return Math.round((source & mask) * alpha + (target & mask) * (1f - alpha));
+    }
+
     void writePixel(ImageDocumentInstance document, int x, int y, int color, ImageRegionStruct region) {
 
         int index = toPixelIndex(document, x, y);

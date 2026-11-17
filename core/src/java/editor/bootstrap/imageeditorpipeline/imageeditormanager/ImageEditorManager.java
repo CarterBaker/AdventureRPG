@@ -1,5 +1,6 @@
 package editor.bootstrap.imageeditorpipeline.imageeditormanager;
 
+import editor.bootstrap.stamppipeline.stampmanager.StampManager;
 import java.io.File;
 
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
@@ -53,6 +54,7 @@ public class ImageEditorManager extends ManagerPackage {
     private ImageManager imageManager;
     private BrushManager brushManager;
     private ToolManager toolManager;
+    private StampManager stampManager;
     private CharacterEditorManager characterEditorManager;
     private ImageProjectBranch imageProjectBranch;
     private ImageEditorLayerBranch imageEditorLayerBranch;
@@ -121,6 +123,7 @@ public class ImageEditorManager extends ManagerPackage {
         this.imageManager = get(ImageManager.class);
         this.brushManager = get(BrushManager.class);
         this.toolManager = get(ToolManager.class);
+        this.stampManager = get(StampManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
     }
 
@@ -433,6 +436,11 @@ public class ImageEditorManager extends ManagerPackage {
 
         EditorTool tool = toolManager.getTool(ToolCanvas.IMAGE_EDITOR);
 
+        if (armsStamp()) {
+            pressStamp(target, pixelX, pixelY);
+            return;
+        }
+
         switch (tool) {
 
             case FILL -> {
@@ -445,6 +453,43 @@ public class ImageEditorManager extends ManagerPackage {
 
             default -> beginBrush(target, tool, pixelX, pixelY);
         }
+    }
+
+    // True while the Brush presses the picture chosen in the Stamps tab rather than stroking
+    public boolean armsStamp() {
+        return toolManager.getTool(ToolCanvas.IMAGE_EDITOR) == EditorTool.BRUSH
+                && stampManager.getActiveImageStamp() != null;
+    }
+
+    // The picture put down unpressed, so the Brush paints again
+    public void disarmStamp() {
+        stampManager.clearActiveImageStamp();
+    }
+
+    // The picture in use pressed at the point, at the Brush's Scale and Turn, as one undo step, then put down
+    private void pressStamp(ImageDocumentInstance target, int pixelX, int pixelY) {
+
+        String stampName = stampManager.getActiveImageStamp();
+        Pixmap picture = stampManager.getImagePixmap(stampName);
+
+        disarmStamp();
+
+        if (picture == null) {
+            setStatusMessage(EditorSetting.IMAGE_STAMP_MESSAGE_NOT_READ + stampName);
+            return;
+        }
+
+        int before = target.getRevision();
+
+        imageManager.press(
+                target,
+                picture,
+                pixelX,
+                pixelY,
+                toolManager.getOption(ToolCanvas.IMAGE_EDITOR, ToolOption.SCALE),
+                toolManager.getOption(ToolCanvas.IMAGE_EDITOR, ToolOption.TURN));
+        recordStep(activeProject, target, before);
+        setStatusMessage(EditorSetting.IMAGE_STAMP_MESSAGE_PRESSED + stampName);
     }
 
     public void continueStroke(int pixelX, int pixelY) {

@@ -142,6 +142,24 @@ public class ImageManager extends ManagerPackage {
         notifyEdited(document, editRegion);
     }
 
+    // A picture pressed onto the document as one undo step, centred at the point, sized and turned
+    public void press(
+            ImageDocumentInstance document,
+            Pixmap picture,
+            int x,
+            int y,
+            float scale,
+            float turnDegrees) {
+
+        endStroke(document);
+        imageHistoryBranch.beginStep(document);
+
+        editRegion.clear();
+        imageEditBranch.press(document, picture, x, y, scale, turnDegrees, editRegion);
+        imageHistoryBranch.commitStep(document);
+        notifyEdited(document, editRegion);
+    }
+
     // A stroke whose tool works out every pixel itself, one undo step however many stamps it lays
     public void beginPaint(ImageDocumentInstance document) {
 

@@ -139,7 +139,9 @@ public enum ToolCanvas {
             true,
             imageSize(),
             strength(EditorSetting.TOOL_PAINT_STRENGTH_DEFAULT),
-            twist()),
+            twist(),
+            stampScale(),
+            stampTurn()),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
             new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK },

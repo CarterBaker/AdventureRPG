@@ -4,7 +4,10 @@ import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.stamppipeline.stamp.StampData;
 import editor.bootstrap.stamppipeline.stamp.StampHandle;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
+import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
+import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.root.UtilityPackage.InternalException;
@@ -25,12 +28,17 @@ public class StampManager extends ManagerPackage {
      * stamp picked in the Hierarchy becomes the stamp in use, and one chosen
      * in the Stamps tab is shown in the Info Panel. Every stamp has an emblem,
      * kept through StampThumbnailBranch. No stamp is in use until one is
-     * chosen; placing it, Escape, or deleting it puts it down again.
+     * chosen; placing it, Escape, or deleting it puts it down again. While
+     * the Image Editor is the canvas worked last, the stamps shown are
+     * pictures instead, read from the workspace through StampImageBranch,
+     * one of them in use for the Image Editor's Brush to press the same way.
      */
 
     // Internal
     private InfoManager infoManager;
     private StampThumbnailBranch stampThumbnailBranch;
+    private StampImageBranch stampImageBranch;
+    private ToolManager toolManager;
 
     // Palette
     private Object2IntOpenHashMap<String> stampName2StampID;
@@ -39,6 +47,7 @@ public class StampManager extends ManagerPackage {
 
     // Active
     private StampHandle activeStamp;
+    private String activeImageStamp;
 
     // Status
     private int revision;
@@ -53,12 +62,14 @@ public class StampManager extends ManagerPackage {
         this.stampID2StampHandle = RegistryUtility.createPalette();
         this.stamps = new ObjectArrayList<>();
         this.stampThumbnailBranch = create(StampThumbnailBranch.class);
+        this.stampImageBranch = create(StampImageBranch.class);
         create(StampLoader.class);
     }
 
     @Override
     protected void get() {
         this.infoManager = get(InfoManager.class);
+        this.toolManager = get(ToolManager.class);
     }
 
     @Override
@@ -155,6 +166,72 @@ public class StampManager extends ManagerPackage {
         notifyChanged();
     }
 
+    // Pictures \\
+
+    // Whether the stamps shown are the Image Editor's pictures: the Image Editor is the canvas worked last
+    public boolean showsImages() {
+        return toolManager.getCanvas() == ToolCanvas.IMAGE_EDITOR;
+    }
+
+    // The workspace's pictures read again, the one in use put down when it is gone
+    public void refreshImages() {
+
+        if (!stampImageBranch.scan())
+            return;
+
+        if (activeImageStamp != null && !stampImageBranch.hasName(activeImageStamp))
+            this.activeImageStamp = null;
+
+        notifyChanged();
+    }
+
+    public void selectImageStamp(String name) {
+
+        if (!stampImageBranch.hasName(name) || name.equals(activeImageStamp))
+            return;
+
+        this.activeImageStamp = name;
+        notifyChanged();
+    }
+
+    // The picture in use put down, so the Image Editor's Brush paints again
+    public void clearActiveImageStamp() {
+
+        if (activeImageStamp == null)
+            return;
+
+        this.activeImageStamp = null;
+        notifyChanged();
+    }
+
+    // The stamp a tile names chosen, a picture or a part by the stamps shown
+    public void chooseStamp(String name) {
+
+        if (showsImages()) {
+            selectImageStamp(name);
+            return;
+        }
+
+        selectStamp(name);
+        showActiveStamp();
+    }
+
+    // The next stamp along among those shown
+    public void stepStamp(int step) {
+
+        if (!showsImages()) {
+            cycleStamp(step);
+            showActiveStamp();
+            return;
+        }
+
+        ObjectArrayList<String> names = stampImageBranch.getNames();
+        int index = activeImageStamp != null ? names.indexOf(activeImageStamp) : step > 0 ? -1 : names.size();
+
+        if (!names.isEmpty())
+            selectImageStamp(names.get(Math.floorMod(index + step, names.size())));
+    }
+
     // The next stamp along, the first or last when none is in use
     public void cycleStamp(int step) {
 
@@ -208,6 +285,25 @@ public class StampManager extends ManagerPackage {
 
     public ObjectArrayList<StampHandle> getStamps() {
         return stamps;
+    }
+
+    public ObjectArrayList<String> getImageStamps() {
+        return stampImageBranch.getNames();
+    }
+
+    // Null while no picture is in use
+    public String getActiveImageStamp() {
+        return activeImageStamp;
+    }
+
+    // Main thread — the picture's emblem texture, 0 when it cannot be read
+    public int getImageThumbnail(String name) {
+        return stampImageBranch.getThumbnail(name);
+    }
+
+    // The picture's pixels, null when it cannot be read
+    public Pixmap getImagePixmap(String name) {
+        return stampImageBranch.getPixmap(name);
     }
 
     // Null while no stamp is in use

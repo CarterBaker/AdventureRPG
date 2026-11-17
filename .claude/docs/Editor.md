@@ -108,7 +108,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   name, the one in use tinted, its details below. A part chosen arms the Sculpt tab's Brush: the Brush places it
   instead of stroking, at the Brush's Scale and Turn, or lays its fur combed by Comb, and puts it down once placed or
   on Escape (see `.claude/docs/CharacterEditorPipeline.md`). There is no Stamp tool and no tab of its own. The game's
-  stamps are fixed entries: nothing makes a new one yet.
+  stamps are fixed entries: nothing makes a new one yet. While the Image Editor is the canvas worked last, the tab
+  lists pictures instead (every PNG in the workspace's `Stamps` folder), and a picture chosen arms the Image Editor's
+  Brush the same way: it presses the picture at the click, at the Brush's Scale and Turn, then puts it down (see
+  `.claude/docs/ImageEditorPipeline.md`). The tab lists only the kind the canvas worked last takes.
 - **A tool means one thing everywhere.** Raise builds up and Lower wears down, a soft brush fades its edge and a hard
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.

@@ -13,9 +13,11 @@ import editor.bootstrap.stamppipeline.stampmanager.StampManager;
 import editor.runtime.EditorSetting;
 import editor.runtime.label.LabelUtility;
 import editor.runtime.stamps.StampsSetting;
+import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.arpg.ArpgUtility;
+import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class StampsMenuSystem extends SystemPackage {
@@ -26,8 +28,11 @@ public class StampsMenuSystem extends SystemPackage {
      * the part and its name, the one in use tinted and every tile carrying its
      * stamp's name; then the details
      * of the stamp in use — its kind, its bones and faces, the loop it joins
-     * a host by or that it is a root part, and its sockets. Rebuilt only when
-     * the stamps move.
+     * a host by or that it is a root part, and its sockets. While the Image
+     * Editor is the canvas worked last it lists the workspace's pictures
+     * instead, read again each time it turns to them, each tile its picture
+     * and name, the details the picture's size. Rebuilt only when the stamps
+     * move or the kind shown turns.
      */
 
     // Internal
@@ -48,6 +53,7 @@ public class StampsMenuSystem extends SystemPackage {
 
     // Status
     private int shownRevision;
+    private boolean shownImages;
 
     // Base \\
 
@@ -87,10 +93,26 @@ public class StampsMenuSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        if (stampManager.getRevision() == shownRevision)
+        boolean images = stampManager.showsImages();
+
+        if (images && !shownImages)
+            stampManager.refreshImages();
+
+        if (stampManager.getRevision() == shownRevision && images == shownImages)
             return;
 
         shownRevision = stampManager.getRevision();
+        shownImages = images;
+
+        clear(tileRows, StampsSetting.ENTRY_TILES);
+        clear(detailLines, StampsSetting.ENTRY_DETAILS);
+
+        if (images) {
+            refreshImageTiles();
+            refreshImageDetails();
+            return;
+        }
+
         refreshTiles();
         refreshDetails();
     }
@@ -99,8 +121,6 @@ public class StampsMenuSystem extends SystemPackage {
 
     // The stamps a row at a time, each row's tiles filled in turn and any left over in the last row emptied
     private void refreshTiles() {
-
-        clear(tileRows, StampsSetting.ENTRY_TILES);
 
         ObjectArrayList<StampHandle> stamps = stampManager.getStamps();
 
@@ -153,8 +173,6 @@ public class StampsMenuSystem extends SystemPackage {
 
     private void refreshDetails() {
 
-        clear(detailLines, StampsSetting.ENTRY_DETAILS);
-
         StampHandle stamp = stampManager.getActiveStamp();
 
         if (stamp == null) {
@@ -174,6 +192,76 @@ public class StampsMenuSystem extends SystemPackage {
         for (int i = 0; i < stamp.getSocketCount(); i++)
             injectDetail(EditorSetting.STAMP_DETAIL_SOCKET_PREFIX + LabelUtility.toWords(
                     stamp.getSocket(i).getSocketName()));
+    }
+
+    // Pictures \\
+
+    // The workspace's pictures a row at a time, as the parts are laid
+    private void refreshImageTiles() {
+
+        ObjectArrayList<String> names = stampManager.getImageStamps();
+
+        for (int first = 0; first < names.size(); first += EditorSetting.STAMP_TILES_PER_ROW) {
+
+            int rowFirst = first;
+
+            tileRows.add(menuManager.inject(
+                    stampsMenu, StampsSetting.ENTRY_TILES, StampsSetting.TEMPLATE_TILE_ROW,
+                    row -> fillImageRow(row, names, rowFirst)));
+        }
+    }
+
+    private void fillImageRow(ElementInstance row, ObjectArrayList<String> names, int first) {
+
+        for (int slot = 0; slot < EditorSetting.STAMP_TILES_PER_ROW; slot++) {
+
+            int index = first + slot;
+
+            fillImageTile(row, slot, index < names.size() ? names.get(index) : null);
+        }
+    }
+
+    private void fillImageTile(ElementInstance row, int slot, String name) {
+
+        ElementInstance tile = row.findChildById(StampsSetting.ELEMENT_TILE + slot);
+        ElementInstance thumbnail = row.findChildById(StampsSetting.ELEMENT_TILE_THUMBNAIL + slot);
+
+        if (tile == null || thumbnail == null)
+            return;
+
+        tile.setActionArgOverride(name != null ? name : "");
+        setChildText(row, StampsSetting.ELEMENT_TILE_LABEL + slot, name != null ? LabelUtility.toWords(
+                FileUtility.getFileName(name)) : "");
+
+        if (name != null && name.equals(stampManager.getActiveImageStamp()))
+            tile.setColorOverride(selectedTint);
+
+        if (name == null) {
+            thumbnail.setColorOverride(emptyTint);
+            return;
+        }
+
+        if (thumbnail.hasSprite())
+            thumbnail.getSpriteInstance().setTexture(stampManager.getImageThumbnail(name));
+    }
+
+    private void refreshImageDetails() {
+
+        String name = stampManager.getActiveImageStamp();
+        Pixmap pixmap = name != null ? stampManager.getImagePixmap(name) : null;
+
+        if (stampManager.getImageStamps().isEmpty()) {
+            injectDetail(EditorSetting.IMAGE_STAMP_DETAIL_EMPTY);
+            return;
+        }
+
+        if (pixmap == null) {
+            injectDetail(EditorSetting.STAMP_DETAIL_NONE);
+            return;
+        }
+
+        injectDetail(EditorSetting.IMAGE_STAMP_DETAIL_SIZE + pixmap.getWidth() + EditorSetting.IMAGE_STAMP_DETAIL_BY
+                + pixmap.getHeight());
     }
 
     // The bones that hang from the host, the ones joining it, by name

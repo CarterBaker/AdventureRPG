@@ -3,6 +3,7 @@ package editor.runtime.imageeditor.tool;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.bootstrap.imageeditorpipeline.imageeditormanager.ImageEditorManager;
 import editor.bootstrap.imageeditorpipeline.imageproject.ImageProjectInstance;
+import editor.runtime.EditorSetting;
 import editor.runtime.imageeditor.ImageEditorSetting;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.uveditor.view.UVEditorViewSystem;
@@ -62,6 +63,12 @@ public class ImageEditorToolSystem extends SystemPackage {
             }
 
             imageEditorManager.continueStroke(toPixelX(mouseX), toPixelY(mouseY));
+            return;
+        }
+
+        if (imageEditorManager.armsStamp() && editorInputSystem.isPointerActive()
+                && rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)) {
+            imageEditorManager.disarmStamp();
             return;
         }
 

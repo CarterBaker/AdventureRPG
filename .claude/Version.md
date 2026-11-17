@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 111
-Task: ImageExportImport
+Delivery: 112
+Task: ImageStamps
 Applied: 2026-11-17
 
 ## Log
@@ -121,3 +121,4 @@ Applied: 2026-11-17
 - 109, 2026-11-17, StampsAnimationsWorkspace
 - 110, 2026-11-17, BootFix
 - 111, 2026-11-17, ImageExportImport
+- 112, 2026-11-17, ImageStamps
