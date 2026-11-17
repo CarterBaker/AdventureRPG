@@ -7,11 +7,12 @@ import engine.root.StructPackage;
 public class AppearanceIsolationStruct extends StructPackage {
 
     /*
-     * What of a previewed character an editor draws: whether the body is
-     * drawn, which worn features are, and the bone mask the body and any
-     * masked feature are drawn through, so a part editor shows its part
-     * alone. Cleared, it draws everything whole. Owned and rebuilt by the
-     * editor only when what it shows changes.
+     * What of a character is drawn: whether the body is drawn, which worn
+     * features are, and whether each is drawn through the bone mask the body
+     * is, so a part editor shows its part alone and a first-person view hides
+     * the head with its hair and every other feature it carries. Cleared, it
+     * draws everything whole. An editor owns and rebuilds its own only when
+     * what it shows changes; the game's are fixed.
      */
 
     // Body

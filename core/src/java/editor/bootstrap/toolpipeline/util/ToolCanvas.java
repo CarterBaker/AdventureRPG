@@ -419,24 +419,29 @@ public enum ToolCanvas {
                 defaultValue);
     }
 
-    private static ToolOptionStruct named(ToolOption option, String[] names, int defaultIndex) {
-        return new ToolOptionStruct(option, names, defaultIndex);
+    private static ToolOptionStruct toggle(ToolOption option, int defaultIndex) {
+        return new ToolOptionStruct(
+                option, ToolOptionKind.SWITCH, EditorSetting.TOOL_OPTION_SWITCH_NAMES, defaultIndex);
+    }
+
+    private static ToolOptionStruct choice(ToolOption option, String[] names, int defaultIndex) {
+        return new ToolOptionStruct(option, ToolOptionKind.CHOICE, names, defaultIndex);
     }
 
     private static ToolOptionStruct mirror() {
-        return named(ToolOption.MIRROR, EditorSetting.TOOL_OPTION_SWITCH_NAMES, EditorSetting.TOOL_OPTION_SWITCH_ON);
+        return toggle(ToolOption.MIRROR, EditorSetting.TOOL_OPTION_SWITCH_ON);
     }
 
     private static ToolOptionStruct xray() {
-        return named(ToolOption.XRAY, EditorSetting.TOOL_OPTION_SWITCH_NAMES, EditorSetting.TOOL_OPTION_SWITCH_OFF);
+        return toggle(ToolOption.XRAY, EditorSetting.TOOL_OPTION_SWITCH_OFF);
     }
 
     private static ToolOptionStruct bones() {
-        return named(ToolOption.BONES, EditorSetting.TOOL_BONE_DISPLAY_NAMES, EditorSetting.TOOL_BONE_DISPLAY_DEFAULT);
+        return choice(ToolOption.BONES, EditorSetting.TOOL_BONE_DISPLAY_NAMES, EditorSetting.TOOL_BONE_DISPLAY_DEFAULT);
     }
 
     private static ToolOptionStruct comb() {
-        return named(ToolOption.COMB, EditorSetting.TOOL_COMB_NAMES, EditorSetting.TOOL_COMB_DEFAULT);
+        return choice(ToolOption.COMB, EditorSetting.TOOL_COMB_NAMES, EditorSetting.TOOL_COMB_DEFAULT);
     }
 
     private static ToolOptionStruct twist() {

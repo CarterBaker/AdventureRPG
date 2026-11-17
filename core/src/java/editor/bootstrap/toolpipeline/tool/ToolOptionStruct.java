@@ -1,6 +1,7 @@
 package editor.bootstrap.toolpipeline.tool;
 
 import editor.bootstrap.toolpipeline.util.ToolOption;
+import editor.bootstrap.toolpipeline.util.ToolOptionKind;
 import editor.runtime.EditorSetting;
 import engine.root.StructPackage;
 
@@ -10,12 +11,15 @@ public class ToolOptionStruct extends StructPackage {
      * One option a canvas honours, with the range it is held to there, the
      * step the Tools panel and the brush size keys move it by, and the value
      * it starts at. A slider sets it by its share of the range, landing on
-     * the nearest step. An option of named steps — a note grid, on or off —
-     * shows and is typed by the name of each whole step from its low end.
+     * the nearest step. An option of named steps — a switch's off and on, or
+     * a choice such as how bones are drawn — shows and is typed by the name
+     * of each whole step from its low end. Its kind says how the Tools panel
+     * shows it: a number on a slider, a switch, or a drop-down of choices.
      */
 
     // Option
     private final ToolOption option;
+    private final ToolOptionKind kind;
     private final float min;
     private final float max;
     private final float step;
@@ -27,16 +31,17 @@ public class ToolOptionStruct extends StructPackage {
     // Constructor \\
 
     public ToolOptionStruct(ToolOption option, float min, float max, float step, float defaultValue) {
-        this(option, min, max, step, defaultValue, null);
+        this(option, ToolOptionKind.NUMBER, min, max, step, defaultValue, null);
     }
 
-    // An option of named steps, from 0 to the last name, starting at the step given
-    public ToolOptionStruct(ToolOption option, String[] names, int defaultIndex) {
-        this(option, 0f, names.length - 1, 1f, defaultIndex, names);
+    // An option of named steps, a switch or a choice, from 0 to the last name, starting at the step given
+    public ToolOptionStruct(ToolOption option, ToolOptionKind kind, String[] names, int defaultIndex) {
+        this(option, kind, 0f, names.length - 1, 1f, defaultIndex, names);
     }
 
     private ToolOptionStruct(
             ToolOption option,
+            ToolOptionKind kind,
             float min,
             float max,
             float step,
@@ -45,6 +50,7 @@ public class ToolOptionStruct extends StructPackage {
 
         // Option
         this.option = option;
+        this.kind = kind;
         this.min = min;
         this.max = max;
         this.step = step;
@@ -122,6 +128,15 @@ public class ToolOptionStruct extends StructPackage {
 
     public ToolOption getOption() {
         return option;
+    }
+
+    public ToolOptionKind getKind() {
+        return kind;
+    }
+
+    // How many named steps a switch or a choice has, none for a number
+    public int getChoiceCount() {
+        return names != null ? names.length : 0;
     }
 
     public float getDefaultValue() {

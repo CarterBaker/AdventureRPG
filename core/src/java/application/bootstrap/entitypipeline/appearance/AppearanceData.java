@@ -13,6 +13,7 @@ import engine.graphics.color.Color;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class AppearanceData extends DataPackage {
 
@@ -37,6 +38,7 @@ public class AppearanceData extends DataPackage {
     private final RigHandle rigHandle;
     private final int headBoneIndex;
     private final SkinnedBoneMaskStruct headMask;
+    private final int[] headFocusBones;
 
     // Bodies — in the order the race's genders wear them
     private final MeshHandle[] bodyMeshes;
@@ -52,6 +54,10 @@ public class AppearanceData extends DataPackage {
     // Shapes — the sliders, and the morph each weighs per body, INDEX_NOT_FOUND for one that drives only bones
     private final AppearanceShapeStruct[] shapes;
     private final int[][] shapeMorphs;
+
+    // Focus — the bones each slider moves, its own and those of every slider it drives, which a preview frames while
+    // it is worked
+    private final int[][] shapeFocusBones;
 
     // Expressions — in the order the race names them, and the blink's place among them, INDEX_NOT_FOUND for none
     private final AppearanceExpressionStruct[] expressions;
@@ -99,6 +105,7 @@ public class AppearanceData extends DataPackage {
         this.headMask = new SkinnedBoneMaskStruct();
         headMask.setMode(SkinnedMaskMode.HIDE);
         headMask.addBranch(rigHandle, headBoneIndex);
+        this.headFocusBones = new int[] { headBoneIndex };
 
         // Bodies
         this.bodyMeshes = bodyMeshes;
@@ -114,6 +121,9 @@ public class AppearanceData extends DataPackage {
         // Shapes
         this.shapes = shapes;
         this.shapeMorphs = shapeMorphs;
+
+        // Focus
+        this.shapeFocusBones = resolveShapeFocusBones(shapes);
 
         // Expressions
         this.expressions = expressions;
@@ -133,6 +143,36 @@ public class AppearanceData extends DataPackage {
         // Creator
         this.creatorTabs = creatorTabs;
         this.offered = offered;
+    }
+
+    private static int[][] resolveShapeFocusBones(AppearanceShapeStruct[] shapes) {
+
+        int[][] focusBones = new int[shapes.length][];
+        IntArrayList bones = new IntArrayList();
+
+        for (int i = 0; i < shapes.length; i++) {
+
+            bones.clear();
+            addTargetBones(shapes[i], bones);
+
+            for (int d = 0; d < shapes[i].getDriveCount(); d++)
+                addTargetBones(shapes[shapes[i].getDrive(d).getSliderIndex()], bones);
+
+            focusBones[i] = bones.toIntArray();
+        }
+
+        return focusBones;
+    }
+
+    private static void addTargetBones(AppearanceShapeStruct shape, IntArrayList bones) {
+
+        for (int t = 0; t < shape.getBoneTargetCount(); t++) {
+
+            int bone = shape.getBoneTarget(t).getBoneIndex();
+
+            if (!bones.contains(bone))
+                bones.add(bone);
+        }
     }
 
     private static int resolveMaxMorphCount(MeshHandle[] bodyMeshes) {
@@ -285,6 +325,16 @@ public class AppearanceData extends DataPackage {
 
     public RigHandle getRigHandle() {
         return rigHandle;
+    }
+
+    // The bones a slider moves, none for one that only weighs a morph
+    public int[] getShapeFocusBones(int shapeIndex) {
+        return shapeFocusBones[shapeIndex];
+    }
+
+    // The head alone, as the head's proportions frame it
+    public int[] getHeadFocusBones() {
+        return headFocusBones;
     }
 
     public int getHeadBoneIndex() {

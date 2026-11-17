@@ -82,6 +82,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Text is never unreadable.** Text shrinks to fit its element no smaller than the Minimum Text Size on the Settings
   dialog's General page; past that it is cut behind an ellipsis. Docked panels never split smaller than
   `EditorSetting.DOCK_PANEL_MIN_SIZE`.
+- **Tab strips shrink, then wrap.** Every tab bar (a dock's strip, the Hierarchy's tabs) lays out through
+  `StripLayoutUtility`: each tab keeps its preferred width while its row has room, all shrink together as it narrows,
+  and once none can shrink past its minimum the strip wraps onto another row, the header growing and the content
+  shrinking beneath it. Never a fixed-width strip that hides tabs, and never a second wrapping routine.
 
 ## Tools and brushes
 
@@ -122,6 +126,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Every number has a slider and a typed value.** A value row shows its name, a slider across its range, a box
   that opens for typing an exact value (the "manual set"), and step buttons. Dragging the slider updates the value
   and everything showing it live, in place, without rebuilding the panel.
+- **Every value takes the control that fits it.** A switch (on or off: Mirror, X-Ray) is a switch flipped by one
+  click and filled while on; a choice of named settings (Bones, Comb) is a drop-down naming the one in use, its choices
+  listed under its row while open; only a number has a slider. A tool option declares its kind in `ToolCanvas`
+  (`ToolOptionKind`: `toggle(...)`, `choice(...)` or a number range) and the Tools tab picks the row template for it
+  (`ToolsSetting.TEMPLATE_OPTION_ROWS`), never a slider over named steps.
 - **One slider path.** Sliders share `editor.runtime.slider.SliderUtility` (track share, step, knob); typed values go
   through the name dialog and the same setter the slider and step buttons use.
 - **Every slider has a range.** A value with a declared range (a tool option, a race's shape slider in the Character

@@ -1052,6 +1052,15 @@ public class EngineSetting {
     public static final float CHARACTER_PREVIEW_FOCUS_HEIGHT = 0.55f;
     public static final float CHARACTER_PREVIEW_LATERAL_OFFSET = 0.26f;
     public static final float CHARACTER_PREVIEW_LIFT = 0.2f;
+
+    // Character Preview — zoom: while a slider is worked the preview closes in on the bones it moves, framing them
+    // with this margin and never tighter than the smallest radius; turning the view eases it back out to the whole
+    // body, and once the turn has stopped for the release time it eases back in and turns back to where it stood
+    public static final float CHARACTER_PREVIEW_ZOOM_MARGIN = 0.08f;
+    public static final float CHARACTER_PREVIEW_ZOOM_RADIUS_MIN = 0.12f;
+    public static final float CHARACTER_PREVIEW_ZOOM_RATE = 4f;
+    public static final float CHARACTER_PREVIEW_RETURN_RATE = 3f;
+    public static final float CHARACTER_PREVIEW_RELEASE_SECONDS = 0.15f;
     public static final String UNIFORM_CAM_FAR_PLANE = "u_farPlane";
     public static final String UNIFORM_CAM_FOV = "u_cameraFOV";
     public static final String UNIFORM_CAM_INVERSE_PROJECTION = "u_inverseProjection";
@@ -4037,6 +4046,7 @@ public class EngineSetting {
     public static final float HIERARCHY_TAB_SPACING_PIXELS = 2f;
     public static final String HIERARCHY_TAB_TEMPLATE = "util/Hierarchy/hierarchy_tab";
     public static final float HIERARCHY_TAB_WIDTH_PIXELS = 96f;
+    public static final float HIERARCHY_TAB_MIN_WIDTH_PIXELS = 56f;
     public static final float HIERARCHY_TOGGLE_WIDTH_PIXELS = 16f;
     public static final int MAX_MASK_DEPTH = 8;
     public static final int DEFAULT_RENDER_DEPTH = 0;

@@ -23,7 +23,9 @@ public class AnimationSpringStruct extends StructPackage {
      * holds its bone, so no jolt flips a lock over, then pushed out of every
      * collider the chain names — the bone between it and the joint before
      * it a capsule of the chain's radius, each collider placed where the
-     * pose just composed carries its bone — and held its length again; the
+     * pose just composed carries its bone, its last place moved with it so
+     * the push gives it no speed and a lock lying on the body rests there
+     * rather than bouncing off it — and held its length again; the
      * bones are then turned about their joints onto the simulated points. A
      * chain
      * starts afresh at the pose when it is first stepped, switched back on,
@@ -310,7 +312,7 @@ public class AnimationSpringStruct extends StructPackage {
 
                 stepJoint(p, q, now, then, i, t, keep, hold, pull, fall);
 
-                if (collide(chain, p, i))
+                if (collide(chain, p, q, i))
                     holdLength(p, now, i, i - EngineSetting.RIGGED_MESH_POSITION_FLOATS);
             }
         }
@@ -400,8 +402,8 @@ public class AnimationSpringStruct extends StructPackage {
     // Collision \\
 
     // A joint pushed out of every collider its chain names, the bone from the joint before it swept by the chain's
-    // radius; true when it moved
-    private boolean collide(RigSpringChainStruct chain, float[] p, int i) {
+    // radius, its last place pushed with it so the contact is inelastic; true when it moved
+    private boolean collide(RigSpringChainStruct chain, float[] p, float[] q, int i) {
 
         int parent = i - EngineSetting.RIGGED_MESH_POSITION_FLOATS;
         boolean pushed = false;
@@ -439,6 +441,9 @@ public class AnimationSpringStruct extends StructPackage {
             p[i] += dx * push;
             p[i + 1] += dy * push;
             p[i + 2] += dz * push;
+            q[i] += dx * push;
+            q[i + 1] += dy * push;
+            q[i + 2] += dz * push;
             pushed = true;
         }
 

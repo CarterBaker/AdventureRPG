@@ -28,7 +28,9 @@ public class ToolManager extends ManagerPackage {
      * without, through openWindow() and closeWindow(), the one pair that
      * owns them. A tool the target's canvas does not take is refused. A
      * change of option moves its own revision, so the panel sets its values
-     * in place while a slider drags. The tools, their options and the brush
+     * in place while a slider drags. One choice option at a time may have its
+     * drop-down open, listing its choices under its row until one is picked
+     * or it is closed again. The tools, their options and the brush
      * in use are kept between sessions
      * through ToolStateBranch, written once on the frame after they change.
      */
@@ -48,6 +50,9 @@ public class ToolManager extends ManagerPackage {
     // Tools
     private EditorTool[] canvas2Tool;
     private float[][] canvas2OptionValues;
+
+    // Choices — the option whose drop-down is open, null while none is
+    private ToolOption openChoice;
 
     // Status
     private int revision;
@@ -226,6 +231,25 @@ public class ToolManager extends ManagerPackage {
             setOption(canvas, option, value);
     }
 
+    // A choice option's drop-down opened under its row, or closed when it is the one open; any other closes
+    public void toggleChoice(ToolOption option) {
+        this.openChoice = openChoice == option ? null : option;
+        notifyChanged();
+    }
+
+    // The open drop-down's option set to the choice named, and the drop-down closed
+    public void choose(String choiceName) {
+
+        ToolCanvas canvas = getCanvas();
+        ToolOptionStruct range = canvas != null && openChoice != null ? canvas.findOption(openChoice) : null;
+
+        if (range != null && range.accepts(choiceName))
+            setOption(canvas, openChoice, range.parse(choiceName));
+
+        this.openChoice = null;
+        notifyChanged();
+    }
+
     // An option of a canvas set, held to the canvas's range for it; only a value that moves counts as a change
     void setOption(ToolCanvas canvas, ToolOption option, float value) {
 
@@ -292,7 +316,13 @@ public class ToolManager extends ManagerPackage {
         return canvas != null ? canvas.findOption(option) : null;
     }
 
-    // Moves whenever what the Tools panel lists changes: the target's canvas, or the tool chosen on it
+    // The option whose drop-down is open, null while none is
+    public ToolOption getOpenChoice() {
+        return openChoice;
+    }
+
+    // Moves whenever what the Tools panel lists changes: the target's canvas, the tool chosen on it, or a drop-down
+    // opened or closed
     public int getRevision() {
         return revision;
     }

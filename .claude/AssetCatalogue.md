@@ -420,6 +420,14 @@ One line per session that changed this file: the date, what was added or removed
   refused Record or Play says why), `menus/editor/Timeline.arpg` (lane strips show only their number and name, ...
   renames; mute, solo, volume and pan left to the Properties tab) and `menus/editor/EditorWindow.arpg` (Note Library
   under Library in the Media menu).
+- 2026-11-17: Topology on the Mesh tab. Regenerated `shortcuts/CharacterEditor.arpg` (the Fewer faces hint shown on
+  the Mesh canvas, where the Topology tool now lives).
+- 2026-11-17: Tool option controls. Regenerated `menus/editor/Tools.arpg` (a switch row for on and off options, a
+  drop-down row and its choice rows for named options), so only numbers have sliders.
+- 2026-11-17: Wrapping tab strips. Regenerated `menus/editor/TabFrame.arpg` (the strip stacks rows of entries, a
+  `tab_strip_row` template), so tabs shrink and then wrap instead of hiding.
+- 2026-11-17: Hair with weight. Regenerated `rigs/HumanoidRig.arpg` (every hair chain near critically damped:
+  stiffness 120, damping 20, drag 3), so hair settles after a move.
 
 ---
 

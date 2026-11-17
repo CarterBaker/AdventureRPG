@@ -3,6 +3,8 @@ package editor.runtime.tools.menu;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.ThemeColor;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -27,9 +29,11 @@ public class ToolsMenuSystem extends SystemPackage {
      * one row per tool it takes, the tool in use highlighted and every row
      * carrying its tool's name, then each group of actions it lists under its
      * title, every action row carrying the action's key; and under that
-     * tool's name, one row per option both it and the canvas have, its value
-     * on a slider between step buttons and in a box that opens for typing,
-     * every part carrying the option's name. The brush a tool strokes with is
+     * tool's name, one row per option both it and the canvas have, laid out
+     * for its kind: a number on a slider between step buttons and in a box
+     * that opens for typing, a switch filled while on, and a choice naming
+     * the one in use, its drop-down listing every choice under it while open,
+     * every part carrying the option's name and every choice its own. The brush a tool strokes with is
      * chosen in the Brushes tab, never here. The rows are rebuilt only when
      * the target or its tool changes; a value that moves, as under a dragged
      * slider, is set on its row in place.
@@ -47,6 +51,11 @@ public class ToolsMenuSystem extends SystemPackage {
     private ObjectArrayList<ElementInstance> toolElements;
     private ObjectArrayList<ElementInstance> optionElements;
     private ObjectArrayList<ToolOption> shownOptions;
+    private ObjectArrayList<ElementInstance> choiceElements;
+
+    // Colors
+    private MenuColorStruct switchOnColor;
+    private MenuColorStruct switchOffColor;
 
     // Status
     private int shownToolRevision;
@@ -61,6 +70,11 @@ public class ToolsMenuSystem extends SystemPackage {
         this.toolElements = new ObjectArrayList<>();
         this.optionElements = new ObjectArrayList<>();
         this.shownOptions = new ObjectArrayList<>();
+        this.choiceElements = new ObjectArrayList<>();
+
+        // Colors
+        this.switchOnColor = new MenuColorStruct(ThemeColor.ACCENT, ToolsSetting.SWITCH_ON_ALPHA);
+        this.switchOffColor = new MenuColorStruct(ThemeColor.ACCENT, ToolsSetting.SWITCH_OFF_ALPHA);
 
         // Status
         this.shownToolRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -107,6 +121,7 @@ public class ToolsMenuSystem extends SystemPackage {
 
         clear(toolElements, ToolsSetting.ENTRY_TOOLS);
         clear(optionElements, ToolsSetting.ENTRY_OPTIONS);
+        clear(choiceElements, ToolsSetting.ENTRY_OPTIONS);
         shownOptions.clear();
         setEntryText(
                 ToolsSetting.ENTRY_CANVAS_TITLE,
@@ -197,19 +212,23 @@ public class ToolsMenuSystem extends SystemPackage {
         if (range == null)
             return;
 
-        ElementInstance row = injectOption(option);
+        float value = toolManager.getOption(canvas, option);
+        ElementInstance row = injectOption(option, range);
 
         optionElements.add(row);
         shownOptions.add(option);
-        fillValue(row, range, toolManager.getOption(canvas, option));
+        fillValue(row, range, value);
+
+        if (toolManager.getOpenChoice() == option)
+            showChoices(range, Math.round(value));
     }
 
-    private ElementInstance injectOption(ToolOption option) {
+    private ElementInstance injectOption(ToolOption option, ToolOptionStruct range) {
 
         String arg = ArpgUtility.toEnumName(option);
 
         return menuManager.inject(
-                toolsMenu, ToolsSetting.ENTRY_OPTIONS, ToolsSetting.TEMPLATE_OPTION_ROW,
+                toolsMenu, ToolsSetting.ENTRY_OPTIONS, ToolsSetting.TEMPLATE_OPTION_ROWS[range.getKind().ordinal()],
                 element -> {
                     setChildText(element, ToolsSetting.ELEMENT_OPTION_LABEL, option.getLabel());
                     setChildArg(element, ToolsSetting.ELEMENT_OPTION_LOWER, arg);
@@ -221,6 +240,25 @@ public class ToolsMenuSystem extends SystemPackage {
                     if (track != null)
                         track.setOnDragArgOverride(arg);
                 });
+    }
+
+    // The open drop-down's rows under its option's row, one per choice, the one in use highlighted
+    private void showChoices(ToolOptionStruct range, int selected) {
+
+        for (int i = 0; i < range.getChoiceCount(); i++) {
+
+            String choiceName = range.format(i);
+            String template = i == selected
+                    ? ToolsSetting.TEMPLATE_CHOICE_ROW_SELECTED
+                    : ToolsSetting.TEMPLATE_CHOICE_ROW;
+
+            choiceElements.add(menuManager.inject(
+                    toolsMenu, ToolsSetting.ENTRY_OPTIONS, template,
+                    element -> {
+                        element.setActionArgOverride(choiceName);
+                        setChildText(element, ToolsSetting.ELEMENT_CHOICE_LABEL, choiceName);
+                    }));
+        }
     }
 
     // Every option row's value and knob set where its option now stands, nothing listed again
@@ -246,6 +284,11 @@ public class ToolsMenuSystem extends SystemPackage {
     private void fillValue(ElementInstance row, ToolOptionStruct range, float value) {
 
         setChildText(row, ToolsSetting.ELEMENT_OPTION_VALUE, range.format(value));
+
+        ElementInstance fill = row.findChildById(ToolsSetting.ELEMENT_OPTION_SWITCH_FILL);
+
+        if (fill != null)
+            fill.setColorOverride(value > 0f ? switchOnColor : switchOffColor);
 
         ElementInstance track = row.findChildById(ToolsSetting.ELEMENT_OPTION_TRACK);
 

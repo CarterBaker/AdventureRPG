@@ -1,6 +1,7 @@
 package application.bootstrap.entitypipeline.playermanager;
 
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
+import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.entity.EntityState;
@@ -35,6 +36,7 @@ import engine.input.Keys;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
@@ -124,9 +126,18 @@ public class PlayerManager extends ManagerPackage {
     private Int2BooleanOpenHashMap windowID2FirstPersonToggled;
     private Int2FloatOpenHashMap windowID2PreFirstPersonZoomTarget;
 
-    // Per-window character preview
+    // Per-window character preview — the way the character faces, held while the preview is open, and how far the
+    // camera has turned about it from there, so turning the preview moves the view, never the body or its hair
     private Int2BooleanOpenHashMap windowID2CharacterPreview;
     private Int2FloatOpenHashMap windowID2CharacterPreviewYaw;
+    private Int2FloatOpenHashMap windowID2CharacterPreviewOrbit;
+
+    // Per-window preview zoom — the bones the preview closes in on while a slider is worked, absent for the whole
+    // body; how far it has closed in, 0 framing the whole body to 1 framing those bones; and the seconds since the
+    // view was last turned
+    private Int2ObjectOpenHashMap<int[]> windowID2PreviewFocus;
+    private Int2FloatOpenHashMap windowID2PreviewZoom;
+    private Int2FloatOpenHashMap windowID2PreviewTurnSeconds;
 
     // Per-window preview framing — x, y: the screen point in NDC the character centres on;
     // z: the share of the screen height the character fills
@@ -141,6 +152,10 @@ public class PlayerManager extends ManagerPackage {
     private Vector3 cameraOffset;
     private Vector3 eyePosition;
     private Vector3 facingDirection;
+    private Vector3 viewDirection;
+    private Vector3 focusCenter;
+    private Vector3 focusPoint;
+    private Vector3 focusCamera;
     private Vector2 turnScratch;
 
     // Internal \\
@@ -175,6 +190,10 @@ public class PlayerManager extends ManagerPackage {
 
         this.windowID2CharacterPreview = new Int2BooleanOpenHashMap();
         this.windowID2CharacterPreviewYaw = new Int2FloatOpenHashMap();
+        this.windowID2CharacterPreviewOrbit = new Int2FloatOpenHashMap();
+        this.windowID2PreviewFocus = new Int2ObjectOpenHashMap<>();
+        this.windowID2PreviewZoom = new Int2FloatOpenHashMap();
+        this.windowID2PreviewTurnSeconds = new Int2FloatOpenHashMap();
         this.windowID2PreviewFraming = new Int2ObjectOpenHashMap<>();
 
         this.windowID2MenuView = new Int2ObjectOpenHashMap<>();
@@ -184,6 +203,10 @@ public class PlayerManager extends ManagerPackage {
         this.cameraOffset = new Vector3();
         this.eyePosition = new Vector3();
         this.facingDirection = new Vector3();
+        this.viewDirection = new Vector3();
+        this.focusCenter = new Vector3();
+        this.focusPoint = new Vector3();
+        this.focusCamera = new Vector3();
         this.turnScratch = new Vector2();
     }
 
@@ -253,6 +276,9 @@ public class PlayerManager extends ManagerPackage {
         windowID2PreFirstPersonZoomTarget.put(windowID, EngineSetting.CAMERA_ZOOM_DEFAULT);
         windowID2CharacterPreview.put(windowID, false);
         windowID2CharacterPreviewYaw.put(windowID, 0f);
+        windowID2CharacterPreviewOrbit.put(windowID, 0f);
+        windowID2PreviewZoom.put(windowID, 0f);
+        windowID2PreviewTurnSeconds.put(windowID, EngineSetting.CHARACTER_PREVIEW_RELEASE_SECONDS);
         return player;
     }
 
@@ -276,6 +302,10 @@ public class PlayerManager extends ManagerPackage {
         windowID2PreFirstPersonZoomTarget.remove(windowID);
         windowID2CharacterPreview.remove(windowID);
         windowID2CharacterPreviewYaw.remove(windowID);
+        windowID2CharacterPreviewOrbit.remove(windowID);
+        windowID2PreviewFocus.remove(windowID);
+        windowID2PreviewZoom.remove(windowID);
+        windowID2PreviewTurnSeconds.remove(windowID);
         windowID2PreviewFraming.remove(windowID);
         endMenuView(windowID);
 
@@ -549,6 +579,10 @@ public class PlayerManager extends ManagerPackage {
         Vector3 direction = windowID2Camera.get(windowID).getDirection();
 
         windowID2CharacterPreviewYaw.put(windowID, (float) Math.atan2(-direction.x, -direction.z));
+        windowID2CharacterPreviewOrbit.put(windowID, 0f);
+        windowID2PreviewFocus.remove(windowID);
+        windowID2PreviewZoom.put(windowID, 0f);
+        windowID2PreviewTurnSeconds.put(windowID, EngineSetting.CHARACTER_PREVIEW_RELEASE_SECONDS);
         windowID2CharacterPreview.put(windowID, true);
     }
 
@@ -559,6 +593,7 @@ public class PlayerManager extends ManagerPackage {
 
         windowID2CharacterPreview.put(windowID, false);
         windowID2PreviewFraming.remove(windowID);
+        windowID2PreviewFocus.remove(windowID);
         windowID2Camera.get(windowID).setDirection(resolvePreviewFacing(windowID));
     }
 
@@ -578,12 +613,25 @@ public class PlayerManager extends ManagerPackage {
         return windowID2CharacterPreview.get(windowID);
     }
 
+    // The preview's camera turned about the character, which stands still facing the way it did
     public void rotateCharacterPreview(int windowID, float degrees) {
-        windowID2CharacterPreviewYaw.put(
+
+        windowID2CharacterPreviewOrbit.put(
                 windowID,
-                windowID2CharacterPreviewYaw.get(windowID) + (float) Math.toRadians(degrees));
+                windowID2CharacterPreviewOrbit.get(windowID) + (float) Math.toRadians(degrees));
+        windowID2PreviewTurnSeconds.put(windowID, 0f);
     }
 
+    // The bones the preview closes in on while a slider is worked, or the whole body again for none
+    public void focusCharacterPreview(int windowID, int[] bones) {
+
+        if (bones == null || bones.length == 0)
+            windowID2PreviewFocus.remove(windowID);
+        else
+            windowID2PreviewFocus.put(windowID, bones);
+    }
+
+    // The way the character faces while previewed
     private Vector3 resolvePreviewFacing(int windowID) {
 
         float yaw = windowID2CharacterPreviewYaw.get(windowID);
@@ -591,10 +639,22 @@ public class PlayerManager extends ManagerPackage {
         return facingDirection.set((float) Math.sin(yaw), 0f, (float) Math.cos(yaw));
     }
 
-    // The camera looks back at a point beside the character; its right axis along -facing is (facing.z, 0, -facing.x)
+    // The side of the character the camera stands on: its facing turned by the camera's orbit
+    private Vector3 resolvePreviewView(int windowID) {
+
+        float yaw = windowID2CharacterPreviewYaw.get(windowID) + windowID2CharacterPreviewOrbit.get(windowID);
+
+        return viewDirection.set((float) Math.sin(yaw), 0f, (float) Math.cos(yaw));
+    }
+
+    // The character stands facing the way it did and the camera looks back at a point beside it from the side the
+    // orbit has turned it to; its right axis along -view is (view.z, 0, -view.x)
     private void updateCharacterPreview(int windowID, EntityInstance player, CameraInstance camera) {
 
+        easePreviewZoom(windowID, internal.getDeltaTime());
+
         Vector3 facing = resolvePreviewFacing(windowID);
+        Vector3 view = resolvePreviewView(windowID);
         EntityStateHandle state = player.getEntityStateHandle();
         EntityInputHandle input = player.getEntityInputHandle();
 
@@ -611,7 +671,7 @@ public class PlayerManager extends ManagerPackage {
         Vector3 framing = windowID2PreviewFraming.get(windowID);
 
         if (framing != null) {
-            placeFramedPreviewCamera(player, camera, facing, framing);
+            placePreviewCamera(windowID, player, camera, view, placeFramedPreviewCamera(player, camera, view, framing));
             internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
             return;
         }
@@ -623,23 +683,117 @@ public class PlayerManager extends ManagerPackage {
 
         cameraPosition.set(player.getWorldPositionStruct().getPosition());
         cameraPosition.add(
-                size.x * 0.5f - facing.z * lateral,
+                size.x * 0.5f - view.z * lateral,
                 size.y * EngineSetting.CHARACTER_PREVIEW_FOCUS_HEIGHT,
-                size.z * 0.5f + facing.x * lateral);
-        cameraPosition.add(facing.x * distance, lift, facing.z * distance);
+                size.z * 0.5f + view.x * lateral);
+        cameraPosition.add(view.x * distance, lift, view.z * distance);
 
-        cameraOffset.set(-facing.x * distance, -lift, -facing.z * distance);
+        cameraOffset.set(-view.x * distance, -lift, -view.z * distance);
 
-        camera.setPosition(cameraPosition);
-        camera.setDirection(cameraOffset);
-
+        placePreviewCamera(windowID, player, camera, view, lateral / distance);
         internalBufferSystem.updatePlayerPosition(player.getWorldPositionStruct());
     }
 
-    private void placeFramedPreviewCamera(
+    // Sets the camera where the preview's placement put it, eased toward the bones a worked slider moves by how far
+    // the preview has closed in; the bones sit as far beside the view's centre for their distance as the body does
+    private void placePreviewCamera(
+            int windowID,
             EntityInstance player,
             CameraInstance camera,
-            Vector3 facing,
+            Vector3 view,
+            float lateralShare) {
+
+        int[] bones = windowID2PreviewFocus.get(windowID);
+        float zoom = windowID2PreviewZoom.get(windowID);
+
+        if (bones != null && zoom > 0f) {
+
+            float distance = resolveFocus(player, bones) / (float) Math.sin(Math.toRadians(camera.getFOV()) * 0.5);
+            float lateral = lateralShare * distance;
+            float blend = zoom * zoom * (3f - 2f * zoom);
+
+            focusPoint.set(focusCenter).add(-view.z * lateral, 0f, view.x * lateral);
+            focusCamera.set(focusPoint).add(view.x * distance, 0f, view.z * distance);
+
+            cameraOffset.add(cameraPosition);
+            cameraOffset.add(
+                    (focusPoint.x - cameraOffset.x) * blend,
+                    (focusPoint.y - cameraOffset.y) * blend,
+                    (focusPoint.z - cameraOffset.z) * blend);
+            cameraPosition.add(
+                    (focusCamera.x - cameraPosition.x) * blend,
+                    (focusCamera.y - cameraPosition.y) * blend,
+                    (focusCamera.z - cameraPosition.z) * blend);
+            cameraOffset.subtract(cameraPosition);
+        }
+
+        camera.setPosition(cameraPosition);
+        camera.setDirection(cameraOffset);
+    }
+
+    // The middle of the bones as posed, into focusCenter, and the radius that frames them all with the margin
+    private float resolveFocus(EntityInstance player, int[] bones) {
+
+        AnimationStateHandle animation = player.getAnimationStateHandle();
+
+        focusCenter.set(0f, 0f, 0f);
+
+        for (int i = 0; i < bones.length; i++) {
+            resolveBonePoint(player, animation, bones[i], focusPoint);
+            focusCenter.add(focusPoint);
+        }
+
+        focusCenter.multiply(1f / bones.length);
+
+        float radius = 0f;
+
+        for (int i = 0; i < bones.length; i++) {
+            resolveBonePoint(player, animation, bones[i], focusPoint);
+            radius = Math.max(radius, focusPoint.subtract(focusCenter).length());
+        }
+
+        return Math.max(
+                EngineSetting.CHARACTER_PREVIEW_ZOOM_RADIUS_MIN,
+                radius + EngineSetting.CHARACTER_PREVIEW_ZOOM_MARGIN);
+    }
+
+    private void resolveBonePoint(EntityInstance player, AnimationStateHandle animation, int bone, Vector3 out) {
+
+        Matrix4 world = animation.getWorldMatrix(bone);
+
+        player.getModelPoint(world.getM03(), world.getM13(), world.getM23(), out);
+    }
+
+    // Closes in on a worked slider's bones while the view is still, backs out to the whole body while it turns, and
+    // once the turn has stopped turns the view back, the short way round, to where it stood
+    private void easePreviewZoom(int windowID, float deltaTime) {
+
+        float seconds = windowID2PreviewTurnSeconds.get(windowID) + deltaTime;
+        boolean turning = seconds < EngineSetting.CHARACTER_PREVIEW_RELEASE_SECONDS;
+        boolean focused = windowID2PreviewFocus.containsKey(windowID);
+        float zoom = windowID2PreviewZoom.get(windowID);
+        float target = focused && !turning ? 1f : 0f;
+
+        windowID2PreviewTurnSeconds.put(windowID, seconds);
+        windowID2PreviewZoom.put(windowID, zoom + (target - zoom)
+                * (1f - (float) Math.exp(-EngineSetting.CHARACTER_PREVIEW_ZOOM_RATE * deltaTime)));
+
+        if (!focused || turning)
+            return;
+
+        float orbit = (float) Math.IEEEremainder(windowID2CharacterPreviewOrbit.get(windowID), 2.0 * Math.PI);
+
+        windowID2CharacterPreviewOrbit.put(
+                windowID,
+                orbit * (float) Math.exp(-EngineSetting.CHARACTER_PREVIEW_RETURN_RATE * deltaTime));
+    }
+
+    // Places the camera to frame the body at the screen point and share asked, and gives how far beside the view's
+    // centre the body sits for its distance
+    private float placeFramedPreviewCamera(
+            EntityInstance player,
+            CameraInstance camera,
+            Vector3 view,
             Vector3 framing) {
 
         Vector3 size = player.getSize();
@@ -651,15 +805,14 @@ public class PlayerManager extends ManagerPackage {
 
         cameraPosition.set(player.getWorldPositionStruct().getPosition());
         cameraPosition.add(
-                size.x * 0.5f - facing.z * lateral,
+                size.x * 0.5f - view.z * lateral,
                 size.y * EngineSetting.CHARACTER_PREVIEW_CENTER_HEIGHT - vertical,
-                size.z * 0.5f + facing.x * lateral);
-        cameraPosition.add(facing.x * distance, 0f, facing.z * distance);
+                size.z * 0.5f + view.x * lateral);
+        cameraPosition.add(view.x * distance, 0f, view.z * distance);
 
-        cameraOffset.set(-facing.x, 0f, -facing.z);
+        cameraOffset.set(-view.x * distance, 0f, -view.z * distance);
 
-        camera.setPosition(cameraPosition);
-        camera.setDirection(cameraOffset);
+        return lateral / distance;
     }
 
     // Placement \\

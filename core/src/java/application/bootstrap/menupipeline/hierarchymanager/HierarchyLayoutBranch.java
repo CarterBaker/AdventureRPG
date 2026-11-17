@@ -9,6 +9,7 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.StripLayoutUtility;
 import application.bootstrap.menupipeline.util.ThemeColor;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -19,8 +20,9 @@ class HierarchyLayoutBranch extends BranchPackage {
     /*
      * Lays a hierarchy panel out into its menu: ejects the old tabs and rows,
      * then injects one tab per provider and one indented row per visible node,
-     * each carrying its node key as the click argument. Tabs wrap onto as many
-     * rows as the panel's width needs, so every tab stays visible; the tab bar
+     * each carrying its node key as the click argument. Tabs shrink together as
+     * the panel narrows and then wrap onto as many rows as its width needs
+     * (StripLayoutUtility), so every tab stays visible; the tab bar
      * grows to hold them and the node list shrinks beneath it. A tab or node
      * holding a problem has its label drawn in the danger color.
      */
@@ -79,14 +81,41 @@ class HierarchyLayoutBranch extends BranchPackage {
 
     // Tabs \\
 
-    int resolveTabsPerRow(HierarchyInstance hierarchy) {
+    int resolveTabsPerRow(HierarchyInstance hierarchy, int tabCount) {
+        return StripLayoutUtility.resolvePerRow(
+                resolveTabBarWidth(hierarchy),
+                tabCount,
+                EngineSetting.HIERARCHY_TAB_MIN_WIDTH_PIXELS,
+                EngineSetting.HIERARCHY_TAB_SPACING_PIXELS);
+    }
 
-        float availableWidth = hierarchy.getMenu().getWindow().getWidth()
-                - 2f * EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS;
-        int tabsPerRow = (int) ((availableWidth + EngineSetting.HIERARCHY_TAB_SPACING_PIXELS)
-                / (EngineSetting.HIERARCHY_TAB_WIDTH_PIXELS + EngineSetting.HIERARCHY_TAB_SPACING_PIXELS));
+    float resolveTabWidth(HierarchyInstance hierarchy, int tabsPerRow) {
+        return StripLayoutUtility.resolveWidth(
+                resolveTabBarWidth(hierarchy),
+                tabsPerRow,
+                EngineSetting.HIERARCHY_TAB_WIDTH_PIXELS,
+                EngineSetting.HIERARCHY_TAB_SPACING_PIXELS);
+    }
 
-        return Math.max(1, tabsPerRow);
+    private float resolveTabBarWidth(HierarchyInstance hierarchy) {
+        return hierarchy.getMenu().getWindow().getWidth() - 2f * EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS;
+    }
+
+    // Every tab set to the width its rows share, in place
+    void resizeTabs(HierarchyInstance hierarchy, float tabWidth) {
+
+        DimensionVector2Struct size = new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(tabWidth),
+                DimensionValueStruct.ofAbsolute(EngineSetting.HIERARCHY_TAB_ROW_HEIGHT_PIXELS));
+        ObjectArrayList<ElementInstance> tabRows = hierarchy.getTabElements();
+
+        for (int i = 0; i < tabRows.size(); i++) {
+
+            ObjectArrayList<ElementInstance> tabs = tabRows.get(i).getChildren();
+
+            for (int j = 0; j < tabs.size(); j++)
+                tabs.get(j).setSizeOverride(size);
+        }
     }
 
     private void injectTabs(
@@ -131,8 +160,10 @@ class HierarchyLayoutBranch extends BranchPackage {
 
     private void resizeTabBar(MenuInstance menu, int rowCount) {
 
-        float stripHeight = rowCount * EngineSetting.HIERARCHY_TAB_ROW_HEIGHT_PIXELS
-                + (rowCount - 1) * EngineSetting.HIERARCHY_TAB_SPACING_PIXELS;
+        float stripHeight = StripLayoutUtility.resolveStripHeight(
+                rowCount,
+                EngineSetting.HIERARCHY_TAB_ROW_HEIGHT_PIXELS,
+                EngineSetting.HIERARCHY_TAB_SPACING_PIXELS);
         float barHeight = stripHeight + EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS;
 
         resizeEntry(menu, EngineSetting.HIERARCHY_ENTRY_TAB_BAR, new DimensionVector2Struct(

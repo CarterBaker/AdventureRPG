@@ -75,6 +75,7 @@ public class EntityRenderSystem extends SystemPackage {
     private SkinnedAppearanceStruct appearanceScratch;
     private SkinnedBoneMaskStruct noMask;
     private AppearanceIsolationStruct wholeIsolation;
+    private AppearanceIsolationStruct headlessIsolation;
     private Matrix4 anchorScratch;
     private Matrix4 equipmentScratch;
 
@@ -100,6 +101,10 @@ public class EntityRenderSystem extends SystemPackage {
         this.appearanceScratch = new SkinnedAppearanceStruct();
         this.noMask = new SkinnedBoneMaskStruct();
         this.wholeIsolation = new AppearanceIsolationStruct();
+        this.headlessIsolation = new AppearanceIsolationStruct();
+
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+            headlessIsolation.setFeature(featureSlot, true, true);
         this.anchorScratch = new Matrix4();
         this.equipmentScratch = new Matrix4();
 
@@ -151,6 +156,8 @@ public class EntityRenderSystem extends SystemPackage {
         RaceGenderStruct raceGender = entity.getRaceGender();
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
+        boolean headless = hideHead && entity.hasAppearance();
+
         composeModelMatrix(entity, viewerChunkCoordinate);
         refreshTextureUser(entity);
         resolveAppearance(raceGender, entity.getAppearanceHandle());
@@ -158,8 +165,8 @@ public class EntityRenderSystem extends SystemPackage {
                 raceGender,
                 entity.getAppearanceHandle(),
                 raceGender.getMaterial(),
-                hideHead && entity.hasAppearance() ? raceData.getAppearanceData().getHeadMask() : noMask,
-                wholeIsolation,
+                headless ? raceData.getAppearanceData().getHeadMask() : noMask,
+                headless ? headlessIsolation : wholeIsolation,
                 null,
                 skinningMatrices,
                 targetFbo,

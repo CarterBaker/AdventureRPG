@@ -224,6 +224,7 @@ public class CharacterCreatorBranch extends BranchPackage {
 
         session.setActiveTab(tab);
         session.setLookTabIndex(lookTabIndex);
+        playerManager.focusCharacterPreview(session.getWindow().getWindowID(), null);
 
         populateTabs(session);
         refreshOptions(session);

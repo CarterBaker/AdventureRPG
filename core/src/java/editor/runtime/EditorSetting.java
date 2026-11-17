@@ -1364,7 +1364,9 @@ public class EditorSetting {
     public static final float CHARACTER_RIG_IK_POLE_SCALE = 1000f;
 
     // Character Rig — spring chains: the settings a chain is simulated by, in the order their rows list them, each
-    // with its label, the step its row moves by, its largest value and what a new chain starts with
+    // with its label, the step its row moves by, its largest value and what a new chain starts with; a new chain
+    // starts near critically damped (damping close to twice the square root of its stiffness) with some drag, so
+    // hair has weight and settles after a move rather than swinging on
     public static final String[] CHARACTER_RIG_SPRING_FIELDS = { "stiffness", "damping", "gravity", "drag", "radius" };
     public static final String[] CHARACTER_RIG_SPRING_LABELS = { "Stiffness", "Damping", "Gravity", "Drag", "Radius" };
     public static final float[] CHARACTER_RIG_SPRING_STEPS = { 5f, 0.5f, 0.5f, 0.1f, 0.002f };
@@ -1373,7 +1375,7 @@ public class EditorSetting {
             EngineSetting.RIG_SPRING_GRAVITY_MAX, EngineSetting.RIG_SPRING_DRAG_MAX,
             EngineSetting.RIG_SPRING_RADIUS_MAX };
     public static final float[] CHARACTER_RIG_SPRING_DEFAULTS = {
-            80f, 6f, 9.8f, 0.8f, EngineSetting.RIG_SPRING_RADIUS_DEFAULT };
+            120f, 20f, 9.8f, 3f, EngineSetting.RIG_SPRING_RADIUS_DEFAULT };
     public static final String CHARACTER_RIG_SPRING_SUFFIX = "_spring";
 
     // Character Rig — colliders: a new one is named after its bone's stem with this suffix and its side, numbered
@@ -3352,6 +3354,7 @@ public class EditorSetting {
     // Tabs
     public static final float DIVIDER_HIT_TOLERANCE = 6f;
     public static final float DOCK_PANEL_MIN_SIZE = 96f;
+    public static final String ELEMENT_TAB_CANVAS = "tab_canvas";
     public static final String ELEMENT_TAB_OUTLINE = "tab_outline";
     public static final String ELEMENT_TAB_STRIP_ACCENT = "tab_strip_accent";
     public static final String ELEMENT_TAB_STRIP_CLOSE = "tab_strip_close";
@@ -3360,6 +3363,7 @@ public class EditorSetting {
     public static final String MENU_TAB_GHOST = "editor/TabFrame/TabGhost";
     public static final String MENU_TAB_SHELL = "editor/TabFrame/TabFrame";
     public static final String MENU_TAB_STRIP_ENTRY = "editor/TabFrame/tab_strip_entry";
+    public static final String MENU_TAB_STRIP_ROW = "editor/TabFrame/tab_strip_row";
     public static final float RATIO_DEFAULT = 0.5f;
     public static final float RATIO_MAX = 0.9f;
     public static final float RATIO_MIN = 0.1f;
@@ -3371,6 +3375,19 @@ public class EditorSetting {
     public static final float TAB_HEADER_ACTIVE_ALPHA = 0.24f;
     public static final float TAB_HEADER_HOVER_ALPHA = 0.10f;
     public static final float TAB_STRIP_ACTIVE_ALPHA = 0.32f;
+
+    // Tabs — the strip: each entry its preferred width while its row has room, shrunk to no narrower than its minimum,
+    // then wrapped onto another row of the header (StripLayoutUtility); the margins are the header's and the canvas's
+    // insets within the tab's chrome
+    public static final float TAB_STRIP_ENTRY_WIDTH_PIXELS = 168f;
+    public static final float TAB_STRIP_ENTRY_MIN_WIDTH_PIXELS = 84f;
+    public static final float TAB_STRIP_ROW_HEIGHT_PIXELS = 26f;
+    public static final float TAB_STRIP_SPACING_PIXELS = 2f;
+    public static final float TAB_STRIP_MARGIN_PIXELS = 12f;
+    public static final float TAB_HEADER_MARGIN_PIXELS = 4f;
+    public static final float TAB_HEADER_PADDING_PIXELS = 4f;
+    public static final float TAB_CANVAS_MARGIN_PIXELS = 8f;
+    public static final float TAB_CANVAS_GAP_PIXELS = 6f;
     public static final String TAB_TITLE_DEV = "Dev Mode";
     public static final String TAB_TITLE_PREVIEW = "Preview";
 }

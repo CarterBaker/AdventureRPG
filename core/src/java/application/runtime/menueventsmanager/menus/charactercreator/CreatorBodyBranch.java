@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.entity.EntityData;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.race.RaceHandle;
 import application.bootstrap.entitypipeline.racemanager.RaceManager;
@@ -44,6 +45,7 @@ public class CreatorBodyBranch extends BranchPackage {
     private CharacterCreatorBranch characterCreatorBranch;
     private GenderManager genderManager;
     private RaceManager raceManager;
+    private PlayerManager playerManager;
 
     // Scratch
     private ObjectArrayList<RaceHandle> playableRaces;
@@ -62,6 +64,7 @@ public class CreatorBodyBranch extends BranchPackage {
         this.characterCreatorBranch = get(CharacterCreatorBranch.class);
         this.genderManager = get(GenderManager.class);
         this.raceManager = get(RaceManager.class);
+        this.playerManager = get(PlayerManager.class);
     }
 
     // Populate \\
@@ -254,6 +257,23 @@ public class CreatorBodyBranch extends BranchPackage {
 
         applyFraction(slider, index, session.getPlayer(), Math.max(0f, Math.min(1f, fraction)));
         refreshSlider(track, slider, index, session.getPlayer());
+        playerManager.focusCharacterPreview(window.getWindowID(), resolveFocus(slider, index, session.getPlayer()));
+    }
+
+    // The bones a slider moves, which the preview closes in on while it is worked: a shape slider's own and those of
+    // the sliders it drives, the head for its proportions, none (the whole body) for the rest
+    private int[] resolveFocus(CreatorSlider slider, int index, EntityInstance player) {
+
+        if (!player.hasAppearance())
+            return null;
+
+        AppearanceData appearanceData = player.getRaceData().getAppearanceData();
+
+        return switch (slider) {
+            case SHAPE -> appearanceData.getShapeFocusBones(index);
+            case HEAD_WIDTH, HEAD_LENGTH, HEAD_DEPTH -> appearanceData.getHeadFocusBones();
+            default -> null;
+        };
     }
 
     private void refreshSlider(ElementInstance track, CreatorSlider slider, int index, EntityInstance player) {

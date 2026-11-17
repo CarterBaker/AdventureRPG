@@ -3,7 +3,10 @@ package editor.bootstrap.tabpipeline.tab;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.StripLayoutUtility;
 import application.bootstrap.menupipeline.util.ThemeColor;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
@@ -26,7 +29,11 @@ public class TabContext extends ContextPackage {
      * living in its canvas. Placement, content sync, reparenting, z-ordering
      * and the tab strip all go through here. The tab a stack shows is placed
      * on its leaf with a strip listing the whole stack, rebuilt only when the
-     * stack changes; every other tab in it is withdrawn with its content.
+     * stack changes or its width fits a different number of entries to a row;
+     * the entries shrink together as the tab narrows and then wrap onto more
+     * rows (StripLayoutUtility), the header growing to hold them and the
+     * canvas shrinking beneath it, so every entry stays readable. Every other
+     * tab in the stack is withdrawn with its content.
      * The chrome's header is tinted and its border drawn in the active
      * window's color while its content is the active window, and its header
      * tinted more faintly in the hovered window's while the pointer is over
@@ -47,6 +54,7 @@ public class TabContext extends ContextPackage {
     private MenuInstance chromeMenu;
     private ElementInstance headerElement;
     private ElementInstance outlineElement;
+    private ElementInstance canvasElement;
 
     // Highlight — the colors the chrome shows, null for its own
     private MenuColorStruct activeHeaderColor;
@@ -66,8 +74,12 @@ public class TabContext extends ContextPackage {
     // Strip — the stack it lists, and this tab alone for while it is out of every stack
     private ObjectArrayList<TabHandle> stripTabs;
     private ObjectArrayList<TabHandle> loneStrip;
+    private ObjectArrayList<ElementInstance> stripEntries;
     private MenuColorStruct activeStripColor;
     private MenuColorStruct activeStripAccentColor;
+    private float shownStripWidth;
+    private int shownPerRow;
+    private int shownRowCount;
 
     // Internal \\
 
@@ -77,6 +89,10 @@ public class TabContext extends ContextPackage {
         // Strip
         this.stripTabs = new ObjectArrayList<>();
         this.loneStrip = new ObjectArrayList<>(1);
+        this.stripEntries = new ObjectArrayList<>();
+        this.shownStripWidth = EngineSetting.INDEX_NOT_FOUND;
+        this.shownPerRow = EngineSetting.INDEX_NOT_FOUND;
+        this.shownRowCount = EngineSetting.INDEX_NOT_FOUND;
         this.activeStripColor = new MenuColorStruct(ThemeColor.ACCENT, EditorSetting.TAB_STRIP_ACTIVE_ALPHA);
         this.activeStripAccentColor = new MenuColorStruct(ThemeColor.ACCENT, EngineSetting.MENU_THEME_ALPHA_DEFAULT);
 
@@ -103,10 +119,16 @@ public class TabContext extends ContextPackage {
         chromeMenu = menuManager.openMenu(EditorSetting.MENU_TAB_SHELL, getWindow());
         headerElement = findChromeElement(EditorSetting.ELEMENT_TAB_TOOLBAR);
         outlineElement = findChromeElement(EditorSetting.ELEMENT_TAB_OUTLINE);
+        canvasElement = findChromeElement(EditorSetting.ELEMENT_TAB_CANVAS);
     }
 
     @Override
     protected void update() {
+
+        float stripWidth = resolveStripWidth();
+
+        if (stripWidth != shownStripWidth)
+            fitStrip(stripWidth);
 
         if (contentContext == null)
             return;
@@ -260,15 +282,98 @@ public class TabContext extends ContextPackage {
 
         stripTabs.clear();
         stripTabs.addAll(tabs);
-        menuManager.ejectAll(chromeMenu, EditorSetting.TAB_ENTRY_STRIP);
-
-        for (int i = 0; i < tabs.size(); i++)
-            injectStripEntry(tabs.get(i));
+        layoutStrip(resolveStripWidth());
     }
 
-    private void injectStripEntry(TabHandle tab) {
-        menuManager.inject(
-                chromeMenu, EditorSetting.TAB_ENTRY_STRIP, EditorSetting.MENU_TAB_STRIP_ENTRY,
+    // The strip refitted to a new width: listed again when a row holds a different number of entries, else every entry
+    // resized in place
+    private void fitStrip(float stripWidth) {
+
+        int perRow = resolvePerRow(stripWidth);
+
+        if (perRow != shownPerRow)
+            layoutStrip(stripWidth);
+        else
+            resizeStrip(stripWidth, perRow);
+    }
+
+    // Every tab in the stack listed again, as many to a row as fit, the header and canvas sized for the rows
+    private void layoutStrip(float stripWidth) {
+
+        int perRow = resolvePerRow(stripWidth);
+        ElementInstance row = null;
+
+        menuManager.ejectAll(chromeMenu, EditorSetting.TAB_ENTRY_STRIP);
+        stripEntries.clear();
+
+        for (int i = 0; i < stripTabs.size(); i++) {
+
+            if (i % perRow == 0)
+                row = menuManager.inject(chromeMenu, EditorSetting.TAB_ENTRY_STRIP, EditorSetting.MENU_TAB_STRIP_ROW);
+
+            stripEntries.add(injectStripEntry(row, stripTabs.get(i)));
+        }
+
+        this.shownPerRow = perRow;
+        resizeHeader(StripLayoutUtility.resolveRowCount(stripTabs.size(), perRow));
+        resizeStrip(stripWidth, perRow);
+    }
+
+    private void resizeStrip(float stripWidth, int perRow) {
+
+        float entryWidth = StripLayoutUtility.resolveWidth(
+                stripWidth,
+                perRow,
+                EditorSetting.TAB_STRIP_ENTRY_WIDTH_PIXELS,
+                EditorSetting.TAB_STRIP_SPACING_PIXELS);
+        DimensionVector2Struct size = new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(entryWidth),
+                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX));
+
+        for (int i = 0; i < stripEntries.size(); i++)
+            stripEntries.get(i).setSizeOverride(size);
+
+        this.shownStripWidth = stripWidth;
+    }
+
+    // The header grown to hold every row of the strip and the canvas shrunk beneath it, only when the rows change
+    private void resizeHeader(int rowCount) {
+
+        if (rowCount == shownRowCount)
+            return;
+
+        float headerHeight = StripLayoutUtility.resolveStripHeight(
+                rowCount,
+                EditorSetting.TAB_STRIP_ROW_HEIGHT_PIXELS,
+                EditorSetting.TAB_STRIP_SPACING_PIXELS) + EditorSetting.TAB_HEADER_PADDING_PIXELS;
+
+        headerElement.setSizeOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofPercentWithOffset(
+                        EngineSetting.PERCENT_MAX, -EditorSetting.TAB_HEADER_MARGIN_PIXELS),
+                DimensionValueStruct.ofAbsolute(headerHeight)));
+        canvasElement.setSizeOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofPercentWithOffset(
+                        EngineSetting.PERCENT_MAX, -EditorSetting.TAB_CANVAS_MARGIN_PIXELS),
+                DimensionValueStruct.ofPercentWithOffset(
+                        EngineSetting.PERCENT_MAX, -(headerHeight + EditorSetting.TAB_CANVAS_GAP_PIXELS))));
+        this.shownRowCount = rowCount;
+    }
+
+    private int resolvePerRow(float stripWidth) {
+        return StripLayoutUtility.resolvePerRow(
+                stripWidth,
+                stripTabs.size(),
+                EditorSetting.TAB_STRIP_ENTRY_MIN_WIDTH_PIXELS,
+                EditorSetting.TAB_STRIP_SPACING_PIXELS);
+    }
+
+    private float resolveStripWidth() {
+        return getWindow().getWidth() - EditorSetting.TAB_STRIP_MARGIN_PIXELS;
+    }
+
+    private ElementInstance injectStripEntry(ElementInstance row, TabHandle tab) {
+        return menuManager.inject(
+                row, EditorSetting.MENU_TAB_STRIP_ENTRY,
                 entry -> {
                     entry.setOnDragArgOverride(tab.getTabTitle());
                     entry.findChildById(EditorSetting.ELEMENT_TAB_STRIP_LABEL).setFontText(tab.getBaseTitle());

@@ -20,7 +20,9 @@ public class ToolBranch extends BranchPackage {
      * tool keys. Tools and their options work on the canvas the tools
      * target, and an action runs on the target's window; an option is
      * stepped by its buttons, set by its slider at the share of its range
-     * under the pointer, or typed into its box. The brush chosen is the tip
+     * under the pointer, or typed into its box; a switch flips with a click,
+     * and a choice opens its drop-down, whose rows carry their choice's name
+     * and pick it. The brush chosen is the tip
      * every canvas strokes with, and choosing one shows it in the Info Panel.
      * Tool rows carry their tool's name, action rows their action's key,
      * option buttons, sliders and boxes their option's name and brush rows
@@ -68,6 +70,16 @@ public class ToolBranch extends BranchPackage {
     // A named option turned over to its next name, the last back to the first
     public void cycleOption(String optionName) {
         toolManager.cycleOption(ArpgUtility.toEnum(optionName, ToolOption.class));
+    }
+
+    // A choice option's drop-down opened under its row, or closed again
+    public void toggleChoice(String optionName) {
+        toolManager.toggleChoice(ArpgUtility.toEnum(optionName, ToolOption.class));
+    }
+
+    // The open drop-down's option set to the choice clicked
+    public void chooseOption(String choiceName) {
+        toolManager.choose(choiceName);
     }
 
     // The option set to the share of its range under the pointer, on the nearest step
