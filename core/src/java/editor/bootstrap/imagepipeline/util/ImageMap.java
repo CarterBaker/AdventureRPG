@@ -13,78 +13,86 @@ public enum ImageMap {
      * emissive, opacity and the tint mask a character's skin takes. Each
      * names how it is worked out of the image and the settings it takes,
      * its own copy of each, so altering a map's settings alters only it,
-     * and the neutral value it holds where nothing marks it.
+     * the suffix its exported PNG takes, and the neutral value it holds
+     * where nothing marks it.
      */
 
-    ALBEDO("Albedo", 0x00000000, null),
+    ALBEDO("Albedo", "a", 0x00000000, null),
     NORMAL(
-            "Normal (OpenGL)", 0x8080FFFF, MapGenerateUtility::generateNormal,
+            "Normal (OpenGL)", "n", 0x8080FFFF, MapGenerateUtility::generateNormal,
             MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.HEIGHT_SOFTNESS, MapGenerateOption.HEIGHT_CONTRAST,
             MapGenerateOption.HEIGHT_INVERT, MapGenerateOption.NORMAL_STRENGTH),
     NORMAL_DIRECTX(
-            "Normal (DirectX)", 0x8080FFFF, MapGenerateUtility::generateNormalDirectX,
+            "Normal (DirectX)", "ndx", 0x8080FFFF, MapGenerateUtility::generateNormalDirectX,
             MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.HEIGHT_SOFTNESS, MapGenerateOption.HEIGHT_CONTRAST,
             MapGenerateOption.HEIGHT_INVERT, MapGenerateOption.NORMAL_STRENGTH),
     HEIGHT(
-            "Height", 0x808080FF, MapGenerateUtility::generateHeight,
+            "Height", "h", 0x808080FF, MapGenerateUtility::generateHeight,
             MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.HEIGHT_SOFTNESS, MapGenerateOption.HEIGHT_CONTRAST,
             MapGenerateOption.HEIGHT_INVERT),
     DISPLACEMENT(
-            "Displacement", 0x808080FF, MapGenerateUtility::generateDisplacement,
+            "Displacement", "disp", 0x808080FF, MapGenerateUtility::generateDisplacement,
             MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.HEIGHT_SOFTNESS, MapGenerateOption.HEIGHT_CONTRAST,
             MapGenerateOption.HEIGHT_INVERT, MapGenerateOption.MID_LEVEL),
     BUMP(
-            "Bump", 0x808080FF, MapGenerateUtility::generateBump,
+            "Bump", "bmp", 0x808080FF, MapGenerateUtility::generateBump,
             MapGenerateOption.BUMP_DETAIL, MapGenerateOption.HEIGHT_CONTRAST, MapGenerateOption.HEIGHT_INVERT),
     AMBIENT_OCCLUSION(
-            "Ambient Occlusion", 0xFFFFFFFF, MapGenerateUtility::generateOcclusion,
+            "Ambient Occlusion", "ao", 0xFFFFFFFF, MapGenerateUtility::generateOcclusion,
             MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.HEIGHT_SOFTNESS, MapGenerateOption.HEIGHT_CONTRAST,
             MapGenerateOption.HEIGHT_INVERT, MapGenerateOption.OCCLUSION_STRENGTH,
             MapGenerateOption.OCCLUSION_RADIUS),
     CAVITY(
-            "Cavity", 0xFFFFFFFF, MapGenerateUtility::generateCavity,
+            "Cavity", "cav", 0xFFFFFFFF, MapGenerateUtility::generateCavity,
             MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.HEIGHT_CONTRAST, MapGenerateOption.HEIGHT_INVERT,
             MapGenerateOption.OCCLUSION_STRENGTH, MapGenerateOption.CAVITY_RADIUS),
     CURVATURE(
-            "Curvature", 0x808080FF, MapGenerateUtility::generateCurvature,
+            "Curvature", "curv", 0x808080FF, MapGenerateUtility::generateCurvature,
             MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.HEIGHT_SOFTNESS, MapGenerateOption.HEIGHT_CONTRAST,
             MapGenerateOption.HEIGHT_INVERT, MapGenerateOption.CURVATURE_STRENGTH),
     THICKNESS(
-            "Thickness", 0x000000FF, MapGenerateUtility::generateThickness,
+            "Thickness", "thick", 0x000000FF, MapGenerateUtility::generateThickness,
             MapGenerateOption.HEIGHT_DETAIL, MapGenerateOption.HEIGHT_CONTRAST, MapGenerateOption.HEIGHT_INVERT,
             MapGenerateOption.THICKNESS_RADIUS),
     ROUGHNESS(
-            "Roughness", 0x808080FF, MapGenerateUtility::generateRoughness,
+            "Roughness", "rough", 0x808080FF, MapGenerateUtility::generateRoughness,
             MapGenerateOption.ROUGHNESS_BASE, MapGenerateOption.ROUGHNESS_VARIATION),
     GLOSSINESS(
-            "Glossiness", 0x808080FF, MapGenerateUtility::generateGlossiness,
+            "Glossiness", "gloss", 0x808080FF, MapGenerateUtility::generateGlossiness,
             MapGenerateOption.ROUGHNESS_BASE, MapGenerateOption.ROUGHNESS_VARIATION),
-    METALLIC("Metallic", 0x000000FF, MapGenerateUtility::generateMetallic, MapGenerateOption.METALLIC),
+    METALLIC("Metallic", "m", 0x000000FF, MapGenerateUtility::generateMetallic, MapGenerateOption.METALLIC),
     SPECULAR(
-            "Specular", 0x0A0A0AFF, MapGenerateUtility::generateSpecular,
+            "Specular", "s", 0x0A0A0AFF, MapGenerateUtility::generateSpecular,
             MapGenerateOption.SPECULAR_LEVEL, MapGenerateOption.METALLIC),
-    DIFFUSE("Diffuse", 0x808080FF, MapGenerateUtility::generateDiffuse, MapGenerateOption.METALLIC),
+    DIFFUSE("Diffuse", "dif", 0x808080FF, MapGenerateUtility::generateDiffuse, MapGenerateOption.METALLIC),
     EMISSIVE(
-            "Emissive", 0x000000FF, MapGenerateUtility::generateEmissive,
+            "Emissive", "e", 0x000000FF, MapGenerateUtility::generateEmissive,
             MapGenerateOption.GLOW_THRESHOLD, MapGenerateOption.GLOW_SOFTNESS, MapGenerateOption.GLOW_STRENGTH),
     OPACITY(
-            "Opacity", 0xFFFFFFFF, MapGenerateUtility::generateOpacity,
+            "Opacity", "opacity", 0xFFFFFFFF, MapGenerateUtility::generateOpacity,
             MapGenerateOption.OPACITY_FROM_BRIGHTNESS, MapGenerateOption.OPACITY_CUTOFF),
-    TINT("Tint", 0x000000FF, MapGenerateUtility::generateTint, MapGenerateOption.TINT_AMOUNT);
+    TINT("Tint", "tint", 0x000000FF, MapGenerateUtility::generateTint, MapGenerateOption.TINT_AMOUNT);
 
     // Values
     public static final ImageMap[] VALUES = values();
 
     // Internal
     private final String label;
+    private final String exportSuffix;
     private final int neutralColor;
     private final MapGenerator generator;
     private final MapGenerateOption[] options;
 
     // Constructor \\
 
-    ImageMap(String label, int neutralColor, MapGenerator generator, MapGenerateOption... options) {
+    ImageMap(
+            String label,
+            String exportSuffix,
+            int neutralColor,
+            MapGenerator generator,
+            MapGenerateOption... options) {
         this.label = label;
+        this.exportSuffix = exportSuffix;
         this.neutralColor = neutralColor;
         this.generator = generator;
         this.options = options;
@@ -94,6 +102,12 @@ public enum ImageMap {
 
     public String getLabel() {
         return label;
+    }
+
+    // The suffix an exported map's PNG takes after the image's name, the alias the engine's textures know it by where
+    // it takes one (a, n, h, ao, rough, m, s, e, tint) and a name no alias holds otherwise, so Import never mistakes it
+    public String getExportSuffix() {
+        return exportSuffix;
     }
 
     // What the map holds where nothing marks it, RGBA8888, the value Erase lays on it

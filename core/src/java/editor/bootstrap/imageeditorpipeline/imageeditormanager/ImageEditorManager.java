@@ -58,6 +58,7 @@ public class ImageEditorManager extends ManagerPackage {
     private ImageEditorLayerBranch imageEditorLayerBranch;
     private ImageEditorMapBranch imageEditorMapBranch;
     private ImageEditorRowBranch imageEditorRowBranch;
+    private ImageExchangeBranch imageExchangeBranch;
 
     // Images — open by name, and the one worked
     private Object2ObjectOpenHashMap<String, ImageProjectInstance> imageName2Project;
@@ -68,6 +69,9 @@ public class ImageEditorManager extends ManagerPackage {
     private ImageStroke[] tool2Stroke;
     private ImageDocumentInstance strokeDocument;
     private int strokeRevision;
+
+    // Import — the pack the last import went to
+    private String importPack;
 
     // State
     private String statusMessage;
@@ -87,6 +91,7 @@ public class ImageEditorManager extends ManagerPackage {
         this.imageEditorLayerBranch = create(ImageEditorLayerBranch.class);
         this.imageEditorMapBranch = create(ImageEditorMapBranch.class);
         this.imageEditorRowBranch = create(ImageEditorRowBranch.class);
+        this.imageExchangeBranch = create(ImageExchangeBranch.class);
 
         // Images
         this.imageName2Project = new Object2ObjectOpenHashMap<>();
@@ -99,6 +104,9 @@ public class ImageEditorManager extends ManagerPackage {
         this.tool2Stroke[EditorTool.SMOOTH.ordinal()] = ImageStroke.SMOOTH;
         this.tool2Stroke[EditorTool.SWIRL.ordinal()] = ImageStroke.SWIRL;
         this.tool2Stroke[EditorTool.SCATTER.ordinal()] = ImageStroke.SCATTER;
+
+        // Import
+        this.importPack = EditorSetting.IMAGE_IMPORT_DEFAULT_PACK;
 
         // State
         this.statusMessage = EditorSetting.IMAGE_EDITOR_MESSAGE_NONE;
@@ -150,6 +158,70 @@ public class ImageEditorManager extends ManagerPackage {
         }
 
         openImage(imageName);
+    }
+
+    // Every map of the image worked written as a PNG in the workspace's Exports folder
+    public void exportImage() {
+
+        if (activeProject == null)
+            return;
+
+        endStroke();
+
+        int written = imageExchangeBranch.export(activeProject);
+
+        setStatusMessage(written == EngineSetting.INDEX_NOT_FOUND
+                ? EditorSetting.IMAGE_EXPORT_MESSAGE_NOT_WRITTEN + activeProject.getImageName()
+                : EditorSetting.IMAGE_EXPORT_MESSAGE_WRITTEN + written + EditorSetting.IMAGE_EXPORT_MESSAGE_TO
+                        + imageExchangeBranch.getExportFolder(activeProject.getImageName()).getPath());
+    }
+
+    // Whether the image worked has exported maps to import; the status says so when it has none
+    public boolean canImport() {
+
+        if (activeProject == null)
+            return false;
+
+        if (imageExchangeBranch.hasExports(activeProject.getImageName()))
+            return true;
+
+        setStatusMessage(EditorSetting.IMAGE_IMPORT_MESSAGE_EXPORT_FIRST);
+        return false;
+    }
+
+    public boolean isImportPack(String packName) {
+        return imageExchangeBranch.isPack(packName);
+    }
+
+    public boolean isImportTileName(String tileName) {
+        return imageExchangeBranch.isTileName(tileName);
+    }
+
+    // The image worked's own name without its folder, the texture name an import offers first
+    public String getActiveImageStem() {
+        return activeProject != null ? FileUtility.getFileName(activeProject.getImageName()) : "";
+    }
+
+    // The pack the last import went to, the one the next is offered
+    public String getImportPack() {
+        return importPack;
+    }
+
+    // The image worked's exported maps imported into the game as a tile of the pack, baked, and cleared from the
+    // workspace
+    public void importImage(String packName, String tileName) {
+
+        if (activeProject == null || !isImportPack(packName) || !isImportTileName(tileName))
+            return;
+
+        this.importPack = packName;
+
+        String refusal = imageExchangeBranch.importImage(activeProject.getImageName(), packName, tileName);
+
+        setStatusMessage(refusal != null
+                ? refusal
+                : EditorSetting.IMAGE_IMPORT_MESSAGE_IMPORTED + packName + EditorSetting.INFO_FOLDER_SEPARATOR
+                        + tileName);
     }
 
     // The workspace folder every image is kept in, where the open dialog starts

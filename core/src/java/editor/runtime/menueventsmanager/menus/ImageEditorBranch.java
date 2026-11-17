@@ -54,6 +54,30 @@ public class ImageEditorBranch extends BranchPackage {
             imageEditorManager.openImageFile(file);
     }
 
+    // Every map of the image written as a PNG in the workspace's Exports folder
+    public void exportImage() {
+        imageEditorManager.exportImage();
+    }
+
+    // The image's exported maps brought into the game: the pack asked for, then the texture's name, then baked
+    public void importImage(WindowInstance window) {
+
+        if (!imageEditorManager.canImport())
+            return;
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.IMAGE_IMPORT_DIALOG_PACK,
+                imageEditorManager.getImportPack(),
+                imageEditorManager::isImportPack,
+                packName -> nameDialogBranch.openText(
+                        window,
+                        EditorSetting.IMAGE_IMPORT_DIALOG_TILE,
+                        imageEditorManager.getActiveImageStem(),
+                        imageEditorManager::isImportTileName,
+                        tileName -> imageEditorManager.importImage(packName, tileName)));
+    }
+
     public void copyImage(WindowInstance window) {
 
         if (!imageEditorManager.hasActiveImage())

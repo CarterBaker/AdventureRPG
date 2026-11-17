@@ -58,6 +58,22 @@ bytes) and `maps` (keyed by the map's enum name: `settings` by option name, and 
 `ArpgUtility.tryWriteObject`, read by `tryLoadObject`; a layer of the wrong size refuses the read. Keys are the
 `IMAGE_FILE_KEY_*` constants.
 
+## Export and Import
+
+The workspace-to-game flow a texturing tool and an engine share (`ImageExchangeBranch`, File menu Export and Import):
+
+- **Export** writes every map the image holds as one PNG in the workspace's `Exports/<Image>/` folder: the albedo (the
+  layers flattened) and each map once generated, named `<Image>_<suffix>.png` by `ImageMap.getExportSuffix`. A map the
+  game's textures take uses that texture alias's own token (`a`, `n`, `h`, `ao`, `rough`, `m`, `s`, `e`, `tint`); every
+  other map a name no alias holds (`ndx`, `disp`, `bmp`, `cav`, `curv`, `thick`, `gloss`, `dif`, `opacity`), so Import
+  never mistakes one for another. A new export clears the folder first.
+- **Import** asks for the texture pack (a folder under `assets/textures/`, the last one used offered) and the
+  texture's name (the image's, no underscore), removes the tile's old images from the pack, copies the exported maps an
+  alias takes as `<Tile>_<suffix>.png`, bakes the tile's streamed files (`TextureBakeUtility`, as the Paint tab does),
+  plays the new bake at once when the tile is already loaded (a new tile loads with the next start), and clears the
+  exports from the workspace. The image's own `.arpg` stays to be worked and imported again. Imported textures are the
+  owner's work: never catalogue them.
+
 ## Traps
 
 - **Strokes on a layer are transparent strokes** (`ImageBrushStruct.setTransparent`): paint lays over by alpha, Erase
@@ -67,4 +83,4 @@ bytes) and `maps` (keyed by the map's enum name: `settings` by option name, and 
 - **The paint colour is `CharacterEditorManager`'s**; its colour keys work with no character open.
 - **Not done yet, only when the owner asks:** opening a character's texture as an Image Editor document (the model is
   shared; the documents are not yet), a brush outline over the image, layer groups, blend modes, moving layers up and
-  down, selections, and exporting an image or its maps as PNG files.
+  down and selections.

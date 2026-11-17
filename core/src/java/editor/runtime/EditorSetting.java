@@ -222,7 +222,9 @@ public class EditorSetting {
             .with(FileMenuAction.REVERT, "revertImage")
             .with(FileMenuAction.DELETE, "deleteImage")
             .with(FileMenuAction.UNDO, "undo")
-            .with(FileMenuAction.REDO, "redo");
+            .with(FileMenuAction.REDO, "redo")
+            .with(FileMenuAction.IMPORT, "importImage")
+            .with(FileMenuAction.EXPORT, "exportImage");
     public static final FileMenuTableStruct FILE_MENU_ITEM = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.ItemEditorBranch")
             .with(FileMenuAction.NEW, "newItem")
@@ -2005,6 +2007,24 @@ public class EditorSetting {
     // Image Editor — its folder in the workspace, the keys of its files, the names of its documents in ImageManager,
     // its layers, sizes and backgrounds
     public static final String IMAGE_EDITOR_USER_DIRECTORY = "Images";
+
+    // Image Export and Import — the workspace folder exports are written to, each PNG named for its image and map's
+    // suffix after the separator a texture's alias follows, the pack first offered, the dialogs and what they report
+    public static final String IMAGE_EXPORT_DIRECTORY = "Exports";
+    public static final String IMAGE_EXPORT_EXTENSION = ".png";
+    public static final String IMAGE_IMPORT_ALIAS_SEPARATOR = "_";
+    public static final String IMAGE_IMPORT_DEFAULT_PACK = "surface/standard";
+    public static final String IMAGE_IMPORT_DIALOG_PACK = "Import: texture pack (a folder under textures)";
+    public static final String IMAGE_IMPORT_DIALOG_TILE = "Import: texture name";
+    public static final String IMAGE_EXPORT_MESSAGE_WRITTEN = "Exported maps: ";
+    public static final String IMAGE_EXPORT_MESSAGE_TO = " to ";
+    public static final String IMAGE_EXPORT_MESSAGE_NOT_WRITTEN = "A map could not be written for ";
+    public static final String IMAGE_IMPORT_MESSAGE_EXPORT_FIRST =
+            "Export the image first; Import takes its exported maps";
+    public static final String IMAGE_IMPORT_MESSAGE_NOT_COPIED = "The maps could not be copied into the textures: ";
+    public static final String IMAGE_IMPORT_MESSAGE_NO_MAPS =
+            "None of the exported maps is one the game's textures take";
+    public static final String IMAGE_IMPORT_MESSAGE_IMPORTED = "Imported and baked the texture ";
     public static final String IMAGE_FILE_KEY_WIDTH = "width";
     public static final String IMAGE_FILE_KEY_HEIGHT = "height";
     public static final String IMAGE_FILE_KEY_ACTIVE_LAYER = "active_layer";
