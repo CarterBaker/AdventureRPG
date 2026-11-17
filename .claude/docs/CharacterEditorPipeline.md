@@ -287,8 +287,10 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   splits into nine on a lattice of thirds and each face beside it takes the transition template its refined edges call
   for (`EditorSetting.CHARACTER_TOPOLOGY_TEMPLATE_*`: one edge, two at a corner, two opposite); a face left with three
   or four refined edges joins the refined set until none is, so the mesh stays all quads with no hanging vertex.
-  Ctrl reduces by quad-mesh simplification (Tarini et al.): the smallest covered faces collapse across their shorter
-  diagonal, refused on an open edge or UV seam, where the rings would pinch (the link condition) or a face about them
+  Ctrl reduces by quad-mesh simplification (Tarini et al.): the smallest covered faces collapse across the diagonal
+  that leaves the merged vertex and the two beside it nearest four faces each (the shorter on a tie), walking the faces
+  about each vertex through an adjacency chained once a frame (never a scan of the mesh) with the vertices locked on
+  open edges and seams found once a stroke until a refine adds more, refused on an open edge or UV seam, where the rings would pinch (the link condition) or a face about them
   would fold or shrink (`CHARACTER_TOPOLOGY_FLIP_COSINE`, `AREA_SHARE_MIN`), and a vertex left between two faces that
   share both its edges dissolves with them. New vertices blend position, weights (`CharacterWeightBranch.blend`),
   masks and shape-key deltas from the corners they lie between; faces keep their texture, zone and interpolated UVs;

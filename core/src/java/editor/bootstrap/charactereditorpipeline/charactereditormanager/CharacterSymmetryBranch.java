@@ -947,7 +947,8 @@ class CharacterSymmetryBranch extends BranchPackage {
 
         for (int p = 0; p < pairUVs.size(); p += 4)
             fitV.add(((pairUVs.getFloat(p) + pairUVs.getFloat(p + 2)) * axisNU
-                    + (pairUVs.getFloat(p + 1) + pairUVs.getFloat(p + 3)) * axisNV) * EditorSetting.CHARACTER_SYMMETRY_HALF);
+                    + (pairUVs.getFloat(p + 1) + pairUVs.getFloat(p + 3)) * axisNV)
+                    * EditorSetting.CHARACTER_SYMMETRY_HALF);
 
         this.axisOffset = median(fitV);
         this.axisGlide = 0f;

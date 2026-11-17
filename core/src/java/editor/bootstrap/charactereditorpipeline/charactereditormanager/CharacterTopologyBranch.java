@@ -34,7 +34,8 @@ class CharacterTopologyBranch extends BranchPackage {
      * face left with three or four refined edges joining the refined set
      * until none is, so no edge is left with a hanging vertex. Reducing
      * follows quad-mesh simplification (Tarini et al.): the smallest covered
-     * faces collapse across their shorter diagonal into its middle, refused
+     * faces collapse across the diagonal that leaves the vertices about them
+     * nearest four faces each (the shorter on a tie) into its middle, refused
      * where the collapse would pinch the surface, fold a face, or cross an
      * open edge or a UV seam, and a vertex left between just two faces that
      * share both its edges is dissolved with them. New vertices take their
@@ -43,7 +44,10 @@ class CharacterTopologyBranch extends BranchPackage {
      * corners, its texture and its zone; a refined seam stays a seam. With
      * mirror on, the brush covers each vertex's twin as well. Faces made by a
      * stroke are not refined again by it, and the vertices a collapse leaves
-     * unused go when the stroke ends.
+     * unused go when the stroke ends. Reducing walks the faces about each
+     * vertex through an adjacency made once a frame, never the whole mesh,
+     * and the vertices locked on open edges and seams are found once a stroke
+     * until a refine adds more.
      */
 
     // Internal
@@ -89,7 +93,14 @@ class CharacterTopologyBranch extends BranchPackage {
     private IntArrayList ringB;
     private IntOpenHashSet linkVertices;
     private BooleanArrayList lockedVertices;
+    private boolean lockedStale;
     private Long2IntOpenHashMap edgeCounts;
+
+    // Adjacency — the faces about each vertex, chained an entry per corner; a collapse that moves a corner adds an
+    // entry, and an entry whose face is gone or no longer stands on its vertex is passed over
+    private IntArrayList vertex2FirstEntry;
+    private IntArrayList entryFaces;
+    private IntArrayList entryNext;
 
     // Scratch
     private Vector3 merged;
@@ -138,6 +149,11 @@ class CharacterTopologyBranch extends BranchPackage {
         this.lockedVertices = new BooleanArrayList();
         this.edgeCounts = new Long2IntOpenHashMap();
 
+        // Adjacency
+        this.vertex2FirstEntry = new IntArrayList();
+        this.entryFaces = new IntArrayList();
+        this.entryNext = new IntArrayList();
+
         // Scratch
         this.merged = new Vector3();
         this.before = new Vector3();
@@ -174,6 +190,7 @@ class CharacterTopologyBranch extends BranchPackage {
         this.strokeDocument = document;
         this.pending = false;
         this.changed = false;
+        this.lockedStale = true;
 
         characterHistoryBranch.begin(document);
         coverage.clear();
@@ -324,6 +341,7 @@ class CharacterTopologyBranch extends BranchPackage {
             if (faceMasks.getInt(f) != 0)
                 layFace(mesh, f);
 
+        this.lockedStale = true;
         return true;
     }
 
@@ -660,6 +678,7 @@ class CharacterTopologyBranch extends BranchPackage {
         faceFlags.clear();
         faceFlags.size(mesh.getFaceCount());
         resolveLockedVertices(mesh);
+        buildAdjacency(mesh);
         resolveAreas(mesh);
         IntArrays.quickSort(candidates.elements(), 0, candidates.size(), areaOrder);
 
@@ -670,7 +689,7 @@ class CharacterTopologyBranch extends BranchPackage {
             if (faceFlags.getBoolean(faceIndex))
                 continue;
 
-            int diagonal = resolveShorterDiagonal(mesh, faceIndex);
+            int diagonal = resolveBestDiagonal(mesh, faceIndex);
 
             if (!collapseDiagonal(mesh, faceIndex, diagonal)) {
 
@@ -693,9 +712,14 @@ class CharacterTopologyBranch extends BranchPackage {
         return true;
     }
 
-    // Vertices on an open edge or a UV seam stay where they are, so the outline and the islands keep their shape
+    // Vertices on an open edge or a UV seam stay where they are, so the outline and the islands keep their shape;
+    // found again only once a refine has added vertices, since a collapse never opens an edge or cuts a seam
     private void resolveLockedVertices(RiggedMeshStruct mesh) {
 
+        if (!lockedStale && lockedVertices.size() == mesh.getVertexCount())
+            return;
+
+        this.lockedStale = false;
         lockedVertices.clear();
         lockedVertices.size(mesh.getVertexCount());
         edgeCounts.clear();
@@ -735,12 +759,46 @@ class CharacterTopologyBranch extends BranchPackage {
         }
     }
 
-    // 0 for the diagonal from corner 0 to corner 2, 1 for the one from corner 1 to corner 3
-    private int resolveShorterDiagonal(RiggedMeshStruct mesh, int faceIndex) {
+    // 0 for the diagonal from corner 0 to corner 2, 1 for the one from corner 1 to corner 3: the one whose collapse
+    // leaves the merged vertex and the two beside it nearest four faces each, the shorter when both do as well
+    private int resolveBestDiagonal(RiggedMeshStruct mesh, int faceIndex) {
+
+        int first = resolveValenceCost(mesh, faceIndex, 0);
+        int second = resolveValenceCost(mesh, faceIndex, 1);
+
+        if (first != second)
+            return first < second ? 0 : 1;
+
         return resolveDistanceSquared(mesh, mesh.getFaceVertex(faceIndex, 0), mesh.getFaceVertex(faceIndex, 2))
                 <= resolveDistanceSquared(mesh, mesh.getFaceVertex(faceIndex, 1), mesh.getFaceVertex(faceIndex, 3))
                 ? 0
                 : 1;
+    }
+
+    // How far a collapse leaves its vertices from four faces each: the merged vertex takes both rings but the face,
+    // each side vertex loses it, and a side left between two faces is dissolved, so it counts as regular
+    private int resolveValenceCost(RiggedMeshStruct mesh, int faceIndex, int diagonal) {
+
+        int regular = EngineSetting.QUAD_VERTEX_COUNT;
+        int merged = countFaces(mesh, mesh.getFaceVertex(faceIndex, diagonal))
+                + countFaces(mesh, mesh.getFaceVertex(faceIndex, diagonal + 2)) - 2;
+
+        return Math.abs(merged - regular)
+                + resolveSideCost(countFaces(mesh, mesh.getFaceVertex(faceIndex, diagonal + 1)) - 1)
+                + resolveSideCost(countFaces(mesh, mesh.getFaceVertex(faceIndex, (diagonal + 3)
+                        % EngineSetting.QUAD_VERTEX_COUNT)) - 1);
+    }
+
+    private int resolveSideCost(int faces) {
+        return faces == EditorSetting.CHARACTER_TOPOLOGY_DOUBLET_FACES
+                ? 0
+                : Math.abs(faces - EngineSetting.QUAD_VERTEX_COUNT);
+    }
+
+    private int countFaces(RiggedMeshStruct mesh, int vertexIndex) {
+
+        collectRing(mesh, vertexIndex, EngineSetting.INDEX_NOT_FOUND, ringA);
+        return ringA.size();
     }
 
     private float resolveDistanceSquared(RiggedMeshStruct mesh, int a, int b) {
@@ -763,15 +821,14 @@ class CharacterTopologyBranch extends BranchPackage {
                 || mesh.usesVertex(faceIndex, twinKeep) || mesh.usesVertex(faceIndex, twinDrop))
             return;
 
-        for (int f = 0; f < mesh.getFaceCount(); f++) {
+        collectRing(mesh, twinKeep, EngineSetting.INDEX_NOT_FOUND, ringA);
 
-            if (faceFlags.getBoolean(f))
-                continue;
+        for (int i = 0; i < ringA.size(); i++) {
 
+            int f = ringA.getInt(i);
             int corner = findCorner(mesh, f, twinKeep);
 
-            if (corner == EngineSetting.INDEX_NOT_FOUND
-                    || mesh.getFaceVertex(f, (corner + 2) % EngineSetting.QUAD_VERTEX_COUNT) != twinDrop)
+            if (mesh.getFaceVertex(f, (corner + 2) % EngineSetting.QUAD_VERTEX_COUNT) != twinDrop)
                 continue;
 
             collapseDiagonal(mesh, f, corner);
@@ -820,8 +877,10 @@ class CharacterTopologyBranch extends BranchPackage {
         blendShares.add(0.5f);
         blendVertex(mesh, keep);
 
-        for (int i = 0; i < ringB.size(); i++)
+        for (int i = 0; i < ringB.size(); i++) {
             replaceCorner(mesh, ringB.getInt(i), drop, keep);
+            addEntry(keep, ringB.getInt(i));
+        }
 
         faceFlags.set(faceIndex, true);
         dissolveDoublet(mesh, sideA);
@@ -830,14 +889,45 @@ class CharacterTopologyBranch extends BranchPackage {
         return true;
     }
 
-    // Every live face but one that stands on a vertex
+    // Every live face but one that stands on a vertex, in face order
     private void collectRing(RiggedMeshStruct mesh, int vertexIndex, int skippedFace, IntArrayList ring) {
 
         ring.clear();
 
-        for (int f = 0; f < mesh.getFaceCount(); f++)
-            if (f != skippedFace && !faceFlags.getBoolean(f) && mesh.usesVertex(f, vertexIndex))
+        for (int e = vertex2FirstEntry.getInt(vertexIndex);
+                e != EngineSetting.INDEX_NOT_FOUND;
+                e = entryNext.getInt(e)) {
+
+            int f = entryFaces.getInt(e);
+
+            if (f != skippedFace && !faceFlags.getBoolean(f) && mesh.usesVertex(f, vertexIndex) && !ring.contains(f))
                 ring.add(f);
+        }
+
+        IntArrays.quickSort(ring.elements(), 0, ring.size());
+    }
+
+    // The faces about every vertex, chained once for the frame's collapses
+    private void buildAdjacency(RiggedMeshStruct mesh) {
+
+        vertex2FirstEntry.clear();
+        vertex2FirstEntry.size(mesh.getVertexCount());
+        entryFaces.clear();
+        entryNext.clear();
+
+        for (int v = 0; v < mesh.getVertexCount(); v++)
+            vertex2FirstEntry.set(v, EngineSetting.INDEX_NOT_FOUND);
+
+        for (int f = 0; f < mesh.getFaceCount(); f++)
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                addEntry(mesh.getFaceVertex(f, c), f);
+    }
+
+    private void addEntry(int vertexIndex, int faceIndex) {
+
+        entryNext.add(vertex2FirstEntry.getInt(vertexIndex));
+        entryFaces.add(faceIndex);
+        vertex2FirstEntry.set(vertexIndex, entryFaces.size() - 1);
     }
 
     // The two vertices' rings may meet only at the face's other two corners and never share another face, or the
@@ -1022,6 +1112,7 @@ class CharacterTopologyBranch extends BranchPackage {
         mesh.setFaceVertex(first, 1, far);
         mesh.setFaceVertex(first, 2, previous);
         mesh.setFaceVertex(first, 3, oppositeVertex);
+        addEntry(oppositeVertex, first);
 
         for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT - 1; c++)
             mesh.setFaceUV(first, c, cornerUVs[c * 2], cornerUVs[c * 2 + 1]);

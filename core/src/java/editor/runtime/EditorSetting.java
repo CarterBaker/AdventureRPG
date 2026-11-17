@@ -1256,6 +1256,7 @@ public class EditorSetting {
     public static final int CHARACTER_TOPOLOGY_MASK_STRIP = 0b0101;
     public static final float CHARACTER_TOPOLOGY_REDUCE_SHARE = 0.25f;
     public static final int CHARACTER_TOPOLOGY_REDUCE_MAX = 16;
+    public static final int CHARACTER_TOPOLOGY_DOUBLET_FACES = 2;
     public static final float CHARACTER_TOPOLOGY_FLIP_COSINE = 0.2f;
     public static final float CHARACTER_TOPOLOGY_AREA_SHARE_MIN = 0.1f;
     public static final String CHARACTER_EDITOR_MESSAGE_TOPOLOGY_SHAPE =
@@ -1277,8 +1278,9 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_OVERLAP_START = ", ";
     public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_OVERLAP =
             " UV islands mirrored in place, with no twin island on the side removed to take";
-    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_UNMATCHED = " bones off the centre have no twin, so the"
-            + " mirrored side weighs onto them too: Rig Hair Locks then Weigh Onto Locks give it chains of its own";
+    public static final String CHARACTER_EDITOR_MESSAGE_SYMMETRY_UNMATCHED =
+            " bones off the centre have no twin, so the mirrored side weighs onto them too:"
+                    + " Rig Hair Locks then Weigh Onto Locks give it chains of its own";
 
     // Character Rig — rig fields
     public static final String CHARACTER_RIG_FIELD_BONES = "bones";
