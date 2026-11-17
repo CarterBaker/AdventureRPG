@@ -400,8 +400,9 @@ class CharacterTopologyBranch extends BranchPackage {
         return added;
     }
 
-    // Two new vertices on every refined edge, at its thirds, made in turn so the second follows the first, each piece
-    // a seam where the edge was a seam
+    // Two new vertices on every refined edge, at its thirds, made in turn so the second follows the first, each
+    // measured from its nearer end so an edge and its mirror make the same two points; each piece a seam where the
+    // edge was a seam
     private void cutEdges(RiggedMeshStruct mesh) {
 
         edge2Point.clear();
@@ -412,7 +413,7 @@ class CharacterTopologyBranch extends BranchPackage {
             int low = RiggedMeshStruct.getSeamVertex(edgeKey, 0);
             int high = RiggedMeshStruct.getSeamVertex(edgeKey, 1);
             int first = addBetween(mesh, low, high, 1f / EditorSetting.CHARACTER_TOPOLOGY_LATTICE);
-            int second = addBetween(mesh, low, high, 2f / EditorSetting.CHARACTER_TOPOLOGY_LATTICE);
+            int second = addBetween(mesh, high, low, 1f / EditorSetting.CHARACTER_TOPOLOGY_LATTICE);
 
             edge2Point.put(edgeKey, first);
 
@@ -671,8 +672,13 @@ class CharacterTopologyBranch extends BranchPackage {
 
             int diagonal = resolveShorterDiagonal(mesh, faceIndex);
 
-            if (!collapseDiagonal(mesh, faceIndex, diagonal) && !collapseDiagonal(mesh, faceIndex, 1 - diagonal))
-                continue;
+            if (!collapseDiagonal(mesh, faceIndex, diagonal)) {
+
+                diagonal = 1 - diagonal;
+
+                if (!collapseDiagonal(mesh, faceIndex, diagonal))
+                    continue;
+            }
 
             collapsed++;
 
@@ -1065,12 +1071,13 @@ class CharacterTopologyBranch extends BranchPackage {
     // Blend \\
 
     // A vertex given the blend of the vertices listed, each by its share: position, weights, masks and the delta of
-    // every shape key any of them carries; the vertex written may be one of those blended
+    // every shape key any of them carries; the vertex written may be one of those blended. The position sums in
+    // double, so the order the corners are listed in (a face and its mirror list them the other way) cannot move it
     private void blendVertex(RiggedMeshStruct mesh, int vertexIndex) {
 
-        float x = 0f;
-        float y = 0f;
-        float z = 0f;
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
 
         for (int ch = 0; ch < maskScratch.length; ch++)
             maskScratch[ch] = 0f;
@@ -1080,9 +1087,9 @@ class CharacterTopologyBranch extends BranchPackage {
             int source = blendVertices.getInt(i);
             float share = blendShares.getFloat(i);
 
-            x += mesh.getX(source) * share;
-            y += mesh.getY(source) * share;
-            z += mesh.getZ(source) * share;
+            x += (double) mesh.getX(source) * share;
+            y += (double) mesh.getY(source) * share;
+            z += (double) mesh.getZ(source) * share;
 
             for (int ch = 0; ch < maskScratch.length; ch++)
                 maskScratch[ch] += mesh.getMask(source, ch) * share;
@@ -1090,7 +1097,7 @@ class CharacterTopologyBranch extends BranchPackage {
 
         blendMorphs(mesh, vertexIndex);
         characterWeightBranch.blend(mesh, blendVertices, blendShares, vertexIndex);
-        CharacterMeshUtility.setRoundedPosition(mesh, vertexIndex, x, y, z);
+        CharacterMeshUtility.setRoundedPosition(mesh, vertexIndex, (float) x, (float) y, (float) z);
 
         for (int ch = 0; ch < maskScratch.length; ch++)
             mesh.setMask(vertexIndex, ch, maskScratch[ch]);

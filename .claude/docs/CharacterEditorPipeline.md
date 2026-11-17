@@ -224,14 +224,21 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
 - **Mirror pairs.** `CharacterSelectionBranch.resolveMirror` pairs each vertex with the one at its mirrored position
   on the decimal grid, then pairs every vertex left without a twin with the nearest one likewise left across x within
   `CHARACTER_MESH_MIRROR_REACH` (`pairNearest`, binned by reach-sized cells), so a mesh not modelled exactly
-  symmetric still mirrors every stroke. `CharacterViewUtility.round` rounds half away from zero, so a point and its
-  mirror always round alike.
+  symmetric still mirrors every stroke. Vertices standing on one point (an extrusion or a copy before it moves) pair
+  in index order with those on the mirrored point, so an original pairs with the original and a copy with the copy.
+  `CharacterViewUtility.round` rounds half away from zero, so a point and its mirror always round alike; every new
+  vertex a tool places from corners (Topology, Subdivide) sums them in double, so a face and its mirror, whose corners
+  run the other way round, find the same point. Every mesh action honours the canvas's Mirror switch: Extrude,
+  Duplicate, Subdivide, Delete and Set Face Texture take the selection's twins too (Extrude pulls a region reaching
+  the centre plane straight out of it), Make Face makes the twin face wound back, and Merge joins the twins at the
+  mirrored point, or both sets as one on the plane where they meet.
 - **Symmetrize** (Blender's Mesh > Symmetrize, Maya's Symmetrize): `CharacterSymmetryBranch.symmetrize(document,
   positiveToNegative)` is the one operation that makes a mesh exactly symmetric, the Mesh canvas's two Symmetrize
-  actions (+X to -X, -X to +X) and the command console's Character group (`assets/commands/Character.arpg`, target
-  `character`: Mirror Body and Mirror Hair, Left onto Right or Right onto Left, left being +x, run by
-  `CharacterCommandBranch` on the open character's body or worn hair through `CharacterEditorManager.executeCommand`)
-  both calling it. It never moves one side's vertices onto the other's: the side given up is removed and the side kept
+  actions (+X to -X, -X to +X) and the Character Commands tab (`CharacterCommandConsoleContext`, the command console's
+  window listing only commands whose `target` is `character`, opened from the Characters menu's Tools section; the
+  Character group, `assets/commands/Character.arpg`: Mirror Body and Mirror Hair, Left onto Right or Right onto Left,
+  left being +x, run by `CharacterCommandBranch` on the open character's body or worn hair through
+  `CharacterEditorManager.executeCommand`) both calling it. It always mirrors, whatever the canvas's Mirror switch. It never moves one side's vertices onto the other's: the side given up is removed and the side kept
   is mirrored and welded on x = 0, so every vertex gets an exact twin and every face a twin wound back. A face crossing
   the plane along two edges is cut there (`CharacterTopologyBranch.addBetween`, the cut shared by both faces beside the
   edge); one crossing any other way first has the corners on the side it holds fewer of laid on the plane. Twins take
@@ -274,7 +281,9 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   vertices and edges are drawn (`CharacterTopologyBranch`, at the canvas's own Strength, honouring its Mirror; a stroke
   routes there from `CharacterEditorManager.beginStroke` before the mode's own stroke): a stroke opens one undo step,
   gathers how far the brush covers each vertex (and its twin with Mirror on), and once a frame (`CharacterEditorManager.showStroke` calls `apply`) changes every face whose
-  corners it all covers. Plain strokes refine by Schneiders' 3-refinement, as adaptive all-quad meshing does: a face
+  corners it all covers; an edge's two thirds are each measured from its nearer end, and a collapse's twin falls along
+  the same diagonal the face itself took, so a stroke with Mirror on leaves the two sides exact twins. Plain strokes
+  refine by Schneiders' 3-refinement, as adaptive all-quad meshing does: a face
   splits into nine on a lattice of thirds and each face beside it takes the transition template its refined edges call
   for (`EditorSetting.CHARACTER_TOPOLOGY_TEMPLATE_*`: one edge, two at a corner, two opposite); a face left with three
   or four refined edges joins the refined set until none is, so the mesh stays all quads with no hanging vertex.

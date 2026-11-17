@@ -65,6 +65,7 @@ class CharacterSculptBranch extends BranchPackage {
     private Vector3 maxScratch;
     private IntArrayList vertexRemap;
     private IntArrayList vertexList;
+    private IntArrayList twinList;
     private BooleanArrayList faceFlags;
     private BooleanArrayList vertexFlags;
     private BooleanArrayList selectionScratch;
@@ -96,6 +97,7 @@ class CharacterSculptBranch extends BranchPackage {
         this.maxScratch = new Vector3();
         this.vertexRemap = new IntArrayList();
         this.vertexList = new IntArrayList();
+        this.twinList = new IntArrayList();
         this.faceFlags = new BooleanArrayList();
         this.vertexFlags = new BooleanArrayList();
         this.selectionScratch = new BooleanArrayList();
@@ -539,6 +541,9 @@ class CharacterSculptBranch extends BranchPackage {
                     mesh.setFaceVertex(f, c, vertexRemap.getInt(mesh.getFaceVertex(f, c)));
             }
 
+        if (characterEditorManager.isMirror() && touchesCentre(mesh, faceCount))
+            normal.x = 0f;
+
         float length = normal.length();
 
         if (length > 0f)
@@ -586,6 +591,18 @@ class CharacterSculptBranch extends BranchPackage {
 
         int count = edge2Value.get(edgeKey);
         edge2Value.put(edgeKey, count == EngineSetting.INDEX_NOT_FOUND ? 1 : count + 1);
+    }
+
+    // Whether a flagged face reaches the centre plane, so the region and its mirror are one region facing along it
+    private boolean touchesCentre(RiggedMeshStruct mesh, int faceCount) {
+
+        for (int f = 0; f < faceCount; f++)
+            if (faceFlags.getBoolean(f))
+                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                    if (Math.abs(mesh.getX(mesh.getFaceVertex(f, c))) <= EditorSetting.CHARACTER_MESH_CENTER_TOLERANCE)
+                        return true;
+
+        return false;
     }
 
     private void addFaceNormal(RiggedMeshStruct mesh, int faceIndex, Vector3 normal) {
@@ -683,7 +700,8 @@ class CharacterSculptBranch extends BranchPackage {
 
     // Make Face \\
 
-    // A quad over four selected vertices, or a triangle over three, its corners ordered around their centre
+    // A quad over four selected vertices, or a triangle over three, its corners ordered around their centre; with
+    // mirror on, the twin over their twins as well, wound back (a quad's corners 0, 3, 2, 1, a triangle's 0, 2, 1, 1)
     void makeFace(CharacterMeshDocumentInstance document) {
 
         RiggedMeshStruct mesh = document.getMesh();
@@ -706,14 +724,44 @@ class CharacterSculptBranch extends BranchPackage {
         characterHistoryBranch.begin(document);
 
         int last = vertexList.getInt(vertexList.size() - 1);
+        int texture = resolveNeighbourTexture(mesh, vertexList);
 
-        mesh.addFace(
-                vertexList.getInt(0),
-                vertexList.getInt(1),
-                vertexList.getInt(2),
-                last,
-                resolveNeighbourTexture(mesh, vertexList));
+        mesh.addFace(vertexList.getInt(0), vertexList.getInt(1), vertexList.getInt(2), last, texture);
+
+        if (characterEditorManager.isMirror() && collectTwins(document, vertexList) == 0)
+            mesh.addFace(
+                    twinList.getInt(0),
+                    twinList.getInt(twinList.size() - 1),
+                    twinList.getInt(twinList.size() - 2),
+                    twinList.getInt(1),
+                    texture);
+
         characterMeshBranch.finishEdit(document);
+    }
+
+    // The twin of every vertex listed, in order, into the twin list; how many of the twins are among the vertices
+    // listed (zero for a set apart from its mirror), or INDEX_NOT_FOUND when one has no twin
+    private int collectTwins(CharacterMeshDocumentInstance document, IntArrayList vertices) {
+
+        IntArrayList mirrorVertices = characterSelectionBranch.resolveMirror(document);
+        int shared = 0;
+
+        twinList.clear();
+
+        for (int i = 0; i < vertices.size(); i++) {
+
+            int twin = mirrorVertices.getInt(vertices.getInt(i));
+
+            if (twin == EngineSetting.INDEX_NOT_FOUND)
+                return EngineSetting.INDEX_NOT_FOUND;
+
+            if (vertices.contains(twin))
+                shared++;
+
+            twinList.add(twin);
+        }
+
+        return shared;
     }
 
     // The largest cross of the corners' spokes from the first; false when they lie on one line
@@ -804,7 +852,8 @@ class CharacterSculptBranch extends BranchPackage {
     // Merge \\
 
     // Joins the selected vertices into one at their centre carrying their averaged weights; faces left with fewer
-    // than three corners go
+    // than three corners go. With mirror on, their twins join at the mirrored point with the mirrored weights, or,
+    // where the two sets meet, both join as one on the centre plane
     void merge(CharacterMeshDocumentInstance document) {
 
         RiggedMeshStruct mesh = document.getMesh();
@@ -817,18 +866,44 @@ class CharacterSculptBranch extends BranchPackage {
         }
 
         int target = vertexList.getInt(0);
+        int shared = characterEditorManager.isMirror()
+                ? collectTwins(document, vertexList)
+                : EngineSetting.INDEX_NOT_FOUND;
+        int[] mirrorBones = characterWeightBranch.resolveMirrorBones(mesh.getRigHandle());
 
         characterHistoryBranch.begin(document);
         characterSelectionBranch.resolveCenter(document, pointScratch);
-        characterWeightBranch.average(mesh, vertexList, target);
-        CharacterMeshUtility.setRoundedPosition(mesh, target, pointScratch.x, pointScratch.y, pointScratch.z);
+        fill(vertexRemap, mesh.getVertexCount(), EngineSetting.INDEX_NOT_FOUND);
+
+        if (shared > 0) {
+
+            for (int i = 0; i < twinList.size(); i++)
+                if (!vertexList.contains(twinList.getInt(i)))
+                    vertexList.add(twinList.getInt(i));
+
+            mergeInto(mesh, vertexList, target, 0f, pointScratch.y, pointScratch.z);
+            characterWeightBranch.symmetrizeWeights(mesh, target, mirrorBones);
+        } else {
+
+            mergeInto(mesh, vertexList, target, pointScratch.x, pointScratch.y, pointScratch.z);
+
+            if (shared == 0) {
+                mergeInto(mesh, twinList, twinList.getInt(0), -pointScratch.x, pointScratch.y, pointScratch.z);
+                characterWeightBranch.copyMirrored(mesh, target, twinList.getInt(0), mirrorBones);
+            }
+        }
+
         faceFlags.clear();
 
         for (int f = 0; f < mesh.getFaceCount(); f++) {
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
-                if (document.isSelected(mesh.getFaceVertex(f, c)))
-                    mesh.setFaceVertex(f, c, target);
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+                int merged = vertexRemap.getInt(mesh.getFaceVertex(f, c));
+
+                if (merged != EngineSetting.INDEX_NOT_FOUND)
+                    mesh.setFaceVertex(f, c, merged);
+            }
 
             faceFlags.add(countDistinctCorners(mesh, f) < EngineSetting.QUAD_VERTEX_COUNT - 1);
         }
@@ -836,12 +911,26 @@ class CharacterSculptBranch extends BranchPackage {
         mesh.removeFaces(faceFlags);
 
         for (int i = 0; i < document.getSelection().size(); i++)
-            document.getSelection().set(i, i == target);
+            document.getSelection().set(i, vertexRemap.getInt(i) == i);
 
         document.getSelectionWeights().set(target, 1f);
+
+        if (shared == 0)
+            document.getSelectionWeights().set(twinList.getInt(0), 1f);
+
         document.setActiveVertex(target);
         removeOrphans(document);
         characterMeshBranch.finishEdit(document);
+    }
+
+    // The vertices listed merged into one at a point, with their averaged weights; each vertex is mapped to it
+    private void mergeInto(RiggedMeshStruct mesh, IntArrayList vertices, int target, float x, float y, float z) {
+
+        characterWeightBranch.average(mesh, vertices, target);
+        CharacterMeshUtility.setRoundedPosition(mesh, target, x, y, z);
+
+        for (int i = 0; i < vertices.size(); i++)
+            vertexRemap.set(vertices.getInt(i), target);
     }
 
     private int countDistinctCorners(RiggedMeshStruct mesh, int faceIndex) {
@@ -987,12 +1076,14 @@ class CharacterSculptBranch extends BranchPackage {
         return midpoint;
     }
 
+    // A new vertex at a face's centre, summed in double so a face and its mirror (corners the other way round) find
+    // the same point, with the corners' averaged weights
     private int resolveCenterVertex(RiggedMeshStruct mesh, int faceIndex) {
 
         int center = mesh.addVertex(0f, 0f, 0f);
-        float x = 0f;
-        float y = 0f;
-        float z = 0f;
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
 
         vertexList.clear();
 
@@ -1006,9 +1097,14 @@ class CharacterSculptBranch extends BranchPackage {
             vertexList.add(corner);
         }
 
-        float share = 1f / EngineSetting.QUAD_VERTEX_COUNT;
+        double share = 1.0 / EngineSetting.QUAD_VERTEX_COUNT;
 
-        CharacterMeshUtility.setRoundedPosition(mesh, center, x * share, y * share, z * share);
+        CharacterMeshUtility.setRoundedPosition(
+                mesh,
+                center,
+                (float) (x * share),
+                (float) (y * share),
+                (float) (z * share));
         characterWeightBranch.average(mesh, vertexList, center);
 
         return center;
@@ -1065,6 +1161,9 @@ class CharacterSculptBranch extends BranchPackage {
     void setFaceTexture(CharacterMeshDocumentInstance document, String textureName) {
 
         RiggedMeshStruct mesh = document.getMesh();
+
+        if (characterEditorManager.isMirror())
+            characterSelectionBranch.extendMirror(document);
 
         if (flagSelectedFaces(document) == 0) {
             characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_NO_FACES);

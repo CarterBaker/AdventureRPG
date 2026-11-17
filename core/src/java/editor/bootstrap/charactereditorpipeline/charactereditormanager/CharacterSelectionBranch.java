@@ -41,8 +41,10 @@ class CharacterSelectionBranch extends BranchPackage {
     // Stroke
     private CharacterEditorSelection strokeSelection;
 
-    // Scratch
+    // Scratch — vertices on one point of the decimal grid chained in index order, each one's place in its chain
     private Long2IntOpenHashMap position2Vertex;
+    private IntArrayList positionNext;
+    private Long2IntOpenHashMap position2Count;
     private Long2IntOpenHashMap cell2Vertex;
     private IntArrayList cellNext;
 
@@ -54,6 +56,8 @@ class CharacterSelectionBranch extends BranchPackage {
         // Scratch
         this.position2Vertex = new Long2IntOpenHashMap();
         this.position2Vertex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
+        this.positionNext = new IntArrayList();
+        this.position2Count = new Long2IntOpenHashMap();
         this.cell2Vertex = new Long2IntOpenHashMap();
         this.cell2Vertex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
         this.cellNext = new IntArrayList();
@@ -350,7 +354,9 @@ class CharacterSelectionBranch extends BranchPackage {
 
     // Mirror \\
 
-    // The vertex each vertex mirrors onto across x, or INDEX_NOT_FOUND when none stands there
+    // The vertex each vertex mirrors onto across x, or INDEX_NOT_FOUND when none stands there. Vertices standing on
+    // one point (an extrusion or a copy before it moves) pair in index order with those on the mirrored point, so an
+    // original pairs with the original and a copy with the copy
     IntArrayList resolveMirror(CharacterMeshDocumentInstance document) {
 
         IntArrayList mirrorVertices = document.getMirrorVertices();
@@ -362,15 +368,27 @@ class CharacterSelectionBranch extends BranchPackage {
         int vertexCount = mesh.getVertexCount();
 
         position2Vertex.clear();
+        position2Count.clear();
+        positionNext.clear();
+        positionNext.size(vertexCount);
         mirrorVertices.clear();
 
-        for (int i = 0; i < vertexCount; i++)
-            position2Vertex.putIfAbsent(
-                    CharacterMeshUtility.toPositionKey(mesh.getX(i), mesh.getY(i), mesh.getZ(i)), i);
+        for (int i = vertexCount - 1; i >= 0; i--)
+            positionNext.set(i, position2Vertex.put(
+                    CharacterMeshUtility.toPositionKey(mesh.getX(i), mesh.getY(i), mesh.getZ(i)), i));
 
-        for (int i = 0; i < vertexCount; i++)
-            mirrorVertices.add(position2Vertex.get(
-                    CharacterMeshUtility.toPositionKey(-mesh.getX(i), mesh.getY(i), mesh.getZ(i))));
+        for (int i = 0; i < vertexCount; i++) {
+
+            int rank = position2Count.addTo(
+                    CharacterMeshUtility.toPositionKey(mesh.getX(i), mesh.getY(i), mesh.getZ(i)), 1);
+            int twin = position2Vertex.get(
+                    CharacterMeshUtility.toPositionKey(-mesh.getX(i), mesh.getY(i), mesh.getZ(i)));
+
+            for (int r = 0; r < rank && twin != EngineSetting.INDEX_NOT_FOUND; r++)
+                twin = positionNext.getInt(twin);
+
+            mirrorVertices.add(twin);
+        }
 
         pairNearest(mesh, mirrorVertices);
         document.markMirrorResolved();

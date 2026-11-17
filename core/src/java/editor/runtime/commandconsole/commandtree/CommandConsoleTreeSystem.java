@@ -8,7 +8,9 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleCategory;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
+import editor.bootstrap.commandpipeline.command.CommandTarget;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
+import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.commandconsole.CommandConsoleSetting;
 import editor.runtime.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
 import editor.runtime.commandconsole.dial.CommandConsoleDialSystem;
@@ -34,8 +36,9 @@ public class CommandConsoleTreeSystem extends SystemPackage {
      * every command that takes a time unit and its value. An item or time
      * command heads its sections with its own name; a vehicle's tile is the
      * command itself, so its sections sit straight under the group. A group
-     * with none of these is left out. A unit the world's calendar does not
-     * have gets no dial.
+     * with none of these is left out, and so is one whose commands run
+     * anywhere but where the console's target names. A unit the world's
+     * calendar does not have gets no dial.
      * Groups and categories start expanded and collapse on click; the tree is
      * laid out on the first frame and again only when one of them is toggled.
      */
@@ -110,7 +113,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
         ObjectArrayList<CommandHandle> commandHandles = commandManager.getCommandHandles(groupName);
 
-        if (!hasListedCommand(commandHandles))
+        if (!hasListedCommand(commandHandles, ((CommandConsoleContext) context).getTarget()))
             return;
 
         boolean expanded = !collapsedNodeKeys.contains(groupName);
@@ -319,12 +322,13 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
     // Utility \\
 
-    private boolean hasListedCommand(ObjectArrayList<CommandHandle> commandHandles) {
+    private boolean hasListedCommand(ObjectArrayList<CommandHandle> commandHandles, CommandTarget target) {
 
         for (int i = 0; i < commandHandles.size(); i++)
-            if (commandHandles.get(i).isArgumentFree() || commandHandles.get(i).takesItem()
+            if (commandHandles.get(i).getTarget() == target
+                    && (commandHandles.get(i).isArgumentFree() || commandHandles.get(i).takesItem()
                     || commandHandles.get(i).takesVehicle() || commandHandles.get(i).takesChunk()
-                    || commandHandles.get(i).takesTime())
+                    || commandHandles.get(i).takesTime()))
                 return true;
 
         return false;

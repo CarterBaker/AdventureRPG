@@ -140,6 +140,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterOutliner(window.getGLWindow());
     }
 
+    public void openCharacterCommands(WindowInstance window) {
+        tabManager.openCharacterCommands(window.getGLWindow());
+    }
+
     public void openAnimationEditor(WindowInstance window) {
         tabManager.openAnimationEditor(window.getGLWindow());
     }

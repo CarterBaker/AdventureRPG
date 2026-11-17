@@ -18,7 +18,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Tools sit at the foot of each menu.** The editor's menus (`menus/editor/EditorWindow.arpg`) list a tab under the
   section for what it works on, and the tabs that serve the others (the Tools and Brushes tabs, the Outliner, Maps,
   Stamps and the Color Wheel, the Recorder) under a Tools section, always the menu's last: Content's Tools holds Tools
-  and Brushes, Characters' the Outliner, Textures' Maps, Stamps and the Color Wheel, Media's the Recorder. The Debug
+  and Brushes, Characters' the Outliner and Character Commands (the command console's window for the commands that
+  run in the character tabs), Textures' Maps, Stamps and the Color Wheel, Media's the Recorder. The Debug
   menu's Preview opens `DevContext`, the game as it runs with the command console's systems; there is no other runtime
   tab.
 - **Split so far:** the World Editor paints the biomes and places settlements and cameras on its Biomes layer and raises
