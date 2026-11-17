@@ -23,18 +23,20 @@ All of it is in `editor.bootstrap.charactereditorpipeline`:
   `GltfImportStruct`), `findMissingBones`, `build` (a `RiggedMeshStruct` against a rig).
 - `util/GltfExportUtility`: `export(mesh, rig, name, normals)`, the `.glb` bytes.
 - `charactereditormanager/CharacterModelBranch`: the two actions and the steps Import walks.
-  `CharacterEditorBranch.importModel` / `exportModel` are the File menu's methods (`FileMenuAction.IMPORT`,
-  `EXPORT`, in `EditorSetting.FILE_MENU_CHARACTER`).
+  `CharacterEditorBranch.openModel` (a `.glb` picked) and `exportModel` are the File menu's methods
+  (`FileMenuAction.OPEN`, `EXPORT`, in `EditorSetting.FILE_MENU_CHARACTER`).
 - Constants: the `// glTF` and `// Model Import and Export` groups of `EditorSetting`.
 - Refusals are catchable `InternalException`s whose message is shown in the status line. Never `throwException`
   for a bad file: that halts the editor.
 
 ## The File menu actions
 
-- **Files live in `Documents/My Games/AdventureRPG/Assets/Models/`.** Export writes `<MeshName>.glb` there. Import
-  Model asks for a file name in that folder through the editor's text dialog. There is no file browser yet.
+- **Files live in `Documents/My Games/AdventureRPG/Assets/Models/`.** Export writes `<MeshName>.glb` there. A `.glb`
+  is brought in through File, Open, which lists `.glb` files beside workspace models in the system's file dialog and
+  takes one from anywhere (`CharacterModelBranch.beginImport(File)`). File, Import is no longer glTF: it brings a
+  workspace model into the game (see `.claude/docs/CharacterEditorPipeline.md`, Models).
 - **Export** writes the mesh being edited, its rig and its morphs.
-- **Import** replaces the mesh being edited, as one edit: Undo brings the old mesh back and Save writes it
+- **A `.glb` opened** replaces the mesh being edited, as one edit: Undo brings the old mesh back and Save writes it
   (compact layout). It never writes a file itself and never makes a new mesh file. It refuses a model past the
   character tools' quad limit like any other edit.
 - **Nothing is assumed silently.** Bones the rig lacks are listed and added only when the user types `add` (through
@@ -84,5 +86,5 @@ One vertex set is shared by every primitive. The same mesh always writes the sam
 - **Seams and UV pins stay in the `.arpg` mesh.** glTF has no place for them: Export writes neither and Import brings
   none, so mark seams again after an import.
 - **Bone transforms are written, never read.** Import takes joint names and, for bones it adds, their positions.
-- **Not done yet, only when the owner asks:** animation clips, sub-voxel item export, writing a new mesh file from
-  an import, and a file browser.
+- **Not done yet, only when the owner asks:** animation clips, sub-voxel item export and writing a new mesh file from
+  an import.

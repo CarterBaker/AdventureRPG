@@ -203,9 +203,13 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
         return raceData != null && raceData.getModelHeight() > 0f;
     }
 
+    // The body framed from where its model's mesh stands, so a body that does not stand on the ground, such as a lone
+    // torso a new model starts from, is framed where it is
     @Override
     public float getCenter(int axis) {
-        return axis == EngineSetting.AXIS_Y ? getBoundingRadius() : 0f;
+        return axis == EngineSetting.AXIS_Y
+                ? raceData.getGenderAt(0).getMeshHandle().getBoundsMin().y + getBoundingRadius()
+                : 0f;
     }
 
     @Override

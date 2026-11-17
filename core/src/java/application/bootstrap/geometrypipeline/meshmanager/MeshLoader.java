@@ -21,7 +21,9 @@ class MeshLoader extends LoaderPackage {
      * VAOInstance per mesh, then delegates to the VAO, VBO, and IBO builders
      * before assembling the final MeshHandle via MeshBuilder; MeshManager
      * assigns each mesh its ID as it registers. Supports on-demand loading
-     * for meshes not yet in the palette at runtime.
+     * for meshes not yet in the palette at runtime, among them a file from
+     * outside the mesh directory made known under a name of its own, as the
+     * editor's workspace models are.
      */
 
     // Internal
@@ -37,6 +39,7 @@ class MeshLoader extends LoaderPackage {
 
     // File Registry
     private Object2ObjectOpenHashMap<String, File> resourceName2File;
+    private Object2ObjectOpenHashMap<File, String> file2ResourceName;
 
     // Base \\
 
@@ -45,6 +48,7 @@ class MeshLoader extends LoaderPackage {
 
         this.root = new File(EngineSetting.MESH_PATH);
         this.resourceName2File = new Object2ObjectOpenHashMap<>();
+        this.file2ResourceName = new Object2ObjectOpenHashMap<>();
 
         FileUtility.verifyDirectory(root, "Mesh ARPG directory not found: " + root.getAbsolutePath());
 
@@ -79,7 +83,7 @@ class MeshLoader extends LoaderPackage {
     @Override
     protected void load(File file) {
 
-        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+        String resourceName = resolveResourceName(file);
 
         vaoBuildSystem.build(resourceName, file, resourceName2File);
 
@@ -94,7 +98,7 @@ class MeshLoader extends LoaderPackage {
         iboBuildSystem.build(resourceName, file, resourceName2File, vaoInstance);
 
         try {
-            MeshHandle meshHandle = internalBuilder.buildMeshHandle(root, file, vaoInstance);
+            MeshHandle meshHandle = internalBuilder.buildMeshHandle(resourceName, file, vaoInstance);
             if (meshHandle != null)
                 meshManager.addMeshHandle(resourceName, meshHandle);
         } catch (RuntimeException ex) {
@@ -102,7 +106,21 @@ class MeshLoader extends LoaderPackage {
         }
     }
 
+    // A file's mesh name: the one it was made known under, else its path below the mesh directory
+    private String resolveResourceName(File file) {
+
+        String resourceName = file2ResourceName.get(file);
+
+        return resourceName != null ? resourceName : FileUtility.getPathWithFileNameWithoutExtension(root, file);
+    }
+
     // On-Demand \\
+
+    // A file from outside the mesh directory made known under a name, loaded the first time the name is asked for
+    void registerFile(String resourceName, File file) {
+        resourceName2File.put(resourceName, file);
+        file2ResourceName.put(file, resourceName);
+    }
 
     void request(String resourceName) {
 

@@ -101,14 +101,6 @@ public class CharacterModelBranch extends BranchPackage {
 
     // Files \\
 
-    public String getModelDirectory() {
-        return modelRoot.getAbsolutePath();
-    }
-
-    public boolean isModelFile(String name) {
-        return !name.isBlank() && resolveModelFile(name).isFile();
-    }
-
     private File resolveModelFile(String name) {
 
         String extension = "." + EditorSetting.GLTF_FILE_EXTENSION;
@@ -117,12 +109,12 @@ public class CharacterModelBranch extends BranchPackage {
 
     // Import \\
 
-    // Opens the file and reads what it holds; a refusal is left in the status line and nothing is imported
-    public void beginImport(String name) {
+    // Opens the .glb picked and reads what it holds; a refusal is left in the status line and nothing is imported
+    public void beginImport(File file) {
 
         this.model = null;
         this.hangBone = null;
-        this.modelName = name;
+        this.modelName = file.getName();
 
         if (characterEditorManager.getActiveMeshDocument() == null) {
             characterEditorManager.setStatusMessage(EditorSetting.MODEL_MESSAGE_NO_MESH);
@@ -131,7 +123,7 @@ public class CharacterModelBranch extends BranchPackage {
 
         try {
             this.model = GltfImportUtility.inspect(
-                    GltfReadUtility.read(Files.readAllBytes(resolveModelFile(name).toPath())));
+                    GltfReadUtility.read(Files.readAllBytes(file.toPath())));
         } catch (IOException | InternalException e) {
             refuse(e);
             return;

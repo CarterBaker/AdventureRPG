@@ -39,7 +39,12 @@ class CharacterEditBranch extends BranchPackage {
 
     // Race \\
 
+    // A workspace model is no race, so it takes no race edit: its race is chosen when it is imported
     private void edit(CharacterDocumentInstance document, Consumer<ArpgObjectStruct> editor) {
+
+        if (document.isModel())
+            return;
+
         infoManager.editEntry(
                 EditorSetting.INFO_SCHEMA_RACES,
                 document.getRaceName(),

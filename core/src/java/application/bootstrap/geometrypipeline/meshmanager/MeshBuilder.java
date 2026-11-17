@@ -21,7 +21,6 @@ import engine.util.arpg.ArpgBufferType;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
-import engine.util.io.FileUtility;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
@@ -63,12 +62,11 @@ class MeshBuilder extends BuilderPackage {
     // Build \\
 
     MeshHandle buildMeshHandle(
-            File root,
+            String resourceName,
             File file,
             VAOInstance vaoInstance) {
 
         ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
-        String resourceName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
         RigHandle rigHandle = resolveRig(arpg);
         boolean hasQuads = hasQuadEntries(arpg) || MeshLayoutUtility.isCompact(arpg);
         boolean hasSubVoxels = subVoxelManager.hasSubVoxels(arpg);

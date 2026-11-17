@@ -31,22 +31,26 @@ public class WorkspaceUtility extends EngineUtility {
 
     // Picker \\
 
-    // The file chosen in the system's open dialog, which starts in the folder and lists only .arpg files; null when
-    // the dialog is cancelled
-    public static File chooseFile(String title, File folder) {
+    // The file chosen in the system's open dialog, which starts in the folder and lists only the files the patterns
+    // take; null when the dialog is cancelled
+    public static File chooseFile(String title, File folder, String[] filePatterns, String description) {
 
         folder.mkdirs();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
 
-            PointerBuffer patterns = stack.mallocPointer(1);
-            patterns.put(stack.UTF8(EditorSetting.WORKSPACE_FILE_PATTERN)).flip();
+            PointerBuffer patterns = stack.mallocPointer(filePatterns.length);
+
+            for (int i = 0; i < filePatterns.length; i++)
+                patterns.put(stack.UTF8(filePatterns[i]));
+
+            patterns.flip();
 
             String chosen = TinyFileDialogs.tinyfd_openFileDialog(
                     title,
                     folder.getAbsolutePath() + File.separator,
                     patterns,
-                    EditorSetting.WORKSPACE_FILE_DESCRIPTION,
+                    description,
                     false);
 
             return chosen != null ? new File(chosen) : null;

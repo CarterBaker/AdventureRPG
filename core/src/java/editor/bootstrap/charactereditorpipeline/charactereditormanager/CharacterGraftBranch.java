@@ -207,6 +207,82 @@ class CharacterGraftBranch extends BranchPackage {
         return true;
     }
 
+    // A blank model's body started from a root part, laid alone as a body of its own; null, with the status saying
+    // why, when the rig would not take its bones. A part whose every bone the rig already holds by name, as a part cut
+    // from a body on that rig does, is bound to those bones where the rig holds them, the rig and its clips left as
+    // they are, the way a mesh is skinned to a shared skeleton; any other has its bones added at the rig's root, with
+    // the motion it brings
+    RiggedMeshStruct startBody(CharacterPartPlacementStruct placement) {
+
+        if (holdsStampBones(placement.getStampHandle()))
+            return bindBody(placement);
+
+        ArpgObjectStruct rigBefore = characterRigBranch.copyRig();
+
+        if (rigBefore == null)
+            return null;
+
+        StampHandle stampHandle = placement.getStampHandle();
+        ArpgObjectStruct rigAfter = rigBefore.deepCopy();
+
+        this.number = resolveNumber(rigAfter, stampHandle, placement, null);
+        graftedParts.clear();
+        graftRig(rigAfter, stampHandle, placement, false);
+        characterRigBranch.replaceRig(rigAfter);
+
+        if (characterRigBranch.getRefusal() != null) {
+            characterRigBranch.replaceRig(rigBefore);
+            characterEditorManager.setStatusMessage(characterRigBranch.getRefusal());
+            return null;
+        }
+
+        RiggedMeshStruct mesh = new RiggedMeshStruct(characterRigBranch.getRigHandle());
+
+        resolveStampBoneRemap(mesh.getRigHandle(), stampHandle, placement);
+        appendStamp(mesh, stampHandle.getMesh(), placement);
+        resetReplace(mesh);
+        appendSeams(mesh, stampHandle.getMesh(), 0);
+        characterClipBranch.join(stampHandle, placement, boneName -> rename(boneName, placement));
+
+        return mesh;
+    }
+
+    // Whether the rig holds every bone of the part by its own name
+    private boolean holdsStampBones(StampHandle stampHandle) {
+
+        ArpgArrayStruct stampBones = stampHandle.getBonesArpg();
+
+        for (int i = 0; i < stampBones.size(); i++)
+            if (characterRigBranch.findBoneIndex(readName(stampBones, i)) == EngineSetting.INDEX_NOT_FOUND)
+                return false;
+
+        return stampBones.size() > 0;
+    }
+
+    // The part laid onto the rig's own bones of its names: carried so its first bone stands where the rig's does, and
+    // weighed onto them by name
+    private RiggedMeshStruct bindBody(CharacterPartPlacementStruct placement) {
+
+        StampHandle stampHandle = placement.getStampHandle();
+        RigHandle stampRig = stampHandle.getRigHandle();
+        String firstName = readName(stampHandle.getBonesArpg(), 0);
+
+        this.number = 0;
+        inverseScratch.set(stampRig.getBindWorldMatrix(stampRig.getBoneIndex(firstName))).inverse();
+        placement.getTransform()
+                .set(characterRigBranch.getWorldMatrix(characterRigBranch.findBoneIndex(firstName)))
+                .multiply(inverseScratch);
+
+        RiggedMeshStruct mesh = new RiggedMeshStruct(characterRigBranch.getRigHandle());
+
+        resolveStampBoneRemap(mesh.getRigHandle(), stampHandle, placement);
+        appendStamp(mesh, stampHandle.getMesh(), placement);
+        resetReplace(mesh);
+        appendSeams(mesh, stampHandle.getMesh(), 0);
+
+        return mesh;
+    }
+
     // The body and rig put back as they stood, and the reason said
     private boolean refuse(CharacterMeshDocumentInstance document, ArpgObjectStruct rigBefore, String refusal) {
 

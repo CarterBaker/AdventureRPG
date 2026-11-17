@@ -351,6 +351,13 @@ class CharacterPlacementBranch extends BranchPackage {
         compose(stampHandle.getPlug(), tilt, out);
     }
 
+    // A root part placed to start a blank model's body, where no body stands to aim at
+    void resolveStart(StampHandle stampHandle, CharacterPartPlacementStruct out) {
+
+        out.begin(stampHandle, toolManager.getOption(ToolCanvas.CHARACTER_SCULPT, ToolOption.SCALE));
+        resolveRoot(stampHandle, out);
+    }
+
     // A root part with its first bone at the rig's root joint, upright and unturned, starting the body over
     private void resolveRoot(StampHandle stampHandle, CharacterPartPlacementStruct out) {
 

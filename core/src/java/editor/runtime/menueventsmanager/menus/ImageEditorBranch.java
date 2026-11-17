@@ -48,7 +48,9 @@ public class ImageEditorBranch extends BranchPackage {
 
         File file = WorkspaceUtility.chooseFile(
                 EditorSetting.WORKSPACE_DIALOG_OPEN_IMAGE,
-                imageEditorManager.getImageFolder());
+                imageEditorManager.getImageFolder(),
+                EditorSetting.WORKSPACE_FILE_PATTERNS,
+                EditorSetting.WORKSPACE_FILE_DESCRIPTION);
 
         if (file != null)
             imageEditorManager.openImageFile(file);

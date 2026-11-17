@@ -1,5 +1,7 @@
 package application.bootstrap.geometrypipeline.meshmanager;
 
+import java.io.File;
+
 import application.bootstrap.geometrypipeline.ibo.IBOHandle;
 import application.bootstrap.geometrypipeline.ibo.IBOInstance;
 import application.bootstrap.geometrypipeline.ibomanager.IBOManager;
@@ -142,6 +144,11 @@ public class MeshManager extends ManagerPackage {
 
     public void request(String resourceName) {
         ((MeshLoader) internalLoader).request(resourceName);
+    }
+
+    // A mesh file from outside the mesh directory made known under a name, loaded on demand like any other
+    public void addMeshFile(String meshName, File file) {
+        ((MeshLoader) internalLoader).registerFile(meshName, file);
     }
 
     public boolean hasMesh(String meshName) {

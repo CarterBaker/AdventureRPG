@@ -33,7 +33,9 @@ public class CharacterEditorStampSystem extends SystemPackage {
      * second click joins it to the body, and a right click or Escape lifts
      * it again. A root part stands at the rig's root and joins at the first
      * click; fur follows the pointer anywhere on the body, never snapping,
-     * and is laid at the first click. Once joined the part is put down, and
+     * and is laid at the first click. On a blank model, with no body to aim
+     * at, a click starts the body from the root part armed. Once joined the
+     * part is put down, and
      * Escape puts it down unplaced, so the Brush strokes again. The placement
      * is worked out again only when the pointer, the view, the part, the
      * tool's options or the body have moved.
@@ -127,6 +129,11 @@ public class CharacterEditorStampSystem extends SystemPackage {
     @Override
     protected void update() {
 
+        if (characterEditorManager.isBlankModel()) {
+            updateBlank();
+            return;
+        }
+
         if (!characterEditorManager.armsStamp() || !characterViewPoseSystem.hasSubject()
                 || !characterEditorMeshViewSystem.hasActiveDocument()) {
             lift();
@@ -164,6 +171,19 @@ public class CharacterEditorStampSystem extends SystemPackage {
         if (editorInputSystem.isPointerActive()
                 && editorInputSystem.isClicked(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT))
             press(rawInput.getMouseX(), rawInput.getMouseY());
+    }
+
+    // A blank model has no body to aim at: a click with a part armed starts the body from it at the rig's root
+    private void updateBlank() {
+
+        lift();
+        hide();
+
+        if (characterEditorManager.armsStamp() && editorInputSystem.isPointerActive()
+                && editorInputSystem.isClicked(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT)) {
+            editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
+            characterEditorManager.startModelBody();
+        }
     }
 
     // A click where the part is green sets it down, or joins a root part at once; anywhere else is the camera's

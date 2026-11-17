@@ -1,5 +1,6 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -7,6 +8,7 @@ import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
@@ -113,11 +115,13 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterHairBranch characterHairBranch;
     private CharacterPlacementBranch characterPlacementBranch;
     private CharacterGraftBranch characterGraftBranch;
+    private CharacterWorkspaceBranch characterWorkspaceBranch;
     private CharacterFurBranch characterFurBranch;
     private StampManager stampManager;
 
     // Palette
     private Object2ObjectOpenHashMap<String, CharacterDocumentInstance> raceName2CharacterDocument;
+    private Object2ObjectOpenHashMap<String, CharacterDocumentInstance> modelName2CharacterDocument;
 
     // Active
     private CharacterDocumentInstance activeDocument;
@@ -196,6 +200,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterHistoryBranch = create(CharacterHistoryBranch.class);
         this.characterMeshBranch = create(CharacterMeshBranch.class);
         create(CharacterModelBranch.class);
+        this.characterWorkspaceBranch = create(CharacterWorkspaceBranch.class);
         this.characterSelectionBranch = create(CharacterSelectionBranch.class);
         this.characterWeightBranch = create(CharacterWeightBranch.class);
         this.characterSculptBranch = create(CharacterSculptBranch.class);
@@ -224,6 +229,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
         // Palette
         this.raceName2CharacterDocument = new Object2ObjectOpenHashMap<>();
+        this.modelName2CharacterDocument = new Object2ObjectOpenHashMap<>();
 
         // Active
         this.mode = CharacterEditorMode.APPEARANCE;
@@ -341,6 +347,11 @@ public class CharacterEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
+        if (activeDocument.isModel()) {
+            rebuildModelPreview(activeDocument);
+            return;
+        }
+
         InfoEntryStruct raceEntry = infoManager.findEntry(
                 EditorSetting.INFO_SCHEMA_RACES,
                 activeDocument.getRaceName(),
@@ -356,6 +367,178 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (document != null && document == activeDocument)
             activate(null);
+    }
+
+    // Models \\
+
+    // A blank model made in the workspace on the rig, then opened in every character tab
+    public void newModel(String modelName, String rigName) {
+
+        if (!isModelNameAvailable(modelName) || !isModelRig(rigName))
+            return;
+
+        if (!characterWorkspaceBranch.create(modelName, rigName)) {
+            setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_WRITTEN + modelName);
+            return;
+        }
+
+        openModel(modelName);
+        setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_CREATED + modelName);
+    }
+
+    public boolean isModelNameAvailable(String modelName) {
+        return characterWorkspaceBranch.isNameAvailable(modelName);
+    }
+
+    public boolean isModelRig(String rigName) {
+        return characterWorkspaceBranch.isRig(rigName);
+    }
+
+    // The model a file chosen in the open dialog holds, when it lies in the workspace's Characters folder
+    public void openModelFile(File file) {
+
+        String modelName = characterWorkspaceBranch.toModelName(file);
+
+        if (modelName == null) {
+            setStatusMessage(EditorSetting.WORKSPACE_MESSAGE_OUTSIDE + characterWorkspaceBranch.getFolder().getPath());
+            return;
+        }
+
+        openModel(modelName);
+    }
+
+    private void openModel(String modelName) {
+
+        CharacterDocumentInstance document = modelName2CharacterDocument.get(modelName);
+
+        if (document == null) {
+
+            document = characterWorkspaceBranch.open(modelName);
+
+            if (document == null) {
+                setStatusMessage(characterWorkspaceBranch.getRefusal());
+                return;
+            }
+
+            modelName2CharacterDocument.put(modelName, document);
+            rebuildModelPreview(document);
+        }
+
+        activate(document);
+        setStatusMessage(document.isBlank()
+                ? EditorSetting.CHARACTER_MODEL_MESSAGE_BLANK
+                : EditorSetting.CHARACTER_MODEL_MESSAGE_OPENED + modelName);
+    }
+
+    private void rebuildModelPreview(CharacterDocumentInstance document) {
+
+        if (document.isBlank())
+            return;
+
+        characterPreviewBranch.rebuild(document, document.getTemplateArpg());
+
+        if (document == activeDocument)
+            resolveSelection();
+
+        notifyChanged();
+    }
+
+    // The folder the open dialog starts in for models
+    public File getModelFolder() {
+        return characterWorkspaceBranch.getFolder();
+    }
+
+    // True while the character open is a model whose body is not yet started
+    public boolean isBlankModel() {
+        return activeDocument != null && activeDocument.isBlank();
+    }
+
+    // A blank model's body started from the root part armed in the Stamps tab, at the rig's root, then the model
+    // opened as any other; a part that joins a host cannot start one
+    public void startModelBody() {
+
+        StampHandle stampHandle = getActiveStamp();
+
+        if (!isBlankModel() || stampHandle == null || !syncRig())
+            return;
+
+        if (stampHandle.hasPlug() || stampHandle.hasFur()) {
+            setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_ROOT_ONLY);
+            return;
+        }
+
+        CharacterPartPlacementStruct placement = new CharacterPartPlacementStruct();
+
+        characterPlacementBranch.resolveStart(stampHandle, placement);
+
+        if (placement.getRefusal() != null) {
+            setStatusMessage(placement.getRefusal());
+            return;
+        }
+
+        RiggedMeshStruct mesh = characterGraftBranch.startBody(placement);
+
+        if (mesh == null)
+            return;
+
+        disarmStamp();
+
+        if (!characterWorkspaceBranch.writeBody(activeDocument, mesh)) {
+            setStatusMessage(characterWorkspaceBranch.getRefusal());
+            return;
+        }
+
+        rebuildModelPreview(activeDocument);
+        setStatusMessage(EditorSetting.CHARACTER_STAMP_MESSAGE_PLACED + stampHandle.getDisplayName());
+    }
+
+    // True while the character open is a workspace model with a body, the one Import brings into the game
+    public boolean canImportModel() {
+
+        if (activeDocument != null && activeDocument.isModel() && !activeDocument.isBlank())
+            return true;
+
+        setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_IMPORT_MODEL);
+        return false;
+    }
+
+    public boolean isImportRace(String raceName) {
+        return canImportModel() && characterWorkspaceBranch.isImportRace(activeDocument, raceName);
+    }
+
+    public boolean isImportGender(String genderName) {
+        return characterWorkspaceBranch.isImportGender(genderName);
+    }
+
+    public boolean isImportEntity(String entityName) {
+        return characterWorkspaceBranch.isImportEntity(entityName);
+    }
+
+    // The model open, saved first, brought into the game as the gender of the race, with an entity when one is named;
+    // the race then opens in every character tab
+    public void importModel(String raceName, String genderName, String entityName) {
+
+        if (!isImportRace(raceName) || !isImportGender(genderName) || !isImportEntity(entityName))
+            return;
+
+        saveActiveTemplate();
+
+        String refusal = characterWorkspaceBranch.importModel(activeDocument, raceName, genderName, entityName);
+
+        if (refusal != null) {
+            setStatusMessage(refusal);
+            return;
+        }
+
+        openRace(raceName);
+        setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_IMPORTED + raceName);
+    }
+
+    // The name a model's import offers for its race and entity first: the model's own
+    public String getActiveModelStem() {
+        return activeDocument != null && activeDocument.isModel()
+                ? FileUtility.getFileName(activeDocument.getModelName())
+                : "";
     }
 
     private void activate(CharacterDocumentInstance document) {
@@ -409,6 +592,11 @@ public class CharacterEditorManager extends ManagerPackage {
             return;
         }
 
+        if (activeDocument.isModel()) {
+            setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + activeDocument.getModelName());
+            return;
+        }
+
         setStatusMessage(infoManager.saveDocument(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName())
                 ? EditorSetting.CHARACTER_EDITOR_MESSAGE_SAVED + activeDocument.getRaceName()
                 : infoManager.getRefusal());
@@ -419,19 +607,26 @@ public class CharacterEditorManager extends ManagerPackage {
         if (activeDocument == null)
             return;
 
-        infoManager.revertDocument(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName());
+        if (!activeDocument.isModel())
+            infoManager.revertDocument(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName());
+
         revertDirtyMeshes();
         revertRigFile();
         characterControlBranch.revert();
         characterClipBranch.revert();
         characterPaintBranch.revert();
-        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + activeDocument.getRaceName());
+        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_REVERTED + getActiveDocumentName());
     }
 
     public void copyActiveTemplate(String localName) {
 
         if (activeDocument == null || !isTemplateNameAvailable(localName))
             return;
+
+        if (activeDocument.isModel()) {
+            setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_RACE);
+            return;
+        }
 
         characterEditBranch.copyTemplate(getTemplateArpg(), toSiblingName(localName));
         setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_COPIED + localName);
@@ -453,6 +648,11 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (activeDocument == null)
             return;
+
+        if (activeDocument.isModel()) {
+            setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_RACE);
+            return;
+        }
 
         String raceName = activeDocument.getRaceName();
 
@@ -813,9 +1013,7 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     private RigHandle resolveRegionRig() {
-        return activeDocument != null && activeDocument.hasPreview()
-                ? activeDocument.getPreviewData().getRigHandle()
-                : null;
+        return activeDocument != null ? activeDocument.getRigHandle() : null;
     }
 
     // The open mesh of the part picked, falling back to the body once the character no longer wears it; null without
@@ -1250,9 +1448,7 @@ public class CharacterEditorManager extends ManagerPackage {
     // Follows the rig the active character is built on; false while there is none to edit
     private boolean syncRig() {
 
-        characterRigBranch.sync(activeDocument != null && activeDocument.hasPreview()
-                ? activeDocument.getPreviewData().getRigHandle()
-                : null);
+        characterRigBranch.sync(activeDocument != null ? activeDocument.getRigHandle() : null);
 
         return characterRigBranch.hasRig();
     }
@@ -1753,8 +1949,11 @@ public class CharacterEditorManager extends ManagerPackage {
         return activeDocument != null;
     }
 
-    // The active race's live ARPG, as InfoManager holds it
+    // The active race's live ARPG, as InfoManager holds it, or the race a model is previewed through
     ArpgObjectStruct getTemplateArpg() {
+
+        if (activeDocument.isModel())
+            return activeDocument.getTemplateArpg();
 
         InfoEntryStruct entry = infoManager.findEntry(
                 EditorSetting.INFO_SCHEMA_RACES,
@@ -2177,11 +2376,21 @@ public class CharacterEditorManager extends ManagerPackage {
             status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR).append(mode.getHint());
     }
 
+    // The name the character open goes by: its race's, or its model's
+    private String getActiveDocumentName() {
+        return activeDocument.isModel() ? activeDocument.getModelName() : activeDocument.getRaceName();
+    }
+
     private void appendDocumentStatus(StringBuilder status) {
 
-        status.append(activeDocument.getRaceName());
+        status.append(getActiveDocumentName());
 
-        if (infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName())
+        if (activeDocument.isModel() && !mode.isModeling())
+            status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)
+                    .append(EditorSetting.CHARACTER_MODEL_MESSAGE_RACE_TABS);
+
+        if (!activeDocument.isModel()
+                && infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_RACES, activeDocument.getRaceName())
                 || hasDirtyWornMesh()
                 || syncRig() && characterRigBranch.isDirty()
                 || characterControlBranch.isDirty()

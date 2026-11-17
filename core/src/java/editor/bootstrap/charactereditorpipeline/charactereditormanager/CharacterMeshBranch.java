@@ -39,7 +39,8 @@ class CharacterMeshBranch extends BranchPackage {
      * the history of a mesh whose joined part is being undone or redone with
      * the rig, held out while that happens; a step waiting to be redone that
      * names a bone the rig no longer holds cannot be redone, and the steps
-     * waiting are dropped.
+     * waiting are dropped. A workspace model's mesh is opened and written in
+     * its own file there, made known here by name.
      */
 
     // Internal
@@ -54,6 +55,7 @@ class CharacterMeshBranch extends BranchPackage {
 
     // Palette
     private Object2ObjectOpenHashMap<String, CharacterMeshDocumentInstance> meshName2MeshDocument;
+    private Object2ObjectOpenHashMap<String, File> meshName2File;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<String>> arrayName2TextureNames;
 
     // History — the mesh whose undo and redo steps a rig change leaves as they are while it is held
@@ -73,6 +75,7 @@ class CharacterMeshBranch extends BranchPackage {
 
         // Palette
         this.meshName2MeshDocument = new Object2ObjectOpenHashMap<>();
+        this.meshName2File = new Object2ObjectOpenHashMap<>();
         this.arrayName2TextureNames = new Object2ObjectOpenHashMap<>();
 
         // Preview
@@ -327,8 +330,17 @@ class CharacterMeshBranch extends BranchPackage {
 
     // Utility \\
 
+    // A mesh's file: the workspace file made known under its name, else its file below the mesh directory
     private File getMeshFile(String meshName) {
-        return ArpgUtility.resolveFile(meshRoot, meshName);
+
+        File file = meshName2File.get(meshName);
+
+        return file != null ? file : ArpgUtility.resolveFile(meshRoot, meshName);
+    }
+
+    // A workspace model's mesh file made known under the mesh's name
+    void addMeshFile(String meshName, File file) {
+        meshName2File.put(meshName, file);
     }
 
     // Bones \\

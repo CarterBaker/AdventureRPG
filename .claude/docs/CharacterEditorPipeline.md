@@ -630,6 +630,41 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Toon lighting.** Characters write a smooth normal (`GBufferNormal.glsl`); the lighting pass lights those pixels
   in toon tones with a rim (`ToonLighting.glsl`), and the editor viewport's character shader uses the same function.
 
+## Models
+
+The character tabs open two kinds of character (`CharacterDocumentInstance`): a race, picked in the Hierarchy, and a
+**model**, a skinned mesh in the workspace (`Documents/My Games/AdventureRPG/Assets/Characters/<Name>.arpg`), the way
+a modelling tool's skeletal mesh is skinned to a shared skeleton. `CharacterWorkspaceBranch` owns them; the File menu's
+New, Open and Import reach them (`FILE_MENU_CHARACTER`: `newModel`, `openModel`, `importModel`).
+
+- **The file** is a rigged mesh file like any under `assets/mesh/` (`rig`, `vao`, `mesh`), naming one of the game's
+  rigs. A new model holds only `rig` (New asks its name, then its rig, `HumanoidRig` offered): it is blank
+  (`isBlank`), with no body to preview, since the engine refuses a rigged mesh without a quad.
+- **The first part** placed on a blank model starts its body (`CharacterEditorManager.startModelBody`, a click in the
+  viewport while a part is armed; `CharacterEditorStampSystem.updateBlank`). Only a root part starts one. A part whose
+  every bone the rig already holds by name (a part cut from a body on that rig) is bound to those bones where the rig
+  holds them (`CharacterGraftBranch.bindBody`): the rig and its clips are left as they are, and the part's own
+  animations are not joined, since the rig's clips already move those bones. Any other has its bones grafted at the
+  rig's root (`startBody`). The body is written to the file (`CharacterWorkspaceBranch.writeBody`) and the model opens
+  as any other; later parts join it through the Sculpt Brush as on any body.
+- **Opening** makes the model's mesh known under `workspace/<Name>` to the mesh loader (`MeshManager.addMeshFile`,
+  loaded on demand like any mesh) and to the mesh tools (`CharacterMeshBranch.addMeshFile`, so Save writes the
+  workspace file), and builds the race it is previewed through in memory only (`buildRace`): one gender wearing the
+  mesh, with the material and animation tree of the first race's gender on the rig, that race's equipment anchors and
+  the part of its look any body takes (`CHARACTER_MODEL_LOOK_FIELDS`: head bone, colors, palettes, details; never the
+  sliders, expressions or features, which name a body's own morphs and meshes). A rig no race stands on cannot be
+  previewed. The view frames a body from where its mesh stands (`CharacterViewPoseSystem.getCenter`), so a lone torso
+  is framed at its own height.
+- **A model is no race.** Race edits skip it (`CharacterEditBranch.edit`), the Appearance and Equipment tabs say so,
+  Duplicate and Delete refuse it, and Save writes its mesh, the rig, controls, clips and paint, never a race.
+- **Import** (the open model, saved first) asks the race it joins (a race already on its rig, or a new name), the
+  gender it is the model of (a registered gender) and an entity to make (empty for none). Its mesh is written to
+  `assets/mesh/characters/<race in lower case>/<Name>.arpg`; an existing race's gender of that name wears it (a gender
+  the race lacks is made), a new race is made with that gender alone, looking like the race it was previewed beside
+  and not yet `playable`; the entity is made with the race. The race then opens. The workspace file stays.
+- **Open** also takes a `.glb`: it is brought into the mesh being edited as glTF Import always was (see
+  `.claude/docs/GLTF.md`).
+
 ## Stamps
 
 Stamps are body parts a character is built from, the way a modular creature kit's parts are cut from finished bodies

@@ -1,10 +1,14 @@
 package editor.runtime.menueventsmanager.menus;
 
+import java.io.File;
+
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterModelBranch;
+import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
+import engine.util.io.FileUtility;
 
 public class CharacterEditorBranch extends BranchPackage {
 
@@ -85,17 +89,67 @@ public class CharacterEditorBranch extends BranchPackage {
         characterModelBranch.exportModel();
     }
 
-    // Asks for the .glb's name in the Models folder, then for whatever the model leaves open, one dialog at a time
+    // A blank model made in the workspace: its name asked, then the game rig it is built on
+    public void newModel(WindowInstance window) {
+        nameDialogBranch.open(
+                window,
+                EditorSetting.CHARACTER_MODEL_DIALOG_NEW,
+                characterEditorManager::isModelNameAvailable,
+                modelName -> nameDialogBranch.openText(
+                        window,
+                        EditorSetting.CHARACTER_MODEL_DIALOG_RIG,
+                        EditorSetting.CHARACTER_MODEL_DEFAULT_RIG,
+                        characterEditorManager::isModelRig,
+                        rigName -> characterEditorManager.newModel(modelName, rigName)));
+    }
+
+    // A file picked in the system's open dialog: a workspace model opens in every character tab, a .glb is brought
+    // into the mesh being edited, whatever it leaves open asked one dialog at a time
+    public void openModel(WindowInstance window) {
+
+        File file = WorkspaceUtility.chooseFile(
+                EditorSetting.CHARACTER_MODEL_DIALOG_OPEN,
+                characterEditorManager.getModelFolder(),
+                EditorSetting.WORKSPACE_MODEL_PATTERNS,
+                EditorSetting.WORKSPACE_MODEL_DESCRIPTION);
+
+        if (file == null)
+            return;
+
+        if (!FileUtility.hasExtension(file, EditorSetting.GLTF_FILE_EXTENSION)) {
+            characterEditorManager.openModelFile(file);
+            return;
+        }
+
+        characterModelBranch.beginImport(file);
+        continueImport(window);
+    }
+
+    // The open model brought into the game: the race it joins, the gender it is the model of, then an entity to make
     public void importModel(WindowInstance window) {
+
+        if (!characterEditorManager.canImportModel())
+            return;
+
         nameDialogBranch.openText(
                 window,
-                EditorSetting.MODEL_DIALOG_FILE + characterModelBranch.getModelDirectory(),
-                "",
-                characterModelBranch::isModelFile,
-                name -> {
-                    characterModelBranch.beginImport(name);
-                    continueImport(window);
-                });
+                EditorSetting.CHARACTER_MODEL_DIALOG_RACE,
+                characterEditorManager.getActiveModelStem(),
+                characterEditorManager::isImportRace,
+                raceName -> nameDialogBranch.openText(
+                        window,
+                        EditorSetting.CHARACTER_MODEL_DIALOG_GENDER,
+                        "",
+                        characterEditorManager::isImportGender,
+                        genderName -> nameDialogBranch.openText(
+                                window,
+                                EditorSetting.CHARACTER_MODEL_DIALOG_ENTITY,
+                                "",
+                                characterEditorManager::isImportEntity,
+                                entityName -> characterEditorManager.importModel(
+                                        raceName,
+                                        genderName,
+                                        entityName))));
     }
 
     private void continueImport(WindowInstance window) {

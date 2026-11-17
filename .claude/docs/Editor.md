@@ -122,8 +122,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Duplicate, Save, Save All, Revert, Delete, Import and Export under File, Undo and Redo under Edit. New is the one way
   to make anything: it names what it makes, and a workspace file is written at once (in the Hierarchy, New makes a new
   file when a folder is picked in a schema that keeps its entries in files, a new entry otherwise). Open picks a workspace file in the system's own
-  file dialog (`WorkspaceUtility.chooseFile`, LWJGL's tinyfd), listing only `.arpg` files and taking only one in the
-  folder of the window's kind. Generating maps is not a file action: Generate and Clear live under the map's settings in the
+  file dialog (`WorkspaceUtility.chooseFile`, LWJGL's tinyfd), listing only the files the window takes (`.arpg`, and
+  `.glb` too in the character tabs) and taking a workspace file only from the folder of the window's kind. Generating maps is not a file action: Generate and Clear live under the map's settings in the
   Maps tab. They act on the window worked in last (`editor.bootstrap.filemenupipeline`,
   `FileMenuManager`), name it at their head and mute what it does not take.
 - **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
@@ -137,7 +137,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The workspace
 
 - **New work lives in the workspace**, `Documents/My Games/AdventureRPG/Assets/` beside the saves, one folder to each
-  kind (`Images`, `Models`), resolved only through `WorkspaceUtility.resolveFolder`. A workspace file is not game
+  kind (`Characters` for models, `Images`, `Exports` for exported maps, `Stamps` for stamp pictures, `Models` for
+  `.glb` files), resolved only through `WorkspaceUtility.resolveFolder`. A workspace file is not game
   content: the Hierarchy never lists it, and it reaches the game only through Import, as a painting or modelling
   tool's project file reaches an engine through its export.
 

@@ -184,6 +184,8 @@ public class EditorSetting {
     // File Menu — each tool's actions, the methods its own keys and buttons run
     public static final FileMenuTableStruct FILE_MENU_CHARACTER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.CharacterEditorBranch")
+            .with(FileMenuAction.NEW, "newModel")
+            .with(FileMenuAction.OPEN, "openModel")
             .with(FileMenuAction.DUPLICATE, "copyCharacter")
             .with(FileMenuAction.SAVE, "saveCharacter")
             .with(FileMenuAction.REVERT, "revertCharacter")
@@ -790,7 +792,6 @@ public class EditorSetting {
     // dialogs Import asks through and what both report
     public static final String MODEL_USER_DIRECTORY = "Models";
     public static final String MODEL_CONFIRM_ADD_BONES = "add";
-    public static final String MODEL_DIALOG_FILE = "Import: type the .glb's name in ";
     public static final String MODEL_DIALOG_ADD_BONES_PREFIX = "The rig lacks ";
     public static final String MODEL_DIALOG_ADD_BONES_SUFFIX = ". Type add to add them to the rig";
     public static final String MODEL_DIALOG_HANG_BONE = "The model has no skin. Type the bone it hangs from";
@@ -1999,8 +2000,10 @@ public class EditorSetting {
     // Workspace — the folder beside the saves new work is made and kept in until it is imported, the file kind its
     // open dialog lists, and the titles that dialog takes
     public static final String WORKSPACE_DIRECTORY = "Assets";
-    public static final String WORKSPACE_FILE_PATTERN = "*.arpg";
+    public static final String[] WORKSPACE_FILE_PATTERNS = { "*.arpg" };
     public static final String WORKSPACE_FILE_DESCRIPTION = "AdventureRPG files (*.arpg)";
+    public static final String[] WORKSPACE_MODEL_PATTERNS = { "*.arpg", "*.glb" };
+    public static final String WORKSPACE_MODEL_DESCRIPTION = "Models (*.arpg) or glTF binaries (*.glb)";
     public static final String WORKSPACE_DIALOG_OPEN_IMAGE = "Open Image";
     public static final String WORKSPACE_MESSAGE_OUTSIDE = "Open takes a file from ";
 
@@ -2012,6 +2015,47 @@ public class EditorSetting {
     // suffix after the separator a texture's alias follows, the pack first offered, the dialogs and what they report
     public static final String IMAGE_EXPORT_DIRECTORY = "Exports";
     public static final String IMAGE_STAMP_DIRECTORY = "Stamps";
+
+    // Character Models — the workspace folder models are kept in, the prefix their mesh and preview race go by while
+    // worked, the fields of a model file and of the gender a model is worn by, the folder under the game's meshes an
+    // import writes to, the dialogs New, Open and Import ask through, and what they report
+    public static final String CHARACTER_WORKSPACE_DIRECTORY = "Characters";
+    public static final String CHARACTER_WORKSPACE_PREFIX = "workspace/";
+    public static final String CHARACTER_MODEL_FIELD_RIG = "rig";
+    public static final String CHARACTER_MODEL_FIELD_VAO = "vao";
+    public static final String CHARACTER_MODEL_FIELD_GEOMETRY = "mesh";
+    public static final String CHARACTER_MODEL_FIELD_GENDERS = "genders";
+    public static final String CHARACTER_MODEL_FIELD_MESH = "mesh";
+    public static final String CHARACTER_MODEL_FIELD_PLAYABLE = "playable";
+    public static final String CHARACTER_MODEL_FIELD_EQUIPMENT = "equipment";
+    public static final String CHARACTER_MODEL_FIELD_APPEARANCE = "appearance";
+    public static final String[] CHARACTER_MODEL_LOOK_FIELDS = { "head_bone", "colors", "palettes", "details" };
+    public static final String[] CHARACTER_MODEL_GENDER_FIELDS = { "rig", "material", "animation_tree" };
+    public static final String CHARACTER_MODEL_IMPORT_FOLDER = "characters/";
+    public static final String CHARACTER_MODEL_DEFAULT_RIG = "HumanoidRig";
+    public static final String CHARACTER_MODEL_DIALOG_NEW = "New model: its name";
+    public static final String CHARACTER_MODEL_DIALOG_RIG = "New model: the rig it is built on";
+    public static final String CHARACTER_MODEL_DIALOG_OPEN = "Open Model";
+    public static final String CHARACTER_MODEL_DIALOG_RACE =
+            "Import: the race it joins (a race on its rig, or a new name)";
+    public static final String CHARACTER_MODEL_DIALOG_GENDER = "Import: the gender it is the model of";
+    public static final String CHARACTER_MODEL_DIALOG_ENTITY = "Import: an entity to make of the race (empty for none)";
+    public static final String CHARACTER_MODEL_MESSAGE_CREATED = "Made the model ";
+    public static final String CHARACTER_MODEL_MESSAGE_OPENED = "Opened the model ";
+    public static final String CHARACTER_MODEL_MESSAGE_NOT_READ = "The model could not be read: ";
+    public static final String CHARACTER_MODEL_MESSAGE_NOT_WRITTEN = "The model could not be written: ";
+    public static final String CHARACTER_MODEL_MESSAGE_NO_RACE =
+            "No race stands on the rig to preview the model with: ";
+    public static final String CHARACTER_MODEL_MESSAGE_BLANK =
+            "Blank model: choose a root part (such as the Torso) in the Stamps tab and click in the Sculpt tab";
+    public static final String CHARACTER_MODEL_MESSAGE_ROOT_ONLY =
+            "A blank model starts from a root part, one that joins no host, such as the Torso";
+    public static final String CHARACTER_MODEL_MESSAGE_RACE_TABS =
+            "Appearance and Equipment belong to a race: Import the model into one to set them";
+    public static final String CHARACTER_MODEL_MESSAGE_NOT_RACE =
+            "A model is copied or removed as a file in the workspace, not here";
+    public static final String CHARACTER_MODEL_MESSAGE_IMPORT_MODEL = "Import takes an open model from the workspace";
+    public static final String CHARACTER_MODEL_MESSAGE_IMPORTED = "Imported the model into the race ";
     public static final String IMAGE_STAMP_MESSAGE_NOT_READ = "A stamp picture could not be read: ";
     public static final String IMAGE_STAMP_MESSAGE_PRESSED = "Pressed the stamp ";
     public static final String IMAGE_EXPORT_EXTENSION = ".png";
