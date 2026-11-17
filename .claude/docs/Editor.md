@@ -15,6 +15,12 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   choice every other tab sees at once. Tabs never keep private copies of a shared choice.
 - **Name a tab for what it holds.** A list of biomes is the Biome Outliner; a window that paints the world's images is
   the World Editor. Never a generic name that hides what the tab is for.
+- **Tools sit at the foot of each menu.** The editor's menus (`menus/editor/EditorWindow.arpg`) list a tab under the
+  section for what it works on, and the tabs that serve the others (the Tools and Brushes tabs, the Outliner, Maps,
+  Stamps and the Color Wheel, the Recorder) under a Tools section, always the menu's last: Content's Tools holds Tools
+  and Brushes, Characters' the Outliner, Textures' Maps, Stamps and the Color Wheel, Media's the Recorder. The Debug
+  menu's Preview opens `DevContext`, the game as it runs with the command console's systems; there is no other runtime
+  tab.
 - **Split so far:** the World Editor paints the biomes and places settlements and cameras on its Biomes layer and raises
   and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
@@ -35,7 +41,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   under Library in the Media menu with the Sound Library, stays empty until an instrument or a note set is picked in the
   Hierarchy and then lists the notes it plays, each sounded by its button and dragged onto the Timeline as a note clip
   that is stretched and cut like any clip. A library's drag, like Record, makes a media file when none is open. The Timeline's title names what is open; Back is a Recorder shortcut. The Scene Assets tab, beside
-  the ARPG Viewer in the Content menu (`editor.bootstrap.sceneassetspipeline`), lists what the Dev window shows as it
+  the ARPG Viewer in the Content menu (`editor.bootstrap.sceneassetspipeline`), lists what the Preview tab shows as it
   runs: the block under the crosshair in full (block, biome, face hit and every face's texture with its pack, material,
   shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
   `DevSceneAssetsSystem` casts across the view about once a second while a Scene Assets tab is open; a row naming

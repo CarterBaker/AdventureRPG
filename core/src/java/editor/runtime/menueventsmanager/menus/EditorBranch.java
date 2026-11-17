@@ -80,10 +80,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openItemEditor(window.getGLWindow());
     }
 
-    public void openTextureViewer(WindowInstance window) {
-        tabManager.openTextureViewer(window.getGLWindow());
-    }
-
     public void openShipwright(WindowInstance window) {
         tabManager.openShipwright(window.getGLWindow());
     }
@@ -244,10 +240,6 @@ public class EditorBranch extends BranchPackage {
 
     public void openPreview(WindowInstance window) {
         tabManager.openPreview(window.getGLWindow());
-    }
-
-    public void openDev(WindowInstance window) {
-        tabManager.openDev(window.getGLWindow());
     }
 
     public void openConsole(WindowInstance window) {

@@ -30,7 +30,7 @@ public class DevContext extends RuntimeContext {
      * included, and rendering its export — which its record, play, stop and mark commands
      * drive too. The scene assets system tells the Scene Assets tab what the
      * window shows while that tab watches it.
-     * The editor pairs it with a Dev Mode tab exactly as it does a preview.
+     * The editor opens it as its Preview tab.
      * Dev-only systems live beside it in the editor's runtime, never in the
      * game's.
      */

@@ -25,7 +25,7 @@ public class EditorSettingsBranch extends BranchPackage {
      * the option list shows one page at a time — this branch owns the tabs,
      * the list, the shared rows and the footer's status, and each page's
      * branch fills it. Every change applies as it is made; the world
-     * settings a Dev Mode tab streams by apply once the dialog closes, which
+     * settings a Preview tab streams by apply once the dialog closes, which
      * also writes the editor's settings file. Escape, the close button or
      * Done closes it, unless a page is waiting for keys, which Escape then
      * cancels. The page last shown opens again next time.

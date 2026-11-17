@@ -95,10 +95,6 @@ public class ItemEditorBranch extends BranchPackage {
                 itemEditorManager::renameSelectedPart);
     }
 
-    public void clearBrush() {
-        itemEditorManager.clearBrush();
-    }
-
     public void previousTexture() {
         itemEditorManager.cycleTexture(-1);
     }

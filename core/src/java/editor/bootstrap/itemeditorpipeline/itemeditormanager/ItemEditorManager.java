@@ -23,7 +23,7 @@ public class ItemEditorManager extends ManagerPackage {
 
     /*
      * Owns the item editor's shared state — open item meshes, the active item
-     * and brush texture, and the status line. The tool every Item Editor
+     * and the status line. The tool every Item Editor
      * applies is the one ToolManager keeps for the item. Items themselves are
      * ARPG entries owned by InfoManager: selecting one there opens the mesh it
      * names here, starting a fresh model when that mesh has no file yet, and
@@ -49,7 +49,6 @@ public class ItemEditorManager extends ManagerPackage {
 
     // Active
     private ItemDocumentInstance activeDocument;
-    private String brushTextureName;
 
     // Status
     private String statusMessage;
@@ -295,7 +294,6 @@ public class ItemEditorManager extends ManagerPackage {
             return;
 
         activeDocument.selectPart(partIndex);
-        this.brushTextureName = null;
         notifyChanged();
     }
 
@@ -342,29 +340,7 @@ public class ItemEditorManager extends ManagerPackage {
     public void applyTool(SubVoxelHitStruct hit) {
 
         if (activeDocument != null)
-            itemEditBranch.applyTool(activeDocument, getTool(), hit, brushTextureName);
-    }
-
-    // Brush \\
-
-    public void selectBrushTexture(String textureName) {
-
-        if (!getTextureNames().contains(textureName))
-            throwException("'" + textureName + "' is not in the item texture array '"
-                    + EditorSetting.ITEM_EDITOR_TEXTURE_ARRAY + "'.");
-
-        this.brushTextureName = textureName;
-        notifyChanged();
-    }
-
-    public void clearBrush() {
-
-        this.brushTextureName = null;
-        notifyChanged();
-    }
-
-    public String getBrushTextureName() {
-        return brushTextureName;
+            itemEditBranch.applyTool(activeDocument, getTool(), hit);
     }
 
     // Status \\
@@ -419,11 +395,6 @@ public class ItemEditorManager extends ManagerPackage {
             status.append(EditorSetting.ITEM_EDITOR_STATUS_NO_ITEM);
         else
             appendDocumentStatus(status);
-
-        if (brushTextureName != null)
-            status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR)
-                    .append(EditorSetting.ITEM_EDITOR_STATUS_BRUSH)
-                    .append(brushTextureName);
 
         if (statusMessage != null)
             status.append(EditorSetting.ITEM_EDITOR_STATUS_SEPARATOR).append(statusMessage);

@@ -19,11 +19,11 @@ import engine.root.BranchPackage;
 public class EditorSettingsOptionBranch extends BranchPackage {
 
     /*
-     * Fills the settings dialog's General page and its Dev Mode pages, and
+     * Fills the settings dialog's General page and its Preview pages, and
      * writes each change into Settings through SettingsValueUtility, the
      * model the game's own settings menu shares, so a setting behaves the
      * same wherever it is changed. General sets the editor's own window; the
-     * Dev Mode pages set what every Dev Mode and Preview tab runs with. A
+     * Preview pages set what every Preview tab runs with. A
      * world setting only marks the dialog, which applies it once on closing.
      * Clicking a control row waits for the next key or mouse button pressed;
      * Escape cancels the wait, and an action given a key another holds swaps
@@ -69,7 +69,7 @@ public class EditorSettingsOptionBranch extends BranchPackage {
 
     void populateGraphics() {
 
-        editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_DEV_MODE);
+        editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_PREVIEW);
 
         editorSettingsBranch.injectSectionHeader(RuntimeSetting.SETTINGS_SECTION_VIEW);
         injectOptionRow(SettingsOption.FIELD_OF_VIEW);
@@ -94,7 +94,7 @@ public class EditorSettingsOptionBranch extends BranchPackage {
 
     void populateEffects() {
 
-        editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_DEV_MODE);
+        editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_PREVIEW);
 
         editorSettingsBranch.injectSectionHeader(RuntimeSetting.SETTINGS_SECTION_OUTLINES);
         injectOptionRow(SettingsOption.OUTLINES);
@@ -130,7 +130,7 @@ public class EditorSettingsOptionBranch extends BranchPackage {
 
     void populateGameplay() {
 
-        editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_DEV_MODE);
+        editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_PREVIEW);
 
         editorSettingsBranch.injectSectionHeader(RuntimeSetting.SETTINGS_SECTION_CAMERA);
         injectOptionRow(SettingsOption.CAMERA_SHAKE);
@@ -144,7 +144,7 @@ public class EditorSettingsOptionBranch extends BranchPackage {
 
     void populateControls() {
 
-        editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_DEV_MODE);
+        editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_PREVIEW);
 
         String section = null;
 

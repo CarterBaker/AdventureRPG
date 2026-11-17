@@ -340,7 +340,7 @@ public class EditorSetting {
 
     // Settings Dialog — pages, sections and notes
     public static final String SETTINGS_GROUP_EDITOR = "Editor";
-    public static final String SETTINGS_GROUP_DEV_MODE = "Dev Mode";
+    public static final String SETTINGS_GROUP_PREVIEW = "Preview";
     public static final String SETTINGS_TAB_GENERAL = "General";
     public static final String SETTINGS_TAB_SHORTCUTS = "Shortcuts";
     public static final String SETTINGS_TAB_COLORS = "Color Scheme";
@@ -355,7 +355,7 @@ public class EditorSetting {
     public static final String SETTINGS_SECTION_FRAME = "Window Frame";
     public static final String SETTINGS_NOTE_WINDOW = "Sets the editor's own window";
     public static final String SETTINGS_NOTE_SAVED = "Every setting is saved to EditorSettings when this dialog closes";
-    public static final String SETTINGS_NOTE_DEV_MODE = "Applies to every Dev Mode and Preview tab";
+    public static final String SETTINGS_NOTE_PREVIEW = "Applies to every Preview tab";
     public static final String SETTINGS_NOTE_WORLD_APPLY = "World changes apply when this dialog closes";
     public static final String SETTINGS_NOTE_CONTROLS = "Click an action, then press its new key or button";
     public static final String SETTINGS_NOTE_SHORTCUTS =
@@ -461,7 +461,6 @@ public class EditorSetting {
     public static final String TAB_TITLE_SETTLEMENT_PLANNER = "Settlement Planner";
     public static final String TAB_TITLE_SHIPWRIGHT = "Shipwright";
     public static final String TAB_TITLE_SHIP_VIEWER = "Ship Viewer";
-    public static final String TAB_TITLE_TEXTURE_VIEWER = "Texture Viewer";
     public static final String TAB_TITLE_TOOLS = "Tools";
     public static final String TAB_TITLE_TRANSITIONS = "Transitions";
     public static final String TAB_TITLE_TREE_PLANNER = "Tree Planner";
@@ -1886,10 +1885,6 @@ public class EditorSetting {
     public static final String ANIMATION_TREE_EDITOR_MESSAGE_LAST_LAYER = "A tree needs at least its base layer";
     public static final String ANIMATION_TREE_EDITOR_MESSAGE_NO_ACTION = "No layer plays the action ";
 
-    // Texture Viewer
-    public static final String TEXTURE_VIEWER_STATUS_HOVERED = "Texture: ";
-    public static final String TEXTURE_VIEWER_STATUS_NO_BRUSH = "No brush. Click a texture to paint items with it.";
-
     // World Map
     public static final String WORLD_MAP_STATUS_X = "X ";
     public static final String WORLD_MAP_STATUS_Z = "   Z ";
@@ -2606,7 +2601,6 @@ public class EditorSetting {
     // Item Status
     public static final String ITEM_EDITOR_DIRTY_MARKER = "*";
     public static final String ITEM_EDITOR_STATUS_SEPARATOR = "  |  ";
-    public static final String ITEM_EDITOR_STATUS_BRUSH = "Brush: ";
     public static final String ITEM_EDITOR_STATUS_NO_ITEM = "No item open. Pick one in the Hierarchy or press New.";
     public static final String ITEM_EDITOR_TEXTURE_SEPARATOR = "  :  ";
     public static final String ITEM_EDITOR_MESSAGE_SAVED = "Saved ";
@@ -3263,7 +3257,7 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_NOTHING_ARMED = "Arm at least one channel to record";
     public static final String RECORDER_STATUS_NOTHING_RECORDED = "Nothing recorded yet";
     public static final String RECORDER_STATUS_NO_RECORDING_FOR_SOUND = "Open or make a recording to lay sounds on";
-    public static final String RECORDER_STATUS_NO_DEV_WINDOW = "Open a Dev Mode tab to record or play";
+    public static final String RECORDER_STATUS_NO_DEV_WINDOW = "Open a Preview tab to record or play";
     public static final String RECORDER_STATUS_WRONG_WORLD = "This recording was made in another world: ";
     public static final String RECORDER_STATUS_NAME_TAKEN = "That name is taken or not a valid file name: ";
     public static final String RECORDER_STATUS_MISSING = "Recording no longer exists: ";
@@ -3282,7 +3276,7 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_NO_TRANSITION = "Click a transition on a clip first";
     public static final String RECORDER_STATUS_EXPORT_WHILE_RECORDING = "Stop the take before exporting";
     public static final String RECORDER_STATUS_EXPORT_WHILE_PAUSED =
-            "Close the pause menu in the Dev Mode tab before exporting";
+            "Close the pause menu in the Preview tab before exporting";
     public static final String RECORDER_STATUS_EXPORTING = "Exporting ";
     public static final String RECORDER_STATUS_EXPORTED = "Exported ";
     public static final String RECORDER_STATUS_EXPORT_FAILED = "Export failed: ";
@@ -3388,6 +3382,5 @@ public class EditorSetting {
     public static final float TAB_HEADER_PADDING_PIXELS = 4f;
     public static final float TAB_CANVAS_MARGIN_PIXELS = 8f;
     public static final float TAB_CANVAS_GAP_PIXELS = 6f;
-    public static final String TAB_TITLE_DEV = "Dev Mode";
     public static final String TAB_TITLE_PREVIEW = "Preview";
 }

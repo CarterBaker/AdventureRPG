@@ -99,7 +99,7 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
   (version 4 adds `key_root`, `key_scale` and `lanes`; older files read with C major and default lanes and are saved as 4
   when opened) in `RECORDER_MEDIA_DIRECTORY` (`RecorderManager.getRecordingFile(name)`). `RecordingInstance.hasPicture`
   (any clip showing a picture) is the one test of video against music: it routes Export
-  (`RecorderBranch.exportMedia`), the Dev window's world check (`bindDevContext`), the ruler, and the beat-grid snap
+  (`RecorderBranch.exportMedia`), the Preview tab's world check (`bindDevContext`), the ruler, and the beat-grid snap
   (`RecordingTimelineBranch.snapTime`). There is no kind and no per-kind lane count.
 - **Codec clips:** a clip carrying `getSongClip()` (a notes clip) is timed by the recording's tempo map where it lies
   (`resolveSongOrigin`), bound by `RecordingSourceBranch.layNotes` to a one-lane song, and is replaced whole by every edit through `RecorderManager.replaceSongClip` (rebind, sound revision, unsaved);

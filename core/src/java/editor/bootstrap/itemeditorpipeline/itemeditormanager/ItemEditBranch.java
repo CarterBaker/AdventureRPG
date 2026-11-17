@@ -1,7 +1,5 @@
 package editor.bootstrap.itemeditorpipeline.itemeditormanager;
 
-import java.util.function.IntPredicate;
-
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelHitStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
@@ -22,9 +20,7 @@ class ItemEditBranch extends BranchPackage {
      * adds a cube of the selected part, Wall a double-sided wall on the
      * struck face or, near its edge, standing on that edge, Erase removes the
      * struck cube or wall, Brush moves it into the selected part and Pick
-     * selects the part it belongs to. With a brush texture chosen, Place, Wall
-     * and Brush build with the part using that texture, creating it when none
-     * does.
+     * selects the part it belongs to.
      */
 
     // Internal
@@ -41,40 +37,35 @@ class ItemEditBranch extends BranchPackage {
 
     // Tools \\
 
-    void applyTool(
-            ItemDocumentInstance document,
-            EditorTool tool,
-            SubVoxelHitStruct hit,
-            String brushTextureName) {
+    void applyTool(ItemDocumentInstance document, EditorTool tool, SubVoxelHitStruct hit) {
 
         switch (tool) {
-            case PLACE -> place(document, hit, brushTextureName);
-            case WALL -> wall(document, hit, brushTextureName);
+            case PLACE -> place(document, hit);
+            case WALL -> wall(document, hit);
             case ERASE -> erase(document, hit);
-            case BRUSH -> paint(document, hit, brushTextureName);
+            case BRUSH -> paint(document, hit);
             case PICK -> pick(document, hit);
             default -> {
             }
         }
     }
 
-    private void place(ItemDocumentInstance document, SubVoxelHitStruct hit, String brushTextureName) {
+    private void place(ItemDocumentInstance document, SubVoxelHitStruct hit) {
 
         if (!hit.hasPlacement())
             return;
 
-        build(document, brushTextureName, partIndex -> editCell(
-                document, hit.getPlaceX(), hit.getPlaceY(), hit.getPlaceZ(), partIndex));
+        editCell(document, hit.getPlaceX(), hit.getPlaceY(), hit.getPlaceZ(), document.getSelectedPartIndex());
     }
 
-    private void wall(ItemDocumentInstance document, SubVoxelHitStruct hit, String brushTextureName) {
+    private void wall(ItemDocumentInstance document, SubVoxelHitStruct hit) {
 
         if (!hit.hasWallPlacement())
             return;
 
-        build(document, brushTextureName, partIndex -> editWall(
+        editWall(
                 document, hit.getWallPlaceAxis(), hit.getWallPlaceX(), hit.getWallPlaceY(), hit.getWallPlaceZ(),
-                partIndex));
+                document.getSelectedPartIndex());
     }
 
     private void erase(ItemDocumentInstance document, SubVoxelHitStruct hit) {
@@ -85,12 +76,12 @@ class ItemEditBranch extends BranchPackage {
         editTarget(document, hit, EngineSetting.INDEX_NOT_FOUND);
     }
 
-    private void paint(ItemDocumentInstance document, SubVoxelHitStruct hit, String brushTextureName) {
+    private void paint(ItemDocumentInstance document, SubVoxelHitStruct hit) {
 
         if (!hit.hasTarget())
             return;
 
-        build(document, brushTextureName, partIndex -> editTarget(document, hit, partIndex));
+        editTarget(document, hit, document.getSelectedPartIndex());
     }
 
     // The part the struck cube or wall belongs to made the selected part, as an eyedropper takes up a color
@@ -113,48 +104,6 @@ class ItemEditBranch extends BranchPackage {
                     document, hit.getTargetAxis(), hit.getTargetX(), hit.getTargetY(), hit.getTargetZ(), partIndex);
 
         return editCell(document, hit.getTargetX(), hit.getTargetY(), hit.getTargetZ(), partIndex);
-    }
-
-    // Resolves the brush part, applies the edit with it, and drops a part the refused edit created
-    private void build(ItemDocumentInstance document, String brushTextureName, IntPredicate edit) {
-
-        SubVoxelModelStruct model = document.getModel();
-        int partCount = model.getPartCount();
-        int partIndex = resolveBuildPart(document, brushTextureName);
-
-        if (partIndex == EngineSetting.INDEX_NOT_FOUND)
-            return;
-
-        if (!edit.test(partIndex)) {
-
-            if (model.getPartCount() > partCount)
-                model.removePart(model.getPartCount() - 1);
-
-            return;
-        }
-
-        document.selectPart(partIndex);
-    }
-
-    private int resolveBuildPart(ItemDocumentInstance document, String brushTextureName) {
-
-        SubVoxelModelStruct model = document.getModel();
-        int selectedPart = document.getSelectedPartIndex();
-
-        if (brushTextureName == null || model.getPart(selectedPart).getTextureName().equals(brushTextureName))
-            return selectedPart;
-
-        int texturePart = subVoxelManager.findTexturePart(model, brushTextureName);
-
-        if (texturePart != EngineSetting.INDEX_NOT_FOUND)
-            return texturePart;
-
-        if (model.getPartCount() >= EngineSetting.SUB_VOXEL_MAX_PARTS) {
-            itemEditorManager.setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_PART_LIMIT);
-            return EngineSetting.INDEX_NOT_FOUND;
-        }
-
-        return subVoxelManager.addTexturePart(model, brushTextureName);
     }
 
     private boolean editCell(ItemDocumentInstance document, int x, int y, int z, int partIndex) {

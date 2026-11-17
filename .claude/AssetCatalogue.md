@@ -428,6 +428,11 @@ One line per session that changed this file: the date, what was added or removed
   `tab_strip_row` template), so tabs shrink and then wrap instead of hiding.
 - 2026-11-17: Hair with weight. Regenerated `rigs/HumanoidRig.arpg` (every hair chain near critically damped:
   stiffness 120, damping 20, drag 3), so hair settles after a move.
+- 2026-11-17: Editor menu sections. Regenerated `menus/editor/EditorWindow.arpg` (Tools sections at the foot of the
+  Content, Characters, Textures and Media menus; Maps, Stamps and the Color Wheel under Textures; the Recorder under
+  Media's Tools; Dev Mode renamed Preview and the old Preview entry removed); removed the Texture Viewer's
+  `menus/editor/TextureViewer.arpg`, `materials/editor/TextureViewerAtlasMaterial.arpg` and
+  `shaders/editor/textureviewer/` (`TextureViewerAtlasShader.arpg`, `.fsh`, `.vsh`) with the tool.
 
 ---
 
@@ -1521,7 +1526,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (180 files)
+## Shaders (178 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1562,10 +1567,6 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/editor/shipviewer/`
 
 `ShipViewerShader.fsh`
-
-### `assets/shaders/editor/textureviewer/`
-
-`TextureViewerAtlasShader.fsh`, `TextureViewerAtlasShader.vsh`
 
 ### `assets/shaders/editor/treeviewer/`
 
@@ -1849,7 +1850,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3803 files)
+## Data Files (3800 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2624,7 +2625,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `CharacterViewMarkerMaterial.arpg`, `CharacterViewMarkerSelectedMaterial.arpg`, `ItemEditorCursorEraseMaterial.arpg`,
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
 `ItemEditorModelMaterial.arpg`, `ImageEditorMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
-`ShipViewerMaterial.arpg`, `TextureViewerAtlasMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
+`ShipViewerMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
 `TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`, `UVEditorOverlayMaterial.arpg`,
 `WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
 `WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
@@ -2692,7 +2693,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
 `NewImageDialog.arpg`, `NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
-`TabFrame.arpg`, `TextureViewer.arpg`,
+`TabFrame.arpg`,
 `Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
@@ -2914,10 +2915,6 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/shaders/editor/shipviewer/`
 
 `ShipViewerShader.arpg`
-
-### `assets/shaders/editor/textureviewer/`
-
-`TextureViewerAtlasShader.arpg`
 
 ### `assets/shaders/editor/treeviewer/`
 

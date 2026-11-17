@@ -14,9 +14,9 @@ own tool tab, laid out however the owner likes, each working the one character t
 `.claude/docs/Editor.md`). A viewport tab holds the status bar and the viewport; saving, reverting, copying, deleting,
 undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`,
 `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
-from the editor's Characters menu (its Tools section holds the Outliner, above the Character section's tool tabs and the
-Animation section), the Content menu (Color Wheel, beside Layers) or the Textures menu (Maps), and restored by
-layouts like any other.
+from the editor's Characters menu (the Character section's tool tabs, the Animation section, then its Tools section
+holding the Outliner) or the Textures menu's Tools section (Maps, Stamps and the Color Wheel), and restored by layouts
+like any other.
 
 | Window | Context | Shows |
 |---|---|---|
@@ -649,7 +649,7 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
 - **Manager** (`StampManager`): the palette, the stamp in use (shared, picked in the Stamps tab or the Hierarchy), live
   rebuilds from the Info Panel, and each stamp's emblem (`StampThumbnailBranch`: a front view rasterised into a square
   with a z-buffer, shaded by facing).
-- **Stamps tab** (`editor.runtime.stamps.StampsContext`, the Characters menu's Tools section): tiles of every stamp, a
+- **Stamps tab** (`editor.runtime.stamps.StampsContext`, the Textures menu's Tools section): tiles of every stamp, a
   row of `STAMP_TILES_PER_ROW` injected at a time with each slot filled from it (`StampsMenuSystem`), the one in use
   tinted, then its details. Anchor a tile's emblem by its centre: an emblem anchored to the top of a tile in a stacked
   row is placed from the panel's top instead.

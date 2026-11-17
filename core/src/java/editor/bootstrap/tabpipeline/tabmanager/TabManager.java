@@ -3,7 +3,6 @@ package editor.bootstrap.tabpipeline.tabmanager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
-import application.runtime.RuntimeContext;
 import editor.runtime.animationeditor.AnimationEditorContext;
 import editor.runtime.animationtimeline.AnimationTimelineContext;
 import editor.runtime.animationtreeeditor.AnimationTreeEditorContext;
@@ -56,7 +55,6 @@ import editor.runtime.shipviewer.ShipViewerContext;
 import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.soundlibrary.SoundLibraryContext;
 import editor.runtime.stamps.StampsContext;
-import editor.runtime.textureviewer.TextureViewerContext;
 import editor.runtime.timeline.TimelineContext;
 import editor.runtime.tools.ToolsContext;
 import editor.runtime.transitions.TransitionsContext;
@@ -152,11 +150,7 @@ public class TabManager extends ManagerPackage {
 
     // Management \\
     public TabHandle openPreview(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_PREVIEW, RuntimeContext.class, osWindow);
-    }
-
-    public TabHandle openDev(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_DEV, DevContext.class, osWindow);
+        return openTab(EditorSetting.TAB_TITLE_PREVIEW, DevContext.class, osWindow);
     }
 
     public TabHandle openHierarchy(WindowInstance osWindow) {
@@ -252,13 +246,6 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openShipViewer(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_SHIP_VIEWER, ShipViewerContext.class, osWindow);
-    }
-
-    public TabHandle openTextureViewer(WindowInstance osWindow) {
-        return openTab(
-                EditorSetting.TAB_TITLE_TEXTURE_VIEWER,
-                TextureViewerContext.class,
-                osWindow);
     }
 
     public TabHandle openWorldMap(WindowInstance osWindow) {

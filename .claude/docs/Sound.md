@@ -167,13 +167,13 @@ samplerManager.noteOnAt(instrumentID, pitch, velocity, entity.getWorldHandle(), 
 
 ## Recorder and Sound Library
 
-- `RecorderChannel.SOUND`: a take records every sound its Dev window's systems start, every placed sound the shared
+- `RecorderChannel.SOUND`: a take records every sound its Preview tab's systems start, every placed sound the shared
   world starts in that window's world and every unplaced one it starts, while it records (`DevRecorderSoundSystem`),
   into the take's `RecordingSoundTrackStruct`, with how loud and from which side it reached the camera. Sounds already
   playing when the take begins are captured too: a loop (ambience, rain, wind) from the take's start, any other (a
   music piece) at a negative time, so it is heard from as far in as it had played. Unlike every other channel, sounds
   add up: every unmuted clip holding the channel sounds together.
-- While a session runs, `RecorderManager.holdSound` pins its Dev window as the one heard, so clicking into the
+- While a session runs, `RecorderManager.holdSound` pins its Preview tab as the one heard, so clicking into the
   Recorder tab never freezes the listener or fades the ambience a take records; while the timeline plays the sound
   channel the pin is quiet, so live ambience, music and heartbeat never double what the take holds.
 - The Keys pane shows the selected clip's take's Sounds layer (`RecorderKeysSystem.injectSounds`): its own row marks
