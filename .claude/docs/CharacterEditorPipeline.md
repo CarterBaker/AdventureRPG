@@ -249,9 +249,10 @@ Paint and Stamp, the modes whose tools select and shape vertices (`CharacterEdit
 - **Sculpt tools.** Brush, Smooth, Relax (even spacing along the surface without shrinking), Inflate, Pinch, Crease
   (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
   in `CharacterShapeBranch.resolveMove`.
-- **Topology brush.** The Sculpt canvas's Topology tool (`D`) changes the faces, not the shape
-  (`CharacterTopologyBranch`): a stroke opens one undo step, gathers how far the brush covers each vertex (and its
-  twin with Mirror on), and once a frame (`CharacterEditorManager.showStroke` calls `apply`) changes every face whose
+- **Topology brush.** The Mesh canvas's Topology tool (`D`) changes the faces, not the shape, where the mesh's
+  vertices and edges are drawn (`CharacterTopologyBranch`, at the canvas's own Strength, honouring its Mirror; a stroke
+  routes there from `CharacterEditorManager.beginStroke` before the mode's own stroke): a stroke opens one undo step,
+  gathers how far the brush covers each vertex (and its twin with Mirror on), and once a frame (`CharacterEditorManager.showStroke` calls `apply`) changes every face whose
   corners it all covers. Plain strokes refine by Schneiders' 3-refinement, as adaptive all-quad meshing does: a face
   splits into nine on a lattice of thirds and each face beside it takes the transition template its refined edges call
   for (`EditorSetting.CHARACTER_TOPOLOGY_TEMPLATE_*`: one edge, two at a corner, two opposite); a face left with three

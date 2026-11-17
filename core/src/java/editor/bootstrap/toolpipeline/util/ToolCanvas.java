@@ -67,10 +67,11 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_MESH,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PICK,
-                    EditorTool.POSE },
+                    EditorTool.POSE, EditorTool.TOPOLOGY },
             new ToolActionGroupStruct[] { meshTransform(), meshGeometry(), meshSelection(), meshPose() },
             false,
             screenSize(),
+            strength(EditorSetting.TOOL_TOPOLOGY_STRENGTH_DEFAULT),
             mirror(),
             xray(),
             bones()),
@@ -78,7 +79,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
             new EditorTool[] {
                     EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.RELAX, EditorTool.INFLATE, EditorTool.PINCH,
-                    EditorTool.CREASE, EditorTool.FLATTEN, EditorTool.NUDGE, EditorTool.TOPOLOGY },
+                    EditorTool.CREASE, EditorTool.FLATTEN, EditorTool.NUDGE },
             true,
             screenSize(),
             strength(EditorSetting.TOOL_SCULPT_STRENGTH_DEFAULT),

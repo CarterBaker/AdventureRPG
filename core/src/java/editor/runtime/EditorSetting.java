@@ -2346,6 +2346,7 @@ public class EditorSetting {
     public static final float TOOL_STRENGTH_DEFAULT = 1f;
     public static final float TOOL_WEIGHT_STRENGTH_DEFAULT = 0.2f;
     public static final float TOOL_SCULPT_STRENGTH_DEFAULT = 0.5f;
+    public static final float TOOL_TOPOLOGY_STRENGTH_DEFAULT = 0.5f;
     public static final float TOOL_PAINT_STRENGTH_DEFAULT = 0.5f;
     public static final float TOOL_TWIST_STEP = 15f;
     public static final float TOOL_TWIST_MAX = 360f;

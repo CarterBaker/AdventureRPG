@@ -966,8 +966,8 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Strokes \\
 
-    // A brush stroke on the active part: its selection with the Select tool, combined with it as asked, its shape in
-    // Sculpt mode and its weights otherwise
+    // A brush stroke on the active part: its selection with the Select tool, combined with it as asked, its faces with
+    // the Topology tool, its shape in Sculpt mode and its weights otherwise
     public void beginStroke(CharacterEditorSelection selection) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
@@ -977,13 +977,12 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (isSelectStroke())
             characterSelectionBranch.beginStroke(document, selection);
-        else if (mode == CharacterEditorMode.SCULPT) {
-            if (refusePosedEdit())
-                return;
-
-            if (toolManager.getTool(mode.getToolCanvas()) == EditorTool.TOPOLOGY)
+        else if (toolManager.getTool(mode.getToolCanvas()) == EditorTool.TOPOLOGY) {
+            if (!refusePosedEdit())
                 characterTopologyBranch.beginStroke(document);
-            else
+        }
+        else if (mode == CharacterEditorMode.SCULPT) {
+            if (!refusePosedEdit())
                 characterShapeBranch.beginStroke(document);
         }
         else
