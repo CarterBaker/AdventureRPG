@@ -10,7 +10,6 @@ import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import editor.bootstrap.commandpipeline.command.CommandHandle;
 import editor.bootstrap.commandpipeline.command.CommandTarget;
 import editor.bootstrap.commandpipeline.commandmanager.CommandManager;
-import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.commandconsole.CommandConsoleSetting;
 import editor.runtime.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
 import editor.runtime.commandconsole.dial.CommandConsoleDialSystem;
@@ -37,8 +36,11 @@ public class CommandConsoleTreeSystem extends SystemPackage {
      * command heads its sections with its own name; a vehicle's tile is the
      * command itself, so its sections sit straight under the group. A group
      * with none of these is left out, and so is one whose commands run
-     * anywhere but where the console's target names. A unit the world's
-     * calendar does not have gets no dial.
+     * anywhere but where the view does: the character tabs while one of them
+     * was worked in after any Dev window, the Dev windows otherwise, so the
+     * console turns to the character being made or the game being played
+     * and is laid out again when that changes. A unit the world's calendar
+     * does not have gets no dial.
      * Groups and categories start expanded and collapse on click; the tree is
      * laid out on the first frame and again only when one of them is toggled.
      */
@@ -56,6 +58,10 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     private ObjectOpenHashSet<String> collapsedNodeKeys;
     private boolean layoutPending;
 
+    // View
+    private CommandTarget viewTarget;
+    private int viewRevision;
+
     // Base \\
 
     @Override
@@ -65,6 +71,9 @@ public class CommandConsoleTreeSystem extends SystemPackage {
         this.treeElements = new ObjectArrayList<>();
         this.collapsedNodeKeys = new ObjectOpenHashSet<>();
         this.layoutPending = true;
+
+        // View
+        this.viewRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
     @Override
@@ -82,11 +91,30 @@ public class CommandConsoleTreeSystem extends SystemPackage {
     @Override
     protected void update() {
 
+        followView();
+
         if (!layoutPending)
             return;
 
         layoutTree();
         this.layoutPending = false;
+    }
+
+    // The commands of whichever the view follows, laid out again once it turns
+    private void followView() {
+
+        if (commandManager.getViewRevision() == viewRevision)
+            return;
+
+        this.viewRevision = commandManager.getViewRevision();
+
+        CommandTarget target = commandManager.resolveViewTarget();
+
+        if (target == viewTarget)
+            return;
+
+        this.viewTarget = target;
+        this.layoutPending = true;
     }
 
     // Layout \\
@@ -113,7 +141,7 @@ public class CommandConsoleTreeSystem extends SystemPackage {
 
         ObjectArrayList<CommandHandle> commandHandles = commandManager.getCommandHandles(groupName);
 
-        if (!hasListedCommand(commandHandles, ((CommandConsoleContext) context).getTarget()))
+        if (!hasListedCommand(commandHandles, viewTarget))
             return;
 
         boolean expanded = !collapsedNodeKeys.contains(groupName);

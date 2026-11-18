@@ -1,6 +1,5 @@
 package editor.runtime.commandconsole;
 
-import editor.bootstrap.commandpipeline.command.CommandTarget;
 import editor.runtime.commandconsole.chunkfield.CommandConsoleChunkFieldSystem;
 import editor.runtime.commandconsole.commandtree.CommandConsoleTreeSystem;
 import editor.runtime.commandconsole.dial.CommandConsoleDialSystem;
@@ -25,10 +24,11 @@ public class CommandConsoleContext extends ContextPackage {
      * time command from a round dial per unit of the clock, turned by
      * dragging around it or stepped by its minus and plus buttons. The
      * command line recalls what was sent with Up and Down and completes a
-     * command's name with Tab. Its tree lists only the groups whose commands
-     * run where its target names, the Dev windows here; a command whose target
-     * is another editor tool runs there instead, whichever console sends it.
-     * What each command reports lands in the log, shown by the Console tab.
+     * command's name with Tab. Its tree turns to whatever was worked in
+     * last: the character tabs' commands (the Mirror commands) while a
+     * character tab was, the game's while a Dev window was. A command whose
+     * target is another editor tool runs there. What each command reports
+     * lands in the log, shown by the Console tab.
      */
 
     // Internal
@@ -90,12 +90,5 @@ public class CommandConsoleContext extends ContextPackage {
 
     public void increaseDial(String unitName) {
         commandConsoleDialSystem.stepDial(unitName, CommandConsoleSetting.DIAL_STEP);
-    }
-
-    // Accessible \\
-
-    // Where the commands this console's tree lists run
-    public CommandTarget getTarget() {
-        return CommandTarget.DEV;
     }
 }

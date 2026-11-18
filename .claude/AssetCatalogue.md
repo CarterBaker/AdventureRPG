@@ -448,6 +448,8 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-17: Added `commands/Character.arpg`, the command console's Character group (Mirror Body and Mirror
   Hair, each way), run in the character tabs.
 - 2026-11-17: Regenerated `menus/editor/EditorWindow.arpg` (Character Commands under the Characters menu's Tools).
+- 2026-11-18: Restored `menus/editor/EditorWindow.arpg` to its form before Character Commands: the Command Console's
+  view now follows the window worked in, so the separate tab is gone.
 
 ## Textures and Sprites (2429 files)
 

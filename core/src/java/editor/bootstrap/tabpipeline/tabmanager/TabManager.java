@@ -30,7 +30,6 @@ import editor.runtime.charactereditor.CharacterUVContext;
 import editor.runtime.charactereditor.CharacterWeightsContext;
 import editor.runtime.characteroutliner.CharacterOutlinerContext;
 import editor.runtime.colorwheel.ColorWheelContext;
-import editor.runtime.commandconsole.CharacterCommandConsoleContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
@@ -219,10 +218,6 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openCharacterOutliner(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_OUTLINER, CharacterOutlinerContext.class, osWindow);
-    }
-
-    public TabHandle openCharacterCommands(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_COMMANDS, CharacterCommandConsoleContext.class, osWindow);
     }
 
     public TabHandle openAnimationEditor(WindowInstance osWindow) {

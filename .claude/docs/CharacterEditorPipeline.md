@@ -234,9 +234,9 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   mirrored point, or both sets as one on the plane where they meet.
 - **Symmetrize** (Blender's Mesh > Symmetrize, Maya's Symmetrize): `CharacterSymmetryBranch.symmetrize(document,
   positiveToNegative)` is the one operation that makes a mesh exactly symmetric, the Mesh canvas's two Symmetrize
-  actions (+X to -X, -X to +X) and the Character Commands tab (`CharacterCommandConsoleContext`, the command console's
-  window listing only commands whose `target` is `character`, opened from the Characters menu's Tools section; the
-  Character group, `assets/commands/Character.arpg`: Mirror Body and Mirror Hair, Left onto Right or Right onto Left,
+  actions (+X to -X, -X to +X) and the Command Console, whose view lists the commands whose `target` is `character`
+  while a character tab was worked in after any Dev window (`CommandManager.resolveViewTarget`; the Character group,
+  `assets/commands/Character.arpg`: Mirror Body and Mirror Hair, Left onto Right or Right onto Left,
   left being +x, run by `CharacterCommandBranch` on the open character's body or worn hair through
   `CharacterEditorManager.executeCommand`) both calling it. It always mirrors, whatever the canvas's Mirror switch. It never moves one side's vertices onto the other's: the side given up is removed and the side kept
   is mirrored and welded on x = 0, so every vertex gets an exact twin and every face a twin wound back. A face crossing

@@ -106,6 +106,20 @@ public class ActiveWindowManager extends ManagerPackage {
         return null;
     }
 
+    // The window worked in last whose content is of either kind, else the first of them opened; null for none
+    public WindowInstance findRecent(Class<?> firstKind, Class<?> secondKind) {
+
+        for (int i = 0; i < recentWindows.size(); i++) {
+
+            WindowInstance window = recentWindows.get(i);
+
+            if (firstKind.isInstance(window.getContext()) || secondKind.isInstance(window.getContext()))
+                return window;
+        }
+
+        return null;
+    }
+
     public int getRevision() {
         return revision;
     }
