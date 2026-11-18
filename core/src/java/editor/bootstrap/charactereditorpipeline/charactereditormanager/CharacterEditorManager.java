@@ -2193,6 +2193,17 @@ public class CharacterEditorManager extends ManagerPackage {
         return isCanvasSwitchOn(ToolOption.XRAY);
     }
 
+    // The Tools panel's Wireframe on the mode's canvas: the edges of the mesh worked drawn over its surface
+    public boolean isWireframe() {
+        return isCanvasSwitchOn(ToolOption.WIREFRAME);
+    }
+
+    // The face size, in metres, the topology brush evens the faces it covers toward: the Tools panel's Detail
+    float getTopologyDetail() {
+        return toolManager.getOption(ToolCanvas.CHARACTER_MESH, ToolOption.DETAIL)
+                * EditorSetting.CHARACTER_TOPOLOGY_DETAIL_UNIT;
+    }
+
     // How the viewport draws the bones: the Tools panel's Bones on the mode's canvas, joints where it has none
     public CharacterBoneDisplay getBoneDisplay() {
 

@@ -54,7 +54,7 @@ public enum EditorTool {
     NUDGE(EditorSetting.TOOL_NUDGE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     RAISE(EditorSetting.TOOL_RAISE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     LOWER(EditorSetting.TOOL_LOWER, true, ToolOption.SIZE, ToolOption.STRENGTH),
-    TOPOLOGY(EditorSetting.TOOL_TOPOLOGY, true, ToolOption.SIZE, ToolOption.STRENGTH),
+    TOPOLOGY(EditorSetting.TOOL_TOPOLOGY, true, ToolOption.SIZE, ToolOption.STRENGTH, ToolOption.DETAIL),
     FILL(EditorSetting.TOOL_FILL, false),
     PICK(EditorSetting.TOOL_PICK, false),
     PLACE(EditorSetting.TOOL_PLACE, false),

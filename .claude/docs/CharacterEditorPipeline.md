@@ -253,11 +253,13 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   other is laid where its old twin island stood, by a glide reflection or, for a layout that shared one, a move,
   whichever fits; with no old twin it is mirrored in place and counted. One undo step, refused on a shape key and past
   the mesh limit. Run on its own result it changes nothing.
-- **Canvas options.** Mirror, X-Ray and Bones are `ToolOption`s marked canvas-wide (`isCanvasWide`): every tool on a
-  canvas that honours one lists it under its own options, last, in the Tools panel. Mirror (on by default) is honoured
-  by the mesh, sculpt, weights, paint and rig canvases, X-Ray by the mesh and weights, Bones
+- **Canvas options.** Mirror, X-Ray, Wireframe and Bones are `ToolOption`s marked canvas-wide (`isCanvasWide`): every
+  tool on a canvas that honours one lists it under its own options, last, in the Tools panel. Mirror (on by default) is
+  honoured by the mesh, sculpt, weights, paint and rig canvases, X-Ray by the mesh and weights, Wireframe (the edges of
+  the part worked drawn over it by `CharacterEditorOverlaySystem`, depth tested unless X-Ray; on by default on the mesh,
+  weights and UV canvases, off on sculpt and paint) by the mesh, sculpt, weights, paint and UV, Bones
   (`CharacterBoneDisplay`: joints, sticks from each joint to its parent's, both, or hidden) by the mesh, weights and
-  rig. `CharacterEditorManager.isMirror` / `isXray` / `getBoneDisplay` read them from
+  rig. `CharacterEditorManager.isMirror` / `isXray` / `isWireframe` / `getBoneDisplay` read them from
   `ToolManager` for the mode's canvas; never keep a copy, and never list them as Properties rows.
 - **Hide and Reveal.** The Selection group's Hide (H), Hide Unselected (Shift+H) and Reveal (Alt+H)
   (`CharacterSelectionBranch.hide` / `reveal`) put vertices out of the way, as Blender hides geometry to reach tight
@@ -281,7 +283,10 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   vertices and edges are drawn (`CharacterTopologyBranch`, at the canvas's own Strength, honouring its Mirror; a stroke
   routes there from `CharacterEditorManager.beginStroke` before the mode's own stroke): a stroke opens one undo step,
   gathers how far the brush covers each vertex (and its twin with Mirror on), and once a frame (`CharacterEditorManager.showStroke` calls `apply`) changes every face whose
-  corners it all covers; an edge's two thirds are each measured from its nearer end, and a collapse's twin falls along
+  corners it all covers and whose size (the side of a square of its area) is off the tool's Detail the way the stroke
+  goes: a plain stroke splits only faces above `CHARACTER_TOPOLOGY_SPLIT_ABOVE` times Detail, Ctrl merges only those
+  below `CHARACTER_TOPOLOGY_MERGE_BELOW` times it, so strokes even an area toward Detail and then stop changing it, as
+  Blender's dynamic topology does (Detail is in millimetres, `getTopologyDetail`; the body's faces run about 6 mm); an edge's two thirds are each measured from its nearer end, and a collapse's twin falls along
   the same diagonal the face itself took, so a stroke with Mirror on leaves the two sides exact twins. Plain strokes
   refine by Schneiders' 3-refinement, as adaptive all-quad meshing does: a face
   splits into nine on a lattice of thirds and each face beside it takes the transition template its refined edges call

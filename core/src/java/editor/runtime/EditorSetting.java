@@ -1222,6 +1222,9 @@ public class EditorSetting {
     // across their shorter diagonal, refusing a collapse that turns any face about it by more than the least cosine
     // or shrinks it below the least share of its area
     public static final float CHARACTER_TOPOLOGY_FACE_COVERAGE = 0.2f;
+    public static final float CHARACTER_TOPOLOGY_DETAIL_UNIT = 0.001f;
+    public static final float CHARACTER_TOPOLOGY_SPLIT_ABOVE = 1.5f;
+    public static final float CHARACTER_TOPOLOGY_MERGE_BELOW = 0.75f;
     public static final int CHARACTER_TOPOLOGY_LATTICE = 3;
     public static final int[] CHARACTER_TOPOLOGY_TEMPLATE_FULL = {
             0, 0, 1, 0, 1, 1, 0, 1,
@@ -2417,6 +2420,8 @@ public class EditorSetting {
     public static final int TOOL_COMB_DEFAULT = 0;
     public static final String TOOL_OPTION_MIRROR = "Mirror";
     public static final String TOOL_OPTION_XRAY = "X-Ray";
+    public static final String TOOL_OPTION_WIREFRAME = "Wireframe";
+    public static final String TOOL_OPTION_DETAIL = "Detail (mm)";
     public static final String TOOL_OPTION_BONES = "Bones";
     public static final String[] TOOL_OPTION_SWITCH_NAMES = { "Off", "On" };
     public static final String[] TOOL_BONE_DISPLAY_NAMES = { "Joints", "Sticks", "Joints and Sticks", "Hidden" };
@@ -2437,6 +2442,10 @@ public class EditorSetting {
     public static final float TOOL_WEIGHT_STRENGTH_DEFAULT = 0.2f;
     public static final float TOOL_SCULPT_STRENGTH_DEFAULT = 0.5f;
     public static final float TOOL_TOPOLOGY_STRENGTH_DEFAULT = 0.5f;
+    public static final float TOOL_TOPOLOGY_DETAIL_MIN = 1f;
+    public static final float TOOL_TOPOLOGY_DETAIL_MAX = 50f;
+    public static final float TOOL_TOPOLOGY_DETAIL_STEP = 0.5f;
+    public static final float TOOL_TOPOLOGY_DETAIL_DEFAULT = 6f;
     public static final float TOOL_PAINT_STRENGTH_DEFAULT = 0.5f;
     public static final float TOOL_TWIST_STEP = 15f;
     public static final float TOOL_TWIST_MAX = 360f;

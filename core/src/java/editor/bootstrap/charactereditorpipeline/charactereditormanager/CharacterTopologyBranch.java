@@ -24,9 +24,15 @@ class CharacterTopologyBranch extends BranchPackage {
 
     /*
      * The topology brush: more faces where it strokes, or fewer with the
-     * stroke inverted, the mesh kept all quads either way. A stroke opens one
-     * undo step and gathers how far the brush covers each vertex; once a
-     * frame the faces it covers are changed and the part shown again.
+     * stroke inverted, the mesh kept all quads either way, evened toward the
+     * Detail size as Blender's dynamic topology evens its edges: a plain
+     * stroke splits only the faces it covers that are larger than Detail by
+     * half again, an inverted one merges only those smaller than three
+     * quarters of it, so a stroke leaves faces near Detail alone and strokes
+     * over an area settle it at that size instead of changing it on and on.
+     * A stroke opens one undo step and gathers how far the brush covers each
+     * vertex; once a frame the faces it covers are changed and the part
+     * shown again.
      * Refining follows Schneiders' 3-refinement, as adaptive all-quad meshing
      * does: each covered face splits into nine on a lattice of thirds, and
      * every face beside one is split by the transition template its refined
@@ -66,6 +72,7 @@ class CharacterTopologyBranch extends BranchPackage {
     private boolean pending;
     private boolean inverted;
     private boolean changed;
+    private float detail;
 
     // Faces — the refined or removed set, each face's refined edges, the refined edges and the first of the two
     // vertices each is cut at, the one nearer its lower vertex
@@ -251,6 +258,7 @@ class CharacterTopologyBranch extends BranchPackage {
         RiggedMeshStruct mesh = document.getMesh();
 
         this.pending = false;
+        this.detail = characterEditorManager.getTopologyDetail();
         collectCovered(mesh);
         coverage.clear();
         coverage.size(mesh.getVertexCount());
@@ -286,7 +294,7 @@ class CharacterTopologyBranch extends BranchPackage {
     }
 
     // Every face whose corners the brush all covers, at least the face coverage on average, that this stroke has not
-    // made
+    // made and that is off the Detail size the way the stroke changes it: larger for a plain stroke, smaller inverted
     private void collectCovered(RiggedMeshStruct mesh) {
 
         candidates.clear();
@@ -308,9 +316,22 @@ class CharacterTopologyBranch extends BranchPackage {
                 total += covered;
             }
 
-            if (whole && total >= EditorSetting.CHARACTER_TOPOLOGY_FACE_COVERAGE * EngineSetting.QUAD_VERTEX_COUNT)
+            if (whole && total >= EditorSetting.CHARACTER_TOPOLOGY_FACE_COVERAGE * EngineSetting.QUAD_VERTEX_COUNT
+                    && isOffDetail(mesh, f))
                 candidates.add(f);
         }
+    }
+
+    // A face's size, the side of a square of its area, against the Detail size the stroke evens toward
+    private boolean isOffDetail(RiggedMeshStruct mesh, int faceIndex) {
+
+        resolveFaceNormal(mesh, faceIndex, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND, before);
+
+        float size = (float) Math.sqrt(before.length());
+
+        return inverted
+                ? size < detail * EditorSetting.CHARACTER_TOPOLOGY_MERGE_BELOW
+                : size > detail * EditorSetting.CHARACTER_TOPOLOGY_SPLIT_ABOVE;
     }
 
     // Refine \\

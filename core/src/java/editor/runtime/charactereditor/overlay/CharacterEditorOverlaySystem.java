@@ -40,10 +40,11 @@ import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 public class CharacterEditorOverlaySystem extends SystemPackage {
 
     /*
-     * Draws the active part's vertices and edges over this tab's character
-     * while the Mesh, Weights or UV tab is open, as one mesh of dots and
-     * lines the overlay shader keeps a fixed number of pixels wide however
-     * far the camera orbits. In Mesh and UV the selection and the active
+     * Draws the active part's vertices over this tab's character while the
+     * Mesh, Weights or UV tab is open, and its edges in any mesh tab while
+     * the canvas's Wireframe is on, as one mesh of dots and lines the
+     * overlay shader keeps a fixed number of pixels wide however far the
+     * camera orbits. In Mesh and UV the selection and the active
      * vertex stand out, each selected vertex shaded toward the selection's
      * colour as far as it is selected, so a soft brush's falloff shows, and
      * the edges marked as seams are drawn wider in red, as Blender draws
@@ -112,6 +113,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private CharacterMeshDocumentInstance builtDocument;
     private int builtRevision;
     private int builtManagerRevision;
+    private boolean builtDots;
+    private boolean builtWireframe;
     private int builtColliderRevision;
     private int builtStampRevision;
     private int builtStampManagerRevision;
@@ -219,7 +222,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         boolean xray = characterEditorManager.isXray();
 
-        if (characterEditorManager.getMode().showsVertices())
+        if (characterEditorManager.getMode().showsVertices() || characterEditorManager.isWireframe())
             pushMeshOverlay(window, xray);
 
         if (characterEditorManager.placesStamp())
@@ -570,10 +573,14 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         CharacterMeshDocumentInstance document = characterEditorMeshViewSystem.getActiveDocument();
         boolean posePlayed = characterEditorManager.getMode() == CharacterEditorMode.WEIGHTS
                 && characterEditorManager.getPose().isPlayed();
+        boolean dots = characterEditorManager.getMode().showsVertices();
+        boolean wireframe = characterEditorManager.isWireframe();
 
         if (document == builtDocument
                 && document.getRevision() == builtRevision
                 && characterEditorManager.getRevision() == builtManagerRevision
+                && dots == builtDots
+                && wireframe == builtWireframe
                 && !posePlayed)
             return;
 
@@ -586,8 +593,10 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         this.builtDocument = document;
         this.builtRevision = document.getRevision();
         this.builtManagerRevision = characterEditorManager.getRevision();
+        this.builtDots = dots;
+        this.builtWireframe = wireframe;
 
-        buildMeshOverlay(document);
+        buildMeshOverlay(document, dots, wireframe);
 
         if (indices.isEmpty())
             return;
@@ -602,7 +611,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         meshModel.updateMeshData(meshOverlay.getMeshData());
     }
 
-    private void buildMeshOverlay(CharacterMeshDocumentInstance document) {
+    // The vertices' dots where the mode shows them and the edges while Wireframe is on
+    private void buildMeshOverlay(CharacterMeshDocumentInstance document, boolean dots, boolean wireframe) {
 
         RiggedMeshStruct mesh = document.getMesh();
         boolean weights = characterEditorManager.getMode() == CharacterEditorMode.WEIGHTS;
@@ -612,11 +622,13 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         vertices.ensureCapacity((mesh.getVertexCount() + mesh.getFaceCount() * EngineSetting.QUAD_VERTEX_COUNT)
                 * EngineSetting.QUAD_VERTEX_COUNT * CharacterEditorSetting.OVERLAY_VERTEX_FLOATS);
 
-        for (int v = 0; v < mesh.getVertexCount(); v++)
-            if (characterEditorMeshViewSystem.isInRegion(v))
-                appendVertexDot(document, v, weights);
+        if (dots)
+            for (int v = 0; v < mesh.getVertexCount(); v++)
+                if (characterEditorMeshViewSystem.isInRegion(v))
+                    appendVertexDot(document, v, weights);
 
-        appendEdges(document, weights);
+        if (wireframe)
+            appendEdges(document, weights);
     }
 
     private void appendVertexDot(CharacterMeshDocumentInstance document, int vertexIndex, boolean weights) {

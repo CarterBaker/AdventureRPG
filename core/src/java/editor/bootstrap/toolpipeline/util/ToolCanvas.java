@@ -72,8 +72,10 @@ public enum ToolCanvas {
             false,
             screenSize(),
             strength(EditorSetting.TOOL_TOPOLOGY_STRENGTH_DEFAULT),
+            detail(),
             mirror(),
             xray(),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON),
             bones()),
     CHARACTER_SCULPT(
             EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
@@ -86,7 +88,8 @@ public enum ToolCanvas {
             stampScale(),
             stampTurn(),
             comb(),
-            mirror()),
+            mirror(),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_OFF)),
     CHARACTER_WEIGHTS(
             EditorSetting.TOOL_CANVAS_CHARACTER_WEIGHTS,
             new EditorTool[] {
@@ -98,6 +101,7 @@ public enum ToolCanvas {
             strength(EditorSetting.TOOL_WEIGHT_STRENGTH_DEFAULT),
             mirror(),
             xray(),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON),
             bones()),
     CHARACTER_PAINT(
             EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
@@ -107,7 +111,8 @@ public enum ToolCanvas {
             true,
             screenSize(),
             strength(EditorSetting.TOOL_PAINT_STRENGTH_DEFAULT),
-            mirror()),
+            mirror(),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_OFF)),
     CHARACTER_RIG(
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
@@ -124,7 +129,8 @@ public enum ToolCanvas {
             false,
             screenSize(),
             mirror(),
-            xray()),
+            xray(),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
     UV_EDITOR(
             EditorSetting.TOOL_CANVAS_UV_EDITOR,
             new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
@@ -431,6 +437,20 @@ public enum ToolCanvas {
 
     private static ToolOptionStruct xray() {
         return toggle(ToolOption.XRAY, EditorSetting.TOOL_OPTION_SWITCH_OFF);
+    }
+
+    private static ToolOptionStruct wireframe(int defaultIndex) {
+        return toggle(ToolOption.WIREFRAME, defaultIndex);
+    }
+
+    // The face size the topology brush evens faces toward, in millimetres
+    private static ToolOptionStruct detail() {
+        return new ToolOptionStruct(
+                ToolOption.DETAIL,
+                EditorSetting.TOOL_TOPOLOGY_DETAIL_MIN,
+                EditorSetting.TOOL_TOPOLOGY_DETAIL_MAX,
+                EditorSetting.TOOL_TOPOLOGY_DETAIL_STEP,
+                EditorSetting.TOOL_TOPOLOGY_DETAIL_DEFAULT);
     }
 
     private static ToolOptionStruct bones() {
