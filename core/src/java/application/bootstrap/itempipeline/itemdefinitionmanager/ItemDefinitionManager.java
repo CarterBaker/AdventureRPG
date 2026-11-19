@@ -66,6 +66,7 @@ public class ItemDefinitionManager extends ManagerPackage {
         this.contentID2ContentPieceHandle = new Int2ObjectOpenHashMap<>();
         this.blockPieceBranch = create(BlockPieceBranch.class);
         this.paintedMeshBranch = create(PaintedMeshBranch.class);
+        create(WornModelBranch.class);
         create(ItemDefinitionLoader.class);
     }
 

@@ -9,6 +9,7 @@ import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
+import application.bootstrap.itempipeline.itemdefinition.EquipmentType;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
@@ -45,8 +46,12 @@ class CharacterWorkspaceBranch extends BranchPackage {
      * game's meshes and worn by a gender of a race (one already on the rig,
      * or a new one made with that gender alone, looking like the race it was
      * previewed beside and not yet offered to the player), and an entity of
-     * the race made when one is named. The model's file stays in the
-     * workspace to be worked and imported again.
+     * the race made when one is named, or, named an item worn on the body,
+     * worn as that item on the model's rig: its mesh written among the
+     * game's worn meshes and listed in the item's worn models for the gender
+     * named or every gender, in place of any it held for the same rig and
+     * gender. The model's file stays in the workspace to be worked and
+     * imported again.
      */
 
     // Internal
@@ -576,6 +581,80 @@ class CharacterWorkspaceBranch extends BranchPackage {
         return infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, item.getDefinitionName())
                 ? null
                 : infoManager.getRefusal();
+    }
+
+    // Worn Import \\
+
+    // Whether a model may be worn as the item: one of that full name worn on the body, not only held
+    boolean isImportWorn(String itemName) {
+
+        InfoEntryStruct item = findItem(itemName);
+
+        return item != null && ArpgUtility.getEnum(
+                item.getArpg(), EditorSetting.INFO_ITEM_EQUIP_FIELD, EquipmentType.class, EquipmentType.NONE)
+                .isWornOnBody();
+    }
+
+    // The saved model brought into the game as the model the item is worn as on the model's rig: written among the
+    // game's worn meshes and listed in the item's worn models for the gender named, empty for every gender; null when
+    // it was, else why not
+    String importWorn(CharacterDocumentInstance document, String itemName, String genderName) {
+
+        InfoEntryStruct item = findItem(itemName);
+        String meshName = EditorSetting.CHARACTER_WORN_IMPORT_FOLDER + FileUtility.getFileName(document.getModelName());
+        File meshFile = ArpgUtility.resolveFile(new File(EngineSetting.MESH_PATH), meshName);
+        ArpgObjectStruct modelArpg = ArpgUtility.tryLoadObject(resolveFile(document.getModelName()));
+
+        meshFile.getParentFile().mkdirs();
+
+        if (item == null || modelArpg == null || !ArpgUtility.tryWriteObject(meshFile, modelArpg))
+            return EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_WRITTEN + meshName;
+
+        meshManager.addMeshFile(meshName, meshFile);
+        infoManager.notifyResourcesChanged();
+        infoManager.editEntry(
+                EditorSetting.INFO_SCHEMA_ITEMS,
+                item.getDefinitionName(),
+                item.getEntryName(),
+                itemArpg -> wearModel(itemArpg, meshName, genderName, document.getRigHandle().getRigName()));
+
+        return infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, item.getDefinitionName())
+                ? null
+                : infoManager.getRefusal();
+    }
+
+    // Lists the mesh among the item's worn models for the gender, dropping the one it held for the same rig and gender
+    private void wearModel(ArpgObjectStruct itemArpg, String meshName, String genderName, String rigName) {
+
+        ArpgArrayStruct worn = ArpgUtility.hasArray(itemArpg, EngineSetting.ITEM_WORN_FIELD)
+                ? itemArpg.getAsArray(EngineSetting.ITEM_WORN_FIELD)
+                : new ArpgArrayStruct();
+
+        for (int i = worn.size() - 1; i >= 0; i--) {
+
+            ArpgObjectStruct wornArpg = worn.get(i).getAsObject();
+
+            if (genderName.equals(ArpgUtility.getString(
+                    wornArpg, EditorSetting.INFO_ITEM_WORN_GENDER_FIELD, EngineSetting.ITEM_WORN_GENDER_NONE))
+                    && isOnRig(ArpgUtility.getString(wornArpg, EditorSetting.INFO_ITEM_WORN_MESH_FIELD, ""),
+                            meshName, rigName))
+                worn.remove(i);
+        }
+
+        ArpgObjectStruct wornArpg = new ArpgObjectStruct();
+        wornArpg.addProperty(EditorSetting.INFO_ITEM_WORN_MESH_FIELD, meshName);
+
+        if (!genderName.isEmpty())
+            wornArpg.addProperty(EditorSetting.INFO_ITEM_WORN_GENDER_FIELD, genderName);
+
+        worn.add(wornArpg);
+        itemArpg.add(EngineSetting.ITEM_WORN_FIELD, worn);
+    }
+
+    // Whether a worn model's mesh is the one imported or another skinned to the same rig
+    private boolean isOnRig(String wornMeshName, String meshName, String rigName) {
+        return wornMeshName.equals(meshName)
+                || rigName.equals(meshManager.getMeshHandleFromMeshName(wornMeshName).getRigHandle().getRigName());
     }
 
     private InfoEntryStruct findItem(String itemName) {

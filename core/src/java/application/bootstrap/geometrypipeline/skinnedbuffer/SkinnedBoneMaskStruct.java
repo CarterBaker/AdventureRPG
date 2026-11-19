@@ -61,6 +61,13 @@ public class SkinnedBoneMaskStruct extends StructPackage {
                 addBone(i);
     }
 
+    // Every bone of another mask added to this one's, its mode kept
+    public void addBones(SkinnedBoneMaskStruct source) {
+
+        for (int i = 0; i < bits.length; i++)
+            bits[i] = (int) bits[i] | (int) source.bits[i];
+    }
+
     public void set(SkinnedBoneMaskStruct source) {
         this.mode = source.mode;
         System.arraycopy(source.bits, 0, bits, 0, bits.length);

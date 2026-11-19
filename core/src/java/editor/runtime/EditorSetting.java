@@ -2263,7 +2263,11 @@ public class EditorSetting {
     public static final String CHARACTER_MODEL_DIALOG_RIG = "New model: the rig it is built on";
     public static final String CHARACTER_MODEL_DIALOG_OPEN = "Open Model";
     public static final String CHARACTER_MODEL_DIALOG_RACE =
-            "Import: the race it joins (a race on its rig, or a new name)";
+            "Import: the race it joins (a race on its rig, or a new name), or the item it is worn as (its full name)";
+    public static final String CHARACTER_MODEL_DIALOG_WORN_GENDER =
+            "Import: the gender whose body it fits (empty for every gender)";
+    public static final String CHARACTER_WORN_IMPORT_FOLDER = "worn/";
+    public static final String CHARACTER_MODEL_MESSAGE_IMPORTED_WORN = "Imported the model as worn by the item ";
     public static final String CHARACTER_MODEL_DIALOG_GENDER = "Import: the gender it is the model of";
     public static final String CHARACTER_MODEL_DIALOG_ENTITY = "Import: an entity to make of the race (empty for none)";
     public static final String CHARACTER_MODEL_MESSAGE_CREATED = "Made the model ";
@@ -2876,6 +2880,9 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_BLOCKS = "Blocks";
     public static final String INFO_SCHEMA_SHADERS = "Shaders";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
+    public static final String INFO_ITEM_EQUIP_FIELD = "equip";
+    public static final String INFO_ITEM_WORN_MESH_FIELD = "mesh";
+    public static final String INFO_ITEM_WORN_GENDER_FIELD = "gender";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";
     public static final String[] INFO_SUMMARY_FIELDS = { "name", "block", "clip", "time" };

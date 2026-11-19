@@ -48,7 +48,9 @@ class ItemDefinitionBuilder extends BuilderPackage {
      * instances. Each ARPG file may contain multiple item entries under an
      * 'items' array. Resolves mesh and material references from their
      * respective managers, and reads the item's mesh file through
-     * SubVoxelManager — every item mesh must be a sub-voxel model. The shape
+     * SubVoxelManager — every item mesh must be a sub-voxel model, the model
+     * it lies in the world as; the models it is worn as on a body, skinned to
+     * the body's rig, are read by WornModelBranch from its "worn" list. The shape
      * an item claims in a container and in the world is the boxes its 'space'
      * lists inside that model's grid, or the model's own cubes and walls when
      * it lists none. That grid spans as many blocks as the model does, so
@@ -97,6 +99,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private SoundCueManager soundCueManager;
     private ItemModelManager itemModelManager;
     private PaintedMeshBranch paintedMeshBranch;
+    private WornModelBranch wornModelBranch;
 
     // Directory
     private File meshRoot;
@@ -127,6 +130,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.skillManager = get(SkillManager.class);
         this.itemModelManager = get(ItemModelManager.class);
         this.paintedMeshBranch = get(PaintedMeshBranch.class);
+        this.wornModelBranch = get(WornModelBranch.class);
     }
 
     // Build \\
@@ -226,6 +230,7 @@ class ItemDefinitionBuilder extends BuilderPackage {
                 twoHanded,
                 solid,
                 equipmentType,
+                wornModelBranch.parse(itemArpg, equipmentType, itemName),
                 stats,
                 shape,
                 containerSpace,

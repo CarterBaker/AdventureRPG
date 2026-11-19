@@ -478,6 +478,23 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   teeth in every other viewport. A
   removable slot (`FeatureSlot.isRemovable`, hair) is offered bare in the game's creator; eyes and teeth are not, and a
   save that names none for them keeps the gender's. The head's sockets, lids, lips and mouth cavity are the body's.
+- **Gear is worn as models skinned to the body's rig** (the modular-outfit approach: every piece skinned to the
+  skeleton of the body that wears it and posed by the body's own bones). An item lies in the world and in containers
+  as its sub-voxel model; worn, an item whose equip type is worn on the body (`EquipmentType.isWornOnBody`: not a
+  weapon or shield, which are always held) is drawn as the model its `worn` list names for the wearer's rig
+  (`ItemWornModelStruct`, read by `WornModelBranch`): a rigged `mesh` skinned to that rig, the `gender` whose body it
+  is fitted to (none for every gender; the gender's own wins over it), the `material` it is drawn with (the body's
+  when it names none, else its own clone) and the body bones it `hides`. No two may fit one rig and gender.
+  `AppearanceHandle.wear` (each update, from `EntityInstance`, acting only when the inventory's revision or the gender
+  moves) takes on each body slot's model and gathers the hidden bones into one mask; `EntityRenderSystem.pushWorn`
+  draws them after the features through the body's own skinning matrices, and `resolveBodyMask` cuts the hidden bones
+  from the body (`HIDE`, so every fragment those bones move at all goes: hide only bones whose skin the piece covers
+  past their reach). A worn model's morphs play the body's morphs of the same names
+  (`ItemWornModelStruct.getMorphSources`, resolved once per body mesh; `SkinnedAppearanceStruct.setMorphSources`), so
+  a piece modelled from the body keeps every shape slider, and bone sliders reach it through the shared bones. A
+  worn model weighing onto spring bones runs their chains (`AppearanceHandle.weighsOnto`), so a cape rides spring
+  chains as long hair does. Gear with no model for the rig, and everything held, rides its race's anchors rigidly as
+  before. Worn models live under `assets/mesh/worn/`; editor previews draw no equipment.
 - **Bone masks.** A skinned draw's palette row carries a `SkinnedBoneMaskStruct` and its `SkinnedMaskMode`
   (`SkinnedAppearanceStruct.setBoneMask`): `HIDE` cuts every fragment the masked bones move at all (a character seen
   from its own eyes: `AppearanceData.getHeadMask`, the head and everything below it, eyes and teeth included), `SHOW`
@@ -653,7 +670,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   (`RigMathUtility.setPivotTurn`) and skins again only the bones the chains carry. `EntityInstance.moveSprings` hands
   it the body's turn, size and travel across chunks before each update; `CharacterViewPoseSystem.play` hands a
   preview travelling forward at the pace it plays. `poseRest` and `poseClip` never simulate and start the springs
-  afresh. A chain runs only while something worn weighs onto it (`AppearanceHandle.resolveSprings`, reading
+  afresh. Drag works against air moving with the wind (`AnimationSpringStruct.setWind`, the global wind's
+  `RIG_SPRING_WIND_SHARE` swelling and easing in gusts on the wind's clock, handed by `EntityInstance.blowSprings`), so
+  every chain is blown downwind as far as its drag carries it against its stiffness: a cape wants high drag and low
+  stiffness. Editor previews blow no wind. A chain runs only while something worn weighs onto it (`AppearanceHandle.resolveSprings`, reading
   `MeshHandle.weighsOnto`, set for every rigged mesh in `MeshManager.applyRiggedMesh`), so a bald or short-haired
   character simulates nothing. Settings apply live, and so does a new or changed chain: a change of structure moves
   the rig's structure revision and every pose lays its springs out again.
@@ -777,6 +797,11 @@ New, Open and Import reach them (`FILE_MENU_CHARACTER`: `newModel`, `openModel`,
   (`CharacterViewPoseSystem.getCenter`), so a lone torso is framed at its own height.
 - **A model is no race.** Race edits skip it (`CharacterEditBranch.edit`), the Appearance and Equipment tabs say so,
   Duplicate and Delete refuse it, and Save writes its mesh, the rig, controls, clips and paint, never a race.
+- **Import as worn gear.** Named an item's full name in place of a race (an item worn on the body,
+  `CharacterWorkspaceBranch.isImportWorn`), Import then asks the gender whose body the model fits (empty for every
+  gender) and writes the mesh to `assets/mesh/worn/<Name>.arpg`, listing it in the item's `worn` in place of any it
+  held for the same rig and gender (`importWorn`). Model a piece by opening a body model on the rig and shaping it
+  over the body, so it keeps the body's weights and morphs; set `hides` in the Properties tab.
 - **Import** (the open model, saved first) asks the race it joins (a race already on its rig, or a new name), the
   gender it is the model of (a registered gender) and an entity to make (empty for none). Its mesh is written to
   `assets/mesh/characters/<race in lower case>/<Name>.arpg`; an existing race's gender of that name wears it (a gender

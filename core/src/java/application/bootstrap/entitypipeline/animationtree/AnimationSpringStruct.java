@@ -18,7 +18,9 @@ public class AnimationSpringStruct extends StructPackage {
      * so it keeps its own momentum as the body turns, runs and stops. Each
      * substep a joint is pulled toward where the pose holds it from the
      * joint before it, its swing against that joint damped, drawn down by
-     * gravity and held back by the air's drag, then kept its bone's length
+     * gravity and held back by the drag of the air, which moves with the
+     * wind, so a cape or a lock is blown downwind as far as its drag lets
+     * the air carry it against its stiffness, then kept its bone's length
      * from the joint before it and within a cone about the way the pose
      * holds its bone, so no jolt flips a lock over, then pushed out of every
      * collider the chain names — the bone between it and the joint before
@@ -56,6 +58,11 @@ public class AnimationSpringStruct extends StructPackage {
     // Frame — how the body stands turned and sized in the world, and back
     private final Matrix4 frame;
     private final Matrix4 frameInverse;
+
+    // Wind — how fast the air moves past the body, in blocks a second along the world's axes, and how far it carries
+    // a joint each substep of the chain being stepped
+    private final float[] wind;
+    private final float[] windDrift;
 
     // Scratch
     private final Vector3 jointScratch;
@@ -104,6 +111,10 @@ public class AnimationSpringStruct extends StructPackage {
         // Frame
         this.frame = new Matrix4(1f);
         this.frameInverse = new Matrix4(1f);
+
+        // Wind
+        this.wind = new float[EngineSetting.RIGGED_MESH_POSITION_FLOATS];
+        this.windDrift = new float[EngineSetting.RIGGED_MESH_POSITION_FLOATS];
 
         // Scratch
         this.jointScratch = new Vector3();
@@ -161,6 +172,15 @@ public class AnimationSpringStruct extends StructPackage {
         points[i] -= x;
         points[i + 1] -= y;
         points[i + 2] -= z;
+    }
+
+    // Wind \\
+
+    // How fast the air moves past the body now, in blocks a second along the world's axes, as the body's frame holds
+    public void setWind(float x, float y, float z) {
+        wind[0] = x;
+        wind[1] = y;
+        wind[2] = z;
     }
 
     // Capture \\
@@ -298,6 +318,9 @@ public class AnimationSpringStruct extends StructPackage {
         float fall = chain.getGravity() * substep * substep;
         float share = 1f / substeps;
 
+        for (int axis = 0; axis < EngineSetting.RIGGED_MESH_POSITION_FLOATS; axis++)
+            windDrift[axis] = wind[axis] * substep * (1f - hold);
+
         for (int s = 1; s <= substeps; s++) {
 
             float t = s * share;
@@ -339,7 +362,7 @@ public class AnimationSpringStruct extends StructPackage {
             float posedHere = then[k] + (now[k] - then[k]) * t;
             float posedParent = then[parent + axis] + (now[parent + axis] - then[parent + axis]) * t;
             float target = posedHere + p[parent + axis] - posedParent;
-            float velocity = (carried + (p[k] - q[k] - carried) * keep) * hold;
+            float velocity = (carried + (p[k] - q[k] - carried) * keep) * hold + windDrift[axis];
 
             float moved = p[k] + velocity;
 

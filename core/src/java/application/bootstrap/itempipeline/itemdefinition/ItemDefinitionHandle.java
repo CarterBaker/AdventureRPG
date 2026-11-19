@@ -2,6 +2,7 @@ package application.bootstrap.itempipeline.itemdefinition;
 
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import engine.root.HandlePackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -77,6 +78,10 @@ public class ItemDefinitionHandle extends HandlePackage {
 
     public EquipmentType getEquipmentType() {
         return itemDefinitionData.getEquipmentType();
+    }
+
+    public ItemWornModelStruct getWornModel(RigHandle rigHandle, short genderID) {
+        return itemDefinitionData.getWornModel(rigHandle, genderID);
     }
 
     public float getStat(short statID) {

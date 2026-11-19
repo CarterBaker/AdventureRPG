@@ -7,13 +7,18 @@ import application.bootstrap.animationpipeline.animation.AnimationClipUtility;
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
+import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigSpringChainStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedColor;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedMaskMode;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
+import application.bootstrap.itempipeline.itemdefinition.ItemWornModelStruct;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
@@ -38,9 +43,12 @@ public class AppearanceHandle extends HandlePackage {
      * that writes bone proportions and shaping and re-poses the entity,
      * writeAppearance() the one path that hands the lot to a skinned draw,
      * and resetToDefaults() returns everything to the race and the
-     * gender's preset. resolveSprings() runs each of the rig's spring chains
-     * only while the body or a feature worn weighs onto it, so long hair
-     * swings and a bald head simulates nothing. Every array is allocated once
+     * gender's preset. wear() takes on the gear an inventory shows, each body
+     * slot's item as the model it is worn as on this rig and gender, the body
+     * bones those models cover gathered into one mask cut from the body.
+     * resolveSprings() runs each of the rig's spring chains only while the
+     * body, a feature or a worn model weighs onto it, so long hair and a cape
+     * swing and a bald, bare body simulates nothing. Every array is allocated once
      * in constructor(). Lives on EntityInstance.
      */
 
@@ -80,6 +88,14 @@ public class AppearanceHandle extends HandlePackage {
 
     // Overlay Styles — indexed by SkinnedOverlay ordinal, INDEX_NOT_FOUND for the model's default
     private int[] overlayStyles;
+
+    // Worn — indexed by EquipmentSlot ordinal, the model each slot's item is worn as, null where none is; the body
+    // bones they cover and whether they cover any; the inventory revision and gender they were taken on for
+    private ItemWornModelStruct[] wornModels;
+    private SkinnedBoneMaskStruct coveredBones;
+    private boolean bodyCovered;
+    private int wornRevision;
+    private short wornGenderID;
 
     // Proportions
     private float weightRatio;
@@ -134,6 +150,11 @@ public class AppearanceHandle extends HandlePackage {
         this.features = new FeatureHandle[FeatureSlot.VALUES.length];
         this.featureVariants = new int[FeatureSlot.VALUES.length];
         this.overlayStyles = new int[SkinnedOverlay.VALUES.length];
+
+        // Worn
+        this.wornModels = new ItemWornModelStruct[EquipmentSlot.VALUES.length];
+        this.coveredBones = new SkinnedBoneMaskStruct();
+        this.wornRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Proportions
         this.weightRatio = weightRatio;
@@ -448,6 +469,55 @@ public class AppearanceHandle extends HandlePackage {
         featureVariants[featureSlot.ordinal()] = variantIndex;
     }
 
+    // Worn \\
+
+    // Takes on the gear the inventory shows, once each time it or the gender changes: each body slot's item worn as
+    // its model for this rig and gender where it has one, the bones they cover cut from the body, and the springs run
+    // again for whatever now weighs onto them
+    public void wear(InventoryHandle inventory) {
+
+        if (inventory.getRevision() == wornRevision && genderID == wornGenderID)
+            return;
+
+        this.wornRevision = inventory.getRevision();
+        this.wornGenderID = genderID;
+        this.bodyCovered = false;
+        coveredBones.clear();
+        coveredBones.setMode(SkinnedMaskMode.HIDE);
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+
+            ItemWornModelStruct wornModel = !equipmentSlot.isHand() && inventory.isShown(equipmentSlot)
+                    ? inventory.getItem(equipmentSlot).getItemDefinitionHandle()
+                            .getWornModel(appearanceData.getRigHandle(), genderID)
+                    : null;
+
+            wornModels[equipmentSlot.ordinal()] = wornModel;
+
+            if (wornModel == null || !wornModel.covers())
+                continue;
+
+            coveredBones.addBones(wornModel.getCoveredBones());
+            this.bodyCovered = true;
+        }
+
+        resolveSprings();
+    }
+
+    // The model a slot's item is worn as, null where it is worn on an anchor or the slot shows nothing
+    public ItemWornModelStruct getWornModel(EquipmentSlot equipmentSlot) {
+        return wornModels[equipmentSlot.ordinal()];
+    }
+
+    public boolean isBodyCovered() {
+        return bodyCovered;
+    }
+
+    // Every body bone the worn models cover, a mask that hides them
+    public SkinnedBoneMaskStruct getCoveredBones() {
+        return coveredBones;
+    }
+
     // Springs \\
 
     // Each spring chain of the rig runs only while something worn weighs onto one of its bones
@@ -475,6 +545,10 @@ public class AppearanceHandle extends HandlePackage {
 
         for (FeatureHandle feature : features)
             if (feature != null && feature.getMeshHandle().weighsOnto(boneIndex))
+                return true;
+
+        for (ItemWornModelStruct wornModel : wornModels)
+            if (wornModel != null && wornModel.getMeshHandle().weighsOnto(boneIndex))
                 return true;
 
         return false;

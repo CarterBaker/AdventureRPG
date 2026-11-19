@@ -479,6 +479,8 @@ One line per session that changed this file: the date, what was added or removed
   `InventoryPaintedItemMaterial.arpg`, `VehiclePaintedItemMaterial.arpg` and
   `materials/editor/ShipViewerPaintedMaterial.arpg`; regenerated `schemas/Items.arpg` (the `painted` field). The
   rigs, clips and trees New Rig For The Model writes are made on the owner's machine and are not catalogued.
+- 2026-11-19: Worn gear. Regenerated `schemas/Items.arpg` (the `worn` list: `mesh`, `gender`, `material`, `hides`).
+  The worn meshes Import writes under `mesh/worn/` are the owner's models and are not catalogued.
 
 ## Textures and Sprites (2429 files)
 

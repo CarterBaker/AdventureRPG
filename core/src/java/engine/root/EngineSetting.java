@@ -2799,6 +2799,14 @@ public class EngineSetting {
     public static final float RIG_SPRING_DRAG_MAX = 50f;
     public static final float RIG_SPRING_RADIUS_MAX = 0.5f;
     public static final float RIG_SPRING_RADIUS_DEFAULT = 0.01f;
+    // Spring wind — the share of the wind's speed the air moving past a body carries into its springs' drag, and the
+    // gusts it swells and eases in on the wind's own clock (speed, swell, the share of the wind still blowing between
+    // gusts), as the hair shader's gusts do
+    public static final float RIG_SPRING_WIND_SHARE = 0.5f;
+    public static final float RIG_SPRING_GUST_SPEED = 0.37f;
+    public static final float RIG_SPRING_GUST_SWELL = 0.91f;
+    public static final float RIG_SPRING_GUST_PHASE = 1.3f;
+    public static final float RIG_SPRING_GUST_FLOOR = 0.55f;
 
     // Rig Blending — turns closer than the angle whose cosine is given are blended straight and normalised, where
     // slerp would divide by almost nothing
@@ -3939,6 +3947,13 @@ public class EngineSetting {
             { INVENTORY_ITEM_MATERIAL, "items/InventoryPaintedItemMaterial" } };
     public static final String ITEM_TOOL_NONE = "";
     public static final int MAX_ITEM_STACK_SIZE = 512;
+
+    // Worn Items — the field listing the models an item is worn as, the gender a model fitted to every gender names
+    // and the gender it stands for, and the material a model drawn with the body's names
+    public static final String ITEM_WORN_FIELD = "worn";
+    public static final String ITEM_WORN_GENDER_NONE = "";
+    public static final short ITEM_WORN_GENDER_ANY = INDEX_NOT_FOUND;
+    public static final String ITEM_WORN_MATERIAL_BODY = "";
 
     // Item Actions
     public static final String ITEM_ACTION_FIRE_NONE = "";

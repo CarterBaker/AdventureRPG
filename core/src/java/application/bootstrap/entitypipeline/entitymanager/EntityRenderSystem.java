@@ -7,6 +7,7 @@ import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.inventory.InventoryHandle;
 import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.race.RaceGenderStruct;
@@ -15,10 +16,12 @@ import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedMaskMode;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
+import application.bootstrap.itempipeline.itemdefinition.ItemWornModelStruct;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
@@ -47,8 +50,12 @@ public class EntityRenderSystem extends SystemPackage {
      * packs its appearance and the overlays its model places into its palette
      * row, and submits its body, worn features and equipment as skinned and
      * rigid draws, the body and its material those of the gender it wears,
-     * each feature with its own material when it names one; seen from its own
-     * eyes, its head and everything the head carries is masked away.
+     * each feature with its own material when it names one. Gear with a
+     * model worn on the character's rig is skinned by the body's own bones,
+     * its morphs following the body's, and the body bones it covers are cut
+     * from the body beneath it; any other gear rides its anchor rigidly.
+     * Seen from its own eyes, its head and everything the head carries is
+     * masked away.
      * pushPreview() draws a posed character outside any world for editors,
      * as much of it as the editor isolates, every feature material swapped
      * for the viewport's own copy so no two viewports share a skinned batch.
@@ -76,6 +83,7 @@ public class EntityRenderSystem extends SystemPackage {
     private SkinnedBoneMaskStruct noMask;
     private AppearanceIsolationStruct wholeIsolation;
     private AppearanceIsolationStruct headlessIsolation;
+    private SkinnedBoneMaskStruct bodyMaskScratch;
     private Matrix4 anchorScratch;
     private Matrix4 equipmentScratch;
 
@@ -102,6 +110,7 @@ public class EntityRenderSystem extends SystemPackage {
         this.noMask = new SkinnedBoneMaskStruct();
         this.wholeIsolation = new AppearanceIsolationStruct();
         this.headlessIsolation = new AppearanceIsolationStruct();
+        this.bodyMaskScratch = new SkinnedBoneMaskStruct();
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             headlessIsolation.setFeature(featureSlot, true, true);
@@ -154,23 +163,27 @@ public class EntityRenderSystem extends SystemPackage {
 
         RaceData raceData = entity.getRaceData();
         RaceGenderStruct raceGender = entity.getRaceGender();
+        AppearanceHandle appearance = entity.getAppearanceHandle();
         Matrix4[] skinningMatrices = entity.getAnimationStateHandle().getSkinningMatrices();
 
         boolean headless = hideHead && entity.hasAppearance();
+        SkinnedBoneMaskStruct boneMask = headless ? raceData.getAppearanceData().getHeadMask() : noMask;
 
         composeModelMatrix(entity, viewerChunkCoordinate);
         refreshTextureUser(entity);
-        resolveAppearance(raceGender, entity.getAppearanceHandle());
+        resolveAppearance(raceGender, appearance);
         pushBody(
                 raceGender,
-                entity.getAppearanceHandle(),
+                appearance,
                 raceGender.getMaterial(),
-                headless ? raceData.getAppearanceData().getHeadMask() : noMask,
+                resolveBodyMask(boneMask, appearance),
+                boneMask,
                 headless ? headlessIsolation : wholeIsolation,
                 null,
                 skinningMatrices,
                 targetFbo,
                 window);
+        pushWorn(raceGender, appearance, boneMask, skinningMatrices, targetFbo, window);
         pushEquipment(entity, hideHead, skinningMatrices, targetFbo, window);
     }
 
@@ -197,6 +210,7 @@ public class EntityRenderSystem extends SystemPackage {
                 appearance,
                 material,
                 isolation.getBoneMask(),
+                isolation.getBoneMask(),
                 isolation,
                 featureMaterial2ViewMaterial,
                 skinningMatrices,
@@ -204,13 +218,14 @@ public class EntityRenderSystem extends SystemPackage {
                 window);
     }
 
-    // The body the gender wears through the mask, then every feature its appearance wears that the isolation
+    // The body the gender wears through its own mask, then every feature its appearance wears that the isolation
     // shows, through the mask where it masks that feature, each with its own material when it names one (a
     // viewport's copy of it in a preview) and in the variant the appearance picks
     private void pushBody(
             RaceGenderStruct raceGender,
             AppearanceHandle appearance,
             MaterialInstance material,
+            SkinnedBoneMaskStruct bodyMask,
             SkinnedBoneMaskStruct boneMask,
             AppearanceIsolationStruct isolation,
             Object2ObjectOpenHashMap<MaterialInstance, MaterialInstance> featureMaterial2ViewMaterial,
@@ -218,7 +233,7 @@ public class EntityRenderSystem extends SystemPackage {
             FBOInstance targetFbo,
             WindowInstance window) {
 
-        appearanceScratch.setBoneMask(boneMask);
+        appearanceScratch.setBoneMask(bodyMask);
         appearanceScratch.setVariant(null, EngineSetting.INDEX_NOT_FOUND);
 
         if (isolation.isBodyShown())
@@ -241,6 +256,54 @@ public class EntityRenderSystem extends SystemPackage {
                     feature.hasMaterial()
                             ? resolveFeatureMaterial(feature.getMaterial(), featureMaterial2ViewMaterial)
                             : material,
+                    skinningMatrices,
+                    targetFbo,
+                    window);
+        }
+    }
+
+    // The mask the body is drawn through: the one given, with every bone the worn models cover hidden as well
+    private SkinnedBoneMaskStruct resolveBodyMask(SkinnedBoneMaskStruct boneMask, AppearanceHandle appearance) {
+
+        if (appearance == null || !appearance.isBodyCovered())
+            return boneMask;
+
+        bodyMaskScratch.set(boneMask);
+        bodyMaskScratch.setMode(SkinnedMaskMode.HIDE);
+        bodyMaskScratch.addBones(appearance.getCoveredBones());
+
+        return bodyMaskScratch;
+    }
+
+    // Every model the appearance wears its gear as, skinned by the body's own bones through the mask, each of its
+    // morphs playing the body's morph of the same name, drawn with its own material or the body's
+    private void pushWorn(
+            RaceGenderStruct raceGender,
+            AppearanceHandle appearance,
+            SkinnedBoneMaskStruct boneMask,
+            Matrix4[] skinningMatrices,
+            FBOInstance targetFbo,
+            WindowInstance window) {
+
+        if (appearance == null)
+            return;
+
+        appearanceScratch.setBoneMask(boneMask);
+        appearanceScratch.setVariant(null, EngineSetting.INDEX_NOT_FOUND);
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+
+            ItemWornModelStruct wornModel = appearance.getWornModel(equipmentSlot);
+
+            if (wornModel == null)
+                continue;
+
+            appearanceScratch.setMorphSources(
+                    wornModel.getMeshHandle(),
+                    wornModel.getMorphSources(raceGender.getMeshHandle()));
+            pushCharacterPart(
+                    wornModel.getMeshHandle(),
+                    wornModel.hasMaterial() ? wornModel.getMaterial() : raceGender.getMaterial(),
                     skinningMatrices,
                     targetFbo,
                     window);
@@ -301,7 +364,7 @@ public class EntityRenderSystem extends SystemPackage {
 
             EquipmentAnchorStruct anchor = anchors.get(i);
 
-            if (!inventory.isShown(anchor.getEquipmentSlot()) || anchor.getBoneIndex() == hiddenBone)
+            if (!isAnchored(entity, anchor.getEquipmentSlot()) || anchor.getBoneIndex() == hiddenBone)
                 continue;
 
             ItemDefinitionHandle item = inventory.getItem(anchor.getEquipmentSlot()).getItemDefinitionHandle();
@@ -312,6 +375,12 @@ public class EntityRenderSystem extends SystemPackage {
 
             renderManager.pushRenderCall(model, targetFbo, EngineSetting.EQUIPMENT_RENDER_DEPTH, window);
         }
+    }
+
+    // Whether a slot's item rides its anchors: shown, and not worn as a model on the character's rig
+    private boolean isAnchored(EntityInstance entity, EquipmentSlot equipmentSlot) {
+        return entity.getInventoryHandle().isShown(equipmentSlot)
+                && (!entity.hasAppearance() || entity.getAppearanceHandle().getWornModel(equipmentSlot) == null);
     }
 
     // model * skinning * T(anchor) * R(anchor) * S(anchor) * shape placement
@@ -450,7 +519,8 @@ public class EntityRenderSystem extends SystemPackage {
         textureManager.setTextureUserTiles(previewUser, previewTiles.getTileIDs());
     }
 
-    // The body's tiles, and those of every feature worn, its variant and every overlay in the style worn
+    // The body's tiles, and those of every feature worn, its variant, every overlay in the style worn and every model
+    // gear is worn as
     private void collectCharacterTiles(
             RaceGenderStruct raceGender,
             AppearanceHandle appearance,
@@ -482,6 +552,10 @@ public class EntityRenderSystem extends SystemPackage {
             if (feature.getVariants() != null)
                 tiles.add(feature.getVariants().getTile(appearance.getFeatureVariant(featureSlot)));
         }
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
+            if (appearance.getWornModel(equipmentSlot) != null)
+                tiles.addAll(appearance.getWornModel(equipmentSlot).getMeshHandle().getTiles());
     }
 
     private void collectEquipmentTiles(EntityInstance entity, TextureTileSetStruct tiles) {
@@ -490,7 +564,7 @@ public class EntityRenderSystem extends SystemPackage {
         InventoryHandle inventory = entity.getInventoryHandle();
 
         for (int i = 0; i < anchors.size(); i++)
-            if (inventory.isShown(anchors.get(i).getEquipmentSlot()))
+            if (isAnchored(entity, anchors.get(i).getEquipmentSlot()))
                 tiles.addAll(inventory.getItem(anchors.get(i).getEquipmentSlot()).getItemDefinitionHandle()
                         .getMeshHandle().getTiles());
     }

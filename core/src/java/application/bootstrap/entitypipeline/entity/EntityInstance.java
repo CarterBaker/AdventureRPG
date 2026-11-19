@@ -17,6 +17,8 @@ import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
 import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
+import application.bootstrap.weatherpipeline.wind.WindHandle;
+import application.bootstrap.weatherpipeline.windmanager.WindManager;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -49,6 +51,7 @@ public class EntityInstance extends InstancePackage {
 
     // Internal
     private ProgressionManager progressionManager;
+    private WindManager windManager;
     private EntityData entityData;
     private WorldHandle worldHandle;
     private BehaviorHandle behaviorHandle;
@@ -142,6 +145,7 @@ public class EntityInstance extends InstancePackage {
 
         // Internal
         this.progressionManager = get(ProgressionManager.class);
+        this.windManager = get(WindManager.class);
     }
 
     // Constructor \\
@@ -254,8 +258,10 @@ public class EntityInstance extends InstancePackage {
         animationStateHandle.setParameter(AnimationParameter.LOOK_YAW, entityStateHandle.getLookYaw());
         moveSprings();
 
-        if (appearanceHandle != null)
+        if (appearanceHandle != null) {
+            appearanceHandle.wear(inventoryHandle);
             appearanceHandle.updateFace(deltaTime);
+        }
 
         animationStateHandle.update(
                 entityStateHandle.getMovementState(),
@@ -286,6 +292,22 @@ public class EntityInstance extends InstancePackage {
 
         this.springChunkCoordinate = chunkCoordinate;
         springPosition.set(position);
+        blowSprings();
+    }
+
+    // The wind the springs' drag works against: the global wind's share that moves past a body, swelling and easing
+    // in gusts on the wind's own clock
+    private void blowSprings() {
+
+        WindHandle windHandle = windManager.getWindHandle();
+        Vector3 direction = windHandle.getGlobalWindDirection();
+        float time = windManager.getGustTime();
+        float swell = 0.5f + 0.5f * (float) (Math.sin(time * EngineSetting.RIG_SPRING_GUST_SPEED)
+                * Math.sin(time * EngineSetting.RIG_SPRING_GUST_SWELL + EngineSetting.RIG_SPRING_GUST_PHASE));
+        float gust = EngineSetting.RIG_SPRING_GUST_FLOOR + (1f - EngineSetting.RIG_SPRING_GUST_FLOOR) * swell;
+        float speed = windHandle.getGlobalWindSpeed() * EngineSetting.RIG_SPRING_WIND_SHARE * gust;
+
+        animationStateHandle.setSpringWind(direction.x * speed, direction.y * speed, direction.z * speed);
     }
 
     // Statistics \\

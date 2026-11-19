@@ -101,6 +101,7 @@ class BlockPieceBranch extends BranchPackage {
                 false,
                 true,
                 EquipmentType.NONE,
+                new ObjectArrayList<>(),
                 ValueMapStruct.EMPTY,
                 new ItemShapeStruct(model),
                 null,

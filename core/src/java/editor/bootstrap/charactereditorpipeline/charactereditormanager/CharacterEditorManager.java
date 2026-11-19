@@ -584,6 +584,31 @@ public class CharacterEditorManager extends ManagerPackage {
         setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_IMPORTED + raceName);
     }
 
+    // Whether the model open may be worn as the item: a model with a body, not baked from an item, and an item of
+    // that full name worn on the body
+    public boolean isImportWorn(String itemName) {
+        return canImportModel() && !isItemModel() && characterWorkspaceBranch.isImportWorn(itemName);
+    }
+
+    // The gender whose body a worn model fits: a registered gender, or none for every gender
+    public boolean isImportWornGender(String genderName) {
+        return genderName.isEmpty() || isImportGender(genderName);
+    }
+
+    // The model open, saved first, brought into the game as the model the item is worn as on its rig, fitted to the
+    // gender named or every gender
+    public void importWornModel(String itemName, String genderName) {
+
+        if (!isImportWorn(itemName) || !isImportWornGender(genderName))
+            return;
+
+        saveActiveTemplate();
+
+        String refusal = characterWorkspaceBranch.importWorn(activeDocument, itemName, genderName);
+
+        setStatusMessage(refusal != null ? refusal : EditorSetting.CHARACTER_MODEL_MESSAGE_IMPORTED_WORN + itemName);
+    }
+
     // True while the model open was baked from an item, which Import paints rather than makes a race of
     public boolean isItemModel() {
         return activeDocument != null && activeDocument.isModel() && !activeDocument.isBlank()

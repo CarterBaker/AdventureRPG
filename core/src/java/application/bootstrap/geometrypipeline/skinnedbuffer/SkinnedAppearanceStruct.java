@@ -16,9 +16,10 @@ public class SkinnedAppearanceStruct extends StructPackage {
      * three texels per SkinnedOverlay placing it and the style worn on the
      * model drawn, and the tile of the material variant the part drawn shows
      * (zero for a part showing its own texture),
-     * followed by the morph weights of the mesh they were resolved for — any
-     * other mesh drawn with this appearance, hair worn on the body, gets zero
-     * weights.
+     * followed by the morph weights of the mesh they were resolved for — a
+     * mesh worn over it plays them through the body morph each of its own
+     * morphs follows, and any other mesh drawn with this appearance, hair
+     * worn on the body, gets zero weights.
      * Reused as a mutable scratch by whoever submits skinned draws, holding
      * the weights array it is lent, never a copy.
      */
@@ -29,6 +30,7 @@ public class SkinnedAppearanceStruct extends StructPackage {
     // Morphs
     private MeshHandle morphMesh;
     private float[] morphWeights;
+    private int[] morphSources;
 
     // Constructor \\
 
@@ -51,6 +53,7 @@ public class SkinnedAppearanceStruct extends StructPackage {
 
         morphMesh = null;
         morphWeights = null;
+        morphSources = null;
     }
 
     // The bones this draw hides or alone shows, copied in whole
@@ -111,6 +114,14 @@ public class SkinnedAppearanceStruct extends StructPackage {
     public void setMorphWeights(MeshHandle meshHandle, float[] weights) {
         this.morphMesh = meshHandle;
         this.morphWeights = weights;
+        this.morphSources = null;
+    }
+
+    // Plays the weights lent through another mesh's morphs, each the weight of the morph its source names
+    // (INDEX_NOT_FOUND for none), as a garment's morphs follow the body's of the same names
+    public void setMorphSources(MeshHandle meshHandle, int[] sources) {
+        this.morphMesh = meshHandle;
+        this.morphSources = sources;
     }
 
     // Write \\
@@ -125,8 +136,12 @@ public class SkinnedAppearanceStruct extends StructPackage {
         int morphCount = meshHandle.getMorphCount();
         boolean resolved = meshHandle == morphMesh && morphWeights != null;
 
-        for (int m = 0; m < morphCount; m++)
-            out[offset + m] = resolved && m < morphWeights.length ? morphWeights[m] : 0f;
+        for (int m = 0; m < morphCount; m++) {
+
+            int source = morphSources != null ? morphSources[m] : m;
+
+            out[offset + m] = resolved && source >= 0 && source < morphWeights.length ? morphWeights[source] : 0f;
+        }
     }
 
     // Accessible \\

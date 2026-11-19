@@ -125,7 +125,8 @@ public class CharacterEditorBranch extends BranchPackage {
         continueImport(window);
     }
 
-    // The open model brought into the game: the race it joins, the gender it is the model of, then an entity to make
+    // The open model brought into the game: the race it joins, the gender it is the model of, then an entity to make;
+    // or the item it is worn as, then the gender whose body it fits
     public void importModel(WindowInstance window) {
 
         if (!characterEditorManager.canImportModel())
@@ -145,21 +146,39 @@ public class CharacterEditorBranch extends BranchPackage {
                 window,
                 EditorSetting.CHARACTER_MODEL_DIALOG_RACE,
                 characterEditorManager.getActiveModelStem(),
-                characterEditorManager::isImportRace,
-                raceName -> nameDialogBranch.openText(
+                name -> characterEditorManager.isImportWorn(name) || characterEditorManager.isImportRace(name),
+                name -> {
+                    if (characterEditorManager.isImportWorn(name))
+                        importWornModel(window, name);
+                    else
+                        importRaceModel(window, name);
+                });
+    }
+
+    private void importRaceModel(WindowInstance window, String raceName) {
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.CHARACTER_MODEL_DIALOG_GENDER,
+                "",
+                characterEditorManager::isImportGender,
+                genderName -> nameDialogBranch.openText(
                         window,
-                        EditorSetting.CHARACTER_MODEL_DIALOG_GENDER,
+                        EditorSetting.CHARACTER_MODEL_DIALOG_ENTITY,
                         "",
-                        characterEditorManager::isImportGender,
-                        genderName -> nameDialogBranch.openText(
-                                window,
-                                EditorSetting.CHARACTER_MODEL_DIALOG_ENTITY,
-                                "",
-                                characterEditorManager::isImportEntity,
-                                entityName -> characterEditorManager.importModel(
-                                        raceName,
-                                        genderName,
-                                        entityName))));
+                        characterEditorManager::isImportEntity,
+                        entityName -> characterEditorManager.importModel(
+                                raceName,
+                                genderName,
+                                entityName)));
+    }
+
+    private void importWornModel(WindowInstance window, String itemName) {
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.CHARACTER_MODEL_DIALOG_WORN_GENDER,
+                "",
+                characterEditorManager::isImportWornGender,
+                genderName -> characterEditorManager.importWornModel(itemName, genderName));
     }
 
     private void continueImport(WindowInstance window) {

@@ -2,6 +2,7 @@ package application.bootstrap.itempipeline.itemdefinition;
 
 import application.bootstrap.geometrypipeline.mesh.MeshData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.progressionpipeline.util.ValueMapStruct;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
@@ -14,9 +15,10 @@ public class ItemDefinitionData extends DataPackage {
      * presentation, physical properties, the body slot it is worn in, the
      * statistics it grants, the sub-voxel shape it takes up in a container and
      * in the world, whether its rough box stops whoever walks into it, and
-     * render references for one item type. An item with a container space
-     * holds its own container of that space. A container with a lid carries
-     * its model without the lid, drawn in the world while it stands open, and
+     * render references for one item type, with the models it is worn as on
+     * each rig apart from the sub-voxel model it lies in the world as. An
+     * item with a container space holds its own container of that space. A
+     * container with a lid carries its model without the lid, drawn in the world while it stands open, and
      * a pocket carries the box of walls its space is shown in, drawn only in
      * the inventory's menus. A tool names the tool type it is and the highest
      * break tier it can break; an item names the weapon it is wielded with,
@@ -53,6 +55,7 @@ public class ItemDefinitionData extends DataPackage {
 
     // Equipment
     private final EquipmentType equipmentType;
+    private final ObjectArrayList<ItemWornModelStruct> wornModels;
     private final ValueMapStruct stats;
 
     // Storage
@@ -109,6 +112,7 @@ public class ItemDefinitionData extends DataPackage {
             boolean twoHanded,
             boolean solid,
             EquipmentType equipmentType,
+            ObjectArrayList<ItemWornModelStruct> wornModels,
             ValueMapStruct stats,
             ItemShapeStruct shape,
             ContainerSpaceStruct containerSpace,
@@ -147,6 +151,7 @@ public class ItemDefinitionData extends DataPackage {
 
         // Equipment
         this.equipmentType = equipmentType;
+        this.wornModels = wornModels;
         this.stats = stats;
 
         // Storage
@@ -231,6 +236,29 @@ public class ItemDefinitionData extends DataPackage {
 
     public EquipmentType getEquipmentType() {
         return equipmentType;
+    }
+
+    // The model the item is worn as on a body of the rig and gender given: the one fitted to that gender, else the
+    // one fitted to every gender on the rig, null when it has neither and is worn as its own model on an anchor
+    public ItemWornModelStruct getWornModel(RigHandle rigHandle, short genderID) {
+
+        ItemWornModelStruct fallback = null;
+
+        for (int i = 0; i < wornModels.size(); i++) {
+
+            ItemWornModelStruct wornModel = wornModels.get(i);
+
+            if (!wornModel.fits(rigHandle))
+                continue;
+
+            if (wornModel.isFittedTo(genderID))
+                return wornModel;
+
+            if (wornModel.isFittedToAny())
+                fallback = wornModel;
+        }
+
+        return fallback;
     }
 
     public float getStat(short statID) {

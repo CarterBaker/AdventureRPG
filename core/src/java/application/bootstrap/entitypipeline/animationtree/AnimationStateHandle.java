@@ -401,6 +401,11 @@ public class AnimationStateHandle extends HandlePackage {
         springs.setFrame(bodyFrame, travelX, travelY, travelZ);
     }
 
+    // How fast the air moves past the body, in blocks a second along the world's axes, for the springs' drag
+    public void setSpringWind(float x, float y, float z) {
+        springs.setWind(x, y, z);
+    }
+
     // Whether a spring chain runs, off for one nothing worn weighs onto
     public void setSpringActive(int chainIndex, boolean active) {
         holdRig();
