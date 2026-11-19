@@ -1461,6 +1461,23 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_FIELD_OFFSET = "offset";
     public static final String CHARACTER_RIG_FIELD_START = "start";
     public static final String CHARACTER_RIG_FIELD_END = "end";
+    public static final String CHARACTER_RIG_FIELD_TIME = "time";
+    public static final String CHARACTER_RIG_FIELD_LOOP = "loop";
+    public static final String CHARACTER_RIG_FIELD_TRACKS = "tracks";
+    public static final String CHARACTER_RIG_FIELD_CLIP = "clip";
+    public static final String CHARACTER_RIG_FIELD_NODES = "nodes";
+    public static final String CHARACTER_RIG_FIELD_STATES = "states";
+    public static final String CHARACTER_RIG_FIELD_LAYERS = "layers";
+
+    // Rig of a Model's Own — the name New Rig gives it after the model's, the clip and tree that hold it at rest to
+    // preview it by, and the one shared rig no model's bones may change
+    public static final String CHARACTER_RIG_NEW_SUFFIX = "Rig";
+    public static final String CHARACTER_RIG_REST_CLIP_SUFFIX = "Rest";
+    public static final String CHARACTER_RIG_REST_TREE_SUFFIX = "AnimationTree";
+    public static final float[] CHARACTER_RIG_REST_KEY_TIMES = { 0f, 1f };
+    public static final String CHARACTER_RIG_REST_LAYER = "base";
+    public static final String CHARACTER_RIG_REST_NODE = "idle";
+    public static final String CHARACTER_RIG_REST_STATE = "idle";
 
     // Character Paint — the maps a part's texture carries, in the order the Map row steps through them, each with its
     // label, the alias whose layer it fills and the suffix its image takes beside the texture; a canvas holds at most
@@ -1634,6 +1651,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_KEY_SAVE = "rig_save";
     public static final String CHARACTER_RIG_KEY_REVERT = "rig_revert";
     public static final String CHARACTER_RIG_KEY_DIGITS = "rig_digits";
+    public static final String CHARACTER_RIG_KEY_RIG_NEW = "rig_new";
     public static final String CHARACTER_RIG_KEY_IK_ADD = "rig_ik_add";
     public static final String CHARACTER_RIG_KEY_IK_REMOVE = "rig_ik_remove";
     public static final String CHARACTER_RIG_KEY_PART_ADD = "rig_part_add";
@@ -1666,6 +1684,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_LABEL_SYMMETRIZE_RIGHT = "Symmetrize  Right to Left";
     public static final String CHARACTER_RIG_LABEL_SAVE = "Save Rig";
     public static final String CHARACTER_RIG_LABEL_DIGITS = "Rig Digits";
+    public static final String CHARACTER_RIG_LABEL_RIG_NEW = "New Rig For The Model";
     public static final String CHARACTER_RIG_LABEL_IK_ADD = "Add IK Handle";
     public static final String CHARACTER_RIG_LABEL_IK_REMOVE = "Remove IK Handle";
     public static final String CHARACTER_RIG_LABEL_PART_ADD = "Add Layer From Bone";
@@ -1695,6 +1714,11 @@ public class EditorSetting {
 
     // Character Rig — status text
     public static final String CHARACTER_RIG_MESSAGE_ADDED = "Added ";
+    public static final String CHARACTER_RIG_MESSAGE_SHARED =
+            "Every item shares this rig: give the model a rig of its own with New Rig For The Model first";
+    public static final String CHARACTER_RIG_MESSAGE_NEW = "The model now stands on a rig of its own: ";
+    public static final String CHARACTER_RIG_MESSAGE_NEW_MODEL_ONLY =
+            "New Rig gives a workspace model with a body a rig of its own";
     public static final String CHARACTER_RIG_MESSAGE_DIGITS =
             " digit bones added; weigh onto them with Weigh Onto Digits";
     public static final String CHARACTER_RIG_MESSAGE_NO_DIGITS = "No new digits found under this region's bones";
@@ -2231,6 +2255,9 @@ public class EditorSetting {
     public static final String CHARACTER_MODEL_FIELD_ANIMATION_TREE = "animation_tree";
     public static final String CHARACTER_MODEL_STANDALONE_MATERIAL = "characters/StandardCharacterMaterial";
     public static final String CHARACTER_MODEL_IMPORT_FOLDER = "characters/";
+    public static final String CHARACTER_ITEM_IMPORT_FOLDER = "items/painted/";
+    public static final String CHARACTER_MODEL_DIALOG_ITEM = "Import: the item it paints (its full name)";
+    public static final String CHARACTER_MODEL_MESSAGE_IMPORTED_ITEM = "Imported the painted model into the item ";
     public static final String CHARACTER_MODEL_DEFAULT_RIG = "HumanoidRig";
     public static final String CHARACTER_MODEL_DIALOG_NEW = "New model: its name";
     public static final String CHARACTER_MODEL_DIALOG_RIG = "New model: the rig it is built on";

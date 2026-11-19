@@ -1,5 +1,7 @@
 package application.bootstrap.geometrypipeline.rigmanager;
 
+import java.io.File;
+
 import application.bootstrap.geometrypipeline.rig.RigData;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.EngineSetting;
@@ -67,6 +69,13 @@ public class RigManager extends ManagerPackage {
     // bones before they join a character's rig
     public RigHandle buildDetachedRig(String rigName, ArpgObjectStruct rigArpg) {
         return ((RigLoader) internalLoader).buildDetached(rigName, rigArpg);
+    }
+
+    // On-Demand \\
+
+    // A rig file written while the game runs, loaded by name when first asked for
+    public void addRigFile(String name, File file) {
+        ((RigLoader) internalLoader).registerFile(name, file);
     }
 
     // Accessible \\

@@ -377,7 +377,12 @@ class CharacterRigPropertyBranch extends BranchPackage {
             return;
         }
 
-        if (!characterRigBranch.hasRig() || !isIdle())
+        if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_RIG_NEW)) {
+            characterEditorManager.newModelRig();
+            return;
+        }
+
+        if (!characterRigBranch.hasRig() || !isIdle() || characterRigBranch.refuseShared())
             return;
 
         switch (keyName) {

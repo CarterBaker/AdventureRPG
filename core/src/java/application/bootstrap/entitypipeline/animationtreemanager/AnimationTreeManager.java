@@ -1,5 +1,7 @@
 package application.bootstrap.entitypipeline.animationtreemanager;
 
+import java.io.File;
+
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
@@ -33,6 +35,13 @@ public class AnimationTreeManager extends ManagerPackage {
 
     void addAnimationTree(AnimationTreeHandle animationTreeHandle) {
         treeName2AnimationTreeHandle.put(animationTreeHandle.getTreeName(), animationTreeHandle);
+    }
+
+    // On-Demand \\
+
+    // A animation tree file written while the game runs, loaded by name when first asked for
+    public void addAnimationTreeFile(String name, File file) {
+        ((AnimationTreeLoader) internalLoader).registerFile(name, file);
     }
 
     // Accessible \\

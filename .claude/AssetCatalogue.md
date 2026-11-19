@@ -471,6 +471,14 @@ One line per session that changed this file: the date, what was added or removed
   `animations/item/ItemIdle.arpg` and `animationtrees/item/ItemAnimationTree.arpg` (its rest pose, so a baked item
   previews without a race). The maps Export bakes under `textures/items/baked/` are made on the owner's machine from
   the materials they choose and are not catalogued.
+- 2026-11-19: Painted items in the game. Added `mesh/util/vao/PaintedItemVAO.arpg`, the include
+  `shaders/items/includes/PaintedAlbedo.glsl`, the shaders `items/painted/StandardPaintedItemShader`,
+  `EquipmentPaintedItemShader`, `InventoryPaintedItemShader` and `VehiclePaintedItemShader` (`.arpg`, `.vsh`, `.fsh`)
+  and `editor/shipviewer/ShipViewerPaintedShader` (`.arpg`, `.fsh`), and their materials
+  `materials/items/StandardPaintedItemMaterial.arpg`, `EquipmentPaintedItemMaterial.arpg`,
+  `InventoryPaintedItemMaterial.arpg`, `VehiclePaintedItemMaterial.arpg` and
+  `materials/editor/ShipViewerPaintedMaterial.arpg`; regenerated `schemas/Items.arpg` (the `painted` field). The
+  rigs, clips and trees New Rig For The Model writes are made on the owner's machine and are not catalogued.
 
 ## Textures and Sprites (2429 files)
 
@@ -1562,7 +1570,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (180 files)
+## Shaders (190 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1602,7 +1610,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/editor/shipviewer/`
 
-`ShipViewerShader.fsh`
+`ShipViewerPaintedShader.fsh`, `ShipViewerShader.fsh`
 
 ### `assets/shaders/editor/treeviewer/`
 
@@ -1644,11 +1652,17 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/items/includes/`
 
-`BlockAlbedo.glsl`, `BlockRepeat.glsl`
+`BlockAlbedo.glsl`, `BlockRepeat.glsl`, `PaintedAlbedo.glsl`
 
 ### `assets/shaders/items/inventory/`
 
 `InventoryItemShader.fsh`, `InventoryItemShader.vsh`, `InventoryVehicleShader.fsh`, `InventoryVehicleShader.vsh`
+
+### `assets/shaders/items/painted/`
+
+`EquipmentPaintedItemShader.fsh`, `EquipmentPaintedItemShader.vsh`, `InventoryPaintedItemShader.fsh`,
+`InventoryPaintedItemShader.vsh`, `StandardPaintedItemShader.fsh`, `StandardPaintedItemShader.vsh`,
+`VehiclePaintedItemShader.fsh`, `VehiclePaintedItemShader.vsh`
 
 ### `assets/shaders/items/standard/`
 
@@ -1886,7 +1900,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3807 files)
+## Data Files (3818 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2670,7 +2684,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
 `ItemEditorModelMaterial.arpg`, `ItemEditorStampBuildMaterial.arpg`, `ItemEditorStampDigMaterial.arpg`,
 `ImageEditorMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
-`ShipViewerMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
+`ShipViewerMaterial.arpg`, `ShipViewerPaintedMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
 `TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`, `UVEditorOverlayMaterial.arpg`,
 `WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
 `WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
@@ -2681,8 +2695,9 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/materials/items/`
 
-`EquipmentItemMaterial.arpg`, `InventoryItemMaterial.arpg`, `InventoryVehicleMaterial.arpg`,
-`StandardItemMaterial.arpg`, `TierFrameMaterial.arpg`, `VehicleItemMaterial.arpg`
+`EquipmentItemMaterial.arpg`, `EquipmentPaintedItemMaterial.arpg`, `InventoryItemMaterial.arpg`,
+`InventoryPaintedItemMaterial.arpg`, `InventoryVehicleMaterial.arpg`, `StandardItemMaterial.arpg`,
+`StandardPaintedItemMaterial.arpg`, `TierFrameMaterial.arpg`, `VehicleItemMaterial.arpg`, `VehiclePaintedItemMaterial.arpg`
 
 ### `assets/materials/liquid/`
 
@@ -2858,7 +2873,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/mesh/util/vao/`
 
 `ChunkVAO.arpg`, `DockChromeVAO.arpg`, `ItemVAO.arpg`, `LabelVAO.arpg`, `MacroVAO.arpg`, `MacroWaterVAO.arpg`,
-`QuadVAO.arpg`, `SubVoxelVAO.arpg`
+`PaintedItemVAO.arpg`, `QuadVAO.arpg`, `SubVoxelVAO.arpg`
 
 ### `assets/moods/`
 
@@ -2959,7 +2974,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/shaders/editor/shipviewer/`
 
-`ShipViewerShader.arpg`
+`ShipViewerPaintedShader.arpg`, `ShipViewerShader.arpg`
 
 ### `assets/shaders/editor/treeviewer/`
 
@@ -2992,6 +3007,11 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/shaders/items/inventory/`
 
 `InventoryItemShader.arpg`, `InventoryVehicleShader.arpg`
+
+### `assets/shaders/items/painted/`
+
+`EquipmentPaintedItemShader.arpg`, `InventoryPaintedItemShader.arpg`, `StandardPaintedItemShader.arpg`,
+`VehiclePaintedItemShader.arpg`
 
 ### `assets/shaders/items/standard/`
 

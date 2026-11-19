@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 125
-Task: ItemMeshBake
+Delivery: 126
+Task: PaintedItems
 Applied: 2026-11-19
 
 ## Log
@@ -135,3 +135,4 @@ Applied: 2026-11-19
 - 123, 2026-11-19, EntityMeshTopologyHair
 - 124, 2026-11-19, ItemEditorWorkflow
 - 125, 2026-11-19, ItemMeshBake
+- 126, 2026-11-19, PaintedItems

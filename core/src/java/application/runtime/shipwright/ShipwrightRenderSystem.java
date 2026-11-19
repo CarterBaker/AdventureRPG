@@ -159,7 +159,7 @@ public class ShipwrightRenderSystem extends SystemPackage {
 
         this.fbo = fboManager.cloneFbo(EngineSetting.SHIPWRIGHT_FBO, window);
         this.iconFbo = fboManager.cloneFbo(RuntimeSetting.FBO_INVENTORY, window);
-        this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_ITEM);
+        this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.INVENTORY_ITEM_MATERIAL);
         this.vehicleMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.VEHICLE_MATERIAL_ICON);
         this.sheetTexture = createTexture(EngineSetting.SHIPWRIGHT_SHEET_TEXELS_X,
                 EngineSetting.SHIPWRIGHT_SHEET_TEXELS_Y);

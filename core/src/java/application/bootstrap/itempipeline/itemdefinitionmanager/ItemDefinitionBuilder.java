@@ -18,6 +18,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinition.ItemShapeStruct;
 import application.bootstrap.itempipeline.itemdefinition.ItemStation;
 import application.bootstrap.itempipeline.itemdefinition.LidClearanceStruct;
+import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.musicpipeline.instrumentmanager.InstrumentManager;
@@ -94,6 +95,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
     private StatManager statManager;
     private SkillManager skillManager;
     private SoundCueManager soundCueManager;
+    private ItemModelManager itemModelManager;
+    private PaintedMeshBranch paintedMeshBranch;
 
     // Directory
     private File meshRoot;
@@ -122,6 +125,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
         this.statManager = get(StatManager.class);
         this.soundCueManager = get(SoundCueManager.class);
         this.skillManager = get(SkillManager.class);
+        this.itemModelManager = get(ItemModelManager.class);
+        this.paintedMeshBranch = get(PaintedMeshBranch.class);
     }
 
     // Build \\
@@ -176,7 +181,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
         String meshPath = resolveMeshPath(itemArpg, toolTypeID, itemName);
         int meshID = meshManager.getMeshIDFromMeshName(meshPath);
-        MeshHandle meshHandle = meshManager.getMeshHandleFromMeshID(meshID);
+        MeshHandle meshHandle = resolveDrawnMesh(
+                itemArpg, meshManager.getMeshHandleFromMeshID(meshID), itemName);
         SubVoxelModelStruct model = parseModel(meshPath, itemName);
         ItemShapeStruct shape = parseShape(itemArpg, model, itemName);
         ContainerSpaceStruct containerSpace = parseContainerSpace(itemArpg, model, shape, itemName);
@@ -206,7 +212,8 @@ class ItemDefinitionBuilder extends BuilderPackage {
 
         String materialPath = ArpgUtility.getString(
                 itemArpg, "material", EngineSetting.DEFAULT_ITEM_MATERIAL);
-        int materialID = materialManager.getMaterialIDFromMaterialName(materialPath);
+        int materialID = itemModelManager.resolveMaterial(
+                materialManager.getMaterialIDFromMaterialName(materialPath), meshHandle.getMeshData());
 
         ItemDefinitionData itemDefinitionData = new ItemDefinitionData(
                 itemName,
@@ -366,6 +373,15 @@ class ItemDefinitionBuilder extends BuilderPackage {
             return throwException("Item '" + itemName + "' names no \"mesh\", and its tool type has no \"model\".");
 
         return modelPath;
+    }
+
+    // The mesh the item is drawn with: its sub-voxels' own, or the painted mesh it names, made in the mesh tools
+    private MeshHandle resolveDrawnMesh(ArpgObjectStruct itemArpg, MeshHandle subVoxelHandle, String itemName) {
+
+        String paintedPath = ArpgUtility.getString(
+                itemArpg, EngineSetting.ITEM_PAINTED_FIELD, EngineSetting.ITEM_MESH_NONE);
+
+        return paintedPath.isEmpty() ? subVoxelHandle : paintedMeshBranch.resolve(paintedPath, itemName);
     }
 
     private SubVoxelModelStruct parseModel(String meshPath, String itemName) {

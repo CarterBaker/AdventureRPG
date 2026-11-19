@@ -736,7 +736,6 @@ public class RuntimeSetting {
     public static final int INVENTORY_RING_ROW_LENGTH = 5;
 
     // Inventory Render
-    public static final String MATERIAL_INVENTORY_ITEM = "items/InventoryItemMaterial";
     public static final String UNIFORM_INVENTORY_PROJECTION = "u_projection";
     public static final String UNIFORM_INVENTORY_MODEL = "u_model";
     public static final String UNIFORM_INVENTORY_TINT = "u_tint";

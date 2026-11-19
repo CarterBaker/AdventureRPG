@@ -165,6 +165,17 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   (`TextureManager.applyTileBake`). The mesh opens in the character tabs as the workspace model `items/<Item>`
   (`CharacterEditorManager.openBakedModel`; an open one takes it as one edit), to paint, unwrap and model as any mesh.
   Baking again lays the maps out afresh from the cubes, painting over the last bake: paint after the shape is done.
+- **Painted items reach the game** through the mesh tabs' File, Import: an item model (`items/<Item>`) is written to
+  `assets/mesh/items/painted/<Item>.arpg` and named by the item's `painted` field, which the item it paints offers
+  first (the one whose sub-voxels are `items/<Item>`). The item keeps its sub-voxels for its shape, grip and contents;
+  `PaintedMeshBranch` builds what it is drawn with in the painted layout (`PaintedItemVAO`: position, normal, UV,
+  tile), and `ItemModelManager.resolveMaterial` draws it with the painted twin of whatever item material it is asked
+  for (`ITEM_PAINTED_MATERIAL_TWINS`; a viewer of its own registers its twin, as the Ship Viewer does).
+- **Rigs.** Every baked item stands on the shared `ItemRig`, so no item needs a rig, and its bones cannot be changed
+  (`CharacterRigBranch.refuseShared`). The Rig tab's New Rig For The Model gives any workspace model a rig of its own:
+  a copy of its rig named after it, with a rest clip and an animation tree playing it to preview it by, written and
+  made known at once, the model then opening again on it; Add Child Bone and Remove Bone (or Place and Erase) then
+  shape it.
 
 ## The File and Edit menus
 

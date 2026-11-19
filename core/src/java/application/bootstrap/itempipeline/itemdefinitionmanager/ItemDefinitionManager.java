@@ -37,6 +37,7 @@ public class ItemDefinitionManager extends ManagerPackage {
     private BlockManager blockManager;
     private ContentManager contentManager;
     private BlockPieceBranch blockPieceBranch;
+    private PaintedMeshBranch paintedMeshBranch;
 
     // Palette
     private Object2IntOpenHashMap<String> itemName2ItemIndex;
@@ -64,6 +65,7 @@ public class ItemDefinitionManager extends ManagerPackage {
         this.blockID2BlockPieceHandle = new Int2ObjectOpenHashMap<>();
         this.contentID2ContentPieceHandle = new Int2ObjectOpenHashMap<>();
         this.blockPieceBranch = create(BlockPieceBranch.class);
+        this.paintedMeshBranch = create(PaintedMeshBranch.class);
         create(ItemDefinitionLoader.class);
     }
 

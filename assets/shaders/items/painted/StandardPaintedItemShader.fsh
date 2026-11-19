@@ -1,0 +1,37 @@
+#version 330 core
+
+in vec3 vNormalView;
+in vec3 vViewPosition;
+in vec2 vUV;
+flat in int vTile;
+
+#include "items/includes/PaintedAlbedo.glsl"
+
+
+layout(location = 0) out vec4 gAlbedo;
+layout(location = 1) out vec4 gNormal;
+layout(location = 2) out vec4 gMaterial;
+
+/*
+ * A painted world item writes the same G-buffer as a sub-voxel one, so the
+ * deferred lighting pass lights, shades and fogs both identically. Items draw
+ * without culling, so the normal is turned to face the viewer.
+ */
+const float ITEM_SPECULAR = 0.18;
+
+void main() {
+    vec4 albedo = samplePaintedAlbedo(vTile, vUV);
+
+    if (albedo.a < 0.01)
+    discard;
+
+    vec3 normalView = normalize(vNormalView);
+
+    if (dot(normalView, vViewPosition) > 0.0)
+    normalView = -normalView;
+
+    // Blending is enabled for this pass, so every target writes alpha = 1.0.
+    gAlbedo   = vec4(albedo.rgb, 1.0);
+    gNormal   = vec4(normalView, 1.0);
+    gMaterial = vec4(1.0, ITEM_SPECULAR, 1.0, 1.0);
+}

@@ -381,7 +381,7 @@ class CharacterRigBranch extends BranchPackage {
 
         ArpgObjectStruct rigArpg = getRigArpg();
 
-        if (rigArpg == null)
+        if (rigArpg == null || refuseShared())
             return;
 
         history.record(rigArpg);
@@ -426,7 +426,7 @@ class CharacterRigBranch extends BranchPackage {
 
         ArpgObjectStruct rigArpg = getRigArpg();
 
-        if (rigArpg == null || selectedBone == EngineSetting.INDEX_NOT_FOUND)
+        if (rigArpg == null || selectedBone == EngineSetting.INDEX_NOT_FOUND || refuseShared())
             return false;
 
         history.begin(rigArpg);
@@ -1765,6 +1765,16 @@ class CharacterRigBranch extends BranchPackage {
     }
 
     // Accessible \\
+
+    // True, saying why, while the rig is the one every item shares, whose bones no model may change
+    boolean refuseShared() {
+
+        if (rigHandle == null || !rigHandle.getRigName().equals(EditorSetting.ITEM_BAKE_RIG))
+            return false;
+
+        characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_SHARED);
+        return true;
+    }
 
     boolean hasRig() {
         return rigHandle != null && boneCount > 0;

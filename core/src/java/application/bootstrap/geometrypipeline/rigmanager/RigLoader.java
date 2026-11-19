@@ -81,6 +81,11 @@ class RigLoader extends LoaderPackage {
 
     // On-Demand \\
 
+    // A rig written while the game runs made known under its name, so it loads on demand like any scanned one
+    void registerFile(String name, File file) {
+        rigName2File.put(name, file);
+    }
+
     void request(String rigName) {
 
         File file = rigName2File.get(rigName);

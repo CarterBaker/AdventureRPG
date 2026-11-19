@@ -3923,6 +3923,20 @@ public class EngineSetting {
     public static final int ITEM_ROTATION_COUNT = 4;
     public static final int DEFAULT_ITEM_STACK_SIZE = 1;
     public static final String ITEM_MESH_NONE = "";
+    public static final String INVENTORY_ITEM_MATERIAL = "items/InventoryItemMaterial";
+
+    // Painted Items — the field naming the painted mesh an item is drawn with, the name its drawn copy goes by, the
+    // layout of that copy (position, normal, UV, tile) and its stride in floats, and each item material's twin that
+    // draws it
+    public static final String ITEM_PAINTED_FIELD = "painted";
+    public static final String ITEM_PAINTED_MESH_PREFIX = "painted/";
+    public static final String PAINTED_ITEM_VAO = "util/vao/PaintedItemVAO";
+    public static final int PAINTED_ITEM_VERTEX_STRIDE = 9;
+    public static final String[][] ITEM_PAINTED_MATERIAL_TWINS = {
+            { DEFAULT_ITEM_MATERIAL, "items/StandardPaintedItemMaterial" },
+            { EQUIPMENT_ITEM_MATERIAL, "items/EquipmentPaintedItemMaterial" },
+            { VEHICLE_ITEM_MATERIAL, "items/VehiclePaintedItemMaterial" },
+            { INVENTORY_ITEM_MATERIAL, "items/InventoryPaintedItemMaterial" } };
     public static final String ITEM_TOOL_NONE = "";
     public static final int MAX_ITEM_STACK_SIZE = 512;
 

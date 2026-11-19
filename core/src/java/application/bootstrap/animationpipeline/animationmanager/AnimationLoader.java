@@ -69,6 +69,11 @@ class AnimationLoader extends LoaderPackage {
 
     // On-Demand \\
 
+    // A clip written while the game runs made known under its name, so it loads on demand like any scanned one
+    void registerFile(String name, File file) {
+        clipName2File.put(name, file);
+    }
+
     void request(String clipName) {
 
         File file = clipName2File.get(clipName);

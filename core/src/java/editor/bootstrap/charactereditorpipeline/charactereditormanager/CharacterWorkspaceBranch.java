@@ -3,10 +3,13 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 import java.io.File;
 import java.util.Locale;
 
+import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
+import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeManager;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
+import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
@@ -51,6 +54,8 @@ class CharacterWorkspaceBranch extends BranchPackage {
     private InfoManager infoManager;
     private MeshManager meshManager;
     private RigManager rigManager;
+    private AnimationManager animationManager;
+    private AnimationTreeManager animationTreeManager;
     private GenderManager genderManager;
 
     // Directory
@@ -76,6 +81,8 @@ class CharacterWorkspaceBranch extends BranchPackage {
         this.infoManager = get(InfoManager.class);
         this.meshManager = get(MeshManager.class);
         this.rigManager = get(RigManager.class);
+        this.animationManager = get(AnimationManager.class);
+        this.animationTreeManager = get(AnimationTreeManager.class);
         this.genderManager = get(GenderManager.class);
     }
 
@@ -104,7 +111,13 @@ class CharacterWorkspaceBranch extends BranchPackage {
         return ArpgUtility.resolveFile(modelRoot, modelName);
     }
 
-    // A model's mesh, and the race it is previewed through, go by its name under the workspace's prefix
+    // The mesh a model is worked as, by its name and its rig under the workspace's prefix, so a model moved onto a rig
+    // of its own is loaded afresh on it
+    private static String toWorkspaceMeshName(String modelName, String rigName) {
+        return EditorSetting.CHARACTER_WORKSPACE_PREFIX + modelName + EditorSetting.INFO_FOLDER_SEPARATOR + rigName;
+    }
+
+    // The race a model is previewed through goes by its name under the workspace's prefix
     private static String toWorkspaceName(String modelName) {
         return EditorSetting.CHARACTER_WORKSPACE_PREFIX + modelName;
     }
@@ -188,7 +201,7 @@ class CharacterWorkspaceBranch extends BranchPackage {
     // race built from a race on its rig
     private boolean registerBody(CharacterDocumentInstance document) {
 
-        String meshName = toWorkspaceName(document.getModelName());
+        String meshName = toWorkspaceMeshName(document.getModelName(), document.getRigHandle().getRigName());
         File file = resolveFile(document.getModelName());
         ArpgObjectStruct templateArpg = buildTemplate(document.getRigHandle().getRigName(), meshName);
 
@@ -408,18 +421,191 @@ class CharacterWorkspaceBranch extends BranchPackage {
                 : infoManager.getRefusal();
     }
 
+    // Rig \\
+
+    // The model moved onto a rig of its own: a copy of the one it stands on, named after it, with a rest pose and an
+    // animation tree playing it to preview it by, written among the game's rigs and clips and made known at once;
+    // the model's file then names it. Null when it was, else why not
+    String moveToNewRig(CharacterDocumentInstance document) {
+
+        String sourceRig = document.getRigHandle().getRigName();
+        InfoEntryStruct source = infoManager.findEntry(EditorSetting.INFO_SCHEMA_RIGS, sourceRig, sourceRig);
+        ArpgObjectStruct modelArpg = ArpgUtility.tryLoadObject(resolveFile(document.getModelName()));
+
+        if (source == null || modelArpg == null)
+            return EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_READ + document.getModelName();
+
+        String rigName = resolveNewRigName(FileUtility.getFileName(document.getModelName()));
+        String folder = rigName.toLowerCase(Locale.ROOT) + EditorSetting.INFO_FOLDER_SEPARATOR;
+        String clipName = folder + rigName + EditorSetting.CHARACTER_RIG_REST_CLIP_SUFFIX;
+        String treeName = folder + rigName + EditorSetting.CHARACTER_RIG_REST_TREE_SUFFIX;
+        ArpgObjectStruct rigArpg = source.getArpg().deepCopy().getAsObject();
+        String rootBone = rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES).get(0).getAsObject()
+                .get(EditorSetting.CHARACTER_RIG_FIELD_NAME).getAsString();
+
+        String refusal = writeContent(EditorSetting.INFO_SCHEMA_RIGS, rigName, rigArpg);
+
+        if (refusal == null)
+            refusal = writeContent(EditorSetting.INFO_SCHEMA_ANIMATIONS, clipName, buildRestClip(rigName, rootBone));
+
+        if (refusal == null)
+            refusal = writeContent(
+                    EditorSetting.INFO_SCHEMA_ANIMATION_TREES, treeName, buildRestTree(rigName, clipName));
+
+        if (refusal != null)
+            return refusal;
+
+        rigManager.addRigFile(rigName, ArpgUtility.resolveFile(new File(EngineSetting.RIG_PATH), rigName));
+        animationManager.addAnimationFile(
+                clipName, ArpgUtility.resolveFile(new File(EngineSetting.ANIMATION_PATH), clipName));
+        animationTreeManager.addAnimationTreeFile(
+                treeName, ArpgUtility.resolveFile(new File(EngineSetting.ANIMATION_TREE_PATH), treeName));
+
+        modelArpg.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, rigName);
+
+        return ArpgUtility.tryWriteObject(resolveFile(document.getModelName()), modelArpg)
+                ? null
+                : EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_WRITTEN + document.getModelName();
+    }
+
+    // The model's name and Rig, numbered past every rig of the game already holding it
+    private String resolveNewRigName(String stem) {
+
+        String rigName = stem + EditorSetting.CHARACTER_RIG_NEW_SUFFIX;
+        int number = 2;
+
+        while (infoManager.hasDocument(EditorSetting.INFO_SCHEMA_RIGS, rigName))
+            rigName = stem + EditorSetting.CHARACTER_RIG_NEW_SUFFIX + number++;
+
+        return rigName;
+    }
+
+    // A file of the schema made with exactly the fields given and saved; null when it was, else why not
+    private String writeContent(String schemaName, String definitionName, ArpgObjectStruct contentArpg) {
+
+        infoManager.createDocument(schemaName, definitionName, content -> replaceFields(content, contentArpg));
+
+        return infoManager.saveDocument(schemaName, definitionName) ? null : infoManager.getRefusal();
+    }
+
+    // A looping clip holding the rig at rest, keyed on its root at its start and end
+    private static ArpgObjectStruct buildRestClip(String rigName, String rootBone) {
+
+        ArpgObjectStruct clip = new ArpgObjectStruct();
+        ArpgObjectStruct tracks = new ArpgObjectStruct();
+        ArpgArrayStruct keys = new ArpgArrayStruct();
+        float[] times = EditorSetting.CHARACTER_RIG_REST_KEY_TIMES;
+
+        for (int i = 0; i < times.length; i++) {
+
+            ArpgObjectStruct key = new ArpgObjectStruct();
+            key.addProperty(EditorSetting.CHARACTER_RIG_FIELD_TIME, times[i]);
+            keys.add(key);
+        }
+
+        tracks.add(rootBone, keys);
+        clip.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, rigName);
+        clip.addProperty(EditorSetting.CHARACTER_RIG_FIELD_LOOP, true);
+        clip.add(EditorSetting.CHARACTER_RIG_FIELD_TRACKS, tracks);
+        return clip;
+    }
+
+    // A tree of one layer whose one node plays the rest clip while idle
+    private static ArpgObjectStruct buildRestTree(String rigName, String clipName) {
+
+        ArpgObjectStruct tree = new ArpgObjectStruct();
+        ArpgArrayStruct layers = new ArpgArrayStruct();
+        ArpgObjectStruct layer = new ArpgObjectStruct();
+        ArpgObjectStruct nodes = new ArpgObjectStruct();
+        ArpgObjectStruct node = new ArpgObjectStruct();
+        ArpgObjectStruct states = new ArpgObjectStruct();
+
+        node.addProperty(EditorSetting.CHARACTER_RIG_FIELD_CLIP, clipName);
+        nodes.add(EditorSetting.CHARACTER_RIG_REST_NODE, node);
+        states.addProperty(EditorSetting.CHARACTER_RIG_REST_STATE, EditorSetting.CHARACTER_RIG_REST_NODE);
+        layer.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, EditorSetting.CHARACTER_RIG_REST_LAYER);
+        layer.add(EditorSetting.CHARACTER_RIG_FIELD_NODES, nodes);
+        layer.add(EditorSetting.CHARACTER_RIG_FIELD_STATES, states);
+        layers.add(layer);
+        tree.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, rigName);
+        tree.add(EditorSetting.CHARACTER_RIG_FIELD_LAYERS, layers);
+        return tree;
+    }
+
+    // Item Import \\
+
+    // The full name of the first item whose sub-voxels are the mesh; empty for none
+    String findItemByMesh(String meshName) {
+
+        ObjectArrayList<InfoEntryStruct> items = infoManager.getEntries(EditorSetting.INFO_SCHEMA_ITEMS);
+
+        for (int i = 0; i < items.size(); i++)
+            if (meshName.equals(ArpgUtility.getString(
+                    items.get(i).getArpg(), EditorSetting.INFO_ITEM_MESH_FIELD, "")))
+                return ItemRegistryUtility.toItemName(items.get(i).getDefinitionName(), items.get(i).getEntryName());
+
+        return "";
+    }
+
+    boolean isImportItem(String itemName) {
+        return findItem(itemName) != null;
+    }
+
+    // The item model brought into the game as the mesh the item is drawn with: written among the game's painted item
+    // meshes and named by the item's painted field, its sub-voxels kept for its shape; null when it was, else why not
+    String importItem(CharacterDocumentInstance document, String itemName) {
+
+        InfoEntryStruct item = findItem(itemName);
+        String meshName = EditorSetting.CHARACTER_ITEM_IMPORT_FOLDER + FileUtility.getFileName(document.getModelName());
+        File meshFile = ArpgUtility.resolveFile(new File(EngineSetting.MESH_PATH), meshName);
+        ArpgObjectStruct modelArpg = ArpgUtility.tryLoadObject(resolveFile(document.getModelName()));
+
+        meshFile.getParentFile().mkdirs();
+
+        if (item == null || modelArpg == null || !ArpgUtility.tryWriteObject(meshFile, modelArpg))
+            return EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_WRITTEN + meshName;
+
+        meshManager.addMeshFile(meshName, meshFile);
+        infoManager.notifyResourcesChanged();
+        infoManager.editEntry(
+                EditorSetting.INFO_SCHEMA_ITEMS,
+                item.getDefinitionName(),
+                item.getEntryName(),
+                itemArpg -> itemArpg.addProperty(EngineSetting.ITEM_PAINTED_FIELD, meshName));
+
+        return infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, item.getDefinitionName())
+                ? null
+                : infoManager.getRefusal();
+    }
+
+    private InfoEntryStruct findItem(String itemName) {
+
+        int separator = itemName.lastIndexOf(EditorSetting.INFO_FOLDER_SEPARATOR);
+
+        return separator > 0
+                ? infoManager.findEntry(
+                        EditorSetting.INFO_SCHEMA_ITEMS,
+                        ItemRegistryUtility.toDefinitionName(itemName),
+                        itemName.substring(separator + 1))
+                : null;
+    }
+
     // A new race's fields, every default replaced by the race built for it, not yet offered to the player
     private static void fillRace(ArpgObjectStruct race, ArpgObjectStruct raceArpg) {
+        replaceFields(race, raceArpg);
+        race.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_PLAYABLE, false);
+    }
 
-        ObjectArrayList<String> defaultKeys = new ObjectArrayList<>(race.keySet());
+    // A new document's fields, every default replaced by the ones given
+    private static void replaceFields(ArpgObjectStruct target, ArpgObjectStruct source) {
+
+        ObjectArrayList<String> defaultKeys = new ObjectArrayList<>(target.keySet());
 
         for (int i = 0; i < defaultKeys.size(); i++)
-            race.remove(defaultKeys.get(i));
+            target.remove(defaultKeys.get(i));
 
-        for (String key : raceArpg.keySet())
-            race.add(key, raceArpg.get(key));
-
-        race.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_PLAYABLE, false);
+        for (String key : source.keySet())
+            target.add(key, source.get(key));
     }
 
     // The gender wears the mesh: the race's own gender of that name keeps every other field, a gender it lacks is made

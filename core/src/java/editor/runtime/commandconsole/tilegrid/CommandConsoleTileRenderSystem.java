@@ -89,7 +89,7 @@ public class CommandConsoleTileRenderSystem extends SystemPackage {
         this.iconFbo = fboManager.cloneFbo(RuntimeSetting.FBO_INVENTORY, context.getWindow());
 
         // Resources
-        this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_ITEM);
+        this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.INVENTORY_ITEM_MATERIAL);
         this.vehicleMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.VEHICLE_MATERIAL_ICON);
     }
 

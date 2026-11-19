@@ -134,7 +134,7 @@ public class InventoryRenderSystem extends SystemPackage {
         this.inventoryFbo = fboManager.cloneFbo(RuntimeSetting.FBO_INVENTORY, context.getWindow());
 
         // Resources
-        this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_ITEM);
+        this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.INVENTORY_ITEM_MATERIAL);
         this.worldMaterialID = materialManager.getMaterialIDFromMaterialName(EngineSetting.EQUIPMENT_ITEM_MATERIAL);
         this.frameMaterialID = materialManager.getMaterialIDFromMaterialName(RuntimeSetting.MATERIAL_INVENTORY_FRAME);
         this.frameMesh = meshManager.getMeshHandleFromMeshName(RuntimeSetting.MESH_INVENTORY_FRAME).getMeshData();

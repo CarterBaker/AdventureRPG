@@ -131,6 +131,16 @@ public class CharacterEditorBranch extends BranchPackage {
         if (!characterEditorManager.canImportModel())
             return;
 
+        if (characterEditorManager.isItemModel()) {
+            nameDialogBranch.openText(
+                    window,
+                    EditorSetting.CHARACTER_MODEL_DIALOG_ITEM,
+                    characterEditorManager.getImportItemName(),
+                    characterEditorManager::isImportItem,
+                    characterEditorManager::importItemModel);
+            return;
+        }
+
         nameDialogBranch.openText(
                 window,
                 EditorSetting.CHARACTER_MODEL_DIALOG_RACE,

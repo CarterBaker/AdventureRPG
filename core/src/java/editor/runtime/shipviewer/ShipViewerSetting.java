@@ -10,6 +10,7 @@ public class ShipViewerSetting {
 
     // Materials
     public static final String MATERIAL_SHIP = "editor/ShipViewerMaterial";
+    public static final String MATERIAL_SHIP_PAINTED = "editor/ShipViewerPaintedMaterial";
     public static final String UNIFORM_CUTAWAY_HEIGHT = "u_cutawayHeight";
 
     // Render Order

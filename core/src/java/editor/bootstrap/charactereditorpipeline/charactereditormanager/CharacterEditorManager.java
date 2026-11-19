@@ -584,6 +584,61 @@ public class CharacterEditorManager extends ManagerPackage {
         setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_IMPORTED + raceName);
     }
 
+    // True while the model open was baked from an item, which Import paints rather than makes a race of
+    public boolean isItemModel() {
+        return activeDocument != null && activeDocument.isModel() && !activeDocument.isBlank()
+                && activeDocument.getModelName().startsWith(EditorSetting.ITEM_BAKE_MODEL_FOLDER);
+    }
+
+    // The item an item model's import offers first: the one whose sub-voxels go by the model's own name
+    public String getImportItemName() {
+        return characterWorkspaceBranch.findItemByMesh(EditorSetting.ITEM_EDITOR_MESH_DIRECTORY
+                + EditorSetting.INFO_FOLDER_SEPARATOR + getActiveModelStem());
+    }
+
+    public boolean isImportItem(String itemName) {
+        return isItemModel() && characterWorkspaceBranch.isImportItem(itemName);
+    }
+
+    // The item model open, saved first, brought into the game as the mesh the item is drawn with, painted as it is
+    public void importItemModel(String itemName) {
+
+        if (!isImportItem(itemName))
+            return;
+
+        saveActiveTemplate();
+
+        String refusal = characterWorkspaceBranch.importItem(activeDocument, itemName);
+
+        setStatusMessage(refusal != null ? refusal : EditorSetting.CHARACTER_MODEL_MESSAGE_IMPORTED_ITEM + itemName);
+    }
+
+    // The model open moved onto a rig of its own, a copy of the one it stands on, saved first, then opened again on it
+    public void newModelRig() {
+
+        if (activeDocument == null || !activeDocument.isModel() || activeDocument.isBlank()) {
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NEW_MODEL_ONLY);
+            return;
+        }
+
+        saveActiveTemplate();
+
+        String modelName = activeDocument.getModelName();
+        String refusal = characterWorkspaceBranch.moveToNewRig(activeDocument);
+
+        if (refusal != null) {
+            setStatusMessage(refusal);
+            return;
+        }
+
+        modelName2CharacterDocument.remove(modelName);
+        activate(null);
+        openModel(modelName);
+
+        if (activeDocument != null)
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NEW + activeDocument.getRigHandle().getRigName());
+    }
+
     // The name a model's import offers for its race and entity first: the model's own
     public String getActiveModelStem() {
         return activeDocument != null && activeDocument.isModel()
@@ -1583,13 +1638,13 @@ public class CharacterEditorManager extends ManagerPackage {
     // A child of the selected bone with its joint at a point in the world
     public void addRigBone(Vector3 worldPoint) {
 
-        if (syncRig() && !characterRigBranch.isGesturing())
+        if (syncRig() && !characterRigBranch.isGesturing() && !characterRigBranch.refuseShared())
             characterRigBranch.addBone(worldPoint);
     }
 
     public void removeRigBone(int boneIndex) {
 
-        if (syncRig() && !characterRigBranch.isGesturing())
+        if (syncRig() && !characterRigBranch.isGesturing() && !characterRigBranch.refuseShared())
             characterRigBranch.removeBone(boneIndex);
     }
 

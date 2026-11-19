@@ -70,6 +70,11 @@ class AnimationTreeLoader extends LoaderPackage {
 
     // On-Demand \\
 
+    // A tree written while the game runs made known under its name, so it loads on demand like any scanned one
+    void registerFile(String name, File file) {
+        treeName2File.put(name, file);
+    }
+
     void request(String treeName) {
 
         File file = treeName2File.get(treeName);

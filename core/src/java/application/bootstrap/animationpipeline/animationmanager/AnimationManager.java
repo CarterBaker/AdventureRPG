@@ -1,5 +1,7 @@
 package application.bootstrap.animationpipeline.animationmanager;
 
+import java.io.File;
+
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -38,6 +40,13 @@ public class AnimationManager extends ManagerPackage {
     void addClip(String clipName, AnimationClipHandle handle) {
         RegistryUtility.registerHandle(
                 clipName2ClipID, clipID2ClipHandle, clipName, handle, EngineSetting.REGISTRY_SHORT_ID_COUNT);
+    }
+
+    // On-Demand \\
+
+    // A clip file written while the game runs, loaded by name when first asked for
+    public void addAnimationFile(String name, File file) {
+        ((AnimationLoader) internalLoader).registerFile(name, file);
     }
 
     // Accessible \\

@@ -769,7 +769,11 @@ New, Open and Import reach them (`FILE_MENU_CHARACTER`: `newModel`, `openModel`,
   sliders, expressions or features, which name a body's own morphs and meshes). A rig no race stands on but an
   animation tree moves (`ItemRig`, the item rig) is previewed as the game's first gender in
   `CHARACTER_MODEL_STANDALONE_MATERIAL` moving by that tree (`resolveGender`), so a baked item opens like any model; a
-  rig with neither cannot be previewed. The view frames a body from where its mesh stands
+  rig with neither cannot be previewed. A model's mesh is known as `workspace/<Name>/<Rig>`, so New Rig For The Model
+  (`CharacterWorkspaceBranch.moveToNewRig`: the rig copied, a rest clip and tree made for it, `RigManager.addRigFile`,
+  `AnimationManager.addAnimationFile`, `AnimationTreeManager.addAnimationTreeFile`) opens it afresh on its own rig. An
+  item model's Import paints its item (`importItem`) rather than making a race. The view frames a body from where its
+  mesh stands
   (`CharacterViewPoseSystem.getCenter`), so a lone torso is framed at its own height.
 - **A model is no race.** Race edits skip it (`CharacterEditBranch.edit`), the Appearance and Equipment tabs say so,
   Duplicate and Delete refuse it, and Save writes its mesh, the rig, controls, clips and paint, never a race.

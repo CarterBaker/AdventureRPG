@@ -93,6 +93,9 @@ public class ShipViewerRenderSystem extends SystemPackage {
 
         // Materials
         this.shipMaterialID = materialManager.getMaterialIDFromMaterialName(ShipViewerSetting.MATERIAL_SHIP);
+        itemModelManager.registerPaintedTwin(
+                shipMaterialID,
+                materialManager.getMaterialIDFromMaterialName(ShipViewerSetting.MATERIAL_SHIP_PAINTED));
     }
 
     // Update \\

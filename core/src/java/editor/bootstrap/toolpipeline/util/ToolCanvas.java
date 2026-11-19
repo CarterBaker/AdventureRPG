@@ -372,6 +372,9 @@ public enum ToolCanvas {
     private static ToolActionGroupStruct rigActions() {
         return new ToolActionGroupStruct(
                 EditorSetting.CHARACTER_RIG_HEADER_ACTIONS,
+                action(EditorSetting.CHARACTER_RIG_LABEL_ADD_BONE, EditorSetting.CHARACTER_RIG_KEY_ADD_BONE),
+                action(EditorSetting.CHARACTER_RIG_LABEL_REMOVE_BONE, EditorSetting.CHARACTER_RIG_KEY_REMOVE_BONE),
+                action(EditorSetting.CHARACTER_RIG_LABEL_RIG_NEW, EditorSetting.CHARACTER_RIG_KEY_RIG_NEW),
                 action(EditorSetting.CHARACTER_RIG_LABEL_DIGITS, EditorSetting.CHARACTER_RIG_KEY_DIGITS),
                 action(EditorSetting.CHARACTER_RIG_LABEL_IK_ADD, EditorSetting.CHARACTER_RIG_KEY_IK_ADD),
                 action(EditorSetting.CHARACTER_RIG_LABEL_IK_REMOVE, EditorSetting.CHARACTER_RIG_KEY_IK_REMOVE));
