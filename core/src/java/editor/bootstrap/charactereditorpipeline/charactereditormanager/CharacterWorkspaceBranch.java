@@ -515,7 +515,7 @@ class CharacterWorkspaceBranch extends BranchPackage {
         return clip;
     }
 
-    // A tree of one layer whose one node plays the rest clip while idle
+    // A tree of one layer whose one node, its default, plays the rest clip in every state, as a base layer must cover
     private static ArpgObjectStruct buildRestTree(String rigName, String clipName) {
 
         ArpgObjectStruct tree = new ArpgObjectStruct();
@@ -523,14 +523,12 @@ class CharacterWorkspaceBranch extends BranchPackage {
         ArpgObjectStruct layer = new ArpgObjectStruct();
         ArpgObjectStruct nodes = new ArpgObjectStruct();
         ArpgObjectStruct node = new ArpgObjectStruct();
-        ArpgObjectStruct states = new ArpgObjectStruct();
 
         node.addProperty(EditorSetting.CHARACTER_RIG_FIELD_CLIP, clipName);
         nodes.add(EditorSetting.CHARACTER_RIG_REST_NODE, node);
-        states.addProperty(EditorSetting.CHARACTER_RIG_REST_STATE, EditorSetting.CHARACTER_RIG_REST_NODE);
         layer.addProperty(EditorSetting.CHARACTER_RIG_FIELD_NAME, EditorSetting.CHARACTER_RIG_REST_LAYER);
         layer.add(EditorSetting.CHARACTER_RIG_FIELD_NODES, nodes);
-        layer.add(EditorSetting.CHARACTER_RIG_FIELD_STATES, states);
+        layer.addProperty(EditorSetting.CHARACTER_RIG_FIELD_DEFAULT, EditorSetting.CHARACTER_RIG_REST_NODE);
         layers.add(layer);
         tree.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, rigName);
         tree.add(EditorSetting.CHARACTER_RIG_FIELD_LAYERS, layers);

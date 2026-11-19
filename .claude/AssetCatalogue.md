@@ -481,6 +481,8 @@ One line per session that changed this file: the date, what was added or removed
   rigs, clips and trees New Rig For The Model writes are made on the owner's machine and are not catalogued.
 - 2026-11-19: Worn gear. Regenerated `schemas/Items.arpg` (the `worn` list: `mesh`, `gender`, `material`, `hides`).
   The worn meshes Import writes under `mesh/worn/` are the owner's models and are not catalogued.
+- 2026-11-19: Editor crash fix. Regenerated `animationtrees/item/ItemAnimationTree.arpg`: its base layer now plays
+  its idle node as the `default` for every state, since a base layer naming a node for idle alone is refused at load.
 
 ## Textures and Sprites (2429 files)
 

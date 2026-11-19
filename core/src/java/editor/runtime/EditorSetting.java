@@ -1466,7 +1466,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_FIELD_TRACKS = "tracks";
     public static final String CHARACTER_RIG_FIELD_CLIP = "clip";
     public static final String CHARACTER_RIG_FIELD_NODES = "nodes";
-    public static final String CHARACTER_RIG_FIELD_STATES = "states";
+    public static final String CHARACTER_RIG_FIELD_DEFAULT = "default";
     public static final String CHARACTER_RIG_FIELD_LAYERS = "layers";
 
     // Rig of a Model's Own — the name New Rig gives it after the model's, the clip and tree that hold it at rest to
@@ -1477,7 +1477,6 @@ public class EditorSetting {
     public static final float[] CHARACTER_RIG_REST_KEY_TIMES = { 0f, 1f };
     public static final String CHARACTER_RIG_REST_LAYER = "base";
     public static final String CHARACTER_RIG_REST_NODE = "idle";
-    public static final String CHARACTER_RIG_REST_STATE = "idle";
 
     // Character Paint — the maps a part's texture carries, in the order the Map row steps through them, each with its
     // label, the alias whose layer it fills and the suffix its image takes beside the texture; a canvas holds at most
