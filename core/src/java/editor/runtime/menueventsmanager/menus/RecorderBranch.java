@@ -42,9 +42,10 @@ public class RecorderBranch extends BranchPackage {
      * Nest Selection names its new recording through the name dialog. Takes are named
      * through the text dialog, and deleting a take asks for its name to be
      * typed back. Dragging along the ruler
-     * moves the playhead to the moment under the cursor. The take picked in
-     * the Layers tab's Takes view is laid at the playhead, renamed or deleted
-     * by the take actions. A sound pressed in the sound library is picked up and laid
+     * moves the playhead to the moment under the cursor. A take pressed in the
+     * Layers tab's Takes view is picked up, and letting go over the lanes
+     * lays it there, or where it was pressed picks it; the take picked is
+     * laid at the playhead, renamed or deleted by the take actions. A sound pressed in the sound library is picked up and laid
      * as a take of its own over the lanes of whichever Recorder tab the
      * cursor is let go above, in any window, or let go over the rows of a
      * Keys tab is added to the take shown there at the moment under the
@@ -540,6 +541,27 @@ public class RecorderBranch extends BranchPackage {
     }
 
     // Takes \\
+
+    // A take pressed in the Layers tab's Takes view is picked up on the press and carried over the Timeline's lanes
+    // under the cursor until let go, or picked when let go where it was pressed
+    public void dragLayer(String layerKey, WindowInstance window) {
+
+        int takeIndex = recorderManager.findLayerTake(layerKey);
+
+        if (takeIndex == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        if (!recorderManager.getDrag().isActive())
+            recorderManager.beginTakeDrag(
+                    takeIndex,
+                    window,
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window));
+
+        WindowInstance hovered = windowManager.getHoveredWindow();
+
+        dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
+    }
 
     // A sound is picked up on the press wherever it was pressed, and carried over the lanes or the Keys pane's rows
     // of the Recorder tab under the cursor until let go

@@ -81,7 +81,8 @@ public class RecorderManager extends ManagerPackage {
      * channels from the playhead until stopped, the clips beneath playing
      * every other channel; it then joins the bin and is laid on the timeline
      * where it was recorded, over every clip it was recorded against. Takes
-     * are laid again at the playhead from the Layers tab's Takes view, and clips are moved by
+     * are laid again by dragging them from the Layers tab's Takes view, or at
+     * the playhead, and clips are moved by
      * dragging, trimmed by dragging an edge or at the playhead, cut in two at
      * the playhead or, with the Cut tool chosen for the timeline in the Tools
      * panel, wherever it is pressed, stamped, muted, given or stripped of
@@ -1617,6 +1618,16 @@ public class RecorderManager extends ManagerPackage {
 
     // Drag \\
 
+    // A take picked up from the Layers tab's Takes view, to be laid where it is let go over the lanes, or picked when
+    // it is let go where it was pressed
+    public void beginTakeDrag(int takeIndex, WindowInstance window, float pressX, float pressY) {
+
+        if (drag.isActive() || !canEditTimeline() || !isTakeIndex(takeIndex))
+            return;
+
+        beginDrag(RecorderDragKind.TAKE, takeIndex, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
+    }
+
     // A sound picked up from the sound library in any window, to be laid where it is let go over the lanes; nothing
     // is picked up while no recording is open to lay it on
     public void beginSoundDrag(int soundID, WindowInstance window, float pressX, float pressY) {
@@ -1787,7 +1798,7 @@ public class RecorderManager extends ManagerPackage {
         float tolerance = snapping ? EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel : 0f;
 
         switch (drag.getKind()) {
-            case SOUND, RECORDING, NOTE, CLIP -> landSpan(overLanes, time, lane, tolerance);
+            case TAKE, SOUND, RECORDING, NOTE, CLIP -> landSpan(overLanes, time, lane, tolerance);
             case TRIM_START, TRIM_END -> landEdge(time, tolerance);
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
@@ -1924,6 +1935,12 @@ public class RecorderManager extends ManagerPackage {
         cancelDrag();
 
         switch (kind) {
+            case TAKE -> {
+                if (dropped)
+                    placeTake(index, landingStart, landingLane);
+                else
+                    selectTake(index);
+            }
             case RECORDING -> {
                 if (dropped)
                     placeRecording(carriedName, landingStart, landingLane);
@@ -2032,6 +2049,7 @@ public class RecorderManager extends ManagerPackage {
     // How long what is carried runs, so the tab can draw where it would land; nothing for what lands at a moment
     public float resolveDragLength() {
         return switch (drag.getKind()) {
+            case TAKE -> recording.getTakes().get(drag.getIndex()).getDuration();
             case SOUND -> soundManager.getSoundHandleFromSoundID(drag.getIndex()).getPlayedLength();
             case RECORDING -> resolveRecordingLength(drag.getName());
             case NOTE -> (float) recording.getTempo().toSeconds(recording.getBeatTicks());
@@ -2587,6 +2605,11 @@ public class RecorderManager extends ManagerPackage {
 
     public void selectLayer(String layerKey) {
         recordingLayerBranch.selectLayer(layerKey);
+    }
+
+    // The take a layer's key names in the Takes view, -1 for any other layer
+    public int findLayerTake(String layerKey) {
+        return recordingLayerBranch.findTake(layerKey);
     }
 
     public void showLayerView(RecorderLayerView shown) {

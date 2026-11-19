@@ -14,7 +14,9 @@ public class LayerNodeStruct extends StructPackage {
      * open; the Layers tab only remembers the groups turned away from that.
      * The active layer is the one the window's tools work on now, and a
      * group holding it carries that too. A layer that can be hidden carries
-     * whether it is shown.
+     * whether it is shown. A draggable layer is picked up on a press and
+     * carried out of the tab, its window choosing it when it is let go where
+     * it was pressed.
      */
 
     // Identity
@@ -26,6 +28,7 @@ public class LayerNodeStruct extends StructPackage {
     private final boolean hideable;
     private final boolean visible;
     private final boolean expandedByDefault;
+    private final boolean draggable;
 
     // Tree
     private final ObjectArrayList<LayerNodeStruct> children;
@@ -43,6 +46,17 @@ public class LayerNodeStruct extends StructPackage {
             boolean hideable,
             boolean visible,
             boolean expandedByDefault) {
+        this(layerKey, label, active, hideable, visible, expandedByDefault, false);
+    }
+
+    private LayerNodeStruct(
+            String layerKey,
+            String label,
+            boolean active,
+            boolean hideable,
+            boolean visible,
+            boolean expandedByDefault,
+            boolean draggable) {
 
         // Identity
         this.layerKey = layerKey;
@@ -53,9 +67,15 @@ public class LayerNodeStruct extends StructPackage {
         this.hideable = hideable;
         this.visible = visible;
         this.expandedByDefault = expandedByDefault;
+        this.draggable = draggable;
 
         // Tree
         this.children = new ObjectArrayList<>();
+    }
+
+    // A layer picked up and carried out of the tab by a press, never a group
+    public static LayerNodeStruct draggable(String layerKey, String label, boolean active) {
+        return new LayerNodeStruct(layerKey, label, active, false, true, false, true);
     }
 
     // Tree \\
@@ -89,6 +109,10 @@ public class LayerNodeStruct extends StructPackage {
 
     public boolean isExpandedByDefault() {
         return expandedByDefault;
+    }
+
+    public boolean isDraggable() {
+        return draggable;
     }
 
     public ObjectArrayList<LayerNodeStruct> getChildren() {

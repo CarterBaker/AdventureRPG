@@ -14,6 +14,8 @@ public class LayersSetting {
     public static final String MENU_LAYERS = "editor/Layers/Layers";
     public static final String TEMPLATE_LAYER_ROW = "editor/Layers/layer_row";
     public static final String TEMPLATE_LAYER_ROW_ACTIVE = "editor/Layers/layer_row_active";
+    public static final String TEMPLATE_LAYER_ROW_DRAG = "editor/Layers/layer_row_drag";
+    public static final String TEMPLATE_LAYER_ROW_DRAG_ACTIVE = "editor/Layers/layer_row_drag_active";
     public static final String TEMPLATE_VIEW_BUTTON = "editor/Layers/layer_view_button";
     public static final String TEMPLATE_VIEW_BUTTON_ACTIVE = "editor/Layers/layer_view_button_active";
 

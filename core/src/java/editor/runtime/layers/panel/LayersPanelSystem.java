@@ -29,7 +29,8 @@ public class LayersPanelSystem extends SystemPackage {
      * while it is, and the layer the window's tools work on highlighted. A
      * folded group holding that layer has its name drawn in the accent
      * color, so the active layer is always found. Every row, marker and eye
-     * carries its layer's key. A window that lists its stack more than one
+     * carries its layer's key; a draggable layer's row is picked up on a
+     * press rather than clicked. A window that lists its stack more than one
      * way gets a button for each view at the tab's foot, the one shown marked.
      * The rows are laid out again only when the window, its stack's revision
      * or the groups folded change.
@@ -174,15 +175,18 @@ public class LayersPanelSystem extends SystemPackage {
     // A layer the window's tools work on is highlighted; a group holding it is named in the accent color while folded
     private ElementInstance injectRow(LayerNodeStruct node, int depth, boolean expanded) {
 
-        String template = node.isActive() && !node.isGroup()
-                ? LayersSetting.TEMPLATE_LAYER_ROW_ACTIVE
-                : LayersSetting.TEMPLATE_LAYER_ROW;
+        String template = node.isDraggable()
+                ? node.isActive() ? LayersSetting.TEMPLATE_LAYER_ROW_DRAG_ACTIVE : LayersSetting.TEMPLATE_LAYER_ROW_DRAG
+                : node.isActive() && !node.isGroup()
+                        ? LayersSetting.TEMPLATE_LAYER_ROW_ACTIVE
+                        : LayersSetting.TEMPLATE_LAYER_ROW;
         float indent = depth * LayersSetting.INDENT_PIXELS;
 
         return menuManager.inject(
                 layersMenu, LayersSetting.ENTRY_ROWS, template,
                 element -> {
                     element.setActionArgOverride(node.getLayerKey());
+                    element.setOnDragArgOverride(node.getLayerKey());
 
                     bindChild(element, LayersSetting.ELEMENT_TOGGLE, node, indent, node.isGroup());
                     bindChild(

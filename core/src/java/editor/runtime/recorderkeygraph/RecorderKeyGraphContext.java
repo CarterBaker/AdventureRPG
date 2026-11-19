@@ -2,6 +2,8 @@ package editor.runtime.recorderkeygraph;
 
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.layerspipeline.layers.LayerDragProvider;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
@@ -24,7 +26,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RecorderKeyGraphContext extends ContextPackage
         implements RecorderTabProvider, ToolCanvasProvider, ToolActionProvider, LayersProvider, LayerViewsProvider,
-        FileMenuProvider {
+        LayerDragProvider, FileMenuProvider {
 
     /*
      * Editor tab for the graph of the value selected on the Keys tab: its
@@ -113,6 +115,12 @@ public class RecorderKeyGraphContext extends ContextPackage
     @Override
     public void selectLayer(String layerKey) {
         recorderManager.selectLayer(layerKey);
+    }
+
+    // A take of the Takes view is carried onto the Timeline's lanes
+    @Override
+    public void dragLayer(String layerKey, WindowInstance window) {
+        recorderBranch.dragLayer(layerKey, window);
     }
 
     // Every layer of a take is always shown, so none has an eye

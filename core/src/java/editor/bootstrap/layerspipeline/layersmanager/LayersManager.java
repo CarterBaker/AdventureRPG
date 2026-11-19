@@ -1,6 +1,7 @@
 package editor.bootstrap.layerspipeline.layersmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.layerspipeline.layers.LayerDragProvider;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
@@ -80,6 +81,12 @@ public class LayersManager extends ManagerPackage {
 
         if (provider != null)
             provider.toggleLayerVisible(layerKey);
+    }
+
+    // A draggable layer held, carried by the target window from the Layers tab's window
+    public void dragLayer(String layerKey, WindowInstance window) {
+        if (getProvider() instanceof LayerDragProvider drags)
+            drags.dragLayer(layerKey, window);
     }
 
     // The view the target window lists its stack in, where it lists it more than one way

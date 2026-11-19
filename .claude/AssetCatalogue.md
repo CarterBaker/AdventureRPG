@@ -455,6 +455,8 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/Layers.arpg` (view buttons at the foot), `menus/editor/EditorWindow.arpg` (Keys and Keys Graph in the
   Media menu, Recorder Bin and Recorder Settings gone) and `shortcuts/Recorder.arpg` (L toggles Loop, Clear Range
   gone); added `shortcuts/RecorderKeyGraph.arpg`; removed `shortcuts/RecorderBin.arpg` with its tab.
+- 2026-11-19: Takes dragged onto the Timeline. Regenerated `menus/editor/Layers.arpg` (row templates a layer is
+  dragged out of the tab by).
 
 ## Textures and Sprites (2429 files)
 

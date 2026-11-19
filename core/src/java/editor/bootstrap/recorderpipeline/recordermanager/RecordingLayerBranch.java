@@ -21,7 +21,8 @@ class RecordingLayerBranch extends BranchPackage {
      * group of their own, the weather, the clock and the Sounds layer, the
      * one picked being what the Keys tab shows. In the Takes view, every take
      * in the bin with its channels and its length, the one picked being the
-     * one the take actions lay, rename and delete. Every key is a stable name:
+     * one the take actions lay, rename and delete, each dragged onto the
+     * Timeline's lanes to lay it there. Every key is a stable name:
      * a track by its place in the take, a take by its place in the bin, a
      * group by what it holds.
      */
@@ -156,11 +157,10 @@ class RecordingLayerBranch extends BranchPackage {
         ObjectArrayList<RecordingTakeStruct> takes = recording.getTakes();
 
         for (int i = 0; i < takes.size(); i++)
-            roots.add(new LayerNodeStruct(
+            roots.add(LayerNodeStruct.draggable(
                     EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX + i,
                     describeTake(takes.get(i)),
-                    i == recorderManager.getSelectedTake(),
-                    false));
+                    i == recorderManager.getSelectedTake()));
     }
 
     private String describeTake(RecordingTakeStruct take) {
@@ -194,7 +194,12 @@ class RecordingLayerBranch extends BranchPackage {
             recorderManager.selectKeyLayer(Integer.parseInt(
                     layerKey.substring(EditorSetting.RECORDER_LAYER_KEY_TRACK_PREFIX.length())));
         else if (layerKey.startsWith(EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX))
-            recorderManager.selectTake(Integer.parseInt(
-                    layerKey.substring(EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX.length())));
+            recorderManager.selectTake(findTake(layerKey));
+    }
+
+    int findTake(String layerKey) {
+        return layerKey.startsWith(EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX)
+                ? Integer.parseInt(layerKey.substring(EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX.length()))
+                : EngineSetting.INDEX_NOT_FOUND;
     }
 }
