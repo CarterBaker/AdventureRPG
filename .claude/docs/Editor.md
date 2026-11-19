@@ -42,8 +42,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   too), and the file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library,
   under Library in the Media menu with the Sound Library, stays empty until an instrument or a note set is picked in the
   Hierarchy and then lists the notes it plays, each sounded by its button and dragged onto the Timeline as a note clip
-  that is stretched and cut like any clip. A library's drag, like Record, makes a media file when none is open. The Timeline's title names what is open; Back is a Recorder shortcut. The Scene Assets tab, beside
-  the ARPG Viewer in the Content menu (`editor.bootstrap.sceneassetspipeline`), lists what the Preview tab shows as it
+  that is stretched and cut like any clip. A library's drag, like Record, makes a media file when none is open. The Timeline's title names what is open; Back is a Recorder shortcut. The Timeline's view, once zoomed,
+  scrolls under the cursor with a left drag on its empty lanes or a right drag anywhere over its lanes or ruler, clips
+  included. The Scene Assets tab, under Preview in the Debug menu (`editor.bootstrap.sceneassetspipeline`), lists what the Preview tab shows as it
   runs: the block under the crosshair in full (block, biome, face hit and every face's texture with its pack, material,
   shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
   `DevSceneAssetsSystem` casts across the view about once a second while a Scene Assets tab is open; a row naming

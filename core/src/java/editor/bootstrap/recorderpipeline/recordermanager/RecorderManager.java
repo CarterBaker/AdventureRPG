@@ -1622,6 +1622,17 @@ public class RecorderManager extends ManagerPackage {
         drag.anchorSelection(extending, false, selectedClips.contains(clipIndex));
     }
 
+    // The pan button pressed over the lanes or the ruler takes hold of the view, whatever lies under the press, and
+    // drags it along under the cursor until let go
+    public void pressViewScroll(WindowInstance window, float pressX, float pressY) {
+
+        if (drag.isActive() || recording == null)
+            return;
+
+        beginDrag(RecorderDragKind.SCROLL, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
+                window, pressX, pressY, 0f, 0f);
+    }
+
     // The edge of the clip under the press when it has one there, else the nearer of the two edges found
     private void beginTrimDrag(
             float time,
@@ -1690,7 +1701,7 @@ public class RecorderManager extends ManagerPackage {
             case TRIM_START, TRIM_END -> landEdge(time, tolerance);
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
-            case PAN -> panView(x, secondsPerPixel);
+            case PAN, SCROLL -> panView(x, secondsPerPixel);
             case TRANSITION -> landTransition(overLanes, time, lane,
                     EditorSetting.RECORDER_EDGE_GRAB_PIXELS * secondsPerPixel);
             case TRANSITION_LENGTH -> landTransitionLength(time, tolerance);
@@ -1889,6 +1900,8 @@ public class RecorderManager extends ManagerPackage {
                 if (!moved)
                     seek(pressTime);
             }
+            case SCROLL -> {
+            }
             case KEY, GRAPH_KEY -> {
                 if (moved && !subtracting)
                     finishKeyEdit(selectedKeys.size() == 1
@@ -1940,8 +1953,8 @@ public class RecorderManager extends ManagerPackage {
             case RECORDING -> resolveRecordingLength(drag.getName());
             case NOTE -> (float) recording.getTempo().toSeconds(recording.getBeatTicks());
             case CLIP -> recording.getClips().get(drag.getIndex()).getLength();
-            case TRIM_START, TRIM_END, CUT, NODE, PAN, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS, GRAPH_PRESS,
-                    KEYS_BOX, GRAPH_BOX, SOUND_EVENT, TRANSITION, TRANSITION_LENGTH, NONE -> 0f;
+            case TRIM_START, TRIM_END, CUT, NODE, PAN, SCROLL, KEY, GRAPH_KEY, HANDLE_IN, HANDLE_OUT, KEYS_PRESS,
+                    GRAPH_PRESS, KEYS_BOX, GRAPH_BOX, SOUND_EVENT, TRANSITION, TRANSITION_LENGTH, NONE -> 0f;
         };
     }
 

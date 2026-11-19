@@ -3027,8 +3027,10 @@ public class EditorSetting {
     public static final float RECORDER_EDGE_GRAB_SHARE = 1f / 3f;
 
     // Recorder — the view; each notch of the wheel zooms about the pointer, Shift with the wheel or a sideways scroll
-    // moves along by a share of the view, and a playhead leaving the view brings it back a share in from the left
+    // moves along by a share of the view, the pan button dragged over the lanes or the ruler moves it along under the
+    // cursor, and a playhead leaving the view brings it back a share in from the left
     public static final float RECORDER_MIN_VIEW_SECONDS = 0.25f;
+    public static final int RECORDER_BUTTON_PAN = Buttons.RIGHT;
     public static final float RECORDER_ZOOM_STEP = 1.25f;
     public static final float RECORDER_ZOOM_BUTTON_STEP = 2f;
     public static final float RECORDER_SCROLL_SHARE = 0.1f;

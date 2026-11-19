@@ -9,6 +9,7 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
+import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.soundlibrarypipeline.soundlibrarymanager.SoundLibraryManager;
@@ -100,6 +101,9 @@ public class RecorderBranch extends BranchPackage {
     private int extendSelectionShortcutID;
     private int subtractSelectionShortcutID;
 
+    // Scroll
+    private ElementInstance scrolledStrip;
+
     // Base \\
 
     @Override
@@ -136,6 +140,7 @@ public class RecorderBranch extends BranchPackage {
         updateDrag();
         hoverCut();
         scrollTimeline();
+        panTimeline();
     }
 
     // A drag ends when its button is let go, and is dropped when its window leaves
@@ -151,7 +156,9 @@ public class RecorderBranch extends BranchPackage {
             return;
         }
 
-        if (!inputManager.getRawInput(drag.getWindow()).isMouseDown(Buttons.LEFT))
+        int button = drag.getKind() == RecorderDragKind.SCROLL ? EditorSetting.RECORDER_BUTTON_PAN : Buttons.LEFT;
+
+        if (!inputManager.getRawInput(drag.getWindow()).isMouseDown(button))
             recorderManager.endDrag();
     }
 
@@ -234,6 +241,47 @@ public class RecorderBranch extends BranchPackage {
             recorderManager.zoomGraph(resolveValue(window, graph), factor);
         else
             recorderManager.zoomView(resolveTime(window, hovered), factor);
+    }
+
+    // The pan button pressed over the lanes or the ruler drags the view along under the cursor until let go, over a
+    // clip as much as over nothing, so a zoomed timeline scrolls wherever it is held
+    private void panTimeline() {
+
+        RecordingDragStruct drag = recorderManager.getDrag();
+
+        if (drag.isActive()) {
+
+            if (drag.getKind() == RecorderDragKind.SCROLL)
+                recorderManager.dragTo(
+                        inputManager.getHoverMouseX(drag.getWindow()),
+                        inputManager.getHoverMouseY(drag.getWindow()),
+                        false,
+                        0f,
+                        0,
+                        resolveSecondsPerPixel(scrolledStrip),
+                        false);
+
+            return;
+        }
+
+        WindowInstance window = windowManager.getHoveredWindow();
+
+        if (window == null || !inputManager.getRawInput(window).isMouseClicked(EditorSetting.RECORDER_BUTTON_PAN))
+            return;
+
+        MenuInstance timelineMenu = findMenu(window, EditorSetting.RECORDER_TIMELINE_MENU);
+        ElementInstance lanes = findEntry(timelineMenu, EditorSetting.RECORDER_ENTRY_CLIP_LANES);
+        ElementInstance ruler = findEntry(timelineMenu, EditorSetting.RECORDER_ENTRY_RULER);
+        ElementInstance strip = isUnderCursor(window, lanes) ? lanes : isUnderCursor(window, ruler) ? ruler : null;
+
+        if (strip == null || strip.getComputedW() <= 0f)
+            return;
+
+        this.scrolledStrip = strip;
+        recorderManager.pressViewScroll(
+                window,
+                inputManager.getHoverMouseX(window),
+                inputManager.getHoverMouseY(window));
     }
 
     // Recordings \\

@@ -220,10 +220,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openSoundLibrary(window.getGLWindow());
     }
 
-    public void openSceneAssets(WindowInstance window) {
-        tabManager.openSceneAssets(window.getGLWindow());
-    }
-
     public void openNoteLibrary(WindowInstance window) {
         tabManager.openNoteLibrary(window.getGLWindow());
     }
@@ -236,6 +232,10 @@ public class EditorBranch extends BranchPackage {
 
     public void openPreview(WindowInstance window) {
         tabManager.openPreview(window.getGLWindow());
+    }
+
+    public void openSceneAssets(WindowInstance window) {
+        tabManager.openSceneAssets(window.getGLWindow());
     }
 
     public void openConsole(WindowInstance window) {

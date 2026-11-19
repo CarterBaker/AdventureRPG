@@ -14,7 +14,8 @@ public enum RecorderDragKind {
      * being moved along its lanes, the start or the end of a clip being
      * dragged to trim it, a cut being placed through a clip, a node on a clip
      * being retimed or moved, the empty lanes being dragged to scroll the view
-     * along, a key being retimed on its row of the Keys tab or moved in time
+     * along, the lanes or the ruler dragged with the pan button to scroll the
+     * view along whatever lies under the press, a key being retimed on its row of the Keys tab or moved in time
      * and value on its graph, one of a key's handles being bent, a press on
      * nothing on the Keys pane's rows or graph, which scrolls the view along
      * as it travels — on the graph its values too — or else moves the
@@ -36,6 +37,7 @@ public enum RecorderDragKind {
     CUT,
     NODE,
     PAN,
+    SCROLL,
     KEY,
     GRAPH_KEY,
     HANDLE_IN,

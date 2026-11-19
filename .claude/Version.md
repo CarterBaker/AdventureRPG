@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 119
-Task: StackedViewCamera
+Delivery: 120
+Task: TimelinePanAndSceneAssetsMenu
 Applied: 2026-11-19
 
 ## Log
@@ -129,3 +129,4 @@ Applied: 2026-11-19
 - 117, 2026-11-18, ConsoleView
 - 118, 2026-11-18, TopologyDetail
 - 119, 2026-11-19, StackedViewCamera
+- 120, 2026-11-19, TimelinePanAndSceneAssetsMenu
