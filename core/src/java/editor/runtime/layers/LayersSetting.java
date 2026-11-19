@@ -3,8 +3,8 @@ package editor.runtime.layers;
 public class LayersSetting {
 
     /*
-     * Constants used only by LayersContext — its menu, the layer row
-     * templates with the element ids they are filled through, its entry
+     * Constants used only by LayersContext — its menu, the layer row and
+     * view button templates with the element ids they are filled through, its entry
      * points, how rows are indented, how a hidden layer's eye and a folded
      * group holding the active layer are drawn, and the title shown while no
      * window works on layers.
@@ -14,10 +14,13 @@ public class LayersSetting {
     public static final String MENU_LAYERS = "editor/Layers/Layers";
     public static final String TEMPLATE_LAYER_ROW = "editor/Layers/layer_row";
     public static final String TEMPLATE_LAYER_ROW_ACTIVE = "editor/Layers/layer_row_active";
+    public static final String TEMPLATE_VIEW_BUTTON = "editor/Layers/layer_view_button";
+    public static final String TEMPLATE_VIEW_BUTTON_ACTIVE = "editor/Layers/layer_view_button_active";
 
     // Entry Points
     public static final int ENTRY_ROWS = 0;
     public static final int ENTRY_TITLE = 1;
+    public static final int ENTRY_VIEWS = 2;
 
     // Elements
     public static final String ELEMENT_TOGGLE = "layer_toggle";
@@ -25,6 +28,7 @@ public class LayersSetting {
     public static final String ELEMENT_EYE = "layer_eye";
     public static final String ELEMENT_EYE_ICON = "layer_eye_icon";
     public static final String ELEMENT_LABEL = "layer_label";
+    public static final String ELEMENT_VIEW_LABEL = "layer_view_label";
 
     // Layout
     public static final float INDENT_PIXELS = 14f;

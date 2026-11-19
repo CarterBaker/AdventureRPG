@@ -3,8 +3,7 @@ package editor.bootstrap.recorderpipeline.recording;
 public enum RecorderDragKind {
 
     /*
-     * What the Recorder tab is carrying under the cursor: nothing, a take
-     * picked up from the bin to lay on the timeline, a sound picked up from
+     * What the Recorder tab is carrying under the cursor: nothing, a sound picked up from
      * the sound library to lay as a take of its own or to add to the Sounds
      * layer of the Keys pane, a saved recording picked up from the
      * Recordings tab to lay nested in the open one, a note picked up from the
@@ -27,7 +26,6 @@ public enum RecorderDragKind {
      */
 
     NONE,
-    TAKE,
     SOUND,
     RECORDING,
     NOTE,
@@ -54,7 +52,7 @@ public enum RecorderDragKind {
 
     // True for what carries a whole span to lay on the lanes
     public boolean isSpan() {
-        return this == TAKE || this == SOUND || this == RECORDING || this == NOTE || this == CLIP;
+        return this == SOUND || this == RECORDING || this == NOTE || this == CLIP;
     }
 
     // True for what is let go at a single moment of the timeline

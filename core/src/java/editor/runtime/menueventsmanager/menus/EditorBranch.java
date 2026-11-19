@@ -204,12 +204,8 @@ public class EditorBranch extends BranchPackage {
         tabManager.openRecorderKeys(window.getGLWindow());
     }
 
-    public void openRecorderBin(WindowInstance window) {
-        tabManager.openRecorderBin(window.getGLWindow());
-    }
-
-    public void openRecorderSettings(WindowInstance window) {
-        tabManager.openRecorderSettings(window.getGLWindow());
+    public void openRecorderKeyGraph(WindowInstance window) {
+        tabManager.openRecorderKeyGraph(window.getGLWindow());
     }
 
     public void openRecordings(WindowInstance window) {

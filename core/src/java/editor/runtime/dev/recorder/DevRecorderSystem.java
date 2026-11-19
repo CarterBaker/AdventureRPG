@@ -243,7 +243,7 @@ public class DevRecorderSystem extends SystemPackage {
             this.sessionActive = false;
         }
 
-        recorderManager.releaseDevContext((DevContext) context);
+        recorderManager.releaseSessionHost(context);
     }
 
     // Update \\

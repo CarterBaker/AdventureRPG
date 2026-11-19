@@ -450,6 +450,11 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-17: Regenerated `menus/editor/EditorWindow.arpg` (Character Commands under the Characters menu's Tools).
 - 2026-11-18: Restored `menus/editor/EditorWindow.arpg` to its form before Character Commands: the Command Console's
   view now follows the window worked in, so the separate tab is gone.
+- 2026-11-19: Recorder workflow. Regenerated `menus/editor/Recorder.arpg` (Loop button on the transport, the Keys menu
+  left to the layer's rows, the new Keys Graph menu, the Bin and Settings menus and their row templates removed),
+  `menus/editor/Layers.arpg` (view buttons at the foot), `menus/editor/EditorWindow.arpg` (Keys and Keys Graph in the
+  Media menu, Recorder Bin and Recorder Settings gone) and `shortcuts/Recorder.arpg` (L toggles Loop, Clear Range
+  gone); added `shortcuts/RecorderKeyGraph.arpg`; removed `shortcuts/RecorderBin.arpg` with its tab.
 
 ## Textures and Sprites (2429 files)
 
@@ -3042,7 +3047,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/shortcuts/`
 
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ImageEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
-`RecorderBin.arpg`,
+`RecorderKeyGraph.arpg`,
 `RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `UVEditor.arpg`, `WorldEditor.arpg`
 
 ### `assets/skills/`

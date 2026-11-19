@@ -11,6 +11,7 @@ import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
+import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
 import editor.bootstrap.layerspipeline.layersmanager.LayersManager;
 import editor.runtime.layers.LayersSetting;
@@ -28,8 +29,10 @@ public class LayersPanelSystem extends SystemPackage {
      * while it is, and the layer the window's tools work on highlighted. A
      * folded group holding that layer has its name drawn in the accent
      * color, so the active layer is always found. Every row, marker and eye
-     * carries its layer's key. The rows are laid out again only when the
-     * window, its stack's revision or the groups folded change.
+     * carries its layer's key. A window that lists its stack more than one
+     * way gets a button for each view at the tab's foot, the one shown marked.
+     * The rows are laid out again only when the window, its stack's revision
+     * or the groups folded change.
      */
 
     // Internal
@@ -47,6 +50,7 @@ public class LayersPanelSystem extends SystemPackage {
     // Rows
     private ObjectArrayList<LayerNodeStruct> roots;
     private ObjectArrayList<ElementInstance> rowElements;
+    private ObjectArrayList<ElementInstance> viewElements;
 
     // Shown
     private LayersProvider shownProvider;
@@ -65,6 +69,7 @@ public class LayersPanelSystem extends SystemPackage {
         // Rows
         this.roots = new ObjectArrayList<>();
         this.rowElements = new ObjectArrayList<>();
+        this.viewElements = new ObjectArrayList<>();
 
         // Shown
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -112,7 +117,11 @@ public class LayersPanelSystem extends SystemPackage {
         for (int i = 0; i < rowElements.size(); i++)
             menuManager.eject(layersMenu, LayersSetting.ENTRY_ROWS, rowElements.get(i));
 
+        for (int i = 0; i < viewElements.size(); i++)
+            menuManager.eject(layersMenu, LayersSetting.ENTRY_VIEWS, viewElements.get(i));
+
         rowElements.clear();
+        viewElements.clear();
         roots.clear();
 
         setEntryText(LayersSetting.ENTRY_TITLE,
@@ -121,8 +130,31 @@ public class LayersPanelSystem extends SystemPackage {
         if (provider == null)
             return;
 
+        if (provider instanceof LayerViewsProvider views && views.getLayerViewCount() > 1)
+            injectViews(views);
+
         provider.buildLayers(roots);
         injectRows(roots, 0);
+    }
+
+    // A button for each view the window lists its stack in, the one shown marked
+    private void injectViews(LayerViewsProvider views) {
+
+        for (int view = 0; view < views.getLayerViewCount(); view++) {
+
+            String label = views.getLayerViewLabel(view);
+            String viewKey = Integer.toString(view);
+
+            viewElements.add(menuManager.inject(
+                    layersMenu, LayersSetting.ENTRY_VIEWS,
+                    view == views.getLayerView()
+                            ? LayersSetting.TEMPLATE_VIEW_BUTTON_ACTIVE
+                            : LayersSetting.TEMPLATE_VIEW_BUTTON,
+                    element -> {
+                        element.setActionArgOverride(viewKey);
+                        setChildText(element, LayersSetting.ELEMENT_VIEW_LABEL, label);
+                    }));
+        }
     }
 
     private void injectRows(ObjectArrayList<LayerNodeStruct> nodes, int depth) {

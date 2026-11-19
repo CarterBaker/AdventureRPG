@@ -9,7 +9,8 @@ public class LayersBranch extends BranchPackage {
      * Menu event handlers for the Layers tab's rows. Each hands back the key
      * of the layer it shows: a row picks its layer for the window worked in
      * last, a group's marker folds or opens it, and a layer's eye shows or
-     * hides it; the footer's icons add a layer and delete the one picked.
+     * hides it; the footer's icons add a layer and delete the one picked, and
+     * its view buttons hand back the view they show.
      */
 
     // Internal
@@ -42,5 +43,9 @@ public class LayersBranch extends BranchPackage {
 
     public void removeLayer() {
         layersManager.removeLayer();
+    }
+
+    public void showView(String view) {
+        layersManager.showLayerView(Integer.parseInt(view));
     }
 }

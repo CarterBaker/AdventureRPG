@@ -42,9 +42,8 @@ import editor.runtime.notelibrary.NoteLibraryContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
 import editor.runtime.recorder.RecorderContext;
-import editor.runtime.recorderbin.RecorderBinContext;
+import editor.runtime.recorderkeygraph.RecorderKeyGraphContext;
 import editor.runtime.recorderkeys.RecorderKeysContext;
-import editor.runtime.recordersettings.RecorderSettingsContext;
 import editor.runtime.recordings.RecordingsContext;
 import editor.runtime.sceneassets.SceneAssetsContext;
 import editor.runtime.EditorSecondaryWindowContext;
@@ -322,12 +321,8 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_RECORDER_KEYS, RecorderKeysContext.class, osWindow);
     }
 
-    public TabHandle openRecorderBin(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_RECORDER_BIN, RecorderBinContext.class, osWindow);
-    }
-
-    public TabHandle openRecorderSettings(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_RECORDER_SETTINGS, RecorderSettingsContext.class, osWindow);
+    public TabHandle openRecorderKeyGraph(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_RECORDER_KEY_GRAPH, RecorderKeyGraphContext.class, osWindow);
     }
 
     public TabHandle openRecordings(WindowInstance osWindow) {

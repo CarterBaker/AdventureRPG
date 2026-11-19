@@ -157,6 +157,21 @@ public class RecordingCurveStruct extends StructPackage {
         resolveHandles();
     }
 
+    // The key's handles joined on one line again, as aligned: the incoming one swung round opposite the outgoing,
+    // keeping its own length in time, or the outgoing opposite the incoming on the last key
+    public void joinHandles(int index) {
+
+        float inTime = inTimes.getFloat(index);
+        float outTime = outTimes.getFloat(index);
+
+        modes.set(index, RecorderKeyMode.ALIGNED.ordinal());
+
+        if (outTime != 0f && inTime != 0f)
+            inValues.set(index, outValues.getDouble(index) / outTime * inTime);
+
+        resolveHandles();
+    }
+
     // One handle dragged to an offset from its key; a key whose handles the curve set becomes aligned, and an
     // aligned key's other handle swings round to stay on one line with it, keeping its own length in time
     public void setHandle(int index, boolean outgoing, float time, double value) {

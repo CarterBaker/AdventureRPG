@@ -14,7 +14,6 @@ import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.runtime.EditorSetting;
-import editor.runtime.dev.DevContext;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -23,7 +22,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class DevRecorderSoundSystem extends SystemPackage {
 
     /*
-     * Carries the recorder's sound in this Dev window. While the timeline's
+     * Carries the recorder's sound in this Dev window, or in the Recorder tab
+     * a media file with no picture plays through while no Dev window is
+     * open, where every sound plays unplaced. While the timeline's
      * sounds are heard, every unmuted clip holding the sound channel sounds
      * every sound of its take that spans the playhead, all together whatever
      * their lanes, walking down into every nested recording at the moment
@@ -132,6 +133,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
     @Override
     protected void dispose() {
         stopAll();
+        recorderManager.releaseSessionHost(context);
     }
 
     // Update \\
@@ -139,7 +141,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        boolean wanted = recorderManager.isSessionFor((DevContext) context) && recorderManager.isSoundPlayed();
+        boolean wanted = recorderManager.isSoundHost(context) && recorderManager.isSoundPlayed();
         float time = recorderManager.getPlayhead();
 
         if (!wanted || !sounding || isJump(time) || recorderManager.getSoundRevision() != shownSoundRevision)
@@ -163,7 +165,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
     @Override
     protected void lateUpdate() {
 
-        boolean recording = recorderManager.isSessionFor((DevContext) context)
+        boolean recording = recorderManager.isSoundHost(context)
                 && recorderManager.isTaking()
                 && RecorderChannel.SOUND.isIn(recorderManager.getLiveChannels());
 
@@ -288,7 +290,7 @@ public class DevRecorderSoundSystem extends SystemPackage {
         SoundHandle soundHandle = soundManager.getSoundHandleFromSoundID(soundID);
         float pitch = track.getPitch(event);
         float offset = resolveOffset(soundHandle, (takeTime - track.getTime(event)) * pitch * soundHandle.getPitch());
-        int voice = track.isSpatial(event)
+        int voice = track.isSpatial(event) && isPlaced()
                 ? soundManager.playSoundAt(soundID, track.getVolume(event) * fade, pitch, offset, resolveWorld(),
                         track.getChunkCoordinate(event), track.getPositionX(event), track.getPositionY(event),
                         track.getPositionZ(event))
@@ -539,6 +541,11 @@ public class DevRecorderSoundSystem extends SystemPackage {
         return voice.getOwnerWindowID() == windowID
                 || voice.getOwnerWindowID() == EngineSetting.INDEX_NOT_FOUND
                         && (!voice.isSpatial() || voice.getWorldHandle() == worldHandle);
+    }
+
+    // True for a window with a world to place sounds in: a Dev window, never a Recorder tab sounding music
+    private boolean isPlaced() {
+        return playerManager.hasPlayerForWindow(context.getWindow().getWindowID());
     }
 
     private WorldHandle resolveWorld() {

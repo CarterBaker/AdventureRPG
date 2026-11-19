@@ -4,10 +4,13 @@ import application.bootstrap.musicpipeline.instrumentmanager.InstrumentManager;
 import application.bootstrap.musicpipeline.song.SongClipStruct;
 import application.bootstrap.musicpipeline.util.NoteScale;
 import application.bootstrap.musicpipeline.util.NoteUtility;
+import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingLaneStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSourceKind;
+import editor.bootstrap.recorderpipeline.recording.VideoFormat;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
@@ -18,14 +21,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RecordingRowBranch extends BranchPackage {
 
     /*
-     * The Properties tab's rows for a media file. The Recorder tab's are its
+     * The Properties tab's rows for a media file, and the Character
+     * Outliner's while a Recorder tab is worked in. The Recorder tab's are its
      * tempo, the beats of its bar and the note value of a beat, its key's
-     * root and scale; the Timeline tab's the mix of the
-     * lane selected — its name, volume, pan, mute and solo — and the clip
-     * selected's instrument, volume and transpose. Every row is read and
-     * changed here by its key: a number stepped, slid across its range or
-     * typed, a choice stepped through every value it may take or typed, and
-     * every change made through the one RecorderManager method that owns it.
+     * root and scale; the Timeline tab's the mix of the lane selected — its
+     * name, volume, pan, mute and solo — and the clip selected's channels,
+     * mute and time ramp, with a notes clip's instrument, volume and
+     * transpose. The Outliner's are the recording's settings: the channels
+     * armed for the next take, and the export's size, frame rate, format,
+     * motion blur, supersampling and range. Every row is read and changed
+     * here by its key: a number stepped, slid across its range or typed, a
+     * choice stepped through every value it may take or typed, and every
+     * change made through the one RecorderManager method that owns it.
      */
 
     // Internal
@@ -106,15 +113,29 @@ class RecordingRowBranch extends BranchPackage {
         rows.add(CharacterViewRowStruct.choice(EditorSetting.RECORDER_ROW_LANE_SOLO,
                 EditorSetting.RECORDER_ROW_LABEL_SOLO, getValueText(EditorSetting.RECORDER_ROW_LANE_SOLO)));
 
+        RecordingClipStruct selected = findSelectedClip();
+
+        if (selected == null)
+            return;
+
+        rows.add(CharacterViewRowStruct.header(String.format(EditorSetting.RECORDER_ROWS_HEADER_CLIP_FORMAT,
+                selected.resolveLabelName())));
+
+        int sourceChannels = selected.resolveSourceChannelMask();
+
+        for (RecorderChannel channel : RecorderChannel.VALUES)
+            if (channel.isIn(sourceChannels))
+                addChoice(rows, EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX + channel.getKey(), channel.getLabel());
+
+        addChoice(rows, EditorSetting.RECORDER_KEY_CLIP_MUTE, EditorSetting.RECORDER_ROW_LABEL_MUTED);
+        addChoice(rows, EditorSetting.RECORDER_KEY_CLIP_RAMP, EditorSetting.RECORDER_ROW_LABEL_TIME_RAMP);
+
         RecordingClipStruct clip = findMusicClip();
 
         if (clip == null)
             return;
 
         SongClipStruct codec = clip.getSongClip();
-
-        rows.add(CharacterViewRowStruct.header(String.format(EditorSetting.RECORDER_ROWS_HEADER_CLIP_FORMAT,
-                clip.getSourceName())));
 
         if (clip.getSourceKind() == RecordingSourceKind.NOTES)
             rows.add(CharacterViewRowStruct.choice(EditorSetting.RECORDER_ROW_CLIP_INSTRUMENT,
@@ -130,8 +151,35 @@ class RecordingRowBranch extends BranchPackage {
                 1f));
     }
 
-    // The clip selected when it carries its codec clip, as a notes clip does; null otherwise
-    private RecordingClipStruct findMusicClip() {
+    // The recording's settings: every channel armed or not, then its export
+    void buildSettingsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_HEADER_RECORD));
+
+        for (RecorderChannel channel : RecorderChannel.VALUES)
+            addChoice(rows, EditorSetting.RECORDER_KEY_ARM_PREFIX + channel.getKey(), channel.getLabel());
+
+        if (recorderManager.getRecording() == null) {
+            rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_NO_EXPORT));
+            return;
+        }
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_HEADER_EXPORT));
+        addChoice(rows, EditorSetting.RECORDER_KEY_RESOLUTION, EditorSetting.RECORDER_ROW_LABEL_RESOLUTION);
+        addChoice(rows, EditorSetting.RECORDER_KEY_FRAME_RATE, EditorSetting.RECORDER_ROW_LABEL_FRAME_RATE);
+        addChoice(rows, EditorSetting.RECORDER_KEY_FORMAT, EditorSetting.RECORDER_ROW_LABEL_FORMAT);
+        addChoice(rows, EditorSetting.RECORDER_KEY_MOTION_BLUR, EditorSetting.RECORDER_ROW_LABEL_MOTION_BLUR);
+        addChoice(rows, EditorSetting.RECORDER_KEY_SUPERSAMPLE, EditorSetting.RECORDER_ROW_LABEL_SUPERSAMPLE);
+        addChoice(rows, EditorSetting.RECORDER_KEY_RANGE_START, EditorSetting.RECORDER_ROW_LABEL_RANGE_START);
+        addChoice(rows, EditorSetting.RECORDER_KEY_RANGE_END, EditorSetting.RECORDER_ROW_LABEL_RANGE_END);
+    }
+
+    private void addChoice(ObjectArrayList<CharacterViewRowStruct> rows, String key, String label) {
+        rows.add(CharacterViewRowStruct.choice(key, label, getValueText(key)));
+    }
+
+    // The clip selected, null when none is
+    private RecordingClipStruct findSelectedClip() {
 
         RecordingInstance recording = recorderManager.getRecording();
         int selected = recorderManager.getSelectedClip();
@@ -139,19 +187,43 @@ class RecordingRowBranch extends BranchPackage {
         if (recording == null || selected < 0 || selected >= recording.getClips().size())
             return null;
 
-        RecordingClipStruct clip = recording.getClips().get(selected);
+        return recording.getClips().get(selected);
+    }
 
-        return clip.getSongClip() != null ? clip : null;
+    // The clip selected when it carries its codec clip, as a notes clip does; null otherwise
+    private RecordingClipStruct findMusicClip() {
+
+        RecordingClipStruct clip = findSelectedClip();
+
+        return clip != null && clip.getSongClip() != null ? clip : null;
     }
 
     // Values \\
 
     String getValueText(String key) {
 
+        if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX))
+            return toOnOff(resolveChannel(key, EditorSetting.RECORDER_KEY_ARM_PREFIX)
+                    .isIn(recorderManager.getArmedChannels()));
+
         RecordingInstance recording = recorderManager.getRecording();
 
         if (recording == null)
             return EditorSetting.RECORDER_ROW_VALUE_NONE;
+
+        if (key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX)) {
+
+            RecordingClipStruct selected = findSelectedClip();
+
+            return selected != null
+                    ? toOnOff(selected.holds(resolveChannel(key, EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX)))
+                    : EditorSetting.RECORDER_ROW_VALUE_NONE;
+        }
+
+        String exportText = getExportValueText(key, recording.getExportStruct());
+
+        if (exportText != null)
+            return exportText;
 
         RecordingLaneStruct lane = recording.getLane(Math.max(0, recorderManager.getSelectedLane()));
         RecordingClipStruct clip = findMusicClip();
@@ -177,8 +249,52 @@ class RecordingRowBranch extends BranchPackage {
             case EditorSetting.RECORDER_ROW_CLIP_TRANSPOSE -> clip != null
                     ? Integer.toString(clip.getSongClip().getTranspose())
                     : EditorSetting.RECORDER_ROW_VALUE_NONE;
+            case EditorSetting.RECORDER_KEY_CLIP_MUTE -> findSelectedClip() != null
+                    ? toOnOff(findSelectedClip().isMuted())
+                    : EditorSetting.RECORDER_ROW_VALUE_NONE;
+            case EditorSetting.RECORDER_KEY_CLIP_RAMP -> findSelectedClip() != null
+                    ? formatRamp(findSelectedClip().getTimeRampSeconds())
+                    : EditorSetting.RECORDER_ROW_VALUE_NONE;
             default -> EditorSetting.RECORDER_ROW_VALUE_NONE;
         };
+    }
+
+    // An export setting's value as its row shows it, null for a key that names none
+    private String getExportValueText(String key, RecordingExportStruct exportStruct) {
+        return switch (key) {
+            case EditorSetting.RECORDER_KEY_RESOLUTION -> String.format(EditorSetting.RECORDER_ROW_FORMAT_RESOLUTION,
+                    exportStruct.getWidth(), exportStruct.getHeight());
+            case EditorSetting.RECORDER_KEY_FRAME_RATE -> String.format(EditorSetting.RECORDER_ROW_FORMAT_FRAME_RATE,
+                    exportStruct.getFrameRate());
+            case EditorSetting.RECORDER_KEY_FORMAT -> exportStruct.getFormat().getLabel();
+            case EditorSetting.RECORDER_KEY_MOTION_BLUR -> exportStruct.getMotionBlurSamples() > 1
+                    ? String.format(EditorSetting.RECORDER_ROW_FORMAT_MOTION_BLUR, exportStruct.getMotionBlurSamples())
+                    : EditorSetting.RECORDER_ROW_VALUE_OFF;
+            case EditorSetting.RECORDER_KEY_SUPERSAMPLE -> toOnOff(exportStruct.isSupersampled());
+            case EditorSetting.RECORDER_KEY_RANGE_START -> exportStruct.hasRangeStart()
+                    ? String.format(EditorSetting.RECORDER_ROW_FORMAT_SECONDS, exportStruct.getRangeStart())
+                    : EditorSetting.RECORDER_ROW_VALUE_RANGE_START;
+            case EditorSetting.RECORDER_KEY_RANGE_END -> exportStruct.hasRangeEnd()
+                    ? String.format(EditorSetting.RECORDER_ROW_FORMAT_SECONDS, exportStruct.getRangeEnd())
+                    : EditorSetting.RECORDER_ROW_VALUE_RANGE_END;
+            default -> null;
+        };
+    }
+
+    private String formatRamp(float seconds) {
+        return seconds > 0f
+                ? String.format(EditorSetting.RECORDER_ROW_FORMAT_RAMP, seconds)
+                : EditorSetting.RECORDER_ROW_VALUE_RAMP_CUT;
+    }
+
+    private RecorderChannel resolveChannel(String key, String prefix) {
+
+        RecorderChannel channel = RecorderChannel.findByKey(key.substring(prefix.length()));
+
+        if (channel == null)
+            throwException("Unknown recorder channel: " + key);
+
+        return channel;
     }
 
     // A scale's name as the row shows it: MAJOR_PENTATONIC is MajorPentatonic, read as Major Pentatonic
@@ -237,10 +353,23 @@ class RecordingRowBranch extends BranchPackage {
     // A choice stepped to the value before or after it, round from the last to the first
     void cycle(String key, int direction) {
 
+        if (direction == 0)
+            return;
+
+        if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)) {
+            recorderManager.toggleArm(resolveChannel(key, EditorSetting.RECORDER_KEY_ARM_PREFIX));
+            return;
+        }
+
         RecordingInstance recording = recorderManager.getRecording();
 
-        if (recording == null || direction == 0)
+        if (recording == null)
             return;
+
+        if (key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX)) {
+            recorderManager.toggleClipChannel(resolveChannel(key, EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX));
+            return;
+        }
 
         int laneIndex = Math.max(0, recorderManager.getSelectedLane());
         RecordingClipStruct clip = findMusicClip();
@@ -260,6 +389,15 @@ class RecordingRowBranch extends BranchPackage {
                     replaceClip(clip, cycleInstrument(clip.getSongClip().getInstrumentName(), direction),
                             clip.getSongClip().getVolume(), clip.getSongClip().getTranspose());
             }
+            case EditorSetting.RECORDER_KEY_CLIP_MUTE -> recorderManager.toggleClipMute();
+            case EditorSetting.RECORDER_KEY_CLIP_RAMP -> recorderManager.cycleClipTimeRamp(direction);
+            case EditorSetting.RECORDER_KEY_RESOLUTION -> recorderManager.cycleResolution(direction);
+            case EditorSetting.RECORDER_KEY_FRAME_RATE -> recorderManager.cycleFrameRate(direction);
+            case EditorSetting.RECORDER_KEY_FORMAT -> recorderManager.cycleFormat(direction);
+            case EditorSetting.RECORDER_KEY_MOTION_BLUR -> recorderManager.cycleMotionBlur(direction);
+            case EditorSetting.RECORDER_KEY_SUPERSAMPLE -> recorderManager.toggleSupersample();
+            case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStart();
+            case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEnd();
             default -> {
             }
         }
@@ -289,7 +427,21 @@ class RecordingRowBranch extends BranchPackage {
     // Typed \\
 
     boolean isValueValid(String key, String text) {
+
+        if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)
+                || key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX))
+            return isOnOff(text);
+
         return switch (key) {
+            case EditorSetting.RECORDER_KEY_CLIP_MUTE, EditorSetting.RECORDER_KEY_SUPERSAMPLE -> isOnOff(text);
+            case EditorSetting.RECORDER_KEY_FORMAT -> findFormat(text) != null;
+            case EditorSetting.RECORDER_KEY_RESOLUTION -> findIndex(EditorSetting.RECORDER_EXPORT_HEIGHTS, text)
+                    != EngineSetting.INDEX_NOT_FOUND;
+            case EditorSetting.RECORDER_KEY_FRAME_RATE -> findIndex(EditorSetting.RECORDER_EXPORT_FRAME_RATES, text)
+                    != EngineSetting.INDEX_NOT_FOUND;
+            case EditorSetting.RECORDER_KEY_MOTION_BLUR -> findIndex(
+                    EditorSetting.RECORDER_EXPORT_MOTION_BLUR_SAMPLES, text) != EngineSetting.INDEX_NOT_FOUND;
+            case EditorSetting.RECORDER_KEY_CLIP_RAMP -> findRamp(text) != EngineSetting.INDEX_NOT_FOUND;
             case EditorSetting.RECORDER_ROW_LANE_NAME -> text.length() <= EditorSetting.RECORDER_LABEL_MAX_LENGTH;
             case EditorSetting.RECORDER_ROW_KEY_ROOT -> NoteUtility.parseNoteName(
                     text.trim() + EditorSetting.RECORDER_ROW_KEY_OCTAVE) != EngineSetting.INDEX_NOT_FOUND;
@@ -302,9 +454,24 @@ class RecordingRowBranch extends BranchPackage {
 
     void setValue(String key, String text) {
 
+        if (!isValueValid(key, text))
+            return;
+
+        if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)
+                || key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX)) {
+
+            if (!getValueText(key).equalsIgnoreCase(text.trim()))
+                cycle(key, 1);
+
+            return;
+        }
+
         RecordingInstance recording = recorderManager.getRecording();
 
-        if (recording == null || !isValueValid(key, text))
+        if (recording == null)
+            return;
+
+        if (setExportValue(key, text, recording.getExportStruct()))
             return;
 
         int laneIndex = Math.max(0, recorderManager.getSelectedLane());
@@ -351,6 +518,86 @@ class RecordingRowBranch extends BranchPackage {
             default -> {
             }
         }
+    }
+
+    // A typed export setting, or the clip's mute or time ramp, stepped straight to; false for any other key
+    private boolean setExportValue(String key, String text, RecordingExportStruct exportStruct) {
+
+        float number = CharacterViewUtility.isNumber(text) ? CharacterViewUtility.parseNumber(text) : 0f;
+
+        switch (key) {
+            case EditorSetting.RECORDER_KEY_CLIP_MUTE, EditorSetting.RECORDER_KEY_SUPERSAMPLE -> {
+                if (!getValueText(key).equalsIgnoreCase(text.trim()))
+                    cycle(key, 1);
+            }
+            case EditorSetting.RECORDER_KEY_FORMAT -> recorderManager.cycleFormat(
+                    findFormat(text).ordinal() - exportStruct.getFormat().ordinal());
+            case EditorSetting.RECORDER_KEY_RESOLUTION -> recorderManager.cycleResolution(
+                    findIndex(EditorSetting.RECORDER_EXPORT_HEIGHTS, text)
+                            - findIndex(EditorSetting.RECORDER_EXPORT_HEIGHTS, exportStruct.getHeight()));
+            case EditorSetting.RECORDER_KEY_FRAME_RATE -> recorderManager.cycleFrameRate(
+                    findIndex(EditorSetting.RECORDER_EXPORT_FRAME_RATES, text)
+                            - findIndex(EditorSetting.RECORDER_EXPORT_FRAME_RATES, exportStruct.getFrameRate()));
+            case EditorSetting.RECORDER_KEY_MOTION_BLUR -> recorderManager.cycleMotionBlur(
+                    findIndex(EditorSetting.RECORDER_EXPORT_MOTION_BLUR_SAMPLES, text)
+                            - findIndex(EditorSetting.RECORDER_EXPORT_MOTION_BLUR_SAMPLES,
+                                    exportStruct.getMotionBlurSamples()));
+            case EditorSetting.RECORDER_KEY_CLIP_RAMP -> {
+                RecordingClipStruct selected = findSelectedClip();
+
+                if (selected != null)
+                    recorderManager.cycleClipTimeRamp(findRamp(text) - findRamp(selected.getTimeRampSeconds()));
+            }
+            case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStartAt(number);
+            case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEndAt(number);
+            default -> {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // The place of a typed number among a setting's values, -1 when it is none of them
+    private int findIndex(int[] values, String text) {
+        return CharacterViewUtility.isNumber(text)
+                ? findIndex(values, Math.round(CharacterViewUtility.parseNumber(text)))
+                : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private int findIndex(int[] values, int value) {
+
+        for (int i = 0; i < values.length; i++)
+            if (values[i] == value)
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private int findRamp(String text) {
+        return CharacterViewUtility.isNumber(text)
+                ? findRamp(CharacterViewUtility.parseNumber(text))
+                : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private int findRamp(float seconds) {
+
+        float[] ramps = EditorSetting.RECORDER_TIME_RAMP_SECONDS;
+
+        for (int i = 0; i < ramps.length; i++)
+            if (ramps[i] == seconds)
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private VideoFormat findFormat(String text) {
+
+        for (int i = 0; i < VideoFormat.VALUES.length; i++)
+            if (VideoFormat.VALUES[i].getLabel().equalsIgnoreCase(text.trim()))
+                return VideoFormat.VALUES[i];
+
+        return null;
     }
 
     private NoteScale findScale(String text) {

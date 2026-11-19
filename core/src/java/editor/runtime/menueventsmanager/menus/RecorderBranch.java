@@ -25,27 +25,29 @@ public class RecorderBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the Recorder tabs — the transport, the
-     * Timeline, the Keys, the Bin and the Settings. Every action
+     * Timeline, the Keys and the Keys Graph — and the Tools tab's actions on
+     * them, each the same key its shortcut runs. Every action
      * works on the one recorder all tabs share; the recordings themselves are
      * made, renamed, copied and deleted from the Recordings tool, where a row
      * pressed is picked up and laid nested in the open recording when let go
      * over the Timeline's lanes, or opened when let go where it was pressed.
      * The lane strips select, mute and solo their lanes, the Properties rows
-     * step, cycle and take typed values, and Export sends a video through the
-     * export dialog and exports music at once; Export MIDI writes the music
-     * among the player's songs.
-     * The export range's ends are set at the playhead, and Back returns to
+     * step, cycle and take typed values, and the File menu's Export sends a
+     * video through the export dialog and exports music at once; Export MIDI
+     * writes the music among the player's songs. Play loops round the range
+     * while the Loop switch is on.
+     * The range's ends are set at the playhead, and Back returns to
      * the recording the open one was opened inside. A note pressed in the
      * Note Library is picked up and laid as a note clip the same way.
      * Nest Selection names its new recording through the name dialog. Takes are named
      * through the text dialog, and deleting a take asks for its name to be
      * typed back. Dragging along the ruler
-     * moves the playhead to the moment under the cursor. Pressing a take in
-     * the bin picks it up, and letting go over the lanes lays it there; a
-     * sound pressed in the sound library is picked up the same way and laid
+     * moves the playhead to the moment under the cursor. The take picked in
+     * the Layers tab's Takes view is laid at the playhead, renamed or deleted
+     * by the take actions. A sound pressed in the sound library is picked up and laid
      * as a take of its own over the lanes of whichever Recorder tab the
      * cursor is let go above, in any window, or let go over the rows of a
-     * Recorder Keys tab is added to the take shown there at the moment under the
+     * Keys tab is added to the take shown there at the moment under the
      * cursor; a transition pressed in the transitions tool is picked up the
      * same way and laid on the clip edge of whichever Recorder tab's lanes it
      * is let go over. A
@@ -61,8 +63,7 @@ public class RecorderBranch extends BranchPackage {
      * strips or the Keys graph zooms about the pointer, and with Shift, or
      * scrolled sideways, moves the view along; with Ctrl on the graph it zooms
      * the graph's values, and over the Keys rows' names it scrolls the rows.
-     * The toolbar shows the Keys, the Bin or the Assets below the timeline. On
-     * the Keys pane a name opens its track or selects its curve, a press on a
+     * On the Keys tab a name selects its curve, a press on a
      * row's strip or on the graph is handed to the recorder once to take hold
      * of a key, a handle or a node, or on nothing to scroll the view as it
      * travels; with Shift a key pressed joins the keys selected and a press
@@ -204,25 +205,28 @@ public class RecorderBranch extends BranchPackage {
 
         MenuInstance timelineMenu = findMenu(window, EditorSetting.RECORDER_TIMELINE_MENU);
         MenuInstance keysMenu = findMenu(window, EditorSetting.RECORDER_KEYS_MENU);
+        MenuInstance graphMenu = findMenu(window, EditorSetting.RECORDER_KEY_GRAPH_MENU);
 
-        if (timelineMenu == null && keysMenu == null)
+        if (timelineMenu == null && keysMenu == null && graphMenu == null)
             return;
 
         ElementInstance lanes = findEntry(timelineMenu, EditorSetting.RECORDER_ENTRY_CLIP_LANES);
         ElementInstance ruler = findEntry(timelineMenu, EditorSetting.RECORDER_ENTRY_RULER);
-        ElementInstance graph = findEntry(keysMenu, EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
+        ElementInstance graph = findEntry(graphMenu, EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
         ElementInstance keyRows = findEntry(keysMenu, EditorSetting.RECORDER_ENTRY_KEY_ROWS);
+        ElementInstance keyStrips = findEntry(keysMenu, EditorSetting.RECORDER_ENTRY_KEY_STRIPS);
         boolean overGraph = isUnderCursor(window, graph);
-        boolean overRows = isUnderCursor(window, keyRows);
+        boolean overStrips = isUnderCursor(window, keyStrips);
 
-        if (overRows && inputManager.getHoverMouseX(window) < graph.getComputedLeft()) {
+        if (!overStrips && isUnderCursor(window, keyRows)) {
             keyRows.setScrollY(keyRows.getScrollY() - wheel * EngineSetting.MENU_SCROLL_PIXELS);
             return;
         }
 
         ElementInstance hovered = isUnderCursor(window, lanes) ? lanes
                 : isUnderCursor(window, ruler) ? ruler
-                        : overGraph || overRows ? graph : null;
+                        : overGraph ? graph
+                                : overStrips ? keyStrips : null;
 
         if (hovered == null)
             return;
@@ -308,6 +312,10 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.togglePlayback();
     }
 
+    public void toggleLoop() {
+        recorderManager.toggleLoop();
+    }
+
     public void stop() {
         recorderManager.stop();
     }
@@ -326,10 +334,6 @@ public class RecorderBranch extends BranchPackage {
 
     public void setRangeEnd() {
         recorderManager.setRangeEnd();
-    }
-
-    public void clearRange() {
-        recorderManager.clearRange();
     }
 
     public void backToParent() {
@@ -370,17 +374,13 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.deleteSelection();
     }
 
-    // A track's name opens or closes it, a curve's name selects it, and a sound's name selects the first time it is
-    // heard
+    // A curve's name selects it, and a sound's name selects the first time it is heard
     public void pressKeyName(String rowKey) {
 
-        int trackIndex = resolveKeyTrack(rowKey);
         int row = resolveKeyRow(rowKey);
 
-        if (row == EditorSetting.RECORDER_KEY_ROW_TRACK)
-            recorderManager.toggleTrack(trackIndex);
-        else if (row >= 0)
-            recorderManager.selectCurve(trackIndex, row);
+        if (row >= 0)
+            recorderManager.selectCurve(resolveKeyTrack(rowKey), row);
     }
 
     // A press on a row's strip is settled once, where it began, and what it took hold of follows the cursor
@@ -407,6 +407,7 @@ public class RecorderBranch extends BranchPackage {
                 resolveTime(window, strip),
                 0.0,
                 resolveSecondsPerPixel(strip),
+                0.0,
                 isSnapping(window));
     }
 
@@ -415,12 +416,15 @@ public class RecorderBranch extends BranchPackage {
         if (graph.getComputedW() <= 0f || graph.getComputedH() <= 0f)
             return;
 
+        double valuePerPixel = (recorderManager.getGraphMaximum() - recorderManager.getGraphMinimum())
+                / graph.getComputedH();
+
         if (!recorderManager.getDrag().isActive())
             recorderManager.pressGraph(
                     resolveTime(window, graph),
                     resolveValue(window, graph),
                     resolveSecondsPerPixel(graph),
-                    (recorderManager.getGraphMaximum() - recorderManager.getGraphMinimum()) / graph.getComputedH(),
+                    valuePerPixel,
                     shortcutManager.isHeld(extendSelectionShortcutID, window),
                     shortcutManager.isHeld(subtractSelectionShortcutID, window),
                     window,
@@ -433,6 +437,7 @@ public class RecorderBranch extends BranchPackage {
                 resolveTime(window, graph),
                 resolveValue(window, graph),
                 resolveSecondsPerPixel(graph),
+                valuePerPixel,
                 isSnapping(window));
     }
 
@@ -536,19 +541,6 @@ public class RecorderBranch extends BranchPackage {
 
     // Takes \\
 
-    // The take is picked up on the press and carried over the lanes until let go
-    public void dragTake(String takeKey, WindowInstance window) {
-
-        if (!recorderManager.getDrag().isActive())
-            recorderManager.beginTakeDrag(
-                    Integer.parseInt(takeKey),
-                    window,
-                    inputManager.getHoverMouseX(window),
-                    inputManager.getHoverMouseY(window));
-
-        dragOver(window, window, findLanes(window));
-    }
-
     // A sound is picked up on the press wherever it was pressed, and carried over the lanes or the Keys pane's rows
     // of the Recorder tab under the cursor until let go
     public void dragSound(String soundName, WindowInstance window) {
@@ -636,29 +628,31 @@ public class RecorderBranch extends BranchPackage {
         dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
     }
 
-    // The graph whose span the Keys pane's strips share, when the cursor is over those strips in the window; null
-    // otherwise
+    // The span the Keys tab's strips share, when the cursor is over those strips in the window; null otherwise
     private ElementInstance findKeyStrips(WindowInstance window) {
 
         MenuInstance menu = findMenu(window, EditorSetting.RECORDER_KEYS_MENU);
+        ElementInstance keyStrips = findEntry(menu, EditorSetting.RECORDER_ENTRY_KEY_STRIPS);
 
-        if (menu == null)
-            return null;
-
-        ElementInstance keyRows = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
-        ElementInstance graph = menu.getEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
-
-        return isUnderCursor(window, keyRows) && graph.getComputedW() > 0f
-                && inputManager.getHoverMouseX(window) >= graph.getComputedLeft() ? graph : null;
+        return isUnderCursor(window, keyStrips) && keyStrips.getComputedW() > 0f ? keyStrips : null;
     }
 
-    public void placeTake(String takeKey) {
-        recorderManager.placeTakeAtPlayhead(Integer.parseInt(takeKey));
+    // The take picked in the Layers tab's Takes view laid at the playhead, renamed as typed, or deleted once its name
+    // is typed to confirm
+    private void placeTake() {
+
+        int takeIndex = recorderManager.requireSelectedTake();
+
+        if (takeIndex != EngineSetting.INDEX_NOT_FOUND)
+            recorderManager.placeTakeAtPlayhead(takeIndex);
     }
 
-    public void renameTake(String takeKey, WindowInstance window) {
+    private void renameTake(WindowInstance window) {
 
-        int takeIndex = Integer.parseInt(takeKey);
+        int takeIndex = recorderManager.requireSelectedTake();
+
+        if (takeIndex == EngineSetting.INDEX_NOT_FOUND)
+            return;
 
         nameDialogBranch.openText(
                 window,
@@ -668,9 +662,13 @@ public class RecorderBranch extends BranchPackage {
                 takeName -> recorderManager.renameTake(takeIndex, takeName));
     }
 
-    public void deleteTake(String takeKey, WindowInstance window) {
+    private void deleteTake(WindowInstance window) {
 
-        int takeIndex = Integer.parseInt(takeKey);
+        int takeIndex = recorderManager.requireSelectedTake();
+
+        if (takeIndex == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
         String takeName = recorderManager.getRecording().getTakes().get(takeIndex).getName();
 
         nameDialogBranch.openText(
@@ -812,8 +810,9 @@ public class RecorderBranch extends BranchPackage {
 
     // Music \\
 
-    // A video exports through the export dialog, frame by frame; music exports at once as the game's song and sound
-    private void exportMedia(WindowInstance window) {
+    // The File menu's Export: a video exports through the export dialog, frame by frame; music exports at once as the
+    // game's song and sound
+    public void exportMedia(WindowInstance window) {
 
         if (recorderManager.hasPicture())
             exportDialogBranch.export(window);
@@ -874,25 +873,15 @@ public class RecorderBranch extends BranchPackage {
 
     public void actSetting(String settingKey, WindowInstance window) {
 
-        if (settingKey.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)) {
-            recorderManager.toggleArm(resolveChannel(settingKey, EditorSetting.RECORDER_KEY_ARM_PREFIX));
-            return;
-        }
-
-        if (settingKey.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX)) {
-            recorderManager.toggleClipChannel(
-                    resolveChannel(settingKey, EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX));
-            return;
-        }
-
         if (settingKey.startsWith(EditorSetting.RECORDER_KEY_TRANSITION_PREFIX)) {
             recorderManager.applyTransition(resolveEdge(settingKey));
             return;
         }
 
         switch (settingKey) {
-            case EditorSetting.RECORDER_KEY_CLIP_MUTE -> recorderManager.toggleClipMute();
-            case EditorSetting.RECORDER_KEY_CLIP_RAMP -> recorderManager.cycleClipTimeRamp();
+            case EditorSetting.RECORDER_KEY_TAKE_PLACE -> placeTake();
+            case EditorSetting.RECORDER_KEY_TAKE_RENAME -> renameTake(window);
+            case EditorSetting.RECORDER_KEY_TAKE_DELETE -> deleteTake(window);
             case EditorSetting.RECORDER_KEY_CLIP_TRIM_START -> recorderManager.trimClipStart();
             case EditorSetting.RECORDER_KEY_CLIP_TRIM_END -> recorderManager.trimClipEnd();
             case EditorSetting.RECORDER_KEY_CLIP_SPLIT -> recorderManager.splitClip();
@@ -907,6 +896,7 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_KEY_DELETE -> recorderManager.deleteKeys();
             case EditorSetting.RECORDER_KEY_KEY_MODE -> recorderManager.cycleKeyMode();
             case EditorSetting.RECORDER_KEY_KEY_VALUE -> openKeyValue(window);
+            case EditorSetting.RECORDER_KEY_FRAME_KEYS -> recorderManager.frameKeys();
             case EditorSetting.RECORDER_KEY_CURVE_REFIT -> recorderManager.refitCurve();
             case EditorSetting.RECORDER_KEY_TAKE_REFIT -> recorderManager.refitTake();
             case EditorSetting.RECORDER_KEY_SOUND_VOLUME -> openSoundVolume(window);
@@ -921,17 +911,7 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_TRANSITION_LENGTH -> openTransitionLength(window);
             case EditorSetting.RECORDER_KEY_TRANSITION_REPLACE -> recorderManager.replaceTransition();
             case EditorSetting.RECORDER_KEY_TRANSITION_REMOVE -> recorderManager.removeTransition();
-            case EditorSetting.RECORDER_KEY_RESOLUTION -> recorderManager.cycleResolution();
-            case EditorSetting.RECORDER_KEY_FRAME_RATE -> recorderManager.cycleFrameRate();
-            case EditorSetting.RECORDER_KEY_FORMAT -> recorderManager.cycleFormat();
-            case EditorSetting.RECORDER_KEY_MOTION_BLUR -> recorderManager.cycleMotionBlur();
-            case EditorSetting.RECORDER_KEY_SUPERSAMPLE -> recorderManager.toggleSupersample();
-            case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStart();
-            case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEnd();
-            case EditorSetting.RECORDER_KEY_RANGE_CLEAR -> recorderManager.clearRange();
-            case EditorSetting.RECORDER_KEY_EXPORT -> exportMedia(window);
             case EditorSetting.RECORDER_KEY_EXPORT_MIDI -> recorderManager.exportMidi();
-            case EditorSetting.RECORDER_KEY_CANCEL_EXPORT -> recorderManager.stop();
             default -> throwException("Unknown recorder setting: " + settingKey);
         }
     }
@@ -947,13 +927,4 @@ public class RecorderBranch extends BranchPackage {
         return edge;
     }
 
-    private RecorderChannel resolveChannel(String settingKey, String prefix) {
-
-        RecorderChannel channel = RecorderChannel.findByKey(settingKey.substring(prefix.length()));
-
-        if (channel == null)
-            throwException("Unknown recorder channel: " + settingKey);
-
-        return channel;
-    }
 }

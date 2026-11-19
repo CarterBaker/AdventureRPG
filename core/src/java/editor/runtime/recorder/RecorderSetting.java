@@ -4,22 +4,17 @@ public class RecorderSetting {
 
     /*
      * Constants used only by RecorderContext and the Recorder tabs beside it
-     * — Timeline, Keys, Bin and Settings, which share its systems —
-     * the menus
-     * each opens, the row, clip, transition, node, timeline and Keys
-     * templates their panels are filled from and their elements, each menu's
-     * entry points, the timeline's fixed steps, its ruler's ticks, the sizes
-     * the timeline and the Keys tab draw at, how often the export
-     * progress refreshes, and every word the tabs show.
+     * — Timeline, Keys and Keys Graph, which share its systems — the row,
+     * clip, transition, node, timeline, Keys and graph templates their panels
+     * are filled from and their elements, each menu's entry points, the
+     * timeline's fixed steps, its ruler's ticks, the sizes the timeline, the
+     * Keys and the graph draw at, how often the clock refreshes, and every
+     * word the tabs show.
      */
 
     // Templates
     public static final String TEMPLATE_HEADER_ROW = "editor/Recorder/recorder_header_row";
     public static final String TEMPLATE_TEXT_ROW = "editor/Recorder/recorder_text_row";
-    public static final String TEMPLATE_SETTING_ROW = "editor/Recorder/recorder_setting_row";
-    public static final String TEMPLATE_ACTION_ROW = "editor/Recorder/recorder_action_row";
-    public static final String TEMPLATE_TAKE_ROW = "editor/Recorder/recorder_take_row";
-    public static final String TEMPLATE_TAKE_ROW_SELECTED = "editor/Recorder/recorder_take_row_selected";
     public static final String TEMPLATE_CLIP_BAR = "editor/Recorder/recorder_clip_bar";
     public static final String TEMPLATE_CLIP_BAR_SELECTED = "editor/Recorder/recorder_clip_bar_selected";
     public static final String TEMPLATE_CLIP_BAR_MUTED = "editor/Recorder/recorder_clip_bar_muted";
@@ -31,13 +26,11 @@ public class RecorderSetting {
     public static final String TEMPLATE_NODE_MOVEMENT_SELECTED = "editor/Recorder/recorder_node_movement_selected";
     public static final String TEMPLATE_NODE_GESTURE = "editor/Recorder/recorder_node_gesture";
     public static final String TEMPLATE_NODE_GESTURE_SELECTED = "editor/Recorder/recorder_node_gesture_selected";
-    public static final String TEMPLATE_KEY_TRACK_ROW = "editor/Recorder/recorder_key_track_row";
     public static final String TEMPLATE_KEY_CURVE_ROW = "editor/Recorder/recorder_key_curve_row";
     public static final String TEMPLATE_KEY_CURVE_ROW_SELECTED = "editor/Recorder/recorder_key_curve_row_selected";
     public static final String TEMPLATE_KEY_NODE_ROW = "editor/Recorder/recorder_key_node_row";
     public static final String TEMPLATE_KEY_DIAMOND = "editor/Recorder/recorder_key_diamond";
     public static final String TEMPLATE_KEY_DIAMOND_SELECTED = "editor/Recorder/recorder_key_diamond_selected";
-    public static final String TEMPLATE_KEY_SUMMARY = "editor/Recorder/recorder_key_summary";
     public static final String TEMPLATE_KEY_MOVEMENT = "editor/Recorder/recorder_key_movement";
     public static final String TEMPLATE_KEY_MOVEMENT_SELECTED = "editor/Recorder/recorder_key_movement_selected";
     public static final String TEMPLATE_KEY_GESTURE = "editor/Recorder/recorder_key_gesture";
@@ -55,11 +48,6 @@ public class RecorderSetting {
 
     // Elements
     public static final String ELEMENT_ROW_LABEL = "recorder_row_label";
-    public static final String ELEMENT_ROW_VALUE = "recorder_row_value";
-    public static final String ELEMENT_ROW_SELECT = "recorder_row_select";
-    public static final String ELEMENT_ROW_PLACE = "recorder_row_place";
-    public static final String ELEMENT_ROW_RENAME = "recorder_row_rename";
-    public static final String ELEMENT_ROW_DELETE = "recorder_row_delete";
     public static final String ELEMENT_CLIP_LABEL = "recorder_clip_label";
     public static final String ELEMENT_TRANSITION_LABEL = "recorder_transition_label";
     public static final String ELEMENT_NODE_LABEL = "recorder_node_label";
@@ -70,11 +58,6 @@ public class RecorderSetting {
     public static final String ELEMENT_GRAPH_POINTS = "recorder_key_graph_points";
     public static final String ELEMENT_MIXER_NAME = "timeline_mixer_name";
     public static final String ELEMENT_MIXER_RENAME = "timeline_mixer_rename";
-
-    // Menus — the timeline's and the Keys' are EditorSetting RECORDER_MENU and RECORDER_KEYS_MENU, which the drags
-    // and the wheel look for
-    public static final String MENU_BIN = "editor/Recorder/RecorderBin";
-    public static final String MENU_SETTINGS = "editor/Recorder/RecorderSettings";
 
     // Entry Points — the Timeline's menu; the clip lanes and the ruler are EditorSetting RECORDER_ENTRY_CLIP_LANES
     // and RECORDER_ENTRY_RULER, which the drags and the wheel share
@@ -94,20 +77,21 @@ public class RecorderSetting {
     // Entry Points — the transport's menu
     public static final int ENTRY_TRANSPORT_STATUS = 0;
     public static final int ENTRY_TRANSPORT_CLOCK = 1;
+    public static final int ENTRY_TRANSPORT_LOOP_ICON = 2;
 
-    // Entry Points — the Keys' menu; its rows and graph are EditorSetting RECORDER_ENTRY_KEY_ROWS and
-    // RECORDER_ENTRY_KEY_GRAPH, which the drags and the wheel share
+    // Entry Points — the Keys' menu; its rows and the span their strips share are EditorSetting
+    // RECORDER_ENTRY_KEY_ROWS and RECORDER_ENTRY_KEY_STRIPS, which the drags and the wheel share
     public static final int ENTRY_KEYS_TITLE = 0;
-    public static final int ENTRY_GRAPH_MARKS = 3;
-    public static final int ENTRY_KEYS_PLAYHEAD = 4;
-    public static final int ENTRY_GRAPH_TOP = 5;
-    public static final int ENTRY_GRAPH_BOTTOM = 6;
-    public static final int ENTRY_KEY_INSPECTOR = 7;
+    public static final int ENTRY_KEYS_PLAYHEAD = 3;
 
-    // Entry Points — the Bin's and the Settings' menus
-    public static final int ENTRY_TAKES = 0;
-    public static final int ENTRY_CLIP = 1;
-    public static final int ENTRY_SETTINGS = 0;
+    // Entry Points — the Keys Graph's menu; its graph is EditorSetting RECORDER_ENTRY_KEY_GRAPH, which the drags and
+    // the wheel share
+    public static final int ENTRY_GRAPH_TITLE = 0;
+    public static final int ENTRY_GRAPH_MARKS = 2;
+    public static final int ENTRY_GRAPH_PLAYHEAD = 3;
+    public static final int ENTRY_GRAPH_TOP = 4;
+    public static final int ENTRY_GRAPH_BOTTOM = 5;
+    public static final int ENTRY_GRAPH_DETAIL = 6;
 
     // Timeline — positions across the view as a percentage of it; a drag's ghost may reach a view's width past
     // either side, where the lanes' mask hides it
@@ -157,104 +141,26 @@ public class RecorderSetting {
 
     // Text — rows
     public static final String TEXT_EMPTY = "";
-    public static final String TEXT_NO_TAKES = "No takes yet: arm channels and press Record";
     public static final String TEXT_NO_RECORDING = "No recording open";
-    public static final String TEXT_OPEN_RECORDING_HINT = "Open or make a recording in the Recordings tool";
-    public static final String TEXT_NO_CLIP = "Click a clip on the timeline to edit it";
     public static final String TEXT_UNSAVED_SUFFIX = " *";
     public static final String TEXT_BREADCRUMB_SEPARATOR = " > ";
     public static final String TEXT_TIMELINE_TITLE = "Timeline";
-    public static final String TEXT_CHANNEL_SEPARATOR = " ";
 
-    // Text — settings and clip
-    public static final String TEXT_HEADER_RECORD = "Record";
-    public static final String TEXT_HEADER_EXPORT = "Export";
-    public static final String TEXT_HEADER_PLAYS = "Plays";
-    public static final String TEXT_HEADER_EDIT = "Edit at the playhead";
-    public static final String TEXT_ARMED = "Armed";
-    public static final String TEXT_OFF = "Off";
-    public static final String TEXT_ON = "On";
-    public static final String TEXT_MUTE = "Muted";
-    public static final String TEXT_TIME_RAMP = "Time ramp";
-    public static final String TEXT_RAMP_CUT = "Cut";
-    public static final String TEXT_TRIM_START = "Trim start to playhead";
-    public static final String TEXT_TRIM_END = "Trim end to playhead";
-    public static final String TEXT_SPLIT = "Cut at playhead";
-    public static final String TEXT_STAMP = "Stamp a copy at playhead";
-    public static final String TEXT_REMOVE_CLIP = "Remove from timeline";
-    public static final String TEXT_TRANSITION_IN = "Lay the Transitions selection on its start";
-    public static final String TEXT_TRANSITION_OUT = "Lay the Transitions selection on its end";
-    public static final String TEXT_HEADER_NODE = "Node";
-    public static final String TEXT_NODE_DOING = "Doing";
-    public static final String TEXT_NODE_PREVIOUS = "Previous movement";
-    public static final String TEXT_REMOVE_MOVEMENT = "Remove: carry on as before";
-    public static final String TEXT_REMOVE_GESTURE = "Remove: hands free";
-    public static final String TEXT_NODE_MOVE_HINT = "Drag its notch on the clip to retime it";
-    public static final String TEXT_GESTURE_MOVE_HINT = "Drag it along the clip to move it";
-    public static final String TEXT_NODE_SHARED = "Node edits change the take, and every clip of it";
+    // Text — the view
     public static final String TEXT_VIEW_FIT = "Whole timeline";
 
     // Text — Keys
     public static final String TEXT_KEYS_TITLE = "Keys";
     public static final String TEXT_KEYS_NO_CLIP = "Click a clip on the timeline to see its keys";
     public static final String TEXT_KEYS_NO_TRACKS = "This take recorded nothing a curve can carry";
-    public static final String TEXT_TRACK_OPENED = "-  ";
-    public static final String TEXT_TRACK_CLOSED = "+  ";
+    public static final String TEXT_KEYS_PICK_LAYER = "Pick a layer in the Layers tab to see its keys";
+    public static final String TEXT_LAYER_SOUNDS = "Sounds";
+    public static final String TEXT_LAYER_NONE = "no layer picked";
+    public static final String TEXT_GRAPH_TITLE = "Keys Graph";
     public static final String TEXT_ROW_MOVEMENT = "Movement";
     public static final String TEXT_ROW_GESTURES = "Gestures";
-    public static final String TEXT_GRAPH_EMPTY = "Click a value in the list to see its curve";
-    public static final String TEXT_HEADER_KEYS = "Keys";
-    public static final String TEXT_HEADER_CURVE = "Curve";
-    public static final String TEXT_KEYS_HINT_OPEN = "Click a name to open or close it";
-    public static final String TEXT_KEYS_HINT_SELECT = "Click a value to see its curve on the graph below";
-    public static final String TEXT_KEYS_HINT_VIEW = "Wheel zooms, Shift+wheel or dragging empty space scrolls";
-    public static final String TEXT_KEYS_HINT_VALUES = "Ctrl+wheel on the graph zooms its values";
-    public static final String TEXT_KEYS_HINT_KEY =
-            "Click a key to edit it: Shift adds, Ctrl removes, and dragging on nothing with either boxes keys";
+    public static final String TEXT_GRAPH_EMPTY = "Click a value on the Keys tab to see its curve";
     public static final String TEXT_CURVE_UNLAID = "Its keys are laid once nothing records or exports";
-    public static final String TEXT_KEY_ADD = "Add a key at the playhead";
-    public static final String TEXT_KEY_VALUE = "Value";
-    public static final String TEXT_KEY_MODE = "Handles";
-    public static final String TEXT_KEY_DELETE = "Delete key";
-    public static final String TEXT_CURVE_REFIT = "Lay again from the recording";
-    public static final String TEXT_TAKE_REFIT = "Lay every value of the take again";
-    public static final String TEXT_CURVE_SHARED = "Curves belong to the take, and every clip of it";
-    public static final String TEXT_HEADER_SOUNDS = "Sounds";
-    public static final String TEXT_SOUND_VOLUME = "Volume";
-    public static final String TEXT_SOUND_PITCH = "Pitch";
-    public static final String TEXT_SOUND_LENGTH = "Length";
-    public static final String TEXT_SOUND_PLACED = "Placed in the world, heard from where it was";
-    public static final String TEXT_SOUND_UNPLACED = "Heard as it is, wherever the camera stands";
-    public static final String TEXT_SOUND_LOOPS = "Loops for as long as it runs";
-    public static final String TEXT_SOUND_MISSING = "The game no longer has this sound: it plays silent";
-    public static final String TEXT_SOUND_SEEK = "Move the playhead to it";
-    public static final String TEXT_SOUND_COPY = "Copy it to the playhead";
-    public static final String TEXT_SOUND_REPLACE = "Play the Sound Library's selection instead";
-    public static final String TEXT_SOUND_REMOVE = "Remove sound";
-    public static final String TEXT_SOUND_REMOVE_ALL = "Remove every one of this sound";
-    public static final String TEXT_SOUND_MOVE_HINT = "Drag it along its row to retime it";
-    public static final String TEXT_SOUND_SHARED = "Sound edits change the take, and every clip of it";
-    public static final String TEXT_SOUNDS_ADD = "Add the Sound Library's selection at the playhead";
-    public static final String TEXT_SOUNDS_HINT_SELECT = "Click a sound on the Sounds layer to change or remove it";
-    public static final String TEXT_SOUNDS_HINT_DROP = "Drop a sound from the Sound Library onto the rows to add it";
-    public static final String TEXT_TRANSITION_LENGTH = "Length";
-    public static final String TEXT_TRANSITION_MISSING = "That transition no longer exists: it plays as the default";
-    public static final String TEXT_TRANSITION_REPLACE = "Play the Transitions selection instead";
-    public static final String TEXT_TRANSITION_REMOVE = "Remove transition";
-    public static final String TEXT_TRANSITION_DRAG_HINT = "Drag it on the clip to make it run longer or shorter";
-    public static final String TEXT_TRANSITION_SOUND = "The clip's own sounds fade with it";
-    public static final String TEXT_RESOLUTION = "Resolution";
-    public static final String TEXT_FRAME_RATE = "Frame rate";
-    public static final String TEXT_FORMAT = "Format";
-    public static final String TEXT_MOTION_BLUR = "Motion blur";
-    public static final String TEXT_SUPERSAMPLE = "Supersample";
-    public static final String TEXT_RANGE_START = "Range start";
-    public static final String TEXT_RANGE_END = "Range end";
-    public static final String TEXT_RANGE_FROM_START = "Recording start";
-    public static final String TEXT_RANGE_TO_END = "Recording end";
-    public static final String TEXT_CLEAR_RANGE = "Clear range";
-    public static final String TEXT_EXPORT = "Export video";
-    public static final String TEXT_CANCEL_EXPORT = "Cancel export";
 
     // Formats
     public static final String FORMAT_TIME = "%d:%05.2f";
@@ -264,34 +170,11 @@ public class RecorderSetting {
     // Formats — a clip's name on its bar, by the kind of its source in RecordingSourceKind order: a take's, a nested
     // recording's, a song's and a notes clip's instrument
     public static final String[] FORMAT_CLIP_LABELS = { "%s", "[%s]", "%s", "%s" };
-    public static final String FORMAT_RESOLUTION = "%d x %d";
-    public static final String FORMAT_FRAME_RATE = "%d fps";
-    public static final String FORMAT_MOTION_BLUR = "%d samples";
-    public static final String FORMAT_RAMP = "%.0fs";
-    public static final String FORMAT_TAKE = "%s   %s   %s";
-    public static final String FORMAT_TAKE_PLACED = "%s   %s   %s   x%d";
-    public static final String FORMAT_CLIP_PLACE = "Lane %d   %s to %s";
-    public static final String FORMAT_CLIP_SOURCE = "Plays %s to %s of the %s";
-    public static final String FORMAT_CLIPS_SELECTED = "%d clips selected: they move, delete and nest together";
-    public static final String FORMAT_CLIP_SOURCE_MISSING = "%s %s is missing and plays nothing";
-    public static final String FORMAT_NODE = "%s   %s to %s";
     public static final String FORMAT_VIEW = "%s to %s";
-    public static final String FORMAT_NODE_HEADER = "%s: %s";
     public static final String FORMAT_KEYS_TITLE = "Keys: %s";
+    public static final String FORMAT_GRAPH_NOW = "Now %s  |  %d keys";
+    public static final String FORMAT_GRAPH_KEY = "Now %s  |  %d keys  |  key at %s: %s, %s";
     public static final String FORMAT_CURVE_HEADER = "%s: %s";
-    public static final String FORMAT_CURVE_NOW = "Now %s";
-    public static final String FORMAT_CURVE_KEYS = "%d keys";
-    public static final String FORMAT_KEYS_SELECTED = "%d keys selected";
-    public static final String FORMAT_KEY_HEADER = "Key at %s";
-    public static final String FORMAT_SOUND_LAYER = "Sounds (%d)";
     public static final String FORMAT_SOUND_ROW = "%s (%d)";
-    public static final String FORMAT_SOUND_HEADER = "Sound: %s";
-    public static final String FORMAT_SOUND_SPAN = "%s to %s";
-    public static final String FORMAT_SOUND_PERCENT = "%.0f%%";
-    public static final String FORMAT_SOUND_SECONDS = "%.2fs";
-    public static final String FORMAT_TRANSITION_HEADER = "Transition: %s";
-    public static final String FORMAT_TRANSITION_SPAN = "On its %s   %s to %s";
-    public static final String FORMAT_TRANSITION_LOOK = "%s, %s";
-    public static final String FORMAT_TRANSITION_SECONDS = "%.2fs";
     public static final String FORMAT_PROGRESS = "Frame %d of %d";
 }

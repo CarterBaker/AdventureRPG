@@ -1,5 +1,6 @@
 package editor.bootstrap.toolpipeline.util;
 
+import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.toolpipeline.tool.ToolActionGroupStruct;
 import editor.bootstrap.toolpipeline.tool.ToolActionStruct;
 import editor.bootstrap.toolpipeline.tool.ToolOptionStruct;
@@ -159,7 +160,9 @@ public enum ToolCanvas {
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
-            new ToolActionGroupStruct[] { timelineNesting(), timelineExport() },
+            new ToolActionGroupStruct[] {
+                    recorderTakes(), recorderClip(), recorderKeys(), recorderSounds(), recorderTransition(),
+                    recorderNode(), timelineNesting(), timelineExport() },
             false);
 
     // Values
@@ -382,11 +385,84 @@ public enum ToolCanvas {
                 action(EditorSetting.TOOL_ACTION_LABEL_OPEN_NESTED, EditorSetting.RECORDER_KEY_CLIP_OPEN));
     }
 
+    // A video or music exports through the File menu's Export; MIDI is a format of its own
     private static ToolActionGroupStruct timelineExport() {
         return new ToolActionGroupStruct(
                 EditorSetting.TOOL_ACTION_HEADER_EXPORT,
-                action(EditorSetting.TOOL_ACTION_LABEL_EXPORT, EditorSetting.RECORDER_KEY_EXPORT),
                 action(EditorSetting.TOOL_ACTION_LABEL_EXPORT_MIDI, EditorSetting.RECORDER_KEY_EXPORT_MIDI));
+    }
+
+    // The take picked in the Layers tab's Takes view
+    private static ToolActionGroupStruct recorderTakes() {
+        return new ToolActionGroupStruct(
+                EditorSetting.TOOL_ACTION_HEADER_TAKES,
+                action(EditorSetting.TOOL_ACTION_LABEL_TAKE_PLACE, EditorSetting.RECORDER_KEY_TAKE_PLACE),
+                action(EditorSetting.TOOL_ACTION_LABEL_TAKE_RENAME, EditorSetting.RECORDER_KEY_TAKE_RENAME),
+                action(EditorSetting.TOOL_ACTION_LABEL_TAKE_DELETE, EditorSetting.RECORDER_KEY_TAKE_DELETE));
+    }
+
+    // The clip selected on the Timeline, edited at the playhead
+    private static ToolActionGroupStruct recorderClip() {
+        return new ToolActionGroupStruct(
+                EditorSetting.TOOL_ACTION_HEADER_CLIP,
+                action(EditorSetting.TOOL_ACTION_LABEL_TRIM_START, EditorSetting.RECORDER_KEY_CLIP_TRIM_START),
+                action(EditorSetting.TOOL_ACTION_LABEL_TRIM_END, EditorSetting.RECORDER_KEY_CLIP_TRIM_END),
+                action(EditorSetting.TOOL_ACTION_LABEL_SPLIT, EditorSetting.RECORDER_KEY_CLIP_SPLIT),
+                action(EditorSetting.TOOL_ACTION_LABEL_STAMP, EditorSetting.RECORDER_KEY_CLIP_STAMP),
+                action(EditorSetting.TOOL_ACTION_LABEL_TRANSITION_IN,
+                        EditorSetting.RECORDER_KEY_TRANSITION_PREFIX + RecorderClipEdge.START.getKey()),
+                action(EditorSetting.TOOL_ACTION_LABEL_TRANSITION_OUT,
+                        EditorSetting.RECORDER_KEY_TRANSITION_PREFIX + RecorderClipEdge.END.getKey()),
+                action(EditorSetting.TOOL_ACTION_LABEL_REMOVE_CLIP, EditorSetting.RECORDER_KEY_CLIP_REMOVE));
+    }
+
+    // The keys of the curve selected on the Keys tab or its graph
+    private static ToolActionGroupStruct recorderKeys() {
+        return new ToolActionGroupStruct(
+                EditorSetting.TOOL_ACTION_HEADER_KEYS,
+                action(EditorSetting.TOOL_ACTION_LABEL_KEY_ADD, EditorSetting.RECORDER_KEY_KEY_ADD),
+                action(EditorSetting.TOOL_ACTION_LABEL_KEY_DELETE, EditorSetting.RECORDER_KEY_KEY_DELETE),
+                action(EditorSetting.TOOL_ACTION_LABEL_KEY_MODE, EditorSetting.RECORDER_KEY_KEY_MODE),
+                action(EditorSetting.TOOL_ACTION_LABEL_KEY_VALUE, EditorSetting.RECORDER_KEY_KEY_VALUE),
+                action(EditorSetting.TOOL_ACTION_LABEL_FRAME_KEYS, EditorSetting.RECORDER_KEY_FRAME_KEYS),
+                action(EditorSetting.TOOL_ACTION_LABEL_CURVE_REFIT, EditorSetting.RECORDER_KEY_CURVE_REFIT),
+                action(EditorSetting.TOOL_ACTION_LABEL_TAKE_REFIT, EditorSetting.RECORDER_KEY_TAKE_REFIT));
+    }
+
+    // The sound selected on the Sounds layer, and a sound added from the Sound Library
+    private static ToolActionGroupStruct recorderSounds() {
+        return new ToolActionGroupStruct(
+                EditorSetting.TOOL_ACTION_HEADER_SOUNDS,
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_ADD, EditorSetting.RECORDER_KEY_SOUND_ADD),
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_VOLUME, EditorSetting.RECORDER_KEY_SOUND_VOLUME),
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_PITCH, EditorSetting.RECORDER_KEY_SOUND_PITCH),
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_LENGTH, EditorSetting.RECORDER_KEY_SOUND_LENGTH),
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_SEEK, EditorSetting.RECORDER_KEY_SOUND_SEEK),
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_COPY, EditorSetting.RECORDER_KEY_SOUND_COPY),
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_REPLACE, EditorSetting.RECORDER_KEY_SOUND_REPLACE),
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_REMOVE, EditorSetting.RECORDER_KEY_SOUND_REMOVE),
+                action(EditorSetting.TOOL_ACTION_LABEL_SOUND_REMOVE_ALL, EditorSetting.RECORDER_KEY_SOUND_REMOVE_ALL));
+    }
+
+    // The transition selected on a clip's edge
+    private static ToolActionGroupStruct recorderTransition() {
+        return new ToolActionGroupStruct(
+                EditorSetting.TOOL_ACTION_HEADER_TRANSITION,
+                action(EditorSetting.TOOL_ACTION_LABEL_TRANSITION_LENGTH,
+                        EditorSetting.RECORDER_KEY_TRANSITION_LENGTH),
+                action(EditorSetting.TOOL_ACTION_LABEL_TRANSITION_REPLACE,
+                        EditorSetting.RECORDER_KEY_TRANSITION_REPLACE),
+                action(EditorSetting.TOOL_ACTION_LABEL_TRANSITION_REMOVE,
+                        EditorSetting.RECORDER_KEY_TRANSITION_REMOVE));
+    }
+
+    // The movement or gesture selected on a clip
+    private static ToolActionGroupStruct recorderNode() {
+        return new ToolActionGroupStruct(
+                EditorSetting.TOOL_ACTION_HEADER_NODE,
+                action(EditorSetting.TOOL_ACTION_LABEL_NODE_PREVIOUS, EditorSetting.RECORDER_KEY_NODE_PREVIOUS),
+                action(EditorSetting.TOOL_ACTION_LABEL_NODE_NEXT, EditorSetting.RECORDER_KEY_NODE_NEXT),
+                action(EditorSetting.TOOL_ACTION_LABEL_NODE_REMOVE, EditorSetting.RECORDER_KEY_NODE_REMOVE));
     }
 
     private static ToolActionStruct action(String label, String key) {

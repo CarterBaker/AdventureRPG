@@ -176,13 +176,14 @@ samplerManager.noteOnAt(instrumentID, pitch, velocity, entity.getWorldHandle(), 
 - While a session runs, `RecorderManager.holdSound` pins its Preview tab as the one heard, so clicking into the
   Recorder tab never freezes the listener or fades the ambience a take records; while the timeline plays the sound
   channel the pin is quiet, so live ambience, music and heartbeat never double what the take holds.
-- The Keys pane shows the selected clip's take's Sounds layer (`RecorderKeysSystem.injectSounds`): its own row marks
-  every sound, and opened it holds a row per sound name with a bar for every time it is heard. A sound is selected by
-  clicking its bar (or its row's name for the first one), dragged along its row to retime it, and the inspector
-  (`RecorderPanelSystem.refreshSound`, also in the Clip panel) types its volume, pitch and length, moves the playhead
-  to it, copies it to the playhead, replaces it with the Sound Library's selection, or removes it or every one of it;
-  Delete removes the selected sound after selected keys. A sound from the Sound Library dropped on the Keys rows, or
-  added with "Add the Sound Library's selection at the playhead", joins the selected clip's take. Edits live in
+- The Keys tab shows the selected clip's take's Sounds layer, picked in the Layers tab
+  (`RecorderKeysSystem.injectSounds`): a row per sound name with a bar for every time it is heard. A sound is selected
+  by clicking its bar (or its row's name for the first one) and dragged along its row to retime it, and the Tools tab's
+  Sounds actions type its volume, pitch and length, move the playhead to it, copy it to the playhead, replace it with
+  the Sound Library's selection, or remove it or every one of it; Delete removes the selected sound after selected keys.
+  A sound from the Sound Library dropped on the Keys rows, or added with Add Sound, joins the selected clip's take.
+- With no Preview tab open, a media file with no picture plays through the Recorder or Timeline tab, whose own
+  `DevRecorderSoundSystem` sounds it (`RecorderSoundHost`), every sound unplaced. Edits live in
   `RecorderManager` (`// Sound Layer`) over `RecordingSoundBranch`; each moves `getSoundRevision()`, which stops the
   timeline's voices so they start again as edited.
 - A sound dropped from the Sound Library (or added at the playhead) becomes a take holding that sound alone

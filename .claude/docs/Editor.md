@@ -33,10 +33,17 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting window
   shares and the Maps tab the maps of the image worked (the texture painted, or the Image Editor's image); the Image
   Editor under Textures paints layered images as Krita does, its layers in the Layers tab and its maps in the Maps tab
-  (see `.claude/docs/ImageEditorPipeline.md`); the Recorder is its transport (Record, Play, Pause and Stop, with the
-  clock and the status line that says what they did or why they could not, nothing else) and the Timeline its clips, with Recorder Keys, Recorder Bin and Recorder Settings beside them, each opening its
-  own menu through a shared `RecorderRowSystem`, and the pane tab worked in last being the one the recorder's deletes
-  act on; the Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
+  (see `.claude/docs/ImageEditorPipeline.md`); the Recorder is its transport (Record, Play, Pause, Stop and the Loop
+  switch, which runs playing round the range marked with I and O or the whole media file, with the clock and the status
+  line that says what they did or why they could not, nothing else) and the Timeline its clips, with the Keys (the rows
+  of the layer picked in the Layers tab) and the Keys Graph (the curve selected, a key clicked twice freeing or joining
+  its handles) beside them, each opening its own menu through a shared `RecorderRowSystem`, and the pane tab worked in
+  last being the one the recorder's deletes act on. A take records whether or not the game is paused, so the pause menu
+  that frees the cursor never stops it; music plays with no Preview tab, through the Recorder or Timeline tab. The
+  Layers tab lists the take's tracks (camera, player, characters, items, vehicles, weather, clock, sounds) or, in its
+  Takes view, every take; the Tools tab holds every take, clip, key, sound, transition and node action; the
+  Properties tab the clip's channels, mute and time ramp; the Character Outliner the channels armed and the export;
+  File, Export exports. The Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
   the Timeline shows its lanes as Premiere does, five at first and one more each time the highest takes a clip, each
   strip only its number and the name its ... gives it, the lane and clip selected edited in the Properties tab (its mix
   too), and the file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library,

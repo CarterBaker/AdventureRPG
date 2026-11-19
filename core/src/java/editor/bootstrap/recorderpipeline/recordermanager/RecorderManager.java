@@ -19,12 +19,14 @@ import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderExportResult;
 import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
+import editor.bootstrap.recorderpipeline.recording.RecorderLayerView;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
@@ -53,6 +55,8 @@ import editor.bootstrap.transitionpipeline.transitionmanager.TransitionManager;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.dev.DevContext;
 import editor.runtime.EditorSetting;
+import editor.runtime.recorder.RecorderSoundHost;
+import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgUtility;
@@ -62,7 +66,6 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 
 public class RecorderManager extends ManagerPackage {
 
@@ -78,7 +81,7 @@ public class RecorderManager extends ManagerPackage {
      * channels from the playhead until stopped, the clips beneath playing
      * every other channel; it then joins the bin and is laid on the timeline
      * where it was recorded, over every clip it was recorded against. Takes
-     * are laid again by dragging them from the bin, and clips are moved by
+     * are laid again at the playhead from the Layers tab's Takes view, and clips are moved by
      * dragging, trimmed by dragging an edge or at the playhead, cut in two at
      * the playhead or, with the Cut tool chosen for the timeline in the Tools
      * panel, wherever it is pressed, stamped, muted, given or stripped of
@@ -92,11 +95,11 @@ public class RecorderManager extends ManagerPackage {
      * records is laid on a curve of keys as soon as the take is stopped, and
      * every take of a recording opened that has none yet, one track a frame so
      * nothing stalls, and the curves play from then on: a recording is made of
-     * keys. The Recorder Keys tab shows the selected clip's take track by
-     * track — the camera, the player, every resident, item and vehicle, the
-     * weather and the clock — with the graph of the value selected, and
-     * beneath them the take's Sounds layer, a row for each sound it heard with
-     * a bar for every time it was heard. Sounds are selected, retimed along
+     * keys. The Keys tab shows one layer of the selected clip's take — the
+     * camera, the player, a resident, item or vehicle, the weather or the
+     * clock, a row for each value it holds, or the take's Sounds layer, a row
+     * for each sound it heard with a bar for every time it was heard — and
+     * the Keys Graph tab the curve of the value selected. Sounds are selected, retimed along
      * their rows, copied to the playhead, added from the sound library, given
      * another volume, pitch, length or sound, and removed one by one or every
      * one of a sound at once, each by one method here, and a change to any of
@@ -107,7 +110,12 @@ public class RecorderManager extends ManagerPackage {
      * or handle dragged changes its curve as it moves. Any number of a curve's
      * keys are selected at once — picked one by one or boxed on the graph or a
      * row, added to or taken away from — and move and delete together; the
-     * last picked is the one the inspector shows and whose handles are drawn.
+     * last picked is the one whose handles are drawn. A key clicked twice on
+     * the graph lets its handles go their own ways, and twice again joins them
+     * on one line; a handle dragged with snapping lands on its key's level and
+     * on the moments and values of the curve's other keys within reach. The
+     * Layers tab lists the take's tracks, the layer picked the one the Keys
+     * tab shows, or every take in the bin.
      * What is selected is deleted as one: the keys while the Keys were worked
      * in last, else the sound, else the node, else the clip. A sound dragged
      * in from the sound library, or added at the playhead, is laid as a take
@@ -122,10 +130,14 @@ public class RecorderManager extends ManagerPackage {
      * held. While a session runs, its Dev window is the one heard whichever
      * window has focus, so the world is heard from its camera and its ambience
      * and music are what a take records; while the timeline plays the sound
-     * channel, they hold silent, as the take already holds them. While the
-     * game is paused the session is suspended — the playhead waits and a take
-     * records nothing — and it carries on a few frames after the pause ends,
-     * so the pause menu never reaches a take. Stopping ends every session and
+     * channel, they hold silent, as the take already holds them. A take and
+     * the timeline playing run on whether or not the game is paused, so the
+     * pause menu that lets the cursor out of the Dev window never stops a
+     * take; only an export waits while the game is paused, and for a few
+     * frames after, so no paused frame reaches a video. A media file with no
+     * picture plays without a Dev window, its sound carried by a Recorder tab;
+     * looping, the playhead runs round the range marked, or the whole media
+     * file when none is. Stopping ends every session and
      * the Dev window goes back to just where it was. A transition dragged in
      * from the transitions tool is laid on the clip edge it is let go over,
      * the end of a clip another follows on its lane handing it to the start of
@@ -178,6 +190,7 @@ public class RecorderManager extends ManagerPackage {
     private RecordingMusicBranch recordingMusicBranch;
     private RecordingRowBranch recordingRowBranch;
     private RecordingRenderBranch recordingRenderBranch;
+    private RecordingLayerBranch recordingLayerBranch;
     private InstrumentManager instrumentManager;
 
     // Directory — the media files beside the player's saves, and what they export to
@@ -199,6 +212,8 @@ public class RecorderManager extends ManagerPackage {
     private float takeStart;
     private int takeCount;
     private DevContext devContext;
+    private ContextPackage soundHost;
+    private boolean looping;
 
     // Music — the lane whose mix the Properties tab shows, and the share of a render last shown
     private int selectedLane;
@@ -245,7 +260,7 @@ public class RecorderManager extends ManagerPackage {
     // Keys
     private RecordingTakeStruct keyTake;
     private ObjectArrayList<RecordingCurveTrackStruct> keyTracks;
-    private ReferenceOpenHashSet<RecordingCurveTrackStruct> openedTracks;
+    private int keyLayer;
     private RecordingCurveTrackStruct selectedTrack;
     private int selectedSlot;
     private int selectedKey;
@@ -257,9 +272,17 @@ public class RecorderManager extends ManagerPackage {
     private int keysRevision;
     private int curveRevision;
 
-    // Sounds — whether the Sounds layer of the Keys pane is opened, the sound selected on it, and how often a sound
-    // was changed
-    private boolean soundLayerOpened;
+    // Key Clicks — the key of the curve last clicked on the graph and when, so a second click on it frees or joins
+    // its handles
+    private RecordingCurveStruct clickedCurve;
+    private int clickedKey;
+    private long clickedKeyMillis;
+
+    // Layers — how the Layers tab lists the recorder, and how often what it lists changed
+    private RecorderLayerView layerView;
+    private int layerRevision;
+
+    // Sounds — the sound selected on the Sounds layer, and how often a sound was changed
     private int selectedSound;
     private int soundRevision;
 
@@ -296,6 +319,7 @@ public class RecorderManager extends ManagerPackage {
         this.recordingMusicBranch = create(RecordingMusicBranch.class);
         this.recordingRowBranch = create(RecordingRowBranch.class);
         this.recordingRenderBranch = create(RecordingRenderBranch.class);
+        this.recordingLayerBranch = create(RecordingLayerBranch.class);
 
         // Directory
         this.mediaDirectory = new File(internal.path, EditorSetting.RECORDER_MEDIA_DIRECTORY);
@@ -337,14 +361,19 @@ public class RecorderManager extends ManagerPackage {
 
         // Keys
         this.keyTracks = new ObjectArrayList<>();
-        this.openedTracks = new ReferenceOpenHashSet<>();
+        this.keyLayer = EditorSetting.RECORDER_KEY_LAYER_NONE;
         this.selectedKeys = new IntArrayList();
         this.draggedKeyTimes = new FloatArrayList();
         this.draggedKeyValues = new DoubleArrayList();
         clearCurveSelection();
 
+        // Key Clicks
+        this.clickedKey = EngineSetting.INDEX_NOT_FOUND;
+
+        // Layers
+        this.layerView = RecorderLayerView.LAYERS;
+
         // Sounds
-        this.soundLayerOpened = true;
         clearSoundSelection();
 
         // Curves
@@ -391,17 +420,18 @@ public class RecorderManager extends ManagerPackage {
             stop();
     }
 
-    // A running session waits while the game is paused, and for a few frames after, so nothing of the pause is kept
+    // An export waits while the game is paused, and for a few frames after, so no paused frame reaches its video; a
+    // take and the timeline playing run on, so the pause menu that lets the cursor out never stops them
     private void updateSuspension() {
 
-        boolean wanted = state.isSession() && clockManager.isPaused();
+        boolean wanted = state == RecorderState.EXPORTING && clockManager.isPaused();
 
         if (wanted)
             this.resumeFrames = EditorSetting.RECORDER_RESUME_FRAMES;
         else if (resumeFrames > 0)
             this.resumeFrames--;
 
-        boolean nowSuspended = state.isSession() && (wanted || resumeFrames > 0);
+        boolean nowSuspended = state == RecorderState.EXPORTING && (wanted || resumeFrames > 0);
 
         if (nowSuspended == suspended)
             return;
@@ -427,11 +457,40 @@ public class RecorderManager extends ManagerPackage {
 
         playhead += internal.getDeltaTime();
 
-        if (state == RecorderState.PLAYING && playhead >= recording.getDuration()) {
+        if (state != RecorderState.PLAYING)
+            return;
+
+        float loopStart = resolveLoopStart();
+        float loopEnd = resolveLoopEnd();
+
+        if (looping && loopEnd > loopStart) {
+
+            if (playhead >= loopEnd)
+                playhead = loopStart;
+
+            return;
+        }
+
+        if (playhead >= recording.getDuration()) {
             playhead = recording.getDuration();
             state = RecorderState.PAUSED;
             revision++;
         }
+    }
+
+    // The stretch a looping playhead runs round: the range marked, else the whole media file
+    private float resolveLoopStart() {
+
+        RecordingExportStruct exportStruct = recording.getExportStruct();
+
+        return exportStruct.hasRangeStart() ? exportStruct.getRangeStart() : 0f;
+    }
+
+    private float resolveLoopEnd() {
+
+        RecordingExportStruct exportStruct = recording.getExportStruct();
+
+        return exportStruct.hasRangeEnd() ? exportStruct.getRangeEnd() : recording.getDuration();
     }
 
     // The view keeps to the timeline as it grows and shrinks, and pages along after a running playhead
@@ -473,8 +532,9 @@ public class RecorderManager extends ManagerPackage {
 
     // Session \\
 
-    // Binds the session to the first Dev window still running, in the world a video was made in; music plays in any
-    private boolean bindDevContext() {
+    // Binds the session to the first Dev window still running, in the world a video was made in; music plays in any,
+    // and plays without one through the first Recorder tab that can sound it, though a take always records in one
+    private boolean bindSession(boolean needsDevWindow) {
 
         if (recording.hasPicture()
                 && !recording.getWorldName().equals(worldManager.getActiveWorld().getWorldName())) {
@@ -483,26 +543,47 @@ public class RecorderManager extends ManagerPackage {
         }
 
         ObjectArrayList<TabHandle> openTabs = tabManager.getOpenTabs();
+        ContextPackage musicHost = null;
 
-        for (int i = 0; i < openTabs.size(); i++)
-            if (openTabs.get(i).getTabContext().getContentContext() instanceof DevContext candidate
-                    && !candidate.isCrashed()) {
+        for (int i = 0; i < openTabs.size(); i++) {
+
+            ContextPackage content = openTabs.get(i).getTabContext().getContentContext();
+
+            if (content instanceof DevContext candidate && !candidate.isCrashed()) {
                 this.devContext = candidate;
+                this.soundHost = candidate;
                 return true;
             }
+
+            if (musicHost == null && content instanceof RecorderSoundHost)
+                musicHost = content;
+        }
+
+        if (!needsDevWindow && !recording.hasPicture() && musicHost != null) {
+            this.soundHost = musicHost;
+            return true;
+        }
 
         setStatus(EditorSetting.RECORDER_STATUS_NO_DEV_WINDOW);
         return false;
     }
 
-    // Starts a session if none runs, true once one does
-    private boolean beginSession() {
-        return state.isSession() || bindDevContext();
+    // Starts a session if none runs, true once one does; a take and an export need a Dev window, so a session
+    // sounding music through a Recorder tab gives way to one bound to a Dev window
+    private boolean beginSession(boolean needsDevWindow) {
+
+        if (state.isSession() && (devContext != null || !needsDevWindow))
+            return true;
+
+        if (state.isSession())
+            endSession();
+
+        return bindSession(needsDevWindow);
     }
 
-    // The Dev window leaving ends any session it held
-    public void releaseDevContext(DevContext context) {
-        if (devContext == context)
+    // The window a session runs in leaving ends the session
+    public void releaseSessionHost(ContextPackage context) {
+        if (soundHost == context)
             stop();
     }
 
@@ -522,7 +603,7 @@ public class RecorderManager extends ManagerPackage {
         if (!ensureRecording())
             return;
 
-        if (!beginSession())
+        if (!beginSession(true))
             return;
 
         cancelDrag();
@@ -538,7 +619,7 @@ public class RecorderManager extends ManagerPackage {
         if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING || !hasClips())
             return;
 
-        if (!beginSession())
+        if (!beginSession(false))
             return;
 
         if (playhead >= recording.getDuration())
@@ -571,10 +652,16 @@ public class RecorderManager extends ManagerPackage {
             play();
     }
 
+    // Playing runs round the range marked, or the whole media file, until looping is turned off again
+    public void toggleLoop() {
+        this.looping = !looping;
+        setStatus(looping ? EditorSetting.RECORDER_STATUS_LOOP_ON : EditorSetting.RECORDER_STATUS_LOOP_OFF);
+    }
+
     // Holds the Dev window at the playhead as the timeline stands there
     private void preview() {
 
-        if (!hasClips() || !beginSession())
+        if (!hasClips() || !beginSession(false))
             return;
 
         this.state = RecorderState.PAUSED;
@@ -602,6 +689,7 @@ public class RecorderManager extends ManagerPackage {
     private void endSession() {
         this.state = RecorderState.IDLE;
         this.devContext = null;
+        this.soundHost = null;
         transition.clear();
         this.suspended = false;
         this.resumeFrames = 0;
@@ -933,8 +1021,8 @@ public class RecorderManager extends ManagerPackage {
         cancelDrag();
         clearSelection();
         transition.clear();
-        openedTracks.clear();
         unlaidTracks.clear();
+        layerRevision++;
         this.curvesLaid = false;
         this.saveWhenLaid = false;
 
@@ -958,6 +1046,16 @@ public class RecorderManager extends ManagerPackage {
 
         this.selectedTake = takeIndex;
         revision++;
+    }
+
+    // The take picked in the Layers tab's Takes view, -1 after saying none is
+    public int requireSelectedTake() {
+
+        if (isTakeIndex(selectedTake))
+            return selectedTake;
+
+        setStatus(EditorSetting.RECORDER_STATUS_NO_TAKE);
+        return EngineSetting.INDEX_NOT_FOUND;
     }
 
     public void renameTake(int takeIndex, String takeName) {
@@ -1179,7 +1277,8 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // Steps the clip's clock jumps through each ramp in turn, back to a cut after the longest
-    public void cycleClipTimeRamp() {
+    // The clip's time ramp stepped to the one before or after it, round from the last to the first
+    public void cycleClipTimeRamp(int direction) {
 
         RecordingClipStruct clip = requireSelectedClip();
 
@@ -1192,7 +1291,7 @@ public class RecorderManager extends ManagerPackage {
         while (index < ramps.length && ramps[index] != clip.getTimeRampSeconds())
             index++;
 
-        clip.setTimeRampSeconds(ramps[(index + 1) % ramps.length]);
+        clip.setTimeRampSeconds(ramps[Math.floorMod(index + direction, ramps.length)]);
         markUnsaved();
     }
 
@@ -1518,15 +1617,6 @@ public class RecorderManager extends ManagerPackage {
 
     // Drag \\
 
-    // A take picked up from the bin, to be laid where it is let go
-    public void beginTakeDrag(int takeIndex, WindowInstance window, float pressX, float pressY) {
-
-        if (drag.isActive() || !canEditTimeline() || !isTakeIndex(takeIndex))
-            return;
-
-        beginDrag(RecorderDragKind.TAKE, takeIndex, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
-    }
-
     // A sound picked up from the sound library in any window, to be laid where it is let go over the lanes; nothing
     // is picked up while no recording is open to lay it on
     public void beginSoundDrag(int soundID, WindowInstance window, float pressX, float pressY) {
@@ -1697,7 +1787,7 @@ public class RecorderManager extends ManagerPackage {
         float tolerance = snapping ? EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel : 0f;
 
         switch (drag.getKind()) {
-            case TAKE, SOUND, RECORDING, NOTE, CLIP -> landSpan(overLanes, time, lane, tolerance);
+            case SOUND, RECORDING, NOTE, CLIP -> landSpan(overLanes, time, lane, tolerance);
             case TRIM_START, TRIM_END -> landEdge(time, tolerance);
             case CUT -> landCut(time, tolerance);
             case NODE -> landNode(time);
@@ -1834,12 +1924,6 @@ public class RecorderManager extends ManagerPackage {
         cancelDrag();
 
         switch (kind) {
-            case TAKE -> {
-                if (dropped)
-                    placeTake(index, landingStart, landingLane);
-                else
-                    selectTake(index);
-            }
             case RECORDING -> {
                 if (dropped)
                     placeRecording(carriedName, landingStart, landingLane);
@@ -1948,7 +2032,6 @@ public class RecorderManager extends ManagerPackage {
     // How long what is carried runs, so the tab can draw where it would land; nothing for what lands at a moment
     public float resolveDragLength() {
         return switch (drag.getKind()) {
-            case TAKE -> recording.getTakes().get(drag.getIndex()).getDuration();
             case SOUND -> soundManager.getSoundHandleFromSoundID(drag.getIndex()).getPlayedLength();
             case RECORDING -> resolveRecordingLength(drag.getName());
             case NOTE -> (float) recording.getTempo().toSeconds(recording.getBeatTicks());
@@ -2430,6 +2513,11 @@ public class RecorderManager extends ManagerPackage {
             recordingRowBranch.buildTransportRows(rows);
     }
 
+    // The rows the Character Outliner shows while a Recorder tab is worked in: the channels armed and the export
+    public void buildSettingsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recordingRowBranch.buildSettingsRows(rows);
+    }
+
     public void stepRow(String key, int steps) {
         recordingRowBranch.step(key, steps);
     }
@@ -2484,6 +2572,45 @@ public class RecorderManager extends ManagerPackage {
     public void showPane(RecorderPane shown) {
         this.pane = shown;
         revision++;
+    }
+
+    // Layers \\
+
+    // The stack the Layers tab lists while a Recorder tab is worked in: the take's tracks, or every take in the bin
+    public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
+        recordingLayerBranch.buildLayers(roots, layerView);
+    }
+
+    public String getLayerTitle() {
+        return recordingLayerBranch.resolveTitle(layerView);
+    }
+
+    public void selectLayer(String layerKey) {
+        recordingLayerBranch.selectLayer(layerKey);
+    }
+
+    public void showLayerView(RecorderLayerView shown) {
+
+        if (shown == layerView)
+            return;
+
+        this.layerView = shown;
+        layerRevision++;
+    }
+
+    // The tool action the Layers tab's Delete Layer icon runs: a take is deleted from the Takes view, and a track is
+    // never deleted
+    public String getRemoveLayerKey() {
+        return layerView == RecorderLayerView.TAKES ? EditorSetting.RECORDER_KEY_TAKE_DELETE : "";
+    }
+
+    public RecorderLayerView getLayerView() {
+        return layerView;
+    }
+
+    // Moves whenever the takes, the take shown or the layer picked may have changed
+    public int getLayerRevision() {
+        return revision + layerRevision;
     }
 
     // Curves \\
@@ -2562,60 +2689,62 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         this.keyTake = take;
+        this.keyLayer = EditorSetting.RECORDER_KEY_LAYER_NONE;
         keyTracks.clear();
         clearCurveSelection();
         clearSoundSelection();
+        layerRevision++;
         keysRevision++;
 
         if (take == null)
             return;
 
-        if (take.isSoundAlone() && selectedTransition == EngineSetting.INDEX_NOT_FOUND)
-            selectFirstSound(EngineSetting.INDEX_NOT_FOUND);
-
         collectCurveTracks(take, keyTracks);
 
-        if (keyTracks.isEmpty())
-            return;
-
-        if (!isAnyTrackOpened())
-            toggleTrack(0);
-
-        selectCurve(0, 0);
-    }
-
-    private boolean isAnyTrackOpened() {
-
-        for (int i = 0; i < keyTracks.size(); i++)
-            if (openedTracks.contains(keyTracks.get(i)))
-                return true;
-
-        return false;
-    }
-
-    // A track opened shows every value it holds, each laid on a curve now if the queue has not reached it yet
-    public void toggleTrack(int trackIndex) {
-
-        if (trackIndex == EditorSetting.RECORDER_KEY_TRACK_SOUNDS) {
-            toggleSoundLayer();
+        if (!keyTracks.isEmpty()) {
+            selectKeyLayer(0);
             return;
         }
 
-        if (!isKeyTrackIndex(trackIndex))
+        if (take.getSoundTrack() == null)
             return;
 
-        RecordingCurveTrackStruct track = keyTracks.get(trackIndex);
+        showKeyLayer(EditorSetting.RECORDER_KEY_TRACK_SOUNDS);
 
-        if (openedTracks.remove(track)) {
-            keysRevision++;
+        if (take.isSoundAlone() && selectedTransition == EngineSetting.INDEX_NOT_FOUND)
+            selectFirstSound(EngineSetting.INDEX_NOT_FOUND);
+    }
+
+    // The layer the Keys tab shows: a track of the take, each value it holds laid on a curve now if the queue has
+    // not reached it yet and its first value selected, or the take's Sounds layer, its first sound heard selected
+    public void selectKeyLayer(int layer) {
+
+        if (layer == EditorSetting.RECORDER_KEY_TRACK_SOUNDS) {
+
+            if (getKeySoundTrack() == null)
+                return;
+
+            showKeyLayer(layer);
+            selectFirstSound(EngineSetting.INDEX_NOT_FOUND);
             return;
         }
 
-        openedTracks.add(track);
+        if (!isKeyTrackIndex(layer))
+            return;
 
-        if (ensureCurves(track))
+        if (ensureCurves(keyTracks.get(layer)))
             markUnsaved();
 
+        selectCurve(layer, 0);
+    }
+
+    private void showKeyLayer(int layer) {
+
+        if (layer == keyLayer)
+            return;
+
+        this.keyLayer = layer;
+        layerRevision++;
         keysRevision++;
     }
 
@@ -2638,6 +2767,7 @@ public class RecorderManager extends ManagerPackage {
     public void selectCurve(int trackIndex, int slot) {
 
         if (trackIndex == EditorSetting.RECORDER_KEY_TRACK_SOUNDS) {
+            showKeyLayer(trackIndex);
             selectFirstSound(slot);
             return;
         }
@@ -2649,6 +2779,8 @@ public class RecorderManager extends ManagerPackage {
 
         if (slot < 0 || slot >= track.getCurveCount())
             return;
+
+        showKeyLayer(trackIndex);
 
         if (!track.hasCurve(slot) && canEditTimeline()
                 && recordingCurveBranch.ensureCurve(track, slot, resolveFitWorld()))
@@ -2877,6 +3009,10 @@ public class RecorderManager extends ManagerPackage {
         }
 
         if (nearest != EngineSetting.INDEX_NOT_FOUND) {
+
+            if (!extending && !subtracting && toggleHandlesOnSecondClick(curve, nearest))
+                return;
+
             beginKeyDrag(RecorderDragKind.GRAPH_KEY, curve, nearest, value, extending, subtracting,
                     window, pressX, pressY, time);
             return;
@@ -2890,6 +3026,36 @@ public class RecorderManager extends ManagerPackage {
         beginDrag(RecorderDragKind.GRAPH_PRESS, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
                 window, pressX, pressY, time, 0f);
         drag.anchorValue(value);
+    }
+
+    // A key clicked twice in quick succession on the graph lets its handles go their own ways, so either side bends
+    // alone, or joins them on one line again; true when it did
+    private boolean toggleHandlesOnSecondClick(RecordingCurveStruct curve, int keyIndex) {
+
+        long now = internal.getTime();
+        boolean second = curve == clickedCurve && keyIndex == clickedKey
+                && now - clickedKeyMillis <= EditorSetting.RECORDER_DOUBLE_CLICK_MILLIS;
+
+        this.clickedCurve = second ? null : curve;
+        this.clickedKey = second ? EngineSetting.INDEX_NOT_FOUND : keyIndex;
+        this.clickedKeyMillis = now;
+
+        if (!second)
+            return false;
+
+        boolean freeing = curve.getMode(keyIndex) != RecorderKeyMode.FREE;
+
+        if (freeing)
+            curve.setMode(keyIndex, RecorderKeyMode.FREE);
+        else
+            curve.joinHandles(keyIndex);
+
+        clearKeySelection();
+        addKeyToSelection(keyIndex);
+        finishKeyEdit(freeing
+                ? EditorSetting.RECORDER_STATUS_HANDLES_FREED
+                : EditorSetting.RECORDER_STATUS_HANDLES_JOINED);
+        return true;
     }
 
     private boolean isWithinGrab(
@@ -2966,7 +3132,14 @@ public class RecorderManager extends ManagerPackage {
     // key selected moves with the key carried; a node carried there lands as it does on the lanes, a sound lands
     // where it would begin, a box reaches to
     // the cursor, and a press on nothing scrolls the view, on the graph its values too
-    public void dragKeysTo(float x, float y, float time, double value, float secondsPerPixel, boolean snapping) {
+    public void dragKeysTo(
+            float x,
+            float y,
+            float time,
+            double value,
+            float secondsPerPixel,
+            double valuePerPixel,
+            boolean snapping) {
 
         if (!drag.isActive())
             return;
@@ -3010,8 +3183,17 @@ public class RecorderManager extends ManagerPackage {
         int keyIndex = drag.getIndex();
 
         if (drag.getKind() == RecorderDragKind.HANDLE_IN || drag.getKind() == RecorderDragKind.HANDLE_OUT) {
+
+            float handleTime = clip.toChildTime(time);
+            double handleValue = value;
+
+            if (snapping) {
+                handleTime = snapHandleTime(curve, keyIndex, handleTime, secondsPerPixel);
+                handleValue = snapHandleValue(curve, handleValue, valuePerPixel);
+            }
+
             curve.setHandle(keyIndex, drag.getKind() == RecorderDragKind.HANDLE_OUT,
-                    clip.toChildTime(time) - curve.getTime(keyIndex), value - curve.getValue(keyIndex));
+                    handleTime - curve.getTime(keyIndex), handleValue - curve.getValue(keyIndex));
             curveRevision++;
             return;
         }
@@ -3025,6 +3207,45 @@ public class RecorderManager extends ManagerPackage {
         moveSelectedKeys(curve, clip.toChildTime(landing) - drag.getKeyTime(),
                 drag.getKind() == RecorderDragKind.GRAPH_KEY ? value - drag.getPressValue() : 0.0);
         curveRevision++;
+    }
+
+    // A handle carried with snapping lands on the moment of any other key of its curve within reach
+    private float snapHandleTime(RecordingCurveStruct curve, int keyIndex, float time, float secondsPerPixel) {
+
+        float nearest = EditorSetting.RECORDER_SNAP_PIXELS * secondsPerPixel;
+        float snapped = time;
+
+        for (int i = 0; i < curve.size(); i++) {
+
+            float distance = Math.abs(curve.getTime(i) - time);
+
+            if (i != keyIndex && distance <= nearest) {
+                nearest = distance;
+                snapped = curve.getTime(i);
+            }
+        }
+
+        return snapped;
+    }
+
+    // A handle carried with snapping lands level with the value of any key of its curve within reach, its own key's
+    // laying it flat
+    private double snapHandleValue(RecordingCurveStruct curve, double value, double valuePerPixel) {
+
+        double nearest = EditorSetting.RECORDER_SNAP_PIXELS * valuePerPixel;
+        double snapped = value;
+
+        for (int i = 0; i < curve.size(); i++) {
+
+            double distance = Math.abs(curve.getValue(i) - value);
+
+            if (distance <= nearest) {
+                nearest = distance;
+                snapped = curve.getValue(i);
+            }
+        }
+
+        return snapped;
     }
 
     // Every key selected moved by the same time and value from where it stood, the one furthest along the way first
@@ -3353,15 +3574,6 @@ public class RecorderManager extends ManagerPackage {
 
     // Sound Layer \\
 
-    public void toggleSoundLayer() {
-
-        if (getKeySoundTrack() == null)
-            return;
-
-        this.soundLayerOpened = !soundLayerOpened;
-        keysRevision++;
-    }
-
     // Selecting a sound lets every selected key, any node and any transition go, so Delete always knows what it
     // removes
     public void selectSound(int soundIndex) {
@@ -3489,7 +3701,7 @@ public class RecorderManager extends ManagerPackage {
         float takeTime = Math.clamp(clip.toChildTime(time), clip.getInPoint(), clip.getOutPoint());
 
         this.selectedSound = recordingSoundBranch.addSound(track, soundHandle, takeTime);
-        this.soundLayerOpened = true;
+        showKeyLayer(EditorSetting.RECORDER_KEY_TRACK_SOUNDS);
         clearKeySelection();
         releaseNode();
         finishSoundEdit(EditorSetting.RECORDER_STATUS_SOUND_ADDED + soundHandle.getSoundName());
@@ -3900,20 +4112,22 @@ public class RecorderManager extends ManagerPackage {
 
     // Export Settings \\
 
-    public void cycleResolution() {
+    // Each export setting stepped to the value before or after it, round from the last to the first
+
+    public void cycleResolution(int direction) {
 
         if (!canEditExport())
             return;
 
         RecordingExportStruct exportStruct = recording.getExportStruct();
         int index = findIndex(EditorSetting.RECORDER_EXPORT_HEIGHTS, exportStruct.getHeight());
-        int next = (index + 1) % EditorSetting.RECORDER_EXPORT_HEIGHTS.length;
+        int next = Math.floorMod(index + direction, EditorSetting.RECORDER_EXPORT_HEIGHTS.length);
 
         exportStruct.setSize(EditorSetting.RECORDER_EXPORT_WIDTHS[next], EditorSetting.RECORDER_EXPORT_HEIGHTS[next]);
         markUnsaved();
     }
 
-    public void cycleFrameRate() {
+    public void cycleFrameRate(int direction) {
 
         if (!canEditExport())
             return;
@@ -3922,23 +4136,23 @@ public class RecorderManager extends ManagerPackage {
         int index = findIndex(EditorSetting.RECORDER_EXPORT_FRAME_RATES, exportStruct.getFrameRate());
 
         exportStruct.setFrameRate(EditorSetting.RECORDER_EXPORT_FRAME_RATES[
-                (index + 1) % EditorSetting.RECORDER_EXPORT_FRAME_RATES.length]);
+                Math.floorMod(index + direction, EditorSetting.RECORDER_EXPORT_FRAME_RATES.length)]);
         markUnsaved();
     }
 
-    public void cycleFormat() {
+    public void cycleFormat(int direction) {
 
         if (!canEditExport())
             return;
 
         RecordingExportStruct exportStruct = recording.getExportStruct();
 
-        exportStruct.setFormat(
-                VideoFormat.VALUES[(exportStruct.getFormat().ordinal() + 1) % VideoFormat.VALUES.length]);
+        exportStruct.setFormat(VideoFormat.VALUES[
+                Math.floorMod(exportStruct.getFormat().ordinal() + direction, VideoFormat.VALUES.length)]);
         markUnsaved();
     }
 
-    public void cycleMotionBlur() {
+    public void cycleMotionBlur(int direction) {
 
         if (!canEditExport())
             return;
@@ -3947,7 +4161,7 @@ public class RecorderManager extends ManagerPackage {
         int index = findIndex(EditorSetting.RECORDER_EXPORT_MOTION_BLUR_SAMPLES, exportStruct.getMotionBlurSamples());
 
         exportStruct.setMotionBlurSamples(EditorSetting.RECORDER_EXPORT_MOTION_BLUR_SAMPLES[
-                (index + 1) % EditorSetting.RECORDER_EXPORT_MOTION_BLUR_SAMPLES.length]);
+                Math.floorMod(index + direction, EditorSetting.RECORDER_EXPORT_MOTION_BLUR_SAMPLES.length)]);
         markUnsaved();
     }
 
@@ -3961,40 +4175,44 @@ public class RecorderManager extends ManagerPackage {
         markUnsaved();
     }
 
+    // The range a loop runs round and an export covers begins at the playhead, or at a moment typed
     public void setRangeStart() {
+        if (recording != null)
+            setRangeStartAt(playhead);
+    }
+
+    public void setRangeStartAt(float time) {
 
         if (!canEditExport())
             return;
 
+        float start = Math.clamp(time, 0f, recording.getDuration());
         RecordingExportStruct exportStruct = recording.getExportStruct();
-        exportStruct.setRangeStart(playhead);
+        exportStruct.setRangeStart(start);
 
-        if (exportStruct.hasRangeEnd() && exportStruct.getRangeEnd() < playhead)
+        if (exportStruct.hasRangeEnd() && exportStruct.getRangeEnd() < start)
             exportStruct.setRangeEnd(EditorSetting.RECORDER_TIME_UNSET);
 
         markUnsaved();
     }
 
     public void setRangeEnd() {
-
-        if (!canEditExport())
-            return;
-
-        RecordingExportStruct exportStruct = recording.getExportStruct();
-        exportStruct.setRangeEnd(playhead);
-
-        if (exportStruct.hasRangeStart() && exportStruct.getRangeStart() > playhead)
-            exportStruct.setRangeStart(EditorSetting.RECORDER_TIME_UNSET);
-
-        markUnsaved();
+        if (recording != null)
+            setRangeEndAt(playhead);
     }
 
-    public void clearRange() {
+    public void setRangeEndAt(float time) {
 
         if (!canEditExport())
             return;
 
-        recording.getExportStruct().clearRange();
+        float end = Math.clamp(time, 0f, recording.getDuration());
+        RecordingExportStruct exportStruct = recording.getExportStruct();
+        exportStruct.setRangeEnd(end);
+
+        if (exportStruct.hasRangeStart() && exportStruct.getRangeStart() > end)
+            exportStruct.setRangeStart(EditorSetting.RECORDER_TIME_UNSET);
+
         markUnsaved();
     }
 
@@ -4032,7 +4250,7 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
-        if (!hasClips() || !beginSession())
+        if (!hasClips() || !beginSession(true))
             return;
 
         RecordingExportStruct exportStruct = recording.getExportStruct();
@@ -4217,6 +4435,16 @@ public class RecorderManager extends ManagerPackage {
         return devContext == context && state.isSession();
     }
 
+    // True for the window whose sound system carries the session's sound: its Dev window, or for music without one
+    // the Recorder tab it plays through
+    public boolean isSoundHost(ContextPackage context) {
+        return soundHost == context && state.isSession();
+    }
+
+    public boolean isLooping() {
+        return looping;
+    }
+
     // True while the game is paused under a running session, and for the few frames after
     public boolean isSuspended() {
         return suspended;
@@ -4297,10 +4525,6 @@ public class RecorderManager extends ManagerPackage {
         return selectedClips.contains(clipIndex);
     }
 
-    public int getSelectedClipCount() {
-        return selectedClips.size();
-    }
-
     // The recordings the open one was opened inside, outermost first
     public ObjectArrayList<String> getParentNames() {
         return parentNames;
@@ -4379,8 +4603,10 @@ public class RecorderManager extends ManagerPackage {
         return keyTracks;
     }
 
-    public boolean isTrackOpened(RecordingCurveTrackStruct track) {
-        return openedTracks.contains(track);
+    // The track of the take the Keys tab shows, RECORDER_KEY_TRACK_SOUNDS for its Sounds layer, or
+    // RECORDER_KEY_LAYER_NONE
+    public int getKeyLayer() {
+        return keyLayer;
     }
 
     public RecordingCurveTrackStruct getSelectedTrack() {
@@ -4409,17 +4635,8 @@ public class RecorderManager extends ManagerPackage {
         return keyTake != null ? keyTake.getSoundTrack() : null;
     }
 
-    public boolean isSoundLayerOpened() {
-        return soundLayerOpened;
-    }
-
     public int getSelectedSound() {
         return selectedSound;
-    }
-
-    // True when the sound loops, running for as long as it is asked
-    public boolean isSoundLooping(int soundIndex) {
-        return recordingSoundBranch.isLooping(getKeySoundTrack(), soundIndex);
     }
 
     public boolean isSoundHeardIn(RecordingClipStruct clip, int soundIndex) {

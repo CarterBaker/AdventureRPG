@@ -112,5 +112,5 @@ Every tool that selects many things follows one gesture set, each modifier a hel
 - Where the canvas takes a brush, **Select strokes it**: a drag selects what the brush covers, replacing the selection,
   Shift adding and Ctrl taking away, and a press where it covers nothing clears or boxes as above.
 
-The Recorder Keys tab (keys on a curve's row or graph), the character Mesh and Weights tabs (vertices) and the World
+The Keys and Keys Graph tabs (keys on a curve's row or graph), the character Mesh and Weights tabs (vertices) and the World
 Editor's Select tool (hand-placed settlements and structures) follow it.

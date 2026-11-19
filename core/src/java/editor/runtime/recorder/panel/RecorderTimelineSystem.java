@@ -37,8 +37,8 @@ public class RecorderTimelineSystem extends SystemPackage {
      * clip that is only heard — a sound laid from the sound library, a song,
      * a notes clip — is drawn in a shade of its own, and each is named after
      * its source, a nested recording's name in the form its kind gives it.
-     * The transport, the Keys, the Bin, the Assets and the settings are
-     * their own tabs beside it, and the recordings themselves are listed in
+     * The transport, the Keys and the Keys Graph are their own tabs beside
+     * it, and the recordings themselves are listed in
      * the Recordings tool. Only what lies in view is drawn,
      * cut at the view's edges, and the view's zooming and scrolling redraws
      * the timeline alone. Both playheads follow the playhead every frame from

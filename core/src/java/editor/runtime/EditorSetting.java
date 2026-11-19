@@ -243,7 +243,8 @@ public class EditorSetting {
             .with(FileMenuAction.DELETE, "deleteSelection");
     public static final FileMenuTableStruct FILE_MENU_RECORDER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.RecorderBranch")
-            .with(FileMenuAction.SAVE, "saveRecording");
+            .with(FileMenuAction.SAVE, "saveRecording")
+            .with(FileMenuAction.EXPORT, "exportMedia");
     public static final FileMenuTableStruct FILE_MENU_RECORDINGS = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.RecordingsBranch")
             .with(FileMenuAction.NEW, "newRecording")
@@ -451,9 +452,8 @@ public class EditorSetting {
     public static final String TAB_TITLE_PROFILER = "Profiler";
     public static final String TAB_TITLE_RECORDER = "Recorder";
     public static final String TAB_TITLE_TIMELINE = "Timeline";
-    public static final String TAB_TITLE_RECORDER_KEYS = "Recorder Keys";
-    public static final String TAB_TITLE_RECORDER_BIN = "Recorder Bin";
-    public static final String TAB_TITLE_RECORDER_SETTINGS = "Recorder Settings";
+    public static final String TAB_TITLE_RECORDER_KEYS = "Keys";
+    public static final String TAB_TITLE_RECORDER_KEY_GRAPH = "Keys Graph";
     public static final String TAB_TITLE_RECORDINGS = "Media";
     public static final String TAB_TITLE_SOUND_LIBRARY = "Sound Library";
     public static final String TAB_TITLE_NOTE_LIBRARY = "Note Library";
@@ -2412,8 +2412,45 @@ public class EditorSetting {
     public static final String TOOL_ACTION_LABEL_NEST_SELECTION = "Nest Selection";
     public static final String TOOL_ACTION_LABEL_OPEN_NESTED = "Open Nested";
     public static final String TOOL_ACTION_HEADER_EXPORT = "Export";
-    public static final String TOOL_ACTION_LABEL_EXPORT = "Export";
     public static final String TOOL_ACTION_LABEL_EXPORT_MIDI = "Export MIDI";
+    public static final String TOOL_ACTION_HEADER_TAKES = "Takes";
+    public static final String TOOL_ACTION_LABEL_TAKE_PLACE = "Lay Take";
+    public static final String TOOL_ACTION_LABEL_TAKE_RENAME = "Rename Take";
+    public static final String TOOL_ACTION_LABEL_TAKE_DELETE = "Delete Take";
+    public static final String TOOL_ACTION_HEADER_CLIP = "Clip";
+    public static final String TOOL_ACTION_LABEL_TRIM_START = "Trim Start";
+    public static final String TOOL_ACTION_LABEL_TRIM_END = "Trim End";
+    public static final String TOOL_ACTION_LABEL_SPLIT = "Split at Playhead";
+    public static final String TOOL_ACTION_LABEL_STAMP = "Stamp Edit";
+    public static final String TOOL_ACTION_LABEL_TRANSITION_IN = "Transition In";
+    public static final String TOOL_ACTION_LABEL_TRANSITION_OUT = "Transition Out";
+    public static final String TOOL_ACTION_LABEL_REMOVE_CLIP = "Remove Clip";
+    public static final String TOOL_ACTION_HEADER_KEYS = "Keys";
+    public static final String TOOL_ACTION_LABEL_KEY_ADD = "Add Key";
+    public static final String TOOL_ACTION_LABEL_KEY_DELETE = "Delete Keys";
+    public static final String TOOL_ACTION_LABEL_KEY_MODE = "Key Mode";
+    public static final String TOOL_ACTION_LABEL_KEY_VALUE = "Key Value";
+    public static final String TOOL_ACTION_LABEL_FRAME_KEYS = "Frame Keys";
+    public static final String TOOL_ACTION_LABEL_CURVE_REFIT = "Refit Curve";
+    public static final String TOOL_ACTION_LABEL_TAKE_REFIT = "Refit Take";
+    public static final String TOOL_ACTION_HEADER_SOUNDS = "Sounds";
+    public static final String TOOL_ACTION_LABEL_SOUND_ADD = "Add Sound";
+    public static final String TOOL_ACTION_LABEL_SOUND_VOLUME = "Sound Volume";
+    public static final String TOOL_ACTION_LABEL_SOUND_PITCH = "Sound Pitch";
+    public static final String TOOL_ACTION_LABEL_SOUND_LENGTH = "Sound Length";
+    public static final String TOOL_ACTION_LABEL_SOUND_SEEK = "Playhead to Sound";
+    public static final String TOOL_ACTION_LABEL_SOUND_COPY = "Copy to Playhead";
+    public static final String TOOL_ACTION_LABEL_SOUND_REPLACE = "Replace Sound";
+    public static final String TOOL_ACTION_LABEL_SOUND_REMOVE = "Remove Sound";
+    public static final String TOOL_ACTION_LABEL_SOUND_REMOVE_ALL = "Remove Every Time";
+    public static final String TOOL_ACTION_HEADER_TRANSITION = "Transition";
+    public static final String TOOL_ACTION_LABEL_TRANSITION_LENGTH = "Transition Length";
+    public static final String TOOL_ACTION_LABEL_TRANSITION_REPLACE = "Replace Transition";
+    public static final String TOOL_ACTION_LABEL_TRANSITION_REMOVE = "Remove Transition";
+    public static final String TOOL_ACTION_HEADER_NODE = "Movement";
+    public static final String TOOL_ACTION_LABEL_NODE_PREVIOUS = "Previous State";
+    public static final String TOOL_ACTION_LABEL_NODE_NEXT = "Next State";
+    public static final String TOOL_ACTION_LABEL_NODE_REMOVE = "Remove Node";
     public static final String TOOL_OPTION_SIZE = "Size";
     public static final String TOOL_OPTION_STRENGTH = "Strength";
     public static final String TOOL_OPTION_TWIST = "Twist";
@@ -2788,6 +2825,7 @@ public class EditorSetting {
     // are built from
     public static final String RECORDER_TRANSPORT_PROPERTIES_TITLE = "Music";
     public static final String RECORDER_TIMELINE_PROPERTIES_TITLE = "Mixer";
+    public static final String RECORDER_OUTLINER_TITLE = "Recorder Settings";
     public static final CharacterViewTemplateStruct RECORDER_MUSIC_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/Recorder/music_header_row",
             "editor/Recorder/music_item_row",
@@ -2862,6 +2900,25 @@ public class EditorSetting {
     public static final String RECORDER_ROW_ENUM_SEPARATOR = "_";
     public static final String RECORDER_ROW_WORD_SEPARATOR = " ";
     public static final String RECORDER_ROW_KEY_OCTAVE = "4";
+    public static final String RECORDER_ROWS_HEADER_RECORD = "Record";
+    public static final String RECORDER_ROWS_HEADER_EXPORT = "Export";
+    public static final String RECORDER_ROWS_NO_EXPORT = "Open a media file to set its export";
+    public static final String RECORDER_ROW_LABEL_TIME_RAMP = "Time ramp";
+    public static final String RECORDER_ROW_LABEL_RESOLUTION = "Resolution";
+    public static final String RECORDER_ROW_LABEL_FRAME_RATE = "Frame rate";
+    public static final String RECORDER_ROW_LABEL_FORMAT = "Format";
+    public static final String RECORDER_ROW_LABEL_MOTION_BLUR = "Motion blur";
+    public static final String RECORDER_ROW_LABEL_SUPERSAMPLE = "Supersample";
+    public static final String RECORDER_ROW_LABEL_RANGE_START = "Range in";
+    public static final String RECORDER_ROW_LABEL_RANGE_END = "Range out";
+    public static final String RECORDER_ROW_FORMAT_RESOLUTION = "%d x %d";
+    public static final String RECORDER_ROW_FORMAT_FRAME_RATE = "%d fps";
+    public static final String RECORDER_ROW_FORMAT_MOTION_BLUR = "%d samples";
+    public static final String RECORDER_ROW_FORMAT_RAMP = "%.0fs";
+    public static final String RECORDER_ROW_FORMAT_SECONDS = "%.2f";
+    public static final String RECORDER_ROW_VALUE_RAMP_CUT = "Cut";
+    public static final String RECORDER_ROW_VALUE_RANGE_START = "Media start";
+    public static final String RECORDER_ROW_VALUE_RANGE_END = "Media end";
 
     // Recorder Render — a media file's music mixed offline past its end for its release, a stretch at a time, into a
     // raw file encoded to a music sound
@@ -2933,6 +2990,7 @@ public class EditorSetting {
     public static final String RECORDER_MENU = "editor/Recorder/Recorder";
     public static final String RECORDER_TIMELINE_MENU = "editor/Timeline/Timeline";
     public static final String RECORDER_KEYS_MENU = "editor/Recorder/RecorderKeys";
+    public static final String RECORDER_KEY_GRAPH_MENU = "editor/Recorder/RecorderKeyGraph";
     public static final String SOUND_LIBRARY_MENU = "editor/SoundLibrary/SoundLibrary";
     public static final String NOTE_LIBRARY_MENU = "editor/NoteLibrary/NoteLibrary";
     public static final String SCENE_ASSETS_MENU = "editor/SceneAssets/SceneAssets";
@@ -2993,7 +3051,8 @@ public class EditorSetting {
     public static final int RECORDER_ENTRY_CLIP_LANES = 2;
     public static final int RECORDER_ENTRY_RULER = 3;
     public static final int RECORDER_ENTRY_KEY_ROWS = 1;
-    public static final int RECORDER_ENTRY_KEY_GRAPH = 2;
+    public static final int RECORDER_ENTRY_KEY_STRIPS = 2;
+    public static final int RECORDER_ENTRY_KEY_GRAPH = 1;
 
     // Recorder — channels
     public static final String RECORDER_CHANNEL_LABEL_CAMERA = "Camera";
@@ -3105,10 +3164,31 @@ public class EditorSetting {
     // rows below, the Sounds layer standing in a place of its own with a row for each sound it names, and a press
     // takes hold of a key or a handle this near it
     public static final String RECORDER_KEY_ROW_SEPARATOR = ":";
-    public static final int RECORDER_KEY_ROW_TRACK = -1;
     public static final int RECORDER_KEY_ROW_MOVEMENT = -2;
     public static final int RECORDER_KEY_ROW_GESTURES = -3;
     public static final int RECORDER_KEY_TRACK_SOUNDS = -1;
+    public static final int RECORDER_KEY_LAYER_NONE = -2;
+
+    // Recorder — the Layers tab; its views, a layer's key naming a track by its place in the take, the Sounds layer,
+    // a group by what it holds and a take by its place in the bin, and the words its rows and title show
+    public static final String RECORDER_LAYER_VIEW_LABEL_LAYERS = "Layers";
+    public static final String RECORDER_LAYER_VIEW_LABEL_TAKES = "Takes";
+    public static final String RECORDER_LAYER_KEY_TRACK_PREFIX = "track_";
+    public static final String RECORDER_LAYER_KEY_TAKE_PREFIX = "take_";
+    public static final String RECORDER_LAYER_KEY_SOUNDS = "sounds";
+    public static final String RECORDER_LAYER_KEY_CHARACTERS = "characters";
+    public static final String RECORDER_LAYER_KEY_ITEMS = "items";
+    public static final String RECORDER_LAYER_KEY_VEHICLES = "vehicles";
+    public static final String RECORDER_LAYER_LABEL_CHARACTERS = "Characters";
+    public static final String RECORDER_LAYER_LABEL_ITEMS = "Items";
+    public static final String RECORDER_LAYER_LABEL_VEHICLES = "Vehicles";
+    public static final String RECORDER_LAYER_SOUNDS_FORMAT = "Sounds (%d)";
+    public static final String RECORDER_LAYER_TAKE_FORMAT = "%s  (%s, %.1fs)";
+    public static final String RECORDER_LAYER_CHANNEL_SEPARATOR = ", ";
+    public static final String RECORDER_LAYERS_TITLE_TAKE_FORMAT = "Layers of %s";
+    public static final String RECORDER_LAYERS_TITLE_TAKES_FORMAT = "Takes of %s";
+    public static final String RECORDER_LAYERS_TITLE_NO_CLIP = "Recorder: select a clip of a take";
+    public static final String RECORDER_LAYERS_TITLE_NO_RECORDING = "Recorder: no media file open";
     public static final float RECORDER_KEY_GRAB_PIXELS = 6f;
     public static final float RECORDER_GRAPH_GRAB_PIXELS = 9f;
     public static final double RECORDER_GRAPH_MARGIN_SHARE = 0.1;
@@ -3329,11 +3409,16 @@ public class EditorSetting {
 
     // Recorder — status text
     public static final String RECORDER_STATUS_READY = "Ready";
+    public static final String RECORDER_STATUS_LOOP_ON = "Loop on: playing runs round the range or the whole file";
+    public static final String RECORDER_STATUS_LOOP_OFF = "Loop off";
+    public static final String RECORDER_STATUS_HANDLES_FREED = "Handles freed on ";
+    public static final String RECORDER_STATUS_HANDLES_JOINED = "Handles joined on ";
+    public static final String RECORDER_STATUS_NO_TAKE = "Pick a take in the Layers tab's Takes view first";
     public static final String RECORDER_STATUS_RECORDING = "Recording ";
     public static final String RECORDER_STATUS_PLAYING = "Playing";
     public static final String RECORDER_STATUS_PAUSED = "Paused";
     public static final String RECORDER_STATUS_TAKE_SAVED = "Saved take ";
-    public static final String RECORDER_STATUS_SUSPENDED = "Paused with the game: close the pause menu to carry on";
+    public static final String RECORDER_STATUS_SUSPENDED = "Export paused with the game: close the pause menu";
     public static final String RECORDER_STATUS_PLACED = "Placed ";
     public static final String RECORDER_STATUS_MOVED = "Moved ";
     public static final String RECORDER_STATUS_CUT = "Cut ";
@@ -3452,10 +3537,11 @@ public class EditorSetting {
     public static final String RECORDER_KEY_SUPERSAMPLE = "supersample";
     public static final String RECORDER_KEY_RANGE_START = "range_start";
     public static final String RECORDER_KEY_RANGE_END = "range_end";
-    public static final String RECORDER_KEY_RANGE_CLEAR = "range_clear";
-    public static final String RECORDER_KEY_EXPORT = "export";
-    public static final String RECORDER_KEY_CANCEL_EXPORT = "cancel_export";
     public static final String RECORDER_KEY_EXPORT_MIDI = "export_midi";
+    public static final String RECORDER_KEY_TAKE_PLACE = "take_place";
+    public static final String RECORDER_KEY_TAKE_RENAME = "take_rename";
+    public static final String RECORDER_KEY_TAKE_DELETE = "take_delete";
+    public static final String RECORDER_KEY_FRAME_KEYS = "frame_keys";
 
     // Commands — Recorder
     public static final String COMMAND_RECORD = "record";

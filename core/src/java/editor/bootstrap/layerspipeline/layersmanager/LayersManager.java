@@ -2,6 +2,7 @@ package editor.bootstrap.layerspipeline.layersmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
+import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
@@ -21,7 +22,8 @@ public class LayersManager extends ManagerPackage {
      * the one pair that owns them, and keeps here the groups turned from how
      * they start, so every Layers tab folds alike. Picking, showing and
      * hiding a layer go to the target window, and so do the New Layer and
-     * Delete Layer icons, run as the window's own tool actions; the revision
+     * Delete Layer icons, run as the window's own tool actions, and the view
+     * its stack is listed in when it lists it more than one way; the revision
      * moves whenever a group is folded or opened.
      */
 
@@ -78,6 +80,12 @@ public class LayersManager extends ManagerPackage {
 
         if (provider != null)
             provider.toggleLayerVisible(layerKey);
+    }
+
+    // The view the target window lists its stack in, where it lists it more than one way
+    public void showLayerView(int view) {
+        if (getProvider() instanceof LayerViewsProvider views)
+            views.showLayerView(view);
     }
 
     // The New Layer or Delete Layer icon, run as the target window's tool action of that name, where it has one
