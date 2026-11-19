@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 122
-Task: RecorderTakeDrag
+Delivery: 123
+Task: EntityMeshTopologyHair
 Applied: 2026-11-19
 
 ## Log
@@ -132,3 +132,4 @@ Applied: 2026-11-19
 - 120, 2026-11-19, TimelinePanAndSceneAssetsMenu
 - 121, 2026-11-19, RecorderWorkflow
 - 122, 2026-11-19, RecorderTakeDrag
+- 123, 2026-11-19, EntityMeshTopologyHair

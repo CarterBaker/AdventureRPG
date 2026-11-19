@@ -33,7 +33,11 @@ public enum ToolCanvas {
      * weights also take Pick, which picks the bone under the pointer to weigh, and
      * Pose, which turns a bone out of the way while the mesh follows;
      * every modelling canvas of a character mirrors, and its mesh, weights
-     * and rig choose how the bones are drawn. A character's Stamp tab joins
+     * and rig choose how the bones are drawn. A character's Topology tab
+     * flips, cuts and dissolves the edges clicked and evens the faces under
+     * the brush, and cleans what a retopology pass leaves; its Hair tab draws,
+     * grows, combs, smooths, lengthens, shortens and cuts strands of hair
+     * and paints them with the material chosen. A character's Stamp tab joins
      * body parts to it, each scaled and twisted, and lays fur combed one way
      * or the other, with their twins across the body while mirroring. The recorder's Timeline selects and cuts
      * clips, nests the selection or opens a nested clip, and exports the
@@ -68,16 +72,39 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_MESH,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PICK,
-                    EditorTool.POSE, EditorTool.TOPOLOGY },
+                    EditorTool.POSE },
             new ToolActionGroupStruct[] { meshTransform(), meshGeometry(), meshSelection(), meshPose() },
+            false,
+            screenSize(),
+            mirror(),
+            xray(),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON),
+            bones()),
+    CHARACTER_TOPOLOGY(
+            EditorSetting.TOOL_CANVAS_CHARACTER_TOPOLOGY,
+            new EditorTool[] {
+                    EditorTool.SELECT, EditorTool.FLIP_EDGE, EditorTool.LOOP_CUT, EditorTool.DISSOLVE_LOOP,
+                    EditorTool.TOPOLOGY },
+            new ToolActionGroupStruct[] { topologyFaces(), topologyCleanUp(), meshSelection() },
             false,
             screenSize(),
             strength(EditorSetting.TOOL_TOPOLOGY_STRENGTH_DEFAULT),
             detail(),
             mirror(),
             xray(),
-            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON),
-            bones()),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
+    CHARACTER_HAIR(
+            EditorSetting.TOOL_CANVAS_CHARACTER_HAIR,
+            new EditorTool[] {
+                    EditorTool.SELECT, EditorTool.DRAW, EditorTool.PLACE, EditorTool.BRUSH, EditorTool.NUDGE,
+                    EditorTool.SMOOTH, EditorTool.RAISE, EditorTool.LOWER, EditorTool.ERASE, EditorTool.PICK },
+            new ToolActionGroupStruct[] { hairStrands() },
+            true,
+            screenSize(),
+            strength(EditorSetting.TOOL_HAIR_STRENGTH_DEFAULT),
+            length(),
+            width(),
+            mirror()),
     CHARACTER_SCULPT(
             EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
             new EditorTool[] {
@@ -209,9 +236,6 @@ public enum ToolCanvas {
                 EditorSetting.CHARACTER_EDITOR_HEADER_GEOMETRY,
                 action(EditorSetting.CHARACTER_EDITOR_LABEL_EXTRUDE, EditorSetting.CHARACTER_EDITOR_KEY_EXTRUDE),
                 action(EditorSetting.CHARACTER_EDITOR_LABEL_DUPLICATE, EditorSetting.CHARACTER_EDITOR_KEY_DUPLICATE),
-                action(EditorSetting.CHARACTER_EDITOR_LABEL_MAKE_FACE, EditorSetting.CHARACTER_EDITOR_KEY_MAKE_FACE),
-                action(EditorSetting.CHARACTER_EDITOR_LABEL_MERGE, EditorSetting.CHARACTER_EDITOR_KEY_MERGE),
-                action(EditorSetting.CHARACTER_EDITOR_LABEL_SUBDIVIDE, EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE),
                 action(
                         EditorSetting.CHARACTER_EDITOR_LABEL_DELETE_VERTICES,
                         EditorSetting.CHARACTER_EDITOR_KEY_DELETE_VERTICES),
@@ -224,6 +248,50 @@ public enum ToolCanvas {
                 action(
                         EditorSetting.CHARACTER_EDITOR_LABEL_SYMMETRIZE_NEGATIVE,
                         EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_NEGATIVE));
+    }
+
+    // The faces' own topology: made, joined, cut finer and turned over
+    private static ToolActionGroupStruct topologyFaces() {
+        return new ToolActionGroupStruct(
+                EditorSetting.CHARACTER_TOPOLOGY_HEADER_FACES,
+                action(EditorSetting.CHARACTER_EDITOR_LABEL_MAKE_FACE, EditorSetting.CHARACTER_EDITOR_KEY_MAKE_FACE),
+                action(EditorSetting.CHARACTER_EDITOR_LABEL_MERGE, EditorSetting.CHARACTER_EDITOR_KEY_MERGE),
+                action(
+                        EditorSetting.CHARACTER_TOPOLOGY_LABEL_MERGE_DISTANCE,
+                        EditorSetting.CHARACTER_TOPOLOGY_KEY_MERGE_DISTANCE),
+                action(EditorSetting.CHARACTER_EDITOR_LABEL_SUBDIVIDE, EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE),
+                action(EditorSetting.CHARACTER_TOPOLOGY_LABEL_FLIP_FACES, EditorSetting.CHARACTER_TOPOLOGY_KEY_FLIP_FACES),
+                action(
+                        EditorSetting.CHARACTER_EDITOR_LABEL_DELETE_FACES,
+                        EditorSetting.CHARACTER_EDITOR_KEY_DELETE_FACES));
+    }
+
+    // The checks a retopology pass runs before it is done: what is left broken removed, what breaks the flow selected
+    private static ToolActionGroupStruct topologyCleanUp() {
+        return new ToolActionGroupStruct(
+                EditorSetting.CHARACTER_TOPOLOGY_HEADER_CLEAN_UP,
+                action(
+                        EditorSetting.CHARACTER_TOPOLOGY_LABEL_DELETE_DEGENERATE,
+                        EditorSetting.CHARACTER_TOPOLOGY_KEY_DELETE_DEGENERATE),
+                action(
+                        EditorSetting.CHARACTER_TOPOLOGY_LABEL_SELECT_POLES,
+                        EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_POLES),
+                action(
+                        EditorSetting.CHARACTER_TOPOLOGY_LABEL_SELECT_TRIANGLES,
+                        EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_TRIANGLES),
+                action(
+                        EditorSetting.CHARACTER_TOPOLOGY_LABEL_SELECT_NON_MANIFOLD,
+                        EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_NON_MANIFOLD));
+    }
+
+    // The strands of the groom open: taken from the hair worn, selected and removed
+    private static ToolActionGroupStruct hairStrands() {
+        return new ToolActionGroupStruct(
+                EditorSetting.CHARACTER_HAIR_HEADER_STRANDS,
+                action(EditorSetting.CHARACTER_HAIR_LABEL_FROM_WORN, EditorSetting.CHARACTER_HAIR_KEY_FROM_WORN),
+                action(EditorSetting.CHARACTER_HAIR_LABEL_SELECT_ALL, EditorSetting.CHARACTER_HAIR_KEY_SELECT_ALL),
+                action(EditorSetting.CHARACTER_HAIR_LABEL_SELECT_NONE, EditorSetting.CHARACTER_HAIR_KEY_SELECT_NONE),
+                action(EditorSetting.CHARACTER_HAIR_LABEL_DELETE, EditorSetting.CHARACTER_HAIR_KEY_DELETE));
     }
 
     private static ToolActionGroupStruct meshWeights() {
@@ -527,6 +595,26 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_TOPOLOGY_DETAIL_MAX,
                 EditorSetting.TOOL_TOPOLOGY_DETAIL_STEP,
                 EditorSetting.TOOL_TOPOLOGY_DETAIL_DEFAULT);
+    }
+
+    // How long a new strand of hair grows, in centimetres
+    private static ToolOptionStruct length() {
+        return new ToolOptionStruct(
+                ToolOption.LENGTH,
+                EditorSetting.TOOL_HAIR_LENGTH_MIN,
+                EditorSetting.TOOL_HAIR_LENGTH_MAX,
+                EditorSetting.TOOL_HAIR_LENGTH_STEP,
+                EditorSetting.TOOL_HAIR_LENGTH_DEFAULT);
+    }
+
+    // How wide a new strand's card is at its root, in millimetres
+    private static ToolOptionStruct width() {
+        return new ToolOptionStruct(
+                ToolOption.WIDTH,
+                EditorSetting.TOOL_HAIR_WIDTH_MIN,
+                EditorSetting.TOOL_HAIR_WIDTH_MAX,
+                EditorSetting.TOOL_HAIR_WIDTH_STEP,
+                EditorSetting.TOOL_HAIR_WIDTH_DEFAULT);
     }
 
     private static ToolOptionStruct bones() {

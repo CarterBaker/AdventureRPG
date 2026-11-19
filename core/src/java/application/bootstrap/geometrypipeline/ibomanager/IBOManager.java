@@ -123,6 +123,18 @@ public class IBOManager extends ManagerPackage {
         return IBOGLSLUtility.updateIndexData(iboInstance, indices.elements(), indices.size());
     }
 
+    public IBOInstance createIBOInstance(VAOInstance vaoInstance, IntArrayList indices) {
+        return IBOGLSLUtility.uploadIndexData(
+                vaoInstance,
+                create(IBOInstance.class),
+                indices.elements(),
+                indices.size());
+    }
+
+    public IBOInstance updateIBOInstance(IBOInstance iboInstance, IntArrayList indices) {
+        return IBOGLSLUtility.updateIndexData(iboInstance, indices.elements(), indices.size());
+    }
+
     // Respecifies a registered buffer in place, so every VAO already built over it stays valid
     public IBOHandle updateIBOHandle(IBOHandle iboHandle, ShortArrayList indices) {
         return IBOGLSLUtility.updateIndexData(iboHandle, indices.elements(), indices.size());

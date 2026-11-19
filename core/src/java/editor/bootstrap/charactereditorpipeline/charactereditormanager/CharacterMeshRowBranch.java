@@ -12,11 +12,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class CharacterMeshRowBranch extends BranchPackage {
 
     /*
-     * Lists the rows of the Mesh, Sculpt and Weights panels. The left panel
+     * Lists the rows of the Mesh, Topology, Sculpt and Weights panels. The left panel
      * names every part the character wears a mesh for, the active one
      * selected; the right panel holds the active part's options, the
      * selection's numbers, the selected faces' texture, new parts and file in
-     * Mesh mode, its shape keys and file in Sculpt mode, and the selected
+     * Mesh mode, its count of quads, triangles and poles and file in Topology
+     * mode, its shape keys and file in Sculpt mode, and the selected
      * bone's weight target, the active vertex's weights and file in Weights
      * mode; Mirror and X-Ray are the Tools panel's. Every tool and action — transform, geometry,
      * weight and selection — is the Tools panel's, listed by the mode's tool
@@ -137,6 +138,21 @@ class CharacterMeshRowBranch extends BranchPackage {
         addChoice(rows, EditorSetting.CHARACTER_EDITOR_KEY_PART_TEXTURE, EditorSetting.CHARACTER_EDITOR_LABEL_TEXTURE);
         addAction(rows, EditorSetting.CHARACTER_EDITOR_KEY_ADD_PART,
                 EditorSetting.CHARACTER_EDITOR_LABEL_ADD_PART + characterEditorManager.getSelectedBoneName());
+    }
+
+    // Topology \\
+
+    void buildTopologyRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        CharacterMeshDocumentInstance document = characterEditorManager.getActiveMeshDocument();
+
+        if (!addDocumentHeader(document, rows))
+            return;
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_TOPOLOGY_HEADER_STATS));
+        rows.add(CharacterViewRowStruct.header(characterEditorManager.getTopologyStatsText(document)));
+
+        addFileRows(rows);
     }
 
     // Sculpt \\

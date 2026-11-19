@@ -185,7 +185,8 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         }
 
         if (!editorInputSystem.isPointerActive() || viewCameraSystem.isDragging()
-                || characterEditorManager.isBoneTool() || characterEditorManager.armsStamp())
+                || characterEditorManager.isBoneTool() || characterEditorManager.isEdgeTool()
+                || characterEditorManager.armsStamp())
             return;
 
         if (editorInputSystem.isClicked(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT))

@@ -197,6 +197,31 @@ public class MeshManager extends ManagerPackage {
         meshInstance.constructor(vaoInstance, vboInstance, iboInstance);
     }
 
+    // A runtime mesh indexed by unsigned ints, for one holding more vertices than a short reaches
+    public MeshInstance createMesh(
+            VAOHandle vaoTemplate,
+            FloatArrayList vertices,
+            IntArrayList indices) {
+
+        VAOInstance vaoInstance = vaoManager.createVAOInstance(vaoTemplate);
+        VBOInstance vboInstance = vboManager.createVBOInstance(vaoInstance, vertices);
+        IBOInstance iboInstance = iboManager.createIBOInstance(vaoInstance, indices);
+
+        MeshInstance meshInstance = create(MeshInstance.class);
+        meshInstance.constructor(vaoInstance, vboInstance, iboInstance);
+
+        return meshInstance;
+    }
+
+    public void updateMesh(MeshInstance meshInstance, FloatArrayList vertices, IntArrayList indices) {
+
+        VAOInstance vaoInstance = meshInstance.getVAOInstance();
+        VBOInstance vboInstance = vboManager.updateVBOInstance(vaoInstance, meshInstance.getVBOInstance(), vertices);
+        IBOInstance iboInstance = iboManager.updateIBOInstance(meshInstance.getIBOInstance(), indices);
+
+        meshInstance.constructor(vaoInstance, vboInstance, iboInstance);
+    }
+
     public MeshHandle createMeshHandle(
             String meshName,
             VAOHandle vaoTemplate,
@@ -243,7 +268,7 @@ public class MeshManager extends ManagerPackage {
         return RiggedMeshArpgUtility.write(mesh, sourceArpg);
     }
 
-    // The most quads the character tools edit: their overlays draw every corner, indexed by an unsigned short
+    // The most quads the character tools edit
     public boolean fitsRiggedMeshLimit(RiggedMeshStruct mesh) {
         return fitsRiggedMeshLimit(mesh.getFaceCount());
     }

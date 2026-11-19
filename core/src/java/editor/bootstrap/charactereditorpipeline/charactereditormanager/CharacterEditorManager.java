@@ -6,11 +6,15 @@ import java.util.Objects;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
+import application.bootstrap.entitypipeline.feature.FeatureHandle;
+import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
+import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterGroomStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintCanvasStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStampStruct;
@@ -86,6 +90,7 @@ public class CharacterEditorManager extends ManagerPackage {
     // Internal
     private InfoManager infoManager;
     private ToolManager toolManager;
+    private MeshManager meshManager;
     private CharacterEditBranch characterEditBranch;
     private CharacterPreviewBranch characterPreviewBranch;
     private CharacterLookBranch characterLookBranch;
@@ -106,6 +111,8 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterSculptBranch characterSculptBranch;
     private CharacterShapeBranch characterShapeBranch;
     private CharacterTopologyBranch characterTopologyBranch;
+    private CharacterEdgeBranch characterEdgeBranch;
+    private CharacterGroomBranch characterGroomBranch;
     private CharacterCommandBranch characterCommandBranch;
     private CharacterRigBranch characterRigBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
@@ -181,6 +188,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Scratch
     private ObjectArrayList<String> partKeys;
+    private ObjectArrayList<String> emptyNames;
     private ObjectArrayList<CharacterMeshDocumentInstance> meshDocuments;
 
     // Status
@@ -208,6 +216,8 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterSculptBranch = create(CharacterSculptBranch.class);
         this.characterShapeBranch = create(CharacterShapeBranch.class);
         this.characterTopologyBranch = create(CharacterTopologyBranch.class);
+        this.characterEdgeBranch = create(CharacterEdgeBranch.class);
+        this.characterGroomBranch = create(CharacterGroomBranch.class);
         create(CharacterSymmetryBranch.class);
         this.characterCommandBranch = create(CharacterCommandBranch.class);
         this.characterRigBranch = create(CharacterRigBranch.class);
@@ -274,6 +284,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
         // Scratch
         this.partKeys = new ObjectArrayList<>();
+        this.emptyNames = new ObjectArrayList<>();
         this.meshDocuments = new ObjectArrayList<>();
     }
 
@@ -281,6 +292,7 @@ public class CharacterEditorManager extends ManagerPackage {
     protected void get() {
         this.infoManager = get(InfoManager.class);
         this.toolManager = get(ToolManager.class);
+        this.meshManager = get(MeshManager.class);
         this.stampManager = get(StampManager.class);
     }
 
@@ -1252,6 +1264,34 @@ public class CharacterEditorManager extends ManagerPackage {
         characterMeshBranch.preview(document);
     }
 
+    // Edges \\
+
+    // The Topology tab's edge tool in use on the edge from a face's corner to the next: Flip Edge turns it, backward
+    // when inverted, Loop Cut cuts the ring across it, Dissolve Loop takes its loop away
+    public void applyEdgeTool(int faceIndex, int corner, boolean inverted) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document == null || !isEdgeTool())
+            return;
+
+        if (document.isEditingShape()) {
+            setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_TOPOLOGY_SHAPE);
+            return;
+        }
+
+        switch (toolManager.getTool(mode.getToolCanvas())) {
+            case FLIP_EDGE -> characterEdgeBranch.flip(document, faceIndex, corner, inverted);
+            case LOOP_CUT -> characterEdgeBranch.cutLoop(document, faceIndex, corner);
+            default -> characterEdgeBranch.dissolveLoop(document, faceIndex, corner);
+        }
+    }
+
+    // The Properties tab's count of the active part's quads, triangles and poles
+    String getTopologyStatsText(CharacterMeshDocumentInstance document) {
+        return characterEdgeBranch.getStatsText(document);
+    }
+
     public void endStroke() {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
@@ -1458,7 +1498,7 @@ public class CharacterEditorManager extends ManagerPackage {
     // Rig \\
 
     // Follows the rig the active character is built on; false while there is none to edit
-    private boolean syncRig() {
+    boolean syncRig() {
 
         characterRigBranch.sync(activeDocument != null ? activeDocument.getRigHandle() : null);
 
@@ -1699,6 +1739,254 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (!characterWeightBranch.weighLocks(document))
             setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_UNRIGGED);
+    }
+
+    // Grooming \\
+
+    // The groom open in the Hair tab, null while none is, and the revision that moves with every change to it
+    public CharacterGroomStruct getGroom() {
+        return characterGroomBranch.getGroom();
+    }
+
+    public int getGroomRevision() {
+        return characterGroomBranch.getRevision();
+    }
+
+    public boolean hasGroom() {
+        return characterGroomBranch.hasGroom();
+    }
+
+    // The Hair tab's tool in use
+    public EditorTool getHairTool() {
+        return toolManager.getTool(ToolCanvas.CHARACTER_HAIR);
+    }
+
+    // A strand drawn from where the active part's face was pressed, as wide as the Width option, rooted on the bone
+    // weighing most on the face
+    public void beginHairDraw(Vector3 point, Vector3 normal, int faceIndex) {
+
+        if (!refuseNoGroom())
+            characterGroomBranch.beginDraw(point, normal, resolveRootBone(faceIndex), getHairWidth());
+    }
+
+    public void extendHairDraw(Vector3 point) {
+        characterGroomBranch.extendDraw(point);
+    }
+
+    public void endHairDraw() {
+        characterGroomBranch.endDraw(isMirror());
+    }
+
+    public boolean isDrawingHair() {
+        return characterGroomBranch.isDrawing();
+    }
+
+    // A straight strand as long as the Length option standing out of the active part's face where it was clicked
+    public void placeHairStrand(Vector3 point, Vector3 normal, int faceIndex) {
+
+        if (!refuseNoGroom())
+            characterGroomBranch.place(
+                    point,
+                    normal,
+                    resolveRootBone(faceIndex),
+                    toolManager.getOption(ToolCanvas.CHARACTER_HAIR, ToolOption.LENGTH)
+                            * EditorSetting.CHARACTER_HAIR_LENGTH_UNIT,
+                    getHairWidth(),
+                    isMirror());
+    }
+
+    public void pickHairMaterial(int strandIndex) {
+        characterGroomBranch.pickMaterial(strandIndex);
+    }
+
+    // A brush stroke over the strands with the Hair tab's tool, the selection combined as asked by a selecting one
+    public void beginHairStroke(CharacterEditorSelection selection) {
+
+        if (!refuseNoGroom())
+            characterGroomBranch.beginStroke(isMirror(), getHairTool() == EditorTool.SELECT ? selection : null);
+    }
+
+    public void strokeHair(IntArrayList strands, IntArrayList points, FloatArrayList weights, Vector3 drag) {
+        characterGroomBranch.stroke(getHairTool(), strands, points, weights, drag);
+    }
+
+    public void endHairStroke() {
+        characterGroomBranch.endStroke();
+    }
+
+    // Every card of the hair the character wears made a strand of the groom, a groom made from it when none is open
+    void takeHairFromWorn() {
+
+        String partKey = ArpgUtility.toEnumName(FeatureSlot.HAIR);
+        CharacterMeshDocumentInstance document = activeDocument != null
+                ? characterMeshBranch.open(characterMeshBranch.resolvePartMesh(activeDocument, partKey))
+                : null;
+
+        if (document == null) {
+            setStatusMessage(EditorSetting.CHARACTER_HAIR_MESSAGE_NO_WORN);
+            return;
+        }
+
+        FeatureHandle feature = activeDocument.getPreviewData().getAppearanceData()
+                .getStartingFeature(getPreviewGenderID(), FeatureSlot.HAIR);
+
+        characterGroomBranch.takeFromWorn(document.getMesh(), feature.getFeatureName());
+    }
+
+    // Every texture of the atlas the active part is painted from, the materials a strand may take
+    ObjectArrayList<String> getHairMaterialNames() {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        return document != null ? characterMeshBranch.getTextureNames(document) : emptyNames;
+    }
+
+    public void buildHairMaterialRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        characterGroomBranch.buildMaterialRows(getHairMaterialNames(), rows);
+    }
+
+    private float getHairWidth() {
+        return toolManager.getOption(ToolCanvas.CHARACTER_HAIR, ToolOption.WIDTH)
+                * EditorSetting.CHARACTER_HAIR_WIDTH_UNIT;
+    }
+
+    private boolean refuseNoGroom() {
+
+        if (characterGroomBranch.hasGroom())
+            return false;
+
+        setStatusMessage(EditorSetting.CHARACTER_HAIR_MESSAGE_NO_GROOM);
+        return true;
+    }
+
+    // The bone weighing most on the first corner of the active part's face, the bone a strand rooted there grows from
+    private String resolveRootBone(int faceIndex) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document == null || faceIndex == EngineSetting.INDEX_NOT_FOUND)
+            return EditorSetting.CHARACTER_HAIR_DEFAULT_BONE;
+
+        RiggedMeshStruct mesh = document.getMesh();
+        int vertexIndex = mesh.getFaceVertex(faceIndex, 0);
+        int heaviest = EngineSetting.INDEX_NOT_FOUND;
+        float most = 0f;
+
+        for (int i = 0; i < mesh.getInfluenceCount(vertexIndex); i++)
+            if (mesh.getInfluenceWeight(vertexIndex, i) > most) {
+                most = mesh.getInfluenceWeight(vertexIndex, i);
+                heaviest = mesh.getInfluenceBone(vertexIndex, i);
+            }
+
+        return heaviest != EngineSetting.INDEX_NOT_FOUND
+                ? mesh.getRigHandle().getBone(heaviest).getName()
+                : EditorSetting.CHARACTER_HAIR_DEFAULT_BONE;
+    }
+
+    // Hair Files \\
+
+    public File getHairFolder() {
+        return characterGroomBranch.getFolder();
+    }
+
+    public File getHairExportFolder() {
+        return characterGroomBranch.getExportFolder();
+    }
+
+    public boolean isHairNameAvailable(String name) {
+        return characterGroomBranch.isNameAvailable(name);
+    }
+
+    public void newHair(String name, String rigName) {
+
+        if (characterGroomBranch.create(name, rigName))
+            setStatusMessage(EditorSetting.CHARACTER_HAIR_MESSAGE_MADE + name);
+        else
+            setStatusMessage(EditorSetting.CHARACTER_HAIR_MESSAGE_NOT_WRITTEN + name);
+    }
+
+    public void openHairFile(File file) {
+        setStatusMessage(characterGroomBranch.open(file)
+                ? EditorSetting.CHARACTER_HAIR_MESSAGE_OPENED + characterGroomBranch.getGroomName()
+                : characterGroomBranch.getRefusal());
+    }
+
+    public void saveHair() {
+
+        if (refuseNoGroom())
+            return;
+
+        setStatusMessage(characterGroomBranch.save()
+                ? EditorSetting.CHARACTER_HAIR_MESSAGE_SAVED + characterGroomBranch.getGroomName()
+                : characterGroomBranch.getRefusal());
+    }
+
+    public void revertHair() {
+
+        if (refuseNoGroom())
+            return;
+
+        setStatusMessage(characterGroomBranch.revert()
+                ? EditorSetting.CHARACTER_HAIR_MESSAGE_REVERTED + characterGroomBranch.getGroomName()
+                : characterGroomBranch.getRefusal());
+    }
+
+    public void undoHair() {
+        setStatusMessage(characterGroomBranch.undo()
+                ? EditorSetting.CHARACTER_EDITOR_MESSAGE_UNDONE
+                : EditorSetting.CHARACTER_EDITOR_MESSAGE_NOTHING_TO_UNDO);
+    }
+
+    public void redoHair() {
+        setStatusMessage(characterGroomBranch.redo()
+                ? EditorSetting.CHARACTER_EDITOR_MESSAGE_REDONE
+                : EditorSetting.CHARACTER_EDITOR_MESSAGE_NOTHING_TO_REDO);
+    }
+
+    public void exportHair() {
+
+        if (!characterGroomBranch.export())
+            setStatusMessage(characterGroomBranch.getRefusal());
+    }
+
+    public boolean isHairFeatureName(String featureName) {
+        return characterGroomBranch.isFeatureName(featureName);
+    }
+
+    public String getHairFeatureDefault() {
+        return characterGroomBranch.getDefaultFeatureName();
+    }
+
+    // An export brought into the game as the hair feature named, its mesh shown again where it was loaded already,
+    // and with springs asked its long strands given spring chains on the open character's rig and weighed onto them
+    public void importHair(File file, String featureName, boolean springs) {
+
+        String meshName = characterGroomBranch.importExport(file, featureName);
+
+        if (meshName == null) {
+            setStatusMessage(characterGroomBranch.getRefusal());
+            return;
+        }
+
+        boolean loaded = meshManager.hasMesh(meshName);
+        MeshHandle meshHandle = meshManager.getMeshHandleFromMeshName(meshName);
+        CharacterMeshDocumentInstance document = characterMeshBranch.open(meshHandle);
+
+        if (loaded && document != null)
+            characterMeshBranch.revert(document);
+
+        if (springs && document != null) {
+
+            if (!syncRig() || !characterRigBranch.getRigName().equals(meshHandle.getRigHandle().getRigName())) {
+                setStatusMessage(EditorSetting.CHARACTER_HAIR_MESSAGE_SPRINGS_NO_RIG);
+                return;
+            }
+
+            characterGroomBranch.laySprings(document);
+            saveRigFile();
+        }
+
+        setStatusMessage(EditorSetting.CHARACTER_HAIR_MESSAGE_IMPORTED + featureName);
     }
 
     // Modelling layers' preview leaves the bind pose to play the pose chosen with its springs simulated, or holds it
@@ -2200,7 +2488,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // The face size, in metres, the topology brush evens the faces it covers toward: the Tools panel's Detail
     float getTopologyDetail() {
-        return toolManager.getOption(ToolCanvas.CHARACTER_MESH, ToolOption.DETAIL)
+        return toolManager.getOption(ToolCanvas.CHARACTER_TOPOLOGY, ToolOption.DETAIL)
                 * EditorSetting.CHARACTER_TOPOLOGY_DETAIL_UNIT;
     }
 
@@ -2286,12 +2574,24 @@ public class CharacterEditorManager extends ManagerPackage {
     // Pick, which takes a colour
     public boolean isBoneTool() {
 
-        if (!mode.isMeshMode() || mode.paintsMaps())
+        if (!mode.editsVertices())
             return false;
 
         EditorTool tool = toolManager.getTool(mode.getToolCanvas());
 
         return tool == EditorTool.PICK || tool == EditorTool.POSE;
+    }
+
+    // True while the Topology tab's tool works on the edge clicked rather than the vertices: Flip Edge, Loop Cut and
+    // Dissolve Loop
+    public boolean isEdgeTool() {
+
+        if (!mode.editsEdges())
+            return false;
+
+        EditorTool tool = toolManager.getTool(mode.getToolCanvas());
+
+        return tool == EditorTool.FLIP_EDGE || tool == EditorTool.LOOP_CUT || tool == EditorTool.DISSOLVE_LOOP;
     }
 
     // True while a modelling mode's tool is Pose

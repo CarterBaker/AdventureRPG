@@ -16,12 +16,16 @@ import editor.bootstrap.brushpipeline.brush.BrushHandle;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterGroomStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPartPlacementStruct;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStrandStruct;
+import editor.bootstrap.charactereditorpipeline.util.CharacterStrandUtility;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.stamppipeline.stamp.StampHandle;
 import editor.bootstrap.stamppipeline.stampmanager.StampManager;
 import editor.runtime.EditorSetting;
 import editor.runtime.charactereditor.CharacterEditorSetting;
+import editor.runtime.charactereditor.edge.CharacterEditorEdgeSystem;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.sculpt.CharacterEditorSculptSystem;
 import editor.runtime.charactereditor.stamp.CharacterEditorStampSystem;
@@ -35,7 +39,6 @@ import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 public class CharacterEditorOverlaySystem extends SystemPackage {
 
@@ -54,13 +57,16 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
      * toward the camera, so hidden vertices stay hidden; with it on it
      * draws over everything. The box being dragged, the brush of any mesh
      * mode, Sculpt's included, and the axis a transform is held to are
-     * drawn on top as guides. In Rig mode the colliders the rig's bones
+     * drawn on top as guides, and so is the edge an edge tool of the
+     * Topology tab would act on. In Rig mode the colliders the rig's bones
      * carry are drawn over the body as wire spheres and capsules, the one
      * selected in the selection's colour. In Stamp mode every attach point
      * shows as a yellow dot, the one the part joins nearest larger, and the
      * part aimed, with its twin while mirroring, as a ghost of its edges
      * where it would join (every card of fur where it would lie), green where it can and red where it cannot, drawn
-     * over everything. The overlay is rebuilt in place only when what it
+     * over everything. In Hair mode every strand of the groom is drawn as
+     * its root, its guide line and its card's two sides, the selected ones
+     * in the selection's colour. The overlay is rebuilt in place only when what it
      * shows has moved.
      */
 
@@ -71,6 +77,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private CharacterEditorSculptSystem characterEditorSculptSystem;
     private CharacterEditorStampSystem characterEditorStampSystem;
+    private CharacterEditorEdgeSystem characterEditorEdgeSystem;
     private StampManager stampManager;
     private CharacterViewRenderSystem characterViewRenderSystem;
     private MeshManager meshManager;
@@ -92,16 +99,21 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private ModelInstance colliderModel;
     private MeshInstance stampOverlay;
     private ModelInstance stampModel;
+    private MeshInstance groomOverlay;
+    private ModelInstance groomModel;
 
     // Geometry
     private FloatArrayList vertices;
-    private ShortArrayList indices;
+    private IntArrayList indices;
     private FloatArrayList guideVertices;
-    private ShortArrayList guideIndices;
+    private IntArrayList guideIndices;
     private FloatArrayList colliderVertices;
-    private ShortArrayList colliderIndices;
+    private IntArrayList colliderIndices;
     private FloatArrayList stampVertices;
-    private ShortArrayList stampIndices;
+    private IntArrayList stampIndices;
+    private FloatArrayList groomVertices;
+    private IntArrayList groomIndices;
+    private FloatArrayList cardRows;
     private LongOpenHashSet edges;
 
     // Ghost — the stamp whose edges are held, each edge's two vertices
@@ -119,6 +131,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private int builtStampRevision;
     private int builtStampManagerRevision;
     private int builtStampDocumentRevision;
+    private CharacterGroomStruct builtGroom;
+    private int builtGroomRevision;
 
     // Scratch
     private float[] colorScratch;
@@ -138,13 +152,16 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         // Geometry
         this.vertices = new FloatArrayList();
-        this.indices = new ShortArrayList();
+        this.indices = new IntArrayList();
         this.guideVertices = new FloatArrayList();
-        this.guideIndices = new ShortArrayList();
+        this.guideIndices = new IntArrayList();
         this.colliderVertices = new FloatArrayList();
-        this.colliderIndices = new ShortArrayList();
+        this.colliderIndices = new IntArrayList();
         this.stampVertices = new FloatArrayList();
-        this.stampIndices = new ShortArrayList();
+        this.stampIndices = new IntArrayList();
+        this.groomVertices = new FloatArrayList();
+        this.groomIndices = new IntArrayList();
+        this.cardRows = new FloatArrayList();
         this.edges = new LongOpenHashSet();
 
         // Ghost
@@ -155,6 +172,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         this.builtManagerRevision = EngineSetting.INDEX_NOT_FOUND;
         this.builtColliderRevision = EngineSetting.INDEX_NOT_FOUND;
         this.builtStampRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.builtGroomRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Scratch
         this.colorScratch = new float[CharacterEditorSetting.OVERLAY_COLOR_FLOATS];
@@ -176,6 +194,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
         this.characterEditorSculptSystem = get(CharacterEditorSculptSystem.class);
         this.characterEditorStampSystem = get(CharacterEditorStampSystem.class);
+        this.characterEditorEdgeSystem = get(CharacterEditorEdgeSystem.class);
         this.stampManager = get(StampManager.class);
         this.characterViewRenderSystem = get(CharacterViewRenderSystem.class);
         this.meshManager = get(MeshManager.class);
@@ -205,6 +224,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         if (stampOverlay != null)
             modelManager.removeMesh(stampOverlay);
+
+        if (groomOverlay != null)
+            modelManager.removeMesh(groomOverlay);
     }
 
     // Update \\
@@ -227,6 +249,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         if (characterEditorManager.placesStamp())
             pushStampOverlay(window);
+
+        if (characterEditorManager.getMode().groomsHair())
+            pushGroomOverlay(window);
 
         if (buildGuides())
             renderManager.pushRenderCall(
@@ -261,6 +286,96 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         meshModel.getMaterial().setUniform(
                 CharacterEditorSetting.UNIFORM_DEPTH_BIAS,
                 xray ? 0f : CharacterEditorSetting.OVERLAY_DEPTH_BIAS);
+    }
+
+    // Groom Overlay \\
+
+    private void pushGroomOverlay(WindowInstance window) {
+
+        syncGroomOverlay();
+
+        if (groomModel != null && !groomIndices.isEmpty())
+            renderManager.pushRenderCall(
+                    groomModel,
+                    characterViewRenderSystem.getSceneFbo(),
+                    CharacterEditorSetting.DEPTH_OVERLAY,
+                    window);
+    }
+
+    // Rebuilds only when another groom opened or the one open changed
+    private void syncGroomOverlay() {
+
+        CharacterGroomStruct groom = characterEditorManager.getGroom();
+
+        if (groom == builtGroom && characterEditorManager.getGroomRevision() == builtGroomRevision)
+            return;
+
+        this.builtGroom = groom;
+        this.builtGroomRevision = characterEditorManager.getGroomRevision();
+        groomVertices.clear();
+        groomIndices.clear();
+
+        if (groom != null)
+            for (int s = 0; s < groom.getStrandCount(); s++)
+                appendStrand(groom.getStrand(s));
+
+        if (groomIndices.isEmpty())
+            return;
+
+        if (groomOverlay == null) {
+            this.groomOverlay = meshManager.createMesh(overlayVAO, groomVertices, groomIndices);
+            this.groomModel = modelManager.createModel(groomOverlay, overlayMaterialID);
+            groomModel.getMaterial().setUniform(
+                    CharacterEditorSetting.UNIFORM_DEPTH_BIAS, CharacterEditorSetting.OVERLAY_DEPTH_BIAS);
+            return;
+        }
+
+        meshManager.updateMesh(groomOverlay, groomVertices, groomIndices);
+        groomModel.updateMeshData(groomOverlay.getMeshData());
+    }
+
+    // A strand's root dot, its guide line through its points and its card's two sides, as the export lays the card
+    private void appendStrand(CharacterStrandStruct strand) {
+
+        int rowFloats = CharacterStrandUtility.getRowFloats();
+        int last = (EditorSetting.CHARACTER_HAIR_CARD_U.length - 1) * 3;
+
+        setColor(strand.isSelected() ? CharacterEditorSetting.COLOR_SELECTED : CharacterEditorSetting.COLOR_STRAND);
+        appendDot(groomVertices, groomIndices, strand.getX(0), strand.getY(0), strand.getZ(0),
+                CharacterEditorSetting.STRAND_ROOT_HALF_PIXELS);
+
+        for (int i = 0; i + 1 < strand.getPointCount(); i++)
+            appendLine(
+                    groomVertices,
+                    groomIndices,
+                    strand.getX(i),
+                    strand.getY(i),
+                    strand.getZ(i),
+                    strand.getX(i + 1),
+                    strand.getY(i + 1),
+                    strand.getZ(i + 1),
+                    CharacterEditorSetting.STRAND_HALF_PIXELS);
+
+        CharacterStrandUtility.resolveCardRows(strand, cardRows);
+        setColor(CharacterEditorSetting.COLOR_STRAND_CARD);
+
+        for (int i = 0; i + 1 < strand.getPointCount(); i++) {
+            appendCardSide(i * rowFloats, (i + 1) * rowFloats);
+            appendCardSide(i * rowFloats + last, (i + 1) * rowFloats + last);
+        }
+    }
+
+    private void appendCardSide(int from, int to) {
+        appendLine(
+                groomVertices,
+                groomIndices,
+                cardRows.getFloat(from),
+                cardRows.getFloat(from + 1),
+                cardRows.getFloat(from + 2),
+                cardRows.getFloat(to),
+                cardRows.getFloat(to + 1),
+                cardRows.getFloat(to + 2),
+                CharacterEditorSetting.STRAND_CARD_HALF_PIXELS);
     }
 
     // Collider Overlay \\
@@ -386,7 +501,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
             float cb = (float) Math.cos(b) * radius;
             float sb = (float) Math.sin(b) * radius;
 
-            if (!appendLine(
+            appendLine(
                     colliderVertices,
                     colliderIndices,
                     centre.x + from.x * ca + toward.x * sa,
@@ -395,8 +510,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                     centre.x + from.x * cb + toward.x * sb,
                     centre.y + from.y * cb + toward.y * sb,
                     centre.z + from.z * cb + toward.z * sb,
-                    CharacterEditorSetting.GUIDE_HALF_PIXELS))
-                return;
+                    CharacterEditorSetting.GUIDE_HALF_PIXELS);
         }
     }
 
@@ -505,12 +619,11 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         }
 
         for (int c = 0; c < placement.getFurCount(); c++)
-            if (!appendGhostEdges(placement.getStampHandle().getMesh(), placement.getFurFrame(c)))
-                return;
+            appendGhostEdges(placement.getStampHandle().getMesh(), placement.getFurFrame(c));
     }
 
-    // A stamp's edges carried by a transform; false once the overlay is full
-    private boolean appendGhostEdges(RiggedMeshStruct stampMesh, Matrix4 transform) {
+    // A stamp's edges carried by a transform
+    private void appendGhostEdges(RiggedMeshStruct stampMesh, Matrix4 transform) {
 
         for (int i = 0; i < ghostEdges.size(); i += 2) {
 
@@ -522,7 +635,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
             CharacterPoseUtility.transformPoint(
                     transform, stampMesh.getX(b), stampMesh.getY(b), stampMesh.getZ(b), pointB);
 
-            if (!appendLine(
+            appendLine(
                     stampVertices,
                     stampIndices,
                     pointA.x,
@@ -531,11 +644,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                     pointB.x,
                     pointB.y,
                     pointB.z,
-                    CharacterEditorSetting.STAMP_EDGE_HALF_PIXELS))
-                return false;
+                    CharacterEditorSetting.STAMP_EDGE_HALF_PIXELS);
         }
-
-        return true;
     }
 
     // Every edge of a stamp's mesh once, found again only for another stamp or one rebuilt
@@ -690,7 +800,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                             ? CharacterEditorSetting.COLOR_EDGE_SELECTED
                             : CharacterEditorSetting.COLOR_EDGE);
 
-                if (!appendLine(
+                appendLine(
                         vertices,
                         indices,
                         characterEditorMeshViewSystem.getX(a),
@@ -699,8 +809,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                         characterEditorMeshViewSystem.getX(b),
                         characterEditorMeshViewSystem.getY(b),
                         characterEditorMeshViewSystem.getZ(b),
-                        seam ? CharacterEditorSetting.SEAM_HALF_PIXELS : CharacterEditorSetting.EDGE_HALF_PIXELS))
-                    return;
+                        seam ? CharacterEditorSetting.SEAM_HALF_PIXELS : CharacterEditorSetting.EDGE_HALF_PIXELS);
             }
     }
 
@@ -742,6 +851,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         if (characterEditorSculptSystem.hasTransformAxis())
             appendAxisGuide();
+
+        if (characterEditorEdgeSystem.hasHoveredEdge())
+            appendEdgeGuide();
 
         if (guideIndices.isEmpty())
             return false;
@@ -821,6 +933,25 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                 CharacterEditorSetting.GUIDE_HALF_PIXELS);
     }
 
+    // The edge an edge tool would act on, brighter and wider than the wireframe
+    private void appendEdgeGuide() {
+
+        int a = characterEditorEdgeSystem.getHoveredVertex(false);
+        int b = characterEditorEdgeSystem.getHoveredVertex(true);
+
+        setColor(CharacterEditorSetting.COLOR_EDGE_HOVER);
+        appendLine(
+                guideVertices,
+                guideIndices,
+                characterEditorMeshViewSystem.getX(a),
+                characterEditorMeshViewSystem.getY(a),
+                characterEditorMeshViewSystem.getZ(a),
+                characterEditorMeshViewSystem.getX(b),
+                characterEditorMeshViewSystem.getY(b),
+                characterEditorMeshViewSystem.getZ(b),
+                CharacterEditorSetting.EDGE_HOVER_HALF_PIXELS);
+    }
+
     // A line between two window pixels, placed just past the near plane so it shows over everything
     private void appendScreenLine(float x0, float y0, float x1, float y1) {
 
@@ -846,12 +977,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     // Geometry \\
 
     // A square of corners around one point, each pushed its half size in pixels off it by the shader
-    private void appendDot(FloatArrayList target, ShortArrayList targetIndices, float x, float y, float z, float half) {
+    private void appendDot(FloatArrayList target, IntArrayList targetIndices, float x, float y, float z, float half) {
 
         int base = target.size() / CharacterEditorSetting.OVERLAY_VERTEX_FLOATS;
-
-        if (base + EngineSetting.QUAD_VERTEX_COUNT > EngineSetting.RIGGED_MESH_VERT_LIMIT)
-            return;
 
         putVertex(target, x, y, z, x, y, z, -half, -half);
         putVertex(target, x, y, z, x, y, z, half, -half);
@@ -861,10 +989,10 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     }
 
     // A strip between two points, each end pushed its half width in pixels across the line by the shader; across
-    // flips with the line's direction, so the far end's sides are named the other way round. False at the limit.
-    private boolean appendLine(
+    // flips with the line's direction, so the far end's sides are named the other way round
+    private void appendLine(
             FloatArrayList target,
-            ShortArrayList targetIndices,
+            IntArrayList targetIndices,
             float ax,
             float ay,
             float az,
@@ -875,16 +1003,11 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         int base = target.size() / CharacterEditorSetting.OVERLAY_VERTEX_FLOATS;
 
-        if (base + EngineSetting.QUAD_VERTEX_COUNT > EngineSetting.RIGGED_MESH_VERT_LIMIT)
-            return false;
-
         putVertex(target, ax, ay, az, bx, by, bz, half, 0f);
         putVertex(target, ax, ay, az, bx, by, bz, -half, 0f);
         putVertex(target, bx, by, bz, ax, ay, az, half, 0f);
         putVertex(target, bx, by, bz, ax, ay, az, -half, 0f);
         putQuad(targetIndices, base);
-
-        return true;
     }
 
     private void putVertex(
@@ -911,12 +1034,12 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
             target.add(colorScratch[i]);
     }
 
-    private void putQuad(ShortArrayList targetIndices, int base) {
-        targetIndices.add((short) base);
-        targetIndices.add((short) (base + 1));
-        targetIndices.add((short) (base + 2));
-        targetIndices.add((short) (base + 2));
-        targetIndices.add((short) (base + 3));
-        targetIndices.add((short) base);
+    private void putQuad(IntArrayList targetIndices, int base) {
+        targetIndices.add(base);
+        targetIndices.add(base + 1);
+        targetIndices.add(base + 2);
+        targetIndices.add(base + 2);
+        targetIndices.add(base + 3);
+        targetIndices.add(base);
     }
 }

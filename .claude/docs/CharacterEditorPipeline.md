@@ -1,9 +1,9 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the character
-tool tabs (Appearance, Equipment, Mesh, Sculpt, Weights, Paint, Rig, UV), the UV Editor, the Animation Editor,
-their docker windows, races and their genders' models, or a character's appearance (morphs, sliders, bone controls,
-zones, masks, overlays, shaders). `.claude/CLAUDE.md` still applies in full.
+tool tabs (Appearance, Equipment, Hair, Mesh, Topology, Sculpt, Weights, Paint, Rig, UV), the Hair Materials tab, the UV
+Editor, the Animation Editor, their docker windows, races and their genders' models, or a character's appearance
+(morphs, sliders, bone controls, zones, masks, overlays, shaders). `.claude/CLAUDE.md` still applies in full.
 
 ---
 
@@ -14,14 +14,19 @@ own tool tab, laid out however the owner likes, each working the one character t
 `.claude/docs/Editor.md`). A viewport tab holds the status bar and the viewport; saving, reverting, copying, deleting,
 undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`,
 `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
-from the editor's Characters menu (the Character section's tool tabs, the Animation section, then its Tools section
-holding the Outliner) or the Textures menu's Tools section (Maps, Stamps and the Color Wheel), and restored by layouts
-like any other.
+from the editor's Entities menu (its Entity section: Appearance, Equipment and Hair; the Animation section; then its
+Tools section holding the Outliner and Hair Materials), the Mesh menu (its Mesh section: Mesh, Topology, Sculpt, Paint,
+UV and the UV Editor; its Rigging section: Rig and Weights; its Tools section the Outliner) or the Textures menu's Tools
+section (Maps, Stamps and the Color Wheel), and restored by layouts like any other. Whatever the owner sees says
+Entity, never Character (the Outliner's title, the Animation Editor's row, the command console's Entity group,
+`assets/commands/Entity.arpg`); the code keeps its `Character*` names.
 
 | Window | Context | Shows |
 |---|---|---|
 | Character Appearance, Equipment | `CharacterAppearanceContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
-| Character Mesh, Sculpt, Weights, Rig, UV | `CharacterMeshContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext`, `CharacterUVContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
+| Character Mesh, Topology, Sculpt, Weights, Rig, UV | `CharacterMeshContext`, `CharacterTopologyContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext`, `CharacterUVContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
+| Hair | `CharacterHairContext` | the whole character with the groom open drawn over it, the Hair canvas; its own File and Edit table (`FILE_MENU_HAIR`) |
+| Hair Materials | `editor.runtime.hairmaterials.HairMaterialsContext` | every texture of the open character's atlas, the one strands grow in and the Hair Brush paints picked (`CharacterEditorManager.buildHairMaterialRows`) |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
 | Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows` |
@@ -136,8 +141,9 @@ like any other.
   list does). Row templates stay in the tool's own menu
   (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
   their buttons route to the tool's branch. A tool without a text row template must never list a `TEXT` row.
-- Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_SCULPT`, `CHARACTER_WEIGHTS`, `CHARACTER_RIG`,
-  `CHARACTER_UV`, `UV_EDITOR`, `ANIMATION_POSE`); brushes the Brushes window's. A tool strokes the
+- Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_TOPOLOGY`, `CHARACTER_SCULPT`,
+  `CHARACTER_WEIGHTS`, `CHARACTER_RIG`, `CHARACTER_UV`, `CHARACTER_HAIR`, `UV_EDITOR`, `ANIMATION_POSE`); brushes the
+  Brushes window's. A tool strokes the
   brush where the canvas sizes one and the tool carries Size (`ToolCanvas.strokes`), so on the mesh and the weights Select sweeps the
   brush over vertices, each selected as much as the tip covers it (a hard brush whole, a soft one fading at its edge;
   Shift adds, Ctrl takes away, a press where the brush covers nothing still clears or boxes). Move, Rotate, Scale and
@@ -241,8 +247,8 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
 - **Symmetrize** (Blender's Mesh > Symmetrize, Maya's Symmetrize): `CharacterSymmetryBranch.symmetrize(document,
   positiveToNegative)` is the one operation that makes a mesh exactly symmetric, the Mesh canvas's two Symmetrize
   actions (+X to -X, -X to +X) and the Command Console, whose view lists the commands whose `target` is `character`
-  while a character tab was worked in after any Dev window (`CommandManager.resolveViewTarget`; the Character group,
-  `assets/commands/Character.arpg`: Mirror Body and Mirror Hair, Left onto Right or Right onto Left,
+  while a character tab was worked in after any Dev window (`CommandManager.resolveViewTarget`; the Entity group,
+  `assets/commands/Entity.arpg`: Mirror Body and Mirror Hair, Left onto Right or Right onto Left,
   left being +x, run by `CharacterCommandBranch` on the open character's body or worn hair through
   `CharacterEditorManager.executeCommand`) both calling it. It always mirrors, whatever the canvas's Mirror switch. It never moves one side's vertices onto the other's: the side given up is removed and the side kept
   is mirrored and welded on x = 0, so every vertex gets an exact twin and every face a twin wound back. A face crossing
@@ -285,7 +291,28 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
 - **Sculpt tools.** Brush, Smooth, Relax (even spacing along the surface without shrinking), Inflate, Pinch, Crease
   (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
   in `CharacterShapeBranch.resolveMove`.
-- **Topology brush.** The Mesh canvas's Topology tool (`D`) changes the faces, not the shape, where the mesh's
+- **Topology tab** (`CharacterEditorMode.TOPOLOGY`, `ToolCanvas.CHARACTER_TOPOLOGY`, `editsEdges`): the retopology
+  toolset of Blender's and Maya's modelling kits, its Wireframe on by default and its Properties rows counting quads,
+  triangles and poles (`CharacterEdgeBranch.getStatsText`, counted again only when the mesh moves). Its tools are
+  Select, the Topology brush (below), and three edge tools picked with the pointer (`CharacterEditorEdgeSystem`: the
+  edge of the face under the pointer that passes nearest it, `CharacterEditorMeshViewSystem.pickEdge`, found again
+  only when the pointer or mesh moves, drawn as a guide by the overlay; a click runs
+  `CharacterEditorManager.applyEdgeTool`): **Flip Edge** (Maya's Spin Edge, Blender's Rotate Edge: the two faces beside
+  the edge walked as one polygon and the edge turned one corner round it, Ctrl the other way, so a "/" becomes a "\" and
+  quads stay quads; refused on an open edge, a seam, faces wound opposite ways, or corners joined already), **Loop
+  Cut** (Blender's Loop Cut, Maya's Insert Edge Loop: the ring of quads across the edge, walked through each quad's
+  opposite edge until it closes or meets an open edge or a triangle, cut through every edge's middle, the new loop
+  selected) and **Dissolve Loop** (Maya's Delete Edge Loop: the loop walked straight on through every vertex four quads
+  meet at and taken away with its vertices, the quads either side joined in pairs; it must close or run to open edges,
+  since a pole would leave a face of more than four corners). Its action groups are Faces (Make Face, Merge, Merge by
+  Distance, Subdivide, Flip Faces, Delete Faces) and Clean Up (Delete Degenerate Faces, Select Poles, Select Triangles,
+  Select Non-Manifold), then Selection; all of it is `CharacterEdgeBranch` but Make Face, Merge and Subdivide
+  (`CharacterSculptBranch`). Every edit honours Mirror (the twin edge, ring or loop the mirrored way, skipped where it
+  is the same one or runs into it), is one undo step, and builds the faces about each edge once
+  (`buildEdgeFaces`), never per face. New vertices blend through `CharacterTopologyBranch.addBetween`; faces keep their
+  texture, zone and UVs; a cut seam stays a seam. The Mesh tab keeps transforms, Extrude, Duplicate, the deletes and
+  Symmetrize.
+- **Topology brush.** The Topology canvas's Topology tool (`D`) changes the faces, not the shape, where the mesh's
   vertices and edges are drawn (`CharacterTopologyBranch`, at the canvas's own Strength, honouring its Mirror; a stroke
   routes there from `CharacterEditorManager.beginStroke` before the mode's own stroke): a stroke opens one undo step,
   gathers how far the brush covers each vertex (and its twin with Mirror on), and once a frame (`CharacterEditorManager.showStroke` calls `apply`) changes every face whose
@@ -583,7 +610,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `HumanoidRig` names its `parts` (head showing hair, eyes and teeth and taking the face; ears; eyes holding the eyes;
   mouth holding the teeth; hands; feet) and seven
   `poses` (`animations/humanoid/poses/`). All are generated (catalogued); the character tools edit a rigged
-  mesh of at most `RIGGED_MESH_VERT_LIMIT` corners (their overlays draw every corner). Each hand is one bone: hanging at the side its palm faces the thigh with the
+  mesh of at most `RIGGED_MESH_VERT_LIMIT` corners. Their overlays (`CharacterEditorOverlaySystem`,
+  `UVEditorRenderSystem`) index by unsigned int (`MeshManager.createMesh` with an `IntArrayList`), so the wireframe of a
+  whole body, four overlay vertices to every edge, is never cut short. Each hand is one bone: hanging at the side its
+  palm faces the thigh with the
   thumb forward (+z), so `hand_l` is a left hand at +x; keep that chirality on any hand you model or mirror.
 - **Features are the gender's.** The Outliner's Features rows (Appearance mode) read and write the previewed
   gender's `genders.<gender>.features`, the features it is made with; a gender naming none wears the race's
@@ -671,6 +701,47 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `MaleShortHairMesh` and `MaleMediumHairMesh` are short and stay on the head.
 - **Toon lighting.** Characters write a smooth normal (`GBufferNormal.glsl`); the lighting pass lights those pixels
   in toon tones with a rim (`ToonLighting.glsl`), and the editor viewport's character shader uses the same function.
+
+## Hair Tab
+
+The Hair tab (`CharacterEditorMode.HAIR`, `ToolCanvas.CHARACTER_HAIR`, `groomsHair`) grooms hair the industry's way,
+guide curves turned into game cards (Blender's hair curves, Maya XGen, Unreal's Groom): a **groom**
+(`CharacterGroomStruct`, its strands `CharacterStrandStruct`: points root to tip, the root's surface normal, the bone it
+grows from, its texture, its width at the root and the taper the tip narrows to) is a workspace file in
+`Assets/Hair/<Name>.arpg` (`rig`, `source`, `strands`, each strand's `points` a float32 typed array), owned by
+`CharacterGroomBranch` with its own undo history of whole copies. The tab works on the whole character, its mesh mode
+reaching the surface of the part picked in the Outliner's Parts (the body), and holds the bind pose.
+
+- **Tools** (`CharacterEditorGroomSystem`): Draw roots a strand on the surface pressed and carries it along the drag
+  across the plane through the root facing the camera, a point every `CHARACTER_HAIR_POINT_SPACING`; Place grows a
+  straight strand the Length option long out of the surface clicked; Brush paints the material picked onto the strands
+  it covers; Nudge combs (points move with the pointer, lengths held); Smooth; Raise and Lower lengthen and shorten
+  tips;
+  Erase cuts a strand where the brush first covers it (wholly at its root); Pick takes a strand's material; Select
+  selects strands, Shift adding, Ctrl taking away. Draw and Place take Width, the strokes Size and Strength through the
+  Brushes tab's brush, only points the camera sees. Mirror gives a new strand its twin across x and reaches each
+  strand's twin (the strand rooted at its mirrored root) the mirrored way.
+- **Values.** The Properties tab names the groom, counts its strands and selection, steps the material picked, and holds
+  the selected strands' Width (mm) and Taper. The material is one choice shared with the **Hair Materials** tab, which
+  lists every texture of the open character's atlas (`CharacterMeshBranch.getTextureNames`).
+- **Actions:** Strands From Worn Hair (each card of the hair worn turned back into a strand along its middle, as wide as
+  the card, a groom named after the feature made first when none is open, the feature kept as the groom's `source`),
+  Select All, Select None and Delete Selected Strands.
+- **Files** (`EditorSetting.FILE_MENU_HAIR`, `CharacterEditorBranch.newHair` and on): New (name, then rig), Open (a
+  groom from the Hair folder), Save, Revert, Undo, Redo; **Export** writes the groom's cards to
+  `Assets/Exports/Hair/<Name>.arpg`, a rigged mesh on its rig: each strand a card two quads wide
+  (`CharacterStrandUtility.resolveCardRows`, a rotation-minimising frame from the root tangent crossed with the root
+  normal, the width tapering to the tip; u across 0, 0.5, 1, v from 1 at the root to 0 at the tip), every corner wholly
+  on the strand's bone, the hair zone, beside the scalp cap of the `source` feature with its cards removed; **Import**
+  picks an export from Exports/Hair, asks the hair feature it becomes (`folder/Name`, the source offered; an existing
+  hair feature has its mesh replaced) and whether to lay spring chains, then writes
+  `mesh/characters/<feature>Mesh.arpg`, makes or edits `features/<feature>` and, when asked, runs Rig Hair Locks and
+  Weigh Onto Locks on it against the open character's rig (which must be the hair's) and saves the mesh and the rig.
+  Grooms and exports are the owner's work: never catalogue them.
+- The overlay draws every strand (`CharacterEditorOverlaySystem.syncGroomOverlay`, rebuilt only when the groom moves):
+  its root, its guide line and its card's two sides, the selected ones in the selection's colour.
+- **Not industry standard yet:** the viewport shows the guides and card outlines, not the rendered cards; the cards are
+  seen once exported and imported.
 
 ## Models
 

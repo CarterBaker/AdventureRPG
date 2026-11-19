@@ -10,8 +10,9 @@ public enum ToolOption {
      * Strength how far each stamp takes what lies under it, and Twist how
      * far, in degrees, a swirl turns what lies at its centre; Scale is how
      * large a body part is placed, Turn how far it turns about the loop it
-     * joins by, Comb which way laid fur lies along the surface, and Detail
-     * the face size the topology brush evens faces toward. Mirror makes
+     * joins by, Comb which way laid fur lies along the surface, Detail
+     * the face size the topology brush evens faces toward, and Length and
+     * Width how long and how wide a new strand of hair grows. Mirror makes
      * every edit to one side of a character to its twin across the body as
      * well, X-Ray picks through the surface as if it were glass, Wireframe
      * draws the edges of the mesh worked over its surface, and Bones chooses
@@ -29,6 +30,8 @@ public enum ToolOption {
     COMB(EditorSetting.TOOL_OPTION_COMB),
     TURN(EditorSetting.TOOL_OPTION_TURN),
     DETAIL(EditorSetting.TOOL_OPTION_DETAIL),
+    LENGTH(EditorSetting.TOOL_OPTION_LENGTH),
+    WIDTH(EditorSetting.TOOL_OPTION_WIDTH),
     MIRROR(EditorSetting.TOOL_OPTION_MIRROR, true),
     XRAY(EditorSetting.TOOL_OPTION_XRAY, true),
     WIREFRAME(EditorSetting.TOOL_OPTION_WIREFRAME, true),

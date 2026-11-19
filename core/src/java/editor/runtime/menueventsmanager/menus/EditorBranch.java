@@ -112,6 +112,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterMesh(window.getGLWindow());
     }
 
+    public void openCharacterTopology(WindowInstance window) {
+        tabManager.openCharacterTopology(window.getGLWindow());
+    }
+
     public void openCharacterSculpt(WindowInstance window) {
         tabManager.openCharacterSculpt(window.getGLWindow());
     }
@@ -134,6 +138,14 @@ public class EditorBranch extends BranchPackage {
 
     public void openUVEditor(WindowInstance window) {
         tabManager.openUVEditor(window.getGLWindow());
+    }
+
+    public void openCharacterHair(WindowInstance window) {
+        tabManager.openCharacterHair(window.getGLWindow());
+    }
+
+    public void openHairMaterials(WindowInstance window) {
+        tabManager.openHairMaterials(window.getGLWindow());
     }
 
     public void openCharacterOutliner(WindowInstance window) {

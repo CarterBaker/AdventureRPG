@@ -210,6 +210,90 @@ public class CharacterEditorBranch extends BranchPackage {
         characterModelBranch.finishImport();
     }
 
+    // Hair \\
+
+    // A groom made in the workspace's Hair folder: its name asked, then the game rig it is worn on
+    public void newHair(WindowInstance window) {
+        nameDialogBranch.open(
+                window,
+                EditorSetting.CHARACTER_HAIR_DIALOG_NEW,
+                characterEditorManager::isHairNameAvailable,
+                hairName -> nameDialogBranch.openText(
+                        window,
+                        EditorSetting.CHARACTER_HAIR_DIALOG_RIG,
+                        EditorSetting.CHARACTER_MODEL_DEFAULT_RIG,
+                        characterEditorManager::isModelRig,
+                        rigName -> characterEditorManager.newHair(hairName, rigName)));
+    }
+
+    // A groom picked in the system's open dialog from the Hair folder
+    public void openHair() {
+
+        File file = WorkspaceUtility.chooseFile(
+                EditorSetting.CHARACTER_HAIR_DIALOG_OPEN,
+                characterEditorManager.getHairFolder(),
+                EditorSetting.WORKSPACE_FILE_PATTERNS,
+                EditorSetting.WORKSPACE_FILE_DESCRIPTION);
+
+        if (file != null)
+            characterEditorManager.openHairFile(file);
+    }
+
+    public void saveHair() {
+        characterEditorManager.saveHair();
+    }
+
+    public void revertHair() {
+        characterEditorManager.revertHair();
+    }
+
+    public void undoHair() {
+        characterEditorManager.undoHair();
+    }
+
+    public void redoHair() {
+        characterEditorManager.redoHair();
+    }
+
+    // The groom's cards written to the workspace's Exports, the files Import brings into the game
+    public void exportHair() {
+        characterEditorManager.exportHair();
+    }
+
+    // An export picked from Exports/Hair brought into the game: the hair feature it becomes, then whether its long
+    // strands get spring chains and weights
+    public void importHair(WindowInstance window) {
+
+        File file = WorkspaceUtility.chooseFile(
+                EditorSetting.CHARACTER_HAIR_DIALOG_IMPORT,
+                characterEditorManager.getHairExportFolder(),
+                EditorSetting.WORKSPACE_FILE_PATTERNS,
+                EditorSetting.WORKSPACE_FILE_DESCRIPTION);
+
+        if (file == null)
+            return;
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.CHARACTER_HAIR_DIALOG_FEATURE,
+                characterEditorManager.getHairFeatureDefault(),
+                characterEditorManager::isHairFeatureName,
+                featureName -> nameDialogBranch.openText(
+                        window,
+                        EditorSetting.CHARACTER_HAIR_DIALOG_SPRINGS,
+                        EditorSetting.CHARACTER_HAIR_ANSWER_YES,
+                        this::isAnswer,
+                        answer -> characterEditorManager.importHair(
+                                file,
+                                featureName,
+                                answer.equalsIgnoreCase(EditorSetting.CHARACTER_HAIR_ANSWER_YES))));
+    }
+
+    private boolean isAnswer(String text) {
+        return text.equalsIgnoreCase(EditorSetting.CHARACTER_HAIR_ANSWER_YES)
+                || text.equalsIgnoreCase(EditorSetting.CHARACTER_HAIR_ANSWER_NO);
+    }
+
     // Rows \\
 
     public void selectRow(String key) {

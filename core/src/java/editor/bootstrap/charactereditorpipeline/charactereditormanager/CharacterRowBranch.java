@@ -53,6 +53,7 @@ class CharacterRowBranch extends BranchPackage {
     private CharacterRigRowBranch characterRigRowBranch;
     private CharacterPaintRowBranch characterPaintRowBranch;
     private CharacterUVBranch characterUVBranch;
+    private CharacterGroomBranch characterGroomBranch;
     private CharacterSliderBranch characterSliderBranch;
 
     // Base \\
@@ -65,6 +66,7 @@ class CharacterRowBranch extends BranchPackage {
         this.characterRigRowBranch = get(CharacterRigRowBranch.class);
         this.characterPaintRowBranch = get(CharacterPaintRowBranch.class);
         this.characterUVBranch = get(CharacterUVBranch.class);
+        this.characterGroomBranch = get(CharacterGroomBranch.class);
         this.characterSliderBranch = get(CharacterSliderBranch.class);
     }
 
@@ -109,7 +111,7 @@ class CharacterRowBranch extends BranchPackage {
                 characterMeshRowBranch.addPartRows(document, rows);
                 addBoneRows(rigHandle, rows);
             }
-            case SCULPT, PAINT, UV -> characterMeshRowBranch.addPartRows(document, rows);
+            case TOPOLOGY, SCULPT, PAINT, UV, HAIR -> characterMeshRowBranch.addPartRows(document, rows);
             case RIG -> characterRigRowBranch.addBoneRows(rows);
         }
     }
@@ -223,11 +225,13 @@ class CharacterRowBranch extends BranchPackage {
             case APPEARANCE -> addPreviewRows(document, rows);
             case EQUIPMENT -> addAnchorPropertyRows(document, rows);
             case MESH -> characterMeshRowBranch.buildMeshRows(rows);
+            case TOPOLOGY -> characterMeshRowBranch.buildTopologyRows(rows);
             case SCULPT -> characterMeshRowBranch.buildSculptRows(rows);
             case WEIGHTS -> characterMeshRowBranch.buildWeightRows(rows);
             case PAINT -> characterPaintRowBranch.buildPropertyRows(rows);
             case RIG -> characterRigRowBranch.buildPropertyRows(rows);
             case UV -> characterUVBranch.buildPropertyRows(rows);
+            case HAIR -> characterGroomBranch.buildPropertyRows(rows);
         }
     }
 

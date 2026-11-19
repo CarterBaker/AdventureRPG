@@ -30,6 +30,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
     private CharacterSculptBranch characterSculptBranch;
     private CharacterSymmetryBranch characterSymmetryBranch;
     private CharacterWeightBranch characterWeightBranch;
+    private CharacterEdgeBranch characterEdgeBranch;
 
     // Scratch
     private Vector3 centerScratch;
@@ -57,6 +58,7 @@ class CharacterMeshPropertyBranch extends BranchPackage {
         this.characterSculptBranch = get(CharacterSculptBranch.class);
         this.characterSymmetryBranch = get(CharacterSymmetryBranch.class);
         this.characterWeightBranch = get(CharacterWeightBranch.class);
+        this.characterEdgeBranch = get(CharacterEdgeBranch.class);
     }
 
     // Keys \\
@@ -112,6 +114,12 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_MAKE_FACE,
                     EditorSetting.CHARACTER_EDITOR_KEY_MERGE,
                     EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE,
+                    EditorSetting.CHARACTER_TOPOLOGY_KEY_MERGE_DISTANCE,
+                    EditorSetting.CHARACTER_TOPOLOGY_KEY_FLIP_FACES,
+                    EditorSetting.CHARACTER_TOPOLOGY_KEY_DELETE_DEGENERATE,
+                    EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_POLES,
+                    EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_TRIANGLES,
+                    EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_NON_MANIFOLD,
                     EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_POSITIVE,
                     EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_NEGATIVE,
                     EditorSetting.CHARACTER_EDITOR_KEY_ADD_PART,
@@ -499,6 +507,13 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_MAKE_FACE -> characterSculptBranch.makeFace(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_MERGE -> characterSculptBranch.merge(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE -> characterSculptBranch.subdivide(document);
+            case EditorSetting.CHARACTER_TOPOLOGY_KEY_MERGE_DISTANCE -> characterEdgeBranch.mergeByDistance(document);
+            case EditorSetting.CHARACTER_TOPOLOGY_KEY_FLIP_FACES -> characterEdgeBranch.flipFaces(document);
+            case EditorSetting.CHARACTER_TOPOLOGY_KEY_DELETE_DEGENERATE -> characterEdgeBranch.deleteDegenerate(document);
+            case EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_POLES -> characterEdgeBranch.selectPoles(document);
+            case EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_TRIANGLES -> characterEdgeBranch.selectTriangles(document);
+            case EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_NON_MANIFOLD ->
+                    characterEdgeBranch.selectNonManifold(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_POSITIVE -> characterSymmetryBranch.symmetrize(
                     document, true);
             case EditorSetting.CHARACTER_EDITOR_KEY_SYMMETRIZE_NEGATIVE -> characterSymmetryBranch.symmetrize(

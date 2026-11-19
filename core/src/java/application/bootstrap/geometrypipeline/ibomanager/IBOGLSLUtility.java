@@ -85,6 +85,19 @@ class IBOGLSLUtility extends EngineUtility {
         return iboInstance;
     }
 
+    static IBOInstance uploadIndexData(
+            VAOInstance vaoInstance,
+            IBOInstance iboInstance,
+            int[] indices,
+            int indexCount) {
+
+        IBOData iboData = upload(
+                vaoInstance, fillScratch(indices, indexCount), indexCount, EngineSetting.GL_UNSIGNED_INT);
+        iboInstance.constructor(iboData);
+
+        return iboInstance;
+    }
+
     private static IBOData upload(VAOInstance vaoInstance, Buffer buffer, int indexCount, int indexType) {
 
         GL30 gl30 = EngineContext.gl30;
@@ -114,6 +127,17 @@ class IBOGLSLUtility extends EngineUtility {
         IBOData newData = reupload(
                 oldData.getIndexHandle(), fillScratch(indices, indexCount), indexCount,
                 EngineSetting.GL_UNSIGNED_SHORT);
+        iboInstance.constructor(newData);
+
+        return iboInstance;
+    }
+
+    static IBOInstance updateIndexData(IBOInstance iboInstance, int[] indices, int indexCount) {
+
+        IBOData oldData = iboInstance.getIBOData();
+        IBOData newData = reupload(
+                oldData.getIndexHandle(), fillScratch(indices, indexCount), indexCount,
+                EngineSetting.GL_UNSIGNED_INT);
         iboInstance.constructor(newData);
 
         return iboInstance;

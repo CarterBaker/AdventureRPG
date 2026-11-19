@@ -53,6 +53,7 @@ class CharacterPropertyBranch extends BranchPackage {
     private CharacterRigPropertyBranch characterRigPropertyBranch;
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
     private CharacterUVBranch characterUVBranch;
+    private CharacterGroomBranch characterGroomBranch;
     private CharacterSliderBranch characterSliderBranch;
     private FeatureManager featureManager;
     private GenderManager genderManager;
@@ -67,6 +68,7 @@ class CharacterPropertyBranch extends BranchPackage {
         this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
         this.characterPaintPropertyBranch = get(CharacterPaintPropertyBranch.class);
         this.characterUVBranch = get(CharacterUVBranch.class);
+        this.characterGroomBranch = get(CharacterGroomBranch.class);
         this.characterSliderBranch = get(CharacterSliderBranch.class);
         this.featureManager = get(FeatureManager.class);
         this.genderManager = get(GenderManager.class);
@@ -79,7 +81,9 @@ class CharacterPropertyBranch extends BranchPackage {
         String keyName = CharacterViewUtility.getKeyName(key);
         int index = CharacterViewUtility.getKeyIndex(key);
 
-        if (characterMeshPropertyBranch.handles(keyName))
+        if (characterGroomBranch.handles(keyName))
+            characterGroomBranch.select(key);
+        else if (characterMeshPropertyBranch.handles(keyName))
             characterMeshPropertyBranch.select(key);
         else if (characterRigPropertyBranch.handles(keyName))
             characterRigPropertyBranch.select(key);
@@ -97,6 +101,9 @@ class CharacterPropertyBranch extends BranchPackage {
     // Values \\
 
     String getValueText(CharacterDocumentInstance document, String key) {
+
+        if (isGroomKey(key))
+            return characterGroomBranch.getValueText(key);
 
         if (isMeshKey(key))
             return characterMeshPropertyBranch.getValueText(key);
@@ -121,6 +128,9 @@ class CharacterPropertyBranch extends BranchPackage {
 
     boolean isValueValid(CharacterDocumentInstance document, String key, String text) {
 
+        if (isGroomKey(key))
+            return characterGroomBranch.isValueValid(key, text);
+
         if (isMeshKey(key))
             return characterMeshPropertyBranch.isValueValid(key, text);
 
@@ -140,6 +150,11 @@ class CharacterPropertyBranch extends BranchPackage {
     }
 
     void setValue(CharacterDocumentInstance document, String key, String text) {
+
+        if (isGroomKey(key)) {
+            characterGroomBranch.setValue(key, text);
+            return;
+        }
 
         if (isMeshKey(key)) {
             characterMeshPropertyBranch.setValue(key, text);
@@ -171,6 +186,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
     void step(CharacterDocumentInstance document, String key, int direction) {
 
+        if (isGroomKey(key)) {
+            characterGroomBranch.step(key, direction);
+            return;
+        }
+
         if (isMeshKey(key)) {
             characterMeshPropertyBranch.step(key, direction);
             return;
@@ -198,6 +218,10 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isNumberKey(key) && hasTarget(document, key))
             writeNumber(document, key, getNumber(document, key) + direction * getStep(key));
+    }
+
+    private boolean isGroomKey(String key) {
+        return characterGroomBranch.handles(CharacterViewUtility.getKeyName(key));
     }
 
     private boolean isMeshKey(String key) {
@@ -434,6 +458,11 @@ class CharacterPropertyBranch extends BranchPackage {
     // Choices \\
 
     void cycle(CharacterDocumentInstance document, String key, int direction) {
+
+        if (isGroomKey(key)) {
+            characterGroomBranch.cycle(direction);
+            return;
+        }
 
         if (isMeshKey(key)) {
             characterMeshPropertyBranch.cycle(key, direction);
@@ -966,6 +995,11 @@ class CharacterPropertyBranch extends BranchPackage {
     // Actions \\
 
     void act(CharacterDocumentInstance document, String key) {
+
+        if (isGroomKey(key)) {
+            characterGroomBranch.act(key);
+            return;
+        }
 
         if (isMeshKey(key)) {
             characterMeshPropertyBranch.act(key);

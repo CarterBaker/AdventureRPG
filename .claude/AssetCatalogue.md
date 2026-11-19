@@ -457,6 +457,10 @@ One line per session that changed this file: the date, what was added or removed
   gone); added `shortcuts/RecorderKeyGraph.arpg`; removed `shortcuts/RecorderBin.arpg` with its tab.
 - 2026-11-19: Takes dragged onto the Timeline. Regenerated `menus/editor/Layers.arpg` (row templates a layer is
   dragged out of the tab by).
+- 2026-11-19: Entity, Mesh, Topology and Hair tabs. Regenerated `menus/editor/EditorWindow.arpg` (the Characters menu
+  renamed Entities with Hair and Hair Materials, a new Mesh menu holding the modelling tabs and Topology) and
+  `shortcuts/CharacterEditor.arpg` (Make Face and Merge on the Topology canvas, selection keys and hints there and on
+  Hair); renamed `commands/Character.arpg` to `commands/Entity.arpg`, the console's Entity group.
 
 ## Textures and Sprites (2429 files)
 
@@ -2447,7 +2451,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/commands/`
 
-`Camera.arpg`, `Character.arpg`, `Items.arpg`, `Recorder.arpg`, `Teleport.arpg`, `Time.arpg`, `Vehicles.arpg`
+`Camera.arpg`, `Entity.arpg`, `Items.arpg`, `Recorder.arpg`, `Teleport.arpg`, `Time.arpg`, `Vehicles.arpg`
 
 ### `assets/contents/ores/`
 

@@ -80,10 +80,12 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     private float hitV;
     private int castCornerB;
     private int castCornerC;
+    private int pickedCorner;
 
     // Scratch
     private Vector2 screenScratch;
     private Vector2 occlusionScratch;
+    private Vector2 edgeScratch;
     private Vector3 rayOrigin;
     private Vector3 rayDirection;
 
@@ -109,6 +111,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         // Scratch
         this.screenScratch = new Vector2();
         this.occlusionScratch = new Vector2();
+        this.edgeScratch = new Vector2();
         this.rayOrigin = new Vector3();
         this.rayDirection = new Vector3();
     }
@@ -333,6 +336,61 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         resolveFaceNormal(activeDocument.getMesh(), picked, normalOut);
 
         return picked;
+    }
+
+    // The active part's face under a window pixel whose edge, as the view shows it, passes nearest the pixel, that
+    // edge's first corner kept for getPickedCorner; INDEX_NOT_FOUND where the ray meets none of the region's faces
+    public int pickEdge(float pixelX, float pixelY) {
+
+        int picked = castFace(pixelX, pixelY);
+
+        if (picked == EngineSetting.INDEX_NOT_FOUND)
+            return picked;
+
+        RiggedMeshStruct mesh = activeDocument.getMesh();
+        float nearest = Float.POSITIVE_INFINITY;
+
+        this.pickedCorner = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+            int a = mesh.getFaceVertex(picked, c);
+            int b = mesh.getFaceVertex(picked, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+
+            if (a == b || !project(getX(a), getY(a), getZ(a), screenScratch)
+                    || !project(getX(b), getY(b), getZ(b), edgeScratch))
+                continue;
+
+            float distance = resolveSegmentDistance(pixelX, pixelY);
+
+            if (distance < nearest) {
+                nearest = distance;
+                this.pickedCorner = c;
+            }
+        }
+
+        return pickedCorner != EngineSetting.INDEX_NOT_FOUND ? picked : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // The squared distance from a pixel to the window segment between the two scratch points
+    private float resolveSegmentDistance(float pixelX, float pixelY) {
+
+        float dx = edgeScratch.x - screenScratch.x;
+        float dy = edgeScratch.y - screenScratch.y;
+        float lengthSquared = dx * dx + dy * dy;
+        float t = lengthSquared > 0f
+                ? Math.max(0f, Math.min(1f, ((pixelX - screenScratch.x) * dx + (pixelY - screenScratch.y) * dy)
+                        / lengthSquared))
+                : 0f;
+        float ox = screenScratch.x + dx * t - pixelX;
+        float oy = screenScratch.y + dy * t - pixelY;
+
+        return ox * ox + oy * oy;
+    }
+
+    // The corner the edge last picked starts at
+    public int getPickedCorner() {
+        return pickedCorner;
     }
 
     // The face the ray through a pixel meets first, the hit's distance, triangle and place on it kept

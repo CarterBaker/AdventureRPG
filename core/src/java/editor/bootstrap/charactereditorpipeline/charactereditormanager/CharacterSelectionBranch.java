@@ -409,7 +409,8 @@ class CharacterSelectionBranch extends BranchPackage {
 
         for (int v = 0; v < mesh.getVertexCount(); v++)
             if (mirrorVertices.getInt(v) == EngineSetting.INDEX_NOT_FOUND && mesh.getX(v) < -tolerance)
-                cellNext.set(v, cell2Vertex.put(toCellKey(mesh.getX(v), mesh.getY(v), mesh.getZ(v), reach), v));
+                cellNext.set(v, cell2Vertex.put(
+                        CharacterMeshUtility.toCellKey(mesh.getX(v), mesh.getY(v), mesh.getZ(v), reach), v));
 
         for (int v = 0; v < mesh.getVertexCount(); v++) {
 
@@ -447,7 +448,7 @@ class CharacterSelectionBranch extends BranchPackage {
         for (int dx = -1; dx <= 1; dx++)
             for (int dy = -1; dy <= 1; dy++)
                 for (int dz = -1; dz <= 1; dz++)
-                    for (int v = cell2Vertex.get(packCell(cellX + dx, cellY + dy, cellZ + dz));
+                    for (int v = cell2Vertex.get(CharacterMeshUtility.packCell(cellX + dx, cellY + dy, cellZ + dz));
                             v != EngineSetting.INDEX_NOT_FOUND;
                             v = cellNext.getInt(v)) {
 
@@ -466,16 +467,6 @@ class CharacterSelectionBranch extends BranchPackage {
                     }
 
         return found;
-    }
-
-    private long toCellKey(float x, float y, float z, float reach) {
-        return packCell((int) Math.floor(x / reach), (int) Math.floor(y / reach), (int) Math.floor(z / reach));
-    }
-
-    private long packCell(int x, int y, int z) {
-        return ((long) x & EditorSetting.CHARACTER_MESH_KEY_MASK) << (EditorSetting.CHARACTER_MESH_KEY_BITS * 2)
-                | ((long) y & EditorSetting.CHARACTER_MESH_KEY_MASK) << EditorSetting.CHARACTER_MESH_KEY_BITS
-                | (long) z & EditorSetting.CHARACTER_MESH_KEY_MASK;
     }
 
     // Measure \\

@@ -9,12 +9,13 @@ public enum CharacterEditorMode {
      * What the character editor's panels work on: Appearance the default
      * features, colors, palettes, every slider the creator offers and the
      * build, Equipment the anchors worn and held gear hangs from, Mesh the
-     * vertices and faces of a worn part, Sculpt that part's surface under the
-     * brush, Weights the bones each of its vertices follows, Paint the
+     * vertices and faces of a worn part, Topology the edges and faces those
+     * vertices are joined by, Sculpt that part's surface under the brush, Weights the bones each of its vertices follows, Paint the
      * texture maps it is coloured by, Rig the bones themselves and the
      * slider channels they offer, and UV the seams that cut the part's
      * surface and the faces unwrapped flat, their UVs laid out in the UV
-     * Editor beside it. Sculpt's Brush also places the body part chosen in
+     * Editor beside it, and Hair the strands of the groom open, grown over
+     * the part's surface and turned into cards when exported. Sculpt's Brush also places the body part chosen in
      * the Stamps tab, its bones grafted onto the rig and its mesh merged into
      * the body. Each mode that takes viewport input is its own tool
      * canvas; the mesh modes edit the part's mesh file, Rig holds the bind
@@ -25,8 +26,9 @@ public enum CharacterEditorMode {
      * way the game's creator shows the player, or lets its outliner pick the
      * pose the preview strikes — the mesh modes in the bind pose by default,
      * their vertices moved there alone. Each is its own character tool tab;
-     * Mesh, Sculpt, Weights, Rig and UV list the regions as their layers,
+     * Mesh, Topology, Sculpt, Weights, Rig and UV list the regions as their layers,
      * Paint the paint layers of the map painted, and the rest work on the
+     * whole character; Topology lists the regions too, Hair works on the
      * whole character. The modes that take tools frame the region picked and
      * share their view with one another's tabs stacked in the same dock.
      */
@@ -48,6 +50,14 @@ public enum CharacterEditorMode {
             true,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_MESH_HINT),
+    TOPOLOGY(
+            EditorSetting.CHARACTER_EDITOR_MODE_TOPOLOGY,
+            ToolCanvas.CHARACTER_TOPOLOGY,
+            true,
+            false,
+            true,
+            null,
+            EditorSetting.CHARACTER_EDITOR_STATUS_TOPOLOGY_HINT),
     SCULPT(
             EditorSetting.CHARACTER_EDITOR_MODE_SCULPT,
             ToolCanvas.CHARACTER_SCULPT,
@@ -65,6 +75,14 @@ public enum CharacterEditorMode {
             false,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_PAINT_HINT),
+    HAIR(
+            EditorSetting.CHARACTER_EDITOR_MODE_HAIR,
+            ToolCanvas.CHARACTER_HAIR,
+            true,
+            true,
+            false,
+            null,
+            EditorSetting.CHARACTER_EDITOR_STATUS_HAIR_HINT),
     RIG(
             EditorSetting.CHARACTER_EDITOR_MODE_RIG,
             ToolCanvas.CHARACTER_RIG,
@@ -147,14 +165,24 @@ public enum CharacterEditorMode {
         return toolCanvas == ToolCanvas.CHARACTER_PAINT;
     }
 
+    // True for the mode that grooms the strands of hair grown over the part, never its vertices
+    public boolean groomsHair() {
+        return toolCanvas == ToolCanvas.CHARACTER_HAIR;
+    }
+
+    // True for the mode whose edge tools pick the edge under the pointer
+    public boolean editsEdges() {
+        return toolCanvas == ToolCanvas.CHARACTER_TOPOLOGY;
+    }
+
     // True for the mode whose Brush joins the body part chosen in the Stamps tab in place of a stroke
     public boolean placesParts() {
         return toolCanvas == ToolCanvas.CHARACTER_SCULPT;
     }
 
-    // True for a mesh mode whose tools select and shape the part's vertices: every one but Paint
+    // True for a mesh mode whose tools select and shape the part's vertices: every one but Paint and Hair
     public boolean editsVertices() {
-        return meshMode && !paintsMaps();
+        return meshMode && !paintsMaps() && !groomsHair();
     }
 
     // True for the mode that edits the rig, which draws the colliders its bones carry
@@ -179,7 +207,7 @@ public enum CharacterEditorMode {
 
     // True for a mode whose tab lists the regions as its layers, every edit held to the region picked
     public boolean takesRegions() {
-        return isModeling() && !paintsMaps();
+        return isModeling() && !paintsMaps() && !groomsHair();
     }
 
     // True for a mode whose tab lists layers in the Layers tab: the regions, or the paint layers

@@ -57,6 +57,7 @@ public class CharacterEditorSetting {
     public static final float EDGE_HALF_PIXELS = 0.75f;
     public static final float SEAM_HALF_PIXELS = 1.5f;
     public static final float GUIDE_HALF_PIXELS = 1f;
+    public static final float EDGE_HOVER_HALF_PIXELS = 2f;
 
     // Overlay — guides; screen guides sit this many near planes from the camera, an axis runs this far each way
     public static final float GUIDE_NEAR_SCALE = 2f;
@@ -76,6 +77,12 @@ public class CharacterEditorSetting {
     public static final float ATTACH_ACTIVE_HALF_PIXELS = 6f;
     public static final float STAMP_EDGE_HALF_PIXELS = 0.75f;
 
+    // Overlay — hair: each strand is its guide line through its points, its card's two sides beside it, and its root
+    // a dot; a selected strand is drawn in the selection's colour
+    public static final float STRAND_HALF_PIXELS = 1.25f;
+    public static final float STRAND_CARD_HALF_PIXELS = 0.6f;
+    public static final float STRAND_ROOT_HALF_PIXELS = 2.5f;
+
     // Overlay — colours
     public static final float[] COLOR_VERTEX = { 0.05f, 0.05f, 0.08f, 1f };
     public static final float[] COLOR_SELECTED = { 1f, 0.55f, 0.1f, 1f };
@@ -87,6 +94,9 @@ public class CharacterEditorSetting {
     public static final float[] COLOR_HEAT_HALF = { 0.15f, 0.85f, 0.2f, 1f };
     public static final float[] COLOR_HEAT_FULL = { 0.95f, 0.15f, 0.1f, 1f };
     public static final float[] COLOR_GUIDE = { 1f, 1f, 1f, 0.85f };
+    public static final float[] COLOR_EDGE_HOVER = { 0.3f, 0.95f, 1f, 1f };
+    public static final float[] COLOR_STRAND = { 0.95f, 0.85f, 0.55f, 1f };
+    public static final float[] COLOR_STRAND_CARD = { 1f, 1f, 1f, 0.35f };
     public static final float[] COLOR_COLLIDER = { 0.35f, 0.85f, 1f, 0.9f };
     public static final float[] COLOR_AXIS_NORMAL = { 1f, 0.85f, 0.2f, 1f };
     public static final float[] COLOR_ATTACH = { 1f, 0.85f, 0.1f, 0.9f };

@@ -26,7 +26,6 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector2;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 public class UVEditorRenderSystem extends SystemPackage {
 
@@ -68,7 +67,7 @@ public class UVEditorRenderSystem extends SystemPackage {
 
     // Geometry
     private FloatArrayList vertices;
-    private ShortArrayList indices;
+    private IntArrayList indices;
     private IntArrayList faces;
 
     // State
@@ -88,7 +87,7 @@ public class UVEditorRenderSystem extends SystemPackage {
 
         // Geometry
         this.vertices = new FloatArrayList();
-        this.indices = new ShortArrayList();
+        this.indices = new IntArrayList();
         this.faces = new IntArrayList();
 
         // State
@@ -222,24 +221,22 @@ public class UVEditorRenderSystem extends SystemPackage {
 
                 setColor(seam ? UVEditorSetting.COLOR_SEAM : UVEditorSetting.COLOR_EDGE);
 
-                if (!appendLine(
+                appendLine(
                         mesh.getFaceU(faceIndex, c),
                         mesh.getFaceV(faceIndex, c),
                         mesh.getFaceU(faceIndex, next),
                         mesh.getFaceV(faceIndex, next),
-                        seam ? UVEditorSetting.SEAM_HALF_PIXELS : UVEditorSetting.EDGE_HALF_PIXELS))
-                    return;
+                        seam ? UVEditorSetting.SEAM_HALF_PIXELS : UVEditorSetting.EDGE_HALF_PIXELS);
             }
         }
 
         for (int i = 0; i < faces.size(); i++)
             for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
-                if (!appendCorner(document, faces.getInt(i), c))
-                    return;
+                appendCorner(document, faces.getInt(i), c);
     }
 
-    // A face corner's dot, selected and pinned corners standing out; false at the vertex limit
-    private boolean appendCorner(CharacterMeshDocumentInstance document, int faceIndex, int corner) {
+    // A face corner's dot, selected and pinned corners standing out
+    private void appendCorner(CharacterMeshDocumentInstance document, int faceIndex, int corner) {
 
         RiggedMeshStruct mesh = document.getMesh();
         boolean selected = document.isCornerSelected(faceIndex, corner);
@@ -251,7 +248,7 @@ public class UVEditorRenderSystem extends SystemPackage {
                     ? UVEditorSetting.COLOR_PINNED
                     : UVEditorSetting.COLOR_CORNER);
 
-        return appendDot(
+        appendDot(
                 mesh.getFaceU(faceIndex, corner),
                 mesh.getFaceV(faceIndex, corner),
                 selected ? UVEditorSetting.CORNER_SELECTED_HALF_PIXELS : UVEditorSetting.CORNER_HALF_PIXELS);
@@ -299,37 +296,27 @@ public class UVEditorRenderSystem extends SystemPackage {
     // Geometry \\
 
     // A square of corners around one point, each pushed its half size in pixels off it by the shader
-    private boolean appendDot(float u, float v, float half) {
+    private void appendDot(float u, float v, float half) {
 
         int base = vertices.size() / UVEditorSetting.OVERLAY_VERTEX_FLOATS;
-
-        if (base + EngineSetting.QUAD_VERTEX_COUNT > EngineSetting.RIGGED_MESH_VERT_LIMIT)
-            return false;
 
         putVertex(u, v, u, v, -half, -half);
         putVertex(u, v, u, v, half, -half);
         putVertex(u, v, u, v, half, half);
         putVertex(u, v, u, v, -half, half);
         putQuad(base);
-
-        return true;
     }
 
     // A strip between two points, each end pushed its half width in pixels across the line by the shader
-    private boolean appendLine(float au, float av, float bu, float bv, float half) {
+    private void appendLine(float au, float av, float bu, float bv, float half) {
 
         int base = vertices.size() / UVEditorSetting.OVERLAY_VERTEX_FLOATS;
-
-        if (base + EngineSetting.QUAD_VERTEX_COUNT > EngineSetting.RIGGED_MESH_VERT_LIMIT)
-            return false;
 
         putVertex(au, av, bu, bv, half, 0f);
         putVertex(au, av, bu, bv, -half, 0f);
         putVertex(bu, bv, au, av, half, 0f);
         putVertex(bu, bv, au, av, -half, 0f);
         putQuad(base);
-
-        return true;
     }
 
     private void putVertex(float u, float v, float otherU, float otherV, float shapeX, float shapeY) {
@@ -348,12 +335,12 @@ public class UVEditorRenderSystem extends SystemPackage {
     }
 
     private void putQuad(int base) {
-        indices.add((short) base);
-        indices.add((short) (base + 1));
-        indices.add((short) (base + 2));
-        indices.add((short) (base + 2));
-        indices.add((short) (base + 3));
-        indices.add((short) base);
+        indices.add(base);
+        indices.add(base + 1);
+        indices.add(base + 2);
+        indices.add(base + 2);
+        indices.add(base + 3);
+        indices.add(base);
     }
 
     private void setColor(float[] color) {

@@ -18,7 +18,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Tools sit at the foot of each menu.** The editor's menus (`menus/editor/EditorWindow.arpg`) list a tab under the
   section for what it works on, and the tabs that serve the others (the Tools and Brushes tabs, the Outliner, Maps,
   Stamps and the Color Wheel, the Recorder) under a Tools section, always the menu's last: Content's Tools holds Tools
-  and Brushes, Characters' the Outliner, Textures' Maps, Stamps and the Color Wheel, Media's the Recorder. The Debug
+  and Brushes, Entities' the Outliner and Hair Materials, Mesh's the Outliner, Textures' Maps, Stamps and the Color
+  Wheel, Media's the Recorder. The Entities menu (once Characters) holds what only an entity has (its Entity section:
+  Appearance, Equipment, Hair; then Animation); the Mesh menu holds the general modelling tools any rigged model takes
+  (its Mesh section: Mesh, Topology, Sculpt, Paint, UV, UV Editor; its Rigging section: Rig, Weights). A tab or tool
+  shown to the owner says Entity, never Character; the code's `Character*` class names stay as they are. The Debug
   menu's Preview opens `DevContext`, the game as it runs with the command console's systems; there is no other runtime
   tab. The Command Console is one window whose view follows the window worked in last
   (`CommandManager.resolveViewTarget`): the character tabs' commands while a character tab was, the game's while a Dev
@@ -27,7 +31,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
   and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
-  Equipment, Mesh, Sculpt, Weights, Paint, Rig and UV, see `.claude/docs/CharacterEditorPipeline.md`; the
+  Equipment, Hair, Mesh, Topology, Sculpt, Weights, Paint, Rig and UV, see `.claude/docs/CharacterEditorPipeline.md`;
+  the Hair tab grooms strands painted with the material picked in the Hair Materials tab; the
   Appearance outliner holds every slider and control, the Rig tab marks which bone channels are sliders), sharing the
   region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with the
   Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting window
@@ -72,10 +77,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   keys are stable names (an enum's name, `region/mode`, a layer document's name), never IDs. The window keeps the layer
   picked itself and every system reads it there; a layer picked hands its tool canvas, Properties rows and File and Edit
   table to the shared tabs through the window's own providers, which answer for the layer picked.
-- **So far:** the World Editor (Heights over Biomes, each with an eye), the character Mesh, Sculpt, Weights, Rig and UV
-  tabs (the Body and every region within it, one region picked for all of them; no eyes), the character Paint tab
-  (the paint layers of the map painted, each above the base with an eye) and the Image Editor (every layer of the
-  image, each with an eye; its maps are listed in the Maps tab, never here).
+- **So far:** the World Editor (Heights over Biomes, each with an eye), the character Mesh, Topology, Sculpt, Weights,
+  Rig and UV tabs (the Body and every region within it, one region picked for all of them; no eyes), the character
+  Paint tab (the paint layers of the map painted, each above the base with an eye) and the Image Editor (every layer of
+  the image, each with an eye; its maps are listed in the Maps tab, never here).
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers
   dockers have them; each runs the window's own tool action through `LayersManager.addLayer` / `removeLayer`, so the
   icon, the Tools tab's action and its shortcut do one thing.
@@ -147,8 +152,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The workspace
 
 - **New work lives in the workspace**, `Documents/My Games/AdventureRPG/Assets/` beside the saves, one folder to each
-  kind (`Characters` for models, `Images`, `Exports` for exported maps, `Stamps` for stamp pictures, `Models` for
-  `.glb` files), resolved only through `WorkspaceUtility.resolveFolder`. A workspace file is not game
+  kind (`Characters` for models, `Hair` for grooms, `Images`, `Exports` for exported maps and, under `Exports/Hair`,
+  exported hair cards, `Stamps` for stamp pictures, `Models` for `.glb` files), resolved only through
+  `WorkspaceUtility.resolveFolder`. A workspace file is not game
   content: the Hierarchy never lists it, and it reaches the game only through Import, as a painting or modelling
   tool's project file reaches an engine through its export.
 

@@ -18,11 +18,16 @@ public enum EditorTool {
      * drags it along with the pointer; Raise and Lower build what lies
      * under the brush up or wear it down a little more with every stamp;
      * Topology gives a surface more faces where the brush covers it, or
-     * fewer with the stroke inverted, keeping it all quads;
+     * fewer with the stroke inverted, keeping it all quads; Flip Edge turns
+     * the edge clicked one step round the two faces beside it, so its ends
+     * move to the next corners along, Loop Cut cuts a new edge loop through
+     * the ring of faces across the edge clicked, and Dissolve Loop takes the
+     * edge loop clicked away, joining the faces either side of it; Draw
+     * draws a new strand of hair from where it presses along the drag;
      * Fill floods a run of one value and Pick takes up the value under the
      * pointer; Place stands a new thing where it clicks and Wall a thin
      * wall on the face it clicks; Move, Rotate and Scale drag what is
-     * selected; Cut cuts a clip in two where it clicks; IK Handle drags the
+     * selected, and on hair Place grows a strand where it clicks; Cut cuts a clip in two where it clicks; IK Handle drags the
      * end of a limb or digit the rig carries a handle for, and the joints
      * above it bend the way the handle's pole says; Pose turns a bone by its
      * joint so what it carries follows, a pose held only to work in. While a
@@ -55,9 +60,13 @@ public enum EditorTool {
     RAISE(EditorSetting.TOOL_RAISE, true, ToolOption.SIZE, ToolOption.STRENGTH),
     LOWER(EditorSetting.TOOL_LOWER, true, ToolOption.SIZE, ToolOption.STRENGTH),
     TOPOLOGY(EditorSetting.TOOL_TOPOLOGY, true, ToolOption.SIZE, ToolOption.STRENGTH, ToolOption.DETAIL),
+    FLIP_EDGE(EditorSetting.TOOL_FLIP_EDGE, false),
+    LOOP_CUT(EditorSetting.TOOL_LOOP_CUT, false),
+    DISSOLVE_LOOP(EditorSetting.TOOL_DISSOLVE_LOOP, false),
+    DRAW(EditorSetting.TOOL_DRAW, false, ToolOption.WIDTH),
     FILL(EditorSetting.TOOL_FILL, false),
     PICK(EditorSetting.TOOL_PICK, false),
-    PLACE(EditorSetting.TOOL_PLACE, false),
+    PLACE(EditorSetting.TOOL_PLACE, false, ToolOption.LENGTH, ToolOption.WIDTH),
     WALL(EditorSetting.TOOL_WALL, false),
     MOVE(EditorSetting.TOOL_MOVE, false),
     ROTATE(EditorSetting.TOOL_ROTATE, false),

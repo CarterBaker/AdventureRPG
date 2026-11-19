@@ -194,6 +194,16 @@ public class EditorSetting {
             .with(FileMenuAction.REDO, "redo")
             .with(FileMenuAction.IMPORT, "importModel")
             .with(FileMenuAction.EXPORT, "exportModel");
+    public static final FileMenuTableStruct FILE_MENU_HAIR = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.CharacterEditorBranch")
+            .with(FileMenuAction.NEW, "newHair")
+            .with(FileMenuAction.OPEN, "openHair")
+            .with(FileMenuAction.SAVE, "saveHair")
+            .with(FileMenuAction.REVERT, "revertHair")
+            .with(FileMenuAction.UNDO, "undoHair")
+            .with(FileMenuAction.REDO, "redoHair")
+            .with(FileMenuAction.IMPORT, "importHair")
+            .with(FileMenuAction.EXPORT, "exportHair");
     public static final FileMenuTableStruct FILE_MENU_ANIMATION = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.AnimationEditorBranch")
             .with(FileMenuAction.NEW, "newClip")
@@ -439,6 +449,9 @@ public class EditorSetting {
     public static final String TAB_TITLE_CHARACTER_PAINT = "Paint";
     public static final String TAB_TITLE_CHARACTER_RIG = "Rig";
     public static final String TAB_TITLE_CHARACTER_UV = "UV";
+    public static final String TAB_TITLE_CHARACTER_TOPOLOGY = "Topology";
+    public static final String TAB_TITLE_CHARACTER_HAIR = "Hair";
+    public static final String TAB_TITLE_HAIR_MATERIALS = "Hair Materials";
     public static final String TAB_TITLE_UV_EDITOR = "UV Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
@@ -690,7 +703,7 @@ public class EditorSetting {
     public static final String CHARACTER_VIEW_MENU_DOCK = "editor/CharacterDock/Dock";
     public static final int CHARACTER_VIEW_DOCK_ENTRY_TITLE = 0;
     public static final int CHARACTER_VIEW_DOCK_ENTRY_ROWS = 1;
-    public static final String CHARACTER_OUTLINER_TITLE = "Character";
+    public static final String CHARACTER_OUTLINER_TITLE = "Entity";
     public static final String CHARACTER_PROPERTIES_TITLE = "Properties";
     public static final String ANIMATION_OUTLINER_TITLE = "Clip";
     public static final String ANIMATION_PROPERTIES_TITLE = "Key";
@@ -929,6 +942,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_MESH = "Mesh";
     public static final String CHARACTER_EDITOR_MODE_SCULPT = "Sculpt";
     public static final String CHARACTER_EDITOR_MODE_WEIGHTS = "Weights";
+    public static final String CHARACTER_EDITOR_MODE_TOPOLOGY = "Topology";
+    public static final String CHARACTER_EDITOR_MODE_HAIR = "Hair";
     public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
     public static final String CHARACTER_EDITOR_MODE_PAINT = "Paint";
     public static final String CHARACTER_EDITOR_MODE_UV = "UV";
@@ -1178,6 +1193,12 @@ public class EditorSetting {
             + " Ctrl inverts the stroke; drag off it to orbit, right-drag to pan";
     public static final String CHARACTER_EDITOR_STATUS_PAINT_HINT = "Drag on the mesh to paint the map chosen; Fill"
             + " fills the island clicked, Pick takes its colour; drag off it to orbit, right-drag to pan";
+    public static final String CHARACTER_EDITOR_STATUS_TOPOLOGY_HINT = "Flip Edge turns the edge clicked (Ctrl the"
+            + " other way), Loop Cut cuts a loop across it, Dissolve Loop takes its loop away; Topology brushes faces"
+            + " finer, Ctrl coarser; drag off the mesh to orbit";
+    public static final String CHARACTER_EDITOR_STATUS_HAIR_HINT = "Draw drags a strand from the scalp, Place grows"
+            + " one where it clicks; Brush paints the material chosen, Nudge combs, Raise and Lower lengthen and"
+            + " shorten, Erase cuts; drag off the head to orbit";
     public static final String CHARACTER_EDITOR_STATUS_UV_HINT = "Select the vertices of the edges to cut and Mark"
             + " Seam, then select the faces and Unwrap; their UVs show in the UV Editor; drag off the mesh to orbit";
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
@@ -1267,6 +1288,144 @@ public class EditorSetting {
     public static final float CHARACTER_TOPOLOGY_AREA_SHARE_MIN = 0.1f;
     public static final String CHARACTER_EDITOR_MESSAGE_TOPOLOGY_SHAPE =
             "The topology changes only on the base shape: return to it under Shape Keys";
+
+    // Character Topology — the Topology tab's edge tools and clean-up. A loop walk ends closed, on an open edge's
+    // vertex, or at a pole it cannot pass; two faces about an edge pack into one long, the second in the low bits
+    public static final String CHARACTER_TOPOLOGY_KEY_MERGE_DISTANCE = "merge_distance";
+    public static final String CHARACTER_TOPOLOGY_KEY_FLIP_FACES = "flip_faces";
+    public static final String CHARACTER_TOPOLOGY_KEY_DELETE_DEGENERATE = "delete_degenerate";
+    public static final String CHARACTER_TOPOLOGY_KEY_SELECT_POLES = "select_poles";
+    public static final String CHARACTER_TOPOLOGY_KEY_SELECT_TRIANGLES = "select_triangles";
+    public static final String CHARACTER_TOPOLOGY_KEY_SELECT_NON_MANIFOLD = "select_non_manifold";
+    public static final String CHARACTER_TOPOLOGY_HEADER_FACES = "Faces";
+    public static final String CHARACTER_TOPOLOGY_HEADER_CLEAN_UP = "Clean Up";
+    public static final String CHARACTER_TOPOLOGY_HEADER_STATS = "Topology";
+    public static final String CHARACTER_TOPOLOGY_LABEL_MERGE_DISTANCE = "Merge by Distance";
+    public static final String CHARACTER_TOPOLOGY_LABEL_FLIP_FACES = "Flip Faces";
+    public static final String CHARACTER_TOPOLOGY_LABEL_DELETE_DEGENERATE = "Delete Degenerate Faces";
+    public static final String CHARACTER_TOPOLOGY_LABEL_SELECT_POLES = "Select Poles";
+    public static final String CHARACTER_TOPOLOGY_LABEL_SELECT_TRIANGLES = "Select Triangles";
+    public static final String CHARACTER_TOPOLOGY_LABEL_SELECT_NON_MANIFOLD = "Select Non-Manifold";
+    public static final String CHARACTER_TOPOLOGY_LABEL_QUADS = " quads";
+    public static final String CHARACTER_TOPOLOGY_LABEL_TRIANGLES = " triangles";
+    public static final String CHARACTER_TOPOLOGY_LABEL_POLES = " poles";
+    public static final float CHARACTER_TOPOLOGY_MERGE_DISTANCE = 0.0001f;
+    public static final float CHARACTER_TOPOLOGY_AREA_EPSILON = 1.0e-12f;
+    public static final int CHARACTER_TOPOLOGY_LOOP_CLOSED = 0;
+    public static final int CHARACTER_TOPOLOGY_LOOP_OPEN = 1;
+    public static final int CHARACTER_TOPOLOGY_LOOP_POLE = 2;
+    public static final long CHARACTER_TOPOLOGY_FACE_MASK = 0xFFFFFFFFL;
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_OPEN_EDGE = "That edge needs exactly two faces beside it";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_SEAM =
+            "A UV seam keeps its faces in separate islands: Clear Seam on it first";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_WINDING =
+            "The faces beside that edge wind opposite ways: Flip Faces on one of them first";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_JOINED = "Those corners are joined already";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_FLIPPED = "Edge flipped";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_RING_TRIANGLE = "Loop Cut runs through quads, not triangles";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_CUT = " faces cut";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_POLE =
+            "That loop meets a pole or a triangle: Dissolve Loop takes a loop that closes or runs to an open edge";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_DISSOLVED = " edges dissolved";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_MERGED = " vertices merged by distance";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_MERGED_NONE = "No vertices stand within the merge distance";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_FACES_FLIPPED = " faces flipped";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_DEGENERATE = " degenerate faces deleted";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_DEGENERATE_NONE = "No degenerate faces";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_SELECTED = " vertices selected";
+
+    // Character Hair — the Hair tab's grooms: the workspace folder they are kept in and the folder under Exports their
+    // cards are written to, the fields of a groom file, the strands' units (Length in centimetres, Width in
+    // millimetres, positions in blocks), how far apart a drawn strand's points are, how far a root stands off the
+    // surface, how far a full-strength stamp grows or shortens a tip and smooths or combs a point, how near twin roots
+    // stand, the undo steps kept, and the defaults a strand starts with. A card is two quads wide, its corners laid
+    // across it at the u given, and its v running from 1 at the root to 0 at the tip as the strand image hangs
+    public static final String CHARACTER_HAIR_WORKSPACE_DIRECTORY = "Hair";
+    public static final String CHARACTER_HAIR_EXPORT_FOLDER = "Hair";
+    public static final String CHARACTER_HAIR_FIELD_RIG = "rig";
+    public static final String CHARACTER_HAIR_FIELD_SOURCE = "source";
+    public static final String CHARACTER_HAIR_FIELD_STRANDS = "strands";
+    public static final String CHARACTER_HAIR_FIELD_TEXTURE = "texture";
+    public static final String CHARACTER_HAIR_FIELD_BONE = "bone";
+    public static final String CHARACTER_HAIR_FIELD_WIDTH = "width";
+    public static final String CHARACTER_HAIR_FIELD_TAPER = "taper";
+    public static final String CHARACTER_HAIR_FIELD_NORMAL = "normal";
+    public static final String CHARACTER_HAIR_FIELD_POINTS = "points";
+    public static final String CHARACTER_HAIR_FIELD_SLOT = "slot";
+    public static final String CHARACTER_HAIR_FIELD_MESH = "mesh";
+    public static final String CHARACTER_HAIR_SLOT = "hair";
+    public static final String CHARACTER_HAIR_MESH_SUFFIX = "Mesh";
+    public static final String CHARACTER_HAIR_DEFAULT_FEATURE_FOLDER = "humanoid/hair/";
+    public static final String CHARACTER_HAIR_DEFAULT_BONE = "head";
+    public static final String CHARACTER_HAIR_DEFAULT_TEXTURE = "characters/standard/Hair";
+    public static final float CHARACTER_HAIR_LENGTH_UNIT = 0.01f;
+    public static final float CHARACTER_HAIR_WIDTH_UNIT = 0.001f;
+    public static final float CHARACTER_HAIR_POINT_SPACING = 0.01f;
+    public static final float CHARACTER_HAIR_ROOT_LIFT = 0.001f;
+    public static final float CHARACTER_HAIR_GROW_RATE = 0.004f;
+    public static final float CHARACTER_HAIR_SMOOTH_RATE = 0.5f;
+    public static final float CHARACTER_HAIR_SEGMENT_MIN = 0.001f;
+    public static final float CHARACTER_HAIR_TWIN_REACH = 0.005f;
+    public static final float CHARACTER_HAIR_TAPER_DEFAULT = 0.35f;
+    public static final float CHARACTER_HAIR_TAPER_STEP = 0.05f;
+    public static final float CHARACTER_HAIR_WIDTH_STEP = 0.5f;
+    public static final float CHARACTER_HAIR_EPSILON = 1.0e-6f;
+    public static final int CHARACTER_HAIR_MIN_POINTS = 2;
+    public static final int CHARACTER_HAIR_HISTORY_MAX = 64;
+    public static final float[] CHARACTER_HAIR_CARD_U = { 0f, 0.5f, 1f };
+    public static final String CHARACTER_HAIR_KEY_PREFIX = "hair_";
+    public static final String CHARACTER_HAIR_KEY_FROM_WORN = "hair_from_worn";
+    public static final String CHARACTER_HAIR_KEY_SELECT_ALL = "hair_select_all";
+    public static final String CHARACTER_HAIR_KEY_SELECT_NONE = "hair_select_none";
+    public static final String CHARACTER_HAIR_KEY_DELETE = "hair_delete";
+    public static final String CHARACTER_HAIR_KEY_MATERIAL = "hair_material";
+    public static final String CHARACTER_HAIR_KEY_WIDTH = "hair_width";
+    public static final String CHARACTER_HAIR_KEY_TAPER = "hair_taper";
+    public static final String CHARACTER_HAIR_HEADER_STRANDS = "Strands";
+    public static final String CHARACTER_HAIR_HEADER_NO_GROOM =
+            "No hair open: File, New makes one, File, Open opens one, Strands From Worn Hair takes the hair worn";
+    public static final String CHARACTER_HAIR_HEADER_SELECTED = "Selected Strands";
+    public static final String CHARACTER_HAIR_HEADER_MATERIALS = "Strand Materials";
+    public static final String CHARACTER_HAIR_HEADER_NO_MATERIALS = "Open a character to list its materials";
+    public static final String CHARACTER_HAIR_LABEL_FROM_WORN = "Strands From Worn Hair";
+    public static final String CHARACTER_HAIR_LABEL_SELECT_ALL = "Select All Strands";
+    public static final String CHARACTER_HAIR_LABEL_SELECT_NONE = "Select No Strands";
+    public static final String CHARACTER_HAIR_LABEL_DELETE = "Delete Selected Strands";
+    public static final String CHARACTER_HAIR_LABEL_MATERIAL = "Material";
+    public static final String CHARACTER_HAIR_LABEL_WIDTH = "Width (mm)";
+    public static final String CHARACTER_HAIR_LABEL_TAPER = "Taper";
+    public static final String CHARACTER_HAIR_LABEL_STRANDS = " strands";
+    public static final String CHARACTER_HAIR_LABEL_SELECTED = " selected";
+    public static final String CHARACTER_HAIR_DIALOG_NEW = "New hair: its name";
+    public static final String CHARACTER_HAIR_DIALOG_RIG = "New hair: the rig it is worn on";
+    public static final String CHARACTER_HAIR_DIALOG_OPEN = "Open Hair";
+    public static final String CHARACTER_HAIR_DIALOG_IMPORT = "Import Hair";
+    public static final String CHARACTER_HAIR_DIALOG_FEATURE =
+            "Import: the hair feature it becomes, as folder/Name (an existing one is replaced)";
+    public static final String CHARACTER_HAIR_DIALOG_SPRINGS =
+            "Import: lay spring chains on the long strands and weigh them on (yes or no)";
+    public static final String CHARACTER_HAIR_ANSWER_YES = "yes";
+    public static final String CHARACTER_HAIR_ANSWER_NO = "no";
+    public static final String CHARACTER_HAIR_MESSAGE_MADE = "Made the hair ";
+    public static final String CHARACTER_HAIR_MESSAGE_OPENED = "Opened the hair ";
+    public static final String CHARACTER_HAIR_MESSAGE_SAVED = "Saved the hair ";
+    public static final String CHARACTER_HAIR_MESSAGE_REVERTED = "Reverted the hair ";
+    public static final String CHARACTER_HAIR_MESSAGE_NOT_WRITTEN = "The hair file could not be written: ";
+    public static final String CHARACTER_HAIR_MESSAGE_NOT_READ = "The hair file could not be read: ";
+    public static final String CHARACTER_HAIR_MESSAGE_OUTSIDE = "Open takes a hair from the workspace's Hair folder";
+    public static final String CHARACTER_HAIR_MESSAGE_NO_GROOM = "No hair is open";
+    public static final String CHARACTER_HAIR_MESSAGE_NO_STRANDS = "The hair has no strands to export";
+    public static final String CHARACTER_HAIR_MESSAGE_EXPORTED = "Exported the hair's cards to ";
+    public static final String CHARACTER_HAIR_MESSAGE_IMPORTED = "Imported the hair as the feature ";
+    public static final String CHARACTER_HAIR_MESSAGE_NOT_EXPORT = "Import takes a hair exported to Exports/Hair";
+    public static final String CHARACTER_HAIR_MESSAGE_NO_WORN = "The character wears no hair to take strands from";
+    public static final String CHARACTER_HAIR_MESSAGE_FROM_WORN = " strands taken from the hair worn";
+    public static final String CHARACTER_HAIR_MESSAGE_NO_MATERIAL = "Pick a material in the Hair Materials tab first";
+    public static final String CHARACTER_HAIR_MESSAGE_PAINTED = " strands painted";
+    public static final String CHARACTER_HAIR_MESSAGE_DELETED = " strands deleted";
+    public static final String CHARACTER_HAIR_MESSAGE_NO_SELECTION = "Select strands first";
+    public static final String CHARACTER_HAIR_MESSAGE_SPRINGS_NO_RIG =
+            "Open a character on the hair's rig in the character tabs to lay its spring chains";
 
     // Character Symmetry — the centre plane is x = 0; corners within CHARACTER_MESH_CENTER_TOLERANCE lie on it
     public static final int CHARACTER_SYMMETRY_SIDE_KEPT = 1;
@@ -1741,7 +1900,7 @@ public class EditorSetting {
     public static final String ANIMATION_EDITOR_KEY_AT = " at ";
     public static final String ANIMATION_EDITOR_KEY_COUNT_OPEN = "  (";
     public static final String ANIMATION_EDITOR_KEY_COUNT_CLOSE = ")";
-    public static final String ANIMATION_EDITOR_LABEL_CHARACTER = "Character";
+    public static final String ANIMATION_EDITOR_LABEL_CHARACTER = "Entity";
     public static final String ANIMATION_EDITOR_LABEL_LOOP = "Loops";
     public static final String ANIMATION_EDITOR_LABEL_ROTATION = "Rotation";
     public static final String ANIMATION_EDITOR_LABEL_POSITION = "Position";
@@ -2393,6 +2552,10 @@ public class EditorSetting {
     public static final String TOOL_RAISE = "Raise";
     public static final String TOOL_LOWER = "Lower";
     public static final String TOOL_TOPOLOGY = "Topology";
+    public static final String TOOL_FLIP_EDGE = "Flip Edge";
+    public static final String TOOL_LOOP_CUT = "Loop Cut";
+    public static final String TOOL_DISSOLVE_LOOP = "Dissolve Loop";
+    public static final String TOOL_DRAW = "Draw";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
@@ -2403,6 +2566,8 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_RIG = "Rig";
     public static final String TOOL_CANVAS_CHARACTER_PAINT = "Paint";
     public static final String TOOL_CANVAS_CHARACTER_UV = "UV";
+    public static final String TOOL_CANVAS_CHARACTER_TOPOLOGY = "Topology";
+    public static final String TOOL_CANVAS_CHARACTER_HAIR = "Hair";
     public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
     public static final String TOOL_CANVAS_IMAGE_EDITOR = "Image Editor";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
@@ -2463,6 +2628,8 @@ public class EditorSetting {
     public static final String TOOL_OPTION_XRAY = "X-Ray";
     public static final String TOOL_OPTION_WIREFRAME = "Wireframe";
     public static final String TOOL_OPTION_DETAIL = "Detail (mm)";
+    public static final String TOOL_OPTION_LENGTH = "Length (cm)";
+    public static final String TOOL_OPTION_WIDTH = "Width (mm)";
     public static final String TOOL_OPTION_BONES = "Bones";
     public static final String[] TOOL_OPTION_SWITCH_NAMES = { "Off", "On" };
     public static final String[] TOOL_BONE_DISPLAY_NAMES = { "Joints", "Sticks", "Joints and Sticks", "Hidden" };
@@ -2487,6 +2654,15 @@ public class EditorSetting {
     public static final float TOOL_TOPOLOGY_DETAIL_MAX = 50f;
     public static final float TOOL_TOPOLOGY_DETAIL_STEP = 0.5f;
     public static final float TOOL_TOPOLOGY_DETAIL_DEFAULT = 6f;
+    public static final float TOOL_HAIR_STRENGTH_DEFAULT = 0.5f;
+    public static final float TOOL_HAIR_LENGTH_MIN = 0.5f;
+    public static final float TOOL_HAIR_LENGTH_MAX = 120f;
+    public static final float TOOL_HAIR_LENGTH_STEP = 0.5f;
+    public static final float TOOL_HAIR_LENGTH_DEFAULT = 12f;
+    public static final float TOOL_HAIR_WIDTH_MIN = 1f;
+    public static final float TOOL_HAIR_WIDTH_MAX = 120f;
+    public static final float TOOL_HAIR_WIDTH_STEP = 0.5f;
+    public static final float TOOL_HAIR_WIDTH_DEFAULT = 20f;
     public static final float TOOL_PAINT_STRENGTH_DEFAULT = 0.5f;
     public static final float TOOL_TWIST_STEP = 15f;
     public static final float TOOL_TWIST_MAX = 360f;
@@ -2601,6 +2777,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_TREES = "Trees";
     public static final String INFO_SCHEMA_ENTITIES = "Entities";
     public static final String INFO_SCHEMA_RACES = "Races";
+    public static final String INFO_SCHEMA_FEATURES = "Features";
     public static final String INFO_SCHEMA_GENDERS = "Genders";
     public static final String INFO_SCHEMA_MATERIALS = "Materials";
     public static final String INFO_SCHEMA_ANIMATIONS = "Animations";

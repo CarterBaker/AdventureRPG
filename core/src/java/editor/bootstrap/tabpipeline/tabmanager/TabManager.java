@@ -23,6 +23,9 @@ import editor.bootstrap.tabpipeline.util.DropZone;
 import editor.runtime.charactereditor.CharacterAppearanceContext;
 import editor.runtime.charactereditor.CharacterEquipmentContext;
 import editor.runtime.charactereditor.CharacterMeshContext;
+import editor.runtime.charactereditor.CharacterHairContext;
+import editor.runtime.charactereditor.CharacterTopologyContext;
+import editor.runtime.hairmaterials.HairMaterialsContext;
 import editor.runtime.charactereditor.CharacterPaintContext;
 import editor.runtime.charactereditor.CharacterRigContext;
 import editor.runtime.charactereditor.CharacterSculptContext;
@@ -191,6 +194,10 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_MESH, CharacterMeshContext.class, osWindow);
     }
 
+    public TabHandle openCharacterTopology(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_TOPOLOGY, CharacterTopologyContext.class, osWindow);
+    }
+
     public TabHandle openCharacterSculpt(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_SCULPT, CharacterSculptContext.class, osWindow);
     }
@@ -209,6 +216,14 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openCharacterUV(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_UV, CharacterUVContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterHair(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_HAIR, CharacterHairContext.class, osWindow);
+    }
+
+    public TabHandle openHairMaterials(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_HAIR_MATERIALS, HairMaterialsContext.class, osWindow);
     }
 
     public TabHandle openUVEditor(WindowInstance osWindow) {

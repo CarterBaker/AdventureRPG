@@ -15,6 +15,8 @@ import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
 import editor.runtime.charactereditor.bone.CharacterEditorBoneSystem;
+import editor.runtime.charactereditor.edge.CharacterEditorEdgeSystem;
+import editor.runtime.charactereditor.groom.CharacterEditorGroomSystem;
 import editor.runtime.charactereditor.menu.CharacterEditorMenuSystem;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
@@ -55,11 +57,12 @@ public abstract class CharacterToolContext extends ContextPackage
      * one mode it names, so the owner lays the tools out as they wish:
      * Appearance and Equipment shape how it looks on the live preview, the
      * Appearance outliner holding every slider the creator offers with the
-     * build; Mesh, Sculpt, Weights, Rig and UV model the meshes it wears and
+     * build; Mesh, Topology, Sculpt, Weights, Rig and UV model the meshes it wears and
      * the rig it is built on in the region picked in the Layers tab, shared
      * by all of them, framed and shown alone, every pick, box, stroke and
      * mirror held to it; Paint paints the maps of the part open, its paint
-     * layers listed in the Layers tab; Stamp joins the parts chosen in the
+     * layers listed in the Layers tab; Hair grooms the strands of hair grown
+     * over it; Stamp joins the parts chosen in the
      * Stamps tab to the body. Each tool tab is a tool canvas worked
      * with the Tools and Brushes tabs, its actions listed in the Tools tab
      * and its values and those of what is picked in the Properties tab while
@@ -86,6 +89,8 @@ public abstract class CharacterToolContext extends ContextPackage
     private CharacterEditorSculptSystem characterEditorSculptSystem;
     private CharacterEditorRigSystem characterEditorRigSystem;
     private CharacterEditorBoneSystem characterEditorBoneSystem;
+    private CharacterEditorEdgeSystem characterEditorEdgeSystem;
+    private CharacterEditorGroomSystem characterEditorGroomSystem;
     private CharacterEditorPaintSystem characterEditorPaintSystem;
     private CharacterEditorStampSystem characterEditorStampSystem;
     private CharacterEditorOverlaySystem characterEditorOverlaySystem;
@@ -111,6 +116,8 @@ public abstract class CharacterToolContext extends ContextPackage
         this.characterEditorSculptSystem = create(CharacterEditorSculptSystem.class);
         this.characterEditorRigSystem = create(CharacterEditorRigSystem.class);
         this.characterEditorBoneSystem = create(CharacterEditorBoneSystem.class);
+        this.characterEditorEdgeSystem = create(CharacterEditorEdgeSystem.class);
+        this.characterEditorGroomSystem = create(CharacterEditorGroomSystem.class);
         this.characterEditorPaintSystem = create(CharacterEditorPaintSystem.class);
         this.characterEditorStampSystem = create(CharacterEditorStampSystem.class);
         this.characterEditorOverlaySystem = create(CharacterEditorOverlaySystem.class);

@@ -15,7 +15,8 @@ public class CharacterMeshUtility extends EngineUtility {
      * Stateless geometry the character editor's mesh tools share: the smooth
      * falloff of proportional edits and brushes, turning a point about an
      * axis, the exact key of a position on the editor's decimal grid so a
-     * point and its mirror across x find each other, the mirrored name of a
+     * point and its mirror across x find each other, the grid cell a point
+     * falls in for searches near it, the mirrored name of a
      * left or right bone, and the starting shapes of a new part. Every
      * position written is rounded to the editor's precision first.
      */
@@ -68,6 +69,18 @@ public class CharacterMeshUtility extends EngineUtility {
 
     private static long pack(float value) {
         return Math.round(value * EditorSetting.CHARACTER_VIEW_DECIMAL_SCALE) & EditorSetting.CHARACTER_MESH_KEY_MASK;
+    }
+
+    // The cell of a grid of the given reach a position falls in, packed into one key, so a search near a point
+    // looks only in the cells about its own
+    public static long toCellKey(float x, float y, float z, float reach) {
+        return packCell((int) Math.floor(x / reach), (int) Math.floor(y / reach), (int) Math.floor(z / reach));
+    }
+
+    public static long packCell(int x, int y, int z) {
+        return ((long) x & EditorSetting.CHARACTER_MESH_KEY_MASK) << (EditorSetting.CHARACTER_MESH_KEY_BITS * 2)
+                | ((long) y & EditorSetting.CHARACTER_MESH_KEY_MASK) << EditorSetting.CHARACTER_MESH_KEY_BITS
+                | (long) z & EditorSetting.CHARACTER_MESH_KEY_MASK;
     }
 
     public static float distanceSquared(RiggedMeshStruct mesh, int vertexA, int vertexB) {
