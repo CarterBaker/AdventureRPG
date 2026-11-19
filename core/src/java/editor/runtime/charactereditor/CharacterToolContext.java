@@ -38,14 +38,16 @@ import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
+import editor.runtime.viewcamera.ViewCameraShareProvider;
+import editor.runtime.viewcamera.ViewCameraStateStruct;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public abstract class CharacterToolContext extends ContextPackage
-        implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, PropertiesProvider,
-        OutlinerProvider, MapsProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider,
+        implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, ViewCameraShareProvider,
+        PropertiesProvider, OutlinerProvider, MapsProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider,
         CharacterModeProvider {
 
     /*
@@ -66,7 +68,9 @@ public abstract class CharacterToolContext extends ContextPackage
      * All state lives in CharacterEditorManager, the region, the bone and the
      * vertices selected shared by every tab; a tab keeps its mode, reads
      * input, orbits the camera, poses and draws the preview, and shows the
-     * status bar.
+     * status bar. Modelling tabs stacked in one dock share one view, so
+     * switching between them keeps the same part in sight; in separate docks,
+     * and for the look tabs, each view is its own.
      */
 
     // Internal
@@ -284,6 +288,19 @@ public abstract class CharacterToolContext extends ContextPackage
     @Override
     public ViewCameraSubject getViewCameraSubject() {
         return characterRegionFrameSystem;
+    }
+
+    // A modelling tab shares its view with the modelling tabs stacked with it; a look tab keeps its own
+    @Override
+    public String getViewCameraShare() {
+        return getMode().sharesView()
+                ? EditorSetting.VIEW_CAMERA_SHARE_CHARACTER
+                : EditorSetting.VIEW_CAMERA_SHARE_NONE;
+    }
+
+    @Override
+    public ViewCameraStateStruct getViewCameraState() {
+        return viewCameraSystem.getViewCameraState();
     }
 
     // File Menu \\

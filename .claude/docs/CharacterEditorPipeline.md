@@ -150,6 +150,12 @@ like any other.
   (zoomed in as far as it goes, the wheel dollies the pivot forward, and the near plane follows the distance, so close
   detail is never clipped),
   framing `CharacterViewPoseSystem` (every character tool tab frames its region through `CharacterRegionFrameSystem`).
+  **Stacked modelling tabs share one view.** Every mode that takes tools (`CharacterEditorMode.sharesView`: Mesh, Sculpt,
+  Weights, Paint, Rig and UV) frames the region picked (`CharacterEditorModeSystem.getFramedRegion`, Paint's frame
+  included though it paints the whole character) and names `EditorSetting.VIEW_CAMERA_SHARE_CHARACTER` as its
+  `ViewCameraShareProvider` kind, so the modelling tabs stacked in one dock look through one camera: switching between
+  them keeps the same part in sight, while modelling tabs in separate docks each keep their own view. Appearance and
+  Equipment name none and keep a view of their own on the whole character.
   A viewport
   system takes a click only when it acts on something (a vertex, a joint, the mesh under the brush) and claims it with
   `EditorInputSystem.claim`; any other left press orbits and a right press pans. Cancel clicks

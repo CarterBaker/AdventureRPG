@@ -631,6 +631,10 @@ public class EditorSetting {
     public static final float VIEW_CAMERA_INITIAL_PITCH_DEGREES = 18f;
     public static final float VIEW_CAMERA_VERTICAL_LEAN = 0.02f;
 
+    // View Camera Share — the kind of view a viewport hands on to the tabs stacked with it; none keeps it its own
+    public static final String VIEW_CAMERA_SHARE_NONE = "";
+    public static final String VIEW_CAMERA_SHARE_CHARACTER = "character";
+
     // Character View — meshes, materials and draw order
     public static final String CHARACTER_VIEW_MESH_GRID = "editor/CharacterViewGrid";
     public static final String CHARACTER_VIEW_MESH_MARKER = "editor/CharacterViewMarker";

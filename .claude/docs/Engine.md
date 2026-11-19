@@ -51,7 +51,11 @@ writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
   (`editor.runtime.viewcamera`), and its context implements `ViewCameraProvider`, naming the `ViewCameraSubject` it
   frames (shown, centre, bounding radius). Left drag orbits, right drag pans, the wheel zooms. A tool takes a click
   only when it acts on something and claims it (`EditorInputSystem.claim` / `takeClick`); the camera reads input in
-  `lateUpdate` and drags only on unclaimed presses. Never write a viewport camera of its own.
+  `lateUpdate` and drags only on unclaimed presses. Tabs stacked in one dock that look at the same kind of thing share
+  one view: their context implements `ViewCameraShareProvider`, naming the kind (`EditorSetting.VIEW_CAMERA_SHARE_*`),
+  and the tab shown hands its `ViewCameraStateStruct` to the others behind it (`ViewCameraSystem.shareStack`, the
+  stack from `TabManager.getStackOf`); tabs in separate docks look independently. Never write a viewport camera of its
+  own.
 - **Editor tools live in the Tools panel.** A tool is an `EditorTool` on the window's `ToolCanvas`; a one-off
   operation is a `ToolActionStruct` in the canvas's action groups, run by its context through `ToolActionProvider`
   with the same key its shortcut uses. Never add a tool or tool action as a panel button.

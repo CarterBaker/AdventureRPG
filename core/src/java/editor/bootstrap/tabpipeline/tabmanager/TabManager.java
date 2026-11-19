@@ -610,6 +610,19 @@ public class TabManager extends ManagerPackage {
         return null;
     }
 
+    // The stack of tabs a content window's tab is docked in, null while it is out of every dock
+    public ObjectArrayList<TabHandle> getStackOf(WindowInstance contentWindow) {
+
+        TabHandle handle = getTabHandleForContentWindow(contentWindow);
+
+        if (handle == null)
+            return null;
+
+        DockNodeStruct leaf = dockLayoutSystem.findLeaf(handle.getTabContext().getWindow().getGLWindow(), handle);
+
+        return leaf != null ? leaf.getTabs() : null;
+    }
+
     public WindowInstance resolveContentWindow(WindowInstance window) {
         TabHandle tab = getTabHandleForWindow(window);
         return tab != null ? tab.getWindow() : window;

@@ -139,6 +139,12 @@ public class CharacterEditorModeSystem extends SystemPackage {
         return mode.takesRegions() ? characterEditorManager.getPickedRegion() : CharacterRegionStruct.WHOLE;
     }
 
+    // The region the view frames: the region picked for every tab that shares its view, Paint's among them, so tabs
+    // handing a view on frame one part; the whole character otherwise
+    public CharacterRegionStruct getFramedRegion() {
+        return mode.sharesView() ? characterEditorManager.getPickedRegion() : CharacterRegionStruct.WHOLE;
+    }
+
     // Moves whenever the layers listed or the layer picked change
     public int getRevision() {
 

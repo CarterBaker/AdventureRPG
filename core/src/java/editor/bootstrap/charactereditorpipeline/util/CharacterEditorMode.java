@@ -27,7 +27,8 @@ public enum CharacterEditorMode {
      * their vertices moved there alone. Each is its own character tool tab;
      * Mesh, Sculpt, Weights, Rig and UV list the regions as their layers,
      * Paint the paint layers of the map painted, and the rest work on the
-     * whole character.
+     * whole character. The modes that take tools frame the region picked and
+     * share their view with one another's tabs stacked in the same dock.
      */
 
     APPEARANCE(
@@ -169,6 +170,11 @@ public enum CharacterEditorMode {
     // True for a mode that takes tools, rather than one shaping the whole character's look
     public boolean isModeling() {
         return toolCanvas != null;
+    }
+
+    // True for a mode whose tab frames the region picked and shares its view with such tabs stacked with it
+    public boolean sharesView() {
+        return isModeling();
     }
 
     // True for a mode whose tab lists the regions as its layers, every edit held to the region picked

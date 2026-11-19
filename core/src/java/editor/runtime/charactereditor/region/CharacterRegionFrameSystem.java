@@ -18,7 +18,9 @@ import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 public class CharacterRegionFrameSystem extends SystemPackage implements ViewCameraSubject {
 
     /*
-     * What the Character Editor window's view camera frames on every layer:
+     * What a character tool tab's view camera frames: the region picked for
+     * every modelling tab, Paint's among them, so stacked tabs sharing a view
+     * frame the same part, and the whole character for the look tabs. That is
      * the whole character for the whole region, otherwise the region's frame
      * bone and every bone below it — the head with its face, ears, eyes and
      * hair, the hand shown with its fingers, the foot shown with its toes,
@@ -76,7 +78,7 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
     @Override
     protected void update() {
 
-        CharacterRegionStruct region = characterEditorModeSystem.getRegion();
+        CharacterRegionStruct region = characterEditorModeSystem.getFramedRegion();
         int frameBone = !characterViewPoseSystem.hasSubject()
                 ? EngineSetting.INDEX_NOT_FOUND
                 : characterEditorManager.getRegionFrameBone(region, characterViewPoseSystem.getRaceData().getRigHandle());
