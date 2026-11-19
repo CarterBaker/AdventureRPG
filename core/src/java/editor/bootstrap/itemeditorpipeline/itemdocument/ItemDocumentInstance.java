@@ -7,14 +7,16 @@ import engine.root.InstancePackage;
 public class ItemDocumentInstance extends InstancePackage {
 
     /*
-     * One item mesh open in the editor: the item that last opened it, the
-     * model being edited, and the selected part. The revision moves on every
-     * model change so viewports know when to rebuild; dirty marks changes not
-     * yet saved.
+     * One item open in the editor: a game item's mesh, with the item that
+     * last opened it, or a workspace item by its name in the workspace's
+     * Items folder; the model being edited; and the selected part. The
+     * revision moves on every model change so viewports know when to
+     * rebuild; dirty marks changes not yet saved.
      */
 
-    // Identity
+    // Identity — the game item, or the workspace item's name; exactly one is set
     private ItemEntryStruct entry;
+    private String workspaceName;
 
     // Model
     private SubVoxelModelStruct model;
@@ -38,6 +40,16 @@ public class ItemDocumentInstance extends InstancePackage {
 
         // State
         this.dirty = dirty;
+    }
+
+    // A workspace item, kept in the workspace's Items folder until it is imported
+    public void constructWorkspace(String workspaceName, SubVoxelModelStruct model) {
+
+        // Identity
+        this.workspaceName = workspaceName;
+
+        // Model
+        this.model = model;
     }
 
     // Management \\
@@ -78,7 +90,20 @@ public class ItemDocumentInstance extends InstancePackage {
     }
 
     public String getItemName() {
-        return entry.getItemName();
+        return entry != null ? entry.getItemName() : workspaceName;
+    }
+
+    // The name Delete asks to be typed back: the item's name within its definition, or the workspace item's
+    public String getLocalName() {
+        return entry != null ? entry.getLocalName() : workspaceName;
+    }
+
+    public boolean isWorkspace() {
+        return workspaceName != null;
+    }
+
+    public String getWorkspaceName() {
+        return workspaceName;
     }
 
     public SubVoxelModelStruct getModel() {

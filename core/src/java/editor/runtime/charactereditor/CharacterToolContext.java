@@ -6,6 +6,7 @@ import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
 import editor.bootstrap.propertiespipeline.properties.MapsProvider;
 import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
@@ -78,6 +79,7 @@ public abstract class CharacterToolContext extends ContextPackage
 
     // Internal
     private CharacterEditorManager characterEditorManager;
+    private MaterialsManager materialsManager;
     private EditorInputSystem editorInputSystem;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private ViewCameraSystem viewCameraSystem;
@@ -134,6 +136,7 @@ public abstract class CharacterToolContext extends ContextPackage
     @Override
     protected void get() {
         this.characterEditorManager = get(CharacterEditorManager.class);
+        this.materialsManager = get(MaterialsManager.class);
     }
 
     @Override
@@ -209,9 +212,10 @@ public abstract class CharacterToolContext extends ContextPackage
         return PropertiesContent.ROWS;
     }
 
+    // The rows move with the character and with the material chosen, which the Hair tab's rows name
     @Override
     public int getRowRevision() {
-        return characterEditorManager.getRevision();
+        return characterEditorManager.getRevision() + materialsManager.getRevision();
     }
 
     @Override

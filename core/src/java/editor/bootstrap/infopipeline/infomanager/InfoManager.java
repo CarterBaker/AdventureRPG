@@ -66,6 +66,7 @@ public class InfoManager extends ManagerPackage {
     private Object2ObjectOpenHashMap<String, InfoSchemaHandle> schemaName2InfoSchemaHandle;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<InfoDocumentInstance>> schemaName2Documents;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2Listeners;
+    private ObjectArrayList<Consumer<InfoEntryStruct>> anySchemaListeners;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2ChangeListeners;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2DeleteListeners;
 
@@ -117,6 +118,7 @@ public class InfoManager extends ManagerPackage {
         this.schemaName2InfoSchemaHandle = new Object2ObjectOpenHashMap<>();
         this.schemaName2Documents = new Object2ObjectOpenHashMap<>();
         this.schemaName2Listeners = new Object2ObjectOpenHashMap<>();
+        this.anySchemaListeners = new ObjectArrayList<>();
         this.schemaName2ChangeListeners = new Object2ObjectOpenHashMap<>();
         this.schemaName2DeleteListeners = new Object2ObjectOpenHashMap<>();
 
@@ -206,6 +208,11 @@ public class InfoManager extends ManagerPackage {
 
     public void addSelectionListener(String schemaName, Consumer<InfoEntryStruct> listener) {
         schemaName2Listeners.computeIfAbsent(schemaName, name -> new ObjectArrayList<>()).add(listener);
+    }
+
+    // A listener told of every entry selected, whatever its schema
+    public void addSelectionListener(Consumer<InfoEntryStruct> listener) {
+        anySchemaListeners.add(listener);
     }
 
     public void addChangeListener(String schemaName, Consumer<InfoEntryStruct> listener) {
@@ -426,6 +433,10 @@ public class InfoManager extends ManagerPackage {
         if (listeners != null)
             for (int i = 0; i < listeners.size(); i++)
                 listeners.get(i).accept(entry);
+
+        if (entry != null)
+            for (int i = 0; i < anySchemaListeners.size(); i++)
+                anySchemaListeners.get(i).accept(entry);
     }
 
     boolean isFolderSelected(InfoSchemaHandle schema, String folderName) {
@@ -1616,6 +1627,11 @@ public class InfoManager extends ManagerPackage {
 
         InfoDocumentInstance document = findDocument(getSchema(schemaName), definitionName);
         return document != null && document.findEntryIndex(entryName) != EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Whether a field of the schema's entries names entries of the other schema
+    public boolean referencesSchema(String schemaName, String referencedSchemaName) {
+        return getSchema(schemaName).getReferencedSchemaNames().contains(referencedSchemaName);
     }
 
     public boolean hasDocument(String schemaName, String definitionName) {

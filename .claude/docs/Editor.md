@@ -18,9 +18,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Tools sit at the foot of each menu.** The editor's menus (`menus/editor/EditorWindow.arpg`) list a tab under the
   section for what it works on, and the tabs that serve the others (the Tools and Brushes tabs, the Outliner, Maps,
   Stamps and the Color Wheel, the Recorder) under a Tools section, always the menu's last: Content's Tools holds Tools
-  and Brushes, Entities' the Outliner and Hair Materials, Mesh's the Outliner, Textures' Maps, Stamps and the Color
-  Wheel, Media's the Recorder. The Entities menu (once Characters) holds what only an entity has (its Entity section:
-  Appearance, Equipment, Hair; then Animation); the Mesh menu holds the general modelling tools any rigged model takes
+  and Brushes, Entities' and Mesh's the Outliner, Textures' Maps, Stamps and the Color Wheel, Media's the Recorder. The
+  Materials menu, after Textures, holds the Materials tab, the editor's one list of materials (see Materials below).
+  The Entities menu (once Characters) holds what only an entity has (its Entity section: Appearance, Equipment, Hair;
+  then Animation); the Mesh menu holds the general modelling tools any rigged model takes
   (its Mesh section: Mesh, Topology, Sculpt, Paint, UV, UV Editor; its Rigging section: Rig, Weights). A tab or tool
   shown to the owner says Entity, never Character; the code's `Character*` class names stay as they are. The Debug
   menu's Preview opens `DevContext`, the game as it runs with the command console's systems; there is no other runtime
@@ -32,7 +33,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
   and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
   Equipment, Hair, Mesh, Topology, Sculpt, Weights, Paint, Rig and UV, see `.claude/docs/CharacterEditorPipeline.md`;
-  the Hair tab grooms strands painted with the material picked in the Hair Materials tab; the
+  the Hair tab grooms strands painted with the material chosen in the Materials tab; the
   Appearance outliner holds every slider and control, the Rig tab marks which bone channels are sliders), sharing the
   region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with the
   Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting window
@@ -79,8 +80,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   table to the shared tabs through the window's own providers, which answer for the layer picked.
 - **So far:** the World Editor (Heights over Biomes, each with an eye), the character Mesh, Topology, Sculpt, Weights,
   Rig and UV tabs (the Body and every region within it, one region picked for all of them; no eyes), the character
-  Paint tab (the paint layers of the map painted, each above the base with an eye) and the Image Editor (every layer of
-  the image, each with an eye; its maps are listed in the Maps tab, never here).
+  Paint tab (the paint layers of the map painted, each above the base with an eye), the Image Editor (every layer of
+  the image, each with an eye; its maps are listed in the Maps tab, never here) and the Item Editor (every part of the
+  item, each one material, the part picked being the one its tools lay; no eyes).
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers
   dockers have them; each runs the window's own tool action through `LayersManager.addLayer` / `removeLayer`, so the
   icon, the Tools tab's action and its shortcut do one thing.
@@ -131,6 +133,31 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.
 
+## Materials
+
+- **One list of materials.** The Materials tab (`editor.runtime.materials`, under the Materials menu) lists every
+  texture of every baked pack, pack by pack, as Substance and Blender list a material library. `MaterialsManager`
+  (`editor.bootstrap.materialspipeline`) keeps the material chosen, which every window that lays a material reads: the
+  Hair tab's new strands and Brush lay it (hair, `characters/standard`'s strand textures, draws as intended; any other
+  is the owner's choice), and the Item Editor gives it to a new part. A row pressed is chosen and picked up; let go over
+  a window that implements `MaterialDropProvider`, the material is dropped there once (`MaterialsManager.update` sees
+  the release), and the Item Editor colours the part under the pointer with it.
+
+## Item Editor
+
+- **Sub-voxel items, worked as a voxel modeller's.** Every part is one material and a layer in the Layers tab, added
+  and deleted by its icons or the Tools tab's Parts actions (`ITEM_EDITOR_KEY_PART_ADD`, `_REMOVE`), renamed by F2.
+  The tools (`ToolCanvas.ITEM`) are Brush, Erase, Wall, Fill and Pick; Brush and Erase stamp the Brushes tab's tip on
+  the face struck, Size in sub-voxels (none is one sub-voxel, the usual way to work), each column of the tip as deep as
+  its coverage times Strength, so a soft tip thins at its feathered edge; the stamp is shown as the sub-voxels it would
+  build or dig, merged like the item. A stroke is held to the layer it began on (`ItemBrushBranch`). The mesh is
+  greedily merged by `SubVoxelManager` as it changes.
+- **Workspace items.** New, Open, Save, Revert and Delete work on `Assets/Items/<Name>.arpg`, a sub-voxel mesh file;
+  Import writes `assets/mesh/items/<Name>.arpg` and makes an item naming it in the file asked for, unless content
+  already names that mesh. An item of the game opens when picked in any Hierarchy tab: the item itself, the item an
+  entry of a schema that names items names (a furnishing, a loot table), or the item naming the entry (an instrument),
+  and saves in place.
+
 ## The File and Edit menus
 
 - **Every file action lives in the editor's File and Edit menus**, never as a tool's own button: New, Open,
@@ -152,7 +179,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The workspace
 
 - **New work lives in the workspace**, `Documents/My Games/AdventureRPG/Assets/` beside the saves, one folder to each
-  kind (`Characters` for models, `Hair` for grooms, `Images`, `Exports` for exported maps and, under `Exports/Hair`,
+  kind (`Characters` for models, `Hair` for grooms, `Items` for items, `Images`, `Exports` for exported maps and, under
+  `Exports/Hair`,
   exported hair cards, `Stamps` for stamp pictures, `Models` for `.glb` files), resolved only through
   `WorkspaceUtility.resolveFolder`. A workspace file is not game
   content: the Hierarchy never lists it, and it reaches the game only through Import, as a painting or modelling

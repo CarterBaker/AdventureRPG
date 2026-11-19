@@ -5,29 +5,40 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
-import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class ItemEditBranch extends BranchPackage {
 
     /*
-     * Performs every change to an item's model, its cubes and its walls alike.
-     * An edit that would push the item past the mesh vertex limit is undone
-     * and refused, so a saved item can always be loaded by the game. Place
-     * adds a cube of the selected part, Wall a double-sided wall on the
-     * struck face or, near its edge, standing on that edge, Erase removes the
-     * struck cube or wall, Brush moves it into the selected part and Pick
-     * selects the part it belongs to.
+     * Performs every change to an item's model, its cubes, its walls and its
+     * parts. An edit that would push the item past the mesh vertex limit is
+     * undone whole and refused, so a saved item can always be loaded by the
+     * game. Cubes change as the list of cells a stamp or a fill reached,
+     * each moved into one part or emptied; a wall is placed or taken away on
+     * its own. Every part is drawn in its one material, the material dropped
+     * on it; a new part takes the material chosen in the Materials tab and a
+     * name no part holds yet. Pick selects the part the struck cube or wall
+     * belongs to.
      */
 
     // Internal
     private ItemEditorManager itemEditorManager;
     private SubVoxelManager subVoxelManager;
 
+    // Scratch — the part each cell held before the edit, to put back when it is refused
+    private IntArrayList previousParts;
+
     // Base \\
+
+    @Override
+    protected void create() {
+
+        // Scratch
+        this.previousParts = new IntArrayList();
+    }
 
     @Override
     protected void get() {
@@ -35,30 +46,37 @@ class ItemEditBranch extends BranchPackage {
         this.subVoxelManager = get(SubVoxelManager.class);
     }
 
-    // Tools \\
+    // Cells \\
 
-    void applyTool(ItemDocumentInstance document, EditorTool tool, SubVoxelHitStruct hit) {
+    // Every cell listed, by its grid index, moved into the part or emptied for INDEX_NOT_FOUND, as one edit
+    boolean editCells(ItemDocumentInstance document, IntArrayList cells, int partIndex) {
 
-        switch (tool) {
-            case PLACE -> place(document, hit);
-            case WALL -> wall(document, hit);
-            case ERASE -> erase(document, hit);
-            case BRUSH -> paint(document, hit);
-            case PICK -> pick(document, hit);
-            default -> {
-            }
+        if (cells.isEmpty())
+            return false;
+
+        SubVoxelModelStruct model = document.getModel();
+
+        previousParts.clear();
+
+        for (int i = 0; i < cells.size(); i++) {
+            previousParts.add(model.getCellPartAt(cells.getInt(i)));
+            model.setCellPartAt(cells.getInt(i), partIndex);
         }
+
+        if (!subVoxelManager.fitsMeshLimit(model)) {
+
+            for (int i = 0; i < cells.size(); i++)
+                model.setCellPartAt(cells.getInt(i), previousParts.getInt(i));
+
+            return refuseEdit();
+        }
+
+        return acceptEdit(document);
     }
 
-    private void place(ItemDocumentInstance document, SubVoxelHitStruct hit) {
+    // Walls \\
 
-        if (!hit.hasPlacement())
-            return;
-
-        editCell(document, hit.getPlaceX(), hit.getPlaceY(), hit.getPlaceZ(), document.getSelectedPartIndex());
-    }
-
-    private void wall(ItemDocumentInstance document, SubVoxelHitStruct hit) {
+    void placeWall(ItemDocumentInstance document, SubVoxelHitStruct hit) {
 
         if (!hit.hasWallPlacement())
             return;
@@ -68,63 +86,18 @@ class ItemEditBranch extends BranchPackage {
                 document.getSelectedPartIndex());
     }
 
-    private void erase(ItemDocumentInstance document, SubVoxelHitStruct hit) {
+    void eraseWall(ItemDocumentInstance document, SubVoxelHitStruct hit) {
 
-        if (!hit.hasTarget())
+        if (!hit.hasTarget() || !hit.isTargetWall())
             return;
 
-        editTarget(document, hit, EngineSetting.INDEX_NOT_FOUND);
+        editWall(
+                document, hit.getTargetAxis(), hit.getTargetX(), hit.getTargetY(), hit.getTargetZ(),
+                EngineSetting.INDEX_NOT_FOUND);
     }
 
-    private void paint(ItemDocumentInstance document, SubVoxelHitStruct hit) {
-
-        if (!hit.hasTarget())
-            return;
-
-        editTarget(document, hit, document.getSelectedPartIndex());
-    }
-
-    // The part the struck cube or wall belongs to made the selected part, as an eyedropper takes up a color
-    private void pick(ItemDocumentInstance document, SubVoxelHitStruct hit) {
-
-        if (!hit.hasTarget())
-            return;
-
-        SubVoxelModelStruct model = document.getModel();
-
-        itemEditorManager.selectPart(hit.isTargetWall()
-                ? model.getWallPart(hit.getTargetAxis(), hit.getTargetX(), hit.getTargetY(), hit.getTargetZ())
-                : model.getCellPart(hit.getTargetX(), hit.getTargetY(), hit.getTargetZ()));
-    }
-
-    private boolean editTarget(ItemDocumentInstance document, SubVoxelHitStruct hit, int partIndex) {
-
-        if (hit.isTargetWall())
-            return editWall(
-                    document, hit.getTargetAxis(), hit.getTargetX(), hit.getTargetY(), hit.getTargetZ(), partIndex);
-
-        return editCell(document, hit.getTargetX(), hit.getTargetY(), hit.getTargetZ(), partIndex);
-    }
-
-    private boolean editCell(ItemDocumentInstance document, int x, int y, int z, int partIndex) {
-
-        SubVoxelModelStruct model = document.getModel();
-        int previousPart = model.getCellPart(x, y, z);
-
-        if (previousPart == partIndex)
-            return false;
-
-        writeCell(model, x, y, z, partIndex);
-
-        if (!subVoxelManager.fitsMeshLimit(model)) {
-            writeCell(model, x, y, z, previousPart);
-            return refuseEdit();
-        }
-
-        return acceptEdit(document);
-    }
-
-    private boolean editWall(ItemDocumentInstance document, int axis, int x, int y, int z, int partIndex) {
+    // The wall moved into the part, or taken away for INDEX_NOT_FOUND
+    boolean editWall(ItemDocumentInstance document, int axis, int x, int y, int z, int partIndex) {
 
         SubVoxelModelStruct model = document.getModel();
         int previousPart = model.getWallPart(axis, x, y, z);
@@ -142,6 +115,31 @@ class ItemEditBranch extends BranchPackage {
         return acceptEdit(document);
     }
 
+    private void writeWall(SubVoxelModelStruct model, int axis, int x, int y, int z, int partIndex) {
+
+        if (partIndex == EngineSetting.INDEX_NOT_FOUND)
+            model.clearWall(axis, x, y, z);
+        else
+            model.setWall(axis, x, y, z, partIndex);
+    }
+
+    // Pick \\
+
+    // The part the struck cube or wall belongs to made the selected part, as an eyedropper takes up a color
+    void pick(ItemDocumentInstance document, SubVoxelHitStruct hit) {
+
+        if (!hit.hasTarget())
+            return;
+
+        SubVoxelModelStruct model = document.getModel();
+
+        itemEditorManager.selectPart(hit.isTargetWall()
+                ? model.getWallPart(hit.getTargetAxis(), hit.getTargetX(), hit.getTargetY(), hit.getTargetZ())
+                : model.getCellPart(hit.getTargetX(), hit.getTargetY(), hit.getTargetZ()));
+    }
+
+    // Edits \\
+
     private boolean acceptEdit(ItemDocumentInstance document) {
 
         document.markEdited();
@@ -155,25 +153,10 @@ class ItemEditBranch extends BranchPackage {
         return false;
     }
 
-    private void writeCell(SubVoxelModelStruct model, int x, int y, int z, int partIndex) {
-
-        if (partIndex == EngineSetting.INDEX_NOT_FOUND)
-            model.clearCell(x, y, z);
-        else
-            model.setCell(x, y, z, partIndex);
-    }
-
-    private void writeWall(SubVoxelModelStruct model, int axis, int x, int y, int z, int partIndex) {
-
-        if (partIndex == EngineSetting.INDEX_NOT_FOUND)
-            model.clearWall(axis, x, y, z);
-        else
-            model.setWall(axis, x, y, z, partIndex);
-    }
-
     // Parts \\
 
-    void addPart(ItemDocumentInstance document, String partName) {
+    // A new part in the material chosen, named Part and the first number no part's name takes yet
+    void addPart(ItemDocumentInstance document, String materialName) {
 
         SubVoxelModelStruct model = document.getModel();
 
@@ -182,8 +165,13 @@ class ItemEditBranch extends BranchPackage {
             return;
         }
 
-        String textureName = model.getPart(document.getSelectedPartIndex()).getTextureName();
-        int partIndex = model.addPart(new SubVoxelPartStruct(partName, textureName));
+        int number = model.getPartCount() + 1;
+
+        while (hasPartNamed(model, EditorSetting.ITEM_EDITOR_PART_NAME_PREFIX + number))
+            number++;
+
+        int partIndex = model.addPart(
+                new SubVoxelPartStruct(EditorSetting.ITEM_EDITOR_PART_NAME_PREFIX + number, materialName));
 
         document.selectPart(partIndex);
         document.markEdited();
@@ -217,14 +205,29 @@ class ItemEditBranch extends BranchPackage {
         itemEditorManager.setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_RENAMED + partName);
     }
 
-    void cycleTexture(ItemDocumentInstance document, ObjectArrayList<String> textureNames, int direction) {
+    // The part drawn in the material, every cube and wall of it at once
+    void setPartMaterial(ItemDocumentInstance document, int partIndex, String materialName) {
 
-        SubVoxelPartStruct part = document.getModel().getPart(document.getSelectedPartIndex());
-        int current = Math.max(0, textureNames.indexOf(part.getTextureName()));
-        int next = Math.floorMod(current + direction, textureNames.size());
+        SubVoxelPartStruct part = document.getModel().getPart(partIndex);
 
-        part.setTextureName(textureNames.get(next));
+        if (part.getTextureName().equals(materialName))
+            return;
+
+        part.setTextureName(materialName);
         document.markEdited();
-        itemEditorManager.notifyChanged();
+        itemEditorManager.setStatusMessage(
+                EditorSetting.ITEM_EDITOR_MESSAGE_MATERIAL + part.getPartName() + EditorSetting.ITEM_EDITOR_MATERIAL_TO
+                        + materialName);
+    }
+
+    // Utility \\
+
+    static boolean hasPartNamed(SubVoxelModelStruct model, String partName) {
+
+        for (int i = 0; i < model.getPartCount(); i++)
+            if (model.getPart(i).getPartName().equals(partName))
+                return true;
+
+        return false;
     }
 }

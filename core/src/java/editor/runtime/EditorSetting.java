@@ -240,9 +240,11 @@ public class EditorSetting {
     public static final FileMenuTableStruct FILE_MENU_ITEM = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.ItemEditorBranch")
             .with(FileMenuAction.NEW, "newItem")
+            .with(FileMenuAction.OPEN, "openItem")
             .with(FileMenuAction.SAVE, "saveItem")
             .with(FileMenuAction.REVERT, "reloadItem")
-            .with(FileMenuAction.DELETE, "deleteItem");
+            .with(FileMenuAction.DELETE, "deleteItem")
+            .with(FileMenuAction.IMPORT, "importItem");
     public static final FileMenuTableStruct FILE_MENU_INFO = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.InfoPanelBranch")
             .with(FileMenuAction.NEW, "newEntry")
@@ -283,7 +285,6 @@ public class EditorSetting {
     public static final int TEXT_INPUT_MAX_LENGTH = 256;
     public static final String DIALOG_TITLE_CREATE_LAYOUT = "New Layout";
     public static final String DIALOG_TITLE_NEW_ITEM = "New Item";
-    public static final String DIALOG_TITLE_NEW_PART = "New Part";
     public static final String DIALOG_TITLE_RENAME_PART = "Rename Part";
     public static final String DIALOG_TITLE_NEW_ENTRY = "New";
     public static final String DIALOG_TITLE_NEW_KEY = "New Key";
@@ -451,7 +452,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_CHARACTER_UV = "UV";
     public static final String TAB_TITLE_CHARACTER_TOPOLOGY = "Topology";
     public static final String TAB_TITLE_CHARACTER_HAIR = "Hair";
-    public static final String TAB_TITLE_HAIR_MATERIALS = "Hair Materials";
+    public static final String TAB_TITLE_MATERIALS = "Materials";
     public static final String TAB_TITLE_UV_EDITOR = "UV Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
@@ -1385,8 +1386,6 @@ public class EditorSetting {
     public static final String CHARACTER_HAIR_HEADER_NO_GROOM =
             "No hair open: File, New makes one, File, Open opens one, Strands From Worn Hair takes the hair worn";
     public static final String CHARACTER_HAIR_HEADER_SELECTED = "Selected Strands";
-    public static final String CHARACTER_HAIR_HEADER_MATERIALS = "Strand Materials";
-    public static final String CHARACTER_HAIR_HEADER_NO_MATERIALS = "Open a character to list its materials";
     public static final String CHARACTER_HAIR_LABEL_FROM_WORN = "Strands From Worn Hair";
     public static final String CHARACTER_HAIR_LABEL_SELECT_ALL = "Select All Strands";
     public static final String CHARACTER_HAIR_LABEL_SELECT_NONE = "Select No Strands";
@@ -2200,6 +2199,7 @@ public class EditorSetting {
     public static final String[] WORKSPACE_MODEL_PATTERNS = { "*.arpg", "*.glb" };
     public static final String WORKSPACE_MODEL_DESCRIPTION = "Models (*.arpg) or glTF binaries (*.glb)";
     public static final String WORKSPACE_DIALOG_OPEN_IMAGE = "Open Image";
+    public static final String WORKSPACE_DIALOG_OPEN_ITEM = "Open Item";
     public static final String WORKSPACE_MESSAGE_OUTSIDE = "Open takes a file from ";
 
     // Image Editor — its folder in the workspace, the keys of its files, the names of its documents in ImageManager,
@@ -2641,6 +2641,10 @@ public class EditorSetting {
     public static final float TOOL_IMAGE_SIZE_MAX = 32f;
     public static final float TOOL_IMAGE_SIZE_STEP = 1f;
     public static final float TOOL_IMAGE_SIZE_DEFAULT = 1f;
+    public static final float TOOL_ITEM_SIZE_MIN = 0f;
+    public static final float TOOL_ITEM_SIZE_MAX = 32f;
+    public static final float TOOL_ITEM_SIZE_STEP = 1f;
+    public static final float TOOL_ITEM_SIZE_DEFAULT = 0f;
     public static final float TOOL_SCREEN_SIZE_MIN = 4f;
     public static final float TOOL_SCREEN_SIZE_MAX = 400f;
     public static final float TOOL_SCREEN_SIZE_STEP = 5f;
@@ -2764,11 +2768,34 @@ public class EditorSetting {
     public static final String TREE_PLANNER_MESSAGE_AGED = "Grown to a new age";
     public static final String TREE_PLANNER_MESSAGE_NO_TREE = "Select a tree first";
 
-    // Item Library
+    // Item Library — the game's item meshes, the definition file an import first offers, the pack a converted quad
+    // mesh is drawn from, and the names new parts take
     public static final String ITEM_EDITOR_MESH_DIRECTORY = "items";
     public static final String ITEM_EDITOR_DEFINITION_FILE = "EditorItems";
     public static final String ITEM_EDITOR_TEXTURE_ARRAY = "items/standard";
     public static final String ITEM_EDITOR_DEFAULT_PART_NAME = "Body";
+    public static final String ITEM_EDITOR_PART_NAME_PREFIX = "Part ";
+
+    // Item Workspace — the workspace folder items are kept in until imported, and the dialog Import asks through
+    public static final String ITEM_WORKSPACE_DIRECTORY = "Items";
+    public static final String ITEM_IMPORT_DIALOG_DEFINITION = "Import: item file the item joins";
+
+    // Item Parts — the Layers tab's and the Tools tab's actions on the item's parts
+    public static final String ITEM_EDITOR_HEADER_PARTS = "Parts";
+    public static final String ITEM_EDITOR_KEY_PART_ADD = "item_editor_part_add";
+    public static final String ITEM_EDITOR_KEY_PART_REMOVE = "item_editor_part_remove";
+    public static final String ITEM_EDITOR_LABEL_PART_ADD = "New Part";
+    public static final String ITEM_EDITOR_LABEL_PART_REMOVE = "Delete Part";
+
+    // Item Stamps — a stroke's ray running along its layer, the middle of a cell the stroke's plane passes through,
+    // and the seed a speckled tip's density rolls from
+    public static final float ITEM_EDITOR_STROKE_PARALLEL_EPSILON = 1e-4f;
+    public static final float ITEM_EDITOR_CELL_MIDDLE = 0.5f;
+    public static final long ITEM_EDITOR_DENSITY_SEED = 0x1A2B3C4DL;
+    public static final long ITEM_EDITOR_DENSITY_SALT = 0x5E6F7081L;
+
+    // Materials — the material chosen before any is picked
+    public static final String MATERIALS_DEFAULT_MATERIAL = CHARACTER_HAIR_DEFAULT_TEXTURE;
 
     // Info Schemas
     public static final String INFO_SCHEMA_PATH = "schemas";
@@ -2930,7 +2957,8 @@ public class EditorSetting {
     // Item Status
     public static final String ITEM_EDITOR_DIRTY_MARKER = "*";
     public static final String ITEM_EDITOR_STATUS_SEPARATOR = "  |  ";
-    public static final String ITEM_EDITOR_STATUS_NO_ITEM = "No item open. Pick one in the Hierarchy or press New.";
+    public static final String ITEM_EDITOR_STATUS_NO_ITEM =
+            "No item open. Pick one in the Hierarchy, or New or Open one.";
     public static final String ITEM_EDITOR_TEXTURE_SEPARATOR = "  :  ";
     public static final String ITEM_EDITOR_MESSAGE_SAVED = "Saved ";
     public static final String ITEM_EDITOR_MESSAGE_RELOADED = "Reloaded ";
@@ -2945,6 +2973,15 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_MESSAGE_MESH_LIMIT = "Edit refused: the item would pass the vertex limit";
     public static final String ITEM_EDITOR_MESSAGE_LAST_PART = "An item needs at least one part";
     public static final String ITEM_EDITOR_MESSAGE_PART_LIMIT = "An item cannot hold any more parts";
+    public static final String ITEM_EDITOR_MESSAGE_NOT_WRITTEN = "Could not write ";
+    public static final String ITEM_EDITOR_MESSAGE_NOT_READ = "Could not read ";
+    public static final String ITEM_EDITOR_MESSAGE_NOT_DELETED = "Could not delete ";
+    public static final String ITEM_EDITOR_MESSAGE_IMPORTED = "Imported ";
+    public static final String ITEM_EDITOR_MESSAGE_IMPORT_WORKSPACE =
+            "Import brings a workspace item into the game: this item is the game's already";
+    public static final String ITEM_EDITOR_MESSAGE_DROP_MISSED = "Drop the material on a part of the item";
+    public static final String ITEM_EDITOR_MESSAGE_MATERIAL = "Coloured ";
+    public static final String ITEM_EDITOR_MATERIAL_TO = " with ";
 
     // Recorder — media files, video and music alike, in the game's own directory beside the player's saves; what they
     // export goes in a folder beside them, music laid out as the project's assets are so it is dragged in as it lies

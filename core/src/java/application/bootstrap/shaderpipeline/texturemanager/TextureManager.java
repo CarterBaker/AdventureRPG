@@ -163,6 +163,11 @@ public class TextureManager extends ManagerPackage {
         ((TextureLoader) internalLoader).request(arrayName);
     }
 
+    // Every baked texture pack, by the array name its tiles are listed under, in name order
+    public ObjectArrayList<String> getPackNames() {
+        return ((TextureLoader) internalLoader).getArrayNames();
+    }
+
     // Streaming \\
 
     // A texture user in the world, referencing its tiles for as long as it occupies the given bounds in blocks

@@ -27,6 +27,7 @@ class TextureLoader extends LoaderPackage {
 
     // File Registry
     private Object2ObjectOpenHashMap<String, File> arrayName2File;
+    private ObjectArrayList<String> arrayNames;
 
     // Base \\
 
@@ -35,6 +36,7 @@ class TextureLoader extends LoaderPackage {
 
         this.root = new File(new File(EngineSetting.BAKED_TEXTURE_PATH), EngineSetting.BAKED_TEXTURE_TILE_DIRECTORY);
         this.arrayName2File = new Object2ObjectOpenHashMap<>();
+        this.arrayNames = new ObjectArrayList<>();
 
         FileUtility.verifyDirectory(root, "Baked texture directory not found: " + root.getAbsolutePath()
                 + ". Run gradlew lwjgl3:bake.");
@@ -44,7 +46,9 @@ class TextureLoader extends LoaderPackage {
 
         for (int i = 0; i < directories.size(); i++) {
             File directory = directories.get(i);
-            arrayName2File.put(FileUtility.getPathWithFileNameWithoutExtension(root, directory), directory);
+            String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
+            arrayName2File.put(arrayName, directory);
+            arrayNames.add(arrayName);
             queueFile(directory);
         }
     }
@@ -95,5 +99,12 @@ class TextureLoader extends LoaderPackage {
             throwException("On-demand texture load failed — array not found: \"" + arrayName + "\"");
 
         request(directory);
+    }
+
+    // Accessible \\
+
+    // Every baked pack's array name, in name order
+    ObjectArrayList<String> getArrayNames() {
+        return arrayNames;
     }
 }

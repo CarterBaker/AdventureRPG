@@ -17,6 +17,7 @@ import editor.runtime.menueventsmanager.menus.ImageEditorBranch;
 import editor.runtime.menueventsmanager.menus.InfoPanelBranch;
 import editor.runtime.menueventsmanager.menus.ItemEditorBranch;
 import editor.runtime.menueventsmanager.menus.LayersBranch;
+import editor.runtime.menueventsmanager.menus.MaterialsBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
 import editor.runtime.menueventsmanager.menus.NewImageDialogBranch;
 import editor.runtime.menueventsmanager.menus.NoteLibraryBranch;
@@ -90,5 +91,6 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(NoteLibraryBranch.class);
         create(SceneAssetsBranch.class);
         create(TransitionsBranch.class);
+        create(MaterialsBranch.class);
     }
 }

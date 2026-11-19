@@ -15,7 +15,11 @@ public enum ToolCanvas {
      * selection and geometry edits, run by its window — whether what it
      * holds can blend between values, and every tool option it honours
      * with its range there: a brush is sized in image pixels on the
-     * world's layers and in window pixels on a character. A tool shows
+     * world's layers, in window pixels on a character and in sub-voxels on
+     * an item, whose Brush builds and Erase digs the stamp of its tip, Wall
+     * stands a wall, Fill moves a run of one part's cubes into the part laid
+     * and Pick takes up the part struck, and whose parts are added and
+     * deleted. A tool shows
      * only the options both it and the canvas have, and a canvas without
      * Size takes no brush; on one with it, every tool that carries Size
      * strokes with the brush, so a mesh's Select sweeps the brush over its
@@ -182,8 +186,11 @@ public enum ToolCanvas {
             false),
     ITEM(
             EditorSetting.TOOL_CANVAS_ITEM,
-            new EditorTool[] { EditorTool.PLACE, EditorTool.WALL, EditorTool.ERASE, EditorTool.BRUSH, EditorTool.PICK },
-            false),
+            new EditorTool[] { EditorTool.BRUSH, EditorTool.ERASE, EditorTool.WALL, EditorTool.FILL, EditorTool.PICK },
+            new ToolActionGroupStruct[] { itemParts() },
+            false,
+            itemSize(),
+            strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
@@ -393,6 +400,13 @@ public enum ToolCanvas {
                 action(EditorSetting.IMAGE_EDITOR_LABEL_LAYER_REMOVE, EditorSetting.IMAGE_EDITOR_KEY_LAYER_REMOVE));
     }
 
+    private static ToolActionGroupStruct itemParts() {
+        return new ToolActionGroupStruct(
+                EditorSetting.ITEM_EDITOR_HEADER_PARTS,
+                action(EditorSetting.ITEM_EDITOR_LABEL_PART_ADD, EditorSetting.ITEM_EDITOR_KEY_PART_ADD),
+                action(EditorSetting.ITEM_EDITOR_LABEL_PART_REMOVE, EditorSetting.ITEM_EDITOR_KEY_PART_REMOVE));
+    }
+
     private static ToolActionGroupStruct uvSeams() {
         return new ToolActionGroupStruct(
                 EditorSetting.UV_HEADER_SEAMS,
@@ -546,6 +560,16 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_IMAGE_SIZE_MAX,
                 EditorSetting.TOOL_IMAGE_SIZE_STEP,
                 EditorSetting.TOOL_IMAGE_SIZE_DEFAULT);
+    }
+
+    // An item's brush, its radius in sub-voxels, none being one sub-voxel alone
+    private static ToolOptionStruct itemSize() {
+        return new ToolOptionStruct(
+                ToolOption.SIZE,
+                EditorSetting.TOOL_ITEM_SIZE_MIN,
+                EditorSetting.TOOL_ITEM_SIZE_MAX,
+                EditorSetting.TOOL_ITEM_SIZE_STEP,
+                EditorSetting.TOOL_ITEM_SIZE_DEFAULT);
     }
 
     private static ToolOptionStruct screenSize() {

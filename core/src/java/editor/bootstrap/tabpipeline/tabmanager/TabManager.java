@@ -25,7 +25,6 @@ import editor.runtime.charactereditor.CharacterEquipmentContext;
 import editor.runtime.charactereditor.CharacterMeshContext;
 import editor.runtime.charactereditor.CharacterHairContext;
 import editor.runtime.charactereditor.CharacterTopologyContext;
-import editor.runtime.hairmaterials.HairMaterialsContext;
 import editor.runtime.charactereditor.CharacterPaintContext;
 import editor.runtime.charactereditor.CharacterRigContext;
 import editor.runtime.charactereditor.CharacterSculptContext;
@@ -41,6 +40,7 @@ import editor.runtime.imageeditor.ImageEditorContext;
 import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.layers.LayersContext;
 import editor.runtime.maps.MapsContext;
+import editor.runtime.materials.MaterialsContext;
 import editor.runtime.notelibrary.NoteLibraryContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
@@ -222,8 +222,8 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_HAIR, CharacterHairContext.class, osWindow);
     }
 
-    public TabHandle openHairMaterials(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_HAIR_MATERIALS, HairMaterialsContext.class, osWindow);
+    public TabHandle openMaterials(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_MATERIALS, MaterialsContext.class, osWindow);
     }
 
     public TabHandle openUVEditor(WindowInstance osWindow) {

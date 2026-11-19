@@ -18,6 +18,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterStrandUtility;
 import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
+import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
@@ -43,8 +44,8 @@ class CharacterGroomBranch extends BranchPackage {
      * The Hair tab's groom, the industry's guide-curve grooming turned into
      * game hair cards as a groom is in Blender, Maya XGen or Unreal's Groom:
      * strands are drawn from the surface, planted, combed, smoothed, grown,
-     * shortened, cut and painted with the material picked in the Hair
-     * Materials tab, each a curve of points with its width and taper, and
+     * shortened, cut and painted with the material chosen in the Materials
+     * tab, each a curve of points with its width and taper, and
      * Export lays each one out as a card two quads wide along it
      * (CharacterStrandUtility), its UVs running across in u and from the root
      * at v 1 to the tip at v 0 as the strand image hangs, wholly weighed onto
@@ -71,16 +72,16 @@ class CharacterGroomBranch extends BranchPackage {
     private MeshManager meshManager;
     private RigManager rigManager;
     private InfoManager infoManager;
+    private MaterialsManager materialsManager;
 
     // Directory
     private File groomRoot;
     private File exportRoot;
 
-    // Groom — the one open, its name in the Hair folder, the material new strands and the Brush lay
+    // Groom — the one open and its name in the Hair folder
     private CharacterGroomStruct groom;
     private String groomName;
     private boolean dirty;
-    private String materialName;
     private int revision;
 
     // History — whole copies of the groom, the one the open step started from and whether it changed since
@@ -124,9 +125,6 @@ class CharacterGroomBranch extends BranchPackage {
                 WorkspaceUtility.resolveFolder(internal.path, EditorSetting.IMAGE_EXPORT_DIRECTORY),
                 EditorSetting.CHARACTER_HAIR_EXPORT_FOLDER);
 
-        // Groom
-        this.materialName = EditorSetting.CHARACTER_HAIR_DEFAULT_TEXTURE;
-
         // History
         this.undoSteps = new ObjectArrayList<>();
         this.redoSteps = new ObjectArrayList<>();
@@ -160,6 +158,7 @@ class CharacterGroomBranch extends BranchPackage {
         this.meshManager = get(MeshManager.class);
         this.rigManager = get(RigManager.class);
         this.infoManager = get(InfoManager.class);
+        this.materialsManager = get(MaterialsManager.class);
     }
 
     // Files \\
@@ -393,16 +392,15 @@ class CharacterGroomBranch extends BranchPackage {
 
     // Material \\
 
-    void setMaterial(String textureName) {
-        this.materialName = textureName;
-        changed();
-    }
-
-    // The material of the strand picked becomes the one new strands and the Brush lay
+    // The material of the strand picked becomes the one chosen in the Materials tab, which new strands and the Brush
+    // lay
     void pickMaterial(int strandIndex) {
 
-        if (groom != null && strandIndex >= 0 && strandIndex < groom.getStrandCount())
-            setMaterial(groom.getStrand(strandIndex).getTextureName());
+        if (groom == null || strandIndex < 0 || strandIndex >= groom.getStrandCount())
+            return;
+
+        materialsManager.selectMaterial(groom.getStrand(strandIndex).getTextureName());
+        changed();
     }
 
     // Draw \\
@@ -506,7 +504,11 @@ class CharacterGroomBranch extends BranchPackage {
     private int addStrand(Vector3 root, Vector3 normal, String boneName, float width) {
 
         CharacterStrandStruct strand = new CharacterStrandStruct(
-                normal, boneName, materialName, width, EditorSetting.CHARACTER_HAIR_TAPER_DEFAULT);
+                normal,
+                boneName,
+                materialsManager.getSelectedMaterial(),
+                width,
+                EditorSetting.CHARACTER_HAIR_TAPER_DEFAULT);
         float lift = EditorSetting.CHARACTER_HAIR_ROOT_LIFT;
 
         strand.addPoint(root.x + normal.x * lift, root.y + normal.y * lift, root.z + normal.z * lift);
@@ -641,7 +643,7 @@ class CharacterGroomBranch extends BranchPackage {
 
         switch (tool) {
             case SELECT -> strand.setSelected(strokeSelection != CharacterEditorSelection.SUBTRACT);
-            case BRUSH -> strand.setTextureName(materialName);
+            case BRUSH -> strand.setTextureName(materialsManager.getSelectedMaterial());
             case NUDGE -> comb(strand, drag, twin);
             case SMOOTH -> smooth(strand);
             case RAISE -> grow(strand, resolveMostWeight());
@@ -980,7 +982,7 @@ class CharacterGroomBranch extends BranchPackage {
                 resolveHeaviestBone(mesh, rootVertex),
                 face != EngineSetting.INDEX_NOT_FOUND
                         ? mesh.getTextureName(mesh.getFaceTexture(face))
-                        : materialName,
+                        : materialsManager.getSelectedMaterial(),
                 Math.max(width, EditorSetting.TOOL_HAIR_WIDTH_MIN * EditorSetting.CHARACTER_HAIR_WIDTH_UNIT),
                 EditorSetting.CHARACTER_HAIR_TAPER_DEFAULT);
         int segments = Math.max(1, (int) Math.ceil(card.getLength() / EditorSetting.CHARACTER_HAIR_POINT_SPACING));
@@ -1362,24 +1364,6 @@ class CharacterGroomBranch extends BranchPackage {
                 getValueText(EditorSetting.CHARACTER_HAIR_KEY_TAPER)));
     }
 
-    // The Hair Materials tab's rows: every texture of the atlas the character is painted from, the one picked
-    // selected
-    void buildMaterialRows(ObjectArrayList<String> textureNames, ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        if (textureNames.isEmpty()) {
-            rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_HAIR_HEADER_NO_MATERIALS));
-            return;
-        }
-
-        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_HAIR_HEADER_MATERIALS));
-
-        for (int i = 0; i < textureNames.size(); i++)
-            rows.add(CharacterViewRowStruct.item(
-                    CharacterViewUtility.toKey(EditorSetting.CHARACTER_HAIR_KEY_MATERIAL, i),
-                    CharacterViewUtility.toResourceLabel(textureNames.get(i)),
-                    textureNames.get(i).equals(materialName)));
-    }
-
     // Keys \\
 
     boolean handles(String keyName) {
@@ -1388,7 +1372,8 @@ class CharacterGroomBranch extends BranchPackage {
 
     String getValueText(String key) {
         return switch (CharacterViewUtility.getKeyName(key)) {
-            case EditorSetting.CHARACTER_HAIR_KEY_MATERIAL -> CharacterViewUtility.toResourceLabel(materialName);
+            case EditorSetting.CHARACTER_HAIR_KEY_MATERIAL -> CharacterViewUtility.toResourceLabel(
+                    materialsManager.getSelectedMaterial());
             case EditorSetting.CHARACTER_HAIR_KEY_WIDTH -> CharacterViewUtility.formatNumber(getSelectedWidth());
             case EditorSetting.CHARACTER_HAIR_KEY_TAPER -> CharacterViewUtility.formatNumber(getSelectedTaper());
             default -> "";
@@ -1425,17 +1410,6 @@ class CharacterGroomBranch extends BranchPackage {
             setSelectedTaper(getSelectedTaper() + direction * EditorSetting.CHARACTER_HAIR_TAPER_STEP);
     }
 
-    // A material row picked in the Hair Materials tab makes its texture the one new strands and the Brush lay
-    void select(String key) {
-
-        ObjectArrayList<String> textureNames = characterEditorManager.getHairMaterialNames();
-        int index = CharacterViewUtility.getKeyIndex(key);
-
-        if (CharacterViewUtility.getKeyName(key).equals(EditorSetting.CHARACTER_HAIR_KEY_MATERIAL)
-                && index >= 0 && index < textureNames.size())
-            setMaterial(textureNames.get(index));
-    }
-
     void act(String key) {
         switch (CharacterViewUtility.getKeyName(key)) {
             case EditorSetting.CHARACTER_HAIR_KEY_FROM_WORN -> characterEditorManager.takeHairFromWorn();
@@ -1447,17 +1421,10 @@ class CharacterGroomBranch extends BranchPackage {
         }
     }
 
-    // The material stepped through every texture of the atlas
+    // The material stepped through every material of the Materials tab
     void cycle(int direction) {
-
-        ObjectArrayList<String> textureNames = characterEditorManager.getHairMaterialNames();
-
-        if (textureNames.isEmpty())
-            return;
-
-        int index = Math.max(0, textureNames.indexOf(materialName));
-
-        setMaterial(textureNames.get(Math.floorMod(index + direction, textureNames.size())));
+        materialsManager.cycleMaterial(direction);
+        changed();
     }
 
     // Accessible \\

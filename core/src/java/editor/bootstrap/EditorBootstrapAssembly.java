@@ -13,6 +13,7 @@ import editor.bootstrap.imagepipeline.ImagePipeline;
 import editor.bootstrap.infopipeline.InfoPipeline;
 import editor.bootstrap.itemeditorpipeline.ItemEditorPipeline;
 import editor.bootstrap.layerspipeline.LayersPipeline;
+import editor.bootstrap.materialspipeline.MaterialsPipeline;
 import editor.bootstrap.notelibrarypipeline.NoteLibraryPipeline;
 import editor.bootstrap.propertiespipeline.PropertiesPipeline;
 import editor.bootstrap.recorderpipeline.RecorderPipeline;
@@ -49,7 +50,8 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
      * plays back and exports from a Dev window, the transitions every tool
      * that cuts footage together lays between its clips, the shortcut
      * pipeline that runs every tool's keys, the tool the File and Edit menus
-     * act on, the window the Layers tab lists the layers of, and the one set
+     * act on, the window the Layers tab lists the layers of, the materials every
+     * window that lays one chooses from, and the one set
      * of editor menu branches the toolbar, every tab's chrome, and every tool
      * route their callbacks to.
      */
@@ -65,6 +67,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(ToolPipeline.class);
         create(PropertiesPipeline.class);
         create(LayersPipeline.class);
+        create(MaterialsPipeline.class);
         create(FileMenuPipeline.class);
         create(ItemEditorPipeline.class);
         create(ImagePipeline.class);

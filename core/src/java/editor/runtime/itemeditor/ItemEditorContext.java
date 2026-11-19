@@ -2,8 +2,13 @@ package editor.runtime.itemeditor;
 
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
+import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
+import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.materialspipeline.materials.MaterialDropProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
@@ -13,24 +18,32 @@ import editor.runtime.itemeditor.frame.ItemEditorFrameSystem;
 import editor.runtime.itemeditor.menu.ItemEditorMenuSystem;
 import editor.runtime.itemeditor.render.ItemEditorRenderSystem;
 import editor.runtime.itemeditor.tool.ItemEditorToolSystem;
+import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.ContextPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ItemEditorContext extends ContextPackage
-        implements ToolCanvasProvider, ViewCameraProvider, PropertiesProvider, FileMenuProvider {
+        implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, LayersProvider, PropertiesProvider,
+        FileMenuProvider, MaterialDropProvider {
 
     /*
      * Editor tab for building items from sub-voxel cubes. Reads input, orbits
-     * the camera, casts the pointer, draws the active item, and shows the
-     * toolbar and parts panel — all state and cube logic live in the editor and
-     * engine. The tab is a tool canvas, the item, for as long as it is open.
+     * the camera, casts the pointer, draws the active item and the stamp the
+     * tools would lay, and shows the status bar — all state and cube logic
+     * live in the editor and engine. The item's parts are its layers in the
+     * Layers tab, each one material, added and deleted by the tab's icons or
+     * the Tools tab's actions, the one picked laid by the tools; a material
+     * dropped here from the Materials tab colours the part under the pointer.
+     * The tab is a tool canvas, the item, for as long as it is open.
      */
 
     // Internal
+    private ItemEditorManager itemEditorManager;
     private EditorInputSystem editorInputSystem;
     private ItemEditorFrameSystem itemEditorFrameSystem;
     private ViewCameraSystem viewCameraSystem;
@@ -40,6 +53,7 @@ public class ItemEditorContext extends ContextPackage
     private ToolCanvasSystem toolCanvasSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
     private FileMenuSourceSystem fileMenuSourceSystem;
+    private LayersSourceSystem layersSourceSystem;
 
     // Internal \\
 
@@ -54,6 +68,12 @@ public class ItemEditorContext extends ContextPackage
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
+        this.layersSourceSystem = create(LayersSourceSystem.class);
+    }
+
+    @Override
+    protected void get() {
+        this.itemEditorManager = get(ItemEditorManager.class);
     }
 
     @Override
@@ -68,11 +88,61 @@ public class ItemEditorContext extends ContextPackage
         return ToolCanvas.ITEM;
     }
 
+    // The tab's actions run exactly as the Layers tab's icons run them
+    @Override
+    public void runToolAction(String actionKey) {
+        itemEditorManager.act(actionKey);
+    }
+
     // Camera \\
 
     @Override
     public ViewCameraSubject getViewCameraSubject() {
         return itemEditorFrameSystem;
+    }
+
+    // Layers \\
+
+    @Override
+    public int getLayerRevision() {
+        return itemEditorManager.getRevision();
+    }
+
+    @Override
+    public String getLayerTitle() {
+        return EditorSetting.TAB_TITLE_ITEM_EDITOR;
+    }
+
+    @Override
+    public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
+        itemEditorManager.buildLayers(roots);
+    }
+
+    @Override
+    public void selectLayer(String layerKey) {
+        itemEditorManager.selectLayer(layerKey);
+    }
+
+    // A part is never hidden: every part is the item
+    @Override
+    public void toggleLayerVisible(String layerKey) {
+    }
+
+    @Override
+    public String getAddLayerKey() {
+        return EditorSetting.ITEM_EDITOR_KEY_PART_ADD;
+    }
+
+    @Override
+    public String getRemoveLayerKey() {
+        return EditorSetting.ITEM_EDITOR_KEY_PART_REMOVE;
+    }
+
+    // Materials \\
+
+    @Override
+    public boolean dropMaterial(String materialName) {
+        return itemEditorToolSystem.dropMaterial(materialName);
     }
 
     // Properties \\

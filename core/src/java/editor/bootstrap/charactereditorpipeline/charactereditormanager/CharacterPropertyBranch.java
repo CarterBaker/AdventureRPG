@@ -81,9 +81,7 @@ class CharacterPropertyBranch extends BranchPackage {
         String keyName = CharacterViewUtility.getKeyName(key);
         int index = CharacterViewUtility.getKeyIndex(key);
 
-        if (characterGroomBranch.handles(keyName))
-            characterGroomBranch.select(key);
-        else if (characterMeshPropertyBranch.handles(keyName))
+        if (characterMeshPropertyBranch.handles(keyName))
             characterMeshPropertyBranch.select(key);
         else if (characterRigPropertyBranch.handles(keyName))
             characterRigPropertyBranch.select(key);

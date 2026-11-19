@@ -188,7 +188,6 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Scratch
     private ObjectArrayList<String> partKeys;
-    private ObjectArrayList<String> emptyNames;
     private ObjectArrayList<CharacterMeshDocumentInstance> meshDocuments;
 
     // Status
@@ -284,7 +283,6 @@ public class CharacterEditorManager extends ManagerPackage {
 
         // Scratch
         this.partKeys = new ObjectArrayList<>();
-        this.emptyNames = new ObjectArrayList<>();
         this.meshDocuments = new ObjectArrayList<>();
     }
 
@@ -1831,18 +1829,6 @@ public class CharacterEditorManager extends ManagerPackage {
                 .getStartingFeature(getPreviewGenderID(), FeatureSlot.HAIR);
 
         characterGroomBranch.takeFromWorn(document.getMesh(), feature.getFeatureName());
-    }
-
-    // Every texture of the atlas the active part is painted from, the materials a strand may take
-    ObjectArrayList<String> getHairMaterialNames() {
-
-        CharacterMeshDocumentInstance document = getActiveMeshDocument();
-
-        return document != null ? characterMeshBranch.getTextureNames(document) : emptyNames;
-    }
-
-    public void buildHairMaterialRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-        characterGroomBranch.buildMaterialRows(getHairMaterialNames(), rows);
     }
 
     private float getHairWidth() {

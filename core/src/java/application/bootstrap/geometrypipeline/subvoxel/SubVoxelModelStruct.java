@@ -1,5 +1,7 @@
 package application.bootstrap.geometrypipeline.subvoxel;
 
+import java.util.Arrays;
+
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -175,6 +177,25 @@ public class SubVoxelModelStruct extends StructPackage {
         cells[toCellIndex(x, y, z)] = (byte) EngineSetting.SUB_VOXEL_EMPTY_CELL;
     }
 
+    // A cell by its index in the grid, as toCellIndex numbers it; empty when the part is INDEX_NOT_FOUND
+    public int getCellPartAt(int cellIndex) {
+        return (cells[cellIndex] & 0xFF) - 1;
+    }
+
+    public void setCellPartAt(int cellIndex, int partIndex) {
+
+        if (partIndex != EngineSetting.INDEX_NOT_FOUND)
+            verifyPartIndex(partIndex);
+
+        cells[cellIndex] = (byte) (partIndex + 1);
+    }
+
+    // Every cube and wall taken away, the parts kept
+    public void clear() {
+        Arrays.fill(cells, (byte) EngineSetting.SUB_VOXEL_EMPTY_CELL);
+        Arrays.fill(walls, (byte) EngineSetting.SUB_VOXEL_EMPTY_CELL);
+    }
+
     public int getFilledCellCount() {
         return countEntries(cells);
     }
@@ -249,7 +270,8 @@ public class SubVoxelModelStruct extends StructPackage {
 
     // Utility \\
 
-    private int toCellIndex(int x, int y, int z) {
+    // A cell's index in the grid, x fastest, then y, then z
+    public int toCellIndex(int x, int y, int z) {
         return x + sizeX * (y + sizeY * z);
     }
 

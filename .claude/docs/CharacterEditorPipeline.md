@@ -1,7 +1,7 @@
 # CharacterEditorPipeline
 
 Where the character tools live, which method owns each operation, and the traps. Read it before working in the character
-tool tabs (Appearance, Equipment, Hair, Mesh, Topology, Sculpt, Weights, Paint, Rig, UV), the Hair Materials tab, the UV
+tool tabs (Appearance, Equipment, Hair, Mesh, Topology, Sculpt, Weights, Paint, Rig, UV), the Materials tab, the UV
 Editor, the Animation Editor, their docker windows, races and their genders' models, or a character's appearance
 (morphs, sliders, bone controls, zones, masks, overlays, shaders). `.claude/CLAUDE.md` still applies in full.
 
@@ -15,7 +15,7 @@ own tool tab, laid out however the owner likes, each working the one character t
 undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`,
 `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
 from the editor's Entities menu (its Entity section: Appearance, Equipment and Hair; the Animation section; then its
-Tools section holding the Outliner and Hair Materials), the Mesh menu (its Mesh section: Mesh, Topology, Sculpt, Paint,
+Tools section holding the Outliner), the Mesh menu (its Mesh section: Mesh, Topology, Sculpt, Paint,
 UV and the UV Editor; its Rigging section: Rig and Weights; its Tools section the Outliner) or the Textures menu's Tools
 section (Maps, Stamps and the Color Wheel), and restored by layouts like any other. Whatever the owner sees says
 Entity, never Character (the Outliner's title, the Animation Editor's row, the command console's Entity group,
@@ -26,7 +26,7 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
 | Character Appearance, Equipment | `CharacterAppearanceContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
 | Character Mesh, Topology, Sculpt, Weights, Rig, UV | `CharacterMeshContext`, `CharacterTopologyContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext`, `CharacterUVContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
 | Hair | `CharacterHairContext` | the whole character with the groom open drawn over it, the Hair canvas; its own File and Edit table (`FILE_MENU_HAIR`) |
-| Hair Materials | `editor.runtime.hairmaterials.HairMaterialsContext` | every texture of the open character's atlas, the one strands grow in and the Hair Brush paints picked (`CharacterEditorManager.buildHairMaterialRows`) |
+| Materials | `editor.runtime.materials.MaterialsContext` (Materials menu) | every texture of every baked pack, the one strands grow in and the Hair Brush paints chosen (`MaterialsManager`, see `.claude/docs/Editor.md`) |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
 | Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows` |
@@ -722,8 +722,9 @@ reaching the surface of the part picked in the Outliner's Parts (the body), and 
   Brushes tab's brush, only points the camera sees. Mirror gives a new strand its twin across x and reaches each
   strand's twin (the strand rooted at its mirrored root) the mirrored way.
 - **Values.** The Properties tab names the groom, counts its strands and selection, steps the material picked, and holds
-  the selected strands' Width (mm) and Taper. The material is one choice shared with the **Hair Materials** tab, which
-  lists every texture of the open character's atlas (`CharacterMeshBranch.getTextureNames`).
+  the selected strands' Width (mm) and Taper. The material is the one chosen in the **Materials** tab
+  (`MaterialsManager.getSelectedMaterial`), which lists every material of the game; Pick on a strand chooses its
+  material there, and the Hair tab's rows move with that choice (`CharacterToolContext.getRowRevision`).
 - **Actions:** Strands From Worn Hair (each card of the hair worn turned back into a strand along its middle, as wide as
   the card, a groom named after the feature made first when none is open, the feature kept as the groom's `source`),
   Select All, Select None and Delete Selected Strands.

@@ -144,8 +144,8 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterHair(window.getGLWindow());
     }
 
-    public void openHairMaterials(WindowInstance window) {
-        tabManager.openHairMaterials(window.getGLWindow());
+    public void openMaterials(WindowInstance window) {
+        tabManager.openMaterials(window.getGLWindow());
     }
 
     public void openCharacterOutliner(WindowInstance window) {

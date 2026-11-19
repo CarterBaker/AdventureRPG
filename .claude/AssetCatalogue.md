@@ -461,6 +461,12 @@ One line per session that changed this file: the date, what was added or removed
   renamed Entities with Hair and Hair Materials, a new Mesh menu holding the modelling tabs and Topology) and
   `shortcuts/CharacterEditor.arpg` (Make Face and Merge on the Topology canvas, selection keys and hints there and on
   Hair); renamed `commands/Character.arpg` to `commands/Entity.arpg`, the console's Entity group.
+- 2026-11-19: Item Editor workflow and the Materials tab. Added `menus/editor/Materials.arpg`, the shader
+  `editor/itemeditor/ItemEditorStampShader` (`.arpg`, `.vsh`, `.fsh`) and the materials
+  `ItemEditorStampBuildMaterial.arpg` and `ItemEditorStampDigMaterial.arpg` (the brush's sub-voxel stamp); regenerated
+  `menus/editor/ItemEditor.arpg` (status bar only, its parts now the Layers tab's), `menus/editor/EditorWindow.arpg`
+  (a Materials menu holding the Materials tab, Hair Materials gone from Entities) and `shortcuts/ItemEditor.arpg`
+  (F2 renames a part, the texture keys gone).
 
 ## Textures and Sprites (2429 files)
 
@@ -1552,7 +1558,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (178 files)
+## Shaders (180 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1580,7 +1586,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/editor/itemeditor/`
 
 `ItemEditorCursorShader.fsh`, `ItemEditorCursorShader.vsh`, `ItemEditorGridShader.fsh`, `ItemEditorGridShader.vsh`,
-`ItemEditorModelShader.fsh`, `ItemEditorModelShader.vsh`
+`ItemEditorModelShader.fsh`, `ItemEditorModelShader.vsh`, `ItemEditorStampShader.fsh`, `ItemEditorStampShader.vsh`
 
 ### `assets/shaders/editor/placementicon/`
 
@@ -1876,7 +1882,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3800 files)
+## Data Files (3804 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2650,7 +2656,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `CharacterMeshOverlayMaterial.arpg`, `CharacterViewCharacterMaterial.arpg`, `CharacterViewGridMaterial.arpg`,
 `CharacterViewMarkerMaterial.arpg`, `CharacterViewMarkerSelectedMaterial.arpg`, `ItemEditorCursorEraseMaterial.arpg`,
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
-`ItemEditorModelMaterial.arpg`, `ImageEditorMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
+`ItemEditorModelMaterial.arpg`, `ItemEditorStampBuildMaterial.arpg`, `ItemEditorStampDigMaterial.arpg`,
+`ImageEditorMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
 `ShipViewerMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
 `TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`, `UVEditorOverlayMaterial.arpg`,
 `WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
@@ -2716,7 +2723,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
-`ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`,
+`ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `Materials.arpg`,
 `NewImageDialog.arpg`, `NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
 `TabFrame.arpg`,
@@ -2928,7 +2935,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/shaders/editor/itemeditor/`
 
-`ItemEditorCursorShader.arpg`, `ItemEditorGridShader.arpg`, `ItemEditorModelShader.arpg`
+`ItemEditorCursorShader.arpg`, `ItemEditorGridShader.arpg`, `ItemEditorModelShader.arpg`, `ItemEditorStampShader.arpg`
 
 ### `assets/shaders/editor/placementicon/`
 

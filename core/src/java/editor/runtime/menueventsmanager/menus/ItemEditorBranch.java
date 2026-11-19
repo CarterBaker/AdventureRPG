@@ -1,6 +1,9 @@
 package editor.runtime.menueventsmanager.menus;
 
+import java.io.File;
+
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -8,13 +11,14 @@ import engine.root.BranchPackage;
 public class ItemEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Item Editor's parts panel and keys, and its
-     * File menu actions. Every
-     * action works on the shared active item; new items and parts, and part
-     * renames, are named through the name dialog, and deleting an item asks
-     * for its name to be typed back as confirmation. Part rows carry their
-     * part index. The tools are chosen through ToolBranch, as every editor's
-     * are.
+     * Menu event handlers for the Item Editor's keys and its File menu
+     * actions. Every action works on the shared active item; new workspace
+     * items and part renames are named through the name dialog, Open picks a
+     * workspace item in the system's open dialog, Import asks the definition
+     * file the item joins, and deleting an item asks for its name to be typed
+     * back as confirmation. Parts are added, picked and deleted through the
+     * Layers tab, and the tools are chosen through ToolBranch, as every
+     * editor's are.
      */
 
     // Internal
@@ -39,6 +43,19 @@ public class ItemEditorBranch extends BranchPackage {
                 itemEditorManager::createItem);
     }
 
+    // A workspace item picked in the system's open dialog, which starts in the workspace's Items folder
+    public void openItem() {
+
+        File file = WorkspaceUtility.chooseFile(
+                EditorSetting.WORKSPACE_DIALOG_OPEN_ITEM,
+                itemEditorManager.getItemFolder(),
+                EditorSetting.WORKSPACE_FILE_PATTERNS,
+                EditorSetting.WORKSPACE_FILE_DESCRIPTION);
+
+        if (file != null)
+            itemEditorManager.openItemFile(file);
+    }
+
     public void saveItem() {
         itemEditorManager.saveActiveItem();
     }
@@ -47,12 +64,26 @@ public class ItemEditorBranch extends BranchPackage {
         itemEditorManager.reloadActiveItem();
     }
 
+    // The open workspace item brought into the game, joining the definition file asked for
+    public void importItem(WindowInstance window) {
+
+        if (!itemEditorManager.canImport())
+            return;
+
+        nameDialogBranch.openText(
+                window,
+                EditorSetting.ITEM_IMPORT_DIALOG_DEFINITION,
+                EditorSetting.ITEM_EDITOR_DEFINITION_FILE,
+                itemEditorManager::isImportDefinition,
+                itemEditorManager::importActiveItem);
+    }
+
     public void deleteItem(WindowInstance window) {
 
         if (!itemEditorManager.hasActiveDocument())
             return;
 
-        String localName = itemEditorManager.getActiveDocument().getEntry().getLocalName();
+        String localName = itemEditorManager.getActiveDocument().getLocalName();
 
         nameDialogBranch.open(
                 window,
@@ -62,22 +93,6 @@ public class ItemEditorBranch extends BranchPackage {
     }
 
     // Parts \\
-
-    public void selectPart(String partIndex) {
-        itemEditorManager.selectPart(Integer.parseInt(partIndex));
-    }
-
-    public void addPart(WindowInstance window) {
-
-        if (!itemEditorManager.hasActiveDocument())
-            return;
-
-        nameDialogBranch.open(
-                window,
-                EditorSetting.DIALOG_TITLE_NEW_PART,
-                itemEditorManager::isPartNameAvailable,
-                itemEditorManager::addPart);
-    }
 
     public void removePart() {
         itemEditorManager.removeSelectedPart();
@@ -93,13 +108,5 @@ public class ItemEditorBranch extends BranchPackage {
                 EditorSetting.DIALOG_TITLE_RENAME_PART,
                 itemEditorManager::isPartNameAvailable,
                 itemEditorManager::renameSelectedPart);
-    }
-
-    public void previousTexture() {
-        itemEditorManager.cycleTexture(-1);
-    }
-
-    public void nextTexture() {
-        itemEditorManager.cycleTexture(1);
     }
 }
