@@ -244,7 +244,8 @@ public class EditorSetting {
             .with(FileMenuAction.SAVE, "saveItem")
             .with(FileMenuAction.REVERT, "reloadItem")
             .with(FileMenuAction.DELETE, "deleteItem")
-            .with(FileMenuAction.IMPORT, "importItem");
+            .with(FileMenuAction.IMPORT, "importItem")
+            .with(FileMenuAction.EXPORT, "exportItem");
     public static final FileMenuTableStruct FILE_MENU_INFO = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.InfoPanelBranch")
             .with(FileMenuAction.NEW, "newEntry")
@@ -2226,6 +2227,9 @@ public class EditorSetting {
     public static final String CHARACTER_MODEL_FIELD_APPEARANCE = "appearance";
     public static final String[] CHARACTER_MODEL_LOOK_FIELDS = { "head_bone", "colors", "palettes", "details" };
     public static final String[] CHARACTER_MODEL_GENDER_FIELDS = { "rig", "material", "animation_tree" };
+    public static final String CHARACTER_MODEL_FIELD_MATERIAL = "material";
+    public static final String CHARACTER_MODEL_FIELD_ANIMATION_TREE = "animation_tree";
+    public static final String CHARACTER_MODEL_STANDALONE_MATERIAL = "characters/StandardCharacterMaterial";
     public static final String CHARACTER_MODEL_IMPORT_FOLDER = "characters/";
     public static final String CHARACTER_MODEL_DEFAULT_RIG = "HumanoidRig";
     public static final String CHARACTER_MODEL_DIALOG_NEW = "New model: its name";
@@ -2240,7 +2244,7 @@ public class EditorSetting {
     public static final String CHARACTER_MODEL_MESSAGE_NOT_READ = "The model could not be read: ";
     public static final String CHARACTER_MODEL_MESSAGE_NOT_WRITTEN = "The model could not be written: ";
     public static final String CHARACTER_MODEL_MESSAGE_NO_RACE =
-            "No race stands on the rig to preview the model with: ";
+            "Neither a race nor an animation tree stands on the rig to preview the model with: ";
     public static final String CHARACTER_MODEL_MESSAGE_BLANK =
             "Blank model: choose a root part (such as the Torso) in the Stamps tab and click in the Sculpt tab";
     public static final String CHARACTER_MODEL_MESSAGE_ROOT_ONLY =
@@ -2794,6 +2798,26 @@ public class EditorSetting {
     public static final long ITEM_EDITOR_DENSITY_SEED = 0x1A2B3C4DL;
     public static final long ITEM_EDITOR_DENSITY_SALT = 0x5E6F7081L;
 
+    // Item Bakes — the rig and bone every baked item is skinned to, the pack its maps are kept in, the folder its
+    // model takes among the workspace's models, the most texels a sub-voxel takes and the padding round each island,
+    // the atlas sides tried, each face's u and v as the item shader lays a block's texels (axis, then sign), the corner
+    // orders of a face and of a wall's back, and how a corner's position packs into one key
+    public static final String ITEM_BAKE_RIG = "ItemRig";
+    public static final String ITEM_BAKE_ROOT_BONE = "root";
+    public static final String ITEM_BAKE_PACK = "items/baked";
+    public static final String ITEM_BAKE_MODEL_FOLDER = "items/";
+    public static final int ITEM_BAKE_TEXELS_PER_CELL = 4;
+    public static final int ITEM_BAKE_PADDING = 2;
+    public static final int[] ITEM_BAKE_ATLAS_SIZES = { 128, 256, 512 };
+    public static final int[] ITEM_BAKE_FACE_U_AXIS = { 0, 2, 0, 2, 0, 0 };
+    public static final int[] ITEM_BAKE_FACE_U_SIGN = { 1, -1, -1, 1, 1, 1 };
+    public static final int[] ITEM_BAKE_FACE_V_AXIS = { 1, 1, 1, 1, 2, 2 };
+    public static final int[] ITEM_BAKE_FACE_V_SIGN = { 1, 1, 1, 1, 1, -1 };
+    public static final int[] ITEM_BAKE_FRONT_CORNERS = { 0, 1, 2, 3 };
+    public static final int[] ITEM_BAKE_BACK_CORNERS = { 0, 3, 2, 1 };
+    public static final int ITEM_BAKE_KEY_SHIFT_X = 42;
+    public static final int ITEM_BAKE_KEY_SHIFT_Y = 21;
+
     // Materials — the material chosen before any is picked
     public static final String MATERIALS_DEFAULT_MATERIAL = CHARACTER_HAIR_DEFAULT_TEXTURE;
 
@@ -2982,6 +3006,10 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_MESSAGE_DROP_MISSED = "Drop the material on a part of the item";
     public static final String ITEM_EDITOR_MESSAGE_MATERIAL = "Coloured ";
     public static final String ITEM_EDITOR_MATERIAL_TO = " with ";
+    public static final String ITEM_EDITOR_MESSAGE_EXPORTED =
+            "Baked for the mesh tools, open in the Mesh menu's tabs: ";
+    public static final String ITEM_EDITOR_MESSAGE_BAKE_TOO_LARGE =
+            "Too many faces to bake into the largest atlas: merge or remove some";
 
     // Recorder — media files, video and music alike, in the game's own directory beside the player's saves; what they
     // export goes in a folder beside them, music laid out as the project's assets are so it is dragged in as it lies

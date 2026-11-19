@@ -157,6 +157,14 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   already names that mesh. An item of the game opens when picked in any Hierarchy tab: the item itself, the item an
   entry of a schema that names items names (a furnishing, a loot table), or the item naming the entry (an instrument),
   and saves in place.
+- **Export bakes the item for the mesh tools** (`ItemBakeBranch`), as a voxel modeller exports a mesh: the greedy quads
+  become a rigged mesh skinned wholly to the root of the shared one-bone `ItemRig`, every quad its own UV island laid in
+  the block's texel directions and shelf-packed into one atlas (`ITEM_BAKE_ATLAS_SIZES`, up to
+  `ITEM_BAKE_TEXELS_PER_CELL` texels a sub-voxel), every map the parts' materials carry baked into it part by part as a
+  material-ID fill, written as `assets/textures/items/baked/<Item>_<suffix>.png`, baked and shown at once
+  (`TextureManager.applyTileBake`). The mesh opens in the character tabs as the workspace model `items/<Item>`
+  (`CharacterEditorManager.openBakedModel`; an open one takes it as one edit), to paint, unwrap and model as any mesh.
+  Baking again lays the maps out afresh from the cubes, painting over the last bake: paint after the shape is done.
 
 ## The File and Edit menus
 

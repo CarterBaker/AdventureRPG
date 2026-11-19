@@ -766,9 +766,11 @@ New, Open and Import reach them (`FILE_MENU_CHARACTER`: `newModel`, `openModel`,
   workspace file), and builds the race it is previewed through in memory only (`buildRace`): one gender wearing the
   mesh, with the material and animation tree of the first race's gender on the rig, that race's equipment anchors and
   the part of its look any body takes (`CHARACTER_MODEL_LOOK_FIELDS`: head bone, colors, palettes, details; never the
-  sliders, expressions or features, which name a body's own morphs and meshes). A rig no race stands on cannot be
-  previewed. The view frames a body from where its mesh stands (`CharacterViewPoseSystem.getCenter`), so a lone torso
-  is framed at its own height.
+  sliders, expressions or features, which name a body's own morphs and meshes). A rig no race stands on but an
+  animation tree moves (`ItemRig`, the item rig) is previewed as the game's first gender in
+  `CHARACTER_MODEL_STANDALONE_MATERIAL` moving by that tree (`resolveGender`), so a baked item opens like any model; a
+  rig with neither cannot be previewed. The view frames a body from where its mesh stands
+  (`CharacterViewPoseSystem.getCenter`), so a lone torso is framed at its own height.
 - **A model is no race.** Race edits skip it (`CharacterEditBranch.edit`), the Appearance and Equipment tabs say so,
   Duplicate and Delete refuse it, and Save writes its mesh, the rig, controls, clips and paint, never a race.
 - **Import** (the open model, saved first) asks the race it joins (a race already on its rig, or a new name), the

@@ -101,6 +101,27 @@ class TextureLoader extends LoaderPackage {
         request(directory);
     }
 
+    // A tile baked while the game runs, read and uploaded as bootstrap reads every tile; a pack it starts is known
+    // from then on, as the next bootstrap's scan will find it
+    void loadBakedTile(String tileName) {
+
+        String arrayName = tileName.substring(0, tileName.lastIndexOf(EngineSetting.TEXTURE_TILE_NAME_SEPARATOR));
+        File definitionFile = TextureBakeUtility.resolveDefinitionFile(
+                new File(EngineSetting.BAKED_TEXTURE_PATH), tileName);
+
+        if (!definitionFile.isFile())
+            throwException("Baked texture '" + tileName + "' has no definition: " + definitionFile.getAbsolutePath());
+
+        if (!arrayName2File.containsKey(arrayName)) {
+            arrayName2File.put(arrayName, definitionFile.getParentFile());
+            arrayNames.add(arrayName);
+            arrayNames.sort(null);
+        }
+
+        internalBuilder.build(definitionFile, arrayName);
+        textureManager.flushUploads();
+    }
+
     // Accessible \\
 
     // Every baked pack's array name, in name order

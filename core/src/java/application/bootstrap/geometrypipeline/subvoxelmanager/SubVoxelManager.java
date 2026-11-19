@@ -160,8 +160,19 @@ public class SubVoxelManager extends ManagerPackage {
 
     // The model's cubes and walls meshed into the model quads
     private void meshModel(SubVoxelModelStruct model) {
+        meshModel(model, modelQuads);
+    }
+
+    // A merged quad's four corners in block units, three floats each, in the winding every sub-voxel face takes
+    public void resolveQuadCorners(SubVoxelQuadListStruct quads, int quad, float[] corners) {
+        SubVoxelMeshUtility.resolveQuadBounds(quads, quad, minScratch, maxScratch);
+        SubVoxelMeshUtility.resolveCorners(quads.getFace(quad), minScratch, maxScratch, corners);
+    }
+
+    // The model's cubes and walls merged into quads, for whoever writes them in a format of its own
+    public void meshModel(SubVoxelModelStruct model, SubVoxelQuadListStruct out) {
         SubVoxelMeshUtility.writeGrid(model, modelGrid);
-        meshGrid(modelGrid, null, modelQuads);
+        meshGrid(modelGrid, null, out);
     }
 
     // Every part's tile ID, indexed by part

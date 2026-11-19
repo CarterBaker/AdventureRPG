@@ -219,6 +219,18 @@ public class TextureManager extends ManagerPackage {
         textureStreamBranch.replaceBake(tileID, bake);
     }
 
+    // A tile the editor baked and wrote, shown at once: put in place of the one loaded, or loaded new as bootstrap
+    // loads every tile
+    public void applyTileBake(TextureBakeStruct bake) {
+
+        if (hasTexture(bake.getTileName())) {
+            replaceTileBake(getTileIDFromTextureName(bake.getTileName()), bake);
+            return;
+        }
+
+        ((TextureLoader) internalLoader).loadBakedTile(bake.getTileName());
+    }
+
     // Accessible \\
 
     public AliasLibraryStruct getAliasLibrary() {

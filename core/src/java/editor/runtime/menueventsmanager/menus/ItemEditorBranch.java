@@ -15,7 +15,8 @@ public class ItemEditorBranch extends BranchPackage {
      * actions. Every action works on the shared active item; new workspace
      * items and part renames are named through the name dialog, Open picks a
      * workspace item in the system's open dialog, Import asks the definition
-     * file the item joins, and deleting an item asks for its name to be typed
+     * file the item joins, Export bakes it for the mesh tools, and deleting an
+     * item asks for its name to be typed
      * back as confirmation. Parts are added, picked and deleted through the
      * Layers tab, and the tools are chosen through ToolBranch, as every
      * editor's are.
@@ -76,6 +77,11 @@ public class ItemEditorBranch extends BranchPackage {
                 EditorSetting.ITEM_EDITOR_DEFINITION_FILE,
                 itemEditorManager::isImportDefinition,
                 itemEditorManager::importActiveItem);
+    }
+
+    // The item baked for the mesh tools and opened in the character tabs
+    public void exportItem() {
+        itemEditorManager.exportActiveItem();
     }
 
     public void deleteItem(WindowInstance window) {

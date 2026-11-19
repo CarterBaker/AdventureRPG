@@ -159,7 +159,7 @@ class ImageExchangeBranch extends BranchPackage {
         return null;
     }
 
-    // The tile baked from its images and written where the game streams it, and played at once where it is loaded
+    // The tile baked from its images and written where the game streams it, and shown at once
     private void bake(String textureName, TextureSourceStruct source, AliasLibraryStruct library) {
 
         BufferedImage[] images = new BufferedImage[source.getSourceCount()];
@@ -179,9 +179,7 @@ class ImageExchangeBranch extends BranchPackage {
                 compressionScratch);
 
         TextureBakeUtility.writeBake(bakeRoot, bake);
-
-        if (textureManager.hasTexture(textureName))
-            textureManager.replaceTileBake(textureManager.getTileIDFromTextureName(textureName), bake);
+        textureManager.applyTileBake(bake);
     }
 
     // Files \\

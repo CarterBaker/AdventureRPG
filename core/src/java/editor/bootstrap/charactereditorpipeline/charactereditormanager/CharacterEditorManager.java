@@ -444,6 +444,42 @@ public class CharacterEditorManager extends ManagerPackage {
                 : EditorSetting.CHARACTER_MODEL_MESSAGE_OPENED + modelName);
     }
 
+    // A mesh made outside the character tabs (an item baked for them) opened as a workspace model: written and opened
+    // when no model of that name is open with a body, or, when one is, its body replaced by the mesh as one edit, as a
+    // model brought in from a file replaces it
+    public void openBakedModel(String modelName, RiggedMeshStruct mesh) {
+
+        CharacterDocumentInstance document = modelName2CharacterDocument.get(modelName);
+
+        if (document == null || document.isBlank()) {
+
+            if (!characterWorkspaceBranch.writeModel(modelName, mesh)) {
+                setStatusMessage(characterWorkspaceBranch.getRefusal());
+                return;
+            }
+
+            modelName2CharacterDocument.remove(modelName);
+            openModel(modelName);
+            return;
+        }
+
+        activate(document);
+
+        CharacterMeshDocumentInstance meshDocument = characterMeshBranch.open(
+                characterMeshBranch.resolvePartMesh(document, EditorSetting.CHARACTER_EDITOR_PART_BODY));
+
+        if (meshDocument == null) {
+            setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_READ + modelName);
+            return;
+        }
+
+        characterHistoryBranch.begin(meshDocument);
+        meshDocument.getMesh().set(mesh);
+
+        if (characterMeshBranch.finishEdit(meshDocument))
+            setStatusMessage(EditorSetting.CHARACTER_MODEL_MESSAGE_OPENED + modelName);
+    }
+
     private void rebuildModelPreview(CharacterDocumentInstance document) {
 
         if (document.isBlank())

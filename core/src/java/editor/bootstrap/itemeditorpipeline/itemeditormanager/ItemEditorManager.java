@@ -3,11 +3,14 @@ package editor.bootstrap.itemeditorpipeline.itemeditormanager;
 import java.io.File;
 import java.util.function.Predicate;
 
+import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelHitStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelModelStruct;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
+import application.bootstrap.shaderpipeline.texturemanager.TextureBakeUtility;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
@@ -48,8 +51,11 @@ public class ItemEditorManager extends ManagerPackage {
      * Materials tab colours the part under the pointer. The tools are the
      * Tools tab's for the item, stamping with the Brushes tab's brush. Items
      * stay open with their edits until saved, deleted, or the editor
-     * closes. Disk access, the workspace, stamps and model edits each live in
-     * their own branch.
+     * closes. Export bakes the item for the mesh tools, its maps into its own
+     * texture and its mesh into a workspace model the character tabs open,
+     * to paint, unwrap, model and rig as any mesh. Disk access, the
+     * workspace, stamps, bakes and model edits each live in their own
+     * branch.
      */
 
     // Internal
@@ -57,10 +63,12 @@ public class ItemEditorManager extends ManagerPackage {
     private InfoManager infoManager;
     private ToolManager toolManager;
     private MaterialsManager materialsManager;
+    private CharacterEditorManager characterEditorManager;
     private ItemLibraryBranch itemLibraryBranch;
     private ItemWorkspaceBranch itemWorkspaceBranch;
     private ItemEditBranch itemEditBranch;
     private ItemBrushBranch itemBrushBranch;
+    private ItemBakeBranch itemBakeBranch;
 
     // Palette
     private Object2ObjectOpenHashMap<String, ItemDocumentInstance> meshName2ItemDocument;
@@ -84,6 +92,7 @@ public class ItemEditorManager extends ManagerPackage {
         this.itemWorkspaceBranch = create(ItemWorkspaceBranch.class);
         this.itemEditBranch = create(ItemEditBranch.class);
         this.itemBrushBranch = create(ItemBrushBranch.class);
+        this.itemBakeBranch = create(ItemBakeBranch.class);
 
         // Palette
         this.meshName2ItemDocument = new Object2ObjectOpenHashMap<>();
@@ -96,6 +105,7 @@ public class ItemEditorManager extends ManagerPackage {
         this.infoManager = get(InfoManager.class);
         this.toolManager = get(ToolManager.class);
         this.materialsManager = get(MaterialsManager.class);
+        this.characterEditorManager = get(CharacterEditorManager.class);
     }
 
     @Override
@@ -367,6 +377,26 @@ public class ItemEditorManager extends ManagerPackage {
 
     public File getItemFolder() {
         return itemWorkspaceBranch.getFolder();
+    }
+
+    // The item baked for the mesh tools: its maps into a texture of the bake pack and its mesh opened in the
+    // character tabs as a workspace model on the item rig, both under the item's own name
+    public void exportActiveItem() {
+
+        if (activeDocument == null)
+            return;
+
+        String stem = FileUtility.getFileName(activeDocument.getLocalName());
+        RiggedMeshStruct mesh = itemBakeBranch.bake(
+                activeDocument.getModel(), TextureBakeUtility.toTileName(EditorSetting.ITEM_BAKE_PACK, stem));
+
+        if (mesh == null) {
+            setStatusMessage(itemBakeBranch.getRefusal());
+            return;
+        }
+
+        characterEditorManager.openBakedModel(EditorSetting.ITEM_BAKE_MODEL_FOLDER + stem, mesh);
+        setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_EXPORTED + stem);
     }
 
     // File \\

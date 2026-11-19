@@ -34,7 +34,9 @@ class CharacterWorkspaceBranch extends BranchPackage {
      * is placed. A model with a body is made known to the mesh loader under
      * a workspace name and previewed through a race built in memory alone,
      * its one gender, material and animation tree taken from a race already
-     * on that rig and its look and anchors with them, so every character
+     * on that rig and its look and anchors with them, or, on a rig no race
+     * stands on (an item's), the game's first gender in the standalone
+     * material moving by the rig's own animation tree, so every character
      * tool works on it as on any character; it is never written as a race.
      * Import brings the model into the game: its mesh written among the
      * game's meshes and worn by a gender of a race (one already on the rig,
@@ -157,23 +159,29 @@ class CharacterWorkspaceBranch extends BranchPackage {
     // A blank model's first body written to its file and made known, so it opens as any model does; false, with the
     // refusal kept, when it could not be
     boolean writeBody(CharacterDocumentInstance document, RiggedMeshStruct mesh) {
+        return writeModel(document.getModelName(), mesh) && registerBody(document);
+    }
+
+    // A model written whole with the mesh as its body, on the mesh's rig, over any model of that name; false, with
+    // the refusal kept, when it could not be
+    boolean writeModel(String modelName, RiggedMeshStruct mesh) {
 
         ArpgObjectStruct sourceArpg = new ArpgObjectStruct();
         ArpgArrayStruct layout = new ArpgArrayStruct();
+        File file = resolveFile(modelName);
 
         layout.add(EngineSetting.RIGGED_MESH_POSITION_FLOATS);
         layout.add(EngineSetting.RIGGED_MESH_UV_FLOATS);
         sourceArpg.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, mesh.getRigHandle().getRigName());
         sourceArpg.add(EditorSetting.CHARACTER_MODEL_FIELD_VAO, layout);
+        file.getParentFile().mkdirs();
 
-        if (!ArpgUtility.tryWriteObject(
-                resolveFile(document.getModelName()),
-                meshManager.toRiggedMeshArpg(mesh, sourceArpg))) {
-            this.refusal = EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_WRITTEN + document.getModelName();
+        if (!ArpgUtility.tryWriteObject(file, meshManager.toRiggedMeshArpg(mesh, sourceArpg))) {
+            this.refusal = EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_WRITTEN + modelName;
             return false;
         }
 
-        return registerBody(document);
+        return true;
     }
 
     // The model's mesh made known to the mesh loader and the mesh tools under its workspace name, and its preview
@@ -210,7 +218,7 @@ class CharacterWorkspaceBranch extends BranchPackage {
     // meshes), as a new race starts looking like the race it was made beside; null when no race stands on it
     private ArpgObjectStruct buildRace(String rigName, String meshName, String genderName) {
 
-        ArpgObjectStruct gender = findGender(rigName, null);
+        ArpgObjectStruct gender = resolveGender(rigName);
 
         if (gender == null)
             return null;
@@ -222,7 +230,8 @@ class CharacterWorkspaceBranch extends BranchPackage {
         raceArpg.add(EditorSetting.CHARACTER_MODEL_FIELD_GENDERS, gendersArpg);
         copyField(foundRaceArpg, raceArpg, EditorSetting.CHARACTER_MODEL_FIELD_EQUIPMENT);
 
-        if (ArpgUtility.hasObject(foundRaceArpg, EditorSetting.CHARACTER_MODEL_FIELD_APPEARANCE)) {
+        if (foundRaceArpg != null
+                && ArpgUtility.hasObject(foundRaceArpg, EditorSetting.CHARACTER_MODEL_FIELD_APPEARANCE)) {
 
             ArpgObjectStruct sourceLook = foundRaceArpg.getAsObject(EditorSetting.CHARACTER_MODEL_FIELD_APPEARANCE);
             ArpgObjectStruct look = new ArpgObjectStruct();
@@ -238,7 +247,7 @@ class CharacterWorkspaceBranch extends BranchPackage {
 
     private static void copyField(ArpgObjectStruct source, ArpgObjectStruct target, String key) {
 
-        if (source.has(key))
+        if (source != null && source.has(key))
             target.add(key, source.get(key).deepCopy());
     }
 
@@ -270,6 +279,49 @@ class CharacterWorkspaceBranch extends BranchPackage {
                 return gender;
             }
         }
+
+        return null;
+    }
+
+    // The gender a model on the rig is previewed as: the first gender of a race on the rig, or on a rig no race stands
+    // on, the game's first gender in the standalone material moving by the rig's own animation tree, no race found;
+    // null when the rig has neither
+    private ArpgObjectStruct resolveGender(String rigName) {
+
+        ArpgObjectStruct gender = findGender(rigName, null);
+
+        return gender != null ? gender : buildStandaloneGender(rigName);
+    }
+
+    private ArpgObjectStruct buildStandaloneGender(String rigName) {
+
+        String treeName = findAnimationTree(rigName);
+        ObjectArrayList<InfoEntryStruct> genders = infoManager.getEntries(EditorSetting.INFO_SCHEMA_GENDERS);
+
+        if (treeName == null || genders.isEmpty())
+            return null;
+
+        ArpgObjectStruct gender = new ArpgObjectStruct();
+
+        gender.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, rigName);
+        gender.addProperty(
+                EditorSetting.CHARACTER_MODEL_FIELD_MATERIAL, EditorSetting.CHARACTER_MODEL_STANDALONE_MATERIAL);
+        gender.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_ANIMATION_TREE, treeName);
+
+        this.foundRaceArpg = null;
+        this.foundGenderName = genders.get(0).getEntryName();
+        return gender;
+    }
+
+    // The first animation tree moving the rig; null for none
+    private String findAnimationTree(String rigName) {
+
+        ObjectArrayList<InfoEntryStruct> trees = infoManager.getEntries(EditorSetting.INFO_SCHEMA_ANIMATION_TREES);
+
+        for (int i = 0; i < trees.size(); i++)
+            if (rigName.equals(ArpgUtility.getString(
+                    trees.get(i).getArpg(), EditorSetting.CHARACTER_MODEL_FIELD_RIG, "")))
+                return trees.get(i).getEntryName();
 
         return null;
     }
@@ -329,7 +381,7 @@ class CharacterWorkspaceBranch extends BranchPackage {
 
         meshManager.addMeshFile(meshName, meshFile);
 
-        ArpgObjectStruct gender = toGender(findGender(document.getRigHandle().getRigName(), null), meshName);
+        ArpgObjectStruct gender = toGender(resolveGender(document.getRigHandle().getRigName()), meshName);
 
         if (infoManager.hasDocument(EditorSetting.INFO_SCHEMA_RACES, raceName))
             infoManager.editEntry(EditorSetting.INFO_SCHEMA_RACES, raceName, raceName, race -> wearGender(
