@@ -18,7 +18,7 @@ public class MaterialsBranch extends BranchPackage {
      * let go over; pressing the open material's row chooses it. The File
      * menu makes, opens, saves, reverts, deletes, exports and imports the
      * material of the workspace, the Edit menu undoes and redoes its edits,
-     * and the Outliner's rows step, cycle, take typed values and choose a
+     * and the Properties tab's rows step, cycle, take typed values and choose a
      * map's image in the system's file dialog. Rows hand back the name or key
      * they show.
      */

@@ -31,7 +31,7 @@ and File, Open picks one there in the system's file dialog.
   path that generates (`ImageMapBranch`, scratch in `MapGenerateScratchStruct`, grown only for a larger image). The
   albedo is the layers themselves and is never generated.
 - **The Maps tab** (`editor.runtime.maps.MapsContext`) follows the window worked in last that implements
-  `MapsProvider`, tracked by `PropertiesManager.getMaps` as the Outliner is: the Image Editor, every character tool tab
+  `MapsProvider`, tracked by `PropertiesManager.getMaps` as the Properties tab's provider is: the Image Editor, every character tool tab
   and the UV Editor. Rows come from `MapRowUtility` for both, so the layout is one: map entries (generated ones
   marked), the picked map's settings, Generate, Clear.
 

@@ -1,6 +1,8 @@
 package editor.runtime.frame;
 
 import application.bootstrap.menupipeline.menumanager.ElementHitSystem;
+import application.bootstrap.shaderpipeline.sprite.SpriteHandle;
+import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.runtime.EditorSetting;
@@ -24,11 +26,13 @@ public class EditorFrameSystem extends SystemPackage {
      * a side takes that half and a corner that quarter. A maximized or snapped
      * window dragged by its title bar restores under the cursor at the same
      * share of its width. The cursor takes the resize shape of the edges under
-     * it, and a fullscreen window has no frame to work.
+     * it, and a fullscreen window has no frame to work. As it opens the window
+     * takes the editor's icon, the sword the taskbar shows beside its title.
      */
 
     // Internal
     private InputManager inputManager;
+    private SpriteManager spriteManager;
     private ElementHitSystem elementHitSystem;
     private EditorDockSystem editorDockSystem;
     private EditorFrameBranch editorFrameBranch;
@@ -75,9 +79,22 @@ public class EditorFrameSystem extends SystemPackage {
     @Override
     protected void get() {
         this.inputManager = get(InputManager.class);
+        this.spriteManager = get(SpriteManager.class);
         this.elementHitSystem = get(ElementHitSystem.class);
         this.editorDockSystem = get(EditorDockSystem.class);
         this.editorFrameBranch = get(EditorFrameBranch.class);
+    }
+
+    @Override
+    protected void awake() {
+
+        SpriteHandle icon = spriteManager.getSpriteHandleFromSpriteName(EditorSetting.WINDOW_ICON);
+
+        internal.windowPlatform.setWindowIcon(
+                context.getWindow(),
+                icon.getGpuHandle(),
+                icon.getWidth(),
+                icon.getHeight());
     }
 
     // Update \\

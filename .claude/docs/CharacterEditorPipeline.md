@@ -16,9 +16,9 @@ undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_M
 `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
 from the editor's Entities menu (its Entity section: Appearance, Equipment and Hair; the Animation section), the Mesh
 menu (its Mesh section: Mesh, Topology, Sculpt, Paint, UV and the UV Editor; its Rigging section: Rig and Weights), the
-Content menu's Tools section (the Outliner, beside Tools and Brushes) or the Textures menu's Tools section (Maps, Stamps
-and the Color Wheel), and restored by layouts like any other. Whatever the owner sees says
-Entity, never Character (the Outliner's title, the Animation Editor's row, the command console's Entity group,
+Tools menu (Properties; Tools, Brushes, Stamps, Maps and the Color Wheel in its Canvas section), and restored by
+layouts like any other. Whatever the owner sees says
+Entity, never Character (the Animation Editor's row, the command console's Entity group,
 `assets/commands/Entity.arpg`); the code keeps its `Character*` names.
 
 | Window | Context | Shows |
@@ -30,8 +30,8 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
 | Material Viewer | `editor.runtime.materialviewer.MaterialViewerContext` (Materials menu) | the material chosen on the shape the Shape option names, lit by the light its Light tool turns |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
-| Outliner | `CharacterOutlinerContext` (Content menu) | the outliner rows of the window worked in last that lists them (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows`, and the material's maps and parameters for the Materials and Material Viewer tabs (`MaterialsManager.buildRows`) |
-| Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), then Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) |
+| Properties | `editor.runtime.properties.PropertiesContext` (Tools menu) | the rows of the window worked in last: what it picks from first (`CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows`), then the values of what is picked (`buildPropertyRows`); the material's maps and parameters for the Materials and Material Viewer tabs (`MaterialsManager.buildRows`); the colour's rows for the Color Wheel |
+| Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`); its Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) are the Properties tab's while it was worked in last |
 | Maps | `editor.runtime.maps.MapsContext` | the maps of the texture painted while a character tab or the UV Editor was worked in last (`MapsProvider`, `CharacterEditorManager.buildMapRows`): the one painted selected, its settings, Generate and Clear |
 | Animation Editor | `AnimationEditorContext` | the character chosen (the player at first) posed at the recorder Timeline's playhead; the Animation Pose tool canvas while a clip plays on a character |
 | Properties | `PropertiesContext` | the value rows of the character or animation tab worked in last |
@@ -57,15 +57,15 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
   selection lives in the part's mesh document, shared by every tab.
 - **One window, one manager.** Each tab draws its preview in its own mode (`CharacterEditorPreviewSystem` reads the
   window's mode, never the manager's); while it is the active window, and when a layer is picked for it, it hands its
-  region and mode to `CharacterEditorManager.setRegion` / `setMode`, so the Outliner and the Properties tab follow the
-  window worked in last. The context creates every viewport system; the mesh view, sculpt, rig, paint and overlay
+  region and mode to `CharacterEditorManager.setRegion` / `setMode`, so the Properties tab follows the window
+  worked in last. The context creates every viewport system; the mesh view, sculpt, rig, paint and overlay
   systems act only in the modes their flags name. `CharacterToolContext` answers its tool canvas, tool actions,
   Properties rows, templates and File and Edit table for its mode, all the character editor's. The keys of every tool
   tab are one file, `shortcuts/CharacterEditor.arpg`, naming `CharacterToolContext` (a shortcut file naming a base
   context keys every tab built on it, `ShortcutManager.findShortcuts`) and kept to their tools by `canvases`; Undo, Redo
   and Save run the File menu's action (`FileMenuBranch.run`).
 
-- **The Appearance outliner is the player's creator.** In Appearance the Outliner lists everything the game's creator
+- **The Appearance rows are the player's creator.** In Appearance the Properties tab lists first everything the game's creator
   offers the player: whether the race is Playable (`playable`, `CharacterEditBranch.setPlayable`), the gender, the
   features worn (Hair: the race default, none, or any style that fits), under each
   worn feature that offers variants the variant the previewed gender starts it in (eyes, teeth: the feature's own
@@ -78,8 +78,8 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
   `CharacterEditBranch.setOffered`, read through `AppearanceData.isOffered`); a mark's amount is offered with the mark,
   never flagged on its own (`SkinnedOverlay.findByDetail`). Appearance lists no pose: a mode names the pose
   it stands in (`CharacterEditorMode.getStandingPose`, Appearance idles as the creator shows the player) or lets its
-  outliner pick one (`picksPose`: Equipment, Weights). Only Blink, Weight and Head, preview controls, stay in the
-  Properties tab.
+  rows pick one (`picksPose`: Equipment, Weights). Blink, Weight and Head, preview controls, follow them as the
+  values.
 - **The game's creator is laid out by the race.** `appearance.creator` lists the creator's look tabs, each with its
   sections, each listing options by `kind` (`AppearanceOptionKind`: race, gender, build, head, color, detail, overlay,
   feature, sliders) and `name` (the member's lower-case enum name, or the slider group);
@@ -106,7 +106,7 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
   Adding or removing a bone, a tick or a morph changes the list the next time the race is built; nothing else to edit.
 - **Controls.** A control is one slider that moves several bone sliders, the Set Driven Key of Maya and the driver of
   Blender, kept per rig in `assets/bonecontrols/<Rig>.arpg` (`BoneControlManager`, `entitypipeline.bonecontrolmanager`;
-  schema `BoneControls`). Each bone slider row carries Pick For Control; Add Control at the foot of the outliner makes a
+  schema `BoneControls`). Each bone slider row carries Pick For Control; Add Control at the foot of the list makes a
   control over the two or more picked (`CharacterControlBranch.addControl`, named `control_<n>`, in the default group
   until the race's `sliders` gives it one; rename and regroup it in the Info Panel). Under a control each bone slider it
   drives lists an adjust slider (where the bone stands on the preview now: its own value plus every control's push, held
@@ -132,13 +132,11 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
   step buttons take; the value box still opens for typing. A ranged row spans its declared range instead, its knob set
   where the value stands on every refill and refresh, a drag still handing over whole steps of the row's own step. A number row template carries the track and knob ids in
   its `CharacterViewTemplateStruct`.
-- **One outliner.** There is one Outliner (`CharacterOutlinerContext`), never one per tool: a viewport that
-  lists outliner rows implements `OutlinerProvider` (`editor.bootstrap.propertiespipeline.properties`) beside
-  `PropertiesProvider`, and `PropertiesManager.getOutliner` names the one worked in last, the way the Properties tab
-  follows. The outliner implements `CharacterViewRowSource` over it and creates `CharacterViewPanelSystem`,
-  `CharacterViewDockSystem` and `ToolCanvasSystem`; the dock system opens `menus/editor/CharacterDock.arpg` and
-  refills it only when the source's revision moves (the outliner's own, moved when the window followed changes or its
-  list does). Row templates stay in the tool's own menu
+- **One panel.** A tool's list and its values are one panel, the Properties tab, never an outliner or a docker per
+  tool: a viewport implements `PropertiesProvider` with `PropertiesContent.ROWS` and `CharacterViewRowSource`, its
+  `buildRows` listing what it picks from first and the values of what is picked after, under one revision that moves
+  with both. `RowPropertiesSystem` fills the tab through `CharacterViewPanelSystem` only when that revision moves, and
+  the tab's File and Edit menus act on the tool whose rows it shows. Row templates stay in the tool's own menu
   (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
   their buttons route to the tool's branch. A tool without a text row template must never list a `TEXT` row.
 - Tools are the Tools window's (`ToolCanvas.CHARACTER_MESH`, `CHARACTER_TOPOLOGY`, `CHARACTER_SCULPT`,
@@ -183,10 +181,10 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
   holding it; the rig applies live, so the Layers tab follows at once. Bone membership is read only through
   `CharacterRegionBranch.holdsBone` / `holdsRigBone`. The active window hands its region to
   `CharacterEditorManager.setRegion`, which keeps the part picked while the region holds it, else picks its body, else
-  its feature. A region holding both lists only those two in the outliner's Parts (`holdsPartKey`), so the Eyes layers
+  its feature. A region holding both lists only those two in the Properties tab's Parts (`holdsPartKey`), so the Eyes layers
   sculpt the socket on the head and the eye itself, and the Mouth layers the lips and the teeth.
 - **Sides.** A region whose every part bone has a twin (`_l`/`_r`) is sided (`CharacterRegionBranch.isSided`, cached
-  per rig data): the outliner lists Side (`CharacterEditorSide`, kept per region in the manager), the window frames the
+  per rig data): the Properties tab lists Side (`CharacterEditorSide`, kept per region in the manager), the window frames the
   side's first part bone (`getRegionFrameBone`), shows and picks only that side (`isOnRegionSide`, `isBoneShown`,
   `isRigBoneShown`), and `isMirror` is held on, so every edit is made to the hidden twin as well.
 - **Isolation.** `CharacterRegionIsolationSystem` fills the viewport's `AppearanceIsolationStruct`
@@ -341,7 +339,7 @@ The UV tool is two tabs that work together, as Blender's UV Editing workspace pa
 the Character UV tab (`CharacterEditorMode.UV`, `ToolCanvas.CHARACTER_UV`: Select with the brush, the Seams, Unwrap and
 Selection groups) and the UV Editor (`UVEditorContext`, `ToolCanvas.UV_EDITOR`: Select, Move, Rotate, Scale, the
 Unwrap, Islands and Selection groups). Both work in the UV mode on the region picked for the modelling tabs
-(`CharacterModeProvider`), so the Outliner lists the parts and the Properties tab the UVs selected.
+(`CharacterModeProvider`), so the Properties tab lists the parts, then the UVs selected.
 
 - **Data.** UVs are per face corner (`RiggedMeshStruct.getFaceU` / `setFaceUV`); seams are vertex pairs
   (`isSeam` / `setSeam`, keyed by `toEdgeKey`, renumbered by `removeVertices`); pins are four bits a face
@@ -409,8 +407,8 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
   into the atlas layer the map fills, only its rectangle, rows bottom first (`TextureManager.updateTextureArrayLayer`,
   `glTexSubImage3D`). The base keeps its own alpha; Erase wears the base to the default and a layer to nothing.
 - **Values.** The Layers tab picks the layer painted and shows or hides each above the base; the Properties tab names
-  it and holds its Opacity; the colour lives in the Color Wheel tab (Hue, Saturation and
-  Brightness, `CHARACTER_PAINT_KEY_HSB`, a grey keeping the hue last chosen in `CharacterPaintBranch.getHue`; Red,
+  it and holds its Opacity; the colour lives in the Color Wheel tab, its sliders in the Properties tab while the wheel
+  was worked in last (Hue, Saturation and Brightness, `CHARACTER_PAINT_KEY_HSB`, a grey keeping the hue last chosen in `CharacterPaintBranch.getHue`; Red,
   Green and Blue, `CHARACTER_PAINT_KEY_COLOR`, which work with no character open, since the Image Editor paints with
   the same colour) and the map painted is picked in the Maps tab
   (`CHARACTER_PAINT_KEY_MAP_ITEM`, `CharacterPaintBranch.setMapIndex`), every key read and written through
@@ -539,7 +537,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   its region, so a style is a small image; paint a new style in the body's layout, crop it to the region, and every
   map it carries (A, h, n, ...) goes beside it by suffix. Saves keep a chosen style by name (`overlay_styles`); the
   creator lists a style row and an amount per overlay (Lips under Lip Color, Blush, Eyeshadow and Eyeliner under
-  Makeup), and the Appearance outliner's Marks rows set the previewed gender's `default`. Each overlay's `region` is the
+  Makeup), and the Appearance rows' Marks set the previewed gender's `default`. Each overlay's `region` is the
   tight UV box of what its styles cover, so its image (at most 512 texels a side, the bake's top tier) spends its
   texels on the mark; the head's UV shell gives the face few body texels, so face marks belong in overlays.
 - **Makeup** replaced the vertex-mask lip colour, blush and liner: the `blush`, `lips` and `liner` mask channels stay
@@ -656,7 +654,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   whole body, four overlay vertices to every edge, is never cut short. Each hand is one bone: hanging at the side its
   palm faces the thigh with the
   thumb forward (+z), so `hand_l` is a left hand at +x; keep that chirality on any hand you model or mirror.
-- **Features are the gender's.** The Outliner's Features rows (Appearance mode) read and write the previewed
+- **Features are the gender's.** The Properties tab's Features rows (Appearance mode) read and write the previewed
   gender's `genders.<gender>.features`, the features it is made with; a gender naming none wears the race's
   `appearance.features` default, shown with `CHARACTER_EDITOR_FEATURE_DEFAULT_SUFFIX`. A row steps through the default
   (the gender's own removed), then `none` (`EngineSetting.APPEARANCE_FEATURE_NONE`, `""`: the gender wears nothing
@@ -757,7 +755,7 @@ guide curves turned into game cards (Blender's hair curves, Maya XGen, Unreal's 
 grows from, its texture, its width at the root and the taper the tip narrows to) is a workspace file in
 `Assets/Hair/<Name>.arpg` (`rig`, `source`, `strands`, each strand's `points` a float32 typed array), owned by
 `CharacterGroomBranch` with its own undo history of whole copies. The tab works on the whole character, its mesh mode
-reaching the surface of the part picked in the Outliner's Parts (the body), and holds the bind pose.
+reaching the surface of the part picked in the Properties tab's Parts (the body), and holds the bind pose.
 
 - **Tools** (`CharacterEditorGroomSystem`): Draw roots a strand on the surface pressed and carries it along the drag
   across the plane through the root facing the camera, a point every `CHARACTER_HAIR_POINT_SPACING`; Place grows a

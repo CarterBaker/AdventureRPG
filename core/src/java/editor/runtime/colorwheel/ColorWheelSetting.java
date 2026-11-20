@@ -15,7 +15,6 @@ public class ColorWheelSetting {
     // Entry Points
     public static final int ENTRY_TITLE = 0;
     public static final int ENTRY_WHEEL = 1;
-    public static final int ENTRY_ROWS = 2;
 
     // Wheel — the image's side in texels, the ring's outer and inner radius and the triangle's corner radius as
     // shares of half the side

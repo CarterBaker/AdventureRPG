@@ -2815,12 +2815,12 @@ public class RecorderManager extends ManagerPackage {
             recordingRowBranch.buildTransportRows(rows);
     }
 
-    // The rows the Character Outliner shows while a Recorder tab is worked in: the channels armed and the export
+    // The rows the Properties tab lists first while a Recorder tab is worked in: the channels armed and the export
     public void buildSettingsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
         recordingRowBranch.buildSettingsRows(rows);
     }
 
-    // The rows the Character Outliner shows while the Keys or Keys Graph tab is worked in: the keys selected
+    // The rows the Properties tab lists first while the Keys or Keys Graph tab is worked in: the keys selected
     public void buildKeyRows(ObjectArrayList<CharacterViewRowStruct> rows) {
         recordingRowBranch.buildKeyRows(rows);
     }
@@ -3859,7 +3859,7 @@ public class RecorderManager extends ManagerPackage {
         shiftKeys(0f, parseKeyValue(curve, text) - curve.getValue(selectedKey));
     }
 
-    // The value a step of the Outliner's value row moves the keys by, a share of the least span the curve frames
+    // The value a step of the keys' value row moves the keys by, a share of the least span the curve frames
     public double resolveKeyValueStep() {
 
         RecordingCurveStruct curve = getSelectedCurve();

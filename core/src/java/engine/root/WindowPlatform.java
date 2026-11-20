@@ -12,7 +12,8 @@ public interface WindowPlatform {
      * uppermost under the cursor, and for a transparent window whether it lets
      * the cursor through to whatever lies behind it. A window that draws its
      * own frame minimizes, maximizes, closes and reads and sets its bounds in
-     * screen units through the frame calls.
+     * screen units through the frame calls. A window's icon, shown on the
+     * taskbar and in the window switcher, is read from a sprite's texture.
      */
 
     void openWindow(WindowInstance window);
@@ -60,6 +61,8 @@ public interface WindowPlatform {
     boolean isTransparent(WindowInstance window);
 
     void setMousePassthrough(WindowInstance window, boolean passthrough);
+
+    void setWindowIcon(WindowInstance window, int gpuHandle, int width, int height);
 
     void setFullscreen(boolean fullscreen);
 

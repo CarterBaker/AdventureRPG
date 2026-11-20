@@ -514,8 +514,14 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-20: Animation layers and morph curves. Rewrote `animations/humanoid/expressions/HumanoidBlink.arpg` (its
   morph keys made `linear` curve keys) and regenerated `schemas/Animations.arpg` (`morphs` as curves) and
   `menus/editor/Recordings.arpg` (the Media / Animations switch).
+- 2026-11-20: Editor re-organization. Added `sprites/menus/FileIcon.png` (floppy disk) and `sprites/menus/EditIcon.png`
+  (pencil), the File and Edit icon buttons; regenerated `sprites/menus/Sword.png` at 64 texels in colour as every
+  editor window's taskbar icon; regenerated `menus/editor/EditorWindow.arpg` (icon buttons, the divider, Content
+  renamed Tools and holding every shared tab), `menus/editor/Properties.arpg` (the biome palette rows) and
+  `menus/editor/ColorWheel.arpg` (its sliders moved to the Properties tab); removed `menus/editor/BiomeOutliner.arpg`
+  (the Biome Outliner merged into the Properties tab).
 
-## Textures and Sprites (2429 files)
+## Textures and Sprites (2431 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -531,8 +537,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `DialFace`
 - `DialNeedle`
 - `DialRing`
+- `EditIcon`
 - `EditorTab`
 - `EyeIcon`
+- `FileIcon`
 - `FrameOutline`
 - `LoopIcon`
 - `MaximizeIcon`
@@ -1939,7 +1947,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3853 files)
+## Data Files (3852 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2786,7 +2794,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/menus/editor/`
 
-`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
+`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
 `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`,

@@ -13,14 +13,17 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   is layers (below): its tasks are layers picked in the Layers tab, never modes or toolbars of its own.
 - **Tabs talk through shared state.** What is chosen in one tab (a biome, a brush, a tree, a ship, a bone) is the
   choice every other tab sees at once. Tabs never keep private copies of a shared choice.
-- **Name a tab for what it holds.** A list of biomes is the Biome Outliner; a window that paints the world's images is
+- **Name a tab for what it holds.** A list of brushes is the Brushes tab; a window that paints the world's images is
   the World Editor. Never a generic name that hides what the tab is for.
-- **Tools sit at the foot of each menu.** The editor's menus (`menus/editor/EditorWindow.arpg`) list a tab under the
-  section for what it works on, and the tabs that serve the others (the Tools and Brushes tabs, the Outliner, Maps,
-  Stamps and the Color Wheel, the Recorder) under a Tools section, always the menu's last: Content's Tools holds Tools,
-  Brushes and the Outliner (one window serving every tab that lists outliner rows, so it sits with the other shared
-  tabs), Textures' Maps, Stamps and the Color Wheel, Media's the Recorder. The Materials menu, after Textures, holds
-  the Materials tab, the editor's one list of materials, and the Material Viewer (see Materials below).
+- **File and Edit are icons; shared tabs live in the Tools menu.** The toolbar (`menus/editor/EditorWindow.arpg`)
+  opens with File and Edit as square icon buttons (`menus/FileIcon`, a floppy disk; `menus/EditIcon`, a pencil), a thin
+  divider, then the menus. Every other menu lists a tab under the section for what it works on. The tabs whose view
+  changes with the window worked in last, the ones that serve the others, all sit in the Tools menu, the first: Data
+  (Hierarchy, Properties, Layers, ARPG Viewer), Canvas (Tools, Brushes, Stamps, Maps, Color Wheel) and Media (the
+  Recorder). A new shared tab joins the Tools menu, never another menu. The sword (`menus/Sword`,
+  `EditorSetting.WINDOW_ICON`) is every editor window's OS icon, set by `EditorFrameSystem` through
+  `WindowPlatform.setWindowIcon`, never drawn in the toolbar. The Materials menu, after Textures, holds the Materials
+  tab, the editor's one list of materials, and the Material Viewer (see Materials below).
   The Entities menu (once Characters) holds what only an entity has (its Entity section: Appearance, Equipment, Hair;
   then Animation); the Mesh menu holds the general modelling tools any rigged model takes
   (its Mesh section: Mesh, Topology, Sculpt, Paint, UV, UV Editor; its Rigging section: Rig, Weights). A tab or tool
@@ -30,15 +33,15 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   (`CommandManager.resolveViewTarget`): the character tabs' commands while a character tab was, the game's while a Dev
   window was.
 - **Split so far:** the World Editor paints the biomes and places settlements and cameras on its Biomes layer and raises
-  and lowers the ground on its Heights layer, the biome it paints chosen in the Biome Outliner and shown in the
-  Properties tab, while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
+  and lowers the ground on its Heights layer, the biome it paints chosen in the Properties tab's palette (shown while
+  the Biomes layer is picked, the biome's fields below it), while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
   and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
   Equipment, Hair, Mesh, Topology, Sculpt, Weights, Paint, Rig and UV, see `.claude/docs/CharacterEditorPipeline.md`;
   the Hair tab grooms strands painted with the material chosen in the Materials tab; the
-  Appearance outliner holds every slider and control, the Rig tab marks which bone channels are sliders), sharing the
+  Appearance tab's Properties rows hold every slider and control, the Rig tab marks which bone channels are sliders), sharing the
   region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with the
-  Outliner beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting window
-  shares and the Maps tab the maps of the image worked (the texture painted, or the Image Editor's image); the Image
+  Properties tab beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting
+  window shares (its sliders in the Properties tab while it was worked in last) and the Maps tab the maps of the image worked (the texture painted, or the Image Editor's image); the Image
   Editor under Textures paints layered images as Krita does, its layers in the Layers tab and its maps in the Maps tab
   (see `.claude/docs/ImageEditorPipeline.md`); the Recorder is its transport (Record, Play, Pause, Stop and the Loop
   switch, which runs playing round the range marked with I and O or the whole media file, with the clock and the status
@@ -50,9 +53,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Layers tab lists the take's tracks (camera, player, characters, items, vehicles, weather, clock, sounds) or, in its
   Takes view, every take of the open recording, each dragged onto the Timeline's lanes to lay it, each pane keeping its
   own view (the Timeline opens on the Takes, the Keys and Keys Graph on the take's layers); the Tools tab holds every
-  take, clip, key, sound, transition and node action; the Properties tab the clip's channels, mute and time ramp; the
-  Character Outliner the channels armed and the export while the Recorder or Timeline is worked in, and the keys
-  selected (their time and value, moved together, and their mode) while the Keys or Keys Graph is; Delete removes what
+  take, clip, key, sound, transition and node action; the Properties tab the channels armed and the export first, then
+  the clip's channels, mute and time ramp while the Recorder or Timeline is worked in, and the keys selected (their
+  time and value, moved together, and their mode) first while the Keys or Keys Graph is; Delete removes what
   is selected in the pane worked in last; Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step through every edit of the open
   recording (`RecordingHistoryBranch`); File, Export exports. The Tracks tab (`RecordingsContext`) lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
   the Timeline shows its lanes as Premiere does, five at first and one more each time the highest takes a clip, each
@@ -86,7 +89,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **One canvas, many layers.** A window whose canvas does several jobs lists them as layers in the shared Layers tab
   (`editor.bootstrap.layerspipeline`), as Krita and Photoshop list theirs: the layer picked is the one the window's
   tools work on, groups fold what they hold, and an eye shows or hides a layer that can be hidden. The Layers tab
-  lives beside the Hierarchy and Properties tabs (the Content menu) and, like Properties, shows the window worked in
+  lives beside the Hierarchy and Properties tabs (the Tools menu) and, like Properties, shows the window worked in
   last that has layers. This is the standard for putting several tools in one window, and the base the editor's
   image editing is built on.
 - **A window that has layers** implements `LayersProvider` (its revision, title, the stack as `LayerNodeStruct`s top
@@ -178,7 +181,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **The Material Viewer** (`editor.runtime.materialviewer`, under the Materials menu) shows the material chosen on a
   sphere, cube, cylinder or plane, the Tools tab's Shape option (`ToolCanvas.MATERIAL_VIEWER`, a canvas-wide choice),
   lit by one light its Light tool (key `G`) turns when dragged from the shape; the camera is the shared
-  `ViewCameraSystem`. While the Materials tab or the viewer was worked in last, the Outliner holds the material's rows
+  `ViewCameraSystem`. While the Materials tab or the viewer was worked in last, the Properties tab holds the material's
+  rows
   (`MaterialRowBranch`): a game texture's name and how to make a material from it, or the workspace material's base,
   each map's texture (From Base or any material) with a Choose Image action under it (the system's file dialog,
   starting in the workspace's Exports), and every parameter as a slider. Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step
@@ -266,19 +270,24 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   (`ToolsSetting.TEMPLATE_OPTION_ROWS`), never a slider over named steps.
 - **One slider path.** Sliders share `editor.runtime.slider.SliderUtility` (track share, step, knob); typed values go
   through the name dialog and the same setter the slider and step buttons use.
-- **Every slider has a range.** A value with a declared range (a tool option, a race's shape slider in the Character
-  Appearance outliner) slides across it; a character, face, animation or tree value slides across a fixed count of its
+- **Every slider has a range.** A value with a declared range (a tool option, a race's shape slider in the Appearance
+  tab's Properties rows) slides across it; a character, face, animation or tree value slides across a fixed count of its
   own steps centred where it stood when its row was listed, through the tool's own step, so the tool's clamps still
   hold. Either way a typed value can go anywhere the setter allows.
 
 ## The Properties tab
 
-- **One shared Properties tab, never a properties window per tool.** It shows what the window worked in last
-  provides (`editor.bootstrap.propertiespipeline`): a window implements `PropertiesProvider`, names its
-  `PropertiesContent` and creates a `PropertiesSourceSystem`. `ROWS` are a character, face or animation tab's value
-  rows (the window is also a `CharacterViewRowSource`), and `INFO` the content entry selected in the Hierarchy, the
-  editor's Info Panel, which the Hierarchy and every content tool show. A new kind of content is a new `PropertiesContent` and a `PropertiesView` system in the Properties tab,
-  never a new window. Its status line always works on the Hierarchy's selection.
+- **One shared Properties tab, never a properties or outliner window per tool.** It shows what the window worked in
+  last provides (`editor.bootstrap.propertiespipeline`): a window implements `PropertiesProvider`, names its
+  `PropertiesContent` and creates a `PropertiesSourceSystem`. `ROWS` are a tool window's rows (the window is also a
+  `CharacterViewRowSource`): what it picks from listed first (features, sliders, bones, anchors, parts, the clip, the
+  recording's settings, the keys selected), then the values of what is picked, so a tool's list and its values are
+  one panel, as Substance Painter's Properties and Krita's Tool Options are; `INFO` is the content entry selected in
+  the Hierarchy, the editor's Info Panel, which the Hierarchy and every content tool show; `BIOMES` is the World
+  Editor's biome palette (`BiomePropertiesSystem`, a terrain inspector's paint palette) above the `INFO` rows, named by
+  its Biomes layer (`WorldEditorLayer.getPropertiesContent`). A new kind of content is a new `PropertiesContent` and a
+  `PropertiesView` system in the Properties tab, never a new window. Its status line always works on the Hierarchy's
+  selection; its File and Edit menus act on the window whose `ROWS` it shows, the Info Panel otherwise.
 - **Info rows are laid out for editing.** Every field reads as words (`animation_tree` is Animation Tree), plain values
   before groups. A number has a slider (across its declared range when it has both ends, otherwise steps about its
   value), step buttons and a typed value; a boolean, an enum, or a string naming other content or a file is a choice

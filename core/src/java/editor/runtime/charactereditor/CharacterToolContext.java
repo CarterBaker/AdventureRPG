@@ -8,7 +8,6 @@ import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
 import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
 import editor.bootstrap.propertiespipeline.properties.MapsProvider;
-import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
@@ -50,14 +49,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public abstract class CharacterToolContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, ViewCameraShareProvider,
-        PropertiesProvider, OutlinerProvider, MapsProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider,
+        PropertiesProvider, MapsProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider,
         CharacterModeProvider {
 
     /*
      * The base of every character tool tab, each working the character in the
      * one mode it names, so the owner lays the tools out as they wish:
      * Appearance and Equipment shape how it looks on the live preview, the
-     * Appearance outliner holding every slider the creator offers with the
+     * Properties tab holding every slider the creator offers with the
      * build; Mesh, Topology, Sculpt, Weights, Rig and UV model the meshes it wears and
      * the rig it is built on in the region picked in the Layers tab, shared
      * by all of them, framed and shown alone, every pick, box, stroke and
@@ -212,7 +211,8 @@ public abstract class CharacterToolContext extends ContextPackage
         return PropertiesContent.ROWS;
     }
 
-    // The rows move with the character and with the material chosen, which the Hair tab's rows name
+    // The rows move with the character and with the material chosen, which the Hair tab's rows name; what the
+    // tool picks from is listed first, the values of what is picked after it
     @Override
     public int getRowRevision() {
         return characterEditorManager.getRevision() + materialsManager.getRevision();
@@ -226,6 +226,7 @@ public abstract class CharacterToolContext extends ContextPackage
 
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        characterEditorManager.buildListRows(rows);
         characterEditorManager.buildPropertyRows(rows);
     }
 
@@ -263,34 +264,6 @@ public abstract class CharacterToolContext extends ContextPackage
 
     @Override
     public void stepMapsRow(String key, int steps) {
-        stepRow(key, steps);
-    }
-
-    // Outliner \\
-
-    @Override
-    public int getOutlinerRevision() {
-        return characterEditorManager.getRevision();
-    }
-
-    @Override
-    public String getOutlinerTitle() {
-        return EditorSetting.CHARACTER_OUTLINER_TITLE + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
-                + characterEditorManager.getMode().getLabel();
-    }
-
-    @Override
-    public void buildOutlinerRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-        characterEditorManager.buildListRows(rows);
-    }
-
-    @Override
-    public CharacterViewTemplateStruct getOutlinerTemplates() {
-        return getRowTemplates();
-    }
-
-    @Override
-    public void stepOutlinerRow(String key, int steps) {
         stepRow(key, steps);
     }
 

@@ -41,8 +41,8 @@ public class WorldEditorContext extends ContextPackage
      * every hand placement, and shows the toolbar and status line, with every
      * player's marker when shown. A design dragged from the Settlement
      * Planner is stood where it is dropped. The tools, brushes and design are
-     * chosen in their own tabs, the biome painted in the Biome Outliner and
-     * its fields shown in the Properties tab; the images, their history and
+     * chosen in their own tabs, the biome painted in the Properties tab's
+     * palette while the Biomes layer is picked, its fields shown below it; the images, their history and
      * every live update live in the editor and engine. The tab is a tool
      * canvas for as long as it is open, working on the layer picked.
      */
@@ -151,10 +151,10 @@ public class WorldEditorContext extends ContextPackage
 
     // Properties \\
 
-    // The biome chosen to paint while the World Editor paints, the placement chosen to place while it places
+    // The layer picked names it: the biome palette over the biome chosen, or the placement chosen to place
     @Override
     public PropertiesContent getPropertiesContent() {
-        return PropertiesContent.INFO;
+        return worldEditorLayerSystem.getLayer().getPropertiesContent();
     }
 
     // File Menu \\

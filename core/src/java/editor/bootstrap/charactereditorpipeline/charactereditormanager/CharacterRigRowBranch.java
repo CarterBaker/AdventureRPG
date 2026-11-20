@@ -116,7 +116,7 @@ class CharacterRigRowBranch extends BranchPackage {
         addFileRows(rows);
     }
 
-    // Each channel the selected bone may offer the Appearance outliner as a slider, with its twin across the body
+    // Each channel the selected bone may offer the Appearance rows as a slider, with its twin across the body
     private void addSliderRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_RIG_HEADER_SLIDERS));

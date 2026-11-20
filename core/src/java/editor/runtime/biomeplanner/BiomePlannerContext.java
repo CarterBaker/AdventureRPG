@@ -15,7 +15,7 @@ public class BiomePlannerContext extends ContextPackage implements PropertiesPro
     /*
      * Editor tab for making biomes, the way the Settlement Planner is for
      * settlements: a grid of cells whose centre is always the biome chosen in
-     * the Biome Outliner. Clicking a cell paints the selected biome into it, so
+     * the Properties tab's palette or the Hierarchy. Clicking a cell paints the selected biome into it, so
      * a biome can be set beside the ones it is meant to meet; the Biome
      * Viewer flies over the world the grid lays out. New and Duplicate make
      * biomes through the Info Panel, where every field of one is edited.

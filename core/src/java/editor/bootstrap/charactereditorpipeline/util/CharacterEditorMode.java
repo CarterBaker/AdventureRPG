@@ -23,7 +23,7 @@ public enum CharacterEditorMode {
      * and those that show the vertices draw them over the body. Each carries
      * the hint the status bar shows while it is open, and every other mode
      * either stands in the one pose it names, as Appearance stands idle the
-     * way the game's creator shows the player, or lets its outliner pick the
+     * way the game's creator shows the player, or lets its rows pick the
      * pose the preview strikes — the mesh modes in the bind pose by default,
      * their vertices moved there alone. Each is its own character tool tab;
      * Mesh, Topology, Sculpt, Weights, Rig and UV list the regions as their layers,
@@ -146,12 +146,12 @@ public enum CharacterEditorMode {
         return bindPose;
     }
 
-    // The one pose a posed mode's preview stands in, null for one whose outliner picks the pose
+    // The one pose a posed mode's preview stands in, null for one whose rows pick the pose
     public CharacterEditorPose getStandingPose() {
         return standingPose;
     }
 
-    // True for a posed mode whose outliner lists the pose the preview strikes
+    // True for a posed mode whose rows list the pose the preview strikes
     public boolean picksPose() {
         return !bindPose && standingPose == null;
     }

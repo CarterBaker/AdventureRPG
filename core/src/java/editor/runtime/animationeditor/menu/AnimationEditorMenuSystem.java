@@ -16,8 +16,8 @@ public class AnimationEditorMenuSystem extends SystemPackage {
     /*
      * Opens the Animation Editor toolbar and its status bar over the
      * viewport, and rewrites the status line when the editor's revision
-     * moves. The editor's panels and timeline are the Character Outliner and
-     * Animation Timeline docker windows, and its values the Properties tab.
+     * moves. The editor's timeline is the Timeline docker window, and its
+     * clip, bones and values the Properties tab.
      */
 
     // Internal

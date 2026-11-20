@@ -19,8 +19,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class CharacterControlBranch extends BranchPackage {
 
     /*
-     * Owns the controls of the active race's rig as the Appearance outliner
-     * edits them: the rig's controls document (InfoManager's Bone Controls
+     * Owns the controls of the active race's rig as the Appearance rows
+     * edit them: the rig's controls document (InfoManager's Bone Controls
      * entry named after the rig, made the first time a control is added),
      * the bone sliders picked to make the next control from, and every edit
      * of a control — added over the sliders picked, removed, a drive's

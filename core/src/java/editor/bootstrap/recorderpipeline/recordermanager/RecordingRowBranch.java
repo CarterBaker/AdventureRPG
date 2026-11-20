@@ -24,13 +24,13 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RecordingRowBranch extends BranchPackage {
 
     /*
-     * The Properties tab's rows for a media file, and the Character
-     * Outliner's while a Recorder tab is worked in. The Recorder tab's are its
+     * The Properties tab's rows for a media file while a Recorder tab is
+     * worked in, its settings listed first. The Recorder tab's are its
      * tempo, the beats of its bar and the note value of a beat, its key's
      * root and scale; the Timeline tab's the mix of the lane selected — its
      * name, volume, pan, mute and solo — and the clip selected's channels,
      * mute and time ramp, with a notes clip's instrument, volume and
-     * transpose. The Outliner's are the recording's settings: the channels
+     * transpose. The settings are the recording's: the channels
      * armed for the next take, and the export's size, frame rate, format,
      * motion blur, supersampling and range; while the Keys or Keys Graph tab
      * is worked in, the keys selected on the curve picked instead: their

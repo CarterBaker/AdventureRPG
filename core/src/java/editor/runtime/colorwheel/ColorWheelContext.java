@@ -2,38 +2,41 @@ package editor.runtime.colorwheel;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
-import editor.runtime.characterview.panel.CharacterViewPanelSystem;
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.characterview.panel.CharacterViewRowSource;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.colorwheel.wheel.ColorWheelSystem;
 import editor.runtime.EditorSetting;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ColorWheelContext extends ContextPackage implements CharacterViewRowSource {
+public class ColorWheelContext extends ContextPackage implements PropertiesProvider, CharacterViewRowSource {
 
     /*
      * Editor tab holding the colour painting uses, a paint program's colour
      * docker: a hue ring with a triangle of saturation and brightness inside
-     * it, turned to the hue, and under it the colour's hue, saturation and
-     * brightness and its red, green and blue, each a slider with a typed
-     * value. The colour is the Character Editor's paint colour, so picking
-     * it here, in the Properties tab or with Pick is one choice every tab
-     * sees at once.
+     * it, turned to the hue. While it is the window worked in last the
+     * Properties tab holds the colour's hue, saturation and brightness and
+     * its red, green and blue, each a slider with a typed value, so turning
+     * the wheel moves the sliders and dragging a slider turns the wheel. The
+     * colour is the Character Editor's paint colour, so picking it here, in
+     * the Properties tab or with Pick is one choice every tab sees at once.
      */
 
     // Internal
     private CharacterEditorManager characterEditorManager;
     private ColorWheelSystem colorWheelSystem;
-    private CharacterViewPanelSystem characterViewPanelSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
 
     // Internal \\
 
     @Override
     protected void create() {
         this.colorWheelSystem = create(ColorWheelSystem.class);
-        this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
@@ -53,7 +56,12 @@ public class ColorWheelContext extends ContextPackage implements CharacterViewRo
         colorWheelSystem.drag(wheelElement);
     }
 
-    // Rows \\
+    // Properties \\
+
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.ROWS;
+    }
 
     @Override
     public int getRowRevision() {

@@ -35,7 +35,7 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   brush, or scale the part on a canvas that places parts (`[` and `]`, `ToolManager.stepSize`), and step through the
   brushes (`-` and `=`). Besides the Tools tab, they work in every window `ToolManager` counts as a tool window — each
   canvas (World Editor, Item Editor, the character tool tabs, Animation Editor, Timeline), the Brushes tab, the
-  Properties and Layers tabs and the character, face and animation docker windows (Outliner, Timeline), each opened
+  Properties and Layers tabs and the character, face and animation docker windows (Timeline), each opened
   there by its `ToolCanvasSystem` — after that window's own keys, so a window's own shortcut wins where both use a key
   (the character Mesh tab's `E` extrudes and `S` scales; the Timeline's `B` keeps its own action). A tool a canvas does
   not take is ignored there. Rebinding one on the Settings dialog's Shortcuts page rebinds it in every editor at once.

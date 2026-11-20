@@ -11,16 +11,12 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
-import editor.runtime.characterview.panel.CharacterViewPanelSystem;
-import editor.runtime.characterview.panel.CharacterViewRowSource;
-import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.colorwheel.ColorWheelSetting;
 import editor.runtime.EditorSetting;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.memory.BufferUtility;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ColorWheelSystem extends SystemPackage {
 
@@ -29,8 +25,8 @@ public class ColorWheelSystem extends SystemPackage {
      * the wheel image drawn again only when the colour moves (a hue ring,
      * inside it a triangle turned so its first corner holds the hue at full
      * strength, its others white and black, and a marker on each where the
-     * colour stands), and the rows refilled through CharacterViewPanelSystem
-     * when the character editor's revision moves. A press on the ring turns
+     * colour stands), its title written once as it opens; the colour's
+     * sliders are the Properties tab's. A press on the ring turns
      * the hue as far round as the pointer is; a press in the triangle sets
      * saturation and brightness where the pointer is, held to the triangle
      * while the drag goes on. Image rows run bottom first, as the layout's y
@@ -43,17 +39,9 @@ public class ColorWheelSystem extends SystemPackage {
     private TextureManager textureManager;
     private InputManager inputManager;
     private CharacterEditorManager characterEditorManager;
-    private CharacterViewPanelSystem characterViewPanelSystem;
-
-    // Source
-    private CharacterViewRowSource rowSource;
 
     // Menus
     private MenuInstance wheelMenu;
-
-    // Rows
-    private ObjectArrayList<CharacterViewRowStruct> rows;
-    private int shownRevision;
 
     // Wheel — its texture, the colour it shows, and its texels
     private int wheelTexture;
@@ -78,10 +66,6 @@ public class ColorWheelSystem extends SystemPackage {
 
         int size = ColorWheelSetting.WHEEL_SIZE;
 
-        // Rows
-        this.rows = new ObjectArrayList<>();
-        this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
-
         // Wheel
         this.texels = BufferUtility.newByteBuffer(size * size * EngineSetting.COLOR_CHANNEL_COUNT);
         this.shownHue = Float.NaN;
@@ -99,16 +83,10 @@ public class ColorWheelSystem extends SystemPackage {
         this.textureManager = get(TextureManager.class);
         this.inputManager = get(InputManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
-        this.characterViewPanelSystem = get(CharacterViewPanelSystem.class);
     }
 
     @Override
     protected void awake() {
-
-        if (!(context instanceof CharacterViewRowSource))
-            throwException("The Color Wheel's context must supply its rows.");
-
-        this.rowSource = (CharacterViewRowSource) context;
 
         WindowInstance window = context.getWindow();
         int size = ColorWheelSetting.WHEEL_SIZE;
@@ -117,6 +95,11 @@ public class ColorWheelSystem extends SystemPackage {
         this.wheelMenu = menuManager.openMenu(ColorWheelSetting.MENU_COLOR_WHEEL, window);
         this.wheelTexture = textureManager.createTexture2D(
                 size, size, EngineSetting.GL_CLAMP_TO_EDGE, EngineSetting.GL_LINEAR);
+
+        ElementInstance title = wheelMenu.getEntryPoint(ColorWheelSetting.ENTRY_TITLE);
+
+        if (title != null)
+            title.setFontText(EditorSetting.CHARACTER_PAINT_HEADER_COLOR);
 
         ElementInstance wheel = wheelMenu.getEntryPoint(ColorWheelSetting.ENTRY_WHEEL);
 
@@ -141,25 +124,7 @@ public class ColorWheelSystem extends SystemPackage {
         if (dragging && !inputManager.getRawInput(context.getWindow()).isMouseDown(EditorSetting.COMMAND_DRAG_BUTTON))
             this.dragging = false;
 
-        refreshRows();
         refreshWheel();
-    }
-
-    private void refreshRows() {
-
-        if (rowSource.getRowRevision() == shownRevision)
-            return;
-
-        this.shownRevision = rowSource.getRowRevision();
-
-        ElementInstance title = wheelMenu.getEntryPoint(ColorWheelSetting.ENTRY_TITLE);
-
-        if (title != null)
-            title.setFontText(rowSource.getRowTitle());
-
-        rows.clear();
-        rowSource.buildRows(rows);
-        characterViewPanelSystem.fill(wheelMenu, ColorWheelSetting.ENTRY_ROWS, rows, rowSource.getRowTemplates());
     }
 
     private void refreshWheel() {

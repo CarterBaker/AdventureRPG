@@ -2,7 +2,6 @@ package editor.runtime.recorder;
 
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
-import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
@@ -20,8 +19,7 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RecorderContext extends ContextPackage
-        implements RecorderTabProvider, RecorderSoundHost, FileMenuProvider, PropertiesProvider, OutlinerProvider,
-        CharacterViewRowSource {
+        implements RecorderTabProvider, RecorderSoundHost, FileMenuProvider, PropertiesProvider, CharacterViewRowSource {
 
     /*
      * Editor tab for the recorder's transport: record, play, pause and stop
@@ -34,8 +32,8 @@ public class RecorderContext extends ContextPackage
      * Graph of the value selected. The recordings themselves are made and
      * opened in the Recordings tool. All state lives in RecorderManager; this
      * tab only shows it and hands clicks to RecorderBranch. With a media file
-     * open the Properties tab sets its tempo, meter and key, and the Character
-     * Outliner the channels armed and the export.
+     * open the Properties tab arms its channels, sets its export, and sets
+     * its tempo, meter and key.
      */
 
     // Internal
@@ -99,6 +97,7 @@ public class RecorderContext extends ContextPackage
 
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recorderManager.buildSettingsRows(rows);
         recorderManager.buildRows(rows, false);
     }
 
@@ -109,33 +108,6 @@ public class RecorderContext extends ContextPackage
 
     @Override
     public void stepRow(String key, int steps) {
-        recorderManager.stepRow(key, steps);
-    }
-
-    // Outliner \\
-
-    @Override
-    public int getOutlinerRevision() {
-        return recorderManager.getRevision();
-    }
-
-    @Override
-    public String getOutlinerTitle() {
-        return EditorSetting.RECORDER_OUTLINER_TITLE;
-    }
-
-    @Override
-    public void buildOutlinerRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-        recorderManager.buildSettingsRows(rows);
-    }
-
-    @Override
-    public CharacterViewTemplateStruct getOutlinerTemplates() {
-        return EditorSetting.RECORDER_MUSIC_ROW_TEMPLATES;
-    }
-
-    @Override
-    public void stepOutlinerRow(String key, int steps) {
         recorderManager.stepRow(key, steps);
     }
 

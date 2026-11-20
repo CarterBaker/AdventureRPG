@@ -2300,7 +2300,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Preview \\
 
-    // The pose every outliner picks, stepped through Bind, each pose the rig names, then the movements played
+    // The pose every mode's rows pick, stepped through Bind, each pose the rig names, then the movements played
     void stepPose(int direction) {
 
         RigHandle rigHandle = resolveRegionRig();

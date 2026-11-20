@@ -3,7 +3,6 @@ package editor.runtime.animationeditor;
 import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
-import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
@@ -28,8 +27,7 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class AnimationEditorContext extends ContextPackage
-        implements ToolCanvasProvider, ViewCameraProvider, PropertiesProvider, OutlinerProvider,
-        CharacterViewRowSource, FileMenuProvider {
+        implements ToolCanvasProvider, ViewCameraProvider, PropertiesProvider, CharacterViewRowSource, FileMenuProvider {
 
     /*
      * Editor tab for keyframing animation clips on a character: the
@@ -110,6 +108,7 @@ public class AnimationEditorContext extends ContextPackage
 
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        animationEditorManager.buildListRows(rows);
         animationEditorManager.buildPropertyRows(rows);
     }
 
@@ -120,33 +119,6 @@ public class AnimationEditorContext extends ContextPackage
 
     @Override
     public void stepRow(String key, int steps) {
-        animationEditorManager.step(key, steps);
-    }
-
-    // Outliner \\
-
-    @Override
-    public int getOutlinerRevision() {
-        return animationEditorManager.getRevision();
-    }
-
-    @Override
-    public String getOutlinerTitle() {
-        return EditorSetting.ANIMATION_OUTLINER_TITLE;
-    }
-
-    @Override
-    public void buildOutlinerRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-        animationEditorManager.buildListRows(rows);
-    }
-
-    @Override
-    public CharacterViewTemplateStruct getOutlinerTemplates() {
-        return EditorSetting.ANIMATION_EDITOR_ROW_TEMPLATES;
-    }
-
-    @Override
-    public void stepOutlinerRow(String key, int steps) {
         animationEditorManager.step(key, steps);
     }
 

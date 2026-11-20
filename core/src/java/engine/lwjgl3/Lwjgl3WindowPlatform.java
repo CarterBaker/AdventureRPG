@@ -8,7 +8,9 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GLCapabilities;
 
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -16,6 +18,7 @@ import engine.input.Input;
 import engine.root.EngineContext;
 import engine.root.WindowPlatform;
 
+import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 
@@ -30,7 +33,8 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
      * from the window itself, and mouse passthrough hands the cursor to
      * whatever lies behind. Frame calls act on the window's OS state, and a
      * close asked for in code goes through the application exactly as the OS
-     * close button does.
+     * close button does. A window's icon is read back from the sprite's
+     * texture once, as a sprite cursor is.
      */
 
     // Application
@@ -392,6 +396,25 @@ public class Lwjgl3WindowPlatform implements WindowPlatform {
                 window.getNativeHandle(),
                 GLFW.GLFW_MOUSE_PASSTHROUGH,
                 passthrough ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
+    }
+
+    // Icon \\
+
+    @Override
+    public void setWindowIcon(WindowInstance window, int gpuHandle, int width, int height) {
+
+        if (!window.hasNativeHandle())
+            return;
+
+        ByteBuffer pixels = BufferUtils.createByteBuffer(width * height * EngineSetting.COLOR_CHANNEL_COUNT);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, gpuHandle);
+        GL11.glGetTexImage(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+
+        GLFWImage.Buffer images = GLFWImage.malloc(1);
+        images.get(0).set(width, height, pixels);
+        GLFW.glfwSetWindowIcon(window.getNativeHandle(), images);
+        images.free();
     }
 
     // Display Mode \\

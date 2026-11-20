@@ -7,7 +7,6 @@ import editor.bootstrap.layerspipeline.layers.LayerDragProvider;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
-import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
@@ -33,7 +32,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RecorderKeysContext extends ContextPackage
         implements RecorderTabProvider, ToolCanvasProvider, ToolActionProvider, LayersProvider, LayerViewsProvider,
-        LayerDragProvider, FileMenuProvider, PropertiesProvider, OutlinerProvider, CharacterViewRowSource {
+        LayerDragProvider, FileMenuProvider, PropertiesProvider, CharacterViewRowSource {
 
     /*
      * Editor tab for the keys of the layer picked in the Layers tab, of the
@@ -43,9 +42,9 @@ public class RecorderKeysContext extends ContextPackage
      * the Timeline shows; the Sounds layer a row for each sound it names. The
      * graph of the value selected is the Keys Graph tab beside it, and what
      * can be done to keys, sounds and nodes the Tools tab's actions. While it
-     * is worked in, the recorder's keys and deletes act on its keys, the
-     * Character Outliner lists the keys selected to move, set and give a mode,
-     * and the Properties tab keeps the lane and clip selected. All state lives
+     * is worked in, the recorder's keys and deletes act on its keys, and the
+     * Properties tab lists the keys selected to move, set and give a mode,
+     * then keeps the lane and clip selected. All state lives
      * in RecorderManager; clicks, drags and the wheel go to RecorderBranch.
      */
 
@@ -115,9 +114,10 @@ public class RecorderKeysContext extends ContextPackage
         return PropertiesContent.ROWS;
     }
 
+    // Moves with the keys selected as well, which are listed first, to move, set and give a mode
     @Override
     public int getRowRevision() {
-        return recorderManager.getRevision();
+        return recorderManager.getKeyRowRevision();
     }
 
     @Override
@@ -127,6 +127,7 @@ public class RecorderKeysContext extends ContextPackage
 
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recorderManager.buildKeyRows(rows);
         recorderManager.buildRows(rows, true);
     }
 
@@ -137,34 +138,6 @@ public class RecorderKeysContext extends ContextPackage
 
     @Override
     public void stepRow(String key, int steps) {
-        recorderManager.stepRow(key, steps);
-    }
-
-    // Outliner \\
-
-    // The Character Outliner lists the keys selected, to move, set and give a mode
-    @Override
-    public int getOutlinerRevision() {
-        return recorderManager.getKeyRowRevision();
-    }
-
-    @Override
-    public String getOutlinerTitle() {
-        return EditorSetting.RECORDER_KEYS_OUTLINER_TITLE;
-    }
-
-    @Override
-    public void buildOutlinerRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-        recorderManager.buildKeyRows(rows);
-    }
-
-    @Override
-    public CharacterViewTemplateStruct getOutlinerTemplates() {
-        return EditorSetting.RECORDER_MUSIC_ROW_TEMPLATES;
-    }
-
-    @Override
-    public void stepOutlinerRow(String key, int steps) {
         recorderManager.stepRow(key, steps);
     }
 

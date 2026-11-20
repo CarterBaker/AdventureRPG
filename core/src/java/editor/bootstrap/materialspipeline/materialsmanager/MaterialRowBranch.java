@@ -14,7 +14,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class MaterialRowBranch extends BranchPackage {
 
     /*
-     * The Outliner's rows for the material chosen. A texture of the game
+     * The Properties tab's rows for the material chosen. A texture of the game
      * lists itself, stepped through every material, and how a material is
      * made from it; a material of the workspace lists its base, the texture
      * or image each map is taken from, stepped through the base and every

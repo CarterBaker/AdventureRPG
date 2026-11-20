@@ -21,9 +21,9 @@ public class PropertiesSystem extends SystemPackage {
     /*
      * Binds the Properties tab to a UI render target and opens its menu, then
      * hands its rows to the view of whatever the window worked in last
-     * shows — its value rows or the content entry selected in the Hierarchy —
-     * the Info entry when no window has been worked in
-     * yet. When the window or what it shows changes, the outgoing view takes
+     * shows — its rows, the content entry selected in the Hierarchy, or the
+     * biome palette over that entry — the Info entry when no window has been
+     * worked in yet. When the window or what it shows changes, the outgoing view takes
      * its rows away and the incoming one fills them at once; otherwise a view
      * fills them again only when what it shows moves, and the title is
      * written after each fill. The toolbar and status line always work on the
@@ -38,6 +38,7 @@ public class PropertiesSystem extends SystemPackage {
     private PropertiesManager propertiesManager;
     private RowPropertiesSystem rowPropertiesSystem;
     private InfoPropertiesSystem infoPropertiesSystem;
+    private BiomePropertiesSystem biomePropertiesSystem;
 
     // Menus
     private MenuInstance propertiesMenu;
@@ -73,6 +74,7 @@ public class PropertiesSystem extends SystemPackage {
         this.propertiesManager = get(PropertiesManager.class);
         this.rowPropertiesSystem = get(RowPropertiesSystem.class);
         this.infoPropertiesSystem = get(InfoPropertiesSystem.class);
+        this.biomePropertiesSystem = get(BiomePropertiesSystem.class);
     }
 
     @Override
@@ -87,6 +89,7 @@ public class PropertiesSystem extends SystemPackage {
         this.content2View = new PropertiesView[PropertiesContent.VALUES.length];
         content2View[PropertiesContent.ROWS.ordinal()] = rowPropertiesSystem;
         content2View[PropertiesContent.INFO.ordinal()] = infoPropertiesSystem;
+        content2View[PropertiesContent.BIOMES.ordinal()] = biomePropertiesSystem;
     }
 
     // Update \\

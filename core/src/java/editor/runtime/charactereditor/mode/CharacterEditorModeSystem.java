@@ -21,8 +21,7 @@ public class CharacterEditorModeSystem extends SystemPackage {
      * holding every region nested under it, and the paint layers of the map
      * painted, top first, for the Paint tab. While the window is the active
      * window, and whenever a layer is picked for it, its region and mode are
-     * handed to the editor, so the Character Outliner and the Properties tab
-     * follow the window worked in last. The window draws its preview in its
+     * handed to the editor, so the Properties tab follows the window worked in last. The window draws its preview in its
      * own mode whatever the editor's is.
      */
 

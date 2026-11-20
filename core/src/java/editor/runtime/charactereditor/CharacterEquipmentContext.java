@@ -7,7 +7,7 @@ public class CharacterEquipmentContext extends CharacterToolContext {
 
     /*
      * The Equipment character tool tab: the anchors worn and held gear hangs
-     * from, posed as its outliner picks.
+     * from, posed as its Properties rows pick.
      */
 
     // Tool \\

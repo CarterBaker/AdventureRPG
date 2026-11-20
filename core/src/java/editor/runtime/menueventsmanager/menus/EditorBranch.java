@@ -40,7 +40,7 @@ public class EditorBranch extends BranchPackage {
         this.nameDialogBranch = get(NameDialogBranch.class);
     }
 
-    // Content Dropdown \\
+    // Tools Dropdown \\
 
     public void openHierarchy(WindowInstance window) {
         tabManager.openHierarchy(window.getGLWindow());
@@ -74,6 +74,14 @@ public class EditorBranch extends BranchPackage {
         tabManager.openStamps(window.getGLWindow());
     }
 
+    public void openMaps(WindowInstance window) {
+        tabManager.openMaps(window.getGLWindow());
+    }
+
+    public void openRecorder(WindowInstance window) {
+        tabManager.openRecorder(window.getGLWindow());
+    }
+
     // Assets Dropdown \\
 
     public void openItemEditor(WindowInstance window) {
@@ -92,10 +100,6 @@ public class EditorBranch extends BranchPackage {
 
     public void openImageEditor(WindowInstance window) {
         tabManager.openImageEditor(window.getGLWindow());
-    }
-
-    public void openMaps(WindowInstance window) {
-        tabManager.openMaps(window.getGLWindow());
     }
 
     // Characters Dropdown \\
@@ -152,10 +156,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openMaterialViewer(window.getGLWindow());
     }
 
-    public void openCharacterOutliner(WindowInstance window) {
-        tabManager.openCharacterOutliner(window.getGLWindow());
-    }
-
     public void openAnimationEditor(WindowInstance window) {
         tabManager.openAnimationEditor(window.getGLWindow());
     }
@@ -182,10 +182,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCameraPlanner(window.getGLWindow());
     }
 
-    public void openBiomeOutliner(WindowInstance window) {
-        tabManager.openBiomeOutliner(window.getGLWindow());
-    }
-
     public void openBiomePlanner(WindowInstance window) {
         tabManager.openBiomePlanner(window.getGLWindow());
     }
@@ -203,10 +199,6 @@ public class EditorBranch extends BranchPackage {
     }
 
     // Media Dropdown \\
-
-    public void openRecorder(WindowInstance window) {
-        tabManager.openRecorder(window.getGLWindow());
-    }
 
     public void openTimeline(WindowInstance window) {
         tabManager.openTimeline(window.getGLWindow());

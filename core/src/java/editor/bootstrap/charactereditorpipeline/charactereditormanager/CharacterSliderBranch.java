@@ -18,7 +18,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class CharacterSliderBranch extends BranchPackage {
 
     /*
-     * The one place every slider of the Appearance outliner is listed, read,
+     * The one place every slider of the Appearance rows is listed, read,
      * stepped, typed, cycled, picked or acted on, by the key its row carries.
      * Every slider the creator offers — each bone slider the rig's bones
      * offer, each control of the rig and each shape key — is listed under

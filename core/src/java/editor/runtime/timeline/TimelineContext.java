@@ -7,7 +7,6 @@ import editor.bootstrap.layerspipeline.layers.LayerDragProvider;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
-import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
@@ -35,7 +34,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TimelineContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, RecorderTabProvider, RecorderSoundHost, FileMenuProvider,
-        PropertiesProvider, OutlinerProvider, LayersProvider, LayerViewsProvider, LayerDragProvider,
+        PropertiesProvider, LayersProvider, LayerViewsProvider, LayerDragProvider,
         CharacterViewRowSource {
 
     /*
@@ -55,10 +54,10 @@ public class TimelineContext extends ContextPackage
      * transition and node selected, nests clips and exports MIDI, and File's
      * Export sends the media file out as a video or as music. Working in it
      * makes the clips what the recorder's deletes act on. The Properties tab
-     * shows the mix of the lane selected and the clip selected's channels,
-     * mute, time ramp and instrument; the Layers tab every take of the open
-     * recording to lay, or the layers of its take; the Character Outliner the
-     * channels armed and the export.
+     * arms the channels and sets the export, then shows the mix of the lane
+     * selected and the clip selected's channels, mute, time ramp and
+     * instrument; the Layers tab every take of the open recording to lay, or
+     * the layers of its take.
      */
 
     // Internal
@@ -140,6 +139,7 @@ public class TimelineContext extends ContextPackage
 
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recorderManager.buildSettingsRows(rows);
         recorderManager.buildRows(rows, true);
     }
 
@@ -150,33 +150,6 @@ public class TimelineContext extends ContextPackage
 
     @Override
     public void stepRow(String key, int steps) {
-        recorderManager.stepRow(key, steps);
-    }
-
-    // Outliner \\
-
-    @Override
-    public int getOutlinerRevision() {
-        return recorderManager.getRevision();
-    }
-
-    @Override
-    public String getOutlinerTitle() {
-        return EditorSetting.RECORDER_OUTLINER_TITLE;
-    }
-
-    @Override
-    public void buildOutlinerRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-        recorderManager.buildSettingsRows(rows);
-    }
-
-    @Override
-    public CharacterViewTemplateStruct getOutlinerTemplates() {
-        return EditorSetting.RECORDER_MUSIC_ROW_TEMPLATES;
-    }
-
-    @Override
-    public void stepOutlinerRow(String key, int steps) {
         recorderManager.stepRow(key, steps);
     }
 

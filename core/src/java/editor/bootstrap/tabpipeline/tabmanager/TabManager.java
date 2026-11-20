@@ -6,7 +6,6 @@ import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.runtime.animationeditor.AnimationEditorContext;
 import editor.runtime.animationtreeeditor.AnimationTreeEditorContext;
 import editor.runtime.arpgviewer.ArpgViewerContext;
-import editor.runtime.biomeoutliner.BiomeOutlinerContext;
 import editor.runtime.biomeplanner.BiomePlannerContext;
 import editor.runtime.biomeviewer.BiomeViewerContext;
 import editor.runtime.brushes.BrushesContext;
@@ -29,7 +28,6 @@ import editor.runtime.charactereditor.CharacterRigContext;
 import editor.runtime.charactereditor.CharacterSculptContext;
 import editor.runtime.charactereditor.CharacterUVContext;
 import editor.runtime.charactereditor.CharacterWeightsContext;
-import editor.runtime.characteroutliner.CharacterOutlinerContext;
 import editor.runtime.colorwheel.ColorWheelContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
@@ -239,10 +237,6 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_UV_EDITOR, UVEditorContext.class, osWindow);
     }
 
-    public TabHandle openCharacterOutliner(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_CHARACTER_OUTLINER, CharacterOutlinerContext.class, osWindow);
-    }
-
     public TabHandle openAnimationEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ANIMATION_EDITOR, AnimationEditorContext.class, osWindow);
     }
@@ -288,10 +282,6 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openStamps(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_STAMPS, StampsContext.class, osWindow);
-    }
-
-    public TabHandle openBiomeOutliner(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_BIOME_OUTLINER, BiomeOutlinerContext.class, osWindow);
     }
 
     public TabHandle openBiomePlanner(WindowInstance osWindow) {

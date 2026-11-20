@@ -31,6 +31,9 @@ public class EditorSetting {
     public static final String CURSOR_RESIZE_H = "menus/CursorStretchIconHorizontal";
     public static final String CURSOR_RESIZE_V = "menus/CursorStretchIconVertical";
 
+    // Window Icon — the sprite every editor OS window shows on the taskbar and in the window switcher
+    public static final String WINDOW_ICON = "menus/Sword";
+
     // Layouts
     public static final int LAYOUT_NAME_MAX_LENGTH = 32;
     public static final String LAYOUT_SESSION_NAME = "LastSession";
@@ -452,7 +455,6 @@ public class EditorSetting {
     public static final String TAB_TITLE_ARPG_VIEWER = "ARPG Viewer";
     public static final String TAB_TITLE_ANIMATION_EDITOR = "Animation Editor";
     public static final String TAB_TITLE_ANIMATION_TREE_EDITOR = "Animation Tree Editor";
-    public static final String TAB_TITLE_BIOME_OUTLINER = "Biome Outliner";
     public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
     public static final String TAB_TITLE_BRUSHES = "Brushes";
@@ -471,7 +473,6 @@ public class EditorSetting {
     public static final String TAB_TITLE_MATERIALS = "Materials";
     public static final String TAB_TITLE_MATERIAL_VIEWER = "Material Viewer";
     public static final String TAB_TITLE_UV_EDITOR = "UV Editor";
-    public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_PROPERTIES = "Properties";
@@ -721,9 +722,7 @@ public class EditorSetting {
     public static final String CHARACTER_VIEW_MENU_DOCK = "editor/CharacterDock/Dock";
     public static final int CHARACTER_VIEW_DOCK_ENTRY_TITLE = 0;
     public static final int CHARACTER_VIEW_DOCK_ENTRY_ROWS = 1;
-    public static final String CHARACTER_OUTLINER_TITLE = "Entity";
     public static final String CHARACTER_PROPERTIES_TITLE = "Properties";
-    public static final String ANIMATION_OUTLINER_TITLE = "Clip";
     public static final String ANIMATION_PROPERTIES_TITLE = "Key";
 
     // Character View — the row templates of each tool's menu its docker windows fill with
@@ -1809,7 +1808,7 @@ public class EditorSetting {
 
     // Character Controls — the fields of a rig's controls document, the name a new control takes with its number,
     // the bone sliders one needs, how near a key's place counts as the place itself, the passes a key's share is
-    // worked out in, and what the Appearance outliner reports
+    // worked out in, and what the Appearance rows report
     public static final String CHARACTER_CONTROL_FIELD_CONTROLS = "controls";
     public static final String CHARACTER_CONTROL_FIELD_NAME = "name";
     public static final String CHARACTER_CONTROL_FIELD_GROUP = "group";
@@ -2917,8 +2916,8 @@ public class EditorSetting {
     public static final String MATERIALS_PREVIEW_IMAGE_PREFIX = "material/preview/";
     public static final int MATERIALS_HISTORY_MAX_STEPS = 64;
 
-    // Material Rows — the Outliner's keys, headers and words for the material chosen
-    public static final String MATERIALS_OUTLINER_TITLE = "Material";
+    // Material Rows — the Properties tab's keys, headers and words for the material chosen
+    public static final String MATERIALS_PROPERTIES_TITLE = "Material";
     public static final String MATERIALS_KEY_MATERIAL = "material_chosen";
     public static final String MATERIALS_KEY_BASE = "material_base";
     public static final String MATERIALS_KEY_MAP = "material_map";
@@ -3217,7 +3216,6 @@ public class EditorSetting {
     // are built from
     public static final String RECORDER_TRANSPORT_PROPERTIES_TITLE = "Music";
     public static final String RECORDER_TIMELINE_PROPERTIES_TITLE = "Mixer";
-    public static final String RECORDER_OUTLINER_TITLE = "Recorder Settings";
     public static final CharacterViewTemplateStruct RECORDER_MUSIC_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/Recorder/music_header_row",
             "editor/Recorder/music_item_row",
@@ -3312,9 +3310,8 @@ public class EditorSetting {
     public static final String RECORDER_ROW_VALUE_RANGE_START = "Media start";
     public static final String RECORDER_ROW_VALUE_RANGE_END = "Media end";
 
-    // Recorder Keys — the Character Outliner's rows while the Keys or Keys Graph tab is worked in: the keys selected
-    // on the curve picked, moved together by their moment and value and given one mode
-    public static final String RECORDER_KEYS_OUTLINER_TITLE = "Keys";
+    // Recorder Keys — the Properties tab's first rows while the Keys or Keys Graph tab is worked in: the keys
+    // selected on the curve picked, moved together by their moment and value and given one mode
     public static final String RECORDER_ROWS_NO_CURVE = "Pick a value on the Keys tab";
     public static final String RECORDER_ROWS_NO_KEY = "Select keys on the Keys tab or the graph";
     public static final String RECORDER_ROWS_HEADER_CURVE_FORMAT = "%s: %s";

@@ -16,8 +16,7 @@ public class CharacterEditorMenuSystem extends SystemPackage {
     /*
      * Opens a character tool tab's status bar over the viewport and writes
      * the character editor's status into it, rewritten only when the
-     * editor's state moves. The editor's panels are the Character Outliner
-     * docker window and the Properties tab.
+     * editor's state moves. The editor's panel is the Properties tab.
      */
 
     // Internal

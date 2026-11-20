@@ -4,9 +4,10 @@ public class PropertiesSetting {
 
     /*
      * Constants used only by PropertiesContext — its menu, the Info value,
-     * number, choice, group and missing row templates with the element ids
-     * they are filled through, its entry points and how Info rows are
-     * indented. Value rows come from their own tools' menus.
+     * number, choice, group and missing row templates and the biome palette's
+     * row templates with the element ids they are filled through, its entry
+     * points and how Info rows are indented. A tool window's rows come from
+     * its own menu.
      */
 
     // Menus
@@ -16,6 +17,8 @@ public class PropertiesSetting {
     public static final String TEMPLATE_CHOICE_ROW = "editor/Properties/info_choice_row";
     public static final String TEMPLATE_GROUP_ROW = "editor/Properties/info_group_row";
     public static final String TEMPLATE_MISSING_ROW = "editor/Properties/info_missing_row";
+    public static final String TEMPLATE_BIOME_ROW = "editor/Properties/biome_row";
+    public static final String TEMPLATE_BIOME_ROW_SELECTED = "editor/Properties/biome_row_selected";
 
     // Entry Points
     public static final int ENTRY_ROWS = 0;
@@ -34,6 +37,8 @@ public class PropertiesSetting {
     public static final String ELEMENT_TRACK = "info_track";
     public static final String ELEMENT_KNOB = "info_knob";
     public static final String ELEMENT_REMOVE_BUTTON = "info_remove_button";
+    public static final String ELEMENT_BIOME_SWATCH = "biome_swatch";
+    public static final String ELEMENT_BIOME_LABEL = "biome_label";
 
     // Layout
     public static final float ROW_OFFSET_PIXELS = 4f;
