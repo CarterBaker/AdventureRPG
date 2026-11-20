@@ -21,7 +21,7 @@ public class SongManager extends ManagerPackage {
      * registration order. A song is an arrangement of clips on lanes over a
      * tempo map; the project's songs load on demand, when a song clip, a
      * player or a tool first names one, and SONG_NONE (0) is the reserved
-     * sentinel. A player's songs are MIDI files in SONG_USER_DIRECTORY,
+     * sentinel. A player's songs are MIDI files in MEDIA_USER_DIRECTORY,
      * listed newest first, read through SongMidiUtility when played and kept
      * by name apart from the palette, held by every play that loads one and
      * let go once the last of them releases it; an unreadable one is logged
@@ -51,7 +51,7 @@ public class SongManager extends ManagerPackage {
         this.songID2SongHandle = RegistryUtility.createPalette();
 
         // User Songs
-        this.userSongDirectory = new File(internal.path, EngineSetting.SONG_USER_DIRECTORY);
+        this.userSongDirectory = new File(internal.path, EngineSetting.MEDIA_USER_DIRECTORY);
         this.userSongName2SongHandle = new Object2ObjectOpenHashMap<>();
         this.userSongName2HoldCount = new Object2IntOpenHashMap<>();
 

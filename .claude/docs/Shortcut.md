@@ -72,6 +72,8 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   is not listed. `canvases` (`ToolCanvas` names, `character_sculpt`) and `tools` (`EditorTool` names, `brush`) keep
   the hint to the canvases and tools it applies to; each left out means every one. Pressed and held shortcuts both
   take them, so a gesture's modifiers are listed like its keys.
+- `"repeat": true` makes a pressed shortcut run again at the operating system's key repeat while its key stays held
+  (`Input.isKeyRepeated`), as the brush size keys `[` and `]` do; every other pressed shortcut runs once per press.
 - `"shared": true` makes a file's pressed shortcuts also work in every window `ToolManager` opens, after that
   window's own. Only the tools' own file should be shared.
 - A shortcut's registered name is the file's name, a `/`, then its own: `Timeline/ExtendSelection`.

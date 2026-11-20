@@ -359,7 +359,7 @@ public class RecorderManager extends ManagerPackage {
         this.recordingAnimationBranch = create(RecordingAnimationBranch.class);
 
         // Directory
-        this.mediaDirectory = new File(internal.path, EditorSetting.RECORDER_MEDIA_DIRECTORY);
+        this.mediaDirectory = new File(internal.path, EngineSetting.MEDIA_USER_DIRECTORY);
         this.exportDirectory = new File(mediaDirectory, EditorSetting.RECORDER_EXPORT_DIRECTORY);
         recordingSourceBranch.setRecordingDirectory(mediaDirectory);
 
@@ -2730,7 +2730,7 @@ public class RecorderManager extends ManagerPackage {
         if (refuseAnimation())
             return;
 
-        File file = new File(new File(internal.path, EngineSetting.SONG_USER_DIRECTORY),
+        File file = new File(new File(internal.path, EngineSetting.MEDIA_USER_DIRECTORY),
                 recording.getRecordingName() + EditorSetting.RECORDER_EXTENSION_SEPARATOR
                         + EngineSetting.SONG_USER_FILE_EXTENSION);
 
@@ -4903,7 +4903,7 @@ public class RecorderManager extends ManagerPackage {
         return !label.isBlank() && label.length() <= EditorSetting.RECORDER_LABEL_MAX_LENGTH;
     }
 
-    // Every media file in the media directory beside the player's saves, video and music alike, most recently
+    // Every media file in the player's Assets/Media folder, video and music alike, most recently
     // changed first
     public ObjectArrayList<String> getRecordingNames() {
 

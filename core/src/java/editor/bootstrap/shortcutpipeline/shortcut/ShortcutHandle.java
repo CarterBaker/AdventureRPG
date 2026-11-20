@@ -33,7 +33,11 @@ public class ShortcutHandle extends HandlePackage {
     // Input \\
 
     public boolean isPressed(Input input, int heldModifiers) {
-        return heldModifiers == shortcutData.getModifiers() && input.isKeyClicked(shortcutData.getKey());
+
+        int key = shortcutData.getKey();
+
+        return heldModifiers == shortcutData.getModifiers()
+                && (shortcutData.isRepeat() ? input.isKeyRepeated(key) : input.isKeyClicked(key));
     }
 
     public boolean isHeld(Input input, int heldModifiers) {

@@ -195,7 +195,8 @@ public class EngineSetting {
     public static final String TEMPORARY_FILE_SUFFIX = ".tmp";
     public static final int LOADER_BATCH_SIZE = 32;
     public static final String SAVE_DIRECTORY = "Saves";
-    public static final String SONG_USER_DIRECTORY = "Songs";
+    public static final String USER_ASSETS_DIRECTORY = "Assets";
+    public static final String MEDIA_USER_DIRECTORY = USER_ASSETS_DIRECTORY + "/Media";
     public static final String SETTINGS_FILE_NAME = "Settings.arpg";
     public static final String SETTINGS_UBO = "SettingsData";
     public static final String POST_PROCESS_UBO = "PostProcessData";
@@ -730,7 +731,7 @@ public class EngineSetting {
     public static final float DEFAULT_SONG_CLIP_VOLUME = 1f;
     public static final int DEFAULT_SONG_CLIP_TRANSPOSE = 0;
 
-    // Music MIDI — Standard MIDI Files read and written as songs, player songs read from SONG_USER_DIRECTORY
+    // Music MIDI — Standard MIDI Files read and written as songs, player songs read from MEDIA_USER_DIRECTORY
     public static final String SONG_USER_FILE_EXTENSION = "mid";
     public static final int SONG_MIDI_FILE_TYPE = 1;
     public static final int SONG_MIDI_CHANNEL_COUNT = 16;
@@ -4066,6 +4067,9 @@ public class EngineSetting {
     public static final String FONT_ELLIPSIS = "...";
     public static final float FONT_FIT_PADDING_X_PIXELS = 6f;
     public static final float FONT_FIT_PADDING_Y_PIXELS = 2f;
+
+    // Tab Strips — the halvings that find the width a row's widest tabs shrink to (StripLayoutUtility)
+    public static final int STRIP_CAP_SEARCH_STEPS = 24;
     public static final float FONT_LETTER_SPACING_RATIO = 0.05f;
     public static final int FONT_MIN_SIZE_DEFAULT = 11;
     public static final int FONT_MIN_SIZE_MAX = 24;
@@ -4100,8 +4104,6 @@ public class EngineSetting {
     public static final String HIERARCHY_TAB_ROW_TEMPLATE = "util/Hierarchy/hierarchy_tab_row";
     public static final float HIERARCHY_TAB_SPACING_PIXELS = 2f;
     public static final String HIERARCHY_TAB_TEMPLATE = "util/Hierarchy/hierarchy_tab";
-    public static final float HIERARCHY_TAB_WIDTH_PIXELS = 96f;
-    public static final float HIERARCHY_TAB_MIN_WIDTH_PIXELS = 56f;
     public static final float HIERARCHY_TOGGLE_WIDTH_PIXELS = 16f;
     public static final int MAX_MASK_DEPTH = 8;
     public static final int DEFAULT_RENDER_DEPTH = 0;

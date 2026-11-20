@@ -198,6 +198,7 @@ public class ShortcutManager extends ManagerPackage {
                 shortcutData.getActionMethod(),
                 shortcutData.getActionArg(),
                 shortcutData.isClaimed(),
+                shortcutData.isRepeat(),
                 shortcutData.getHint(),
                 shortcutData.getCanvasMask(),
                 shortcutData.getToolMask()));

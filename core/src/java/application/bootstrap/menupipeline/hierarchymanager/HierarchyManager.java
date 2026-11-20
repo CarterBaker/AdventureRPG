@@ -63,25 +63,23 @@ public class HierarchyManager extends ManagerPackage {
 
         HierarchyTabProvider activeProvider = resolveActiveProvider(hierarchy);
         int revision = activeProvider != null ? activeProvider.getRevision() : EngineSetting.INDEX_NOT_FOUND;
-        int tabsPerRow = hierarchyLayoutBranch.resolveTabsPerRow(hierarchy, tabName2HierarchyTabProvider.size());
+        float barWidth = hierarchyLayoutBranch.resolveTabBarWidth(hierarchy);
 
-        if (hierarchy.needsLayout(revision, tabsPerRow)) {
+        if (hierarchy.needsLayout(revision) || !hierarchyLayoutBranch.tabsBreakAt(hierarchy, barWidth)) {
             hierarchyLayoutBranch.layout(
                     hierarchy,
                     new ObjectArrayList<>(tabName2HierarchyTabProvider.values()),
                     activeProvider,
-                    tabsPerRow);
-            hierarchy.markLaidOut(revision, tabsPerRow);
+                    barWidth);
+            hierarchy.markLaidOut(revision);
             hierarchy.markTabsResized(EngineSetting.INDEX_NOT_FOUND);
         }
 
-        float tabWidth = hierarchyLayoutBranch.resolveTabWidth(hierarchy, tabsPerRow);
-
-        if (!hierarchy.needsTabResize(tabWidth))
+        if (!hierarchy.needsTabResize(barWidth))
             return;
 
-        hierarchyLayoutBranch.resizeTabs(hierarchy, tabWidth);
-        hierarchy.markTabsResized(tabWidth);
+        hierarchyLayoutBranch.resizeTabs(hierarchy, barWidth);
+        hierarchy.markTabsResized(barWidth);
     }
 
     // Management \\

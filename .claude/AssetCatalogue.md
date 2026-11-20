@@ -525,6 +525,10 @@ One line per session that changed this file: the date, what was added or removed
   fit their rows, wider File and Edit), `menus/editor/Properties.arpg` (the biome palette as a swatch grid),
   `menus/editor/CharacterEditor.arpg`, `ImageEditor.arpg`, `AnimationEditor.arpg`, `Materials.arpg` and `Recorder.arpg`
   (header rows fold) and `shortcuts/Properties.arpg` (its keys run the File menu's items).
+- 2026-11-20: General editor fixes. Removed `layouts/Animate.arpg`, `layouts/Paint.arpg`, `layouts/Sculpt.arpg` and
+  `layouts/World.arpg` (layouts are the user's own only); regenerated `menus/editor/EditorWindow.arpg` (ARPG Viewer
+  moved to the Debug menu), `schemas/Shortcuts.arpg` (`repeat`, current canvas and tool names) and
+  `shortcuts/Tools.arpg` (`[` and `]` repeat while held).
 
 ## Textures and Sprites (2431 files)
 
@@ -2706,10 +2710,6 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/lessons/`
 
 `Lessons.arpg`
-
-### `assets/layouts/`
-
-`Animate.arpg`, `Paint.arpg`, `Sculpt.arpg`, `World.arpg`
 
 ### `assets/loottables/containers/`
 

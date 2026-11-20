@@ -6,7 +6,7 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
-import editor.runtime.EditorSetting;
+import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
@@ -26,7 +26,7 @@ public class WorkspaceUtility extends EngineUtility {
 
     // The workspace itself, under the player's game folder
     public static File resolveRoot(File userRoot) {
-        return new File(userRoot, EditorSetting.WORKSPACE_DIRECTORY);
+        return new File(userRoot, EngineSetting.USER_ASSETS_DIRECTORY);
     }
 
     // A kind's folder in the workspace under the player's game folder

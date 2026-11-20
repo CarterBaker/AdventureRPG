@@ -20,6 +20,8 @@ import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.EditorSetting;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TabContext extends ContextPackage {
@@ -29,10 +31,11 @@ public class TabContext extends ContextPackage {
      * living in its canvas. Placement, content sync, reparenting, z-ordering
      * and the tab strip all go through here. The tab a stack shows is placed
      * on its leaf with a strip listing the whole stack, rebuilt only when the
-     * stack changes or its width fits a different number of entries to a row;
-     * the entries shrink together as the tab narrows and then wrap onto more
-     * rows (StripLayoutUtility), the header growing to hold them and the
-     * canvas shrinking beneath it, so every entry stays readable. Every other
+     * stack changes or its width breaks the rows elsewhere; each entry is as
+     * wide as its whole title, the widest shrinking first as the tab narrows,
+     * then the entries wrap onto more rows (StripLayoutUtility), the header
+     * growing to hold them and the canvas shrinking beneath it, so every
+     * entry stays readable. Every other
      * tab in the stack is withdrawn with its content.
      * The chrome's header is tinted and its border drawn in the active
      * window's color while its content is the active window, and its header
@@ -75,10 +78,12 @@ public class TabContext extends ContextPackage {
     private ObjectArrayList<TabHandle> stripTabs;
     private ObjectArrayList<TabHandle> loneStrip;
     private ObjectArrayList<ElementInstance> stripEntries;
+    private FloatArrayList stripWidths;
+    private FloatArrayList stripNarrowest;
+    private IntArrayList shownRowEnds;
     private MenuColorStruct activeStripColor;
     private MenuColorStruct activeStripAccentColor;
     private float shownStripWidth;
-    private int shownPerRow;
     private int shownRowCount;
 
     // Internal \\
@@ -90,8 +95,10 @@ public class TabContext extends ContextPackage {
         this.stripTabs = new ObjectArrayList<>();
         this.loneStrip = new ObjectArrayList<>(1);
         this.stripEntries = new ObjectArrayList<>();
+        this.stripWidths = new FloatArrayList();
+        this.stripNarrowest = new FloatArrayList();
+        this.shownRowEnds = new IntArrayList();
         this.shownStripWidth = EngineSetting.INDEX_NOT_FOUND;
-        this.shownPerRow = EngineSetting.INDEX_NOT_FOUND;
         this.shownRowCount = EngineSetting.INDEX_NOT_FOUND;
         this.activeStripColor = new MenuColorStruct(ThemeColor.ACCENT, EditorSetting.TAB_STRIP_ACTIVE_ALPHA);
         this.activeStripAccentColor = new MenuColorStruct(ThemeColor.ACCENT, EngineSetting.MENU_THEME_ALPHA_DEFAULT);
@@ -285,53 +292,83 @@ public class TabContext extends ContextPackage {
         layoutStrip(resolveStripWidth());
     }
 
-    // The strip refitted to a new width: listed again when a row holds a different number of entries, else every entry
-    // resized in place
+    // The strip refitted to a new width: listed again when its rows break elsewhere, else every entry resized in place
     private void fitStrip(float stripWidth) {
 
-        int perRow = resolvePerRow(stripWidth);
+        boolean sameRows = StripLayoutUtility.breaksAt(
+                stripNarrowest,
+                shownRowEnds,
+                stripWidth,
+                EditorSetting.TAB_STRIP_SPACING_PIXELS);
 
-        if (perRow != shownPerRow)
-            layoutStrip(stripWidth);
+        if (sameRows)
+            resizeStrip(stripWidth);
         else
-            resizeStrip(stripWidth, perRow);
+            layoutStrip(stripWidth);
     }
 
-    // Every tab in the stack listed again, as many to a row as fit, the header and canvas sized for the rows
+    // Every tab in the stack listed again, each measured as it is listed and started on a new row when the row it
+    // joins cannot hold it at its narrowest, the header and canvas sized for the rows
     private void layoutStrip(float stripWidth) {
 
-        int perRow = resolvePerRow(stripWidth);
         ElementInstance row = null;
+        int rowStart = 0;
 
         menuManager.ejectAll(chromeMenu, EditorSetting.TAB_ENTRY_STRIP);
         stripEntries.clear();
+        stripWidths.clear();
+        stripNarrowest.clear();
+        shownRowEnds.clear();
 
         for (int i = 0; i < stripTabs.size(); i++) {
 
-            if (i % perRow == 0)
+            if (row == null)
                 row = menuManager.inject(chromeMenu, EditorSetting.TAB_ENTRY_STRIP, EditorSetting.MENU_TAB_STRIP_ROW);
 
-            stripEntries.add(injectStripEntry(row, stripTabs.get(i)));
+            ElementInstance entry = injectStripEntry(row, stripTabs.get(i));
+            measureEntry(entry);
+
+            if (resolveRowEnd(rowStart, stripWidth) <= i) {
+
+                menuManager.eject(row, entry);
+                shownRowEnds.add(i);
+                rowStart = i;
+                row = menuManager.inject(chromeMenu, EditorSetting.TAB_ENTRY_STRIP, EditorSetting.MENU_TAB_STRIP_ROW);
+                entry = injectStripEntry(row, stripTabs.get(i));
+            }
+
+            stripEntries.add(entry);
         }
 
-        this.shownPerRow = perRow;
-        resizeHeader(StripLayoutUtility.resolveRowCount(stripTabs.size(), perRow));
-        resizeStrip(stripWidth, perRow);
+        shownRowEnds.add(stripTabs.size());
+        resizeHeader(shownRowEnds.size());
+        resizeStrip(stripWidth);
     }
 
-    private void resizeStrip(float stripWidth, int perRow) {
+    // Each entry its whole title's width, capped by the width its row's widest share
+    private void resizeStrip(float stripWidth) {
 
-        float entryWidth = StripLayoutUtility.resolveWidth(
-                stripWidth,
-                perRow,
-                EditorSetting.TAB_STRIP_ENTRY_WIDTH_PIXELS,
-                EditorSetting.TAB_STRIP_SPACING_PIXELS);
-        DimensionVector2Struct size = new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(entryWidth),
-                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX));
+        int rowStart = 0;
 
-        for (int i = 0; i < stripEntries.size(); i++)
-            stripEntries.get(i).setSizeOverride(size);
+        for (int r = 0; r < shownRowEnds.size(); r++) {
+
+            int rowEnd = shownRowEnds.getInt(r);
+            float cap = StripLayoutUtility.resolveRowCap(
+                    stripWidths,
+                    stripNarrowest,
+                    rowStart,
+                    rowEnd,
+                    stripWidth,
+                    EditorSetting.TAB_STRIP_SPACING_PIXELS);
+
+            for (int i = rowStart; i < rowEnd; i++)
+                stripEntries.get(i).setSizeOverride(new DimensionVector2Struct(
+                        DimensionValueStruct.ofAbsolute(StripLayoutUtility.capWidth(
+                                stripWidths.getFloat(i), stripNarrowest.getFloat(i), cap)),
+                        DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX)));
+
+            rowStart = rowEnd;
+        }
 
         this.shownStripWidth = stripWidth;
     }
@@ -359,12 +396,25 @@ public class TabContext extends ContextPackage {
         this.shownRowCount = rowCount;
     }
 
-    private int resolvePerRow(float stripWidth) {
-        return StripLayoutUtility.resolvePerRow(
+    private int resolveRowEnd(int rowStart, float stripWidth) {
+        return StripLayoutUtility.resolveRowEnd(
+                stripNarrowest,
+                rowStart,
                 stripWidth,
-                stripTabs.size(),
-                EditorSetting.TAB_STRIP_ENTRY_MIN_WIDTH_PIXELS,
                 EditorSetting.TAB_STRIP_SPACING_PIXELS);
+    }
+
+    // An entry's whole title's width with the accent and close button beside it, at full size and at the smallest
+    // readable size
+    private void measureEntry(ElementInstance entry) {
+
+        ElementInstance label = entry.findChildById(EditorSetting.ELEMENT_TAB_STRIP_LABEL);
+        float preferred = label.resolveTextWidth(label.resolveFontSize(EditorSetting.TAB_STRIP_ROW_HEIGHT_PIXELS))
+                + EditorSetting.TAB_STRIP_ENTRY_CHROME_PIXELS;
+        float narrowest = label.resolveTextWidth(settings.minTextSize) + EditorSetting.TAB_STRIP_ENTRY_CHROME_PIXELS;
+
+        stripWidths.add(preferred);
+        stripNarrowest.add(Math.min(preferred, narrowest));
     }
 
     private float resolveStripWidth() {

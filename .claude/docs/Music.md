@@ -73,7 +73,7 @@ The owner is not a musician, so code, labels and hints use these plain meanings:
 ## Deliberate departures
 
 - **Player songs are `.mid` files**, not `.arpg`. Players bring MIDI from anywhere, so the game reads
-  `Documents/My Games/AdventureRPG/Songs/*.mid` (`EngineSetting.SONG_USER_DIRECTORY`). Everything the engine itself
+  `Documents/My Games/AdventureRPG/Assets/Media/*.mid` (`EngineSetting.MEDIA_USER_DIRECTORY`). Everything the engine itself
   writes is still `.arpg`.
 - **Library conversion happens only from `.claude/`.** The engine and the editor never read `.sfz` or `.wav`, never
   run ffmpeg to bring an instrument in and never acknowledge `.claude/`. Claude converts an instrument from
@@ -137,9 +137,9 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
 - Player songs: `SongManager.getUserSongNames()` lists the `.mid` files newest first, `loadUserSong(name)` reads one
   into a `SongHandle` kept by name apart from the palette (no song ID), and `releaseUserSong` lets it go with the last
   play that holds it; an unreadable file is logged and plays nothing. Project songs keep assigned IDs and load on
-  demand. The game and editor launchers create `Songs/` with their other required directories.
+  demand. The game and editor launchers create `Assets/Media/` with their other required directories.
 - **Media files.** Songs and videos the owner makes are one kind of file, a media file, saved by the recorder in
-  `Documents/My Games/AdventureRPG/Media/` (`RECORDER_MEDIA_DIRECTORY`, beside the player's saves) and listed together
+  `Documents/My Games/AdventureRPG/Assets/Media/` (`EngineSetting.MEDIA_USER_DIRECTORY`, with the player's songs) and listed together
   in the Tracks tab. Both record, nest and edit the same way; a media file any clip of which shows a picture is a video,
   one with none is music, decided by what is laid on it, never chosen. The Timeline shows five lanes, one more each time
   the highest takes a clip, up to `SONG_LANE_COUNT`, each strip its number and name, its ruler in bars and beats and a beat grid it snaps to while the file is music, in seconds once it
@@ -149,7 +149,7 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   companion), both under `Media/Export/`, laid out as `assets/` is (`songs/<Name>.arpg`, `sounds/music/<Name>.ogg`)
   so the owner drags them into the project when they are ready. Nothing the editor makes is written into `assets/`. A
   nested media file and a take of the world have no place in a song and are left out of it. Export MIDI writes
-  `Documents/My Games/AdventureRPG/Songs/<Name>.mid`, where player songs live.
+  `Documents/My Games/AdventureRPG/Assets/Media/<Name>.mid`, where player songs live.
 - Constants: `EngineSetting` (`// Music ...` groups) for anything the game uses; `EditorSetting` for the editor.
 
 ## Playing in the game

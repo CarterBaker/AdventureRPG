@@ -5,6 +5,7 @@ import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.LayoutStruct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.shaderpipeline.sprite.SpriteInstance;
+import engine.root.EngineSetting;
 import engine.root.InstancePackage;
 import engine.util.mathematics.matrices.Matrix4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -590,6 +591,22 @@ public class ElementInstance extends InstancePackage {
 
     public FontInstance getFontInstance() {
         return fontInstance;
+    }
+
+    // The font size this element draws its text at, at full size, when it stands the given height
+    public float resolveFontSize(float height) {
+        return Math.max(1f, data.getFontSize().resolve(height));
+    }
+
+    // The width this element's text takes whole at the font size given, its fit padding included; zero for an element
+    // without text
+    public float resolveTextWidth(float fontSize) {
+
+        if (fontInstance == null || fontInstance.getTextWidth() <= 0f)
+            return 0f;
+
+        return fontInstance.getTextWidth() * fontSize / fontInstance.getHandle().getRasterPixelSize()
+                + EngineSetting.FONT_FIT_PADDING_X_PIXELS * 2f;
     }
 
     public ObjectArrayList<ElementInstance> getChildren() {

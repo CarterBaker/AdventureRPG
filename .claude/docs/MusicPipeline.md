@@ -20,9 +20,9 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
 | Note Library | `editor/bootstrap/notelibrarypipeline/` (`NoteLibraryPipeline`, `notelibrarymanager/NoteLibraryManager`); tab `editor/runtime/notelibrary/` (`NoteLibraryContext`, `NoteLibrarySetting`, `panel/NoteLibraryPanelSystem`); `menueventsmanager/menus/NoteLibraryBranch`; menu `assets/menus/editor/NoteLibrary.arpg`; the music row templates live in `assets/menus/editor/Recorder.arpg` |
 | Performance | `performance/PerformanceInstance` (an entity playing its held instrument: keys, octave, velocity, a song part, the PLAY stance); play mode `application/runtime/music/InstrumentSystem`; Songbook `menueventsmanager/menus/music/SongbookBranch`, menu `assets/menus/SongbookMenu.arpg` (Songbook, Playing panel, Notice) |
 | Clips and items | `assets/animations/humanoid/instruments/Humanoid<Pipe/Flute/Harp/Lute/Fiddle/Cradle/Drum><Hold/Play>`, the tree's `perform` layer (`play` action, arms, hands and fingers); items `assets/items/instruments/Instruments.arpg`, meshes `assets/mesh/items/instruments/` |
-| Constants | `EngineSetting` groups `// Music Notes`, `// Music Scales`, `// Music Note Sets`, `// Music Instruments`, `// Music Sampler`, `// Music Songs`, `// Music MIDI`, `// Music Playback`, `// Music Performance`; `SONG_USER_DIRECTORY` in `// Engine & Application` |
+| Constants | `EngineSetting` groups `// Music Notes`, `// Music Scales`, `// Music Note Sets`, `// Music Instruments`, `// Music Sampler`, `// Music Songs`, `// Music MIDI`, `// Music Playback`, `// Music Performance`; `USER_ASSETS_DIRECTORY` and `MEDIA_USER_DIRECTORY` in `// Engine & Application` |
 | Content | `assets/notesets/<Instrument>.arpg`, `assets/instruments/<Instrument>.arpg`, samples and companions in `assets/sounds/notes/<Instrument>/`, `assets/songs/<Folder>/<Song>.arpg` (`Test/Scale` proves the pipeline); schemas `NoteSets.arpg`, `Instruments.arpg`, `Songs.arpg` |
-| Player songs | `Documents/My Games/AdventureRPG/Songs/*.mid`, created by `Lwjgl3Launcher` (game) and `Lwjgl3LauncherEditor` as required directories |
+| Player songs | `Documents/My Games/AdventureRPG/Assets/Media/*.mid`, created by `Lwjgl3Launcher` (game) and `Lwjgl3LauncherEditor` as required directories |
 | Items | `instrument` field, read by `ItemDefinitionBuilder.parseInstrument` exactly as `weapon`; `ItemDefinitionHandle.getInstrumentID` / `hasInstrument`; an item played as an instrument is gear |
 | Conversion | `.claude/tools/SfzConvert.py`, Claude-side only; nothing in the engine or the editor reads SFZ or WAV |
 
@@ -97,7 +97,7 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
   notes alone, round robin turned by the note's index, a note let go at its end or when its pitch is struck again.
 - **Media files:** every recording is a media file (`RecordingInstance`), read and written by `RecordingFileBranch`
   (version 4 adds `key_root`, `key_scale` and `lanes`; older files read with C major and default lanes and are saved as 4
-  when opened) in `RECORDER_MEDIA_DIRECTORY` (`RecorderManager.getRecordingFile(name)`). `RecordingInstance.hasPicture`
+  when opened) in `EngineSetting.MEDIA_USER_DIRECTORY` (`RecorderManager.getRecordingFile(name)`). `RecordingInstance.hasPicture`
   (any clip showing a picture) is the one test of video against music: it routes Export
   (`RecorderBranch.exportMedia`), the Preview tab's world check (`RecorderManager.bindSession`, which plays music without a Preview tab through a
   `RecorderSoundHost` tab), the ruler, and the beat-grid snap
@@ -127,7 +127,7 @@ music side. `.claude/CLAUDE.md` still applies in full. Each music stage keeps th
   whole length, volume and transpose kept. A notes clip of many notes (from MIDI or an older song) is windowed as before.
 - **Recording:** `record()` records a take into any media file; `isTaking()` is true for every recording session.
 - **Export:** `RecorderManager.exportMidi` writes `SongMidiUtility.write(toSong(recording, true))` to
-  `Documents/My Games/AdventureRPG/Songs/<Name>.mid`. `exportMusic` writes `RecordingMusicBranch.writeSong` to
+  `Documents/My Games/AdventureRPG/Assets/Media/<Name>.mid`. `exportMusic` writes `RecordingMusicBranch.writeSong` to
   `Media/Export/songs/<Name>.arpg` and hands `toSong(recording, true)` to `RecordingRenderBranch.begin(soundFile, song)`,
   which flattens it, decodes and mixes it on the General thread through `SamplerMixUtility` (lane pan by equal power,
   `RECORDER_RENDER_TAIL_SECONDS` past the end) and encodes it through `FfmpegUtility.encodeVorbis` to

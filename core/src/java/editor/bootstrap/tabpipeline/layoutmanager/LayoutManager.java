@@ -20,21 +20,17 @@ public class LayoutManager extends ManagerPackage {
      * update, never inside the menu event that asked for it, and the last
      * request in a frame wins. LayoutSaveBranch captures windows and dock
      * trees, LayoutRestoreBranch rebuilds them, and a layout that cannot be
-     * read is logged and skipped without touching the open editor. The
-     * editor ships task layouts under assets/layouts (Sculpt, Paint, Animate,
-     * World), listed beside the user's as a design tool lists its
-     * workspaces: saving over one writes the user's own copy, which is the one
-     * loaded from then on, and deleting that copy resets it to the one
-     * shipped; a shipped layout itself is never written or deleted.
+     * read is logged and skipped without touching the open editor. Every
+     * layout is the user's own, kept in the user's bin folder; the editor
+     * ships none.
      */
 
     // Internal
     private LayoutSaveBranch layoutSaveBranch;
     private LayoutRestoreBranch layoutRestoreBranch;
 
-    // Directory — the user's layouts and the ones the editor ships
+    // Directory — the user's layouts
     private File layoutDirectory;
-    private File defaultDirectory;
 
     // Session
     private boolean sessionChanged;
@@ -55,7 +51,6 @@ public class LayoutManager extends ManagerPackage {
         this.layoutDirectory = new File(
                 internal.path,
                 EngineSetting.BIN_DIRECTORY + "/" + EngineSetting.EDITOR_LAYOUT_DIRECTORY);
-        this.defaultDirectory = new File(EditorSetting.LAYOUT_DEFAULT_PATH);
     }
 
     @Override
@@ -107,7 +102,6 @@ public class LayoutManager extends ManagerPackage {
         layoutSaveBranch.save(getLayoutFile(layoutName));
     }
 
-    // Always the user's own file, so saving over a shipped layout keeps the user's copy beside it
     public void saveLayout(String layoutName) {
         if (getSavedLayoutFile(layoutName) != null)
             layoutSaveBranch.save(getLayoutFile(layoutName));
@@ -121,17 +115,11 @@ public class LayoutManager extends ManagerPackage {
             pendingLayoutFile = layoutFile;
     }
 
-    // The user's own file only: a shipped layout's copy deleted resets it, and the shipped file itself stays
     public void deleteLayout(String layoutName) {
 
-        File layoutFile = getLayoutFile(layoutName);
+        File layoutFile = getSavedLayoutFile(layoutName);
 
-        if (!layoutFile.exists()) {
-            errorLog("Layout '" + layoutName + "' is one the editor ships and holds no changes to reset.");
-            return;
-        }
-
-        if (!layoutFile.delete())
+        if (layoutFile != null && !layoutFile.delete())
             errorLog("Layout '" + layoutName + "' could not be deleted: " + layoutFile.getAbsolutePath());
     }
 
@@ -155,7 +143,7 @@ public class LayoutManager extends ManagerPackage {
         return ArpgUtility.resolveFile(layoutDirectory, layoutName);
     }
 
-    // The user's copy of a layout when there is one, else the one the editor ships, else none
+    // The user's layout of that name, or none
     private File getSavedLayoutFile(String layoutName) {
 
         if (!isLayoutNameValid(layoutName))
@@ -165,11 +153,6 @@ public class LayoutManager extends ManagerPackage {
 
         if (layoutFile.exists())
             return layoutFile;
-
-        File defaultFile = ArpgUtility.resolveFile(defaultDirectory, layoutName);
-
-        if (defaultFile.exists())
-            return defaultFile;
 
         errorLog("Layout '" + layoutName + "' no longer exists: " + layoutFile.getAbsolutePath());
         return null;
@@ -187,28 +170,16 @@ public class LayoutManager extends ManagerPackage {
     }
 
     public boolean isLayoutNameAvailable(String layoutName) {
-        return isLayoutNameValid(layoutName)
-                && !getLayoutFile(layoutName).exists()
-                && !ArpgUtility.resolveFile(defaultDirectory, layoutName).exists();
+        return isLayoutNameValid(layoutName) && !getLayoutFile(layoutName).exists();
     }
 
     public ObjectArrayList<String> getLayoutNames() {
 
         ObjectArrayList<String> layoutNames = new ObjectArrayList<>();
-
-        addLayoutNames(defaultDirectory, layoutNames);
-        addLayoutNames(layoutDirectory, layoutNames);
-        layoutNames.sort(String.CASE_INSENSITIVE_ORDER);
-        return layoutNames;
-    }
-
-    // Every layout a directory holds, the session's and any already listed left out
-    private void addLayoutNames(File directory, ObjectArrayList<String> layoutNames) {
-
-        File[] layoutFiles = directory.listFiles();
+        File[] layoutFiles = layoutDirectory.listFiles();
 
         if (layoutFiles == null)
-            return;
+            return layoutNames;
 
         for (File layoutFile : layoutFiles) {
 
@@ -217,8 +188,11 @@ public class LayoutManager extends ManagerPackage {
 
             String layoutName = FileUtility.getFileName(layoutFile);
 
-            if (!isSessionName(layoutName) && !layoutNames.contains(layoutName))
+            if (!isSessionName(layoutName))
                 layoutNames.add(layoutName);
         }
+
+        layoutNames.sort(String.CASE_INSENSITIVE_ORDER);
+        return layoutNames;
     }
 }

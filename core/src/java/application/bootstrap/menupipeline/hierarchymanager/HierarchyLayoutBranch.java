@@ -13,6 +13,8 @@ import application.bootstrap.menupipeline.util.StripLayoutUtility;
 import application.bootstrap.menupipeline.util.ThemeColor;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class HierarchyLayoutBranch extends BranchPackage {
@@ -20,9 +22,10 @@ class HierarchyLayoutBranch extends BranchPackage {
     /*
      * Lays a hierarchy panel out into its menu: ejects the old tabs and rows,
      * then injects one tab per provider and one indented row per visible node,
-     * each carrying its node key as the click argument. Tabs shrink together as
-     * the panel narrows and then wrap onto as many rows as its width needs
-     * (StripLayoutUtility), so every tab stays visible; the tab bar
+     * each carrying its node key as the click argument. Each tab is as wide as
+     * its whole name, the widest shrinking first as the panel narrows, then
+     * the tabs wrap onto as many rows as its width needs (StripLayoutUtility),
+     * so every tab stays visible; the tab bar
      * grows to hold them and the node list shrinks beneath it. A tab or node
      * holding a problem has its label drawn in the danger color.
      */
@@ -53,14 +56,14 @@ class HierarchyLayoutBranch extends BranchPackage {
             HierarchyInstance hierarchy,
             ObjectArrayList<HierarchyTabProvider> providers,
             HierarchyTabProvider activeProvider,
-            int tabsPerRow) {
+            float barWidth) {
 
         MenuInstance menu = hierarchy.getMenu();
 
         ejectAll(menu, EngineSetting.HIERARCHY_ENTRY_TABS, hierarchy.getTabElements());
         ejectAll(menu, EngineSetting.HIERARCHY_ENTRY_ROWS, hierarchy.getRowElements());
 
-        injectTabs(hierarchy, providers, tabsPerRow);
+        injectTabs(hierarchy, providers, barWidth);
         resizeTabBar(menu, Math.max(1, hierarchy.getTabElements().size()));
 
         if (activeProvider == null)
@@ -81,71 +84,124 @@ class HierarchyLayoutBranch extends BranchPackage {
 
     // Tabs \\
 
-    int resolveTabsPerRow(HierarchyInstance hierarchy, int tabCount) {
-        return StripLayoutUtility.resolvePerRow(
-                resolveTabBarWidth(hierarchy),
-                tabCount,
-                EngineSetting.HIERARCHY_TAB_MIN_WIDTH_PIXELS,
-                EngineSetting.HIERARCHY_TAB_SPACING_PIXELS);
-    }
-
-    float resolveTabWidth(HierarchyInstance hierarchy, int tabsPerRow) {
-        return StripLayoutUtility.resolveWidth(
-                resolveTabBarWidth(hierarchy),
-                tabsPerRow,
-                EngineSetting.HIERARCHY_TAB_WIDTH_PIXELS,
-                EngineSetting.HIERARCHY_TAB_SPACING_PIXELS);
-    }
-
-    private float resolveTabBarWidth(HierarchyInstance hierarchy) {
+    float resolveTabBarWidth(HierarchyInstance hierarchy) {
         return hierarchy.getMenu().getWindow().getWidth() - 2f * EngineSetting.HIERARCHY_TAB_BAR_PADDING_PIXELS;
     }
 
-    // Every tab set to the width its rows share, in place
-    void resizeTabs(HierarchyInstance hierarchy, float tabWidth) {
+    // Whether the tab rows laid out break the same way at the width given
+    boolean tabsBreakAt(HierarchyInstance hierarchy, float barWidth) {
+        return StripLayoutUtility.breaksAt(
+                hierarchy.getTabNarrowest(),
+                hierarchy.getTabRowEnds(),
+                barWidth,
+                EngineSetting.HIERARCHY_TAB_SPACING_PIXELS);
+    }
 
-        DimensionVector2Struct size = new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(tabWidth),
-                DimensionValueStruct.ofAbsolute(EngineSetting.HIERARCHY_TAB_ROW_HEIGHT_PIXELS));
+    // Every tab its whole name's width, capped by the width its row's widest share, in place
+    void resizeTabs(HierarchyInstance hierarchy, float barWidth) {
+
+        FloatArrayList tabWidths = hierarchy.getTabWidths();
+        FloatArrayList tabNarrowest = hierarchy.getTabNarrowest();
+        IntArrayList rowEnds = hierarchy.getTabRowEnds();
         ObjectArrayList<ElementInstance> tabRows = hierarchy.getTabElements();
+        int rowStart = 0;
 
-        for (int i = 0; i < tabRows.size(); i++) {
+        for (int r = 0; r < tabRows.size(); r++) {
 
-            ObjectArrayList<ElementInstance> tabs = tabRows.get(i).getChildren();
+            int rowEnd = rowEnds.getInt(r);
+            ObjectArrayList<ElementInstance> tabs = tabRows.get(r).getChildren();
+            float cap = StripLayoutUtility.resolveRowCap(
+                    tabWidths,
+                    tabNarrowest,
+                    rowStart,
+                    rowEnd,
+                    barWidth,
+                    EngineSetting.HIERARCHY_TAB_SPACING_PIXELS);
 
             for (int j = 0; j < tabs.size(); j++)
-                tabs.get(j).setSizeOverride(size);
+                tabs.get(j).setSizeOverride(new DimensionVector2Struct(
+                        DimensionValueStruct.ofAbsolute(StripLayoutUtility.capWidth(
+                                tabWidths.getFloat(rowStart + j), tabNarrowest.getFloat(rowStart + j), cap)),
+                        DimensionValueStruct.ofAbsolute(EngineSetting.HIERARCHY_TAB_ROW_HEIGHT_PIXELS)));
+
+            rowStart = rowEnd;
         }
     }
 
+    // Each tab measured as it is injected and started on a new row when the row it joins cannot hold it at its
+    // narrowest
     private void injectTabs(
             HierarchyInstance hierarchy,
             ObjectArrayList<HierarchyTabProvider> providers,
-            int tabsPerRow) {
+            float barWidth) {
 
+        FloatArrayList tabNarrowest = hierarchy.getTabNarrowest();
+        IntArrayList rowEnds = hierarchy.getTabRowEnds();
         ElementInstance tabRow = null;
+        int rowStart = 0;
+
+        hierarchy.getTabWidths().clear();
+        tabNarrowest.clear();
+        rowEnds.clear();
 
         for (int i = 0; i < providers.size(); i++) {
 
-            if (i % tabsPerRow == 0) {
-                tabRow = menuManager.inject(
-                        hierarchy.getMenu(), EngineSetting.HIERARCHY_ENTRY_TABS,
-                        EngineSetting.HIERARCHY_TAB_ROW_TEMPLATE);
-                hierarchy.getTabElements().add(tabRow);
-            }
+            if (tabRow == null)
+                tabRow = injectTabRow(hierarchy);
 
+            ElementInstance tab = injectTab(hierarchy, tabRow, providers.get(i));
+            measureTab(hierarchy, tab);
+
+            int rowEnd = StripLayoutUtility.resolveRowEnd(
+                    tabNarrowest,
+                    rowStart,
+                    barWidth,
+                    EngineSetting.HIERARCHY_TAB_SPACING_PIXELS);
+
+            if (rowEnd > i)
+                continue;
+
+            menuManager.eject(tabRow, tab);
+            rowEnds.add(i);
+            rowStart = i;
+            tabRow = injectTabRow(hierarchy);
             injectTab(hierarchy, tabRow, providers.get(i));
         }
+
+        rowEnds.add(providers.size());
     }
 
-    private void injectTab(HierarchyInstance hierarchy, ElementInstance tabRow, HierarchyTabProvider provider) {
+    // A tab's whole name's width at full size and at the smallest readable size
+    private void measureTab(HierarchyInstance hierarchy, ElementInstance tab) {
+
+        ElementInstance label = tab.findChildById(EngineSetting.HIERARCHY_ELEMENT_TAB_LABEL);
+        float preferred = label.resolveTextWidth(label.resolveFontSize(EngineSetting.HIERARCHY_TAB_ROW_HEIGHT_PIXELS));
+
+        hierarchy.getTabWidths().add(preferred);
+        hierarchy.getTabNarrowest().add(Math.min(preferred, label.resolveTextWidth(settings.minTextSize)));
+    }
+
+    private ElementInstance injectTabRow(HierarchyInstance hierarchy) {
+
+        ElementInstance tabRow = menuManager.inject(
+                hierarchy.getMenu(), EngineSetting.HIERARCHY_ENTRY_TABS,
+                EngineSetting.HIERARCHY_TAB_ROW_TEMPLATE);
+        hierarchy.getTabElements().add(tabRow);
+
+        return tabRow;
+    }
+
+    private ElementInstance injectTab(
+            HierarchyInstance hierarchy,
+            ElementInstance tabRow,
+            HierarchyTabProvider provider) {
 
         String tabName = provider.getTabName();
         String template = tabName.equals(hierarchy.getActiveTabName())
                 ? EngineSetting.HIERARCHY_TAB_ACTIVE_TEMPLATE
                 : EngineSetting.HIERARCHY_TAB_TEMPLATE;
 
-        menuManager.inject(
+        return menuManager.inject(
                 tabRow, template,
                 element -> {
                     element.setActionArgOverride(tabName);

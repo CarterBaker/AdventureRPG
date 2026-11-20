@@ -34,6 +34,7 @@ class Lwjgl3Input implements Input {
     private final IntOpenHashSet heldKeys = new IntOpenHashSet();
     private final IntOpenHashSet clickedKeys = new IntOpenHashSet();
     private final IntOpenHashSet releasedKeys = new IntOpenHashSet();
+    private final IntOpenHashSet repeatedKeys = new IntOpenHashSet();
 
     // Mouse State
     private final IntOpenHashSet heldButtons = new IntOpenHashSet();
@@ -122,9 +123,13 @@ class Lwjgl3Input implements Input {
         if (action == GLFW.GLFW_PRESS) {
             heldKeys.add(key);
             clickedKeys.add(key);
+            repeatedKeys.add(key);
             for (int i = 0; i < listeners.size(); i++)
                 listeners.get(i).onKeyDown(key);
         }
+
+        if (action == GLFW.GLFW_REPEAT)
+            repeatedKeys.add(key);
 
         if (action == GLFW.GLFW_RELEASE) {
             heldKeys.remove(key);
@@ -146,6 +151,7 @@ class Lwjgl3Input implements Input {
         scrollY = 0;
         clickedKeys.clear();
         releasedKeys.clear();
+        repeatedKeys.clear();
         clickedButtons.clear();
         releasedButtons.clear();
     }
@@ -208,6 +214,12 @@ class Lwjgl3Input implements Input {
     @Override
     public boolean isKeyDown(int key) {
         return heldKeys.contains(key);
+    }
+
+    // Pressed this frame, or repeated by the operating system while held
+    @Override
+    public boolean isKeyRepeated(int key) {
+        return repeatedKeys.contains(key);
     }
 
     @Override

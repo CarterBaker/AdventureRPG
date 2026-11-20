@@ -40,6 +40,6 @@ public class Lwjgl3Launcher {
                 EngineSetting.SETTINGS_FILE_NAME,
                 EngineSetting.LAUNCHER_WINDOW_TITLE,
                 GameEngine::new,
-                EngineSetting.SONG_USER_DIRECTORY);
+                EngineSetting.MEDIA_USER_DIRECTORY);
     }
 }

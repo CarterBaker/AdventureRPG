@@ -90,6 +90,7 @@ class ShortcutBuilder extends BuilderPackage {
                 ArpgUtility.validateString(shortcutArpg, "method"),
                 ArpgUtility.getString(shortcutArpg, "arg", null),
                 ArpgUtility.getBoolean(shortcutArpg, "claimed", false),
+                ArpgUtility.getBoolean(shortcutArpg, "repeat", false),
                 shortcutArpg);
     }
 
@@ -107,7 +108,8 @@ class ShortcutBuilder extends BuilderPackage {
         if (key == EngineSetting.INDEX_NOT_FOUND && modifiers == ShortcutModifier.NONE)
             throwException("Shortcut '" + shortcutName + "' is held, so it needs a key or a modifier to hold.");
 
-        return createShortcut(shortcutName, contextClass, key, modifiers, null, null, null, false, shortcutArpg);
+        return createShortcut(
+                shortcutName, contextClass, key, modifiers, null, null, null, false, false, shortcutArpg);
     }
 
     private ShortcutHandle createShortcut(
@@ -119,6 +121,7 @@ class ShortcutBuilder extends BuilderPackage {
             String actionMethod,
             String actionArg,
             boolean claimed,
+            boolean repeat,
             ArpgObjectStruct shortcutArpg) {
 
         ShortcutData shortcutData = new ShortcutData(
@@ -131,6 +134,7 @@ class ShortcutBuilder extends BuilderPackage {
                 actionMethod,
                 actionArg,
                 claimed,
+                repeat,
                 parseHint(shortcutArpg),
                 parseMask(shortcutArpg, "canvases", ToolCanvas.class),
                 parseMask(shortcutArpg, "tools", EditorTool.class));

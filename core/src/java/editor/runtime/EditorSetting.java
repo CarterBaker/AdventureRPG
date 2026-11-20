@@ -41,7 +41,6 @@ public class EditorSetting {
     // Layouts
     public static final int LAYOUT_NAME_MAX_LENGTH = 32;
     public static final String LAYOUT_SESSION_NAME = "LastSession";
-    public static final String LAYOUT_DEFAULT_PATH = "layouts";
 
     // Resize
     public static final float RESIZE_EDGE_TOLERANCE = 8f;
@@ -2270,7 +2269,6 @@ public class EditorSetting {
 
     // Workspace — the folder beside the saves new work is made and kept in until it is imported, the file kind its
     // open dialog lists, and the titles that dialog takes
-    public static final String WORKSPACE_DIRECTORY = "Assets";
     public static final String[] WORKSPACE_FILE_PATTERNS = { "*.arpg" };
     public static final String WORKSPACE_FILE_DESCRIPTION = "AdventureRPG files (*.arpg)";
     public static final String[] WORKSPACE_MODEL_PATTERNS = { "*.arpg", "*.glb" };
@@ -3204,9 +3202,9 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_MESSAGE_BAKE_TOO_LARGE =
             "Too many faces to bake into the largest atlas: merge or remove some";
 
-    // Recorder — media files, video and music alike, in the game's own directory beside the player's saves; what they
-    // export goes in a folder beside them, music laid out as the project's assets are so it is dragged in as it lies
-    public static final String RECORDER_MEDIA_DIRECTORY = "Media";
+    // Recorder — media files, video and music alike, live in the player's Assets/Media folder with their songs
+    // (EngineSetting.MEDIA_USER_DIRECTORY); what they export goes in a folder beside them, music laid out as the
+    // project's assets are so it is dragged in as it lies
     public static final String RECORDER_EXPORT_DIRECTORY = "Export";
     public static final String RECORDER_EXPORT_SONG_DIRECTORY = "songs";
     public static final String RECORDER_EXPORT_SOUND_DIRECTORY = "sounds/music";
@@ -4060,11 +4058,11 @@ public class EditorSetting {
     public static final float TAB_HEADER_HOVER_ALPHA = 0.10f;
     public static final float TAB_STRIP_ACTIVE_ALPHA = 0.32f;
 
-    // Tabs — the strip: each entry its preferred width while its row has room, shrunk to no narrower than its minimum,
-    // then wrapped onto another row of the header (StripLayoutUtility); the margins are the header's and the canvas's
-    // insets within the tab's chrome
-    public static final float TAB_STRIP_ENTRY_WIDTH_PIXELS = 168f;
-    public static final float TAB_STRIP_ENTRY_MIN_WIDTH_PIXELS = 84f;
+    // Tabs — the strip: each entry its whole title's width (the label's, plus the chrome beside it, the template's
+    // label inset) while its row has room, the widest shrunk first to no narrower than their whole title at the
+    // smallest readable size, then wrapped onto another row of the header (StripLayoutUtility); the margins are the
+    // header's and the canvas's insets within the tab's chrome
+    public static final float TAB_STRIP_ENTRY_CHROME_PIXELS = 42f;
     public static final float TAB_STRIP_ROW_HEIGHT_PIXELS = 26f;
     public static final float TAB_STRIP_SPACING_PIXELS = 2f;
     public static final float TAB_STRIP_MARGIN_PIXELS = 12f;

@@ -14,7 +14,8 @@ public class ShortcutData extends DataPackage {
      * its tool reads it while a press or a drag is under way. A shortcut with
      * a hint is listed on the hint bar while its window is active, on the
      * canvases and with the tools its masks name, every one for an empty mask.
-     * A claimed shortcut runs only while its window claims its keys.
+     * A claimed shortcut runs only while its window claims its keys; a
+     * repeating one runs again at the key repeat while its key is held.
      */
 
     // Identity
@@ -33,6 +34,7 @@ public class ShortcutData extends DataPackage {
     private final String actionMethod;
     private final String actionArg;
     private final boolean claimed;
+    private final boolean repeat;
 
     // Hint
     private final String hint;
@@ -51,6 +53,7 @@ public class ShortcutData extends DataPackage {
             String actionMethod,
             String actionArg,
             boolean claimed,
+            boolean repeat,
             String hint,
             int canvasMask,
             int toolMask) {
@@ -71,6 +74,7 @@ public class ShortcutData extends DataPackage {
         this.actionMethod = actionMethod;
         this.actionArg = actionArg;
         this.claimed = claimed;
+        this.repeat = repeat;
 
         // Hint
         this.hint = hint;
@@ -114,6 +118,10 @@ public class ShortcutData extends DataPackage {
 
     public boolean isClaimed() {
         return claimed;
+    }
+
+    public boolean isRepeat() {
+        return repeat;
     }
 
     public String getHint() {

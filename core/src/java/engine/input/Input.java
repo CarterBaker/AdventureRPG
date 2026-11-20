@@ -4,7 +4,7 @@ public interface Input {
 
     /*
      * Platform input contract. Exposes click, held, and release state for both
-     * keys and mouse buttons, plus cursor position, deltas, cursor shape, and
+     * keys and mouse buttons, the operating system's repeat of a held key, plus cursor position, deltas, cursor shape, and
      * accumulated scroll delta for this frame.
      */
 
@@ -15,6 +15,8 @@ public interface Input {
     boolean isKeyClicked(int key);
 
     boolean isKeyDown(int key);
+
+    boolean isKeyRepeated(int key);
 
     boolean isKeyReleased(int key);
 

@@ -19,11 +19,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   opens with File and Edit as square icon buttons (`menus/FileIcon`, a floppy disk; `menus/EditIcon`, a pencil), a thin
   divider, then the menus. Every other menu lists a tab under the section for what it works on. The tabs whose view
   changes with the window worked in last, the ones that serve the others, all sit in the Tools menu, the first: Data
-  (Hierarchy, Properties, Layers, ARPG Viewer), Canvas (Tools, Brushes, Stamps, Maps, Color Wheel) and Media (the
+  (Hierarchy, Properties, Layers), Canvas (Tools, Brushes, Stamps, Maps, Color Wheel) and Media (the
   Recorder). A new shared tab joins the Tools menu, never another menu. The sword (`menus/Sword`,
   `EditorSetting.WINDOW_ICON`) is every editor window's OS icon, set by `EditorFrameSystem` through
   `WindowPlatform.setWindowIcon`, never drawn in the toolbar. The menus between the divider and Settings lay out as
-  every tab strip does (`StripLayoutUtility`, in `EditorToolbarSystem`): each at its preferred width while the bar has
+  equal cells (`StripLayoutUtility`'s grid helpers, in `EditorToolbarSystem`): each at its preferred width while the bar has
   room, all shrinking together as it narrows, then wrapping onto more rows, the bar growing and the dock shrinking
   beneath it. A dropdown's height is `"fit"`: `MenuBuilder` makes it the height of the rows it holds as it loads, so a
   row added or removed never leaves a dropdown clipped or padded; never count a dropdown's height by hand. The
@@ -33,7 +33,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   then Animation); the Mesh menu holds the general modelling tools any rigged model takes
   (its Mesh section: Mesh, Topology, Sculpt, Paint, UV, UV Editor; its Rigging section: Rig, Weights). A tab or tool
   shown to the owner says Entity, never Character; the code's `Character*` class names stay as they are. The Debug
-  menu's Preview opens `DevContext`, the game as it runs with the command console's systems; there is no other runtime
+  menu's Output section holds the ARPG Viewer beside the consoles. Its Preview opens `DevContext`, the game as it runs with the command console's systems; there is no other runtime
   tab. The Command Console is one window whose view follows the window worked in last
   (`CommandManager.resolveViewTarget`): the character tabs' commands while a character tab was, the game's while a Dev
   window was.
@@ -99,10 +99,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   `.claude/docs/CharacterEditorPipeline.md`, Animation). Its clip is never moved, cut or recorded into, and it saves,
   reverts and deletes as content.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
-- **Task layouts.** The editor ships Sculpt, Paint, Animate and World under `assets/layouts/`, listed in the Layouts
-  menu beside the user's own as Photoshop lists its workspaces (`LayoutManager`): saving over one writes the user's
-  copy, loaded from then on, and deleting that copy resets it to the one shipped; a shipped layout is never written or
-  deleted. A new task's layout is a new file there, written as `LayoutSaveBranch` writes one.
+- **Layouts are the user's.** Every layout lives in the user's `bin/editorLayout/` folder and is listed in the Layouts
+  menu as Photoshop lists its workspaces (`LayoutManager`); the editor ships none. Only when the owner hands over
+  layouts of their own to ship are any added to the project.
 
 ## Layers
 
@@ -151,9 +150,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   dialog's General page; past that it is cut behind an ellipsis. Docked panels never split smaller than
   `EditorSetting.DOCK_PANEL_MIN_SIZE`.
 - **Tab strips shrink, then wrap.** Every tab bar (a dock's strip, the Hierarchy's tabs) lays out through
-  `StripLayoutUtility`: each tab keeps its preferred width while its row has room, all shrink together as it narrows,
-  and once none can shrink past its minimum the strip wraps onto another row, the header growing and the content
-  shrinking beneath it. Never a fixed-width strip that hides tabs, and never a second wrapping routine.
+  `StripLayoutUtility`: each tab is as wide as its whole title (`ElementInstance.resolveTextWidth`) while its row has
+  room; as it narrows the widest shrink first, down together to one shared width (`resolveRowCap`), each no narrower
+  than its whole title at the Minimum Text Size, so every letter stays visible; and once no tab can shrink further the
+  strip wraps onto another row (`resolveRowEnd`), the header growing and the content shrinking beneath it. Never a fixed-width strip that hides
+  tabs, and never a second wrapping routine.
 
 ## Tools and brushes
 
@@ -281,7 +282,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **New work lives in the workspace**, `Documents/My Games/AdventureRPG/Assets/` beside the saves, one folder to each
   kind (`Characters` for models, `Hair` for grooms, `Items` for items, `Materials` for materials, `Images`, `Exports`
-  for exported maps and, under `Exports/Hair` and `Exports/Materials`, exported hair cards and material maps, `Stamps` for stamp pictures, `Models` for `.glb` files), resolved only through
+  for exported maps and, under `Exports/Hair` and `Exports/Materials`, exported hair cards and material maps, `Stamps` for stamp pictures, `Models` for `.glb` files, `Media` for songs and media files, video and music), resolved only through
   `WorkspaceUtility.resolveFolder`. A workspace file is not game
   content: the Hierarchy never lists it, and it reaches the game only through Import, as a painting or modelling
   tool's project file reaches an engine through its export.
