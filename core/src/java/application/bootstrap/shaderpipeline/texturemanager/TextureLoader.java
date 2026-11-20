@@ -11,7 +11,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class TextureLoader extends LoaderPackage {
 
     /*
-     * Discovers the baked texture packs under bakedtextures/tiles and loads
+     * Discovers the baked texture packs under bakedtextures/tiles (every
+     * folder holding tile definitions; a folder of folders is no pack) and loads
      * one pack per load() call: every tile definition in name order, each
      * registered with its fallback and extra maps staged into the pools,
      * then uploaded together. The texture manager requests every pack at
@@ -45,7 +46,12 @@ class TextureLoader extends LoaderPackage {
         directories.sort(null);
 
         for (int i = 0; i < directories.size(); i++) {
+
             File directory = directories.get(i);
+
+            if (FileUtility.collectFilesShallow(directory, EngineSetting.ARPG_FILE_EXTENSIONS).isEmpty())
+                continue;
+
             String arrayName = FileUtility.getPathWithFileNameWithoutExtension(root, directory);
             arrayName2File.put(arrayName, directory);
             arrayNames.add(arrayName);
