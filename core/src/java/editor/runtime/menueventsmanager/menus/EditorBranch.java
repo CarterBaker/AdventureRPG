@@ -148,6 +148,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openMaterials(window.getGLWindow());
     }
 
+    public void openMaterialViewer(WindowInstance window) {
+        tabManager.openMaterialViewer(window.getGLWindow());
+    }
+
     public void openCharacterOutliner(WindowInstance window) {
         tabManager.openCharacterOutliner(window.getGLWindow());
     }

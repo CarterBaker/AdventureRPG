@@ -36,7 +36,9 @@ class ImageExchangeBranch extends BranchPackage {
      * the tile asked for in the pack asked for, its old images there
      * replaced, bakes the tile's streamed files from them, live where the
      * tile already plays, and clears the PNGs it took from the workspace; the
-     * image's own file stays there to be worked and imported again.
+     * image's own file stays there to be worked and imported again. Any
+     * folder of exported maps imports the same way, so a material's exports
+     * go through this one path.
      */
 
     // Internal
@@ -106,8 +108,13 @@ class ImageExchangeBranch extends BranchPackage {
 
     // Whether the image has exported maps waiting to be imported
     boolean hasExports(String imageName) {
+        return hasMaps(resolveExportFolder(imageName));
+    }
 
-        collectExports(resolveExportFolder(imageName), fileScratch);
+    // Whether a folder holds exported maps waiting to be imported
+    boolean hasMaps(File folder) {
+
+        collectExports(folder, fileScratch);
         return !fileScratch.isEmpty();
     }
 
@@ -122,11 +129,10 @@ class ImageExchangeBranch extends BranchPackage {
                 && !tileName.contains(EditorSetting.IMAGE_IMPORT_ALIAS_SEPARATOR);
     }
 
-    // The image's exported maps a texture alias takes laid into the pack as the tile and baked, then cleared from the
+    // A folder's exported maps a texture alias takes laid into the pack as the tile and baked, then cleared from the
     // workspace; null when it imported, else why it could not
-    String importImage(String imageName, String packName, String tileName) {
+    String importMaps(File folder, String packName, String tileName) {
 
-        File folder = resolveExportFolder(imageName);
         File packFolder = new File(textureRoot, packName);
         AliasLibraryStruct library = textureManager.getAliasLibrary();
 

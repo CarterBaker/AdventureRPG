@@ -246,6 +246,15 @@ public class EditorSetting {
             .with(FileMenuAction.DELETE, "deleteItem")
             .with(FileMenuAction.IMPORT, "importItem")
             .with(FileMenuAction.EXPORT, "exportItem");
+    public static final FileMenuTableStruct FILE_MENU_MATERIALS = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.MaterialsBranch")
+            .with(FileMenuAction.NEW, "newMaterial")
+            .with(FileMenuAction.OPEN, "openMaterial")
+            .with(FileMenuAction.SAVE, "saveMaterial")
+            .with(FileMenuAction.REVERT, "revertMaterial")
+            .with(FileMenuAction.DELETE, "deleteMaterial")
+            .with(FileMenuAction.IMPORT, "importMaterial")
+            .with(FileMenuAction.EXPORT, "exportMaterial");
     public static final FileMenuTableStruct FILE_MENU_INFO = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.InfoPanelBranch")
             .with(FileMenuAction.NEW, "newEntry")
@@ -304,6 +313,7 @@ public class EditorSetting {
     public static final String DIALOG_TITLE_UNIQUE_PREFIX = "Unique ";
     public static final String DIALOG_TITLE_EDIT_VALUE = "Edit Value";
     public static final String DIALOG_TITLE_NEW_IMAGE = "Name the New Image";
+    public static final String DIALOG_TITLE_NEW_MATERIAL = "Name the New Material";
     public static final String DIALOG_TITLE_NEW_CLIP = "New Clip";
     public static final String DIALOG_TITLE_NEW_TREE = "New Animation Tree";
     public static final String DIALOG_TITLE_NEW_LAYER = "New Layer";
@@ -458,6 +468,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_CHARACTER_TOPOLOGY = "Topology";
     public static final String TAB_TITLE_CHARACTER_HAIR = "Hair";
     public static final String TAB_TITLE_MATERIALS = "Materials";
+    public static final String TAB_TITLE_MATERIAL_VIEWER = "Material Viewer";
     public static final String TAB_TITLE_UV_EDITOR = "UV Editor";
     public static final String TAB_TITLE_CHARACTER_OUTLINER = "Outliner";
     public static final String TAB_TITLE_CONSOLE = "Console";
@@ -2230,6 +2241,7 @@ public class EditorSetting {
     public static final String WORKSPACE_MODEL_DESCRIPTION = "Models (*.arpg) or glTF binaries (*.glb)";
     public static final String WORKSPACE_DIALOG_OPEN_IMAGE = "Open Image";
     public static final String WORKSPACE_DIALOG_OPEN_ITEM = "Open Item";
+    public static final String WORKSPACE_DIALOG_OPEN_MATERIAL = "Open Material";
     public static final String WORKSPACE_MESSAGE_OUTSIDE = "Open takes a file from ";
 
     // Image Editor — its folder in the workspace, the keys of its files, the names of its documents in ImageManager,
@@ -2309,6 +2321,8 @@ public class EditorSetting {
     public static final String IMAGE_IMPORT_MESSAGE_NO_MAPS =
             "None of the exported maps is one the game's textures take";
     public static final String IMAGE_IMPORT_MESSAGE_IMPORTED = "Imported and baked the texture ";
+    public static final String IMAGE_IMPORT_MESSAGE_REFUSED =
+            "Import takes a pack under textures and a texture name with no underscore";
     public static final String IMAGE_FILE_KEY_WIDTH = "width";
     public static final String IMAGE_FILE_KEY_HEIGHT = "height";
     public static final String IMAGE_FILE_KEY_ACTIVE_LAYER = "active_layer";
@@ -2598,6 +2612,8 @@ public class EditorSetting {
     public static final String TOOL_LOOP_CUT = "Loop Cut";
     public static final String TOOL_DISSOLVE_LOOP = "Dissolve Loop";
     public static final String TOOL_DRAW = "Draw";
+    public static final String TOOL_MATERIAL = "Material";
+    public static final String TOOL_LIGHT = "Light";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
@@ -2612,6 +2628,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_HAIR = "Hair";
     public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
     public static final String TOOL_CANVAS_IMAGE_EDITOR = "Image Editor";
+    public static final String TOOL_CANVAS_MATERIAL_VIEWER = "Material Viewer";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";
@@ -2673,6 +2690,9 @@ public class EditorSetting {
     public static final String TOOL_OPTION_LENGTH = "Length (cm)";
     public static final String TOOL_OPTION_WIDTH = "Width (mm)";
     public static final String TOOL_OPTION_BONES = "Bones";
+    public static final String TOOL_OPTION_SHAPE = "Shape";
+    public static final String[] TOOL_SHAPE_NAMES = { "Sphere", "Cube", "Cylinder", "Plane" };
+    public static final int TOOL_SHAPE_DEFAULT = 0;
     public static final String[] TOOL_OPTION_SWITCH_NAMES = { "Off", "On" };
     public static final String[] TOOL_BONE_DISPLAY_NAMES = { "Joints", "Sticks", "Joints and Sticks", "Hidden" };
     public static final int TOOL_BONE_DISPLAY_DEFAULT = 2;
@@ -2858,6 +2878,82 @@ public class EditorSetting {
 
     // Materials — the material chosen before any is picked
     public static final String MATERIALS_DEFAULT_MATERIAL = CHARACTER_HAIR_DEFAULT_TEXTURE;
+
+    // Material Documents — the workspace folder materials are made in and the folder under Exports their maps are
+    // written to, the keys of a material's file, its parameters' labels, ranges, steps and starting values in
+    // MaterialParameter order, and a normal map's encoding about its middle
+    public static final String MATERIALS_WORKSPACE_DIRECTORY = "Materials";
+    public static final String MATERIALS_EXPORT_DIRECTORY = "Materials";
+    public static final String MATERIALS_FIELD_BASE = "base";
+    public static final String MATERIALS_FIELD_MAPS = "maps";
+    public static final String MATERIALS_FIELD_PARAMETERS = "parameters";
+    public static final String[] MATERIALS_PARAMETER_KEYS = {
+            "red", "green", "blue", "tiling", "normal_strength", "roughness", "metallic" };
+    public static final String[] MATERIALS_PARAMETER_LABELS = {
+            "Base Color Red", "Base Color Green", "Base Color Blue", "Tiling", "Normal Strength", "Roughness Offset",
+            "Metallic Offset" };
+    public static final float[] MATERIALS_PARAMETER_MIN = { 0f, 0f, 0f, 0.25f, 0f, -1f, -1f };
+    public static final float[] MATERIALS_PARAMETER_MAX = { 1f, 1f, 1f, 8f, 2f, 1f, 1f };
+    public static final float[] MATERIALS_PARAMETER_STEP = { 0.01f, 0.01f, 0.01f, 0.25f, 0.05f, 0.05f, 0.05f };
+    public static final float[] MATERIALS_PARAMETER_DEFAULT = { 1f, 1f, 1f, 1f, 1f, 0f, 0f };
+    public static final int MATERIALS_PARAMETER_RED = 0;
+    public static final int MATERIALS_PARAMETER_GREEN = 1;
+    public static final int MATERIALS_PARAMETER_BLUE = 2;
+    public static final int MATERIALS_PARAMETER_TILING = 3;
+    public static final int MATERIALS_PARAMETER_NORMAL_STRENGTH = 4;
+    public static final int MATERIALS_PARAMETER_ROUGHNESS = 5;
+    public static final int MATERIALS_PARAMETER_METALLIC = 6;
+    public static final int MATERIALS_MAP_ALBEDO = 0;
+    public static final int MATERIALS_MAP_NORMAL = 1;
+    public static final int MATERIALS_MAP_AMBIENT_OCCLUSION = 3;
+    public static final int MATERIALS_MAP_METALLIC = 4;
+    public static final int MATERIALS_MAP_ROUGHNESS = 5;
+    public static final int MATERIALS_MAP_TINT = 6;
+    public static final float MATERIALS_NORMAL_MIDDLE = 0.5f;
+
+    // Material Rows — the Outliner's keys, headers and words for the material chosen
+    public static final String MATERIALS_OUTLINER_TITLE = "Material";
+    public static final String MATERIALS_KEY_MATERIAL = "material_chosen";
+    public static final String MATERIALS_KEY_BASE = "material_base";
+    public static final String MATERIALS_KEY_MAP = "material_map";
+    public static final String MATERIALS_KEY_PARAMETER = "material_parameter";
+    public static final String MATERIALS_LABEL_MATERIAL = "Material";
+    public static final String MATERIALS_LABEL_BASE = "Base";
+    public static final String MATERIALS_HEADER_MAPS = "Maps";
+    public static final String MATERIALS_HEADER_PARAMETERS = "Settings";
+    public static final String MATERIALS_TEXT_FROM_BASE = "From Base";
+    public static final String MATERIALS_TEXT_NEW_HINT = "File, New makes a material from this one";
+    public static final CharacterViewTemplateStruct MATERIALS_ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            "editor/Materials/material_header_row",
+            "editor/Materials/material_text_row",
+            "editor/Materials/material_text_row",
+            "editor/Materials/material_number_row",
+            "editor/Materials/material_text_row",
+            "editor/Materials/material_choice_row",
+            "editor/Materials/material_text_row",
+            null,
+            "material_row_label",
+            "material_row_value",
+            "material_row_value_button",
+            "material_row_decrease",
+            "material_row_increase",
+            "material_row_track",
+            "material_row_knob",
+            null,
+            null,
+            null);
+
+    // Material Files — what New, Open, Save, Revert, Delete, Export and Import report
+    public static final String MATERIALS_MESSAGE_CREATED = "Material made: ";
+    public static final String MATERIALS_MESSAGE_NOT_READ = "The material could not be read: ";
+    public static final String MATERIALS_MESSAGE_SAVED = "Material saved: ";
+    public static final String MATERIALS_MESSAGE_NOT_WRITTEN = "The material could not be written: ";
+    public static final String MATERIALS_MESSAGE_REVERTED = "Material reverted: ";
+    public static final String MATERIALS_MESSAGE_DELETED = "Material deleted: ";
+    public static final String MATERIALS_MESSAGE_NOT_DELETED = "The material could not be deleted: ";
+    public static final String MATERIALS_MESSAGE_NONE_OPEN = "No material is open: File, New or Open makes one";
+    public static final String MATERIALS_MESSAGE_EXPORT_FIRST =
+            "Export the material first; Import takes its exported maps";
 
     // Info Schemas
     public static final String INFO_SCHEMA_PATH = "schemas";

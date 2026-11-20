@@ -43,7 +43,10 @@ public enum ToolCanvas {
      * grows, combs, smooths, lengthens, shortens and cuts strands of hair
      * and paints them with the material chosen. A character's Stamp tab joins
      * body parts to it, each scaled and twisted, and lays fur combed one way
-     * or the other, with their twins across the body while mirroring. The recorder's Timeline selects and cuts
+     * or the other, with their twins across the body while mirroring. A
+     * character's Paint tab also lays the material chosen, every map at once.
+     * The Material Viewer turns its light and shows the material on the
+     * shape chosen. The recorder's Timeline selects and cuts
      * clips, nests the selection or opens a nested clip, and exports the
      * media file, as a video or as music, or as MIDI.
      */
@@ -138,7 +141,8 @@ public enum ToolCanvas {
     CHARACTER_PAINT(
             EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL, EditorTool.PICK },
+                    EditorTool.BRUSH, EditorTool.MATERIAL, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL,
+                    EditorTool.PICK },
             new ToolActionGroupStruct[] { paintLayers() },
             true,
             screenSize(),
@@ -180,6 +184,11 @@ public enum ToolCanvas {
             twist(),
             stampScale(),
             stampTurn()),
+    MATERIAL_VIEWER(
+            EditorSetting.TOOL_CANVAS_MATERIAL_VIEWER,
+            new EditorTool[] { EditorTool.LIGHT },
+            false,
+            shape()),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
             new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK },
@@ -646,6 +655,10 @@ public enum ToolCanvas {
 
     private static ToolOptionStruct bones() {
         return choice(ToolOption.BONES, EditorSetting.TOOL_BONE_DISPLAY_NAMES, EditorSetting.TOOL_BONE_DISPLAY_DEFAULT);
+    }
+
+    private static ToolOptionStruct shape() {
+        return choice(ToolOption.SHAPE, EditorSetting.TOOL_SHAPE_NAMES, EditorSetting.TOOL_SHAPE_DEFAULT);
     }
 
     private static ToolOptionStruct comb() {

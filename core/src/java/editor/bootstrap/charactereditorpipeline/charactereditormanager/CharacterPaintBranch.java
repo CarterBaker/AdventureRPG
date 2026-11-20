@@ -22,6 +22,7 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStam
 import editor.bootstrap.imagepipeline.imagedocument.ImageDocumentInstance;
 import editor.bootstrap.imagepipeline.imagemanager.ImageManager;
 import editor.bootstrap.imagepipeline.util.ImageColorUtility;
+import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.EditorSetting;
 import engine.assets.image.Pixmap;
@@ -48,10 +49,14 @@ class CharacterPaintBranch extends BranchPackage {
      * there — layered in image documents, so every stroke, fill and erase
      * is one undo step of the layer it touched, and each change is laid
      * flat and the texture baked again from its images and canvases into
-     * the tile pools, as often as a stroke allows and whenever one ends. Brush paints the colour, Erase wears the base
+     * the tile pools, as often as a stroke allows and whenever one ends. Brush paints the colour, Material lays
+     * every map of the material chosen in the Materials tab at once, each
+     * texel taking the material's own at its UV, as a texturing tool paints
+     * a material's channels, Erase wears the base
      * back to the map's default and a layer back to nothing, Smooth blurs,
      * Fill covers the island of faces clicked and Pick takes the colour
-     * under the pointer. Saving writes each changed map flat into its image
+     * under the pointer. A stroke is one undo step however many maps and
+     * textures it reached. Saving writes each changed map flat into its image
      * and bakes its texture's streamed files again; reverting puts the tile
      * back as its images hold it. Layers above the
      * base last the session and are laid into the image when it is saved.
@@ -62,6 +67,7 @@ class CharacterPaintBranch extends BranchPackage {
     private TextureManager textureManager;
     private ImageManager imageManager;
     private BrushManager brushManager;
+    private MaterialsManager materialsManager;
 
     // Paint — the map painted, by its place in CHARACTER_PAINT_MAP_LABELS, the colour, 0 to 1 per channel, and the
     // hue last chosen, which a grey keeps
@@ -74,9 +80,9 @@ class CharacterPaintBranch extends BranchPackage {
     private ObjectArrayList<CharacterPaintCanvasStruct> strokeCanvases;
     private boolean stroking;
 
-    // History — the layer each step painted, oldest first, across every canvas
-    private ObjectArrayList<ImageDocumentInstance> undoLayers;
-    private ObjectArrayList<ImageDocumentInstance> redoLayers;
+    // History — the layers each step painted, oldest step first, across every canvas
+    private ObjectArrayList<ObjectArrayList<ImageDocumentInstance>> undoSteps;
+    private ObjectArrayList<ObjectArrayList<ImageDocumentInstance>> redoSteps;
 
     // Scratch
     private IntArrayList textureScratch;
@@ -107,8 +113,8 @@ class CharacterPaintBranch extends BranchPackage {
         this.strokeCanvases = new ObjectArrayList<>();
 
         // History
-        this.undoLayers = new ObjectArrayList<>();
-        this.redoLayers = new ObjectArrayList<>();
+        this.undoSteps = new ObjectArrayList<>();
+        this.redoSteps = new ObjectArrayList<>();
 
         // Scratch
         this.textureScratch = new IntArrayList();
@@ -132,6 +138,7 @@ class CharacterPaintBranch extends BranchPackage {
         this.textureManager = get(TextureManager.class);
         this.imageManager = get(ImageManager.class);
         this.brushManager = get(BrushManager.class);
+        this.materialsManager = get(MaterialsManager.class);
     }
 
     // Update \\
@@ -328,7 +335,8 @@ class CharacterPaintBranch extends BranchPackage {
         strokeCanvases.clear();
     }
 
-    // One stamp: every texel of the faces under the brush painted by how much of the tip covers it on the window
+    // One stamp: every texel of the faces under the brush painted by how much of the tip covers it on the window,
+    // on the map painted, or on every map while the Material tool lays a material
     void stamp(
             CharacterMeshDocumentInstance document,
             CharacterPaintStampStruct stamp,
@@ -340,21 +348,40 @@ class CharacterPaintBranch extends BranchPackage {
 
         RiggedMeshStruct mesh = document.getMesh();
         BrushHandle brush = brushManager.getActiveBrush();
+        int firstMap = tool == EditorTool.MATERIAL ? 0 : mapIndex;
+        int lastMap = tool == EditorTool.MATERIAL ? EditorSetting.CHARACTER_PAINT_MAP_LABELS.length - 1 : mapIndex;
 
         collectTextures(mesh, stamp);
 
-        for (int t = 0; t < textureScratch.size(); t++) {
+        for (int t = 0; t < textureScratch.size(); t++)
+            for (int map = firstMap; map <= lastMap; map++)
+                stampCanvas(
+                        resolveCanvas(mesh.getTextureName(textureScratch.getInt(t)), map),
+                        mesh,
+                        textureScratch.getInt(t),
+                        stamp,
+                        brush,
+                        tool,
+                        strength);
+    }
 
-            int texture = textureScratch.getInt(t);
-            CharacterPaintCanvasStruct canvas = resolveCanvas(mesh.getTextureName(texture));
-            ImageDocumentInstance layer = beginCanvas(canvas);
+    // The stamp laid on one canvas: every face under it that wears the canvas's texture
+    private void stampCanvas(
+            CharacterPaintCanvasStruct canvas,
+            RiggedMeshStruct mesh,
+            int texture,
+            CharacterPaintStampStruct stamp,
+            BrushHandle brush,
+            EditorTool tool,
+            float strength) {
 
-            for (int i = 0; i < stamp.getFaceCount(); i++)
-                if (mesh.getFaceTexture(stamp.getFace(i)) == texture)
-                    paintFace(canvas, layer, mesh, stamp.getFace(i), stamp, i, brush, tool, strength);
+        ImageDocumentInstance layer = beginCanvas(canvas);
 
-            imageManager.flushPaint(layer);
-        }
+        for (int i = 0; i < stamp.getFaceCount(); i++)
+            if (mesh.getFaceTexture(stamp.getFace(i)) == texture)
+                paintFace(canvas, layer, mesh, stamp.getFace(i), stamp, i, brush, tool, strength);
+
+        imageManager.flushPaint(layer);
     }
 
     private void collectTextures(RiggedMeshStruct mesh, CharacterPaintStampStruct stamp) {
@@ -383,8 +410,10 @@ class CharacterPaintBranch extends BranchPackage {
         return layer;
     }
 
-    // Every canvas the stroke reached closed as one undo step of the layer it painted
+    // Every canvas the stroke reached closed, the layers it painted one undo step together
     void endStroke() {
+
+        ObjectArrayList<ImageDocumentInstance> step = new ObjectArrayList<>(strokeCanvases.size());
 
         for (int i = 0; i < strokeCanvases.size(); i++) {
 
@@ -394,14 +423,17 @@ class CharacterPaintBranch extends BranchPackage {
 
             imageManager.endStroke(layer);
 
-            if (painted) {
-                undoLayers.add(layer);
-                redoLayers.clear();
-            }
+            if (painted)
+                step.add(layer);
         }
 
-        while (undoLayers.size() > EditorSetting.IMAGE_HISTORY_MAX_STEPS)
-            undoLayers.remove(0);
+        if (!step.isEmpty()) {
+            undoSteps.add(step);
+            redoSteps.clear();
+        }
+
+        while (undoSteps.size() > EditorSetting.IMAGE_HISTORY_MAX_STEPS)
+            undoSteps.remove(0);
 
         strokeCanvases.clear();
         this.stroking = false;
@@ -613,8 +645,8 @@ class CharacterPaintBranch extends BranchPackage {
             }
     }
 
-    // One texel by the tool: Brush toward the colour, Erase back to the default or to nothing, Smooth toward its
-    // neighbours; the base keeps its own alpha, which only its image sets
+    // One texel by the tool: Brush toward the colour, Material toward the material's own texel there, Erase back to
+    // the default or to nothing, Smooth toward its neighbours; the base keeps its own alpha, which only its image sets
     private void paintTexel(
             CharacterPaintCanvasStruct canvas,
             ImageDocumentInstance layer,
@@ -630,6 +662,10 @@ class CharacterPaintBranch extends BranchPackage {
                     ? ImageColorUtility.mix(before, canvas.getDefaultColor(), amount, false)
                     : ImageColorUtility.mix(before, before & ~EngineSetting.PACKED_COLOR_CHANNEL_MASK, amount, true);
             case SMOOTH -> ImageColorUtility.mix(before, averageTexel(layer, x, y), amount, !base);
+            case MATERIAL -> ImageColorUtility.mix(before, materialsManager.sampleMap(
+                    canvas.getMapIndex(),
+                    (x + 0.5f) / canvas.getWidth(),
+                    1f - (y + 0.5f) / canvas.getHeight()), amount, !base);
             default -> ImageColorUtility.mix(before, toRGBA(), amount, !base);
         };
 
@@ -755,33 +791,54 @@ class CharacterPaintBranch extends BranchPackage {
 
     private void closeLayer(ImageDocumentInstance layer) {
 
-        undoLayers.removeIf(step -> step == layer);
-        redoLayers.removeIf(step -> step == layer);
+        forgetLayer(undoSteps, layer);
+        forgetLayer(redoSteps, layer);
 
         imageManager.closeImage(layer.getImageName());
+    }
+
+    // A layer closed taken out of every step, a step left with no layer dropped
+    private void forgetLayer(
+            ObjectArrayList<ObjectArrayList<ImageDocumentInstance>> steps,
+            ImageDocumentInstance layer) {
+
+        for (int i = steps.size() - 1; i >= 0; i--) {
+
+            ObjectArrayList<ImageDocumentInstance> step = steps.get(i);
+
+            step.remove(layer);
+
+            if (step.isEmpty())
+                steps.remove(i);
+        }
     }
 
     // History \\
 
     boolean undo() {
-        return stepHistory(undoLayers, redoLayers, true);
+        return stepHistory(undoSteps, redoSteps, true);
     }
 
     boolean redo() {
-        return stepHistory(redoLayers, undoLayers, false);
+        return stepHistory(redoSteps, undoSteps, false);
     }
 
+    // The latest step taken back or done again, every layer it painted together
     private boolean stepHistory(
-            ObjectArrayList<ImageDocumentInstance> from,
-            ObjectArrayList<ImageDocumentInstance> to,
+            ObjectArrayList<ObjectArrayList<ImageDocumentInstance>> from,
+            ObjectArrayList<ObjectArrayList<ImageDocumentInstance>> to,
             boolean back) {
 
         while (!from.isEmpty()) {
 
-            ImageDocumentInstance layer = from.pop();
+            ObjectArrayList<ImageDocumentInstance> step = from.pop();
+            boolean stepped = false;
 
-            if (back ? imageManager.undo(layer) : imageManager.redo(layer)) {
-                to.push(layer);
+            for (int i = 0; i < step.size(); i++)
+                stepped |= back ? imageManager.undo(step.get(i)) : imageManager.redo(step.get(i));
+
+            if (stepped) {
+                to.push(step);
                 return true;
             }
         }

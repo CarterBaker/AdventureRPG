@@ -495,6 +495,13 @@ One line per session that changed this file: the date, what was added or removed
   `thigh_l`, `thigh_r`, `shin_l` and `shin_r`), `items/armor/Armor.arpg` and `items/clothing/Clothing.arpg` (their
   `worn` lists), `schemas/Items.arpg` (`side`, `hides_features`), and `CharacterAppearance.glsl`,
   `CharacterSurface.glsl`, `CharacterZone.glsl` and `StandardcharacterShader.vsh` (the gear zone and cloth flutter).
+- 2026-11-20: Material painting and the Material Viewer. Added the shader `editor/materialviewer/MaterialViewerShader`
+  (`.arpg`, `.vsh`, `.fsh`), `materials/editor/MaterialViewerMaterial.arpg` and `menus/editor/MaterialViewer.arpg`;
+  regenerated `menus/editor/EditorWindow.arpg` (the Outliner under Content's Tools, the Material Viewer under
+  Materials), `menus/editor/Materials.arpg` (the workspace material's rows and the Outliner's material rows),
+  `shortcuts/Tools.arpg` (`M` Material, `G` Light) and `shaders/editor/treeviewer/TreeViewerLight.glsl` (the light's
+  view direction shared). Materials made, exported and imported in the workspace are the owner's and are not
+  catalogued.
 
 ## Textures and Sprites (2429 files)
 
@@ -1586,7 +1593,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (191 files)
+## Shaders (193 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1623,6 +1630,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/editor/recorder/`
 
 `TransitionShader.fsh`
+
+### `assets/shaders/editor/materialviewer/`
+
+`MaterialViewerShader.fsh`, `MaterialViewerShader.vsh`
 
 ### `assets/shaders/editor/shipviewer/`
 
@@ -1916,7 +1927,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3850 files)
+## Data Files (3853 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2699,8 +2710,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `CharacterViewMarkerMaterial.arpg`, `CharacterViewMarkerSelectedMaterial.arpg`, `ItemEditorCursorEraseMaterial.arpg`,
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
 `ItemEditorModelMaterial.arpg`, `ItemEditorStampBuildMaterial.arpg`, `ItemEditorStampDigMaterial.arpg`,
-`ImageEditorMaterial.arpg`, `PlacementIconMaterial.arpg`, `RecorderTransitionMaterial.arpg`,
-`ShipViewerMaterial.arpg`, `ShipViewerPaintedMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
+`ImageEditorMaterial.arpg`, `MaterialViewerMaterial.arpg`, `PlacementIconMaterial.arpg`,
+`RecorderTransitionMaterial.arpg`, `ShipViewerMaterial.arpg`, `ShipViewerPaintedMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
 `TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`, `UVEditorOverlayMaterial.arpg`,
 `WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
 `WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
@@ -2766,7 +2777,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
-`ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `Materials.arpg`,
+`ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`,
 `NewImageDialog.arpg`, `NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
 `TabFrame.arpg`,
@@ -2997,6 +3008,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/shaders/editor/recorder/`
 
 `TransitionShader.arpg`
+
+### `assets/shaders/editor/materialviewer/`
+
+`MaterialViewerShader.arpg`
 
 ### `assets/shaders/editor/shipviewer/`
 

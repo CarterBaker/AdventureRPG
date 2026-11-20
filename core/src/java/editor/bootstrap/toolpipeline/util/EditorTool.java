@@ -33,7 +33,10 @@ public enum EditorTool {
      * joint so what it carries follows, a pose held only to work in. While a
      * body part is chosen in the Stamps tab, the Brush joins it where it
      * clicks, at its Scale and Turn, or lays fur combed the way it is set,
-     * on the canvases that declare those options. The
+     * on the canvases that declare those options. Material strokes the
+     * brush laying every map of the material chosen in the Materials tab at
+     * once, as a texturing tool paints a material, and Light turns the light
+     * a viewer shows its subject by, dragged from the subject. The
      * stroking tools work along a drag with a brush and carry the options
      * that shape their strokes; the rest act once per press.
      */
@@ -73,7 +76,9 @@ public enum EditorTool {
     SCALE(EditorSetting.TOOL_SCALE, false),
     CUT(EditorSetting.TOOL_CUT, false),
     IK(EditorSetting.TOOL_IK, false),
-    POSE(EditorSetting.TOOL_POSE, false);
+    POSE(EditorSetting.TOOL_POSE, false),
+    MATERIAL(EditorSetting.TOOL_MATERIAL, true, ToolOption.SIZE, ToolOption.STRENGTH),
+    LIGHT(EditorSetting.TOOL_LIGHT, false);
 
     // Values
     public static final EditorTool[] VALUES = values();

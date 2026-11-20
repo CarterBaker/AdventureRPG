@@ -72,7 +72,9 @@ The workspace-to-game flow a texturing tool and an engine share (`ImageExchangeB
   alias takes as `<Tile>_<suffix>.png`, bakes the tile's streamed files (`TextureBakeUtility`, as the Paint tab does),
   plays the new bake at once when the tile is already loaded (a new tile loads with the next start), and clears the
   exports from the workspace. The image's own `.arpg` stays to be worked and imported again. Imported textures are the
-  owner's work: never catalogue them.
+  owner's work: never catalogue them. Any folder of exported maps imports the same way
+  (`ImageEditorManager.importMaps`, `ImageExchangeBranch.importMaps`), which is how a workspace material's exports reach
+  the game (see `.claude/docs/Editor.md`, Materials).
 
 ## Stamps
 

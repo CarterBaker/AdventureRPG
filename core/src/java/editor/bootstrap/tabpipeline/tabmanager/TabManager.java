@@ -41,6 +41,7 @@ import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.layers.LayersContext;
 import editor.runtime.maps.MapsContext;
 import editor.runtime.materials.MaterialsContext;
+import editor.runtime.materialviewer.MaterialViewerContext;
 import editor.runtime.notelibrary.NoteLibraryContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
@@ -224,6 +225,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openMaterials(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_MATERIALS, MaterialsContext.class, osWindow);
+    }
+
+    public TabHandle openMaterialViewer(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_MATERIAL_VIEWER, MaterialViewerContext.class, osWindow);
     }
 
     public TabHandle openUVEditor(WindowInstance osWindow) {

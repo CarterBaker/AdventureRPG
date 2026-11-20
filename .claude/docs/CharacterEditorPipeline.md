@@ -14,10 +14,10 @@ own tool tab, laid out however the owner likes, each working the one character t
 `.claude/docs/Editor.md`). A viewport tab holds the status bar and the viewport; saving, reverting, copying, deleting,
 undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_MENU_CHARACTER`,
 `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
-from the editor's Entities menu (its Entity section: Appearance, Equipment and Hair; the Animation section; then its
-Tools section holding the Outliner), the Mesh menu (its Mesh section: Mesh, Topology, Sculpt, Paint,
-UV and the UV Editor; its Rigging section: Rig and Weights; its Tools section the Outliner) or the Textures menu's Tools
-section (Maps, Stamps and the Color Wheel), and restored by layouts like any other. Whatever the owner sees says
+from the editor's Entities menu (its Entity section: Appearance, Equipment and Hair; the Animation section), the Mesh
+menu (its Mesh section: Mesh, Topology, Sculpt, Paint, UV and the UV Editor; its Rigging section: Rig and Weights), the
+Content menu's Tools section (the Outliner, beside Tools and Brushes) or the Textures menu's Tools section (Maps, Stamps
+and the Color Wheel), and restored by layouts like any other. Whatever the owner sees says
 Entity, never Character (the Outliner's title, the Animation Editor's row, the command console's Entity group,
 `assets/commands/Entity.arpg`); the code keeps its `Character*` names.
 
@@ -26,10 +26,11 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
 | Character Appearance, Equipment | `CharacterAppearanceContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
 | Character Mesh, Topology, Sculpt, Weights, Rig, UV | `CharacterMeshContext`, `CharacterTopologyContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext`, `CharacterUVContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
 | Hair | `CharacterHairContext` | the whole character with the groom open drawn over it, the Hair canvas; its own File and Edit table (`FILE_MENU_HAIR`) |
-| Materials | `editor.runtime.materials.MaterialsContext` (Materials menu) | every texture of every baked pack, the one strands grow in and the Hair Brush paints chosen (`MaterialsManager`, see `.claude/docs/Editor.md`) |
+| Materials | `editor.runtime.materials.MaterialsContext` (Materials menu) | the workspace material open and every texture of every baked pack, the one strands grow in, the Hair Brush paints and the Paint tab's Material tool lays chosen (`MaterialsManager`, see `.claude/docs/Editor.md`) |
+| Material Viewer | `editor.runtime.materialviewer.MaterialViewerContext` (Materials menu) | the material chosen on the shape the Shape option names, lit by the light its Light tool turns |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
-| Outliner | `CharacterOutlinerContext` | the outliner rows of the character or animation viewport worked in last (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows` |
+| Outliner | `CharacterOutlinerContext` (Content menu) | the outliner rows of the window worked in last that lists them (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows`, and the material's maps and parameters for the Materials and Material Viewer tabs (`MaterialsManager.buildRows`) |
 | Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), then Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) |
 | Maps | `editor.runtime.maps.MapsContext` | the maps of the texture painted while a character tab or the UV Editor was worked in last (`MapsProvider`, `CharacterEditorManager.buildMapRows`): the one painted selected, its settings, Generate and Clear |
 | Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
@@ -376,8 +377,8 @@ Unwrap, Islands and Selection groups). Both work in the UV mode on the region pi
 
 ## Paint
 
-The Paint tab (`CharacterEditorMode.PAINT`, `ToolCanvas.CHARACTER_PAINT`: Brush, Erase, Smooth, Fill, Pick, the Brushes
-tab's brush) paints the open part's texture maps on every region. It is a mesh mode that `paintsMaps`, so the
+The Paint tab (`CharacterEditorMode.PAINT`, `ToolCanvas.CHARACTER_PAINT`: Brush, Material, Erase, Smooth, Fill, Pick, the
+Brushes tab's brush) paints the open part's texture maps on every region. It is a mesh mode that `paintsMaps`, so the
 mesh view skins the part in any pose and the sculpt system stays out of it.
 
 - **Projection painting**, as Blender and Substance paint: `CharacterEditorPaintSystem` lays a stamp every brush
@@ -386,6 +387,14 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
   paints each texel by the tip's coverage where the same barycentrics place it on the window, so strokes cross UV
   seams; texels within `CHARACTER_PAINT_BLEED_PIXELS` of an island edge are painted too. Fill covers the island of
   faces joined corner to corner around the face clicked (`pickFace`), Pick takes the flattened map's colour there.
+- **Material painting** (Substance Painter's material brush): the Material tool strokes like Brush but stamps every
+  map's canvas of each texture it reaches (`CharacterPaintBranch.stamp`, `stampCanvas`), each texel mixed by the tip's
+  coverage toward `MaterialsManager.sampleMap` at the texel's UV, the material chosen in the Materials tab read from
+  its maps' textures, repeated by its Tiling and shaped by its parameters (see `.claude/docs/Editor.md`, Materials).
+  The maps' images are read on first use and let go when the material laid changes (`MaterialSampleBranch.retain`).
+- **One undo step per stroke.** The history is a list of steps, each the layers one stroke, fill or map write painted
+  across every canvas (`undoSteps`, `redoSteps`); Undo and Redo take a whole step back, and a layer removed leaves
+  every step, an empty step dropped (`forgetLayer`).
 - **Symmetry painting** (Substance Painter's and Blender's object-space symmetry): with the paint canvas's Mirror on,
   `CharacterEditorPaintSystem.resolveFaceMirrors` finds each face's twin once a stroke (the face whose corners are its
   corners' twins, `CharacterEditorManager.getMirrorVertices`, keyed by the sorted corners), and every stamp lays each

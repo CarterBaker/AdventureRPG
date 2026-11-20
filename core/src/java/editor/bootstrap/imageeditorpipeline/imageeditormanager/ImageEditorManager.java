@@ -217,14 +217,32 @@ public class ImageEditorManager extends ManagerPackage {
         if (activeProject == null || !isImportPack(packName) || !isImportTileName(tileName))
             return;
 
+        setStatusMessage(importMaps(
+                imageExchangeBranch.getExportFolder(activeProject.getImageName()),
+                packName,
+                tileName));
+    }
+
+    // Whether a folder of the workspace holds exported maps to import
+    public boolean hasMaps(File folder) {
+        return imageExchangeBranch.hasMaps(folder);
+    }
+
+    // A folder's exported maps imported into the game as a tile of the pack, baked, and cleared from the workspace,
+    // the pack kept as the one the next import is offered; what it did, or why it could not
+    public String importMaps(File folder, String packName, String tileName) {
+
+        if (!isImportPack(packName) || !isImportTileName(tileName))
+            return EditorSetting.IMAGE_IMPORT_MESSAGE_REFUSED;
+
         this.importPack = packName;
 
-        String refusal = imageExchangeBranch.importImage(activeProject.getImageName(), packName, tileName);
+        String refusal = imageExchangeBranch.importMaps(folder, packName, tileName);
 
-        setStatusMessage(refusal != null
+        return refusal != null
                 ? refusal
                 : EditorSetting.IMAGE_IMPORT_MESSAGE_IMPORTED + packName + EditorSetting.INFO_FOLDER_SEPARATOR
-                        + tileName);
+                        + tileName;
     }
 
     // The workspace folder every image is kept in, where the open dialog starts

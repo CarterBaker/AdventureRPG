@@ -17,6 +17,8 @@ public class MaterialsSetting {
     public static final String TEMPLATE_DETAIL_ROW = "editor/Materials/materials_detail_row";
     public static final String TEMPLATE_MATERIAL_ROW = "editor/Materials/materials_material_row";
     public static final String TEMPLATE_MATERIAL_ROW_SELECTED = "editor/Materials/materials_material_row_selected";
+    public static final String TEMPLATE_DOCUMENT_ROW = "editor/Materials/materials_document_row";
+    public static final String TEMPLATE_DOCUMENT_ROW_SELECTED = "editor/Materials/materials_document_row_selected";
 
     // Elements
     public static final String ELEMENT_ROW_LABEL = "materials_row_label";
@@ -32,10 +34,14 @@ public class MaterialsSetting {
     public static final String TEXT_NO_MATERIALS = "No materials yet: import a texture through the Image Editor";
     public static final String TEXT_NAME = "Name";
     public static final String TEXT_PACK = "Pack";
+    public static final String TEXT_BASE = "Base";
+    public static final String TEXT_WORKSPACE = "Workspace";
     public static final String TEXT_DRAGGING = "Let go over an Item Editor's part to colour it";
     public static final String TEXT_PICK_HINT = "Pick a material for the Hair tab's strands and Brush";
     public static final String TEXT_DRAG_HINT = "Drag a material onto an item's part in the Item Editor";
     public static final String TEXT_HAIR_HINT = "Hair cards draw as intended only with hair materials";
+    public static final String TEXT_PAINT_HINT = "The Paint tab's Material tool lays every map of the material chosen";
+    public static final String TEXT_DOCUMENT_HINT = "Hair and items take its base until it is imported";
 
     // Formats
     public static final String FORMAT_LIST_TITLE = "Materials (%d)";

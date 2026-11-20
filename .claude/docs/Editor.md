@@ -17,9 +17,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   the World Editor. Never a generic name that hides what the tab is for.
 - **Tools sit at the foot of each menu.** The editor's menus (`menus/editor/EditorWindow.arpg`) list a tab under the
   section for what it works on, and the tabs that serve the others (the Tools and Brushes tabs, the Outliner, Maps,
-  Stamps and the Color Wheel, the Recorder) under a Tools section, always the menu's last: Content's Tools holds Tools
-  and Brushes, Entities' and Mesh's the Outliner, Textures' Maps, Stamps and the Color Wheel, Media's the Recorder. The
-  Materials menu, after Textures, holds the Materials tab, the editor's one list of materials (see Materials below).
+  Stamps and the Color Wheel, the Recorder) under a Tools section, always the menu's last: Content's Tools holds Tools,
+  Brushes and the Outliner (one window serving every tab that lists outliner rows, so it sits with the other shared
+  tabs), Textures' Maps, Stamps and the Color Wheel, Media's the Recorder. The Materials menu, after Textures, holds
+  the Materials tab, the editor's one list of materials, and the Material Viewer (see Materials below).
   The Entities menu (once Characters) holds what only an entity has (its Entity section: Appearance, Equipment, Hair;
   then Animation); the Mesh menu holds the general modelling tools any rigged model takes
   (its Mesh section: Mesh, Topology, Sculpt, Paint, UV, UV Editor; its Rigging section: Rig, Weights). A tab or tool
@@ -139,13 +140,38 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 ## Materials
 
-- **One list of materials.** The Materials tab (`editor.runtime.materials`, under the Materials menu) lists every
-  texture of every baked pack, pack by pack, as Substance and Blender list a material library. `MaterialsManager`
-  (`editor.bootstrap.materialspipeline`) keeps the material chosen, which every window that lays a material reads: the
-  Hair tab's new strands and Brush lay it (hair, `characters/standard`'s strand textures, draws as intended; any other
-  is the owner's choice), and the Item Editor gives it to a new part. A row pressed is chosen and picked up; let go over
-  a window that implements `MaterialDropProvider`, the material is dropped there once (`MaterialsManager.update` sees
+- **One list of materials.** The Materials tab (`editor.runtime.materials`, under the Materials menu) lists the
+  workspace material open, then every texture of every baked pack, pack by pack, as Substance and Blender list a
+  material library. `MaterialsManager` (`editor.bootstrap.materialspipeline`) keeps the material chosen, which every
+  window that lays a material reads: the Hair tab's new strands and Brush lay it (hair, `characters/standard`'s strand
+  textures, draws as intended; any other is the owner's choice), the Item Editor gives it to a new part, the Paint
+  tab's Material tool lays it and the Material Viewer shows it. A row pressed is chosen and picked up; let go over a
+  window that implements `MaterialDropProvider`, the material is dropped there once (`MaterialsManager.update` sees
   the release), and the Item Editor colours the part under the pointer with it.
+- **A material is a texture set and its parameters**, as Substance and Unreal's material instances hold one: the
+  texture it is made from (its base), the texture any of its maps (Albedo, Normal, Height, AO, Metallic, Roughness,
+  Tint) is taken from instead, and the parameters the surface shaders take (Base Color, Tiling, Normal Strength,
+  Roughness Offset, Metallic Offset; `MATERIALS_PARAMETER_*`). The shader is the surface's own (character, item, block):
+  a painted material is drawn by whatever draws the surface it lands on, so a material names no shader of its own.
+  `MaterialSampleBranch` reads every map texel by texel the one way the Material tool and Export share; the viewer's
+  shader mirrors it on the GPU.
+- **Paint a material** as Substance Painter does: the Tools tab's Material tool (`EditorTool.MATERIAL`, key `M`) on
+  the Paint tab, the Brushes tab's brush and the Materials tab's material lay every map of the material at once, each
+  texel taking the material's own at its UV repeated by the Tiling, through the brush's coverage and Strength
+  (`CharacterPaintBranch.stamp`); a stroke is one undo step across every map and texture it reached. Characters,
+  worn clothing and baked items are all painted there.
+- **The Material Viewer** (`editor.runtime.materialviewer`, under the Materials menu) shows the material chosen on a
+  sphere, cube, cylinder or plane, the Tools tab's Shape option (`ToolCanvas.MATERIAL_VIEWER`, a canvas-wide choice),
+  lit by one light its Light tool (key `G`) turns when dragged from the shape; the camera is the shared
+  `ViewCameraSystem`. While the Materials tab or the viewer was worked in last, the Outliner holds the material's rows
+  (`MaterialRowBranch`): a game texture's name and how to make a material from it, or the workspace material's base,
+  each map's texture (From Base or any material) and every parameter as a slider.
+- **Workspace materials.** File, New names a material made from the texture chosen and writes
+  `Assets/Materials/<Name>.arpg` at once (`base`, `maps` keyed by alias, `parameters` by key); Open, Save, Revert and
+  Delete work on it; Export writes its seven maps, shaped by its parameters and once across the base's size (Tiling is
+  how it is laid, never baked), as `Exports/Materials/<Name>/<Name>_<suffix>.png`; Import takes them into a pack as a
+  tile and bakes it through the Image Editor's one import path (`ImageEditorManager.importMaps`). Hair and items take
+  only the game's textures, so while a workspace material is chosen they take its base until it is imported.
 
 ## Item Editor
 
@@ -202,9 +228,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The workspace
 
 - **New work lives in the workspace**, `Documents/My Games/AdventureRPG/Assets/` beside the saves, one folder to each
-  kind (`Characters` for models, `Hair` for grooms, `Items` for items, `Images`, `Exports` for exported maps and, under
-  `Exports/Hair`,
-  exported hair cards, `Stamps` for stamp pictures, `Models` for `.glb` files), resolved only through
+  kind (`Characters` for models, `Hair` for grooms, `Items` for items, `Materials` for materials, `Images`, `Exports`
+  for exported maps and, under `Exports/Hair` and `Exports/Materials`, exported hair cards and material maps, `Stamps` for stamp pictures, `Models` for `.glb` files), resolved only through
   `WorkspaceUtility.resolveFolder`. A workspace file is not game
   content: the Hierarchy never lists it, and it reaches the game only through Import, as a painting or modelling
   tool's project file reaches an engine through its export.

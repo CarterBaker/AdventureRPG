@@ -10,8 +10,13 @@
 uniform vec3  u_lightDirection;
 uniform float u_ambient;
 
+// The way toward the light, in view space
+vec3 resolveTreeViewerLightView() {
+    return normalize(mat3(u_view) * -u_lightDirection);
+}
+
 float resolveTreeViewerLight(vec3 viewNormal, float occlusion) {
-    vec3  lightView = normalize(mat3(u_view) * -u_lightDirection);
+    vec3  lightView = resolveTreeViewerLightView();
     float diffuse   = max(dot(normalize(viewNormal), lightView), 0.0);
 
     return (u_ambient + (1.0 - u_ambient) * diffuse) * occlusion;
