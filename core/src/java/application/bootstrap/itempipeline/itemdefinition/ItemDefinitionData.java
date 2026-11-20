@@ -238,27 +238,32 @@ public class ItemDefinitionData extends DataPackage {
         return equipmentType;
     }
 
-    // The model the item is worn as on a body of the rig and gender given: the one fitted to that gender, else the
-    // one fitted to every gender on the rig, null when it has neither and is worn as its own model on an anchor
-    public ItemWornModelStruct getWornModel(RigHandle rigHandle, short genderID) {
+    // The model the item is worn as on a body of the rig and gender given, on the side given: of those on the rig
+    // fitted to that gender or every gender and to that side or either, the one fitted most closely, a gender of its
+    // own outweighing a side of its own; null when none is, and the item is worn as its own model on an anchor
+    public ItemWornModelStruct getWornModel(RigHandle rigHandle, short genderID, EquipmentSide equipmentSide) {
 
-        ItemWornModelStruct fallback = null;
+        ItemWornModelStruct match = null;
+        int matchFit = EngineSetting.INDEX_NOT_FOUND;
 
         for (int i = 0; i < wornModels.size(); i++) {
 
             ItemWornModelStruct wornModel = wornModels.get(i);
 
-            if (!wornModel.fits(rigHandle))
+            if (!wornModel.fits(rigHandle) || !wornModel.suits(equipmentSide)
+                    || !wornModel.isFittedTo(genderID) && !wornModel.isFittedToAny())
                 continue;
 
-            if (wornModel.isFittedTo(genderID))
-                return wornModel;
+            int fit = (wornModel.isFittedTo(genderID) ? EngineSetting.ITEM_WORN_GENDER_FIT : 0)
+                    + (wornModel.isOnSide(equipmentSide) ? EngineSetting.ITEM_WORN_SIDE_FIT : 0);
 
-            if (wornModel.isFittedToAny())
-                fallback = wornModel;
+            if (fit > matchFit) {
+                match = wornModel;
+                matchFit = fit;
+            }
         }
 
-        return fallback;
+        return match;
     }
 
     public float getStat(short statID) {

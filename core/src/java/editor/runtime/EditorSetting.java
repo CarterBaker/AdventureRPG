@@ -907,6 +907,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_GIRTH = "girth";
     public static final String CHARACTER_EDITOR_KEY_BONE = "bone";
     public static final String CHARACTER_EDITOR_KEY_ANCHOR = "anchor";
+    public static final String CHARACTER_EDITOR_KEY_GEAR = "gear";
     public static final String CHARACTER_EDITOR_KEY_ANCHOR_SLOT = "anchor_slot";
     public static final String CHARACTER_EDITOR_KEY_ANCHOR_BONE = "anchor_bone";
     public static final String CHARACTER_EDITOR_KEY_ANCHOR_HOLD = "anchor_hold";
@@ -999,6 +1000,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_HEADER_BUILD_CURVE = "Build Curve";
     public static final String CHARACTER_EDITOR_HEADER_PREVIEW_BODY = "Preview Body";
     public static final String CHARACTER_EDITOR_HEADER_ANCHORS = "Anchors";
+    public static final String CHARACTER_EDITOR_HEADER_GEAR = "Gear";
     public static final String CHARACTER_EDITOR_HEADER_ANCHOR = "Anchor";
     public static final String CHARACTER_EDITOR_LABEL_POSE = "Pose";
     public static final String CHARACTER_EDITOR_LABEL_SIDE = "Side";
@@ -2269,6 +2271,8 @@ public class EditorSetting {
             "Import: the race it joins (a race on its rig, or a new name), or the item it is worn as (its full name)";
     public static final String CHARACTER_MODEL_DIALOG_WORN_GENDER =
             "Import: the gender whose body it fits (empty for every gender)";
+    public static final String CHARACTER_MODEL_DIALOG_WORN_SIDE =
+            "Import: the side it is worn on, left or right (empty for either)";
     public static final String CHARACTER_WORN_IMPORT_FOLDER = "worn/";
     public static final String CHARACTER_MODEL_MESSAGE_IMPORTED_WORN = "Imported the model as worn by the item ";
     public static final String CHARACTER_MODEL_DIALOG_GENDER = "Import: the gender it is the model of";
@@ -2886,6 +2890,8 @@ public class EditorSetting {
     public static final String INFO_ITEM_EQUIP_FIELD = "equip";
     public static final String INFO_ITEM_WORN_MESH_FIELD = "mesh";
     public static final String INFO_ITEM_WORN_GENDER_FIELD = "gender";
+    public static final String INFO_ITEM_WORN_SIDE_FIELD = "side";
+    public static final String INFO_ITEM_WORN_SIDE_NONE = "";
     public static final String INFO_FOLDER_SEPARATOR = "/";
     public static final String INFO_PATH_SEPARATOR = "|";
     public static final String[] INFO_SUMMARY_FIELDS = { "name", "block", "clip", "time" };

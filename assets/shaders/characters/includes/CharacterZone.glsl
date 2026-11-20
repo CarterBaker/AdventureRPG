@@ -11,5 +11,6 @@ const int CHARACTER_ZONE_HAIR  = 4;
 const int CHARACTER_ZONE_CLOTH = 5;
 const int CHARACTER_ZONE_MOUTH = 6;
 const int CHARACTER_ZONE_TEETH = 7;
+const int CHARACTER_ZONE_GEAR  = 8;
 
 #endif

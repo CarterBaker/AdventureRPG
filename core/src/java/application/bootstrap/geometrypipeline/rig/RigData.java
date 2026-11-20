@@ -2,6 +2,7 @@ package application.bootstrap.geometrypipeline.rig;
 
 import java.util.Arrays;
 
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.matrices.Matrix4;
@@ -15,7 +16,8 @@ public class RigData extends DataPackage {
      * parent before child so poses evaluate in one pass, with the IK handles
      * its tools pose limbs and digits through and the spring chains the
      * runtime simulates in place of any key — every bone a chain turns, and
-     * the chain each bone belongs to, found once here, and the colliders
+     * the chain each bone belongs to and a bone mask of every chain bone a
+     * skinned draw hands its shader, found once here, and the colliders
      * its bones carry for those chains to rest against. It names the parts
      * of the body its editors work on closely, any the rig chooses, each by
      * the bones it holds, and the clips its editors strike as poses.
@@ -33,10 +35,12 @@ public class RigData extends DataPackage {
     // IK
     private final RigIkChainStruct[] ikChains;
 
-    // Springs — the chains, the chain each bone belongs to, and every bone a chain's turn reaches, parents first
+    // Springs — the chains, the chain each bone belongs to, every bone a chain's turn reaches, parents first, and
+    // every chain bone as a bone mask
     private final RigSpringChainStruct[] springChains;
     private final int[] bone2SpringChain;
     private final int[] springCarriedBones;
+    private final SkinnedBoneMaskStruct springBoneMask;
 
     // Colliders — the shapes bones carry, which spring chains are kept out of
     private final RigColliderStruct[] colliders;
@@ -75,6 +79,11 @@ public class RigData extends DataPackage {
         this.springChains = springChains;
         this.bone2SpringChain = resolveSpringChains(bones.length, springChains);
         this.springCarriedBones = resolveSpringCarried(bones.length, springChains);
+        this.springBoneMask = new SkinnedBoneMaskStruct();
+
+        for (int i = 0; i < bones.length; i++)
+            if (bone2SpringChain[i] != EngineSetting.INDEX_NOT_FOUND)
+                springBoneMask.addBone(i);
 
         // Colliders
         this.colliders = colliders;
@@ -263,6 +272,10 @@ public class RigData extends DataPackage {
 
     public int[] getSpringCarriedBones() {
         return springCarriedBones;
+    }
+
+    public SkinnedBoneMaskStruct getSpringBoneMask() {
+        return springBoneMask;
     }
 
     public int getColliderCount() {

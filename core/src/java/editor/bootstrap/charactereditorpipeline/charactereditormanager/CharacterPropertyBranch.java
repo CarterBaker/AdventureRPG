@@ -13,6 +13,7 @@ import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedVariantStruct;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
@@ -504,6 +505,8 @@ class CharacterPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_FEATURE_VARIANT -> cycleFeatureVariant(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class),
                     direction);
+            case EditorSetting.CHARACTER_EDITOR_KEY_GEAR -> characterEditorManager.stepGear(
+                    ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), EquipmentSlot.class), direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_SLOT -> cycleAnchorSlot(document, direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_BONE -> cycleAnchorBone(document, direction);
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_HOLD -> toggleAnchorHold(document);
@@ -538,6 +541,8 @@ class CharacterPropertyBranch extends BranchPackage {
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), FeatureSlot.class));
             case EditorSetting.CHARACTER_EDITOR_KEY_OVERLAY_STYLE -> getOverlayStyleText(
                     document, ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), SkinnedOverlay.class));
+            case EditorSetting.CHARACTER_EDITOR_KEY_GEAR -> getGearText(
+                    ArpgUtility.toEnum(CharacterViewUtility.getKeyArgument(key), EquipmentSlot.class));
             case EditorSetting.CHARACTER_EDITOR_KEY_ANCHOR_SLOT -> anchor != null
                     ? ArpgUtility.getString(anchor, EditorSetting.CHARACTER_EDITOR_FIELD_SLOT, "")
                     : "";
@@ -549,6 +554,14 @@ class CharacterPropertyBranch extends BranchPackage {
                     : EditorSetting.CHARACTER_VIEW_NO;
             default -> "";
         };
+    }
+
+    // The item a slot's preview wears, by its display name, or none
+    private String getGearText(EquipmentSlot equipmentSlot) {
+
+        ItemDefinitionHandle item = characterEditorManager.getPreviewGear(equipmentSlot);
+
+        return item != null ? item.getDisplayName() : EditorSetting.CHARACTER_VIEW_NONE;
     }
 
     // Creator \\

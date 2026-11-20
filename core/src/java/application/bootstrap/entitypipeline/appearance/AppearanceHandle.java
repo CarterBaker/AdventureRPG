@@ -94,6 +94,7 @@ public class AppearanceHandle extends HandlePackage {
     private ItemWornModelStruct[] wornModels;
     private SkinnedBoneMaskStruct coveredBones;
     private boolean bodyCovered;
+    private boolean[] coveredFeatures;
     private int wornRevision;
     private short wornGenderID;
 
@@ -154,6 +155,7 @@ public class AppearanceHandle extends HandlePackage {
         // Worn
         this.wornModels = new ItemWornModelStruct[EquipmentSlot.VALUES.length];
         this.coveredBones = new SkinnedBoneMaskStruct();
+        this.coveredFeatures = new boolean[FeatureSlot.VALUES.length];
         this.wornRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Proportions
@@ -472,8 +474,7 @@ public class AppearanceHandle extends HandlePackage {
     // Worn \\
 
     // Takes on the gear the inventory shows, once each time it or the gender changes: each body slot's item worn as
-    // its model for this rig and gender where it has one, the bones they cover cut from the body, and the springs run
-    // again for whatever now weighs onto them
+    // its model for this rig, gender and the slot's side where it has one
     public void wear(InventoryHandle inventory) {
 
         if (inventory.getRevision() == wornRevision && genderID == wornGenderID)
@@ -481,20 +482,40 @@ public class AppearanceHandle extends HandlePackage {
 
         this.wornRevision = inventory.getRevision();
         this.wornGenderID = genderID;
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
+            wornModels[equipmentSlot.ordinal()] = !equipmentSlot.isHand() && inventory.isShown(equipmentSlot)
+                    ? inventory.getItem(equipmentSlot).getItemDefinitionHandle()
+                            .getWornModel(appearanceData.getRigHandle(), genderID, equipmentSlot.getEquipmentSide())
+                    : null;
+
+        resolveWorn();
+    }
+
+    // Wears a model in a slot outside any inventory, as an editor previews gear; null takes it off. resolveWorn()
+    // takes up every change made so
+    public void setWornModel(EquipmentSlot equipmentSlot, ItemWornModelStruct wornModel) {
+        wornModels[equipmentSlot.ordinal()] = wornModel;
+    }
+
+    // The bones and features the models worn cover, gathered once, and the springs run again for whatever now weighs
+    // onto them
+    public void resolveWorn() {
+
         this.bodyCovered = false;
         coveredBones.clear();
         coveredBones.setMode(SkinnedMaskMode.HIDE);
+        Arrays.fill(coveredFeatures, false);
 
-        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+        for (ItemWornModelStruct wornModel : wornModels) {
 
-            ItemWornModelStruct wornModel = !equipmentSlot.isHand() && inventory.isShown(equipmentSlot)
-                    ? inventory.getItem(equipmentSlot).getItemDefinitionHandle()
-                            .getWornModel(appearanceData.getRigHandle(), genderID)
-                    : null;
+            if (wornModel == null)
+                continue;
 
-            wornModels[equipmentSlot.ordinal()] = wornModel;
+            for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+                coveredFeatures[featureSlot.ordinal()] |= wornModel.coversFeature(featureSlot);
 
-            if (wornModel == null || !wornModel.covers())
+            if (!wornModel.covers())
                 continue;
 
             coveredBones.addBones(wornModel.getCoveredBones());
@@ -516,6 +537,11 @@ public class AppearanceHandle extends HandlePackage {
     // Every body bone the worn models cover, a mask that hides them
     public SkinnedBoneMaskStruct getCoveredBones() {
         return coveredBones;
+    }
+
+    // Whether a worn model leaves the feature worn in the slot off
+    public boolean isFeatureCovered(FeatureSlot featureSlot) {
+        return coveredFeatures[featureSlot.ordinal()];
     }
 
     // Springs \\
@@ -543,8 +569,9 @@ public class AppearanceHandle extends HandlePackage {
         if (getBodyMesh().weighsOnto(boneIndex))
             return true;
 
-        for (FeatureHandle feature : features)
-            if (feature != null && feature.getMeshHandle().weighsOnto(boneIndex))
+        for (FeatureSlot featureSlot : FeatureSlot.VALUES)
+            if (features[featureSlot.ordinal()] != null && !coveredFeatures[featureSlot.ordinal()]
+                    && features[featureSlot.ordinal()].getMeshHandle().weighsOnto(boneIndex))
                 return true;
 
         for (ItemWornModelStruct wornModel : wornModels)

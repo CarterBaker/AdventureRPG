@@ -126,7 +126,7 @@ public class CharacterEditorBranch extends BranchPackage {
     }
 
     // The open model brought into the game: the race it joins, the gender it is the model of, then an entity to make;
-    // or the item it is worn as, then the gender whose body it fits
+    // or the item it is worn as, then the gender whose body it fits and the side it is worn on
     public void importModel(WindowInstance window) {
 
         if (!characterEditorManager.canImportModel())
@@ -178,7 +178,12 @@ public class CharacterEditorBranch extends BranchPackage {
                 EditorSetting.CHARACTER_MODEL_DIALOG_WORN_GENDER,
                 "",
                 characterEditorManager::isImportWornGender,
-                genderName -> characterEditorManager.importWornModel(itemName, genderName));
+                genderName -> nameDialogBranch.openText(
+                        window,
+                        EditorSetting.CHARACTER_MODEL_DIALOG_WORN_SIDE,
+                        "",
+                        characterEditorManager::isImportWornSide,
+                        sideName -> characterEditorManager.importWornModel(itemName, genderName, sideName)));
     }
 
     private void continueImport(WindowInstance window) {

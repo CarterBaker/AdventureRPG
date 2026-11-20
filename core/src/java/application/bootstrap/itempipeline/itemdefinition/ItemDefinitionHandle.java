@@ -80,8 +80,8 @@ public class ItemDefinitionHandle extends HandlePackage {
         return itemDefinitionData.getEquipmentType();
     }
 
-    public ItemWornModelStruct getWornModel(RigHandle rigHandle, short genderID) {
-        return itemDefinitionData.getWornModel(rigHandle, genderID);
+    public ItemWornModelStruct getWornModel(RigHandle rigHandle, short genderID, EquipmentSide equipmentSide) {
+        return itemDefinitionData.getWornModel(rigHandle, genderID, equipmentSide);
     }
 
     public float getStat(short statID) {

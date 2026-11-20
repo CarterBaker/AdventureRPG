@@ -8,11 +8,15 @@ import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.itempipeline.itemdefinition.ItemWornModelStruct;
+import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterGroomStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
@@ -91,6 +95,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private InfoManager infoManager;
     private ToolManager toolManager;
     private MeshManager meshManager;
+    private ItemDefinitionManager itemDefinitionManager;
     private CharacterEditBranch characterEditBranch;
     private CharacterPreviewBranch characterPreviewBranch;
     private CharacterLookBranch characterLookBranch;
@@ -137,6 +142,9 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterEditorMode mode;
     private int selectedBoneIndex;
     private int selectedAnchorIndex;
+
+    // Gear — indexed by EquipmentSlot ordinal, the item every preview wears in the slot, null for none
+    private ItemDefinitionHandle[] previewGear;
 
     // Preview — the pose struck: Bind, one of the rig's own poses, or a movement played
     private CharacterEditorPose pose;
@@ -248,6 +256,9 @@ public class CharacterEditorManager extends ManagerPackage {
         this.mode = CharacterEditorMode.APPEARANCE;
         this.selectedAnchorIndex = EngineSetting.INDEX_NOT_FOUND;
 
+        // Gear
+        this.previewGear = new ItemDefinitionHandle[EquipmentSlot.VALUES.length];
+
         // Preview
         this.pose = CharacterEditorPose.REST;
         this.poseClipIndex = EngineSetting.INDEX_NOT_FOUND;
@@ -291,6 +302,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.infoManager = get(InfoManager.class);
         this.toolManager = get(ToolManager.class);
         this.meshManager = get(MeshManager.class);
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.stampManager = get(StampManager.class);
     }
 
@@ -595,16 +607,21 @@ public class CharacterEditorManager extends ManagerPackage {
         return genderName.isEmpty() || isImportGender(genderName);
     }
 
-    // The model open, saved first, brought into the game as the model the item is worn as on its rig, fitted to the
-    // gender named or every gender
-    public void importWornModel(String itemName, String genderName) {
+    // The side of the body a worn model is worn on: left, right, or none for either
+    public boolean isImportWornSide(String sideName) {
+        return sideName.isEmpty() || characterWorkspaceBranch.isImportWornSide(sideName);
+    }
 
-        if (!isImportWorn(itemName) || !isImportWornGender(genderName))
+    // The model open, saved first, brought into the game as the model the item is worn as on its rig, fitted to the
+    // gender named or every gender and to the side named or either
+    public void importWornModel(String itemName, String genderName, String sideName) {
+
+        if (!isImportWorn(itemName) || !isImportWornGender(genderName) || !isImportWornSide(sideName))
             return;
 
         saveActiveTemplate();
 
-        String refusal = characterWorkspaceBranch.importWorn(activeDocument, itemName, genderName);
+        String refusal = characterWorkspaceBranch.importWorn(activeDocument, itemName, genderName, sideName);
 
         setStatusMessage(refusal != null ? refusal : EditorSetting.CHARACTER_MODEL_MESSAGE_IMPORTED_WORN + itemName);
     }
@@ -2234,6 +2251,51 @@ public class CharacterEditorManager extends ManagerPackage {
 
         this.selectedAnchorIndex = anchorIndex;
         notifyChanged();
+    }
+
+    // Gear \\
+
+    // Steps the item a slot's preview wears through none and every item made for the slot with a model for the
+    // previewed rig, gender and side
+    void stepGear(EquipmentSlot equipmentSlot, int direction) {
+
+        RigHandle rigHandle = activeDocument != null && activeDocument.hasPreview()
+                ? activeDocument.getPreviewData().getRigHandle()
+                : null;
+
+        if (rigHandle == null)
+            return;
+
+        ObjectArrayList<ItemDefinitionHandle> items = itemDefinitionManager.getItemHandles();
+        ItemDefinitionHandle current = previewGear[equipmentSlot.ordinal()];
+        int start = current != null ? items.indexOf(current) : items.size();
+        short genderID = getPreviewGenderID();
+
+        for (int step = 1; step <= items.size(); step++) {
+
+            int index = Math.floorMod(start + step * direction, items.size() + 1);
+            ItemDefinitionHandle item = index < items.size() ? items.get(index) : null;
+
+            if (item == null || equipmentSlot.accepts(item)
+                    && item.getWornModel(rigHandle, genderID, equipmentSlot.getEquipmentSide()) != null) {
+                previewGear[equipmentSlot.ordinal()] = item;
+                notifyChanged();
+                return;
+            }
+        }
+    }
+
+    // The item a slot's preview wears, null for none
+    public ItemDefinitionHandle getPreviewGear(EquipmentSlot equipmentSlot) {
+        return previewGear[equipmentSlot.ordinal()];
+    }
+
+    // The model a preview on the rig and gender given wears in a slot for the item chosen there, null for none
+    ItemWornModelStruct resolvePreviewWornModel(EquipmentSlot equipmentSlot, RigHandle rigHandle, short genderID) {
+
+        ItemDefinitionHandle item = previewGear[equipmentSlot.ordinal()];
+
+        return item != null ? item.getWornModel(rigHandle, genderID, equipmentSlot.getEquipmentSide()) : null;
     }
 
     // Preview \\

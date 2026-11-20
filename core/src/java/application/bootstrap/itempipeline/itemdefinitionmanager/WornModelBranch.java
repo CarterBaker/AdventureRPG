@@ -1,10 +1,12 @@
 package application.bootstrap.itempipeline.itemdefinitionmanager;
 
+import application.bootstrap.entitypipeline.feature.FeatureSlot;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedMaskMode;
+import application.bootstrap.itempipeline.itemdefinition.EquipmentSide;
 import application.bootstrap.itempipeline.itemdefinition.EquipmentType;
 import application.bootstrap.itempipeline.itemdefinition.ItemWornModelStruct;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
@@ -23,11 +25,12 @@ class WornModelBranch extends BranchPackage {
      * Reads the models an item is worn as from its "worn" list, the way
      * outfit pieces are skinned to the skeleton of the body that wears them:
      * each names a rigged "mesh" skinned to a rig, the "gender" whose body it
-     * is fitted to (none for every gender on that rig), the "material" it is
-     * drawn with (the body's when it names none, else its own clone) and the
-     * body bones it "hides" beneath it. Only an item worn on the body takes
-     * worn models, and no two may fit the same rig and gender, so which one a
-     * character wears is never ambiguous.
+     * is fitted to (none for every gender on that rig), the "side" it is worn
+     * on (none for either), the "material" it is drawn with (the body's when
+     * it names none, else its own clone), the body bones it "hides" beneath
+     * it and the features it "hides_features", as a helmet hides the hair. Only an item worn on the body takes worn models, and no two
+     * may fit the same rig, gender and side, so which one a character wears
+     * is never ambiguous.
      */
 
     // Internal
@@ -69,7 +72,7 @@ class WornModelBranch extends BranchPackage {
             if (findFit(wornModels, wornModel) != null)
                 throwException("Item '" + itemName + "' names two worn models for the rig \""
                         + wornModel.getMeshHandle().getRigHandle().getRigName()
-                        + "\" and the same gender — each rig and gender is worn as one model.");
+                        + "\" and the same gender and side — each rig, gender and side is worn as one model.");
 
             wornModels.add(wornModel);
         }
@@ -93,8 +96,26 @@ class WornModelBranch extends BranchPackage {
                 meshHandle,
                 parseMaterial(wornArpg),
                 parseGender(wornArpg),
+                ArpgUtility.getEnum(wornArpg, "side", EquipmentSide.class, EquipmentSide.NONE),
                 coveredBones,
-                covers);
+                covers,
+                parseCoveredFeatures(wornArpg));
+    }
+
+    // Per feature slot, whether the model leaves the feature worn there off
+    private boolean[] parseCoveredFeatures(ArpgObjectStruct wornArpg) {
+
+        boolean[] coveredFeatures = new boolean[FeatureSlot.VALUES.length];
+
+        if (!ArpgUtility.hasArray(wornArpg, "hides_features"))
+            return coveredFeatures;
+
+        ArpgArrayStruct featuresArray = wornArpg.getAsArray("hides_features");
+
+        for (int i = 0; i < featuresArray.size(); i++)
+            coveredFeatures[ArpgUtility.toEnum(featuresArray.get(i).getAsString(), FeatureSlot.class).ordinal()] = true;
+
+        return coveredFeatures;
     }
 
     private short parseGender(ArpgObjectStruct wornArpg) {
@@ -143,14 +164,15 @@ class WornModelBranch extends BranchPackage {
 
     // Utility \\
 
-    // The model already listed that fits the same rig and gender as the one given, null for none
+    // The model already listed that fits the same rig, gender and side as the one given, null for none
     private static ItemWornModelStruct findFit(
             ObjectArrayList<ItemWornModelStruct> wornModels,
             ItemWornModelStruct wornModel) {
 
         for (int i = 0; i < wornModels.size(); i++)
             if (wornModels.get(i).fits(wornModel.getMeshHandle().getRigHandle())
-                    && wornModels.get(i).isFittedTo(wornModel.getGenderID()))
+                    && wornModels.get(i).isFittedTo(wornModel.getGenderID())
+                    && wornModels.get(i).isOnSide(wornModel.getEquipmentSide()))
                 return wornModels.get(i);
 
         return null;

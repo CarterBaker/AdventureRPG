@@ -255,6 +255,8 @@ CharacterSurface resolveCharacterSurface(
         surface.albedo = fetchCharacterColor(instance, CHARACTER_COLOR_LIPS) * CHARACTER_MOUTH_SHADE;
     } else if (zone == CHARACTER_ZONE_CLOTH) {
         surface.albedo = base * fetchCharacterColor(instance, CHARACTER_COLOR_CLOTH);
+    } else if (zone == CHARACTER_ZONE_GEAR) {
+        surface.albedo = base;
     } else {
         surface.albedo = shadeOverlays(instance, shadeSkin(instance, base, masks, surfacePosition), rawUV, viewPosition,
             frame, surface.normal);

@@ -3949,11 +3949,14 @@ public class EngineSetting {
     public static final int MAX_ITEM_STACK_SIZE = 512;
 
     // Worn Items — the field listing the models an item is worn as, the gender a model fitted to every gender names
-    // and the gender it stands for, and the material a model drawn with the body's names
+    // and the gender it stands for, the material a model drawn with the body's names, and how much a model fitted to
+    // the wearer's own gender, and to the slot's own side, counts toward being the one worn
     public static final String ITEM_WORN_FIELD = "worn";
     public static final String ITEM_WORN_GENDER_NONE = "";
     public static final short ITEM_WORN_GENDER_ANY = INDEX_NOT_FOUND;
     public static final String ITEM_WORN_MATERIAL_BODY = "";
+    public static final int ITEM_WORN_GENDER_FIT = 2;
+    public static final int ITEM_WORN_SIDE_FIT = 1;
 
     // Item Actions
     public static final String ITEM_ACTION_FIRE_NONE = "";

@@ -1,5 +1,6 @@
 package application.bootstrap.geometrypipeline.rig;
 
+import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
 import engine.root.HandlePackage;
 import engine.util.mathematics.matrices.Matrix4;
 
@@ -123,6 +124,11 @@ public class RigHandle extends HandlePackage {
 
     public int[] getSpringCarriedBones() {
         return rigData.getSpringCarriedBones();
+    }
+
+    // Every bone a spring chain simulates, as a bone mask
+    public SkinnedBoneMaskStruct getSpringBoneMask() {
+        return rigData.getSpringBoneMask();
     }
 
     public int getColliderCount() {

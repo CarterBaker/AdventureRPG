@@ -488,6 +488,13 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-20: Recorder undo. Regenerated `shortcuts/Recorder.arpg`, `shortcuts/Timeline.arpg`,
   `shortcuts/RecorderKeys.arpg` and `shortcuts/RecorderKeyGraph.arpg`: Ctrl+Z undoes, Ctrl+Y and Ctrl+Shift+Z redo, through
   the Edit menu's `undo` and `redo`.
+- 2026-11-20: Worn gear models. Added 32 worn meshes under `mesh/worn/armor/` and `mesh/worn/clothing/` (each armor
+  and clothing item fitted to the male and female bodies, paired pieces left and right; shells offset from the body
+  they fit, the cloak a sheet on the cape chains) and the include `shaders/characters/includes/CharacterCloth.glsl`;
+  regenerated `rigs/HumanoidRig.arpg` (cape chains `cape_l`, `cape_c` and `cape_r`, colliders `back`, `hips`,
+  `thigh_l`, `thigh_r`, `shin_l` and `shin_r`), `items/armor/Armor.arpg` and `items/clothing/Clothing.arpg` (their
+  `worn` lists), `schemas/Items.arpg` (`side`, `hides_features`), and `CharacterAppearance.glsl`,
+  `CharacterSurface.glsl`, `CharacterZone.glsl` and `StandardcharacterShader.vsh` (the gear zone and cloth flutter).
 
 ## Textures and Sprites (2429 files)
 
@@ -1579,12 +1586,12 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (190 files)
+## Shaders (191 files)
 
 ### `assets/shaders/characters/includes/`
 
-`CharacterAppearance.glsl`, `CharacterHair.glsl`, `CharacterHidden.glsl`, `CharacterMaterial.glsl`,
-`CharacterNormal.glsl`, `CharacterSurface.glsl`, `CharacterZone.glsl`
+`CharacterAppearance.glsl`, `CharacterCloth.glsl`, `CharacterHair.glsl`, `CharacterHidden.glsl`,
+`CharacterMaterial.glsl`, `CharacterNormal.glsl`, `CharacterSurface.glsl`, `CharacterZone.glsl`
 
 ### `assets/shaders/characters/standard/`
 
@@ -1909,7 +1916,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3818 files)
+## Data Files (3850 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2883,6 +2890,16 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `ChunkVAO.arpg`, `DockChromeVAO.arpg`, `ItemVAO.arpg`, `LabelVAO.arpg`, `MacroVAO.arpg`, `MacroWaterVAO.arpg`,
 `PaintedItemVAO.arpg`, `QuadVAO.arpg`, `SubVoxelVAO.arpg`
+
+### `assets/mesh/worn/armor/`
+
+`IronBreastplate` (`Female`, `Male`), `IronGauntlet`, `IronGreave` and `IronPauldron` (`LeftFemale`, `LeftMale`,
+`RightFemale`, `RightMale`), `IronHelm` (`Female`, `Male`), `LeatherBelt` (`Female`, `Male`), `LeatherBoot` and
+`LeatherBracer` (`LeftFemale`, `LeftMale`, `RightFemale`, `RightMale`), all `.arpg`
+
+### `assets/mesh/worn/clothing/`
+
+`CrimsonCloak`, `LinenPants` and `LinenShirt` (`Female`, `Male`), all `.arpg`
 
 ### `assets/moods/`
 

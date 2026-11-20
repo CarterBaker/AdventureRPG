@@ -13,6 +13,7 @@ layout(location = 8) in mat4 a_instanceModel;
 #include "includes/CameraData.glsl"
 #include "characters/includes/CharacterAppearance.glsl"
 #include "characters/includes/CharacterHair.glsl"
+#include "characters/includes/CharacterCloth.glsl"
 
 uniform sampler2D u_morphTargets;
 uniform int u_morphBase;
@@ -77,6 +78,18 @@ float resolveMaskWeight() {
     return weight;
 }
 
+// How much of this vertex the bones its rig's spring chains simulate carry
+float resolveSpringWeight() {
+    float weight = 0.0;
+
+    if (isSpringBone(gl_InstanceID, int(a_boneIndices.x + 0.5))) weight += a_boneWeights.x;
+    if (isSpringBone(gl_InstanceID, int(a_boneIndices.y + 0.5))) weight += a_boneWeights.y;
+    if (isSpringBone(gl_InstanceID, int(a_boneIndices.z + 0.5))) weight += a_boneWeights.z;
+    if (isSpringBone(gl_InstanceID, int(a_boneIndices.w + 0.5))) weight += a_boneWeights.w;
+
+    return weight;
+}
+
 void main() {
     mat4 skin =
     a_boneWeights.x * fetchBoneMatrix(int(a_boneIndices.x)) +
@@ -89,6 +102,7 @@ void main() {
     int  zone            = int(a_detail.x + 0.5);
 
     worldPosition.xyz += resolveHairSway(zone, a_uv.y, morphedPosition);
+    worldPosition.xyz += resolveClothFlutter(zone, resolveSpringWeight(), morphedPosition);
 
     v_uv              = a_uv;
     v_viewPosition    = (u_view * worldPosition).xyz;

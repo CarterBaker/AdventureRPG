@@ -2,6 +2,7 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
@@ -18,8 +19,9 @@ class CharacterLookBranch extends BranchPackage {
      * here, so all show one face. A neutral look holds every slider at
      * nothing and the eyes open, as the mesh is authored; a still face never
      * blinks on its own. The sliders are staged and taken up in the one
-     * proportions pass the build sets off, and the spring chains run as the
-     * meshes worn now weigh onto them.
+     * proportions pass the build sets off, the gear chosen for each slot is
+     * worn as its model for the rig and gender, and the spring chains run as
+     * the meshes worn now weigh onto them.
      */
 
     // Internal
@@ -60,7 +62,12 @@ class CharacterLookBranch extends BranchPackage {
         appearance.setBlink(neutral ? 0f : blink);
         appearance.setWeightRatio(characterEditorManager.getWeightRatio());
         appearance.setHeadProportion(headProportion.x, headProportion.y, headProportion.z);
-        appearance.resolveSprings();
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES)
+            appearance.setWornModel(equipmentSlot, characterEditorManager.resolvePreviewWornModel(
+                    equipmentSlot, appearanceData.getRigHandle(), genderID));
+
+        appearance.resolveWorn();
     }
 
     // The tone worn, or the default color while none is or the palette has not caught up with the edit

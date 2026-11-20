@@ -9,6 +9,7 @@ import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
+import application.bootstrap.itempipeline.itemdefinition.EquipmentSide;
 import application.bootstrap.itempipeline.itemdefinition.EquipmentType;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
@@ -49,8 +50,8 @@ class CharacterWorkspaceBranch extends BranchPackage {
      * the race made when one is named, or, named an item worn on the body,
      * worn as that item on the model's rig: its mesh written among the
      * game's worn meshes and listed in the item's worn models for the gender
-     * named or every gender, in place of any it held for the same rig and
-     * gender. The model's file stays in the workspace to be worked and
+     * named or every gender and the side named or either, in place of any it
+     * held for the same rig, gender and side. The model's file stays in the workspace to be worked and
      * imported again.
      */
 
@@ -593,10 +594,20 @@ class CharacterWorkspaceBranch extends BranchPackage {
                 .isWornOnBody();
     }
 
+    // Whether a side names one of the body's sides, left or right
+    boolean isImportWornSide(String sideName) {
+
+        for (EquipmentSide equipmentSide : EquipmentSide.VALUES)
+            if (equipmentSide != EquipmentSide.NONE && ArpgUtility.toEnumName(equipmentSide).equals(sideName))
+                return true;
+
+        return false;
+    }
+
     // The saved model brought into the game as the model the item is worn as on the model's rig: written among the
-    // game's worn meshes and listed in the item's worn models for the gender named, empty for every gender; null when
-    // it was, else why not
-    String importWorn(CharacterDocumentInstance document, String itemName, String genderName) {
+    // game's worn meshes and listed in the item's worn models for the gender named, empty for every gender, and the
+    // side named, empty for either; null when it was, else why not
+    String importWorn(CharacterDocumentInstance document, String itemName, String genderName, String sideName) {
 
         InfoEntryStruct item = findItem(itemName);
         String meshName = EditorSetting.CHARACTER_WORN_IMPORT_FOLDER + FileUtility.getFileName(document.getModelName());
@@ -614,15 +625,21 @@ class CharacterWorkspaceBranch extends BranchPackage {
                 EditorSetting.INFO_SCHEMA_ITEMS,
                 item.getDefinitionName(),
                 item.getEntryName(),
-                itemArpg -> wearModel(itemArpg, meshName, genderName, document.getRigHandle().getRigName()));
+                itemArpg -> wearModel(itemArpg, meshName, genderName, sideName, document.getRigHandle().getRigName()));
 
         return infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, item.getDefinitionName())
                 ? null
                 : infoManager.getRefusal();
     }
 
-    // Lists the mesh among the item's worn models for the gender, dropping the one it held for the same rig and gender
-    private void wearModel(ArpgObjectStruct itemArpg, String meshName, String genderName, String rigName) {
+    // Lists the mesh among the item's worn models for the gender and side, dropping the one it held for the same rig,
+    // gender and side
+    private void wearModel(
+            ArpgObjectStruct itemArpg,
+            String meshName,
+            String genderName,
+            String sideName,
+            String rigName) {
 
         ArpgArrayStruct worn = ArpgUtility.hasArray(itemArpg, EngineSetting.ITEM_WORN_FIELD)
                 ? itemArpg.getAsArray(EngineSetting.ITEM_WORN_FIELD)
@@ -634,6 +651,8 @@ class CharacterWorkspaceBranch extends BranchPackage {
 
             if (genderName.equals(ArpgUtility.getString(
                     wornArpg, EditorSetting.INFO_ITEM_WORN_GENDER_FIELD, EngineSetting.ITEM_WORN_GENDER_NONE))
+                    && sideName.equals(ArpgUtility.getString(
+                            wornArpg, EditorSetting.INFO_ITEM_WORN_SIDE_FIELD, EditorSetting.INFO_ITEM_WORN_SIDE_NONE))
                     && isOnRig(ArpgUtility.getString(wornArpg, EditorSetting.INFO_ITEM_WORN_MESH_FIELD, ""),
                             meshName, rigName))
                 worn.remove(i);
@@ -644,6 +663,9 @@ class CharacterWorkspaceBranch extends BranchPackage {
 
         if (!genderName.isEmpty())
             wornArpg.addProperty(EditorSetting.INFO_ITEM_WORN_GENDER_FIELD, genderName);
+
+        if (!sideName.isEmpty())
+            wornArpg.addProperty(EditorSetting.INFO_ITEM_WORN_SIDE_FIELD, sideName);
 
         worn.add(wornArpg);
         itemArpg.add(EngineSetting.ITEM_WORN_FIELD, worn);

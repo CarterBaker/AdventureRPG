@@ -444,7 +444,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `.claude/docs/ARPG.md`), quads still the unit: `positions` (each distinct vertex once), `bones` (the bone names the
   file uses, resolved against the rig by name at load) with `influence_counts`, `influence_bones` and
   `influence_weights`, `quads` (four vertex numbers a face) beside `quad_textures` and `quad_zones` (numbers into the
-  `textures` and `zones` name lists; `MeshZone`: skin, eye, brow, lash, hair, cloth, mouth, teeth), `quad_uv_flags`
+  `textures` and `zones` name lists; `MeshZone`: skin, eye, brow, lash, hair, cloth (dyed the cloth color), mouth,
+  teeth, gear (its own texture untinted, for armor)), `quad_uv_flags`
   (bit 0 the face authors its UVs, bits 1 to 4 its corners pinned for unwrapping,
   `EngineSetting.RIGGED_MESH_UV_*`; a build older than the pins reads any non-zero flag as authored) with the eight
   `quad_uvs` floats of each face that authors them, the optional `seams` (vertex pairs, the edges cut for unwrapping,
@@ -481,12 +482,17 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Gear is worn as models skinned to the body's rig** (the modular-outfit approach: every piece skinned to the
   skeleton of the body that wears it and posed by the body's own bones). An item lies in the world and in containers
   as its sub-voxel model; worn, an item whose equip type is worn on the body (`EquipmentType.isWornOnBody`: not a
-  weapon or shield, which are always held) is drawn as the model its `worn` list names for the wearer's rig
-  (`ItemWornModelStruct`, read by `WornModelBranch`): a rigged `mesh` skinned to that rig, the `gender` whose body it
-  is fitted to (none for every gender; the gender's own wins over it), the `material` it is drawn with (the body's
-  when it names none, else its own clone) and the body bones it `hides`. No two may fit one rig and gender.
+  weapon or shield, which are always held, nor a ring, which rides its finger slot's anchor) is drawn as the model
+  its `worn` list names for the wearer's rig (`ItemWornModelStruct`, read by `WornModelBranch`): a rigged `mesh`
+  skinned to that rig, the `gender` whose body it is fitted to (none for every gender), the `side` it is worn on
+  (`EquipmentSide`, from the slot's `EquipmentSlot.getEquipmentSide`: a pauldron's left and right models; none for
+  either), the `material` it is drawn with (the body's when it names none, else its own clone), the body bones it
+  `hides` and the features it `hides_features` (a helmet hides the hair, which then neither draws nor simulates). The
+  model fitted most closely wins, its own gender outweighing its own side (`ItemDefinitionData.getWornModel`); no two
+  may fit one rig, gender and side.
   `AppearanceHandle.wear` (each update, from `EntityInstance`, acting only when the inventory's revision or the gender
-  moves) takes on each body slot's model and gathers the hidden bones into one mask; `EntityRenderSystem.pushWorn`
+  moves) takes on each body slot's model and `resolveWorn` gathers the hidden bones into one mask and the hidden
+  features; `EntityRenderSystem.pushWorn`
   draws them after the features through the body's own skinning matrices, and `resolveBodyMask` cuts the hidden bones
   from the body (`HIDE`, so every fragment those bones move at all goes: hide only bones whose skin the piece covers
   past their reach). A worn model's morphs play the body's morphs of the same names
@@ -494,7 +500,16 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   a piece modelled from the body keeps every shape slider, and bone sliders reach it through the shared bones. A
   worn model weighing onto spring bones runs their chains (`AppearanceHandle.weighsOnto`), so a cape rides spring
   chains as long hair does. Gear with no model for the rig, and everything held, rides its race's anchors rigidly as
-  before. Worn models live under `assets/mesh/worn/`; editor previews draw no equipment.
+  before. Worn models live under `assets/mesh/worn/`. The Equipment tab's Gear rows step the item every preview
+  wears in each body slot (`CharacterEditorManager.stepGear`, offering only items with a model for the previewed rig,
+  gender and side), worn through `AppearanceHandle.setWornModel` in `CharacterLookBranch` and drawn by
+  `EntityRenderSystem.pushPreview`; anchored gear is not previewed.
+- **Assets.** Every armor and clothing item wears a quick model per body (`worn/armor/`, `worn/clothing/`, `Male`
+  and `Female`, paired pieces `Left` and `Right`): the body's own faces under the garment offset along their normals,
+  so each keeps the body's weights and shape morphs, in the gear zone with the item's texture box-projected; the
+  helmet hides the hair. The cloak is a sheet hung down the back on `HumanoidRig`'s cape chains (`cape_l`, `cape_c`,
+  `cape_r`, five joints each from `upper_torso`, resting against `back`, `hips`, `chest`, the shoulders, thighs and
+  shins). Replace them by modelling over the body and importing as worn gear.
 - **Bone masks.** A skinned draw's palette row carries a `SkinnedBoneMaskStruct` and its `SkinnedMaskMode`
   (`SkinnedAppearanceStruct.setBoneMask`): `HIDE` cuts every fragment the masked bones move at all (a character seen
   from its own eyes: `AppearanceData.getHeadMask`, the head and everything below it, eyes and teeth included), `SHOW`
@@ -673,7 +688,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   afresh. Drag works against air moving with the wind (`AnimationSpringStruct.setWind`, the global wind's
   `RIG_SPRING_WIND_SHARE` swelling and easing in gusts on the wind's clock, handed by `EntityInstance.blowSprings`), so
   every chain is blown downwind as far as its drag carries it against its stiffness: a cape wants high drag and low
-  stiffness. Editor previews blow no wind. A chain runs only while something worn weighs onto it (`AppearanceHandle.resolveSprings`, reading
+  stiffness. Editor previews blow no wind. On top of the chains, the character vertex shader flutters every
+  non-hair vertex the spring bones carry (`CharacterCloth.glsl`, by the share the spring bones carry, read from the
+  rig's spring bone mask each draw writes after its variant texel, `SkinnedAppearanceStruct.setSpringBones`), so a
+  cape ripples while its chains swing it. A chain runs only while something worn weighs onto it (`AppearanceHandle.resolveSprings`, reading
   `MeshHandle.weighsOnto`, set for every rigged mesh in `MeshManager.applyRiggedMesh`), so a bald or short-haired
   character simulates nothing. Settings apply live, and so does a new or changed chain: a change of structure moves
   the rig's structure revision and every pose lays its springs out again.
@@ -799,8 +817,8 @@ New, Open and Import reach them (`FILE_MENU_CHARACTER`: `newModel`, `openModel`,
   Duplicate and Delete refuse it, and Save writes its mesh, the rig, controls, clips and paint, never a race.
 - **Import as worn gear.** Named an item's full name in place of a race (an item worn on the body,
   `CharacterWorkspaceBranch.isImportWorn`), Import then asks the gender whose body the model fits (empty for every
-  gender) and writes the mesh to `assets/mesh/worn/<Name>.arpg`, listing it in the item's `worn` in place of any it
-  held for the same rig and gender (`importWorn`). Model a piece by opening a body model on the rig and shaping it
+  gender) and the side it is worn on (left, right, or empty for either) and writes the mesh to `assets/mesh/worn/<Name>.arpg`, listing it in the item's `worn` in place of any it
+  held for the same rig, gender and side (`importWorn`). Model a piece by opening a body model on the rig and shaping it
   over the body, so it keeps the body's weights and morphs; set `hides` in the Properties tab.
 - **Import** (the open model, saved first) asks the race it joins (a race already on its rig, or a new name), the
   gender it is the model of (a registered gender) and an entity to make (empty for none). Its mesh is written to

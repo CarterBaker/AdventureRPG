@@ -14,8 +14,9 @@ public class SkinnedAppearanceStruct extends StructPackage {
      * after the bones: a header texel (x = SkinnedMaskMode), one texel per
      * SkinnedColor, the SkinnedDetail amounts four to a texel, the bone mask
      * three texels per SkinnedOverlay placing it and the style worn on the
-     * model drawn, and the tile of the material variant the part drawn shows
-     * (zero for a part showing its own texture),
+     * model drawn, the tile of the material variant the part drawn shows
+     * (zero for a part showing its own texture) and the bone mask of every
+     * bone a spring chain simulates, whose cloth the wind flutters,
      * followed by the morph weights of the mesh they were resolved for — a
      * mesh worn over it plays them through the body morph each of its own
      * morphs follows, and any other mesh drawn with this appearance, hair
@@ -110,6 +111,11 @@ public class SkinnedAppearanceStruct extends StructPackage {
                 * EngineSetting.COLOR_CHANNEL_COUNT + skinnedDetail.ordinal()] = amount;
     }
 
+    // The bones a spring chain simulates, copied in whole: the cloth they carry flutters in the wind
+    public void setSpringBones(SkinnedBoneMaskStruct springBones) {
+        springBones.write(texels, getSpringTexel() * EngineSetting.COLOR_CHANNEL_COUNT);
+    }
+
     // Lends the morph weights resolved for one mesh, by that mesh's morph index
     public void setMorphWeights(MeshHandle meshHandle, float[] weights) {
         this.morphMesh = meshHandle;
@@ -147,6 +153,10 @@ public class SkinnedAppearanceStruct extends StructPackage {
     // Accessible \\
 
     public static int getTexelCount() {
+        return getSpringTexel() + EngineSetting.SKINNED_BONE_MASK_TEXELS;
+    }
+
+    private static int getSpringTexel() {
         return getVariantTexel() + EngineSetting.SKINNED_VARIANT_TEXELS;
     }
 

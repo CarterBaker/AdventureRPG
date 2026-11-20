@@ -7,7 +7,9 @@ public enum EquipmentType {
      * a greave fits either leg — and the entity's equipment slots decide which
      * types each slot accepts. NONE marks an item that is only ever carried.
      * A type worn on the body may be drawn as a worn model skinned to the
-     * wearer's rig; a weapon or shield is always held, keeping its own model.
+     * wearer's rig; a weapon or shield is always held, and a ring rides the
+     * anchor of whichever finger's slot it is worn in, each keeping its own
+     * model.
      */
 
     NONE(false),
@@ -22,7 +24,7 @@ public enum EquipmentType {
     GLOVE(true),
     LEG(true),
     FOOT(true),
-    RING(true),
+    RING(false),
     BACKPACK(true),
     WEAPON(false),
     SHIELD(false);

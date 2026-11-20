@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.appearance.AppearanceData;
 import application.bootstrap.entitypipeline.appearance.AppearanceOptionKind;
 import application.bootstrap.entitypipeline.appearance.AppearanceShapeStruct;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
+import application.bootstrap.entitypipeline.inventory.EquipmentSlot;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
@@ -106,7 +107,10 @@ class CharacterRowBranch extends BranchPackage {
                 characterSliderBranch.buildRows(document, rows);
                 addBuildRows(document, rows);
             }
-            case EQUIPMENT -> addAnchorRows(rows);
+            case EQUIPMENT -> {
+                addGearRows(document, rows);
+                addAnchorRows(rows);
+            }
             case MESH, WEIGHTS -> {
                 characterMeshRowBranch.addPartRows(document, rows);
                 addBoneRows(rigHandle, rows);
@@ -189,6 +193,23 @@ class CharacterRowBranch extends BranchPackage {
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_BONE, i),
                     rigHandle.getBone(i).getName(),
                     i == characterEditorManager.getSelectedBoneIndex()));
+    }
+
+    // One row per body slot a worn model may be worn in, stepping the item every preview wears there
+    private void addGearRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_GEAR));
+
+        for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+
+            if (equipmentSlot.isHand() || !equipmentSlot.getEquipmentType().isWornOnBody())
+                continue;
+
+            String slotName = ArpgUtility.toEnumName(equipmentSlot);
+
+            addChoice(document, rows, CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_GEAR, slotName),
+                    slotName);
+        }
     }
 
     private void addAnchorRows(ObjectArrayList<CharacterViewRowStruct> rows) {

@@ -4,8 +4,8 @@
 // Every skinned instance owns one row of the palette texture: its bones, then its appearance from u_appearanceBase —
 // a header texel (x = SkinnedMaskMode), one texel per color in SkinnedColor order, the detail amounts four to a texel
 // in SkinnedDetail order, the bone mask (SKINNED_BONE_MASK_BITS bones to a channel), three texels per overlay in
-// SkinnedOverlay order and the tile of the material variant the part drawn shows — then its morph weights four to a
-// texel from u_morphBase.
+// SkinnedOverlay order, the tile of the material variant the part drawn shows and the bone mask of every bone a spring
+// chain simulates — then its morph weights four to a texel from u_morphBase.
 
 uniform sampler2D u_bonePalette;
 uniform int u_appearanceBase;
@@ -85,6 +85,16 @@ int characterMaskBase() {
 bool isMaskedBone(int instance, int bone) {
     int  channel = bone / CHARACTER_MASK_BITS;
     vec4 texel   = texelFetch(u_bonePalette, ivec2(characterMaskBase() + channel / 4, instance), 0);
+    int  bits    = int(texel[channel % 4] + 0.5);
+
+    return ((bits >> (bone % CHARACTER_MASK_BITS)) & 1) != 0;
+}
+
+// Whether a bone is one a spring chain simulates: its bit in the spring mask after the variant texel
+bool isSpringBone(int instance, int bone) {
+    int  base    = characterMaskBase() + CHARACTER_MASK_TEXELS + CHARACTER_OVERLAY_COUNT * CHARACTER_OVERLAY_TEXELS + 1;
+    int  channel = bone / CHARACTER_MASK_BITS;
+    vec4 texel   = texelFetch(u_bonePalette, ivec2(base + channel / 4, instance), 0);
     int  bits    = int(texel[channel % 4] + 0.5);
 
     return ((bits >> (bone % CHARACTER_MASK_BITS)) & 1) != 0;
