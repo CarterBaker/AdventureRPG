@@ -211,6 +211,11 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_PAINT, CharacterPaintContext.class, osWindow);
     }
 
+    // The Paint tab brought forward, a new one opened only when none is
+    public TabHandle showCharacterPaint(WindowInstance osWindow) {
+        return showTab(EditorSetting.TAB_TITLE_CHARACTER_PAINT, CharacterPaintContext.class, osWindow);
+    }
+
     public TabHandle openCharacterRig(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_RIG, CharacterRigContext.class, osWindow);
     }
@@ -363,6 +368,21 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openTransitions(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_TRANSITIONS, TransitionsContext.class, osWindow);
+    }
+
+    // The first open tab of a kind brought forward, or a new one opened when there is none
+    public TabHandle showTab(
+            String baseTitle,
+            Class<? extends ContextPackage> contentClass,
+            WindowInstance osWindow) {
+
+        for (int i = 0; i < openTabs.size(); i++)
+            if (openTabs.get(i).getContentContextClass() == contentClass && openTabs.get(i).isOpen()) {
+                activateTab(openTabs.get(i));
+                return openTabs.get(i);
+            }
+
+        return openTab(baseTitle, contentClass, osWindow);
     }
 
     public TabHandle openTab(

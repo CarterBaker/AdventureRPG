@@ -167,6 +167,11 @@ public class ToolManager extends ManagerPackage {
             setTool(canvas, tool);
     }
 
+    // A tool chosen on a canvas other than the one worked last, as a window handing work to another chooses for it
+    public void selectTool(ToolCanvas canvas, EditorTool tool) {
+        setTool(canvas, tool);
+    }
+
     // A tool made a canvas's own, when the canvas takes it
     void setTool(ToolCanvas canvas, EditorTool tool) {
 

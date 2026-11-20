@@ -196,7 +196,7 @@ public enum ToolCanvas {
     ITEM(
             EditorSetting.TOOL_CANVAS_ITEM,
             new EditorTool[] { EditorTool.BRUSH, EditorTool.ERASE, EditorTool.WALL, EditorTool.FILL, EditorTool.PICK },
-            new ToolActionGroupStruct[] { itemParts() },
+            new ToolActionGroupStruct[] { itemParts(), itemPaint() },
             false,
             itemSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
@@ -417,6 +417,12 @@ public enum ToolCanvas {
                 EditorSetting.ITEM_EDITOR_HEADER_PARTS,
                 action(EditorSetting.ITEM_EDITOR_LABEL_PART_ADD, EditorSetting.ITEM_EDITOR_KEY_PART_ADD),
                 action(EditorSetting.ITEM_EDITOR_LABEL_PART_REMOVE, EditorSetting.ITEM_EDITOR_KEY_PART_REMOVE));
+    }
+
+    private static ToolActionGroupStruct itemPaint() {
+        return new ToolActionGroupStruct(
+                EditorSetting.ITEM_EDITOR_HEADER_PAINT,
+                action(EditorSetting.ITEM_EDITOR_LABEL_PAINT, EditorSetting.ITEM_EDITOR_KEY_PAINT));
     }
 
     private static ToolActionGroupStruct uvSeams() {

@@ -11,6 +11,7 @@ import editor.bootstrap.materialspipeline.materials.MaterialDocumentStruct;
 import editor.bootstrap.materialspipeline.materials.MaterialDropProvider;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import engine.assets.image.Pixmap;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
@@ -28,7 +29,8 @@ public class MaterialsManager extends ManagerPackage {
      * one. Choosing the open material makes it the one laid: the Material
      * Viewer shows it and the Paint tab's Material tool lays its maps, while
      * the hair and items, which take only the game's textures, take its base
-     * until it is imported. A material pressed in the Materials tab is chosen
+     * until it is imported. Every edit of the open material is a step of its
+     * undo history. A material pressed in the Materials tab is chosen
      * and picked up; held, it is carried over the windows, and once let go it
      * is dropped on the window under the pointer when that window takes
      * materials. A release is seen on the first frame no drag is reported,
@@ -44,6 +46,7 @@ public class MaterialsManager extends ManagerPackage {
     private MaterialDocumentBranch materialDocumentBranch;
     private MaterialSampleBranch materialSampleBranch;
     private MaterialRowBranch materialRowBranch;
+    private MaterialHistoryBranch materialHistoryBranch;
 
     // Palette
     private ObjectArrayList<String> packNames;
@@ -76,6 +79,7 @@ public class MaterialsManager extends ManagerPackage {
         this.materialDocumentBranch = create(MaterialDocumentBranch.class);
         this.materialSampleBranch = create(MaterialSampleBranch.class);
         this.materialRowBranch = create(MaterialRowBranch.class);
+        this.materialHistoryBranch = create(MaterialHistoryBranch.class);
 
         // Palette
         this.packName2MaterialNames = new Object2ObjectOpenHashMap<>();
@@ -216,6 +220,7 @@ public class MaterialsManager extends ManagerPackage {
         if (document == null || !hasMaterial(textureName))
             return;
 
+        materialHistoryBranch.record(document, null);
         document.setBaseTexture(textureName);
 
         if (documentChosen)
@@ -229,17 +234,43 @@ public class MaterialsManager extends ManagerPackage {
         if (document == null || !textureName.isEmpty() && !hasMaterial(textureName))
             return;
 
+        materialHistoryBranch.record(document, null);
         document.setMapTexture(map, textureName);
         changeSource();
     }
 
-    void setParameter(int parameter, float value) {
+    // A map taken from an image file, read again so a file changed since it was last read shows as it is now
+    void setMapImage(int map, File imageFile) {
+
+        if (document == null)
+            return;
+
+        Pixmap image = materialSampleBranch.readImage(imageFile);
+
+        if (image == null) {
+            setStatusMessage(EditorSetting.MATERIALS_MESSAGE_NOT_IMAGE + imageFile.getPath());
+            return;
+        }
+
+        String imagePath = materialDocumentBranch.toImagePath(imageFile);
+
+        image.dispose();
+        materialHistoryBranch.record(document, null);
+        materialSampleBranch.forgetImage(imagePath);
+        document.setMapImage(map, imagePath);
+        changeSource();
+        setStatusMessage(EditorSetting.MATERIALS_MESSAGE_IMAGE + imagePath);
+    }
+
+    // A parameter set, the steps of one row in a row recorded as one edit
+    void setParameter(int parameter, float value, String rowKey) {
 
         if (document == null)
             return;
 
         boolean wasDirty = document.isDirty();
 
+        materialHistoryBranch.record(document, rowKey);
         document.setParameter(parameter, value);
         valueRevision++;
 
@@ -253,10 +284,15 @@ public class MaterialsManager extends ManagerPackage {
     // a texturing tool's brush lays a material's channels
     public int sampleMap(int map, float u, float v) {
 
-        MaterialDocumentStruct chosen = getChosenDocument();
         float tiling = getParameter(EditorSetting.MATERIALS_PARAMETER_TILING);
 
-        return materialSampleBranch.sample(chosen, resolveMapTexture(map), map, u * tiling, v * tiling);
+        return materialSampleBranch.sample(getChosenDocument(), selectedMaterial, map, u * tiling, v * tiling);
+    }
+
+    // The editor texture holding a map's image of the material laid, before its parameters, as the Material Viewer
+    // reads it; zero until its first upload
+    public int usePreviewTexture(int map) {
+        return materialSampleBranch.usePreviewTexture(getChosenDocument(), selectedMaterial, map);
     }
 
     // Rows \\
@@ -283,6 +319,40 @@ public class MaterialsManager extends ManagerPackage {
 
     public void setRowValue(String key, String text) {
         materialRowBranch.setValue(key, text);
+    }
+
+    // The map an image row names taken from the image file chosen
+    public void setRowImage(String key, File imageFile) {
+        materialRowBranch.setImage(key, imageFile);
+    }
+
+    // The folder the image dialog starts in
+    public File getImageFolder() {
+        return materialDocumentBranch.getImageFolder();
+    }
+
+    // History \\
+
+    public void undoMaterial() {
+
+        if (requireDocument() && materialHistoryBranch.undo(document))
+            restore();
+    }
+
+    public void redoMaterial() {
+
+        if (requireDocument() && materialHistoryBranch.redo(document))
+            restore();
+    }
+
+    // A step put back shown everywhere: the base the hair and items take, the images read, every row and value
+    private void restore() {
+
+        if (documentChosen)
+            this.selectedMaterial = document.getBaseTexture();
+
+        changeSource();
+        valueRevision++;
     }
 
     // Files \\
@@ -336,6 +406,7 @@ public class MaterialsManager extends ManagerPackage {
 
     private void open(MaterialDocumentStruct opened) {
 
+        materialHistoryBranch.clear();
         this.document = opened;
         this.documentChosen = false;
         chooseDocument();
@@ -370,6 +441,7 @@ public class MaterialsManager extends ManagerPackage {
 
         boolean chosen = documentChosen;
 
+        materialHistoryBranch.clear();
         this.document = read;
 
         if (chosen)
@@ -398,6 +470,7 @@ public class MaterialsManager extends ManagerPackage {
             return;
         }
 
+        materialHistoryBranch.clear();
         this.document = null;
         this.documentChosen = false;
         changeSource();
@@ -497,11 +570,6 @@ public class MaterialsManager extends ManagerPackage {
     // The workspace material laid, null while a texture of the game is
     public MaterialDocumentStruct getChosenDocument() {
         return documentChosen ? document : null;
-    }
-
-    // The texture a map of the material laid is read from
-    public String resolveMapTexture(int map) {
-        return documentChosen ? document.resolveMapTexture(map) : selectedMaterial;
     }
 
     // A parameter of the material laid, its default for a texture of the game

@@ -10,6 +10,7 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelPartStruct;
 import application.bootstrap.itempipeline.util.ItemRegistryUtility;
 import application.bootstrap.shaderpipeline.texturemanager.TextureBakeUtility;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
+import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
@@ -17,6 +18,7 @@ import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
+import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
@@ -64,6 +66,7 @@ public class ItemEditorManager extends ManagerPackage {
     private ToolManager toolManager;
     private MaterialsManager materialsManager;
     private CharacterEditorManager characterEditorManager;
+    private TabManager tabManager;
     private ItemLibraryBranch itemLibraryBranch;
     private ItemWorkspaceBranch itemWorkspaceBranch;
     private ItemEditBranch itemEditBranch;
@@ -106,6 +109,7 @@ public class ItemEditorManager extends ManagerPackage {
         this.toolManager = get(ToolManager.class);
         this.materialsManager = get(MaterialsManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
+        this.tabManager = get(TabManager.class);
     }
 
     @Override
@@ -381,10 +385,11 @@ public class ItemEditorManager extends ManagerPackage {
 
     // The item baked for the mesh tools: its maps into a texture of the bake pack and its mesh opened in the
     // character tabs as a workspace model on the item rig, both under the item's own name
-    public void exportActiveItem() {
+    // The item baked for the mesh tools and opened in their tabs; false when there was none or it could not be baked
+    public boolean exportActiveItem() {
 
         if (activeDocument == null)
-            return;
+            return false;
 
         String stem = FileUtility.getFileName(activeDocument.getLocalName());
         RiggedMeshStruct mesh = itemBakeBranch.bake(
@@ -392,11 +397,12 @@ public class ItemEditorManager extends ManagerPackage {
 
         if (mesh == null) {
             setStatusMessage(itemBakeBranch.getRefusal());
-            return;
+            return false;
         }
 
         characterEditorManager.openBakedModel(EditorSetting.ITEM_BAKE_MODEL_FOLDER + stem, mesh);
         setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_EXPORTED + stem);
+        return true;
     }
 
     // File \\
@@ -626,7 +632,7 @@ public class ItemEditorManager extends ManagerPackage {
     }
 
     // The tab's actions, run exactly as the Layers tab's icons and the Tools tab run them
-    public void act(String actionKey) {
+    public void act(String actionKey, WindowInstance osWindow) {
 
         if (activeDocument == null)
             return;
@@ -635,6 +641,19 @@ public class ItemEditorManager extends ManagerPackage {
             itemEditBranch.addPart(activeDocument, materialsManager.getSelectedMaterial());
         else if (actionKey.equals(EditorSetting.ITEM_EDITOR_KEY_PART_REMOVE))
             itemEditBranch.removeSelectedPart(activeDocument);
+        else if (actionKey.equals(EditorSetting.ITEM_EDITOR_KEY_PAINT))
+            paintActiveItem(osWindow);
+    }
+
+    // The item baked for the mesh tools and opened in the Paint tab with the Material tool chosen, one step from
+    // modelling to texturing
+    private void paintActiveItem(WindowInstance osWindow) {
+
+        if (!exportActiveItem())
+            return;
+
+        tabManager.showCharacterPaint(osWindow);
+        toolManager.selectTool(ToolCanvas.CHARACTER_PAINT, EditorTool.MATERIAL);
     }
 
     // Materials \\

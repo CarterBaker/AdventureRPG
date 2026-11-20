@@ -1,5 +1,7 @@
 package editor.runtime.materialviewer;
 
+import editor.runtime.EditorSetting;
+
 public class MaterialViewerSetting {
 
     /*
@@ -12,9 +14,13 @@ public class MaterialViewerSetting {
     // Materials
     public static final String MATERIAL_VIEWER = "editor/MaterialViewerMaterial";
 
-    // Uniforms
-    public static final String UNIFORM_MAP_TILES = "u_mapTiles";
-    public static final String UNIFORM_MAP_TILES_EXTRA = "u_mapTilesExtra";
+    // Uniforms — the maps the viewer reads, by their place in CHARACTER_PAINT_MAP_LABELS, each with its sampler
+    public static final int[] SHOWN_MAPS = {
+            EditorSetting.MATERIALS_MAP_ALBEDO, EditorSetting.MATERIALS_MAP_NORMAL,
+            EditorSetting.MATERIALS_MAP_AMBIENT_OCCLUSION, EditorSetting.MATERIALS_MAP_METALLIC,
+            EditorSetting.MATERIALS_MAP_ROUGHNESS };
+    public static final String[] UNIFORM_MAPS = {
+            "u_albedoMap", "u_normalMap", "u_occlusionMap", "u_metallicMap", "u_roughnessMap" };
     public static final String UNIFORM_BASE_COLOR = "u_baseColor";
     public static final String UNIFORM_SURFACE = "u_surface";
     public static final String UNIFORM_LIGHT_DIRECTION = "u_lightDirection";

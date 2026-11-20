@@ -17,8 +17,10 @@ public class MaterialsBranch extends BranchPackage {
      * picks it up, to be dropped on whichever window takes materials it is
      * let go over; pressing the open material's row chooses it. The File
      * menu makes, opens, saves, reverts, deletes, exports and imports the
-     * material of the workspace, and the Outliner's rows step, cycle and take
-     * typed values. Rows hand back the name or key they show.
+     * material of the workspace, the Edit menu undoes and redoes its edits,
+     * and the Outliner's rows step, cycle, take typed values and choose a
+     * map's image in the system's file dialog. Rows hand back the name or key
+     * they show.
      */
 
     // Internal
@@ -89,6 +91,18 @@ public class MaterialsBranch extends BranchPackage {
                 confirmedName -> materialsManager.deleteMaterial());
     }
 
+    // History \\
+
+    public void undoMaterial() {
+        materialsManager.undoMaterial();
+    }
+
+    public void redoMaterial() {
+        materialsManager.redoMaterial();
+    }
+
+    // Exchange \\
+
     // Every map of the material written as a PNG in the workspace's Exports folder
     public void exportMaterial() {
         materialsManager.exportMaterial();
@@ -129,6 +143,19 @@ public class MaterialsBranch extends BranchPackage {
 
     public void nextRow(String key) {
         materialsManager.cycleRow(key, 1);
+    }
+
+    // A map's image chosen in the system's file dialog, which starts among the workspace's exported maps
+    public void actRow(String key) {
+
+        File file = WorkspaceUtility.chooseFile(
+                EditorSetting.MATERIALS_DIALOG_CHOOSE_IMAGE,
+                materialsManager.getImageFolder(),
+                EditorSetting.MATERIALS_IMAGE_PATTERNS,
+                EditorSetting.MATERIALS_IMAGE_DESCRIPTION);
+
+        if (file != null)
+            materialsManager.setRowImage(key, file);
     }
 
     public void editRow(String key, WindowInstance window) {

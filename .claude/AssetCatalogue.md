@@ -502,6 +502,9 @@ One line per session that changed this file: the date, what was added or removed
   `shortcuts/Tools.arpg` (`M` Material, `G` Light) and `shaders/editor/treeviewer/TreeViewerLight.glsl` (the light's
   view direction shared). Materials made, exported and imported in the workspace are the owner's and are not
   catalogued.
+- 2026-11-20: Material images and history. Added `shortcuts/Materials.arpg` and `shortcuts/MaterialViewer.arpg` (Save,
+  Undo, Redo); regenerated `menus/editor/Materials.arpg` (the Outliner's action row, a map's Choose Image) and
+  `shaders/editor/materialviewer/MaterialViewerShader.fsh` (each map read from the material's own image).
 
 ## Textures and Sprites (2429 files)
 
@@ -1927,7 +1930,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3853 files)
+## Data Files (3855 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -3132,7 +3135,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/shortcuts/`
 
-`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ImageEditor.arpg`, `ItemEditor.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ImageEditor.arpg`, `ItemEditor.arpg`, `MaterialViewer.arpg`, `Materials.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `RecorderKeyGraph.arpg`,
 `RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `UVEditor.arpg`, `WorldEditor.arpg`
 

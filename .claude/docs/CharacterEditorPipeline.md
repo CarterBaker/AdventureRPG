@@ -390,7 +390,8 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
 - **Material painting** (Substance Painter's material brush): the Material tool strokes like Brush but stamps every
   map's canvas of each texture it reaches (`CharacterPaintBranch.stamp`, `stampCanvas`), each texel mixed by the tip's
   coverage toward `MaterialsManager.sampleMap` at the texel's UV, the material chosen in the Materials tab read from
-  its maps' textures, repeated by its Tiling and shaped by its parameters (see `.claude/docs/Editor.md`, Materials).
+  its maps' textures or images, repeated by its Tiling and shaped by its parameters (see `.claude/docs/Editor.md`,
+  Materials).
   The maps' images are read on first use and let go when the material laid changes (`MaterialSampleBranch.retain`).
 - **One undo step per stroke.** The history is a list of steps, each the layers one stroke, fill or map write painted
   across every canvas (`undoSteps`, `redoSteps`); Undo and Redo take a whole step back, and a layer removed leaves

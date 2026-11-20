@@ -12,7 +12,6 @@ import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
@@ -25,10 +24,8 @@ import editor.runtime.materialviewer.light.MaterialViewerLightSystem;
 import editor.runtime.materialviewer.util.MaterialShapeUtility;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.mathematics.vectors.Vector4;
-import engine.util.mathematics.vectors.Vector4Int;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
@@ -37,12 +34,14 @@ public class MaterialViewerRenderSystem extends SystemPackage {
     /*
      * Draws the material laid onto the shape chosen by the Shape option into
      * this window's scene target, with the viewer's material, which reads
-     * each map from the tile the material takes it from and lights it by the
-     * Light tool's light, as an editor viewport has no lighting pass. Every
-     * shape is built once, when the window opens, and the model only takes
-     * another's mesh when the shape changes; the tiles are looked up again
-     * only when what is laid changes, and the parameters are handed on every
-     * frame through the same vectors, so nothing is made per frame.
+     * each map from the image the brush lays it from, as MaterialsManager
+     * hands it on as an editor texture, and lights it by the Light tool's
+     * light, as an editor viewport has no lighting pass. Every shape is built
+     * once, when the window opens, and the model only takes another's mesh
+     * when the shape changes; a map's texture is handed on afresh only when
+     * it changes, and the parameters every frame through the same vectors, so
+     * nothing is made per frame. Nothing is drawn until every map's texture
+     * is up.
      */
 
     // Internal
@@ -50,7 +49,6 @@ public class MaterialViewerRenderSystem extends SystemPackage {
     private ModelManager modelManager;
     private VAOManager vaoManager;
     private MaterialManager materialManager;
-    private TextureManager textureManager;
     private RenderManager renderManager;
     private FBOManager fboManager;
     private FBORenderSystem fboRenderSystem;
@@ -66,12 +64,11 @@ public class MaterialViewerRenderSystem extends SystemPackage {
     private ModelInstance model;
     private int shownShape;
 
-    // Uniforms
-    private Vector4Int mapTiles;
-    private Vector2Int mapTilesExtra;
+    // Uniforms — each map's texture as last handed on, kept boxed so it is boxed only when it changes
+    private int[] mapTextures;
+    private Integer[] mapTextureValues;
     private Vector3 baseColor;
     private Vector4 surface;
-    private int shownRevision;
 
     // Base \\
 
@@ -82,11 +79,10 @@ public class MaterialViewerRenderSystem extends SystemPackage {
         this.shapeMeshes = new MeshInstance[EditorSetting.TOOL_SHAPE_NAMES.length];
 
         // Uniforms
-        this.mapTiles = new Vector4Int();
-        this.mapTilesExtra = new Vector2Int();
+        this.mapTextures = new int[MaterialViewerSetting.SHOWN_MAPS.length];
+        this.mapTextureValues = new Integer[MaterialViewerSetting.SHOWN_MAPS.length];
         this.baseColor = new Vector3();
         this.surface = new Vector4();
-        this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
     @Override
@@ -95,7 +91,6 @@ public class MaterialViewerRenderSystem extends SystemPackage {
         this.modelManager = get(ModelManager.class);
         this.vaoManager = get(VAOManager.class);
         this.materialManager = get(MaterialManager.class);
-        this.textureManager = get(TextureManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
         this.fboRenderSystem = get(FBORenderSystem.class);
@@ -143,7 +138,10 @@ public class MaterialViewerRenderSystem extends SystemPackage {
             return;
 
         showShape();
-        resolveTiles();
+
+        if (!resolveMaps())
+            return;
+
         pushUniforms(model.getMaterial());
 
         renderManager.pushRenderCall(model, sceneFbo, MaterialViewerSetting.DEPTH_SHAPE, window);
@@ -165,26 +163,24 @@ public class MaterialViewerRenderSystem extends SystemPackage {
         model.updateMeshData(shapeMeshes[shape].getMeshData());
     }
 
-    // The tile every map is read from, looked up again only when what is laid changes
-    private void resolveTiles() {
+    // Every shown map's texture as it stands, boxed afresh only when it changed; false while one is not up yet
+    private boolean resolveMaps() {
 
-        if (materialsManager.getRevision() == shownRevision)
-            return;
+        boolean ready = true;
 
-        this.shownRevision = materialsManager.getRevision();
+        for (int i = 0; i < mapTextures.length; i++) {
 
-        mapTiles.set(
-                resolveTile(EditorSetting.MATERIALS_MAP_ALBEDO),
-                resolveTile(EditorSetting.MATERIALS_MAP_NORMAL),
-                resolveTile(EditorSetting.MATERIALS_MAP_AMBIENT_OCCLUSION),
-                resolveTile(EditorSetting.MATERIALS_MAP_METALLIC));
-        mapTilesExtra.set(
-                resolveTile(EditorSetting.MATERIALS_MAP_ROUGHNESS),
-                resolveTile(EditorSetting.MATERIALS_MAP_TINT));
-    }
+            int texture = materialsManager.usePreviewTexture(MaterialViewerSetting.SHOWN_MAPS[i]);
 
-    private int resolveTile(int map) {
-        return textureManager.getTileIDFromTextureName(materialsManager.resolveMapTexture(map));
+            if (texture != mapTextures[i] || mapTextureValues[i] == null) {
+                mapTextures[i] = texture;
+                mapTextureValues[i] = texture;
+            }
+
+            ready &= texture != 0;
+        }
+
+        return ready;
     }
 
     // The parameters, the tiles and the light handed on through the same vectors every frame
@@ -200,8 +196,9 @@ public class MaterialViewerRenderSystem extends SystemPackage {
                 materialsManager.getParameter(EditorSetting.MATERIALS_PARAMETER_ROUGHNESS),
                 materialsManager.getParameter(EditorSetting.MATERIALS_PARAMETER_METALLIC));
 
-        material.setUniform(MaterialViewerSetting.UNIFORM_MAP_TILES, mapTiles);
-        material.setUniform(MaterialViewerSetting.UNIFORM_MAP_TILES_EXTRA, mapTilesExtra);
+        for (int i = 0; i < mapTextureValues.length; i++)
+            material.setUniform(MaterialViewerSetting.UNIFORM_MAPS[i], mapTextureValues[i]);
+
         material.setUniform(MaterialViewerSetting.UNIFORM_BASE_COLOR, baseColor);
         material.setUniform(MaterialViewerSetting.UNIFORM_SURFACE, surface);
         material.setUniform(

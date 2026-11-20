@@ -1,11 +1,14 @@
 package editor.bootstrap.materialspipeline.materialsmanager;
 
+import java.io.File;
+
 import editor.bootstrap.materialspipeline.materials.MaterialDocumentStruct;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class MaterialRowBranch extends BranchPackage {
@@ -14,8 +17,9 @@ class MaterialRowBranch extends BranchPackage {
      * The Outliner's rows for the material chosen. A texture of the game
      * lists itself, stepped through every material, and how a material is
      * made from it; a material of the workspace lists its base, the texture
-     * each map is taken from, stepped through the base and every material,
-     * and its parameters, each a slider across its range. Every row steps,
+     * or image each map is taken from, stepped through the base and every
+     * material or chosen as an image file, and its parameters, each a slider
+     * across its range. Every row steps,
      * cycles and takes a typed value through MaterialsManager, so the
      * viewer, the brush and the file all follow.
      */
@@ -50,11 +54,16 @@ class MaterialRowBranch extends BranchPackage {
                 CharacterViewUtility.toResourceLabel(document.getBaseTexture())));
         rows.add(CharacterViewRowStruct.header(EditorSetting.MATERIALS_HEADER_MAPS));
 
-        for (int m = 0; m < EditorSetting.CHARACTER_PAINT_MAP_LABELS.length; m++)
+        for (int m = 0; m < EditorSetting.CHARACTER_PAINT_MAP_LABELS.length; m++) {
             rows.add(CharacterViewRowStruct.choice(
                     CharacterViewUtility.toKey(EditorSetting.MATERIALS_KEY_MAP, m),
                     EditorSetting.CHARACTER_PAINT_MAP_LABELS[m],
-                    toSourceLabel(document.getMapTexture(m))));
+                    toSourceLabel(document, m)));
+            rows.add(CharacterViewRowStruct.action(
+                    CharacterViewUtility.toKey(EditorSetting.MATERIALS_KEY_IMAGE, m),
+                    EditorSetting.MATERIALS_LABEL_IMAGE_PREFIX + EditorSetting.CHARACTER_PAINT_MAP_LABELS[m]
+                            + EditorSetting.MATERIALS_LABEL_IMAGE_SUFFIX));
+        }
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.MATERIALS_HEADER_PARAMETERS));
 
@@ -79,10 +88,15 @@ class MaterialRowBranch extends BranchPackage {
         rows.add(CharacterViewRowStruct.header(EditorSetting.MATERIALS_TEXT_NEW_HINT));
     }
 
-    private String toSourceLabel(String textureName) {
-        return textureName.isEmpty()
+    // What a map is taken from: its image file by name, its own texture, or the base
+    private String toSourceLabel(MaterialDocumentStruct document, int map) {
+
+        if (document.hasMapImage(map))
+            return FileUtility.getFileName(document.getMapImage(map));
+
+        return document.getMapTexture(map).isEmpty()
                 ? EditorSetting.MATERIALS_TEXT_FROM_BASE
-                : CharacterViewUtility.toResourceLabel(textureName);
+                : CharacterViewUtility.toResourceLabel(document.getMapTexture(map));
     }
 
     // Step \\
@@ -98,7 +112,8 @@ class MaterialRowBranch extends BranchPackage {
 
         materialsManager.setParameter(
                 parameter,
-                document.getParameter(parameter) + steps * EditorSetting.MATERIALS_PARAMETER_STEP[parameter]);
+                document.getParameter(parameter) + steps * EditorSetting.MATERIALS_PARAMETER_STEP[parameter],
+                key);
     }
 
     // The material, the base or a map's texture stepped to the next or previous material, a map's passing its base
@@ -170,11 +185,22 @@ class MaterialRowBranch extends BranchPackage {
         if (document == null)
             materialsManager.selectMaterial(text);
         else if (parameter != EngineSetting.INDEX_NOT_FOUND)
-            materialsManager.setParameter(parameter, CharacterViewUtility.parseNumber(text));
+            materialsManager.setParameter(parameter, CharacterViewUtility.parseNumber(text), null);
         else if (map != EngineSetting.INDEX_NOT_FOUND)
             materialsManager.setMapTexture(map, text);
         else
             materialsManager.setBaseTexture(text);
+    }
+
+    // Images \\
+
+    // The map an image row names taken from the image file chosen
+    void setImage(String key, File imageFile) {
+
+        int map = resolveIndex(key, EditorSetting.MATERIALS_KEY_IMAGE, EditorSetting.CHARACTER_PAINT_MAP_LABELS.length);
+
+        if (map != EngineSetting.INDEX_NOT_FOUND)
+            materialsManager.setMapImage(map, imageFile);
     }
 
     // Keys \\

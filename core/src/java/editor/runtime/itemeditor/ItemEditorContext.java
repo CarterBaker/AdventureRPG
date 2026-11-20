@@ -91,7 +91,7 @@ public class ItemEditorContext extends ContextPackage
     // The tab's actions run exactly as the Layers tab's icons run them
     @Override
     public void runToolAction(String actionKey) {
-        itemEditorManager.act(actionKey);
+        itemEditorManager.act(actionKey, getWindow().getGLWindow());
     }
 
     // Camera \\

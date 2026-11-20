@@ -24,9 +24,14 @@ public class WorkspaceUtility extends EngineUtility {
 
     // Folders \\
 
+    // The workspace itself, under the player's game folder
+    public static File resolveRoot(File userRoot) {
+        return new File(userRoot, EditorSetting.WORKSPACE_DIRECTORY);
+    }
+
     // A kind's folder in the workspace under the player's game folder
     public static File resolveFolder(File userRoot, String folderName) {
-        return new File(new File(userRoot, EditorSetting.WORKSPACE_DIRECTORY), folderName);
+        return new File(resolveRoot(userRoot), folderName);
     }
 
     // Picker \\

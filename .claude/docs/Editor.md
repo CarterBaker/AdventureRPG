@@ -149,12 +149,15 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   window that implements `MaterialDropProvider`, the material is dropped there once (`MaterialsManager.update` sees
   the release), and the Item Editor colours the part under the pointer with it.
 - **A material is a texture set and its parameters**, as Substance and Unreal's material instances hold one: the
-  texture it is made from (its base), the texture any of its maps (Albedo, Normal, Height, AO, Metallic, Roughness,
-  Tint) is taken from instead, and the parameters the surface shaders take (Base Color, Tiling, Normal Strength,
-  Roughness Offset, Metallic Offset; `MATERIALS_PARAMETER_*`). The shader is the surface's own (character, item, block):
-  a painted material is drawn by whatever draws the surface it lands on, so a material names no shader of its own.
-  `MaterialSampleBranch` reads every map texel by texel the one way the Material tool and Export share; the viewer's
-  shader mirrors it on the GPU.
+  texture it is made from (its base), the texture or the PNG image any of its maps (Albedo, Normal, Height, AO,
+  Metallic, Roughness, Tint) is taken from instead (an image wins), and the parameters the surface shaders take (Base
+  Color, Tiling, Normal Strength, Roughness Offset, Metallic Offset; `MATERIALS_PARAMETER_*`). The shader is the
+  surface's own (character, item, block): a painted material is drawn by whatever draws the surface it lands on, so a
+  material names no shader of its own. `MaterialSampleBranch` reads every map's image texel by texel the one way the
+  Material tool and Export share, and hands the same images to the viewer as editor textures
+  (`MaterialsManager.usePreviewTexture`, made again only when an image changes), whose shader applies the parameters
+  as the brush does. A map wanting a generated image (a normal or roughness from an albedo) takes the Image Editor's
+  exported map: generate it in the Maps tab, Export, then choose the PNG.
 - **Paint a material** as Substance Painter does: the Tools tab's Material tool (`EditorTool.MATERIAL`, key `M`) on
   the Paint tab, the Brushes tab's brush and the Materials tab's material lay every map of the material at once, each
   texel taking the material's own at its UV repeated by the Tiling, through the brush's coverage and Strength
@@ -165,9 +168,12 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   lit by one light its Light tool (key `G`) turns when dragged from the shape; the camera is the shared
   `ViewCameraSystem`. While the Materials tab or the viewer was worked in last, the Outliner holds the material's rows
   (`MaterialRowBranch`): a game texture's name and how to make a material from it, or the workspace material's base,
-  each map's texture (From Base or any material) and every parameter as a slider.
+  each map's texture (From Base or any material) with a Choose Image action under it (the system's file dialog,
+  starting in the workspace's Exports), and every parameter as a slider. Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step
+  through every edit of the open material, a slider's drag one step (`MaterialHistoryBranch`), and Ctrl+S saves.
 - **Workspace materials.** File, New names a material made from the texture chosen and writes
-  `Assets/Materials/<Name>.arpg` at once (`base`, `maps` keyed by alias, `parameters` by key); Open, Save, Revert and
+  `Assets/Materials/<Name>.arpg` at once (`base`, `maps` and `images` keyed by alias, an image kept by its path below
+  the workspace or in full outside it, `parameters` by key); Open, Save, Revert and
   Delete work on it; Export writes its seven maps, shaped by its parameters and once across the base's size (Tiling is
   how it is laid, never baked), as `Exports/Materials/<Name>/<Name>_<suffix>.png`; Import takes them into a pack as a
   tile and bakes it through the Image Editor's one import path (`ImageEditorManager.importMaps`). Hair and items take
@@ -195,6 +201,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   (`TextureManager.applyTileBake`). The mesh opens in the character tabs as the workspace model `items/<Item>`
   (`CharacterEditorManager.openBakedModel`; an open one takes it as one edit), to paint, unwrap and model as any mesh.
   Baking again lays the maps out afresh from the cubes, painting over the last bake: paint after the shape is done.
+  The Tools tab's Paint Item action (`ITEM_EDITOR_KEY_PAINT`) does it in one step: it exports, brings the Paint tab
+  forward (`TabManager.showCharacterPaint`, a new one only when none is open) and chooses its Material tool.
 - **Painted items reach the game** through the mesh tabs' File, Import: an item model (`items/<Item>`) is written to
   `assets/mesh/items/painted/<Item>.arpg` and named by the item's `painted` field, which the item it paints offers
   first (the one whose sub-voxels are `items/<Item>`). The item keeps its sub-voxels for its shape, grip and contents;

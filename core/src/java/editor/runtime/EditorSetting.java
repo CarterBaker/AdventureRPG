@@ -253,6 +253,8 @@ public class EditorSetting {
             .with(FileMenuAction.SAVE, "saveMaterial")
             .with(FileMenuAction.REVERT, "revertMaterial")
             .with(FileMenuAction.DELETE, "deleteMaterial")
+            .with(FileMenuAction.UNDO, "undoMaterial")
+            .with(FileMenuAction.REDO, "redoMaterial")
             .with(FileMenuAction.IMPORT, "importMaterial")
             .with(FileMenuAction.EXPORT, "exportMaterial");
     public static final FileMenuTableStruct FILE_MENU_INFO = new FileMenuTableStruct(
@@ -2849,6 +2851,11 @@ public class EditorSetting {
     public static final String ITEM_EDITOR_LABEL_PART_ADD = "New Part";
     public static final String ITEM_EDITOR_LABEL_PART_REMOVE = "Delete Part";
 
+    // Item Paint — the Tools tab's action that bakes the item and opens it in the Paint tab with the Material tool
+    public static final String ITEM_EDITOR_HEADER_PAINT = "Texture";
+    public static final String ITEM_EDITOR_KEY_PAINT = "item_editor_paint";
+    public static final String ITEM_EDITOR_LABEL_PAINT = "Paint Item";
+
     // Item Stamps — a stroke's ray running along its layer, the middle of a cell the stroke's plane passes through,
     // and the seed a speckled tip's density rolls from
     public static final float ITEM_EDITOR_STROKE_PARALLEL_EPSILON = 1e-4f;
@@ -2886,6 +2893,7 @@ public class EditorSetting {
     public static final String MATERIALS_EXPORT_DIRECTORY = "Materials";
     public static final String MATERIALS_FIELD_BASE = "base";
     public static final String MATERIALS_FIELD_MAPS = "maps";
+    public static final String MATERIALS_FIELD_IMAGES = "images";
     public static final String MATERIALS_FIELD_PARAMETERS = "parameters";
     public static final String[] MATERIALS_PARAMETER_KEYS = {
             "red", "green", "blue", "tiling", "normal_strength", "roughness", "metallic" };
@@ -2908,8 +2916,15 @@ public class EditorSetting {
     public static final int MATERIALS_MAP_AMBIENT_OCCLUSION = 3;
     public static final int MATERIALS_MAP_METALLIC = 4;
     public static final int MATERIALS_MAP_ROUGHNESS = 5;
-    public static final int MATERIALS_MAP_TINT = 6;
     public static final float MATERIALS_NORMAL_MIDDLE = 0.5f;
+
+    // Material Images — the files a map's image may be, the dialog that picks one, the name each map's image goes by
+    // as the Material Viewer's texture, and how many edits Undo reaches back
+    public static final String[] MATERIALS_IMAGE_PATTERNS = { "*.png" };
+    public static final String MATERIALS_IMAGE_DESCRIPTION = "PNG images (*.png)";
+    public static final String MATERIALS_DIALOG_CHOOSE_IMAGE = "Choose the Map's Image";
+    public static final String MATERIALS_PREVIEW_IMAGE_PREFIX = "material/preview/";
+    public static final int MATERIALS_HISTORY_MAX_STEPS = 64;
 
     // Material Rows — the Outliner's keys, headers and words for the material chosen
     public static final String MATERIALS_OUTLINER_TITLE = "Material";
@@ -2917,6 +2932,9 @@ public class EditorSetting {
     public static final String MATERIALS_KEY_BASE = "material_base";
     public static final String MATERIALS_KEY_MAP = "material_map";
     public static final String MATERIALS_KEY_PARAMETER = "material_parameter";
+    public static final String MATERIALS_KEY_IMAGE = "material_image";
+    public static final String MATERIALS_LABEL_IMAGE_PREFIX = "Choose ";
+    public static final String MATERIALS_LABEL_IMAGE_SUFFIX = " Image";
     public static final String MATERIALS_LABEL_MATERIAL = "Material";
     public static final String MATERIALS_LABEL_BASE = "Base";
     public static final String MATERIALS_HEADER_MAPS = "Maps";
@@ -2930,7 +2948,7 @@ public class EditorSetting {
             "editor/Materials/material_number_row",
             "editor/Materials/material_text_row",
             "editor/Materials/material_choice_row",
-            "editor/Materials/material_text_row",
+            "editor/Materials/material_action_row",
             null,
             "material_row_label",
             "material_row_value",
@@ -2952,6 +2970,8 @@ public class EditorSetting {
     public static final String MATERIALS_MESSAGE_DELETED = "Material deleted: ";
     public static final String MATERIALS_MESSAGE_NOT_DELETED = "The material could not be deleted: ";
     public static final String MATERIALS_MESSAGE_NONE_OPEN = "No material is open: File, New or Open makes one";
+    public static final String MATERIALS_MESSAGE_NOT_IMAGE = "Not an image the map can take: ";
+    public static final String MATERIALS_MESSAGE_IMAGE = "Image laid: ";
     public static final String MATERIALS_MESSAGE_EXPORT_FIRST =
             "Export the material first; Import takes its exported maps";
 
