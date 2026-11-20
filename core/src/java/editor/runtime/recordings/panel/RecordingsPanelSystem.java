@@ -27,10 +27,12 @@ public class RecordingsPanelSystem extends SystemPackage {
 
     /*
      * Binds this window to a UI render target and shows the tracks the
-     * recorder opens: the media files, or, while animations are worked on —
-     * the Animation Editor worked in since a Dev window, or an animation open
-     * on the timeline when neither was — the animations of the character the
-     * Animation Editor has chosen. When the recorder's, the animation
+     * recorder opens: the media files, or the animations of the character
+     * the Animation Editor has chosen. It turns to the animations as soon as
+     * they are worked on — the Animation Editor worked in since a Dev window,
+     * or an animation open on the timeline when neither was — and back to the
+     * media files when they are, and the toolbar's switch turns it either way
+     * in between (RecorderManager keeps which, for every Tracks tab). When the recorder's, the animation
      * editor's or the content's revision moves, or what it lists changes, it
      * refills the list — a row for every media file in the media directory
      * beside the player's saves, video and music alike, most recently changed
@@ -59,6 +61,7 @@ public class RecordingsPanelSystem extends SystemPackage {
     private int shownAnimationRevision;
     private int shownInfoRevision;
     private boolean shownAnimations;
+    private int workedOn;
 
     // Scratch
     private ObjectArrayList<String> clipNames;
@@ -70,6 +73,7 @@ public class RecordingsPanelSystem extends SystemPackage {
 
         // State
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.workedOn = EngineSetting.INDEX_NOT_FOUND;
 
         // Scratch
         this.clipNames = new ObjectArrayList<>();
@@ -116,7 +120,9 @@ public class RecordingsPanelSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        boolean animations = isWorkingOnAnimations();
+        followWork();
+
+        boolean animations = recorderManager.isListingAnimations();
 
         if (recorderManager.getRevision() == shownRevision
                 && animations == shownAnimations
@@ -138,6 +144,18 @@ public class RecordingsPanelSystem extends SystemPackage {
 
         refreshRecordings();
         refreshDetails();
+    }
+
+    // The list turned to what is worked on whenever that changes, so the switch holds in between
+    private void followWork() {
+
+        int working = isWorkingOnAnimations() ? 1 : 0;
+
+        if (working == workedOn)
+            return;
+
+        this.workedOn = working;
+        recorderManager.showAnimationTracks(working == 1);
     }
 
     // Animations are worked on while the Animation Editor was worked in since any Dev window, or, when neither was,

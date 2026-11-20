@@ -177,7 +177,7 @@ public class LayersPanelSystem extends SystemPackage {
 
         String template = node.isDraggable()
                 ? node.isActive() ? LayersSetting.TEMPLATE_LAYER_ROW_DRAG_ACTIVE : LayersSetting.TEMPLATE_LAYER_ROW_DRAG
-                : node.isActive() && !node.isGroup()
+                : node.isChosen()
                         ? LayersSetting.TEMPLATE_LAYER_ROW_ACTIVE
                         : LayersSetting.TEMPLATE_LAYER_ROW;
         float indent = depth * LayersSetting.INDENT_PIXELS;
@@ -208,7 +208,7 @@ public class LayersPanelSystem extends SystemPackage {
                             indent + LayersSetting.TOGGLE_WIDTH_PIXELS + LayersSetting.EYE_WIDTH_PIXELS));
                     label.setFontText(node.getLabel());
 
-                    if (node.isGroup() && node.isActive() && !expanded)
+                    if (node.isGroup() && node.isActive() && !node.isChosen() && !expanded)
                         label.setColorOverride(holdingColor);
                 });
     }

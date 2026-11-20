@@ -14,7 +14,7 @@ public enum RecorderCurveProperty {
      * The lists say which a camera, a character, an item, a vehicle, the
      * weather, the clock and an animation clip's bone hold, in the order the
      * Keys tab lists them; a bone's are its clip's channel slots, in their
-     * order.
+     * order, and a clip's morphs are each a weight.
      */
 
     POSITION_X(EditorSetting.RECORDER_CURVE_LABEL_POSITION_X, RecorderCurveKind.DISTANCE),
@@ -50,7 +50,8 @@ public enum RecorderCurveProperty {
     BONE_POSITION_Z(EditorSetting.RECORDER_CURVE_LABEL_BONE_POSITION_Z, RecorderCurveKind.DISTANCE),
     BONE_SCALE_X(EditorSetting.RECORDER_CURVE_LABEL_BONE_SCALE_X, RecorderCurveKind.SCALAR),
     BONE_SCALE_Y(EditorSetting.RECORDER_CURVE_LABEL_BONE_SCALE_Y, RecorderCurveKind.SCALAR),
-    BONE_SCALE_Z(EditorSetting.RECORDER_CURVE_LABEL_BONE_SCALE_Z, RecorderCurveKind.SCALAR);
+    BONE_SCALE_Z(EditorSetting.RECORDER_CURVE_LABEL_BONE_SCALE_Z, RecorderCurveKind.SCALAR),
+    MORPH_WEIGHT(EditorSetting.RECORDER_CURVE_LABEL_MORPH_WEIGHT, RecorderCurveKind.SCALAR);
 
     // Lists
     public static final RecorderCurveProperty[] CAMERA = {

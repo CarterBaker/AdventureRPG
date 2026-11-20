@@ -71,9 +71,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   the viewport, showing the character chosen (the player at first) posed at the Timeline's playhead, beside the
   Recorder, Timeline, Keys, Keys Graph and Layers tabs. While animations are worked on (the Animation Editor worked in
   since any Dev window) the Tracks tab lists the clips on that character's rig instead of the media files, and a clip
-  clicked there or picked in the Hierarchy opens on the Timeline in the media file's place (saved first) as one clip,
-  its bones the Layers tab's layers and each axis of each channel a curve on the Keys and Keys Graph tabs, keyed,
-  moved and bent like any take's; the Recorder plays it, Undo and Redo step one history for every edit of it, a pose
+  clicked there or picked in the Hierarchy opens on the Timeline in the media file's place (saved first), each of its
+  layers (its own tracks and morphs, then every part a stamp joined) a clip on a lane of its own, together the one
+  clip; the layer pressed is the one whose bones (nested as the rig nests them) and morphs the Layers tab lists, each
+  axis of each channel a curve on the Keys and Keys Graph tabs, keyed, moved and bent like any take's; the Tracks
+  tab's Media / Animations switch turns its list either way between; the Recorder plays it, Undo and Redo step one history for every edit of it, a pose
   drag one step, and the bone picked in the Layers tab is the Animation Editor's and the other way round (see
   `.claude/docs/CharacterEditorPipeline.md`, Animation). Its clip is never moved, cut or recorded into, and it saves,
   reverts and deletes as content.

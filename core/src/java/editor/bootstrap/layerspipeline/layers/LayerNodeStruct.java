@@ -13,7 +13,9 @@ public class LayerNodeStruct extends StructPackage {
      * or opened, so it must stay stable across rebuilds. A group may start
      * open; the Layers tab only remembers the groups turned away from that.
      * The active layer is the one the window's tools work on now, and a
-     * group holding it carries that too. A layer that can be hidden carries
+     * group holding it carries that too; a group that is itself a layer, as
+     * a bone holding the bones below it is, is marked chosen while it is the
+     * one picked. A layer that can be hidden carries
      * whether it is shown. A draggable layer is picked up on a press and
      * carried out of the tab, its window choosing it when it is let go where
      * it was pressed.
@@ -29,6 +31,7 @@ public class LayerNodeStruct extends StructPackage {
     private final boolean visible;
     private final boolean expandedByDefault;
     private final boolean draggable;
+    private boolean chosen;
 
     // Tree
     private final ObjectArrayList<LayerNodeStruct> children;
@@ -84,6 +87,11 @@ public class LayerNodeStruct extends StructPackage {
         children.add(child);
     }
 
+    // A group that is itself the layer picked, not only holding it
+    public void markChosen() {
+        this.chosen = true;
+    }
+
     // Accessible \\
 
     public String getLayerKey() {
@@ -97,6 +105,11 @@ public class LayerNodeStruct extends StructPackage {
     // The layer the window's tools work on, or a group holding it
     public boolean isActive() {
         return active;
+    }
+
+    // The layer picked itself: an active layer, or a group marked chosen
+    public boolean isChosen() {
+        return chosen || active && children.isEmpty();
     }
 
     public boolean isHideable() {

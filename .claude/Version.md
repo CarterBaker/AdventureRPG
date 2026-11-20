@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 134
-Task: AnimationOnTimeline
+Delivery: 135
+Task: AnimationLayers
 Applied: 2026-11-20
 
 ## Log
@@ -144,3 +144,4 @@ Applied: 2026-11-20
 - 132, 2026-11-20, MaterialEditor
 - 133, 2026-11-20, MaterialImages
 - 134, 2026-11-20, AnimationOnTimeline
+- 135, 2026-11-20, AnimationLayers

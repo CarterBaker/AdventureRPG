@@ -3541,6 +3541,7 @@ public class EditorSetting {
     public static final String RECORDER_TRACK_LABEL_CAMERA = "Camera";
     public static final String RECORDER_TRACK_LABEL_WEATHER = "World weather";
     public static final String RECORDER_TRACK_LABEL_CLOCK = "World time";
+    public static final String RECORDER_TRACK_LABEL_MORPHS = "Morphs";
     public static final String RECORDER_CURVE_PART_FORMAT = "%s %d";
     public static final String RECORDER_CURVE_LABEL_POSITION_X = "Position X";
     public static final String RECORDER_CURVE_LABEL_POSITION_Y = "Height";
@@ -3572,6 +3573,7 @@ public class EditorSetting {
     public static final String RECORDER_CURVE_LABEL_BONE_SCALE_X = "Scale X";
     public static final String RECORDER_CURVE_LABEL_BONE_SCALE_Y = "Scale Y";
     public static final String RECORDER_CURVE_LABEL_BONE_SCALE_Z = "Scale Z";
+    public static final String RECORDER_CURVE_LABEL_MORPH_WEIGHT = "Weight";
     public static final String RECORDER_CURVE_LABEL_DRIFT_X = "Drift X";
     public static final String RECORDER_CURVE_LABEL_DRIFT_Z = "Drift Z";
     public static final String RECORDER_CURVE_LABEL_GUST = "Gusts";
@@ -3844,6 +3846,7 @@ public class EditorSetting {
 
     // Recorder — status text
     public static final String RECORDER_STATUS_READY = "Ready";
+    public static final String RECORDER_ANIMATION_BASE_LAYER = "Base";
     public static final String RECORDER_STATUS_ANIMATION_OPENED = "Opened animation ";
     public static final String RECORDER_STATUS_ANIMATION_CLOSED = "Animation deleted: ";
     public static final String RECORDER_STATUS_ANIMATION_SAVED = "Saved animation ";

@@ -12,8 +12,8 @@ public class AnimationClipUtility extends EngineUtility {
      * channel, as offsets from the bind pose; a looping clip's curves run
      * round their seam, and a one-shot's ease into its holds. An axis with
      * no curve holds its channel's default, and a bone with no track samples
-     * as no offset. A morph curve is sampled linearly
-     * between its keys, holding past either end. Writes into caller-owned
+     * as no offset. A morph curve is sampled the same way, holding past
+     * either end. Writes into caller-owned
      * vectors, so sampling never allocates.
      */
 
@@ -21,25 +21,7 @@ public class AnimationClipUtility extends EngineUtility {
 
     // A morph curve's weight at a phase of its clip
     public static float sampleMorph(AnimationClipHandle clip, int trackIndex, float phase) {
-
-        MorphTrackStruct track = clip.getMorphTrack(trackIndex);
-        float time = phase * clip.getDuration();
-        int last = track.getKeyCount() - 1;
-
-        if (time <= track.getTime(0))
-            return track.getValue(0);
-
-        if (time >= track.getTime(last))
-            return track.getValue(last);
-
-        int key = 0;
-
-        while (track.getTime(key + 1) < time)
-            key++;
-
-        float t = (time - track.getTime(key)) / (track.getTime(key + 1) - track.getTime(key));
-
-        return track.getValue(key) + (track.getValue(key + 1) - track.getValue(key)) * t;
+        return (float) clip.getMorphTrack(trackIndex).getCurve().evaluate(phase * clip.getDuration());
     }
 
     public static void sampleClip(

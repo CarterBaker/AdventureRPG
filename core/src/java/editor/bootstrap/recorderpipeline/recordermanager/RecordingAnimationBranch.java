@@ -12,34 +12,42 @@ import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecordingBoneTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
+import editor.bootstrap.recorderpipeline.recording.RecordingMorphTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.root.UtilityPackage.InternalException;
-import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.curves.CurveEnds;
 import engine.util.mathematics.curves.CurveStruct;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RecordingAnimationBranch extends BranchPackage {
 
     /*
      * Opens an animation clip on the timeline and writes it back, the clip's
      * ARPG as InfoManager holds it being what both read. Opened, a clip is a
-     * recording of one take laid once from its start, holding a bone track
-     * for every bone of its rig a clip may key, each axis of each channel a
-     * curve with the clip's own keys, modes and handles, in the joined part
-     * that keys it where one does; the take runs as long as its latest key,
-     * morph curves included, and never shorter than the floor that leaves
-     * room to key an empty clip. Written, every bone track that holds a key
-     * is laid back where it came from and every other removed, and every
-     * other field of the clip, and every track of a bone the timeline does
-     * not show, is kept as it was read. A clip that cannot be read is
-     * refused, and why is kept for the status line.
+     * recording of one take for each of its layers, each laid once from its
+     * start on a lane of its own named after it, as a sequencer stacks the
+     * layers of one character's motion: the clip's own tracks on the first,
+     * its morph curves with them, and every part a stamp joined on the next,
+     * in the order the clip lists them. A layer holds a bone track for every
+     * bone of the rig it keys — the clip's own layer every bone no part keys
+     * — each axis of each channel a curve with the clip's own keys, modes and
+     * handles, nested under the nearest bone above it the layer holds; every
+     * layer runs as long as the clip's latest key, so they read as the one
+     * clip they play as, and never shorter than the floor that leaves room
+     * to key an empty clip. Written, every bone track that holds a key is
+     * laid back in its layer and every other removed, the morph curves with
+     * it, and every other field of the clip, and every track of a bone the
+     * timeline does not show, is kept as it was read. A clip that cannot be
+     * read, or holds more layers than the timeline has lanes, is refused,
+     * and why is kept for the status line.
      */
 
     // Internal
@@ -89,16 +97,23 @@ class RecordingAnimationBranch extends BranchPackage {
                 ArpgUtility.validateString(clipArpg, EngineSetting.ANIMATION_FIELD_RIG));
         CurveEnds ends = AnimationCurveArpgUtility.resolveEnds(
                 ArpgUtility.getBoolean(clipArpg, EngineSetting.ANIMATION_FIELD_LOOP, false));
-        RecordingTakeStruct take = new RecordingTakeStruct(clipName, RecorderChannel.NONE);
+        ObjectArrayList<String> partNames = readPartNames(clipArpg);
 
-        for (int i = 0; i < rigHandle.getBoneCount(); i++)
-            if (!rigHandle.isSpringBone(i))
-                take.getBoneTracks().add(readBone(clipArpg, rigHandle.getBone(i).getName(), ends, clipName));
+        if (partNames.size() + 1 > EngineSetting.SONG_LANE_COUNT)
+            throwException("Clip \"" + clipName + "\" has more layers than the timeline has lanes");
 
-        float duration = resolveDuration(take, clipArpg);
+        ObjectArrayList<RecordingTakeStruct> layers = new ObjectArrayList<>(partNames.size() + 1);
+
+        layers.add(new RecordingTakeStruct(EditorSetting.RECORDER_ANIMATION_BASE_LAYER, RecorderChannel.NONE));
+
+        for (int i = 0; i < partNames.size(); i++)
+            layers.add(new RecordingTakeStruct(partNames.get(i), RecorderChannel.NONE));
+
+        readBones(clipArpg, rigHandle, partNames, ends, layers, clipName);
+        layers.get(0).setMorphTrack(readMorphs(clipArpg, ends, clipName));
+
         RecordingInstance recording = create(RecordingInstance.class);
 
-        take.setDuration(duration);
         recording.constructor(
                 clipName,
                 worldManager.getActiveWorld().getWorldName(),
@@ -108,22 +123,86 @@ class RecordingAnimationBranch extends BranchPackage {
                 EngineSetting.DEFAULT_SONG_KEY_ROOT,
                 NoteScale.MAJOR,
                 new RecordingExportStruct());
-        recording.addTake(take);
-        recording.addClip(RecordingClipStruct.ofTake(take, 0f, duration, 0, 0f, RecorderChannel.NONE));
+
+        for (int lane = 0; lane < layers.size(); lane++) {
+            recording.addTake(layers.get(lane));
+            recording.addClip(RecordingClipStruct.ofTake(layers.get(lane), 0f, 0f, lane, 0f, RecorderChannel.NONE));
+            recording.getLane(lane).setName(layers.get(lane).getName());
+        }
+
         recording.setAnimation(clipName, clipArpg.deepCopy().getAsObject());
+        fitSpan(recording);
 
         return recording;
+    }
+
+    // The parts the clip joined, in the order it lists them
+    private static ObjectArrayList<String> readPartNames(ArpgObjectStruct clipArpg) {
+
+        ObjectArrayList<String> partNames = new ObjectArrayList<>();
+        ArpgObjectStruct parts = CharacterViewUtility.findObject(clipArpg, EngineSetting.ANIMATION_FIELD_PARTS);
+
+        if (parts != null)
+            partNames.addAll(parts.keySet());
+
+        return partNames;
+    }
+
+    // Every bone of the rig but its spring bones laid in the layer that keys it, under the nearest bone above it
+    // that layer holds
+    private void readBones(
+            ArpgObjectStruct clipArpg,
+            RigHandle rigHandle,
+            ObjectArrayList<String> partNames,
+            CurveEnds ends,
+            ObjectArrayList<RecordingTakeStruct> layers,
+            String clipName) {
+
+        int boneCount = rigHandle.getBoneCount();
+        int[] boneLayers = new int[boneCount];
+
+        for (int i = 0; i < boneCount; i++) {
+
+            String partName = findPart(clipArpg, rigHandle.getBone(i).getName());
+
+            boneLayers[i] = rigHandle.isSpringBone(i)
+                    ? EngineSetting.INDEX_NOT_FOUND
+                    : partName != null ? partNames.indexOf(partName) + 1 : 0;
+        }
+
+        for (int i = 0; i < boneCount; i++) {
+
+            if (boneLayers[i] == EngineSetting.INDEX_NOT_FOUND)
+                continue;
+
+            int parent = rigHandle.getBone(i).getParentIndex();
+
+            while (parent >= 0 && boneLayers[parent] != boneLayers[i])
+                parent = rigHandle.getBone(parent).getParentIndex();
+
+            String parentName = parent >= 0 ? rigHandle.getBone(parent).getName() : null;
+            int layer = boneLayers[i];
+
+            layers.get(layer).getBoneTracks().add(readBone(
+                    clipArpg,
+                    rigHandle.getBone(i).getName(),
+                    layer > 0 ? partNames.get(layer - 1) : null,
+                    parentName,
+                    ends,
+                    clipName));
+        }
     }
 
     // A bone's track with the clip's keys for it, from the joined part that keys it or the clip's own tracks
     private RecordingBoneTrackStruct readBone(
             ArpgObjectStruct clipArpg,
             String boneName,
+            String partName,
+            String parentName,
             CurveEnds ends,
             String clipName) {
 
-        String partName = findPart(clipArpg, boneName);
-        RecordingBoneTrackStruct track = new RecordingBoneTrackStruct(boneName, partName, ends);
+        RecordingBoneTrackStruct track = new RecordingBoneTrackStruct(boneName, partName, parentName, ends);
         ArpgObjectStruct tracks = findTracks(clipArpg, partName);
 
         if (tracks == null || !ArpgUtility.hasObject(tracks, boneName))
@@ -135,6 +214,27 @@ class RecordingAnimationBranch extends BranchPackage {
         for (int slot = 0; slot < curves.length; slot++)
             if (curves[slot] != null)
                 track.getCurve(slot).copyKeys(curves[slot]);
+
+        return track;
+    }
+
+    // The clip's morph curves, one slot each in the order it lists them, null when it keys none
+    private static RecordingMorphTrackStruct readMorphs(ArpgObjectStruct clipArpg, CurveEnds ends, String clipName) {
+
+        ArpgObjectStruct morphs = CharacterViewUtility.findObject(clipArpg, EngineSetting.ANIMATION_FIELD_MORPHS);
+
+        if (morphs == null || morphs.isEmpty())
+            return null;
+
+        ObjectArrayList<String> morphNames = new ObjectArrayList<>(morphs.keySet());
+        RecordingMorphTrackStruct track = new RecordingMorphTrackStruct(morphNames, ends);
+
+        for (int slot = 0; slot < morphNames.size(); slot++)
+            AnimationCurveArpgUtility.readCurve(
+                    ArpgUtility.validateArray(morphs, morphNames.get(slot)),
+                    track.getCurve(slot),
+                    morphNames.get(slot),
+                    clipName);
 
         return track;
     }
@@ -171,42 +271,46 @@ class RecordingAnimationBranch extends BranchPackage {
 
     // Length \\
 
-    // The clip's take laid again to run as long as its keys now reach
+    // Every layer laid again to run as long as the clip's keys now reach
     void fitSpan(RecordingInstance recording) {
 
-        RecordingTakeStruct take = recording.getTakes().get(0);
-        float duration = resolveDuration(take, recording.getAnimationArpg());
+        float duration = resolveDuration(recording);
 
-        take.setDuration(duration);
-        recording.getClips().get(0).setSpan(0f, duration);
+        for (int i = 0; i < recording.getTakes().size(); i++)
+            recording.getTakes().get(i).setDuration(duration);
+
+        for (int i = 0; i < recording.getClips().size(); i++)
+            recording.getClips().get(i).setSpan(0f, duration);
     }
 
-    // The latest key of every bone track and every morph curve, held to the floor an empty clip is keyed in
-    private static float resolveDuration(RecordingTakeStruct take, ArpgObjectStruct clipArpg) {
+    // The latest key of every curve of every layer, held to the floor an empty clip is keyed in
+    private static float resolveDuration(RecordingInstance recording) {
 
         float duration = EditorSetting.ANIMATION_EDITOR_TIMELINE_MIN_SPAN;
 
-        for (int i = 0; i < take.getBoneTracks().size(); i++) {
+        for (int i = 0; i < recording.getTakes().size(); i++) {
 
-            RecordingBoneTrackStruct track = take.getBoneTracks().get(i);
+            RecordingTakeStruct layer = recording.getTakes().get(i);
 
-            for (int slot = 0; slot < track.getCurveCount(); slot++)
-                if (!track.getCurve(slot).isEmpty())
-                    duration = Math.max(duration, track.getCurve(slot).getEndTime());
+            for (int b = 0; b < layer.getBoneTracks().size(); b++)
+                duration = Math.max(duration, resolveEndTime(layer.getBoneTracks().get(b)));
+
+            if (layer.getMorphTrack() != null)
+                duration = Math.max(duration, resolveEndTime(layer.getMorphTrack()));
         }
 
-        ArpgObjectStruct morphs = CharacterViewUtility.findObject(clipArpg, EngineSetting.ANIMATION_FIELD_MORPHS);
-
-        if (morphs == null)
-            return duration;
-
-        for (String morphName : morphs.keySet())
-            for (ArpgElementStruct key : morphs.getAsArray(morphName))
-                duration = Math.max(
-                        duration,
-                        ArpgUtility.getFloat(key.getAsObject(), EngineSetting.ANIMATION_FIELD_TIME, 0f));
-
         return duration;
+    }
+
+    private static float resolveEndTime(RecordingCurveTrackStruct track) {
+
+        float endTime = 0f;
+
+        for (int slot = 0; slot < track.getCurveCount(); slot++)
+            if (!track.getCurve(slot).isEmpty())
+                endTime = Math.max(endTime, track.getCurve(slot).getEndTime());
+
+        return endTime;
     }
 
     // Write \\
@@ -215,12 +319,28 @@ class RecordingAnimationBranch extends BranchPackage {
     ArpgObjectStruct build(RecordingInstance recording) {
 
         ArpgObjectStruct clipArpg = recording.getAnimationArpg().deepCopy().getAsObject();
-        RecordingTakeStruct take = recording.getTakes().get(0);
 
-        for (int i = 0; i < take.getBoneTracks().size(); i++)
-            writeBone(clipArpg, take.getBoneTracks().get(i));
+        for (int i = 0; i < recording.getTakes().size(); i++) {
+
+            RecordingTakeStruct layer = recording.getTakes().get(i);
+
+            for (int b = 0; b < layer.getBoneTracks().size(); b++)
+                writeBone(clipArpg, layer.getBoneTracks().get(b));
+
+            if (layer.getMorphTrack() != null)
+                writeMorphs(clipArpg, layer.getMorphTrack());
+        }
 
         return clipArpg;
+    }
+
+    private static void writeMorphs(ArpgObjectStruct clipArpg, RecordingMorphTrackStruct track) {
+
+        ArpgObjectStruct morphs = CharacterViewUtility.requireObject(clipArpg, EngineSetting.ANIMATION_FIELD_MORPHS);
+
+        for (int slot = 0; slot < track.getCurveCount(); slot++)
+            if (!track.getCurve(slot).isEmpty())
+                morphs.add(track.getMorphName(slot), AnimationCurveArpgUtility.writeCurve(track.getCurve(slot)));
     }
 
     private void writeBone(ArpgObjectStruct clipArpg, RecordingBoneTrackStruct track) {

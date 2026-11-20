@@ -11,8 +11,9 @@ public class RecordingTakeStruct extends StructPackage {
      * recorded, how long it ran, and holds a track for each thing it saw —
      * the camera, the player, every resident, thrown item and vehicle about
      * them, the weather, the clock, the interface and the sounds. The take
-     * of an animation clip open on the timeline records nothing and holds a
-     * track for every bone the clip may key instead. A take
+     * of an animation clip's layer open on the timeline records nothing and
+     * holds a track for every bone the layer keys instead, the clip's own
+     * layer its morph curves too. A take
      * dropped from the sound library holds that one sound alone, from its
      * start, and runs as long as it plays. A take is never played
      * by itself: clips placed on the timeline play spans of it, each with
@@ -35,6 +36,7 @@ public class RecordingTakeStruct extends StructPackage {
     private final RecordingOverlayTrackStruct overlayTrack;
     private final RecordingSoundTrackStruct soundTrack;
     private final ObjectArrayList<RecordingBoneTrackStruct> boneTracks;
+    private RecordingMorphTrackStruct morphTrack;
 
     // Constructor \\
 
@@ -171,5 +173,13 @@ public class RecordingTakeStruct extends StructPackage {
 
     public ObjectArrayList<RecordingBoneTrackStruct> getBoneTracks() {
         return boneTracks;
+    }
+
+    public RecordingMorphTrackStruct getMorphTrack() {
+        return morphTrack;
+    }
+
+    public void setMorphTrack(RecordingMorphTrackStruct morphTrack) {
+        this.morphTrack = morphTrack;
     }
 }

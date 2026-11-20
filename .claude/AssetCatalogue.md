@@ -511,6 +511,9 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/EditorWindow.arpg` (Animation Timeline removed, Media tab named Tracks) and
   `menus/editor/Recordings.arpg` (animation rows); deleted `menus/editor/AnimationTimeline.arpg` and
   `shortcuts/AnimationTimeline.arpg` with the tab.
+- 2026-11-20: Animation layers and morph curves. Rewrote `animations/humanoid/expressions/HumanoidBlink.arpg` (its
+  morph keys made `linear` curve keys) and regenerated `schemas/Animations.arpg` (`morphs` as curves) and
+  `menus/editor/Recordings.arpg` (the Media / Animations switch).
 
 ## Textures and Sprites (2429 files)
 

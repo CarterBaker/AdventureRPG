@@ -604,7 +604,7 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   store values by name.
 - **Expressions are clips.** A race's `appearance.expressions` maps each expression's name to an animation clip made for
   the race's rig (`AppearanceExpressionStruct`), the facial-clip standard: its bone tracks move face bones and its
-  `morphs` curves (`MorphTrackStruct`, keyed `time` and `value`, linear between keys,
+  `morphs` curves (`MorphTrackStruct`, a curve of keys as a bone axis has, the blink's linear,
   `AnimationClipUtility.sampleMorph`) weigh morphs by name, resolved on every body when the race is built. The one named
   `blink` (`EngineSetting.FACE_EXPRESSION_BLINK`) plays by itself: `AppearanceHandle.updateFace(deltaTime)`, called from
   `EntityInstance.updateAnimation` before the tree updates, places it once at a pseudo-random moment in every interval
@@ -1050,14 +1050,22 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   stamp's `animations`) is an object of channels (`rotation`, `position`, `scale`), each of the axes it keys (`x`,
   `y`, `z`), each a list of keys: `time`, `value`, a `mode` when not `auto` (`aligned`, `free`, `linear`,
   `constant`) and, for aligned and free keys, `in` and `out` handles (a moment and a value from the key), as Blender's
-  F-curves and glTF's cubic splines hold them. An axis with no curve holds its channel's default. The one reader and
+  F-curves and glTF's cubic splines hold them. An axis with no curve holds its channel's default. A clip's `morphs`
+  are curves of the same keys, one per morph (the converted expressions keep `linear` keys). The one reader and
   writer is `AnimationCurveArpgUtility`; the curve is the engine's `CurveStruct` (`engine.util.mathematics.curves`),
   the same Bezier curve the recorder's keys are (`RecordingCurveStruct` extends it), so what the Keys Graph shows is
   exactly what the game plays (`AnimationClipUtility.sampleClip`). Auto keys at a looping clip's ends run round its
   seam (`CurveEnds.CYCLIC`, the last key repeating the first) and a one-shot's ease flat into its holds (`CLAMPED`).
 - **The timeline is the recorder's.** `AnimationEditorManager` opens its active clip there
-  (`RecorderManager.openAnimation`, `RecordingAnimationBranch.parse`): one take, one clip on the first lane, a
-  `RecordingBoneTrackStruct` for every bone but the spring bones, each holding a curve for every slot. Keys edited on
+  (`RecorderManager.openAnimation`, `RecordingAnimationBranch.parse`): one take and one clip for each layer, each on a
+  lane of its own named after it, as a sequencer stacks one character's motion: Base (the clip's own tracks and its
+  morphs, `RecordingMorphTrackStruct`) on the first lane, then every part a stamp joined (`parts`, the modular kit's
+  animation layers) in the clip's order, all spanning the clip's whole length so they read as the one clip they play
+  as. A layer holds a `RecordingBoneTrackStruct` for every bone it keys (Base: every bone no part keys; never spring
+  bones), each holding a curve for every slot and nested in the Layers tab under the nearest bone above it the layer
+  holds. A press on a lane picks its layer (`pressAnimationLayer`), and a bone picked in the Animation Editor picks
+  the layer that keys it (`selectBoneLayer`); the pose tools and pose actions work across every layer at once, each
+  bone keyed in its own layer. Keys edited on
   the Keys tabs are written back into the clip on the frame they change (`RecorderManager.writeAnimation`), every
   other field and every track of a bone the timeline does not show kept as read; a change made anywhere else (the pose
   tools, the Properties rows, the Info Panel) is read back as a step of the same history (`refreshAnimation`). The
@@ -1065,10 +1073,11 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   Animation Editor's Properties rows key a bone's pose at the playhead on every axis it keys or that leaves its
   default (at least its first rotation axis), and its bone's keys are every moment any of its curves holds one.
 - **The Tracks tab** (`RecordingsPanelSystem`) lists `AnimationEditorManager.collectCharacterClips` while animations
-  are worked on; a row clicked runs `AnimationEditorManager.openClip`, through `InfoManager.selectEntry`, so the
+  are worked on, turning there and back as the work moves and by its Media / Animations switch in between
+  (`RecorderManager.showAnimationTracks`); a row clicked runs `AnimationEditorManager.openClip`, through `InfoManager.selectEntry`, so the
   Hierarchy, the Info Panel, the Animation Editor and the Timeline all follow.
 - **Traps.** A clip open on the timeline refuses what only a media file does (laying, moving, cutting or recording
-  clips, tempo and lanes, export, rename, copy and delete: `canArrangeTimeline`, `refuseAnimation`). Morph curves are
-  still linear keys under `morphs` and are not on the timeline yet. A curve keeps at least one key on the Keys tab;
-  to unkey a bone, delete its key in the Animation Editor's rows.
+  clips, tempo and lanes, export, rename, copy and delete: `canArrangeTimeline`, `refuseAnimation`); its layers are
+  made by joining stamps, never on the timeline. A clip holds at most `SONG_LANE_COUNT` layers. A curve keeps at least
+  one key on the Keys tab; to unkey a bone, delete its key in the Animation Editor's rows.
 

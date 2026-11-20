@@ -11,7 +11,6 @@ import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
-import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.curves.CurveEnds;
@@ -29,7 +28,7 @@ class AnimationBuilder extends BuilderPackage {
      * looping clip's curves run round their seam and a one-shot's ease into
      * their holds. Duration is derived, never authored — the latest key time
      * across every track, morph curves included. "morphs" keys the weight of morph
-     * targets by name, each a list of "time" and "value" keys, the
+     * targets by name, each a curve of keys as a bone axis keys, the
      * blendshape curves a facial clip plays; the mesh that plays the clip
      * resolves the names. "parts" groups the tracks a joined body part
      * brought, each under its own name, so a part's motion is edited apart
@@ -96,7 +95,7 @@ class AnimationBuilder extends BuilderPackage {
             }
         }
 
-        MorphTrackStruct[] morphTracks = parseMorphTracks(arpg, sourceName);
+        MorphTrackStruct[] morphTracks = parseMorphTracks(arpg, ends, sourceName);
 
         for (int i = 0; i < morphTracks.length; i++)
             duration = Math.max(duration, morphTracks[i].getEndTime());
@@ -162,7 +161,7 @@ class AnimationBuilder extends BuilderPackage {
     }
 
     // Every morph curve the clip keys, in the order the file lists them
-    private MorphTrackStruct[] parseMorphTracks(ArpgObjectStruct arpg, String sourceName) {
+    private MorphTrackStruct[] parseMorphTracks(ArpgObjectStruct arpg, CurveEnds ends, String sourceName) {
 
         if (!ArpgUtility.hasObject(arpg, EngineSetting.ANIMATION_FIELD_MORPHS))
             return new MorphTrackStruct[0];
@@ -171,32 +170,15 @@ class AnimationBuilder extends BuilderPackage {
         MorphTrackStruct[] morphTracks = new MorphTrackStruct[morphsArpg.size()];
         int index = 0;
 
-        for (String morphName : morphsArpg.keySet())
-            morphTracks[index++] = parseMorphTrack(morphsArpg.getAsArray(morphName), morphName, sourceName);
+        for (String morphName : morphsArpg.keySet()) {
 
-        return morphTracks;
-    }
+            CurveStruct curve = new CurveStruct(ends);
 
-    private MorphTrackStruct parseMorphTrack(ArpgArrayStruct keysArpg, String morphName, String sourceName) {
-
-        if (keysArpg.size() == 0)
-            throwException("Morph curve \"" + morphName + "\" has no keys in " + sourceName);
-
-        float[] times = new float[keysArpg.size()];
-        float[] values = new float[keysArpg.size()];
-
-        for (int i = 0; i < times.length; i++) {
-
-            ArpgObjectStruct keyArpg = keysArpg.get(i).getAsObject();
-
-            times[i] = ArpgUtility.validateFloat(keyArpg, EngineSetting.ANIMATION_FIELD_TIME);
-            values[i] = ArpgUtility.validateFloat(keyArpg, EngineSetting.ANIMATION_FIELD_VALUE);
-
-            if (i > 0 && times[i] <= times[i - 1])
-                throwException("Key " + i + " on morph curve \"" + morphName
-                        + "\" is out of order — keys must be strictly increasing in time. Source: " + sourceName);
+            AnimationCurveArpgUtility.readCurve(
+                    ArpgUtility.validateArray(morphsArpg, morphName), curve, morphName, sourceName);
+            morphTracks[index++] = new MorphTrackStruct(morphName, curve);
         }
 
-        return new MorphTrackStruct(morphName, times, values);
+        return morphTracks;
     }
 }

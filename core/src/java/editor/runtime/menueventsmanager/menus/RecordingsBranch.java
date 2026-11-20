@@ -18,7 +18,8 @@ public class RecordingsBranch extends BranchPackage {
      * deleting the open recording asks for its name to be typed back. Rows
      * hand back the name of the recording they show; while the tab lists
      * animations, a row clicked opens its clip on the Timeline and in the
-     * Animation Editor.
+     * Animation Editor, and the toolbar's switch turns the list between the
+     * two.
      */
 
     // Internal
@@ -48,6 +49,11 @@ public class RecordingsBranch extends BranchPackage {
 
     public void openAnimation(String clipName) {
         animationEditorManager.openClip(clipName);
+    }
+
+    // The list turned between the media files and the animations of the character chosen
+    public void toggleTracksView() {
+        recorderManager.toggleAnimationTracks();
     }
 
     public void saveRecording() {

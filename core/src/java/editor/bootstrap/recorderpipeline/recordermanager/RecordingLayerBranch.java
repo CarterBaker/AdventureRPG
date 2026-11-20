@@ -3,6 +3,7 @@ package editor.bootstrap.recorderpipeline.recordermanager;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderLayerView;
+import editor.bootstrap.recorderpipeline.recording.RecordingBoneTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
@@ -10,6 +11,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RecordingLayerBranch extends BranchPackage {
@@ -19,8 +21,9 @@ class RecordingLayerBranch extends BranchPackage {
      * selected clip's take as layers, in the order the take recorded them:
      * the camera and the player, the characters, items and vehicles each in a
      * group of their own, the weather, the clock and the Sounds layer, the
-     * one picked being what the Keys tab shows; an animation clip's bones
-     * in a group of their own. In the Takes view, every take
+     * one picked being what the Keys tab shows; an animation clip layer's
+     * bones in a group of their own, nested as its rig nests them, then its
+     * morphs. In the Takes view, every take
      * in the bin with its channels and its length, the one picked being the
      * one the take actions lay, rename and delete, each dragged onto the
      * Timeline's lanes to lay it there. Every key is a stable name:
@@ -93,8 +96,8 @@ class RecordingLayerBranch extends BranchPackage {
                 take.getVehicleTracks());
         addTrack(roots, take.getWeatherTrack());
         addTrack(roots, take.getClockTrack());
-        addGroup(roots, EditorSetting.RECORDER_LAYER_KEY_BONES, EditorSetting.RECORDER_LAYER_LABEL_BONES,
-                take.getBoneTracks());
+        addBones(roots, take.getBoneTracks());
+        addTrack(roots, take.getMorphTrack());
 
         if (take.getSoundTrack() != null)
             roots.add(new LayerNodeStruct(
@@ -130,6 +133,85 @@ class RecordingLayerBranch extends BranchPackage {
             group.addChild(children.get(i));
 
         roots.add(group);
+    }
+
+    // An animation clip layer's bones under one group, each nested under the nearest bone above it the layer holds,
+    // a bone holding others still a layer of its own
+    private void addBones(ObjectArrayList<LayerNodeStruct> roots, ObjectArrayList<RecordingBoneTrackStruct> bones) {
+
+        if (bones.isEmpty())
+            return;
+
+        Object2ObjectOpenHashMap<String, ObjectArrayList<RecordingBoneTrackStruct>> parent2Children =
+                new Object2ObjectOpenHashMap<>();
+        ObjectArrayList<RecordingBoneTrackStruct> tops = new ObjectArrayList<>();
+
+        for (int i = 0; i < bones.size(); i++) {
+
+            RecordingBoneTrackStruct bone = bones.get(i);
+
+            if (bone.getParentName() == null) {
+                tops.add(bone);
+                continue;
+            }
+
+            ObjectArrayList<RecordingBoneTrackStruct> siblings = parent2Children.get(bone.getParentName());
+
+            if (siblings == null) {
+                siblings = new ObjectArrayList<>();
+                parent2Children.put(bone.getParentName(), siblings);
+            }
+
+            siblings.add(bone);
+        }
+
+        ObjectArrayList<LayerNodeStruct> children = new ObjectArrayList<>();
+
+        for (int i = 0; i < tops.size(); i++)
+            children.add(buildBone(tops.get(i), parent2Children));
+
+        boolean holding = false;
+
+        for (int i = 0; i < children.size(); i++)
+            holding |= children.get(i).isActive();
+
+        LayerNodeStruct group = new LayerNodeStruct(
+                EditorSetting.RECORDER_LAYER_KEY_BONES, EditorSetting.RECORDER_LAYER_LABEL_BONES, holding, true);
+
+        for (int i = 0; i < children.size(); i++)
+            group.addChild(children.get(i));
+
+        roots.add(group);
+    }
+
+    private LayerNodeStruct buildBone(
+            RecordingBoneTrackStruct bone,
+            Object2ObjectOpenHashMap<String, ObjectArrayList<RecordingBoneTrackStruct>> parent2Children) {
+
+        ObjectArrayList<RecordingBoneTrackStruct> below = parent2Children.get(bone.getBoneName());
+        ObjectArrayList<LayerNodeStruct> children = new ObjectArrayList<>();
+        int trackIndex = recorderManager.getKeyTracks().indexOf(bone);
+        boolean chosen = trackIndex != EngineSetting.INDEX_NOT_FOUND && recorderManager.getKeyLayer() == trackIndex;
+        boolean holding = chosen;
+
+        for (int i = 0; below != null && i < below.size(); i++) {
+
+            LayerNodeStruct child = buildBone(below.get(i), parent2Children);
+
+            children.add(child);
+            holding |= child.isActive();
+        }
+
+        LayerNodeStruct node = new LayerNodeStruct(
+                EditorSetting.RECORDER_LAYER_KEY_TRACK_PREFIX + trackIndex, bone.getTrackLabel(), holding, true);
+
+        for (int i = 0; i < children.size(); i++)
+            node.addChild(children.get(i));
+
+        if (chosen && !children.isEmpty())
+            node.markChosen();
+
+        return node;
     }
 
     // A track's layer, keyed by its place among the take's tracks; a track that recorded nothing is no layer

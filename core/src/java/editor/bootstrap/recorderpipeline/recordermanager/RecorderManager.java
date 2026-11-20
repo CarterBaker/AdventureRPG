@@ -184,6 +184,8 @@ public class RecorderManager extends ManagerPackage {
      * is never moved, cut or joined by another, nothing is recorded into it,
      * and it is saved, reverted and deleted as content; a drag begun in
      * another window is one step, and taken back whole when it is cancelled.
+     * Each layer of the clip — its own tracks and every part a stamp joined —
+     * lies on a lane of its own, and a press on one picks that layer.
      */
 
     // Internal
@@ -226,6 +228,9 @@ public class RecorderManager extends ManagerPackage {
     private int documentRevision;
     private int writtenRevision;
     private int gestureCount;
+
+    // Tracks — whether the Tracks tab lists the animations of the character chosen rather than the media files
+    private boolean listingAnimations;
 
     // Nesting — the recordings opened on the way down to the open one, outermost first
     private ObjectArrayList<String> parentNames;
@@ -1220,8 +1225,24 @@ public class RecorderManager extends ManagerPackage {
             restore(step, statusText);
     }
 
-    // The bone track the Keys tab shows picked by its bone, as the Animation Editor's bone selected is
+    // The bone track the Keys tab shows picked by its bone, as the Animation Editor's bone selected is: the layer
+    // that keys the bone picked on the timeline first when another is
     public void selectBoneLayer(String boneName) {
+
+        if (recording == null || !recording.isAnimation())
+            return;
+
+        for (int c = 0; c < recording.getClips().size(); c++)
+            if (holdsBone(recording.getClips().get(c).getTake(), boneName)) {
+
+                if (c != selectedClip) {
+                    pickClip(c);
+                    updateKeyTracks();
+                    revision++;
+                }
+
+                break;
+            }
 
         for (int i = 0; i < keyTracks.size(); i++)
             if (keyTracks.get(i) instanceof RecordingBoneTrackStruct bone && bone.getBoneName().equals(boneName)) {
@@ -1231,6 +1252,33 @@ public class RecorderManager extends ManagerPackage {
 
                 return;
             }
+    }
+
+    private static boolean holdsBone(RecordingTakeStruct layer, String boneName) {
+
+        for (int i = 0; i < layer.getBoneTracks().size(); i++)
+            if (layer.getBoneTracks().get(i).getBoneName().equals(boneName))
+                return true;
+
+        return false;
+    }
+
+    // The Tracks tab turned to the animations or the media files, as working on either turns it, or by its switch
+    public void showAnimationTracks(boolean shown) {
+
+        if (shown == listingAnimations)
+            return;
+
+        this.listingAnimations = shown;
+        revision++;
+    }
+
+    public void toggleAnimationTracks() {
+        showAnimationTracks(!listingAnimations);
+    }
+
+    public boolean isListingAnimations() {
+        return listingAnimations;
     }
 
     public boolean isAnimationOpen(String clipName) {
@@ -1876,6 +1924,11 @@ public class RecorderManager extends ManagerPackage {
         if (drag.isActive() || recording == null)
             return;
 
+        if (recording.isAnimation()) {
+            pressAnimationLayer(window, pressX, pressY, time, lane);
+            return;
+        }
+
         int clipIndex = canArrangeTimeline() ? recording.findClipAt(time, lane) : EngineSetting.INDEX_NOT_FOUND;
 
         if (isCutting() && clipIndex != EngineSetting.INDEX_NOT_FOUND) {
@@ -1931,6 +1984,21 @@ public class RecorderManager extends ManagerPackage {
         beginDrag(RecorderDragKind.CLIP, clipIndex, nodeIndex, window, pressX, pressY, time,
                 time - recording.getClips().get(clipIndex).getStart());
         drag.anchorSelection(extending, false, selectedClips.contains(clipIndex));
+    }
+
+    // A press on an animation clip's lanes picks the layer under it, its bones then the ones the Layers and Keys tabs
+    // show, and moves the playhead there once let go where it was pressed
+    private void pressAnimationLayer(WindowInstance window, float pressX, float pressY, float time, int lane) {
+
+        int layerClip = recording.findClipAt(time, lane);
+
+        if (layerClip != EngineSetting.INDEX_NOT_FOUND && layerClip != selectedClip) {
+            pickClip(layerClip);
+            revision++;
+        }
+
+        beginDrag(RecorderDragKind.PAN, EngineSetting.INDEX_NOT_FOUND, EngineSetting.INDEX_NOT_FOUND,
+                window, pressX, pressY, time, 0f);
     }
 
     // The pan button pressed over the lanes or the ruler takes hold of the view, whatever lies under the press, and
@@ -3046,7 +3114,7 @@ public class RecorderManager extends ManagerPackage {
 
     // The tracks of the take that recorded anything, in the order the Keys pane lists them: the camera, the
     // player, every resident, item and vehicle, the weather and the clock, whichever it holds, and an animation
-    // clip's bones
+    // clip layer's bones and morphs
     private void collectCurveTracks(RecordingTakeStruct collected, ObjectArrayList<RecordingCurveTrackStruct> tracks) {
 
         addCurveTrack(collected.getCameraTrack(), tracks);
@@ -3066,6 +3134,8 @@ public class RecorderManager extends ManagerPackage {
 
         for (int i = 0; i < collected.getBoneTracks().size(); i++)
             addCurveTrack(collected.getBoneTracks().get(i), tracks);
+
+        addCurveTrack(collected.getMorphTrack(), tracks);
     }
 
     private void addCurveTrack(RecordingCurveTrackStruct track, ObjectArrayList<RecordingCurveTrackStruct> tracks) {

@@ -1,6 +1,7 @@
 package application.bootstrap.animationpipeline.animation;
 
 import engine.root.StructPackage;
+import engine.util.mathematics.curves.CurveStruct;
 
 public class MorphTrackStruct extends StructPackage {
 
@@ -8,28 +9,27 @@ public class MorphTrackStruct extends StructPackage {
      * Immutable weight curve of one morph target within a clip, the
      * blendshape curve a facial clip keys: the morph is named, not indexed,
      * since every mesh numbers its morphs its own way, and whoever plays the
-     * clip resolves the name against the mesh it weighs. Times are strictly
-     * increasing, enforced by AnimationBuilder; the weight is linear between
-     * keys and holds past either end.
+     * clip resolves the name against the mesh it weighs. Its keys are a curve
+     * like any bone axis's (keys in strictly increasing time, each with its
+     * mode and handles, enforced by AnimationBuilder), holding its first and
+     * last value past either end.
      */
 
     // Identity
     private final String morphName;
 
-    // Keys
-    private final float[] times;
-    private final float[] values;
+    // Curve
+    private final CurveStruct curve;
 
     // Constructor \\
 
-    public MorphTrackStruct(String morphName, float[] times, float[] values) {
+    public MorphTrackStruct(String morphName, CurveStruct curve) {
 
         // Identity
         this.morphName = morphName;
 
-        // Keys
-        this.times = times;
-        this.values = values;
+        // Curve
+        this.curve = curve;
     }
 
     // Accessible \\
@@ -38,19 +38,11 @@ public class MorphTrackStruct extends StructPackage {
         return morphName;
     }
 
-    public int getKeyCount() {
-        return times.length;
-    }
-
-    public float getTime(int key) {
-        return times[key];
-    }
-
-    public float getValue(int key) {
-        return values[key];
+    public CurveStruct getCurve() {
+        return curve;
     }
 
     public float getEndTime() {
-        return times[times.length - 1];
+        return curve.getEndTime();
     }
 }
