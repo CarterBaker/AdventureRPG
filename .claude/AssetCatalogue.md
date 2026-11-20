@@ -483,6 +483,8 @@ One line per session that changed this file: the date, what was added or removed
   The worn meshes Import writes under `mesh/worn/` are the owner's models and are not catalogued.
 - 2026-11-19: Editor crash fix. Regenerated `animationtrees/item/ItemAnimationTree.arpg`: its base layer now plays
   its idle node as the `default` for every state, since a base layer naming a node for idle alone is refused at load.
+- 2026-11-20: File menu crash fix. Regenerated `menus/editor/EditorWindow.arpg`: Import and Export run the `import`
+  and `export` actions, as `FileMenuAction` names them, instead of the retired `import_model` and `export_model`.
 
 ## Textures and Sprites (2429 files)
 
