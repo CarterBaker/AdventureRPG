@@ -24,8 +24,9 @@ public class BiomePropertiesSystem extends SystemPackage implements PropertiesVi
      * can paint as a grid of swatches, each with its name under it, the one
      * chosen highlighted and every cell carrying its biome's name, as many to
      * a row as the tab's width holds (StripLayoutUtility), and below them the
-     * Info rows of the entry selected in the Hierarchy, the biome chosen once
-     * a cell is pressed, the status line naming its file. The palette is laid
+     * Info rows of the biome chosen, selected in the Hierarchy as the palette
+     * is shown and whenever a cell is pressed, the status line naming its
+     * file. The palette is laid
      * out again only when it moves or the tab's width changes how many fit a
      * row; the Info rows are then taken away first and listed again after it,
      * so they always stand below the palette.
@@ -69,6 +70,9 @@ public class BiomePropertiesSystem extends SystemPackage implements PropertiesVi
         boolean relaid = force
                 || worldEditorManager.getPaletteRevision() != shownPaletteRevision
                 || perRow != shownPerRow;
+
+        if (force)
+            worldEditorManager.showChosenBiome();
 
         if (relaid) {
             clear();

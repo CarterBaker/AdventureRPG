@@ -2646,7 +2646,6 @@ public class EditorSetting {
     public static final String TOOL_LOOP_CUT = "Loop Cut";
     public static final String TOOL_DISSOLVE_LOOP = "Dissolve Loop";
     public static final String TOOL_DRAW = "Draw";
-    public static final String TOOL_MATERIAL = "Material";
     public static final String TOOL_LIGHT = "Light";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
@@ -2810,7 +2809,9 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_PLAYERS_OFF = "Players Off";
     public static final String WORLD_EDITOR_DIRTY_MARKER = "*";
     public static final String WORLD_EDITOR_STATUS_SEPARATOR = "  |  ";
-    public static final String WORLD_EDITOR_STATUS_NO_BIOME = "No biome selected";
+    public static final String WORLD_EDITOR_STATUS_NO_BIOME =
+            "No biome selected: list the biomes this world paints with in its Biomes field (Worlds tab)";
+    public static final String WORLD_EDITOR_KEY_BIOMES = "biomes";
     public static final String WORLD_EDITOR_STATUS_X = "X ";
     public static final String WORLD_EDITOR_STATUS_Y = "  Y ";
     public static final String WORLD_EDITOR_STATUS_UNPAINTED = "Unpainted color";

@@ -79,6 +79,7 @@ class CharacterPaintBranch extends BranchPackage {
     private Object2ObjectOpenHashMap<String, CharacterPaintCanvasStruct[]> textureName2Canvases;
     private ObjectArrayList<CharacterPaintCanvasStruct> strokeCanvases;
     private boolean stroking;
+    private boolean laysMaterial;
 
     // History — the layers each step painted, oldest step first, across every canvas
     private ObjectArrayList<ObjectArrayList<ImageDocumentInstance>> undoSteps;
@@ -336,7 +337,7 @@ class CharacterPaintBranch extends BranchPackage {
     }
 
     // One stamp: every texel of the faces under the brush painted by how much of the tip covers it on the window,
-    // on the map painted, or on every map while the Material tool lays a material
+    // on the map painted, or on every map while the Brush lays the material chosen
     void stamp(
             CharacterMeshDocumentInstance document,
             CharacterPaintStampStruct stamp,
@@ -348,8 +349,9 @@ class CharacterPaintBranch extends BranchPackage {
 
         RiggedMeshStruct mesh = document.getMesh();
         BrushHandle brush = brushManager.getActiveBrush();
-        int firstMap = tool == EditorTool.MATERIAL ? 0 : mapIndex;
-        int lastMap = tool == EditorTool.MATERIAL ? EditorSetting.CHARACTER_PAINT_MAP_LABELS.length - 1 : mapIndex;
+        boolean everyMap = resolveLaysMaterial(tool);
+        int firstMap = everyMap ? 0 : mapIndex;
+        int lastMap = everyMap ? EditorSetting.CHARACTER_PAINT_MAP_LABELS.length - 1 : mapIndex;
 
         collectTextures(mesh, stamp);
 
@@ -470,17 +472,35 @@ class CharacterPaintBranch extends BranchPackage {
         int texture = mesh.getFaceTexture(faceIndex);
         BrushHandle brush = brushManager.getActiveBrush();
 
+        boolean everyMap = resolveLaysMaterial(EditorTool.FILL);
+        int firstMap = everyMap ? 0 : mapIndex;
+        int lastMap = everyMap ? EditorSetting.CHARACTER_PAINT_MAP_LABELS.length - 1 : mapIndex;
+
         collectIsland(mesh, faceIndex, texture);
         beginStroke();
 
-        CharacterPaintCanvasStruct canvas = resolveCanvas(mesh.getTextureName(texture));
-        ImageDocumentInstance layer = beginCanvas(canvas);
+        for (int map = firstMap; map <= lastMap; map++) {
 
-        for (int i = 0; i < islandFaces.size(); i++)
-            paintFace(canvas, layer, mesh, islandFaces.getInt(i), null, 0, brush, EditorTool.BRUSH, strength);
+            CharacterPaintCanvasStruct canvas = resolveCanvas(mesh.getTextureName(texture), map);
+            ImageDocumentInstance layer = beginCanvas(canvas);
 
-        imageManager.flushPaint(layer);
+            for (int i = 0; i < islandFaces.size(); i++)
+                paintFace(canvas, layer, mesh, islandFaces.getInt(i), null, 0, brush, EditorTool.BRUSH, strength);
+
+            imageManager.flushPaint(layer);
+        }
+
         endStroke();
+    }
+
+    // Whether the tool lays the material chosen instead of the colour, on every map at once: Brush and Fill do while
+    // the Materials tab was worked in after the Color Wheel
+    private boolean resolveLaysMaterial(EditorTool tool) {
+
+        this.laysMaterial = (tool == EditorTool.BRUSH || tool == EditorTool.FILL)
+                && materialsManager.isPaintingMaterial();
+
+        return laysMaterial;
     }
 
     private void collectIsland(RiggedMeshStruct mesh, int startFace, int texture) {
@@ -645,8 +665,9 @@ class CharacterPaintBranch extends BranchPackage {
             }
     }
 
-    // One texel by the tool: Brush toward the colour, Material toward the material's own texel there, Erase back to
-    // the default or to nothing, Smooth toward its neighbours; the base keeps its own alpha, which only its image sets
+    // One texel by the tool: Brush and Fill toward the colour, or toward the material's own texel there while they
+    // lay the material chosen, Erase back to the default or to nothing, Smooth toward its neighbours; the base keeps
+    // its own alpha, which only its image sets
     private void paintTexel(
             CharacterPaintCanvasStruct canvas,
             ImageDocumentInstance layer,
@@ -662,11 +683,10 @@ class CharacterPaintBranch extends BranchPackage {
                     ? ImageColorUtility.mix(before, canvas.getDefaultColor(), amount, false)
                     : ImageColorUtility.mix(before, before & ~EngineSetting.PACKED_COLOR_CHANNEL_MASK, amount, true);
             case SMOOTH -> ImageColorUtility.mix(before, averageTexel(layer, x, y), amount, !base);
-            case MATERIAL -> ImageColorUtility.mix(before, materialsManager.sampleMap(
+            default -> ImageColorUtility.mix(before, laysMaterial ? materialsManager.sampleMap(
                     canvas.getMapIndex(),
                     (x + 0.5f) / canvas.getWidth(),
-                    1f - (y + 0.5f) / canvas.getHeight()), amount, !base);
-            default -> ImageColorUtility.mix(before, toRGBA(), amount, !base);
+                    1f - (y + 0.5f) / canvas.getHeight()) : toRGBA(), amount, !base);
         };
 
         imageManager.paintPixel(layer, x, y, after);

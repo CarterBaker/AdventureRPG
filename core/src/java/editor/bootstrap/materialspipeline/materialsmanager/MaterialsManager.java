@@ -9,8 +9,11 @@ import editor.bootstrap.filemenupipeline.util.WorkspaceUtility;
 import editor.bootstrap.imageeditorpipeline.imageeditormanager.ImageEditorManager;
 import editor.bootstrap.materialspipeline.materials.MaterialDocumentStruct;
 import editor.bootstrap.materialspipeline.materials.MaterialDropProvider;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import editor.runtime.colorwheel.ColorWheelContext;
+import editor.runtime.materials.MaterialsContext;
 import engine.assets.image.Pixmap;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
@@ -27,7 +30,7 @@ public class MaterialsManager extends ManagerPackage {
      * strokes with, and the material of the workspace open, made from a
      * texture with maps and parameters of its own, as a texturing tool makes
      * one. Choosing the open material makes it the one laid: the Material
-     * Viewer shows it and the Paint tab's Material tool lays its maps, while
+     * Viewer shows it and the Paint tab lays its maps, while
      * the hair and items, which take only the game's textures, take its base
      * until it is imported. Every edit of the open material is a step of its
      * undo history. A material pressed in the Materials tab is chosen
@@ -36,13 +39,18 @@ public class MaterialsManager extends ManagerPackage {
      * materials. A release is seen on the first frame no drag is reported,
      * whichever runs first in a frame, the tab's drag or this update. The
      * revision moves whenever the list or what is chosen changes, the value
-     * revision whenever only a value of the open material does.
+     * revision whenever only a value of the open material does. Painting
+     * lays the material chosen instead of the colour while the Materials tab
+     * was worked in after the Color Wheel, as a texturing tool's fill swaps
+     * between a colour and a material; working in the Color Wheel again
+     * paints the colour.
      */
 
     // Internal
     private TextureManager textureManager;
     private WindowManager windowManager;
     private ImageEditorManager imageEditorManager;
+    private ActiveWindowManager activeWindowManager;
     private MaterialDocumentBranch materialDocumentBranch;
     private MaterialSampleBranch materialSampleBranch;
     private MaterialRowBranch materialRowBranch;
@@ -102,6 +110,7 @@ public class MaterialsManager extends ManagerPackage {
         this.textureManager = get(TextureManager.class);
         this.windowManager = get(WindowManager.class);
         this.imageEditorManager = get(ImageEditorManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
     }
 
     // Update \\
@@ -551,6 +560,15 @@ public class MaterialsManager extends ManagerPackage {
 
         resolvePalette();
         return packName2MaterialNames.get(packName);
+    }
+
+    // Whether painting lays the material chosen rather than the colour: the Materials tab worked in after the Color
+    // Wheel
+    public boolean isPaintingMaterial() {
+
+        WindowInstance recent = activeWindowManager.findRecent(MaterialsContext.class, ColorWheelContext.class);
+
+        return recent != null && recent.getContext() instanceof MaterialsContext;
     }
 
     public boolean hasMaterial(String materialName) {

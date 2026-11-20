@@ -8,7 +8,9 @@ public enum MapGenerateOption {
      * Every setting that turns an image into one of its maps, as a map
      * generator (Materialize, Bitmap2Material) offers them: how the height is
      * read off the image's brightness (the size of the forms kept, a
-     * softening blur, its contrast, and whether dark is high), where a
+     * softening blur, its contrast), Invert, which reads the brightness the
+     * other way round (dark high, so a normal's relief turns inside out, or a
+     * roughness, glossiness or opacity read from the darks), where a
      * displacement's level stands, the fine detail a bump keeps, how strongly
      * the normal bends, how dark and how wide occlusion and cavities gather,
      * how sharply curvature shows, how far thickness reaches, the
@@ -23,7 +25,7 @@ public enum MapGenerateOption {
     HEIGHT_DETAIL("Height Detail", 2f, 64f, 1f, 24f, false),
     HEIGHT_SOFTNESS("Height Softness", 0f, 8f, 1f, 1f, false),
     HEIGHT_CONTRAST("Height Contrast", 0.2f, 4f, 0.05f, 1.5f, false),
-    HEIGHT_INVERT("Dark Is High", 0f, 1f, 1f, 0f, true),
+    HEIGHT_INVERT("Invert", 0f, 1f, 1f, 0f, true),
     MID_LEVEL("Mid Level", 0f, 1f, 0.01f, 0.5f, false),
     BUMP_DETAIL("Bump Detail", 1f, 16f, 1f, 2f, false),
     NORMAL_STRENGTH("Normal Strength", 0f, 16f, 0.25f, 4f, false),

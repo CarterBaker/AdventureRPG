@@ -41,9 +41,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 ## The tabs
 
-- **World Editor.** Paints the biomes and places settlements and cameras on its Biomes layer, and raises and lowers
-  the ground on its Heights layer. The biome it paints is chosen in the Properties tab's palette, shown while the
-  Biomes layer is picked with the biome's fields below it. The Biome Planner only plans.
+- **World Editor.** Paints the biomes and places settlements and cameras on its Biomes layer, and shapes the ground on
+  its Heights layer with one Raise brush that lowers while Ctrl is held (`WorldEditor/InvertStroke`). The biome it
+  paints is chosen in the Properties tab's palette, which lists the biomes the world itself names in its `biomes`
+  field (edited with the world in the Worlds tab), shown while the Biomes layer is picked with the chosen biome's
+  fields below it (selected in the Hierarchy as the palette is shown). The Biome Planner only plans.
 - **Content.** Entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab.
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
   Sculpt, Weights, Paint, Rig and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
@@ -186,7 +188,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   material library. `MaterialsManager` (`editor.bootstrap.materialspipeline`) keeps the material chosen, which every
   window that lays a material reads: the Hair tab's new strands and Brush lay it (hair, `characters/standard`'s strand
   textures, draws as intended; any other is the owner's choice), the Item Editor gives it to a new part, the Paint
-  tab's Material tool lays it and the Material Viewer shows it. A row pressed is chosen and picked up; let go over a
+  tab's Brush and Fill lay it in place of the colour and the Material Viewer shows it. A row pressed is chosen and picked up; let go over a
   window that implements `MaterialDropProvider`, the material is dropped there once (`MaterialsManager.update` sees
   the release), and the Item Editor colours the part under the pointer with it.
 - **A material is a texture set and its parameters**, as Substance and Unreal's material instances hold one: the
@@ -195,13 +197,14 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Color, Tiling, Normal Strength, Roughness Offset, Metallic Offset; `MATERIALS_PARAMETER_*`). The shader is the
   surface's own (character, item, block): a painted material is drawn by whatever draws the surface it lands on, so a
   material names no shader of its own. `MaterialSampleBranch` reads every map's image texel by texel the one way the
-  Material tool and Export share, and hands the same images to the viewer as editor textures
+  material brush and Export share, and hands the same images to the viewer as editor textures
   (`MaterialsManager.usePreviewTexture`, made again only when an image changes), whose shader applies the parameters
   as the brush does. A map wanting a generated image (a normal or roughness from an albedo) takes the Image Editor's
   exported map: generate it in the Maps tab, Export, then choose the PNG.
-- **Paint a material** as Substance Painter does: the Tools tab's Material tool (`EditorTool.MATERIAL`, key `M`) on
-  the Paint tab, the Brushes tab's brush and the Materials tab's material lay every map of the material at once, each
-  texel taking the material's own at its UV repeated by the Tiling, through the brush's coverage and Strength
+- **Paint a material** as Substance Painter does: there is no material tool. The Paint tab's Brush and Fill paint the
+  Color Wheel's colour, or, while the Materials tab was worked in after the Color Wheel
+  (`MaterialsManager.isPaintingMaterial`, `ActiveWindowManager.findRecent`), the material chosen there in its place:
+  working in either tab switches what they lay. The material is laid on every map at once, each texel taking the material's own at its UV repeated by the Tiling, through the brush's coverage and Strength
   (`CharacterPaintBranch.stamp`); a stroke is one undo step across every map and texture it reached. Characters,
   worn clothing and baked items are all painted there.
 - **The Material Viewer** (`editor.runtime.materialviewer`, under the Materials menu) shows the material chosen on a
@@ -244,7 +247,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   (`CharacterEditorManager.openBakedModel`; an open one takes it as one edit), to paint, unwrap and model as any mesh.
   Baking again lays the maps out afresh from the cubes, painting over the last bake: paint after the shape is done.
   The Tools tab's Paint Item action (`ITEM_EDITOR_KEY_PAINT`) does it in one step: it exports, brings the Paint tab
-  forward (`TabManager.showCharacterPaint`, a new one only when none is open) and chooses its Material tool.
+  forward (`TabManager.showCharacterPaint`, a new one only when none is open) and chooses its Brush.
 - **Painted items reach the game** through the mesh tabs' File, Import: an item model (`items/<Item>`) is written to
   `assets/mesh/items/painted/<Item>.arpg` and named by the item's `painted` field, which the item it paints offers
   first (the one whose sub-voxels are `items/<Item>`). The item keeps its sub-voxels for its shape, grip and contents;

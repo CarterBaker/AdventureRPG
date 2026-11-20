@@ -9,6 +9,9 @@ import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.UtilityPackage.InternalException;
+import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgUtility;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 class WorldBiomeBranch extends BranchPackage {
 
@@ -20,7 +23,9 @@ class WorldBiomeBranch extends BranchPackage {
      * as it was and reports why, in the world editor's status and the log.
      * Biome selection runs both ways: a biome chosen in the world editor or
      * clicked on a map is selected in the hierarchy, and a biome selected
-     * there becomes the world editor's brush when it paints the world.
+     * there becomes the world editor's brush when it paints the world. The
+     * biomes a world paints with are its own list (the world's biomes field),
+     * the palette taken again whenever the world's entry changes.
      */
 
     // Internal
@@ -52,6 +57,35 @@ class WorldBiomeBranch extends BranchPackage {
         infoManager.addSelectionListener(
                 EditorSetting.INFO_SCHEMA_BIOMES,
                 entry -> worldEditorManager.applyBiomeSelection(entry.getEntryName()));
+        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_WORLDS, entry -> worldEditorManager.invalidatePalette());
+    }
+
+    // Palette \\
+
+    // The biomes the world lists to paint with, as its entry stands now, saved or not; none for a world without one
+    void collectWorldBiomes(WorldHandle worldHandle, ObjectOpenHashSet<String> outNames) {
+
+        outNames.clear();
+
+        if (worldHandle == null)
+            return;
+
+        InfoEntryStruct entry = infoManager.findEntry(
+                EditorSetting.INFO_SCHEMA_WORLDS, worldHandle.getWorldName(), worldHandle.getWorldName());
+
+        if (entry == null || !ArpgUtility.hasArray(entry.getArpg(), EditorSetting.WORLD_EDITOR_KEY_BIOMES))
+            return;
+
+        ArpgArrayStruct biomesArpg = entry.getArpg().getAsArray(EditorSetting.WORLD_EDITOR_KEY_BIOMES);
+
+        for (int i = 0; i < biomesArpg.size(); i++)
+            outNames.add(biomesArpg.get(i).getAsString());
+    }
+
+    // The chosen biome's entry shown in the Properties tab's Info rows, unless it already is
+    void showInHierarchy(String biomeName) {
+        if (!infoManager.isSelected(EditorSetting.INFO_SCHEMA_BIOMES, biomeName))
+            selectInHierarchy(biomeName);
     }
 
     // Selection \\

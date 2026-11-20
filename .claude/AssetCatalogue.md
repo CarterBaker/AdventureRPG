@@ -529,6 +529,11 @@ One line per session that changed this file: the date, what was added or removed
   `layouts/World.arpg` (layouts are the user's own only); regenerated `menus/editor/EditorWindow.arpg` (ARPG Viewer
   moved to the Debug menu), `schemas/Shortcuts.arpg` (`repeat`, current canvas and tool names) and
   `shortcuts/Tools.arpg` (`[` and `]` repeat while held).
+- 2026-11-20: Editor workflow fixes. Regenerated `shortcuts/Tools.arpg` (Material tool key removed),
+  `schemas/Shortcuts.arpg` (tool names), `shortcuts/WorldEditor.arpg` (Ctrl lowers with Raise), `schemas/Worlds.arpg`
+  (`biomes`) and `worlds/TerraArcana.arpg` (its biome list); rewrote `shaders/characters/includes/CharacterSurface.glsl`,
+  `shaders/characters/standard/StandardcharacterShader.fsh` and
+  `shaders/editor/characterview/CharacterViewCharacterShader.fsh` (hair cards read clamped to their edges).
 
 ## Textures and Sprites (2431 files)
 

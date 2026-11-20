@@ -305,9 +305,10 @@ public class MapGenerateUtility extends EngineUtility {
         float[] luminance = scratch.getLuminance();
         float base = MapGenerateOption.ROUGHNESS_BASE.get(settings);
         float variation = MapGenerateOption.ROUGHNESS_VARIATION.get(settings);
+        boolean invert = MapGenerateOption.HEIGHT_INVERT.isOn(settings);
 
         for (int i = 0; i < scratch.getCount(); i++) {
-            float roughness = resolveRoughness(luminance[i], base, variation);
+            float roughness = resolveRoughness(invert ? 1f - luminance[i] : luminance[i], base, variation);
             out[i] = toGrey(glossy ? 1f - roughness : roughness);
         }
     }
@@ -368,10 +369,12 @@ public class MapGenerateUtility extends EngineUtility {
         float[] luminance = scratch.getLuminance();
         boolean fromBrightness = MapGenerateOption.OPACITY_FROM_BRIGHTNESS.isOn(settings);
         float cutoff = MapGenerateOption.OPACITY_CUTOFF.get(settings);
+        boolean invert = MapGenerateOption.HEIGHT_INVERT.isOn(settings);
 
         for (int i = 0; i < scratch.getCount(); i++) {
 
-            float opacity = fromBrightness ? luminance[i] : toChannel(pixels[i], EngineSetting.COLOR_CHANNEL_COUNT - 1);
+            float read = fromBrightness ? luminance[i] : toChannel(pixels[i], EngineSetting.COLOR_CHANNEL_COUNT - 1);
+            float opacity = invert ? 1f - read : read;
 
             out[i] = toGrey(cutoff > 0f ? (opacity >= cutoff ? 1f : 0f) : opacity);
         }

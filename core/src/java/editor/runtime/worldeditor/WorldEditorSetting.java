@@ -62,6 +62,7 @@ public class WorldEditorSetting {
     // Shortcuts — held modifiers the selection reads
     public static final String SHORTCUT_ADD_SELECTION = "WorldEditor/AddSelection";
     public static final String SHORTCUT_SUBTRACT_SELECTION = "WorldEditor/SubtractSelection";
+    public static final String SHORTCUT_INVERT_STROKE = "WorldEditor/InvertStroke";
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/WorldEditor/Toolbar";

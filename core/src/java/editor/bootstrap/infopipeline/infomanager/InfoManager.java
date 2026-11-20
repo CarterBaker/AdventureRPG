@@ -789,6 +789,11 @@ public class InfoManager extends ManagerPackage {
         return name.equals(getSelectionName());
     }
 
+    // Whether the entry of that name in that schema is the one selected
+    public boolean isSelected(String schemaName, String name) {
+        return activeSchema != null && activeSchema.getSchemaName().equals(schemaName) && isSelectionName(name);
+    }
+
     public void deleteSelection() {
 
         if (selectedDocument == null)

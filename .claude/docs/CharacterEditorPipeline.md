@@ -26,7 +26,7 @@ Entity, never Character (the Animation Editor's row, the command console's Entit
 | Character Appearance, Equipment | `CharacterAppearanceContext`, `CharacterEquipmentContext` | the live preview in its look mode, no layers |
 | Character Mesh, Topology, Sculpt, Weights, Rig, UV | `CharacterMeshContext`, `CharacterTopologyContext`, `CharacterSculptContext`, `CharacterWeightsContext`, `CharacterRigContext`, `CharacterUVContext` | the region picked in the Layers tab framed and shown alone, its tool canvas |
 | Hair | `CharacterHairContext` | the whole character with the groom open drawn over it, the Hair canvas; its own File and Edit table (`FILE_MENU_HAIR`) |
-| Materials | `editor.runtime.materials.MaterialsContext` (Materials menu) | the workspace material open and every texture of every baked pack, the one strands grow in, the Hair Brush paints and the Paint tab's Material tool lays chosen (`MaterialsManager`, see `.claude/docs/Editor.md`) |
+| Materials | `editor.runtime.materials.MaterialsContext` (Materials menu) | the workspace material open and every texture of every baked pack, the one strands grow in, the Hair Brush paints and the Paint tab's Brush and Fill lay chosen (`MaterialsManager`, see `.claude/docs/Editor.md`) |
 | Material Viewer | `editor.runtime.materialviewer.MaterialViewerContext` (Materials menu) | the material chosen on the shape the Shape option names, lit by the light its Light tool turns |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
@@ -384,8 +384,9 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
   paints each texel by the tip's coverage where the same barycentrics place it on the window, so strokes cross UV
   seams; texels within `CHARACTER_PAINT_BLEED_PIXELS` of an island edge are painted too. Fill covers the island of
   faces joined corner to corner around the face clicked (`pickFace`), Pick takes the flattened map's colour there.
-- **Material painting** (Substance Painter's material brush): the Material tool strokes like Brush but stamps every
-  map's canvas of each texture it reaches (`CharacterPaintBranch.stamp`, `stampCanvas`), each texel mixed by the tip's
+- **Material painting** (Substance Painter's material brush): there is no material tool. While the Materials tab was
+  worked in after the Color Wheel (`MaterialsManager.isPaintingMaterial`), Brush and Fill lay the material chosen in
+  place of the colour, stamping every map's canvas of each texture they reach (`CharacterPaintBranch.stamp`, `stampCanvas`), each texel mixed by the tip's
   coverage toward `MaterialsManager.sampleMap` at the texel's UV, the material chosen in the Materials tab read from
   its maps' textures or images, repeated by its Tiling and shaped by its parameters (see `.claude/docs/Editor.md`,
   Materials).

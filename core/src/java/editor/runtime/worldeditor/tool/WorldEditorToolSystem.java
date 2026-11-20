@@ -55,6 +55,7 @@ public class WorldEditorToolSystem extends SystemPackage {
     // Shortcuts
     private int addSelectionShortcutID;
     private int subtractSelectionShortcutID;
+    private int invertStrokeShortcutID;
 
     // Pointer
     private boolean hovering;
@@ -106,6 +107,8 @@ public class WorldEditorToolSystem extends SystemPackage {
                 WorldEditorSetting.SHORTCUT_ADD_SELECTION);
         this.subtractSelectionShortcutID = shortcutManager.getShortcutIDFromShortcutName(
                 WorldEditorSetting.SHORTCUT_SUBTRACT_SELECTION);
+        this.invertStrokeShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                WorldEditorSetting.SHORTCUT_INVERT_STROKE);
     }
 
     @Override
@@ -162,7 +165,7 @@ public class WorldEditorToolSystem extends SystemPackage {
             return;
         }
 
-        worldEditorManager.beginStroke(layer, hoveredX, hoveredY);
+        worldEditorManager.beginStroke(layer, hoveredX, hoveredY, isShortcutHeld(invertStrokeShortcutID));
         stroking = true;
     }
 

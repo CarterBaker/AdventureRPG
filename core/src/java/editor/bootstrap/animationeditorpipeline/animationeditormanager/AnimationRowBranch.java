@@ -13,12 +13,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class AnimationRowBranch extends BranchPackage {
 
     /*
-     * Lists the rows of the animation editor's two panels. The left panel
-     * holds the clip's character and looping and every bone of its rig, each
-     * with how many keys it has; the right panel the selected bone at the
-     * playhead — its key there or the way to make one, its rotation,
-     * position and scale — and the pose tools that work on every bone at
-     * once. Every value shown is read through AnimationPropertyBranch, the
+     * Lists the animation editor's rows in the Properties tab: first the
+     * selected bone at the playhead — its key there or the way to make one,
+     * its rotation, position and scale — and the pose tools that work on
+     * every bone at once, then the clip's character and looping and every
+     * bone of its rig, each with how many keys it has, to pick from. Every value shown is read through AnimationPropertyBranch, the
      * same path that edits it.
      */
 

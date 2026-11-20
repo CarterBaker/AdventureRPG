@@ -33,12 +33,13 @@ void main() {
     vec3           smoothView = resolveCharacterNormal(v_viewNormal, v_viewPosition);
     CharacterFrame frame      = resolveCharacterFrame(smoothView, v_viewPosition, v_uv);
     TileRead       tile       = resolveTileReadGrad(resolveCharacterTile(v_instance, v_tile), frame.uvDx, frame.uvDy);
-    vec4           base       = sampleTileAlbedo(tile, v_uv, frame.uvDx, frame.uvDy);
+    vec2           readUV     = clampCardUV(v_zone, v_uv, frame.uvDx, frame.uvDy);
+    vec4           base       = sampleTileAlbedo(tile, readUV, frame.uvDx, frame.uvDy);
 
     if (base.a < 0.01)
     discard;
 
-    CharacterMaterial material = sampleCharacterMaterial(tile, v_uv, frame);
+    CharacterMaterial material = sampleCharacterMaterial(tile, readUV, frame);
     CharacterSurface surface = resolveCharacterSurface(
         v_instance, v_zone, base.rgb, v_uv, v_masks, v_surfacePosition, v_viewPosition, frame, material);
     vec3 normalView = surface.normal;

@@ -56,10 +56,10 @@ public enum ImageMap {
             MapGenerateOption.THICKNESS_RADIUS),
     ROUGHNESS(
             "Roughness", "rough", 0x808080FF, MapGenerateUtility::generateRoughness,
-            MapGenerateOption.ROUGHNESS_BASE, MapGenerateOption.ROUGHNESS_VARIATION),
+            MapGenerateOption.ROUGHNESS_BASE, MapGenerateOption.ROUGHNESS_VARIATION, MapGenerateOption.HEIGHT_INVERT),
     GLOSSINESS(
             "Glossiness", "gloss", 0x808080FF, MapGenerateUtility::generateGlossiness,
-            MapGenerateOption.ROUGHNESS_BASE, MapGenerateOption.ROUGHNESS_VARIATION),
+            MapGenerateOption.ROUGHNESS_BASE, MapGenerateOption.ROUGHNESS_VARIATION, MapGenerateOption.HEIGHT_INVERT),
     METALLIC("Metallic", "m", 0x000000FF, MapGenerateUtility::generateMetallic, MapGenerateOption.METALLIC),
     SPECULAR(
             "Specular", "s", 0x0A0A0AFF, MapGenerateUtility::generateSpecular,
@@ -70,7 +70,7 @@ public enum ImageMap {
             MapGenerateOption.GLOW_THRESHOLD, MapGenerateOption.GLOW_SOFTNESS, MapGenerateOption.GLOW_STRENGTH),
     OPACITY(
             "Opacity", "opacity", 0xFFFFFFFF, MapGenerateUtility::generateOpacity,
-            MapGenerateOption.OPACITY_FROM_BRIGHTNESS, MapGenerateOption.OPACITY_CUTOFF),
+            MapGenerateOption.OPACITY_FROM_BRIGHTNESS, MapGenerateOption.OPACITY_CUTOFF, MapGenerateOption.HEIGHT_INVERT),
     TINT("Tint", "tint", 0x000000FF, MapGenerateUtility::generateTint, MapGenerateOption.TINT_AMOUNT);
 
     // Values

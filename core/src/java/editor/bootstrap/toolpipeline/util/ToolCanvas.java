@@ -44,7 +44,9 @@ public enum ToolCanvas {
      * and paints them with the material chosen. A character's Stamp tab joins
      * body parts to it, each scaled and twisted, and lays fur combed one way
      * or the other, with their twins across the body while mirroring. A
-     * character's Paint tab also lays the material chosen, every map at once.
+     * character's Paint tab's Brush and Fill lay the material chosen instead
+     * of the colour, every map at once, while the Materials tab was worked in
+     * after the Color Wheel.
      * The Material Viewer turns its light and shows the material on the
      * shape chosen. The recorder's Timeline selects and cuts
      * clips, nests the selection or opens a nested clip, and exports the
@@ -63,7 +65,7 @@ public enum ToolCanvas {
     HEIGHTS(
             EditorSetting.TOOL_CANVAS_HEIGHTS,
             new EditorTool[] {
-                    EditorTool.RAISE, EditorTool.LOWER, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE },
+                    EditorTool.RAISE, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE },
             true,
             imageSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
@@ -141,8 +143,7 @@ public enum ToolCanvas {
     CHARACTER_PAINT(
             EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.MATERIAL, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL,
-                    EditorTool.PICK },
+                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL, EditorTool.PICK },
             new ToolActionGroupStruct[] { paintLayers() },
             true,
             screenSize(),

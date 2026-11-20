@@ -645,15 +645,15 @@ public class ItemEditorManager extends ManagerPackage {
             paintActiveItem(osWindow);
     }
 
-    // The item baked for the mesh tools and opened in the Paint tab with the Material tool chosen, one step from
-    // modelling to texturing
+    // The item baked for the mesh tools and opened in the Paint tab with the Brush chosen, one step from modelling to
+    // texturing; it lays the material chosen while the Materials tab was worked in after the Color Wheel
     private void paintActiveItem(WindowInstance osWindow) {
 
         if (!exportActiveItem())
             return;
 
         tabManager.showCharacterPaint(osWindow);
-        toolManager.selectTool(ToolCanvas.CHARACTER_PAINT, EditorTool.MATERIAL);
+        toolManager.selectTool(ToolCanvas.CHARACTER_PAINT, EditorTool.BRUSH);
     }
 
     // Materials \\

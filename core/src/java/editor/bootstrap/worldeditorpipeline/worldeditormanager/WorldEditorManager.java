@@ -31,6 +31,7 @@ import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class WorldEditorManager extends ManagerPackage {
 
@@ -93,6 +94,9 @@ public class WorldEditorManager extends ManagerPackage {
     private ObjectArrayList<WorldBiomeEntryStruct> palette;
     private ObjectArrayList<String> paintedNames;
     private IntArrayList paintedColors;
+    private ObjectOpenHashSet<String> worldBiomeNames;
+    private WorldHandle paletteWorldHandle;
+    private boolean paletteStale;
     private int paletteBiomeRevision;
     private int paletteRevision;
 
@@ -101,8 +105,10 @@ public class WorldEditorManager extends ManagerPackage {
     private String selectedBiomeName;
     private ImageBrushStruct brush;
 
-    // Tools — what each tool strokes onto a layer, by the tool's ordinal; null for a tool that does not stroke
+    // Tools — what each tool strokes onto a layer, by the tool's ordinal, and what it strokes inverted (Ctrl held);
+    // null for a tool that does not stroke
     private ImageStroke[] tool2Stroke;
+    private ImageStroke[] tool2InvertedStroke;
 
     // Status
     private String statusMessage;
@@ -124,6 +130,7 @@ public class WorldEditorManager extends ManagerPackage {
         this.palette = new ObjectArrayList<>();
         this.paintedNames = new ObjectArrayList<>();
         this.paintedColors = new IntArrayList();
+        this.worldBiomeNames = new ObjectOpenHashSet<>();
         this.paletteBiomeRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Brush
@@ -139,7 +146,8 @@ public class WorldEditorManager extends ManagerPackage {
         this.tool2Stroke[EditorTool.SCATTER.ordinal()] = ImageStroke.SCATTER;
         this.tool2Stroke[EditorTool.FLATTEN.ordinal()] = ImageStroke.PAINT;
         this.tool2Stroke[EditorTool.RAISE.ordinal()] = ImageStroke.RAISE;
-        this.tool2Stroke[EditorTool.LOWER.ordinal()] = ImageStroke.LOWER;
+        this.tool2InvertedStroke = tool2Stroke.clone();
+        this.tool2InvertedStroke[EditorTool.RAISE.ordinal()] = ImageStroke.LOWER;
     }
 
     @Override
@@ -247,16 +255,21 @@ public class WorldEditorManager extends ManagerPackage {
     private void syncPalette() {
 
         int biomeRevision = biomeManager.getRevision();
+        WorldHandle activeWorld = worldManager.getActiveWorld();
 
-        if (biomeRevision == paletteBiomeRevision)
+        if (biomeRevision == paletteBiomeRevision && activeWorld == paletteWorldHandle && !paletteStale)
             return;
 
         this.paletteBiomeRevision = biomeRevision;
+        this.paletteWorldHandle = activeWorld;
+        this.paletteStale = false;
         biomeManager.collectPaintedBiomes(paintedNames, paintedColors);
+        worldBiomeBranch.collectWorldBiomes(activeWorld, worldBiomeNames);
         palette.clear();
 
         for (int i = 0; i < paintedNames.size(); i++)
-            palette.add(new WorldBiomeEntryStruct(
+            if (worldBiomeNames.contains(paintedNames.get(i)))
+                palette.add(new WorldBiomeEntryStruct(
                     paintedNames.get(i),
                     biomeManager.getDisplayName(biomeManager.getBiomeHandleFromBiomeName(paintedNames.get(i))),
                     paintedColors.getInt(i)));
@@ -285,6 +298,17 @@ public class WorldEditorManager extends ManagerPackage {
                 return palette.get(i);
 
         return null;
+    }
+
+    // The palette taken again on the next update, as after the world's own list of biomes changed
+    void invalidatePalette() {
+        this.paletteStale = true;
+    }
+
+    // The biome chosen shown in the Properties tab below the palette, as when the palette is first shown
+    public void showChosenBiome() {
+        if (selectedBiomeName != null)
+            worldBiomeBranch.showInHierarchy(selectedBiomeName);
     }
 
     public void selectBiome(String biomeName) {
@@ -351,7 +375,8 @@ public class WorldEditorManager extends ManagerPackage {
         return !layer.isPlacing() || !activeMode.isPlacing();
     }
 
-    public void beginStroke(WorldEditorLayer layer, int pixelX, int pixelY) {
+    // A stroke begun on the layer; inverted, Raise lowers the ground instead
+    public void beginStroke(WorldEditorLayer layer, int pixelX, int pixelY, boolean inverted) {
 
         ImageDocumentInstance image = getImage(layer);
         EditorTool tool = getTool(layer);
@@ -365,7 +390,7 @@ public class WorldEditorManager extends ManagerPackage {
 
             case PICK -> pickBiome(image, pixelX, pixelY);
 
-            default -> beginBrush(layer, image, pixelX, pixelY, tool);
+            default -> beginBrush(layer, image, pixelX, pixelY, resolveStroke(tool, inverted), tool);
         }
     }
 
@@ -378,15 +403,18 @@ public class WorldEditorManager extends ManagerPackage {
         imageManager.endStroke(getImage(layer));
     }
 
+    private ImageStroke resolveStroke(EditorTool tool, boolean inverted) {
+        return (inverted ? tool2InvertedStroke : tool2Stroke)[tool.ordinal()];
+    }
+
     // A stroke of the tool's own kind begun with the brush in use and the tool's options; only painting takes a color
     private void beginBrush(
             WorldEditorLayer layer,
             ImageDocumentInstance image,
             int pixelX,
             int pixelY,
+            ImageStroke stroke,
             EditorTool tool) {
-
-        ImageStroke stroke = tool2Stroke[tool.ordinal()];
 
         if (stroke == null)
             return;

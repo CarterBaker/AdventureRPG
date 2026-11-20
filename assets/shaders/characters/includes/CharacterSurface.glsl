@@ -15,7 +15,10 @@
 // its height map (parallax occlusion) and bends the normal through its normal map, within the Character Detail
 // distance. The eye is its variant's image laid on its raw corner UVs, the iris sized, the pupil dilated and the iris
 // seen through the cornea (shadeEye). Hair is its cards' strand texture with a root-to-tip grade and a broken band of
-// shine where it faces up toward the light. Specular rises for the wet eye and the shining hair.
+// shine where it faces up toward the light; a card's strand image is laid once across it, never repeated, so it is
+// read clamped to its edges (clampCardUV), as a hair card's texture is sampled clamp-to-edge, and the transparent tip
+// never blends with the opaque root that the texture array's repeat would wrap round beside it. Specular rises for the
+// wet eye and the shining hair.
 
 struct CharacterSurface {
     vec3  albedo;
@@ -29,6 +32,7 @@ const float CHARACTER_HAIR_SPECULAR  = 0.3;
 const float CHARACTER_HAIR_ROOT_SHADE = 0.7;
 const float CHARACTER_HAIR_TIP_LIGHT  = 1.1;
 const float CHARACTER_TWO_PI         = 6.28318530718;
+const float CHARACTER_CARD_EDGE      = 0.5 / 512.0;
 
 const float CHARACTER_FRECKLE_CELLS  = 420.0;
 const float CHARACTER_BLEMISH_CELLS  = 160.0;
@@ -201,6 +205,16 @@ vec3 shadeEye(int instance, vec2 rawUV, vec3 viewPosition, CharacterFrame frame)
     float    tint  = sampleTileExtra(tile, uv, dx, dy).b;
 
     return mix(image, image * fetchCharacterColor(instance, CHARACTER_COLOR_EYES), tint);
+}
+
+// A hair card's UV held inside its image by the filter's footprint at the level read, half a texel of the largest tier at
+// least, so no read reaches across to the opposite edge; every other zone's UV unchanged
+vec2 clampCardUV(int zone, vec2 uv, vec2 dx, vec2 dy) {
+    if (zone != CHARACTER_ZONE_HAIR)
+    return uv;
+
+    vec2 margin = 0.5 * max(abs(dx), abs(dy)) + vec2(CHARACTER_CARD_EDGE);
+    return clamp(uv, margin, 1.0 - margin);
 }
 
 // Hair as anime hair is painted: the strand texture tinted by the hair color, darker at the roots and catching the

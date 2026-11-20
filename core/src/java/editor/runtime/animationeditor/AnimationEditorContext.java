@@ -106,10 +106,11 @@ public class AnimationEditorContext extends ContextPackage
         return EditorSetting.ANIMATION_PROPERTIES_TITLE;
     }
 
+    // The bone picked first, its key and values at the playhead, then the clip and every bone to pick from
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-        animationEditorManager.buildListRows(rows);
         animationEditorManager.buildPropertyRows(rows);
+        animationEditorManager.buildListRows(rows);
     }
 
     @Override
