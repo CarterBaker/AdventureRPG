@@ -257,8 +257,9 @@ public class RecorderKeyGraphSystem extends SystemPackage {
             setAsideUnused(pools[i]);
     }
 
-    // The selected curve across the view as a line through its keys, a key too close to the last drawn left out
-    // unless selected, and the handles of the selected key drawn out
+    // The selected curve across the view as a line through its keys, every key in view drawn whether or not the clip
+    // plays that far, a key too close to the last drawn left out unless selected, and the handles of the selected
+    // key drawn out
     private void placeCurve(RecordingClipStruct clip, RecordingCurveStruct curve, float width, float height) {
 
         placeCurveLine(clip, curve, width, height);
@@ -277,7 +278,7 @@ public class RecorderKeyGraphSystem extends SystemPackage {
 
             float time = clip.toTimelineTime(curve.getTime(i));
 
-            if (time < clip.getStart() || time > clip.getEnd() || !recorderManager.getView().contains(time))
+            if (!recorderManager.getView().contains(time))
                 continue;
 
             float x = toGraphX(time, width);
@@ -324,12 +325,18 @@ public class RecorderKeyGraphSystem extends SystemPackage {
         placeLine(boxPool, left, top, left, bottom, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
     }
 
-    // The curve sampled every few pixels across the part of its clip in view, each stretch a turned line
+    // The curve sampled every few pixels across the part in view of all it reaches — the whole of its take, and any
+    // key lying past it — each stretch a turned line, so every key that shapes what the clip plays is seen
     private void placeCurveLine(RecordingClipStruct clip, RecordingCurveStruct curve, float width, float height) {
 
+        if (curve.isEmpty())
+            return;
+
         RecordingViewStruct view = recorderManager.getView();
-        float from = Math.max(view.getStart(), clip.getStart());
-        float to = Math.min(view.getEnd(), clip.getEnd());
+        float reachStart = clip.toTimelineTime(Math.min(0f, curve.getTime(0)));
+        float reachEnd = clip.toTimelineTime(Math.max(clip.getTake().getDuration(), curve.getTime(curve.size() - 1)));
+        float from = Math.max(view.getStart(), reachStart);
+        float to = Math.min(view.getEnd(), reachEnd);
 
         if (to <= from)
             return;

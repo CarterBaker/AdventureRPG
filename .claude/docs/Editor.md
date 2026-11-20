@@ -47,9 +47,13 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   last being the one the recorder's deletes act on. A take records whether or not the game is paused, so the pause menu
   that frees the cursor never stops it; music plays with no Preview tab, through the Recorder or Timeline tab. The
   Layers tab lists the take's tracks (camera, player, characters, items, vehicles, weather, clock, sounds) or, in its
-  Takes view, every take, each dragged onto the Timeline's lanes to lay it; the Tools tab holds every take, clip, key, sound, transition and node action; the
-  Properties tab the clip's channels, mute and time ramp; the Character Outliner the channels armed and the export;
-  File, Export exports. The Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
+  Takes view, every take of the open recording, each dragged onto the Timeline's lanes to lay it, each pane keeping its
+  own view (the Timeline opens on the Takes, the Keys and Keys Graph on the take's layers); the Tools tab holds every
+  take, clip, key, sound, transition and node action; the Properties tab the clip's channels, mute and time ramp; the
+  Character Outliner the channels armed and the export while the Recorder or Timeline is worked in, and the keys
+  selected (their time and value, moved together, and their mode) while the Keys or Keys Graph is; Delete removes what
+  is selected in the pane worked in last; Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step through every edit of the open
+  recording (`RecordingHistoryBranch`); File, Export exports. The Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
   the Timeline shows its lanes as Premiere does, five at first and one more each time the highest takes a clip, each
   strip only its number and the name its ... gives it, the lane and clip selected edited in the Properties tab (its mix
   too), and the file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library,

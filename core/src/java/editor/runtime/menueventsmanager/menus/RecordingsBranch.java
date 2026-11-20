@@ -45,6 +45,14 @@ public class RecordingsBranch extends BranchPackage {
         recorderManager.saveRecording();
     }
 
+    public void undo() {
+        recorderManager.undo();
+    }
+
+    public void redo() {
+        recorderManager.redo();
+    }
+
     public void renameRecording(WindowInstance window) {
 
         if (!recorderManager.hasRecording())

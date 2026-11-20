@@ -59,6 +59,7 @@ import editor.runtime.recorder.RecorderSoundHost;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
@@ -117,8 +118,9 @@ public class RecorderManager extends ManagerPackage {
      * on the moments and values of the curve's other keys within reach. The
      * Layers tab lists the take's tracks, the layer picked the one the Keys
      * tab shows, or every take in the bin.
-     * What is selected is deleted as one: the keys while the Keys were worked
-     * in last, else the sound, else the node, else the clip. A sound dragged
+     * What is selected in the pane worked in last is deleted as one: on the
+     * Keys the keys, else the sound, else the node; on the Timeline the
+     * transition, else the node, else the clips. A sound dragged
      * in from the sound library, or added at the playhead, is laid as a take
      * of its own holding that sound alone, the bin keeping one such take for
      * each sound however often it is laid; a clip of such a take selected
@@ -150,8 +152,9 @@ public class RecorderManager extends ManagerPackage {
      * each frame set here — so the two can be blended; every clip's own sounds
      * fade in and out with its transitions. The recordings themselves are
      * listed, opened, renamed, copied and deleted from the Recordings tool.
-     * Each structural change marks the recording unsaved and moves the
-     * revision the recorder tab redraws on. Takes save the recording at once.
+     * Each structural change marks the recording unsaved, moves the revision
+     * the recorder tab redraws on and is a step of the open recording's undo
+     * history, undone and redone as one, the selection and view kept. Takes save the recording at once.
      * A clip plays a take, another recording nested by name, a song or a notes
      * clip: a saved recording dragged from the Recordings tab is laid as a
      * clip nesting it, refused when it would reach the open recording again at
@@ -192,6 +195,7 @@ public class RecorderManager extends ManagerPackage {
     private RecordingRowBranch recordingRowBranch;
     private RecordingRenderBranch recordingRenderBranch;
     private RecordingLayerBranch recordingLayerBranch;
+    private RecordingHistoryBranch recordingHistoryBranch;
     private InstrumentManager instrumentManager;
 
     // Directory — the media files beside the player's saves, and what they export to
@@ -238,6 +242,10 @@ public class RecorderManager extends ManagerPackage {
     private float selectedNodeTime;
     private int selectedTransition;
 
+    // History — the clips and keys selected, kept while a step of the history is put back
+    private IntArrayList keptClips;
+    private IntArrayList keptKeys;
+
     // Transition — the one the picture passes through at the playhead, read again whenever it is asked for
     private RecordingTransitionStruct transition;
 
@@ -279,8 +287,8 @@ public class RecorderManager extends ManagerPackage {
     private int clickedKey;
     private long clickedKeyMillis;
 
-    // Layers — how the Layers tab lists the recorder, and how often what it lists changed
-    private RecorderLayerView layerView;
+    // Layers — how the Layers tab lists the recorder for each pane, and how often what it lists changed
+    private RecorderLayerView[] layerViews;
     private int layerRevision;
 
     // Sounds — the sound selected on the Sounds layer, and how often a sound was changed
@@ -321,6 +329,7 @@ public class RecorderManager extends ManagerPackage {
         this.recordingRowBranch = create(RecordingRowBranch.class);
         this.recordingRenderBranch = create(RecordingRenderBranch.class);
         this.recordingLayerBranch = create(RecordingLayerBranch.class);
+        this.recordingHistoryBranch = create(RecordingHistoryBranch.class);
 
         // Directory
         this.mediaDirectory = new File(internal.path, EditorSetting.RECORDER_MEDIA_DIRECTORY);
@@ -336,6 +345,10 @@ public class RecorderManager extends ManagerPackage {
 
         // Music
         this.renderPercent = EngineSetting.INDEX_NOT_FOUND;
+
+        // History
+        this.keptClips = new IntArrayList();
+        this.keptKeys = new IntArrayList();
 
         // Selection
         this.selectedClips = new IntArrayList();
@@ -372,7 +385,10 @@ public class RecorderManager extends ManagerPackage {
         this.clickedKey = EngineSetting.INDEX_NOT_FOUND;
 
         // Layers
-        this.layerView = RecorderLayerView.LAYERS;
+        this.layerViews = new RecorderLayerView[RecorderPane.VALUES.length];
+
+        for (int i = 0; i < layerViews.length; i++)
+            layerViews[i] = RecorderPane.VALUES[i].getLayerView();
 
         // Sounds
         clearSoundSelection();
@@ -983,6 +999,7 @@ public class RecorderManager extends ManagerPackage {
         clearParents();
         this.recording = null;
         this.unsaved = false;
+        recordingHistoryBranch.reset(null);
         unlaidTracks.clear();
         cancelDrag();
         clearSelection();
@@ -1011,31 +1028,39 @@ public class RecorderManager extends ManagerPackage {
         this.recording = null;
     }
 
-    // The recording opened, bound to everything it nests, with every take still without keys queued to be laid on
-    // them, and its first clip selected so the Keys pane shows its keys at once
+    // The recording opened with a history of its own, its first clip selected so the Keys pane shows its keys at
+    // once
     private void activateRecording(RecordingInstance activated) {
 
-        recordingSourceBranch.bind(activated);
-        this.recording = activated;
+        adoptRecording(activated);
         this.unsaved = false;
         this.playhead = 0f;
-        cancelDrag();
         clearSelection();
-        transition.clear();
-        unlaidTracks.clear();
-        layerRevision++;
-        this.curvesLaid = false;
-        this.saveWhenLaid = false;
-
-        for (int i = 0; i < activated.getTakes().size(); i++)
-            queueCurves(activated.getTakes().get(i));
 
         if (!activated.getClips().isEmpty())
             pickClip(0);
 
         fitView();
         rebuildNodes();
+        recordingHistoryBranch.reset(activated);
         revision++;
+    }
+
+    // The recording made the open one, as opened or as a step of its history brings it back: bound to everything it
+    // nests, with every take still without keys queued to be laid on them
+    private void adoptRecording(RecordingInstance adopted) {
+
+        recordingSourceBranch.bind(adopted);
+        this.recording = adopted;
+        cancelDrag();
+        transition.clear();
+        unlaidTracks.clear();
+        layerRevision++;
+        this.curvesLaid = false;
+        this.saveWhenLaid = false;
+
+        for (int i = 0; i < adopted.getTakes().size(); i++)
+            queueCurves(adopted.getTakes().get(i));
     }
 
     // Takes \\
@@ -2536,8 +2561,21 @@ public class RecorderManager extends ManagerPackage {
         recordingRowBranch.buildSettingsRows(rows);
     }
 
+    // The rows the Character Outliner shows while the Keys or Keys Graph tab is worked in: the keys selected
+    public void buildKeyRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recordingRowBranch.buildKeyRows(rows);
+    }
+
+    // Moves whenever the keys, the curve picked or anything else the recorder shows may have changed
+    public int getKeyRowRevision() {
+        return revision + keysRevision;
+    }
+
+    // Every step of one row in a row is one step of the undo history, so a slider dragged undoes at once
     public void stepRow(String key, int steps) {
+        recordingHistoryBranch.beginRow(key);
         recordingRowBranch.step(key, steps);
+        recordingHistoryBranch.endRow();
     }
 
     public void cycleRow(String key, int direction) {
@@ -2558,17 +2596,13 @@ public class RecorderManager extends ManagerPackage {
 
     // Selection \\
 
-    // What is selected removed as one: the keys on the Keys pane, else the sound, else the transition, else the
-    // node, else the clip
+    // What is selected in the pane worked in last removed as one: on the Keys pane the keys, else the sound, else
+    // the node; on the Timeline the transition, else the node, else every clip selected, so a clip whose take is a
+    // sound alone leaves the timeline rather than losing its sound
     public void deleteSelection() {
 
-        if (pane == RecorderPane.KEYS && !selectedKeys.isEmpty()) {
-            deleteKeys();
-            return;
-        }
-
-        if (isSoundIndex(selectedSound)) {
-            removeSound();
+        if (pane == RecorderPane.KEYS) {
+            deleteKeysPaneSelection();
             return;
         }
 
@@ -2585,6 +2619,135 @@ public class RecorderManager extends ManagerPackage {
         removeClip();
     }
 
+    // The keys selected, else the sound, else the node; with none of them, the status says no key is selected
+    private void deleteKeysPaneSelection() {
+
+        if (selectedKeys.isEmpty() && isSoundIndex(selectedSound)) {
+            removeSound();
+            return;
+        }
+
+        if (selectedKeys.isEmpty() && isNodeIndex(selectedNode)) {
+            removeNode();
+            return;
+        }
+
+        deleteKeys();
+    }
+
+    // History \\
+
+    // The open recording put back as it stood before the last edit, refused while a session runs on it
+    public void undo() {
+
+        if (recording == null || state.isSession() || drag.isActive())
+            return;
+
+        ArpgObjectStruct step = recordingHistoryBranch.undo();
+
+        if (step == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_NOTHING_TO_UNDO);
+            return;
+        }
+
+        restore(step, EditorSetting.RECORDER_STATUS_UNDONE);
+    }
+
+    public void redo() {
+
+        if (recording == null || state.isSession() || drag.isActive())
+            return;
+
+        ArpgObjectStruct step = recordingHistoryBranch.redo();
+
+        if (step == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_NOTHING_TO_REDO);
+            return;
+        }
+
+        restore(step, EditorSetting.RECORDER_STATUS_REDONE);
+    }
+
+    // The recording a step holds made the open one in place of the one open, unsaved, the playhead, the view, the
+    // clips, the layer, the curve and the keys selected kept wherever they still fit; a step that cannot be read
+    // leaves the recording as it is and the history begun again from it
+    private void restore(ArpgObjectStruct step, String status) {
+
+        String recordingName = recording.getRecordingName();
+        RecordingInstance restored = recordingFileBranch.parse(
+                step, recordingName, EditorSetting.RECORDER_HISTORY_ORIGIN_PREFIX + recordingName);
+
+        if (restored == null) {
+            recordingHistoryBranch.reset(recording);
+            setStatus(EditorSetting.RECORDER_STATUS_UNREADABLE + recordingName);
+            return;
+        }
+
+        int keptClip = selectedClip;
+        int keptLayer = keyLayer;
+        int keptSlot = selectedSlot;
+        int keptKey = selectedKey;
+        int keptSound = selectedSound;
+        double keptMinimum = graphMinimum;
+        double keptMaximum = graphMaximum;
+
+        keptClips.clear();
+        keptClips.addAll(selectedClips);
+        keptKeys.clear();
+        keptKeys.addAll(selectedKeys);
+
+        adoptRecording(restored);
+        clearSelection();
+        restoreClipSelection(keptClip);
+        this.unsaved = true;
+        this.playhead = Math.min(playhead, recording.getDuration());
+        rebuildNodes();
+        updateKeyTracks();
+        restoreKeySelection(keptLayer, keptSlot, keptKey, keptSound);
+        this.graphMinimum = keptMinimum;
+        this.graphMaximum = keptMaximum;
+        keysRevision++;
+        setStatus(status);
+    }
+
+    private void restoreClipSelection(int keptClip) {
+
+        for (int i = 0; i < keptClips.size(); i++)
+            if (isClipIndex(keptClips.getInt(i)))
+                selectedClips.add(keptClips.getInt(i));
+
+        if (isClipIndex(keptClip))
+            focusClip(keptClip);
+        else if (!selectedClips.isEmpty())
+            focusClip(selectedClips.getInt(selectedClips.size() - 1));
+    }
+
+    // The layer and curve picked again, and the keys or the sound selected on it that it still holds
+    private void restoreKeySelection(int keptLayer, int keptSlot, int keptKey, int keptSound) {
+
+        if (keptLayer == EditorSetting.RECORDER_KEY_LAYER_NONE)
+            return;
+
+        selectCurve(keptLayer, keptSlot);
+
+        if (keptLayer == EditorSetting.RECORDER_KEY_TRACK_SOUNDS) {
+            selectSound(keptSound);
+            return;
+        }
+
+        RecordingCurveStruct curve = getSelectedCurve();
+
+        if (curve == null || keyLayer != keptLayer)
+            return;
+
+        for (int i = 0; i < keptKeys.size(); i++)
+            if (keptKeys.getInt(i) < curve.size())
+                addKeyToSelection(keptKeys.getInt(i));
+
+        if (keptKey >= 0 && keptKey < curve.size() && selectedKeys.contains(keptKey))
+            this.selectedKey = keptKey;
+    }
+
     // Pane \\
 
     public void showPane(RecorderPane shown) {
@@ -2594,13 +2757,14 @@ public class RecorderManager extends ManagerPackage {
 
     // Layers \\
 
-    // The stack the Layers tab lists while a Recorder tab is worked in: the take's tracks, or every take in the bin
-    public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
-        recordingLayerBranch.buildLayers(roots, layerView);
+    // The stack the Layers tab lists while a pane is worked in: the take's tracks, or every take in the bin, each
+    // pane keeping its own view so the Timeline shows the takes and the Keys the take's layers
+    public void buildLayers(ObjectArrayList<LayerNodeStruct> roots, RecorderPane shownPane) {
+        recordingLayerBranch.buildLayers(roots, getLayerView(shownPane));
     }
 
-    public String getLayerTitle() {
-        return recordingLayerBranch.resolveTitle(layerView);
+    public String getLayerTitle(RecorderPane shownPane) {
+        return recordingLayerBranch.resolveTitle(getLayerView(shownPane));
     }
 
     public void selectLayer(String layerKey) {
@@ -2612,23 +2776,23 @@ public class RecorderManager extends ManagerPackage {
         return recordingLayerBranch.findTake(layerKey);
     }
 
-    public void showLayerView(RecorderLayerView shown) {
+    public void showLayerView(RecorderPane shownPane, RecorderLayerView shown) {
 
-        if (shown == layerView)
+        if (shown == layerViews[shownPane.ordinal()])
             return;
 
-        this.layerView = shown;
+        layerViews[shownPane.ordinal()] = shown;
         layerRevision++;
     }
 
     // The tool action the Layers tab's Delete Layer icon runs: a take is deleted from the Takes view, and a track is
     // never deleted
-    public String getRemoveLayerKey() {
-        return layerView == RecorderLayerView.TAKES ? EditorSetting.RECORDER_KEY_TAKE_DELETE : "";
+    public String getRemoveLayerKey(RecorderPane shownPane) {
+        return getLayerView(shownPane) == RecorderLayerView.TAKES ? EditorSetting.RECORDER_KEY_TAKE_DELETE : "";
     }
 
-    public RecorderLayerView getLayerView() {
-        return layerView;
+    public RecorderLayerView getLayerView(RecorderPane shownPane) {
+        return layerViews[shownPane.ordinal()];
     }
 
     // Moves whenever the takes, the take shown or the layer picked may have changed
@@ -2663,7 +2827,7 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         if (curvesLaid)
-            markUnsaved();
+            markLaid();
 
         if (saveWhenLaid)
             saveRecording();
@@ -2756,7 +2920,7 @@ public class RecorderManager extends ManagerPackage {
             return;
 
         if (ensureCurves(keyTracks.get(layer)))
-            markUnsaved();
+            markLaid();
 
         selectCurve(layer, 0);
     }
@@ -2807,7 +2971,7 @@ public class RecorderManager extends ManagerPackage {
 
         if (!track.hasCurve(slot) && canEditTimeline()
                 && recordingCurveBranch.ensureCurve(track, slot, resolveFitWorld()))
-            markUnsaved();
+            markLaid();
 
         this.selectedTrack = track;
         this.selectedSlot = slot;
@@ -2878,8 +3042,8 @@ public class RecorderManager extends ManagerPackage {
         if (clip == null || curve == null)
             return;
 
-        float from = Math.max(Math.min(fromTime, toTime), clip.getStart());
-        float to = Math.min(Math.max(fromTime, toTime), clip.getEnd());
+        float from = Math.min(fromTime, toTime);
+        float to = Math.max(fromTime, toTime);
 
         for (int i = 0; i < curve.size(); i++) {
 
@@ -3273,15 +3437,26 @@ public class RecorderManager extends ManagerPackage {
 
     // Every key selected moved by the same time and value from where it stood, the one furthest along the way first
     // so each still has room beside the next
+    // The selected keys moved together, held as one within the take they belong to so none can be carried past its
+    // start or its end; keys already lying outside it may be brought back in, never carried further out
     private void moveSelectedKeys(RecordingCurveStruct curve, float shift, double rise) {
 
         int count = selectedKeys.size();
 
+        if (count == 0)
+            return;
+
+        float duration = getSelectedClipStruct().getTake().getDuration();
+        float held = Math.clamp(
+                shift,
+                Math.min(0f, -draggedKeyTimes.getFloat(0)),
+                Math.max(0f, duration - draggedKeyTimes.getFloat(count - 1)));
+
         for (int i = 0; i < count; i++) {
 
-            int slot = shift > 0f ? count - 1 - i : i;
+            int slot = held > 0f ? count - 1 - i : i;
 
-            curve.moveKey(selectedKeys.getInt(slot), draggedKeyTimes.getFloat(slot) + shift,
+            curve.moveKey(selectedKeys.getInt(slot), draggedKeyTimes.getFloat(slot) + held,
                     draggedKeyValues.getDouble(slot) + rise);
         }
     }
@@ -3328,17 +3503,59 @@ public class RecorderManager extends ManagerPackage {
                 : EditorSetting.RECORDER_STATUS_KEYS_DELETED);
     }
 
-    // The selected key's handles stand in the next mode in turn
+    // Every selected key's handles stand in the mode after the shown key's, in turn
     public void cycleKeyMode() {
+        cycleKeyMode(1);
+    }
+
+    public void cycleKeyMode(int direction) {
 
         RecordingCurveStruct curve = requireSelectedKey();
 
         if (curve == null)
             return;
 
-        curve.setMode(selectedKey, RecorderKeyMode.VALUES[
-                (curve.getMode(selectedKey).ordinal() + 1) % RecorderKeyMode.VALUES.length]);
+        setKeyMode(RecorderKeyMode.VALUES[Math.floorMod(
+                curve.getMode(selectedKey).ordinal() + direction, RecorderKeyMode.VALUES.length)]);
+    }
+
+    // Every selected key's handles stand in the mode
+    public void setKeyMode(RecorderKeyMode mode) {
+
+        RecordingCurveStruct curve = requireSelectedKey();
+
+        if (curve == null)
+            return;
+
+        for (int i = 0; i < selectedKeys.size(); i++)
+            curve.setMode(selectedKeys.getInt(i), mode);
+
         finishKeyEdit(EditorSetting.RECORDER_STATUS_KEY_CHANGED);
+    }
+
+    // Every selected key moved along by the seconds and up by the rise, together as a drag moves them
+    public void shiftKeys(float shift, double rise) {
+
+        RecordingCurveStruct curve = requireSelectedKey();
+
+        if (curve == null || shift == 0f && rise == 0.0)
+            return;
+
+        anchorSelectedKeys(curve);
+        moveSelectedKeys(curve, shift, rise);
+        frameGraph();
+        finishKeyEdit(EditorSetting.RECORDER_STATUS_KEY_MOVED);
+    }
+
+    // The shown key moved to the moment of the timeline, every other selected key with it
+    public void setKeyTime(float time) {
+
+        RecordingCurveStruct curve = requireSelectedKey();
+
+        if (curve == null)
+            return;
+
+        shiftKeys(getSelectedClipStruct().toChildTime(time) - curve.getTime(selectedKey), 0.0);
     }
 
     public boolean isKeyValueValid(String text) {
@@ -3349,6 +3566,7 @@ public class RecorderManager extends ManagerPackage {
                 && !Double.isNaN(parseKeyValue(curve, text));
     }
 
+    // The shown key given the typed value, every other selected key rising or falling with it
     public void setKeyValue(String text) {
 
         RecordingCurveStruct curve = requireSelectedKey();
@@ -3356,9 +3574,28 @@ public class RecorderManager extends ManagerPackage {
         if (curve == null || !isKeyValueValid(text))
             return;
 
-        curve.setValue(selectedKey, parseKeyValue(curve, text));
-        frameGraph();
-        finishKeyEdit(EditorSetting.RECORDER_STATUS_KEY_CHANGED);
+        shiftKeys(0f, parseKeyValue(curve, text) - curve.getValue(selectedKey));
+    }
+
+    // The value a step of the Outliner's value row moves the keys by, a share of the least span the curve frames
+    public double resolveKeyValueStep() {
+
+        RecordingCurveStruct curve = getSelectedCurve();
+
+        return curve != null
+                ? curve.getProperty().getKind().getMinimumSpan() * EditorSetting.RECORDER_ROW_KEYS_VALUE_STEP_SHARE
+                : 0.0;
+    }
+
+    // The shown key's moment on the timeline, or -1 when no key is shown
+    public float resolveKeyTime() {
+
+        RecordingCurveStruct curve = getSelectedCurve();
+        RecordingClipStruct clip = getSelectedClipStruct();
+
+        return curve != null && clip != null && selectedKey >= 0 && selectedKey < curve.size()
+                ? clip.toTimelineTime(curve.getTime(selectedKey))
+                : EngineSetting.INDEX_NOT_FOUND;
     }
 
     private double parseKeyValue(RecordingCurveStruct curve, String text) {
@@ -3478,6 +3715,7 @@ public class RecorderManager extends ManagerPackage {
 
         clearKeySelection();
         keysRevision++;
+        markUnsaved();
         setStatus(EditorSetting.RECORDER_STATUS_TAKE_REFIT + keyTake.getName());
     }
 
@@ -4440,11 +4678,21 @@ public class RecorderManager extends ManagerPackage {
         clearTransitionSelection();
     }
 
-    // Every edit moves the nodes with it
+    // Every edit moves the nodes with it and is a step of the undo history
     private void markUnsaved() {
         this.unsaved = true;
         rebuildNodes();
         revision++;
+        recordingHistoryBranch.commit(recording);
+    }
+
+    // Curves laid from what a take recorded are kept as an edit is, but are no step of their own: a step that brings
+    // back the recording without them has them laid the same way again
+    private void markLaid() {
+        this.unsaved = true;
+        rebuildNodes();
+        revision++;
+        recordingHistoryBranch.rebase(recording);
     }
 
     private void setStatus(String statusText) {

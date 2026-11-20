@@ -485,6 +485,9 @@ One line per session that changed this file: the date, what was added or removed
   its idle node as the `default` for every state, since a base layer naming a node for idle alone is refused at load.
 - 2026-11-20: File menu crash fix. Regenerated `menus/editor/EditorWindow.arpg`: Import and Export run the `import`
   and `export` actions, as `FileMenuAction` names them, instead of the retired `import_model` and `export_model`.
+- 2026-11-20: Recorder undo. Regenerated `shortcuts/Recorder.arpg`, `shortcuts/Timeline.arpg`,
+  `shortcuts/RecorderKeys.arpg` and `shortcuts/RecorderKeyGraph.arpg`: Ctrl+Z undoes, Ctrl+Y and Ctrl+Shift+Z redo, through
+  the Edit menu's `undo` and `redo`.
 
 ## Textures and Sprites (2429 files)
 

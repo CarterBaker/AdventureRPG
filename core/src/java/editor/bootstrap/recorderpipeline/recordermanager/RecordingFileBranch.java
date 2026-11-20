@@ -22,6 +22,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayStreamStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingOverlayTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingPackCacheStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSourceKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
@@ -35,8 +36,10 @@ import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
+import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import engine.util.arpg.ArpgValueStruct;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class RecordingFileBranch extends BranchPackage {
@@ -67,16 +70,38 @@ class RecordingFileBranch extends BranchPackage {
      * once where it was recorded. A file of any older version is saved in
      * the new form as soon as it is opened. A
      * file that cannot be read, or no longer fits the game, is logged and
-     * comes back null without touching anything.
+     * comes back null without touching anything. The same tree is what the
+     * recorder's undo history keeps of each step, built and read back here;
+     * every packed block is kept by what it packs, so a track or curve no
+     * edit has touched since is written as the very block it was last written
+     * or read with, and the steps and saves of a recording share them.
      */
 
     // Read
     private boolean upgraded;
+    private boolean seeding;
     private IntArrayList keyModes;
+
+    // Cache
+    private RecordingPackCacheStruct packCache;
+
+    // Base \\
+
+    @Override
+    protected void create() {
+
+        // Cache
+        this.packCache = new RecordingPackCacheStruct();
+    }
 
     // Write \\
 
     boolean write(File file, RecordingInstance recording) {
+        return ArpgUtility.tryWriteObject(file, build(recording));
+    }
+
+    // The recording as its file holds it, every block no edit has changed since given back as it was
+    ArpgObjectStruct build(RecordingInstance recording) {
 
         ArpgObjectStruct recordingArpg = new ArpgObjectStruct();
         recordingArpg.addProperty("version", EditorSetting.RECORDER_FILE_VERSION);
@@ -93,8 +118,9 @@ class RecordingFileBranch extends BranchPackage {
         recordingArpg.add("export", buildExport(recording.getExportStruct()));
         recordingArpg.add("takes", buildTakes(recording));
         recordingArpg.add("clips", buildClips(recording));
+        packCache.finish();
 
-        return ArpgUtility.tryWriteObject(file, recordingArpg);
+        return recordingArpg;
     }
 
     private ArpgArrayStruct buildLanes(RecordingInstance recording) {
@@ -149,7 +175,7 @@ class RecordingFileBranch extends BranchPackage {
         takeArpg.addProperty("duration", take.getDuration());
 
         if (take.getCameraTrack() != null) {
-            takeArpg.addProperty("camera", packCamera(take.getCameraTrack()));
+            takeArpg.add("camera", packCamera(take.getCameraTrack()));
             takeArpg.add("camera_curves", buildCurves(take.getCameraTrack()));
         }
 
@@ -178,7 +204,7 @@ class RecordingFileBranch extends BranchPackage {
         takeArpg.add("vehicles", vehiclesArpg);
 
         if (take.getWeatherTrack() != null) {
-            takeArpg.addProperty("weather", packWeather(take.getWeatherTrack()));
+            takeArpg.add("weather", packWeather(take.getWeatherTrack()));
             takeArpg.add("weather_curves", buildCurves(take.getWeatherTrack()));
         }
 
@@ -230,7 +256,7 @@ class RecordingFileBranch extends BranchPackage {
         }
 
         bodyArpg.add("looks", looksArpg);
-        bodyArpg.addProperty("samples", packBody(track));
+        bodyArpg.add("samples", packBody(track));
         bodyArpg.add("curves", buildCurves(track));
         return bodyArpg;
     }
@@ -239,7 +265,7 @@ class RecordingFileBranch extends BranchPackage {
 
         ArpgObjectStruct projectileArpg = new ArpgObjectStruct();
         projectileArpg.addProperty("item", track.getItemName());
-        projectileArpg.addProperty("samples", packProjectile(track));
+        projectileArpg.add("samples", packProjectile(track));
         projectileArpg.add("curves", buildCurves(track));
         return projectileArpg;
     }
@@ -251,26 +277,16 @@ class RecordingFileBranch extends BranchPackage {
         vehicleArpg.addProperty("masts", track.getMastCount());
         vehicleArpg.addProperty("sails", track.getSailCount());
         vehicleArpg.addProperty("doors", track.getDoorCount());
-        vehicleArpg.addProperty("samples", packVehicle(track));
+        vehicleArpg.add("samples", packVehicle(track));
         vehicleArpg.add("curves", buildCurves(track));
         return vehicleArpg;
     }
 
     private ArpgObjectStruct buildClock(RecordingClockTrackStruct track) {
 
-        ByteBuffer samples = RecordingArpgUtility.allocateBlock(
-                track.size(), EditorSetting.RECORDER_CLOCK_SAMPLE_BYTES);
-        RecordingArpgUtility.writeFloats(samples, track.getTimes());
-        RecordingArpgUtility.writeLongs(samples, track.getElapsedMillis());
-
-        ByteBuffer jumps = RecordingArpgUtility.allocateBlock(
-                track.getJumpTimes().size(), EditorSetting.RECORDER_CLOCK_SAMPLE_BYTES);
-        RecordingArpgUtility.writeFloats(jumps, track.getJumpTimes());
-        RecordingArpgUtility.writeLongs(jumps, track.getJumpMillis());
-
         ArpgObjectStruct clockArpg = new ArpgObjectStruct();
-        clockArpg.addProperty("samples", RecordingArpgUtility.toText(samples));
-        clockArpg.addProperty("jumps", RecordingArpgUtility.toText(jumps));
+        clockArpg.add("samples", packClockSamples(track));
+        clockArpg.add("jumps", packClockJumps(track));
         clockArpg.add("curves", buildCurves(track));
         return clockArpg;
     }
@@ -290,14 +306,20 @@ class RecordingFileBranch extends BranchPackage {
             ArpgObjectStruct curveArpg = new ArpgObjectStruct();
             curveArpg.addProperty("property", ArpgUtility.toEnumName(curve.getProperty()));
             curveArpg.addProperty("part", curve.getPart());
-            curveArpg.addProperty("keys", packCurve(curve));
+            curveArpg.add("keys", packCurve(curve));
             curvesArpg.add(curveArpg);
         }
 
         return curvesArpg;
     }
 
-    private ArpgArrayStruct buildOverlays(RecordingOverlayTrackStruct track) {
+    // Every stream of the interface the take recorded; a take's interface never changes once recorded
+    private ArpgElementStruct buildOverlays(RecordingOverlayTrackStruct track) {
+
+        ArpgElementStruct packed = packCache.find(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION);
+
+        if (packed != null)
+            return packed;
 
         ArpgArrayStruct overlaysArpg = new ArpgArrayStruct();
 
@@ -314,6 +336,8 @@ class RecordingFileBranch extends BranchPackage {
             overlayArpg.addProperty("data", RecordingArpgUtility.toText(packOverlayData(stream)));
             overlaysArpg.add(overlayArpg);
         }
+
+        packCache.keep(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION, overlaysArpg);
 
         return overlaysArpg;
     }
@@ -388,7 +412,15 @@ class RecordingFileBranch extends BranchPackage {
 
     // Pack \\
 
-    private String packCamera(RecordingCameraTrackStruct track) {
+    // A block of samples that never change once recorded, or that move the source's revision when edited, is packed
+    // only when the cache does not already hold it at that revision
+
+    private ArpgElementStruct packCamera(RecordingCameraTrackStruct track) {
+
+        ArpgElementStruct packed = packCache.find(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION);
+
+        if (packed != null)
+            return packed;
 
         ByteBuffer block = RecordingArpgUtility.allocateBlock(track.size(), EditorSetting.RECORDER_CAMERA_SAMPLE_BYTES);
         writePlaces(block, track);
@@ -399,10 +431,15 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.writeFloats(block, track.getShakePitches());
         RecordingArpgUtility.writeFloats(block, track.getShakeRolls());
         RecordingArpgUtility.writeFloats(block, track.getFovs());
-        return RecordingArpgUtility.toText(block);
+        return keep(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION, block);
     }
 
-    private String packCurve(RecordingCurveStruct curve) {
+    private ArpgElementStruct packCurve(RecordingCurveStruct curve) {
+
+        ArpgElementStruct packed = packCache.find(curve, curve.getRevision());
+
+        if (packed != null)
+            return packed;
 
         ByteBuffer block = RecordingArpgUtility.allocateBlock(curve.size(), EditorSetting.RECORDER_CURVE_KEY_BYTES);
         RecordingArpgUtility.writeFloats(block, curve.getTimes());
@@ -412,10 +449,15 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.writeDoubles(block, curve.getInValues());
         RecordingArpgUtility.writeFloats(block, curve.getOutTimes());
         RecordingArpgUtility.writeDoubles(block, curve.getOutValues());
-        return RecordingArpgUtility.toText(block);
+        return keep(curve, curve.getRevision(), block);
     }
 
-    private String packBody(RecordingBodyTrackStruct track) {
+    private ArpgElementStruct packBody(RecordingBodyTrackStruct track) {
+
+        ArpgElementStruct packed = packCache.find(track, track.getRevision());
+
+        if (packed != null)
+            return packed;
 
         ByteBuffer block = RecordingArpgUtility.allocateBlock(track.size(), EditorSetting.RECORDER_BODY_SAMPLE_BYTES);
         writePlaces(block, track);
@@ -431,10 +473,15 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.writeInts(block, track.getClips());
         RecordingArpgUtility.writeFloats(block, track.getPhases());
         RecordingArpgUtility.writeInts(block, track.getSequences());
-        return RecordingArpgUtility.toText(block);
+        return keep(track, track.getRevision(), block);
     }
 
-    private String packProjectile(RecordingProjectileTrackStruct track) {
+    private ArpgElementStruct packProjectile(RecordingProjectileTrackStruct track) {
+
+        ArpgElementStruct packed = packCache.find(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION);
+
+        if (packed != null)
+            return packed;
 
         ByteBuffer block = RecordingArpgUtility.allocateBlock(
                 track.size(), EditorSetting.RECORDER_PROJECTILE_SAMPLE_BYTES);
@@ -443,10 +490,15 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.writeFloats(block, track.getOrientationsX());
         RecordingArpgUtility.writeFloats(block, track.getOrientationsY());
         RecordingArpgUtility.writeFloats(block, track.getOrientationsZ());
-        return RecordingArpgUtility.toText(block);
+        return keep(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION, block);
     }
 
-    private String packVehicle(RecordingVehicleTrackStruct track) {
+    private ArpgElementStruct packVehicle(RecordingVehicleTrackStruct track) {
+
+        ArpgElementStruct packed = packCache.find(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION);
+
+        if (packed != null)
+            return packed;
 
         ByteBuffer block = RecordingArpgUtility.allocateBlock(track.size(), resolveVehicleSampleBytes(
                 track.getMastCount(), track.getSailCount(), track.getDoorCount()));
@@ -460,10 +512,15 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.writeFloats(block, track.getBraceAngles());
         RecordingArpgUtility.writeFloats(block, track.getSailHoists());
         RecordingArpgUtility.writeFloats(block, track.getDoorOpenings());
-        return RecordingArpgUtility.toText(block);
+        return keep(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION, block);
     }
 
-    private String packWeather(RecordingWeatherTrackStruct track) {
+    private ArpgElementStruct packWeather(RecordingWeatherTrackStruct track) {
+
+        ArpgElementStruct packed = packCache.find(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION);
+
+        if (packed != null)
+            return packed;
 
         ByteBuffer block = RecordingArpgUtility.allocateBlock(
                 track.size(), EditorSetting.RECORDER_WEATHER_SAMPLE_BYTES);
@@ -471,7 +528,47 @@ class RecordingFileBranch extends BranchPackage {
         RecordingArpgUtility.writeDoubles(block, track.getFlowsX());
         RecordingArpgUtility.writeDoubles(block, track.getFlowsZ());
         RecordingArpgUtility.writeFloats(block, track.getGustTimes());
-        return RecordingArpgUtility.toText(block);
+        return keep(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION, block);
+    }
+
+    // The clock's samples and its jumps, each kept by the column of moments it packs
+    private ArpgElementStruct packClockSamples(RecordingClockTrackStruct track) {
+
+        ArpgElementStruct packed = packCache.find(track.getTimes(), EditorSetting.RECORDER_PACK_RECORDED_REVISION);
+
+        if (packed != null)
+            return packed;
+
+        ByteBuffer block = RecordingArpgUtility.allocateBlock(
+                track.size(), EditorSetting.RECORDER_CLOCK_SAMPLE_BYTES);
+        RecordingArpgUtility.writeFloats(block, track.getTimes());
+        RecordingArpgUtility.writeLongs(block, track.getElapsedMillis());
+        return keep(track.getTimes(), EditorSetting.RECORDER_PACK_RECORDED_REVISION, block);
+    }
+
+    private ArpgElementStruct packClockJumps(RecordingClockTrackStruct track) {
+
+        ArpgElementStruct packed = packCache.find(
+                track.getJumpTimes(), EditorSetting.RECORDER_PACK_RECORDED_REVISION);
+
+        if (packed != null)
+            return packed;
+
+        ByteBuffer block = RecordingArpgUtility.allocateBlock(
+                track.getJumpTimes().size(), EditorSetting.RECORDER_CLOCK_SAMPLE_BYTES);
+        RecordingArpgUtility.writeFloats(block, track.getJumpTimes());
+        RecordingArpgUtility.writeLongs(block, track.getJumpMillis());
+        return keep(track.getJumpTimes(), EditorSetting.RECORDER_PACK_RECORDED_REVISION, block);
+    }
+
+    // The block packed as text and kept by its source for the write under way
+    private ArpgElementStruct keep(Object source, int revision, ByteBuffer block) {
+
+        ArpgElementStruct packed = new ArpgValueStruct(RecordingArpgUtility.toText(block));
+
+        packCache.keep(source, revision, packed);
+
+        return packed;
     }
 
     private String packSounds(RecordingSoundTrackStruct track) {
@@ -549,10 +646,17 @@ class RecordingFileBranch extends BranchPackage {
         if (recordingArpg == null)
             return null;
 
+        return parse(recordingArpg, recordingName, file.getAbsolutePath());
+    }
+
+    // The recording a tree holds, as its file or an undo step keeps it, or null, logged as read from where it came,
+    // when it cannot be read or no longer fits the game
+    RecordingInstance parse(ArpgObjectStruct recordingArpg, String recordingName, String origin) {
+
         try {
             return parseRecording(recordingArpg, recordingName);
         } catch (InternalException e) {
-            errorLog(EditorSetting.RECORDER_MESSAGE_UNREADABLE + file.getAbsolutePath(), e);
+            errorLog(EditorSetting.RECORDER_MESSAGE_UNREADABLE + origin, e);
             return null;
         }
     }
@@ -607,6 +711,12 @@ class RecordingFileBranch extends BranchPackage {
                 ? resolveEnumOrdinals(recordingArpg.getAsArray("key_modes"), RecorderKeyMode.VALUES)
                 : new IntArrayList();
 
+        // A block is kept as read only when writing the recording again would write it the same
+        this.seeding = !upgraded
+                && isIdentity(states, EntityState.VALUES.length)
+                && isIdentity(actions, EntityAction.VALUES.length)
+                && isIdentity(keyModes, RecorderKeyMode.VALUES.length);
+
         boolean parsed = layered
                 ? parseLayers(recordingArpg.getAsArray("layers"), recording, states, actions)
                 : parseTakes(recordingArpg.getAsArray("takes"), recording, states, actions)
@@ -650,6 +760,19 @@ class RecordingFileBranch extends BranchPackage {
         }
 
         return ordinals;
+    }
+
+    // True when the file names every value in the game's own order, so its ordinals are read as they stand
+    private boolean isIdentity(IntArrayList ordinals, int count) {
+
+        if (ordinals.size() != count)
+            return false;
+
+        for (int i = 0; i < count; i++)
+            if (ordinals.getInt(i) != i)
+                return false;
+
+        return true;
     }
 
     private RecordingExportStruct parseExport(ArpgObjectStruct recordingArpg) {
@@ -875,6 +998,9 @@ class RecordingFileBranch extends BranchPackage {
                         || !parseCurves(takeArpg, "camera_curves", take.getCameraTrack())))
             return false;
 
+        if (take.getCameraTrack() != null)
+            remember(take.getCameraTrack(), EditorSetting.RECORDER_PACK_RECORDED_REVISION, takeArpg.get("camera"));
+
         if (ArpgUtility.hasObject(takeArpg, "player")) {
 
             RecordingBodyTrackStruct playerTrack = parseBody(takeArpg.getAsObject("player"), states, actions);
@@ -900,16 +1026,30 @@ class RecordingFileBranch extends BranchPackage {
                         || !parseCurves(takeArpg, "weather_curves", take.getWeatherTrack())))
             return false;
 
+        if (take.getWeatherTrack() != null)
+            remember(take.getWeatherTrack(), EditorSetting.RECORDER_PACK_RECORDED_REVISION, takeArpg.get("weather"));
+
         if (take.getClockTrack() != null
                 && (!ArpgUtility.hasObject(takeArpg, "clock")
                         || !unpackClock(takeArpg.getAsObject("clock"), take.getClockTrack())
                         || !parseCurves(takeArpg.getAsObject("clock"), "curves", take.getClockTrack())))
             return false;
 
+        if (take.getClockTrack() != null) {
+            remember(take.getClockTrack().getTimes(), EditorSetting.RECORDER_PACK_RECORDED_REVISION,
+                    takeArpg.getAsObject("clock").get("samples"));
+            remember(take.getClockTrack().getJumpTimes(), EditorSetting.RECORDER_PACK_RECORDED_REVISION,
+                    takeArpg.getAsObject("clock").get("jumps"));
+        }
+
         if (take.getOverlayTrack() != null
                 && ArpgUtility.hasArray(takeArpg, "interface")
                 && !parseOverlays(takeArpg.getAsArray("interface"), take.getOverlayTrack()))
             return false;
+
+        if (take.getOverlayTrack() != null && ArpgUtility.hasArray(takeArpg, "interface"))
+            remember(take.getOverlayTrack(), EditorSetting.RECORDER_PACK_RECORDED_REVISION,
+                    takeArpg.getAsArray("interface"));
 
         return take.getSoundTrack() == null
                 || !ArpgUtility.hasObject(takeArpg, "sounds")
@@ -969,6 +1109,8 @@ class RecordingFileBranch extends BranchPackage {
                     || !parseCurves(projectileArpg, "curves", track))
                 return false;
 
+            remember(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION, projectileArpg.get("samples"));
+
             take.getProjectileTracks().add(track);
         }
 
@@ -1000,6 +1142,8 @@ class RecordingFileBranch extends BranchPackage {
                     || !unpackVehicle(vehicleArpg.get("samples").getAsString(), track)
                     || !parseCurves(vehicleArpg, "curves", track))
                 return false;
+
+            remember(track, EditorSetting.RECORDER_PACK_RECORDED_REVISION, vehicleArpg.get("samples"));
 
             take.getVehicleTracks().add(track);
         }
@@ -1064,6 +1208,8 @@ class RecordingFileBranch extends BranchPackage {
                 || !parseCurves(bodyArpg, "curves", track))
             return null;
 
+        remember(track, track.getRevision(), bodyArpg.get("samples"));
+
         return track;
     }
 
@@ -1095,10 +1241,18 @@ class RecordingFileBranch extends BranchPackage {
             if (!unpackCurve(curveArpg.get("keys").getAsString(), curve))
                 return false;
 
+            remember(curve, curve.getRevision(), curveArpg.get("keys"));
+
             track.setCurve(slot, curve);
         }
 
         return true;
+    }
+
+    // A block just unpacked kept by what it was unpacked into, while the recording read would be written the same
+    private void remember(Object source, int revision, ArpgElementStruct block) {
+        if (seeding)
+            packCache.remember(source, revision, block);
     }
 
     private RecorderCurveProperty findCurveProperty(String name) {

@@ -295,6 +295,14 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.saveRecording();
     }
 
+    public void undo() {
+        recorderManager.undo();
+    }
+
+    public void redo() {
+        recorderManager.redo();
+    }
+
     // Transport \\
 
     public void record() {

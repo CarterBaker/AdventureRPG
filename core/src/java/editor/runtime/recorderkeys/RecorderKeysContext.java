@@ -7,6 +7,9 @@ import editor.bootstrap.layerspipeline.layers.LayerDragProvider;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.propertiespipeline.properties.OutlinerProvider;
+import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderLayerView;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
@@ -14,9 +17,13 @@ import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
+import editor.runtime.characterview.panel.CharacterViewRowSource;
+import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.menueventsmanager.menus.RecorderBranch;
+import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.recorder.RecorderTabProvider;
 import editor.runtime.recorder.panel.RecorderRowSystem;
 import editor.runtime.recorder.panel.RecorderKeysSystem;
@@ -26,7 +33,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RecorderKeysContext extends ContextPackage
         implements RecorderTabProvider, ToolCanvasProvider, ToolActionProvider, LayersProvider, LayerViewsProvider,
-        LayerDragProvider, FileMenuProvider {
+        LayerDragProvider, FileMenuProvider, PropertiesProvider, OutlinerProvider, CharacterViewRowSource {
 
     /*
      * Editor tab for the keys of the layer picked in the Layers tab, of the
@@ -36,9 +43,10 @@ public class RecorderKeysContext extends ContextPackage
      * the Timeline shows; the Sounds layer a row for each sound it names. The
      * graph of the value selected is the Keys Graph tab beside it, and what
      * can be done to keys, sounds and nodes the Tools tab's actions. While it
-     * is worked in, the recorder's keys and deletes act on its keys. All
-     * state lives in RecorderManager; clicks, drags and the wheel go to
-     * RecorderBranch.
+     * is worked in, the recorder's keys and deletes act on its keys, the
+     * Character Outliner lists the keys selected to move, set and give a mode,
+     * and the Properties tab keeps the lane and clip selected. All state lives
+     * in RecorderManager; clicks, drags and the wheel go to RecorderBranch.
      */
 
     // Internal
@@ -47,6 +55,7 @@ public class RecorderKeysContext extends ContextPackage
     private ToolCanvasSystem toolCanvasSystem;
     private LayersSourceSystem layersSourceSystem;
     private FileMenuSourceSystem fileMenuSourceSystem;
+    private PropertiesSourceSystem propertiesSourceSystem;
     private RecorderBranch recorderBranch;
     private RecorderManager recorderManager;
 
@@ -59,6 +68,7 @@ public class RecorderKeysContext extends ContextPackage
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.layersSourceSystem = create(LayersSourceSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
+        this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
     @Override
@@ -97,6 +107,67 @@ public class RecorderKeysContext extends ContextPackage
         recorderBranch.actSetting(actionKey, getWindow());
     }
 
+    // Properties \\
+
+    // The Properties tab keeps the mix of the lane and the clip selected, as the Timeline shows them
+    @Override
+    public PropertiesContent getPropertiesContent() {
+        return PropertiesContent.ROWS;
+    }
+
+    @Override
+    public int getRowRevision() {
+        return recorderManager.getRevision();
+    }
+
+    @Override
+    public String getRowTitle() {
+        return EditorSetting.RECORDER_TIMELINE_PROPERTIES_TITLE;
+    }
+
+    @Override
+    public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recorderManager.buildRows(rows, true);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getRowTemplates() {
+        return EditorSetting.RECORDER_MUSIC_ROW_TEMPLATES;
+    }
+
+    @Override
+    public void stepRow(String key, int steps) {
+        recorderManager.stepRow(key, steps);
+    }
+
+    // Outliner \\
+
+    // The Character Outliner lists the keys selected, to move, set and give a mode
+    @Override
+    public int getOutlinerRevision() {
+        return recorderManager.getKeyRowRevision();
+    }
+
+    @Override
+    public String getOutlinerTitle() {
+        return EditorSetting.RECORDER_KEYS_OUTLINER_TITLE;
+    }
+
+    @Override
+    public void buildOutlinerRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recorderManager.buildKeyRows(rows);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getOutlinerTemplates() {
+        return EditorSetting.RECORDER_MUSIC_ROW_TEMPLATES;
+    }
+
+    @Override
+    public void stepOutlinerRow(String key, int steps) {
+        recorderManager.stepRow(key, steps);
+    }
+
     // Layers \\
 
     @Override
@@ -106,12 +177,12 @@ public class RecorderKeysContext extends ContextPackage
 
     @Override
     public String getLayerTitle() {
-        return recorderManager.getLayerTitle();
+        return recorderManager.getLayerTitle(getRecorderPane());
     }
 
     @Override
     public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
-        recorderManager.buildLayers(roots);
+        recorderManager.buildLayers(roots, getRecorderPane());
     }
 
     @Override
@@ -137,7 +208,7 @@ public class RecorderKeysContext extends ContextPackage
 
     @Override
     public String getRemoveLayerKey() {
-        return recorderManager.getRemoveLayerKey();
+        return recorderManager.getRemoveLayerKey(getRecorderPane());
     }
 
     @Override
@@ -152,12 +223,12 @@ public class RecorderKeysContext extends ContextPackage
 
     @Override
     public int getLayerView() {
-        return recorderManager.getLayerView().ordinal();
+        return recorderManager.getLayerView(getRecorderPane()).ordinal();
     }
 
     @Override
     public void showLayerView(int view) {
-        recorderManager.showLayerView(RecorderLayerView.VALUES[view]);
+        recorderManager.showLayerView(getRecorderPane(), RecorderLayerView.VALUES[view]);
     }
 
     // File Menu \\

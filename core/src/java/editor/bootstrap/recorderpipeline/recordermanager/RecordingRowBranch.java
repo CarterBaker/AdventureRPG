@@ -5,6 +5,9 @@ import application.bootstrap.musicpipeline.song.SongClipStruct;
 import application.bootstrap.musicpipeline.util.NoteScale;
 import application.bootstrap.musicpipeline.util.NoteUtility;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
+import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingExportStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
@@ -29,10 +32,12 @@ class RecordingRowBranch extends BranchPackage {
      * mute and time ramp, with a notes clip's instrument, volume and
      * transpose. The Outliner's are the recording's settings: the channels
      * armed for the next take, and the export's size, frame rate, format,
-     * motion blur, supersampling and range. Every row is read and changed
-     * here by its key: a number stepped, slid across its range or typed, a
-     * choice stepped through every value it may take or typed, and every
-     * change made through the one RecorderManager method that owns it.
+     * motion blur, supersampling and range; while the Keys or Keys Graph tab
+     * is worked in, the keys selected on the curve picked instead: their
+     * moment and value, moved together, and their mode. Every row is read
+     * and changed here by its key: a number stepped, slid across its range or
+     * typed, a choice stepped through every value it may take or typed, and
+     * every change made through the one RecorderManager method that owns it.
      */
 
     // Internal
@@ -174,6 +179,39 @@ class RecordingRowBranch extends BranchPackage {
         addChoice(rows, EditorSetting.RECORDER_KEY_RANGE_END, EditorSetting.RECORDER_ROW_LABEL_RANGE_END);
     }
 
+    // The curve picked and the keys selected on it: the shown key's moment and value, every selected key moving
+    // with it, and the mode they all take
+    void buildKeyRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        RecordingCurveTrackStruct track = recorderManager.getSelectedTrack();
+        int slot = recorderManager.getSelectedSlot();
+        RecordingCurveStruct curve = recorderManager.getSelectedCurve();
+
+        if (track == null || slot < 0 || curve == null) {
+            rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_NO_CURVE));
+            return;
+        }
+
+        rows.add(CharacterViewRowStruct.header(String.format(EditorSetting.RECORDER_ROWS_HEADER_CURVE_FORMAT,
+                track.getTrackLabel(), track.getCurveLabel(slot))));
+
+        int count = recorderManager.getSelectedKeys().size();
+
+        if (count == 0 || recorderManager.resolveKeyTime() < 0f) {
+            rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_NO_KEY));
+            return;
+        }
+
+        rows.add(CharacterViewRowStruct.header(count == 1
+                ? EditorSetting.RECORDER_ROWS_HEADER_KEY_ONE
+                : String.format(EditorSetting.RECORDER_ROWS_HEADER_KEYS_FORMAT, count)));
+        rows.add(CharacterViewRowStruct.number(EditorSetting.RECORDER_ROW_KEYS_TIME,
+                EditorSetting.RECORDER_ROW_LABEL_KEYS_TIME, getValueText(EditorSetting.RECORDER_ROW_KEYS_TIME)));
+        rows.add(CharacterViewRowStruct.number(EditorSetting.RECORDER_ROW_KEYS_VALUE,
+                EditorSetting.RECORDER_ROW_LABEL_KEYS_VALUE, getValueText(EditorSetting.RECORDER_ROW_KEYS_VALUE)));
+        addChoice(rows, EditorSetting.RECORDER_ROW_KEYS_MODE, EditorSetting.RECORDER_ROW_LABEL_KEYS_MODE);
+    }
+
     private void addChoice(ObjectArrayList<CharacterViewRowStruct> rows, String key, String label) {
         rows.add(CharacterViewRowStruct.choice(key, label, getValueText(key)));
     }
@@ -224,6 +262,11 @@ class RecordingRowBranch extends BranchPackage {
 
         if (exportText != null)
             return exportText;
+
+        String keyText = getKeyValueText(key);
+
+        if (keyText != null)
+            return keyText;
 
         RecordingLaneStruct lane = recording.getLane(Math.max(0, recorderManager.getSelectedLane()));
         RecordingClipStruct clip = findMusicClip();
@@ -277,6 +320,27 @@ class RecordingRowBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_RANGE_END -> exportStruct.hasRangeEnd()
                     ? String.format(EditorSetting.RECORDER_ROW_FORMAT_SECONDS, exportStruct.getRangeEnd())
                     : EditorSetting.RECORDER_ROW_VALUE_RANGE_END;
+            default -> null;
+        };
+    }
+
+    // A key row's value as it shows it, null for a key that names none
+    private String getKeyValueText(String key) {
+
+        RecordingCurveStruct curve = recorderManager.getSelectedCurve();
+        int shownKey = recorderManager.getSelectedKey();
+        boolean shown = curve != null && shownKey >= 0 && shownKey < curve.size();
+
+        return switch (key) {
+            case EditorSetting.RECORDER_ROW_KEYS_TIME -> shown
+                    ? String.format(EditorSetting.RECORDER_ROW_FORMAT_SECONDS, recorderManager.resolveKeyTime())
+                    : EditorSetting.RECORDER_ROW_VALUE_NONE;
+            case EditorSetting.RECORDER_ROW_KEYS_VALUE -> shown
+                    ? recorderManager.formatValue(curve.getProperty().getKind(), curve.getValue(shownKey))
+                    : EditorSetting.RECORDER_ROW_VALUE_NONE;
+            case EditorSetting.RECORDER_ROW_KEYS_MODE -> shown
+                    ? curve.getMode(shownKey).getLabel()
+                    : EditorSetting.RECORDER_ROW_VALUE_NONE;
             default -> null;
         };
     }
@@ -346,6 +410,10 @@ class RecordingRowBranch extends BranchPackage {
                     replaceClip(clip, clip.getSongClip().getInstrumentName(), clip.getSongClip().getVolume(),
                             clip.getSongClip().getTranspose() + steps);
             }
+            case EditorSetting.RECORDER_ROW_KEYS_TIME -> recorderManager.shiftKeys(
+                    steps * EditorSetting.RECORDER_ROW_KEYS_TIME_STEP, 0.0);
+            case EditorSetting.RECORDER_ROW_KEYS_VALUE -> recorderManager.shiftKeys(
+                    0f, steps * recorderManager.resolveKeyValueStep());
             default -> cycle(key, Integer.signum(steps));
         }
     }
@@ -398,6 +466,7 @@ class RecordingRowBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_SUPERSAMPLE -> recorderManager.toggleSupersample();
             case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStart();
             case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEnd();
+            case EditorSetting.RECORDER_ROW_KEYS_MODE -> recorderManager.cycleKeyMode(direction);
             default -> {
             }
         }
@@ -448,6 +517,8 @@ class RecordingRowBranch extends BranchPackage {
             case EditorSetting.RECORDER_ROW_KEY_SCALE -> findScale(text) != null;
             case EditorSetting.RECORDER_ROW_CLIP_INSTRUMENT -> findInstrument(text) != null;
             case EditorSetting.RECORDER_ROW_LANE_MUTED, EditorSetting.RECORDER_ROW_LANE_SOLO -> isOnOff(text);
+            case EditorSetting.RECORDER_ROW_KEYS_VALUE -> recorderManager.isKeyValueValid(text);
+            case EditorSetting.RECORDER_ROW_KEYS_MODE -> findKeyMode(text) != null;
             default -> CharacterViewUtility.isNumber(text);
         };
     }
@@ -515,6 +586,9 @@ class RecordingRowBranch extends BranchPackage {
                     replaceClip(clip, clip.getSongClip().getInstrumentName(), clip.getSongClip().getVolume(),
                             Math.round(number));
             }
+            case EditorSetting.RECORDER_ROW_KEYS_TIME -> recorderManager.setKeyTime(number);
+            case EditorSetting.RECORDER_ROW_KEYS_VALUE -> recorderManager.setKeyValue(text);
+            case EditorSetting.RECORDER_ROW_KEYS_MODE -> recorderManager.setKeyMode(findKeyMode(text));
             default -> {
             }
         }
@@ -596,6 +670,15 @@ class RecordingRowBranch extends BranchPackage {
         for (int i = 0; i < VideoFormat.VALUES.length; i++)
             if (VideoFormat.VALUES[i].getLabel().equalsIgnoreCase(text.trim()))
                 return VideoFormat.VALUES[i];
+
+        return null;
+    }
+
+    private RecorderKeyMode findKeyMode(String text) {
+
+        for (int i = 0; i < RecorderKeyMode.VALUES.length; i++)
+            if (RecorderKeyMode.VALUES[i].getLabel().equalsIgnoreCase(text.trim()))
+                return RecorderKeyMode.VALUES[i];
 
         return null;
     }

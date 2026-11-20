@@ -18,7 +18,9 @@ public class RecordingCurveStruct extends StructPackage {
      * in time; a constant key holds its value until the next. Every change
      * resolves the handles again — auto keys along the curve's own slope,
      * flat at a peak or a trough so the curve never overshoots, linear keys
-     * straight at their neighbours — so the curve always reads true.
+     * straight at their neighbours — so the curve always reads true. Its
+     * revision moves on every change, so what was packed of it is known to
+     * still hold.
      */
 
     // Curve
@@ -35,6 +37,9 @@ public class RecordingCurveStruct extends StructPackage {
     private final DoubleArrayList inValues;
     private final FloatArrayList outTimes;
     private final DoubleArrayList outValues;
+
+    // Revision
+    private int revision;
 
     // Constructor \\
 
@@ -100,6 +105,7 @@ public class RecordingCurveStruct extends StructPackage {
             float outTime,
             double outValue) {
 
+        revision++;
         times.add(index, time);
         values.add(index, value);
         modes.add(index, mode.ordinal());
@@ -111,6 +117,7 @@ public class RecordingCurveStruct extends StructPackage {
 
     // Every key let go, as a fit laying the curve again begins
     public void clear() {
+        revision++;
         times.clear();
         values.clear();
         modes.clear();
@@ -214,6 +221,8 @@ public class RecordingCurveStruct extends StructPackage {
 
     // Every handle the curve sets laid again, and every handle held within the span it reaches across
     public void resolveHandles() {
+
+        revision++;
 
         int count = times.size();
 
@@ -377,6 +386,10 @@ public class RecordingCurveStruct extends StructPackage {
     }
 
     // Accessible \\
+
+    public int getRevision() {
+        return revision;
+    }
 
     public RecorderCurveProperty getProperty() {
         return property;

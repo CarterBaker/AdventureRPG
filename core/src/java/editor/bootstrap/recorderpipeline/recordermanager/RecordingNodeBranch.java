@@ -358,6 +358,7 @@ class RecordingNodeBranch extends BranchPackage {
 
     // The movement's run moves the number of states along, wrapping round
     void stepState(RecordingBodyTrackStruct track, RecordingNodeStruct node, int step) {
+        track.markEdited();
         fill(track.getStates(), node.getFirstSample(), node.getEndSample(),
                 Math.floorMod(node.getValue() + step, EntityState.VALUES.length));
     }
@@ -376,6 +377,7 @@ class RecordingNodeBranch extends BranchPackage {
         if (replacement == EngineSetting.INDEX_NOT_FOUND)
             return false;
 
+        track.markEdited();
         fill(states, node.getFirstSample(), node.getEndSample(), replacement);
         return true;
     }
@@ -386,6 +388,8 @@ class RecordingNodeBranch extends BranchPackage {
         IntArrayList states = track.getStates();
         int boundary = findSampleFrom(track, takeTime);
 
+        track.markEdited();
+
         if (boundary < node.getFirstSample())
             fill(states, boundary, node.getFirstSample(), node.getValue());
         else
@@ -395,6 +399,7 @@ class RecordingNodeBranch extends BranchPackage {
     // Gesture \\
 
     void removeGesture(RecordingBodyTrackStruct track, RecordingNodeStruct node) {
+        track.markEdited();
         clearGesture(track, node.getFirstSample(), node.getEndSample());
     }
 
@@ -404,6 +409,7 @@ class RecordingNodeBranch extends BranchPackage {
         float shift = takeStart - node.getTakeStart();
         float takeEnd = node.getTakeEnd() + shift;
 
+        track.markEdited();
         copyGesture(track, node.getFirstSample(), node.getEndSample());
         clearGesture(track, node.getFirstSample(), node.getEndSample());
 

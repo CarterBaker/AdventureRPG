@@ -257,13 +257,17 @@ public class EditorSetting {
     public static final FileMenuTableStruct FILE_MENU_RECORDER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.RecorderBranch")
             .with(FileMenuAction.SAVE, "saveRecording")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo")
             .with(FileMenuAction.EXPORT, "exportMedia");
     public static final FileMenuTableStruct FILE_MENU_RECORDINGS = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.RecordingsBranch")
             .with(FileMenuAction.NEW, "newRecording")
             .with(FileMenuAction.DUPLICATE, "duplicateRecording")
             .with(FileMenuAction.SAVE, "saveRecording")
-            .with(FileMenuAction.DELETE, "deleteRecording");
+            .with(FileMenuAction.DELETE, "deleteRecording")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
     public static final FileMenuTableStruct FILE_MENU_TREE_PLANNER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.TreePlannerBranch")
             .with(FileMenuAction.NEW, "newTree")
@@ -3194,6 +3198,33 @@ public class EditorSetting {
     public static final String RECORDER_ROW_VALUE_RAMP_CUT = "Cut";
     public static final String RECORDER_ROW_VALUE_RANGE_START = "Media start";
     public static final String RECORDER_ROW_VALUE_RANGE_END = "Media end";
+
+    // Recorder Keys — the Character Outliner's rows while the Keys or Keys Graph tab is worked in: the keys selected
+    // on the curve picked, moved together by their moment and value and given one mode
+    public static final String RECORDER_KEYS_OUTLINER_TITLE = "Keys";
+    public static final String RECORDER_ROWS_NO_CURVE = "Pick a value on the Keys tab";
+    public static final String RECORDER_ROWS_NO_KEY = "Select keys on the Keys tab or the graph";
+    public static final String RECORDER_ROWS_HEADER_CURVE_FORMAT = "%s: %s";
+    public static final String RECORDER_ROWS_HEADER_KEY_ONE = "1 key selected";
+    public static final String RECORDER_ROWS_HEADER_KEYS_FORMAT = "%d keys selected";
+    public static final String RECORDER_ROW_KEYS_TIME = "keys_time";
+    public static final String RECORDER_ROW_KEYS_VALUE = "keys_value";
+    public static final String RECORDER_ROW_KEYS_MODE = "keys_mode";
+    public static final String RECORDER_ROW_LABEL_KEYS_TIME = "Time";
+    public static final String RECORDER_ROW_LABEL_KEYS_VALUE = "Value";
+    public static final String RECORDER_ROW_LABEL_KEYS_MODE = "Mode";
+    public static final float RECORDER_ROW_KEYS_TIME_STEP = 0.01f;
+    public static final double RECORDER_ROW_KEYS_VALUE_STEP_SHARE = 0.01;
+
+    // Recorder History — every edit of the open recording kept as the recording stood before it, so it can be undone
+    // and redone; steps of one value stepped or slid in a row are one step
+    public static final int RECORDER_HISTORY_MAX_STEPS = 64;
+    public static final String RECORDER_STATUS_UNDONE = "Undone";
+    public static final String RECORDER_STATUS_REDONE = "Redone";
+    public static final String RECORDER_STATUS_NOTHING_TO_UNDO = "Nothing to undo";
+    public static final String RECORDER_STATUS_NOTHING_TO_REDO = "Nothing to redo";
+    public static final String RECORDER_HISTORY_ORIGIN_PREFIX = "the undo history of ";
+    public static final int RECORDER_PACK_RECORDED_REVISION = 0;
 
     // Recorder Render — a media file's music mixed offline past its end for its release, a stretch at a time, into a
     // raw file encoded to a music sound

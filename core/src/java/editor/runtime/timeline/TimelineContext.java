@@ -56,8 +56,9 @@ public class TimelineContext extends ContextPackage
      * Export sends the media file out as a video or as music. Working in it
      * makes the clips what the recorder's deletes act on. The Properties tab
      * shows the mix of the lane selected and the clip selected's channels,
-     * mute, time ramp and instrument; the Layers tab the layers of its take or
-     * every take; the Character Outliner the channels armed and the export.
+     * mute, time ramp and instrument; the Layers tab every take of the open
+     * recording to lay, or the layers of its take; the Character Outliner the
+     * channels armed and the export.
      */
 
     // Internal
@@ -188,12 +189,12 @@ public class TimelineContext extends ContextPackage
 
     @Override
     public String getLayerTitle() {
-        return recorderManager.getLayerTitle();
+        return recorderManager.getLayerTitle(getRecorderPane());
     }
 
     @Override
     public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
-        recorderManager.buildLayers(roots);
+        recorderManager.buildLayers(roots, getRecorderPane());
     }
 
     @Override
@@ -219,7 +220,7 @@ public class TimelineContext extends ContextPackage
 
     @Override
     public String getRemoveLayerKey() {
-        return recorderManager.getRemoveLayerKey();
+        return recorderManager.getRemoveLayerKey(getRecorderPane());
     }
 
     @Override
@@ -234,12 +235,12 @@ public class TimelineContext extends ContextPackage
 
     @Override
     public int getLayerView() {
-        return recorderManager.getLayerView().ordinal();
+        return recorderManager.getLayerView(getRecorderPane()).ordinal();
     }
 
     @Override
     public void showLayerView(int view) {
-        recorderManager.showLayerView(RecorderLayerView.VALUES[view]);
+        recorderManager.showLayerView(getRecorderPane(), RecorderLayerView.VALUES[view]);
     }
 
     // File Menu \\

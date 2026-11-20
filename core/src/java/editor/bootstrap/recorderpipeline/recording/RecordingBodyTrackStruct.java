@@ -22,7 +22,8 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
      * kept once by name and sampled by index. While a take records it, it
      * remembers the last look it saw, which is never saved. Its place, facing,
      * look, speeds and ground offset can each be carried on a curve; its
-     * movement state and actions are nodes instead.
+     * movement state and actions are nodes instead, and every edit to them
+     * moves its revision, so what was packed of it is known to still hold.
      */
 
     // Identity
@@ -53,6 +54,9 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
 
     // Capture
     private int lookSignature;
+
+    // Revision — moves whenever an edit changes the samples after the take was recorded
+    private int revision;
 
     // Constructor \\
 
@@ -186,7 +190,16 @@ public class RecordingBodyTrackStruct extends RecordingTrackStruct {
         this.lookSignature = lookSignature;
     }
 
+    // An edit to its movements or gestures, after the take was recorded
+    public void markEdited() {
+        revision++;
+    }
+
     // Accessible \\
+
+    public int getRevision() {
+        return revision;
+    }
 
     public String getTemplateName() {
         return templateName;

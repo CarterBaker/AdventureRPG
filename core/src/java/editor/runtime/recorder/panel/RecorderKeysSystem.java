@@ -239,8 +239,8 @@ public class RecorderKeysSystem extends SystemPackage {
         return trackIndex + EditorSetting.RECORDER_KEY_ROW_SEPARATOR + row;
     }
 
-    // Every key of the curve within its clip and the view, one mark however many share a step, every selected one
-    // always marked and kept so a drag can move them alone
+    // Every key of the curve within the view, inside its clip or not, one mark however many share a step, every
+    // selected one always marked and kept so a drag can move them alone
     private void injectKeys(
             ElementInstance strip,
             RecordingClipStruct clip,
@@ -288,7 +288,7 @@ public class RecorderKeysSystem extends SystemPackage {
         });
     }
 
-    // Each selected key's mark follows its key along its strip, set aside while it lies outside its clip or the view
+    // Each selected key's mark follows its key along its strip, set aside while it lies outside the view
     private void moveSelectedDiamonds(RecordingClipStruct clip) {
 
         RecordingCurveStruct curve = recorderManager.getSelectedCurve();
@@ -311,13 +311,13 @@ public class RecorderKeysSystem extends SystemPackage {
         }
     }
 
-    // The step across the view a key of the take falls on, -1 outside its clip or the view
+    // The step across the view a key of the take falls on, -1 outside the view
     private int resolveKeyStep(RecordingClipStruct clip, float takeTime) {
 
         float time = clip.toTimelineTime(takeTime);
         RecordingViewStruct view = recorderManager.getView();
 
-        if (time < clip.getStart() || time > clip.getEnd() || !view.contains(time))
+        if (!view.contains(time))
             return EngineSetting.INDEX_NOT_FOUND;
 
         return recorderRowSystem.toViewStep(time);
