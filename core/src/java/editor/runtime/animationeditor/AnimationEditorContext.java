@@ -24,6 +24,7 @@ import editor.runtime.toolcanvas.ToolCanvasSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
+import editor.runtime.viewcamera.ViewGizmoSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -69,6 +70,7 @@ public class AnimationEditorContext extends ContextPackage
         this.animationEditorPoseSystem = create(AnimationEditorPoseSystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.animationEditorMenuSystem = create(AnimationEditorMenuSystem.class);
+        create(ViewGizmoSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);

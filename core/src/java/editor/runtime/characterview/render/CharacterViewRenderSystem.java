@@ -260,7 +260,7 @@ public class CharacterViewRenderSystem extends SystemPackage {
     }
 
     // A bone's segment from one joint to another in the display's shape, as wide as the display makes a bone of its
-    // length and size, its head at the first joint; nothing for two joints on one spot
+    // length and size, its head at the first joint
     private void addSegment(
             Matrix4 fromWorld,
             Matrix4 toWorld,
@@ -276,10 +276,49 @@ public class CharacterViewRenderSystem extends SystemPackage {
         float dz = to[14] - from[14];
         float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
 
+        pushSegment(from[12], from[13], from[14], to[12], to[13], to[14],
+                display.resolveWidth(length, size), display.getSegmentShape(), color, selected);
+    }
+
+    // A handle of a transform gizmo: a segment between two points, as wide as given, in a marker shape and colour
+    public void addGizmoSegment(Vector3 from, Vector3 to, float width, int shape, Vector4 color) {
+        pushSegment(from.x, from.y, from.z, to.x, to.y, to.z, width, shape, color, false);
+    }
+
+    // A cube of a size in blocks at a point, unturned, in a colour, as a scale handle ends
+    public void addGizmoCube(Vector3 point, float size, Vector4 color) {
+
+        markerScratch.set(
+                size, 0f, 0f, point.x,
+                0f, size, 0f, point.y,
+                0f, 0f, size, point.z,
+                0f, 0f, 0f, 1f);
+
+        pushMarker(EditorSetting.CHARACTER_VIEW_MARKER_CUBE, false, color);
+    }
+
+    // A marker shape stretched from one point to another, its head at the first and as wide as given across; nothing
+    // for two points on one spot
+    private void pushSegment(
+            float fromX,
+            float fromY,
+            float fromZ,
+            float toX,
+            float toY,
+            float toZ,
+            float width,
+            int shape,
+            Vector4 color,
+            boolean selected) {
+
+        float dx = toX - fromX;
+        float dy = toY - fromY;
+        float dz = toZ - fromZ;
+        float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+
         if (length <= EditorSetting.CHARACTER_VIEW_STICK_MIN_LENGTH)
             return;
 
-        float width = display.resolveWidth(length, size);
         boolean upright = Math.abs(dy / length) > EditorSetting.CHARACTER_VIEW_STICK_PARALLEL;
 
         stickAlong.set(dx / length, dy / length, dz / length);
@@ -287,12 +326,12 @@ public class CharacterViewRenderSystem extends SystemPackage {
         stickSide.normalize();
         cross(stickAlong.x, stickAlong.y, stickAlong.z, stickSide, stickNormal);
         markerScratch.set(
-                stickSide.x * width, dx, stickNormal.x * width, from[12] + dx * 0.5f,
-                stickSide.y * width, dy, stickNormal.y * width, from[13] + dy * 0.5f,
-                stickSide.z * width, dz, stickNormal.z * width, from[14] + dz * 0.5f,
+                stickSide.x * width, dx, stickNormal.x * width, fromX + dx * 0.5f,
+                stickSide.y * width, dy, stickNormal.y * width, fromY + dy * 0.5f,
+                stickSide.z * width, dz, stickNormal.z * width, fromZ + dz * 0.5f,
                 0f, 0f, 0f, 1f);
 
-        pushMarker(display.getSegmentShape(), selected, color);
+        pushMarker(shape, selected, color);
     }
 
     // The cross product of a direction and a vector

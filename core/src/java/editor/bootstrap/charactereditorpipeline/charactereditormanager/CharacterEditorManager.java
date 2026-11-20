@@ -1320,6 +1320,16 @@ public class CharacterEditorManager extends ManagerPackage {
         return characterSculptBranch.isTransforming();
     }
 
+    // Where the transform gizmo stands: the Mesh tab's selection's weighted centre as the view shows it, posed or in
+    // the bind pose; false with nothing selected or no mesh open
+    public boolean resolveGizmoPivot(Matrix4[] skinningMatrices, Vector3 pivot) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        return document != null && mode == CharacterEditorMode.MESH
+                && characterSculptBranch.resolveSelectionCenter(document, isPosed() ? skinningMatrices : null, pivot);
+    }
+
     public Vector3 getTransformPivot() {
         return characterSculptBranch.getTransformPivot();
     }

@@ -10,6 +10,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.runtime.charactereditor.CharacterEditorSetting;
+import editor.runtime.charactereditor.gizmo.CharacterEditorGizmoSystem;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
@@ -33,8 +34,9 @@ public class CharacterEditorSculptSystem extends SystemPackage {
      * selection, Shift adding and Ctrl taking away, and a press where the
      * brush covers nothing still boxes with either of them held; in Mesh
      * mode the Move, Rotate and Scale tools drag the selection from a
-     * vertex instead, picking it first when it is not selected, letting go
-     * to confirm, each vertex carried as far as it is selected; in Sculpt
+     * vertex instead, picking it first when it is not selected, or along one
+     * axis from a handle of the transform gizmo (CharacterEditorGizmoSystem),
+     * letting go to confirm, each vertex carried as far as it is selected; in Sculpt
      * mode every tool strokes the surface the brush covers, Ctrl inverting
      * the stroke, and in Weights mode the Brush, Erase and Smooth tools
      * stroke the weights. Each stamp of a stroke is placed on the mesh at
@@ -56,6 +58,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     private ViewCameraSystem viewCameraSystem;
     private CharacterEditorManager characterEditorManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
+    private CharacterEditorGizmoSystem characterEditorGizmoSystem;
     private ShortcutManager shortcutManager;
     private BrushManager brushManager;
 
@@ -133,6 +136,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.viewCameraSystem = get(ViewCameraSystem.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
+        this.characterEditorGizmoSystem = get(CharacterEditorGizmoSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
         this.brushManager = get(BrushManager.class);
     }
@@ -258,6 +262,19 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         int vertexIndex = characterEditorMeshViewSystem.pickVertex(mouseX, mouseY);
         boolean modified = shift || control;
         CharacterEditorTransform toolTransform = characterEditorManager.getToolTransform();
+        int gizmoAxis = characterEditorGizmoSystem.getHoveredAxis();
+
+        if (toolTransform != null && gizmoAxis != EngineSetting.INDEX_NOT_FOUND && !modified) {
+
+            startTransform(toolTransform, mouseX, mouseY);
+
+            if (transform != null) {
+                holdAxis(gizmoAxis);
+                this.draggingTransform = true;
+                editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
+                return;
+            }
+        }
 
         if (toolTransform != null && vertexIndex != EngineSetting.INDEX_NOT_FOUND && !modified) {
 
@@ -534,14 +551,18 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
         for (int axis = 0; axis < EditorSetting.CHARACTER_VIEW_KEY_AXES.length; axis++) {
 
-            if (!rawInput.isKeyClicked(EditorSetting.CHARACTER_VIEW_KEY_AXES[axis]))
-                continue;
-
-            this.customAxis = false;
-            this.transformAxis = transformAxis == axis ? EngineSetting.INDEX_NOT_FOUND : axis;
-            axisVector.set(axis == 0 ? 1f : 0f, axis == 1 ? 1f : 0f, axis == 2 ? 1f : 0f);
-            anchorGrab();
+            if (rawInput.isKeyClicked(EditorSetting.CHARACTER_VIEW_KEY_AXES[axis]))
+                holdAxis(transformAxis == axis ? EngineSetting.INDEX_NOT_FOUND : axis);
         }
+    }
+
+    // The transform held to one axis through the pivot, or freed with none, from where the pointer stands now
+    private void holdAxis(int axis) {
+
+        this.customAxis = false;
+        this.transformAxis = axis;
+        axisVector.set(axis == 0 ? 1f : 0f, axis == 1 ? 1f : 0f, axis == 2 ? 1f : 0f);
+        anchorGrab();
     }
 
     private void applyTransform(RawInputHandle rawInput) {

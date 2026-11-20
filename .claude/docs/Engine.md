@@ -55,7 +55,14 @@ writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
   one view: their context implements `ViewCameraShareProvider`, naming the kind (`EditorSetting.VIEW_CAMERA_SHARE_*`),
   and the tab shown hands its `ViewCameraStateStruct` to the others behind it (`ViewCameraSystem.shareStack`, the
   stack from `TabManager.getStackOf`); tabs in separate docks look independently. Never write a viewport camera of its
-  own.
+  own. Every such viewport also creates `ViewGizmoSystem` after its menu system: the axis gizmo in its corner
+  (`menus/editor/ViewGizmo.arpg`), as Blender's navigation gizmo, whose bubbles snap the view along an axis (again for
+  its opposite) and whose middle centres it; never a gizmo of a tool's own.
+- **Selections carry the transform gizmo.** While Move, Rotate or Scale is the tool, red, green and blue handles stand
+  on the selection (arrows, rings or cube-ended shafts, the tool choosing which, a fixed size on screen), and a press
+  on one drags the selection held to its axis through the tool's own transform. The character Mesh tab's is
+  `CharacterEditorGizmoSystem`, drawn through `CharacterViewRenderSystem.addGizmoSegment` / `addGizmoCube`
+  (`EditorSetting.TRANSFORM_GIZMO_*`); a tool that moves a selection uses the same handles and settings.
 - **Editor tools live in the Tools panel.** A tool is an `EditorTool` on the window's `ToolCanvas`; a one-off
   operation is a `ToolActionStruct` in the canvas's action groups, run by its context through `ToolActionProvider`
   with the same key its shortcut uses. Never add a tool or tool action as a panel button.

@@ -18,6 +18,7 @@ import editor.runtime.charactereditor.bone.CharacterEditorBoneSystem;
 import editor.runtime.charactereditor.edge.CharacterEditorEdgeSystem;
 import editor.runtime.charactereditor.groom.CharacterEditorGroomSystem;
 import editor.runtime.charactereditor.menu.CharacterEditorMenuSystem;
+import editor.runtime.charactereditor.gizmo.CharacterEditorGizmoSystem;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.charactereditor.mode.CharacterModeProvider;
@@ -44,6 +45,7 @@ import editor.runtime.viewcamera.ViewCameraShareProvider;
 import editor.runtime.viewcamera.ViewCameraStateStruct;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
+import editor.runtime.viewcamera.ViewGizmoSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -114,6 +116,7 @@ public abstract class CharacterToolContext extends ContextPackage
         this.characterRegionFrameSystem = create(CharacterRegionFrameSystem.class);
         this.characterRegionIsolationSystem = create(CharacterRegionIsolationSystem.class);
         this.characterEditorMeshViewSystem = create(CharacterEditorMeshViewSystem.class);
+        create(CharacterEditorGizmoSystem.class);
         this.characterEditorSculptSystem = create(CharacterEditorSculptSystem.class);
         this.characterEditorRigSystem = create(CharacterEditorRigSystem.class);
         this.characterEditorBoneSystem = create(CharacterEditorBoneSystem.class);
@@ -124,6 +127,7 @@ public abstract class CharacterToolContext extends ContextPackage
         this.characterEditorOverlaySystem = create(CharacterEditorOverlaySystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterEditorMenuSystem = create(CharacterEditorMenuSystem.class);
+        create(ViewGizmoSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);

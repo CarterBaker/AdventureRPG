@@ -18,6 +18,7 @@ import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
+import editor.runtime.viewcamera.ViewGizmoSystem;
 import engine.root.ContextPackage;
 
 public class AnimationTreeEditorContext extends ContextPackage
@@ -58,6 +59,7 @@ public class AnimationTreeEditorContext extends ContextPackage
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
         this.animationTreeEditorMenuSystem = create(AnimationTreeEditorMenuSystem.class);
+        create(ViewGizmoSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
     }

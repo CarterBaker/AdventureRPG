@@ -10,6 +10,7 @@ import editor.runtime.treeviewer.render.TreeViewerRenderSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
+import editor.runtime.viewcamera.ViewGizmoSystem;
 import engine.root.ContextPackage;
 
 public class TreeViewerContext extends ContextPackage implements ViewCameraProvider, PropertiesProvider {
@@ -40,6 +41,7 @@ public class TreeViewerContext extends ContextPackage implements ViewCameraProvi
         this.viewCameraSystem = create(ViewCameraSystem.class);
         this.treeViewerRenderSystem = create(TreeViewerRenderSystem.class);
         this.treeViewerMenuSystem = create(TreeViewerMenuSystem.class);
+        create(ViewGizmoSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 

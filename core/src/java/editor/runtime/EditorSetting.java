@@ -707,6 +707,37 @@ public class EditorSetting {
     public static final String VIEW_CAMERA_SHARE_NONE = "";
     public static final String VIEW_CAMERA_SHARE_CHARACTER = "character";
 
+    // View Gizmo — the axis gizmo in a viewport's corner (ViewGizmoSystem), as Blender's navigation gizmo: each axis a
+    // bubble where it points on screen out to a radius in pixels, placed in steps across the gizmo, the positive ones
+    // joined to the middle by an arm in pixel steps of length and whole degrees of turn; a click looks back along it,
+    // or along its opposite when the view already does
+    public static final String VIEW_GIZMO_MENU = "editor/ViewGizmo/ViewGizmo";
+    public static final String[] VIEW_GIZMO_AXES = { "x", "-x", "y", "-y", "z", "-z" };
+    public static final float[][] VIEW_GIZMO_AXIS_VECTORS = {
+            { 1f, 0f, 0f }, { -1f, 0f, 0f }, { 0f, 1f, 0f }, { 0f, -1f, 0f }, { 0f, 0f, 1f }, { 0f, 0f, -1f } };
+    public static final int VIEW_GIZMO_ENTRY_BUBBLES = 0;
+    public static final int VIEW_GIZMO_ENTRY_ARMS = VIEW_GIZMO_AXES.length;
+    public static final float VIEW_GIZMO_RADIUS_PIXELS = 32f;
+    public static final int VIEW_GIZMO_STEPS = 33;
+    public static final float VIEW_GIZMO_ARM_PIXELS = 2f;
+    public static final float VIEW_GIZMO_FACING_COSINE = 0.999f;
+
+    // Transform Gizmo — the handles drawn on a selection while Move, Rotate or Scale is the tool, as every 3D tool
+    // shows them: each axis's handle as long on screen as the length in pixels, in its colour or the hovered colour,
+    // a handle under the pointer within the pick distance taking a press as a drag held to its axis; a Move handle is
+    // a shaft and an octahedral arrowhead, a Rotate handle a ring of segments, a Scale handle a shaft ending in a cube,
+    // each part's size a share of the handle's length
+    public static final float TRANSFORM_GIZMO_PIXELS = 72f;
+    public static final float TRANSFORM_GIZMO_PICK_PIXELS = 8f;
+    public static final float TRANSFORM_GIZMO_SHAFT_SHARE = 0.02f;
+    public static final float TRANSFORM_GIZMO_HEAD_SHARE = 0.22f;
+    public static final float TRANSFORM_GIZMO_HEAD_WIDTH_SHARE = 0.6f;
+    public static final float TRANSFORM_GIZMO_CUBE_SHARE = 0.12f;
+    public static final int TRANSFORM_GIZMO_RING_SEGMENTS = 32;
+    public static final float[][] TRANSFORM_GIZMO_COLORS = {
+            { 0.92f, 0.28f, 0.26f, 0.95f }, { 0.45f, 0.78f, 0.22f, 0.95f }, { 0.26f, 0.52f, 0.95f, 0.95f } };
+    public static final float[] TRANSFORM_GIZMO_HOVER_COLOR = { 1f, 0.85f, 0.2f, 1f };
+
     // Character View — meshes, materials and draw order
     public static final String CHARACTER_VIEW_MESH_GRID = "editor/CharacterViewGrid";
     public static final String CHARACTER_VIEW_MATERIAL_CHARACTER = "editor/CharacterViewCharacterMaterial";

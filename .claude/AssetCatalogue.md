@@ -536,6 +536,8 @@ One line per session that changed this file: the date, what was added or removed
   `shaders/editor/characterview/CharacterViewCharacterShader.fsh` (hair cards read clamped to their edges).
 - 2026-11-20: Bone display. Added `mesh/editor/CharacterViewBoneOctahedral.arpg` and
   `mesh/editor/CharacterViewBoneSphere.arpg`, the octahedral bone and joint sphere markers.
+- 2026-11-20: Viewport gizmos. Added `menus/editor/ViewGizmo.arpg` (the axis gizmo every 3D viewport shows);
+  regenerated `menus/editor/ShipViewer.arpg` (its own gizmo removed).
 
 ## Textures and Sprites (2431 files)
 
@@ -2817,7 +2819,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `NewImageDialog.arpg`, `NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
 `TabFrame.arpg`,
-`Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `WorldEditor.arpg`, `WorldMap.arpg`
+`Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `ViewGizmo.arpg`,
+`WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`
 

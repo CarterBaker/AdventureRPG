@@ -10,6 +10,7 @@ import editor.runtime.shipviewer.view.ShipViewerSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
+import editor.runtime.viewcamera.ViewGizmoSystem;
 import engine.root.ContextPackage;
 
 public class ShipViewerContext extends ContextPackage implements ViewCameraProvider, PropertiesProvider {
@@ -19,16 +20,15 @@ public class ShipViewerContext extends ContextPackage implements ViewCameraProvi
      * Shipwright's table as it is drawn, as the game draws it, at rest with
      * its sails set, its anchors aboard and its furniture in place, lit by one
      * fixed light. The orbit button turns the view, the pan button slides it
-     * with the pointer and scrolling zooms; clicking an axis of the gizmo
-     * looks back at the ship along it, centred, and its middle centres the
-     * view; the toolbar's minus and plus step the cutaway down through the
-     * decks and back up to them all.
+     * with the pointer and scrolling zooms; the axis gizmo in its corner
+     * (ViewGizmoSystem) looks back at the ship along an axis clicked and its
+     * middle centres the view; the toolbar's minus and plus step the cutaway
+     * down through the decks and back up to them all.
      */
 
     // Internal
     private EditorInputSystem editorInputSystem;
     private ShipViewerSystem shipViewerSystem;
-    private ViewCameraSystem viewCameraSystem;
     private ShipViewerRenderSystem shipViewerRenderSystem;
     private ShipViewerMenuSystem shipViewerMenuSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
@@ -39,9 +39,10 @@ public class ShipViewerContext extends ContextPackage implements ViewCameraProvi
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
         this.shipViewerSystem = create(ShipViewerSystem.class);
-        this.viewCameraSystem = create(ViewCameraSystem.class);
+        create(ViewCameraSystem.class);
         this.shipViewerRenderSystem = create(ShipViewerRenderSystem.class);
         this.shipViewerMenuSystem = create(ShipViewerMenuSystem.class);
+        create(ViewGizmoSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
     }
 
@@ -58,18 +59,6 @@ public class ShipViewerContext extends ContextPackage implements ViewCameraProvi
     }
 
     // Accessible \\
-
-    // Looks back at the ship along an axis named as in VIEW_AXES
-    public void view(String axisName) {
-
-        for (int i = 0; i < ShipViewerSetting.VIEW_AXES.length; i++)
-            if (ShipViewerSetting.VIEW_AXES[i].equals(axisName))
-                viewCameraSystem.snap(ShipViewerSetting.VIEW_AXIS_VECTORS[i]);
-    }
-
-    public void centre() {
-        viewCameraSystem.centre();
-    }
 
     // Steps the cutaway a deck down or up
     public void stepDeck(int step) {

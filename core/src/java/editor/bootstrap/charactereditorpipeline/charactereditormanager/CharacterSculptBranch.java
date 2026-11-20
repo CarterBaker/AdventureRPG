@@ -120,6 +120,37 @@ class CharacterSculptBranch extends BranchPackage {
 
     // Transform \\
 
+    // The selection's weighted centre on the cage the skinning matrices pose when given and in the bind pose
+    // otherwise, where the transform gizmo stands; false when nothing is selected
+    boolean resolveSelectionCenter(
+            CharacterMeshDocumentInstance document,
+            Matrix4[] skinningMatrices,
+            Vector3 center) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+        float total = 0f;
+
+        center.set(0f, 0f, 0f);
+
+        for (int i = 0; i < mesh.getVertexCount(); i++) {
+
+            float weight = document.getSelectionWeight(i);
+
+            if (weight <= 0f)
+                continue;
+
+            resolvePoint(mesh, i, skinningMatrices, pointScratch);
+            center.add(pointScratch.x * weight, pointScratch.y * weight, pointScratch.z * weight);
+            total += weight;
+        }
+
+        if (total <= 0f)
+            return false;
+
+        center.divide(total);
+        return true;
+    }
+
     // Holds the selection's start for a transform, on the cage the skinning matrices pose when given and in the bind
     // pose otherwise; false when nothing is selected or a transform is already held
     boolean beginTransform(CharacterMeshDocumentInstance document, Matrix4[] skinningMatrices) {
@@ -171,7 +202,7 @@ class CharacterSculptBranch extends BranchPackage {
             return;
         }
 
-        resolveBlend(mesh, vertexIndex, blendScratch);
+        resolveBlend(mesh, vertexIndex, transformSkinning, blendScratch);
         CharacterPoseUtility.transformPoint(
                 blendScratch, mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex), pointScratch);
         transformStarts.add(pointScratch.x);
@@ -185,7 +216,7 @@ class CharacterSculptBranch extends BranchPackage {
 
     // B = Σ wᵢ Mᵢ, a vertex's skinning matrices blended by its weights: affine under linear blend skinning, so its
     // inverse carries a posed point back to the bind pose exactly
-    private void resolveBlend(RiggedMeshStruct mesh, int vertexIndex, Matrix4 out) {
+    private void resolveBlend(RiggedMeshStruct mesh, int vertexIndex, Matrix4[] skinningMatrices, Matrix4 out) {
 
         int influenceCount = mesh.getInfluenceCount(vertexIndex);
 
@@ -198,7 +229,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         for (int i = 0; i < influenceCount; i++) {
 
-            float[] m = transformSkinning[mesh.getInfluenceBone(vertexIndex, i)].val;
+            float[] m = skinningMatrices[mesh.getInfluenceBone(vertexIndex, i)].val;
             float w = mesh.getInfluenceWeight(vertexIndex, i);
 
             for (int k = 0; k < out.val.length; k++)
@@ -236,13 +267,18 @@ class CharacterSculptBranch extends BranchPackage {
 
     // Where a vertex stands on the cage the transform works on
     private void resolveStart(RiggedMeshStruct mesh, int vertexIndex, Vector3 out) {
+        resolvePoint(mesh, vertexIndex, transformSkinning, out);
+    }
 
-        if (transformSkinning == null) {
+    // Where a vertex stands on the cage the skinning matrices pose, or in the bind pose without them
+    private void resolvePoint(RiggedMeshStruct mesh, int vertexIndex, Matrix4[] skinningMatrices, Vector3 out) {
+
+        if (skinningMatrices == null) {
             out.set(mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex));
             return;
         }
 
-        resolveBlend(mesh, vertexIndex, blendScratch);
+        resolveBlend(mesh, vertexIndex, skinningMatrices, blendScratch);
         CharacterPoseUtility.transformPoint(
                 blendScratch, mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex), out);
     }
