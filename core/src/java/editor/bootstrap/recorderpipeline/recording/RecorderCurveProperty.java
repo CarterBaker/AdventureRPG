@@ -12,7 +12,9 @@ public enum RecorderCurveProperty {
      * kept as yaw, pitch and roll, so each bends on its own. A vehicle has
      * one brace, hoist or opening for each of its masts, sails and doors.
      * The lists say which a camera, a character, an item, a vehicle, the
-     * weather and the clock hold, in the order the Keys tab lists them.
+     * weather, the clock and an animation clip's bone hold, in the order the
+     * Keys tab lists them; a bone's are its clip's channel slots, in their
+     * order.
      */
 
     POSITION_X(EditorSetting.RECORDER_CURVE_LABEL_POSITION_X, RecorderCurveKind.DISTANCE),
@@ -39,7 +41,16 @@ public enum RecorderCurveProperty {
     DRIFT_X(EditorSetting.RECORDER_CURVE_LABEL_DRIFT_X, RecorderCurveKind.DISTANCE),
     DRIFT_Z(EditorSetting.RECORDER_CURVE_LABEL_DRIFT_Z, RecorderCurveKind.DISTANCE),
     GUST(EditorSetting.RECORDER_CURVE_LABEL_GUST, RecorderCurveKind.SCALAR),
-    TIME(EditorSetting.RECORDER_CURVE_LABEL_TIME, RecorderCurveKind.CLOCK);
+    TIME(EditorSetting.RECORDER_CURVE_LABEL_TIME, RecorderCurveKind.CLOCK),
+    BONE_ROTATION_X(EditorSetting.RECORDER_CURVE_LABEL_BONE_ROTATION_X, RecorderCurveKind.DEGREES),
+    BONE_ROTATION_Y(EditorSetting.RECORDER_CURVE_LABEL_BONE_ROTATION_Y, RecorderCurveKind.DEGREES),
+    BONE_ROTATION_Z(EditorSetting.RECORDER_CURVE_LABEL_BONE_ROTATION_Z, RecorderCurveKind.DEGREES),
+    BONE_POSITION_X(EditorSetting.RECORDER_CURVE_LABEL_BONE_POSITION_X, RecorderCurveKind.DISTANCE),
+    BONE_POSITION_Y(EditorSetting.RECORDER_CURVE_LABEL_BONE_POSITION_Y, RecorderCurveKind.DISTANCE),
+    BONE_POSITION_Z(EditorSetting.RECORDER_CURVE_LABEL_BONE_POSITION_Z, RecorderCurveKind.DISTANCE),
+    BONE_SCALE_X(EditorSetting.RECORDER_CURVE_LABEL_BONE_SCALE_X, RecorderCurveKind.SCALAR),
+    BONE_SCALE_Y(EditorSetting.RECORDER_CURVE_LABEL_BONE_SCALE_Y, RecorderCurveKind.SCALAR),
+    BONE_SCALE_Z(EditorSetting.RECORDER_CURVE_LABEL_BONE_SCALE_Z, RecorderCurveKind.SCALAR);
 
     // Lists
     public static final RecorderCurveProperty[] CAMERA = {
@@ -53,6 +64,9 @@ public enum RecorderCurveProperty {
             POSITION_X, POSITION_Y, POSITION_Z, YAW, PITCH, ROLL, RUDDER };
     public static final RecorderCurveProperty[] WEATHER = { DRIFT_X, DRIFT_Z, GUST };
     public static final RecorderCurveProperty[] CLOCK = { TIME };
+    public static final RecorderCurveProperty[] BONE = {
+            BONE_ROTATION_X, BONE_ROTATION_Y, BONE_ROTATION_Z, BONE_POSITION_X, BONE_POSITION_Y, BONE_POSITION_Z,
+            BONE_SCALE_X, BONE_SCALE_Y, BONE_SCALE_Z };
 
     // Internal
     private final String label;

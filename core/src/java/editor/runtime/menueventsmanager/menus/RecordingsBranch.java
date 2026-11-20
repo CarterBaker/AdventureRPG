@@ -1,6 +1,7 @@
 package editor.runtime.menueventsmanager.menus;
 
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -15,11 +16,14 @@ public class RecordingsBranch extends BranchPackage {
      * New asks for the media file's name; renamed and copied ones are named
      * through the name dialog too, and
      * deleting the open recording asks for its name to be typed back. Rows
-     * hand back the name of the recording they show.
+     * hand back the name of the recording they show; while the tab lists
+     * animations, a row clicked opens its clip on the Timeline and in the
+     * Animation Editor.
      */
 
     // Internal
     private RecorderManager recorderManager;
+    private AnimationEditorManager animationEditorManager;
     private NameDialogBranch nameDialogBranch;
 
     // Base \\
@@ -27,6 +31,7 @@ public class RecordingsBranch extends BranchPackage {
     @Override
     protected void get() {
         this.recorderManager = get(RecorderManager.class);
+        this.animationEditorManager = get(AnimationEditorManager.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
     }
 
@@ -39,6 +44,10 @@ public class RecordingsBranch extends BranchPackage {
                 EditorSetting.DIALOG_TITLE_NEW_RECORDING,
                 recorderManager::isRecordingNameAvailable,
                 recorderManager::createRecording);
+    }
+
+    public void openAnimation(String clipName) {
+        animationEditorManager.openClip(clipName);
     }
 
     public void saveRecording() {

@@ -19,18 +19,20 @@ import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
+import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderExportResult;
-import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecorderLayerView;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingBoneTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
@@ -62,6 +64,7 @@ import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
+import engine.util.mathematics.curves.CurveKeyMode;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -171,6 +174,16 @@ public class RecorderManager extends ManagerPackage {
      * A media file any clip of which shows a picture is a video and exports as
      * one, frame by frame; one with none is music and exports as the game's
      * own song and rendered sound; both land in the export directory.
+     * An animation clip opens on the timeline in a media file's place, its
+     * ARPG as InfoManager holds it being what is edited: its one take holds a
+     * track for every bone, laid once from its start, its keys edited on the
+     * Keys and Keys Graph tabs like any take's and written back into the clip
+     * on the frame they change, so the preview, the Info Panel and the
+     * Animation Editor see them at once, and a change made to the clip
+     * anywhere else is read back as a step of the same history. Its one clip
+     * is never moved, cut or joined by another, nothing is recorded into it,
+     * and it is saved, reverted and deleted as content; a drag begun in
+     * another window is one step, and taken back whole when it is cancelled.
      */
 
     // Internal
@@ -196,7 +209,9 @@ public class RecorderManager extends ManagerPackage {
     private RecordingRenderBranch recordingRenderBranch;
     private RecordingLayerBranch recordingLayerBranch;
     private RecordingHistoryBranch recordingHistoryBranch;
+    private RecordingAnimationBranch recordingAnimationBranch;
     private InstrumentManager instrumentManager;
+    private InfoManager infoManager;
 
     // Directory — the media files beside the player's saves, and what they export to
     private File mediaDirectory;
@@ -205,6 +220,12 @@ public class RecorderManager extends ManagerPackage {
     // Recording
     private RecordingInstance recording;
     private boolean unsaved;
+
+    // Animation — how far the open clip's edits have gone and how far they were written into it, and how many
+    // gestures of another window have begun, each one step of its history
+    private int documentRevision;
+    private int writtenRevision;
+    private int gestureCount;
 
     // Nesting — the recordings opened on the way down to the open one, outermost first
     private ObjectArrayList<String> parentNames;
@@ -330,6 +351,7 @@ public class RecorderManager extends ManagerPackage {
         this.recordingRenderBranch = create(RecordingRenderBranch.class);
         this.recordingLayerBranch = create(RecordingLayerBranch.class);
         this.recordingHistoryBranch = create(RecordingHistoryBranch.class);
+        this.recordingAnimationBranch = create(RecordingAnimationBranch.class);
 
         // Directory
         this.mediaDirectory = new File(internal.path, EditorSetting.RECORDER_MEDIA_DIRECTORY);
@@ -415,6 +437,13 @@ public class RecorderManager extends ManagerPackage {
         this.soundManager = get(SoundManager.class);
         this.transitionManager = get(TransitionManager.class);
         this.instrumentManager = get(InstrumentManager.class);
+        this.infoManager = get(InfoManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        infoManager.addChangeListener(EditorSetting.INFO_SCHEMA_ANIMATIONS, this::refreshAnimation);
+        infoManager.addDeleteListener(EditorSetting.INFO_SCHEMA_ANIMATIONS, this::closeAnimation);
     }
 
     // Update \\
@@ -427,6 +456,7 @@ public class RecorderManager extends ManagerPackage {
         updateView();
         updateKeyTracks();
         layCurves();
+        writeAnimation();
         holdWorld();
         holdSound();
         updateRender();
@@ -550,8 +580,12 @@ public class RecorderManager extends ManagerPackage {
     // Session \\
 
     // Binds the session to the first Dev window still running, in the world a video was made in; music plays in any,
-    // and plays without one through the first Recorder tab that can sound it, though a take always records in one
+    // and plays without one through the first Recorder tab that can sound it, though a take always records in one;
+    // an animation clip plays in no window, its playhead alone running
     private boolean bindSession(boolean needsDevWindow) {
+
+        if (recording.isAnimation())
+            return true;
 
         if (recording.hasPicture()
                 && !recording.getWorldName().equals(worldManager.getActiveWorld().getWorldName())) {
@@ -614,6 +648,11 @@ public class RecorderManager extends ManagerPackage {
 
         if (armedChannels == RecorderChannel.NONE) {
             setStatus(EditorSetting.RECORDER_STATUS_NOTHING_ARMED);
+            return;
+        }
+
+        if (recording != null && recording.isAnimation()) {
+            setStatus(EditorSetting.RECORDER_STATUS_ANIMATION_NOT_RECORDED);
             return;
         }
 
@@ -746,7 +785,7 @@ public class RecorderManager extends ManagerPackage {
         this.playhead = Math.clamp(time, 0f, recording.getDuration());
         revealPlayhead();
 
-        if (state == RecorderState.IDLE)
+        if (state == RecorderState.IDLE && !recording.isAnimation())
             preview();
     }
 
@@ -913,6 +952,11 @@ public class RecorderManager extends ManagerPackage {
     // for nesting it is read again, so it is nested as it now stands
     public void saveRecording() {
 
+        if (recording != null && recording.isAnimation()) {
+            saveAnimation();
+            return;
+        }
+
         if (recording == null || !unsaved)
             return;
 
@@ -939,7 +983,7 @@ public class RecorderManager extends ManagerPackage {
 
     public void renameRecording(String recordingName) {
 
-        if (recording == null || state.isSession() || !isRecordingNameAvailable(recordingName))
+        if (recording == null || state.isSession() || refuseAnimation() || !isRecordingNameAvailable(recordingName))
             return;
 
         saveRecording();
@@ -959,7 +1003,7 @@ public class RecorderManager extends ManagerPackage {
     // A copy of the open recording saved under the name and opened in its place
     public void duplicateRecording(String recordingName) {
 
-        if (recording == null || state.isSession() || !isRecordingNameAvailable(recordingName))
+        if (recording == null || state.isSession() || refuseAnimation() || !isRecordingNameAvailable(recordingName))
             return;
 
         saveRecording();
@@ -982,7 +1026,7 @@ public class RecorderManager extends ManagerPackage {
 
     public void deleteRecording() {
 
-        if (recording == null)
+        if (recording == null || refuseAnimation())
             return;
 
         stop();
@@ -996,6 +1040,12 @@ public class RecorderManager extends ManagerPackage {
         }
 
         recordingSourceBranch.forget(recordingName);
+        dropRecording();
+        setStatus(EditorSetting.RECORDER_STATUS_DELETED + recordingName);
+    }
+
+    // The open recording let go with nothing open in its place
+    private void dropRecording() {
         clearParents();
         this.recording = null;
         this.unsaved = false;
@@ -1005,7 +1055,6 @@ public class RecorderManager extends ManagerPackage {
         clearSelection();
         transition.clear();
         rebuildNodes();
-        setStatus(EditorSetting.RECORDER_STATUS_DELETED + recordingName);
     }
 
     private boolean isOpen(String recordingName) {
@@ -1017,14 +1066,18 @@ public class RecorderManager extends ManagerPackage {
         parentNames.clear();
     }
 
-    // Saves and lets go of the open recording, ending any session on it
+    // Saves and lets go of the open recording, ending any session on it; an animation clip keeps its changes in
+    // InfoManager, saved with the content
     private void closeRecording() {
 
         if (recording == null)
             return;
 
         stop();
-        saveRecording();
+
+        if (!recording.isAnimation())
+            saveRecording();
+
         this.recording = null;
     }
 
@@ -1063,6 +1116,132 @@ public class RecorderManager extends ManagerPackage {
             queueCurves(adopted.getTakes().get(i));
     }
 
+    // Animation \\
+
+    // The animation clip opened on the timeline in place of the media file open, which is saved first
+    public void openAnimation(String clipName) {
+
+        if (isAnimationOpen(clipName))
+            return;
+
+        InfoEntryStruct entry = infoManager.findEntry(EditorSetting.INFO_SCHEMA_ANIMATIONS, clipName, clipName);
+        RecordingInstance opened = entry != null ? recordingAnimationBranch.parse(entry.getArpg(), clipName) : null;
+
+        if (opened == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_ANIMATION_UNREADABLE + clipName);
+            return;
+        }
+
+        closeRecording();
+        clearParents();
+        activateRecording(opened);
+        this.writtenRevision = documentRevision + curveRevision;
+        setStatus(EditorSetting.RECORDER_STATUS_ANIMATION_OPENED + clipName);
+    }
+
+    // A clip deleted while open on the timeline is let go
+    private void closeAnimation(InfoEntryStruct entry) {
+
+        if (!isAnimationOpen(entry.getEntryName()))
+            return;
+
+        stop();
+        dropRecording();
+        setStatus(EditorSetting.RECORDER_STATUS_ANIMATION_CLOSED + entry.getEntryName());
+    }
+
+    // A change made to the open clip anywhere but here read back in place of what the timeline holds, as a step of
+    // its history; a clip that cannot be read now keeps what the timeline holds and says why
+    private void refreshAnimation(InfoEntryStruct entry) {
+
+        if (recordingAnimationBranch.isWriting() || !isAnimationOpen(entry.getEntryName()))
+            return;
+
+        RecordingInstance refreshed = recordingAnimationBranch.parse(entry.getArpg(), entry.getEntryName());
+
+        if (refreshed == null) {
+            setStatus(EditorSetting.RECORDER_STATUS_ANIMATION_UNREADABLE + recordingAnimationBranch.getRefusal());
+            return;
+        }
+
+        replaceRecording(refreshed, statusText);
+        markUnsaved();
+        this.writtenRevision = documentRevision + curveRevision;
+    }
+
+    // The open clip written back on the frame its keys changed, and its clip laid again to run as long as they reach
+    private void writeAnimation() {
+
+        if (recording == null || !recording.isAnimation() || documentRevision + curveRevision == writtenRevision)
+            return;
+
+        this.writtenRevision = documentRevision + curveRevision;
+        recordingAnimationBranch.write(recording);
+        recordingAnimationBranch.fitSpan(recording);
+        revision++;
+    }
+
+    private void saveAnimation() {
+
+        writeAnimation();
+
+        String clipName = recording.getAnimationName();
+
+        setStatus(infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ANIMATIONS, clipName)
+                ? EditorSetting.RECORDER_STATUS_ANIMATION_SAVED + clipName
+                : infoManager.getRefusal());
+    }
+
+    // A media file's own actions refused while an animation clip is open, saying where the clip is handled
+    private boolean refuseAnimation() {
+
+        if (recording == null || !recording.isAnimation())
+            return false;
+
+        setStatus(EditorSetting.RECORDER_STATUS_ANIMATION_CONTENT);
+        return true;
+    }
+
+    // Every change the gesture of another window makes to the open clip, from now until it ends, is one step
+    public void beginGesture() {
+        recordingHistoryBranch.beginRow(EditorSetting.RECORDER_GESTURE_ROW_PREFIX + ++gestureCount);
+    }
+
+    public void endGesture() {
+        recordingHistoryBranch.endRow();
+    }
+
+    // The gesture taken back whole, as though it was never made, leaving nothing to redo
+    public void cancelGesture() {
+
+        ArpgObjectStruct step = recordingHistoryBranch.cancelRow();
+
+        if (step != null && recording != null)
+            restore(step, statusText);
+    }
+
+    // The bone track the Keys tab shows picked by its bone, as the Animation Editor's bone selected is
+    public void selectBoneLayer(String boneName) {
+
+        for (int i = 0; i < keyTracks.size(); i++)
+            if (keyTracks.get(i) instanceof RecordingBoneTrackStruct bone && bone.getBoneName().equals(boneName)) {
+
+                if (keyLayer != i)
+                    selectKeyLayer(i);
+
+                return;
+            }
+    }
+
+    public boolean isAnimationOpen(String clipName) {
+        return recording != null && recording.isAnimation() && recording.getAnimationName().equals(clipName);
+    }
+
+    // The bone whose track the Keys tab shows, null when it shows no bone
+    public String getSelectedBoneName() {
+        return selectedTrack instanceof RecordingBoneTrackStruct bone ? bone.getBoneName() : null;
+    }
+
     // Takes \\
 
     public void selectTake(int takeIndex) {
@@ -1096,7 +1275,7 @@ public class RecorderManager extends ManagerPackage {
     // The take leaves the bin and every clip of it the timeline
     public void deleteTake(int takeIndex) {
 
-        if (!isTakeIndex(takeIndex) || !canEditTimeline())
+        if (!isTakeIndex(takeIndex) || !canArrangeTimeline())
             return;
 
         String takeName = recording.getTakes().get(takeIndex).getName();
@@ -1115,7 +1294,7 @@ public class RecorderManager extends ManagerPackage {
 
     public void placeTake(int takeIndex, float start, int lane) {
 
-        if (!isTakeIndex(takeIndex) || !canEditTimeline())
+        if (!isTakeIndex(takeIndex) || !canArrangeTimeline())
             return;
 
         RecordingTakeStruct placed = recording.getTakes().get(takeIndex);
@@ -1141,7 +1320,7 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return;
 
         placeTake(recordingSoundBranch.requireSoundTake(recording, soundManager.getSoundHandleFromSoundID(soundID)),
@@ -1234,7 +1413,7 @@ public class RecorderManager extends ManagerPackage {
     // The clip's start or end dragged to the moment, as far as its take and the clips beside it allow
     public void trimClipTo(int clipIndex, float time, boolean start) {
 
-        if (!isClipIndex(clipIndex) || !canEditTimeline())
+        if (!isClipIndex(clipIndex) || !canArrangeTimeline())
             return;
 
         RecordingClipStruct clip = recording.getClips().get(clipIndex);
@@ -1255,7 +1434,7 @@ public class RecorderManager extends ManagerPackage {
     // nearest clear lane to the one it is carried to
     public void moveClip(int clipIndex, float start, int lane) {
 
-        if (!isClipIndex(clipIndex) || !canEditTimeline())
+        if (!isClipIndex(clipIndex) || !canArrangeTimeline())
             return;
 
         RecordingClipStruct clip = recording.getClips().get(clipIndex);
@@ -1331,7 +1510,7 @@ public class RecorderManager extends ManagerPackage {
     // either end of the clip to cut there
     private boolean cutClip(int clipIndex, float time) {
 
-        if (!isClipIndex(clipIndex) || !canEditTimeline())
+        if (!isClipIndex(clipIndex) || !canArrangeTimeline())
             return false;
 
         RecordingClipStruct clip = recording.getClips().get(clipIndex);
@@ -1354,7 +1533,7 @@ public class RecorderManager extends ManagerPackage {
     // Where the cut tool would cut with the pointer where it is now, nowhere when it is over no clip
     public void hoverCut(float time, int lane, float secondsPerPixel, boolean snapping) {
 
-        int clipIndex = isCutting() && canEditTimeline()
+        int clipIndex = isCutting() && canArrangeTimeline()
                 ? recording.findClipAt(time, lane)
                 : EngineSetting.INDEX_NOT_FOUND;
 
@@ -1568,7 +1747,7 @@ public class RecorderManager extends ManagerPackage {
     // clip a beat long; nothing is picked up while no recording is open to lay it on
     public void beginNoteDrag(String instrumentName, int pitch, WindowInstance window, float pressX, float pressY) {
 
-        if (drag.isActive() || !ensureRecording() || !canEditTimeline())
+        if (drag.isActive() || !ensureRecording() || !canArrangeTimeline())
             return;
 
         beginDrag(RecorderDragKind.NOTE, pitch, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
@@ -1579,7 +1758,7 @@ public class RecorderManager extends ManagerPackage {
     // refused when it would nest the open recording in itself, at any depth, or shows a picture of another world
     public void placeRecording(String recordingName, float start, int lane) {
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return;
 
         if (layRecording(recordingName, start, lane))
@@ -1620,7 +1799,7 @@ public class RecorderManager extends ManagerPackage {
     // The selected clip when the timeline can be edited, null after saying why not
     private RecordingClipStruct requireSelectedClip() {
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return null;
 
         if (!isClipIndex(selectedClip)) {
@@ -1641,13 +1820,19 @@ public class RecorderManager extends ManagerPackage {
         return recording != null && state != RecorderState.RECORDING && state != RecorderState.EXPORTING;
     }
 
+    // Clips laid, moved, cut and joined, and everything they carry, are for a media file: an animation clip's one
+    // clip only shows its keys
+    private boolean canArrangeTimeline() {
+        return canEditTimeline() && !recording.isAnimation();
+    }
+
     // Drag \\
 
     // A take picked up from the Layers tab's Takes view, to be laid where it is let go over the lanes, or picked when
     // it is let go where it was pressed
     public void beginTakeDrag(int takeIndex, WindowInstance window, float pressX, float pressY) {
 
-        if (drag.isActive() || !canEditTimeline() || !isTakeIndex(takeIndex))
+        if (drag.isActive() || !canArrangeTimeline() || !isTakeIndex(takeIndex))
             return;
 
         beginDrag(RecorderDragKind.TAKE, takeIndex, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
@@ -1657,7 +1842,7 @@ public class RecorderManager extends ManagerPackage {
     // is picked up while no recording is open to lay it on
     public void beginSoundDrag(int soundID, WindowInstance window, float pressX, float pressY) {
 
-        if (drag.isActive() || !ensureRecording() || !canEditTimeline())
+        if (drag.isActive() || !ensureRecording() || !canArrangeTimeline())
             return;
 
         beginDrag(RecorderDragKind.SOUND, soundID, EngineSetting.INDEX_NOT_FOUND, window, pressX, pressY, 0f, 0f);
@@ -1667,7 +1852,7 @@ public class RecorderManager extends ManagerPackage {
     // over; nothing is picked up while no recording is open to lay it on
     public void beginTransitionDrag(int transitionID, WindowInstance window, float pressX, float pressY) {
 
-        if (drag.isActive() || !canEditTimeline())
+        if (drag.isActive() || !canArrangeTimeline())
             return;
 
         beginDrag(RecorderDragKind.TRANSITION, transitionID, EngineSetting.INDEX_NOT_FOUND,
@@ -1691,7 +1876,7 @@ public class RecorderManager extends ManagerPackage {
         if (drag.isActive() || recording == null)
             return;
 
-        int clipIndex = canEditTimeline() ? recording.findClipAt(time, lane) : EngineSetting.INDEX_NOT_FOUND;
+        int clipIndex = canArrangeTimeline() ? recording.findClipAt(time, lane) : EngineSetting.INDEX_NOT_FOUND;
 
         if (isCutting() && clipIndex != EngineSetting.INDEX_NOT_FOUND) {
             beginDrag(RecorderDragKind.CUT, clipIndex, EngineSetting.INDEX_NOT_FOUND,
@@ -1700,10 +1885,10 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
-        int startEdge = canEditTimeline() ? recordingTimelineBranch.findStartEdge(
+        int startEdge = canArrangeTimeline() ? recordingTimelineBranch.findStartEdge(
                 recording, time, lane, EditorSetting.RECORDER_EDGE_GRAB_PIXELS * secondsPerPixel)
                 : EngineSetting.INDEX_NOT_FOUND;
-        int endEdge = canEditTimeline() ? recordingTimelineBranch.findEndEdge(
+        int endEdge = canArrangeTimeline() ? recordingTimelineBranch.findEndEdge(
                 recording, time, lane, EditorSetting.RECORDER_EDGE_GRAB_PIXELS * secondsPerPixel)
                 : EngineSetting.INDEX_NOT_FOUND;
 
@@ -1712,7 +1897,7 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
-        int transitionTarget = canEditTimeline()
+        int transitionTarget = canArrangeTimeline()
                 ? recordingTransitionBranch.findTransitionAt(recording, time, lane, 0f)
                 : EngineSetting.INDEX_NOT_FOUND;
 
@@ -1898,7 +2083,7 @@ public class RecorderManager extends ManagerPackage {
     // nowhere
     private void landTransition(boolean overLanes, float time, int lane, float tolerance) {
 
-        int target = overLanes && canEditTimeline()
+        int target = overLanes && canArrangeTimeline()
                 ? recordingTransitionBranch.findDropTarget(recording, time, lane, tolerance)
                 : EngineSetting.INDEX_NOT_FOUND;
 
@@ -2159,7 +2344,7 @@ public class RecorderManager extends ManagerPackage {
     // A movement dragged opens at the moment instead; a gesture dragged plays from it instead
     public void moveNode(int nodeIndex, float time) {
 
-        if (!isNodeIndex(nodeIndex) || !canEditTimeline())
+        if (!isNodeIndex(nodeIndex) || !canArrangeTimeline())
             return;
 
         RecordingNodeStruct node = nodes.get(nodeIndex);
@@ -2185,7 +2370,7 @@ public class RecorderManager extends ManagerPackage {
     // The selected node when the timeline can be edited, null after saying why not
     private RecordingNodeStruct requireSelectedNode() {
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return null;
 
         if (!isNodeIndex(selectedNode)) {
@@ -2232,7 +2417,7 @@ public class RecorderManager extends ManagerPackage {
     // RECORDER_NOTE_VELOCITY; it is stretched and cut on the timeline like any clip, its note always filling it
     public void placeNote(String instrumentName, int pitch, float start, int lane) {
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return;
 
         int startTick = toTick(start);
@@ -2329,7 +2514,7 @@ public class RecorderManager extends ManagerPackage {
     // place in bars and beats, every other keeps its moment
     public void setTempo(float bpm) {
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return;
 
         SongTempoStruct previous = recording.getTempo();
@@ -2374,7 +2559,7 @@ public class RecorderManager extends ManagerPackage {
 
     public void setMeter(int beatsPerBar, int beatUnit) {
 
-        if (!canEditTimeline() || beatsPerBar < 1 || beatsPerBar > EngineSetting.SONG_BEATS_PER_BAR_MAX
+        if (!canArrangeTimeline() || beatsPerBar < 1 || beatsPerBar > EngineSetting.SONG_BEATS_PER_BAR_MAX
                 || beatUnit < 1 || beatUnit > EngineSetting.SONG_BEAT_UNIT_MAX || Integer.bitCount(beatUnit) != 1)
             return;
 
@@ -2474,6 +2659,9 @@ public class RecorderManager extends ManagerPackage {
             return;
         }
 
+        if (refuseAnimation())
+            return;
+
         File file = new File(new File(internal.path, EngineSetting.SONG_USER_DIRECTORY),
                 recording.getRecordingName() + EditorSetting.RECORDER_EXTENSION_SEPARATOR
                         + EngineSetting.SONG_USER_FILE_EXTENSION);
@@ -2502,6 +2690,9 @@ public class RecorderManager extends ManagerPackage {
             setStatus(EditorSetting.RECORDER_STATUS_NO_RECORDING);
             return;
         }
+
+        if (refuseAnimation())
+            return;
 
         if (recordingRenderBranch.isRunning()) {
             setStatus(EditorSetting.RECORDER_STATUS_RENDER_RUNNING);
@@ -2637,10 +2828,16 @@ public class RecorderManager extends ManagerPackage {
 
     // History \\
 
-    // The open recording put back as it stood before the last edit, refused while a session runs on it
+    // True while a session plays the open media file in a window, which is never changed under it; an animation clip
+    // plays in no window, so it is undone and redone while it plays
+    private boolean isHeldBySession() {
+        return state.isSession() && !recording.isAnimation();
+    }
+
+    // The open recording put back as it stood before the last edit, refused while a session plays it in a window
     public void undo() {
 
-        if (recording == null || state.isSession() || drag.isActive())
+        if (recording == null || isHeldBySession() || drag.isActive())
             return;
 
         ArpgObjectStruct step = recordingHistoryBranch.undo();
@@ -2655,7 +2852,7 @@ public class RecorderManager extends ManagerPackage {
 
     public void redo() {
 
-        if (recording == null || state.isSession() || drag.isActive())
+        if (recording == null || isHeldBySession() || drag.isActive())
             return;
 
         ArpgObjectStruct step = recordingHistoryBranch.redo();
@@ -2674,14 +2871,24 @@ public class RecorderManager extends ManagerPackage {
     private void restore(ArpgObjectStruct step, String status) {
 
         String recordingName = recording.getRecordingName();
-        RecordingInstance restored = recordingFileBranch.parse(
-                step, recordingName, EditorSetting.RECORDER_HISTORY_ORIGIN_PREFIX + recordingName);
+        RecordingInstance restored = recording.isAnimation()
+                ? recordingAnimationBranch.parse(step, recordingName)
+                : recordingFileBranch.parse(
+                        step, recordingName, EditorSetting.RECORDER_HISTORY_ORIGIN_PREFIX + recordingName);
 
         if (restored == null) {
             recordingHistoryBranch.reset(recording);
             setStatus(EditorSetting.RECORDER_STATUS_UNREADABLE + recordingName);
             return;
         }
+
+        replaceRecording(restored, status);
+    }
+
+    // A recording made the open one in place of the one open, as a step of the history or a change made to an open
+    // animation clip elsewhere brings it back: unsaved, the playhead, the view, the clips, the layer, the curve and
+    // the keys selected kept wherever they still fit
+    private void replaceRecording(RecordingInstance restored, String status) {
 
         int keptClip = selectedClip;
         int keptLayer = keyLayer;
@@ -2706,6 +2913,7 @@ public class RecorderManager extends ManagerPackage {
         restoreKeySelection(keptLayer, keptSlot, keptKey, keptSound);
         this.graphMinimum = keptMinimum;
         this.graphMaximum = keptMaximum;
+        this.documentRevision++;
         keysRevision++;
         setStatus(status);
     }
@@ -2837,7 +3045,8 @@ public class RecorderManager extends ManagerPackage {
     }
 
     // The tracks of the take that recorded anything, in the order the Keys pane lists them: the camera, the
-    // player, every resident, item and vehicle, the weather and the clock, whichever it holds
+    // player, every resident, item and vehicle, the weather and the clock, whichever it holds, and an animation
+    // clip's bones
     private void collectCurveTracks(RecordingTakeStruct collected, ObjectArrayList<RecordingCurveTrackStruct> tracks) {
 
         addCurveTrack(collected.getCameraTrack(), tracks);
@@ -2854,10 +3063,13 @@ public class RecorderManager extends ManagerPackage {
 
         addCurveTrack(collected.getWeatherTrack(), tracks);
         addCurveTrack(collected.getClockTrack(), tracks);
+
+        for (int i = 0; i < collected.getBoneTracks().size(); i++)
+            addCurveTrack(collected.getBoneTracks().get(i), tracks);
     }
 
     private void addCurveTrack(RecordingCurveTrackStruct track, ObjectArrayList<RecordingCurveTrackStruct> tracks) {
-        if (track != null && !track.isEmpty())
+        if (track != null && (track.isKeyedOnly() || !track.isEmpty()))
             tracks.add(track);
     }
 
@@ -3160,7 +3372,7 @@ public class RecorderManager extends ManagerPackage {
         float takeTime = clip.toChildTime(time);
 
         if (canEditTimeline() && !extending && !subtracting && selectedKey >= 0 && selectedKey < curve.size()
-                && curve.getMode(selectedKey) != RecorderKeyMode.CONSTANT) {
+                && curve.getMode(selectedKey) != CurveKeyMode.CONSTANT) {
 
             float keyTime = curve.getTime(selectedKey);
             double keyValue = curve.getValue(selectedKey);
@@ -3230,10 +3442,10 @@ public class RecorderManager extends ManagerPackage {
         if (!second)
             return false;
 
-        boolean freeing = curve.getMode(keyIndex) != RecorderKeyMode.FREE;
+        boolean freeing = curve.getMode(keyIndex) != CurveKeyMode.FREE;
 
         if (freeing)
-            curve.setMode(keyIndex, RecorderKeyMode.FREE);
+            curve.setMode(keyIndex, CurveKeyMode.FREE);
         else
             curve.joinHandles(keyIndex);
 
@@ -3471,7 +3683,7 @@ public class RecorderManager extends ManagerPackage {
         RecordingClipStruct clip = getSelectedClipStruct();
         float takeTime = Math.clamp(clip.toChildTime(playhead), 0f, clip.getTake().getDuration());
 
-        int keyIndex = curve.addKey(takeTime, curve.evaluate(takeTime), RecorderKeyMode.AUTO);
+        int keyIndex = curve.addKey(takeTime, curve.evaluate(takeTime), CurveKeyMode.AUTO);
 
         clearKeySelection();
         addKeyToSelection(keyIndex);
@@ -3515,12 +3727,12 @@ public class RecorderManager extends ManagerPackage {
         if (curve == null)
             return;
 
-        setKeyMode(RecorderKeyMode.VALUES[Math.floorMod(
-                curve.getMode(selectedKey).ordinal() + direction, RecorderKeyMode.VALUES.length)]);
+        setKeyMode(CurveKeyMode.VALUES[Math.floorMod(
+                curve.getMode(selectedKey).ordinal() + direction, CurveKeyMode.VALUES.length)]);
     }
 
     // Every selected key's handles stand in the mode
-    public void setKeyMode(RecorderKeyMode mode) {
+    public void setKeyMode(CurveKeyMode mode) {
 
         RecordingCurveStruct curve = requireSelectedKey();
 
@@ -3892,7 +4104,7 @@ public class RecorderManager extends ManagerPackage {
 
         selectSound(soundIndex);
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return;
 
         float start = clip.toTimelineTime(track.getTime(soundIndex));
@@ -3921,7 +4133,7 @@ public class RecorderManager extends ManagerPackage {
 
         RecordingClipStruct clip = getSelectedClipStruct();
 
-        if (!canEditTimeline() || clip == null || !isSoundIndex(soundIndex))
+        if (!canArrangeTimeline() || clip == null || !isSoundIndex(soundIndex))
             return;
 
         RecordingSoundTrackStruct track = clip.getTake().getSoundTrack();
@@ -3936,7 +4148,7 @@ public class RecorderManager extends ManagerPackage {
     // it selected
     public void addSound(int soundID, float time) {
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return;
 
         if (soundID == EngineSetting.INDEX_NOT_FOUND) {
@@ -4136,7 +4348,7 @@ public class RecorderManager extends ManagerPackage {
     // The selected sound's track when sounds can be edited, null after saying why not
     private RecordingSoundTrackStruct requireSelectedSound() {
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return null;
 
         if (!isSoundIndex(selectedSound)) {
@@ -4228,7 +4440,7 @@ public class RecorderManager extends ManagerPackage {
     // The transition laid on the clip edge, as long as it runs when first laid
     public void placeTransition(int transitionID, int target) {
 
-        if (!canEditTimeline() || !isClipIndex(recordingTransitionBranch.toClipIndex(target)))
+        if (!canArrangeTimeline() || !isClipIndex(recordingTransitionBranch.toClipIndex(target)))
             return;
 
         TransitionHandle transitionHandle = transitionManager.getTransitionHandleFromTransitionID(transitionID);
@@ -4272,7 +4484,7 @@ public class RecorderManager extends ManagerPackage {
     // The transition's far side dragged to the moment, so it runs from its edge to there
     private void stretchTransition(int target, float farSide) {
 
-        if (!isTransitionTarget(target) || !canEditTimeline())
+        if (!isTransitionTarget(target) || !canArrangeTimeline())
             return;
 
         RecordingClipStruct clip = recording.getClips().get(recordingTransitionBranch.toClipIndex(target));
@@ -4348,7 +4560,7 @@ public class RecorderManager extends ManagerPackage {
     // The clip holding the selected transition when the timeline can be edited, null after saying why not
     private RecordingClipStruct requireSelectedTransition() {
 
-        if (!canEditTimeline())
+        if (!canArrangeTimeline())
             return null;
 
         if (!isTransitionTarget(selectedTransition)) {
@@ -4496,7 +4708,7 @@ public class RecorderManager extends ManagerPackage {
     // says why in the status
     public void export() {
 
-        if (state == RecorderState.EXPORTING)
+        if (state == RecorderState.EXPORTING || refuseAnimation())
             return;
 
         this.exportResult = RecorderExportResult.REFUSED;
@@ -4681,6 +4893,7 @@ public class RecorderManager extends ManagerPackage {
     // Every edit moves the nodes with it and is a step of the undo history
     private void markUnsaved() {
         this.unsaved = true;
+        this.documentRevision++;
         rebuildNodes();
         revision++;
         recordingHistoryBranch.commit(recording);
@@ -4767,7 +4980,9 @@ public class RecorderManager extends ManagerPackage {
     }
 
     public boolean isUnsaved() {
-        return unsaved;
+        return recording != null && recording.isAnimation()
+                ? infoManager.isDocumentDirty(EditorSetting.INFO_SCHEMA_ANIMATIONS, recording.getAnimationName())
+                : unsaved;
     }
 
     public RecordingTakeStruct getTake() {

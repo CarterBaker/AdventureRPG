@@ -2,6 +2,7 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import java.util.function.UnaryOperator;
 
+import application.bootstrap.animationpipeline.animation.AnimationChannel;
 import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPartPlacementStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
@@ -11,10 +12,12 @@ import editor.bootstrap.stamppipeline.stamp.StampHandle;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
+import engine.root.EngineSetting;
 import engine.root.UtilityPackage.InternalException;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import engine.util.arpg.ArpgValueStruct;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
@@ -132,11 +135,10 @@ class CharacterClipBranch extends BranchPackage {
 
         for (String boneName : sourceArpg.keySet()) {
 
-            ArpgArrayStruct track = sourceArpg.getAsArray(boneName).deepCopy();
+            ArpgObjectStruct track = sourceArpg.getAsObject(boneName).deepCopy();
 
             if (mirrored && !sided)
-                for (int i = 0; i < track.size(); i++)
-                    mirrorKey(track.get(i).getAsObject());
+                mirrorTrack(track);
 
             tracksArpg.add(rename.apply(boneName), track);
         }
@@ -144,30 +146,44 @@ class CharacterClipBranch extends BranchPackage {
         return tracksArpg;
     }
 
-    // A key reflected across the body's centre plane: a turn keeps its x and turns the other way about y and z, and a
-    // move crosses over in x
-    private static void mirrorKey(ArpgObjectStruct keyArpg) {
-
-        ArpgObjectStruct rotation = CharacterViewUtility.findObject(
-                keyArpg,
-                EditorSetting.ANIMATION_EDITOR_FIELD_ROTATION);
-        ArpgObjectStruct position = CharacterViewUtility.findObject(
-                keyArpg,
-                EditorSetting.ANIMATION_EDITOR_FIELD_POSITION);
-
-        if (rotation != null) {
-            negate(rotation, EditorSetting.CHARACTER_VIEW_AXIS_NAMES[1]);
-            negate(rotation, EditorSetting.CHARACTER_VIEW_AXIS_NAMES[2]);
-        }
-
-        if (position != null)
-            negate(position, EditorSetting.CHARACTER_VIEW_AXIS_NAMES[0]);
+    // A track reflected across the body's centre plane: a turn keeps its x and turns the other way about y and z, and
+    // a move crosses over in x
+    private static void mirrorTrack(ArpgObjectStruct trackArpg) {
+        negate(trackArpg, AnimationChannel.ROTATION, 1);
+        negate(trackArpg, AnimationChannel.ROTATION, 2);
+        negate(trackArpg, AnimationChannel.POSITION, 0);
     }
 
-    private static void negate(ArpgObjectStruct vectorArpg, String axis) {
+    // Every key of one axis's curve, and both its handles, turned the other way
+    private static void negate(ArpgObjectStruct trackArpg, AnimationChannel channel, int axis) {
 
-        if (vectorArpg.has(axis))
-            vectorArpg.addProperty(axis, -ArpgUtility.getFloat(vectorArpg, axis, 0f));
+        ArpgObjectStruct channelArpg = CharacterViewUtility.findObject(trackArpg, channel.getField());
+        String axisName = EngineSetting.ANIMATION_AXIS_NAMES[axis];
+
+        if (channelArpg == null || !ArpgUtility.hasArray(channelArpg, axisName))
+            return;
+
+        ArpgArrayStruct keysArpg = channelArpg.getAsArray(axisName);
+
+        for (int i = 0; i < keysArpg.size(); i++) {
+
+            ArpgObjectStruct keyArpg = keysArpg.get(i).getAsObject();
+
+            keyArpg.addProperty(EngineSetting.ANIMATION_FIELD_VALUE,
+                    -keyArpg.getAsValue(EngineSetting.ANIMATION_FIELD_VALUE).getAsDouble());
+            negateHandle(keyArpg, EngineSetting.ANIMATION_FIELD_IN);
+            negateHandle(keyArpg, EngineSetting.ANIMATION_FIELD_OUT);
+        }
+    }
+
+    private static void negateHandle(ArpgObjectStruct keyArpg, String key) {
+
+        if (!ArpgUtility.hasArray(keyArpg, key))
+            return;
+
+        ArpgArrayStruct handleArpg = keyArpg.getAsArray(key);
+
+        handleArpg.set(1, new ArpgValueStruct(-handleArpg.get(1).getAsDouble()));
     }
 
     // The part's first bone, the one every other hangs below

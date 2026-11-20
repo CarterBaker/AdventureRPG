@@ -2,13 +2,13 @@ package editor.bootstrap.recorderpipeline.recordermanager;
 
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveKind;
-import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.util.RecordingCurveUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.curves.CurveKeyMode;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -119,7 +119,7 @@ class RecordingCurveBranch extends BranchPackage {
             float after = i < count - 1 ? fitTimes.getFloat(keySamples.getInt(i + 1)) - time : 0f;
             double slope = slopes.getDouble(i);
 
-            curve.appendKey(time, fitValues.getDouble(keySamples.getInt(i)), RecorderKeyMode.ALIGNED,
+            curve.appendKey(time, fitValues.getDouble(keySamples.getInt(i)), CurveKeyMode.ALIGNED,
                     -before / 3f, -slope * before / 3.0, after / 3f, slope * after / 3.0);
         }
 

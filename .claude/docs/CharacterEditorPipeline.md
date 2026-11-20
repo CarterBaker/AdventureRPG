@@ -33,8 +33,7 @@ Entity, never Character (the Outliner's title, the Animation Editor's row, the c
 | Outliner | `CharacterOutlinerContext` (Content menu) | the outliner rows of the window worked in last that lists them (`OutlinerProvider`): `CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows`, and the material's maps and parameters for the Materials and Material Viewer tabs (`MaterialsManager.buildRows`) |
 | Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), then Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) |
 | Maps | `editor.runtime.maps.MapsContext` | the maps of the texture painted while a character tab or the UV Editor was worked in last (`MapsProvider`, `CharacterEditorManager.buildMapRows`): the one painted selected, its settings, Generate and Clear |
-| Animation Editor | `AnimationEditorContext` | the posed character; the Animation Pose tool canvas while a clip plays on a character |
-| Animation Timeline | `AnimationTimelineContext` | transport, summary track and a dope sheet lane per bone |
+| Animation Editor | `AnimationEditorContext` | the character chosen (the player at first) posed at the recorder Timeline's playhead; the Animation Pose tool canvas while a clip plays on a character |
 | Properties | `PropertiesContext` | the value rows of the character or animation tab worked in last |
 
 - **One tab per tool.** Every tool tab extends `CharacterToolContext` and names its `CharacterEditorMode` (`getMode`)
@@ -951,9 +950,10 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   (`CharacterPlacementBranch`, the body's open loops and attach points cached per edit) and joins through
   `placeStamp` (`CharacterGraftBranch`). The placement is worked out again only when the pointer, the view, the stamp,
   the tool options or the body moved; the ghost is rebuilt only when the placement's revision moves.
-- Clip edits: `AnimationEditBranch.edit` records every edit in the clip's `CharacterViewHistoryStruct`; pose drags
-  go through `AnimationEditorManager.beginPose / writePose / endPose / cancelPose`; viewport:
-  `AnimationEditorPoseSystem`.
+- Clip edits: `AnimationEditBranch.edit` makes every edit on a copy of the clip and puts it in place through
+  InfoManager (a clip that cannot be read is refused with the reason); pose drags go through
+  `AnimationEditorManager.beginPose / writePose / endPose / cancelPose`, each one step of the recorder's history
+  (`RecorderManager.beginGesture / endGesture / cancelGesture`); viewport: `AnimationEditorPoseSystem`.
 - Sliders: `CharacterSliderBranch` lists, reads, steps, types, cycles and acts on every slider row (keys
   `CHARACTER_EDITOR_KEY_SHAPE*`, `DRIVE_*`, `CONTROL_*`; a drive's key index is its control's slider number times
   `CHARACTER_EDITOR_DRIVE_KEY_STRIDE` plus the drive's place), writing the race through `CharacterEditBranch`
@@ -1043,3 +1043,32 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   existing clips play unchanged. The editors key against the bind the same way
   (`CharacterPoseUtility.composeBindTurn` / `toKeyEuler`, nearest the key it replaces so keys never spin the long
   way); never add a key to the bind rotation.
+
+## Animation
+
+- **Clips key curves, one per axis of each channel.** A bone's track in a clip (and in a joined part's tracks, and a
+  stamp's `animations`) is an object of channels (`rotation`, `position`, `scale`), each of the axes it keys (`x`,
+  `y`, `z`), each a list of keys: `time`, `value`, a `mode` when not `auto` (`aligned`, `free`, `linear`,
+  `constant`) and, for aligned and free keys, `in` and `out` handles (a moment and a value from the key), as Blender's
+  F-curves and glTF's cubic splines hold them. An axis with no curve holds its channel's default. The one reader and
+  writer is `AnimationCurveArpgUtility`; the curve is the engine's `CurveStruct` (`engine.util.mathematics.curves`),
+  the same Bezier curve the recorder's keys are (`RecordingCurveStruct` extends it), so what the Keys Graph shows is
+  exactly what the game plays (`AnimationClipUtility.sampleClip`). Auto keys at a looping clip's ends run round its
+  seam (`CurveEnds.CYCLIC`, the last key repeating the first) and a one-shot's ease flat into its holds (`CLAMPED`).
+- **The timeline is the recorder's.** `AnimationEditorManager` opens its active clip there
+  (`RecorderManager.openAnimation`, `RecordingAnimationBranch.parse`): one take, one clip on the first lane, a
+  `RecordingBoneTrackStruct` for every bone but the spring bones, each holding a curve for every slot. Keys edited on
+  the Keys tabs are written back into the clip on the frame they change (`RecorderManager.writeAnimation`), every
+  other field and every track of a bone the timeline does not show kept as read; a change made anywhere else (the pose
+  tools, the Properties rows, the Info Panel) is read back as a step of the same history (`refreshAnimation`). The
+  playhead, playback, undo and redo are the recorder's; `AnimationEditorManager.getTime` reads its playhead. The
+  Animation Editor's Properties rows key a bone's pose at the playhead on every axis it keys or that leaves its
+  default (at least its first rotation axis), and its bone's keys are every moment any of its curves holds one.
+- **The Tracks tab** (`RecordingsPanelSystem`) lists `AnimationEditorManager.collectCharacterClips` while animations
+  are worked on; a row clicked runs `AnimationEditorManager.openClip`, through `InfoManager.selectEntry`, so the
+  Hierarchy, the Info Panel, the Animation Editor and the Timeline all follow.
+- **Traps.** A clip open on the timeline refuses what only a media file does (laying, moving, cutting or recording
+  clips, tempo and lanes, export, rename, copy and delete: `canArrangeTimeline`, `refuseAnimation`). Morph curves are
+  still linear keys under `morphs` and are not on the timeline yet. A curve keeps at least one key on the Keys tab;
+  to unkey a bone, delete its key in the Animation Editor's rows.
+

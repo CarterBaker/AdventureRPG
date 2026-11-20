@@ -160,10 +160,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openAnimationEditor(window.getGLWindow());
     }
 
-    public void openAnimationTimeline(WindowInstance window) {
-        tabManager.openAnimationTimeline(window.getGLWindow());
-    }
-
     public void openAnimationTreeEditor(WindowInstance window) {
         tabManager.openAnimationTreeEditor(window.getGLWindow());
     }

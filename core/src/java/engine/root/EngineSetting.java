@@ -2835,12 +2835,29 @@ public class EngineSetting {
     public static final float FACE_EXPRESSION_FADE = 0.25f;
     public static final long FACE_BLINK_SALT = 0x3B9F5D27A61C48E3L;
 
-    // Animation Fields — the keys of a clip's morph curves
+    // Curves — keys closer together than this are one key, and a Bezier segment is solved for a moment in at most
+    // this many steps, to within this share of a second
+    public static final float CURVE_KEY_MIN_GAP_SECONDS = 0.01f;
+    public static final int CURVE_SOLVE_STEPS = 16;
+    public static final double CURVE_SOLVE_EPSILON = 1e-5;
+
+    // Animation Fields — the keys of a clip, its bone channels' curves, each axis's keys and their handles (a
+    // moment and a value from the key), and its morph curves
     public static final String ANIMATION_FIELD_TRACKS = "tracks";
     public static final String ANIMATION_FIELD_PARTS = "parts";
     public static final String ANIMATION_FIELD_MORPHS = "morphs";
     public static final String ANIMATION_FIELD_TIME = "time";
     public static final String ANIMATION_FIELD_VALUE = "value";
+    public static final String ANIMATION_FIELD_RIG = "rig";
+    public static final String ANIMATION_FIELD_LOOP = "loop";
+    public static final String ANIMATION_FIELD_ROTATION = "rotation";
+    public static final String ANIMATION_FIELD_POSITION = "position";
+    public static final String ANIMATION_FIELD_SCALE = "scale";
+    public static final String ANIMATION_FIELD_MODE = "mode";
+    public static final String ANIMATION_FIELD_IN = "in";
+    public static final String ANIMATION_FIELD_OUT = "out";
+    public static final String[] ANIMATION_AXIS_NAMES = { "x", "y", "z" };
+    public static final int ANIMATION_HANDLE_LENGTH = 2;
     public static final String APPEARANCE_FIELD_EXPRESSIONS = "expressions";
 
     // Appearance — detail defaults in SkinnedDetail order (iris size, pupil size, hair shine, lips, blush, freckles,

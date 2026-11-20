@@ -10,7 +10,6 @@ import application.bootstrap.musicpipeline.util.SongArpgUtility;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderClipEdge;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveProperty;
-import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecorderOverlay;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCameraTrackStruct;
@@ -40,6 +39,7 @@ import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.arpg.ArpgValueStruct;
+import engine.util.mathematics.curves.CurveKeyMode;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class RecordingFileBranch extends BranchPackage {
@@ -74,8 +74,13 @@ class RecordingFileBranch extends BranchPackage {
      * recorder's undo history keeps of each step, built and read back here;
      * every packed block is kept by what it packs, so a track or curve no
      * edit has touched since is written as the very block it was last written
-     * or read with, and the steps and saves of a recording share them.
+     * or read with, and the steps and saves of a recording share them. An
+     * animation clip open on the timeline is built as the clip's own ARPG
+     * (RecordingAnimationBranch), which is what its history keeps.
      */
+
+    // Internal
+    private RecordingAnimationBranch recordingAnimationBranch;
 
     // Read
     private boolean upgraded;
@@ -94,6 +99,11 @@ class RecordingFileBranch extends BranchPackage {
         this.packCache = new RecordingPackCacheStruct();
     }
 
+    @Override
+    protected void get() {
+        this.recordingAnimationBranch = get(RecordingAnimationBranch.class);
+    }
+
     // Write \\
 
     boolean write(File file, RecordingInstance recording) {
@@ -102,6 +112,9 @@ class RecordingFileBranch extends BranchPackage {
 
     // The recording as its file holds it, every block no edit has changed since given back as it was
     ArpgObjectStruct build(RecordingInstance recording) {
+
+        if (recording.isAnimation())
+            return recordingAnimationBranch.build(recording);
 
         ArpgObjectStruct recordingArpg = new ArpgObjectStruct();
         recordingArpg.addProperty("version", EditorSetting.RECORDER_FILE_VERSION);
@@ -114,7 +127,7 @@ class RecordingFileBranch extends BranchPackage {
         recordingArpg.add("lanes", buildLanes(recording));
         recordingArpg.add("states", buildEnumNames(EntityState.VALUES));
         recordingArpg.add("actions", buildEnumNames(EntityAction.VALUES));
-        recordingArpg.add("key_modes", buildEnumNames(RecorderKeyMode.VALUES));
+        recordingArpg.add("key_modes", buildEnumNames(CurveKeyMode.VALUES));
         recordingArpg.add("export", buildExport(recording.getExportStruct()));
         recordingArpg.add("takes", buildTakes(recording));
         recordingArpg.add("clips", buildClips(recording));
@@ -708,14 +721,14 @@ class RecordingFileBranch extends BranchPackage {
         IntArrayList actions = resolveEnumOrdinals(recordingArpg.getAsArray("actions"), EntityAction.VALUES);
 
         this.keyModes = ArpgUtility.hasArray(recordingArpg, "key_modes")
-                ? resolveEnumOrdinals(recordingArpg.getAsArray("key_modes"), RecorderKeyMode.VALUES)
+                ? resolveEnumOrdinals(recordingArpg.getAsArray("key_modes"), CurveKeyMode.VALUES)
                 : new IntArrayList();
 
         // A block is kept as read only when writing the recording again would write it the same
         this.seeding = !upgraded
                 && isIdentity(states, EntityState.VALUES.length)
                 && isIdentity(actions, EntityAction.VALUES.length)
-                && isIdentity(keyModes, RecorderKeyMode.VALUES.length);
+                && isIdentity(keyModes, CurveKeyMode.VALUES.length);
 
         boolean parsed = layered
                 ? parseLayers(recordingArpg.getAsArray("layers"), recording, states, actions)

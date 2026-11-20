@@ -54,7 +54,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Character Outliner the channels armed and the export while the Recorder or Timeline is worked in, and the keys
   selected (their time and value, moved together, and their mode) while the Keys or Keys Graph is; Delete removes what
   is selected in the pane worked in last; Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step through every edit of the open
-  recording (`RecordingHistoryBranch`); File, Export exports. The Media tab lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
+  recording (`RecordingHistoryBranch`); File, Export exports. The Tracks tab (`RecordingsContext`) lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
   the Timeline shows its lanes as Premiere does, five at first and one more each time the highest takes a clip, each
   strip only its number and the name its ... gives it, the lane and clip selected edited in the Properties tab (its mix
   too), and the file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library,
@@ -67,6 +67,16 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
   `DevSceneAssetsSystem` casts across the view about once a second while a Scene Assets tab is open; a row naming
   content opens it in the Properties tab.
+- **Animations are edited on the same timeline.** There is no animation timeline of its own: the Animation Editor is
+  the viewport, showing the character chosen (the player at first) posed at the Timeline's playhead, beside the
+  Recorder, Timeline, Keys, Keys Graph and Layers tabs. While animations are worked on (the Animation Editor worked in
+  since any Dev window) the Tracks tab lists the clips on that character's rig instead of the media files, and a clip
+  clicked there or picked in the Hierarchy opens on the Timeline in the media file's place (saved first) as one clip,
+  its bones the Layers tab's layers and each axis of each channel a curve on the Keys and Keys Graph tabs, keyed,
+  moved and bent like any take's; the Recorder plays it, Undo and Redo step one history for every edit of it, a pose
+  drag one step, and the bone picked in the Layers tab is the Animation Editor's and the other way round (see
+  `.claude/docs/CharacterEditorPipeline.md`, Animation). Its clip is never moved, cut or recorded into, and it saves,
+  reverts and deletes as content.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 
 ## Layers

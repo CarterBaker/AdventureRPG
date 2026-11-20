@@ -98,4 +98,10 @@ public abstract class RecordingCurveTrackStruct extends StructPackage {
     public boolean isEmpty() {
         return getTimes().isEmpty();
     }
+
+    // True for a track made of keys alone, recording nothing, as an animation clip's bone is: always listed, never
+    // laid again from samples
+    public boolean isKeyedOnly() {
+        return false;
+    }
 }

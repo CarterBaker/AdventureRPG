@@ -10,7 +10,9 @@ public class RecordingTakeStruct extends StructPackage {
      * Stop, its own clock running from zero. It knows the channels it
      * recorded, how long it ran, and holds a track for each thing it saw —
      * the camera, the player, every resident, thrown item and vehicle about
-     * them, the weather, the clock, the interface and the sounds. A take
+     * them, the weather, the clock, the interface and the sounds. The take
+     * of an animation clip open on the timeline records nothing and holds a
+     * track for every bone the clip may key instead. A take
      * dropped from the sound library holds that one sound alone, from its
      * start, and runs as long as it plays. A take is never played
      * by itself: clips placed on the timeline play spans of it, each with
@@ -32,6 +34,7 @@ public class RecordingTakeStruct extends StructPackage {
     private final RecordingClockTrackStruct clockTrack;
     private final RecordingOverlayTrackStruct overlayTrack;
     private final RecordingSoundTrackStruct soundTrack;
+    private final ObjectArrayList<RecordingBoneTrackStruct> boneTracks;
 
     // Constructor \\
 
@@ -50,6 +53,7 @@ public class RecordingTakeStruct extends StructPackage {
         this.clockTrack = RecorderChannel.TIME.isIn(channelMask) ? new RecordingClockTrackStruct() : null;
         this.overlayTrack = RecorderChannel.INTERFACE.isIn(channelMask) ? new RecordingOverlayTrackStruct() : null;
         this.soundTrack = RecorderChannel.SOUND.isIn(channelMask) ? new RecordingSoundTrackStruct() : null;
+        this.boneTracks = new ObjectArrayList<>();
     }
 
     // Management \\
@@ -163,5 +167,9 @@ public class RecordingTakeStruct extends StructPackage {
 
     public RecordingSoundTrackStruct getSoundTrack() {
         return soundTrack;
+    }
+
+    public ObjectArrayList<RecordingBoneTrackStruct> getBoneTracks() {
+        return boneTracks;
     }
 }

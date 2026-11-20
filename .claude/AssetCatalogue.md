@@ -505,6 +505,12 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-20: Material images and history. Added `shortcuts/Materials.arpg` and `shortcuts/MaterialViewer.arpg` (Save,
   Undo, Redo); regenerated `menus/editor/Materials.arpg` (the Outliner's action row, a map's Choose Image) and
   `shaders/editor/materialviewer/MaterialViewerShader.fsh` (each map read from the material's own image).
+- 2026-11-20: Animation on the media timeline. Rewrote every clip under `animations/` and the six stamps under
+  `stamps/humanoid/` that carry motion into per-channel curves (each axis of each channel its own keys, auto handles)
+  and regenerated `schemas/Animations.arpg` and `schemas/Stamps.arpg` for them; regenerated
+  `menus/editor/EditorWindow.arpg` (Animation Timeline removed, Media tab named Tracks) and
+  `menus/editor/Recordings.arpg` (animation rows); deleted `menus/editor/AnimationTimeline.arpg` and
+  `shortcuts/AnimationTimeline.arpg` with the tab.
 
 ## Textures and Sprites (2429 files)
 
@@ -1930,7 +1936,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3855 files)
+## Data Files (3853 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2777,7 +2783,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/menus/editor/`
 
-`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
+`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`, `BiomeOutliner.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
 `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`,
@@ -3135,7 +3141,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/shortcuts/`
 
-`AnimationEditor.arpg`, `AnimationTimeline.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ImageEditor.arpg`, `ItemEditor.arpg`, `MaterialViewer.arpg`, `Materials.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ImageEditor.arpg`, `ItemEditor.arpg`, `MaterialViewer.arpg`, `Materials.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `RecorderKeyGraph.arpg`,
 `RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `UVEditor.arpg`, `WorldEditor.arpg`
 

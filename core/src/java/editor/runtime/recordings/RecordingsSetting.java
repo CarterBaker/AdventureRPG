@@ -3,9 +3,10 @@ package editor.runtime.recordings;
 public class RecordingsSetting {
 
     /*
-     * Constants used only by RecordingsContext — the row templates its panels
-     * are filled from and their elements, its entry points, and every word
-     * the tab shows.
+     * Constants used only by RecordingsContext, the Tracks tab — the row
+     * templates its panels are filled from and their elements, its entry
+     * points, and every word the tab shows for media files and for the
+     * animations of the character chosen.
      */
 
     // Templates
@@ -14,6 +15,8 @@ public class RecordingsSetting {
     public static final String TEMPLATE_DETAIL_ROW = "editor/Recordings/recordings_detail_row";
     public static final String TEMPLATE_RECORDING_ROW = "editor/Recordings/recordings_recording_row";
     public static final String TEMPLATE_RECORDING_ROW_SELECTED = "editor/Recordings/recordings_recording_row_selected";
+    public static final String TEMPLATE_ANIMATION_ROW = "editor/Recordings/recordings_animation_row";
+    public static final String TEMPLATE_ANIMATION_ROW_SELECTED = "editor/Recordings/recordings_animation_row_selected";
 
     // Elements
     public static final String ELEMENT_ROW_LABEL = "recordings_row_label";
@@ -43,9 +46,21 @@ public class RecordingsSetting {
     public static final String TEXT_STATE = "State";
     public static final String TEXT_OPEN_HINT = "Click a media file to open it in every Recorder tab";
     public static final String TEXT_EDIT_HINT = "Drag a media file onto the Timeline to lay it in the open one";
+    public static final String TEXT_NO_ANIMATIONS =
+            "No animations for this character yet: File, New in the Animation Editor";
+    public static final String TEXT_NO_CHARACTER = "No character chosen: pick one in the Animation Editor's rows";
+    public static final String TEXT_NO_ANIMATION = "No animation open: click one to open it on the Timeline";
+    public static final String TEXT_CHARACTER = "Character";
+    public static final String TEXT_RIG = "Rig";
+    public static final String TEXT_BONES = "Bones keyed";
+    public static final String TEXT_ANIMATION_OPEN_HINT =
+            "Click an animation to open it on the Timeline and in the Animation Editor";
+    public static final String TEXT_ANIMATION_EDIT_HINT =
+            "Its bones are the Layers tab's; key them on the Keys and Keys Graph tabs";
 
     // Formats
     public static final String FORMAT_LIST_TITLE = "Media (%d)";
+    public static final String FORMAT_ANIMATION_LIST_TITLE = "Animations (%d)";
     public static final String FORMAT_TIME = "%d:%05.2f";
     public static final int SECONDS_PER_MINUTE = 60;
 }

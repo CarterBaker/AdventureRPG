@@ -140,7 +140,7 @@ is the per-race animation, exactly as weapons name their attack clips per rig.
   demand. The game and editor launchers create `Songs/` with their other required directories.
 - **Media files.** Songs and videos the owner makes are one kind of file, a media file, saved by the recorder in
   `Documents/My Games/AdventureRPG/Media/` (`RECORDER_MEDIA_DIRECTORY`, beside the player's saves) and listed together
-  in the Media tab. Both record, nest and edit the same way; a media file any clip of which shows a picture is a video,
+  in the Tracks tab. Both record, nest and edit the same way; a media file any clip of which shows a picture is a video,
   one with none is music, decided by what is laid on it, never chosen. The Timeline shows five lanes, one more each time
   the highest takes a clip, up to `SONG_LANE_COUNT`, each strip its number and name, its ruler in bars and beats and a beat grid it snaps to while the file is music, in seconds once it
   shows a picture.

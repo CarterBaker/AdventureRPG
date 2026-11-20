@@ -5,7 +5,6 @@ import application.bootstrap.musicpipeline.song.SongClipStruct;
 import application.bootstrap.musicpipeline.util.NoteScale;
 import application.bootstrap.musicpipeline.util.NoteUtility;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
-import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
@@ -19,6 +18,7 @@ import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.curves.CurveKeyMode;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class RecordingRowBranch extends BranchPackage {
@@ -339,7 +339,7 @@ class RecordingRowBranch extends BranchPackage {
                     ? recorderManager.formatValue(curve.getProperty().getKind(), curve.getValue(shownKey))
                     : EditorSetting.RECORDER_ROW_VALUE_NONE;
             case EditorSetting.RECORDER_ROW_KEYS_MODE -> shown
-                    ? curve.getMode(shownKey).getLabel()
+                    ? EditorSetting.RECORDER_KEY_MODE_LABELS[curve.getMode(shownKey).ordinal()]
                     : EditorSetting.RECORDER_ROW_VALUE_NONE;
             default -> null;
         };
@@ -674,11 +674,11 @@ class RecordingRowBranch extends BranchPackage {
         return null;
     }
 
-    private RecorderKeyMode findKeyMode(String text) {
+    private CurveKeyMode findKeyMode(String text) {
 
-        for (int i = 0; i < RecorderKeyMode.VALUES.length; i++)
-            if (RecorderKeyMode.VALUES[i].getLabel().equalsIgnoreCase(text.trim()))
-                return RecorderKeyMode.VALUES[i];
+        for (int i = 0; i < CurveKeyMode.VALUES.length; i++)
+            if (EditorSetting.RECORDER_KEY_MODE_LABELS[i].equalsIgnoreCase(text.trim()))
+                return CurveKeyMode.VALUES[i];
 
         return null;
     }

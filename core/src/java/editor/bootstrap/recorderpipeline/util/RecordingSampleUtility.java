@@ -8,6 +8,7 @@ import editor.bootstrap.recorderpipeline.recording.RecordingTrackStruct;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
+import engine.util.mathematics.curves.CurveUtility;
 import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -30,25 +31,7 @@ public class RecordingSampleUtility extends EngineUtility {
 
     // The last sample at or before the time, -1 before the first
     public static int findSample(FloatArrayList times, float time) {
-
-        int low = 0;
-        int high = times.size() - 1;
-        int found = EngineSetting.INDEX_NOT_FOUND;
-
-        while (low <= high) {
-
-            int middle = (low + high) >>> 1;
-
-            if (times.getFloat(middle) <= time) {
-                found = middle;
-                low = middle + 1;
-            }
-
-            else
-                high = middle - 1;
-        }
-
-        return found;
+        return CurveUtility.findAtOrBefore(times, time);
     }
 
     // How far the time stands from the sample toward the next, 0 to 1, and 0 past the last

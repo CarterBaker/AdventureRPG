@@ -5,6 +5,7 @@ import application.bootstrap.musicpipeline.util.NoteScale;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
+import engine.util.arpg.ArpgObjectStruct;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RecordingInstance extends InstancePackage {
@@ -18,7 +19,10 @@ public class RecordingInstance extends InstancePackage {
      * more each time the highest shown takes a clip, its bin of takes in
      * the order they were recorded, the clips laid on its timeline, and how
      * it exports. It is a video while any clip of it shows a picture, and
-     * music otherwise. It runs as long as its last clip reaches. For each channel
+     * music otherwise. An animation clip opened on the timeline is one too:
+     * it names the clip, keeps the clip's ARPG as it was read, every field
+     * the timeline does not show held as it stands, and holds the one take
+     * of the clip's bones laid once from its start. It runs as long as its last clip reaches. For each channel
      * the clip on the highest lane covering a moment is the one that plays
      * it, the later laid of two on the same lane; a nested recording is
      * walked down into at the moment mapped into it, by the same rule at
@@ -53,6 +57,10 @@ public class RecordingInstance extends InstancePackage {
 
     // Export
     private RecordingExportStruct exportStruct;
+
+    // Animation — the clip open in its place, null for a media file, and its ARPG as it was read
+    private String animationName;
+    private ArpgObjectStruct animationArpg;
 
     // Internal \\
 
@@ -424,6 +432,23 @@ public class RecordingInstance extends InstancePackage {
 
     public RecordingExportStruct getExportStruct() {
         return exportStruct;
+    }
+
+    public void setAnimation(String animationName, ArpgObjectStruct animationArpg) {
+        this.animationName = animationName;
+        this.animationArpg = animationArpg;
+    }
+
+    public boolean isAnimation() {
+        return animationName != null;
+    }
+
+    public String getAnimationName() {
+        return animationName;
+    }
+
+    public ArpgObjectStruct getAnimationArpg() {
+        return animationArpg;
     }
 
     public float getDuration() {

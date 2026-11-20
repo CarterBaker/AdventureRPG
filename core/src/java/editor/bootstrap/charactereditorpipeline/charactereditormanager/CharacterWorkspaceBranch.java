@@ -3,7 +3,9 @@ package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 import java.io.File;
 import java.util.Locale;
 
+import application.bootstrap.animationpipeline.animation.AnimationChannel;
 import application.bootstrap.animationpipeline.animationmanager.AnimationManager;
+import application.bootstrap.animationpipeline.util.AnimationCurveArpgUtility;
 import application.bootstrap.entitypipeline.animationtreemanager.AnimationTreeManager;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
@@ -26,6 +28,8 @@ import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
+import engine.util.mathematics.curves.CurveKeyMode;
+import engine.util.mathematics.curves.CurveStruct;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CharacterWorkspaceBranch extends BranchPackage {
@@ -494,22 +498,20 @@ class CharacterWorkspaceBranch extends BranchPackage {
         return infoManager.saveDocument(schemaName, definitionName) ? null : infoManager.getRefusal();
     }
 
-    // A looping clip holding the rig at rest, keyed on its root at its start and end
+    // A looping clip holding the rig at rest, its root's first rotation axis keyed at rest at its start and end
     private static ArpgObjectStruct buildRestClip(String rigName, String rootBone) {
 
         ArpgObjectStruct clip = new ArpgObjectStruct();
         ArpgObjectStruct tracks = new ArpgObjectStruct();
-        ArpgArrayStruct keys = new ArpgArrayStruct();
+        CurveStruct[] curves = new CurveStruct[AnimationChannel.SLOT_COUNT];
+        CurveStruct rest = new CurveStruct(AnimationCurveArpgUtility.resolveEnds(true));
         float[] times = EditorSetting.CHARACTER_RIG_REST_KEY_TIMES;
 
-        for (int i = 0; i < times.length; i++) {
+        for (int i = 0; i < times.length; i++)
+            rest.addKey(times[i], AnimationChannel.ROTATION.getDefaultValue(), CurveKeyMode.AUTO);
 
-            ArpgObjectStruct key = new ArpgObjectStruct();
-            key.addProperty(EditorSetting.CHARACTER_RIG_FIELD_TIME, times[i]);
-            keys.add(key);
-        }
-
-        tracks.add(rootBone, keys);
+        curves[AnimationChannel.ROTATION.toSlot(0)] = rest;
+        tracks.add(rootBone, AnimationCurveArpgUtility.writeTrack(curves));
         clip.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, rigName);
         clip.addProperty(EditorSetting.CHARACTER_RIG_FIELD_LOOP, true);
         clip.add(EditorSetting.CHARACTER_RIG_FIELD_TRACKS, tracks);

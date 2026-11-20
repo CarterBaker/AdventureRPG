@@ -19,7 +19,8 @@ class RecordingLayerBranch extends BranchPackage {
      * selected clip's take as layers, in the order the take recorded them:
      * the camera and the player, the characters, items and vehicles each in a
      * group of their own, the weather, the clock and the Sounds layer, the
-     * one picked being what the Keys tab shows. In the Takes view, every take
+     * one picked being what the Keys tab shows; an animation clip's bones
+     * in a group of their own. In the Takes view, every take
      * in the bin with its channels and its length, the one picked being the
      * one the take actions lay, rename and delete, each dragged onto the
      * Timeline's lanes to lay it there. Every key is a stable name:
@@ -92,6 +93,8 @@ class RecordingLayerBranch extends BranchPackage {
                 take.getVehicleTracks());
         addTrack(roots, take.getWeatherTrack());
         addTrack(roots, take.getClockTrack());
+        addGroup(roots, EditorSetting.RECORDER_LAYER_KEY_BONES, EditorSetting.RECORDER_LAYER_LABEL_BONES,
+                take.getBoneTracks());
 
         if (take.getSoundTrack() != null)
             roots.add(new LayerNodeStruct(

@@ -4,9 +4,9 @@ import java.io.File;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipData;
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
-import application.bootstrap.animationpipeline.animation.AnimationKeyframeStruct;
 import application.bootstrap.animationpipeline.animation.BoneTrackStruct;
 import application.bootstrap.animationpipeline.animation.MorphTrackStruct;
+import application.bootstrap.animationpipeline.util.AnimationCurveArpgUtility;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import engine.root.BuilderPackage;
@@ -14,7 +14,8 @@ import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
-import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.curves.CurveEnds;
+import engine.util.mathematics.curves.CurveStruct;
 
 class AnimationBuilder extends BuilderPackage {
 
@@ -22,10 +23,12 @@ class AnimationBuilder extends BuilderPackage {
      * Parses one animation clip ARPG file into an AnimationClipData and
      * wraps it in an AnimationClipHandle. Every clip declares the rig its
      * bone names are validated against — track keys are resolved to bone
-     * indices at build time, never by name at runtime. Keyframes within a
-     * track must be supplied in strictly increasing time order. Duration is
-     * derived, never authored — the latest keyframe time across every
-     * track, morph curves included. "morphs" keys the weight of morph
+     * indices at build time, never by name at runtime. A bone's track keys
+     * each axis of each channel on a curve of its own
+     * (AnimationCurveArpgUtility), keys in strictly increasing time; a
+     * looping clip's curves run round their seam and a one-shot's ease into
+     * their holds. Duration is derived, never authored — the latest key time
+     * across every track, morph curves included. "morphs" keys the weight of morph
      * targets by name, each a list of "time" and "value" keys, the
      * blendshape curves a facial clip plays; the mesh that plays the clip
      * resolves the names. "parts" groups the tracks a joined body part
@@ -57,9 +60,10 @@ class AnimationBuilder extends BuilderPackage {
 
     AnimationClipHandle build(ArpgObjectStruct arpg, String clipName, String sourceName) {
 
-        String rigName = ArpgUtility.validateString(arpg, "rig");
+        String rigName = ArpgUtility.validateString(arpg, EngineSetting.ANIMATION_FIELD_RIG);
         RigHandle rigHandle = rigManager.getRigHandleFromRigName(rigName);
-        boolean looping = arpg.has("loop") && arpg.get("loop").getAsBoolean();
+        boolean looping = ArpgUtility.getBoolean(arpg, EngineSetting.ANIMATION_FIELD_LOOP, false);
+        CurveEnds ends = AnimationCurveArpgUtility.resolveEnds(looping);
 
         BoneTrackStruct[] boneTracks = new BoneTrackStruct[rigHandle.getBoneCount()];
         float duration = 0f;
@@ -73,7 +77,7 @@ class AnimationBuilder extends BuilderPackage {
                     throwException("Clip \"" + clipName + "\" references unknown bone \"" + boneName
                             + "\" for rig \"" + rigName + "\" in " + sourceName);
 
-            duration = parseTracks(tracksArpg, rigHandle, boneTracks, clipName, sourceName);
+            duration = parseTracks(tracksArpg, rigHandle, ends, boneTracks, clipName, sourceName);
         }
 
         if (ArpgUtility.hasObject(arpg, EngineSetting.ANIMATION_FIELD_PARTS)) {
@@ -87,7 +91,8 @@ class AnimationBuilder extends BuilderPackage {
                         EngineSetting.ANIMATION_FIELD_TRACKS);
 
                 if (holdsBones(tracksArpg, rigHandle))
-                    duration = Math.max(duration, parseTracks(tracksArpg, rigHandle, boneTracks, clipName, sourceName));
+                    duration = Math.max(
+                            duration, parseTracks(tracksArpg, rigHandle, ends, boneTracks, clipName, sourceName));
             }
         }
 
@@ -120,6 +125,7 @@ class AnimationBuilder extends BuilderPackage {
     private float parseTracks(
             ArpgObjectStruct tracksArpg,
             RigHandle rigHandle,
+            CurveEnds ends,
             BoneTrackStruct[] boneTracks,
             String clipName,
             String sourceName) {
@@ -134,10 +140,12 @@ class AnimationBuilder extends BuilderPackage {
                 throwException("Clip \"" + clipName + "\" keys bone \"" + boneName
                         + "\" more than once across its tracks and parts in " + sourceName);
 
-            BoneTrackStruct track = parseTrack(tracksArpg.getAsArray(boneName), boneName, sourceName);
+            CurveStruct[] curves = AnimationCurveArpgUtility.readTrack(
+                    ArpgUtility.validateObject(tracksArpg, boneName), ends, boneName, sourceName);
+            BoneTrackStruct track = new BoneTrackStruct(curves, AnimationCurveArpgUtility.resolveEndTime(curves));
 
             boneTracks[boneIndex] = track;
-            duration = Math.max(duration, track.getKeyframe(track.getKeyframeCount() - 1).getTime());
+            duration = Math.max(duration, track.getEndTime());
         }
 
         return duration;
@@ -151,41 +159,6 @@ class AnimationBuilder extends BuilderPackage {
                 return false;
 
         return true;
-    }
-
-    private BoneTrackStruct parseTrack(ArpgArrayStruct keyframesArpg, String boneName, String sourceName) {
-
-        if (keyframesArpg.size() == 0)
-            throwException("Bone track \"" + boneName + "\" has no keyframes in " + sourceName);
-
-        AnimationKeyframeStruct[] keyframes = new AnimationKeyframeStruct[keyframesArpg.size()];
-        float previousTime = -1f;
-
-        for (int i = 0; i < keyframesArpg.size(); i++) {
-
-            ArpgObjectStruct keyframeArpg = keyframesArpg.get(i).getAsObject();
-
-            if (!keyframeArpg.has("time"))
-                throwException("Keyframe " + i + " on bone \"" + boneName
-                        + "\" missing \"time\" in " + sourceName);
-
-            float time = keyframeArpg.get("time").getAsFloat();
-
-            if (time <= previousTime)
-                throwException("Keyframe " + i + " on bone \"" + boneName
-                        + "\" is out of order — keyframes must be strictly increasing in time. Source: "
-                        + sourceName);
-
-            previousTime = time;
-
-            keyframes[i] = new AnimationKeyframeStruct(
-                    time,
-                    parseVector3(keyframeArpg, "rotation", 0f, sourceName),
-                    parseVector3(keyframeArpg, "position", 0f, sourceName),
-                    parseVector3(keyframeArpg, "scale", 1f, sourceName));
-        }
-
-        return new BoneTrackStruct(keyframes);
     }
 
     // Every morph curve the clip keys, in the order the file lists them
@@ -225,20 +198,5 @@ class AnimationBuilder extends BuilderPackage {
         }
 
         return new MorphTrackStruct(morphName, times, values);
-    }
-
-    // Vector Parsing \\
-
-    private Vector3 parseVector3(ArpgObjectStruct arpg, String key, float defaultValue, String sourceName) {
-
-        if (!arpg.has(key) || arpg.get(key).isNull())
-            return new Vector3(defaultValue, defaultValue, defaultValue);
-
-        ArpgObjectStruct vector = arpg.getAsObject(key);
-
-        return new Vector3(
-                vector.has("x") ? vector.get("x").getAsFloat() : defaultValue,
-                vector.has("y") ? vector.get("y").getAsFloat() : defaultValue,
-                vector.has("z") ? vector.get("z").getAsFloat() : defaultValue);
     }
 }

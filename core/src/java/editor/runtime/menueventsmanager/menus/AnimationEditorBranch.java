@@ -1,7 +1,5 @@
 package editor.runtime.menueventsmanager.menus;
 
-import application.bootstrap.menupipeline.element.ElementInstance;
-import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
 import editor.runtime.EditorSetting;
@@ -10,20 +8,19 @@ import engine.root.BranchPackage;
 public class AnimationEditorBranch extends BranchPackage {
 
     /*
-     * Menu event handlers for the Animation Editor's keys, timeline and
-     * panels, and its File and Edit menu actions. Every action works on the shared active clip. New clips are
-     * named through the name dialog, deleting a clip asks for its name to be
-     * typed back as confirmation, and a number's value opens in the text
-     * dialog. Undo and redo step the clip's history. Dragging along the
-     * timeline moves the playhead to the frame under the cursor, and along a
-     * bone's lane picks that bone too. Panel rows and lanes hand back the key
-     * of the value they show.
+     * Menu event handlers for the Animation Editor's keys and panels, and its
+     * File and Edit menu actions. Every action works on the shared active
+     * clip. New clips are named through the name dialog, deleting a clip
+     * asks for its name to be typed back as confirmation, and a number's
+     * value opens in the text dialog. Undo and redo step the history of the
+     * recorder's timeline, which holds the clip, and the transport keys play
+     * and step its playhead. Panel rows hand back the key of the value they
+     * show.
      */
 
     // Internal
     private AnimationEditorManager animationEditorManager;
     private NameDialogBranch nameDialogBranch;
-    private InputManager inputManager;
 
     // Base \\
 
@@ -31,7 +28,6 @@ public class AnimationEditorBranch extends BranchPackage {
     protected void get() {
         this.animationEditorManager = get(AnimationEditorManager.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
-        this.inputManager = get(InputManager.class);
     }
 
     // Clips \\
@@ -95,19 +91,6 @@ public class AnimationEditorBranch extends BranchPackage {
 
     public void toEnd() {
         animationEditorManager.toEnd();
-    }
-
-    public void scrubTimeline(WindowInstance window, ElementInstance track) {
-
-        if (track.getComputedW() > 0f)
-            animationEditorManager.scrub(
-                    (inputManager.getHoverMouseX(window) - track.getComputedLeft()) / track.getComputedW());
-    }
-
-    // A dope sheet lane's track picks its bone and moves the playhead to the frame under the cursor
-    public void scrubLane(String key, WindowInstance window, ElementInstance track) {
-        animationEditorManager.select(key);
-        scrubTimeline(window, track);
     }
 
     // Rows \\

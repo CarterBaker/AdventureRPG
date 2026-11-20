@@ -1,38 +1,50 @@
 package application.bootstrap.animationpipeline.animation;
 
 import engine.root.StructPackage;
+import engine.util.mathematics.curves.CurveStruct;
 
 public class BoneTrackStruct extends StructPackage {
 
     /*
-     * Immutable ordered keyframe array for a single bone within one clip.
-     * Bones with no authored motion in a clip simply have no entry in
-     * AnimationClipData.boneTracks — there is no BoneTrackStruct for them,
-     * and pose evaluation falls back to the rig's bind pose for that bone.
+     * Immutable curves of a single bone within one clip, one slot for each
+     * axis of each channel (AnimationChannel.toSlot); a slot with no curve
+     * holds its channel's default. Bones with no authored motion in a clip
+     * simply have no entry in AnimationClipData.boneTracks, and pose
+     * evaluation falls back to the rig's bind pose for that bone.
      */
 
-    // Keyframes
-    private final AnimationKeyframeStruct[] keyframes;
+    // Curves
+    private final CurveStruct[] curves;
+    private final float endTime;
 
     // Constructor \\
 
-    public BoneTrackStruct(AnimationKeyframeStruct[] keyframes) {
+    public BoneTrackStruct(CurveStruct[] curves, float endTime) {
 
-        // Keyframes
-        this.keyframes = keyframes;
+        // Curves
+        this.curves = curves;
+        this.endTime = endTime;
     }
 
     // Accessible \\
 
-    public AnimationKeyframeStruct[] getKeyframes() {
-        return keyframes;
+    public CurveStruct getCurve(int slot) {
+        return curves[slot];
     }
 
-    public int getKeyframeCount() {
-        return keyframes.length;
+    public boolean hasCurve(int slot) {
+        return curves[slot] != null;
     }
 
-    public AnimationKeyframeStruct getKeyframe(int index) {
-        return keyframes[index];
+    // The latest key across every curve
+    public float getEndTime() {
+        return endTime;
+    }
+
+    // The slot's value at a moment of the clip, its channel's default where it has no curve
+    public float sample(int slot, float time) {
+        return curves[slot] != null
+                ? (float) curves[slot].evaluate(time)
+                : AnimationChannel.fromSlot(slot).getDefaultValue();
     }
 }

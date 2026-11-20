@@ -1,7 +1,6 @@
 package editor.bootstrap.animationeditorpipeline.animationeditormanager;
 
-import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
-import application.bootstrap.animationpipeline.animation.AnimationClipUtility;
+import application.bootstrap.animationpipeline.animation.AnimationChannel;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.animationeditorpipeline.util.AnimationEditorChannel;
@@ -9,10 +8,8 @@ import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
-import engine.util.arpg.ArpgArrayStruct;
-import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
-import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.curves.CurveStruct;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -21,10 +18,10 @@ class AnimationPropertyBranch extends BranchPackage {
     /*
      * The one place every value in the animation editor's panels is read,
      * stepped, typed, cycled or acted on, by the key its row carries. A bone's
-     * pose at the playhead reads straight from its key when it has one there,
-     * and otherwise is sampled from the preview clip exactly as the game
-     * samples it. Changing a value where the bone has no key keys it there
-     * first, holding the pose it showed. Mirroring swaps every left bone
+     * pose at the playhead is its curves read there, exactly as the game
+     * samples them, each axis it does not key at its default; its keys are
+     * the moments any of its curves is keyed. Changing a value where the bone
+     * has no key keys it there first, holding the pose it showed. Mirroring swaps every left bone
      * with its right and flips the pose across the body's middle.
      */
 
@@ -32,21 +29,7 @@ class AnimationPropertyBranch extends BranchPackage {
     private AnimationEditorManager animationEditorManager;
     private AnimationEditBranch animationEditBranch;
 
-    // Scratch
-    private Vector3 positionScratch;
-    private Vector3 rotationScratch;
-    private Vector3 scaleScratch;
-
     // Base \\
-
-    @Override
-    protected void create() {
-
-        // Scratch
-        this.positionScratch = new Vector3();
-        this.rotationScratch = new Vector3();
-        this.scaleScratch = new Vector3();
-    }
 
     @Override
     protected void get() {
@@ -128,59 +111,28 @@ class AnimationPropertyBranch extends BranchPackage {
                 document.getRigHandle().getBone(boneIndex).getName(),
                 animationEditorManager.getTime(),
                 samplePose(document, boneIndex),
-                channel,
+                channel.getChannel(),
                 CharacterViewUtility.getKeyIndex(key),
                 written);
     }
 
     // Pose \\
 
-    // A bone's rotation, position and scale at the playhead, read from its key there or sampled between keys
+    // A bone's rotation, position and scale at the playhead, read from its curves there
     float[] samplePose(AnimationDocumentInstance document, int boneIndex) {
 
         float[] pose = new float[AnimationEditorChannel.getPoseLength()];
-        ArpgObjectStruct key = findKeyAt(document, boneIndex);
+        CurveStruct[] curves = animationEditBranch.findCurves(
+                animationEditorManager.getClipArpg(),
+                document.getRigHandle().getBone(boneIndex).getName());
+        float time = animationEditorManager.getTime();
 
-        if (key != null) {
-            readKey(key, pose);
-            return pose;
-        }
-
-        if (!document.hasPreviewClip()) {
-            writeDefaults(pose);
-            return pose;
-        }
-
-        AnimationClipHandle clip = document.getPreviewClip();
-        float phase = CharacterViewUtility.clamp(animationEditorManager.getTime() / clip.getDuration(), 0f, 1f);
-
-        AnimationClipUtility.sampleClip(clip, phase, boneIndex, positionScratch, rotationScratch, scaleScratch);
-        writeVector(pose, AnimationEditorChannel.ROTATION, rotationScratch);
-        writeVector(pose, AnimationEditorChannel.POSITION, positionScratch);
-        writeVector(pose, AnimationEditorChannel.SCALE, scaleScratch);
+        for (int slot = 0; slot < pose.length; slot++)
+            pose[slot] = curves != null && curves[slot] != null
+                    ? (float) curves[slot].evaluate(time)
+                    : AnimationChannel.fromSlot(slot).getDefaultValue();
 
         return pose;
-    }
-
-    private void readKey(ArpgObjectStruct key, float[] pose) {
-
-        for (AnimationEditorChannel channel : AnimationEditorChannel.VALUES)
-            for (int axis = 0; axis < EditorSetting.CHARACTER_VIEW_AXIS_NAMES.length; axis++)
-                pose[channel.toPoseIndex(axis)] = CharacterViewUtility.getComponent(
-                        key, channel.getField(), axis, channel.getDefaultValue());
-    }
-
-    private void writeDefaults(float[] pose) {
-
-        for (AnimationEditorChannel channel : AnimationEditorChannel.VALUES)
-            for (int axis = 0; axis < EditorSetting.CHARACTER_VIEW_AXIS_NAMES.length; axis++)
-                pose[channel.toPoseIndex(axis)] = channel.getDefaultValue();
-    }
-
-    private void writeVector(float[] pose, AnimationEditorChannel channel, Vector3 vector) {
-        pose[channel.toPoseIndex(0)] = vector.x;
-        pose[channel.toPoseIndex(1)] = vector.y;
-        pose[channel.toPoseIndex(2)] = vector.z;
     }
 
     // The same pose seen in a mirror down the body's middle: turns about the up-down axis and the facing axis
@@ -266,28 +218,25 @@ class AnimationPropertyBranch extends BranchPackage {
 
     private void deleteKey(AnimationDocumentInstance document) {
 
-        int boneIndex = animationEditorManager.getSelectedBoneIndex();
-        String boneName = document.getRigHandle().getBone(boneIndex).getName();
-        int keyIndex = findKeyIndexAt(document, boneIndex);
+        String boneName = document.getRigHandle().getBone(animationEditorManager.getSelectedBoneIndex()).getName();
+        FloatArrayList keyTimes = collectKeyTimes(boneName);
+        int keyIndex = animationEditBranch.findKeyIndex(keyTimes, animationEditorManager.getTime());
 
         if (keyIndex != EngineSetting.INDEX_NOT_FOUND)
-            animationEditBranch.deleteKey(document, boneName, keyIndex);
+            animationEditBranch.deleteKey(document, boneName, keyTimes.getFloat(keyIndex));
     }
 
     // Moves the playhead to the selected bone's nearest key before or after it
     private void jumpToKey(AnimationDocumentInstance document, int direction) {
 
-        ArpgArrayStruct track = findBoneTrack(document, animationEditorManager.getSelectedBoneIndex());
-
-        if (track == null)
-            return;
-
+        FloatArrayList keyTimes = collectKeyTimes(
+                document.getRigHandle().getBone(animationEditorManager.getSelectedBoneIndex()).getName());
         float time = animationEditorManager.getTime();
         float target = Float.NaN;
 
-        for (int i = 0; i < track.size(); i++) {
+        for (int i = 0; i < keyTimes.size(); i++) {
 
-            float keyTime = animationEditBranch.getKeyTime(track, i);
+            float keyTime = keyTimes.getFloat(i);
             boolean beyond = direction < 0
                     ? keyTime < time - EditorSetting.ANIMATION_EDITOR_KEY_EPSILON
                     : keyTime > time + EditorSetting.ANIMATION_EDITOR_KEY_EPSILON;
@@ -303,25 +252,24 @@ class AnimationPropertyBranch extends BranchPackage {
     // Moves the selected bone's key at the playhead one frame, never past its neighbours or before the start
     private void moveKey(AnimationDocumentInstance document, int direction) {
 
-        int boneIndex = animationEditorManager.getSelectedBoneIndex();
-        int keyIndex = findKeyIndexAt(document, boneIndex);
-        ArpgArrayStruct track = findBoneTrack(document, boneIndex);
+        String boneName = document.getRigHandle().getBone(animationEditorManager.getSelectedBoneIndex()).getName();
+        FloatArrayList keyTimes = collectKeyTimes(boneName);
+        int keyIndex = animationEditBranch.findKeyIndex(keyTimes, animationEditorManager.getTime());
 
         if (keyIndex == EngineSetting.INDEX_NOT_FOUND)
             return;
 
         float frame = 1f / EditorSetting.ANIMATION_EDITOR_FRAME_RATE;
         float epsilon = EditorSetting.ANIMATION_EDITOR_KEY_EPSILON;
-        float time = CharacterViewUtility.round(animationEditBranch.getKeyTime(track, keyIndex) + direction * frame);
-        boolean afterPrevious = keyIndex == 0
-                || time > animationEditBranch.getKeyTime(track, keyIndex - 1) + epsilon;
-        boolean beforeNext = keyIndex == track.size() - 1
-                || time < animationEditBranch.getKeyTime(track, keyIndex + 1) - epsilon;
+        float keyTime = keyTimes.getFloat(keyIndex);
+        float time = CharacterViewUtility.round(keyTime + direction * frame);
+        boolean afterPrevious = keyIndex == 0 || time > keyTimes.getFloat(keyIndex - 1) + epsilon;
+        boolean beforeNext = keyIndex == keyTimes.size() - 1 || time < keyTimes.getFloat(keyIndex + 1) - epsilon;
 
         if (time < 0f || !afterPrevious || !beforeNext)
             return;
 
-        animationEditBranch.setKeyTime(document, document.getRigHandle().getBone(boneIndex).getName(), keyIndex, time);
+        animationEditBranch.setKeyTime(document, boneName, keyTime, time);
         animationEditorManager.setTime(time);
     }
 
@@ -412,70 +360,6 @@ class AnimationPropertyBranch extends BranchPackage {
                 : null;
     }
 
-    // Timeline \\
-
-    void collectKeyTimes(AnimationDocumentInstance document, FloatArrayList selectedTimes, FloatArrayList otherTimes) {
-
-        selectedTimes.clear();
-        otherTimes.clear();
-
-        if (!document.hasRig())
-            return;
-
-        RigHandle rigHandle = document.getRigHandle();
-        String selectedBone = rigHandle.getBone(animationEditorManager.getSelectedBoneIndex()).getName();
-        ArpgArrayStruct selectedTrack = animationEditBranch.findTrack(
-                animationEditorManager.getClipArpg(),
-                selectedBone);
-
-        if (selectedTrack != null)
-            for (int i = 0; i < selectedTrack.size(); i++)
-                selectedTimes.add(animationEditBranch.getKeyTime(selectedTrack, i));
-
-        for (int b = 0; b < rigHandle.getBoneCount(); b++) {
-
-            String boneName = rigHandle.getBone(b).getName();
-            ArpgArrayStruct track = animationEditBranch.findTrack(animationEditorManager.getClipArpg(), boneName);
-
-            if (track == null || boneName.equals(selectedBone))
-                continue;
-
-            for (int i = 0; i < track.size(); i++) {
-
-                float keyTime = animationEditBranch.getKeyTime(track, i);
-
-                if (!containsTime(selectedTimes, keyTime) && !containsTime(otherTimes, keyTime))
-                    otherTimes.add(keyTime);
-            }
-        }
-    }
-
-    // Every key time of one bone's track, in time order
-    void collectBoneKeyTimes(AnimationDocumentInstance document, int boneIndex, FloatArrayList times) {
-
-        times.clear();
-
-        if (!document.hasRig())
-            return;
-
-        ArpgArrayStruct track = findBoneTrack(document, boneIndex);
-
-        if (track == null)
-            return;
-
-        for (int i = 0; i < track.size(); i++)
-            times.add(animationEditBranch.getKeyTime(track, i));
-    }
-
-    private boolean containsTime(FloatArrayList times, float time) {
-
-        for (int i = 0; i < times.size(); i++)
-            if (Math.abs(times.getFloat(i) - time) <= EditorSetting.ANIMATION_EDITOR_KEY_EPSILON)
-                return true;
-
-        return false;
-    }
-
     // Keys \\
 
     private ObjectArrayList<String> collectSelectedBone(AnimationDocumentInstance document) {
@@ -503,35 +387,20 @@ class AnimationPropertyBranch extends BranchPackage {
     }
 
     boolean isKeyed(String boneName) {
-        return animationEditBranch.findTrack(animationEditorManager.getClipArpg(), boneName) != null;
+        return animationEditBranch.isKeyed(animationEditorManager.getClipArpg(), boneName);
     }
 
     int getKeyCount(String boneName) {
-
-        ArpgArrayStruct track = animationEditBranch.findTrack(animationEditorManager.getClipArpg(), boneName);
-        return track != null ? track.size() : 0;
+        return collectKeyTimes(boneName).size();
     }
 
     int findKeyIndexAt(AnimationDocumentInstance document, int boneIndex) {
         return animationEditBranch.findKeyIndex(
-                animationEditBranch.findTrack(
-                        animationEditorManager.getClipArpg(),
-                        document.getRigHandle().getBone(boneIndex).getName()),
+                collectKeyTimes(document.getRigHandle().getBone(boneIndex).getName()),
                 animationEditorManager.getTime());
     }
 
-    private ArpgObjectStruct findKeyAt(AnimationDocumentInstance document, int boneIndex) {
-
-        int keyIndex = findKeyIndexAt(document, boneIndex);
-
-        return keyIndex != EngineSetting.INDEX_NOT_FOUND
-                ? findBoneTrack(document, boneIndex).get(keyIndex).getAsObject()
-                : null;
-    }
-
-    private ArpgArrayStruct findBoneTrack(AnimationDocumentInstance document, int boneIndex) {
-        return animationEditBranch.findTrack(
-                animationEditorManager.getClipArpg(),
-                document.getRigHandle().getBone(boneIndex).getName());
+    private FloatArrayList collectKeyTimes(String boneName) {
+        return animationEditBranch.collectKeyTimes(animationEditorManager.getClipArpg(), boneName);
     }
 }

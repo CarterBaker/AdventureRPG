@@ -6,7 +6,6 @@ import application.bootstrap.menupipeline.util.DimensionValueStruct;
 import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
-import editor.bootstrap.recorderpipeline.recording.RecorderKeyMode;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
@@ -16,6 +15,7 @@ import editor.runtime.EditorSetting;
 import editor.runtime.recorder.RecorderSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.curves.CurveKeyMode;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class RecorderKeyGraphSystem extends SystemPackage {
@@ -234,7 +234,7 @@ public class RecorderKeyGraphSystem extends SystemPackage {
                 curve.size(),
                 recorderRowSystem.formatTime(clip.toTimelineTime(curve.getTime(key))),
                 recorderManager.formatValue(curve.getProperty().getKind(), curve.getValue(key)),
-                curve.getMode(key).getLabel()));
+                EditorSetting.RECORDER_KEY_MODE_LABELS[curve.getMode(key).ordinal()]));
     }
 
     // Marks \\
@@ -289,7 +289,7 @@ public class RecorderKeyGraphSystem extends SystemPackage {
 
             lastX = x;
 
-            if (i == shownKey && curve.getMode(i) != RecorderKeyMode.CONSTANT) {
+            if (i == shownKey && curve.getMode(i) != CurveKeyMode.CONSTANT) {
 
                 if (i > 0)
                     placeHandle(x, y, toGraphX(clip.toTimelineTime(curve.getTime(i) + curve.getInTime(i)), width),

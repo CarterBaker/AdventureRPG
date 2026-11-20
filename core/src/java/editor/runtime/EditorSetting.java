@@ -452,7 +452,6 @@ public class EditorSetting {
     public static final String TAB_TITLE_ARPG_VIEWER = "ARPG Viewer";
     public static final String TAB_TITLE_ANIMATION_EDITOR = "Animation Editor";
     public static final String TAB_TITLE_ANIMATION_TREE_EDITOR = "Animation Tree Editor";
-    public static final String TAB_TITLE_ANIMATION_TIMELINE = "Animation Timeline";
     public static final String TAB_TITLE_BIOME_OUTLINER = "Biome Outliner";
     public static final String TAB_TITLE_BIOME_PLANNER = "Biome Planner";
     public static final String TAB_TITLE_BIOME_VIEWER = "Biome Viewer";
@@ -486,7 +485,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_TIMELINE = "Timeline";
     public static final String TAB_TITLE_RECORDER_KEYS = "Keys";
     public static final String TAB_TITLE_RECORDER_KEY_GRAPH = "Keys Graph";
-    public static final String TAB_TITLE_RECORDINGS = "Media";
+    public static final String TAB_TITLE_RECORDINGS = "Tracks";
     public static final String TAB_TITLE_SOUND_LIBRARY = "Sound Library";
     public static final String TAB_TITLE_NOTE_LIBRARY = "Note Library";
     public static final String TAB_TITLE_SCENE_ASSETS = "Scene Assets";
@@ -1480,7 +1479,6 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_FIELD_OFFSET = "offset";
     public static final String CHARACTER_RIG_FIELD_START = "start";
     public static final String CHARACTER_RIG_FIELD_END = "end";
-    public static final String CHARACTER_RIG_FIELD_TIME = "time";
     public static final String CHARACTER_RIG_FIELD_LOOP = "loop";
     public static final String CHARACTER_RIG_FIELD_TRACKS = "tracks";
     public static final String CHARACTER_RIG_FIELD_CLIP = "clip";
@@ -1898,10 +1896,6 @@ public class EditorSetting {
     public static final String ANIMATION_EDITOR_FIELD_LOOP = "loop";
     public static final String ANIMATION_EDITOR_FIELD_TRACKS = "tracks";
     public static final String ANIMATION_EDITOR_FIELD_PARTS = "parts";
-    public static final String ANIMATION_EDITOR_FIELD_TIME = "time";
-    public static final String ANIMATION_EDITOR_FIELD_ROTATION = "rotation";
-    public static final String ANIMATION_EDITOR_FIELD_POSITION = "position";
-    public static final String ANIMATION_EDITOR_FIELD_SCALE = "scale";
     public static final String ANIMATION_EDITOR_DEFAULT_RIG = "HumanoidRig";
 
     // Animation Editor — panel keys; the channel rows are keyed by their fields
@@ -1967,15 +1961,12 @@ public class EditorSetting {
     public static final String ANIMATION_EDITOR_STATUS_PAUSED = "Paused";
     public static final String ANIMATION_EDITOR_TIME_SEPARATOR = " / ";
     public static final String ANIMATION_EDITOR_TIME_SUFFIX = "s";
+    public static final String ANIMATION_EDITOR_MESSAGE_REFUSED = "Not keyed: ";
     public static final String ANIMATION_EDITOR_MESSAGE_CREATED = "Created ";
     public static final String ANIMATION_EDITOR_MESSAGE_SAVED = "Saved ";
     public static final String ANIMATION_EDITOR_MESSAGE_REVERTED = "Reverted ";
     public static final String ANIMATION_EDITOR_MESSAGE_DELETED = "Deleted ";
     public static final String ANIMATION_EDITOR_MESSAGE_POSE_COPIED = "Pose copied";
-    public static final String ANIMATION_EDITOR_MESSAGE_UNDONE = "Undone";
-    public static final String ANIMATION_EDITOR_MESSAGE_REDONE = "Redone";
-    public static final String ANIMATION_EDITOR_MESSAGE_NOTHING_TO_UNDO = "Nothing to undo";
-    public static final String ANIMATION_EDITOR_MESSAGE_NOTHING_TO_REDO = "Nothing to redo";
     public static final String ANIMATION_EDITOR_STATUS_POSE_HINT = "Drag a joint to pose its bone, keyed at the"
             + " playhead; X Y Z hold a turn to an axis, Ctrl snaps; drag off the joints to orbit";
 
@@ -3339,8 +3330,10 @@ public class EditorSetting {
     public static final double RECORDER_ROW_KEYS_VALUE_STEP_SHARE = 0.01;
 
     // Recorder History — every edit of the open recording kept as the recording stood before it, so it can be undone
-    // and redone; steps of one value stepped or slid in a row are one step
+    // and redone; steps of one value stepped or slid in a row are one step, as is each gesture of another window,
+    // named by its number after the prefix
     public static final int RECORDER_HISTORY_MAX_STEPS = 64;
+    public static final String RECORDER_GESTURE_ROW_PREFIX = "gesture/";
     public static final String RECORDER_STATUS_UNDONE = "Undone";
     public static final String RECORDER_STATUS_REDONE = "Redone";
     public static final String RECORDER_STATUS_NOTHING_TO_UNDO = "Nothing to undo";
@@ -3542,9 +3535,6 @@ public class EditorSetting {
     public static final int RECORDER_CURVE_MAX_KEYS = 512;
     public static final float RECORDER_CURVE_MAX_KEYS_PER_SECOND = 4f;
     public static final double RECORDER_CURVE_FIT_STEADINESS = 1e-3;
-    public static final float RECORDER_KEY_MIN_GAP_SECONDS = 0.01f;
-    public static final int RECORDER_CURVE_SOLVE_STEPS = 16;
-    public static final double RECORDER_CURVE_SOLVE_EPSILON = 1e-5;
     public static final int RECORDER_GRAPH_FRAME_SAMPLES = 64;
 
     // Recorder — curves, as the Keys tab names them; a mast, sail or door is named with its number
@@ -3573,6 +3563,15 @@ public class EditorSetting {
     public static final String RECORDER_CURVE_LABEL_BRACE = "Mast brace";
     public static final String RECORDER_CURVE_LABEL_HOIST = "Sail hoist";
     public static final String RECORDER_CURVE_LABEL_DOOR = "Door opening";
+    public static final String RECORDER_CURVE_LABEL_BONE_ROTATION_X = "Rotation X";
+    public static final String RECORDER_CURVE_LABEL_BONE_ROTATION_Y = "Rotation Y";
+    public static final String RECORDER_CURVE_LABEL_BONE_ROTATION_Z = "Rotation Z";
+    public static final String RECORDER_CURVE_LABEL_BONE_POSITION_X = "Position X";
+    public static final String RECORDER_CURVE_LABEL_BONE_POSITION_Y = "Position Y";
+    public static final String RECORDER_CURVE_LABEL_BONE_POSITION_Z = "Position Z";
+    public static final String RECORDER_CURVE_LABEL_BONE_SCALE_X = "Scale X";
+    public static final String RECORDER_CURVE_LABEL_BONE_SCALE_Y = "Scale Y";
+    public static final String RECORDER_CURVE_LABEL_BONE_SCALE_Z = "Scale Z";
     public static final String RECORDER_CURVE_LABEL_DRIFT_X = "Drift X";
     public static final String RECORDER_CURVE_LABEL_DRIFT_Z = "Drift Z";
     public static final String RECORDER_CURVE_LABEL_GUST = "Gusts";
@@ -3607,9 +3606,11 @@ public class EditorSetting {
     public static final String RECORDER_LAYER_KEY_CHARACTERS = "characters";
     public static final String RECORDER_LAYER_KEY_ITEMS = "items";
     public static final String RECORDER_LAYER_KEY_VEHICLES = "vehicles";
+    public static final String RECORDER_LAYER_KEY_BONES = "bones";
     public static final String RECORDER_LAYER_LABEL_CHARACTERS = "Characters";
     public static final String RECORDER_LAYER_LABEL_ITEMS = "Items";
     public static final String RECORDER_LAYER_LABEL_VEHICLES = "Vehicles";
+    public static final String RECORDER_LAYER_LABEL_BONES = "Bones";
     public static final String RECORDER_LAYER_SOUNDS_FORMAT = "Sounds (%d)";
     public static final String RECORDER_LAYER_TAKE_FORMAT = "%s  (%s, %.1fs)";
     public static final String RECORDER_LAYER_CHANNEL_SEPARATOR = ", ";
@@ -3622,12 +3623,18 @@ public class EditorSetting {
     public static final double RECORDER_GRAPH_MARGIN_SHARE = 0.1;
     public static final String RECORDER_KEY_STATUS_SEPARATOR = ": ";
 
-    // Recorder — key modes, as the Keys pane names them
+    // Recorder — key modes, as the Keys pane names them, in CurveKeyMode order
     public static final String RECORDER_KEY_MODE_LABEL_AUTO = "Auto";
     public static final String RECORDER_KEY_MODE_LABEL_ALIGNED = "Aligned";
     public static final String RECORDER_KEY_MODE_LABEL_FREE = "Free";
     public static final String RECORDER_KEY_MODE_LABEL_LINEAR = "Linear";
     public static final String RECORDER_KEY_MODE_LABEL_CONSTANT = "Hold";
+    public static final String[] RECORDER_KEY_MODE_LABELS = {
+            RECORDER_KEY_MODE_LABEL_AUTO,
+            RECORDER_KEY_MODE_LABEL_ALIGNED,
+            RECORDER_KEY_MODE_LABEL_FREE,
+            RECORDER_KEY_MODE_LABEL_LINEAR,
+            RECORDER_KEY_MODE_LABEL_CONSTANT };
 
     // Recorder — sampling, in seconds; the camera, the player and the clock are sampled finer than the world
     public static final float RECORDER_SAMPLE_INTERVAL = 1f / 60f;
@@ -3837,6 +3844,14 @@ public class EditorSetting {
 
     // Recorder — status text
     public static final String RECORDER_STATUS_READY = "Ready";
+    public static final String RECORDER_STATUS_ANIMATION_OPENED = "Opened animation ";
+    public static final String RECORDER_STATUS_ANIMATION_CLOSED = "Animation deleted: ";
+    public static final String RECORDER_STATUS_ANIMATION_SAVED = "Saved animation ";
+    public static final String RECORDER_STATUS_ANIMATION_UNREADABLE = "Cannot open animation: ";
+    public static final String RECORDER_STATUS_ANIMATION_NOT_RECORDED =
+            "An animation is keyed, not recorded: open a media file to record";
+    public static final String RECORDER_STATUS_ANIMATION_CONTENT =
+            "An animation is content, not media: rename, copy or delete it in the Hierarchy; it never exports";
     public static final String RECORDER_STATUS_LOOP_ON = "Loop on: playing runs round the range or the whole file";
     public static final String RECORDER_STATUS_LOOP_OFF = "Loop off";
     public static final String RECORDER_STATUS_HANDLES_FREED = "Handles freed on ";

@@ -22,7 +22,8 @@ class RecordingHistoryBranch extends BranchPackage {
      * base without a step of their own, since they are laid the same way
      * again whenever a step brings back a recording without them. Undo and
      * redo hand back the copy to put in place, keeping the base on the other
-     * stack.
+     * stack; a row cancelled hands back the base it began from, leaving no
+     * step and nothing to redo.
      */
 
     // Internal
@@ -100,6 +101,22 @@ class RecordingHistoryBranch extends BranchPackage {
 
     void endRow() {
         this.rowKey = null;
+    }
+
+    // The step the row made since beginRow() taken back as if never made, nothing left to redo: the copy to put in
+    // place of the recording, null when the row changed nothing
+    ArpgObjectStruct cancelRow() {
+
+        boolean stepped = rowKey != null && rowKey.equals(stepRowKey) && !undoSteps.isEmpty();
+
+        this.rowKey = null;
+        this.stepRowKey = null;
+
+        if (!stepped || base == null)
+            return null;
+
+        this.base = undoSteps.pop();
+        return base;
     }
 
     // Undo \\

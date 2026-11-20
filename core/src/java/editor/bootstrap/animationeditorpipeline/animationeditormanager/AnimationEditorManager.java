@@ -6,6 +6,8 @@ import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
+import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
+import editor.bootstrap.recorderpipeline.recording.RecorderState;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
@@ -17,7 +19,6 @@ import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -25,23 +26,26 @@ public class AnimationEditorManager extends ManagerPackage {
 
     /*
      * Owns the animation editor's shared state — the open clips, the active
-     * one, the selected bone, the character it plays on, the playhead and the
-     * copied pose. Clips are ARPG entries owned by InfoManager: selecting one
-     * there opens it here, every edit goes back through it, and every change
-     * to an open clip, made here or in the Info Panel, rebuilds its preview
-     * live. The playhead stops on whole frames; playback runs it freely and
-     * loops or holds at the end as the clip does. While a clip with a rig
-     * plays on a character, the viewport is a tool canvas whose tools pose
-     * the selected bone, keying it at the playhead as a drag goes and
-     * undoing a whole drag at once; every edit of the clip has its undo.
-     * Edits, previews, panel values and panel rows each live in their own
-     * branch.
+     * one, the selected bone, the character it plays on (the player until
+     * another is chosen) and the copied pose. Clips are ARPG entries owned by
+     * InfoManager: selecting one there, or in the Tracks tab, opens it here
+     * and on the recorder's timeline, every edit goes back through it, and
+     * every change to an open clip, made here, on the Keys tabs or in the
+     * Info Panel, rebuilds its preview live. The timeline is the recorder's:
+     * its playhead is this editor's, stopped on whole frames, its transport
+     * plays the clip, its history undoes every edit of it, and the bone its
+     * Keys tab shows is the bone selected here and the other way round.
+     * While a clip with a rig plays on a character, the viewport is a tool
+     * canvas whose tools pose the selected bone, keying it at the playhead
+     * as a drag goes, a whole drag one step. Edits, previews, panel values
+     * and panel rows each live in their own branch.
      */
 
     // Internal
     private InfoManager infoManager;
     private EntityManager entityManager;
     private ToolManager toolManager;
+    private RecorderManager recorderManager;
     private AnimationEditBranch animationEditBranch;
     private AnimationPreviewBranch animationPreviewBranch;
     private AnimationPropertyBranch animationPropertyBranch;
@@ -54,10 +58,6 @@ public class AnimationEditorManager extends ManagerPackage {
     private AnimationDocumentInstance activeDocument;
     private int selectedBoneIndex;
     private String characterName;
-
-    // Playback
-    private float time;
-    private boolean playing;
 
     // Clipboard
     private ObjectArrayList<float[]> clipboardPoses;
@@ -95,6 +95,9 @@ public class AnimationEditorManager extends ManagerPackage {
         this.poseBoneNames = new ObjectArrayList<>();
         this.posePoses = new ObjectArrayList<>();
         this.chainPoseStarts = new float[2][];
+
+        // Active
+        this.characterName = EngineSetting.DEFAULT_PLAYER_RACE;
     }
 
     @Override
@@ -102,6 +105,7 @@ public class AnimationEditorManager extends ManagerPackage {
         this.infoManager = get(InfoManager.class);
         this.entityManager = get(EntityManager.class);
         this.toolManager = get(ToolManager.class);
+        this.recorderManager = get(RecorderManager.class);
     }
 
     @Override
@@ -113,30 +117,26 @@ public class AnimationEditorManager extends ManagerPackage {
 
     // Update \\
 
+    // The bone the recorder's Keys tab shows is the bone selected here
     @Override
     protected void update() {
 
-        if (!playing || activeDocument == null)
+        if (activeDocument == null || !activeDocument.hasRig() || posing || !isOnTimeline())
             return;
 
-        float duration = activeDocument.getDuration();
+        String boneName = recorderManager.getSelectedBoneName();
+        RigHandle rigHandle = activeDocument.getRigHandle();
 
-        if (duration <= 0f) {
-            pause();
-            return;
-        }
-
-        time += internal.getDeltaTime();
-
-        if (time <= duration)
+        if (boneName == null || !rigHandle.hasBone(boneName))
             return;
 
-        if (activeDocument.getPreviewClip().isLooping())
-            time %= duration;
-        else {
-            time = duration;
-            pause();
-        }
+        int boneIndex = rigHandle.getBoneIndex(boneName);
+
+        if (boneIndex == selectedBoneIndex)
+            return;
+
+        this.selectedBoneIndex = boneIndex;
+        notifyChanged();
     }
 
     // Clips \\
@@ -182,15 +182,35 @@ public class AnimationEditorManager extends ManagerPackage {
     private void activate(AnimationDocumentInstance document) {
 
         this.activeDocument = document;
-        this.time = 0f;
-        this.playing = false;
         this.selectedBoneIndex = 0;
         this.statusMessage = null;
 
-        if (document != null)
+        if (document != null) {
             resolveSelection();
+            claimTimeline();
+        }
 
         notifyChanged();
+    }
+
+    // The clip picked to be opened here and on the timeline, through InfoManager so every window follows
+    public void openClip(String clipName) {
+        infoManager.selectEntry(EditorSetting.INFO_SCHEMA_ANIMATIONS, clipName, clipName);
+    }
+
+    // The active clip made the one the recorder's timeline holds, so its keys, playhead and history are this
+    // editor's; false while no clip is active or it cannot be opened there
+    private boolean claimTimeline() {
+
+        if (activeDocument == null)
+            return false;
+
+        recorderManager.openAnimation(activeDocument.getClipName());
+        return isOnTimeline();
+    }
+
+    private boolean isOnTimeline() {
+        return activeDocument != null && recorderManager.isAnimationOpen(activeDocument.getClipName());
     }
 
     // Keeps the selected bone and the character on the rig the clip names now
@@ -203,7 +223,12 @@ public class AnimationEditorManager extends ManagerPackage {
 
         ObjectArrayList<String> characterNames = getCharacterNames();
 
-        if (!characterNames.contains(characterName))
+        if (characterNames.contains(characterName))
+            return;
+
+        if (characterNames.contains(EngineSetting.DEFAULT_PLAYER_RACE))
+            this.characterName = EngineSetting.DEFAULT_PLAYER_RACE;
+        else
             this.characterName = characterNames.isEmpty() ? null : characterNames.get(0);
     }
 
@@ -212,12 +237,13 @@ public class AnimationEditorManager extends ManagerPackage {
         if (!isClipNameAvailable(localName))
             return;
 
+        RigHandle characterRig = getCharacterRig();
         String rigName = activeDocument != null
                 ? ArpgUtility.getString(
                         getClipArpg(),
                         EditorSetting.ANIMATION_EDITOR_FIELD_RIG,
                         EditorSetting.ANIMATION_EDITOR_DEFAULT_RIG)
-                : EditorSetting.ANIMATION_EDITOR_DEFAULT_RIG;
+                : characterRig != null ? characterRig.getRigName() : EditorSetting.ANIMATION_EDITOR_DEFAULT_RIG;
 
         infoManager.createDocument(EditorSetting.INFO_SCHEMA_ANIMATIONS, toSiblingName(localName), root -> {
             root.addProperty(EditorSetting.ANIMATION_EDITOR_FIELD_RIG, rigName);
@@ -243,7 +269,6 @@ public class AnimationEditorManager extends ManagerPackage {
             return;
 
         cancelPose();
-        activeDocument.getHistory().clear();
         infoManager.revertDocument(EditorSetting.INFO_SCHEMA_ANIMATIONS, activeDocument.getClipName());
         setStatusMessage(EditorSetting.ANIMATION_EDITOR_MESSAGE_REVERTED + activeDocument.getClipName());
     }
@@ -294,60 +319,39 @@ public class AnimationEditorManager extends ManagerPackage {
     // Playback \\
 
     public void togglePlayback() {
-
-        if (activeDocument == null || activeDocument.getDuration() <= 0f)
-            return;
-
-        if (playing) {
-            pause();
-            return;
-        }
-
-        if (time >= activeDocument.getDuration())
-            this.time = 0f;
-
-        this.playing = true;
-        notifyChanged();
+        if (claimTimeline())
+            recorderManager.togglePlayback();
     }
 
     // Stops on the frame the playhead had reached
     void pause() {
-
-        this.playing = false;
-        setTime(time);
+        if (isPlaying())
+            recorderManager.pause();
     }
 
     public void toStart() {
-
-        this.playing = false;
         setTime(0f);
     }
 
     public void toEnd() {
-
-        this.playing = false;
         setTime(getTimelineSpan());
     }
 
     public void stepFrame(int direction) {
-
-        this.playing = false;
-        setTime(time + direction / EditorSetting.ANIMATION_EDITOR_FRAME_RATE);
+        setTime(getTime() + direction / EditorSetting.ANIMATION_EDITOR_FRAME_RATE);
     }
 
-    public void scrub(float fraction) {
-
-        this.playing = false;
-        setTime(CharacterViewUtility.clamp(fraction, 0f, 1f) * getTimelineSpan());
-    }
-
-    // Snaps the playhead to the nearest whole frame within the timeline
+    // Snaps the timeline's playhead to the nearest whole frame within the clip
     void setTime(float time) {
+
+        if (!claimTimeline())
+            return;
 
         float frameRate = EditorSetting.ANIMATION_EDITOR_FRAME_RATE;
         float snapped = Math.round(CharacterViewUtility.clamp(time, 0f, getTimelineSpan()) * frameRate) / frameRate;
 
-        this.time = CharacterViewUtility.round(snapped);
+        pause();
+        recorderManager.seek(CharacterViewUtility.round(snapped));
         notifyChanged();
     }
 
@@ -358,6 +362,34 @@ public class AnimationEditorManager extends ManagerPackage {
         RigHandle rigHandle = activeDocument != null ? activeDocument.getRigHandle() : null;
 
         return rigHandle != null ? entityManager.getTemplateNamesForRig(rigHandle) : new ObjectArrayList<>();
+    }
+
+    // The rig the character chosen is posed on, whose clips the Tracks tab lists; null with none chosen
+    public RigHandle getCharacterRig() {
+        return characterName != null && entityManager.hasTemplate(characterName)
+                ? entityManager.getEntityHandleFromTemplateName(characterName).getEntityData().getRaceData()
+                        .getRigHandle()
+                : null;
+    }
+
+    // The clips posed on the rig of the character chosen, by name, as the Tracks tab lists them
+    public void collectCharacterClips(ObjectArrayList<String> clipNames) {
+
+        clipNames.clear();
+
+        RigHandle rigHandle = getCharacterRig();
+
+        if (rigHandle == null)
+            return;
+
+        ObjectArrayList<InfoEntryStruct> entries = infoManager.getEntries(EditorSetting.INFO_SCHEMA_ANIMATIONS);
+
+        for (int i = 0; i < entries.size(); i++)
+            if (rigHandle.getRigName().equals(ArpgUtility.getString(
+                    entries.get(i).getArpg(), EditorSetting.ANIMATION_EDITOR_FIELD_RIG, "")))
+                clipNames.add(entries.get(i).getEntryName());
+
+        clipNames.sort(String.CASE_INSENSITIVE_ORDER);
     }
 
     void cycleCharacter(int direction) {
@@ -383,19 +415,19 @@ public class AnimationEditorManager extends ManagerPackage {
 
     public void step(String key, int direction) {
 
-        if (activeDocument != null)
+        if (claimTimeline())
             animationPropertyBranch.step(activeDocument, key, direction);
     }
 
     public void cycle(String key, int direction) {
 
-        if (activeDocument != null)
+        if (claimTimeline())
             animationPropertyBranch.cycle(activeDocument, key, direction);
     }
 
     public void act(String key) {
 
-        if (activeDocument != null)
+        if (claimTimeline())
             animationPropertyBranch.act(activeDocument, key);
     }
 
@@ -409,7 +441,7 @@ public class AnimationEditorManager extends ManagerPackage {
 
     public void setValue(String key, String text) {
 
-        if (isValueValid(key, text))
+        if (isValueValid(key, text) && claimTimeline())
             animationPropertyBranch.setValue(activeDocument, key, text);
     }
 
@@ -423,26 +455,6 @@ public class AnimationEditorManager extends ManagerPackage {
 
         if (activeDocument != null)
             animationRowBranch.buildPropertyRows(activeDocument, rows);
-    }
-
-    // Times of every key on the timeline: the selected bone's, and every other bone's apart from those
-    public void collectKeyTimes(FloatArrayList selectedTimes, FloatArrayList otherTimes) {
-
-        if (activeDocument != null)
-            animationPropertyBranch.collectKeyTimes(activeDocument, selectedTimes, otherTimes);
-    }
-
-    public void collectBoneKeyTimes(int boneIndex, FloatArrayList times) {
-
-        times.clear();
-
-        if (activeDocument != null)
-            animationPropertyBranch.collectBoneKeyTimes(activeDocument, boneIndex, times);
-    }
-
-    // The bones of the clip's rig a timeline lists, none while the clip names no rig the engine knows
-    public int getBoneCount() {
-        return activeDocument != null && activeDocument.hasRig() ? activeDocument.getRigHandle().getBoneCount() : 0;
     }
 
     public String getBoneName(int boneIndex) {
@@ -464,6 +476,10 @@ public class AnimationEditorManager extends ManagerPackage {
             return;
 
         this.selectedBoneIndex = boneIndex;
+
+        if (isOnTimeline())
+            recorderManager.selectBoneLayer(getBoneName(boneIndex));
+
         notifyChanged();
     }
 
@@ -472,11 +488,11 @@ public class AnimationEditorManager extends ManagerPackage {
     // Opens a drag posing the selected bone at the playhead from how it stands there; false with nothing to pose
     public boolean beginPose() {
 
-        if (getToolCanvas() == null || posing)
+        if (getToolCanvas() == null || posing || !claimTimeline())
             return false;
 
         pause();
-        animationEditBranch.beginGesture(activeDocument);
+        recorderManager.beginGesture();
 
         this.poseStart = animationPropertyBranch.samplePose(activeDocument, selectedBoneIndex);
         this.posing = true;
@@ -487,11 +503,11 @@ public class AnimationEditorManager extends ManagerPackage {
     // Opens a drag posing an IK handle's root and middle bones at the playhead from how they stand there
     public boolean beginChainPose(RigIkChainStruct chain) {
 
-        if (getToolCanvas() == null || posing)
+        if (getToolCanvas() == null || posing || !claimTimeline())
             return false;
 
         pause();
-        animationEditBranch.beginGesture(activeDocument);
+        recorderManager.beginGesture();
 
         chainPoseStarts[0] = animationPropertyBranch.samplePose(activeDocument, chain.getRootBone());
         chainPoseStarts[1] = animationPropertyBranch.samplePose(activeDocument, chain.getMiddleBone());
@@ -539,7 +555,7 @@ public class AnimationEditorManager extends ManagerPackage {
             return;
 
         this.posing = false;
-        animationEditBranch.endGesture(activeDocument);
+        recorderManager.endGesture();
     }
 
     public void cancelPose() {
@@ -548,7 +564,7 @@ public class AnimationEditorManager extends ManagerPackage {
             return;
 
         this.posing = false;
-        animationEditBranch.cancelGesture(activeDocument);
+        recorderManager.cancelGesture();
     }
 
     public boolean isPosing() {
@@ -562,24 +578,15 @@ public class AnimationEditorManager extends ManagerPackage {
 
     // History \\
 
+    // The recorder's history undoes and redoes every edit of the clip, made here or anywhere else
     public void undo() {
-
-        if (activeDocument == null || posing)
-            return;
-
-        setStatusMessage(animationEditBranch.undo(activeDocument)
-                ? EditorSetting.ANIMATION_EDITOR_MESSAGE_UNDONE
-                : EditorSetting.ANIMATION_EDITOR_MESSAGE_NOTHING_TO_UNDO);
+        if (!posing && claimTimeline())
+            recorderManager.undo();
     }
 
     public void redo() {
-
-        if (activeDocument == null || posing)
-            return;
-
-        setStatusMessage(animationEditBranch.redo(activeDocument)
-                ? EditorSetting.ANIMATION_EDITOR_MESSAGE_REDONE
-                : EditorSetting.ANIMATION_EDITOR_MESSAGE_NOTHING_TO_REDO);
+        if (!posing && claimTimeline())
+            recorderManager.redo();
     }
 
     // Clipboard \\
@@ -641,12 +648,13 @@ public class AnimationEditorManager extends ManagerPackage {
         return characterName;
     }
 
+    // The timeline's playhead while it holds the active clip
     public float getTime() {
-        return Math.min(time, getTimelineSpan());
+        return isOnTimeline() ? Math.min(recorderManager.getPlayhead(), getTimelineSpan()) : 0f;
     }
 
     public boolean isPlaying() {
-        return playing;
+        return isOnTimeline() && recorderManager.getState() == RecorderState.PLAYING;
     }
 
     // The clip's length, or a floor that leaves room to key a clip that has none yet
@@ -699,7 +707,7 @@ public class AnimationEditorManager extends ManagerPackage {
                 .append(CharacterViewUtility.formatNumber(activeDocument.getDuration()))
                 .append(EditorSetting.ANIMATION_EDITOR_TIME_SUFFIX);
         status.append(EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR)
-                .append(playing
+                .append(isPlaying()
                         ? EditorSetting.ANIMATION_EDITOR_STATUS_PLAYING
                         : EditorSetting.ANIMATION_EDITOR_STATUS_PAUSED);
 

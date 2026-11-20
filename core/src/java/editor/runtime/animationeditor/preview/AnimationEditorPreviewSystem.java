@@ -8,6 +8,7 @@ import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocum
 import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
 public class AnimationEditorPreviewSystem extends SystemPackage {
@@ -17,8 +18,9 @@ public class AnimationEditorPreviewSystem extends SystemPackage {
      * chosen character is put on its own animation tree whenever the clip,
      * its preview or the character changes; each frame it is posed straight
      * from the preview clip at the playhead, or held at rest while the clip
-     * has nothing to play, and every joint is marked, the selected bone
-     * highlighted.
+     * has nothing to play or none is open, so the character — the player at
+     * first — always stands in view, and every joint is marked, the selected
+     * bone highlighted.
      */
 
     // Internal
@@ -50,18 +52,19 @@ public class AnimationEditorPreviewSystem extends SystemPackage {
         AnimationDocumentInstance document = animationEditorManager.getActiveDocument();
         String characterName = animationEditorManager.getCharacterName();
 
-        if (document == null || characterName == null) {
+        if (characterName == null) {
             characterViewPoseSystem.clear();
             this.boundDocument = null;
+            this.boundCharacterName = null;
             return;
         }
 
         if (document != boundDocument
-                || document.getPreviewRevision() != boundRevision
+                || document != null && document.getPreviewRevision() != boundRevision
                 || !Objects.equals(characterName, boundCharacterName))
             bind(document, characterName);
 
-        if (document.hasPreviewClip())
+        if (document != null && document.hasPreviewClip())
             characterViewPoseSystem.poseClip(document.getPreviewClip(), animationEditorManager.getTime());
         else
             characterViewPoseSystem.poseRest();
@@ -75,7 +78,7 @@ public class AnimationEditorPreviewSystem extends SystemPackage {
 
         characterViewPoseSystem.bind(raceData, raceData.getDefaultGenderID());
         this.boundDocument = document;
-        this.boundRevision = document.getPreviewRevision();
+        this.boundRevision = document != null ? document.getPreviewRevision() : EngineSetting.INDEX_NOT_FOUND;
         this.boundCharacterName = characterName;
     }
 
