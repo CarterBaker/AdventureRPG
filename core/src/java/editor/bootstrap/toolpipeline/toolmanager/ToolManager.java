@@ -294,7 +294,12 @@ public class ToolManager extends ManagerPackage {
 
     // What the target works on, null while there is no target or it takes no tools right now
     public ToolCanvas getCanvas() {
-        return getWindowCanvas(activeWindowManager.findRecent(window2Provider));
+        return getWindowCanvas(getCanvasWindow());
+    }
+
+    // The window the Tools tab targets, null before any is worked in
+    public WindowInstance getCanvasWindow() {
+        return activeWindowManager.findRecent(window2Provider);
     }
 
     // What a window works on, null for a window that takes no tools or none right now

@@ -31,12 +31,17 @@ public class EditorSetting {
     public static final String CURSOR_RESIZE_H = "menus/CursorStretchIconHorizontal";
     public static final String CURSOR_RESIZE_V = "menus/CursorStretchIconVertical";
 
+    // Context — what a shared tab or menu item acts on, named after its own text in parentheses
+    public static final String CONTEXT_OPEN = " (";
+    public static final String CONTEXT_CLOSE = ")";
+
     // Window Icon — the sprite every editor OS window shows on the taskbar and in the window switcher
     public static final String WINDOW_ICON = "menus/Sword";
 
     // Layouts
     public static final int LAYOUT_NAME_MAX_LENGTH = 32;
     public static final String LAYOUT_SESSION_NAME = "LastSession";
+    public static final String LAYOUT_DEFAULT_PATH = "layouts";
 
     // Resize
     public static final float RESIZE_EDGE_TOLERANCE = 8f;
@@ -107,6 +112,29 @@ public class EditorSetting {
     public static final String MENU_EDITOR_SECONDARY = "editor/EditorWindow/Secondary";
     public static final String MENU_EDITOR_TOOLBAR = "editor/EditorWindow/Toolbar";
     public static final String MENU_EDITOR_TITLE_BAR = "editor/EditorWindow/TitleBar";
+
+    // Menu Bar — the main window's menus between the divider after File and Edit and the right-hand menus: each its
+    // preferred width while the bar has room, all shrinking together as it narrows, then wrapping onto more rows,
+    // the bar growing and the dock shrinking beneath it
+    public static final String MENU_BAR_ELEMENT = "toolbar";
+    public static final String[] MENU_BAR_MENU_ELEMENTS = {
+            "tools_menu",
+            "assets_menu",
+            "characters_menu",
+            "mesh_menu",
+            "textures_menu",
+            "materials_menu",
+            "world_menu",
+            "media_menu",
+            "debug_menu" };
+    public static final float MENU_BAR_LEFT_PIXELS = 82f;
+    public static final float MENU_BAR_RIGHT_RESERVE_PIXELS = 332f;
+    public static final float MENU_BAR_MENU_WIDTH_PIXELS = 100f;
+    public static final float MENU_BAR_MENU_MIN_WIDTH_PIXELS = 72f;
+    public static final float MENU_BAR_ROW_PIXELS = 32f;
+    public static final String MENU_BAR_DOCK_ELEMENT = "dock_canvas";
+    public static final float MENU_BAR_DOCK_INSET_X_PIXELS = 8f;
+    public static final float MENU_BAR_DOCK_INSET_Y_PIXELS = 60f;
     public static final String MENU_EDITOR_NAME_DIALOG = "editor/EditorWindow/NameDialog";
     public static final String MENU_EDITOR_EXPORT_DIALOG = "editor/EditorWindow/ExportDialog";
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
@@ -166,11 +194,23 @@ public class EditorSetting {
     public static final int ENTRY_SETTINGS_DIALOG_OPTIONS = 1;
     public static final int ENTRY_SETTINGS_DIALOG_STATUS = 2;
 
-    // File Menu — the head naming the tool the File and Edit menus act on, and each action's item label, by
-    // FileMenuAction's order
+    // File Menu — the head naming the tool the File and Edit menus act on, and each action's item name and label,
+    // by FileMenuAction's order
     public static final String ELEMENT_FILE_MENU_TARGET = "file_target_label";
     public static final String ELEMENT_EDIT_MENU_TARGET = "edit_target_label";
     public static final String FILE_MENU_NO_TARGET = "No tool worked in yet";
+    public static final String[] FILE_MENU_NAMES = {
+            "New",
+            "Open",
+            "Duplicate",
+            "Save",
+            "Save All",
+            "Revert",
+            "Delete",
+            "Undo",
+            "Redo",
+            "Import",
+            "Export" };
     public static final String[] FILE_MENU_LABELS = {
             "file_new_label",
             "file_open_label",
@@ -506,6 +546,7 @@ public class EditorSetting {
 
     // Hint Bar
     public static final String HINT_BAR_ENTRY_SEPARATOR = "     ";
+    public static final String HINT_BAR_CONTEXT_OPEN = "(";
     public static final int HINT_BAR_ENTRY_LABEL = 0;
     public static final String HINT_BAR_KEY_SEPARATOR = ": ";
     public static final String SHORTCUT_MODIFIER_CONTROL = "Ctrl";
@@ -697,6 +738,9 @@ public class EditorSetting {
     // Character View — a number row's slider spans this many of its value's steps, centred where the value stood
     // when the row was listed
     public static final int CHARACTER_VIEW_SLIDER_STEPS = 40;
+
+    // Character View Fold — the label in every tool's header row template that shows whether its rows are folded
+    public static final String CHARACTER_VIEW_FOLD_ELEMENT = "row_fold_label";
 
     // Character View — panel keys, numbers and text
     public static final String CHARACTER_VIEW_KEY_SEPARATOR = ":";

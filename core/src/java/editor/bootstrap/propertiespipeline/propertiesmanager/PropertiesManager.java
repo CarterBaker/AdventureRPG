@@ -64,14 +64,24 @@ public class PropertiesManager extends ManagerPackage {
     // What the window worked in last shows in the Properties tab, null before any is worked in
     public PropertiesProvider getProvider() {
 
-        WindowInstance targetWindow = activeWindowManager.findRecent(window2Provider);
+        WindowInstance targetWindow = getProviderWindow();
 
         return targetWindow != null ? window2Provider.get(targetWindow) : null;
     }
 
+    // The window the Properties tab shows, null before any is worked in
+    public WindowInstance getProviderWindow() {
+        return activeWindowManager.findRecent(window2Provider);
+    }
+
     // What the window worked in last whose image carries maps shows in the Maps tab, null before any is
     public MapsProvider getMaps() {
-        WindowInstance targetWindow = activeWindowManager.findRecent(window2Maps);
+        WindowInstance targetWindow = getMapsWindow();
         return targetWindow != null ? window2Maps.get(targetWindow) : null;
+    }
+
+    // The window the Maps tab shows, null before any is worked in
+    public WindowInstance getMapsWindow() {
+        return activeWindowManager.findRecent(window2Maps);
     }
 }

@@ -140,12 +140,6 @@ public class UVEditorContext extends ContextPackage
     }
 
     @Override
-    public String getMapsTitle() {
-        return EditorSetting.TAB_TITLE_MAPS + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
-                + EditorSetting.TAB_TITLE_UV_EDITOR;
-    }
-
-    @Override
     public void buildMapsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
         characterEditorManager.buildMapRows(rows);
     }

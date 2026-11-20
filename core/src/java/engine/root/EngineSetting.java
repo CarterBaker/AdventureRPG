@@ -4079,6 +4079,7 @@ public class EngineSetting {
     public static final String ELEMENT_DEFAULT_MIN_SIZE = "0%";
     public static final String ELEMENT_DEFAULT_POSITION = "0%";
     public static final String ELEMENT_DEFAULT_SIZE = "100%";
+    public static final String ELEMENT_SIZE_FIT = "fit";
     public static final String HIERARCHY_COLLAPSED_MARKER = "+";
     public static final String HIERARCHY_ELEMENT_LABEL = "hierarchy_label";
     public static final String HIERARCHY_ELEMENT_TAB_LABEL = "hierarchy_tab_label";

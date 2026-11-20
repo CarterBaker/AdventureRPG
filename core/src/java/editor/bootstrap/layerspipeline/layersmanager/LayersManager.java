@@ -150,6 +150,11 @@ public class LayersManager extends ManagerPackage {
         return activeWindowManager.findRecent(window2Provider);
     }
 
+    // The window the Layers tab shows, null before any is worked in
+    public WindowInstance getProviderWindow() {
+        return getTargetWindow();
+    }
+
     // What the window worked in last shows in the Layers tab, null before any is worked in
     public LayersProvider getProvider() {
 

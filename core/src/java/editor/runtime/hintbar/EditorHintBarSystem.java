@@ -14,9 +14,10 @@ import engine.root.SystemPackage;
 public class EditorHintBarSystem extends SystemPackage {
 
     /*
-     * Owns the hint bar along the foot of the editor's main window: the keys
-     * of the active window alone, on the canvas it works on and with the tool
-     * chosen there, each read out from its shortcut file's hints by
+     * Owns the hint bar along the foot of the editor's main window: the
+     * active window named in parentheses, then the keys of that window
+     * alone, on the canvas it works on and with the tool chosen there, each
+     * read out from its shortcut file's hints by
      * ShortcutManager. The bar is read out again only when the active
      * window, its canvas, its tool or a shortcut's keys change, never while
      * they hold.
@@ -91,7 +92,17 @@ public class EditorHintBarSystem extends SystemPackage {
         this.shownShortcutRevision = shortcutManager.getRevision();
 
         hintBuilder.setLength(0);
+        appendContext(activeWindowManager.getWindowTitle(shownWindow));
         shortcutManager.appendHints(hintBuilder, shownWindow, shownCanvas, shownTool);
         hintLabel.setFontText(hintBuilder.toString());
+    }
+
+    // The window the hints are for, in parentheses at the head of the bar
+    private void appendContext(String windowTitle) {
+
+        if (windowTitle == null)
+            return;
+
+        hintBuilder.append(EditorSetting.HINT_BAR_CONTEXT_OPEN).append(windowTitle).append(EditorSetting.CONTEXT_CLOSE);
     }
 }

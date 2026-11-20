@@ -218,10 +218,10 @@ public abstract class CharacterToolContext extends ContextPackage
         return characterEditorManager.getRevision() + materialsManager.getRevision();
     }
 
+    // The tab's own title follows in parentheses, naming the mode
     @Override
     public String getRowTitle() {
-        return EditorSetting.CHARACTER_PROPERTIES_TITLE + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
-                + characterEditorManager.getMode().getLabel();
+        return EditorSetting.CHARACTER_PROPERTIES_TITLE;
     }
 
     @Override
@@ -245,11 +245,6 @@ public abstract class CharacterToolContext extends ContextPackage
     @Override
     public int getMapsRevision() {
         return characterEditorManager.getRevision();
-    }
-
-    @Override
-    public String getMapsTitle() {
-        return EditorSetting.TAB_TITLE_MAPS + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR + getTabTitle();
     }
 
     @Override

@@ -15,8 +15,8 @@ public class FileMenuBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the editor's File and Edit menus. Opening
-     * either names the tool it acts on at its head and mutes every item that
-     * tool does not take; an item runs its action on that tool through
+     * either names the tool it acts on at its head and after every item that
+     * tool takes, in parentheses, and mutes every item it does not take; an item runs its action on that tool through
      * FileMenuManager, the one path every menu item takes.
      */
 
@@ -66,8 +66,11 @@ public class FileMenuBranch extends BranchPackage {
 
             ElementInstance label = list.findChildById(EditorSetting.FILE_MENU_LABELS[action.ordinal()]);
 
-            if (label != null)
-                label.setColorOverride(fileMenuManager.takes(action) ? takenColor : untakenColor);
+            if (label == null)
+                continue;
+
+            label.setFontText(fileMenuManager.nameItem(action));
+            label.setColorOverride(fileMenuManager.takes(action) ? takenColor : untakenColor);
         }
     }
 

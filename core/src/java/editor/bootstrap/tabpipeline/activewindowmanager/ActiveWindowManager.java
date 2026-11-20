@@ -2,7 +2,9 @@ package editor.bootstrap.tabpipeline.activewindowmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
+import editor.bootstrap.tabpipeline.tab.TabHandle;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.runtime.EditorSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -21,7 +23,10 @@ public class ActiveWindowManager extends ManagerPackage {
      * worked in last, the File and Edit menus, the Tools tab, the Properties
      * tab, the shortcuts and the hint bar, reads it here, filtered to the
      * windows it takes through findRecent(), so none keeps a copy. A move of
-     * the active window moves the revision.
+     * the active window moves the revision. Whatever acts on a window other
+     * than its own names it the one way, through nameContext(): its text
+     * followed by the window's tab title in parentheses, so the File and Edit
+     * menus and every shared tab always say what they are working on.
      */
 
     // Internal
@@ -122,5 +127,25 @@ public class ActiveWindowManager extends ManagerPackage {
 
     public int getRevision() {
         return revision;
+    }
+
+    // The title of the tab a window is the content of, null for a window no tab holds
+    public String getWindowTitle(WindowInstance window) {
+
+        TabHandle tab = window != null ? tabManager.getTabHandleForContentWindow(window) : null;
+
+        return tab != null ? tab.getBaseTitle() : null;
+    }
+
+    // The text followed by the title of the window it acts on in parentheses; the text alone for no window, or when
+    // the text already is the window's title
+    public String nameContext(String text, WindowInstance window) {
+
+        String title = getWindowTitle(window);
+
+        if (title == null || title.equals(text))
+            return text;
+
+        return text + EditorSetting.CONTEXT_OPEN + title + EditorSetting.CONTEXT_CLOSE;
     }
 }

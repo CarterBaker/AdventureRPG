@@ -370,7 +370,7 @@ class MenuBuilder extends BuilderPackage {
         MenuColorStruct color = MenuFileParserUtility.parseColor(arpg);
         MenuColorStruct hoverColor = MenuFileParserUtility.parseHoverColor(arpg);
         MenuColorStruct parentHoverColor = MenuFileParserUtility.parseParentHoverColor(arpg);
-        LayoutStruct layout = MenuFileParserUtility.parseLayout(arpg);
+        LayoutStruct parsedLayout = MenuFileParserUtility.parseLayout(arpg);
         boolean mask = ArpgUtility.getBoolean(arpg, "mask", false);
         StackDirection stackDirection = arpg.has("stack")
                 ? StackDirection.fromString(arpg.get("stack").getAsString())
@@ -390,6 +390,7 @@ class MenuBuilder extends BuilderPackage {
 
         ObjectArrayList<MenuNodeStruct> defaultChildren = buildNodes(
                 scope + "/" + id, arpg, fontName, fontSize, explicitFontSize);
+        LayoutStruct layout = resolveFit(id, parsedLayout, defaultChildren);
 
         ElementData data = new ElementData(
                 id, type, spriteName, text, fontName, materialName, fontSize, explicitFontSize,
@@ -415,6 +416,69 @@ class MenuBuilder extends BuilderPackage {
         master.constructor(data, defaultChildren, hoverEnterState, hoverState, hoverExitState, clickState);
 
         return master;
+    }
+
+    // Fit \\
+
+    // A height declared "fit" made the height of the rows the element holds: the vertical stack inside it, every row's
+    // fixed height and the spacing between them, plus whatever the elements around the stack inset it by
+    private LayoutStruct resolveFit(String id, LayoutStruct layout, ObjectArrayList<MenuNodeStruct> children) {
+
+        if (!layout.getSize().getY().isFit())
+            return layout;
+
+        float height = resolveFitHeight(children);
+
+        if (height <= 0f)
+            throwException("Menu element '" + id + "' fits its height to its rows, but holds no row of fixed height.");
+
+        return layout.withHeight(DimensionValueStruct.ofAbsolute(height));
+    }
+
+    private float resolveFitHeight(ObjectArrayList<MenuNodeStruct> children) {
+
+        float height = 0f;
+
+        for (int i = 0; i < children.size(); i++)
+            height = Math.max(height, resolveRequiredHeight(children.get(i)));
+
+        return height;
+    }
+
+    // The height a parent needs to hold an element: its own when fixed, otherwise its content's through its share
+    private float resolveRequiredHeight(MenuNodeStruct node) {
+
+        LayoutStruct layout = node.getLayoutOverride() != null
+                ? node.getLayoutOverride()
+                : node.getMaster().getLayout();
+        DimensionValueStruct height = layout.getSize().getY();
+
+        if (!height.isPercentage())
+            return height.getRawValue() + height.getOffset();
+
+        float content = resolveContentHeight(node);
+
+        if (content <= 0f || height.getRawValue() <= 0f)
+            return 0f;
+
+        return (content - height.getOffset()) * EngineSetting.PERCENT_MAX / height.getRawValue();
+    }
+
+    private float resolveContentHeight(MenuNodeStruct node) {
+
+        ElementHandle master = node.getMaster();
+        ObjectArrayList<MenuNodeStruct> children = node.getChildren();
+
+        if (master.getStackDirection() != StackDirection.VERTICAL)
+            return resolveFitHeight(children);
+
+        float spacing = master.getSpacing() != null ? master.getSpacing().resolve(0f) : 0f;
+        float height = Math.max(0, children.size() - 1) * spacing;
+
+        for (int i = 0; i < children.size(); i++)
+            height += resolveRequiredHeight(children.get(i));
+
+        return height;
     }
 
     // State Block Parsing \\

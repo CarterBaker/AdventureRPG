@@ -3,7 +3,10 @@ package editor.runtime.properties.panel;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.StripLayoutUtility;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.worldeditorpipeline.worldbiome.WorldBiomeEntryStruct;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
@@ -18,12 +21,14 @@ public class BiomePropertiesSystem extends SystemPackage implements PropertiesVi
     /*
      * The Properties tab's view of the World Editor's Biomes layer, as a
      * terrain tool's inspector holds its paint palette: every biome the world
-     * can paint, one row with its swatch and name, the one chosen
-     * highlighted and every row carrying its biome's name, and below them
-     * the Info rows of the entry selected in the Hierarchy, the biome chosen
-     * once a row is pressed. The palette is listed again only when it moves;
-     * the Info rows are then taken away first and listed again after it, so
-     * they always stand below the palette.
+     * can paint as a grid of swatches, each with its name under it, the one
+     * chosen highlighted and every cell carrying its biome's name, as many to
+     * a row as the tab's width holds (StripLayoutUtility), and below them the
+     * Info rows of the entry selected in the Hierarchy, the biome chosen once
+     * a cell is pressed, the status line naming its file. The palette is laid
+     * out again only when it moves or the tab's width changes how many fit a
+     * row; the Info rows are then taken away first and listed again after it,
+     * so they always stand below the palette.
      */
 
     // Internal
@@ -32,9 +37,10 @@ public class BiomePropertiesSystem extends SystemPackage implements PropertiesVi
     private PropertiesSystem propertiesSystem;
     private InfoPropertiesSystem infoPropertiesSystem;
 
-    // Rows
+    // Rows — the grid's rows, the palette they show and how many cells each holds
     private ObjectArrayList<ElementInstance> rowElements;
     private int shownPaletteRevision;
+    private int shownPerRow;
 
     // Base \\
 
@@ -59,12 +65,16 @@ public class BiomePropertiesSystem extends SystemPackage implements PropertiesVi
     @Override
     public boolean refresh(PropertiesProvider provider, boolean force) {
 
-        boolean relaid = force || worldEditorManager.getPaletteRevision() != shownPaletteRevision;
+        int perRow = resolvePerRow();
+        boolean relaid = force
+                || worldEditorManager.getPaletteRevision() != shownPaletteRevision
+                || perRow != shownPerRow;
 
         if (relaid) {
             clear();
             this.shownPaletteRevision = worldEditorManager.getPaletteRevision();
-            injectPalette();
+            this.shownPerRow = perRow;
+            injectPalette(perRow);
         }
 
         return infoPropertiesSystem.refresh(provider, relaid) || relaid;
@@ -72,7 +82,7 @@ public class BiomePropertiesSystem extends SystemPackage implements PropertiesVi
 
     @Override
     public String getTitle(PropertiesProvider provider) {
-        return infoPropertiesSystem.getTitle(provider);
+        return PropertiesSetting.TITLE_BIOME_PALETTE;
     }
 
     @Override
@@ -87,29 +97,63 @@ public class BiomePropertiesSystem extends SystemPackage implements PropertiesVi
 
         rowElements.clear();
         this.shownPaletteRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.shownPerRow = EngineSetting.INDEX_NOT_FOUND;
     }
 
     // Palette \\
 
-    private void injectPalette() {
-
-        ObjectArrayList<WorldBiomeEntryStruct> palette = worldEditorManager.getPalette();
-
-        for (int i = 0; i < palette.size(); i++)
-            rowElements.add(injectBiome(palette.get(i)));
+    // How many cells a row of the tab's width holds
+    private int resolvePerRow() {
+        return StripLayoutUtility.resolvePerRow(
+                resolveWidth(),
+                worldEditorManager.getPalette().size(),
+                PropertiesSetting.BIOME_CELL_MIN_WIDTH_PIXELS,
+                PropertiesSetting.BIOME_CELL_SPACING_PIXELS);
     }
 
-    private ElementInstance injectBiome(WorldBiomeEntryStruct entry) {
+    private float resolveWidth() {
+        ElementInstance rows = propertiesSystem.getMenu().getEntryPoint(PropertiesSetting.ENTRY_ROWS);
+        return rows != null ? rows.getComputedW() : 0f;
+    }
+
+    private void injectPalette(int perRow) {
+
+        ObjectArrayList<WorldBiomeEntryStruct> palette = worldEditorManager.getPalette();
+        DimensionVector2Struct cellSize = new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(StripLayoutUtility.resolveWidth(
+                        resolveWidth(),
+                        perRow,
+                        PropertiesSetting.BIOME_CELL_MAX_WIDTH_PIXELS,
+                        PropertiesSetting.BIOME_CELL_SPACING_PIXELS)),
+                DimensionValueStruct.ofAbsolute(PropertiesSetting.BIOME_CELL_HEIGHT_PIXELS));
+        ElementInstance row = null;
+
+        for (int i = 0; i < palette.size(); i++) {
+
+            if (i % perRow == 0) {
+                row = menuManager.inject(
+                        propertiesSystem.getMenu(),
+                        PropertiesSetting.ENTRY_ROWS,
+                        PropertiesSetting.TEMPLATE_BIOME_GRID_ROW);
+                rowElements.add(row);
+            }
+
+            injectBiome(row, palette.get(i), cellSize);
+        }
+    }
+
+    private void injectBiome(ElementInstance row, WorldBiomeEntryStruct entry, DimensionVector2Struct cellSize) {
 
         String template = entry.getBiomeName().equals(worldEditorManager.getSelectedBiomeName())
-                ? PropertiesSetting.TEMPLATE_BIOME_ROW_SELECTED
-                : PropertiesSetting.TEMPLATE_BIOME_ROW;
+                ? PropertiesSetting.TEMPLATE_BIOME_CELL_SELECTED
+                : PropertiesSetting.TEMPLATE_BIOME_CELL;
         MenuColorStruct swatchColor = new MenuColorStruct(PackedColorUtility.toColor(entry.getMapColor()));
 
-        return menuManager.inject(
-                propertiesSystem.getMenu(), PropertiesSetting.ENTRY_ROWS, template,
+        menuManager.inject(
+                row, template,
                 element -> {
                     element.setActionArgOverride(entry.getBiomeName());
+                    element.setSizeOverride(cellSize);
 
                     ElementInstance swatch = element.findChildById(PropertiesSetting.ELEMENT_BIOME_SWATCH);
                     ElementInstance label = element.findChildById(PropertiesSetting.ELEMENT_BIOME_LABEL);

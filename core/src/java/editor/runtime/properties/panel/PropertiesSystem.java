@@ -12,6 +12,7 @@ import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.propertiesmanager.PropertiesManager;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.runtime.properties.PropertiesSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -26,7 +27,7 @@ public class PropertiesSystem extends SystemPackage {
      * worked in yet. When the window or what it shows changes, the outgoing view takes
      * its rows away and the incoming one fills them at once; otherwise a view
      * fills them again only when what it shows moves, and the title is
-     * written after each fill. The toolbar and status line always work on the
+     * written after each fill, naming the window shown in parentheses. The toolbar and status line always work on the
      * entry selected in the Hierarchy, the status drawn in the danger color
      * while it reports a problem.
      */
@@ -36,6 +37,7 @@ public class PropertiesSystem extends SystemPackage {
     private FBOManager fboManager;
     private InfoManager infoManager;
     private PropertiesManager propertiesManager;
+    private ActiveWindowManager activeWindowManager;
     private RowPropertiesSystem rowPropertiesSystem;
     private InfoPropertiesSystem infoPropertiesSystem;
     private BiomePropertiesSystem biomePropertiesSystem;
@@ -72,6 +74,7 @@ public class PropertiesSystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.infoManager = get(InfoManager.class);
         this.propertiesManager = get(PropertiesManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
         this.rowPropertiesSystem = get(RowPropertiesSystem.class);
         this.infoPropertiesSystem = get(InfoPropertiesSystem.class);
         this.biomePropertiesSystem = get(BiomePropertiesSystem.class);
@@ -113,7 +116,9 @@ public class PropertiesSystem extends SystemPackage {
         PropertiesView view = content2View[content.ordinal()];
 
         if (view.refresh(provider, switched))
-            setEntryText(PropertiesSetting.ENTRY_TITLE, view.getTitle(provider));
+            setEntryText(PropertiesSetting.ENTRY_TITLE, activeWindowManager.nameContext(
+                    view.getTitle(provider),
+                    propertiesManager.getProviderWindow()));
 
         refreshStatus();
     }

@@ -8,6 +8,7 @@ import application.bootstrap.menupipeline.util.ThemeColor;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.toolpipeline.tool.ToolActionGroupStruct;
 import editor.bootstrap.toolpipeline.tool.ToolActionStruct;
 import editor.bootstrap.toolpipeline.tool.ToolOptionStruct;
@@ -26,6 +27,7 @@ public class ToolsMenuSystem extends SystemPackage {
 
     /*
      * Opens the Tools menu: under the name of what the tools target works on,
+     * the target window named after it in parentheses,
      * one row per tool it takes, the tool in use highlighted and every row
      * carrying its tool's name, then each group of actions it lists under its
      * title, every action row carrying the action's key; and under that
@@ -43,6 +45,7 @@ public class ToolsMenuSystem extends SystemPackage {
     private MenuManager menuManager;
     private FBOManager fboManager;
     private ToolManager toolManager;
+    private ActiveWindowManager activeWindowManager;
 
     // Menus
     private MenuInstance toolsMenu;
@@ -86,6 +89,7 @@ public class ToolsMenuSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
         this.toolManager = get(ToolManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
     }
 
     @Override
@@ -125,7 +129,9 @@ public class ToolsMenuSystem extends SystemPackage {
         shownOptions.clear();
         setEntryText(
                 ToolsSetting.ENTRY_CANVAS_TITLE,
-                canvas != null ? canvas.getLabel() : ToolsSetting.TITLE_NO_CANVAS);
+                canvas != null
+                        ? activeWindowManager.nameContext(canvas.getLabel(), toolManager.getCanvasWindow())
+                        : ToolsSetting.TITLE_NO_CANVAS);
         setEntryText(ToolsSetting.ENTRY_TOOL_TITLE, tool != null
                 ? tool.getLabel() + ToolsSetting.TITLE_OPTIONS_SUFFIX
                 : ToolsSetting.TITLE_NO_OPTIONS);

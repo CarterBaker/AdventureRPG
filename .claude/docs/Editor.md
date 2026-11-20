@@ -22,7 +22,12 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   (Hierarchy, Properties, Layers, ARPG Viewer), Canvas (Tools, Brushes, Stamps, Maps, Color Wheel) and Media (the
   Recorder). A new shared tab joins the Tools menu, never another menu. The sword (`menus/Sword`,
   `EditorSetting.WINDOW_ICON`) is every editor window's OS icon, set by `EditorFrameSystem` through
-  `WindowPlatform.setWindowIcon`, never drawn in the toolbar. The Materials menu, after Textures, holds the Materials
+  `WindowPlatform.setWindowIcon`, never drawn in the toolbar. The menus between the divider and Settings lay out as
+  every tab strip does (`StripLayoutUtility`, in `EditorToolbarSystem`): each at its preferred width while the bar has
+  room, all shrinking together as it narrows, then wrapping onto more rows, the bar growing and the dock shrinking
+  beneath it. A dropdown's height is `"fit"`: `MenuBuilder` makes it the height of the rows it holds as it loads, so a
+  row added or removed never leaves a dropdown clipped or padded; never count a dropdown's height by hand. The
+  Materials menu, after Textures, holds the Materials
   tab, the editor's one list of materials, and the Material Viewer (see Materials below).
   The Entities menu (once Characters) holds what only an entity has (its Entity section: Appearance, Equipment, Hair;
   then Animation); the Mesh menu holds the general modelling tools any rigged model takes
@@ -32,43 +37,54 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   tab. The Command Console is one window whose view follows the window worked in last
   (`CommandManager.resolveViewTarget`): the character tabs' commands while a character tab was, the game's while a Dev
   window was.
-- **Split so far:** the World Editor paints the biomes and places settlements and cameras on its Biomes layer and raises
-  and lowers the ground on its Heights layer, the biome it paints chosen in the Properties tab's palette (shown while
-  the Biomes layer is picked, the biome's fields below it), while the Biome Planner only plans; entities and races, like all content, are picked in the Hierarchy
-  and edited in the Properties tab; every part of making a race's character is its own character tool tab (Appearance,
-  Equipment, Hair, Mesh, Topology, Sculpt, Weights, Paint, Rig and UV, see `.claude/docs/CharacterEditorPipeline.md`;
-  the Hair tab grooms strands painted with the material chosen in the Materials tab; the
-  Appearance tab's Properties rows hold every slider and control, the Rig tab marks which bone channels are sliders), sharing the
-  region, bone and vertices selected, the UV Editor laying out the UVs of the faces the UV tab selects, with the
-  Properties tab beside them (also the Animation Editor's), the Color Wheel holding the paint colour every painting
-  window shares (its sliders in the Properties tab while it was worked in last) and the Maps tab the maps of the image worked (the texture painted, or the Image Editor's image); the Image
-  Editor under Textures paints layered images as Krita does, its layers in the Layers tab and its maps in the Maps tab
-  (see `.claude/docs/ImageEditorPipeline.md`); the Recorder is its transport (Record, Play, Pause, Stop and the Loop
-  switch, which runs playing round the range marked with I and O or the whole media file, with the clock and the status
-  line that says what they did or why they could not, nothing else) and the Timeline its clips, with the Keys (the rows
-  of the layer picked in the Layers tab) and the Keys Graph (the curve selected, a key clicked twice freeing or joining
-  its handles) beside them, each opening its own menu through a shared `RecorderRowSystem`, and the pane tab worked in
-  last being the one the recorder's deletes act on. A take records whether or not the game is paused, so the pause menu
-  that frees the cursor never stops it; music plays with no Preview tab, through the Recorder or Timeline tab. The
-  Layers tab lists the take's tracks (camera, player, characters, items, vehicles, weather, clock, sounds) or, in its
-  Takes view, every take of the open recording, each dragged onto the Timeline's lanes to lay it, each pane keeping its
-  own view (the Timeline opens on the Takes, the Keys and Keys Graph on the take's layers); the Tools tab holds every
-  take, clip, key, sound, transition and node action; the Properties tab the channels armed and the export first, then
-  the clip's channels, mute and time ramp while the Recorder or Timeline is worked in, and the keys selected (their
-  time and value, moved together, and their mode) first while the Keys or Keys Graph is; Delete removes what
-  is selected in the pane worked in last; Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step through every edit of the open
-  recording (`RecordingHistoryBranch`); File, Export exports. The Tracks tab (`RecordingsContext`) lists every media file, video and music in one list, and its rows drag onto the Timeline to lay;
-  the Timeline shows its lanes as Premiere does, five at first and one more each time the highest takes a clip, each
-  strip only its number and the name its ... gives it, the lane and clip selected edited in the Properties tab (its mix
-  too), and the file's tempo, meter and key set in the Properties tab while the Recorder is worked in; the Note Library,
-  under Library in the Media menu with the Sound Library, stays empty until an instrument or a note set is picked in the
-  Hierarchy and then lists the notes it plays, each sounded by its button and dragged onto the Timeline as a note clip
-  that is stretched and cut like any clip. A library's drag, like Record, makes a media file when none is open. The Timeline's title names what is open; Back is a Recorder shortcut. The Timeline's view, once zoomed,
-  scrolls under the cursor with a left drag on its empty lanes or a right drag anywhere over its lanes or ruler, clips
-  included. The Scene Assets tab, under Preview in the Debug menu (`editor.bootstrap.sceneassetspipeline`), lists what the Preview tab shows as it
-  runs: the block under the crosshair in full (block, biome, face hit and every face's texture with its pack, material,
-  shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
-  `DevSceneAssetsSystem` casts across the view about once a second while a Scene Assets tab is open; a row naming
+- **Each tab's job** is listed under The tabs, below.
+
+## The tabs
+
+- **World Editor.** Paints the biomes and places settlements and cameras on its Biomes layer, and raises and lowers
+  the ground on its Heights layer. The biome it paints is chosen in the Properties tab's palette, shown while the
+  Biomes layer is picked with the biome's fields below it. The Biome Planner only plans.
+- **Content.** Entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab.
+- **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
+  Sculpt, Weights, Paint, Rig and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
+  vertices selected. The Appearance tab's Properties rows hold every slider and control, and the Rig tab marks which
+  bone channels are sliders. The Hair tab grooms strands painted with the material chosen in the Materials tab.
+- **UV Editor.** Lays out the UVs of the faces the UV tab selects.
+- **Shared beside them.** The Properties tab (also the Animation Editor's); the Color Wheel, holding the paint colour
+  every painting window shares, its sliders in the Properties tab while it was worked in last; the Maps tab, the maps
+  of the image worked (the texture painted, or the Image Editor's image).
+- **Image Editor** (under Textures). Paints layered images as Krita does, its layers in the Layers tab and its maps in
+  the Maps tab (see `.claude/docs/ImageEditorPipeline.md`).
+- **Recorder.** The transport and nothing else: Record, Play, Pause, Stop and the Loop switch (which runs playing round
+  the range marked with I and O, or the whole media file), the clock, and the status line saying what they did or why
+  they could not. A take records whether or not the game is paused, so the pause menu that frees the cursor never
+  stops it; music plays with no Preview tab, through the Recorder or Timeline tab. Back is a Recorder shortcut.
+- **Timeline.** The clips, laid on lanes as Premiere lays them: five at first and one more each time the highest takes
+  a clip, each strip only its number and the name its ... gives it. Its title names what is open. Once zoomed, its
+  view scrolls under the cursor with a left drag on its empty lanes or a right drag anywhere over its lanes or ruler,
+  clips included.
+- **Keys and Keys Graph.** The Keys tab holds the rows of the layer picked in the Layers tab; the Keys Graph the curve
+  selected, a key clicked twice freeing or joining its handles. Each opens its own menu through a shared
+  `RecorderRowSystem`, and the pane tab worked in last is the one the recorder's deletes act on.
+- **Recording in the shared tabs.** The Layers tab lists the take's tracks (camera, player, characters, items,
+  vehicles, weather, clock, sounds) or, in its Takes view, every take of the open recording, each dragged onto the
+  Timeline's lanes to lay it; each pane keeps its own view (the Timeline opens on the Takes, the Keys and Keys Graph on
+  the take's layers). The Tools tab holds every take, clip, key, sound, transition and node action. The Properties tab
+  lists the channels armed and the export first, then the clip's channels, mute and time ramp (the lane and clip
+  selected, its mix too) while the Recorder or Timeline is worked in, the file's tempo, meter and key while the
+  Recorder is, and the keys selected first (their time and value, moved together, and their mode) while the Keys or
+  Keys Graph is. Delete removes what is selected in the pane worked in last; Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step
+  through every edit of the open recording (`RecordingHistoryBranch`); File, Export exports.
+- **Tracks** (`RecordingsContext`). Every media file, video and music in one list; its rows drag onto the Timeline to
+  lay.
+- **Note Library** (under Library in the Media menu, with the Sound Library). Empty until an instrument or a note set
+  is picked in the Hierarchy, then the notes it plays, each sounded by its button and dragged onto the Timeline as a
+  note clip that is stretched and cut like any clip. A library's drag, like Record, makes a media file when none is
+  open.
+- **Scene Assets** (under Preview in the Debug menu, `editor.bootstrap.sceneassetspipeline`). What the Preview tab shows
+  as it runs: the block under the crosshair in full (block, biome, face hit and every face's texture with its pack,
+  material, shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
+  `DevSceneAssetsSystem` casts across the view about once a second while a Scene Assets tab is open. A row naming
   content opens it in the Properties tab.
 - **Animations are edited on the same timeline.** There is no animation timeline of its own: the Animation Editor is
   the viewport, showing the character chosen (the player at first) posed at the Timeline's playhead, beside the
@@ -83,6 +99,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   `.claude/docs/CharacterEditorPipeline.md`, Animation). Its clip is never moved, cut or recorded into, and it saves,
   reverts and deletes as content.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
+- **Task layouts.** The editor ships Sculpt, Paint, Animate and World under `assets/layouts/`, listed in the Layouts
+  menu beside the user's own as Photoshop lists its workspaces (`LayoutManager`): saving over one writes the user's
+  copy, loaded from then on, and deleting that copy resets it to the one shipped; a shipped layout is never written or
+  deleted. A new task's layout is a new file there, written as `LayoutSaveBranch` writes one.
 
 ## Layers
 
@@ -119,6 +139,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **The active window is marked.** Its tab header is tinted and its border drawn in the theme's Active Window color,
   and a hovered inactive tab's header takes the fainter Hovered Window tint, both on the Settings dialog's Colors
   page under Window Frame.
+- **Everything says what it acts on.** A shared tab or menu that acts on a window other than its own names that window
+  after its text in parentheses, the one way, through `ActiveWindowManager.nameContext` (the window's tab title):
+  "Properties (Sculpt)", "Biome Palette (World Editor)", the Tools, Layers and Maps tabs' titles, every File and Edit
+  item the tool takes ("Save (World Editor)") and the head of the hint bar ("(World Editor)"). Never build such a
+  label by hand.
 - **The hint bar** along the foot of the main window lists the active window's shortcuts for its current canvas and
   tool, read from the `hint`s in its `assets/shortcuts/` file (see `.claude/docs/Shortcut.md`), never hard-coded.
   It is rebuilt only when the active window, its canvas, its tool or a shortcut's keys change.
@@ -239,8 +264,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   file when a folder is picked in a schema that keeps its entries in files, a new entry otherwise). Open picks a workspace file in the system's own
   file dialog (`WorkspaceUtility.chooseFile`, LWJGL's tinyfd), listing only the files the window takes (`.arpg`, and
   `.glb` too in the character tabs) and taking a workspace file only from the folder of the window's kind. Generating maps is not a file action: Generate and Clear live under the map's settings in the
-  Maps tab. They act on the window worked in last (`editor.bootstrap.filemenupipeline`,
-  `FileMenuManager`), name it at their head and mute what it does not take.
+  Maps tab. They act on the last window that takes file actions (`editor.bootstrap.filemenupipeline`,
+  `FileMenuManager.getTargetWindow`), name it at their head and after every item it takes, and mute what it does not
+  take. A shared tab (Properties, Tools, Layers, Maps, the Color Wheel) takes none, so working in it leaves the menus on
+  the tool worked in before; the Properties tab's Ctrl+N, Ctrl+D, Ctrl+S, Ctrl+Shift+S, Ctrl+Z and Ctrl+Y run the File
+  menu's items (`FileMenuBranch.run`), so a key there does what the menu says.
 - **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
   `FileMenuTableStruct` constant from `EditorSetting` (the branch and, per `FileMenuAction`, the method its own keys
   already run) and creates a `FileMenuSourceSystem`. Every item runs through `ElementHitSystem.executeAction` on the
@@ -287,7 +315,13 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Editor's biome palette (`BiomePropertiesSystem`, a terrain inspector's paint palette) above the `INFO` rows, named by
   its Biomes layer (`WorldEditorLayer.getPropertiesContent`). A new kind of content is a new `PropertiesContent` and a
   `PropertiesView` system in the Properties tab, never a new window. Its status line always works on the Hierarchy's
-  selection; its File and Edit menus act on the window whose `ROWS` it shows, the Info Panel otherwise.
+  selection; it takes no File or Edit actions of its own (see The File and Edit menus).
+- **Headers fold.** Every header row of a tool's rows (`ROWS`, the Maps tab, any `CharacterViewPanelSystem` panel) is a
+  button that folds the rows under it shut or opens them again, its marker (`row_fold_label`, + or -) saying which; the
+  panel keeps what it was handed, so a fold lays it out again without asking the tool, and the folds of a panel hold
+  while it lists other windows' rows. A tool's header template carries the `toggleHeader` action and the marker.
+- **The biome palette** is a grid of swatches with each biome's name under it, as many to a row as the tab's width
+  holds, the one chosen highlighted.
 - **Info rows are laid out for editing.** Every field reads as words (`animation_tree` is Animation Tree), plain values
   before groups. A number has a slider (across its declared range when it has both ends, otherwise steps about its
   value), step buttons and a typed value; a boolean, an enum, or a string naming other content or a file is a choice

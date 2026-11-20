@@ -6,8 +6,6 @@ import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.filemenupipeline.util.FileMenuAction;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
-import editor.bootstrap.tabpipeline.tab.TabHandle;
-import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.runtime.EditorSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -29,7 +27,6 @@ public class FileMenuManager extends ManagerPackage {
 
     // Internal
     private ActiveWindowManager activeWindowManager;
-    private TabManager tabManager;
     private ElementHitSystem elementHitSystem;
 
     // Windows
@@ -47,7 +44,6 @@ public class FileMenuManager extends ManagerPackage {
     @Override
     protected void get() {
         this.activeWindowManager = get(ActiveWindowManager.class);
-        this.tabManager = get(TabManager.class);
         this.elementHitSystem = get(ElementHitSystem.class);
     }
 
@@ -85,8 +81,9 @@ public class FileMenuManager extends ManagerPackage {
                 targetWindow);
     }
 
-    // The tool worked in last among those that take file actions, null for none
-    private WindowInstance getTargetWindow() {
+    // The tool worked in last among those that take file actions, null for none; windows that take none, the shared
+    // tabs among them, never become it, so the menus stay on the last tool that makes, saves and undoes
+    public WindowInstance getTargetWindow() {
         return activeWindowManager.findRecent(window2Provider);
     }
 
@@ -102,9 +99,16 @@ public class FileMenuManager extends ManagerPackage {
     // The name of the tab the menus act on, shown at their head
     public String getTargetTitle() {
 
-        WindowInstance targetWindow = getTargetWindow();
-        TabHandle tab = targetWindow != null ? tabManager.getTabHandleForContentWindow(targetWindow) : null;
+        String title = activeWindowManager.getWindowTitle(getTargetWindow());
 
-        return tab != null ? tab.getBaseTitle() : EditorSetting.FILE_MENU_NO_TARGET;
+        return title != null ? title : EditorSetting.FILE_MENU_NO_TARGET;
+    }
+
+    // An item's name with the tool it acts on after it in parentheses, the name alone when that tool does not take it
+    public String nameItem(FileMenuAction action) {
+
+        String name = EditorSetting.FILE_MENU_NAMES[action.ordinal()];
+
+        return takes(action) ? activeWindowManager.nameContext(name, getTargetWindow()) : name;
     }
 }

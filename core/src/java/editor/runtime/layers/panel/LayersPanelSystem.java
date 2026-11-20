@@ -14,6 +14,7 @@ import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
 import editor.bootstrap.layerspipeline.layersmanager.LayersManager;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.runtime.layers.LayersSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -23,7 +24,8 @@ public class LayersPanelSystem extends SystemPackage {
 
     /*
      * Binds the Layers tab to a UI render target and opens its menu, then
-     * lists the layer stack of the window worked in last: one row per layer
+     * lists the layer stack of the window worked in last, named in
+     * parentheses after the title: one row per layer
      * and group shown, top first, indented by depth, a group's marker folding
      * or opening it, an eye on every layer that can be hidden, drawn faint
      * while it is, and the layer the window's tools work on highlighted. A
@@ -40,6 +42,7 @@ public class LayersPanelSystem extends SystemPackage {
     private MenuManager menuManager;
     private FBOManager fboManager;
     private LayersManager layersManager;
+    private ActiveWindowManager activeWindowManager;
 
     // Menus
     private MenuInstance layersMenu;
@@ -82,6 +85,7 @@ public class LayersPanelSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
         this.layersManager = get(LayersManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
     }
 
     @Override
@@ -125,8 +129,9 @@ public class LayersPanelSystem extends SystemPackage {
         viewElements.clear();
         roots.clear();
 
-        setEntryText(LayersSetting.ENTRY_TITLE,
-                provider != null ? provider.getLayerTitle() : LayersSetting.TITLE_NO_LAYERS);
+        setEntryText(LayersSetting.ENTRY_TITLE, provider != null
+                ? activeWindowManager.nameContext(provider.getLayerTitle(), layersManager.getProviderWindow())
+                : LayersSetting.TITLE_NO_LAYERS);
 
         if (provider == null)
             return;

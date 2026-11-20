@@ -171,12 +171,6 @@ public class ImageEditorContext extends ContextPackage
     }
 
     @Override
-    public String getMapsTitle() {
-        return EditorSetting.TAB_TITLE_MAPS + EditorSetting.CHARACTER_VIEW_STATUS_SEPARATOR
-                + EditorSetting.TAB_TITLE_IMAGE_EDITOR;
-    }
-
-    @Override
     public void buildMapsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
         imageEditorManager.buildMapRows(rows);
     }

@@ -39,8 +39,8 @@ Everything written for Claude lives in `.claude/`: this file, `AssetCatalogue.md
 beside the code. `.claude/assets/` and `.claude/catalogue/` are the owner's asset folders (see AI Asset
 Catalogue); `.claude/Delivery.bat` and the `.claude/Version.md` it writes apply deliveries (see Delivering Code and
 Version). `.claude/tools/` holds tools Claude runs itself, never the engine or the editor (`SfzConvert.py` converts a
-library instrument; see `.claude/docs/MusicPipeline.md`). Paths in these instructions are relative to the project
-root.
+library instrument, see `.claude/docs/MusicPipeline.md`; `EditorSmoke.sh` starts the editor headless, see
+`.claude/docs/Build.md`). Paths in these instructions are relative to the project root.
 
 - **Topics.** Imported below, so each loads with this file:
   - `.claude/docs/Engine.md`: class roles, naming, folder layout, lifecycle, settings, registry IDs, threads,

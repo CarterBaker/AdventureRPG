@@ -56,6 +56,18 @@ public class LayoutStruct extends StructPackage {
                 override.hasAspect() ? override.aspect : base.aspect);
     }
 
+    // The same layout at a fixed height, as a height that fits its rows resolves to
+    public LayoutStruct withHeight(DimensionValueStruct height) {
+        return new LayoutStruct(
+                anchor,
+                pivot,
+                position,
+                new DimensionVector2Struct(size.getX(), height),
+                minSize,
+                maxSize,
+                aspect);
+    }
+
     // Size \\
 
     public float resolveWidth(float parentW, float parentH) {

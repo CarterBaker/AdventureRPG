@@ -5,13 +5,22 @@ directly. Read it when a change needs compiling or a tool needs running. `.claud
 
 ---
 
+## Editor Smoke Test
+
+`.claude/tools/EditorSmoke.sh <work-dir> [seconds]`, from the project root, compiles everything, builds the Linux
+kernels (again only when a C source changed), runs the editor under a virtual display, saves `EditorSmoke.png` and
+prints every error its session log wrote, exiting non-zero on any but the missing audio device. Run it before
+delivering any editor change. The `AdventureRPG` cloud environment's setup script fetches the libraries into
+`/opt/adventurerpg/libs` and installs `xdotool`, which drives the mouse for a closer look:
+`xdotool mousemove <x> <y> click 1` under the same `xvfb-run`, then `import -window root <png>`.
+
 ## Direct Compile
 
 If Gradle cannot start (a cloud session: `gradle/gradle-daemon-jvm.properties` pins the daemon to JDK 17 and
 toolchain downloads may be blocked), compile directly with the installed JDK 21:
 
 ```
-mkdir -p $S/libs && cd $S/libs    # $S = your scratchpad directory
+mkdir -p $S/libs && cd $S/libs    # $S = your scratchpad directory; use /opt/adventurerpg/libs when it exists
 for a in org/lwjgl/lwjgl/3.3.4/lwjgl-3.3.4.jar org/lwjgl/lwjgl-glfw/3.3.4/lwjgl-glfw-3.3.4.jar \
          org/lwjgl/lwjgl-opengl/3.3.4/lwjgl-opengl-3.3.4.jar org/lwjgl/lwjgl-openal/3.3.4/lwjgl-openal-3.3.4.jar \
          org/lwjgl/lwjgl-stb/3.3.4/lwjgl-stb-3.3.4.jar org/lwjgl/lwjgl-tinyfd/3.3.4/lwjgl-tinyfd-3.3.4.jar \

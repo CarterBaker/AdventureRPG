@@ -10,20 +10,27 @@ public class DimensionValueStruct extends StructPackage {
      * A single resolved dimension — either a percentage of the parent
      * dimension or an absolute pixel value, with an optional pixel offset.
      * Created via parse() from ARPG string values like "50%", "100px", "32",
-     * or "calc(100% - 24px)".
+     * or "calc(100% - 24px)". A height of "fit" is a placeholder MenuBuilder
+     * replaces with the height of the rows the element holds as it builds it.
      */
 
     // Internal
     private final float value;
     private final boolean percentage;
     private final float offset;
+    private final boolean fit;
 
     // Constructor \\
 
     private DimensionValueStruct(float value, boolean percentage, float offset) {
+        this(value, percentage, offset, false);
+    }
+
+    private DimensionValueStruct(float value, boolean percentage, float offset, boolean fit) {
         this.value = value;
         this.percentage = percentage;
         this.offset = offset;
+        this.fit = fit;
     }
 
     // Factory \\
@@ -31,6 +38,9 @@ public class DimensionValueStruct extends StructPackage {
     public static DimensionValueStruct parse(String raw) {
 
         raw = raw.trim();
+
+        if (raw.equals(EngineSetting.ELEMENT_SIZE_FIT))
+            return new DimensionValueStruct(0f, false, 0f, true);
 
         if (raw.startsWith("calc(") && raw.endsWith(")")) {
 
@@ -89,5 +99,13 @@ public class DimensionValueStruct extends StructPackage {
 
     public float getRawValue() {
         return value;
+    }
+
+    public float getOffset() {
+        return offset;
+    }
+
+    public boolean isFit() {
+        return fit;
     }
 }

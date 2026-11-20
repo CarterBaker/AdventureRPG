@@ -27,8 +27,11 @@ public class CharacterViewPanelSystem extends SystemPackage {
      * the step buttons take. A ranged row's slider spans the range it
      * declares instead, its knob standing where its value does and following
      * it whenever the value or the range moves. A pair row hands each of its
-     * two value buttons its own key. Tools refill a panel only when their state has
-     * moved, never per frame.
+     * two value buttons its own key. A header pressed folds the rows under it
+     * shut, or opens them again, its marker saying which; the panel keeps
+     * what it was handed, so a fold lays it out again without asking the
+     * tool. Tools refill a panel only when their state has moved, never per
+     * frame.
      */
 
     // Internal
@@ -41,6 +44,9 @@ public class CharacterViewPanelSystem extends SystemPackage {
     // Panels
     private ObjectArrayList<CharacterViewPanelStruct> panels;
 
+    // Scratch — the rows a panel shows, those under no folded header
+    private ObjectArrayList<CharacterViewRowStruct> shownRows;
+
     // Base \\
 
     @Override
@@ -48,6 +54,9 @@ public class CharacterViewPanelSystem extends SystemPackage {
 
         // Panels
         this.panels = new ObjectArrayList<>();
+
+        // Scratch
+        this.shownRows = new ObjectArrayList<>();
     }
 
     @Override
@@ -75,25 +84,72 @@ public class CharacterViewPanelSystem extends SystemPackage {
 
         CharacterViewPanelStruct panel = resolvePanel(menu, entryPoint);
 
-        if (panel.lists(rows, templates)) {
-            refreshValues(panel, rows);
-            return;
-        }
-
-        menuManager.ejectAll(menu, entryPoint);
-        panel.clear(templates);
-
-        for (int i = 0; i < rows.size(); i++) {
-            panel.add(rows.get(i), injectRow(menu, entryPoint, rows.get(i), templates));
-            placeRangedKnob(panel, i);
-        }
+        panel.keep(rows);
+        layout(panel, templates);
     }
 
     // A panel emptied and forgotten, as when another view takes its entry point over
     public void clear(MenuInstance menu, int entryPoint) {
 
         menuManager.ejectAll(menu, entryPoint);
-        resolvePanel(menu, entryPoint).clear(null);
+        resolvePanel(menu, entryPoint).forget();
+    }
+
+    // The rows under no folded header listed, set in place while they are the rows shown, injected afresh otherwise
+    private void layout(CharacterViewPanelStruct panel, CharacterViewTemplateStruct templates) {
+
+        resolveShownRows(panel);
+
+        if (panel.lists(shownRows, templates)) {
+            refreshValues(panel, shownRows);
+            return;
+        }
+
+        menuManager.ejectAll(panel.getMenu(), panel.getEntryPoint());
+        panel.clear(templates);
+
+        for (int i = 0; i < shownRows.size(); i++) {
+            CharacterViewRowStruct row = shownRows.get(i);
+            panel.add(row, injectRow(panel, row, templates));
+            placeRangedKnob(panel, i);
+        }
+    }
+
+    private void resolveShownRows(CharacterViewPanelStruct panel) {
+
+        ObjectArrayList<CharacterViewRowStruct> listed = panel.getListed();
+        boolean folded = false;
+
+        shownRows.clear();
+
+        for (int i = 0; i < listed.size(); i++) {
+
+            CharacterViewRowStruct row = listed.get(i);
+
+            if (row.getKind() == CharacterViewRowKind.HEADER)
+                folded = panel.isFolded(row.getLabel());
+            else if (folded)
+                continue;
+
+            shownRows.add(row);
+        }
+    }
+
+    // Fold \\
+
+    // A header pressed: the rows under it folded shut or opened again, in the panel that shows it
+    public void toggleHeader(String headerLabel, ElementInstance element) {
+
+        for (int i = 0; i < panels.size(); i++) {
+
+            CharacterViewPanelStruct panel = panels.get(i);
+
+            if (panel.holds(element)) {
+                panel.toggleFolded(headerLabel);
+                layout(panel, panel.getTemplates());
+                return;
+            }
+        }
     }
 
     private CharacterViewPanelStruct resolvePanel(MenuInstance menu, int entryPoint) {
@@ -109,14 +165,15 @@ public class CharacterViewPanelSystem extends SystemPackage {
     }
 
     private ElementInstance injectRow(
-            MenuInstance menu,
-            int entryPoint,
+            CharacterViewPanelStruct panel,
             CharacterViewRowStruct row,
             CharacterViewTemplateStruct templates) {
 
-        return menuManager.inject(menu, entryPoint, resolveTemplate(row, templates), element -> {
+        boolean header = row.getKind() == CharacterViewRowKind.HEADER;
 
-            element.setActionArgOverride(row.getKey());
+        return menuManager.inject(panel.getMenu(), panel.getEntryPoint(), resolveTemplate(row, templates), element -> {
+
+            element.setActionArgOverride(header ? row.getLabel() : row.getKey());
             setText(element, templates.getLabelElement(), row.getLabel());
             setText(element, templates.getValueElement(), row.getValue());
             setKey(element, templates.getValueButtonElement(), row.getKey());
@@ -130,6 +187,11 @@ public class CharacterViewPanelSystem extends SystemPackage {
 
             if (track != null)
                 track.setOnDragArgOverride(row.getKey());
+
+            if (header)
+                setText(element, EditorSetting.CHARACTER_VIEW_FOLD_ELEMENT, panel.isFolded(row.getLabel())
+                        ? EngineSetting.HIERARCHY_COLLAPSED_MARKER
+                        : EngineSetting.HIERARCHY_EXPANDED_MARKER);
         });
     }
 

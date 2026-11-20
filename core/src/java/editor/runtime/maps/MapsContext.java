@@ -2,6 +2,7 @@ package editor.runtime.maps;
 
 import editor.bootstrap.propertiespipeline.properties.MapsProvider;
 import editor.bootstrap.propertiespipeline.propertiesmanager.PropertiesManager;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.runtime.characterview.panel.CharacterViewDockSystem;
 import editor.runtime.characterview.panel.CharacterViewPanelSystem;
 import editor.runtime.characterview.panel.CharacterViewRowSource;
@@ -30,6 +31,7 @@ public class MapsContext extends ContextPackage implements CharacterViewRowSourc
 
     // Internal
     private PropertiesManager propertiesManager;
+    private ActiveWindowManager activeWindowManager;
     private CharacterViewPanelSystem characterViewPanelSystem;
     private CharacterViewDockSystem characterViewDockSystem;
 
@@ -49,6 +51,7 @@ public class MapsContext extends ContextPackage implements CharacterViewRowSourc
     @Override
     protected void get() {
         this.propertiesManager = get(PropertiesManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
     }
 
     @Override
@@ -77,9 +80,7 @@ public class MapsContext extends ContextPackage implements CharacterViewRowSourc
     @Override
     public String getRowTitle() {
 
-        MapsProvider maps = propertiesManager.getMaps();
-
-        return maps != null ? maps.getMapsTitle() : EditorSetting.TAB_TITLE_MAPS;
+        return activeWindowManager.nameContext(EditorSetting.TAB_TITLE_MAPS, propertiesManager.getMapsWindow());
     }
 
     @Override
