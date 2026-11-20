@@ -534,6 +534,8 @@ One line per session that changed this file: the date, what was added or removed
   (`biomes`) and `worlds/TerraArcana.arpg` (its biome list); rewrote `shaders/characters/includes/CharacterSurface.glsl`,
   `shaders/characters/standard/StandardcharacterShader.fsh` and
   `shaders/editor/characterview/CharacterViewCharacterShader.fsh` (hair cards read clamped to their edges).
+- 2026-11-20: Bone display. Added `mesh/editor/CharacterViewBoneOctahedral.arpg` and
+  `mesh/editor/CharacterViewBoneSphere.arpg`, the octahedral bone and joint sphere markers.
 
 ## Textures and Sprites (2431 files)
 
@@ -2831,8 +2833,9 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/mesh/editor/`
 
-`CharacterMeshOverlayVAO.arpg`, `CharacterViewGrid.arpg`, `CharacterViewMarker.arpg`, `EditorViewportQuad.arpg`,
-`ItemEditorCursor.arpg`, `ItemEditorGrid.arpg`
+`CharacterMeshOverlayVAO.arpg`, `CharacterViewBoneOctahedral.arpg`, `CharacterViewBoneSphere.arpg`,
+`CharacterViewGrid.arpg`, `CharacterViewMarker.arpg`, `EditorViewportQuad.arpg`, `ItemEditorCursor.arpg`,
+`ItemEditorGrid.arpg`
 
 ### `assets/mesh/fonts/`
 

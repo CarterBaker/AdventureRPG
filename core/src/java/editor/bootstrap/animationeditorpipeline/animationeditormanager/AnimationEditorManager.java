@@ -4,6 +4,7 @@ import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
@@ -46,6 +47,7 @@ public class AnimationEditorManager extends ManagerPackage {
     private EntityManager entityManager;
     private ToolManager toolManager;
     private RecorderManager recorderManager;
+    private CharacterEditorManager characterEditorManager;
     private AnimationEditBranch animationEditBranch;
     private AnimationPreviewBranch animationPreviewBranch;
     private AnimationPropertyBranch animationPropertyBranch;
@@ -106,6 +108,7 @@ public class AnimationEditorManager extends ManagerPackage {
         this.entityManager = get(EntityManager.class);
         this.toolManager = get(ToolManager.class);
         this.recorderManager = get(RecorderManager.class);
+        this.characterEditorManager = get(CharacterEditorManager.class);
     }
 
     @Override
@@ -419,9 +422,12 @@ public class AnimationEditorManager extends ManagerPackage {
             animationPropertyBranch.step(activeDocument, key, direction);
     }
 
+    // A choice stepped: how the bones are drawn, shared with every character viewport, or one of the clip's
     public void cycle(String key, int direction) {
 
-        if (claimTimeline())
+        if (characterEditorManager.isBoneDisplayKey(key))
+            characterEditorManager.cycleBoneDisplay(key, direction);
+        else if (claimTimeline())
             animationPropertyBranch.cycle(activeDocument, key, direction);
     }
 
@@ -432,6 +438,10 @@ public class AnimationEditorManager extends ManagerPackage {
     }
 
     public String getValueText(String key) {
+
+        if (characterEditorManager.isBoneDisplayKey(key))
+            return characterEditorManager.getValueText(key);
+
         return activeDocument != null ? animationPropertyBranch.getValueText(activeDocument, key) : "";
     }
 

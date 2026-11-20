@@ -9,7 +9,6 @@ import application.bootstrap.entitypipeline.inventory.EquipmentAnchorStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.characterdocument.CharacterDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
-import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
 import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
@@ -17,13 +16,15 @@ import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
+import editor.runtime.characterview.render.CharacterBoneSource;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class CharacterEditorPreviewSystem extends SystemPackage {
+public class CharacterEditorPreviewSystem extends SystemPackage implements CharacterBoneSource {
 
     /*
      * Drives a character tool tab's viewport from the character editor. A new
@@ -38,8 +39,8 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
      * the edit pose's turns laid over it on the mesh and weights layers, and
      * given the markers of the mode: the bones in Mesh and Weights,
      * the rig's bones as they are being edited in Rig, each drawn as the
-     * Tools panel's Bones says (joints, sticks from each joint to its
-     * parent's, both or none), every equipment anchor in Equipment, the
+     * Properties tab's Bone Display says (CharacterBoneSource, answering for
+     * whichever of the two is drawn), every equipment anchor in Equipment, the
      * selected one highlighted.
      * The window's own mode decides all of it, so two tool tabs each show
      * the character their own way side by side.
@@ -57,6 +58,11 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
     private int boundRevision;
     private int lookRevision;
     private CharacterEditorMode lookMode;
+
+    // Bones — what the viewport's bones are read from while they are drawn: the rig being edited at its bind joints,
+    // or the posed character, and the region showing them
+    private boolean drawsEditedRig;
+    private CharacterRegionStruct boneRegion;
 
     // Scratch
     private Vector3 heldSize;
@@ -215,74 +221,28 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
 
     private void pushMarkers() {
 
-        switch (characterEditorModeSystem.getMode()) {
-            case MESH, WEIGHTS -> pushJointMarkers();
-            case RIG -> pushRigMarkers();
-            case EQUIPMENT -> pushAnchorMarkers();
-            default -> {
-            }
-        }
+        CharacterEditorMode mode = characterEditorModeSystem.getMode();
+
+        if (mode.drawsBones())
+            pushBones(mode == CharacterEditorMode.RIG);
+        else if (mode == CharacterEditorMode.EQUIPMENT)
+            pushAnchorMarkers();
     }
 
-    // Every shown bone as posed, its joint and the stick to its shown parent's as the Bones option says; a stick from
-    // the selected joint is highlighted with it
-    private void pushJointMarkers() {
+    // Every bone the region shows, as the Properties tab's Bone Display draws them: the posed character's, or the rig
+    // being edited at its bind joints with the selected bone's size about its joint
+    private void pushBones(boolean editedRig) {
 
-        RigHandle rigHandle = characterViewPoseSystem.getRaceData().getRigHandle();
-        AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
-        CharacterRegionStruct region = characterEditorModeSystem.getRegion();
-        CharacterBoneDisplay display = characterEditorManager.getBoneDisplay();
-        int selected = characterEditorManager.getSelectedBoneIndex();
+        this.drawsEditedRig = editedRig;
+        this.boneRegion = characterEditorModeSystem.getRegion();
+        characterViewRenderSystem.addBones(
+                this,
+                characterEditorManager.getBoneDisplay(),
+                characterEditorManager.getBoneColors());
 
-        for (int i = 0; i < rigHandle.getBoneCount(); i++) {
+        int selected = getSelectedBone();
 
-            if (!characterEditorManager.isBoneShown(region, rigHandle, i))
-                continue;
-
-            if (display.drawsJoints())
-                characterViewRenderSystem.addJointMarker(i, i == selected);
-
-            int parent = rigHandle.getBone(i).getParentIndex();
-
-            if (display.drawsSticks() && parent != EngineSetting.INDEX_NOT_FOUND
-                    && characterEditorManager.isBoneShown(region, rigHandle, parent))
-                characterViewRenderSystem.addStickMarker(
-                        state.getWorldMatrix(parent), state.getWorldMatrix(i), parent == selected);
-        }
-    }
-
-    // Every bone of the rig as it is being edited, at its bind joint, drawn as the Bones option says, and the selected
-    // one's size about its joint
-    private void pushRigMarkers() {
-
-        int boneCount = characterEditorManager.getRigBoneCount();
-        int selected = characterEditorManager.getSelectedRigBoneIndex();
-        CharacterRegionStruct region = characterEditorModeSystem.getRegion();
-        CharacterBoneDisplay display = characterEditorManager.getBoneDisplay();
-
-        for (int i = 0; i < boneCount; i++) {
-
-            if (!characterEditorManager.isRigBoneShown(region, i))
-                continue;
-
-            if (display.drawsJoints())
-                characterViewRenderSystem.addWorldMarker(
-                        characterEditorManager.getRigBoneWorldMatrix(i),
-                        i == selected ? EditorSetting.CHARACTER_VIEW_JOINT_SELECTED_SIZE
-                                : EditorSetting.CHARACTER_VIEW_JOINT_SIZE,
-                        i == selected);
-
-            int parent = characterEditorManager.getRigBoneParent(i);
-
-            if (display.drawsSticks() && parent != EngineSetting.INDEX_NOT_FOUND
-                    && characterEditorManager.isRigBoneShown(region, parent))
-                characterViewRenderSystem.addStickMarker(
-                        characterEditorManager.getRigBoneWorldMatrix(parent),
-                        characterEditorManager.getRigBoneWorldMatrix(i),
-                        parent == selected);
-        }
-
-        if (selected != EngineSetting.INDEX_NOT_FOUND)
+        if (editedRig && selected != EngineSetting.INDEX_NOT_FOUND)
             characterViewRenderSystem.addWorldBoxMarker(
                     characterEditorManager.getRigBoneWorldMatrix(selected),
                     characterEditorManager.getRigBoneSize(selected));
@@ -303,5 +263,67 @@ public class CharacterEditorPreviewSystem extends SystemPackage {
                     anchor.isHeld() ? heldSize : anchor.getSize(),
                     i == characterEditorManager.getSelectedAnchorIndex());
         }
+    }
+
+    // Bones \\
+
+    @Override
+    public int getBoneCount() {
+        return drawsEditedRig ? characterEditorManager.getRigBoneCount() : getPosedRig().getBoneCount();
+    }
+
+    @Override
+    public int getBoneParent(int boneIndex) {
+        return drawsEditedRig
+                ? characterEditorManager.getRigBoneParent(boneIndex)
+                : getPosedRig().getBone(boneIndex).getParentIndex();
+    }
+
+    @Override
+    public String getBoneName(int boneIndex) {
+        return drawsEditedRig
+                ? characterEditorManager.getRigBoneName(boneIndex)
+                : getPosedRig().getBone(boneIndex).getName();
+    }
+
+    @Override
+    public Matrix4 getBoneWorldMatrix(int boneIndex) {
+        return drawsEditedRig
+                ? characterEditorManager.getRigBoneWorldMatrix(boneIndex)
+                : characterViewPoseSystem.getAnimationStateHandle().getWorldMatrix(boneIndex);
+    }
+
+    // The bone's width, the mean of its size across
+    @Override
+    public float getBoneSize(int boneIndex) {
+
+        Vector3 size = drawsEditedRig
+                ? characterEditorManager.getRigBoneSize(boneIndex)
+                : getPosedRig().getBone(boneIndex).getSize();
+
+        return (size.x + size.z) * 0.5f;
+    }
+
+    @Override
+    public boolean isBoneShown(int boneIndex) {
+        return drawsEditedRig
+                ? characterEditorManager.isRigBoneShown(boneRegion, boneIndex)
+                : characterEditorManager.isBoneShown(boneRegion, getPosedRig(), boneIndex);
+    }
+
+    @Override
+    public boolean isFacialPartBone(int boneIndex) {
+        return characterEditorManager.isFacialPartBone(getBoneName(boneIndex));
+    }
+
+    @Override
+    public int getSelectedBone() {
+        return drawsEditedRig
+                ? characterEditorManager.getSelectedRigBoneIndex()
+                : characterEditorManager.getSelectedBoneIndex();
+    }
+
+    private RigHandle getPosedRig() {
+        return characterViewPoseSystem.getRaceData().getRigHandle();
     }
 }

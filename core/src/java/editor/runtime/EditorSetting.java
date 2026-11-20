@@ -709,7 +709,6 @@ public class EditorSetting {
 
     // Character View — meshes, materials and draw order
     public static final String CHARACTER_VIEW_MESH_GRID = "editor/CharacterViewGrid";
-    public static final String CHARACTER_VIEW_MESH_MARKER = "editor/CharacterViewMarker";
     public static final String CHARACTER_VIEW_MATERIAL_CHARACTER = "editor/CharacterViewCharacterMaterial";
     public static final String CHARACTER_VIEW_MATERIAL_GRID = "editor/CharacterViewGridMaterial";
     public static final String CHARACTER_VIEW_MATERIAL_MARKER = "editor/CharacterViewMarkerMaterial";
@@ -723,10 +722,50 @@ public class EditorSetting {
     // Character View — markers, sizes in blocks
     public static final float CHARACTER_VIEW_JOINT_SIZE = 0.035f;
     public static final float CHARACTER_VIEW_JOINT_SELECTED_SIZE = 0.06f;
-    public static final float CHARACTER_VIEW_STICK_WIDTH = 0.012f;
-    public static final float CHARACTER_VIEW_STICK_SELECTED_WIDTH = 0.022f;
     public static final float CHARACTER_VIEW_STICK_MIN_LENGTH = 0.0001f;
     public static final float CHARACTER_VIEW_STICK_PARALLEL = 0.9f;
+
+    // Character View — marker shapes, by the index the marker pools and bone styles name them with
+    public static final int CHARACTER_VIEW_MARKER_CUBE = 0;
+    public static final int CHARACTER_VIEW_MARKER_OCTAHEDRAL = 1;
+    public static final int CHARACTER_VIEW_MARKER_SPHERE = 2;
+    public static final String[] CHARACTER_VIEW_MARKER_MESHES = {
+            "editor/CharacterViewMarker", "editor/CharacterViewBoneOctahedral", "editor/CharacterViewBoneSphere" };
+    public static final float[] CHARACTER_VIEW_MARKER_COLOR = { 0.55f, 0.75f, 1.0f, 0.35f };
+    public static final String CHARACTER_VIEW_UNIFORM_COLOR = "u_color";
+
+    // Bone Display — how every character viewport draws the bones (CharacterBoneDisplay, CharacterBoneKind), as
+    // Blender's armature display does: each style's widths in blocks or shares, and the named bone colours
+    public static final String BONE_DISPLAY_HEADER = "Bone Display";
+    public static final String BONE_DISPLAY_KEY_STYLE = "bone_display_style";
+    public static final String BONE_DISPLAY_KEY_BODY = "bone_display_body";
+    public static final String BONE_DISPLAY_KEY_FACE = "bone_display_face";
+    public static final String BONE_DISPLAY_KEY_HAIR = "bone_display_hair";
+    public static final String BONE_DISPLAY_LABEL_STYLE = "Style";
+    public static final String BONE_DISPLAY_LABEL_BODY = "Body Bones";
+    public static final String BONE_DISPLAY_LABEL_FACE = "Face Bones";
+    public static final String BONE_DISPLAY_LABEL_HAIR = "Hair Bones";
+    public static final String BONE_DISPLAY_LABEL_OCTAHEDRAL = "Octahedral";
+    public static final String BONE_DISPLAY_LABEL_STICK = "Stick";
+    public static final String BONE_DISPLAY_LABEL_BBONE = "B-Bone";
+    public static final String BONE_DISPLAY_LABEL_ENVELOPE = "Envelope";
+    public static final String BONE_DISPLAY_LABEL_WIRE = "Wire";
+    public static final String BONE_DISPLAY_LABEL_HIDDEN = "Hidden";
+    public static final float BONE_DISPLAY_OCTAHEDRAL_LENGTH_SHARE = 0.2f;
+    public static final float BONE_DISPLAY_STICK_WIDTH = 0.012f;
+    public static final float BONE_DISPLAY_BBONE_SIZE_SHARE = 1f;
+    public static final float BONE_DISPLAY_WIRE_WIDTH = 0.003f;
+    public static final float BONE_DISPLAY_ENVELOPE_SIZE_SHARE = 0.5f;
+    public static final float BONE_DISPLAY_ALPHA = 0.55f;
+    public static final String[] BONE_DISPLAY_COLOR_NAMES = {
+            "Grey", "White", "Red", "Orange", "Yellow", "Green", "Teal", "Blue", "Violet", "Pink" };
+    public static final float[][] BONE_DISPLAY_COLORS = {
+            { 0.62f, 0.66f, 0.72f }, { 0.95f, 0.95f, 0.95f }, { 0.9f, 0.25f, 0.25f }, { 0.95f, 0.55f, 0.18f },
+            { 0.95f, 0.85f, 0.25f }, { 0.35f, 0.8f, 0.35f }, { 0.25f, 0.75f, 0.75f }, { 0.35f, 0.55f, 0.95f },
+            { 0.65f, 0.4f, 0.9f }, { 0.95f, 0.45f, 0.75f } };
+    public static final int BONE_DISPLAY_DEFAULT_BODY = 7;
+    public static final int BONE_DISPLAY_DEFAULT_FACE = 9;
+    public static final int BONE_DISPLAY_DEFAULT_HAIR = 3;
 
     // Character View — the preview's build between thin (0) and heavy (1)
     public static final float CHARACTER_VIEW_WEIGHT_RATIO = 0.5f;
@@ -2462,6 +2501,9 @@ public class EditorSetting {
     public static final float IMAGE_BRUSH_RANDOM_SCALE = 1f / (1 << 24);
     // Levels a raise or lower stamp moves a channel by at full strength, its fraction dithered so light strokes build
     public static final float IMAGE_RAISE_LEVELS = 6f;
+    public static final float IMAGE_RELIEF_SLOPE = 0.08f;
+    public static final float IMAGE_RELIEF_MIN_Z = 0.05f;
+    public static final int IMAGE_PAINT_HSB_BRIGHTNESS = 2;
 
     // Brushes — loaded from this directory, the default one standing in for any deleted
     public static final String BRUSH_PATH = "brushes";
@@ -2722,13 +2764,10 @@ public class EditorSetting {
     public static final String TOOL_OPTION_DETAIL = "Detail (mm)";
     public static final String TOOL_OPTION_LENGTH = "Length (cm)";
     public static final String TOOL_OPTION_WIDTH = "Width (mm)";
-    public static final String TOOL_OPTION_BONES = "Bones";
     public static final String TOOL_OPTION_SHAPE = "Shape";
     public static final String[] TOOL_SHAPE_NAMES = { "Sphere", "Cube", "Cylinder", "Plane" };
     public static final int TOOL_SHAPE_DEFAULT = 0;
     public static final String[] TOOL_OPTION_SWITCH_NAMES = { "Off", "On" };
-    public static final String[] TOOL_BONE_DISPLAY_NAMES = { "Joints", "Sticks", "Joints and Sticks", "Hidden" };
-    public static final int TOOL_BONE_DISPLAY_DEFAULT = 2;
     public static final int TOOL_OPTION_SWITCH_OFF = 0;
     public static final int TOOL_OPTION_SWITCH_ON = 1;
     public static final float TOOL_OPTION_PRECISION = 100f;
@@ -3635,6 +3674,7 @@ public class EditorSetting {
     public static final String RECORDER_KEY_ROW_SEPARATOR = ":";
     public static final int RECORDER_KEY_ROW_MOVEMENT = -2;
     public static final int RECORDER_KEY_ROW_GESTURES = -3;
+    public static final int RECORDER_KEY_ROW_SUMMARY = -4;
     public static final int RECORDER_KEY_TRACK_SOUNDS = -1;
     public static final int RECORDER_KEY_LAYER_NONE = -2;
 

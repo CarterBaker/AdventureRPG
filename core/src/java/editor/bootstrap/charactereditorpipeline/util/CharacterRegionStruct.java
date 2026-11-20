@@ -23,7 +23,9 @@ public class CharacterRegionStruct extends StructPackage {
      * hang from. A region is listed under the part whose bones its own hang
      * below, the hair under the part that shows it. A region names its key,
      * stable across runs, its label, the region it is listed under, the worn
-     * part it holds, the bones it holds on the body, whether its roots are
+     * part it holds, the bones it holds on the body (by their place in the
+     * rig it was made for and by name, so another copy of the rig, its bones
+     * in another order, still finds them), whether its roots are
      * pinned and it is sided, whether it takes the face, the prefix naming
      * its own bones, which new bones there take, and the worn parts it shows
      * beside its own.
@@ -36,6 +38,7 @@ public class CharacterRegionStruct extends StructPackage {
             0,
             null,
             new int[0],
+            new String[0],
             false,
             false,
             false,
@@ -53,6 +56,7 @@ public class CharacterRegionStruct extends StructPackage {
     // Holds
     private final FeatureSlot featureSlot;
     private final int[] partBones;
+    private final String[] partBoneNames;
     private final boolean rootPinned;
     private final boolean sided;
     private final boolean facial;
@@ -67,6 +71,7 @@ public class CharacterRegionStruct extends StructPackage {
             int index,
             FeatureSlot featureSlot,
             int[] partBones,
+            String[] partBoneNames,
             boolean rootPinned,
             boolean sided,
             boolean facial,
@@ -81,6 +86,7 @@ public class CharacterRegionStruct extends StructPackage {
         // Holds
         this.featureSlot = featureSlot;
         this.partBones = partBones;
+        this.partBoneNames = partBoneNames;
         this.rootPinned = rootPinned;
         this.sided = sided;
         this.facial = facial;
@@ -135,6 +141,20 @@ public class CharacterRegionStruct extends StructPackage {
     // The bones of the rig's part the region holds, with every bone below them; none for the hair and the whole
     public int[] getPartBones() {
         return partBones;
+    }
+
+    public String[] getPartBoneNames() {
+        return partBoneNames;
+    }
+
+    // Whether a bone, by name, is one of the part's own
+    public boolean isPartBone(String boneName) {
+
+        for (int i = 0; i < partBoneNames.length; i++)
+            if (partBoneNames[i].equals(boneName))
+                return true;
+
+        return false;
     }
 
     public boolean isRootPinned() {

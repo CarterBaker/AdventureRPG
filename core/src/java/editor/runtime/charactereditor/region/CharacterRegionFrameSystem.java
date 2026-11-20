@@ -26,8 +26,9 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
      * hair, the hand shown with its fingers, the foot shown with its toes,
      * the ear on its side, the eye shown in its socket, the jaw with the
      * mouth. While the region's part is open the frame is the box of every
-     * vertex those bones carry at least the pick share of, worked out again
-     * only once the mesh changes; otherwise it is about the bones' joints as
+     * vertex those bones carry at least the pick share of, the bone found by
+     * name in the mesh's own rig, worked out again only once the mesh
+     * changes; otherwise it is about the bones' joints as
      * the preview stands. The radius reaches past the farthest point by a
      * margin, never less than a set least.
      */
@@ -110,8 +111,15 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
         this.framedBone = frameBone;
 
         RiggedMeshStruct mesh = document.getMesh();
+        RigHandle meshRig = mesh.getRigHandle();
+        String frameBoneName = characterViewPoseSystem.getRaceData().getRigHandle().getBone(frameBone).getName();
 
-        resolveChain(mesh.getRigHandle(), frameBone);
+        if (!meshRig.hasBone(frameBoneName)) {
+            this.framed = false;
+            return;
+        }
+
+        resolveChain(meshRig, meshRig.getBoneIndex(frameBoneName));
         low.set(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE);
         high.set(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE);
 

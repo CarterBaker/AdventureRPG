@@ -36,8 +36,8 @@ public enum ToolCanvas {
      * in image pixels, and adds and deletes layers. A character's mesh and
      * weights also take Pick, which picks the bone under the pointer to weigh, and
      * Pose, which turns a bone out of the way while the mesh follows;
-     * every modelling canvas of a character mirrors, and its mesh, weights
-     * and rig choose how the bones are drawn. A character's Topology tab
+     * every modelling canvas of a character mirrors (how the bones are drawn
+     * is the Properties tab's Bone Display). A character's Topology tab
      * flips, cuts and dissolves the edges clicked and evens the faces under
      * the brush, and cleans what a retopology pass leaves; its Hair tab draws,
      * grows, combs, smooths, lengthens, shortens and cuts strands of hair
@@ -87,8 +87,7 @@ public enum ToolCanvas {
             screenSize(),
             mirror(),
             xray(),
-            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON),
-            bones()),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
     CHARACTER_TOPOLOGY(
             EditorSetting.TOOL_CANVAS_CHARACTER_TOPOLOGY,
             new EditorTool[] {
@@ -138,8 +137,7 @@ public enum ToolCanvas {
             strength(EditorSetting.TOOL_WEIGHT_STRENGTH_DEFAULT),
             mirror(),
             xray(),
-            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON),
-            bones()),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
     CHARACTER_PAINT(
             EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
             new EditorTool[] {
@@ -157,8 +155,7 @@ public enum ToolCanvas {
                     EditorTool.ERASE },
             new ToolActionGroupStruct[] { rigActions(), rigLayers(), colliderActions(), hairActions() },
             false,
-            mirror(),
-            bones()),
+            mirror()),
     CHARACTER_UV(
             EditorSetting.TOOL_CANVAS_CHARACTER_UV,
             new EditorTool[] { EditorTool.SELECT },
@@ -658,10 +655,6 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_HAIR_WIDTH_MAX,
                 EditorSetting.TOOL_HAIR_WIDTH_STEP,
                 EditorSetting.TOOL_HAIR_WIDTH_DEFAULT);
-    }
-
-    private static ToolOptionStruct bones() {
-        return choice(ToolOption.BONES, EditorSetting.TOOL_BONE_DISPLAY_NAMES, EditorSetting.TOOL_BONE_DISPLAY_DEFAULT);
     }
 
     private static ToolOptionStruct shape() {

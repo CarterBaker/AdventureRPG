@@ -13,7 +13,9 @@ public enum ImageStroke {
      * pixels as they stood before the stamp. Raise brightens every channel
      * under the brush and Lower darkens it, a little more with each stamp, so
      * on a height layer they build the ground up and wear it down; they only
-     * work where the image blends. Erase wears a layer that holds alpha
+     * work where the image blends. Relief bends a normal map's normals as if
+     * the tip pressed a bump into it (MapPaintRule), every normal kept unit
+     * length. Erase wears a layer that holds alpha
      * clear and lays the image's clear value down on one that does not.
      */
 
@@ -23,7 +25,8 @@ public enum ImageStroke {
     SWIRL(true),
     SCATTER(true),
     RAISE(false),
-    LOWER(false);
+    LOWER(false),
+    RELIEF(false);
 
     // Internal
     private final boolean moving;

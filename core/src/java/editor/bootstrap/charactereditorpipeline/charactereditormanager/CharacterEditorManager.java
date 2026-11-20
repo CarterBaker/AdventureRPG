@@ -25,6 +25,7 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStam
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPartPlacementStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
+import editor.bootstrap.charactereditorpipeline.util.CharacterBoneKind;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorPose;
@@ -53,6 +54,7 @@ import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -102,6 +104,7 @@ public class CharacterEditorManager extends ManagerPackage {
     private CharacterColliderBranch characterColliderBranch;
     private CharacterPaintBranch characterPaintBranch;
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
+    private CharacterBoneDisplayBranch characterBoneDisplayBranch;
     private CharacterUVBranch characterUVBranch;
     private CharacterControlBranch characterControlBranch;
     private CharacterClipBranch characterClipBranch;
@@ -231,6 +234,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterColliderBranch = create(CharacterColliderBranch.class);
         this.characterPaintBranch = create(CharacterPaintBranch.class);
         this.characterPaintPropertyBranch = create(CharacterPaintPropertyBranch.class);
+        this.characterBoneDisplayBranch = create(CharacterBoneDisplayBranch.class);
         this.characterUVBranch = create(CharacterUVBranch.class);
         this.characterControlBranch = create(CharacterControlBranch.class);
         this.characterClipBranch = create(CharacterClipBranch.class);
@@ -869,7 +873,9 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public void cycle(String key, int direction) {
 
-        if (activeDocument != null)
+        if (isBoneDisplayKey(key))
+            cycleBoneDisplay(key, direction);
+        else if (activeDocument != null)
             characterPropertyBranch.cycle(activeDocument, key, direction);
     }
 
@@ -883,6 +889,9 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (isColorKey(key))
             return characterPaintPropertyBranch.getValueText(key);
+
+        if (isBoneDisplayKey(key))
+            return characterBoneDisplayBranch.getValueText(key);
 
         return activeDocument != null ? characterPropertyBranch.getValueText(activeDocument, key) : "";
     }
@@ -2656,14 +2665,43 @@ public class CharacterEditorManager extends ManagerPackage {
                 * EditorSetting.CHARACTER_TOPOLOGY_DETAIL_UNIT;
     }
 
-    // How the viewport draws the bones: the Tools panel's Bones on the mode's canvas, joints where it has none
+    // Bone Display \\
+
+    // How every character viewport draws the bones, one choice for the editor
     public CharacterBoneDisplay getBoneDisplay() {
+        return characterBoneDisplayBranch.getDisplay();
+    }
 
-        ToolCanvas canvas = mode.getToolCanvas();
+    // Each kind of bone's colour, by the kind's ordinal
+    public Vector4[] getBoneColors() {
+        return characterBoneDisplayBranch.getColors();
+    }
 
-        return canvas != null && canvas.findOption(ToolOption.BONES) != null
-                ? CharacterBoneDisplay.fromOption(toolManager.getOption(canvas, ToolOption.BONES))
-                : CharacterBoneDisplay.JOINTS;
+    public int getBoneDisplayRevision() {
+        return characterBoneDisplayBranch.getRevision();
+    }
+
+    // The bone display's rows, listed in the Properties tab of every window that draws bones
+    public void buildBoneDisplayRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        characterBoneDisplayBranch.buildRows(rows);
+    }
+
+    public boolean isBoneDisplayKey(String key) {
+        return characterBoneDisplayBranch.isKey(key);
+    }
+
+    // The style or a kind's colour stepped, every window drawing bones and listing the rows refreshed
+    public void cycleBoneDisplay(String key, int direction) {
+        characterBoneDisplayBranch.cycle(key, direction);
+        notifyChanged();
+    }
+
+    // Whether a bone, by name, is a part's own where the rig being edited marks the part as taking the face
+    public boolean isFacialPartBone(String boneName) {
+
+        RigHandle rigHandle = resolveRegionRig();
+
+        return rigHandle != null && CharacterBoneKind.isFacialPartBone(rigHandle, boneName);
     }
 
     // Whether an on-or-off option of the mode's canvas is on; off on a canvas that has none
@@ -2785,6 +2823,10 @@ public class CharacterEditorManager extends ManagerPackage {
     // The bone a bone of the rig being edited hangs from, INDEX_NOT_FOUND for a root
     public int getRigBoneParent(int boneIndex) {
         return characterRigBranch.getParent(boneIndex);
+    }
+
+    public String getRigBoneName(int boneIndex) {
+        return characterRigBranch.getBoneName(boneIndex);
     }
 
     public Vector3 getRigBoneSize(int boneIndex) {

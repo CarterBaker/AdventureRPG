@@ -30,6 +30,8 @@ public class ImageBrushStruct extends StructPackage {
     private float twist;
     private boolean blending;
     private boolean transparent;
+    private float relief;
+    private float reliefGreen;
 
     // Management \\
 
@@ -57,6 +59,13 @@ public class ImageBrushStruct extends StructPackage {
     // The color a painting or erasing stroke lays down; no other stroke reads it
     public void setColor(int color) {
         this.color = color;
+    }
+
+    // Which way a relief stroke bends the normals, raising or carving, and the sign the map's green convention puts on
+    // the up slope; no other stroke reads them
+    public void setRelief(float relief, float reliefGreen) {
+        this.relief = relief;
+        this.reliefGreen = reliefGreen;
     }
 
     // Accessible \\
@@ -87,6 +96,14 @@ public class ImageBrushStruct extends StructPackage {
 
     public boolean isBlending() {
         return blending;
+    }
+
+    public float getRelief() {
+        return relief;
+    }
+
+    public float getReliefGreen() {
+        return reliefGreen;
     }
 
     public boolean isTransparent() {

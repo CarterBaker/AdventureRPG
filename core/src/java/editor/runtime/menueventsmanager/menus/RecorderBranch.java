@@ -384,12 +384,16 @@ public class RecorderBranch extends BranchPackage {
     }
 
     // A curve's name selects it, and a sound's name selects the first time it is heard
+    // A value's name selects its curve; a bone's or morph's summary row on the dope sheet picks it, unfolding its
+    // values beneath it
     public void pressKeyName(String rowKey) {
 
         int row = resolveKeyRow(rowKey);
 
         if (row >= 0)
             recorderManager.selectCurve(resolveKeyTrack(rowKey), row);
+        else if (row == EditorSetting.RECORDER_KEY_ROW_SUMMARY)
+            recorderManager.selectKeyLayer(resolveKeyTrack(rowKey));
     }
 
     // A press on a row's strip is settled once, where it began, and what it took hold of follows the cursor

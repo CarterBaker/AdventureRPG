@@ -9,6 +9,7 @@ import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingBoneTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
@@ -30,7 +31,10 @@ public class RecorderKeysSystem extends SystemPackage {
      * the selected clip plays. A track's layer is a row for every value it
      * holds and, for a character, a row of its movement and one of its
      * gestures, every row's strip showing its keys or nodes across the stretch
-     * of the timeline in view; the Sounds layer is a row for each sound it
+     * of the timeline in view. An animation clip's layer is a dope sheet, as
+     * Blender's lists one: a summary row for every bone and morph it keys,
+     * marking every key of any of its values, the one picked unfolded with a
+     * row for each of its values beneath it; the Sounds layer is a row for each sound it
      * names with a bar for every time it is heard, the selected one marked and
      * following the cursor while it is dragged. The tab is drawn again when
      * the recorder's revision, its keys or its view move; keys being dragged
@@ -193,6 +197,8 @@ public class RecorderKeysSystem extends SystemPackage {
 
         if (layer == EditorSetting.RECORDER_KEY_TRACK_SOUNDS && soundTrack != null)
             injectSounds(soundTrack, clip);
+        else if (layer >= 0 && layer < tracks.size() && tracks.get(layer) instanceof RecordingBoneTrackStruct)
+            injectDopeSheet(tracks, layer, clip);
         else if (layer >= 0 && layer < tracks.size())
             injectTrack(tracks.get(layer), layer, clip);
         else
@@ -219,6 +225,52 @@ public class RecorderKeysSystem extends SystemPackage {
 
             if (track.hasCurve(slot))
                 injectKeys(strip, clip, track.getCurve(slot), selected);
+        }
+    }
+
+    // A summary row for every track of the animation layer, the one picked unfolded with its values beneath it
+    private void injectDopeSheet(
+            ObjectArrayList<RecordingCurveTrackStruct> tracks,
+            int layer,
+            RecordingClipStruct clip) {
+
+        for (int i = 0; i < tracks.size(); i++) {
+
+            RecordingCurveTrackStruct track = tracks.get(i);
+            ElementInstance strip = injectRow(
+                    i == layer ? RecorderSetting.TEMPLATE_KEY_CURVE_ROW_SELECTED : RecorderSetting.TEMPLATE_KEY_NODE_ROW,
+                    track.getTrackLabel(),
+                    toRowKey(i, EditorSetting.RECORDER_KEY_ROW_SUMMARY));
+
+            injectSummaryKeys(strip, clip, track);
+
+            if (i == layer)
+                injectTrack(track, i, clip);
+        }
+    }
+
+    // One mark for every step of the view where any value of the track holds a key
+    private void injectSummaryKeys(ElementInstance strip, RecordingClipStruct clip, RecordingCurveTrackStruct track) {
+
+        clearSteps();
+
+        for (int slot = 0; slot < track.getCurveCount(); slot++) {
+
+            if (!track.hasCurve(slot))
+                continue;
+
+            RecordingCurveStruct curve = track.getCurve(slot);
+
+            for (int i = 0; i < curve.size(); i++) {
+
+                int step = resolveKeyStep(clip, curve.getTime(i));
+
+                if (step == EngineSetting.INDEX_NOT_FOUND || stepTaken[step])
+                    continue;
+
+                stepTaken[step] = true;
+                injectDiamond(strip, RecorderSetting.TEMPLATE_KEY_DIAMOND, step);
+            }
         }
     }
 

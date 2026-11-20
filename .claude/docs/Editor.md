@@ -65,8 +65,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   a clip, each strip only its number and the name its ... gives it. Its title names what is open. Once zoomed, its
   view scrolls under the cursor with a left drag on its empty lanes or a right drag anywhere over its lanes or ruler,
   clips included.
-- **Keys and Keys Graph.** The Keys tab holds the rows of the layer picked in the Layers tab; the Keys Graph the curve
-  selected, a key clicked twice freeing or joining its handles. Each opens its own menu through a shared
+- **Keys and Keys Graph.** The Keys tab holds the rows of the layer picked in the Layers tab, and for an animation it
+  is a dope sheet as Blender's is: a summary row for every bone and morph marking every key it holds, the one picked
+  (in the Layers tab, the Animation Editor or by its name here) unfolded with a row for each of its values; the Keys
+  Graph the curve selected, a key clicked twice freeing or joining its handles. Each opens its own menu through a shared
   `RecorderRowSystem`, and the pane tab worked in last is the one the recorder's deletes act on.
 - **Recording in the shared tabs.** The Layers tab lists the take's tracks (camera, player, characters, items,
   vehicles, weather, clock, sounds) or, in its Takes view, every take of the open recording, each dragged onto the
@@ -296,7 +298,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   that opens for typing an exact value (the "manual set"), and step buttons. Dragging the slider updates the value
   and everything showing it live, in place, without rebuilding the panel.
 - **Every value takes the control that fits it.** A switch (on or off: Mirror, X-Ray) is a switch flipped by one
-  click and filled while on; a choice of named settings (Bones, Comb) is a drop-down naming the one in use, its choices
+  click and filled while on; a choice of named settings (Shape, Comb) is a drop-down naming the one in use, its choices
   listed under its row while open; only a number has a slider. A tool option declares its kind in `ToolCanvas`
   (`ToolOptionKind`: `toggle(...)`, `choice(...)` or a number range) and the Tools tab picks the row template for it
   (`ToolsSetting.TEMPLATE_OPTION_ROWS`), never a slider over named steps.

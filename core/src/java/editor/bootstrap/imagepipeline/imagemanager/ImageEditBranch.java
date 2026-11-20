@@ -161,7 +161,39 @@ class ImageEditBranch extends BranchPackage {
             case SCATTER -> blend(before, tipPixels.getInt(randomIndex(tipPixels.size())), strength, false);
             case RAISE -> shiftPixel(before, strength, blending);
             case LOWER -> shiftPixel(before, -strength, blending);
+            case RELIEF -> reliefPixel(before, brush, dx, dy);
         };
+    }
+
+    // A tangent-space normal bent by the slope of the bump the tip presses, read off the tip's coverage either side
+    // of the pixel and scaled by its radius, so a wide tip raises a broad bump; added in slope space and laid back
+    // as a unit normal, its alpha kept
+    private int reliefPixel(int before, ImageBrushStruct brush, int dx, int dy) {
+
+        BrushHandle tip = brush.getBrush();
+        float reach = brush.getRadius() + EditorSetting.IMAGE_BRUSH_EDGE_PIXELS;
+        float scale = brush.getRelief() * brush.getStrength() * brush.getRadius() * EditorSetting.IMAGE_RELIEF_SLOPE;
+        float slopeX = (BrushUtility.resolveCoverage(tip, dx + 1, -dy, reach)
+                - BrushUtility.resolveCoverage(tip, dx - 1, -dy, reach)) * 0.5f * scale;
+        float slopeY = (BrushUtility.resolveCoverage(tip, dx, 1 - dy, reach)
+                - BrushUtility.resolveCoverage(tip, dx, -1 - dy, reach)) * 0.5f * scale * brush.getReliefGreen();
+        float nx = ImageColorUtility.toChannel(before, 0) / EngineSetting.COLOR_CHANNEL_BYTE_MAX * 2f - 1f;
+        float ny = ImageColorUtility.toChannel(before, 1) / EngineSetting.COLOR_CHANNEL_BYTE_MAX * 2f - 1f;
+        float nz = Math.max(ImageColorUtility.toChannel(before, 2) / EngineSetting.COLOR_CHANNEL_BYTE_MAX * 2f - 1f,
+                EditorSetting.IMAGE_RELIEF_MIN_Z);
+        float sx = nx / nz - slopeX;
+        float sy = ny / nz - slopeY;
+        float length = (float) Math.sqrt(sx * sx + sy * sy + 1f);
+
+        return (PackedColorUtility.pack(
+                toNormalChannel(sx / length),
+                toNormalChannel(sy / length),
+                toNormalChannel(1f / length)) << Byte.SIZE)
+                | (before & EngineSetting.PACKED_COLOR_CHANNEL_MASK);
+    }
+
+    private int toNormalChannel(float component) {
+        return Math.round((component * 0.5f + 0.5f) * EngineSetting.COLOR_CHANNEL_BYTE_MAX);
     }
 
     // Every channel moved by a share of the raise levels and held to its range, the fraction of a level taken with

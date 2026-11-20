@@ -267,10 +267,19 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   tool on a canvas that honours one lists it under its own options, last, in the Tools panel. Mirror (on by default) is
   honoured by the mesh, sculpt, weights, paint and rig canvases, X-Ray by the mesh and weights, Wireframe (the edges of
   the part worked drawn over it by `CharacterEditorOverlaySystem`, depth tested unless X-Ray; on by default on the mesh,
-  weights and UV canvases, off on sculpt and paint) by the mesh, sculpt, weights, paint and UV, Bones
-  (`CharacterBoneDisplay`: joints, sticks from each joint to its parent's, both, or hidden) by the mesh, weights and
-  rig. `CharacterEditorManager.isMirror` / `isXray` / `isWireframe` / `getBoneDisplay` read them from
-  `ToolManager` for the mode's canvas; never keep a copy, and never list them as Properties rows.
+  weights and UV canvases, off on sculpt and paint) by the mesh, sculpt, weights, paint and UV.
+  `CharacterEditorManager.isMirror` / `isXray` / `isWireframe` read them from `ToolManager` for the mode's canvas;
+  never keep a copy, and never list them as Properties rows.
+- **Bone Display** (Blender's armature display), one choice for the editor in `CharacterBoneDisplayBranch`, listed as
+  Properties rows by every window that draws bones (the modes whose `drawsBones` is set: Mesh, Weights, Rig; and the
+  Animation Editor): the style (`CharacterBoneDisplay`: Octahedral, Stick, B-Bone, Envelope, Wire, Hidden; one width
+  formula of a fixed width, a share of the bone's length and a share of its size) and the colour of each kind
+  (`CharacterBoneKind`: Hair by the lock prefix, Face below a part that `takes_face`, Body otherwise) from the named
+  `BONE_DISPLAY_COLORS`. Every viewport draws its bones through `CharacterViewRenderSystem.addBones`, handing it a
+  `CharacterBoneSource` (the posed character, or the rig being edited at its bind joints); a bone runs from its joint
+  to each child's in the style's marker shape (`CHARACTER_VIEW_MARKER_*`: the cube, `CharacterViewBoneOctahedral`,
+  `CharacterViewBoneSphere`), a root or childless bone is a sphere at its joint, and Envelope adds a sphere at every
+  joint as wide as the bone.
 - **Hide and Reveal.** The Selection group's Hide (H), Hide Unselected (Shift+H) and Reveal (Alt+H)
   (`CharacterSelectionBranch.hide` / `reveal`) put vertices out of the way, as Blender hides geometry to reach tight
   spaces: the document's hidden flags (`CharacterMeshDocumentInstance.isHidden`, carried through `removeOrphans`,
@@ -1062,7 +1071,10 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   animation layers) in the clip's order, all spanning the clip's whole length so they read as the one clip they play
   as. A layer holds a `RecordingBoneTrackStruct` for every bone it keys (Base: every bone no part keys; never spring
   bones), each holding a curve for every slot and nested in the Layers tab under the nearest bone above it the layer
-  holds. A press on a lane picks its layer (`pressAnimationLayer`), and a bone picked in the Animation Editor picks
+  holds. The Keys tab lays the layer out as a dope sheet (`RecorderKeysSystem.injectDopeSheet`): a summary row for
+  every bone and morph track marking each step any of its curves keys, a press on its name picking it
+  (`RECORDER_KEY_ROW_SUMMARY`), and the picked one's curve rows beneath it. A press on a lane picks its layer
+  (`pressAnimationLayer`), and a bone picked in the Animation Editor picks
   the layer that keys it (`selectBoneLayer`); the pose tools and pose actions work across every layer at once, each
   bone keyed in its own layer. Keys edited on
   the Keys tabs are written back into the clip on the frame they change (`RecorderManager.writeAnimation`), every

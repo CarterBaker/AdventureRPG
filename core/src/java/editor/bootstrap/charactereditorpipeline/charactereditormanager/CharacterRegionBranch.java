@@ -127,11 +127,22 @@ class CharacterRegionBranch extends BranchPackage {
                 index,
                 part.holdsSlot() ? ArpgUtility.toEnum(part.getHeldSlot(), FeatureSlot.class) : null,
                 part.getBones(),
+                resolvePartBoneNames(rigHandle, part.getBones()),
                 false,
                 resolveSided(rigHandle, part.getBones()),
                 part.takesFace(),
                 EditorSetting.CHARACTER_REGION_NO_PREFIX,
                 shownFeatures);
+    }
+
+    private String[] resolvePartBoneNames(RigHandle rigHandle, int[] partBones) {
+
+        String[] names = new String[partBones.length];
+
+        for (int i = 0; i < partBones.length; i++)
+            names[i] = rigHandle.getBone(partBones[i]).getName();
+
+        return names;
     }
 
     private CharacterRegionStruct buildHairRegion(int index) {
@@ -141,6 +152,7 @@ class CharacterRegionBranch extends BranchPackage {
                 index,
                 FeatureSlot.HAIR,
                 new int[0],
+                new String[0],
                 true,
                 false,
                 false,
@@ -318,7 +330,7 @@ class CharacterRegionBranch extends BranchPackage {
 
             int parent = rigHandle.getBone(i).getParentIndex();
 
-            regionBones.add(isRoot(region, rigHandle, rigHandle.getBone(i).getName())
+            regionBones.add(isRoot(region, rigHandle.getBone(i).getName())
                     || (parent != EngineSetting.INDEX_NOT_FOUND && regionBones.getBoolean(parent)));
         }
     }
@@ -336,7 +348,7 @@ class CharacterRegionBranch extends BranchPackage {
         for (int bone = boneIndex;
                 bone != EngineSetting.INDEX_NOT_FOUND;
                 bone = rigHandle.getBone(bone).getParentIndex())
-            if (isRoot(region, rigHandle, rigHandle.getBone(bone).getName()))
+            if (isRoot(region, rigHandle.getBone(bone).getName()))
                 return true;
 
         return false;
@@ -355,25 +367,15 @@ class CharacterRegionBranch extends BranchPackage {
             return false;
 
         for (int bone = boneIndex; bone != EngineSetting.INDEX_NOT_FOUND; bone = characterRigBranch.getParent(bone))
-            if (isRoot(region, rigHandle, characterRigBranch.getBoneName(bone)))
+            if (isRoot(region, characterRigBranch.getBoneName(bone)))
                 return true;
 
         return false;
     }
 
     // Whether a bone, by name, is one the rig names for the region's part
-    private boolean isRoot(CharacterRegionStruct region, RigHandle rigHandle, String boneName) {
-
-        if (!region.holdsBody())
-            return false;
-
-        int[] partBones = region.getPartBones();
-
-        for (int i = 0; i < partBones.length; i++)
-            if (rigHandle.getBone(partBones[i]).getName().equals(boneName))
-                return true;
-
-        return false;
+    private boolean isRoot(CharacterRegionStruct region, String boneName) {
+        return region.holdsBody() && region.isPartBone(boneName);
     }
 
     // Sides \\
@@ -397,12 +399,12 @@ class CharacterRegionBranch extends BranchPackage {
         if (!region.holdsBody())
             return EngineSetting.INDEX_NOT_FOUND;
 
-        int[] partBones = region.getPartBones();
+        String[] partBoneNames = region.getPartBoneNames();
         boolean sided = region.isSided();
 
-        for (int i = 0; i < partBones.length; i++)
-            if (!sided || side.namesBone(rigHandle.getBone(partBones[i]).getName()))
-                return partBones[i];
+        for (int i = 0; i < partBoneNames.length; i++)
+            if (rigHandle.hasBone(partBoneNames[i]) && (!sided || side.namesBone(partBoneNames[i])))
+                return rigHandle.getBoneIndex(partBoneNames[i]);
 
         return EngineSetting.INDEX_NOT_FOUND;
     }

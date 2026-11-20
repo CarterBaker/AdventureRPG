@@ -90,6 +90,13 @@ Pictures pressed onto the image, as a painting tool's stamp library presses them
 
 ## Traps
 
+- **A map is painted by its own rule** (`ImageMap.getPaintRule`, `MapPaintRule`), set as the stroke begins
+  (`ImageEditorManager.beginBrush`), never on the albedo's layers: colour maps take the paint colour; level maps turn
+  Paint into Raise or Lower by whether the colour is brighter or darker than mid grey, its Strength scaled by how far
+  it lies from it, so a value only moves within its range and keeps its grey; normal maps turn it into Relief
+  (`ImageEditBranch.reliefPixel`), the tip's coverage slope bending each normal in slope space by the brush's radius
+  and `IMAGE_RELIEF_SLOPE`, raising for a bright colour and carving for a dark one, the DirectX map's green flipped,
+  every normal laid back unit length.
 - **Strokes on a layer are transparent strokes** (`ImageBrushStruct.setTransparent`): paint lays over by alpha, Erase
   wears alpha away. On a map, Erase lays the map's neutral colour. The World Editor's brush never sets it.
 - **Pixel edits never move the manager's revision**; only structure, settings, history and status do, so the rows are

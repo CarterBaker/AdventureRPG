@@ -215,7 +215,8 @@ public abstract class CharacterToolContext extends ContextPackage
     // tool picks from is listed first, the values of what is picked after it
     @Override
     public int getRowRevision() {
-        return characterEditorManager.getRevision() + materialsManager.getRevision();
+        return characterEditorManager.getRevision() + materialsManager.getRevision()
+                + characterEditorManager.getBoneDisplayRevision();
     }
 
     // The tab's own title follows in parentheses, naming the mode
@@ -226,8 +227,12 @@ public abstract class CharacterToolContext extends ContextPackage
 
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
         characterEditorManager.buildListRows(rows);
         characterEditorManager.buildPropertyRows(rows);
+
+        if (getMode().drawsBones())
+            characterEditorManager.buildBoneDisplayRows(rows);
     }
 
     @Override

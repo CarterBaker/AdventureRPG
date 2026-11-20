@@ -4,14 +4,20 @@ import java.util.Objects;
 
 import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.race.RaceData;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.animationeditorpipeline.animationdocument.AnimationDocumentInstance;
 import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
+import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
+import editor.bootstrap.charactereditorpipeline.util.CharacterBoneKind;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
+import editor.runtime.characterview.render.CharacterBoneSource;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.vectors.Vector3;
 
-public class AnimationEditorPreviewSystem extends SystemPackage {
+public class AnimationEditorPreviewSystem extends SystemPackage implements CharacterBoneSource {
 
     /*
      * Drives this tab's character viewport from the animation editor. The
@@ -19,13 +25,15 @@ public class AnimationEditorPreviewSystem extends SystemPackage {
      * its preview or the character changes; each frame it is posed straight
      * from the preview clip at the playhead, or held at rest while the clip
      * has nothing to play or none is open, so the character — the player at
-     * first — always stands in view, and every joint is marked, the selected
+     * first — always stands in view, and every bone is drawn as the
+     * Properties tab's Bone Display says, in its kind's colour, the selected
      * bone highlighted.
      */
 
     // Internal
     private AnimationEditorManager animationEditorManager;
     private EntityManager entityManager;
+    private CharacterEditorManager characterEditorManager;
     private CharacterViewPoseSystem characterViewPoseSystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
 
@@ -40,6 +48,7 @@ public class AnimationEditorPreviewSystem extends SystemPackage {
     protected void get() {
         this.animationEditorManager = get(AnimationEditorManager.class);
         this.entityManager = get(EntityManager.class);
+        this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterViewPoseSystem = get(CharacterViewPoseSystem.class);
         this.characterViewRenderSystem = get(CharacterViewRenderSystem.class);
     }
@@ -85,10 +94,59 @@ public class AnimationEditorPreviewSystem extends SystemPackage {
     // Markers \\
 
     private void pushMarkers() {
+        characterViewRenderSystem.addBones(
+                this,
+                characterEditorManager.getBoneDisplay(),
+                characterEditorManager.getBoneColors());
+    }
 
-        int boneCount = characterViewPoseSystem.getRaceData().getRigHandle().getBoneCount();
+    // Bones \\
 
-        for (int i = 0; i < boneCount; i++)
-            characterViewRenderSystem.addJointMarker(i, i == animationEditorManager.getSelectedBoneIndex());
+    @Override
+    public int getBoneCount() {
+        return getRig().getBoneCount();
+    }
+
+    @Override
+    public int getBoneParent(int boneIndex) {
+        return getRig().getBone(boneIndex).getParentIndex();
+    }
+
+    @Override
+    public String getBoneName(int boneIndex) {
+        return getRig().getBone(boneIndex).getName();
+    }
+
+    @Override
+    public Matrix4 getBoneWorldMatrix(int boneIndex) {
+        return characterViewPoseSystem.getAnimationStateHandle().getWorldMatrix(boneIndex);
+    }
+
+    // The bone's width, the mean of its size across
+    @Override
+    public float getBoneSize(int boneIndex) {
+
+        Vector3 size = getRig().getBone(boneIndex).getSize();
+
+        return (size.x + size.z) * 0.5f;
+    }
+
+    @Override
+    public boolean isBoneShown(int boneIndex) {
+        return true;
+    }
+
+    @Override
+    public boolean isFacialPartBone(int boneIndex) {
+        return CharacterBoneKind.isFacialPartBone(getRig(), getBoneName(boneIndex));
+    }
+
+    @Override
+    public int getSelectedBone() {
+        return animationEditorManager.getSelectedBoneIndex();
+    }
+
+    private RigHandle getRig() {
+        return characterViewPoseSystem.getRaceData().getRigHandle();
     }
 }

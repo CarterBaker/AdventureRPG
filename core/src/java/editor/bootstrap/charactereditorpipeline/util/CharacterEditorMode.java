@@ -39,14 +39,16 @@ public enum CharacterEditorMode {
             false,
             false,
             false,
+            false,
             CharacterEditorPose.IDLE,
             null),
-    EQUIPMENT(EditorSetting.CHARACTER_EDITOR_MODE_EQUIPMENT, null, false, false, false, null, null),
+    EQUIPMENT(EditorSetting.CHARACTER_EDITOR_MODE_EQUIPMENT, null, false, false, false, false, null, null),
     MESH(
             EditorSetting.CHARACTER_EDITOR_MODE_MESH,
             ToolCanvas.CHARACTER_MESH,
             true,
             false,
+            true,
             true,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_MESH_HINT),
@@ -56,6 +58,7 @@ public enum CharacterEditorMode {
             true,
             false,
             true,
+            false,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_TOPOLOGY_HINT),
     SCULPT(
@@ -64,13 +67,23 @@ public enum CharacterEditorMode {
             true,
             false,
             false,
+            false,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_SCULPT_HINT),
-    WEIGHTS(EditorSetting.CHARACTER_EDITOR_MODE_WEIGHTS, ToolCanvas.CHARACTER_WEIGHTS, true, false, true, null, null),
+    WEIGHTS(
+            EditorSetting.CHARACTER_EDITOR_MODE_WEIGHTS,
+            ToolCanvas.CHARACTER_WEIGHTS,
+            true,
+            false,
+            true,
+            true,
+            null,
+            null),
     PAINT(
             EditorSetting.CHARACTER_EDITOR_MODE_PAINT,
             ToolCanvas.CHARACTER_PAINT,
             true,
+            false,
             false,
             false,
             null,
@@ -81,6 +94,7 @@ public enum CharacterEditorMode {
             true,
             true,
             false,
+            false,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_HAIR_HINT),
     RIG(
@@ -89,6 +103,7 @@ public enum CharacterEditorMode {
             false,
             true,
             false,
+            true,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_RIG_HINT),
     UV(
@@ -97,6 +112,7 @@ public enum CharacterEditorMode {
             true,
             false,
             true,
+            false,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_UV_HINT);
 
@@ -109,6 +125,7 @@ public enum CharacterEditorMode {
     private final boolean meshMode;
     private final boolean bindPose;
     private final boolean vertexOverlay;
+    private final boolean drawsBones;
     private final CharacterEditorPose standingPose;
     private final String hint;
 
@@ -120,6 +137,7 @@ public enum CharacterEditorMode {
             boolean meshMode,
             boolean bindPose,
             boolean vertexOverlay,
+            boolean drawsBones,
             CharacterEditorPose standingPose,
             String hint) {
         this.label = label;
@@ -127,6 +145,7 @@ public enum CharacterEditorMode {
         this.meshMode = meshMode;
         this.bindPose = bindPose;
         this.vertexOverlay = vertexOverlay;
+        this.drawsBones = drawsBones;
         this.standingPose = standingPose;
         this.hint = hint;
     }
@@ -198,6 +217,12 @@ public enum CharacterEditorMode {
     // True for a mode that takes tools, rather than one shaping the whole character's look
     public boolean isModeling() {
         return toolCanvas != null;
+    }
+
+    // True for a mode whose viewport draws the rig's bones, and lists how they are drawn in the Properties tab: Mesh
+    // and Weights the posed character's, Rig the rig being edited
+    public boolean drawsBones() {
+        return drawsBones;
     }
 
     // True for a mode whose tab frames the region picked and shares its view with such tabs stacked with it

@@ -15,9 +15,8 @@ public enum ToolOption {
      * Width how long and how wide a new strand of hair grows. Mirror makes
      * every edit to one side of a character to its twin across the body as
      * well, X-Ray picks through the surface as if it were glass, Wireframe
-     * draws the edges of the mesh worked over its surface, Bones chooses
-     * how the rig's bones are drawn, and Shape which shape a viewer shows a
-     * material on. Each canvas declares the range, step and
+     * draws the edges of the mesh worked over its surface, and Shape which
+     * shape a viewer shows a material on. Each canvas declares the range, step and
      * starting value of every option it honours, since each measures in its
      * own units. Most options belong to the tools that carry them; a canvas
      * option belongs to every tool on the canvases that honour it, and is
@@ -36,7 +35,6 @@ public enum ToolOption {
     MIRROR(EditorSetting.TOOL_OPTION_MIRROR, true),
     XRAY(EditorSetting.TOOL_OPTION_XRAY, true),
     WIREFRAME(EditorSetting.TOOL_OPTION_WIREFRAME, true),
-    BONES(EditorSetting.TOOL_OPTION_BONES, true),
     SHAPE(EditorSetting.TOOL_OPTION_SHAPE, true);
 
     // Values

@@ -15,6 +15,7 @@ import editor.bootstrap.imagepipeline.util.ImageColorUtility;
 import editor.bootstrap.imagepipeline.util.ImageMap;
 import editor.bootstrap.imagepipeline.util.ImageStroke;
 import editor.bootstrap.imagepipeline.util.MapGenerateUtility;
+import editor.bootstrap.imagepipeline.util.MapPaintRule;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
@@ -525,6 +526,8 @@ public class ImageEditorManager extends ManagerPackage {
         this.strokeDocument = null;
     }
 
+    // A stroke of the tool's kind; painting a map takes the map's own rule (MapPaintRule) by the paint colour's
+    // brightness, so a level map is raised or lowered and a normal map bent, each kept within its range
     private void beginBrush(ImageDocumentInstance target, EditorTool tool, int pixelX, int pixelY) {
 
         ImageStroke stroke = tool2Stroke[tool.ordinal()];
@@ -533,15 +536,20 @@ public class ImageEditorManager extends ManagerPackage {
             return;
 
         ToolCanvas canvas = ToolCanvas.IMAGE_EDITOR;
-        boolean layer = activeProject.getShownMap() == ImageMap.ALBEDO;
+        ImageMap shownMap = activeProject.getShownMap();
+        boolean layer = shownMap == ImageMap.ALBEDO;
+        MapPaintRule rule = shownMap.getPaintRule();
+        float brightness = characterEditorManager.getPaintHSB(EditorSetting.IMAGE_PAINT_HSB_BRIGHTNESS);
+        boolean ruled = stroke == ImageStroke.PAINT && !layer;
 
         brush.set(
                 brushManager.getActiveBrush(),
-                stroke,
+                ruled ? rule.resolveStroke(brightness) : stroke,
                 Math.round(toolManager.getOption(canvas, ToolOption.SIZE)),
-                toolManager.getOption(canvas, ToolOption.STRENGTH),
+                toolManager.getOption(canvas, ToolOption.STRENGTH) * (ruled ? rule.resolveAmount(brightness) : 1f),
                 toolManager.getOption(canvas, ToolOption.TWIST),
                 canvas.isBlending());
+        brush.setRelief(rule.resolveRelief(brightness), rule.getGreen());
         brush.setTransparent(layer);
         brush.setColor(stroke == ImageStroke.ERASE && !layer
                 ? activeProject.getShownMap().getNeutralColor()

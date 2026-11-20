@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 140
-Task: EditorWorkflowFixes
+Delivery: 141
+Task: BonesKeysMapsRegions
 Applied: 2026-11-20
 
 ## Log
@@ -150,3 +150,4 @@ Applied: 2026-11-20
 - 138, 2026-11-20, MaterialsPackScan
 - 139, 2026-11-20, GeneralEditorFixes
 - 140, 2026-11-20, EditorWorkflowFixes
+- 141, 2026-11-20, BonesKeysMapsRegions

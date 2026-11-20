@@ -1,6 +1,7 @@
 package editor.runtime.animationeditor;
 
 import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
+import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
@@ -48,6 +49,7 @@ public class AnimationEditorContext extends ContextPackage
     private CharacterViewPoseSystem characterViewPoseSystem;
     private ViewCameraSystem viewCameraSystem;
     private AnimationEditorManager animationEditorManager;
+    private CharacterEditorManager characterEditorManager;
     private AnimationEditorPreviewSystem animationEditorPreviewSystem;
     private AnimationEditorPoseSystem animationEditorPoseSystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
@@ -75,6 +77,7 @@ public class AnimationEditorContext extends ContextPackage
     @Override
     protected void get() {
         this.animationEditorManager = get(AnimationEditorManager.class);
+        this.characterEditorManager = get(CharacterEditorManager.class);
     }
 
     @Override
@@ -98,7 +101,7 @@ public class AnimationEditorContext extends ContextPackage
 
     @Override
     public int getRowRevision() {
-        return animationEditorManager.getRevision();
+        return animationEditorManager.getRevision() + characterEditorManager.getBoneDisplayRevision();
     }
 
     @Override
@@ -106,11 +109,13 @@ public class AnimationEditorContext extends ContextPackage
         return EditorSetting.ANIMATION_PROPERTIES_TITLE;
     }
 
-    // The bone picked first, its key and values at the playhead, then the clip and every bone to pick from
+    // The bone picked first, its key and values at the playhead, then the clip and every bone to pick from, then how
+    // the bones are drawn
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
         animationEditorManager.buildPropertyRows(rows);
         animationEditorManager.buildListRows(rows);
+        characterEditorManager.buildBoneDisplayRows(rows);
     }
 
     @Override
