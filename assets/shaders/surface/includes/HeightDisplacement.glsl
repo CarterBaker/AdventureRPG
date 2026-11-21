@@ -10,10 +10,14 @@
 // blocks of a natural surface draw a different spin of the tile, so without that window the sampled height
 // steps discontinuously at every internal block line and cracks the surface inside a single merged quad. The
 // height is read at the mip level the vertex spacing calls for, so a coarse patch never aliases a fine map.
-// Displacement rides the flat geometric normal, never the beveled one.
+// Relief is measured from the tile's own mean height, its one-texel mip, the midlevel a displacement map is
+// neutral at: a tile with no height map reads the alias default of zero everywhere and so displaces nothing,
+// and an authored map whose mean sits off half never sinks or raises a whole block against the window holding
+// its edges. Displacement rides the flat geometric normal, never the beveled one.
 
 const float HEIGHT_DISPLACE_SCALE    = 0.12;
 const float HEIGHT_BLOCK_EDGE_MARGIN = 0.25;
+const float HEIGHT_MEAN_LOD          = log2(TILE_BASE_SIZE);
 
 float heightBlockWindow(vec3 localPos, vec3 normal) {
     vec3 axis = abs(normal);
@@ -39,8 +43,9 @@ vec3 applyHeightDisplacement(
     float    footprint = spacing * TILE_BASE_SIZE;
     TileRead tile      = resolveTileRead(tileID, footprint);
     float    h         = sampleTileMaterialLod(tile, uv, log2(max(footprint, TILE_MIN_FOOTPRINT))).a;
+    float    midlevel  = sampleTileMaterialLod(tile, uv, HEIGHT_MEAN_LOD).a;
 
-    return worldPos + normal * ((h - 0.5) * HEIGHT_DISPLACE_SCALE * weight * window);
+    return worldPos + normal * ((h - midlevel) * HEIGHT_DISPLACE_SCALE * weight * window);
 }
 
 #endif
