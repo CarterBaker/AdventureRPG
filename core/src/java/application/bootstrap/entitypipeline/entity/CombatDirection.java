@@ -8,7 +8,8 @@ public enum CombatDirection {
      * ahead — the thrust, and the middle guard that meets it. Two entities
      * face each other, so a blow from the attacker's left arrives on the
      * defender's right; mirror() turns one into the other, and a guard
-     * catches a blow only when it is held toward the attack's mirror. A
+     * catches a blow only when it is held toward the attack's mirror;
+     * opposite() is the side turned right round, the guard a step raises. A
      * weapon names each by its lower-case name and need not have them all:
      * fallback() is the side asked for instead when it lacks one, and the
      * fallbacks run through every side once, so following them always
@@ -32,6 +33,17 @@ public enum CombatDirection {
             case LEFT -> RIGHT;
             case RIGHT -> LEFT;
             default -> this;
+        };
+    }
+
+    // The side turned right round — up to low, left to right — none staying straight ahead
+    public CombatDirection opposite() {
+        return switch (this) {
+            case UP -> DOWN;
+            case DOWN -> UP;
+            case LEFT -> RIGHT;
+            case RIGHT -> LEFT;
+            case NEUTRAL -> NEUTRAL;
         };
     }
 

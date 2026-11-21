@@ -11,7 +11,6 @@ import application.bootstrap.entitypipeline.entitymanager.EntityManager;
 import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import application.bootstrap.entitypipeline.player.MenuViewStruct;
 import application.bootstrap.entitypipeline.player.PlayerCameraStruct;
-import application.bootstrap.entitypipeline.player.PlayerGestureStruct;
 import application.bootstrap.entitypipeline.player.PlayerPhotoStruct;
 import application.bootstrap.entitypipeline.player.UseTargetStruct;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
@@ -63,11 +62,10 @@ public class PlayerManager extends ManagerPackage {
      * per-window entry and taking the player out of the world when its window
      * closes. After movement the player's input reaches the world through
      * PlacementManager and its fighting — attacks, aiming and blocking —
-     * through CombatManager, the side of each read from the mouse by
+     * through CombatManager, the side of each read from the player's step by
      * PlayerGestureSystem; a raised guard or a stagger holds the player to a
-     * walk and an attack keeps it from sprinting. While a gesture reads, the
-     * view holds still, and behind a raised guard it turns slower, so a swipe
-     * steers the weapon instead of the camera. Aboard a vehicle the view
+     * walk and an attack keeps it from sprinting. Behind a raised guard the
+     * view turns slower. Aboard a vehicle the view
      * turns with the deck, a player at the helm steers with its sideways
      * input, and the activate binding works the vehicle control the player
      * faces before it reaches PlacementManager. A teleported player lets go
@@ -113,7 +111,6 @@ public class PlayerManager extends ManagerPackage {
     private Int2ObjectOpenHashMap<CameraInstance> windowID2Camera;
     private Int2ObjectOpenHashMap<RawInputHandle> windowID2RawInput;
     private Int2ObjectOpenHashMap<WindowInstance> windowID2Window;
-    private Int2ObjectOpenHashMap<PlayerGestureStruct> windowID2Gesture;
     private Int2ObjectOpenHashMap<PlayerCameraStruct> windowID2CameraState;
     private Int2BooleanOpenHashMap windowID2VerifyPlayerPosition;
     private Int2BooleanOpenHashMap windowID2FreeCamera;
@@ -182,7 +179,6 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2Camera = new Int2ObjectOpenHashMap<>();
         this.windowID2RawInput = new Int2ObjectOpenHashMap<>();
         this.windowID2Window = new Int2ObjectOpenHashMap<>();
-        this.windowID2Gesture = new Int2ObjectOpenHashMap<>();
         this.windowID2CameraState = new Int2ObjectOpenHashMap<>();
         this.windowID2VerifyPlayerPosition = new Int2BooleanOpenHashMap();
         this.windowID2FreeCamera = new Int2BooleanOpenHashMap();
@@ -272,7 +268,6 @@ public class PlayerManager extends ManagerPackage {
         windowID2Camera.put(windowID, window.getActiveCamera());
         windowID2RawInput.put(windowID, rawInput);
         windowID2Window.put(windowID, window);
-        windowID2Gesture.put(windowID, new PlayerGestureStruct());
         windowID2CameraState.put(windowID, new PlayerCameraStruct());
         windowID2VerifyPlayerPosition.put(windowID, true);
         windowID2FreeCamera.put(windowID, false);
@@ -298,7 +293,6 @@ public class PlayerManager extends ManagerPackage {
         windowID2Camera.remove(windowID);
         windowID2RawInput.remove(windowID);
         windowID2Window.remove(windowID);
-        windowID2Gesture.remove(windowID);
         windowID2CameraState.remove(windowID);
         windowID2VerifyPlayerPosition.remove(windowID);
         windowID2FreeCamera.remove(windowID);
@@ -399,7 +393,6 @@ public class PlayerManager extends ManagerPackage {
             EntityInstance player,
             CameraInstance camera,
             RawInputHandle raw,
-            PlayerGestureStruct gesture,
             boolean inputLocked) {
 
         if (photo.getPose() != null)
@@ -411,12 +404,10 @@ public class PlayerManager extends ManagerPackage {
 
         if (inputLocked) {
             player.getEntityInputHandle().clear();
-            gesture.reset();
             return;
         }
 
-        playerInputSystem.translate(raw, player.getEntityInputHandle(), gesture);
-        gesture.reset();
+        playerInputSystem.translate(raw, player.getEntityInputHandle());
         photoCameraBranch.fly(player, photo, eyePosition, camera);
     }
 
@@ -557,10 +548,7 @@ public class PlayerManager extends ManagerPackage {
             return;
         }
 
-        PlayerGestureStruct gesture = windowID2Gesture.get(windowID);
-
         if (windowID2CharacterPreview.get(windowID)) {
-            gesture.reset();
             cameraShakeBranch.calm(camera, cameraState);
             updateCharacterPreview(windowID, player, camera);
             return;
@@ -570,7 +558,7 @@ public class PlayerManager extends ManagerPackage {
 
         if (photo != null) {
             cameraShakeBranch.calm(camera, cameraState);
-            updatePhoto(photo, player, camera, raw, gesture,
+            updatePhoto(photo, player, camera, raw,
                     windowID2Window.get(windowID).getMenuListHandle().isInputLocked());
             return;
         }
@@ -578,7 +566,6 @@ public class PlayerManager extends ManagerPackage {
         turnWithDeck(player, camera);
 
         if (windowID2Window.get(windowID).getMenuListHandle().isInputLocked()) {
-            gesture.reset();
             cameraShakeBranch.calm(camera, cameraState);
             return;
         }
@@ -587,11 +574,10 @@ public class PlayerManager extends ManagerPackage {
         EntityInputHandle input = player.getEntityInputHandle();
         boolean firstPerson = isFirstPerson(windowID);
 
-        if (windowID2Performing.get(windowID)) {
+        if (windowID2Performing.get(windowID))
             input.clear();
-            gesture.reset();
-        } else
-            playerInputSystem.translate(raw, input, gesture);
+        else
+            playerInputSystem.translate(raw, input);
 
         input.setStrafe(firstPerson);
         input.setTwist(firstPerson && !combatManager.isEngaged(player));
@@ -1135,17 +1121,13 @@ public class PlayerManager extends ManagerPackage {
         return windowID2Camera.get(windowID);
     }
 
-    // How much of the mouse's travel turns the window's view — none while a gesture reads, less behind a guard
+    // How much of the mouse's travel turns the window's view — less behind a guard
     public float getLookScaleForWindow(int windowID) {
 
-        PlayerGestureStruct gesture = windowID2Gesture.get(windowID);
         EntityInstance player = windowID2Player.get(windowID);
 
-        if (gesture == null || player == null)
+        if (player == null)
             return EngineSetting.LOOK_SCALE_FULL;
-
-        if (gesture.isReading())
-            return EngineSetting.GESTURE_READ_LOOK_SCALE;
 
         return combatManager.isGuarding(player) ? EngineSetting.GUARD_LOOK_SCALE : EngineSetting.LOOK_SCALE_FULL;
     }

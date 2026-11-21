@@ -22,7 +22,7 @@ public class EntityInputHandle extends HandlePackage {
      * fly; blockAction is held for as long as the guard stays up.
      * attackAction is the moment a weapon attack is called for, from
      * attackDirection, and guardDirection the side a guard is held toward —
-     * the player reads both from a mouse swipe, an AI sets them outright.
+     * the player reads both from its step, an AI sets them outright.
      */
 
     // Movement
