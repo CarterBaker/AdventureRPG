@@ -2414,7 +2414,7 @@ public class EngineSetting {
     public static final int TREE_STAND_IN_FACETED_CELLS_PER_SIDE = 32;
     public static final int TREE_STAND_IN_FACETED_SIDES = 6;
     public static final int TREE_STAND_IN_FACETED_TRUNK_SIDES = 4;
-    public static final int TREE_STAND_IN_MIN_CELLS_PER_SIDE = 4;
+    public static final int TREE_STAND_IN_MIN_CELLS_PER_SIDE = 2;
     public static final float TREE_STAND_IN_PLAIN_CROWN_CELLS = 0.35f;
     public static final int TREE_STAND_IN_PLAIN_CELLS_PER_SIDE = 16;
     public static final int TREE_STAND_IN_PLAIN_SIDES = 4;

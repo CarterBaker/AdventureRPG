@@ -9,8 +9,10 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
 
     /*
      * Lock guarding one macro chunk's CPU geometry between its build and its
-     * upload: the land mesh, the bark and leaves of the tree models a tile
-     * near the grid draws, and the tile's patch of the grid's open water
+     * upload: the land mesh, the tree mesh its canopy and stand-ins are laid
+     * in apart from the land, so the tile's trees can fade from one look to
+     * the next while its ground does not, the bark and leaves of the tree
+     * models a tile near the grid draws, and the tile's patch of the grid's open water
      * mask, one RGBA texel per mask cell. A reserved build keeps the macro
      * from being uploaded or recycled until endWork() clears it, and built
      * marks geometry waiting for the GPU together with the resolution it was
@@ -21,6 +23,8 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
     // Geometry
     private FloatArrayList vertices;
     private ShortArrayList indices;
+    private FloatArrayList treeVertices;
+    private ShortArrayList treeIndices;
     private byte[] waterMask;
     private FloatArrayList treeBark;
     private FloatArrayList treeLeaves;
@@ -39,6 +43,8 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
     protected void create() {
         this.vertices = new FloatArrayList();
         this.indices = new ShortArrayList();
+        this.treeVertices = new FloatArrayList();
+        this.treeIndices = new ShortArrayList();
         this.treeBark = new FloatArrayList();
         this.treeLeaves = new FloatArrayList();
         this.waterMask = new byte[EngineSetting.MACRO_WATER_MASK_TEXELS_PER_TILE
@@ -93,6 +99,8 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
     public void clearGeometry() {
         vertices.clear();
         indices.clear();
+        treeVertices.clear();
+        treeIndices.clear();
         treeBark.clear();
         treeLeaves.clear();
         this.built = false;
@@ -106,6 +114,14 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
 
     public ShortArrayList getIndices() {
         return indices;
+    }
+
+    public FloatArrayList getTreeVertices() {
+        return treeVertices;
+    }
+
+    public ShortArrayList getTreeIndices() {
+        return treeIndices;
     }
 
     public byte[] getWaterMask() {

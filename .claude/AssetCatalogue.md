@@ -565,6 +565,8 @@ One line per session that changed this file: the date, what was added or removed
   grid's rim, closing the pale seam) and `shaders/trees/includes/TreeFar.glsl` (a macro tile's tree models stand on
   that ground); regenerated `MacroTerrainShader.vsh`, `TreeFade.glsl`, `TreeBarkShader.vsh` and `TreeLeafShader.vsh`.
 - 2026-11-21: Stamp lanes. Regenerated `schemas/Rigs.arpg` (the `stamps` records of the bones each joined part brought).
+- 2026-11-21: Macro tree fades. Regenerated `shaders/surface/macro/MacroTerrainShader.fsh` (a tile's canopy and
+  stand-ins fade through the tree dither when it is built again).
 
 ## Textures and Sprites (2433 files)
 

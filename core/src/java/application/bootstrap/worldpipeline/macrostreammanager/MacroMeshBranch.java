@@ -20,14 +20,15 @@ public class MacroMeshBranch extends BranchPackage {
      * wherever any corner of the cell holding it has the sea over it, so the
      * water plane always reaches the shore the land rises out of, and a dry
      * basin below sea level, with no open corner, stays dry. Woods are a
-     * second grid laid after the land in the same buffers: every lattice
+     * grid of their own in the tile's tree buffers, apart from the land so
+     * the tile's trees fade as a whole when it is built again: every lattice
      * point under a canopy rises to it in the woods' colors and every other
      * one sinks below the ground, and only a cell with a canopy corner is
      * drawn, so a forest's edge breaks off in jagged slopes into the land.
-     * Settlements are a third grid laid the same way after the woods, their
+     * Settlements are a grid laid the same way after the land, their
      * structures, walls and bridges rising out of the land in their own
-     * colors. Nearer tiles lay their trees as faceted shapes instead of a
-     * canopy, whole shapes only and every crown before any trunk, so a tile
+     * colors. Nearer tiles lay their trees as faceted shapes in the tree
+     * buffers instead of a canopy, whole shapes only and every crown before any trunk, so a tile
      * crowded past what one mesh can index gives up trunks before crowns.
      * Every vertex names the chunk of the tile it yields to once the chunk
      * grid draws it: a tree's shapes name the chunk it roots in, and ground,
@@ -204,8 +205,7 @@ public class MacroMeshBranch extends BranchPackage {
 
     // Stand-Ins \\
 
-    // Every tree's shapes laid after the land, canopy and settlements in the same buffers, as many as one mesh can
-    // index
+    // Every tree's shapes laid after the canopy in the tile's tree buffers, as many as one mesh can index
     void assembleStandIns(MacroBuildAsyncContainer scratch, FloatArrayList vertices, ShortArrayList indices) {
 
         MacroStandInStruct crowns = scratch.standInCrowns;

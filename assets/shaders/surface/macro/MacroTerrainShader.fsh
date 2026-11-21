@@ -21,7 +21,9 @@ layout(location = 2) out vec4 gMaterial;
 // fills every chunk the grid has not drawn — beyond its footprint, along its rim, and wherever streaming has not caught
 // up — and never overlaps one. Over a chunk the grid draws, a tree stand-in shows only across the hand-over band
 // near the grid's rim, rising through the dither its tree's own look falls away through (TreeFade), so the forest
-// passes from the grid's trees to the stand-ins by distance and never at a chunk's edge. The facet normal comes from screen-space derivatives of the flat
+// passes from the grid's trees to the stand-ins by distance and never at a chunk's edge. A tile's canopy and stand-ins
+// are a model of their own, and when the tile is built again they fall away through the dither their new ones rise
+// through (u_treeFade), so trees never change their look at once; the land's fade is always zero. The facet normal comes from screen-space derivatives of the flat
 // position, which gives the low poly look without any normal data. A heightfield never faces down, while a tree
 // stand-in is a closed faceted shape, so its facet faces the camera and a crown's underside turns down into its
 // slope color. A gentle facet
@@ -47,6 +49,9 @@ float resolveSunVisibility() {
 
 void main() {
     bool standIn = vCoverChunk >= 0;
+
+    if (isTreeFaded())
+    discard;
 
     if (standIn ? isChunkDrawnByGrid(vCoverChunk) && isStandInHeldBack(vLocalPos) : isDrawnByChunkGrid(vTilePos))
     discard;

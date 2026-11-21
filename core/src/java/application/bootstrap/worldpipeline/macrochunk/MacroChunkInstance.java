@@ -34,6 +34,8 @@ public class MacroChunkInstance extends InstancePackage {
     private MeshInstance meshInstance;
     private ModelInstance modelInstance;
     private ObjectArrayList<ModelInstance> treeModels;
+    private ObjectArrayList<ModelInstance> fadingTreeModels;
+    private float treeFadeAge;
     private UBOInstance positionUBO;
     private UBOInstance coverageUBO;
     private boolean rendered;
@@ -68,6 +70,7 @@ public class MacroChunkInstance extends InstancePackage {
         this.macroDataSyncContainer = create(MacroDataSyncContainer.class);
         this.coverageWords = new int[EngineSetting.MACRO_COVERAGE_WORD_COUNT];
         this.treeModels = new ObjectArrayList<>();
+        this.fadingTreeModels = new ObjectArrayList<>();
     }
 
     // Constructor \\
@@ -117,6 +120,10 @@ public class MacroChunkInstance extends InstancePackage {
 
     public void setHasGeometry(boolean hasGeometry) {
         this.hasGeometry = hasGeometry;
+    }
+
+    public void setTreeFadeAge(float treeFadeAge) {
+        this.treeFadeAge = treeFadeAge;
     }
 
     // Target \\
@@ -225,9 +232,20 @@ public class MacroChunkInstance extends InstancePackage {
         return targetTreeModels;
     }
 
-    // The bark and leaf models of the trees the tile draws as models, empty while it draws none
+    // Every model the tile draws its trees with — its canopy and stand-ins, and the bark and leaves of the trees it
+    // draws as models — empty while it draws none
     public ObjectArrayList<ModelInstance> getTreeModels() {
         return treeModels;
+    }
+
+    // The models its trees were drawn with before its last build, falling away while its new ones rise
+    public ObjectArrayList<ModelInstance> getFadingTreeModels() {
+        return fadingTreeModels;
+    }
+
+    // How long since its trees last changed, the age their fade runs on
+    public float getTreeFadeAge() {
+        return treeFadeAge;
     }
 
     public float getAngleFromCenter() {

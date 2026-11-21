@@ -703,9 +703,19 @@ public class WorldRenderManager extends ManagerPackage {
         if (age < 0f)
             return EngineSetting.TREE_FADE_STEPS;
 
+        return resolveTreeFadeStep(age);
+    }
+
+    // How far a fade aged this long has run, in steps of the dither pattern, shared with macro terrain's trees
+    int resolveTreeFadeStep(float age) {
         return Math.min(
                 (int) (age / EngineSetting.TREE_FADE_SECONDS * EngineSetting.TREE_FADE_STEPS),
                 EngineSetting.TREE_FADE_STEPS);
+    }
+
+    // The fade a look rising in, or one falling away, takes at a step of the dither pattern
+    Float getTreeFade(int step, boolean rising) {
+        return rising ? treeFadeRising[step] : treeFadeFalling[step];
     }
 
     private void applyTreeFade(Int2ObjectOpenHashMap<ObjectArrayList<RenderEntry>> materialEntries, Float fade) {

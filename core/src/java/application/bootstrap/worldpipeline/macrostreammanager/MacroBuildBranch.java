@@ -27,10 +27,11 @@ public class MacroBuildBranch extends BranchPackage {
      * chunk placement roots it, as a model of itself in its own bark and
      * leaves while the tile lies near the grid and as a flat stand-in beyond;
      * a coarser one raises a jagged canopy over the
-     * woods instead, sampled by MacroCanopyBranch. Either is laid into the
-     * tile's mesh apart from the land, and settlements raise their buildings,
-     * walls and bridges and lay their roads, sampled by MacroSettlementBranch
-     * from their plans and laid after the woods. No block, neighbor or chunk
+     * trees that truly stand there instead, sampled by MacroCanopyBranch.
+     * Either is laid into the tile's tree mesh apart from the land, and
+     * settlements raise their buildings, walls and bridges and lay their
+     * roads, sampled by MacroSettlementBranch from their plans and laid
+     * after the land. No block, neighbor or chunk
      * is ever touched, and no tree is ever grown.
      * The target is read on the main thread when the build is reserved,
      * sampling runs outside the macro's lock since a reserved build pins the
@@ -96,12 +97,17 @@ public class MacroBuildBranch extends BranchPackage {
                 sampleLattice(scratch, worldHandle, coordinate);
                 macroTreeBranch.sampleStandIns(scratch, worldHandle, coordinate);
 
+                if (!scratch.standIns)
+                    macroCanopyBranch.sampleCanopy(scratch, worldHandle, coordinate);
+
                 sync.acquire();
                 try {
                     macroMeshBranch.assembleLand(scratch, sync.getVertices(), sync.getIndices());
-                    macroMeshBranch.assembleCanopy(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleStructures(scratch, sync.getVertices(), sync.getIndices());
-                    macroMeshBranch.assembleStandIns(scratch, sync.getVertices(), sync.getIndices());
+                    sync.getTreeVertices().clear();
+                    sync.getTreeIndices().clear();
+                    macroMeshBranch.assembleCanopy(scratch, sync.getTreeVertices(), sync.getTreeIndices());
+                    macroMeshBranch.assembleStandIns(scratch, sync.getTreeVertices(), sync.getTreeIndices());
                     macroMeshBranch.assembleWaterMask(scratch, sync.getWaterMask());
                     sync.getTreeBark().clear();
                     sync.getTreeBark().addAll(scratch.modelBark);
@@ -159,8 +165,6 @@ public class MacroBuildBranch extends BranchPackage {
                 if (sample.isOpenWater())
                     scratch.openWaterCount++;
 
-                if (!scratch.standIns)
-                    macroCanopyBranch.sampleCanopy(scratch, worldHandle, index, sampleX, sampleZ);
                 macroSettlementBranch.sampleSettlement(scratch, worldHandle, index, sampleX, sampleZ, cellSizeBlocks);
             }
         }

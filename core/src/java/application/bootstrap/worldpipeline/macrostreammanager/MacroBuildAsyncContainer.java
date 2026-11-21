@@ -17,7 +17,7 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
      * Thread-local scratch for one macro build, sized for the finest lattice
      * a tile can take: the ground height, packed top and side colors and open
      * sea and still water flags at every lattice point, the lattice's lowest
-     * ground, the canopy its woods raise over it with that canopy's colors,
+     * ground, the canopy its trees raise over it with that canopy's colors,
      * the stand-in shapes its trees are drawn as with the sites they stand on
      * and the crown and lumps each is sized by, or the models of themselves
      * the trees of a tile near the grid are drawn as instead, what settlements and their roads raise
@@ -42,10 +42,15 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
     float minHeightBlocks;
     int openWaterCount;
 
-    // Canopy — blocks the woods stand above the ground, zero where none do
+    // Canopy — blocks the woods stand above the ground, zero where none do, and the crown area, leaf colors and
+    // heights the trees rooted nearest each point count toward it
     float[] canopyHeights;
     float[] canopyTopColors;
     float[] canopySideColors;
+    float[] canopyCover;
+    float[] canopyRed;
+    float[] canopyGreen;
+    float[] canopyBlue;
     int canopyCount;
 
     // Stand-Ins — crowns apart from trunks; set when the tile draws them
@@ -85,6 +90,10 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
         this.canopyHeights = new float[MAX_SAMPLE_COUNT];
         this.canopyTopColors = new float[MAX_SAMPLE_COUNT];
         this.canopySideColors = new float[MAX_SAMPLE_COUNT];
+        this.canopyCover = new float[MAX_SAMPLE_COUNT];
+        this.canopyRed = new float[MAX_SAMPLE_COUNT];
+        this.canopyGreen = new float[MAX_SAMPLE_COUNT];
+        this.canopyBlue = new float[MAX_SAMPLE_COUNT];
         this.standInCrowns = new MacroStandInStruct();
         this.standInTrunks = new MacroStandInStruct();
         this.sites = new ObjectArrayList<>();
