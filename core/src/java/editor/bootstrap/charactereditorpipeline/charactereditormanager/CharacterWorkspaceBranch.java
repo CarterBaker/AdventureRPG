@@ -117,6 +117,10 @@ class CharacterWorkspaceBranch extends BranchPackage {
         return infoManager.hasDocument(EditorSetting.INFO_SCHEMA_RIGS, rigName);
     }
 
+    boolean hasModel(String modelName) {
+        return resolveFile(modelName).exists();
+    }
+
     private File resolveFile(String modelName) {
         return ArpgUtility.resolveFile(modelRoot, modelName);
     }

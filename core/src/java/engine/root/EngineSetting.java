@@ -3337,12 +3337,8 @@ public class EngineSetting {
     public static final float STAGGER_SECONDS = 0.35f;
     public static final float SWING_IMPULSE = 31.5f;
 
-    // Combat Gestures — swipes are measured in mouse pixels, whatever the look sensitivity
-    public static final float GESTURE_READ_LOOK_SCALE = 0f;
-    public static final float GESTURE_READ_SECONDS = 0.12f;
-    public static final float GESTURE_REST_SECONDS = 0.15f;
-    public static final float GESTURE_SWIPE_DECAY_SECONDS = 0.08f;
-    public static final float GESTURE_SWIPE_THRESHOLD = 22f;
+    // Combat Gestures — a step's side read from the movement axes, each a whole step of one
+    public static final float COMBAT_STEP_DEADZONE = 0.5f;
     public static final float LOOK_SCALE_FULL = 1f;
 
     // Weapons

@@ -22,6 +22,8 @@ import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
+import editor.runtime.viewcamera.ViewCameraShareProvider;
+import editor.runtime.viewcamera.ViewCameraStateStruct;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.viewcamera.ViewGizmoSystem;
@@ -29,8 +31,8 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ItemEditorContext extends ContextPackage
-        implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, LayersProvider, PropertiesProvider,
-        FileMenuProvider, MaterialDropProvider {
+        implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, ViewCameraShareProvider, LayersProvider,
+        PropertiesProvider, FileMenuProvider, MaterialDropProvider {
 
     /*
      * Editor tab for building items from sub-voxel cubes. Reads input, orbits
@@ -101,6 +103,17 @@ public class ItemEditorContext extends ContextPackage
     @Override
     public ViewCameraSubject getViewCameraSubject() {
         return itemEditorFrameSystem;
+    }
+
+    // Stacked with the modelling tabs, it shares their view, so its item and its baked mesh are seen alike
+    @Override
+    public String getViewCameraShare() {
+        return EditorSetting.VIEW_CAMERA_SHARE_CHARACTER;
+    }
+
+    @Override
+    public ViewCameraStateStruct getViewCameraState() {
+        return viewCameraSystem.getViewCameraState();
     }
 
     // Layers \\

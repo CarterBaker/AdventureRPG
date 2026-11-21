@@ -18,12 +18,15 @@ import editor.bootstrap.itemeditorpipeline.itemdocument.ItemDocumentInstance;
 import editor.bootstrap.itemeditorpipeline.itementry.ItemEntryStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
+import editor.runtime.charactereditor.CharacterToolContext;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
+import editor.runtime.itemeditor.ItemEditorContext;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgArrayStruct;
@@ -55,7 +58,10 @@ public class ItemEditorManager extends ManagerPackage {
      * stay open with their edits until saved, deleted, or the editor
      * closes. Export bakes the item for the mesh tools, its maps into its own
      * texture and its mesh into a workspace model the character tabs open,
-     * to paint, unwrap, model and rig as any mesh. Disk access, the
+     * to paint, unwrap, model and rig as any mesh; the first modelling tab
+     * made active after the Item Editor was worked in shows the item's model
+     * at once, its last export when it has one, so painted maps are never
+     * baked over, else a first export. Disk access, the
      * workspace, stamps, bakes and model edits each live in their own
      * branch.
      */
@@ -67,6 +73,7 @@ public class ItemEditorManager extends ManagerPackage {
     private MaterialsManager materialsManager;
     private CharacterEditorManager characterEditorManager;
     private TabManager tabManager;
+    private ActiveWindowManager activeWindowManager;
     private ItemLibraryBranch itemLibraryBranch;
     private ItemWorkspaceBranch itemWorkspaceBranch;
     private ItemEditBranch itemEditBranch;
@@ -83,6 +90,11 @@ public class ItemEditorManager extends ManagerPackage {
 
     // Tool — whether Brush digs instead of building
     private boolean inverted;
+
+    // Mesh Tabs — the active window revision last looked at, and whether the Item Editor was worked in since a
+    // modelling tab last was, so the next one shows its item
+    private int seenWindowRevision;
+    private boolean meshTabsPending;
 
     // Status
     private String statusMessage;
@@ -113,6 +125,7 @@ public class ItemEditorManager extends ManagerPackage {
         this.materialsManager = get(MaterialsManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.tabManager = get(TabManager.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
     }
 
     @Override
@@ -406,6 +419,52 @@ public class ItemEditorManager extends ManagerPackage {
         characterEditorManager.openBakedModel(EditorSetting.ITEM_BAKE_MODEL_FOLDER + stem, mesh);
         setStatusMessage(EditorSetting.ITEM_EDITOR_MESSAGE_EXPORTED + stem);
         return true;
+    }
+
+    // Mesh Tabs \\
+
+    @Override
+    protected void update() {
+
+        int windowRevision = activeWindowManager.getRevision();
+
+        if (windowRevision == seenWindowRevision)
+            return;
+
+        this.seenWindowRevision = windowRevision;
+
+        WindowInstance active = activeWindowManager.getActiveWindow();
+
+        if (active == null)
+            return;
+
+        if (active.getContext() instanceof ItemEditorContext) {
+            this.meshTabsPending = true;
+            return;
+        }
+
+        if (!(active.getContext() instanceof CharacterToolContext tool)
+                || !tool.getMode().sharesView()
+                || tool.getMode().groomsHair())
+            return;
+
+        if (meshTabsPending)
+            showActiveItemInMeshTabs();
+
+        this.meshTabsPending = false;
+    }
+
+    // The item worked in the Item Editor shown in the modelling tabs: its last export when it has one, so paint laid on
+    // that never gets baked over, otherwise baked for them once now
+    private void showActiveItemInMeshTabs() {
+
+        if (activeDocument == null || activeDocument.getModel().isEmpty())
+            return;
+
+        String stem = FileUtility.getFileName(activeDocument.getLocalName());
+
+        if (!characterEditorManager.showWorkspaceModel(EditorSetting.ITEM_BAKE_MODEL_FOLDER + stem))
+            exportActiveItem();
     }
 
     // File \\

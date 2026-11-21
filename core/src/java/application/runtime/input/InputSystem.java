@@ -16,8 +16,8 @@ public class InputSystem extends SystemPackage {
      * Runtime input bridge for this context. Owns the context's RawInputHandle,
      * refreshed from InputManager each frame, and drives camera rotation and
      * the player's facing direction. The view turns by as much of the mouse's
-     * travel as PlayerManager allows, so a combat swipe steers the weapon
-     * instead of the camera. Movement bindings are translated by
+     * travel as PlayerManager allows, less behind a raised guard. Movement
+     * bindings are translated by
      * PlayerInputSystem inside PlayerManager.
      */
 

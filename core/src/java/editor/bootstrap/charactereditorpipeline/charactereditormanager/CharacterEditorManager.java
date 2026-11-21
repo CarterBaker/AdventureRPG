@@ -460,6 +460,18 @@ public class CharacterEditorManager extends ManagerPackage {
                 : EditorSetting.CHARACTER_MODEL_MESSAGE_OPENED + modelName);
     }
 
+    // A workspace model shown in the character tabs when it is open or on disk, true when it is; nothing is written
+    public boolean showWorkspaceModel(String modelName) {
+
+        if (!modelName2CharacterDocument.containsKey(modelName) && !characterWorkspaceBranch.hasModel(modelName))
+            return false;
+
+        if (activeDocument == null || !modelName.equals(activeDocument.getModelName()))
+            openModel(modelName);
+
+        return true;
+    }
+
     // A mesh made outside the character tabs (an item baked for them) opened as a workspace model: written and opened
     // when no model of that name is open with a body, or, when one is, its body replaced by the mesh as one edit, as a
     // model brought in from a file replaces it
