@@ -11,12 +11,10 @@
 // fade is positive for the look rising in, the share of the pattern it still leaves out, and negative for the look
 // falling away, the share it already gave up; zero shows the whole tree. The steps match TREE_FADE_STEPS.
 //
-// Far out the grid's trees hand over to the macro terrain's stand-ins by distance alone, whichever chunks have
-// loaded: across a band just inside the rim the grid draws, the stand-ins rise through the same pattern as the
-// grid's trees fall away through it, measured from the camera to each fragment, so every pixel shows exactly one of
-// them and the forest never changes its look at a chunk's edge. A macro tile near the grid draws its trees as models
-// of themselves in these very materials, marked far (TreeFar), so they rise across the band exactly where the
-// grid's own trees fall away. With macro terrain off nothing stands in, so the grid's trees keep the whole way out.
+// Far out the grid's trees hand over to the macro terrain's trees chunk by chunk, as its ground does: a macro tile
+// draws a tree only while the grid does not draw the chunk it roots in, so a tree never leaves before the one taking
+// its place is drawn, and never shows twice (TreeFar). Near the grid the macro tile's trees are the very look the
+// grid's farthest trees take, so the hand-over shows no change.
 
 uniform float u_treeFade;
 
@@ -26,9 +24,6 @@ const float TREE_FADE_PATTERN[16] = float[16](
     3.0, 11.0, 1.0, 9.0,
     15.0, 7.0, 13.0, 5.0);
 const float TREE_FADE_STEPS = 16.0;
-
-const float TREE_HANDOVER_INSET_CHUNKS = 1.5;
-const float TREE_HANDOVER_BAND_CHUNKS  = 2.0;
 
 // This fragment's place in the dither pattern, from 0 to 1
 float resolveTreeFadeThreshold() {
@@ -42,31 +37,6 @@ bool isTreeFaded() {
     float threshold = resolveTreeFadeThreshold();
 
     return u_treeFade >= 0.0 ? threshold < u_treeFade : threshold >= 1.0 + u_treeFade;
-}
-
-// How far across the hand-over band a grid-relative position lies: 0 where the grid's own trees show, 1 where the
-// macro terrain's stand-ins do
-float resolveTreeHandover(vec3 position) {
-    if (u_treeHandover <= 0.0)
-    return 0.0;
-
-    float end   = (u_renderDistance * 0.5 - TREE_HANDOVER_INSET_CHUNKS) * u_chunkSize;
-    float start = end - TREE_HANDOVER_BAND_CHUNKS * u_chunkSize;
-
-    return clamp((length(position.xz - u_inverseView[3].xz) - start) / (end - start), 0.0, 1.0);
-}
-
-// True where a grid tree's fragment has already handed over to the stand-in, or where a macro tile's tree model's
-// fragment has not taken over from the grid's tree yet
-bool isTreeHandedOver(vec3 position) {
-    bool handedOver = resolveTreeFadeThreshold() < resolveTreeHandover(position);
-
-    return isTreeFar() ? !handedOver : handedOver;
-}
-
-// True where a stand-in's fragment over a chunk the grid draws has not taken over yet
-bool isStandInHeldBack(vec3 position) {
-    return resolveTreeFadeThreshold() >= resolveTreeHandover(position);
 }
 
 #endif

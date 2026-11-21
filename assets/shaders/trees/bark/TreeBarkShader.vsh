@@ -5,6 +5,7 @@ layout (location = 2) in float aMeta;
 layout (location = 3) in float aColor;
 layout (location = 4) in vec4  aEdgeLow;
 layout (location = 5) in vec4  aEdgeHigh;
+layout (location = 6) in float aCover;
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
@@ -19,9 +20,11 @@ flat out int  vTile;
 flat out vec3 vColor;
 flat out int  vFace;
 flat out int  vEdges;
+flat out int  vCover;
 
 // Wood standing in a chunk: positions are the chunk's own, placed by the grid slot it is drawn in. A macro tile's
-// far tree is placed by the tile's own position the same way and stands on its macro ground (TreeFar).
+// far tree is placed by the tile's own position the same way, stands on its macro ground and names the chunk its
+// tree roots in (TreeFar).
 
 void main() {
     vWorldPos = vec3(aPos.x + u_gridPosition.x, aPos.y, aPos.z + u_gridPosition.y);
@@ -33,6 +36,7 @@ void main() {
     vColor    = unpackTreeColor(aColor);
     vFace     = unpackTreeFace(aMeta);
     vEdges    = unpackTreeEdges(aMeta);
+    vCover    = int(aCover + 0.5);
 
     gl_Position = u_viewProjection * vec4(vWorldPos, 1.0);
 }

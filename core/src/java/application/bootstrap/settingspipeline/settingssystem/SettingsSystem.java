@@ -94,7 +94,6 @@ public class SettingsSystem extends SystemPackage {
                 textureManager.getTextureAnisotropy());
         renderSettingsData.updateUniform(EngineSetting.UNIFORM_MACRO_CRINKLE, settings.macroCrinkle);
         renderSettingsData.updateUniform(EngineSetting.UNIFORM_MACRO_CRINKLE_SIZE, settings.macroCrinkleSize);
-        renderSettingsData.updateUniform(EngineSetting.UNIFORM_TREE_HANDOVER, settings.macroTerrain ? 1f : 0f);
         uboManager.push(renderSettingsData);
     }
 

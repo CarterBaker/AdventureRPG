@@ -29,9 +29,5 @@ layout(std140) uniform SettingsData {
     // scale of its cells. See surface/includes/MacroCrinkle.glsl.
     float u_macroCrinkle;
     float u_macroCrinkleSize;
-    // Source: application Settings — runtime, user-configurable. 1 while
-    // macro terrain stands trees in, so the grid's own trees hand over to
-    // them far out; 0 when it is off. See trees/includes/TreeFade.glsl.
-    float u_treeHandover;
 };
 #endif

@@ -8,6 +8,7 @@ flat in int  vTile;
 flat in vec3 vColor;
 flat in int  vFace;
 flat in int  vEdges;
+flat in int  vCover;
 
 #include "trees/includes/TreeBarkShading.glsl"
 #include "trees/includes/TreeFade.glsl"
@@ -16,11 +17,11 @@ layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
-// Wood standing in a chunk or mega keeps the world's axes, fades between looks with its tree, and hands over to the
-// macro terrain's stand-ins far out (TreeFade).
+// Wood standing in a chunk or mega keeps the world's axes and fades between looks with its tree; a macro tile's far
+// tree yields while the grid draws its chunk (TreeFade).
 
 void main() {
-    if (isTreeFaded() || isTreeHandedOver(vWorldPos))
+    if (isTreeFaded() || isTreeYielded(vCover))
     discard;
 
     shadeTreeBark(

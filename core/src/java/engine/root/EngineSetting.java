@@ -1101,7 +1101,6 @@ public class EngineSetting {
     public static final String UNIFORM_CHARACTER_DETAIL = "u_characterDetail";
     public static final String UNIFORM_MACRO_CRINKLE = "u_macroCrinkle";
     public static final String UNIFORM_MACRO_CRINKLE_SIZE = "u_macroCrinkleSize";
-    public static final String UNIFORM_TREE_HANDOVER = "u_treeHandover";
     public static final String UNIFORM_DEST_RECT = "u_destRect";
     public static final String UNIFORM_DISTANCE_FROM_CENTER = "u_distanceFromCenter";
     public static final String UNIFORM_FACE_ORIENTATIONS = "u_faceOrientations";
@@ -2157,7 +2156,8 @@ public class EngineSetting {
     public static final int TREE_WOOD_PART_COUNT = 2;
 
     // Tree Mesh — how a wood vertex packs its face and edge kinds, the slots a wood and a leaf vertex leave empty,
-    // and how many upright leaf cards a cluster turns about its centre beside its level one
+    // the last of which a macro tile's tree model fills with the chunk of the tile its tree roots in, and how many
+    // upright leaf cards a cluster turns about its centre beside its level one
     public static final int TREE_EDGE_BITS = 2;
     public static final int TREE_HIDER_FLOATS = 5;
     public static final float TREE_LEAF_HIDE_SHARE = 0.66f;
@@ -2168,6 +2168,7 @@ public class EngineSetting {
     public static final int TREE_LEAF_UPRIGHT_CARDS = 3;
     public static final int TREE_META_EDGE_SHIFT = 3;
     public static final int TREE_WOOD_PADDING_FLOATS = 5;
+    public static final int TREE_VERTEX_COVER_OFFSET = CHUNK_VERTEX_FLOAT_COUNT - 1;
 
     // Tree Defaults — every optional field of a tree species file
     public static final float TREE_DEFAULT_ACCENT_CHANCE = 0f;
@@ -2414,7 +2415,7 @@ public class EngineSetting {
     public static final int TREE_STAND_IN_FACETED_CELLS_PER_SIDE = 32;
     public static final int TREE_STAND_IN_FACETED_SIDES = 6;
     public static final int TREE_STAND_IN_FACETED_TRUNK_SIDES = 4;
-    public static final int TREE_STAND_IN_MIN_CELLS_PER_SIDE = 2;
+    public static final int TREE_STAND_IN_MIN_CELLS_PER_SIDE = 4;
     public static final float TREE_STAND_IN_PLAIN_CROWN_CELLS = 0.35f;
     public static final int TREE_STAND_IN_PLAIN_CELLS_PER_SIDE = 16;
     public static final int TREE_STAND_IN_PLAIN_SIDES = 4;

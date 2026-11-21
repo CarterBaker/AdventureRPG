@@ -567,6 +567,11 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-21: Stamp lanes. Regenerated `schemas/Rigs.arpg` (the `stamps` records of the bones each joined part brought).
 - 2026-11-21: Macro tree fades. Regenerated `shaders/surface/macro/MacroTerrainShader.fsh` (a tile's canopy and
   stand-ins fade through the tree dither when it is built again).
+- 2026-11-21: Tree hand-over by chunk. Regenerated `shaders/trees/includes/TreeFade.glsl`, `TreeFar.glsl`,
+  `shaders/trees/bark/TreeBarkShader.vsh`, `TreeBarkShader.fsh`, `shaders/trees/leaf/TreeLeafShader.vsh`,
+  `TreeLeafShader.fsh`, `shaders/surface/macro/MacroTerrainShader.fsh`, `shaders/surface/includes/MacroGround.glsl`,
+  `shaders/includes/SettingsData.glsl` and `ubos/SettingsData.arpg` (distant trees yield whole by chunk instead of
+  dissolving by distance; the rim sink stays at the rim).
 
 ## Textures and Sprites (2433 files)
 

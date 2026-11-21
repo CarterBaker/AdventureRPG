@@ -48,9 +48,9 @@ class MacroRenderSystem extends SystemPackage {
      * tile's trees are models of their own beside its land: its canopy and
      * stand-ins in the land's layout and material, and near the grid the
      * models of the trees themselves in the grid's own bark and leaf
-     * materials, placed by the same position UBO and marked far, so they rise
-     * by distance through the very dither the grid's trees fall away
-     * through. A tile built again keeps the trees it drew before for
+     * materials, placed by the same position UBO and marked far, each
+     * yielding while the grid draws the chunk its tree roots in, as the
+     * land does. A tile built again keeps the trees it drew before for
      * TREE_FADE_SECONDS, falling away through that dither as its new ones
      * rise through it, as a chunk's or mega's trees do, so no tree ever
      * changes its look at once; its trees are made again only when it is
@@ -258,6 +258,7 @@ class MacroRenderSystem extends SystemPackage {
 
             MaterialInstance material = materialManager.cloneMaterial(materialID);
             material.setUBO(macro.getPositionUBO());
+            material.setUBO(macro.getCoverageUBO());
             material.setUniform(EngineSetting.UNIFORM_TREE_FADE, EngineSetting.TREE_FADE_SHOWN);
             material.setUniform(EngineSetting.UNIFORM_TREE_FAR, EngineSetting.TREE_FAR_ON);
 

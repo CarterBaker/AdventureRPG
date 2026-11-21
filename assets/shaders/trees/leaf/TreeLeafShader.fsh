@@ -9,6 +9,7 @@ flat in float vUnderside;
 flat in float vSeed;
 flat in int   vTile;
 flat in vec3  vColor;
+flat in int   vCover;
 
 #include "trees/includes/TreeLeafSprig.glsl"
 #include "trees/includes/TreeFade.glsl"
@@ -17,11 +18,11 @@ layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
-// Leaves standing in a chunk or mega keep the world's axes, fade between looks with their tree, and hand over to the
-// macro terrain's stand-ins far out (TreeFade).
+// Leaves standing in a chunk or mega keep the world's axes and fade between looks with their tree; a macro tile's far
+// tree yields while the grid draws its chunk (TreeFade).
 
 void main() {
-    if (isTreeFaded() || isTreeHandedOver(vWorldPos))
+    if (isTreeFaded() || isTreeYielded(vCover))
     discard;
 
     if (!shadeTreeLeaf(

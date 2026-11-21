@@ -5,6 +5,7 @@ layout (location = 2) in float aMeta;
 layout (location = 3) in float aColor;
 layout (location = 4) in vec4  aEdgeLow;
 layout (location = 5) in vec4  aEdgeHigh;
+layout (location = 6) in float aCover;
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
@@ -20,11 +21,12 @@ flat out float vUnderside;
 flat out float vSeed;
 flat out int   vTile;
 flat out vec3  vColor;
+flat out int   vCover;
 
 // Leaves standing in a chunk: positions are the chunk's own, placed by the grid slot they are drawn in, and the
 // cluster's centre is found from each vertex, so every card of it sways as one. A macro tile's far tree is placed
-// by the tile's own position the same way and stands on its macro ground (TreeFar), lifted as its centre is, so a
-// cluster moves whole.
+// by the tile's own position the same way, stands on its macro ground (TreeFar), lifted as its centre is, so a
+// cluster moves whole, and names the chunk its tree roots in.
 
 void main() {
     vec3 position = vec3(aPos.x + u_gridPosition.x, aPos.y, aPos.z + u_gridPosition.y);
@@ -46,6 +48,7 @@ void main() {
     vSeed      = resolveTreeLeafCardSeed(aEdgeHigh.y, card);
     vTile      = int(aTile + 0.5);
     vColor     = unpackTreeColor(aColor);
+    vCover     = int(aCover + 0.5);
 
     gl_Position = u_viewProjection * vec4(vWorldPos, 1.0);
 }

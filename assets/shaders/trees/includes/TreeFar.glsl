@@ -1,12 +1,14 @@
 #ifndef TREE_FAR_GLSL
 #define TREE_FAR_GLSL
 
+#include "includes/MacroCoverageUtility.glsl"
 #include "surface/includes/MacroGround.glsl"
 
 // A tree drawn by a macro tile rather than the chunk grid: one of the tile's models of its own trees, in the grid's
-// very bark and leaf materials, marked far by u_treeFar. It stands on the macro ground, so it moves with it, crinkled
-// and sunk beneath the rim alike (MacroGround), and it rises across the grid's hand-over band where the grid's own
-// trees fall away (TreeFade).
+// very bark and leaf materials, marked far by u_treeFar. Every vertex names the chunk of the tile its tree roots in,
+// and the tree yields whole while the grid draws that chunk, so the grid's own tree and this one never show together
+// and never leave a gap (TreeFade). It stands on the macro ground, so it moves with it, crinkled and sunk at the rim
+// alike (MacroGround).
 
 uniform float u_treeFar;
 
@@ -20,6 +22,11 @@ vec3 resolveTreeFarLift(vec3 position) {
     return vec3(0.0);
 
     return placeOnMacroGround(position, false) - position;
+}
+
+// True where a far tree's chunk is drawn by the grid, whose own tree stands there instead; never for a grid tree
+bool isTreeYielded(int cover) {
+    return isTreeFar() && isChunkDrawnByGrid(cover);
 }
 
 #endif

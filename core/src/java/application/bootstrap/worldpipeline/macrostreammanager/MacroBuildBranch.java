@@ -27,7 +27,7 @@ public class MacroBuildBranch extends BranchPackage {
      * chunk placement roots it, as a model of itself in its own bark and
      * leaves while the tile lies near the grid and as a flat stand-in beyond;
      * a coarser one raises a jagged canopy over the
-     * trees that truly stand there instead, sampled by MacroCanopyBranch.
+     * woods instead, sampled by MacroCanopyBranch.
      * Either is laid into the tile's tree mesh apart from the land, and
      * settlements raise their buildings, walls and bridges and lay their
      * roads, sampled by MacroSettlementBranch from their plans and laid
@@ -97,9 +97,6 @@ public class MacroBuildBranch extends BranchPackage {
                 sampleLattice(scratch, worldHandle, coordinate);
                 macroTreeBranch.sampleStandIns(scratch, worldHandle, coordinate);
 
-                if (!scratch.standIns)
-                    macroCanopyBranch.sampleCanopy(scratch, worldHandle, coordinate);
-
                 sync.acquire();
                 try {
                     macroMeshBranch.assembleLand(scratch, sync.getVertices(), sync.getIndices());
@@ -165,6 +162,8 @@ public class MacroBuildBranch extends BranchPackage {
                 if (sample.isOpenWater())
                     scratch.openWaterCount++;
 
+                if (!scratch.standIns)
+                    macroCanopyBranch.sampleCanopy(scratch, worldHandle, index, sampleX, sampleZ);
                 macroSettlementBranch.sampleSettlement(scratch, worldHandle, index, sampleX, sampleZ, cellSizeBlocks);
             }
         }

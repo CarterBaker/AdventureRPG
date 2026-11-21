@@ -16,6 +16,7 @@ import engine.graphics.color.PackedColorUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 public class MacroTreeBranch extends BranchPackage {
 
@@ -29,8 +30,10 @@ public class MacroTreeBranch extends BranchPackage {
      * from afar. resolveStandIn() is the one place a tile's resolution picks
      * how finely. A tile near the grid draws every tree as a model of itself
      * instead — its OUTLINE in its own bark and leaves, the very look the
-     * grid's farthest trees take, so a forest keeps its look as it passes
-     * from the grid to the macro terrain. Beyond them the finest tiles facet
+     * grid's farthest trees take, every vertex naming the chunk its tree
+     * roots in, so a forest keeps its look as it passes from the grid to
+     * the macro terrain and a tree yields whole the moment the grid draws
+     * its chunk. Beyond them the finest tiles facet
      * each lump round over a tapered trunk,
      * coarser ones keep each lump a plain diamond, and the coarsest draw the
      * whole crown as one spire reaching down to the root. A crown wide enough
@@ -147,14 +150,20 @@ public class MacroTreeBranch extends BranchPackage {
         float rootY = resolveSurface(scratch, rootX, rootZ);
         float matureHeight = TreeSkeletonUtility.resolveMatureHeight(treeHandle, site.getSeed());
 
+        float cover = blockZ / chunkSize * macroChunkSize + blockX / chunkSize;
+
         if (scratch.treeModels) {
+
+            int barkStart = scratch.modelBark.size();
+            int leafStart = scratch.modelLeaves.size();
+
             TreeModelUtility.emitOutline(
                     treeHandle, site.getSeed(), matureHeight, site.getAge(), rootX, rootY, rootZ,
                     scratch.model, scratch.modelBark, scratch.modelLeaves);
+            markCover(scratch.modelBark, barkStart, cover);
+            markCover(scratch.modelLeaves, leafStart, cover);
             return;
         }
-
-        float cover = blockZ / chunkSize * macroChunkSize + blockX / chunkSize;
         float turn = TreeStandInUtility.resolveTurn(site.getSeed());
         float[] crown = scratch.crown;
         int leafAlbedo = treeHandle.getPartAlbedos()[EngineSetting.TREE_PART_LEAF];
@@ -174,6 +183,13 @@ public class MacroTreeBranch extends BranchPackage {
                 scratch.standInTrunks, shape, rootX, rootY, rootZ,
                 crown[EngineSetting.TREE_IMPOSTOR_TRUNK_HALF_WIDTH], crown[EngineSetting.TREE_IMPOSTOR_TRUNK_TOP], turn,
                 barkAlbedo, PackedColorUtility.scale(barkAlbedo, EngineSetting.TREE_CANOPY_SIDE_SHADE), cover);
+    }
+
+    // Every vertex a tree model just laid names the chunk its tree roots in, so the whole tree yields with that chunk
+    private static void markCover(FloatArrayList vertices, int start, float cover) {
+        for (int i = start + EngineSetting.TREE_VERTEX_COVER_OFFSET; i < vertices.size();
+                i += EngineSetting.CHUNK_VERTEX_FLOAT_COUNT)
+            vertices.set(i, cover);
     }
 
     // Water \\
