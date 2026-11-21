@@ -3,6 +3,7 @@
 
 #include "includes/CameraData.glsl"
 #include "includes/SettingsData.glsl"
+#include "trees/includes/TreeFar.glsl"
 
 // A standing tree's look hands over to its next one by screen-door dither rather than at once: while a chunk or mega
 // redraws its trees, the new look rises through a 4x4 ordered pattern as the old one falls away through the very same
@@ -13,8 +14,9 @@
 // Far out the grid's trees hand over to the macro terrain's stand-ins by distance alone, whichever chunks have
 // loaded: across a band just inside the rim the grid draws, the stand-ins rise through the same pattern as the
 // grid's trees fall away through it, measured from the camera to each fragment, so every pixel shows exactly one of
-// them and the forest never changes its look at a chunk's edge. With macro terrain off nothing stands in, so the
-// grid's trees keep the whole way out.
+// them and the forest never changes its look at a chunk's edge. A macro tile near the grid draws its trees as models
+// of themselves in these very materials, marked far (TreeFar), so they rise across the band exactly where the
+// grid's own trees fall away. With macro terrain off nothing stands in, so the grid's trees keep the whole way out.
 
 uniform float u_treeFade;
 
@@ -54,9 +56,12 @@ float resolveTreeHandover(vec3 position) {
     return clamp((length(position.xz - u_inverseView[3].xz) - start) / (end - start), 0.0, 1.0);
 }
 
-// True where a grid tree's fragment has already handed over to the stand-in
+// True where a grid tree's fragment has already handed over to the stand-in, or where a macro tile's tree model's
+// fragment has not taken over from the grid's tree yet
 bool isTreeHandedOver(vec3 position) {
-    return resolveTreeFadeThreshold() < resolveTreeHandover(position);
+    bool handedOver = resolveTreeFadeThreshold() < resolveTreeHandover(position);
+
+    return isTreeFar() ? !handedOver : handedOver;
 }
 
 // True where a stand-in's fragment over a chunk the grid draws has not taken over yet

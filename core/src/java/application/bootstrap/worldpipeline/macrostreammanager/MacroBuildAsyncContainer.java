@@ -3,10 +3,12 @@ package application.bootstrap.worldpipeline.macrostreammanager;
 import application.bootstrap.worldpipeline.layout.LayoutPlanStruct;
 import application.bootstrap.worldpipeline.layout.LayoutSurfaceStruct;
 import application.bootstrap.worldpipeline.macrochunk.MacroStandInStruct;
+import application.bootstrap.worldpipeline.tree.TreeModelStruct;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
 import application.bootstrap.worldpipeline.worldgenerationmanager.TerrainSurfaceSampleStruct;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MacroBuildAsyncContainer extends AsyncContainerPackage {
@@ -17,7 +19,8 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
      * sea and still water flags at every lattice point, the lattice's lowest
      * ground, the canopy its woods raise over it with that canopy's colors,
      * the stand-in shapes its trees are drawn as with the sites they stand on
-     * and the crown and lumps each is sized by, what settlements and their roads raise
+     * and the crown and lumps each is sized by, or the models of themselves
+     * the trees of a tile near the grid are drawn as instead, what settlements and their roads raise
      * over it with their colors, the layouts reaching the tile with the
      * sample each point is read against them through, and the surface sample
      * each point is read through. Filled by MacroBuildBranch,
@@ -53,6 +56,12 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
     float[] crown;
     float[] lumps;
 
+    // Tree Models — each tree's own OUTLINE in the bark and leaf layouts; set when the tile draws them
+    boolean treeModels;
+    FloatArrayList modelBark;
+    FloatArrayList modelLeaves;
+    TreeModelStruct model;
+
     // Settlements — blocks structures, walls and bridges stand above the ground, zero where none do
     float[] structureHeights;
     float[] structureTopColors;
@@ -81,6 +90,9 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
         this.sites = new ObjectArrayList<>();
         this.crown = new float[EngineSetting.TREE_IMPOSTOR_CROWN_FLOATS];
         this.lumps = new float[EngineSetting.TREE_IMPOSTOR_LUMPS_MAX_FLOATS];
+        this.modelBark = new FloatArrayList();
+        this.modelLeaves = new FloatArrayList();
+        this.model = new TreeModelStruct();
         this.structureHeights = new float[MAX_SAMPLE_COUNT];
         this.structureTopColors = new float[MAX_SAMPLE_COUNT];
         this.structureSideColors = new float[MAX_SAMPLE_COUNT];
@@ -99,6 +111,8 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
         standInCrowns.clear();
         standInTrunks.clear();
         sites.clear();
+        modelBark.clear();
+        modelLeaves.clear();
     }
 
     // Lattice \\

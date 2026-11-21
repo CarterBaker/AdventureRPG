@@ -9,6 +9,7 @@ layout (location = 5) in vec4  aEdgeHigh;
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
 #include "trees/includes/TreeLeaf.glsl"
+#include "trees/includes/TreeFar.glsl"
 
 out vec3       vWorldPos;
 out vec2       vCard;
@@ -21,11 +22,17 @@ flat out int   vTile;
 flat out vec3  vColor;
 
 // Leaves standing in a chunk: positions are the chunk's own, placed by the grid slot they are drawn in, and the
-// cluster's centre is found from each vertex, so every card of it sways as one.
+// cluster's centre is found from each vertex, so every card of it sways as one. A macro tile's far tree is placed
+// by the tile's own position the same way and stands on its macro ground (TreeFar), lifted as its centre is, so a
+// cluster moves whole.
 
 void main() {
     vec3 position = vec3(aPos.x + u_gridPosition.x, aPos.y, aPos.z + u_gridPosition.y);
     vec3 center   = position + aEdgeLow.xyz;
+    vec3 lift     = resolveTreeFarLift(center);
+
+    position += lift;
+    center   += lift;
     vec3 sway     = resolveTreeLeafSway(center, aEdgeHigh.y);
     vec2 radii    = vec2(aEdgeLow.w, aEdgeHigh.x);
     int  card     = int(aMeta);

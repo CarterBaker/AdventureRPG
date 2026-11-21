@@ -9,6 +9,7 @@ layout (location = 5) in vec4  aEdgeHigh;
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
 #include "trees/includes/TreeBark.glsl"
+#include "trees/includes/TreeFar.glsl"
 
 out vec3      vWorldPos;
 out vec3      vModelPos;
@@ -19,10 +20,12 @@ flat out vec3 vColor;
 flat out int  vFace;
 flat out int  vEdges;
 
-// Wood standing in a chunk: positions are the chunk's own, placed by the grid slot it is drawn in.
+// Wood standing in a chunk: positions are the chunk's own, placed by the grid slot it is drawn in. A macro tile's
+// far tree is placed by the tile's own position the same way and stands on its macro ground (TreeFar).
 
 void main() {
     vWorldPos = vec3(aPos.x + u_gridPosition.x, aPos.y, aPos.z + u_gridPosition.y);
+    vWorldPos += resolveTreeFarLift(vWorldPos);
     vModelPos = aPos;
     vLocal    = aEdgeLow.xy;
     vSize     = aEdgeLow.zw;

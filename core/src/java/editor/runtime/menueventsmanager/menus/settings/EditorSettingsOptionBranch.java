@@ -78,6 +78,7 @@ public class EditorSettingsOptionBranch extends BranchPackage {
         injectOptionRow(SettingsOption.RENDER_DISTANCE);
         injectOptionRow(SettingsOption.TERRAIN_DETAIL);
         injectOptionRow(SettingsOption.TREE_DETAIL);
+        injectOptionRow(SettingsOption.TREE_MODEL_DISTANCE);
         injectOptionRow(SettingsOption.CHARACTER_DETAIL);
         injectOptionRow(SettingsOption.MACRO_TERRAIN);
         injectSlider(SettingsSlider.MACRO_CRINKLE);

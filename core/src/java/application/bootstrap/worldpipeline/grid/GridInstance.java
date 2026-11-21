@@ -119,6 +119,7 @@ public class GridInstance extends InstancePackage {
     private LongOpenHashSet macroCoordinates;
     private long macroAnchorCoordinate;
     private int macroAdmitCursor;
+    private float macroTreeModelBlocks;
 
     // Macro Water — created the first time a macro writes its water or the grid draws its sea
     private MacroWaterInstance macroWaterInstance;
@@ -433,6 +434,19 @@ public class GridInstance extends InstancePackage {
     public void anchorMacroRing(long anchorCoordinate) {
         this.macroAnchorCoordinate = anchorCoordinate;
         this.macroAdmitCursor = 0;
+        this.macroTreeModelBlocks = getTreeModelBlocks();
+    }
+
+    // True once when the tree model distance moved since the ring's tiles were last placed against it
+    public boolean takeMacroTreeModelChange() {
+
+        float treeModelBlocks = getTreeModelBlocks();
+
+        if (treeModelBlocks == macroTreeModelBlocks)
+            return false;
+
+        this.macroTreeModelBlocks = treeModelBlocks;
+        return true;
     }
 
     public long getMacroAnchorCoordinate() {
@@ -569,6 +583,11 @@ public class GridInstance extends InstancePackage {
 
     public int getTreeDetailDistance() {
         return range.getTreeDetailDistance();
+    }
+
+    // How far beyond its rim the macro terrain draws trees as models of themselves, followed live from the range
+    public float getTreeModelBlocks() {
+        return range.getTreeModelBlocks();
     }
 
     public UBOInstance getSettingsDataUBO() {

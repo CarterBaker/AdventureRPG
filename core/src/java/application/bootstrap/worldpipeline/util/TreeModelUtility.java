@@ -486,13 +486,29 @@ public final class TreeModelUtility extends EngineUtility {
             TreeModelStruct model,
             FloatArrayList bark,
             FloatArrayList leaves) {
+        emitOutline(
+                tree.getTreeHandle(), tree.getSeed(), tree.getMatureHeight(), tree.getAge(),
+                rootX, tree.getBaseY(), rootZ, model, bark, leaves);
+    }
 
-        TreeHandle treeHandle = tree.getTreeHandle();
+    // A tree known only by its species, seed, mature height and age, never grown, drawn as its OUTLINE: what distant
+    // terrain draws each tree as before its stand-ins take over
+    public static void emitOutline(
+            TreeHandle treeHandle,
+            long seed,
+            float matureHeight,
+            float age,
+            float rootX,
+            float rootY,
+            float rootZ,
+            TreeModelStruct model,
+            FloatArrayList bark,
+            FloatArrayList leaves) {
+
         float[] crown = model.getCrown();
         float[] lumps = model.getLumps();
-        float rootY = tree.getBaseY();
 
-        TreeImpostorUtility.estimateCrown(treeHandle, tree.getMatureHeight(), tree.getAge(), crown);
+        TreeImpostorUtility.estimateCrown(treeHandle, matureHeight, age, crown);
 
         float halfWidth = crown[EngineSetting.TREE_IMPOSTOR_TRUNK_HALF_WIDTH];
         float trunkTop = crown[EngineSetting.TREE_IMPOSTOR_TRUNK_TOP];
@@ -524,7 +540,7 @@ public final class TreeModelUtility extends EngineUtility {
                     tiles[EngineSetting.TREE_PART_LEAF],
                     treeHandle.getPartColors()[EngineSetting.TREE_PART_LEAF],
                     BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
-                            tree.getSeed() ^ EngineSetting.TREE_IMPOSTOR_SEED_SALT, lump, 0)),
+                            seed ^ EngineSetting.TREE_IMPOSTOR_SEED_SALT, lump, 0)),
                     leaves);
         }
     }

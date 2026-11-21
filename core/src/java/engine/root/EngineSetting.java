@@ -822,6 +822,9 @@ public class EngineSetting {
     public static final int RENDER_DISTANCE_MIN = 16;
     public static final int TREE_DETAIL_DISTANCE_MAX = 6;
     public static final int TREE_DETAIL_DISTANCE_MIN = 2;
+    public static final int TREE_MODEL_DISTANCE_DEFAULT = 500;
+    public static final int TREE_MODEL_DISTANCE_MAX = 1500;
+    public static final int TREE_MODEL_DISTANCE_MIN = 250;
     public static final int CHARACTER_DETAIL_DISTANCE_MAX = 48;
     public static final int CHARACTER_DETAIL_DISTANCE_MIN = 2;
     public static final int TEXTURE_QUALITY_LOW = 0;
@@ -2325,12 +2328,16 @@ public class EngineSetting {
     public static final int TREE_DETAIL_KEEP_CHUNKS = 1;
 
     // Tree Fade — how long a chunk's or mega's old trees take to fall away under its new ones, the steps of the
-    // dither pattern they fall through (TreeFade.glsl draws sixteen), the fade age that marks none under way, and the
-    // uniform each standing tree material takes its fade through
+    // dither pattern they fall through (TreeFade.glsl draws sixteen), the fade age that marks none under way, the
+    // uniform each standing tree material takes its fade through, the fade that shows a tree whole, and the uniform
+    // marking a macro tile's tree models as the far side of the grid's hand-over band
     public static final float TREE_FADE_NONE = -1f;
     public static final float TREE_FADE_SECONDS = 0.6f;
     public static final int TREE_FADE_STEPS = 16;
     public static final String UNIFORM_TREE_FADE = "u_treeFade";
+    public static final float TREE_FADE_SHOWN = 0f;
+    public static final String UNIFORM_TREE_FAR = "u_treeFar";
+    public static final float TREE_FAR_ON = 1f;
 
     // Tree Model — how a tree drawn coarser than in full keeps its own wood and crown: how near a segment must set
     // out to the last one's end to carry its trunk on, how far a trunk box runs before its top strays past a share

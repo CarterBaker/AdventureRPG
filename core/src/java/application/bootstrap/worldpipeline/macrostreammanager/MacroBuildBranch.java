@@ -24,7 +24,9 @@ public class MacroBuildBranch extends BranchPackage {
      * sea's plane, so the lattice rises to its surface and wears its water,
      * shaded by depth as the map shades it. A tile sampled finely enough
      * stands its trees in one by one through MacroTreeBranch, each where
-     * chunk placement roots it; a coarser one raises a jagged canopy over the
+     * chunk placement roots it, as a model of itself in its own bark and
+     * leaves while the tile lies near the grid and as a flat stand-in beyond;
+     * a coarser one raises a jagged canopy over the
      * woods instead, sampled by MacroCanopyBranch. Either is laid into the
      * tile's mesh apart from the land, and settlements raise their buildings,
      * walls and bridges and lay their roads, sampled by MacroSettlementBranch
@@ -81,6 +83,7 @@ public class MacroBuildBranch extends BranchPackage {
         WorldHandle worldHandle = macro.getWorldHandle();
         long coordinate = macro.getCoordinate();
         int cellsPerSide = macro.getTargetCellsPerSide();
+        boolean treeModels = macro.isTargetTreeModels();
 
         executeAsync(threadHandle, () -> {
 
@@ -88,7 +91,8 @@ public class MacroBuildBranch extends BranchPackage {
 
             try {
                 scratch.cellsPerSide = cellsPerSide;
-                scratch.standIns = macroTreeBranch.drawsStandIns(cellsPerSide);
+                scratch.standIns = macroTreeBranch.drawsStandIns(cellsPerSide) || treeModels;
+                scratch.treeModels = treeModels;
                 sampleLattice(scratch, worldHandle, coordinate);
                 macroTreeBranch.sampleStandIns(scratch, worldHandle, coordinate);
 
@@ -99,7 +103,11 @@ public class MacroBuildBranch extends BranchPackage {
                     macroMeshBranch.assembleStructures(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleStandIns(scratch, sync.getVertices(), sync.getIndices());
                     macroMeshBranch.assembleWaterMask(scratch, sync.getWaterMask());
-                    sync.markBuilt(cellsPerSide);
+                    sync.getTreeBark().clear();
+                    sync.getTreeBark().addAll(scratch.modelBark);
+                    sync.getTreeLeaves().clear();
+                    sync.getTreeLeaves().addAll(scratch.modelLeaves);
+                    sync.markBuilt(cellsPerSide, treeModels);
                 } finally {
                     sync.release();
                 }

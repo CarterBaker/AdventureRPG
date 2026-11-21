@@ -52,6 +52,13 @@ public class SettingsValueUtility extends EngineUtility {
                 settings.treeDetailDistance = stepTreeDetail(settings.treeDetailDistance, step);
                 settingsSystem.applyTreeDetail();
             }
+            case TREE_MODEL_DISTANCE -> {
+                settings.treeModelDistance = Math.clamp(
+                        settings.treeModelDistance + step * RuntimeSetting.SETTINGS_TREE_MODEL_DISTANCE_STEP,
+                        EngineSetting.TREE_MODEL_DISTANCE_MIN,
+                        EngineSetting.TREE_MODEL_DISTANCE_MAX);
+                settingsSystem.applyTreeDetail();
+            }
             case CHARACTER_DETAIL -> {
                 settings.characterDetailDistance = Math.clamp(
                         settings.characterDetailDistance + step * RuntimeSetting.SETTINGS_CHARACTER_DETAIL_STEP,
@@ -150,6 +157,9 @@ public class SettingsValueUtility extends EngineUtility {
                     RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
                     settings.detailRadius);
             case TREE_DETAIL -> String.format(RuntimeSetting.SETTINGS_FORMAT_CHUNKS, settings.treeDetailDistance);
+            case TREE_MODEL_DISTANCE -> String.format(
+                    RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
+                    settings.treeModelDistance);
             case CHARACTER_DETAIL -> String.format(
                     RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
                     settings.characterDetailDistance);

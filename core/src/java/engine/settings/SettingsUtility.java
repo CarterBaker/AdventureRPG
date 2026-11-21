@@ -84,6 +84,10 @@ public class SettingsUtility extends EngineUtility {
                 settings.maxRenderDistance,
                 EngineSetting.RENDER_DISTANCE_MIN,
                 EngineSetting.RENDER_DISTANCE_MAX);
+        settings.treeModelDistance = Math.clamp(
+                settings.treeModelDistance,
+                EngineSetting.TREE_MODEL_DISTANCE_MIN,
+                EngineSetting.TREE_MODEL_DISTANCE_MAX);
         settings.treeDetailDistance = Math.clamp(
                 settings.treeDetailDistance,
                 EngineSetting.TREE_DETAIL_DISTANCE_MIN,

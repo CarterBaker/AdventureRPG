@@ -61,6 +61,7 @@ public class SettingsOptionBranch extends BranchPackage {
         injectOptionRow(session, SettingsOption.RENDER_DISTANCE);
         injectOptionRow(session, SettingsOption.TERRAIN_DETAIL);
         injectOptionRow(session, SettingsOption.TREE_DETAIL);
+        injectOptionRow(session, SettingsOption.TREE_MODEL_DISTANCE);
         injectOptionRow(session, SettingsOption.CHARACTER_DETAIL);
         injectOptionRow(session, SettingsOption.MACRO_TERRAIN);
         injectSlider(session, SettingsSlider.MACRO_CRINKLE);

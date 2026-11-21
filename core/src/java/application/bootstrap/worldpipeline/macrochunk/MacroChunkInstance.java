@@ -6,6 +6,7 @@ import application.bootstrap.shaderpipeline.ubo.UBOInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MacroChunkInstance extends InstancePackage {
 
@@ -32,6 +33,7 @@ public class MacroChunkInstance extends InstancePackage {
     // GPU
     private MeshInstance meshInstance;
     private ModelInstance modelInstance;
+    private ObjectArrayList<ModelInstance> treeModels;
     private UBOInstance positionUBO;
     private UBOInstance coverageUBO;
     private boolean rendered;
@@ -39,9 +41,11 @@ public class MacroChunkInstance extends InstancePackage {
 
     // Target
     private int targetCellsPerSide;
+    private boolean targetTreeModels;
 
     // Built
     private int builtCellsPerSide;
+    private boolean builtTreeModels;
 
     // Coverage
     private int[] coverageWords;
@@ -63,6 +67,7 @@ public class MacroChunkInstance extends InstancePackage {
 
         this.macroDataSyncContainer = create(MacroDataSyncContainer.class);
         this.coverageWords = new int[EngineSetting.MACRO_COVERAGE_WORD_COUNT];
+        this.treeModels = new ObjectArrayList<>();
     }
 
     // Constructor \\
@@ -116,18 +121,21 @@ public class MacroChunkInstance extends InstancePackage {
 
     // Target \\
 
-    public void setTarget(int cellsPerSide) {
+    // The resolution its distance calls for, and whether it lies near enough the grid to draw its trees as models
+    public void setTarget(int cellsPerSide, boolean treeModels) {
         this.targetCellsPerSide = cellsPerSide;
+        this.targetTreeModels = treeModels;
     }
 
     public boolean needsRebuild() {
-        return builtCellsPerSide != targetCellsPerSide;
+        return builtCellsPerSide != targetCellsPerSide || builtTreeModels != targetTreeModels;
     }
 
     // Built \\
 
-    public void setBuilt(int cellsPerSide) {
+    public void setBuilt(int cellsPerSide, boolean treeModels) {
         this.builtCellsPerSide = cellsPerSide;
+        this.builtTreeModels = treeModels;
     }
 
     public void invalidateBuild() {
@@ -211,6 +219,15 @@ public class MacroChunkInstance extends InstancePackage {
 
     public int getTargetCellsPerSide() {
         return targetCellsPerSide;
+    }
+
+    public boolean isTargetTreeModels() {
+        return targetTreeModels;
+    }
+
+    // The bark and leaf models of the trees the tile draws as models, empty while it draws none
+    public ObjectArrayList<ModelInstance> getTreeModels() {
+        return treeModels;
     }
 
     public float getAngleFromCenter() {

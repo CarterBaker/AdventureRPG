@@ -85,8 +85,9 @@ public class MacroRingBranch extends BranchPackage {
 
         long activeChunkCoordinate = grid.getActiveChunkCoordinate();
 
+        // A moved tree model distance re-places the resident tiles without streaming the ring again
         if (activeChunkCoordinate == grid.getMacroAnchorCoordinate())
-            return false;
+            return grid.takeMacroTreeModelChange();
 
         rebuildRing(grid, activeChunkCoordinate);
         grid.anchorMacroRing(activeChunkCoordinate);
@@ -161,6 +162,10 @@ public class MacroRingBranch extends BranchPackage {
         float nearestDistanceBlocks = MacroTerrainUtility.nearestDistanceChunks(
                 relativeX, relativeZ, macroChunkSize) * chunkSize;
 
-        macro.setTarget(MacroTerrainUtility.resolveCellsPerSide(nearestDistanceBlocks, tileSizeBlocks));
+        float modelReachBlocks = grid.getRenderDistance() * 0.5f * chunkSize + grid.getTreeModelBlocks();
+
+        macro.setTarget(
+                MacroTerrainUtility.resolveCellsPerSide(nearestDistanceBlocks, tileSizeBlocks),
+                nearestDistanceBlocks <= modelReachBlocks);
     }
 }

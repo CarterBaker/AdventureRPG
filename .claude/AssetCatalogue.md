@@ -561,6 +561,9 @@ One line per session that changed this file: the date, what was added or removed
   and `menus/PhotoMode.arpg`; regenerated `menus/PauseMenu.arpg` (Photo Mode under Continue) and
   `shaders/postprocessing/effects/PostCompositeShader.fsh` (photo mode's look).
 - 2026-11-21: Photo mode fixes. Regenerated `menus/PhotoMode.arpg` (buttons stacked, Fly Camera, the flying hint).
+- 2026-11-21: Macro tree models. Added `shaders/surface/includes/MacroGround.glsl` (macro ground sunk beneath the
+  grid's rim, closing the pale seam) and `shaders/trees/includes/TreeFar.glsl` (a macro tile's tree models stand on
+  that ground); regenerated `MacroTerrainShader.vsh`, `TreeFade.glsl`, `TreeBarkShader.vsh` and `TreeLeafShader.vsh`.
 
 ## Textures and Sprites (2433 files)
 
@@ -1827,7 +1830,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/surface/includes/`
 
 `Bevel.glsl`, `CloudShadow.glsl`, `Content.glsl`, `Coverage.glsl`, `FaceGradient.glsl`, `HeightDisplacement.glsl`,
-`MacroCrinkle.glsl`, `NearTerrainNoise.glsl`, `Normal.glsl`, `PatchCulling.glsl`, `SurfaceTessellationTier.glsl`, `SurfaceTierFlat.glsl`,
+`MacroCrinkle.glsl`, `MacroGround.glsl`, `NearTerrainNoise.glsl`, `Normal.glsl`, `PatchCulling.glsl`, `SurfaceTessellationTier.glsl`, `SurfaceTierFlat.glsl`,
 `SurfaceTierFull.glsl`, `TiledSampling.glsl`
 
 ### `assets/shaders/surface/macro/`
@@ -1844,7 +1847,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/trees/includes/`
 
-`TreeBark.glsl`, `TreeBarkShading.glsl`, `TreeFade.glsl`, `TreeLeaf.glsl`, `TreeLeafSprig.glsl`, `TreeShading.glsl`
+`TreeBark.glsl`, `TreeBarkShading.glsl`, `TreeFade.glsl`, `TreeFar.glsl`, `TreeLeaf.glsl`, `TreeLeafSprig.glsl`, `TreeShading.glsl`
 
 ### `assets/shaders/trees/leaf/`
 

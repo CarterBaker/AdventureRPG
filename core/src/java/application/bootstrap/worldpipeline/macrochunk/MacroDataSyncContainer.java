@@ -9,7 +9,8 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
 
     /*
      * Lock guarding one macro chunk's CPU geometry between its build and its
-     * upload: the land mesh, and the tile's patch of the grid's open water
+     * upload: the land mesh, the bark and leaves of the tree models a tile
+     * near the grid draws, and the tile's patch of the grid's open water
      * mask, one RGBA texel per mask cell. A reserved build keeps the macro
      * from being uploaded or recycled until endWork() clears it, and built
      * marks geometry waiting for the GPU together with the resolution it was
@@ -21,10 +22,13 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
     private FloatArrayList vertices;
     private ShortArrayList indices;
     private byte[] waterMask;
+    private FloatArrayList treeBark;
+    private FloatArrayList treeLeaves;
     private boolean built;
 
     // Build Record
     private int builtCellsPerSide;
+    private boolean builtTreeModels;
 
     // Work
     private boolean building;
@@ -35,6 +39,8 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
     protected void create() {
         this.vertices = new FloatArrayList();
         this.indices = new ShortArrayList();
+        this.treeBark = new FloatArrayList();
+        this.treeLeaves = new FloatArrayList();
         this.waterMask = new byte[EngineSetting.MACRO_WATER_MASK_TEXELS_PER_TILE
                 * EngineSetting.MACRO_WATER_MASK_TEXELS_PER_TILE * EngineSetting.COLOR_CHANNEL_COUNT];
     }
@@ -78,14 +84,17 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
 
     // Geometry \\
 
-    public void markBuilt(int cellsPerSide) {
+    public void markBuilt(int cellsPerSide, boolean treeModels) {
         this.built = true;
         this.builtCellsPerSide = cellsPerSide;
+        this.builtTreeModels = treeModels;
     }
 
     public void clearGeometry() {
         vertices.clear();
         indices.clear();
+        treeBark.clear();
+        treeLeaves.clear();
         this.built = false;
     }
 
@@ -101,6 +110,18 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
 
     public byte[] getWaterMask() {
         return waterMask;
+    }
+
+    public FloatArrayList getTreeBark() {
+        return treeBark;
+    }
+
+    public FloatArrayList getTreeLeaves() {
+        return treeLeaves;
+    }
+
+    public boolean isBuiltTreeModels() {
+        return builtTreeModels;
     }
 
     public boolean isBuilt() {

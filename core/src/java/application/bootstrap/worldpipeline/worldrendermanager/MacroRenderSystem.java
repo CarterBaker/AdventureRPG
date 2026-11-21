@@ -17,6 +17,7 @@ import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroDataSyncContainer;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
@@ -24,8 +25,10 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector4Int;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 class MacroRenderSystem extends SystemPackage {
@@ -41,7 +44,12 @@ class MacroRenderSystem extends SystemPackage {
      * exactly the ground the chunk grid leaves open and meets it with no hole
      * and no overlap. A reupload writes into the macro's existing buffers, a
      * hidden macro keeps them for its next tenant, and only disposal frees
-     * them, so streaming macros in and out never churns GPU objects.
+     * them, so streaming macros in and out never churns GPU objects. A tile
+     * near the grid also draws its trees as models of themselves in the
+     * grid's own bark and leaf materials, placed by the same position UBO and
+     * marked far, so they rise by distance through the very dither the grid's
+     * trees fall away through; they are made again only when the tile
+     * crosses into or out of that ring.
      */
 
     // Internal
@@ -51,6 +59,7 @@ class MacroRenderSystem extends SystemPackage {
     private ModelManager modelManager;
     private MaterialManager materialManager;
     private VAOManager vaoManager;
+    private TreeManager treeManager;
     private FrustumCullingSystem frustumCullingSystem;
 
     // Handles
@@ -72,6 +81,7 @@ class MacroRenderSystem extends SystemPackage {
 
     // Scratch
     private Vector2 gridPositionScratch;
+    private ObjectArrayList<MeshInstance> treeMeshScratch;
 
     // Base \\
 
@@ -94,6 +104,7 @@ class MacroRenderSystem extends SystemPackage {
 
         // Scratch
         this.gridPositionScratch = new Vector2();
+        this.treeMeshScratch = new ObjectArrayList<>();
     }
 
     @Override
@@ -106,6 +117,7 @@ class MacroRenderSystem extends SystemPackage {
         this.modelManager = get(ModelManager.class);
         this.materialManager = get(MaterialManager.class);
         this.vaoManager = get(VAOManager.class);
+        this.treeManager = get(TreeManager.class);
         this.frustumCullingSystem = get(FrustumCullingSystem.class);
     }
 
@@ -169,6 +181,7 @@ class MacroRenderSystem extends SystemPackage {
 
         macro.setRendered(true);
         macro.setHasGeometry(!sync.getIndices().isEmpty());
+        uploadTreeModels(macro, sync);
 
         if (!macro.hasGeometry())
             return;
@@ -188,6 +201,46 @@ class MacroRenderSystem extends SystemPackage {
         }
     }
 
+    // Tree Models \\
+
+    private void uploadTreeModels(MacroChunkInstance macro, MacroDataSyncContainer sync) {
+        disposeTreeModels(macro);
+        addTreeModels(macro, sync.getTreeBark(), treeManager.getBarkMaterialID());
+        addTreeModels(macro, sync.getTreeLeaves(), treeManager.getLeafMaterialID());
+    }
+
+    private void addTreeModels(MacroChunkInstance macro, FloatArrayList vertices, int materialID) {
+
+        if (vertices.isEmpty())
+            return;
+
+        treeManager.uploadTreeMeshes(vertices, treeMeshScratch);
+
+        ObjectArrayList<ModelInstance> treeModels = macro.getTreeModels();
+
+        for (int i = 0; i < treeMeshScratch.size(); i++) {
+
+            MaterialInstance material = materialManager.cloneMaterial(materialID);
+            material.setUBO(macro.getPositionUBO());
+            material.setUniform(EngineSetting.UNIFORM_TREE_FADE, EngineSetting.TREE_FADE_SHOWN);
+            material.setUniform(EngineSetting.UNIFORM_TREE_FAR, EngineSetting.TREE_FAR_ON);
+
+            treeModels.add(modelManager.createModel(treeMeshScratch.get(i), material));
+        }
+
+        treeMeshScratch.clear();
+    }
+
+    private void disposeTreeModels(MacroChunkInstance macro) {
+
+        ObjectArrayList<ModelInstance> treeModels = macro.getTreeModels();
+
+        for (int i = 0; i < treeModels.size(); i++)
+            modelManager.removeMesh(treeModels.get(i));
+
+        treeModels.clear();
+    }
+
     // Removal \\
 
     void hideMacro(MacroChunkInstance macro) {
@@ -203,6 +256,8 @@ class MacroRenderSystem extends SystemPackage {
             modelManager.removeMesh(modelInstance);
             macro.clearModel();
         }
+
+        disposeTreeModels(macro);
 
         UBOInstance positionUBO = macro.getPositionUBO();
 
@@ -238,6 +293,11 @@ class MacroRenderSystem extends SystemPackage {
 
             refreshCoverage(macro, grid);
             worldRenderManager.pushSurfaceModel(macro.getModelInstance(), grid, worldFbo, window);
+
+            ObjectArrayList<ModelInstance> treeModels = macro.getTreeModels();
+
+            for (int i = 0; i < treeModels.size(); i++)
+                worldRenderManager.pushSurfaceModel(treeModels.get(i), grid, worldFbo, window);
         }
     }
 

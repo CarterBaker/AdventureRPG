@@ -39,7 +39,7 @@ public class MacroRenderBranch extends BranchPackage {
                 return;
 
             worldRenderManager.addMacroInstance(macro, grid);
-            macro.setBuilt(sync.getBuiltCellsPerSide());
+            macro.setBuilt(sync.getBuiltCellsPerSide(), sync.isBuiltTreeModels());
             sync.clearGeometry();
         } finally {
             sync.release();
