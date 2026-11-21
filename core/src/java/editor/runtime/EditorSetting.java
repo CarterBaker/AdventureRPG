@@ -1909,6 +1909,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_MESSAGE_PART_NAMED = "A layer of that name already exists: ";
     public static final String CHARACTER_RIG_MESSAGE_PART_NONE = "No layer holds the selected bone";
     public static final String CHARACTER_RIG_FIELD_PARTS = "parts";
+    public static final String CHARACTER_RIG_FIELD_STAMPS = "stamps";
     public static final String CHARACTER_RIG_MESSAGE_MIRRORED = "Mirrored ";
     public static final String CHARACTER_RIG_MESSAGE_LOADED_BONE = "Only bones added since the editor started can be"
             + " renamed or removed";

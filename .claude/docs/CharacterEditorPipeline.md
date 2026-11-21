@@ -906,7 +906,9 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   the rig entry where the placement carries it (its frame the placement's turn times its own, reflected when mirrored,
   its joint carried by the whole matrix, sizes scaled), its top bones under the host bone, each renamed for the side it
   joins and numbered past every name the rig holds (`upper_arm_2_l`), with the part's layers (a twin adding its bones to
-  the same layers); the rig is applied live (`CharacterRigBranch.replaceRig`). The body then opens where it joins: the
+  the same layers) and a record of the bones it brought (the rig's `stamps`: the part's name, numbered past any record
+  of it, and its bones; a twin's bones join the same record, and Remove Bone and Rename Bone keep every record in step,
+  `CharacterRigBranch.followStampBone`); the rig is applied live (`CharacterRigBranch.replaceRig`). The body then opens where it joins: the
   open loop aimed at, or a hole of the faces facing out within the plug's radius of the point, flooded across edges
   from the nearest and closed over any face left enclosed. The stamp's vertices, faces, weights (onto the grafted bones
   by name, the host placeholder onto the host), masks, shape keys (by name, their deltas turned), textures, zones, UVs,
@@ -1080,10 +1082,12 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
 - **The timeline is the recorder's.** `AnimationEditorManager` opens its active clip there
   (`RecorderManager.openAnimation`, `RecordingAnimationBranch.parse`): one take and one clip for each layer, each on a
   lane of its own named after it, as a sequencer stacks one character's motion: Base (the clip's own tracks and its
-  morphs, `RecordingMorphTrackStruct`) on the first lane, then every part a stamp joined (`parts`, the modular kit's
-  animation layers) in the clip's order, all spanning the clip's whole length so they read as the one clip they play
-  as. A layer holds a `RecordingBoneTrackStruct` for every bone it keys (Base: every bone no part keys; never spring
-  bones), each holding a curve for every slot and nested in the Layers tab under the nearest bone above it the layer
+  morphs, `RecordingMorphTrackStruct`) on the first lane, then the clip's own tracks of each body part a stamp joined,
+  one lane to each record in the rig's `stamps` while lanes remain (`readStamps`), then every part a stamp joined with
+  motion of its own (`parts`, the modular kit's animation layers) in the clip's order, all spanning the clip's whole
+  length so they read as the one clip they play as. A stamp's lane is the timeline's view only: its tracks are written
+  back into the clip's own `tracks`. A layer holds a `RecordingBoneTrackStruct` for every bone it keys (Base: every bone
+  no other layer holds; never spring bones), each holding a curve for every slot and nested in the Layers tab under the nearest bone above it the layer
   holds. The Keys tab lays the layer out as a dope sheet (`RecorderKeysSystem.injectDopeSheet`): a summary row for
   every bone and morph track marking each step any of its curves keys, a press on its name picking it
   (`RECORDER_KEY_ROW_SUMMARY`) and showing its first curve on the Keys Graph; the picked one's curves are the

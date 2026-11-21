@@ -33,7 +33,9 @@ class CharacterGraftBranch extends BranchPackage {
      * onto the rig first, each placed in the bind pose where the placement
      * carries it, its top bones under the bone it joins, all renamed for the
      * side they join and numbered past every name the rig holds, with the
-     * part's layers; the rig applies live. Then the body opens where the part
+     * part's layers and a record of the bones it brought, under the part's
+     * name, so the timeline can lay them on a lane of their own; the rig
+     * applies live. Then the body opens where the part
      * joins, at the open loop it was aimed at or through a hole cut from the
      * faces within its plug's radius, and the part's vertices and faces come
      * in carried by the placement, weighed onto the grafted bones, with its
@@ -61,12 +63,13 @@ class CharacterGraftBranch extends BranchPackage {
     private CharacterClipBranch characterClipBranch;
 
     // Rig — the number every grafted name takes, the names the rig holds, each grafted bone's frame in the bind pose,
-    // each stamp bone's bone in the rig, and the layers made for the part
+    // each stamp bone's bone in the rig, the layers made for the part and the record of the bones it brought
     private int number;
     private ObjectOpenHashSet<String> takenNames;
     private ObjectArrayList<Matrix4> graftWorlds;
     private IntArrayList stampBoneRemap;
     private ObjectArrayList<ArpgObjectStruct> graftedParts;
+    private ArpgObjectStruct graftedStamp;
 
     // Hole — the faces cut, each directed edge's face, and the flood's queue
     private BooleanArrayList faceFlags;
@@ -391,6 +394,7 @@ class CharacterGraftBranch extends BranchPackage {
         }
 
         graftParts(rigArpg, stampHandle, placement, twinPass);
+        recordStamp(rigArpg, stampHandle, placement, twinPass);
     }
 
     // A stamp bone's frame in the bind pose: its turn reflected where the part is mirrored, then carried by the
@@ -483,6 +487,34 @@ class CharacterGraftBranch extends BranchPackage {
             for (int b = 0; b < sourceBones.size(); b++)
                 partBones.add(rename(sourceBones.get(b).getAsString(), placement));
         }
+    }
+
+    // The bones the part brought recorded under its name, numbered past any record of that name; a twin's bones join
+    // the record the part made, so a pair of twins is one record
+    private void recordStamp(
+            ArpgObjectStruct rigArpg,
+            StampHandle stampHandle,
+            CharacterPartPlacementStruct placement,
+            boolean twinPass) {
+
+        ArpgArrayStruct stampBones = stampHandle.getBonesArpg();
+
+        if (!twinPass) {
+
+            ArpgArrayStruct stamps = CharacterViewUtility.requireArray(
+                    rigArpg, EditorSetting.CHARACTER_RIG_FIELD_STAMPS);
+
+            this.graftedStamp = new ArpgObjectStruct();
+            graftedStamp.addProperty(
+                    EditorSetting.CHARACTER_RIG_FIELD_NAME, resolvePartName(stamps, stampHandle.getDisplayName()));
+            graftedStamp.add(EditorSetting.CHARACTER_RIG_FIELD_BONES, new ArpgArrayStruct());
+            stamps.add(graftedStamp);
+        }
+
+        ArpgArrayStruct recordBones = graftedStamp.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+
+        for (int i = 0; i < stampBones.size(); i++)
+            recordBones.add(rename(readName(stampBones, i), placement));
     }
 
     // A layer's name with the part's number where the rig holds it already, counting on past any taken

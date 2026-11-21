@@ -7,6 +7,7 @@ import application.bootstrap.geometrypipeline.rigmanager.RigManager;
 import application.bootstrap.musicpipeline.util.NoteScale;
 import application.bootstrap.musicpipeline.util.SongArpgUtility;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecordingBoneTrackStruct;
@@ -21,6 +22,7 @@ import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.root.UtilityPackage.InternalException;
+import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.curves.CurveEnds;
@@ -35,10 +37,12 @@ class RecordingAnimationBranch extends BranchPackage {
      * recording of one take for each of its layers, each laid once from its
      * start on a lane of its own named after it, as a sequencer stacks the
      * layers of one character's motion: the clip's own tracks on the first,
-     * its morph curves with them, and every part a stamp joined on the next,
-     * in the order the clip lists them. A layer holds a bone track for every
-     * bone of the rig it keys — the clip's own layer every bone no part keys
-     * — each axis of each channel a curve with the clip's own keys, modes and
+     * its morph curves with them, then the clip's own tracks of each body
+     * part a stamp joined, one lane to each part the rig records, as long as
+     * lanes remain, then every part a stamp joined with motion of its own on
+     * the next, in the order the clip lists them. A layer holds a bone track
+     * for every bone of the rig it keys — the clip's own layer every bone no
+     * other layer holds — each axis of each channel a curve with the clip's own keys, modes and
      * handles, nested under the nearest bone above it the layer holds; every
      * layer runs as long as the clip's latest key, so they read as the one
      * clip they play as, and never shorter than the floor that leaves room
@@ -102,14 +106,18 @@ class RecordingAnimationBranch extends BranchPackage {
         if (partNames.size() + 1 > EngineSetting.SONG_LANE_COUNT)
             throwException("Clip \"" + clipName + "\" has more layers than the timeline has lanes");
 
-        ObjectArrayList<RecordingTakeStruct> layers = new ObjectArrayList<>(partNames.size() + 1);
+        ArpgArrayStruct stamps = readStamps(rigHandle, EngineSetting.SONG_LANE_COUNT - 1 - partNames.size());
+        ObjectArrayList<RecordingTakeStruct> layers = new ObjectArrayList<>(partNames.size() + stamps.size() + 1);
 
         layers.add(new RecordingTakeStruct(EditorSetting.RECORDER_ANIMATION_BASE_LAYER, RecorderChannel.NONE));
+
+        for (int i = 0; i < stamps.size(); i++)
+            layers.add(new RecordingTakeStruct(readStampName(stamps, i), RecorderChannel.NONE));
 
         for (int i = 0; i < partNames.size(); i++)
             layers.add(new RecordingTakeStruct(partNames.get(i), RecorderChannel.NONE));
 
-        readBones(clipArpg, rigHandle, partNames, ends, layers, clipName);
+        readBones(clipArpg, rigHandle, partNames, stamps, ends, layers, clipName);
         layers.get(0).setMorphTrack(readMorphs(clipArpg, ends, clipName));
 
         RecordingInstance recording = create(RecordingInstance.class);
@@ -148,26 +156,72 @@ class RecordingAnimationBranch extends BranchPackage {
         return partNames;
     }
 
-    // Every bone of the rig but its spring bones laid in the layer that keys it, under the nearest bone above it
-    // that layer holds
+    // The rig's records of the bones each joined body part brought, as many as the lanes left take, empty when it
+    // records none
+    private ArpgArrayStruct readStamps(RigHandle rigHandle, int laneCount) {
+
+        ArpgArrayStruct stamps = new ArpgArrayStruct();
+        InfoEntryStruct entry = infoManager.findEntry(
+                EditorSetting.INFO_SCHEMA_RIGS,
+                rigHandle.getRigName(),
+                rigHandle.getRigName());
+        ArpgArrayStruct recorded = entry != null
+                && ArpgUtility.hasArray(entry.getArpg(), EditorSetting.CHARACTER_RIG_FIELD_STAMPS)
+                        ? entry.getArpg().getAsArray(EditorSetting.CHARACTER_RIG_FIELD_STAMPS)
+                        : null;
+
+        for (int i = 0; recorded != null && i < recorded.size() && stamps.size() < laneCount; i++)
+            stamps.add(recorded.get(i));
+
+        return stamps;
+    }
+
+    private static String readStampName(ArpgArrayStruct stamps, int stampIndex) {
+        return ArpgUtility.validateString(stamps.get(stampIndex).getAsObject(), EditorSetting.CHARACTER_RIG_FIELD_NAME);
+    }
+
+    // The record holding a bone by its name, or INDEX_NOT_FOUND when none does
+    private static int findStamp(ArpgArrayStruct stamps, String boneName) {
+
+        for (int s = 0; s < stamps.size(); s++) {
+
+            ArpgArrayStruct stampBones = ArpgUtility.validateArray(
+                    stamps.get(s).getAsObject(), EditorSetting.CHARACTER_RIG_FIELD_BONES);
+
+            for (int b = 0; b < stampBones.size(); b++)
+                if (boneName.equals(stampBones.get(b).getAsString()))
+                    return s;
+        }
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Every bone of the rig but its spring bones laid in the layer that keys it — a joined part's own motion, else
+    // the lane of the body part that brought it, else the clip's own — under the nearest bone above it that layer
+    // holds
     private void readBones(
             ArpgObjectStruct clipArpg,
             RigHandle rigHandle,
             ObjectArrayList<String> partNames,
+            ArpgArrayStruct stamps,
             CurveEnds ends,
             ObjectArrayList<RecordingTakeStruct> layers,
             String clipName) {
 
         int boneCount = rigHandle.getBoneCount();
         int[] boneLayers = new int[boneCount];
+        String[] boneParts = new String[boneCount];
 
         for (int i = 0; i < boneCount; i++) {
 
-            String partName = findPart(clipArpg, rigHandle.getBone(i).getName());
+            String boneName = rigHandle.getBone(i).getName();
+            String partName = findPart(clipArpg, boneName);
+            int stamp = findStamp(stamps, boneName);
 
+            boneParts[i] = partName;
             boneLayers[i] = rigHandle.isSpringBone(i)
                     ? EngineSetting.INDEX_NOT_FOUND
-                    : partName != null ? partNames.indexOf(partName) + 1 : 0;
+                    : partName != null ? stamps.size() + partNames.indexOf(partName) + 1 : stamp + 1;
         }
 
         for (int i = 0; i < boneCount; i++) {
@@ -186,7 +240,7 @@ class RecordingAnimationBranch extends BranchPackage {
             layers.get(layer).getBoneTracks().add(readBone(
                     clipArpg,
                     rigHandle.getBone(i).getName(),
-                    layer > 0 ? partNames.get(layer - 1) : null,
+                    boneParts[i],
                     parentName,
                     ends,
                     clipName));

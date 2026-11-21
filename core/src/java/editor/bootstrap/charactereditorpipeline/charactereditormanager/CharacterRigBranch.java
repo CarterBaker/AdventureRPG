@@ -24,6 +24,7 @@ import engine.root.UtilityPackage.InternalException;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import engine.util.arpg.ArpgValueStruct;
 import engine.util.io.FileUtility;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
@@ -1365,10 +1366,18 @@ class CharacterRigBranch extends BranchPackage {
         int parent = parents.getInt(boneIndex);
 
         markSubtree(boneIndex);
-        edit(bones -> {
-            for (int i = boneCount - 1; i >= 0; i--)
-                if (subtree.getBoolean(i))
-                    bones.remove(i);
+        editRig(rig -> {
+
+            ArpgArrayStruct bones = rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+
+            for (int i = boneCount - 1; i >= 0; i--) {
+
+                if (!subtree.getBoolean(i))
+                    continue;
+
+                followStampBone(rig, boneNames.get(i), null);
+                bones.remove(i);
+            }
         });
         pickBone(parent);
         characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_REMOVED + boneName);
@@ -1388,7 +1397,12 @@ class CharacterRigBranch extends BranchPackage {
 
         String oldName = boneNames.get(boneIndex);
 
-        edit(bones -> {
+        editRig(rig -> {
+
+            ArpgArrayStruct bones = rig.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+
+            followStampBone(rig, oldName, boneName);
+
             for (int i = 0; i < bones.size(); i++) {
 
                 ArpgObjectStruct boneArpg = bones.get(i).getAsObject();
@@ -1399,6 +1413,36 @@ class CharacterRigBranch extends BranchPackage {
                     boneArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_PARENT, boneName);
             }
         });
+    }
+
+    // Every record of the bones a joined part brought follows a bone renamed, or lets it go when it is removed; a
+    // record left holding no bone goes with it
+    private static void followStampBone(ArpgObjectStruct rigArpg, String boneName, String newName) {
+
+        if (!ArpgUtility.hasArray(rigArpg, EditorSetting.CHARACTER_RIG_FIELD_STAMPS))
+            return;
+
+        ArpgArrayStruct stamps = rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_STAMPS);
+
+        for (int s = stamps.size() - 1; s >= 0; s--) {
+
+            ArpgArrayStruct stampBones = stamps.get(s).getAsObject()
+                    .getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+
+            for (int b = stampBones.size() - 1; b >= 0; b--) {
+
+                if (!boneName.equals(stampBones.get(b).getAsString()))
+                    continue;
+
+                if (newName != null)
+                    stampBones.set(b, new ArpgValueStruct(newName));
+                else
+                    stampBones.remove(b);
+            }
+
+            if (stampBones.size() == 0)
+                stamps.remove(s);
+        }
     }
 
     // Only a bone nothing loaded can name yet — one added since the start — takes a new name or goes; the root
