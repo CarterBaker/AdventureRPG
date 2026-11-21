@@ -33,20 +33,19 @@ class BlockBranch extends BranchPackage {
      * Handles block breaking and placement for PlacementManager. Every blow,
      * swung or thrown, breaks by one rule: its work — the momentum it drives
      * in — counts against the block's durability, so a stronger arm or a
-     * heavier tool breaks a block in fewer strokes. A block that names a tool
-     * takes work across strokes only from that tool, at a tier at least its
-     * own, the current break target tracked from one stroke to the next; any
-     * other blow breaks it only by driving its whole durability in at once,
-     * as a hard throw shatters what it meets. A block that names no tool takes
-     * work from anything. A block subdivided into sub-blocks breaks one
+     * heavier tool breaks a block in fewer strokes, the current break target
+     * tracked from one stroke to the next. A block that names a tool takes
+     * work only from that tool, at a tier at least its own and its content's,
+     * and turns every other blow, however hard; a block that names no tool
+     * takes work from anything. A block subdivided into sub-blocks breaks one
      * sub-block at a time — the one the blow met — each taking the block's
      * full durability, and yields one block piece; a whole block breaks whole
      * and yields a piece for each of its eight sub-blocks. A whole block
      * holding a content needs a tool of the content's tier too, takes the
-     * content's durability on top of its own, and, broken by that tool, yields
-     * a piece of the content for each it held beside its own pieces; a whole
-     * block broken under a fully grown covering also yields the covering's
-     * drop through CoverageBranch. A blow struck by hand hands what it yields
+     * content's durability on top of its own, and yields a piece of the
+     * content for each it held beside its own pieces; a whole block broken
+     * under a fully grown covering also yields the covering's drop through
+     * CoverageBranch. A blow struck by hand hands what it yields
      * to its striker, and whatever does not fit, or anything a thrown blow
      * breaks loose, is let fall from where it stood through
      * ProjectileManager, carrying a share of the blow's speed. A blow that
@@ -124,7 +123,7 @@ class BlockBranch extends BranchPackage {
 
     // Break \\
 
-    // The blow's work against the block a cast met — counted across strokes for the right tool, all at once otherwise
+    // The blow's work against the block a cast met, counted across strokes — turned unless struck with the right tool
     BlowOutcome tryBreak(BlowStruct blow, BlockCastStruct castStruct) {
 
         BlockHandle block = castStruct.getBlock();
@@ -142,16 +141,14 @@ class BlockBranch extends BranchPackage {
         }
 
         boolean subdivided = SubBlockUtility.isSubdivided(blockPlacementSystem.getSubBlockMask(castStruct));
-        boolean tooled = canWork(blow.getItem(), block, content);
-        float durability = resolveDurability(block, content);
-        float work = blow.getWork();
-
-        if (!tooled && work < durability) {
+        if (!canWork(blow.getItem(), block, content)) {
             playAt(turnedCueID, worldHandle, castStruct);
             return BlowOutcome.TURNED;
         }
 
-        float prior = tooled ? resolvePriorWork(castStruct, subdivided) : 0f;
+        float durability = resolveDurability(block, content);
+        float work = blow.getWork();
+        float prior = resolvePriorWork(castStruct, subdivided);
 
         if (prior + work < durability) {
             currentHits = prior + work;
@@ -172,7 +169,7 @@ class BlockBranch extends BranchPackage {
 
         blow.spend(durability - prior);
         playSurfaceAt(block.getSoundSurface(), true, worldHandle, castStruct);
-        yieldContentPieces(blow, castStruct, content, tooled ? ContentUtility.getAmount(contained) : 0);
+        yieldContentPieces(blow, castStruct, content, ContentUtility.getAmount(contained));
         yieldPieces(blow, castStruct, block, subdivided);
 
         if (!coveringDrop.equals(EngineSetting.COVERING_DROP_NONE))
@@ -366,7 +363,7 @@ class BlockBranch extends BranchPackage {
         return block.getDurability() + (content != null ? content.getDurability() : 0);
     }
 
-    // True when a blow struck with an item counts across strokes — any blow on a block that names no tool, otherwise
+    // True when a blow struck with an item works the block at all — any blow on a block that names no tool, otherwise
     // only that tool at the tier of the block and its content
     private boolean canWork(ItemInstance itemInstance, BlockHandle block, ContentHandle content) {
 
