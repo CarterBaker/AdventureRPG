@@ -26,10 +26,11 @@ class ItemBrushBranch extends BranchPackage {
      * brush does, the edits themselves left to ItemEditBranch. A stamp is the
      * Brushes tab's tip laid flat on the face the pointer struck, sized by the
      * Tools tab's Size in sub-voxels, every column of it as deep as the tip
-     * covers it times Strength, so a soft tip thins toward its feathered edge
-     * and a speckled one leaves gaps where its density does; Brush builds
-     * the columns outward from the face into empty cells and Erase digs them
-     * inward through filled ones. A stroke is held to the layer of cells its
+     * covers it times Strength of the Tools tab's Depth, one layer unless
+     * raised, so a soft tip thins toward its feathered edge and a speckled
+     * one leaves gaps where its density does; Brush builds the columns
+     * outward from the face into empty cells and, inverted, digs them inward
+     * through filled ones. A stroke is held to the layer of cells its
      * press began on, the way a voxel editor drags along a face, so building
      * never climbs toward the camera; stamps are laid along it every brush
      * spacing. Fill gathers the run of cubes of one part joined face to face.
@@ -250,8 +251,8 @@ class ItemBrushBranch extends BranchPackage {
             }
     }
 
-    // Every cell the tip reaches about the centre on the face: each column as deep as its coverage times Strength
-    // reaches, built outward into empty cells or dug inward through filled ones
+    // Every cell the tip reaches about the centre on the face: each column as deep as its coverage times Strength of
+    // the Depth reaches, built outward into empty cells or dug inward through filled ones
     private void collectStamp(SubVoxelModelStruct model, boolean adding) {
 
         reachedCells.clear();
@@ -261,7 +262,7 @@ class ItemBrushBranch extends BranchPackage {
         float strength = toolManager.getOption(ToolCanvas.ITEM, ToolOption.STRENGTH);
         float density = brush.getValue(BrushField.DENSITY);
         int reach = (int) Math.ceil(radius);
-        int deepest = Math.max(1, reach);
+        int deepest = Math.max(1, Math.round(toolManager.getOption(ToolCanvas.ITEM, ToolOption.DEPTH)));
         int uAxis = toUAxis(faceAxis);
         int vAxis = toVAxis(faceAxis);
         int step = adding ? faceSign : -faceSign;

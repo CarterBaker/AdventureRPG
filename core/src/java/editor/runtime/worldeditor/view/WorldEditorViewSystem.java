@@ -14,7 +14,8 @@ public class WorldEditorViewSystem extends SystemPackage {
      * Where the world editor looks. The whole image fits the window when the
      * tab first opens; scrolling zooms about the pointer, from many window
      * pixels per image pixel out to the image shown small, and dragging the
-     * pan button moves it, keeping the view's centre on the image. Image
+     * pan button, or the apply button under the Move tool (beginPan()),
+     * moves it, keeping the view's centre on the image. Image
      * positions are pixels with y down, window positions pixels with y up.
      */
 
@@ -30,6 +31,7 @@ public class WorldEditorViewSystem extends SystemPackage {
 
     // Pan
     private boolean panning;
+    private int panButton;
     private float lastMouseX;
     private float lastMouseY;
 
@@ -109,9 +111,9 @@ public class WorldEditorViewSystem extends SystemPackage {
         float mouseY = rawInput.getMouseY();
 
         if (editorInputSystem.isClicked(WorldEditorSetting.BUTTON_PAN))
-            panning = true;
+            beginPan(WorldEditorSetting.BUTTON_PAN);
 
-        if (!rawInput.isButtonHeld(WorldEditorSetting.BUTTON_PAN))
+        if (panning && !rawInput.isButtonHeld(panButton))
             panning = false;
 
         if (panning) {
@@ -121,6 +123,12 @@ public class WorldEditorViewSystem extends SystemPackage {
 
         lastMouseX = mouseX;
         lastMouseY = mouseY;
+    }
+
+    // A pan held for as long as the button pressed stays down
+    public void beginPan(int button) {
+        this.panning = true;
+        this.panButton = button;
     }
 
     // Conversion — window pixels, y up, to image pixels, y down, and back \\

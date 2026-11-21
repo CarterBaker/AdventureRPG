@@ -81,6 +81,9 @@ public class ItemEditorManager extends ManagerPackage {
     // Active
     private ItemDocumentInstance activeDocument;
 
+    // Tool — whether Brush digs instead of building
+    private boolean inverted;
+
     // Status
     private String statusMessage;
     private int revision;
@@ -678,15 +681,28 @@ public class ItemEditorManager extends ManagerPackage {
 
     // Tools \\
 
-    // A press of the tool chosen for the item: Brush and Erase begin a stroke, the rest act once
+    // Whether Brush digs instead of building — Ctrl held over the item, read by its tool system each frame
+    public void setInverted(boolean inverted) {
+        this.inverted = inverted;
+    }
+
+    public boolean isErasing() {
+        return getTool() == EditorTool.BRUSH && inverted;
+    }
+
+    // Whether the tool chosen acts on the item at all — Move only looks, leaving every press to the camera
+    public boolean isActingTool() {
+        return getTool() != EditorTool.MOVE;
+    }
+
+    // A press of the tool chosen for the item: Brush begins a stroke, building or, inverted, digging; the rest act once
     public void pressTool(SubVoxelHitStruct hit) {
 
         if (activeDocument == null)
             return;
 
         switch (getTool()) {
-            case BRUSH -> itemBrushBranch.beginStroke(activeDocument, true, hit);
-            case ERASE -> eraseAt(hit);
+            case BRUSH -> brushAt(hit);
             case FILL -> itemBrushBranch.fill(activeDocument, hit);
             case WALL -> itemEditBranch.placeWall(activeDocument, hit);
             case PICK -> itemEditBranch.pick(activeDocument, hit);
@@ -695,10 +711,12 @@ public class ItemEditorManager extends ManagerPackage {
         }
     }
 
-    // A struck wall is taken away alone; cubes are dug by a stroke
-    private void eraseAt(SubVoxelHitStruct hit) {
+    // Built by a stroke; inverted, a struck wall is taken away alone and cubes are dug by a stroke
+    private void brushAt(SubVoxelHitStruct hit) {
 
-        if (hit.hasTarget() && hit.isTargetWall())
+        if (!inverted)
+            itemBrushBranch.beginStroke(activeDocument, true, hit);
+        else if (hit.hasTarget() && hit.isTargetWall())
             itemEditBranch.eraseWall(activeDocument, hit);
         else
             itemBrushBranch.beginStroke(activeDocument, false, hit);
@@ -716,13 +734,13 @@ public class ItemEditorManager extends ManagerPackage {
 
     // Whether the tool chosen stamps with the brush, built or dug, rather than marking one cube or wall
     public boolean isStampTool() {
-        return getTool() == EditorTool.BRUSH || getTool() == EditorTool.ERASE;
+        return getTool() == EditorTool.BRUSH;
     }
 
     // The cubes the tool's stamp would reach where the pointer is, laid into the preview; false when none
     public boolean buildStampPreview(SubVoxelHitStruct hit, SubVoxelModelStruct preview) {
         return activeDocument != null && isStampTool()
-                && itemBrushBranch.buildPreview(activeDocument, getTool() == EditorTool.BRUSH, hit, preview);
+                && itemBrushBranch.buildPreview(activeDocument, !isErasing(), hit, preview);
     }
 
     // Status \\

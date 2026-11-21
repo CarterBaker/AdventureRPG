@@ -30,6 +30,7 @@ public class WorldEditorToolSystem extends SystemPackage {
      * conventions: a click picks the placement nearest the pointer, Shift and
      * Ctrl adding and taking away, a drag from a placement moves everything
      * selected with it once released, and a drag from nothing draws a box.
+     * Move begins nothing: its press drags the view as the pan button does.
      * Nothing begins while the view is being panned. While the Settlement
      * Planner carries a design over the window while its picked layer places,
      * focused or not, the pointer is followed for the drop instead, the
@@ -154,6 +155,11 @@ public class WorldEditorToolSystem extends SystemPackage {
         if (!hovering || worldEditorViewSystem.isPanning()
                 || !editorInputSystem.isClicked(WorldEditorSetting.BUTTON_APPLY))
             return;
+
+        if (worldEditorManager.getTool(layer) == EditorTool.MOVE) {
+            worldEditorViewSystem.beginPan(WorldEditorSetting.BUTTON_APPLY);
+            return;
+        }
 
         if (worldEditorManager.getTool(layer) == EditorTool.SELECT) {
             press();

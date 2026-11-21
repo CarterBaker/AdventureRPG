@@ -57,7 +57,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_BIOMES,
             new EditorTool[] {
                     EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.SWIRL, EditorTool.SCATTER,
-                    EditorTool.FILL, EditorTool.PICK },
+                    EditorTool.FILL, EditorTool.PICK, EditorTool.MOVE },
             false,
             imageSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT),
@@ -65,7 +65,7 @@ public enum ToolCanvas {
     HEIGHTS(
             EditorSetting.TOOL_CANVAS_HEIGHTS,
             new EditorTool[] {
-                    EditorTool.RAISE, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE },
+                    EditorTool.RAISE, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE, EditorTool.MOVE },
             true,
             imageSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
@@ -193,11 +193,12 @@ public enum ToolCanvas {
             false),
     ITEM(
             EditorSetting.TOOL_CANVAS_ITEM,
-            new EditorTool[] { EditorTool.BRUSH, EditorTool.ERASE, EditorTool.WALL, EditorTool.FILL, EditorTool.PICK },
+            new EditorTool[] { EditorTool.BRUSH, EditorTool.WALL, EditorTool.FILL, EditorTool.PICK, EditorTool.MOVE },
             new ToolActionGroupStruct[] { itemParts(), itemPaint() },
             false,
             itemSize(),
-            strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
+            strength(EditorSetting.TOOL_STRENGTH_DEFAULT),
+            itemDepth()),
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
@@ -598,6 +599,16 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_ITEM_SIZE_MAX,
                 EditorSetting.TOOL_ITEM_SIZE_STEP,
                 EditorSetting.TOOL_ITEM_SIZE_DEFAULT);
+    }
+
+    // How many layers of cubes one stamp of an item's brush builds or digs at most, one being a layer at a time
+    private static ToolOptionStruct itemDepth() {
+        return new ToolOptionStruct(
+                ToolOption.DEPTH,
+                EditorSetting.TOOL_ITEM_DEPTH_MIN,
+                EditorSetting.TOOL_ITEM_DEPTH_MAX,
+                EditorSetting.TOOL_ITEM_DEPTH_STEP,
+                EditorSetting.TOOL_ITEM_DEPTH_DEFAULT);
     }
 
     private static ToolOptionStruct screenSize() {

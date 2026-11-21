@@ -584,6 +584,7 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-21: Ledge climbing. Added `animations/humanoid/HumanoidClamber.arpg` and `HumanoidMantle.arpg`;
   regenerated every stamp under `stamps/humanoid/` (each carries its tracks of both clips),
   `animationtrees/humanoid/HumanoidAnimationTree.arpg` (clamber and mantle nodes) and `schemas/AnimationTrees.arpg`.
+- 2026-11-21: Item Editor tools. Regenerated `shortcuts/ItemEditor.arpg` (Ctrl held inverts the Brush to erase).
 
 ## Textures and Sprites (2567 files)
 

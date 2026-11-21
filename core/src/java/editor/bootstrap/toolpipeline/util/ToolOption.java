@@ -11,8 +11,9 @@ public enum ToolOption {
      * far, in degrees, a swirl turns what lies at its centre; Scale is how
      * large a body part is placed, Turn how far it turns about the loop it
      * joins by, Comb which way laid fur lies along the surface, Detail
-     * the face size the topology brush evens faces toward, and Length and
-     * Width how long and how wide a new strand of hair grows. Mirror makes
+     * the face size the topology brush evens faces toward, Length and Width
+     * how long and how wide a new strand of hair grows, and Depth how many
+     * layers of cubes one stamp of an item's brush builds or digs at most. Mirror makes
      * every edit to one side of a character to its twin across the body as
      * well, X-Ray picks through the surface as if it were glass, Wireframe
      * draws the edges of the mesh worked over its surface, and Shape which
@@ -35,7 +36,8 @@ public enum ToolOption {
     MIRROR(EditorSetting.TOOL_OPTION_MIRROR, true),
     XRAY(EditorSetting.TOOL_OPTION_XRAY, true),
     WIREFRAME(EditorSetting.TOOL_OPTION_WIREFRAME, true),
-    SHAPE(EditorSetting.TOOL_OPTION_SHAPE, true);
+    SHAPE(EditorSetting.TOOL_OPTION_SHAPE, true),
+    DEPTH(EditorSetting.TOOL_OPTION_DEPTH);
 
     // Values
     public static final ToolOption[] VALUES = values();
