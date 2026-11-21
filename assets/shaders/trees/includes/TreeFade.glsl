@@ -6,10 +6,11 @@
 #include "trees/includes/TreeFar.glsl"
 
 // A standing tree's look hands over to its next one by screen-door dither rather than at once: while a chunk or mega
-// redraws its trees, the new look rises through a 4x4 ordered pattern as the old one falls away through the very same
-// pattern, so every pixel shows exactly one of them and a tree that did not change looks the same throughout. The
-// fade is positive for the look rising in, the share of the pattern it still leaves out, and negative for the look
-// falling away, the share it already gave up; zero shows the whole tree. The steps match TREE_FADE_STEPS.
+// redraws its trees, the new look rises through a 4x4 ordered pattern while the old one stands whole, and only once
+// the new one is whole does the old fall away through the very same pattern, so a crown is never thinner than one
+// whole look, however differently the two looks' leaf cards cover it. The fade is positive for the look rising in,
+// the share of the pattern it still leaves out, and negative for the look falling away, the share it already gave
+// up; zero shows the whole tree. The steps match TREE_FADE_STEPS.
 //
 // Far out the grid's trees hand over to the macro terrain's trees chunk by chunk, as its ground does: a macro tile
 // draws a tree only while the grid does not draw the chunk it roots in, so a tree never leaves before the one taking

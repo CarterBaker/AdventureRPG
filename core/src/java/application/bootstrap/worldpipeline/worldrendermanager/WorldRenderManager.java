@@ -75,10 +75,12 @@ public class WorldRenderManager extends ManagerPackage {
      * a mega's stand-ins land, the trees its chunks still hold stand in for
      * them, so no forest blinks out as the player walks away from it. A chunk
      * or mega that redraws its trees keeps the ones it drew before for
-     * TREE_FADE_SECONDS, falling away through a dither pattern as the new
-     * ones rise through it, and a chunk whose trees are taken down lets them
-     * fall away over its mega's stand-ins, so a tree changing its look never
-     * pops.
+     * TREE_FADE_SECONDS: the new ones rise through a dither pattern over the
+     * first half while the old stand whole, and only then do the old fall
+     * away through it, so a crown is never thinner than one whole look, its
+     * leaves never flickering where the two looks' cards cover different
+     * pixels. A chunk whose trees are taken down lets them fall away over its
+     * mega's stand-ins, so a tree changing its look never pops.
      */
 
     // Internal
@@ -172,10 +174,12 @@ public class WorldRenderManager extends ManagerPackage {
         this.treeFadeRising = new Float[EngineSetting.TREE_FADE_STEPS + 1];
         this.treeFadeFalling = new Float[EngineSetting.TREE_FADE_STEPS + 1];
 
+        // The new look rises over the first half while the old stands whole, then the old falls away over the
+        // second, so two looks whose leaves cover different pixels never both stand half drawn
         for (int step = 0; step <= EngineSetting.TREE_FADE_STEPS; step++) {
             float share = (float) step / EngineSetting.TREE_FADE_STEPS;
-            treeFadeRising[step] = 1f - share;
-            treeFadeFalling[step] = -share;
+            treeFadeRising[step] = 1f - Math.min(1f, share * 2f);
+            treeFadeFalling[step] = -Math.max(0f, share * 2f - 1f);
         }
 
         // Stand-In

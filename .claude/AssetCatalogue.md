@@ -574,6 +574,8 @@ One line per session that changed this file: the date, what was added or removed
   dissolving by distance; the rim sink stays at the rim).
 - 2026-11-21: Leaf coverage. Regenerated `shaders/trees/includes/TreeLeafSprig.glsl` (leaf alpha raised by mip level
   before the gap test, so leaves keep their fill across mips, tiers and looks).
+- 2026-11-21: Tree fade order. Regenerated `shaders/trees/includes/TreeFade.glsl` (the new look rises whole before
+  the old falls away, so crowns never thin mid-fade).
 
 ## Textures and Sprites (2433 files)
 
