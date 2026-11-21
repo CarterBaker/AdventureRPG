@@ -27,7 +27,8 @@ public class BlockCollisionBranch extends BranchPackage {
      * Sub-blocks and item boxes already overlapped never block. A grounded
      * entity cut short tries a stair step and eases the lift into the
      * cosmetic ground offset, so sub-block terrain and low items walk like
-     * stairs. A natural wall stops the box where its edge warp draws it: a
+     * stairs. resolveLedge() lifts the same way to find a ledge a climb can
+     * reach, for LedgeBranch. A natural wall stops the box where its edge warp draws it: a
      * face bent toward the entity stops it early, so it never sinks into a
      * bulge it can see, while a face bent away still stops it at the block,
      * so it never enters solid ground.
@@ -60,6 +61,9 @@ public class BlockCollisionBranch extends BranchPackage {
     private Vector3 detailScratch;
     private Vector3 warpScratch;
 
+    // Ledge — the reach a ledge probe gathers item boxes across
+    private Vector3 ledgeReach;
+
     // Item Boxes — min and max corner of each solid item box and tree wood box near the move, six floats each
     private FloatArrayList itemBoxes;
     private int boxStride;
@@ -87,6 +91,9 @@ public class BlockCollisionBranch extends BranchPackage {
         // Layer
         this.detailScratch = new Vector3();
         this.warpScratch = new Vector3();
+
+        // Ledge
+        this.ledgeReach = new Vector3();
 
         // Item Boxes
         this.itemBoxes = new FloatArrayList();
@@ -171,6 +178,36 @@ public class BlockCollisionBranch extends BranchPackage {
 
         EntityStateHandle state = entity.getEntityStateHandle();
         state.setGroundOffset(state.getGroundOffset() - lift);
+    }
+
+    // Ledge \\
+
+    // How far a box standing at the position climbs to stand on a ledge a forward step away, rising no more than the
+    // most it may and stepping the whole way onto it — zero where no ledge stands within reach
+    float resolveLedge(
+            Vector3 position,
+            EntityInstance entity,
+            float forwardX, float forwardZ,
+            float maxRise) {
+
+        long chunkCoordinate = entity.getWorldPositionStruct().getChunkCoordinate();
+
+        setBox(position, entity.getSize());
+        gatherItemBoxes(entity, chunkCoordinate, ledgeReach.set(forwardX, maxRise, forwardZ));
+
+        float rise = sweep(chunkCoordinate, axisY, maxRise);
+        translate(axisY, rise);
+
+        float stepX = sweep(chunkCoordinate, axisX, forwardX);
+        translate(axisX, stepX);
+
+        float stepZ = sweep(chunkCoordinate, axisZ, forwardZ);
+        translate(axisZ, stepZ);
+
+        if (horizontalDistance(stepX, stepZ) < horizontalDistance(forwardX, forwardZ) - skin)
+            return 0f;
+
+        return Math.max(rise + sweep(chunkCoordinate, axisY, -rise), 0f);
     }
 
     private float horizontalDistance(float x, float z) {
