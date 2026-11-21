@@ -560,6 +560,7 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-21: Photo mode. Added `photofilters/PhotoFilters.arpg` (the eight standard filters), `schemas/PhotoFilters.arpg`
   and `menus/PhotoMode.arpg`; regenerated `menus/PauseMenu.arpg` (Photo Mode under Continue) and
   `shaders/postprocessing/effects/PostCompositeShader.fsh` (photo mode's look).
+- 2026-11-21: Photo mode fixes. Regenerated `menus/PhotoMode.arpg` (buttons stacked, Fly Camera, the flying hint).
 
 ## Textures and Sprites (2433 files)
 

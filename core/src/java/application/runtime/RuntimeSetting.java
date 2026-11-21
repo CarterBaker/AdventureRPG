@@ -232,9 +232,13 @@ public class RuntimeSetting {
     // Photo Mode — its panel, the row every option is stepped on, and what the panel's rows say
     public static final String MENU_PHOTO_MODE = "PhotoMode/PhotoMode";
     public static final String MENU_PHOTO_ROW = "PhotoMode/photo_row";
+    public static final String MENU_PHOTO_FLY_HINT = "PhotoMode/PhotoFlyHint";
+    public static final int ENTRY_PHOTO_FLY_HINT = 0;
+    public static final String PHOTO_FORMAT_FLY_HINT =
+            "Flying: move and look to frame the shot    %s: panel    %s: take a photo    %s: leave";
     public static final int ENTRY_PHOTO_ROWS = 0;
     public static final int ENTRY_PHOTO_HINT = 1;
-    public static final String PHOTO_FORMAT_HINT = "%s: fly the camera    %s: take a photo    %s: leave";
+    public static final String PHOTO_FORMAT_HINT = "%s or Fly Camera: move the camera    %s: photo    %s: leave";
     public static final String PHOTO_OPTION_FILTER = "Filter";
     public static final String PHOTO_OPTION_POSE = "Pose";
     public static final String PHOTO_OPTION_HIDE_PLAYER = "Hide Player";

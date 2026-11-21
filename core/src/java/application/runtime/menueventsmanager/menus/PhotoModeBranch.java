@@ -31,8 +31,10 @@ public class PhotoModeBranch extends BranchPackage {
      * filter, exposure, contrast, saturation, vignette and grain, through
      * PostEffectsSystem), the field of view, the pose the player holds —
      * every pose made for their own rig, so each race and species holds its
-     * own — and whether the player is in the picture. The Photo Panel binding
-     * puts the panel away to fly the camera and brings it back; Take Photo or
+     * own — and whether the player is in the picture. Fly Camera or the Photo
+     * Panel binding puts the panel away to fly the camera, a line along the
+     * foot of the view saying how to bring it back, and the binding brings
+     * it back; Take Photo or
      * the Screenshot binding takes the shot (ScreenshotSystem), never with the
      * panel in it.
      */
@@ -52,6 +54,7 @@ public class PhotoModeBranch extends BranchPackage {
     private boolean active;
     private boolean closeArmed;
     private MenuInstance panel;
+    private MenuInstance flyHint;
 
     // Look
     private short photoFilterID;
@@ -145,6 +148,7 @@ public class PhotoModeBranch extends BranchPackage {
             return;
 
         this.panel = menuManager.closeMenu(panel);
+        this.flyHint = menuManager.closeMenu(flyHint);
         this.active = false;
 
         playerManager.endPhotoMode(window.getWindowID());
@@ -161,15 +165,32 @@ public class PhotoModeBranch extends BranchPackage {
     private void togglePanel(WindowInstance window) {
 
         if (panel != null) {
-            this.panel = menuManager.closeMenu(panel);
+            flyCamera(window);
             return;
         }
 
         openPanel(window);
     }
 
+    // The panel put away and the camera given the keys and the mouse, a line along the foot of the view saying how
+    // to bring the panel back
+    public void flyCamera(WindowInstance window) {
+
+        if (!active || panel == null)
+            return;
+
+        this.panel = menuManager.closeMenu(panel);
+        this.flyHint = menuManager.openMenu(RuntimeSetting.MENU_PHOTO_FLY_HINT, window);
+        flyHint.getEntryPoint(RuntimeSetting.ENTRY_PHOTO_FLY_HINT).setFontText(String.format(
+                RuntimeSetting.PHOTO_FORMAT_FLY_HINT,
+                InputNameUtility.getName(KeyBindings.PHOTO_PANEL),
+                InputNameUtility.getName(KeyBindings.SCREENSHOT),
+                InputNameUtility.getName(KeyBindings.PAUSE)));
+    }
+
     private void openPanel(WindowInstance window) {
 
+        this.flyHint = menuManager.closeMenu(flyHint);
         this.panel = menuManager.openMenu(RuntimeSetting.MENU_PHOTO_MODE, window);
         panel.getEntryPoint(RuntimeSetting.ENTRY_PHOTO_HINT).setFontText(String.format(
                 RuntimeSetting.PHOTO_FORMAT_HINT,
