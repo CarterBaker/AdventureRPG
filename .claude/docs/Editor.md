@@ -51,7 +51,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
   Sculpt, Weights, Paint, Rig and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
   vertices selected. The Appearance tab's Properties rows hold every slider and control, and the Rig tab marks which
-  bone channels are sliders. The Hair tab grooms strands painted with the material chosen in the Materials tab.
+  bone channels are sliders. The Hair tab grooms strands painted with the material chosen in the Materials tab. Every
+  bone the Properties tab lists (Mesh, Weights, Rig) has an eye, as a layer has (`CharacterViewRowKind.EYE_ITEM`,
+  `CharacterEditorManager.toggleRowEye`): shut, it hides the bone, every bone under it and the vertices they carry most,
+  the bones below keeping their own eyes as a hidden group's layers do.
 - **UV Editor.** Lays out the UVs of the faces the UV tab selects.
 - **Shared beside them.** The Properties tab (also the Animation Editor's); the Color Wheel, holding the paint colour
   every painting window shares, its sliders in the Properties tab while it was worked in last; the Maps tab, the maps

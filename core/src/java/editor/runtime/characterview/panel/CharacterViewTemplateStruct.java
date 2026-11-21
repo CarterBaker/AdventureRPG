@@ -9,8 +9,9 @@ public class CharacterViewTemplateStruct extends StructPackage {
      * and a second for a selected item, and the ids of the label, the value
      * and the button it sits on, the step buttons inside them, and a number
      * row's slider track and knob, and the second label, value and button
-     * of a pair row. A tool that lists no text or pair rows declares no
-     * template for them. Each tool's
+     * of a pair row, and an eye item row's two templates with the ids of its
+     * eye button and the icon on it. A tool that lists no text, pair or eye
+     * item rows declares no template for them. Each tool's
      * templates call its own menu branch, so the panels it fills route back
      * to it.
      */
@@ -24,6 +25,8 @@ public class CharacterViewTemplateStruct extends StructPackage {
     private final String choiceTemplate;
     private final String actionTemplate;
     private final String pairTemplate;
+    private final String eyeItemTemplate;
+    private final String selectedEyeItemTemplate;
 
     // Elements
     private final String labelElement;
@@ -36,6 +39,8 @@ public class CharacterViewTemplateStruct extends StructPackage {
     private final String pairLabelElement;
     private final String pairValueElement;
     private final String pairValueButtonElement;
+    private final String eyeElement;
+    private final String eyeIconElement;
 
     // Constructor \\
 
@@ -58,6 +63,36 @@ public class CharacterViewTemplateStruct extends StructPackage {
             String pairLabelElement,
             String pairValueElement,
             String pairValueButtonElement) {
+        this(
+                headerTemplate, itemTemplate, selectedItemTemplate, numberTemplate, textTemplate, choiceTemplate,
+                actionTemplate, pairTemplate, null, null,
+                labelElement, valueElement, valueButtonElement, decreaseElement, increaseElement, trackElement,
+                knobElement, pairLabelElement, pairValueElement, pairValueButtonElement, null, null);
+    }
+
+    public CharacterViewTemplateStruct(
+            String headerTemplate,
+            String itemTemplate,
+            String selectedItemTemplate,
+            String numberTemplate,
+            String textTemplate,
+            String choiceTemplate,
+            String actionTemplate,
+            String pairTemplate,
+            String eyeItemTemplate,
+            String selectedEyeItemTemplate,
+            String labelElement,
+            String valueElement,
+            String valueButtonElement,
+            String decreaseElement,
+            String increaseElement,
+            String trackElement,
+            String knobElement,
+            String pairLabelElement,
+            String pairValueElement,
+            String pairValueButtonElement,
+            String eyeElement,
+            String eyeIconElement) {
 
         // Templates
         this.headerTemplate = headerTemplate;
@@ -68,6 +103,8 @@ public class CharacterViewTemplateStruct extends StructPackage {
         this.choiceTemplate = choiceTemplate;
         this.actionTemplate = actionTemplate;
         this.pairTemplate = pairTemplate;
+        this.eyeItemTemplate = eyeItemTemplate;
+        this.selectedEyeItemTemplate = selectedEyeItemTemplate;
 
         // Elements
         this.labelElement = labelElement;
@@ -80,6 +117,8 @@ public class CharacterViewTemplateStruct extends StructPackage {
         this.pairLabelElement = pairLabelElement;
         this.pairValueElement = pairValueElement;
         this.pairValueButtonElement = pairValueButtonElement;
+        this.eyeElement = eyeElement;
+        this.eyeIconElement = eyeIconElement;
     }
 
     // Accessible \\
@@ -116,6 +155,15 @@ public class CharacterViewTemplateStruct extends StructPackage {
     // Null for a tool that lists no pair rows
     public String getPairTemplate() {
         return pairTemplate;
+    }
+
+    // Null for a tool that lists no eye item rows
+    public String getEyeItemTemplate() {
+        return eyeItemTemplate;
+    }
+
+    public String getSelectedEyeItemTemplate() {
+        return selectedEyeItemTemplate;
     }
 
     public String getLabelElement() {
@@ -156,5 +204,13 @@ public class CharacterViewTemplateStruct extends StructPackage {
 
     public String getPairValueButtonElement() {
         return pairValueButtonElement;
+    }
+
+    public String getEyeElement() {
+        return eyeElement;
+    }
+
+    public String getEyeIconElement() {
+        return eyeIconElement;
     }
 }

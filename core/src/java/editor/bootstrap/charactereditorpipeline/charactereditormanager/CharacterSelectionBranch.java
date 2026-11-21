@@ -1,6 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
@@ -552,6 +553,80 @@ class CharacterSelectionBranch extends BranchPackage {
 
         changed(document);
         return true;
+    }
+
+    // The vertices a bone or any bone under it carries most hidden or shown as their bones now are, as a bone's eye in
+    // the Properties tab turns; never the last vertices shown. False when nothing changed
+    boolean setCarriedHidden(CharacterMeshDocumentInstance document, RigHandle rigHandle, int boneIndex) {
+
+        int vertexCount = document.getMesh().getVertexCount();
+        int hiding = 0;
+        int changing = 0;
+
+        for (int i = 0; i < vertexCount; i++) {
+
+            int carrier = resolveCarrier(document, i);
+
+            if (carrier == EngineSetting.INDEX_NOT_FOUND || !isUnder(rigHandle, carrier, boneIndex))
+                continue;
+
+            boolean hidden = characterEditorManager.isBoneHidden(rigHandle, carrier);
+
+            if (document.isHidden(i) != hidden) {
+                changing++;
+                hiding += hidden ? 1 : -1;
+            }
+        }
+
+        if (changing == 0)
+            return false;
+
+        if (document.getHiddenCount() + hiding >= vertexCount) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_HIDE_ALL);
+            return false;
+        }
+
+        for (int i = 0; i < vertexCount; i++) {
+
+            int carrier = resolveCarrier(document, i);
+
+            if (carrier != EngineSetting.INDEX_NOT_FOUND && isUnder(rigHandle, carrier, boneIndex))
+                document.setHidden(i, characterEditorManager.isBoneHidden(rigHandle, carrier));
+        }
+
+        changed(document);
+        return true;
+    }
+
+    // The bone a vertex leans on most, INDEX_NOT_FOUND for one with no influence
+    private int resolveCarrier(CharacterMeshDocumentInstance document, int vertexIndex) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+        int carrier = EngineSetting.INDEX_NOT_FOUND;
+        float heaviest = 0f;
+
+        for (int i = 0; i < mesh.getInfluenceCount(vertexIndex); i++) {
+
+            float weight = mesh.getInfluenceWeight(vertexIndex, i);
+
+            if (weight > heaviest) {
+                heaviest = weight;
+                carrier = mesh.getInfluenceBone(vertexIndex, i);
+            }
+        }
+
+        return carrier;
+    }
+
+    // Whether a bone is the ancestor given or hangs anywhere beneath it
+    private boolean isUnder(RigHandle rigHandle, int boneIndex, int ancestorIndex) {
+
+        for (int bone = boneIndex; bone != EngineSetting.INDEX_NOT_FOUND;
+                bone = rigHandle.getBone(bone).getParentIndex())
+            if (bone == ancestorIndex)
+                return true;
+
+        return false;
     }
 
     // Shows every hidden vertex again, selected, as it comes back; false when nothing was hidden

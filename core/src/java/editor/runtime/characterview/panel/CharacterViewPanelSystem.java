@@ -3,10 +3,13 @@ package editor.runtime.characterview.panel;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.MenuColorStruct;
+import application.bootstrap.menupipeline.util.ThemeColor;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.util.CharacterViewRowKind;
+import editor.runtime.layers.LayersSetting;
 import editor.runtime.slider.SliderUtility;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -27,7 +30,8 @@ public class CharacterViewPanelSystem extends SystemPackage {
      * the step buttons take. A ranged row's slider spans the range it
      * declares instead, its knob standing where its value does and following
      * it whenever the value or the range moves. A pair row hands each of its
-     * two value buttons its own key. A header pressed folds the rows under it
+     * two value buttons its own key, and an eye item its eye the row's key,
+     * the eye drawn faint while what it names is hidden. A header pressed folds the rows under it
      * shut, or opens them again, its marker saying which; the panel keeps
      * what it was handed, so a fold lays it out again without asking the
      * tool. Tools refill a panel only when their state has moved, never per
@@ -47,6 +51,9 @@ public class CharacterViewPanelSystem extends SystemPackage {
     // Scratch — the rows a panel shows, those under no folded header
     private ObjectArrayList<CharacterViewRowStruct> shownRows;
 
+    // Colors — the eye of what an eye item hides, as faint as a hidden layer's
+    private MenuColorStruct hiddenColor;
+
     // Base \\
 
     @Override
@@ -57,6 +64,9 @@ public class CharacterViewPanelSystem extends SystemPackage {
 
         // Scratch
         this.shownRows = new ObjectArrayList<>();
+
+        // Colors
+        this.hiddenColor = new MenuColorStruct(ThemeColor.TEXT, LayersSetting.EYE_HIDDEN_ALPHA);
     }
 
     @Override
@@ -182,6 +192,12 @@ public class CharacterViewPanelSystem extends SystemPackage {
             setText(element, templates.getPairLabelElement(), row.getPairLabel());
             setText(element, templates.getPairValueElement(), row.getPairValue());
             setKey(element, templates.getPairValueButtonElement(), row.getPairKey());
+            setKey(element, templates.getEyeElement(), row.getKey());
+
+            ElementInstance eyeIcon = element.findChildById(templates.getEyeIconElement());
+
+            if (eyeIcon != null && !row.isShown())
+                eyeIcon.setColorOverride(hiddenColor);
 
             ElementInstance track = element.findChildById(templates.getTrackElement());
 
@@ -220,6 +236,7 @@ public class CharacterViewPanelSystem extends SystemPackage {
         return switch (row.getKind()) {
             case HEADER -> templates.getHeaderTemplate();
             case ITEM -> row.isSelected() ? templates.getSelectedItemTemplate() : templates.getItemTemplate();
+            case EYE_ITEM -> resolveEyeItemTemplate(row, templates);
             case NUMBER -> templates.getNumberTemplate();
             case TEXT -> resolveTextTemplate(templates);
             case CHOICE -> templates.getChoiceTemplate();
@@ -234,6 +251,14 @@ public class CharacterViewPanelSystem extends SystemPackage {
             throwException("A character tool listed a text row but its menu declares no text row template.");
 
         return templates.getTextTemplate();
+    }
+
+    private String resolveEyeItemTemplate(CharacterViewRowStruct row, CharacterViewTemplateStruct templates) {
+
+        if (templates.getEyeItemTemplate() == null)
+            throwException("A character tool listed an eye item row but its menu declares no eye item row template.");
+
+        return row.isSelected() ? templates.getSelectedEyeItemTemplate() : templates.getEyeItemTemplate();
     }
 
     private String resolvePairTemplate(CharacterViewTemplateStruct templates) {

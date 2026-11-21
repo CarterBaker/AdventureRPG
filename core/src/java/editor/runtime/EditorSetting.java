@@ -858,6 +858,8 @@ public class EditorSetting {
             "editor/CharacterEditor/character_editor_choice_row",
             "editor/CharacterEditor/character_editor_action_row",
             "editor/CharacterEditor/character_editor_pair_row",
+            "editor/CharacterEditor/character_editor_eye_row",
+            "editor/CharacterEditor/character_editor_eye_row_selected",
             "character_editor_row_label",
             "character_editor_row_value",
             "character_editor_row_value_button",
@@ -867,7 +869,9 @@ public class EditorSetting {
             "character_editor_row_knob",
             "character_editor_row_pair_label",
             "character_editor_row_pair_value",
-            "character_editor_row_pair_value_button");
+            "character_editor_row_pair_value_button",
+            "character_editor_row_eye",
+            "character_editor_row_eye_icon");
     public static final CharacterViewTemplateStruct IMAGE_EDITOR_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/ImageEditor/image_editor_header_row",
             "editor/ImageEditor/image_editor_item_row",
