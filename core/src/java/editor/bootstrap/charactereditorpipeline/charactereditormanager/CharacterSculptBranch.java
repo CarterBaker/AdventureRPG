@@ -547,10 +547,10 @@ class CharacterSculptBranch extends BranchPackage {
 
         for (int f = 0; f < faceCount; f++)
             if (faceFlags.getBoolean(f))
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                     int a = mesh.getFaceVertex(f, c);
-                    int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                    int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                     if (a != b)
                         countEdge(toEdgeKey(a, b));
@@ -564,16 +564,16 @@ class CharacterSculptBranch extends BranchPackage {
 
                 addFaceNormal(mesh, f, normal);
 
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                     int a = mesh.getFaceVertex(f, c);
-                    int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                    int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                     if (a != b && edge2Value.get(toEdgeKey(a, b)) == 1)
                         mesh.addFace(a, b, vertexRemap.getInt(b), vertexRemap.getInt(a), mesh.getFaceTexture(f));
                 }
 
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                     mesh.setFaceVertex(f, c, vertexRemap.getInt(mesh.getFaceVertex(f, c)));
             }
 
@@ -598,10 +598,10 @@ class CharacterSculptBranch extends BranchPackage {
         edge2Value.clear();
 
         for (int f = 0; f < faceCount; f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int a = mesh.getFaceVertex(f, c);
-                int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
                 long edgeKey = toEdgeKey(a, b);
 
                 if (a == b || !document.isSelected(a) || !document.isSelected(b) || edge2Value.containsKey(edgeKey))
@@ -634,7 +634,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         for (int f = 0; f < faceCount; f++)
             if (faceFlags.getBoolean(f))
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                     if (Math.abs(mesh.getX(mesh.getFaceVertex(f, c))) <= EditorSetting.CHARACTER_MESH_CENTER_TOLERANCE)
                         return true;
 
@@ -677,7 +677,7 @@ class CharacterSculptBranch extends BranchPackage {
 
             int copy = mesh.duplicateFace(f);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(copy); c++)
                 mesh.setFaceVertex(copy, c, remapDuplicate(mesh, mesh.getFaceVertex(f, c)));
         }
 
@@ -933,7 +933,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         for (int f = 0; f < mesh.getFaceCount(); f++) {
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int merged = vertexRemap.getInt(mesh.getFaceVertex(f, c));
 
@@ -973,7 +973,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         int distinct = 0;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             boolean repeated = false;
 
@@ -1016,7 +1016,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
             if (f >= faceCount || faceFlags.getBoolean(f))
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                     document.getSelection().set(mesh.getFaceVertex(f, c), true);
 
         characterMeshBranch.finishEdit(document);
@@ -1035,7 +1035,7 @@ class CharacterSculptBranch extends BranchPackage {
         int center = resolveCenterVertex(mesh, faceIndex);
         int texture = mesh.getFaceTexture(faceIndex);
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
             cornerScratch[c * 2] = mesh.getFaceU(faceIndex, c);
             cornerScratch[c * 2 + 1] = mesh.getFaceV(faceIndex, c);
         }
@@ -1123,7 +1123,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         vertexList.clear();
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int corner = mesh.getFaceVertex(faceIndex, c);
 
@@ -1133,7 +1133,7 @@ class CharacterSculptBranch extends BranchPackage {
             vertexList.add(corner);
         }
 
-        double share = 1.0 / EngineSetting.QUAD_VERTEX_COUNT;
+        double share = 1.0 / mesh.getFaceCornerCount(faceIndex);
 
         CharacterMeshUtility.setRoundedPosition(
                 mesh,
@@ -1256,7 +1256,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         RiggedMeshStruct mesh = document.getMesh();
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (document.isSelected(mesh.getFaceVertex(faceIndex, c)))
                 return true;
 
@@ -1284,7 +1284,7 @@ class CharacterSculptBranch extends BranchPackage {
 
         float x = 0f;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             x += mesh.getX(mesh.getFaceVertex(faceIndex, c));
 
         return x;
@@ -1324,7 +1324,7 @@ class CharacterSculptBranch extends BranchPackage {
             vertexFlags.set(i, true);
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                 vertexFlags.set(mesh.getFaceVertex(f, c), false);
 
         document.syncSelection();

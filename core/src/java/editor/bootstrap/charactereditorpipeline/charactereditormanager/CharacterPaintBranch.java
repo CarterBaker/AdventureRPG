@@ -516,7 +516,7 @@ class CharacterPaintBranch extends BranchPackage {
 
             int face = islandFaces.getInt(next);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(face); c++) {
 
                 int vertex = mesh.getFaceVertex(face, c);
 
@@ -545,7 +545,7 @@ class CharacterPaintBranch extends BranchPackage {
         vertexFill.size(vertexCount);
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int slot = mesh.getFaceVertex(f, c) + 1;
                 vertexStarts.set(slot, vertexStarts.getInt(slot) + 1);
@@ -558,7 +558,7 @@ class CharacterPaintBranch extends BranchPackage {
         vertexFaces.size(vertexStarts.getInt(vertexCount));
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int vertex = mesh.getFaceVertex(f, c);
                 int slot = vertexStarts.getInt(vertex) + vertexFill.getInt(vertex);

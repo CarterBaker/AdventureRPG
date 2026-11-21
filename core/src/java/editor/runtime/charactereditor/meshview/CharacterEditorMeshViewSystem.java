@@ -352,10 +352,10 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
         this.pickedCorner = EngineSetting.INDEX_NOT_FOUND;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(picked); c++) {
 
             int a = mesh.getFaceVertex(picked, c);
-            int b = mesh.getFaceVertex(picked, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+            int b = mesh.getFaceVertex(picked, mesh.getNextCorner(picked, c));
 
             if (a == b || !project(getX(a), getY(a), getZ(a), screenScratch)
                     || !project(getX(b), getY(b), getZ(b), edgeScratch))
@@ -444,10 +444,10 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
         out.set(0f, 0f, 0f);
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int a = mesh.getFaceVertex(faceIndex, c) * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
-            int b = mesh.getFaceVertex(faceIndex, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT)
+            int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c))
                     * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
 
             out.add(
@@ -509,7 +509,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
         RiggedMeshStruct mesh = document.getMesh();
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (isInRegion(mesh.getFaceVertex(faceIndex, c)))
                 return true;
 
@@ -705,7 +705,7 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         float maxX = Float.NEGATIVE_INFINITY;
         float maxY = Float.NEGATIVE_INFINITY;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertexIndex = mesh.getFaceVertex(faceIndex, c);
             float x = screens.getFloat(vertexIndex * 2);

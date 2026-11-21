@@ -120,7 +120,7 @@ public class CharacterEditorEdgeSystem extends SystemPackage {
     public int getHoveredVertex(boolean end) {
 
         RiggedMeshStruct mesh = characterEditorMeshViewSystem.getActiveDocument().getMesh();
-        int corner = end ? (hoveredCorner + 1) % EngineSetting.QUAD_VERTEX_COUNT : hoveredCorner;
+        int corner = end ? mesh.getNextCorner(hoveredFace, hoveredCorner) : hoveredCorner;
 
         return mesh.getFaceVertex(hoveredFace, corner);
     }

@@ -308,7 +308,7 @@ class CharacterFurBranch extends BranchPackage {
         if (!card.hasAuthoredUVs(faceIndex))
             return;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(copy); c++)
             mesh.setFaceUV(copy, c, card.getFaceU(faceIndex, c), card.getFaceV(faceIndex, c));
     }
 
@@ -335,7 +335,7 @@ class CharacterFurBranch extends BranchPackage {
         rootCorners.clear();
         rootShares.clear();
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             float alongU = c == 1 || c == 2 ? u : 1f - u;
             float alongV = c >= 2 ? v : 1f - v;
@@ -351,10 +351,10 @@ class CharacterFurBranch extends BranchPackage {
         centreScratch.set(0f, 0f, 0f);
         normalScratch.set(0f, 0f, 0f);
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int a = mesh.getFaceVertex(faceIndex, c);
-            int b = mesh.getFaceVertex(faceIndex, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+            int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c));
 
             centreScratch.add(mesh.getX(a), mesh.getY(a), mesh.getZ(a));
             normalScratch.add(
@@ -363,7 +363,7 @@ class CharacterFurBranch extends BranchPackage {
                     (mesh.getX(a) - mesh.getX(b)) * (mesh.getY(a) + mesh.getY(b)));
         }
 
-        centreScratch.divide(EngineSetting.QUAD_VERTEX_COUNT);
+        centreScratch.divide(mesh.getFaceCornerCount(faceIndex));
 
         float length = normalScratch.length();
 

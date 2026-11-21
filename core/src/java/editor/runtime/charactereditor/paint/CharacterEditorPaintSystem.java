@@ -219,7 +219,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
 
                 stamp.addFace(f);
 
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                     int vertex = mesh.getFaceVertex(f, c);
                     stamp.addCorner(screens.getFloat(vertex * 2), screens.getFloat(vertex * 2 + 1));
@@ -244,7 +244,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
 
             stamp.addFace(twinFace);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(twinFace); c++) {
 
                 int twin = mirrorVertices.getInt(mesh.getFaceVertex(twinFace, c));
                 stamp.addCorner(screens.getFloat(twin * 2), screens.getFloat(twin * 2 + 1));
@@ -255,7 +255,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
     // Whether every corner's twin shows on the window, so the twin face can take the covered face's place there
     private boolean isTwinShown(RiggedMeshStruct mesh, int twinFace) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(twinFace); c++)
             if (Float.isNaN(screens.getFloat(mirrorVertices.getInt(mesh.getFaceVertex(twinFace, c)) * 2)))
                 return false;
 
@@ -287,7 +287,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
     // A face's corners, or their twins, as one key whatever their order: sorted, sixteen bits each
     private long toCornerKey(RiggedMeshStruct mesh, int faceIndex, boolean twins) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertex = mesh.getFaceVertex(faceIndex, c);
             cornerScratch[c] = twins ? mirrorVertices.getInt(vertex) : vertex;
@@ -300,7 +300,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
 
         long key = 0L;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             key = (key << Short.SIZE) | cornerScratch[c];
 
         return key;
@@ -314,7 +314,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
         float maxX = Float.NEGATIVE_INFINITY;
         float maxY = Float.NEGATIVE_INFINITY;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertex = mesh.getFaceVertex(faceIndex, c);
             float sx = screens.getFloat(vertex * 2);
@@ -340,7 +340,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
         float z = 0f;
         boolean inRegion = false;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertex = mesh.getFaceVertex(faceIndex, c);
 
@@ -350,7 +350,7 @@ public class CharacterEditorPaintSystem extends SystemPackage {
             z += characterEditorMeshViewSystem.getZ(vertex);
         }
 
-        float share = 1f / EngineSetting.QUAD_VERTEX_COUNT;
+        float share = 1f / mesh.getFaceCornerCount(faceIndex);
 
         return inRegion && characterEditorMeshViewSystem.isPointShown(x * share, y * share, z * share);
     }

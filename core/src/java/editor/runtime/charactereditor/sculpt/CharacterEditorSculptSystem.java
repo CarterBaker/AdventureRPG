@@ -10,8 +10,9 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.runtime.charactereditor.CharacterEditorSetting;
-import editor.runtime.charactereditor.gizmo.CharacterEditorGizmoSystem;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
+import editor.runtime.characterview.gizmo.CharacterGizmoSource;
+import editor.runtime.characterview.gizmo.CharacterGizmoSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
@@ -23,7 +24,7 @@ import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
-public class CharacterEditorSculptSystem extends SystemPackage {
+public class CharacterEditorSculptSystem extends SystemPackage implements CharacterGizmoSource {
 
     /*
      * Turns this tab's pointer and keys into mesh edits while a mesh mode
@@ -35,7 +36,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
      * brush covers nothing still boxes with either of them held; in Mesh
      * mode the Move, Rotate and Scale tools drag the selection from a
      * vertex instead, picking it first when it is not selected, or along one
-     * axis from a handle of the transform gizmo (CharacterEditorGizmoSystem),
+     * axis from a handle of the transform gizmo (CharacterGizmoSystem),
      * letting go to confirm, each vertex carried as far as it is selected; in Sculpt
      * mode every tool strokes the surface the brush covers, Ctrl inverting
      * the stroke, and in Weights mode the Brush, Erase and Smooth tools
@@ -58,7 +59,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
     private ViewCameraSystem viewCameraSystem;
     private CharacterEditorManager characterEditorManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
-    private CharacterEditorGizmoSystem characterEditorGizmoSystem;
+    private CharacterGizmoSystem characterGizmoSystem;
     private ShortcutManager shortcutManager;
     private BrushManager brushManager;
 
@@ -136,9 +137,14 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         this.viewCameraSystem = get(ViewCameraSystem.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
-        this.characterEditorGizmoSystem = get(CharacterEditorGizmoSystem.class);
+        this.characterGizmoSystem = get(CharacterGizmoSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
         this.brushManager = get(BrushManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        characterGizmoSystem.addSource(this);
     }
 
     @Override
@@ -262,7 +268,7 @@ public class CharacterEditorSculptSystem extends SystemPackage {
         int vertexIndex = characterEditorMeshViewSystem.pickVertex(mouseX, mouseY);
         boolean modified = shift || control;
         CharacterEditorTransform toolTransform = characterEditorManager.getToolTransform();
-        int gizmoAxis = characterEditorGizmoSystem.getHoveredAxis();
+        int gizmoAxis = characterGizmoSystem.getHoveredAxis();
 
         if (toolTransform != null && gizmoAxis != EngineSetting.INDEX_NOT_FOUND && !modified) {
 
@@ -721,6 +727,21 @@ public class CharacterEditorSculptSystem extends SystemPackage {
 
     public Vector3 getPivot() {
         return pivot;
+    }
+
+    // Gizmo \\
+
+    // The transform the Mesh tab's tool drags while none is held, null outside the Mesh tab or while one is
+    @Override
+    public CharacterEditorTransform getGizmoTransform() {
+        return transform == null && characterEditorMeshViewSystem.hasActiveDocument()
+                ? characterEditorManager.getToolTransform()
+                : null;
+    }
+
+    @Override
+    public boolean resolveGizmoPivot(Vector3 out) {
+        return characterEditorManager.resolveGizmoPivot(characterEditorMeshViewSystem.getSkinningMatrices(), out);
     }
 
     // Whether the brush shows under the pointer

@@ -930,6 +930,7 @@ public class EngineSetting {
     public static final String SPRITE_DEFAULT_MESH = "sprites/SpriteMesh";
     public static final String SPRITE_STRETCH_UNIFORM = "u_stretch";
     public static final String SUN_LIGHT_UBO = "SunLightData";
+    public static final int TRIANGLE_INDEX_COUNT = 3;
     public static final int TRIANGLE_VERTEX_COUNT = 3;
     public static final String UBO_TIME_DATA_NAME = "TimeData";
 

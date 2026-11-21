@@ -222,7 +222,7 @@ class CharacterSelectionBranch extends BranchPackage {
 
     private boolean touchesSelection(RiggedMeshStruct mesh, int faceIndex, BooleanArrayList selection) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (selection.getBoolean(mesh.getFaceVertex(faceIndex, c)))
                 return true;
 
@@ -233,7 +233,7 @@ class CharacterSelectionBranch extends BranchPackage {
 
         boolean grew = false;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertexIndex = mesh.getFaceVertex(faceIndex, c);
 

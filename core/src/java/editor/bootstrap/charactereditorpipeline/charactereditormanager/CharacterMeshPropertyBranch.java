@@ -116,6 +116,8 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE,
                     EditorSetting.CHARACTER_TOPOLOGY_KEY_MERGE_DISTANCE,
                     EditorSetting.CHARACTER_TOPOLOGY_KEY_FLIP_FACES,
+                    EditorSetting.CHARACTER_TOPOLOGY_KEY_TRIANGULATE,
+                    EditorSetting.CHARACTER_TOPOLOGY_KEY_JOIN_TRIANGLES,
                     EditorSetting.CHARACTER_TOPOLOGY_KEY_DELETE_DEGENERATE,
                     EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_POLES,
                     EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_TRIANGLES,
@@ -509,6 +511,8 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE -> characterSculptBranch.subdivide(document);
             case EditorSetting.CHARACTER_TOPOLOGY_KEY_MERGE_DISTANCE -> characterEdgeBranch.mergeByDistance(document);
             case EditorSetting.CHARACTER_TOPOLOGY_KEY_FLIP_FACES -> characterEdgeBranch.flipFaces(document);
+            case EditorSetting.CHARACTER_TOPOLOGY_KEY_TRIANGULATE -> characterEdgeBranch.triangulate(document);
+            case EditorSetting.CHARACTER_TOPOLOGY_KEY_JOIN_TRIANGLES -> characterEdgeBranch.joinTriangles(document);
             case EditorSetting.CHARACTER_TOPOLOGY_KEY_DELETE_DEGENERATE -> characterEdgeBranch.deleteDegenerate(document);
             case EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_POLES -> characterEdgeBranch.selectPoles(document);
             case EditorSetting.CHARACTER_TOPOLOGY_KEY_SELECT_TRIANGLES -> characterEdgeBranch.selectTriangles(document);

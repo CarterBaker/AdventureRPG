@@ -806,7 +806,7 @@ class CharacterWeightBranch extends BranchPackage {
             if (!mesh.usesVertex(f, vertexIndex))
                 continue;
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int other = mesh.getFaceVertex(f, c);
 

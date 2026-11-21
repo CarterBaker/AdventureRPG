@@ -12,6 +12,7 @@ import editor.runtime.EditorSetting;
 import editor.runtime.animationeditor.menu.AnimationEditorMenuSystem;
 import editor.runtime.animationeditor.pose.AnimationEditorPoseSystem;
 import editor.runtime.animationeditor.preview.AnimationEditorPreviewSystem;
+import editor.runtime.characterview.gizmo.CharacterGizmoSystem;
 import editor.runtime.characterview.panel.CharacterViewRowSource;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
@@ -67,6 +68,7 @@ public class AnimationEditorContext extends ContextPackage
         this.characterViewPoseSystem = create(CharacterViewPoseSystem.class);
         this.viewCameraSystem = create(ViewCameraSystem.class);
         this.animationEditorPreviewSystem = create(AnimationEditorPreviewSystem.class);
+        create(CharacterGizmoSystem.class);
         this.animationEditorPoseSystem = create(AnimationEditorPoseSystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
         this.animationEditorMenuSystem = create(AnimationEditorMenuSystem.class);

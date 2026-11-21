@@ -46,10 +46,10 @@ public class CharacterLoopUtility extends EngineUtility {
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
             if (isLooped(mesh, faces, f))
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                     int a = mesh.getFaceVertex(f, c);
-                    int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                    int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                     if (a != b)
                         directedEdges.add(toDirectedKey(a, b));
@@ -57,10 +57,10 @@ public class CharacterLoopUtility extends EngineUtility {
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
             if (isLooped(mesh, faces, f))
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                     int a = mesh.getFaceVertex(f, c);
-                    int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                    int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                     if (a != b && !directedEdges.contains(toDirectedKey(b, a)))
                         next.set(a, b);

@@ -14,11 +14,14 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RiggedMeshStruct extends StructPackage {
 
     /*
-     * An editable rigged quad mesh, the one form every character mesh is
-     * parsed into, built from and written back out of. A vertex is a position
-     * with up to MAX_BONE_INFLUENCES weighted bones, shared by every quad
-     * corner standing on it with the same influences; a face is four vertices
-     * in winding order, a texture from the mesh's palette and, when authored,
+     * An editable rigged mesh of quads and triangles, as a modelling tool
+     * holds one, the one form every character mesh is parsed into, built from
+     * and written back out of. A vertex is a position with up to
+     * MAX_BONE_INFLUENCES weighted bones, shared by every face corner
+     * standing on it with the same influences; a face is three or four
+     * vertices in winding order (its corner count; a triangle's fourth slot
+     * repeats its third and is never read as a corner), a texture from the
+     * mesh's palette and, when authored,
      * its own corner UVs, which of its corners are pinned for unwrapping,
      * and the zone it is made of. Edges marked as seams, each a pair of
      * vertices, cut the surface into UV islands. Each vertex also carries
@@ -40,8 +43,9 @@ public class RiggedMeshStruct extends StructPackage {
     private final FloatArrayList influenceWeights;
     private final FloatArrayList masks;
 
-    // Faces — four vertices, a texture and eight corner UV floats each
+    // Faces — four vertex slots, a corner count (3 or 4), a texture and eight corner UV floats each
     private final IntArrayList faceVertices;
+    private final IntArrayList faceCorners;
     private final IntArrayList faceTextures;
     private final FloatArrayList faceUVs;
     private final BooleanArrayList faceAuthoredUVs;
@@ -74,6 +78,7 @@ public class RiggedMeshStruct extends StructPackage {
 
         // Faces
         this.faceVertices = new IntArrayList();
+        this.faceCorners = new IntArrayList();
         this.faceTextures = new IntArrayList();
         this.faceUVs = new FloatArrayList();
         this.faceAuthoredUVs = new BooleanArrayList();
@@ -114,6 +119,8 @@ public class RiggedMeshStruct extends StructPackage {
         masks.addAll(source.masks);
         faceVertices.clear();
         faceVertices.addAll(source.faceVertices);
+        faceCorners.clear();
+        faceCorners.addAll(source.faceCorners);
         faceTextures.clear();
         faceTextures.addAll(source.faceTextures);
         faceUVs.clear();
@@ -521,11 +528,21 @@ public class RiggedMeshStruct extends StructPackage {
 
     // A face over four vertices in winding order, spanning its texture's whole tile until UVs are authored for it
     public int addFace(int v0, int v1, int v2, int v3, int textureIndex) {
+        return addFace(v0, v1, v2, v3, EngineSetting.QUAD_VERTEX_COUNT, textureIndex);
+    }
+
+    // A face over three vertices in winding order, its fourth slot repeating the third
+    public int addTriangle(int v0, int v1, int v2, int textureIndex) {
+        return addFace(v0, v1, v2, v2, EngineSetting.TRIANGLE_VERTEX_COUNT, textureIndex);
+    }
+
+    private int addFace(int v0, int v1, int v2, int v3, int corners, int textureIndex) {
 
         faceVertices.add(v0);
         faceVertices.add(v1);
         faceVertices.add(v2);
         faceVertices.add(v3);
+        faceCorners.add(corners);
         faceTextures.add(textureIndex);
         faceUVs.addElements(faceUVs.size(), EngineSetting.MESH_QUAD_DEFAULT_UVS);
         faceAuthoredUVs.add(false);
@@ -543,6 +560,7 @@ public class RiggedMeshStruct extends StructPackage {
                 getFaceVertex(faceIndex, 1),
                 getFaceVertex(faceIndex, 2),
                 getFaceVertex(faceIndex, 3),
+                getFaceCornerCount(faceIndex),
                 getFaceTexture(faceIndex));
 
         copyFaceUVs(faceIndex, copy);
@@ -554,12 +572,109 @@ public class RiggedMeshStruct extends StructPackage {
         return faceTextures.size();
     }
 
+    // How many corners a face has: 4 for a quad, 3 for a triangle
+    public int getFaceCornerCount(int faceIndex) {
+        return faceCorners.getInt(faceIndex);
+    }
+
+    public boolean isTriangle(int faceIndex) {
+        return faceCorners.getInt(faceIndex) == EngineSetting.TRIANGLE_VERTEX_COUNT;
+    }
+
+    // The corner after or before one, round the face
+    public int getNextCorner(int faceIndex, int corner) {
+        return (corner + 1) % faceCorners.getInt(faceIndex);
+    }
+
+    public int getPreviousCorner(int faceIndex, int corner) {
+
+        int corners = faceCorners.getInt(faceIndex);
+
+        return (corner + corners - 1) % corners;
+    }
+
+    // A quad turned into a triangle over three of its corners, in their order, keeping the corners' UVs and pins; the
+    // dropped corner's slot repeats the last
+    public void setTriangle(int faceIndex, int cornerA, int cornerB, int cornerC) {
+
+        int a = getFaceVertex(faceIndex, cornerA);
+        int b = getFaceVertex(faceIndex, cornerB);
+        int c = getFaceVertex(faceIndex, cornerC);
+        float ua = getFaceU(faceIndex, cornerA);
+        float va = getFaceV(faceIndex, cornerA);
+        float ub = getFaceU(faceIndex, cornerB);
+        float vb = getFaceV(faceIndex, cornerB);
+        float uc = getFaceU(faceIndex, cornerC);
+        float vc = getFaceV(faceIndex, cornerC);
+        boolean authored = hasAuthoredUVs(faceIndex);
+        int pins = (isCornerPinned(faceIndex, cornerA) ? 1 : 0) | (isCornerPinned(faceIndex, cornerB) ? 2 : 0)
+                | (isCornerPinned(faceIndex, cornerC) ? 4 : 0);
+
+        setFaceVertex(faceIndex, 0, a);
+        setFaceVertex(faceIndex, 1, b);
+        setFaceVertex(faceIndex, 2, c);
+        setFaceVertex(faceIndex, 3, c);
+        faceCorners.set(faceIndex, EngineSetting.TRIANGLE_VERTEX_COUNT);
+        writeUV(faceIndex, 0, ua, va);
+        writeUV(faceIndex, 1, ub, vb);
+        writeUV(faceIndex, 2, uc, vc);
+        writeUV(faceIndex, 3, uc, vc);
+        faceAuthoredUVs.set(faceIndex, authored);
+        faceUVPins.set(faceIndex, pins);
+    }
+
+    // A face made a quad or a triangle; a triangle's fourth slot takes its third's vertex and UV
+    public void setFaceCornerCount(int faceIndex, int corners) {
+
+        faceCorners.set(faceIndex, corners);
+
+        if (corners != EngineSetting.TRIANGLE_VERTEX_COUNT)
+            return;
+
+        setFaceVertex(faceIndex, 3, getFaceVertex(faceIndex, 2));
+        writeUV(faceIndex, 3, getFaceU(faceIndex, 2), getFaceV(faceIndex, 2));
+    }
+
+    // Every quad standing on only three vertices, one corner doubled as the edit that made it laid it, made the
+    // triangle it is, its three corners kept in winding order; a face on fewer is left for the clean-up to delete
+    public void settleTriangles() {
+
+        for (int f = 0; f < getFaceCount(); f++) {
+
+            if (isTriangle(f))
+                continue;
+
+            int doubled = EngineSetting.INDEX_NOT_FOUND;
+            int collapses = 0;
+
+            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                if (getFaceVertex(f, c) == getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT)) {
+                    doubled = c;
+                    collapses++;
+                }
+
+            if (collapses == 1)
+                setTriangle(
+                        f,
+                        (doubled + 1) % EngineSetting.QUAD_VERTEX_COUNT,
+                        (doubled + 2) % EngineSetting.QUAD_VERTEX_COUNT,
+                        (doubled + 3) % EngineSetting.QUAD_VERTEX_COUNT);
+        }
+    }
+
     public int getFaceVertex(int faceIndex, int corner) {
         return faceVertices.getInt(faceIndex * EngineSetting.QUAD_VERTEX_COUNT + corner);
     }
 
+    // A corner's vertex; a triangle's padding slot follows its third corner, so every slot always names a live vertex
     public void setFaceVertex(int faceIndex, int corner, int vertexIndex) {
-        faceVertices.set(faceIndex * EngineSetting.QUAD_VERTEX_COUNT + corner, vertexIndex);
+
+        int base = faceIndex * EngineSetting.QUAD_VERTEX_COUNT;
+
+        faceVertices.set(base + corner, vertexIndex);
+
+        if (corner == 2 && isTriangle(faceIndex))
+            faceVertices.set(base + 3, vertexIndex);
     }
 
     public int getFaceTexture(int faceIndex) {
@@ -599,11 +714,20 @@ public class RiggedMeshStruct extends StructPackage {
     // Authors one corner's UV, marking the face's UVs as its own
     public void setFaceUV(int faceIndex, int corner, float u, float v) {
 
+        writeUV(faceIndex, corner, u, v);
+
+        if (corner == 2 && isTriangle(faceIndex))
+            writeUV(faceIndex, 3, u, v);
+
+        faceAuthoredUVs.set(faceIndex, true);
+    }
+
+    private void writeUV(int faceIndex, int corner, float u, float v) {
+
         int base = toUVBase(faceIndex, corner);
 
         faceUVs.set(base, u);
         faceUVs.set(base + 1, v);
-        faceAuthoredUVs.set(faceIndex, true);
     }
 
     public void copyFaceUVs(int fromFace, int toFace) {
@@ -662,6 +786,7 @@ public class RiggedMeshStruct extends StructPackage {
         }
 
         faceVertices.size(kept * EngineSetting.QUAD_VERTEX_COUNT);
+        faceCorners.size(kept);
         faceTextures.size(kept);
         faceUVs.size(kept * EngineSetting.QUAD_VERTEX_COUNT * EngineSetting.RIGGED_MESH_UV_FLOATS);
         faceAuthoredUVs.size(kept);
@@ -674,6 +799,7 @@ public class RiggedMeshStruct extends StructPackage {
         for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
             setFaceVertex(to, c, getFaceVertex(from, c));
 
+        faceCorners.set(to, faceCorners.getInt(from));
         faceTextures.set(to, faceTextures.getInt(from));
         faceZones.set(to, faceZones.getInt(from));
         copyFaceUVs(from, to);
@@ -682,19 +808,19 @@ public class RiggedMeshStruct extends StructPackage {
     // Whether a face stands on a vertex at any of its corners
     public boolean usesVertex(int faceIndex, int vertexIndex) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < getFaceCornerCount(faceIndex); c++)
             if (getFaceVertex(faceIndex, c) == vertexIndex)
                 return true;
 
         return false;
     }
 
-    // Whether all four corners of a face hold the same influences, so it can name its bones once for the quad
+    // Whether every corner of a face holds the same influences, so it can name its bones once for the face
     public boolean hasUniformInfluences(int faceIndex) {
 
         int first = getFaceVertex(faceIndex, 0);
 
-        for (int c = 1; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 1; c < getFaceCornerCount(faceIndex); c++)
             if (!hasSameInfluences(first, getFaceVertex(faceIndex, c)))
                 return false;
 

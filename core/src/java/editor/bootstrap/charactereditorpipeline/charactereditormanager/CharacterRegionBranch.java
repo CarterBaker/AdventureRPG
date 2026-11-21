@@ -289,7 +289,7 @@ class CharacterRegionBranch extends BranchPackage {
             shares.add(-1f);
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int vertexIndex = mesh.getFaceVertex(f, c);
                 float along = mesh.hasAuthoredUVs(f) ? Math.clamp(mesh.getFaceStrand(f, c), 0f, 1f) : 1f;

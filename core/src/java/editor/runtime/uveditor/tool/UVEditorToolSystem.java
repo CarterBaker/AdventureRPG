@@ -194,7 +194,7 @@ public class UVEditorToolSystem extends SystemPackage {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
                 float dx = uvEditorViewSystem.uToScreen(mesh.getFaceU(faceIndex, c)) - mouseX;
                 float dy = uvEditorViewSystem.vToScreen(mesh.getFaceV(faceIndex, c)) - mouseY;

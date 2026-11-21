@@ -474,15 +474,14 @@ class CharacterRigBranch extends BranchPackage {
     }
 
     // The selected bone's size grown or shrunk from what it was when the drag began
-    void scaleGesture(float factor) {
+    void scaleGesture(float factorX, float factorY, float factorZ) {
 
         int boneIndex = selectedBone;
 
-        vectorScratch.set(gestureSize).multiply(factor);
         vectorScratch.set(
-                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, vectorScratch.x),
-                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, vectorScratch.y),
-                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, vectorScratch.z));
+                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, gestureSize.x * factorX),
+                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, gestureSize.y * factorY),
+                Math.max(EditorSetting.CHARACTER_RIG_SIZE_MIN, gestureSize.z * factorZ));
         edit(bones -> writeVector(bones.get(boneIndex).getAsObject(), EditorSetting.CHARACTER_EDITOR_FIELD_SIZE,
                 vectorScratch));
     }

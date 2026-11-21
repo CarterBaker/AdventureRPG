@@ -246,7 +246,7 @@ class CharacterUVBranch extends BranchPackage {
 
         RiggedMeshStruct mesh = document.getMesh();
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertexIndex = mesh.getFaceVertex(faceIndex, c);
 
@@ -268,10 +268,10 @@ class CharacterUVBranch extends BranchPackage {
         characterHistoryBranch.begin(document);
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int vertexA = mesh.getFaceVertex(f, c);
-                int vertexB = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int vertexB = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                 if (!isEdgeSelected(document, vertexA, vertexB) || mesh.isSeam(vertexA, vertexB) == seam)
                     continue;
@@ -305,10 +305,10 @@ class CharacterUVBranch extends BranchPackage {
         characterHistoryBranch.begin(document);
 
         for (int i = 0; i < faceScratch.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceScratch.getInt(i)); c++) {
 
                 int vertexA = mesh.getFaceVertex(faceScratch.getInt(i), c);
-                int vertexB = mesh.getFaceVertex(faceScratch.getInt(i), (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int vertexB = mesh.getFaceVertex(faceScratch.getInt(i), mesh.getNextCorner(faceScratch.getInt(i), c));
                 long edgeKey = RiggedMeshStruct.toEdgeKey(vertexA, vertexB);
                 int other = edge2Face.putIfAbsent(edgeKey, i);
 
@@ -375,9 +375,9 @@ class CharacterUVBranch extends BranchPackage {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
-                int next = (c + 1) % EngineSetting.QUAD_VERTEX_COUNT;
+                int next = mesh.getNextCorner(faceIndex, c);
                 int vertexA = mesh.getFaceVertex(faceIndex, c);
                 int vertexB = mesh.getFaceVertex(faceIndex, next);
                 int other = edge2Corner.putIfAbsent(
@@ -429,7 +429,7 @@ class CharacterUVBranch extends BranchPackage {
 
     private int findCorner(RiggedMeshStruct mesh, int faceIndex, int vertexIndex) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (mesh.getFaceVertex(faceIndex, c) == vertexIndex)
                 return c;
 
@@ -476,7 +476,7 @@ class CharacterUVBranch extends BranchPackage {
         boolean[] selected = new boolean[islandCount];
 
         for (int i = 0; i < faceScratch.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(faceScratch.getInt(i)); c++)
                 selected[islands[i]] |= document.isCornerSelected(faceScratch.getInt(i), c);
 
         ObjectArrayList<IntArrayList> islandFaces = groupIslands(faceScratch, islands, islandCount);
@@ -602,7 +602,7 @@ class CharacterUVBranch extends BranchPackage {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
                 mesh.setFaceUV(
                         faceIndex,
                         c,
@@ -620,7 +620,7 @@ class CharacterUVBranch extends BranchPackage {
         bounds[base + 3] = -Float.MAX_VALUE;
 
         for (int i = 0; i < faces.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faces.getInt(i)); c++) {
 
                 float u = mesh.getFaceU(faces.getInt(i), c);
                 float v = mesh.getFaceV(faces.getInt(i), c);
@@ -695,7 +695,7 @@ class CharacterUVBranch extends BranchPackage {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
                 mesh.setFaceUV(
                         faceIndex,
                         c,
@@ -727,14 +727,14 @@ class CharacterUVBranch extends BranchPackage {
         return Math.sqrt(nx * nx + ny * ny + nz * nz) * 0.5;
     }
 
-    // A quad's signed area in UV, positive while its corners wind anticlockwise
+    // A face's signed area in UV, positive while its corners wind anticlockwise
     private double resolveUVArea(RiggedMeshStruct mesh, int faceIndex) {
 
         double area = 0.0;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
-            int next = (c + 1) % EngineSetting.QUAD_VERTEX_COUNT;
+            int next = mesh.getNextCorner(faceIndex, c);
 
             area += mesh.getFaceU(faceIndex, c) * mesh.getFaceV(faceIndex, next)
                     - mesh.getFaceU(faceIndex, next) * mesh.getFaceV(faceIndex, c);
@@ -783,7 +783,7 @@ class CharacterUVBranch extends BranchPackage {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
                 if (!document.isCornerSelected(faceIndex, c))
                     continue;
@@ -879,7 +879,7 @@ class CharacterUVBranch extends BranchPackage {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
                 double u = mesh.getFaceU(faceIndex, c) - sourceU;
                 double v = mesh.getFaceV(faceIndex, c) - sourceV;
@@ -942,7 +942,7 @@ class CharacterUVBranch extends BranchPackage {
         corners.clear();
 
         for (int i = 0; i < faceScratch.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < document.getMesh().getFaceCornerCount(faceScratch.getInt(i)); c++)
                 if (document.isCornerSelected(faceScratch.getInt(i), c))
                     corners.add(faceScratch.getInt(i) * EngineSetting.QUAD_VERTEX_COUNT + c);
     }
@@ -997,7 +997,7 @@ class CharacterUVBranch extends BranchPackage {
 
             int faceIndex = faceScratch.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
                 float u = mesh.getFaceU(faceIndex, c);
                 float v = mesh.getFaceV(faceIndex, c);
@@ -1034,7 +1034,7 @@ class CharacterUVBranch extends BranchPackage {
 
         if (select)
             for (int i = 0; i < faceScratch.size(); i++)
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                for (int c = 0; c < document.getMesh().getFaceCornerCount(faceScratch.getInt(i)); c++)
                     document.setCornerSelected(faceScratch.getInt(i), c, true);
 
         selectionChanged(document);
@@ -1050,7 +1050,7 @@ class CharacterUVBranch extends BranchPackage {
             IntArrayList faces = islandFaces.get(i);
 
             for (int f = 0; f < faces.size(); f++)
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                for (int c = 0; c < document.getMesh().getFaceCornerCount(faces.getInt(f)); c++)
                     document.setCornerSelected(faces.getInt(f), c, true);
         }
 

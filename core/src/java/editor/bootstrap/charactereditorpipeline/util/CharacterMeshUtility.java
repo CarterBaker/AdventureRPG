@@ -355,7 +355,7 @@ public class CharacterMeshUtility extends EngineUtility {
     // Whether every corner of a face is selected
     public static boolean isFaceSelected(RiggedMeshStruct mesh, int faceIndex, BooleanArrayList selection) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (!selection.getBoolean(mesh.getFaceVertex(faceIndex, c)))
                 return false;
 

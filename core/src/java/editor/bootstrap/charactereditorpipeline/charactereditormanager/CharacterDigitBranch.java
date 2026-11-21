@@ -228,10 +228,10 @@ class CharacterDigitBranch extends BranchPackage {
             if (!isHeldFace(f))
                 continue;
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int a = mesh.getFaceVertex(f, c);
-                int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                 if (a == b)
                     continue;
@@ -249,7 +249,7 @@ class CharacterDigitBranch extends BranchPackage {
 
     private boolean isHeldFace(int faceIndex) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (!held[mesh.getFaceVertex(faceIndex, c)])
                 return false;
 

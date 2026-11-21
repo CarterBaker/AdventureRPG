@@ -26,13 +26,14 @@ public class GltfImportUtility extends EngineUtility {
      * .claude/docs/GLTF.md). inspect reads the first node that carries a
      * mesh: every primitive's vertices joined into one list, its triangles
      * turned back into quads (the fans FB_ngon_encoding marks, otherwise
-     * pairs of triangles that share an edge and lie flat), its materials,
+     * pairs of triangles that share an edge and lie flat) and a triangle left
+     * alone kept as a triangle face, its materials,
      * joints and morph names. build then makes the mesh against a rig once
      * the user has confirmed a texture and zone for every material: glTF
      * vertices standing on one position with the same influences become one
      * mesh vertex, joints become the rig's bones by name, and morph targets
-     * keep their names. Anything the format cannot hold, a lone triangle, a
-     * polygon of more than four corners or a joint the rig lacks, is refused
+     * keep their names. Anything the format cannot hold, a polygon of more
+     * than four corners or a joint the rig lacks, is refused
      * with a catchable InternalException saying why; nothing is ever dropped
      * or remapped silently.
      */
@@ -68,6 +69,7 @@ public class GltfImportUtility extends EngineUtility {
         model.joints = geometry.joints.toIntArray();
         model.masks = geometry.hasMasks ? geometry.masks.toFloatArray() : null;
         model.quads = geometry.quads.toIntArray();
+        model.quadCorners = geometry.quadCorners.toIntArray();
         model.quadMaterials = geometry.quadMaterials.toIntArray();
         model.morphDeltas = new float[geometry.morphDeltas.size()][];
 
@@ -354,7 +356,8 @@ public class GltfImportUtility extends EngineUtility {
 
     // Quads \\
 
-    // FB_ngon_encoding: the triangles of one polygon follow each other and share their first vertex
+    // FB_ngon_encoding: the triangles of one polygon follow each other and share their first vertex; one triangle is a
+    // triangle face, two a quad
     private static void joinFans(int[] indices, int base, int material, GeometryStruct geometry) {
 
         int triangleCount = indices.length / EngineSetting.TRIANGLE_VERTEX_COUNT;
@@ -368,11 +371,17 @@ public class GltfImportUtility extends EngineUtility {
             while (end < triangleCount && indices[end * EngineSetting.TRIANGLE_VERTEX_COUNT] == first)
                 end++;
 
+            int a = t * EngineSetting.TRIANGLE_VERTEX_COUNT;
+
+            if (end - t == 1) {
+                addTriangle(geometry, base, material, first, indices[a + 1], indices[a + 2]);
+                t = end;
+                continue;
+            }
+
             if (end - t != 2)
                 throw new InternalException("The model has a face of " + (end - t + 2)
-                        + " corners; only quads are read. Turn it to quads in the tool it came from");
-
-            int a = t * EngineSetting.TRIANGLE_VERTEX_COUNT;
+                        + " corners; only triangles and quads are read. Split it in the tool it came from");
 
             if (indices[a + 2] != indices[a + 4])
                 throw new InternalException("The model's faces are not fanned the FB_ngon_encoding way");
@@ -384,12 +393,11 @@ public class GltfImportUtility extends EngineUtility {
 
     // Without the extension: a triangle joins the one listed right after it when they share an edge, the two halves
     // of a quad in nearly every exporter's output however the quad is bent, and otherwise the next one in the list
-    // that shares an edge with it and lies flat against it
+    // that shares an edge with it and lies flat against it; one with no such neighbour stays a triangle face
     private static void joinPairs(int[] indices, float[] positions, int base, int material, GeometryStruct geometry) {
 
         int triangleCount = indices.length / EngineSetting.TRIANGLE_VERTEX_COUNT;
         boolean[] joined = new boolean[triangleCount];
-        int unjoined = 0;
 
         for (int t = 0; t < triangleCount; t++) {
 
@@ -407,18 +415,18 @@ public class GltfImportUtility extends EngineUtility {
                 flatness = EditorSetting.GLTF_QUAD_FLAT_COSINE;
             }
 
+            joined[t] = true;
+
             if (partner == EngineSetting.INDEX_NOT_FOUND) {
-                unjoined++;
+
+                int a = t * EngineSetting.TRIANGLE_VERTEX_COUNT;
+
+                addTriangle(geometry, base, material, indices[a], indices[a + 1], indices[a + 2]);
                 continue;
             }
 
-            joined[t] = true;
             joined[partner] = true;
         }
-
-        if (unjoined > 0)
-            throw new InternalException(unjoined + " triangles of the model have no flat neighbour to make a quad "
-                    + "with. Export it as quads (FB_ngon_encoding) or turn its triangles to quads first");
     }
 
     // Adds the quad two triangles make when one's edge is the other's turned round and their normals agree
@@ -501,6 +509,17 @@ public class GltfImportUtility extends EngineUtility {
         geometry.quads.add(base + b);
         geometry.quads.add(base + c);
         geometry.quads.add(base + d);
+        geometry.quadCorners.add(EngineSetting.QUAD_VERTEX_COUNT);
+        geometry.quadMaterials.add(material);
+    }
+
+    private static void addTriangle(GeometryStruct geometry, int base, int material, int a, int b, int c) {
+
+        geometry.quads.add(base + a);
+        geometry.quads.add(base + b);
+        geometry.quads.add(base + c);
+        geometry.quads.add(base + c);
+        geometry.quadCorners.add(EngineSetting.TRIANGLE_VERTEX_COUNT);
         geometry.quadMaterials.add(material);
     }
 
@@ -550,16 +569,23 @@ public class GltfImportUtility extends EngineUtility {
                 throw new InternalException("Material \"" + model.materialNames.get(material)
                         + "\" has no texture and zone chosen for it");
 
-            int face = mesh.addFace(
-                    meshVertices[model.quads[base]],
-                    meshVertices[model.quads[base + 1]],
-                    meshVertices[model.quads[base + 2]],
-                    meshVertices[model.quads[base + 3]],
-                    mesh.resolveTexture(textures[material]));
+            int corners = model.quadCorners[q];
+            int face = corners == EngineSetting.TRIANGLE_VERTEX_COUNT
+                    ? mesh.addTriangle(
+                            meshVertices[model.quads[base]],
+                            meshVertices[model.quads[base + 1]],
+                            meshVertices[model.quads[base + 2]],
+                            mesh.resolveTexture(textures[material]))
+                    : mesh.addFace(
+                            meshVertices[model.quads[base]],
+                            meshVertices[model.quads[base + 1]],
+                            meshVertices[model.quads[base + 2]],
+                            meshVertices[model.quads[base + 3]],
+                            mesh.resolveTexture(textures[material]));
 
             mesh.setFaceZone(face, zones[material]);
 
-            for (int c = 0; model.uvs != null && c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; model.uvs != null && c < corners; c++)
                 mesh.setFaceUV(face, c, model.uvs[model.quads[base + c] * 2], 1f - model.uvs[model.quads[base + c] * 2 + 1]);
         }
 
@@ -692,8 +718,9 @@ public class GltfImportUtility extends EngineUtility {
         boolean hasUVs;
         boolean hasMasks;
 
-        // Quads
+        // Faces — four vertex slots, a corner count and a material each
         final IntArrayList quads = new IntArrayList();
+        final IntArrayList quadCorners = new IntArrayList();
         final IntArrayList quadMaterials = new IntArrayList();
     }
 }

@@ -38,7 +38,7 @@ public class CharacterUnwrapUtility extends EngineUtility {
         vertex2Local.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
 
         for (int i = 0; i < faces.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faces.getInt(i)); c++) {
 
                 int vertexIndex = mesh.getFaceVertex(faces.getInt(i), c);
 
@@ -63,7 +63,7 @@ public class CharacterUnwrapUtility extends EngineUtility {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
                 int local = vertex2Local.get(mesh.getFaceVertex(faceIndex, c));
                 mesh.setFaceUV(faceIndex, c, (float) solved[local * 2], (float) solved[local * 2 + 1]);
@@ -90,7 +90,7 @@ public class CharacterUnwrapUtility extends EngineUtility {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
                 int local = vertex2Local.get(mesh.getFaceVertex(faceIndex, c));
 

@@ -98,14 +98,16 @@ class PaintedMeshBranch extends BranchPackage {
         return meshHandle;
     }
 
-    // One quad's four corners and its two triangles
+    // One face's corners and its triangles: a quad's four and two, a triangle's three and one
     private void writeFace(RiggedMeshStruct mesh, int face, int tile, FloatArrayList vertices, ShortArrayList indices) {
 
         int base = vertices.size() / EngineSetting.PAINTED_ITEM_VERTEX_STRIDE;
 
         resolveFaceNormal(mesh, face);
 
-        for (int corner = 0; corner < EngineSetting.QUAD_VERTEX_COUNT; corner++) {
+        int corners = mesh.getFaceCornerCount(face);
+
+        for (int corner = 0; corner < corners; corner++) {
 
             int vertex = mesh.getFaceVertex(face, corner);
 
@@ -123,12 +125,16 @@ class PaintedMeshBranch extends BranchPackage {
         indices.add((short) base);
         indices.add((short) (base + 1));
         indices.add((short) (base + 2));
+
+        if (corners == EngineSetting.TRIANGLE_VERTEX_COUNT)
+            return;
+
         indices.add((short) (base + 2));
         indices.add((short) (base + 3));
         indices.add((short) base);
     }
 
-    // The quad's flat normal, across its two diagonals
+    // The face's flat normal, across its two diagonals (a triangle's fourth slot repeating its third)
     private void resolveFaceNormal(RiggedMeshStruct mesh, int face) {
 
         int a = mesh.getFaceVertex(face, 0);

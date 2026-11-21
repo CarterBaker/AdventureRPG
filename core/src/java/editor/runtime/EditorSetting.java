@@ -1425,6 +1425,8 @@ public class EditorSetting {
     // vertex, or at a pole it cannot pass; two faces about an edge pack into one long, the second in the low bits
     public static final String CHARACTER_TOPOLOGY_KEY_MERGE_DISTANCE = "merge_distance";
     public static final String CHARACTER_TOPOLOGY_KEY_FLIP_FACES = "flip_faces";
+    public static final String CHARACTER_TOPOLOGY_KEY_TRIANGULATE = "triangulate";
+    public static final String CHARACTER_TOPOLOGY_KEY_JOIN_TRIANGLES = "join_triangles";
     public static final String CHARACTER_TOPOLOGY_KEY_DELETE_DEGENERATE = "delete_degenerate";
     public static final String CHARACTER_TOPOLOGY_KEY_SELECT_POLES = "select_poles";
     public static final String CHARACTER_TOPOLOGY_KEY_SELECT_TRIANGLES = "select_triangles";
@@ -1434,6 +1436,8 @@ public class EditorSetting {
     public static final String CHARACTER_TOPOLOGY_HEADER_STATS = "Topology";
     public static final String CHARACTER_TOPOLOGY_LABEL_MERGE_DISTANCE = "Merge by Distance";
     public static final String CHARACTER_TOPOLOGY_LABEL_FLIP_FACES = "Flip Faces";
+    public static final String CHARACTER_TOPOLOGY_LABEL_TRIANGULATE = "Triangulate Faces";
+    public static final String CHARACTER_TOPOLOGY_LABEL_JOIN_TRIANGLES = "Triangles to Quads";
     public static final String CHARACTER_TOPOLOGY_LABEL_DELETE_DEGENERATE = "Delete Degenerate Faces";
     public static final String CHARACTER_TOPOLOGY_LABEL_SELECT_POLES = "Select Poles";
     public static final String CHARACTER_TOPOLOGY_LABEL_SELECT_TRIANGLES = "Select Triangles";
@@ -1448,6 +1452,8 @@ public class EditorSetting {
     public static final int CHARACTER_TOPOLOGY_LOOP_POLE = 2;
     public static final long CHARACTER_TOPOLOGY_FACE_MASK = 0xFFFFFFFFL;
     public static final String CHARACTER_TOPOLOGY_MESSAGE_OPEN_EDGE = "That edge needs exactly two faces beside it";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_TRIANGLE =
+            "The stroke would split a triangle, which only quads take: join it into quads first";
     public static final String CHARACTER_TOPOLOGY_MESSAGE_SEAM =
             "A UV seam keeps its faces in separate islands: Clear Seam on it first";
     public static final String CHARACTER_TOPOLOGY_MESSAGE_WINDING =
@@ -1462,6 +1468,11 @@ public class EditorSetting {
     public static final String CHARACTER_TOPOLOGY_MESSAGE_MERGED = " vertices merged by distance";
     public static final String CHARACTER_TOPOLOGY_MESSAGE_MERGED_NONE = "No vertices stand within the merge distance";
     public static final String CHARACTER_TOPOLOGY_MESSAGE_FACES_FLIPPED = " faces flipped";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_TRIANGULATED = " quads split into triangles";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_TRIANGULATE_NONE = "Select whole quads to split";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_JOINED_TRIANGLES = " triangle pairs joined into quads";
+    public static final String CHARACTER_TOPOLOGY_MESSAGE_JOIN_NONE =
+            "Select pairs of triangles that share an edge, a texture and a zone";
     public static final String CHARACTER_TOPOLOGY_MESSAGE_DEGENERATE = " degenerate faces deleted";
     public static final String CHARACTER_TOPOLOGY_MESSAGE_DEGENERATE_NONE = "No degenerate faces";
     public static final String CHARACTER_TOPOLOGY_MESSAGE_SELECTED = " vertices selected";

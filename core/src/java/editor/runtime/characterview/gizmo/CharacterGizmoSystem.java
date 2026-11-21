@@ -1,11 +1,9 @@
-package editor.runtime.charactereditor.gizmo;
+package editor.runtime.characterview.gizmo;
 
-import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.runtime.EditorSetting;
-import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
-import editor.runtime.charactereditor.sculpt.CharacterEditorSculptSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
+import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.EngineSetting;
@@ -13,27 +11,27 @@ import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.mathematics.vectors.Vector4;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class CharacterEditorGizmoSystem extends SystemPackage {
+public class CharacterGizmoSystem extends SystemPackage {
 
     /*
-     * The transform gizmo on the Mesh tab's selection, as every 3D tool
-     * shows one: while Move, Rotate or Scale is the tool and something is
-     * selected, red, green and blue handles for X, Y and Z stand at the
-     * selection's centre as the view shows it, the tool choosing which —
+     * The transform gizmo on a character viewport's selection, as every 3D
+     * tool shows one: while Move, Rotate or Scale is the tool and something
+     * is selected — the Mesh tab's vertices, the Rig tab's bone, the
+     * Animation Editor's posed bone, each system a CharacterGizmoSource that
+     * registers itself (addSource) — red, green and blue handles for X, Y and Z
+     * stand at the selection as the view shows it, the tool choosing which —
      * Move an arrow along each axis, Rotate a ring about it, Scale a shaft
      * ending in a cube — each as long on screen whatever the zoom. The
      * handle under the pointer is drawn in the hovered colour, and a press
-     * on it is taken by the sculpt system as a drag held to its axis
-     * (getHoveredAxis). Nothing is drawn while a transform is under way,
-     * whose own axis line shows instead.
+     * on it is taken by its source as a drag held to its axis
+     * (getHoveredAxis). Nothing is drawn while a drag is under way.
      */
 
     // Internal
     private EditorInputSystem editorInputSystem;
-    private CharacterEditorManager characterEditorManager;
-    private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
-    private CharacterEditorSculptSystem characterEditorSculptSystem;
+    private ObjectArrayList<CharacterGizmoSource> sources;
     private CharacterViewRenderSystem characterViewRenderSystem;
     private ViewCameraSystem viewCameraSystem;
 
@@ -57,6 +55,7 @@ public class CharacterEditorGizmoSystem extends SystemPackage {
     protected void create() {
 
         // Gizmo
+        this.sources = new ObjectArrayList<>();
         this.hoveredAxis = EngineSetting.INDEX_NOT_FOUND;
         this.axisColors = new Vector4[EditorSetting.TRANSFORM_GIZMO_COLORS.length];
 
@@ -81,9 +80,6 @@ public class CharacterEditorGizmoSystem extends SystemPackage {
     @Override
     protected void get() {
         this.editorInputSystem = get(EditorInputSystem.class);
-        this.characterEditorManager = get(CharacterEditorManager.class);
-        this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
-        this.characterEditorSculptSystem = get(CharacterEditorSculptSystem.class);
         this.characterViewRenderSystem = get(CharacterViewRenderSystem.class);
         this.viewCameraSystem = get(ViewCameraSystem.class);
     }
@@ -95,12 +91,9 @@ public class CharacterEditorGizmoSystem extends SystemPackage {
 
         this.hoveredAxis = EngineSetting.INDEX_NOT_FOUND;
 
-        CharacterEditorTransform transform = characterEditorManager.getToolTransform();
+        CharacterEditorTransform transform = resolveTransform();
 
-        if (transform == null || characterEditorSculptSystem.isTransforming()
-                || !characterEditorMeshViewSystem.hasActiveDocument()
-                || !characterEditorManager.resolveGizmoPivot(characterEditorMeshViewSystem.getSkinningMatrices(), pivot)
-                || !characterEditorMeshViewSystem.project(pivot.x, pivot.y, pivot.z, screenPivot))
+        if (transform == null || !project(pivot.x, pivot.y, pivot.z, screenPivot))
             return;
 
         float length = resolveHandleLength();
@@ -115,12 +108,27 @@ public class CharacterEditorGizmoSystem extends SystemPackage {
             drawHandle(transform, axis, length, axis == hoveredAxis ? hoverColor : axisColors[axis]);
     }
 
+    // The transform the first source with a selection drags, its pivot resolved; null for none
+    private CharacterEditorTransform resolveTransform() {
+
+        for (int i = 0; i < sources.size(); i++) {
+
+            CharacterGizmoSource source = sources.get(i);
+            CharacterEditorTransform transform = source.getGizmoTransform();
+
+            if (transform != null && source.resolveGizmoPivot(pivot))
+                return transform;
+        }
+
+        return null;
+    }
+
     // The world length a handle takes to reach its length in pixels at the pivot's depth
     private float resolveHandleLength() {
 
         Vector3 right = viewCameraSystem.getRight();
 
-        if (!characterEditorMeshViewSystem.project(pivot.x + right.x, pivot.y + right.y, pivot.z + right.z, screenA))
+        if (!project(pivot.x + right.x, pivot.y + right.y, pivot.z + right.z, screenA))
             return 0f;
 
         float pixelsPerUnit = (float) Math.hypot(screenA.x - screenPivot.x, screenA.y - screenPivot.y);
@@ -157,7 +165,7 @@ public class CharacterEditorGizmoSystem extends SystemPackage {
 
         resolveAxisPoint(axis, length, axisEnd);
 
-        if (!characterEditorMeshViewSystem.project(axisEnd.x, axisEnd.y, axisEnd.z, screenA))
+        if (!project(axisEnd.x, axisEnd.y, axisEnd.z, screenA))
             return Float.MAX_VALUE;
 
         return resolveSegmentDistance(screenPivot, screenA, mouseX, mouseY);
@@ -169,12 +177,12 @@ public class CharacterEditorGizmoSystem extends SystemPackage {
         int segments = EditorSetting.TRANSFORM_GIZMO_RING_SEGMENTS;
 
         resolveRingPoint(axis, length, 0, pointA);
-        boolean shownA = characterEditorMeshViewSystem.project(pointA.x, pointA.y, pointA.z, screenA);
+        boolean shownA = project(pointA.x, pointA.y, pointA.z, screenA);
 
         for (int i = 1; i <= segments; i++) {
 
             resolveRingPoint(axis, length, i, pointB);
-            boolean shownB = characterEditorMeshViewSystem.project(pointB.x, pointB.y, pointB.z, screenB);
+            boolean shownB = project(pointB.x, pointB.y, pointB.z, screenB);
 
             if (shownA && shownB)
                 nearest = Math.min(nearest, resolveSegmentDistance(screenA, screenB, mouseX, mouseY));
@@ -184,6 +192,11 @@ public class CharacterEditorGizmoSystem extends SystemPackage {
         }
 
         return nearest;
+    }
+
+    // A world point in window pixels; false behind the camera
+    private boolean project(float x, float y, float z, Vector2 out) {
+        return CharacterPoseUtility.project(context.getWindow(), x, y, z, out);
     }
 
     // The distance in pixels from a point to a segment on screen
@@ -267,6 +280,13 @@ public class CharacterEditorGizmoSystem extends SystemPackage {
                 pivot.x + (axis == EngineSetting.AXIS_X ? 0f : a),
                 pivot.y + (axis == EngineSetting.AXIS_Y ? 0f : axis == EngineSetting.AXIS_X ? a : b),
                 pivot.z + (axis == EngineSetting.AXIS_Z ? 0f : b));
+    }
+
+    // Management \\
+
+    // A system whose selection the gizmo stands on, asked in the order added
+    public void addSource(CharacterGizmoSource source) {
+        sources.add(source);
     }
 
     // Accessible \\

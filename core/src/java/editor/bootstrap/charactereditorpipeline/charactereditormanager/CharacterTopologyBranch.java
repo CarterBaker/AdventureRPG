@@ -302,7 +302,7 @@ class CharacterTopologyBranch extends BranchPackage {
 
         for (int f = 0; f < mesh.getFaceCount(); f++) {
 
-            if (freshFaces.getBoolean(f))
+            if (freshFaces.getBoolean(f) || mesh.isTriangle(f))
                 continue;
 
             float total = 0f;
@@ -351,6 +351,11 @@ class CharacterTopologyBranch extends BranchPackage {
 
         closeRefinement(mesh);
 
+        if (touchesTriangle(mesh)) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_TOPOLOGY_MESSAGE_TRIANGLE);
+            return false;
+        }
+
         if (!meshManager.fitsRiggedMeshLimit(faceCount + countAddedFaces(faceCount))) {
             characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_MESH_LIMIT);
             return false;
@@ -395,16 +400,26 @@ class CharacterTopologyBranch extends BranchPackage {
         }
     }
 
+    // Whether the refinement would split an edge of a triangle, which the quad templates cannot lay
+    private boolean touchesTriangle(RiggedMeshStruct mesh) {
+
+        for (int f = 0; f < faceMasks.size(); f++)
+            if (faceMasks.getInt(f) != 0 && mesh.isTriangle(f))
+                return true;
+
+        return false;
+    }
+
     private void collectSplitEdges(RiggedMeshStruct mesh) {
 
         splitEdges.clear();
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
             if (faceFlags.getBoolean(f))
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                     splitEdges.add(RiggedMeshStruct.toEdgeKey(
                             mesh.getFaceVertex(f, c),
-                            mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT)));
+                            mesh.getFaceVertex(f, mesh.getNextCorner(f, c))));
     }
 
     // A face's refined edges, a bit per edge from corner 0's, all four for a face refined whole
@@ -415,10 +430,10 @@ class CharacterTopologyBranch extends BranchPackage {
 
         int mask = 0;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (splitEdges.contains(RiggedMeshStruct.toEdgeKey(
                     mesh.getFaceVertex(faceIndex, c),
-                    mesh.getFaceVertex(faceIndex, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT))))
+                    mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c)))))
                 mask |= 1 << c;
 
         return mask;
@@ -746,10 +761,10 @@ class CharacterTopologyBranch extends BranchPackage {
         edgeCounts.clear();
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                 edgeCounts.addTo(RiggedMeshStruct.toEdgeKey(
                         mesh.getFaceVertex(f, c),
-                        mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT)), 1);
+                        mesh.getFaceVertex(f, mesh.getNextCorner(f, c))), 1);
 
         for (Long2IntOpenHashMap.Entry entry : edgeCounts.long2IntEntrySet())
             if (entry.getIntValue() == 1)
@@ -868,7 +883,7 @@ class CharacterTopologyBranch extends BranchPackage {
 
         int keep = mesh.getFaceVertex(faceIndex, keepCorner);
         int drop = mesh.getFaceVertex(faceIndex, (keepCorner + 2) % EngineSetting.QUAD_VERTEX_COUNT);
-        int sideA = mesh.getFaceVertex(faceIndex, (keepCorner + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+        int sideA = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, keepCorner));
         int sideB = mesh.getFaceVertex(faceIndex, (keepCorner + 3) % EngineSetting.QUAD_VERTEX_COUNT);
 
         if (keep == drop || lockedVertices.getBoolean(keep) || lockedVertices.getBoolean(drop))
@@ -940,7 +955,7 @@ class CharacterTopologyBranch extends BranchPackage {
             vertex2FirstEntry.set(v, EngineSetting.INDEX_NOT_FOUND);
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                 addEntry(mesh.getFaceVertex(f, c), f);
     }
 
@@ -964,12 +979,12 @@ class CharacterTopologyBranch extends BranchPackage {
             if (mesh.usesVertex(faceIndex, drop))
                 return false;
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
                 linkVertices.add(mesh.getFaceVertex(faceIndex, c));
         }
 
         for (int i = 0; i < ringB.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(ringB.getInt(i)); c++) {
 
                 int vertexIndex = mesh.getFaceVertex(ringB.getInt(i), c);
 
@@ -1014,7 +1029,7 @@ class CharacterTopologyBranch extends BranchPackage {
     // A face's normal scaled by its area, across its diagonals; with two vertices given, both read at the merge point
     private void resolveFaceNormal(RiggedMeshStruct mesh, int faceIndex, int keep, int drop, Vector3 out) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             resolveCorner(mesh, mesh.getFaceVertex(faceIndex, c), keep, drop, quadCorners[c]);
 
         resolveQuadNormal(out);
@@ -1074,7 +1089,7 @@ class CharacterTopologyBranch extends BranchPackage {
 
     private int findCorner(RiggedMeshStruct mesh, int faceIndex, int vertexIndex) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (mesh.getFaceVertex(faceIndex, c) == vertexIndex)
                 return c;
 
@@ -1103,12 +1118,12 @@ class CharacterTopologyBranch extends BranchPackage {
         int first = ringA.getInt(0);
         int second = ringA.getInt(1);
         int at = findCorner(mesh, first, vertexIndex);
-        int next = mesh.getFaceVertex(first, (at + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+        int next = mesh.getFaceVertex(first, mesh.getNextCorner(first, at));
         int far = mesh.getFaceVertex(first, (at + 2) % EngineSetting.QUAD_VERTEX_COUNT);
         int previous = mesh.getFaceVertex(first, (at + 3) % EngineSetting.QUAD_VERTEX_COUNT);
         int otherAt = findCorner(mesh, second, vertexIndex);
 
-        if (mesh.getFaceVertex(second, (otherAt + 1) % EngineSetting.QUAD_VERTEX_COUNT) != previous
+        if (mesh.getFaceVertex(second, mesh.getNextCorner(second, otherAt)) != previous
                 || mesh.getFaceVertex(second, (otherAt + 3) % EngineSetting.QUAD_VERTEX_COUNT) != next)
             return;
 
@@ -1121,7 +1136,7 @@ class CharacterTopologyBranch extends BranchPackage {
         float oppositeU = mesh.getFaceU(second, opposite);
         float oppositeV = mesh.getFaceV(second, opposite);
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(first); c++) {
 
             int source = (at + 1 + c) % EngineSetting.QUAD_VERTEX_COUNT;
 
