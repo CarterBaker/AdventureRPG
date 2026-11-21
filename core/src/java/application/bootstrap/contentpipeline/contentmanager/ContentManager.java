@@ -14,9 +14,10 @@ public class ContentManager extends ManagerPackage {
 
     /*
      * Owns the content palette by name and ID. Contents are the ores, rocks
-     * and roots whole blocks hold; a cell's content lives in its subchunk's
-     * content palette, never in the block palette, so one block holds any
-     * content its hosts allow and no two contents ever share a texture.
+     * and roots whole blocks hold; a cell's content and its amount live in
+     * its subchunk's content palette, never in the block palette, so one
+     * block holds any content its hosts allow and no two contents ever share
+     * a texture.
      * Every content is loaded in awake(), before any chunk generates, and
      * the table of their overlay tiles is pushed to the surface shader
      * through ContentBufferSystem in the same breath, so the streaming
@@ -85,7 +86,7 @@ public class ContentManager extends ManagerPackage {
 
     // Content \\
 
-    // A named content's ID for a host block, refused naming its owner when the block cannot hold it
+    // A named content at its most for a host block, refused naming its owner when the block cannot hold it
     public short resolveContent(String contentName, short hostBlockID, String ownerName) {
 
         ContentHandle contentHandle = getContentHandleFromContentName(contentName);
@@ -94,29 +95,31 @@ public class ContentManager extends ManagerPackage {
             throwException("\"" + ownerName + "\" sets content \"" + contentName
                     + "\" into a block it does not name among its \"hosts\".");
 
-        return contentHandle.getContentID();
+        return ContentUtility.pack(contentHandle.getContentID(), contentHandle.getMaxAmount());
     }
 
-    // A face's color with the content its block holds laid over it by the share of its tile it shows — the same
-    // approximation the surface shader draws distant faces with
-    public int resolveContentColor(int faceColor, short contentID) {
+    // A face's color with the content its block holds laid over it by the share of its tile its amount shows — the
+    // same approximation the surface shader draws distant faces with
+    public int resolveContentColor(int faceColor, short content) {
 
-        ContentHandle contentHandle = getContentHandleFromContent(contentID);
+        ContentHandle contentHandle = getContentHandleFromContent(content);
 
         if (contentHandle == null)
             return faceColor;
 
         return PackedColorUtility.mix(
-                faceColor, contentHandle.getReveal().getRevealColor(), contentHandle.getRevealShare());
+                faceColor,
+                contentHandle.getReveal().getRevealColor(),
+                contentHandle.getRevealShare(ContentUtility.getAmount(content)));
     }
 
     // The content a cell holds, null when it holds none
-    public ContentHandle getContentHandleFromContent(short contentID) {
+    public ContentHandle getContentHandleFromContent(short content) {
 
-        if (!ContentUtility.isContained(contentID))
+        if (!ContentUtility.isContained(content))
             return null;
 
-        return getContentHandleFromContentID(contentID);
+        return getContentHandleFromContentID(ContentUtility.getContentID(content));
     }
 
     // Accessible \\

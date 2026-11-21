@@ -1393,21 +1393,24 @@ public class EngineSetting {
     public static final String COVERING_DROP_NONE = "";
     public static final String COVERING_TEXTURE_NONE = "";
 
-    // Contents — the ore, rock or root a whole block holds, its ID one short per cell carried in the geometry meta
-    // word above the quad's flags, and the table the surface shader reads every content's overlay tile and baked
-    // approximation from
+    // Contents — the ore, rock or root a whole block holds and how much of it, its ID above the amount's bits in one
+    // short per cell, the same word carried in the geometry meta word above the quad's flags, and the table the
+    // surface shader reads every content's overlay tile and baked approximation from
     public static final int CONTENT_ID_BITS = 8;
     public static final int CONTENT_ID_COUNT = 1 << CONTENT_ID_BITS;
-    public static final int CONTENT_ID_MASK = CONTENT_ID_COUNT - 1;
+    public static final int CONTENT_AMOUNT_BITS = 3;
+    public static final int CONTENT_AMOUNT_MAX = (1 << CONTENT_AMOUNT_BITS) - 1;
+    public static final int CONTENT_WORD_MASK = (1 << (CONTENT_ID_BITS + CONTENT_AMOUNT_BITS)) - 1;
     public static final short CONTENT_NONE = 0;
     public static final String CONTENT_DATA_UBO = "ContentData";
     public static final String UNIFORM_CONTENT_REVEAL = "u_contentReveal";
+    public static final String UNIFORM_CONTENT_REVEAL_SHARES = "u_contentRevealShares";
     public static final String UNIFORM_CONTENT_TILES = "u_contentTiles";
 
     // Content Defaults — every optional field of a content file
     public static final int DEFAULT_CONTENT_BREAK_TIER = 0;
     public static final int DEFAULT_CONTENT_DURABILITY = 0;
-    public static final int DEFAULT_CONTENT_YIELD = 1;
+    public static final int DEFAULT_CONTENT_MAX_AMOUNT = CONTENT_AMOUNT_MAX;
     public static final String CONTENT_ITEM_TEXTURE_NONE = "";
 
     // Biome Coverings — the tint a biome lends the coverings that grow in it, and the optional coverings it lays

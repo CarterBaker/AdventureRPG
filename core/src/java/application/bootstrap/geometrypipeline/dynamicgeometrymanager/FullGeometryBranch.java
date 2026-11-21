@@ -153,7 +153,7 @@ class FullGeometryBranch extends BranchPackage {
 
         short baseOrientation = rotationPaletteHandle.getBlock(xyz);
         int baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, xyz, direction3Vector);
-        short baseContentID = surfaceEmissionBranch.resolveContentID(subChunkInstance, xyz);
+        short baseContent = surfaceEmissionBranch.resolveContent(subChunkInstance, xyz);
 
         accumulatedBatch.set(ChunkCoordinateUtility.getIndex(xyz));
 
@@ -174,7 +174,7 @@ class FullGeometryBranch extends BranchPackage {
                 blockHandle,
                 baseOrientation,
                 baseCoverageWord,
-                baseContentID,
+                baseContent,
                 accumulatedBatch)) {
             markRow(xyz, tangentA, tangentB, sizeA, sizeB, accumulatedBatch);
             sizeA++;
@@ -196,7 +196,7 @@ class FullGeometryBranch extends BranchPackage {
                 blockHandle,
                 baseOrientation,
                 baseCoverageWord,
-                baseContentID,
+                baseContent,
                 accumulatedBatch)) {
             markRow(xyz, tangentB, tangentA, sizeB, sizeA, accumulatedBatch);
             sizeB++;
@@ -235,7 +235,7 @@ class FullGeometryBranch extends BranchPackage {
             BlockHandle blockHandle,
             short baseOrientation,
             int baseCoverageWord,
-            short baseContentID,
+            short baseContent,
             BitSet accumulatedBatch) {
 
         if (currentSize >= maxMergeExtent)
@@ -265,7 +265,7 @@ class FullGeometryBranch extends BranchPackage {
                     orientationSensitive,
                     baseOrientation,
                     baseCoverageWord,
-                    baseContentID,
+                    baseContent,
                     accumulatedBatch))
                 return false;
         }
@@ -302,7 +302,7 @@ class FullGeometryBranch extends BranchPackage {
             boolean orientationSensitive,
             short baseOrientation,
             int baseCoverageWord,
-            short baseContentID,
+            short baseContent,
             BitSet accumulatedBatch) {
 
         if (accumulatedBatch.get(ChunkCoordinateUtility.getIndex(checkXYZ)))
@@ -324,7 +324,7 @@ class FullGeometryBranch extends BranchPackage {
                 != baseCoverageWord)
             return false;
 
-        if (surfaceEmissionBranch.resolveContentID(subChunkInstance, checkXYZ) != baseContentID)
+        if (surfaceEmissionBranch.resolveContent(subChunkInstance, checkXYZ) != baseContent)
             return false;
 
         if (!blockHasFace(subCellGrid, subChunkInstance, checkXYZ, direction3Vector, blockHandle))

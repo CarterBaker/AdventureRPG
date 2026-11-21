@@ -1,5 +1,6 @@
 package application.bootstrap.contentpipeline.content;
 
+import application.bootstrap.contentpipeline.util.ContentUtility;
 import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import engine.root.DataPackage;
 import engine.root.EngineSetting;
@@ -14,9 +15,11 @@ public class ContentData extends DataPackage {
      * transparent showing the block beneath, and its reveal is the share of
      * the tile it shows and the color it shows in, which distant faces and
      * maps stand in for it with. A cell holding it needs a tool of at least
-     * its break tier and takes its durability in extra strikes, and when the
-     * cell's block breaks whole a content with an item texture hands out its
-     * yield of pieces in place of the block's own.
+     * its break tier and takes its durability in extra strikes. A cell holds
+     * from one to the content's most, which its share of the tile shows by,
+     * and when the cell's block breaks whole to the right tool a content with
+     * an item texture hands out one piece for each it held beside the block's
+     * own.
      */
 
     // Identity
@@ -35,9 +38,11 @@ public class ContentData extends DataPackage {
     private final int breakTier;
     private final int durability;
 
+    // Amount — the most a cell holds
+    private final int maxAmount;
+
     // Pieces — the item texture its pieces are drawn with, CONTENT_ITEM_TEXTURE_NONE for none
     private final String itemTextureName;
-    private final int yield;
 
     // Constructor \\
 
@@ -50,8 +55,8 @@ public class ContentData extends DataPackage {
             TextureRevealStruct reveal,
             int breakTier,
             int durability,
-            String itemTextureName,
-            int yield) {
+            int maxAmount,
+            String itemTextureName) {
 
         // Identity
         this.contentName = contentName;
@@ -69,9 +74,11 @@ public class ContentData extends DataPackage {
         this.breakTier = breakTier;
         this.durability = durability;
 
+        // Amount
+        this.maxAmount = maxAmount;
+
         // Pieces
         this.itemTextureName = itemTextureName;
-        this.yield = yield;
     }
 
     // Accessible \\
@@ -100,9 +107,9 @@ public class ContentData extends DataPackage {
         return reveal;
     }
 
-    // The share of its tile a host's face shows, from none to the whole tile
-    public float getRevealShare() {
-        return reveal.getLevelShare(EngineSetting.COVERAGE_LEVEL_MAX);
+    // The share of its tile a host's face holding an amount shows, from none to the whole tile at its most
+    public float getRevealShare(int amount) {
+        return reveal.getLevelShare(ContentUtility.toRevealLevel(amount, maxAmount));
     }
 
     public int getBreakTier() {
@@ -113,15 +120,15 @@ public class ContentData extends DataPackage {
         return durability;
     }
 
+    public int getMaxAmount() {
+        return maxAmount;
+    }
+
     public String getItemTextureName() {
         return itemTextureName;
     }
 
     public boolean hasPiece() {
         return !itemTextureName.equals(EngineSetting.CONTENT_ITEM_TEXTURE_NONE);
-    }
-
-    public int getYield() {
-        return yield;
     }
 }

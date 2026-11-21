@@ -494,7 +494,7 @@ class StructureBuilder extends BuilderPackage {
 
     // Content Parsing \\
 
-    // The content a whole block holds, NONE when it names none
+    // The content a whole block holds at its most, NONE when it names none
     private short parseContent(ArpgObjectStruct entry, BlockHandle blockHandle, int mask, String structureName) {
 
         String contentName = ArpgUtility.getString(entry, "content", EngineSetting.STRUCTURE_CONTENT_NONE);

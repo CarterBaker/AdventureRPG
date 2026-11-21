@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.util;
 
+import application.bootstrap.shaderpipeline.texture.TextureRevealStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
@@ -12,7 +13,9 @@ public class CoverageUtility extends EngineUtility {
      * zero — is bare, since covering ID zero is the registry's reserved
      * sentinel. A level of zero is bare too, so every bare cell packs to the
      * same NONE. The vertex word adds whether the face shows the covering's
-     * side tiles, and is exact in a float. Every system that reads or writes
+     * side tiles, and is exact in a float. A tile's reveal shares travel to
+     * the surface shader a byte per level, four levels to an int, packed for
+     * coverings and contents alike here. Every system that reads or writes
      * coverage resolves it through here.
      */
 
@@ -65,5 +68,27 @@ public class CoverageUtility extends EngineUtility {
         return (getCoveringID(coverage) << EngineSetting.COVERAGE_VERTEX_ID_SHIFT)
                 | (side ? EngineSetting.COVERAGE_VERTEX_SIDE_BIT : 0)
                 | getLevel(coverage);
+    }
+
+    // Reveal \\
+
+    // One component of a shares row — four consecutive levels, a byte each, the lowest level in the low byte
+    public static int packRevealShares(TextureRevealStruct reveal, int component) {
+
+        int word = 0;
+        int firstLevel = component * EngineSetting.COVERAGE_SHARES_PER_WORD;
+
+        for (int i = 0; i < EngineSetting.COVERAGE_SHARES_PER_WORD; i++) {
+
+            int level = firstLevel + i;
+
+            if (level > LEVEL_MAX)
+                break;
+
+            int share = Math.round(reveal.getLevelShare(level) * EngineSetting.COVERAGE_SHARE_MAX);
+            word |= share << (i * EngineSetting.COVERAGE_SHARE_BITS);
+        }
+
+        return word;
     }
 }

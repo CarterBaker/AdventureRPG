@@ -400,10 +400,17 @@ public final class TerrainCarveUtility extends EngineUtility {
                 - vein.getAbundance() * EngineSetting.TERRAIN_VEIN_GATE_RANGE;
     }
 
-    // A thin seam where the ribbon field crosses zero, as thick as the vein declares
-    public static boolean isVeinSeam(float ribbon, BiomeVeinStruct vein) {
-        return Math.abs(ribbon) < vein.getThicknessBlocks() * EngineSetting.TERRAIN_VEIN_SHEET_GRADIENT
+    // How rich a thin seam runs where the ribbon field crosses zero, as thick as the vein declares: one at its heart,
+    // falling to zero at its edge, and zero or below outside it
+    public static float resolveVeinRichness(float ribbon, BiomeVeinStruct vein) {
+
+        float halfWidth = vein.getThicknessBlocks() * EngineSetting.TERRAIN_VEIN_SHEET_GRADIENT
                 / (float) EngineSetting.TERRAIN_VEIN_WAVELENGTH_BLOCKS;
+
+        if (halfWidth <= 0f)
+            return 0f;
+
+        return 1f - Math.abs(ribbon) / halfWidth;
     }
 
     // Hashing \\
