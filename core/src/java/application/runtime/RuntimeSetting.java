@@ -155,6 +155,19 @@ public class RuntimeSetting {
     public static final String UNIFORM_BLUR_DEPTH_OF_FIELD = "u_blurDepthOfField";
     public static final String UNIFORM_BLUR_BLOOM = "u_blurBloom";
     public static final String UNIFORM_GRAIN_TIME = "u_grainTime";
+
+    // Screenshots — Screenshot_<date>_<time>.png, numbered on when two are taken in one second
+    public static final String SCREENSHOT_NAME_PREFIX = "Screenshot_";
+    public static final String SCREENSHOT_NAME_PATTERN = "yyyy-MM-dd_HH-mm-ss";
+    public static final String SCREENSHOT_COPY_SEPARATOR = "_";
+    public static final String SCREENSHOT_EXTENSION = ".png";
+    public static final String SCREENSHOT_FORMAT = "png";
+    public static final String[] UNIFORM_PHOTO_ROWS = { "u_photoRed", "u_photoGreen", "u_photoBlue" };
+    public static final String UNIFORM_PHOTO_EXPOSURE = "u_photoExposure";
+    public static final String UNIFORM_PHOTO_CONTRAST = "u_photoContrast";
+    public static final String UNIFORM_PHOTO_SATURATION = "u_photoSaturation";
+    public static final String UNIFORM_PHOTO_VIGNETTE = "u_photoVignette";
+    public static final String UNIFORM_PHOTO_GRAIN = "u_photoGrain";
     public static final float GRAIN_TIME_PERIOD = 60f;
 
     // Auto Focus
@@ -215,6 +228,25 @@ public class RuntimeSetting {
 
     // Pause Menu
     public static final String MENU_PAUSE = "PauseMenu/Pause";
+
+    // Photo Mode — its panel, the row every option is stepped on, and what the panel's rows say
+    public static final String MENU_PHOTO_MODE = "PhotoMode/PhotoMode";
+    public static final String MENU_PHOTO_ROW = "PhotoMode/photo_row";
+    public static final int ENTRY_PHOTO_ROWS = 0;
+    public static final int ENTRY_PHOTO_HINT = 1;
+    public static final String PHOTO_FORMAT_HINT = "%s: fly the camera    %s: take a photo    %s: leave";
+    public static final String PHOTO_OPTION_FILTER = "Filter";
+    public static final String PHOTO_OPTION_POSE = "Pose";
+    public static final String PHOTO_OPTION_HIDE_PLAYER = "Hide Player";
+    public static final String PHOTO_OPTION_FIELD_OF_VIEW = "Field of View";
+    public static final String PHOTO_OPTION_EXPOSURE = "Exposure";
+    public static final String PHOTO_OPTION_CONTRAST = "Contrast";
+    public static final String PHOTO_OPTION_SATURATION = "Saturation";
+    public static final String PHOTO_OPTION_VIGNETTE = "Vignette";
+    public static final String PHOTO_OPTION_GRAIN = "Grain";
+    public static final String PHOTO_VALUE_NO_POSE = "As Caught";
+    public static final String PHOTO_POSE_WORD_SPLIT = "(?<=[a-z])(?=[A-Z])";
+    public static final String PHOTO_POSE_WORD_SPACE = " ";
 
     // HUD
     public static final String MENU_HUD_CROSSHAIR = "HUD/Crosshair";
@@ -486,6 +518,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_BINDING_ACTIVATE = "Activate / Place";
     public static final String SETTINGS_BINDING_BLOCK = "Block";
     public static final String SETTINGS_BINDING_INVENTORY = "Inventory";
+    public static final String SETTINGS_BINDING_SCREENSHOT = "Screenshot";
+    public static final String SETTINGS_BINDING_PHOTO_PANEL = "Photo Mode Panel";
     public static final String SETTINGS_BINDING_ROTATE_ITEM = "Rotate Item";
     public static final String SETTINGS_BINDING_TURN_LEFT = "Turn Left";
     public static final String SETTINGS_BINDING_TURN_RIGHT = "Turn Right";

@@ -134,7 +134,7 @@ declare are shown as ignored and never block a save.
 | Schema | Directory under `assets/` | Layout |
 |---|---|---|
 | AnimationTrees, Animations, Architectures, Behaviors, Biomes, BoneControls, Brushes, Calendars, Clouds, Entities, Features, Furnishings, Instruments, Materials, NoteSets, Passes, Races, Rigs, Roads, Seasons, Settlements, Shaders, Shortcuts, Songs, SoundCues, Sounds, Sprites, Stamps, StructureLists, Structures, TextureAliases, UBOs, Vehicles, Weathers, Worlds | the schema's `directory` (e.g. `biomes`, `processingpasses`) | one entry per file; the path relative to the directory, without extension, is the resource name |
-| Blocks, FBOs, Items, Threads, Tools | `blocks`, `application/fbos`, `items`, `application/threads`, `tools` | an array (`blocks`, `fbos`, `items`, `threads`, `tools`) of entries, each named by its `name` field |
+| Blocks, FBOs, Items, PhotoFilters, Threads, Tools | `blocks`, `application/fbos`, `items`, `photofilters`, `application/threads`, `tools` | an array (`blocks`, `fbos`, `items`, `photo_filters`, `threads`, `tools`) of entries, each named by its `name` field |
 | Words, Intents, Replies, Phrases, Topics, Traits, Moods, Relations, Verdicts, Scenarios | the same name in lower case (`words`, `intents`, ...) | an array under that same key, each entry named by its `name` field (see `.claude/docs/Dialogue.md`) |
 | (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `RiggedMeshArpgUtility`, `MeshLayoutUtility`, `CommandBuilder`, `SubVoxelArpgUtility`) |
 | (no schema, baked) Baked textures | `bakedtextures` | written only by the bake tool (`TextureBakeUtility`), never by hand: see Baked textures below |

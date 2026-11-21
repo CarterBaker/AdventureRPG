@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.playermanager;
 
+import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.combatpipeline.combatmanager.CombatManager;
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.entity.EntityInputHandle;
@@ -11,6 +12,7 @@ import application.bootstrap.entitypipeline.placementmanager.PlacementManager;
 import application.bootstrap.entitypipeline.player.MenuViewStruct;
 import application.bootstrap.entitypipeline.player.PlayerCameraStruct;
 import application.bootstrap.entitypipeline.player.PlayerGestureStruct;
+import application.bootstrap.entitypipeline.player.PlayerPhotoStruct;
 import application.bootstrap.entitypipeline.player.UseTargetStruct;
 import application.bootstrap.physicspipeline.movementmanager.MovementManager;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
@@ -98,6 +100,7 @@ public class PlayerManager extends ManagerPackage {
     private FirstPersonBranch firstPersonBranch;
     private CameraShakeBranch cameraShakeBranch;
     private MenuViewBranch menuViewBranch;
+    private PhotoCameraBranch photoCameraBranch;
     private PlacementManager placementManager;
     private CombatManager combatManager;
     private VehicleControlSystem vehicleControlSystem;
@@ -116,6 +119,9 @@ public class PlayerManager extends ManagerPackage {
     private Int2BooleanOpenHashMap windowID2FreeCamera;
     private Int2BooleanOpenHashMap windowID2Held;
     private Int2BooleanOpenHashMap windowID2Performing;
+
+    // Per-window photo mode — its free camera, the pose held and whether the player is left out, while it is open
+    private Int2ObjectOpenHashMap<PlayerPhotoStruct> windowID2Photo;
 
     // Per-window zoom
     private Int2FloatOpenHashMap windowID2ZoomDistance;
@@ -169,6 +175,7 @@ public class PlayerManager extends ManagerPackage {
         this.firstPersonBranch = create(FirstPersonBranch.class);
         this.cameraShakeBranch = create(CameraShakeBranch.class);
         this.menuViewBranch = create(MenuViewBranch.class);
+        this.photoCameraBranch = create(PhotoCameraBranch.class);
         this.placementManager = create(PlacementManager.class);
 
         this.windowID2Player = new Int2ObjectOpenHashMap<>();
@@ -181,6 +188,7 @@ public class PlayerManager extends ManagerPackage {
         this.windowID2FreeCamera = new Int2BooleanOpenHashMap();
         this.windowID2Held = new Int2BooleanOpenHashMap();
         this.windowID2Performing = new Int2BooleanOpenHashMap();
+        this.windowID2Photo = new Int2ObjectOpenHashMap<>();
 
         this.windowID2ZoomDistance = new Int2FloatOpenHashMap();
         this.windowID2ZoomTarget = new Int2FloatOpenHashMap();
@@ -296,6 +304,7 @@ public class PlayerManager extends ManagerPackage {
         windowID2FreeCamera.remove(windowID);
         windowID2Held.remove(windowID);
         windowID2Performing.remove(windowID);
+        windowID2Photo.remove(windowID);
         windowID2ZoomDistance.remove(windowID);
         windowID2ZoomTarget.remove(windowID);
         windowID2FirstPersonToggled.remove(windowID);
@@ -333,6 +342,82 @@ public class PlayerManager extends ManagerPackage {
 
         if (!freeCamera)
             verifyPlayerPositionForWindow(windowID);
+    }
+
+    // Photo Mode \\
+
+    // The window's camera leaves the player where they stand and flies free near them until endPhotoMode()
+    public void beginPhotoMode(int windowID) {
+
+        CameraInstance camera = windowID2Camera.get(windowID);
+
+        if (camera != null && !windowID2Photo.containsKey(windowID))
+            windowID2Photo.put(windowID, new PlayerPhotoStruct(camera.getPosition()));
+    }
+
+    public void endPhotoMode(int windowID) {
+        windowID2Photo.remove(windowID);
+    }
+
+    public boolean isPhotoModeForWindow(int windowID) {
+        return windowID2Photo.containsKey(windowID);
+    }
+
+    // The pose clip the player holds in photo mode, null for the stance they were caught in; a clip of another rig is
+    // refused, so each race and species holds only the poses made for its own
+    public void setPhotoPose(int windowID, AnimationClipHandle pose) {
+
+        PlayerPhotoStruct photo = windowID2Photo.get(windowID);
+        EntityInstance player = windowID2Player.get(windowID);
+
+        if (photo == null || player == null)
+            return;
+
+        photo.setPose(pose != null && pose.getRigHandle() == player.getAnimationStateHandle().getRigHandle()
+                ? pose
+                : null);
+    }
+
+    public void setPhotoPlayerHidden(int windowID, boolean hidden) {
+
+        PlayerPhotoStruct photo = windowID2Photo.get(windowID);
+
+        if (photo != null)
+            photo.setPlayerHidden(hidden);
+    }
+
+    public boolean isPhotoPlayerHiddenForWindow(int windowID) {
+
+        PlayerPhotoStruct photo = windowID2Photo.get(windowID);
+
+        return photo != null && photo.isPlayerHidden();
+    }
+
+    // The player held in their pose, or the stance they were caught in, and the camera flown while no menu holds input
+    private void updatePhoto(
+            PlayerPhotoStruct photo,
+            EntityInstance player,
+            CameraInstance camera,
+            RawInputHandle raw,
+            PlayerGestureStruct gesture,
+            boolean inputLocked) {
+
+        if (photo.getPose() != null)
+            player.getAnimationStateHandle().poseClip(photo.getPose(), 0f);
+        else
+            player.updateAnimation(0f);
+
+        resolveEyePosition(player);
+
+        if (inputLocked) {
+            player.getEntityInputHandle().clear();
+            gesture.reset();
+            return;
+        }
+
+        playerInputSystem.translate(raw, player.getEntityInputHandle(), gesture);
+        gesture.reset();
+        photoCameraBranch.fly(player, photo, eyePosition, camera);
     }
 
     // Hold \\
@@ -478,6 +563,15 @@ public class PlayerManager extends ManagerPackage {
             gesture.reset();
             cameraShakeBranch.calm(camera, cameraState);
             updateCharacterPreview(windowID, player, camera);
+            return;
+        }
+
+        PlayerPhotoStruct photo = windowID2Photo.get(windowID);
+
+        if (photo != null) {
+            cameraShakeBranch.calm(camera, cameraState);
+            updatePhoto(photo, player, camera, raw, gesture,
+                    windowID2Window.get(windowID).getMenuListHandle().isInputLocked());
             return;
         }
 
@@ -1023,7 +1117,7 @@ public class PlayerManager extends ManagerPackage {
     }
 
     // True while the window's player is in play — not flying free, not held, not performing, not posed for a
-    // preview, no menu holding input
+    // preview or a photo, no menu holding input
     public boolean isPlayingForWindow(int windowID) {
 
         WindowInstance window = windowID2Window.get(windowID);
@@ -1033,6 +1127,7 @@ public class PlayerManager extends ManagerPackage {
                 && !windowID2Held.get(windowID)
                 && !windowID2Performing.get(windowID)
                 && !windowID2CharacterPreview.get(windowID)
+                && !windowID2Photo.containsKey(windowID)
                 && !window.getMenuListHandle().isInputLocked();
     }
 

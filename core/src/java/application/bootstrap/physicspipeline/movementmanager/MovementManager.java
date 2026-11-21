@@ -188,6 +188,13 @@ public class MovementManager extends ManagerPackage {
         facingBranch.update(entity);
     }
 
+    // The free flight an entity's input asks for this frame, written out rather than applied, for a camera that
+    // flies on someone else's keys
+    public void resolveFlight(EntityInstance entity, Vector3 out) {
+        out.set(0f, 0f, 0f);
+        flightBranch.calculate(out, entity);
+    }
+
     // Apply \\
 
     private void applyMovement(EntityInstance entity) {

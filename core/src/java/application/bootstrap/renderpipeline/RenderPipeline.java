@@ -3,6 +3,7 @@ package application.bootstrap.renderpipeline;
 import application.bootstrap.renderpipeline.cameramanager.CameraManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.pbomanager.PBOManager;
+import application.bootstrap.renderpipeline.photofiltermanager.PhotoFilterManager;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import engine.root.PipelinePackage;
@@ -23,5 +24,6 @@ public class RenderPipeline extends PipelinePackage {
         create(PBOManager.class);
         create(RenderManager.class);
         create(FBORenderSystem.class);
+        create(PhotoFilterManager.class);
     }
 }

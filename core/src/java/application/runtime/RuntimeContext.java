@@ -7,6 +7,7 @@ import application.runtime.menu.MenuSystem;
 import application.runtime.menueventsmanager.MenuEventsManager;
 import application.runtime.music.InstrumentSystem;
 import application.runtime.npc.NpcSystem;
+import application.runtime.photo.ScreenshotSystem;
 import application.runtime.player.PlayerRenderSystem;
 import application.runtime.player.PlayerSystem;
 import application.runtime.postprocessing.PostProcessingManager;
@@ -55,6 +56,7 @@ public class RuntimeContext extends ContextPackage {
     private PrecipitationSystem precipitationSystem;
     private SquintSystem squintSystem;
     private VitalitySystem vitalitySystem;
+    private ScreenshotSystem screenshotSystem;
     private InventoryRenderSystem inventoryRenderSystem;
     private ProjectileSystem projectileSystem;
     private VehicleSystem vehicleSystem;
@@ -89,6 +91,7 @@ public class RuntimeContext extends ContextPackage {
         this.precipitationSystem = create(PrecipitationSystem.class);
         this.squintSystem = create(SquintSystem.class);
         this.vitalitySystem = create(VitalitySystem.class);
+        this.screenshotSystem = create(ScreenshotSystem.class);
         this.inventoryRenderSystem = create(InventoryRenderSystem.class);
         this.projectileSystem = create(ProjectileSystem.class);
         this.vehicleSystem = create(VehicleSystem.class);

@@ -122,6 +122,8 @@ public class Settings {
     public int[] bindSecondary = { InputCode.storedMouseCode(Buttons.RIGHT) };
     public int[] bindActivate = { Keys.E };
     public int[] bindInventory = { Keys.I };
+    public int[] bindScreenshot = { Keys.F12 };
+    public int[] bindPhotoPanel = { Keys.TAB };
     public int[] bindRotateItem = { Keys.R };
     public int[] bindTurnLeft = { Keys.COMMA };
     public int[] bindTurnRight = { Keys.PERIOD };

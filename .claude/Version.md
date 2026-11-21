@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 144
-Task: GeneralIssues
+Delivery: 145
+Task: PhotoMode
 Applied: 2026-11-21
 
 ## Log
@@ -154,3 +154,4 @@ Applied: 2026-11-21
 - 142, 2026-11-20, ViewportGizmos
 - 143, 2026-11-20, TrianglesAndGizmos
 - 144, 2026-11-21, GeneralIssues
+- 145, 2026-11-21, PhotoMode

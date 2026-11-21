@@ -16,7 +16,11 @@ out vec4 fragColor;
  * foreground covering it, whichever is greater, so the blur always meets
  * sharp edges cleanly. Bloom is added over it, then the brightness, contrast
  * and saturation are graded, the corners darkened and film grain laid over
- * the whole, changing like film frames rather than every frame.
+ * the whole, changing like film frames rather than every frame. Photo mode
+ * lays its look over the grading for this window alone: an exposure, the
+ * photo filter's color matrix (each output channel a mix of red, green and
+ * blue in and an offset), its contrast and saturation, and vignette and
+ * grain added to the player's own. Outside photo mode the look is neutral.
  */
 
 // The composited scene and the blur pass's depth of field and bloom.
@@ -26,6 +30,17 @@ uniform sampler2D u_blurBloom;
 
 // Seconds of grain, wrapped by the post effects system.
 uniform float u_grainTime;
+
+// Photo mode's look for this window: the filter's matrix rows, then exposure, contrast, saturation and the vignette
+// and grain added to the player's own; neutral outside photo mode.
+uniform vec4  u_photoRed;
+uniform vec4  u_photoGreen;
+uniform vec4  u_photoBlue;
+uniform float u_photoExposure;
+uniform float u_photoContrast;
+uniform float u_photoSaturation;
+uniform float u_photoVignette;
+uniform float u_photoGrain;
 
 const vec3  LUMA_WEIGHTS           = vec3(0.2126, 0.7152, 0.0722);
 const float DOF_BLEND_START_PIXELS = 0.5;
@@ -94,12 +109,24 @@ vec3 applyColorGrading(vec3 color) {
     return max(color, vec3(0.0));
 }
 
+// Photo mode's look laid over the grading: exposure, the filter's matrix, then its contrast and saturation
+vec3 applyPhotoLook(vec3 color) {
+    vec4 source = vec4(color * u_photoExposure, 1.0);
+
+    color = vec3(dot(u_photoRed, source), dot(u_photoGreen, source), dot(u_photoBlue, source));
+    color = (color - GRADE_PIVOT) * u_photoContrast + GRADE_PIVOT;
+    color = mix(vec3(dot(color, LUMA_WEIGHTS)), color, u_photoSaturation);
+
+    return max(color, vec3(0.0));
+}
+
 // Darkens toward the corners; reach runs from 0 at the centre to 1 at a corner on any aspect.
 vec3 applyVignette(vec3 color, vec2 uv, vec2 size) {
-    vec2  aspect = vec2(size.x / size.y, 1.0);
-    float reach  = length((uv - 0.5) * aspect) / length(aspect * 0.5);
+    vec2  aspect   = vec2(size.x / size.y, 1.0);
+    float reach    = length((uv - 0.5) * aspect) / length(aspect * 0.5);
+    float vignette = clamp(u_vignette + u_photoVignette, 0.0, 1.0);
 
-    return color * (1.0 - u_vignette * smoothstep(VIGNETTE_START, VIGNETTE_END, reach));
+    return color * (1.0 - vignette * smoothstep(VIGNETTE_START, VIGNETTE_END, reach));
 }
 
 // ── Grain ──────────────────────────────────────────────────────────────────
@@ -111,13 +138,15 @@ float hashGrain(vec2 position) {
 }
 
 vec3 applyFilmGrain(vec3 color, vec2 fragCoord) {
-    if (u_filmGrain <= 0.0)
+    float strength = u_filmGrain + u_photoGrain;
+
+    if (strength <= 0.0)
     return color;
 
     vec2  frame = floor(u_grainTime * GRAIN_FRAME_RATE) * GRAIN_FRAME_SHIFT;
     float grain = hashGrain(fragCoord + frame) - 0.5;
 
-    return color + vec3(grain * u_filmGrain * GRAIN_STRENGTH);
+    return color + vec3(grain * strength * GRAIN_STRENGTH);
 }
 
 void main() {
@@ -138,6 +167,7 @@ void main() {
     color += texture(u_blurBloom, v_texCoord).rgb * u_bloomIntensity * BLOOM_STRENGTH;
 
     color = applyColorGrading(color);
+    color = applyPhotoLook(color);
     color = applyVignette(color, v_texCoord, size);
     color = applyFilmGrain(color, gl_FragCoord.xy);
 

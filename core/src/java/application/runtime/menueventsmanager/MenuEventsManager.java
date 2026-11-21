@@ -5,6 +5,7 @@ import application.runtime.menueventsmanager.menus.HUDBranch;
 import application.runtime.menueventsmanager.menus.LoadMenuBranch;
 import application.runtime.menueventsmanager.menus.MainMenuBranch;
 import application.runtime.menueventsmanager.menus.PauseMenuBranch;
+import application.runtime.menueventsmanager.menus.PhotoModeBranch;
 import application.runtime.menueventsmanager.menus.character.CharacterAttributeBranch;
 import application.runtime.menueventsmanager.menus.character.CharacterBranch;
 import application.runtime.menueventsmanager.menus.character.CharacterProfessionBranch;
@@ -49,6 +50,7 @@ public class MenuEventsManager extends ManagerPackage {
         create(SettingsOptionBranch.class);
         create(SettingsBindingBranch.class);
         create(PauseMenuBranch.class);
+        create(PhotoModeBranch.class);
         create(InventoryBranch.class);
         create(InventoryEquipmentBranch.class);
         create(InventoryContainerBranch.class);

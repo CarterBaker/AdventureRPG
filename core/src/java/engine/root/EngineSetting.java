@@ -195,6 +195,7 @@ public class EngineSetting {
     public static final String TEMPORARY_FILE_SUFFIX = ".tmp";
     public static final int LOADER_BATCH_SIZE = 32;
     public static final String SAVE_DIRECTORY = "Saves";
+    public static final String SCREENSHOT_DIRECTORY = "Screenshots";
     public static final String USER_ASSETS_DIRECTORY = "Assets";
     public static final String MEDIA_USER_DIRECTORY = USER_ASSETS_DIRECTORY + "/Media";
     public static final String SETTINGS_FILE_NAME = "Settings.arpg";
@@ -236,6 +237,7 @@ public class EngineSetting {
     public static final String CONTENT_PATH = "contents";
     public static final String COVERING_PATH = "coverings";
     public static final String DAMAGE_TYPE_PATH = "damagetypes";
+    public static final String PHOTO_FILTER_PATH = "photofilters";
     public static final String DEED_PATH = "deeds";
     public static final String ENTITY_PATH = "entities";
     public static final String FEATURE_PATH = "features";
@@ -3034,6 +3036,17 @@ public class EngineSetting {
     public static final float BLEED_PER_WOUND = 2.5f;
     public static final float REGENERATION_DELAY_SECONDS = 5f;
     public static final float VITALITY_FULL = 1f;
+
+    // Photo Filters — each file's array of filters, the plain one photo mode opens on, and the matrix a filter that
+    // names none lays: three rows of red, green, blue and offset, one per output channel
+    public static final String PHOTO_FILTER_ENTRIES = "photo_filters";
+    public static final String PHOTO_FILTER_PLAIN = "none";
+    public static final float PHOTO_CAMERA_REACH_BLOCKS = 12f;
+    public static final String ANIMATION_POSE_FOLDER = "poses";
+    public static final float[] PHOTO_FILTER_IDENTITY = {
+            1f, 0f, 0f, 0f,
+            0f, 1f, 0f, 0f,
+            0f, 0f, 1f, 0f };
 
     // Hazards — a landing faster than a fall from the safe height hurts by the share of the way on to the lethal
     // height its speed reached; a breath lasts so long under water or buried and returns once clear, and once spent

@@ -3,6 +3,7 @@ package application.bootstrap.animationpipeline.animationmanager;
 import java.io.File;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
@@ -17,7 +18,10 @@ public class AnimationManager extends ManagerPackage {
      * self-contained, rig-bound track set — runtime playback position lives
      * on each entity's AnimationStateHandle, never here. Clip IDs are
      * assigned in registration order. Auto-triggers an on-demand load via
-     * AnimationLoader on a name-based cache miss.
+     * AnimationLoader on a name-based cache miss. A clip kept in a poses
+     * folder (humanoid/poses/Kneeling) is a still a rig can hold, and
+     * collectPoseClips() lists those made for one rig, so every race and
+     * species holds only the poses made for its own body.
      */
 
     // Palette
@@ -72,6 +76,28 @@ public class AnimationManager extends ManagerPackage {
 
     public AnimationClipHandle getClipHandleFromClipName(String clipName) {
         return getClipHandleFromClipID(getClipIDFromClipName(clipName));
+    }
+
+    // Every pose clip made for a rig, in name order: each clip in a folder named ANIMATION_POSE_FOLDER whose rig it is
+    public void collectPoseClips(RigHandle rigHandle, ObjectArrayList<AnimationClipHandle> out) {
+
+        out.clear();
+
+        for (int i = 1; i < clipID2ClipHandle.size(); i++) {
+
+            AnimationClipHandle clip = clipID2ClipHandle.get(i);
+
+            if (clip != null && clip.getRigHandle() == rigHandle && isPoseClip(clip.getClipName()))
+                out.add(clip);
+        }
+
+        out.sort((a, b) -> a.getClipName().compareToIgnoreCase(b.getClipName()));
+    }
+
+    private boolean isPoseClip(String clipName) {
+        return clipName.startsWith(EngineSetting.ANIMATION_POSE_FOLDER + EngineSetting.PATH_SEPARATOR)
+                || clipName.contains(EngineSetting.PATH_SEPARATOR + EngineSetting.ANIMATION_POSE_FOLDER
+                        + EngineSetting.PATH_SEPARATOR);
     }
 
     // Preview \\

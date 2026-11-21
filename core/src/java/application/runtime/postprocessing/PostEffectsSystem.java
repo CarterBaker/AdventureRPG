@@ -2,6 +2,7 @@ package application.runtime.postprocessing;
 
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.renderpipeline.photofilter.PhotoFilterHandle;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
@@ -12,7 +13,9 @@ import application.runtime.RuntimeSetting;
 import application.runtime.water.WaterSystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.world.WorldSystem;
+import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -31,7 +34,9 @@ public class PostEffectsSystem extends SystemPackage {
      * composite applies anti-aliasing, depth of field, bloom, color grading
      * and the lens effects at full resolution. Both half-resolution passes are
      * skipped while depth of field and bloom are off. The passes are cloned
-     * for this window, so every window binds its own targets and focus.
+     * for this window, so every window binds its own targets and focus, and
+     * its own photo look, which photo mode sets and every other moment keeps
+     * neutral.
      */
 
     // Internal
@@ -60,6 +65,9 @@ public class PostEffectsSystem extends SystemPackage {
     // Grain
     private float grainTime;
 
+    // Photo Look
+    private Vector4 photoRow;
+
     // Base \\
 
     @Override
@@ -68,6 +76,9 @@ public class PostEffectsSystem extends SystemPackage {
         // Scene Layers
         this.sceneLayers = new ObjectArrayList<>();
         this.sceneLayerOrders = new IntArrayList();
+
+        // Photo Look
+        this.photoRow = new Vector4();
     }
 
     @Override
@@ -96,6 +107,7 @@ public class PostEffectsSystem extends SystemPackage {
         this.compositeFbo = fboManager.cloneFbo(RuntimeSetting.FBO_POST_COMPOSITE, window);
 
         bindEffectTargets();
+        clearPhotoLook();
     }
 
     @Override
@@ -232,6 +244,51 @@ public class PostEffectsSystem extends SystemPackage {
                 compositeFbo,
                 RuntimeSetting.PASS_DRAW_DEPTH,
                 window);
+    }
+
+    // Photo Look \\
+
+    // Photo mode's look over this window's grading: a filter's matrix and its own contrast, vignette and grain, with
+    // the exposure, contrast, saturation, vignette and grain the player set on top
+    public void setPhotoLook(
+            PhotoFilterHandle filter,
+            float exposure,
+            float contrast,
+            float saturation,
+            float vignette,
+            float grain) {
+
+        MaterialInstance composite = compositePass.getMaterial();
+
+        for (int channel = 0; channel < RuntimeSetting.UNIFORM_PHOTO_ROWS.length; channel++)
+            composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_ROWS[channel], filter.writeRow(channel, photoRow));
+
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_EXPOSURE, exposure);
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_CONTRAST, contrast * filter.getContrast());
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_SATURATION, saturation);
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_VIGNETTE, vignette + filter.getVignette());
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_GRAIN, grain + filter.getGrain());
+    }
+
+    // The neutral look every window shows outside photo mode
+    public void clearPhotoLook() {
+
+        MaterialInstance composite = compositePass.getMaterial();
+        float[] identity = EngineSetting.PHOTO_FILTER_IDENTITY;
+
+        for (int channel = 0; channel < RuntimeSetting.UNIFORM_PHOTO_ROWS.length; channel++) {
+
+            int offset = channel * EngineSetting.VECTOR4_COMPONENT_COUNT;
+
+            composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_ROWS[channel], photoRow.set(
+                    identity[offset], identity[offset + 1], identity[offset + 2], identity[offset + 3]));
+        }
+
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_EXPOSURE, 1f);
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_CONTRAST, 1f);
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_SATURATION, 1f);
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_VIGNETTE, 0f);
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_GRAIN, 0f);
     }
 
     // Accessible \\

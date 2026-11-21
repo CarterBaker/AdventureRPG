@@ -14,7 +14,8 @@ public class PlayerRenderSystem extends SystemPackage {
      * hands them to EntityRenderSystem.pushCharacter(), which does all
      * character rendering, in the frame of the chunk the player stands in. A
      * player flying as a free camera is not drawn, nor one carried under the
-     * view its main menu looks out from.
+     * view its main menu looks out from, nor one photo mode leaves out; in
+     * photo mode the whole body is drawn, never the first-person view.
      */
 
     // Internal
@@ -39,7 +40,7 @@ public class PlayerRenderSystem extends SystemPackage {
         int windowID = context.getWindow().getWindowID();
 
         if (!playerManager.hasPlayerForWindow(windowID) || playerManager.isFreeCameraForWindow(windowID)
-                || playerManager.isMenuViewForWindow(windowID))
+                || playerManager.isMenuViewForWindow(windowID) || playerManager.isPhotoPlayerHiddenForWindow(windowID))
             return;
 
         EntityInstance player = playerManager.getPlayerForWindow(windowID);
@@ -48,7 +49,7 @@ public class PlayerRenderSystem extends SystemPackage {
 
         entityRenderSystem.pushCharacter(
                 player,
-                playerManager.isFirstPerson(windowID),
+                playerManager.isFirstPerson(windowID) && !playerManager.isPhotoModeForWindow(windowID),
                 player.getWorldPositionStruct().getChunkCoordinate(),
                 worldFbo,
                 context.getWindow());

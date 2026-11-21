@@ -557,6 +557,9 @@ One line per session that changed this file: the date, what was added or removed
   More and Less, Alt for loops); added `shortcuts/Layers.arpg` (Up and Down pick the next layer).
 - 2026-11-21: Tools menu context. Regenerated `menus/editor/EditorWindow.arpg` (the Tools menu names the window each
   shared tab serves as it opens).
+- 2026-11-21: Photo mode. Added `photofilters/PhotoFilters.arpg` (the eight standard filters), `schemas/PhotoFilters.arpg`
+  and `menus/PhotoMode.arpg`; regenerated `menus/PauseMenu.arpg` (Photo Mode under Continue) and
+  `shaders/postprocessing/effects/PostCompositeShader.fsh` (photo mode's look).
 
 ## Textures and Sprites (2433 files)
 
@@ -1989,7 +1992,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3857 files)
+## Data Files (3860 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2832,7 +2835,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/menus/`
 
 `Character.arpg`, `CharacterCreator.arpg`, `Dialogue.arpg`, `HUD.arpg`, `Inventory.arpg`, `Launcher.arpg`,
-`MainMenu.arpg`, `PauseMenu.arpg`, `Settings.arpg`, `Shipwright.arpg`, `SongbookMenu.arpg`
+`MainMenu.arpg`, `PauseMenu.arpg`, `PhotoMode.arpg`, `Settings.arpg`, `Shipwright.arpg`, `SongbookMenu.arpg`
 
 ### `assets/menus/editor/`
 
@@ -2988,6 +2991,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `Phrases.arpg`
 
+### `assets/photofilters/`
+
+`PhotoFilters.arpg`
+
 ### `assets/processingpasses/`
 
 `DebugCameraOrientationBase.arpg`, `DebugCameraOrientationHUD.arpg`, `DebugUV.arpg`, `Lighting.arpg`, `PostBlur.arpg`,
@@ -3028,7 +3035,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `Blocks.arpg`, `BoneControls.arpg`, `Brushes.arpg`, `Calendars.arpg`, `CaveBiomes.arpg`, `Clouds.arpg`, `Contents.arpg`, `Coverings.arpg`,
 `DamageTypes.arpg`, `Deeds.arpg`, `Entities.arpg`, `FBOs.arpg`, `Features.arpg`, `Furnishings.arpg`, `Genders.arpg`,
 `Instruments.arpg`, `Intents.arpg`, `Items.arpg`, `LootTables.arpg`, `Materials.arpg`, `Moods.arpg`, `NoteSets.arpg`,
-`Npcs.arpg`, `Passes.arpg`, `Phrases.arpg`, `Professions.arpg`, `Races.arpg`, `Relations.arpg`, `Replies.arpg`,
+`Npcs.arpg`, `Passes.arpg`, `PhotoFilters.arpg`, `Phrases.arpg`, `Professions.arpg`, `Races.arpg`, `Relations.arpg`, `Replies.arpg`,
 `Rigs.arpg`, `Roads.arpg`, `Scenarios.arpg`, `Seasons.arpg`, `Settlements.arpg`, `Shaders.arpg`, `Shortcuts.arpg`,
 `Skills.arpg`, `Songs.arpg`, `SoundCues.arpg`, `Sounds.arpg`, `Sprites.arpg`, `Stamps.arpg`, `Stats.arpg`,
 `StructureLists.arpg`,

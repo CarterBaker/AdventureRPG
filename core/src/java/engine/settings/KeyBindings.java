@@ -37,6 +37,10 @@ public final class KeyBindings {
     // Menu
     public static Binding PAUSE = new Binding(InputCode.key(Keys.ESCAPE));
 
+    // Photo — a screenshot of the world as it is shown, and photo mode's panel shown or put away for the camera
+    public static Binding SCREENSHOT = new Binding(InputCode.key(Keys.F12));
+    public static Binding PHOTO_PANEL = new Binding(InputCode.key(Keys.TAB));
+
     // Inventory
     public static Binding INVENTORY = new Binding(InputCode.key(Keys.I));
     public static Binding ROTATE_ITEM = new Binding(InputCode.key(Keys.R));
