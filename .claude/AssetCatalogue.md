@@ -576,8 +576,13 @@ One line per session that changed this file: the date, what was added or removed
   before the gap test, so leaves keep their fill across mips, tiers and looks).
 - 2026-11-21: Tree fade order. Regenerated `shaders/trees/includes/TreeFade.glsl` (the new look rises whole before
   the old falls away, so crowns never thin mid-fade).
+- 2026-11-21: Content amounts. Added a growth map (`_g`) to all 134 content overlays under
+  `textures/surface/standard/` and their bakes (each nugget its own threshold, so a block shows as much ore as it
+  holds); regenerated every content file under `contents/` (`yield` became `max_amount`), `schemas/Contents.arpg`,
+  `ubos/ContentData.arpg`, `shaders/includes/ContentData.glsl`, `shaders/surface/includes/Content.glsl`,
+  `Coverage.glsl` and `shaders/surface/standard/StandardSurfaceShader.vsh`.
 
-## Textures and Sprites (2433 files)
+## Textures and Sprites (2567 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -1303,40 +1308,40 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/textures/surface/standard/`
 
 - `AbyssalOoze`: a, ao, h, n, spec
-- `AgateOreOverlay`: a, ao, n, spec
-- `AlexandriteOreOverlay`: a, ao, n, spec
+- `AgateOreOverlay`: a, ao, g, n, spec
+- `AlexandriteOreOverlay`: a, ao, g, n, spec
 - `AlkaliFlat`: a, ao, h, n, spec
 - `Alluvium`: a, ao, h, n, spec
 - `AlpineGrassSide`: a, ao, g, h, n, spec
 - `AlpineGrassTop`: a, ao, g, h, n, spec
-- `AmazoniteOreOverlay`: a, ao, n, spec
-- `AmberOreOverlay`: a, ao, n, spec
+- `AmazoniteOreOverlay`: a, ao, g, n, spec
+- `AmberOreOverlay`: a, ao, g, n, spec
 - `AmethystCrystal`: a, ao, h, n, spec
-- `AmethystOreOverlay`: a, ao, n, spec
+- `AmethystOreOverlay`: a, ao, g, n, spec
 - `Amphibolite`: a, ao, h, n, spec
 - `Andesite`: a, ao, h, n, spec
 - `Anorthosite`: a, ao, h, n, spec
-- `AquamarineOreOverlay`: a, ao, n, spec
+- `AquamarineOreOverlay`: a, ao, g, n, spec
 - `Aragonite`: a, ao, h, n, spec
 - `Arkose`: a, ao, h, n, spec
-- `ArsenopyriteOreOverlay`: a, ao, n, spec
+- `ArsenopyriteOreOverlay`: a, ao, g, n, spec
 - `AshenGrassSide`: a, ao, g, h, n, spec
 - `AshenGrassTop`: a, ao, g, h, n, spec
 - `AshSoil`: a, ao, h, n, spec
-- `AzuriteOreOverlay`: a, ao, n, spec
+- `AzuriteOreOverlay`: a, ao, g, n, spec
 - `BandedIron`: a, ao, h, n, spec
 - `BandedSandstone`: a, ao, h, n, spec
-- `BaryteOreOverlay`: a, ao, n, spec
+- `BaryteOreOverlay`: a, ao, g, n, spec
 - `Basalt`: a, ao, h, n, spec
 - `BasaltScree`: a, ao, h, n, spec
-- `BastnasiteOreOverlay`: a, ao, n, spec
-- `BauxiteOreOverlay`: a, ao, n, spec
+- `BastnasiteOreOverlay`: a, ao, g, n, spec
+- `BauxiteOreOverlay`: a, ao, g, n, spec
 - `Beachrock`: a, ao, h, n, spec
-- `BenitoiteOreOverlay`: a, ao, n, spec
+- `BenitoiteOreOverlay`: a, ao, g, n, spec
 - `Bentonite`: a, ao, h, n, spec
-- `BentoniteLensesOverlay`: a, ao, n, spec
-- `BerylOreOverlay`: a, ao, n, spec
-- `BismuthiniteOreOverlay`: a, ao, n, spec
+- `BentoniteLensesOverlay`: a, ao, g, n, spec
+- `BerylOreOverlay`: a, ao, g, n, spec
+- `BismuthiniteOreOverlay`: a, ao, g, n, spec
 - `BlackEarth`: a, ao, h, n, spec
 - `BlackGranite`: a, ao, h, n, spec
 - `BlackGravel`: a, ao, h, n, spec
@@ -1347,59 +1352,59 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `BlueIce`: a, ao, h, n, spec
 - `Bluestone`: a, ao, h, n, spec
 - `BlushwoodPetalsTop`: a, ao, g, h, n, spec
-- `BoraxOreOverlay`: a, ao, n, spec
-- `BorniteOreOverlay`: a, ao, n, spec
-- `BraggiteOreOverlay`: a, ao, n, spec
+- `BoraxOreOverlay`: a, ao, g, n, spec
+- `BorniteOreOverlay`: a, ao, g, n, spec
+- `BraggiteOreOverlay`: a, ao, g, n, spec
 - `BrambleSide`: a, ao, g, h, n, spec
 - `BrambleTop`: a, ao, g, h, n, spec
 - `Breccia`: a, ao, h, n, spec
-- `BromargyriteOreOverlay`: a, ao, n, spec
+- `BromargyriteOreOverlay`: a, ao, g, n, spec
 - `BrownSand`: a, ao, h, n, spec
-- `CalaveriteOreOverlay`: a, ao, n, spec
+- `CalaveriteOreOverlay`: a, ao, g, n, spec
 - `CalcareousOoze`: a, ao, h, n, spec
 - `Calcite`: a, ao, h, n, spec
 - `Caliche`: a, ao, h, n, spec
-- `CarnalliteOreOverlay`: a, ao, n, spec
-- `CarnelianOreOverlay`: a, ao, n, spec
-- `CarnotiteOreOverlay`: a, ao, n, spec
-- `CelestineOreOverlay`: a, ao, n, spec
-- `ChalcopyriteOreOverlay`: a, ao, n, spec
+- `CarnalliteOreOverlay`: a, ao, g, n, spec
+- `CarnelianOreOverlay`: a, ao, g, n, spec
+- `CarnotiteOreOverlay`: a, ao, g, n, spec
+- `CelestineOreOverlay`: a, ao, g, n, spec
+- `ChalcopyriteOreOverlay`: a, ao, g, n, spec
 - `Chalk`: a, ao, h, n, spec
 - `Chert`: a, ao, h, n, spec
-- `ChromiteOreOverlay`: a, ao, n, spec
-- `ChrysoberylOreOverlay`: a, ao, n, spec
-- `ChrysocollaOreOverlay`: a, ao, n, spec
+- `ChromiteOreOverlay`: a, ao, g, n, spec
+- `ChrysoberylOreOverlay`: a, ao, g, n, spec
+- `ChrysocollaOreOverlay`: a, ao, g, n, spec
 - `Cinders`: a, ao, h, n, spec
-- `CinnabarOreOverlay`: a, ao, n, spec
-- `CitrineOreOverlay`: a, ao, n, spec
-- `ClausthaliteOreOverlay`: a, ao, n, spec
+- `CinnabarOreOverlay`: a, ao, g, n, spec
+- `CitrineOreOverlay`: a, ao, g, n, spec
+- `ClausthaliteOreOverlay`: a, ao, g, n, spec
 - `Clay`: a, ao, h, n, spec
 - `Claystone`: a, ao, h, n, spec
 - `CloverGrassSide`: a, ao, g, h, n, spec
 - `CloverGrassTop`: a, ao, g, h, n, spec
-- `CoalOreOverlay`: a, ao, n, spec
+- `CoalOreOverlay`: a, ao, g, n, spec
 - `CoarseDirt`: a, ao, h, n, spec
-- `CobaltOreOverlay`: a, ao, n, spec
+- `CobaltOreOverlay`: a, ao, g, n, spec
 - `Cobblestone`: a
-- `ColemaniteOreOverlay`: a, ao, n, spec
-- `ColumbiteOreOverlay`: a, ao, n, spec
+- `ColemaniteOreOverlay`: a, ao, g, n, spec
+- `ColumbiteOreOverlay`: a, ao, g, n, spec
 - `Conglomerate`: a, ao, h, n, spec
-- `CopperOreOverlay`: a, ao, n, spec
+- `CopperOreOverlay`: a, ao, g, n, spec
 - `Coquina`: a, ao, h, n, spec
 - `CoralRubble`: a, ao, h, n, spec
 - `CoralSand`: a, ao, h, n, spec
 - `CrackedClay`: a, ao, h, n, spec
 - `CrackedEarth`: a, ao, h, n, spec
-- `CryoliteOreOverlay`: a, ao, n, spec
+- `CryoliteOreOverlay`: a, ao, g, n, spec
 - `CushionMossSide`: a, ao, g, h, n, spec
 - `CushionMossTop`: a, ao, g, h, n, spec
 - `Dacite`: a, ao, h, n, spec
 - `DarkLimestone`: a, ao, h, n, spec
 - `DarkTimber`: a
 - `Diabase`: a, ao, h, n, spec
-- `DiamondOreOverlay`: a, ao, n, spec
+- `DiamondOreOverlay`: a, ao, g, n, spec
 - `Diatomite`: a, ao, h, n, spec
-- `DioptaseOreOverlay`: a, ao, n, spec
+- `DioptaseOreOverlay`: a, ao, g, n, spec
 - `Diorite`: a, ao, h, n, spec
 - `Dirt`: a
 - `Dolomite`: a, ao, h, n, spec
@@ -1409,24 +1414,24 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `DuneGrassSide`: a, ao, g, h, n, spec
 - `DuneGrassTop`: a, ao, g, h, n, spec
 - `Eclogite`: a, ao, h, n, spec
-- `EmeraldOreOverlay`: a, ao, n, spec
+- `EmeraldOreOverlay`: a, ao, g, n, spec
 - `FernSide`: a, ao, g, h, n, spec
 - `FernTop`: a, ao, g, h, n, spec
 - `Fieldstone`: a, ao, h, n, spec
 - `Flagstone`: a
 - `Flint`: a, ao, h, n, spec
 - `FlintGravel`: a, ao, h, n, spec
-- `FlintNodulesOverlay`: a, ao, n, spec
+- `FlintNodulesOverlay`: a, ao, g, n, spec
 - `Flowstone`: a, ao, h, n, spec
-- `FluoriteOreOverlay`: a, ao, n, spec
+- `FluoriteOreOverlay`: a, ao, g, n, spec
 - `ForestLitterTop`: a, ao, g, h, n, spec
 - `FossilLimestone`: a, ao, h, n, spec
 - `Gabbro`: a, ao, h, n, spec
-- `GalenaOreOverlay`: a, ao, n, spec
-- `GalliteOreOverlay`: a, ao, n, spec
-- `GarnetOreOverlay`: a, ao, n, spec
+- `GalenaOreOverlay`: a, ao, g, n, spec
+- `GalliteOreOverlay`: a, ao, g, n, spec
+- `GarnetOreOverlay`: a, ao, g, n, spec
 - `GarnetSand`: a, ao, h, n, spec
-- `GermaniteOreOverlay`: a, ao, n, spec
+- `GermaniteOreOverlay`: a, ao, g, n, spec
 - `Geyserite`: a, ao, h, n, spec
 - `GlacialTill`: a, ao, h, n, spec
 - `Gneiss`: a, ao, h, n, spec
@@ -1434,15 +1439,15 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `GoldenGrassTop`: a, ao, g, h, n, spec
 - `GoldenSand`: a, ao, h, n, spec
 - `GoldenSandstone`: a, ao, h, n, spec
-- `GoldOreOverlay`: a, ao, n, spec
+- `GoldOreOverlay`: a, ao, g, n, spec
 - `Granite`: a, ao, h, n, spec
 - `GraniteScree`: a, ao, h, n, spec
-- `GraphiteOreOverlay`: a, ao, n, spec
+- `GraphiteOreOverlay`: a, ao, g, n, spec
 - `Gravel`: a, ao, h, n, spec
 - `GreenMarble`: a, ao, h, n, spec
 - `GreenMossSide`: a, ao, g, h, n, spec
 - `GreenMossTop`: a, ao, g, h, n, spec
-- `GreenockiteOreOverlay`: a, ao, n, spec
+- `GreenockiteOreOverlay`: a, ao, g, n, spec
 - `GreenSlate`: a, ao, h, n, spec
 - `Greenstone`: a, ao, h, n, spec
 - `GreyClay`: a, ao, h, n, spec
@@ -1451,51 +1456,51 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Greywacke`: a, ao, h, n, spec
 - `Guano`: a, ao, h, n, spec
 - `GypsumRock`: a, ao, h, n, spec
-- `GypsumRosesOverlay`: a, ao, n, spec
+- `GypsumRosesOverlay`: a, ao, g, n, spec
 - `Halite`: a, ao, h, n, spec
 - `Hardpan`: a, ao, h, n, spec
 - `HeatherSide`: a, ao, g, h, n, spec
 - `HeatherTop`: a, ao, g, h, n, spec
-- `HematiteOreOverlay`: a, ao, n, spec
+- `HematiteOreOverlay`: a, ao, g, n, spec
 - `Hornfels`: a, ao, h, n, spec
 - `Humus`: a, ao, h, n, spec
 - `Ice`: a, ao, h, n, spec
-- `IlmeniteOreOverlay`: a, ao, n, spec
-- `IoliteOreOverlay`: a, ao, n, spec
-- `IronOreOverlay`: a, ao, n, spec
+- `IlmeniteOreOverlay`: a, ao, g, n, spec
+- `IoliteOreOverlay`: a, ao, g, n, spec
+- `IronOreOverlay`: a, ao, g, n, spec
 - `Ironstone`: a, ao, h, n, spec
-- `JadeOreOverlay`: a, ao, n, spec
+- `JadeOreOverlay`: a, ao, g, n, spec
 - `Jasper`: a, ao, h, n, spec
 - `Jet`: a, ao, h, n, spec
-- `JetOverlay`: a, ao, n, spec
+- `JetOverlay`: a, ao, g, n, spec
 - `JungleGrassSide`: a, ao, g, h, n, spec
 - `JungleGrassTop`: a, ao, g, h, n, spec
 - `Kimberlite`: a, ao, h, n, spec
 - `Komatiite`: a, ao, h, n, spec
-- `KunziteOreOverlay`: a, ao, n, spec
-- `KyaniteOreOverlay`: a, ao, n, spec
-- `LabradoriteOreOverlay`: a, ao, n, spec
-- `LapisOreOverlay`: a, ao, n, spec
-- `LarimarOreOverlay`: a, ao, n, spec
+- `KunziteOreOverlay`: a, ao, g, n, spec
+- `KyaniteOreOverlay`: a, ao, g, n, spec
+- `LabradoriteOreOverlay`: a, ao, g, n, spec
+- `LapisOreOverlay`: a, ao, g, n, spec
+- `LarimarOreOverlay`: a, ao, g, n, spec
 - `Laterite`: a, ao, h, n, spec
-- `LauriteOreOverlay`: a, ao, n, spec
-- `LautariteOreOverlay`: a, ao, n, spec
+- `LauriteOreOverlay`: a, ao, g, n, spec
+- `LautariteOreOverlay`: a, ao, g, n, spec
 - `LeadedWindow`: a
-- `LeadOreOverlay`: a, ao, n, spec
+- `LeadOreOverlay`: a, ao, g, n, spec
 - `LeafLitter`: a, ao, h, n, spec
-- `LepidoliteOreOverlay`: a, ao, n, spec
+- `LepidoliteOreOverlay`: a, ao, g, n, spec
 - `LichenSide`: a, ao, g, h, n, spec
 - `LichenTop`: a, ao, g, h, n, spec
 - `Limestone`: a, ao, h, n, spec
 - `LimestoneScree`: a, ao, h, n, spec
-- `LimoniteOreOverlay`: a, ao, n, spec
+- `LimoniteOreOverlay`: a, ao, g, n, spec
 - `Loam`: a, ao, h, n, spec
 - `Loess`: a, ao, h, n, spec
-- `LoranditeOreOverlay`: a, ao, n, spec
-- `MagnesiteOreOverlay`: a, ao, n, spec
-- `MagnetiteOreOverlay`: a, ao, n, spec
-- `MalachiteOreOverlay`: a, ao, n, spec
-- `ManganeseOreOverlay`: a, ao, n, spec
+- `LoranditeOreOverlay`: a, ao, g, n, spec
+- `MagnesiteOreOverlay`: a, ao, g, n, spec
+- `MagnetiteOreOverlay`: a, ao, g, n, spec
+- `MalachiteOreOverlay`: a, ao, g, n, spec
+- `ManganeseOreOverlay`: a, ao, g, n, spec
 - `MangroveLitterTop`: a, ao, g, h, n, spec
 - `MangroveMud`: a, ao, h, n, spec
 - `Marble`: a, ao, h, n, spec
@@ -1504,47 +1509,47 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `MarshGrassTop`: a, ao, g, h, n, spec
 - `MeadowGrassSide`: a, ao, g, h, n, spec
 - `MeadowGrassTop`: a, ao, g, h, n, spec
-- `MicaOreOverlay`: a, ao, n, spec
+- `MicaOreOverlay`: a, ao, g, n, spec
 - `Migmatite`: a, ao, h, n, spec
-- `MolybdeniteOreOverlay`: a, ao, n, spec
-- `MonaziteOreOverlay`: a, ao, n, spec
+- `MolybdeniteOreOverlay`: a, ao, g, n, spec
+- `MonaziteOreOverlay`: a, ao, g, n, spec
 - `MoonlitGrassSide`: a, ao, g, h, n, spec
 - `MoonlitGrassTop`: a, ao, g, h, n, spec
 - `Moonmilk`: a, ao, h, n, spec
-- `MoonstoneOreOverlay`: a, ao, n, spec
-- `MorganiteOreOverlay`: a, ao, n, spec
+- `MoonstoneOreOverlay`: a, ao, g, n, spec
+- `MorganiteOreOverlay`: a, ao, g, n, spec
 - `Mud`: a, ao, h, n, spec
 - `MuddySand`: a, ao, h, n, spec
 - `Mudstone`: a, ao, h, n, spec
 - `MycelialEarth`: a, ao, h, n, spec
-- `NickelOreOverlay`: a, ao, n, spec
-- `NitratineOreOverlay`: a, ao, n, spec
+- `NickelOreOverlay`: a, ao, g, n, spec
+- `NitratineOreOverlay`: a, ao, g, n, spec
 - `NoduleBed`: a, ao, h, n, spec
 - `OakLogNorth`: a
 - `OakPlanks`: a
 - `Obsidian`: a, ao, h, n, spec
-- `ObsidianShardsOverlay`: a, ao, n, spec
+- `ObsidianShardsOverlay`: a, ao, g, n, spec
 - `OchreEarth`: a, ao, h, n, spec
 - `OchreSand`: a, ao, h, n, spec
 - `OilShale`: a, ao, h, n, spec
-- `OilShaleSeamsOverlay`: a, ao, n, spec
+- `OilShaleSeamsOverlay`: a, ao, g, n, spec
 - `OlivineSand`: a, ao, h, n, spec
-- `OnyxOreOverlay`: a, ao, n, spec
+- `OnyxOreOverlay`: a, ao, g, n, spec
 - `Oolite`: a, ao, h, n, spec
-- `OpalOreOverlay`: a, ao, n, spec
-- `OrpimentOreOverlay`: a, ao, n, spec
-- `OsmiridiumOreOverlay`: a, ao, n, spec
+- `OpalOreOverlay`: a, ao, g, n, spec
+- `OrpimentOreOverlay`: a, ao, g, n, spec
+- `OsmiridiumOreOverlay`: a, ao, g, n, spec
 - `PackedDirt`: a
 - `PeaGravel`: a, ao, h, n, spec
 - `Peat`: a, ao, h, n, spec
 - `Pebbles`: a, ao, h, n, spec
-- `PebblesOverlay`: a, ao, n, spec
+- `PebblesOverlay`: a, ao, g, n, spec
 - `Pegmatite`: a, ao, h, n, spec
 - `PelagicClay`: a, ao, h, n, spec
 - `Peridotite`: a, ao, h, n, spec
-- `PeridotOreOverlay`: a, ao, n, spec
+- `PeridotOreOverlay`: a, ao, g, n, spec
 - `PetrifiedWood`: a, ao, h, n, spec
-- `PhosphateOreOverlay`: a, ao, n, spec
+- `PhosphateOreOverlay`: a, ao, g, n, spec
 - `Phyllite`: a, ao, h, n, spec
 - `PillowBasalt`: a, ao, h, n, spec
 - `PineLitterTop`: a, ao, g, h, n, spec
@@ -1552,20 +1557,20 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `PinkGranite`: a, ao, h, n, spec
 - `PinkMarble`: a, ao, h, n, spec
 - `PinkSand`: a, ao, h, n, spec
-- `PlatinumOreOverlay`: a, ao, n, spec
+- `PlatinumOreOverlay`: a, ao, g, n, spec
 - `PlayaCrust`: a, ao, h, n, spec
 - `Podzol`: a, ao, h, n, spec
-- `PolluciteOreOverlay`: a, ao, n, spec
+- `PolluciteOreOverlay`: a, ao, g, n, spec
 - `Porphyry`: a, ao, h, n, spec
 - `Pumice`: a, ao, h, n, spec
 - `PurpleSlate`: a, ao, h, n, spec
-- `PyriteOreOverlay`: a, ao, n, spec
-- `PyrochloreOreOverlay`: a, ao, n, spec
+- `PyriteOreOverlay`: a, ao, g, n, spec
+- `PyrochloreOreOverlay`: a, ao, g, n, spec
 - `QuartzCrystal`: a, ao, h, n, spec
 - `Quartzite`: a, ao, h, n, spec
-- `QuartzOreOverlay`: a, ao, n, spec
+- `QuartzOreOverlay`: a, ao, g, n, spec
 - `QuartzSand`: a, ao, h, n, spec
-- `RealgarOreOverlay`: a, ao, n, spec
+- `RealgarOreOverlay`: a, ao, g, n, spec
 - `RedClay`: a, ao, h, n, spec
 - `RedEarth`: a, ao, h, n, spec
 - `RedGranite`: a, ao, h, n, spec
@@ -1577,27 +1582,27 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `ReedBedSide`: a, ao, g, h, n, spec
 - `ReedBedTop`: a, ao, g, h, n, spec
 - `ReefRock`: a, ao, h, n, spec
-- `RhodochrositeOreOverlay`: a, ao, n, spec
-- `RhodoniteOreOverlay`: a, ao, n, spec
+- `RhodochrositeOreOverlay`: a, ao, g, n, spec
+- `RhodoniteOreOverlay`: a, ao, g, n, spec
 - `Rhyolite`: a, ao, h, n, spec
 - `RockSalt`: a, ao, h, n, spec
 - `RockyDirt`: a, ao, h, n, spec
 - `RootedEarth`: a, ao, h, n, spec
-- `RootletsOverlay`: a, ao, n, spec
-- `RootsOverlay`: a, ao, n, spec
-- `RoquesiteOreOverlay`: a, ao, n, spec
-- `RoseQuartzOreOverlay`: a, ao, n, spec
-- `RubyOreOverlay`: a, ao, n, spec
-- `RutileOreOverlay`: a, ao, n, spec
+- `RootletsOverlay`: a, ao, g, n, spec
+- `RootsOverlay`: a, ao, g, n, spec
+- `RoquesiteOreOverlay`: a, ao, g, n, spec
+- `RoseQuartzOreOverlay`: a, ao, g, n, spec
+- `RubyOreOverlay`: a, ao, g, n, spec
+- `RutileOreOverlay`: a, ao, g, n, spec
 - `SaltCrust`: a, ao, h, n, spec
 - `SaltmarshGrassSide`: a, ao, g, h, n, spec
 - `SaltmarshGrassTop`: a, ao, g, h, n, spec
-- `SaltpeterOreOverlay`: a, ao, n, spec
+- `SaltpeterOreOverlay`: a, ao, g, n, spec
 - `Sand`: a
 - `Sandstone`: a, ao, h, n, spec
 - `SandstoneScree`: a, ao, h, n, spec
 - `SandyLoam`: a, ao, h, n, spec
-- `SapphireOreOverlay`: a, ao, n, spec
+- `SapphireOreOverlay`: a, ao, g, n, spec
 - `SavannaGrassSide`: a, ao, g, h, n, spec
 - `SavannaGrassTop`: a, ao, g, h, n, spec
 - `Schist`: a, ao, h, n, spec
@@ -1612,52 +1617,52 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Shale`: a, ao, h, n, spec
 - `ShellSand`: a, ao, h, n, spec
 - `Shingle`: a, ao, h, n, spec
-- `SideriteOreOverlay`: a, ao, n, spec
+- `SideriteOreOverlay`: a, ao, g, n, spec
 - `Silt`: a, ao, h, n, spec
 - `Siltstone`: a, ao, h, n, spec
-- `SilverOreOverlay`: a, ao, n, spec
+- `SilverOreOverlay`: a, ao, g, n, spec
 - `Slate`: a, ao, h, n, spec
 - `SlateScree`: a, ao, h, n, spec
-- `SmokyQuartzOreOverlay`: a, ao, n, spec
+- `SmokyQuartzOreOverlay`: a, ao, g, n, spec
 - `Soapstone`: a, ao, h, n, spec
-- `SodaliteOreOverlay`: a, ao, n, spec
-- `SperryliteOreOverlay`: a, ao, n, spec
-- `SphaleriteOreOverlay`: a, ao, n, spec
-- `SpinelOreOverlay`: a, ao, n, spec
-- `SpodumeneOreOverlay`: a, ao, n, spec
+- `SodaliteOreOverlay`: a, ao, g, n, spec
+- `SperryliteOreOverlay`: a, ao, g, n, spec
+- `SphaleriteOreOverlay`: a, ao, g, n, spec
+- `SpinelOreOverlay`: a, ao, g, n, spec
+- `SpodumeneOreOverlay`: a, ao, g, n, spec
 - `SteppeGrassSide`: a, ao, g, h, n, spec
 - `SteppeGrassTop`: a, ao, g, h, n, spec
-- `StibniteOreOverlay`: a, ao, n, spec
+- `StibniteOreOverlay`: a, ao, g, n, spec
 - `Stone`: a
 - `StoneBrick`: a
-- `StonesOverlay`: a, ao, n, spec
+- `StonesOverlay`: a, ao, g, n, spec
 - `SulfideRock`: a, ao, h, n, spec
 - `SulfurCrust`: a, ao, h, n, spec
-- `SulfurOreOverlay`: a, ao, n, spec
-- `SunstoneOreOverlay`: a, ao, n, spec
+- `SulfurOreOverlay`: a, ao, g, n, spec
+- `SunstoneOreOverlay`: a, ao, g, n, spec
 - `SwampMuck`: a, ao, h, n, spec
 - `Syenite`: a, ao, h, n, spec
-- `SylviteOreOverlay`: a, ao, n, spec
-- `TantaliteOreOverlay`: a, ao, n, spec
-- `TanzaniteOreOverlay`: a, ao, n, spec
+- `SylviteOreOverlay`: a, ao, g, n, spec
+- `TantaliteOreOverlay`: a, ao, g, n, spec
+- `TanzaniteOreOverlay`: a, ao, g, n, spec
 - `Thatch`: a
-- `ThorianiteOreOverlay`: a, ao, n, spec
-- `ThortveititeOreOverlay`: a, ao, n, spec
-- `TigerEyeOreOverlay`: a, ao, n, spec
-- `TinOreOverlay`: a, ao, n, spec
-- `TitaniumOreOverlay`: a, ao, n, spec
-- `TopazOreOverlay`: a, ao, n, spec
-- `TourmalineOreOverlay`: a, ao, n, spec
+- `ThorianiteOreOverlay`: a, ao, g, n, spec
+- `ThortveititeOreOverlay`: a, ao, g, n, spec
+- `TigerEyeOreOverlay`: a, ao, g, n, spec
+- `TinOreOverlay`: a, ao, g, n, spec
+- `TitaniumOreOverlay`: a, ao, g, n, spec
+- `TopazOreOverlay`: a, ao, g, n, spec
+- `TourmalineOreOverlay`: a, ao, g, n, spec
 - `Travertine`: a, ao, h, n, spec
-- `TronaOreOverlay`: a, ao, n, spec
+- `TronaOreOverlay`: a, ao, g, n, spec
 - `Tuff`: a, ao, h, n, spec
 - `TundraGrassSide`: a, ao, g, h, n, spec
 - `TundraGrassTop`: a, ao, g, h, n, spec
 - `TundraSoil`: a, ao, h, n, spec
-- `TungstenOreOverlay`: a, ao, n, spec
-- `TurquoiseOreOverlay`: a, ao, n, spec
-- `UraniniteOreOverlay`: a, ao, n, spec
-- `VanadiniteOreOverlay`: a, ao, n, spec
+- `TungstenOreOverlay`: a, ao, g, n, spec
+- `TurquoiseOreOverlay`: a, ao, g, n, spec
+- `UraniniteOreOverlay`: a, ao, g, n, spec
+- `VanadiniteOreOverlay`: a, ao, g, n, spec
 - `VolcanicAsh`: a, ao, h, n, spec
 - `WhiteClay`: a, ao, h, n, spec
 - `WhitePlaster`: a
@@ -1665,10 +1670,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `WhiteSandstone`: a, ao, h, n, spec
 - `WildflowerMeadowSide`: a, ao, g, h, n, spec
 - `WildflowerMeadowTop`: a, ao, g, h, n, spec
-- `WollastoniteOreOverlay`: a, ao, n, spec
-- `XenotimeOreOverlay`: a, ao, n, spec
-- `ZincOreOverlay`: a, ao, n, spec
-- `ZirconOreOverlay`: a, ao, n, spec
+- `WollastoniteOreOverlay`: a, ao, g, n, spec
+- `XenotimeOreOverlay`: a, ao, g, n, spec
+- `ZincOreOverlay`: a, ao, g, n, spec
+- `ZirconOreOverlay`: a, ao, g, n, spec
 
 ### `assets/worlds/`
 

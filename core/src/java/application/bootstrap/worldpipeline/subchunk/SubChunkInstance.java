@@ -31,10 +31,11 @@ public class SubChunkInstance extends WorldRenderInstance {
      * path for sub-block cells. Coverage lives in a palette of its own, written
      * only through setCoverage(), and a cell loses its coverage the moment its
      * block or sub-block mask changes, so a covering never outlives the face it
-     * grew over. Contents live in a palette of their own as well, made only
-     * when the first content is written through setContent(), the single write
-     * path, and a cell loses its content the moment its block or sub-block mask
-     * changes, so an ore never outlives the rock that held it. The world spawn
+     * grew over. Contents, each packed with its amount, live in a palette of
+     * their own as well, made only when the first content is written through
+     * setContent(), the single write path, and a cell loses its content the
+     * moment its block or sub-block mask changes, so an ore never outlives the
+     * rock that held it. The world spawn
      * palette is made only when a spot someone lives at is first recorded here,
      * so a subchunk nobody lives in carries none. Writes happen under the
      * chunk's lock.
@@ -469,10 +470,11 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     // Content \\
 
-    // The single write path for contents — callers have already checked the cell's block can hold the content
-    public void setContent(int packedXYZ, short contentID) {
+    // The single write path for contents, each packed with its amount — callers have already checked the cell's
+    // block can hold the content
+    public void setContent(int packedXYZ, short content) {
 
-        if (!ContentUtility.isContained(contentID)) {
+        if (!ContentUtility.isContained(content)) {
             clearContent(packedXYZ);
             return;
         }
@@ -484,7 +486,7 @@ public class SubChunkInstance extends WorldRenderInstance {
                     EngineSetting.CHUNK_SIZE, EngineSetting.BLOCK_PALETTE_THRESHOLD, ContentUtility.NONE,
                     blockManager.getStoragePool());
 
-        contentPaletteHandle.setBlock(packedXYZ, contentID);
+        contentPaletteHandle.setBlock(packedXYZ, content);
         contained = true;
     }
 

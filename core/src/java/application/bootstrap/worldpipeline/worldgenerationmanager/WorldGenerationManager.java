@@ -60,7 +60,8 @@ public class WorldGenerationManager extends ManagerPackage {
      * CaveCarveBranch hollow them and CaveDressingBranch line their caves and
      * grow their speleothems, threads them with veins through world-aligned
      * noise lattices — a vein sets its content into every whole block it runs
-     * through that the content can be held by, the surface biome's veins before
+     * through that the content can be held by, more of it the nearer the
+     * seam's heart, the surface biome's veins before
      * those of the cave biome lining the cell — and leaves fully empty or
      * uniform ones unrealized. The sea stands at sea level and rides the tide,
      * carried into caves that open on it; still water keeps the level its biome
@@ -875,8 +876,9 @@ public class WorldGenerationManager extends ManagerPackage {
             column.veinSlots[i] = findVeinSlot(column, veins[i].getFieldSeed());
     }
 
-    // The content a whole block holds: the first vein of the surface biome, then of the cave biome lining the cell,
-    // whose content the block can hold and that runs through it — the column's slots resolved first, NONE when none
+    // The content a whole block holds and how much: the first vein of the surface biome, then of the cave biome
+    // lining the cell, whose content the block can hold and that runs through it, the richer the nearer the seam's
+    // heart — the column's slots resolved first, NONE when none
     private short resolveCellContent(
             TerrainColumnAsyncContainer column,
             int columnIndex,
@@ -889,20 +891,33 @@ public class WorldGenerationManager extends ManagerPackage {
         TerrainSurfaceProfileStruct profile = column.columnProfile[columnIndex];
         int groundHeight = column.groundHeightBlocks[columnIndex];
 
-        for (int i = 0; i < profile.veins.length; i++)
-            if (canHold(profile.veinContentIDs[i], blockID)
-                    && isInVein(column, profile.veins[i], column.veinSlots[i],
-                            localX, localZ, worldY, latticeOriginY, groundHeight))
-                return profile.veinContentIDs[i];
+        for (int i = 0; i < profile.veins.length; i++) {
+
+            if (!canHold(profile.veinContentIDs[i], blockID))
+                continue;
+
+            float richness = sampleVeinRichness(column, profile.veins[i], column.veinSlots[i],
+                    localX, localZ, worldY, latticeOriginY, groundHeight);
+
+            if (richness > 0f)
+                return packCellContent(profile.veinContentIDs[i], richness);
+        }
 
         if (caveProfile == null)
             return ContentUtility.NONE;
 
-        for (int i = 0; i < caveProfile.veins.length; i++)
-            if (canHold(caveProfile.veinContentIDs[i], blockID)
-                    && isInVein(column, caveProfile.veins[i], findVeinSlot(column, caveProfile.veins[i].getFieldSeed()),
-                            localX, localZ, worldY, latticeOriginY, groundHeight))
-                return caveProfile.veinContentIDs[i];
+        for (int i = 0; i < caveProfile.veins.length; i++) {
+
+            if (!canHold(caveProfile.veinContentIDs[i], blockID))
+                continue;
+
+            float richness = sampleVeinRichness(column, caveProfile.veins[i],
+                    findVeinSlot(column, caveProfile.veins[i].getFieldSeed()),
+                    localX, localZ, worldY, latticeOriginY, groundHeight);
+
+            if (richness > 0f)
+                return packCellContent(caveProfile.veinContentIDs[i], richness);
+        }
 
         return ContentUtility.NONE;
     }
@@ -911,8 +926,17 @@ public class WorldGenerationManager extends ManagerPackage {
         return contentManager.getContentHandleFromContentID(contentID).canHost(blockID);
     }
 
-    // latticeOriginY is the world Y of the vein lattice's first row
-    private boolean isInVein(
+    // A content at the amount a seam's richness gives, from one at its edge to the content's most at its heart
+    private short packCellContent(short contentID, float richness) {
+
+        int maxAmount = contentManager.getContentHandleFromContentID(contentID).getMaxAmount();
+        int amount = 1 + Math.round(Math.min(richness, 1f) * (maxAmount - 1));
+
+        return ContentUtility.pack(contentID, amount);
+    }
+
+    // How rich a vein runs through a cell, zero or below where it does not
+    private float sampleVeinRichness(
             TerrainColumnAsyncContainer column,
             BiomeVeinStruct vein,
             int slot,
@@ -926,7 +950,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 || worldY < vein.getMinHeightBlocks()
                 || worldY > vein.getMaxHeightBlocks()
                 || worldY < groundHeight - vein.getMaxDepthBlocks())
-            return false;
+            return 0f;
 
         int channels = column.veinCount * TerrainCarveUtility.VEIN_CHANNELS_PER_VEIN;
         int channel = slot * TerrainCarveUtility.VEIN_CHANNELS_PER_VEIN;
@@ -940,12 +964,12 @@ public class WorldGenerationManager extends ManagerPackage {
                 column.veinLattice, column.veinLatticePoint, channel + TerrainCarveUtility.CHANNEL_VEIN_GATE);
 
         if (!TerrainCarveUtility.isVeinGateOpen(gate, vein))
-            return false;
+            return 0f;
 
         float ribbon = TerrainCarveUtility.sampleLatticePoint(
                 column.veinLattice, column.veinLatticePoint, channel + TerrainCarveUtility.CHANNEL_VEIN_RIBBON);
 
-        return TerrainCarveUtility.isVeinSeam(ribbon, vein);
+        return TerrainCarveUtility.resolveVeinRichness(ribbon, vein);
     }
 
     // Probe — any single block column \\
@@ -1877,14 +1901,14 @@ public class WorldGenerationManager extends ManagerPackage {
                                 isUniform = false;
                             }
 
-                            short contentID = veins && mask == SubBlockUtility.MASK_FULL
+                            short content = veins && mask == SubBlockUtility.MASK_FULL
                                     ? resolveCellContent(
                                             column, columnIndex, caveProfile, localX, localZ, worldY, offsetY,
                                             resultBlockID)
                                     : ContentUtility.NONE;
 
-                            if (ContentUtility.isContained(contentID)) {
-                                subChunkInstance.setContent(packedXYZ, contentID);
+                            if (ContentUtility.isContained(content)) {
+                                subChunkInstance.setContent(packedXYZ, content);
                                 isUniform = false;
                             }
                         }

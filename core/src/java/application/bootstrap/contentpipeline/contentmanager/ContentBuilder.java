@@ -27,9 +27,9 @@ class ContentBuilder extends BuilderPackage {
      * breakable FULL-geometry block, and the overlay tile must live in the
      * same texture array as every face of each host, since the surface
      * shader reads both from the one array it draws the host with, and must
-     * show at least one texel. The break tier, durability and yield are
-     * never negative, and a yield is only declared alongside the item
-     * texture its pieces are drawn with. Bootstrap only.
+     * show at least one texel. The break tier and durability are never
+     * negative, and the most a cell holds runs from one to the amount's
+     * bits. Bootstrap only.
      */
 
     // Internal
@@ -68,10 +68,13 @@ class ContentBuilder extends BuilderPackage {
         int breakTier = parseNonNegative(arpg, "break_tier", EngineSetting.DEFAULT_CONTENT_BREAK_TIER, contentName);
         int durability = parseNonNegative(arpg, "durability", EngineSetting.DEFAULT_CONTENT_DURABILITY, contentName);
 
+        // Amount
+        int maxAmount = parseMaxAmount(arpg, contentName);
+
         // Pieces
         String itemTextureName = ArpgUtility.getString(
                 arpg, "item_texture", EngineSetting.CONTENT_ITEM_TEXTURE_NONE);
-        int yield = parseYield(arpg, itemTextureName, contentName);
+        validateItemTexture(itemTextureName);
 
         ContentData contentData = new ContentData(
                 contentName,
@@ -82,8 +85,8 @@ class ContentBuilder extends BuilderPackage {
                 reveal,
                 breakTier,
                 durability,
-                itemTextureName,
-                yield);
+                maxAmount,
+                itemTextureName);
 
         ContentHandle contentHandle = create(ContentHandle.class);
         contentHandle.constructor(contentData);
@@ -174,27 +177,24 @@ class ContentBuilder extends BuilderPackage {
         return value;
     }
 
+    // Amount \\
+
+    private int parseMaxAmount(ArpgObjectStruct arpg, String contentName) {
+
+        int maxAmount = ArpgUtility.getInt(arpg, "max_amount", EngineSetting.DEFAULT_CONTENT_MAX_AMOUNT);
+
+        if (maxAmount < 1 || maxAmount > EngineSetting.CONTENT_AMOUNT_MAX)
+            throwException("Content \"" + contentName + "\" has \"max_amount\" " + maxAmount
+                    + " — a cell holds from 1 to " + EngineSetting.CONTENT_AMOUNT_MAX + ".");
+
+        return maxAmount;
+    }
+
     // Pieces \\
 
-    private int parseYield(ArpgObjectStruct arpg, String itemTextureName, String contentName) {
+    private void validateItemTexture(String itemTextureName) {
 
-        if (itemTextureName.equals(EngineSetting.CONTENT_ITEM_TEXTURE_NONE)) {
-
-            if (arpg.has("yield"))
-                throwException("Content \"" + contentName
-                        + "\" declares a \"yield\" but names no \"item_texture\" its pieces are drawn with.");
-
-            return 0;
-        }
-
-        textureManager.getTileIDFromTextureName(itemTextureName);
-
-        int yield = ArpgUtility.getInt(arpg, "yield", EngineSetting.DEFAULT_CONTENT_YIELD);
-
-        if (yield < 1 || yield > EngineSetting.BLOCK_PIECE_STACK_SIZE)
-            throwException("Content \"" + contentName + "\" has \"yield\" " + yield
-                    + " — it must run from 1 to " + EngineSetting.BLOCK_PIECE_STACK_SIZE + " pieces.");
-
-        return yield;
+        if (!itemTextureName.equals(EngineSetting.CONTENT_ITEM_TEXTURE_NONE))
+            textureManager.getTileIDFromTextureName(itemTextureName);
     }
 }

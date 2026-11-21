@@ -6,6 +6,7 @@ import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.shaderpipeline.ubo.UBOHandle;
 import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.worldpipeline.covering.CoveringHandle;
+import application.bootstrap.worldpipeline.util.CoverageUtility;
 import engine.graphics.color.PackedColorUtility;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -123,32 +124,16 @@ class CoveringBufferSystem extends SystemPackage {
         writeColor(coveringRevealTintable[faceID], reveal.getTintableColor());
 
         Vector4Int shares = coveringRevealShares[faceID];
-        shares.set(packShares(reveal, 0), packShares(reveal, 1), packShares(reveal, 2), packShares(reveal, 3));
+        shares.set(
+                CoverageUtility.packRevealShares(reveal, 0),
+                CoverageUtility.packRevealShares(reveal, 1),
+                CoverageUtility.packRevealShares(reveal, 2),
+                CoverageUtility.packRevealShares(reveal, 3));
     }
 
     private void writeColor(Vector4 target, int packedColor) {
         target.x = PackedColorUtility.red(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
         target.y = PackedColorUtility.green(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
         target.z = PackedColorUtility.blue(packedColor) / EngineSetting.COLOR_CHANNEL_BYTE_MAX;
-    }
-
-    // One component of the shares row — four consecutive levels, a byte each, the lowest level in the low byte
-    private int packShares(TextureRevealStruct reveal, int component) {
-
-        int word = 0;
-        int firstLevel = component * EngineSetting.COVERAGE_SHARES_PER_WORD;
-
-        for (int i = 0; i < EngineSetting.COVERAGE_SHARES_PER_WORD; i++) {
-
-            int level = firstLevel + i;
-
-            if (level > EngineSetting.COVERAGE_LEVEL_MAX)
-                break;
-
-            int share = Math.round(reveal.getLevelShare(level) * EngineSetting.COVERAGE_SHARE_MAX);
-            word |= share << (i * EngineSetting.COVERAGE_SHARE_BITS);
-        }
-
-        return word;
     }
 }

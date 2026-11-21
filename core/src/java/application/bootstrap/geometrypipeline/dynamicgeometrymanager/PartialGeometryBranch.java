@@ -150,7 +150,7 @@ class PartialGeometryBranch extends BranchPackage {
         short baseOrientation = rotationPaletteHandle.getBlock(baseCellXYZ);
         int baseCoverageWord = surfaceEmissionBranch.resolveCoverageWord(
                 subChunkInstance, baseCellXYZ, direction3Vector);
-        short baseContentID = surfaceEmissionBranch.resolveContentID(subChunkInstance, baseCellXYZ);
+        short baseContent = surfaceEmissionBranch.resolveContent(subChunkInstance, baseCellXYZ);
 
         subAccumulatedBatch.set(getSubIndex(subX, subY, subZ));
 
@@ -171,7 +171,7 @@ class PartialGeometryBranch extends BranchPackage {
                 blockHandle,
                 baseOrientation,
                 baseCoverageWord,
-                baseContentID,
+                baseContent,
                 subAccumulatedBatch)) {
             markRow(subX, subY, subZ, tangentA, tangentB, sizeA, sizeB, subAccumulatedBatch);
             sizeA++;
@@ -193,7 +193,7 @@ class PartialGeometryBranch extends BranchPackage {
                 blockHandle,
                 baseOrientation,
                 baseCoverageWord,
-                baseContentID,
+                baseContent,
                 subAccumulatedBatch)) {
             markRow(subX, subY, subZ, tangentB, tangentA, sizeB, sizeA, subAccumulatedBatch);
             sizeB++;
@@ -230,7 +230,7 @@ class PartialGeometryBranch extends BranchPackage {
             BlockHandle blockHandle,
             short baseOrientation,
             int baseCoverageWord,
-            short baseContentID,
+            short baseContent,
             BitSet subAccumulatedBatch) {
 
         if (currentSize >= maxMergeExtent)
@@ -257,7 +257,7 @@ class PartialGeometryBranch extends BranchPackage {
                     orientationSensitive,
                     baseOrientation,
                     baseCoverageWord,
-                    baseContentID,
+                    baseContent,
                     subAccumulatedBatch))
                 return false;
         }
@@ -294,7 +294,7 @@ class PartialGeometryBranch extends BranchPackage {
             boolean orientationSensitive,
             short baseOrientation,
             int baseCoverageWord,
-            short baseContentID,
+            short baseContent,
             BitSet subAccumulatedBatch) {
 
         if (subAccumulatedBatch.get(getSubIndex(checkX, checkY, checkZ)))
@@ -323,7 +323,7 @@ class PartialGeometryBranch extends BranchPackage {
         if (surfaceEmissionBranch.resolveCoverageWord(subChunkInstance, cellXYZ, direction3Vector) != baseCoverageWord)
             return false;
 
-        if (surfaceEmissionBranch.resolveContentID(subChunkInstance, cellXYZ) != baseContentID)
+        if (surfaceEmissionBranch.resolveContent(subChunkInstance, cellXYZ) != baseContent)
             return false;
 
         if (!subCellSampleBranch.hasSubFace(

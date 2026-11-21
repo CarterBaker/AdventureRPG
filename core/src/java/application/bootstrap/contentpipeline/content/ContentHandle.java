@@ -50,8 +50,8 @@ public class ContentHandle extends HandlePackage {
         return contentData.getReveal();
     }
 
-    public float getRevealShare() {
-        return contentData.getRevealShare();
+    public float getRevealShare(int amount) {
+        return contentData.getRevealShare(amount);
     }
 
     public int getBreakTier() {
@@ -62,15 +62,15 @@ public class ContentHandle extends HandlePackage {
         return contentData.getDurability();
     }
 
+    public int getMaxAmount() {
+        return contentData.getMaxAmount();
+    }
+
     public String getItemTextureName() {
         return contentData.getItemTextureName();
     }
 
     public boolean hasPiece() {
         return contentData.hasPiece();
-    }
-
-    public int getYield() {
-        return contentData.getYield();
     }
 }

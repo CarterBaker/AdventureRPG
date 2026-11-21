@@ -22,9 +22,9 @@ out float tcContent;
 // Places one corner of a solid quad in world space from the quad's packed record (see includes/QuadRecord.glsl),
 // three texels of four ints. Int 0 is the quad's origin sub-block. Int 1 is the geometry meta word: face index,
 // encoded face orientation, both merged extents in sub-blocks less one, the natural-block flag, the edge
-// resolution and the ID of the content its block holds. Int 2 holds the coverage word in its low sixteen bits and the
-// tile's ID in the high sixteen. The rest is a stream of twelve 24-bit words: the four corner
-// tints as exact RGB triples, then the low and the high word of each edge (A0, A1, B0, B1 in xyzw), whose four-bit
+// resolution and the content its block holds above its amount's three bits, which reach the top bit. Int 2 holds the
+// coverage word in its low sixteen bits and the tile's ID in the high sixteen. The rest is a stream of twelve 24-bit
+// words: the four corner tints as exact RGB triples, then the low and the high word of each edge (A0, A1, B0, B1 in xyzw), whose four-bit
 // column codes cover one entry each across a run capped at ten entries plus one padding entry at either end. An entry
 // covers two sub-blocks on a block-resolution quad and one on a sub-block quad. A corner on the positive side of its
 // face sits one sub-block out from the origin along the normal, so the quad lies on the face it shows. Extents leave
@@ -69,5 +69,5 @@ void main() {
     tcEdgeLow   = vec4(unpackQuadWords(middle.z, middle.w, tail.x));
     tcEdgeHigh  = vec4(unpackQuadWords(tail.y, tail.z, tail.w));
     tcCoverage  = float(surface & 65535u);
-    tcContent   = float((meta >> 21) & 255);
+    tcContent   = float((meta >> 21) & 2047);
 }

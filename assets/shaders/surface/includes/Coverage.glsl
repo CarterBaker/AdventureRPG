@@ -34,6 +34,18 @@ bool isSideCoverage(int word) {
     return (word & COVERAGE_VERTEX_SIDE_BIT) != 0;
 }
 
+// True once a texel's growth is reached at a coverage level — the one test coverings and contents both grow by
+bool isGrownAt(float growth, int level) {
+    return growth <= float(level) / float(COVERAGE_LEVEL_MAX);
+}
+
+// The share of a tile shown at a coverage level, from a shares row packed a byte per level, four levels to an int
+float unpackRevealShare(ivec4 shares, int level) {
+    int word = shares[level / COVERAGE_SHARES_PER_WORD];
+    return float((word >> ((level % COVERAGE_SHARES_PER_WORD) * COVERAGE_SHARE_BITS)) & COVERAGE_SHARE_MASK)
+         / float(COVERAGE_SHARE_MASK);
+}
+
 vec3 tintCovering(vec3 coverAlbedo, int coveringID, vec3 biomeTint) {
     float chroma     = max(coverAlbedo.r, max(coverAlbedo.g, coverAlbedo.b))
                      - min(coverAlbedo.r, min(coverAlbedo.g, coverAlbedo.b));
@@ -75,7 +87,7 @@ bool sampleCoverageDetail(
 
     float growth = sampleTileExtra(tile, cover.uv, cover.dx, cover.dy).r;
 
-    if (growth > float(level) / float(COVERAGE_LEVEL_MAX))
+    if (!isGrownAt(growth, level))
     return false;
 
     vec4 coverAlbedo = sampleTileAlbedo(tile, cover.uv, cover.dx, cover.dy);
@@ -101,11 +113,9 @@ vec3 approximateCoverage(vec3 baseAlbedo, float coverageWord, vec3 biomeTint) {
     if (coveringID == 0)
     return baseAlbedo;
 
-    int   level     = word & COVERAGE_LEVEL_MAX;
-    int   face      = coveringID * 2 + (isSideCoverage(word) ? 1 : 0);
-    int   shareWord = u_coveringRevealShares[face][level / COVERAGE_SHARES_PER_WORD];
-    float share     = float((shareWord >> ((level % COVERAGE_SHARES_PER_WORD) * COVERAGE_SHARE_BITS))
-                    & COVERAGE_SHARE_MASK) / float(COVERAGE_SHARE_MASK);
+    int   level = word & COVERAGE_LEVEL_MAX;
+    int   face  = coveringID * 2 + (isSideCoverage(word) ? 1 : 0);
+    float share = unpackRevealShare(u_coveringRevealShares[face], level);
 
     vec3 cover = u_coveringRevealColor[face].rgb
                + u_coveringStyle[coveringID].x * u_coveringRevealTintable[face].rgb * (biomeTint - 1.0);
