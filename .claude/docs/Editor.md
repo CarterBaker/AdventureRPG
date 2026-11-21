@@ -257,6 +257,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   (`TextureManager.applyTileBake`). The mesh opens in the character tabs as the workspace model `items/<Item>`
   (`CharacterEditorManager.openBakedModel`; an open one takes it as one edit), to paint, unwrap and model as any mesh.
   Baking again lays the maps out afresh from the cubes, painting over the last bake: paint after the shape is done.
+  The first modelling tab (Mesh, Topology, Sculpt, Weights, Paint, Rig, UV) made active after the Item Editor was
+  worked in shows the item's model at once (`ItemEditorManager.showActiveItemInMeshTabs`): its last export when it has
+  one, never baked over, else a first export. The Item Editor shares the modelling tabs' view when stacked with them
+  (`VIEW_CAMERA_SHARE_CHARACTER`), its cubes and their baked mesh lying in the same block space.
   The Tools tab's Paint Item action (`ITEM_EDITOR_KEY_PAINT`) does it in one step: it exports, brings the Paint tab
   forward (`TabManager.showCharacterPaint`, a new one only when none is open) and chooses its Brush.
 - **Painted items reach the game** through the mesh tabs' File, Import: an item model (`items/<Item>`) is written to
