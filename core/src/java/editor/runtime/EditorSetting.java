@@ -3069,6 +3069,12 @@ public class EditorSetting {
     public static final String MATERIALS_PREVIEW_IMAGE_PREFIX = "material/preview/";
     public static final int MATERIALS_HISTORY_MAX_STEPS = 64;
 
+    // Material Thumbnails — the side of each in texels, the map it is made from (albedo) and how many the Materials
+    // tab makes a frame
+    public static final int MATERIALS_THUMBNAIL_SIZE = 32;
+    public static final int MATERIALS_THUMBNAIL_MAP = 0;
+    public static final int MATERIALS_THUMBNAILS_PER_FRAME = 6;
+
     // Material Rows — the Properties tab's keys, headers and words for the material chosen
     public static final String MATERIALS_PROPERTIES_TITLE = "Material";
     public static final String MATERIALS_KEY_MATERIAL = "material_chosen";

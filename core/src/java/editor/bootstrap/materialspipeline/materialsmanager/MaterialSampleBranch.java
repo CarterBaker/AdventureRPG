@@ -116,7 +116,7 @@ class MaterialSampleBranch extends BranchPackage {
     }
 
     // The image the texture's pack holds for the map, or one texel of the map's default where it holds none
-    private Pixmap readMap(String textureName, int map) {
+    Pixmap readMap(String textureName, int map) {
 
         AliasLibraryStruct library = textureManager.getAliasLibrary();
         AliasStruct alias = library.findAlias(EditorSetting.CHARACTER_PAINT_MAP_ALIASES[map]);
