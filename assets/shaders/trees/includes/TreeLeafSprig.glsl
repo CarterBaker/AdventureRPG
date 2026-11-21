@@ -13,7 +13,9 @@
 // depth written, so the cards keep the early depth test. The leaves wear the species' leaf texture, repeating once per
 // block across the card, and where that texture leaves a gap so does the leaf, save while the texture streams in and
 // only its blurred fallback can be read, when the traced sprig alone cuts the leaf so a crown never blinks out as its
-// look changes. Light rounds the sheaf into a dome: each fragment's normal leans from its card's facing toward the way
+// look changes. A texture read from a blurred mip level averages its leaves into its gaps, so its alpha is raised by
+// how many texels the fragment spans before the gap test, the way foliage keeps its coverage across mips, and a
+// crown keeps the same fill whichever level, tier or look reads it. Light rounds the sheaf into a dome: each fragment's normal leans from its card's facing toward the way
 // out from the cluster's centre, and the clump darkens toward its heart and its underside. Far off, where a leaf would
 // shrink below a pixel, leaves and stems widen with the fragment's footprint, so a distant sheaf fills in rather than
 // shimmering away, and a stem thinner than its footprint wears its leaves' shade, so no spokes show from afar. Once the
@@ -43,6 +45,7 @@ const float TREE_LEAF_WIDTH           = 0.38;
 const float TREE_LEAF_TIP_POWER       = 3.0;
 const float TREE_LEAF_WIDEN           = 0.6;
 const float TREE_LEAF_GAP_ALPHA       = 0.5;
+const float TREE_LEAF_MIP_ALPHA_SCALE = 0.25;
 const float TREE_LEAF_GRAZE_MIN       = 0.06;
 const float TREE_LEAF_GRAZE_MAX       = 0.3;
 const float TREE_LEAF_STEM_SHADE      = 0.6;
@@ -207,10 +210,12 @@ bool shadeTreeLeaf(
     if (kind == TREE_LEAF_MISS)
     return false;
 
-    TileRead read   = resolveTileReadGrad(tile, gradX, gradY);
-    vec4     albedo = sampleTileAlbedo(read, point, gradX, gradY);
+    float    footprint = resolveTileFootprint(gradX, gradY);
+    TileRead read      = resolveTileRead(tile, footprint);
+    vec4     albedo    = sampleTileAlbedo(read, point, gradX, gradY);
+    float    coverage  = albedo.a * (1.0 + max(log2(footprint), 0.0) * TREE_LEAF_MIP_ALPHA_SCALE);
 
-    if (albedo.a < TREE_LEAF_GAP_ALPHA && read.lowTier != TILE_TIER_FALLBACK)
+    if (coverage < TREE_LEAF_GAP_ALPHA && read.lowTier != TILE_TIER_FALLBACK)
     return false;
 
     if (dot(facing, camera - worldPos) < 0.0)

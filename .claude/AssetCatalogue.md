@@ -572,6 +572,8 @@ One line per session that changed this file: the date, what was added or removed
   `TreeLeafShader.fsh`, `shaders/surface/macro/MacroTerrainShader.fsh`, `shaders/surface/includes/MacroGround.glsl`,
   `shaders/includes/SettingsData.glsl` and `ubos/SettingsData.arpg` (distant trees yield whole by chunk instead of
   dissolving by distance; the rim sink stays at the rim).
+- 2026-11-21: Leaf coverage. Regenerated `shaders/trees/includes/TreeLeafSprig.glsl` (leaf alpha raised by mip level
+  before the gap test, so leaves keep their fill across mips, tiers and looks).
 
 ## Textures and Sprites (2433 files)
 
