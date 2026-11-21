@@ -37,6 +37,8 @@ public class Settings {
     public int textureQuality = EngineSetting.TEXTURE_QUALITY_MEDIUM;
     public int textureAnisotropy = EngineSetting.TEXTURE_ANISOTROPY_DEFAULT;
     public boolean macroTerrain = true;
+    public float macroCrinkle = 1f;
+    public float macroCrinkleSize = 1f;
 
     // Render — Main Menu
     public boolean menuChunkStreaming = true;

@@ -2,6 +2,7 @@ package editor.runtime.animationeditor.pose;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigIkChainStruct;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -10,19 +11,23 @@ import editor.bootstrap.animationeditorpipeline.util.AnimationEditorChannel;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.runtime.EditorSetting;
 import editor.runtime.animationeditor.AnimationEditorSetting;
 import editor.runtime.characterview.gizmo.CharacterGizmoSource;
 import editor.runtime.characterview.gizmo.CharacterGizmoSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
+import editor.runtime.characterview.util.CharacterBonePickUtility;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
-import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class AnimationEditorPoseSystem extends SystemPackage implements CharacterGizmoSource {
 
@@ -89,6 +94,9 @@ public class AnimationEditorPoseSystem extends SystemPackage implements Characte
     private Matrix4 middleStartLocal;
 
     // Scratch
+    private FloatArrayList pickScreen;
+    private BooleanArrayList pickable;
+    private IntArrayList pickParents;
     private Vector2 screenScratch;
     private Vector3 rayOrigin;
     private Vector3 rayDirection;
@@ -135,6 +143,9 @@ public class AnimationEditorPoseSystem extends SystemPackage implements Characte
         this.middleStartLocal = new Matrix4();
 
         // Scratch
+        this.pickScreen = new FloatArrayList();
+        this.pickable = new BooleanArrayList();
+        this.pickParents = new IntArrayList();
         this.screenScratch = new Vector2();
         this.rayOrigin = new Vector3();
         this.rayDirection = new Vector3();
@@ -238,38 +249,33 @@ public class AnimationEditorPoseSystem extends SystemPackage implements Characte
             startDrag(tool, mouseX, mouseY);
     }
 
-    // The bone whose posed joint lies nearest the pointer within the pick radius, or none; never a bone its springs
-    // simulate, and only handle ends for IK
+    // The bone the pointer is over, at its joint or along the segment drawn from it (CharacterBonePickUtility), or
+    // none; never a bone its springs simulate, and only handle ends for IK
     private int pickJoint(float mouseX, float mouseY, boolean handleEnds) {
 
         AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
+        RigHandle rigHandle = state.getRigHandle();
         WindowInstance window = context.getWindow();
-        float radius = EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS;
-        float nearest = radius * radius;
-        int picked = EngineSetting.INDEX_NOT_FOUND;
+        int boneCount = rigHandle.getBoneCount();
 
-        for (int i = 0; i < state.getRigHandle().getBoneCount(); i++) {
+        CharacterBonePickUtility.reset(pickScreen, pickable, pickParents, boneCount);
 
-            if (state.getRigHandle().isSpringBone(i)
-                    || handleEnds && state.getRigHandle().findIkChainByEnd(i) == null)
-                continue;
+        for (int i = 0; i < boneCount; i++) {
 
+            RigBoneStruct bone = rigHandle.getBone(i);
+
+            pickParents.set(i, bone.isRoot() ? EngineSetting.INDEX_NOT_FOUND : bone.getParentIndex());
             CharacterPoseUtility.getTranslation(state.getWorldMatrix(i), hitScratch);
 
             if (!CharacterPoseUtility.project(window, hitScratch.x, hitScratch.y, hitScratch.z, screenScratch))
                 continue;
 
-            float dx = screenScratch.x - mouseX;
-            float dy = screenScratch.y - mouseY;
-            float distance = dx * dx + dy * dy;
-
-            if (distance <= nearest) {
-                nearest = distance;
-                picked = i;
-            }
+            pickScreen.set(i * 2, screenScratch.x);
+            pickScreen.set(i * 2 + 1, screenScratch.y);
+            pickable.set(i, !rigHandle.isSpringBone(i) && (!handleEnds || rigHandle.findIkChainByEnd(i) != null));
         }
 
-        return picked;
+        return CharacterBonePickUtility.pick(pickScreen, pickable, pickParents, mouseX, mouseY);
     }
 
     // Drag \\

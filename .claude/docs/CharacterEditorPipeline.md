@@ -1086,10 +1086,16 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   bones), each holding a curve for every slot and nested in the Layers tab under the nearest bone above it the layer
   holds. The Keys tab lays the layer out as a dope sheet (`RecorderKeysSystem.injectDopeSheet`): a summary row for
   every bone and morph track marking each step any of its curves keys, a press on its name picking it
-  (`RECORDER_KEY_ROW_SUMMARY`), and the picked one's curve rows beneath it. A press on a lane picks its layer
+  (`RECORDER_KEY_ROW_SUMMARY`) and showing its first curve on the Keys Graph; the picked one's curves are the
+  Properties tab's rows (`RecordingRowBranch.buildValueRows`), each its value at the playhead, keyed there when
+  stepped or typed (`RecorderManager.stepCurveAtPlayhead`, `setCurveAtPlayhead`), and a Graph choice picking the one
+  the Keys Graph shows (`cycleGraphCurve`). A press on a lane picks its layer
   (`pressAnimationLayer`), and a bone picked in the Animation Editor picks
   the layer that keys it (`selectBoneLayer`); the pose tools and pose actions work across every layer at once, each
-  bone keyed in its own layer. Keys edited on
+  bone keyed in its own layer, and only while the Recorder's Record is lit (`RecorderManager.record` toggles
+  `isAutoKeying` on an animation clip; `AnimationEditorManager.beginPose` refuses otherwise). A click picks a bone
+  at its joint or anywhere along the segment drawn from it, in every character viewport alike
+  (`CharacterBonePickUtility`). Keys edited on
   the Keys tabs are written back into the clip on the frame they change (`RecorderManager.writeAnimation`), every
   other field and every track of a bone the timeline does not show kept as read; a change made anywhere else (the pose
   tools, the Properties rows, the Info Panel) is read back as a step of the same history (`refreshAnimation`). The

@@ -7,8 +7,10 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelQuadListStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.worldpipeline.chunkstreammanager.ChunkStreamManager;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
+import application.bootstrap.worldpipeline.tree.TreeModelStruct;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
 import application.bootstrap.worldpipeline.util.TreeMeshUtility;
+import application.bootstrap.worldpipeline.util.TreeModelUtility;
 import application.bootstrap.worldpipeline.util.TreeRasterUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -24,8 +26,10 @@ class TreeMeshBranch extends BranchPackage {
      * into quads, any wood a leaf cluster wholly hides left out, and every
      * leaf cluster — in blocks from the centre of its root, and uploads such
      * geometry as meshes in the chunk vertex layout, each cut before the
-     * mesh vertex limit. A falling piece of tree and the editor's tree
-     * preview are both drawn through here. buildShape() runs on any thread;
+     * mesh vertex limit. A shape too great for its grid to fit within
+     * TREE_FULL_SHAPE_MAX_CELLS is drawn as a model of itself instead, so a
+     * felled giant falls without holding the heap. A falling piece of tree
+     * and the editor's tree preview are both drawn through here. buildShape() runs on any thread;
      * uploading and disposing are the main thread's.
      */
 
@@ -68,6 +72,11 @@ class TreeMeshBranch extends BranchPackage {
         int sizeX = (rootX + (int) Math.ceil(shape.getMaxX()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS) * resolution;
         int sizeY = (rootY + (int) Math.ceil(shape.getMaxY()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS) * resolution;
         int sizeZ = (rootZ + (int) Math.ceil(shape.getMaxZ()) + EngineSetting.TREE_GEOMETRY_MARGIN_BLOCKS) * resolution;
+
+        if ((long) sizeX * sizeY * sizeZ > EngineSetting.TREE_FULL_SHAPE_MAX_CELLS) {
+            TreeModelUtility.emitShape(shape, 0f, 0f, 0f, new TreeModelStruct(), bark, leaves);
+            return;
+        }
 
         partSpecies.add(shape.getTreeHandle());
 

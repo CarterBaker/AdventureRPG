@@ -180,6 +180,16 @@ public class EditorSetting {
     public static final int ENTRY_LAYOUTS_LIST = 0;
     public static final int ENTRY_FILE_MENU_LIST = 1;
     public static final int ENTRY_EDIT_MENU_LIST = 2;
+    public static final int ENTRY_TOOLS_MENU_LIST = 3;
+
+    // Tools menu — the labels of the shared tabs that serve another window, each named after the window it would
+    // serve as the menu opens
+    public static final String ELEMENT_TOOLS_MENU_PROPERTIES = "open_properties_label";
+    public static final String ELEMENT_TOOLS_MENU_LAYERS = "open_layers_label";
+    public static final String ELEMENT_TOOLS_MENU_TOOLS = "open_tools_label";
+    public static final String ELEMENT_TOOLS_MENU_BRUSHES = "open_brushes_label";
+    public static final String ELEMENT_TOOLS_MENU_STAMPS = "open_stamps_label";
+    public static final String ELEMENT_TOOLS_MENU_MAPS = "open_maps_label";
     public static final int ENTRY_NAME_DIALOG_LABEL = 0;
     public static final int ENTRY_NAME_DIALOG_TITLE = 1;
     public static final int ENTRY_EXPORT_DIALOG_TITLE = 0;
@@ -902,7 +912,8 @@ public class EditorSetting {
     public static final int CHARACTER_VIEW_BUTTON_SELECT = Buttons.LEFT;
     public static final int CHARACTER_VIEW_BUTTON_CANCEL = Buttons.RIGHT;
     public static final int[] CHARACTER_VIEW_KEY_AXES = { 88, 89, 90 };
-    public static final float CHARACTER_VIEW_PICK_RADIUS_PIXELS = 10f;
+    public static final float CHARACTER_VIEW_PICK_RADIUS_PIXELS = 12f;
+    public static final float CHARACTER_VIEW_PICK_SEGMENT_PIXELS = 7f;
     public static final float CHARACTER_VIEW_SCALE_MIN_PIXELS = 4f;
     public static final float CHARACTER_VIEW_SNAP_DEGREES = 15f;
     public static final float CHARACTER_VIEW_SNAP_SCALE = 0.1f;
@@ -1180,6 +1191,9 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_SELECT_LINKED = "select_linked";
     public static final String CHARACTER_EDITOR_KEY_SELECT_MIRROR = "select_mirror";
     public static final String CHARACTER_EDITOR_KEY_SELECT_BONE = "select_bone";
+    public static final String CHARACTER_EDITOR_KEY_SELECT_MORE = "select_more";
+    public static final String CHARACTER_EDITOR_KEY_SELECT_LESS = "select_less";
+    public static final int CHARACTER_LOOP_VALENCE = 4;
     public static final String CHARACTER_EDITOR_KEY_HIDE = "hide";
     public static final String CHARACTER_EDITOR_KEY_HIDE_UNSELECTED = "hide_unselected";
     public static final String CHARACTER_EDITOR_KEY_REVEAL = "reveal";
@@ -1279,8 +1293,10 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_LABEL_CENTER = "Center";
     public static final String CHARACTER_EDITOR_LABEL_TURN = "Turn";
     public static final String CHARACTER_EDITOR_LABEL_SELECT_ALL = "Select All  (A)";
-    public static final String CHARACTER_EDITOR_LABEL_SELECT_NONE = "Select None";
-    public static final String CHARACTER_EDITOR_LABEL_SELECT_INVERT = "Invert Selection";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_NONE = "Select None  (Alt+A)";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_INVERT = "Invert Selection  (Ctrl+I)";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_MORE = "Select More  (Ctrl+Numpad +)";
+    public static final String CHARACTER_EDITOR_LABEL_SELECT_LESS = "Select Less  (Ctrl+Numpad -)";
     public static final String CHARACTER_EDITOR_LABEL_SELECT_LINKED = "Select Linked  (L)";
     public static final String CHARACTER_EDITOR_LABEL_SELECT_MIRROR = "Select Mirror";
     public static final String CHARACTER_EDITOR_LABEL_SELECT_BONE = "Select Weighted to Bone";
@@ -2090,8 +2106,10 @@ public class EditorSetting {
     public static final String ANIMATION_EDITOR_MESSAGE_REVERTED = "Reverted ";
     public static final String ANIMATION_EDITOR_MESSAGE_DELETED = "Deleted ";
     public static final String ANIMATION_EDITOR_MESSAGE_POSE_COPIED = "Pose copied";
-    public static final String ANIMATION_EDITOR_STATUS_POSE_HINT = "Drag a joint to pose its bone, keyed at the"
-            + " playhead; X Y Z hold a turn to an axis, Ctrl snaps; drag off the joints to orbit";
+    public static final String ANIMATION_EDITOR_STATUS_POSE_HINT = "Press Record, then drag a joint to pose its"
+            + " bone, keyed at the playhead; X Y Z hold a turn to an axis, Ctrl snaps; drag off the joints to orbit";
+    public static final String ANIMATION_EDITOR_STATUS_NOT_RECORDING = "Record is off: press Record on the"
+            + " Recorder, then pose; every bone you move is keyed at the playhead";
 
     // Animation Tree Editor — tree fields
     public static final String ANIMATION_TREE_EDITOR_FIELD_RIG = "rig";
@@ -3340,6 +3358,8 @@ public class EditorSetting {
     // are built from
     public static final String RECORDER_TRANSPORT_PROPERTIES_TITLE = "Music";
     public static final String RECORDER_TIMELINE_PROPERTIES_TITLE = "Mixer";
+    public static final String RECORDER_ANIMATION_PROPERTIES_TITLE = "Layer";
+    public static final String RECORDER_KEYS_PROPERTIES_TITLE = "Keys";
     public static final CharacterViewTemplateStruct RECORDER_MUSIC_ROW_TEMPLATES = new CharacterViewTemplateStruct(
             "editor/Recorder/music_header_row",
             "editor/Recorder/music_item_row",
@@ -3437,6 +3457,12 @@ public class EditorSetting {
     // Recorder Keys — the Properties tab's first rows while the Keys or Keys Graph tab is worked in: the keys
     // selected on the curve picked, moved together by their moment and value and given one mode
     public static final String RECORDER_ROWS_NO_CURVE = "Pick a value on the Keys tab";
+    public static final String RECORDER_ROWS_NO_BONE = "Pick a bone on the Keys tab";
+    public static final String RECORDER_ROWS_HEADER_VALUES = "Values at the playhead";
+    public static final String RECORDER_ROWS_HEADER_ANIMATION_LAYER_FORMAT = "Layer: %s";
+    public static final String RECORDER_KEY_CURVE_PREFIX = "curve_";
+    public static final String RECORDER_ROW_KEYS_GRAPH = "keys_graph";
+    public static final String RECORDER_ROW_LABEL_KEYS_GRAPH = "Graph";
     public static final String RECORDER_ROWS_NO_KEY = "Select keys on the Keys tab or the graph";
     public static final String RECORDER_ROWS_HEADER_CURVE_FORMAT = "%s: %s";
     public static final String RECORDER_ROWS_HEADER_KEY_ONE = "1 key selected";
@@ -3973,8 +3999,9 @@ public class EditorSetting {
     public static final String RECORDER_STATUS_ANIMATION_CLOSED = "Animation deleted: ";
     public static final String RECORDER_STATUS_ANIMATION_SAVED = "Saved animation ";
     public static final String RECORDER_STATUS_ANIMATION_UNREADABLE = "Cannot open animation: ";
-    public static final String RECORDER_STATUS_ANIMATION_NOT_RECORDED =
-            "An animation is keyed, not recorded: open a media file to record";
+    public static final String RECORDER_STATUS_AUTO_KEY_ON =
+            "Recording keys: every bone you pose is keyed at the playhead; press Record again to stop";
+    public static final String RECORDER_STATUS_AUTO_KEY_OFF = "Stopped recording keys";
     public static final String RECORDER_STATUS_ANIMATION_CONTENT =
             "An animation is content, not media: rename, copy or delete it in the Hierarchy; it never exports";
     public static final String RECORDER_STATUS_LOOP_ON = "Loop on: playing runs round the range or the whole file";

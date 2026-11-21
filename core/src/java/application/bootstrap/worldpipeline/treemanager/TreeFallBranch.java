@@ -25,9 +25,11 @@ class TreeFallBranch extends BranchPackage {
     /*
      * Owns every piece of tree falling free. fell() takes the piece a cut
      * freed and builds its geometry on a worker, exactly as a chunk would
-     * draw it; until that is done the tree still stands whole on screen, and
-     * only once the piece is ready is the stump redrawn and the piece let
-     * fall, so the tree never blinks. A piece standing upright topples about
+     * draw it, or as a model of itself when it is too great to grow sub-voxel
+     * by sub-voxel; then the stream redraws the stump left behind. Until both
+     * are done the tree still stands whole on screen, and only then is the
+     * piece let fall, so the tree never blinks and no stroke stalls the frame
+     * however great the tree. A piece standing upright topples about
      * its cut, away from whoever cut it, its swing gathering speed as a rod
      * hinged at its foot does under gravity, until it lies down; any other
      * piece drops straight down. It rests a moment where it landed, then
@@ -118,7 +120,7 @@ class TreeFallBranch extends BranchPackage {
             boolean toppling) {
 
         if (piece.isEmpty()) {
-            treeRebuildBranch.rebuildTree(tree, true);
+            treeRebuildBranch.rebuildTree(tree, false);
             return;
         }
 
@@ -148,7 +150,8 @@ class TreeFallBranch extends BranchPackage {
             TreeFallInstance fall = falls.get(i);
 
             switch (fall.getState()) {
-                case BUILDING -> beginFall(fall);
+                case BUILDING -> awaitPiece(fall);
+                case WAITING -> beginFall(fall, deltaTime);
                 case FALLING -> advanceFall(fall, deltaTime);
                 case RESTING -> rest(fall, deltaTime);
                 case DONE -> falls.remove(i);
@@ -156,15 +159,27 @@ class TreeFallBranch extends BranchPackage {
         }
     }
 
-    // Once the piece's geometry is ready, it is uploaded, the stump redrawn, and the piece let go
-    private void beginFall(TreeFallInstance fall) {
+    // Once the piece's geometry is ready, the stump it leaves is drawn through the stream
+    private void awaitPiece(TreeFallInstance fall) {
 
         if (!fall.isBuilt())
             return;
 
+        treeRebuildBranch.rebuildTree(fall.getTree(), false);
+        fall.setState(TreeFallState.WAITING);
+    }
+
+    // Once the stump is drawn, or has kept the piece waiting long enough, the piece is uploaded and let go
+    private void beginFall(TreeFallInstance fall, float deltaTime) {
+
+        fall.setWaitSeconds(fall.getWaitSeconds() + deltaTime);
+
+        if (!treeRebuildBranch.isTreeRedrawn(fall.getTree())
+                && fall.getWaitSeconds() < EngineSetting.TREE_FALL_STUMP_WAIT_SECONDS)
+            return;
+
         treeMeshBranch.uploadMeshes(fall.getBuiltBark(), fall.getBarkMeshes());
         treeMeshBranch.uploadMeshes(fall.getBuiltLeaves(), fall.getLeafMeshes());
-        treeRebuildBranch.rebuildTree(fall.getTree(), true);
 
         fall.setAngle(EngineSetting.TREE_FALL_START_RADIANS, 0f);
         fall.setState(TreeFallState.FALLING);

@@ -5,10 +5,12 @@ import editor.bootstrap.layerspipeline.layers.LayerDragProvider;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
-import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
+import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class LayersManager extends ManagerPackage {
@@ -24,8 +26,9 @@ public class LayersManager extends ManagerPackage {
      * they start, so every Layers tab folds alike. Picking, showing and
      * hiding a layer go to the target window, and so do the New Layer and
      * Delete Layer icons, run as the window's own tool actions, and the view
-     * its stack is listed in when it lists it more than one way; the revision
-     * moves whenever a group is folded or opened.
+     * its stack is listed in when it lists it more than one way, and the
+     * arrow keys, which pick the layer listed above or below the one picked;
+     * the revision moves whenever a group is folded or opened.
      */
 
     // Internal
@@ -38,6 +41,10 @@ public class LayersManager extends ManagerPackage {
     // Revision
     private int revision;
 
+    // Scratch — the target's stack and its rows as the tab lists them, top first
+    private ObjectArrayList<LayerNodeStruct> rootScratch;
+    private ObjectArrayList<LayerNodeStruct> rowScratch;
+
     // Base \\
 
     @Override
@@ -46,6 +53,10 @@ public class LayersManager extends ManagerPackage {
         // Windows
         this.window2Provider = new Object2ObjectOpenHashMap<>();
         this.window2ToggledKeys = new Object2ObjectOpenHashMap<>();
+
+        // Scratch
+        this.rootScratch = new ObjectArrayList<>();
+        this.rowScratch = new ObjectArrayList<>();
     }
 
     @Override
@@ -73,6 +84,51 @@ public class LayersManager extends ManagerPackage {
 
         if (provider != null)
             provider.selectLayer(layerKey);
+    }
+
+    // The layer listed a number of rows below the one picked, or above it for a negative step, as the tab shows the
+    // stack with its groups folded or open; a group's own row counts as one
+    public void stepLayer(int direction) {
+
+        LayersProvider provider = getProvider();
+
+        if (provider == null)
+            return;
+
+        rootScratch.clear();
+        rowScratch.clear();
+        provider.buildLayers(rootScratch);
+
+        for (int i = 0; i < rootScratch.size(); i++)
+            collectRows(rootScratch.get(i));
+
+        int picked = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int i = 0; i < rowScratch.size(); i++)
+            if (rowScratch.get(i).isActive())
+                picked = i;
+
+        int next = picked == EngineSetting.INDEX_NOT_FOUND ? 0 : picked + direction;
+
+        if (next >= 0 && next < rowScratch.size())
+            provider.selectLayer(rowScratch.get(next).getLayerKey());
+
+        rootScratch.clear();
+        rowScratch.clear();
+    }
+
+    // A node and, while its group is open, everything it holds, in the order the tab lists them
+    private void collectRows(LayerNodeStruct node) {
+
+        rowScratch.add(node);
+
+        if (!node.isGroup() || !isExpanded(node))
+            return;
+
+        ObjectArrayList<LayerNodeStruct> children = node.getChildren();
+
+        for (int i = 0; i < children.size(); i++)
+            collectRows(children.get(i));
     }
 
     public void toggleLayerVisible(String layerKey) {

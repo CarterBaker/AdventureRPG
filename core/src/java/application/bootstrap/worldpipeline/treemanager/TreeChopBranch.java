@@ -35,7 +35,9 @@ class TreeChopBranch extends BranchPackage {
      * there is cut through: everything beyond the cut falls free — an upright
      * trunk toppling away from the one who cut it, a limb dropping straight
      * down — and the stump stays behind with the notch's lower half in its
-     * top.
+     * top. A stroke is worked like a block: only the chunks about the notch or
+     * the cluster it struck draw their trees again, off the main thread, so a
+     * great tree costs a stroke no more than a sapling does.
      */
 
     // Internal
@@ -145,13 +147,16 @@ class TreeChopBranch extends BranchPackage {
         float centerZ = shape.getLeafZ(leaf);
         TreeGrowthStruct growth = tree.getTreeHandle().getGrowth();
 
+        float reachH = shape.getLeafRadiusH(leaf);
+
         tree.breakLeaf(source, treeManager.getCurrentDay());
 
         if (growth.hasSeed() && BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
                 shape.getSeed() ^ EngineSetting.TREE_SEED_DROP_SALT, source, 0)) < growth.getSeedChance())
             treeFallBranch.throwDrop(tree, entity, growth.getSeedItemName(), centerX, centerY, centerZ, source);
 
-        treeRebuildBranch.rebuildTree(tree, true);
+        treeRebuildBranch.rebuildAround(
+                tree, centerX - reachH, centerZ - reachH, centerX + reachH, centerZ + reachH, false);
     }
 
     // Wood \\
@@ -186,7 +191,12 @@ class TreeChopBranch extends BranchPackage {
             return true;
         }
 
-        treeRebuildBranch.rebuildTree(tree, true);
+        float reach = (radius + EngineSetting.TREE_CHOP_WIDTH_MARGIN_SUB_VOXELS + depth
+                + EngineSetting.TREE_CHOP_MOUTH_SUB_VOXELS) / resolution;
+        float notchX = mouthX / resolution;
+        float notchZ = mouthZ / resolution;
+
+        treeRebuildBranch.rebuildAround(tree, notchX - reach, notchZ - reach, notchX + reach, notchZ + reach, false);
         return false;
     }
 

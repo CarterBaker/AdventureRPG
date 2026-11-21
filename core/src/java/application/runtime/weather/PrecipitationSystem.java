@@ -6,6 +6,7 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.pass.PassInstance;
 import application.bootstrap.shaderpipeline.passmanager.PassManager;
+import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import application.bootstrap.weatherpipeline.cloudmanager.CloudManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.runtime.RuntimeSetting;
@@ -29,7 +30,8 @@ public class PrecipitationSystem extends SystemPackage {
      * sea. Drops fall only beneath the rain-bearing clouds of the grid's
      * weather map, read through the cloud noise, and the rain shafts the
      * weather pass writes into its distance target are laid beneath them, so
-     * that target is rendered first.
+     * that target is rendered first. Snowflakes and raindrops close enough to
+     * resolve are drawn from their own pictures, as the stars are.
      */
 
     // Internal
@@ -41,6 +43,7 @@ public class PrecipitationSystem extends SystemPackage {
     private WaterSystem waterSystem;
     private WeatherSystem weatherSystem;
     private CloudManager cloudManager;
+    private SpriteManager spriteManager;
 
     // Render Target
     private PassInstance precipitationPass;
@@ -58,6 +61,7 @@ public class PrecipitationSystem extends SystemPackage {
         this.waterSystem = get(WaterSystem.class);
         this.weatherSystem = get(WeatherSystem.class);
         this.cloudManager = get(CloudManager.class);
+        this.spriteManager = get(SpriteManager.class);
     }
 
     @Override
@@ -73,6 +77,12 @@ public class PrecipitationSystem extends SystemPackage {
                 RuntimeSetting.UNIFORM_CLOUD_DISTANCE,
                 weatherSystem.getWeatherFbo().getColorTexture(RuntimeSetting.ATTACHMENT_DISTANCE));
         mat.setUniform(EngineSetting.UNIFORM_CLOUD_NOISE, cloudManager.getCloudNoiseTexture());
+        mat.setUniform(
+                RuntimeSetting.UNIFORM_SNOWFLAKE_TEXTURE,
+                resolvePicture(RuntimeSetting.SPRITE_WEATHER_SNOWFLAKE));
+        mat.setUniform(
+                RuntimeSetting.UNIFORM_RAINDROP_TEXTURE,
+                resolvePicture(RuntimeSetting.SPRITE_WEATHER_RAINDROP));
     }
 
     @Override
@@ -109,6 +119,12 @@ public class PrecipitationSystem extends SystemPackage {
         mat.setUBO(grid.getSkyColorUBO());
         mat.setUBO(grid.getPrecipitationDataUBO());
         mat.setUBO(grid.getWeatherMapUBO());
+    }
+
+    // Pictures \\
+
+    private int resolvePicture(String spriteName) {
+        return spriteManager.getSpriteHandleFromSpriteName(spriteName).getGpuHandle();
     }
 
     // Accessible \\

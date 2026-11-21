@@ -12,7 +12,9 @@ public class EntityStateHandle extends HandlePackage {
      * actually travelled last frame, body yaw and look angles written by
      * FacingBranch, and what MovementSoundBranch last heard of it — the stride
      * walked since its last step, whether it was in the air and how fast it
-     * fell, and whether it was in water. Lives on EntityInstance.
+     * fell, and whether it was in water. It also keeps the breath left and the
+     * time held since the last tick a spent breath cost, for HazardBranch.
+     * Lives on EntityInstance.
      */
 
     // State
@@ -33,6 +35,10 @@ public class EntityStateHandle extends HandlePackage {
 
     // Liquid
     private boolean inLiquid;
+
+    // Breath — a share from spent to full, and seconds held since the last tick it cost
+    private float breath;
+    private float breathTickTime;
 
     // Ground Offset — cosmetic only, never fed back into physics position
     private float groundOffset;
@@ -66,6 +72,10 @@ public class EntityStateHandle extends HandlePackage {
 
         // Liquid
         this.inLiquid = false;
+
+        // Breath
+        this.breath = 1f;
+        this.breathTickTime = 0f;
 
         // Ground Offset
         this.groundOffset = 0f;
@@ -148,6 +158,22 @@ public class EntityStateHandle extends HandlePackage {
 
     public void setInLiquid(boolean inLiquid) {
         this.inLiquid = inLiquid;
+    }
+
+    public float getBreath() {
+        return breath;
+    }
+
+    public void setBreath(float breath) {
+        this.breath = breath;
+    }
+
+    public float getBreathTickTime() {
+        return breathTickTime;
+    }
+
+    public void setBreathTickTime(float breathTickTime) {
+        this.breathTickTime = breathTickTime;
     }
 
     public float getGroundOffset() {

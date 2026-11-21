@@ -20,6 +20,10 @@ uniform sampler2D u_waterDepth;
 // The weather pass's distance target: its cloud surfaces and rain shafts (CloudComposite).
 uniform sampler2D u_cloudDistance;
 
+// The pictures a drop near enough to resolve is drawn from, as the stars are.
+uniform sampler2D u_snowflakeTexture;
+uniform sampler2D u_raindropTexture;
+
 /*
  * Fullscreen rain and snow, anchored to the world. A drop carried sideways at
  * the wind's speed while falling at its own traces a straight slanted path,
@@ -39,7 +43,11 @@ uniform sampler2D u_cloudDistance;
  * (CloudRain), thinning out toward its edge, so no rain falls from clear sky
  * or above the cloud it comes from. Beneath the drops lie the rain shafts the
  * weather pass found hanging under every rain cloud in view, a dark mist that
- * shows a storm from far off. Written premultiplied for the composite.
+ * shows a storm from far off. A flake or drop near enough to span a few
+ * pixels is drawn from its picture: a turning snowflake facing the camera, or
+ * a raindrop stretched down its streak; farther ones fade to the plain
+ * shapes, which read the same once smaller than the picture's detail.
+ * Written premultiplied for the composite.
  */
 
 struct PrecipitationKind {
@@ -48,6 +56,7 @@ struct PrecipitationKind {
     float spacingRatio;
     float streakShare;
     float dropRadius;
+    float pictureRadius;
     float densityMin;
     float densityMax;
     float dropShare;
@@ -59,9 +68,9 @@ struct PrecipitationKind {
 };
 
 const PrecipitationKind PRECIPITATION_RAIN =
-PrecipitationKind(11.0, 0.3, 2.0, 0.4, 0.005, 0.3, 1.0, 0.75, 0.65, 0.0, 0.0, 0.0, true);
+PrecipitationKind(11.0, 0.3, 2.0, 0.4, 0.005, 0.009, 0.3, 1.0, 0.75, 0.65, 0.0, 0.0, 0.0, true);
 const PrecipitationKind PRECIPITATION_SNOW =
-PrecipitationKind(1.4, 0.3, 1.0, 0.0, 0.012, 0.15, 0.7, 0.6, 0.9, 0.12, 1.3, 101.0, false);
+PrecipitationKind(1.4, 0.3, 1.0, 0.0, 0.012, 0.03, 0.15, 0.7, 0.6, 0.9, 0.12, 1.3, 101.0, false);
 
 const float PRECIPITATION_EPSILON         = 0.0001;
 const float PRECIPITATION_TWO_PI          = 6.28318531;
@@ -90,6 +99,12 @@ const float SNOW_SWAY_ASPECT   = 0.7;
 const float SNOW_SWAY_SEED     = 5.0;
 const float SNOW_FLAKE_CORE    = 0.5;
 const float SNOW_BRIGHTNESS    = 1.5;
+const float SNOW_SPIN_SPEED    = 0.6;
+const float SNOW_SPIN_SEED     = 11.0;
+
+// A picture shows once its radius spans this many pixels, fully by the second.
+const float PRECIPITATION_PICTURE_PIXELS_LOW  = 1.5;
+const float PRECIPITATION_PICTURE_PIXELS_HIGH = 4.0;
 
 // ── Scene ──────────────────────────────────────────────────────────────────
 
@@ -133,6 +148,30 @@ int resolveColumnTop(vec2 positionXZ) {
 
 bool isSheltered(vec3 position) {
     return position.y < float(resolveColumnTop(position.xz)) / PRECIPITATION_HEIGHTS_PER_BLOCK;
+}
+
+// ── Pictures ───────────────────────────────────────────────────────────────
+
+// Reads a picture's coverage with four rotated-grid taps spread over one
+// screen pixel, given in picture coordinates, so a flake drawn small does not
+// shimmer. Coordinates outside the picture read as empty.
+float samplePrecipitationPicture(sampler2D picture, vec2 uv, float pixelSpan) {
+    if (any(lessThan(uv, vec2(-pixelSpan))) || any(greaterThan(uv, vec2(1.0 + pixelSpan))))
+    return 0.0;
+
+    return 0.25 * (
+        textureLod(picture, uv + vec2(-0.125, -0.375) * pixelSpan, 0.0).a
+        + textureLod(picture, uv + vec2( 0.375, -0.125) * pixelSpan, 0.0).a
+        + textureLod(picture, uv + vec2( 0.125,  0.375) * pixelSpan, 0.0).a
+        + textureLod(picture, uv + vec2(-0.375,  0.125) * pixelSpan, 0.0).a);
+}
+
+// How far a picture of this radius at this distance shows over the plain
+// shape: none while it spans too few pixels to hold its detail.
+float resolvePictureShare(float pictureRadius, float pixelFootprint) {
+    return smoothstep(
+        PRECIPITATION_PICTURE_PIXELS_LOW, PRECIPITATION_PICTURE_PIXELS_HIGH,
+        pictureRadius / max(pixelFootprint, PRECIPITATION_EPSILON));
 }
 
 // ── Columns ────────────────────────────────────────────────────────────────
@@ -209,7 +248,8 @@ bool isDropRainedOn(PrecipitationKind kind, vec3 relativePosition, float lot) {
 
 // ── Rain ───────────────────────────────────────────────────────────────────
 
-// A thin streak with a bright head, trailing up the column behind the drop.
+// A thin streak with a bright head, trailing up the column behind the drop;
+// near, the raindrop's picture laid along the streak, its round end leading.
 float resolveRainDrop(
     PrecipitationKind kind, int band, vec3 dir, vec3 lineDir, vec3 linePoint, vec2 cellId, float seed,
     float spacing, float phase, float pixelAngle, float sceneDistance) {
@@ -226,23 +266,37 @@ float resolveRainDrop(
     float streak     = smoothstep(0.0, head, along) * (1.0 - smoothstep(head, extent, along));
     float lot        = resolveDropLot(cellId, floor(coordinate), seed);
 
-    if (streak <= PRECIPITATION_EPSILON || lot > kind.dropShare)
+    if (along > extent || lot > kind.dropShare)
     return 0.0;
 
-    float footprint = max(kind.dropRadius, pixelAngle * t);
-    float across    = (1.0 - smoothstep(0.0, footprint, length(dir * t - closest))) * kind.dropRadius / footprint;
+    float pixelFootprint = pixelAngle * t;
+    float footprint      = max(kind.dropRadius, pixelFootprint);
+    float pictureShare   = resolvePictureShare(kind.pictureRadius, pixelFootprint);
+    vec3  offset         = dir * t - closest;
+    float across         = (1.0 - smoothstep(0.0, footprint, length(offset))) * kind.dropRadius / footprint;
+    float shape          = across * streak;
 
-    if (across <= PRECIPITATION_EPSILON || isSheltered(u_cameraPosition + closest)
+    if (pictureShare > PRECIPITATION_EPSILON) {
+        vec3  side    = normalize(cross(lineDir, dir));
+        vec2  uv      = vec2(0.5 + 0.5 * dot(offset, side) / kind.pictureRadius, along / extent);
+        float picture = samplePrecipitationPicture(
+            u_raindropTexture, uv, pixelFootprint / (2.0 * kind.pictureRadius));
+
+        shape = mix(shape, picture, pictureShare);
+    }
+
+    if (shape <= PRECIPITATION_EPSILON || isSheltered(u_cameraPosition + closest)
     || !isDropRainedOn(kind, closest, lot))
     return 0.0;
 
-    return across * streak * resolveBandWeight(band, t);
+    return shape * resolveBandWeight(band, t);
 }
 
 // ── Snow ───────────────────────────────────────────────────────────────────
 
 // A soft round flake at the nearest of the column's flakes, swaying about
-// the column on its own rhythm as it drifts down it.
+// the column on its own rhythm as it drifts down it; near, the snowflake's
+// picture facing the camera, turning slowly on a spin of its own.
 float resolveSnowFlake(
     PrecipitationKind kind, int band, vec3 dir, vec3 lineDir, vec3 linePoint, vec2 cellId, float seed,
     float spacing, float phase, float cellSize, float pixelAngle, float sceneDistance) {
@@ -265,16 +319,33 @@ float resolveSnowFlake(
     if (t <= PRECIPITATION_EPSILON || t >= sceneDistance)
     return 0.0;
 
-    float footprint = max(kind.dropRadius, pixelAngle * t);
-    float cover     = kind.dropRadius / footprint;
-    float disc      = (1.0 - smoothstep(footprint * SNOW_FLAKE_CORE, footprint, length(flake - dir * t)))
+    float pixelFootprint = pixelAngle * t;
+    float footprint      = max(kind.dropRadius, pixelFootprint);
+    float cover          = kind.dropRadius / footprint;
+    float pictureShare   = resolvePictureShare(kind.pictureRadius, pixelFootprint);
+    vec3  offset         = flake - dir * t;
+    float shape          = (1.0 - smoothstep(footprint * SNOW_FLAKE_CORE, footprint, length(offset)))
     * cover * cover;
 
-    if (disc <= PRECIPITATION_EPSILON || isSheltered(u_cameraPosition + flake)
+    if (pictureShare > PRECIPITATION_EPSILON) {
+        vec3  right   = normalize(cross(dir, abs(dir.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
+        vec3  up      = cross(right, dir);
+        float spinAt  = u_time * SNOW_SPIN_SPEED * (swayPhase - 0.5)
+        + hash31(vec3(cellId, seed + drop * PRECIPITATION_DROP_SEED + SNOW_SPIN_SEED)) * PRECIPITATION_TWO_PI;
+        vec2  spin    = vec2(cos(spinAt), sin(spinAt));
+        vec2  local   = vec2(dot(offset, right), dot(offset, up)) / kind.pictureRadius;
+        vec2  turned  = vec2(local.x * spin.x - local.y * spin.y, local.x * spin.y + local.y * spin.x);
+        float picture = samplePrecipitationPicture(
+            u_snowflakeTexture, 0.5 + 0.5 * turned, pixelFootprint / (2.0 * kind.pictureRadius));
+
+        shape = mix(shape, picture, pictureShare);
+    }
+
+    if (shape <= PRECIPITATION_EPSILON || isSheltered(u_cameraPosition + flake)
     || !isDropRainedOn(kind, flake, lot))
     return 0.0;
 
-    return disc * resolveBandWeight(band, t);
+    return shape * resolveBandWeight(band, t);
 }
 
 // ── March ──────────────────────────────────────────────────────────────────

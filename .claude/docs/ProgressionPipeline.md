@@ -19,7 +19,7 @@ says where things live, which method owns each operation, and the traps. `.claud
 - **Cached engine IDs.** Managers cache the IDs of the names the engine itself uses:
   - `StatManager`: `health`, `damage`, `armor`, …;
   - `DeedManager`: `kill`, `trade_practice`, `trade_advance`, `skill_advance`;
-  - `DamageTypeManager`: `blunt`.
+  - `DamageTypeManager`: `blunt`, `fall`, `drowning`, `asphyxiation`.
 
   The names live in `EngineSetting` (`STAT_*`, `DEED_*`, `DAMAGE_TYPE_*`). Use the cached getter, never a
   per-call name lookup.
@@ -139,7 +139,9 @@ stats, experience, professions, steps and tier colors, and its `getDisplayRevisi
   4. add it to the `Professions` schema's enum values.
 - **New progression registry.** Mirror `trade/` and `trademanager/` exactly. Create it in `ProgressionPipeline`
   ahead of anything that reads it, and give it a schema under `assets/schemas/` with the next free order.
-- **New damage source** (falls, drowning). Call `CombatManager.damage(source, target, amount, damageTypeID,
-  direction)` with the type cached by `DamageTypeManager`, and add a cached getter there for any new type.
+- **New damage source.** Call `CombatManager.damage(source, target, amount, damageTypeID, direction)` with the type
+  cached by `DamageTypeManager`, and add a cached getter there for any new type. Hurts the world deals as a share of
+  health (falls, drowning, smothering) live in `physicspipeline/movementmanager/HazardBranch`, which passes
+  `share × health` as the amount with no source, so the share lands unchanged.
 - **New per-being state.** Add it to the matching handle in `entitypipeline/progression/`, give the handle a name
   based accessor for saving, and reset it in that handle's `reset`.

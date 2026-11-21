@@ -98,6 +98,8 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_NONE,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_INVERT,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED,
+                    EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MORE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LESS,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE,
                     EditorSetting.CHARACTER_EDITOR_KEY_HIDE,
@@ -431,6 +433,8 @@ class CharacterMeshPropertyBranch extends BranchPackage {
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_NONE,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_INVERT,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED,
+                    EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MORE,
+                    EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LESS,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR,
                     EditorSetting.CHARACTER_EDITOR_KEY_SELECT_BONE,
                     EditorSetting.CHARACTER_EDITOR_KEY_HIDE,
@@ -450,6 +454,8 @@ class CharacterMeshPropertyBranch extends BranchPackage {
             case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_NONE -> characterSelectionBranch.selectAll(document, false);
             case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_INVERT -> characterSelectionBranch.invert(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED -> characterSelectionBranch.selectLinked(document);
+            case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MORE -> characterSelectionBranch.growRing(document, true);
+            case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LESS -> characterSelectionBranch.growRing(document, false);
             case EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR -> characterSelectionBranch.selectMirror(document);
             case EditorSetting.CHARACTER_EDITOR_KEY_HIDE -> showHidden(document,
                     characterSelectionBranch.hide(document, true));
@@ -464,8 +470,11 @@ class CharacterMeshPropertyBranch extends BranchPackage {
     // The preview rebuilt without the faces now hidden, or with them back, when what is hidden changed
     private void showHidden(CharacterMeshDocumentInstance document, boolean changed) {
 
-        if (changed)
-            characterMeshBranch.upload(document);
+        if (!changed)
+            return;
+
+        characterMeshBranch.upload(document);
+        characterEditorManager.notifyRegionsShown();
     }
 
     private void actWeight(CharacterMeshDocumentInstance document, String keyName) {

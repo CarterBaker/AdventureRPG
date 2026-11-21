@@ -2,23 +2,28 @@ package editor.runtime.charactereditor.bone;
 
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
+import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
+import editor.runtime.EditorSetting;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
+import editor.runtime.characterview.util.CharacterBonePickUtility;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
-import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class CharacterEditorBoneSystem extends SystemPackage {
 
@@ -59,6 +64,9 @@ public class CharacterEditorBoneSystem extends SystemPackage {
     private float lastMouseY;
 
     // Scratch
+    private FloatArrayList pickScreen;
+    private BooleanArrayList pickable;
+    private IntArrayList pickParents;
     private Vector3 jointScratch;
     private Vector2 screenScratch;
     private Vector3 axis;
@@ -79,6 +87,9 @@ public class CharacterEditorBoneSystem extends SystemPackage {
         this.jointScreen = new Vector2();
 
         // Scratch
+        this.pickScreen = new FloatArrayList();
+        this.pickable = new BooleanArrayList();
+        this.pickParents = new IntArrayList();
         this.jointScratch = new Vector3();
         this.screenScratch = new Vector2();
         this.axis = new Vector3();
@@ -150,36 +161,32 @@ public class CharacterEditorBoneSystem extends SystemPackage {
             startDrag(picked, mouseX, mouseY);
     }
 
-    // The shown bone whose posed joint lies nearest the pointer within the pick radius, or none
+    // The shown bone the pointer is over, at its posed joint or along the segment drawn from it
+    // (CharacterBonePickUtility), or none
     private int pickJoint(float mouseX, float mouseY) {
 
         AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
         RigHandle rigHandle = state.getRigHandle();
-        float radius = EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS;
-        float nearest = radius * radius;
-        int picked = EngineSetting.INDEX_NOT_FOUND;
+        int boneCount = rigHandle.getBoneCount();
 
-        for (int i = 0; i < rigHandle.getBoneCount(); i++) {
+        CharacterBonePickUtility.reset(pickScreen, pickable, pickParents, boneCount);
 
-            if (!characterEditorManager.isBoneShown(characterEditorModeSystem.getRegion(), rigHandle, i))
-                continue;
+        for (int i = 0; i < boneCount; i++) {
 
+            RigBoneStruct bone = rigHandle.getBone(i);
+
+            pickParents.set(i, bone.isRoot() ? EngineSetting.INDEX_NOT_FOUND : bone.getParentIndex());
             CharacterPoseUtility.getTranslation(state.getWorldMatrix(i), jointScratch);
 
             if (!characterEditorMeshViewSystem.project(jointScratch.x, jointScratch.y, jointScratch.z, screenScratch))
                 continue;
 
-            float dx = screenScratch.x - mouseX;
-            float dy = screenScratch.y - mouseY;
-            float distance = dx * dx + dy * dy;
-
-            if (distance <= nearest) {
-                nearest = distance;
-                picked = i;
-            }
+            pickScreen.set(i * 2, screenScratch.x);
+            pickScreen.set(i * 2 + 1, screenScratch.y);
+            pickable.set(i, characterEditorManager.isBoneShown(characterEditorModeSystem.getRegion(), rigHandle, i));
         }
 
-        return picked;
+        return CharacterBonePickUtility.pick(pickScreen, pickable, pickParents, mouseX, mouseY);
     }
 
     // The bone weighing most on the vertex under the pointer, or none off the mesh

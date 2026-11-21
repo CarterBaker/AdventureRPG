@@ -89,7 +89,8 @@ public class TreeFallRenderSystem extends SystemPackage {
             TreeInstance tree = fall.getTree();
 
             if (tree.getWorldHandle() != worldHandle
-                    || fall.getState() == TreeFallState.BUILDING || fall.getState() == TreeFallState.DONE)
+                    || fall.getState() == TreeFallState.BUILDING || fall.getState() == TreeFallState.WAITING
+                    || fall.getState() == TreeFallState.DONE)
                 continue;
 
             long originX = (long) Coordinate2Long.unpackX(viewerChunkCoordinate) * chunkSize;

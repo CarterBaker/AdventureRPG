@@ -65,20 +65,22 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   a clip, each strip only its number and the name its ... gives it. Its title names what is open. Once zoomed, its
   view scrolls under the cursor with a left drag on its empty lanes or a right drag anywhere over its lanes or ruler,
   clips included.
-- **Keys and Keys Graph.** The Keys tab holds the rows of the layer picked in the Layers tab, and for an animation it
-  is a dope sheet as Blender's is: a summary row for every bone and morph marking every key it holds, the one picked
-  (in the Layers tab, the Animation Editor or by its name here) unfolded with a row for each of its values; the Keys
-  Graph the curve selected, a key clicked twice freeing or joining its handles. Each opens its own menu through a shared
-  `RecorderRowSystem`, and the pane tab worked in last is the one the recorder's deletes act on.
-- **Recording in the shared tabs.** The Layers tab lists the take's tracks (camera, player, characters, items,
-  vehicles, weather, clock, sounds) or, in its Takes view, every take of the open recording, each dragged onto the
-  Timeline's lanes to lay it; each pane keeps its own view (the Timeline opens on the Takes, the Keys and Keys Graph on
-  the take's layers). The Tools tab holds every take, clip, key, sound, transition and node action. The Properties tab
-  lists the channels armed and the export first, then the clip's channels, mute and time ramp (the lane and clip
-  selected, its mix too) while the Recorder or Timeline is worked in, the file's tempo, meter and key while the
-  Recorder is, and the keys selected first (their time and value, moved together, and their mode) while the Keys or
-  Keys Graph is. Delete removes what is selected in the pane worked in last; Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step
-  through every edit of the open recording (`RecordingHistoryBranch`); File, Export exports.
+- **Keys and Keys Graph.** The Keys tab holds the rows of the layer picked in the Layers tab, and for an animation it is
+  a dope sheet as Blender's is: a summary row for every bone and morph marking every key it holds, the one picked (in
+  the Layers tab, the Animation Editor or by its name here) marked, its values (position, rotation and scale on each
+  axis) listed in the Properties tab at the playhead, each keyed there when changed, with the one the graph shows chosen
+  there; the Keys Graph the curve selected, a key clicked twice freeing or joining its handles. Each opens its own menu
+  through a shared `RecorderRowSystem`, and the pane tab worked in last is the one the recorder's deletes act on.
+- **Recording in the shared tabs.** The Layers tab lists the take's tracks (camera, player, characters, items, vehicles,
+  weather, clock, sounds) or, in its Takes view, every take of the open recording, each dragged onto the Timeline's
+  lanes to lay it; each pane keeps its own view (the Timeline opens on the Takes, the Keys and Keys Graph on the take's
+  layers). The Tools tab holds every take, clip, key, sound, transition and node action. The Properties tab lists the
+  channels armed and the export first, then the clip's channels, mute and time ramp (the lane and clip selected, its mix
+  too) while the Recorder or Timeline is worked in on a media file (an animation clip has no mix: only its layer's
+  name), the file's tempo, meter and key while the Recorder is, and the keys selected first (their time and value, moved
+  together, and their mode) while the Keys or Keys Graph is. Delete removes what is selected in the pane worked in last;
+  Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step through every edit of the open recording (`RecordingHistoryBranch`); File,
+  Export exports.
 - **Tracks** (`RecordingsContext`). Every media file, video and music in one list; its rows drag onto the Timeline to
   lay.
 - **Note Library** (under Library in the Media menu, with the Sound Library). Empty until an instrument or a note set
@@ -90,18 +92,19 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   material, shader, position) and every block, biome, texture, material and shader in view, from a grid of rays
   `DevSceneAssetsSystem` casts across the view about once a second while a Scene Assets tab is open. A row naming
   content opens it in the Properties tab.
-- **Animations are edited on the same timeline.** There is no animation timeline of its own: the Animation Editor is
-  the viewport, showing the character chosen (the player at first) posed at the Timeline's playhead, beside the
-  Recorder, Timeline, Keys, Keys Graph and Layers tabs. While animations are worked on (the Animation Editor worked in
-  since any Dev window) the Tracks tab lists the clips on that character's rig instead of the media files, and a clip
-  clicked there or picked in the Hierarchy opens on the Timeline in the media file's place (saved first), each of its
-  layers (its own tracks and morphs, then every part a stamp joined) a clip on a lane of its own, together the one
-  clip; the layer pressed is the one whose bones (nested as the rig nests them) and morphs the Layers tab lists, each
-  axis of each channel a curve on the Keys and Keys Graph tabs, keyed, moved and bent like any take's; the Tracks
-  tab's Media / Animations switch turns its list either way between; the Recorder plays it, Undo and Redo step one history for every edit of it, a pose
-  drag one step, and the bone picked in the Layers tab is the Animation Editor's and the other way round (see
-  `.claude/docs/CharacterEditorPipeline.md`, Animation). Its clip is never moved, cut or recorded into, and it saves,
-  reverts and deletes as content.
+- **Animations are edited on the same timeline.** There is no animation timeline of its own: the Animation Editor is the
+  viewport, showing the character chosen (the player at first) posed at the Timeline's playhead, beside the Recorder,
+  Timeline, Keys, Keys Graph and Layers tabs. While animations are worked on (the Animation Editor worked in since any
+  Dev window) the Tracks tab lists the clips on that character's rig instead of the media files, and a clip clicked
+  there or picked in the Hierarchy opens on the Timeline in the media file's place (saved first), each of its layers
+  (its own tracks and morphs, then every part a stamp joined) a clip on a lane of its own, together the one clip; the
+  layer pressed is the one whose bones (nested as the rig nests them) and morphs the Layers tab lists, each axis of each
+  channel a curve on the Keys and Keys Graph tabs, keyed, moved and bent like any take's; Record turns the recording of
+  keys on and off as Blender's record button does, and only while it is lit does posing in the Animation Editor key the
+  bones moved at the playhead; the Tracks tab's Media / Animations switch turns its list either way between; the
+  Recorder plays it, Undo and Redo step one history for every edit of it, a pose drag one step, and the bone picked in
+  the Layers tab is the Animation Editor's and the other way round (see `.claude/docs/CharacterEditorPipeline.md`,
+  Animation). Its clip is never moved, cut or recorded into, and it saves, reverts and deletes as content.
 - **The one exception** is the Shipwright: it is shared with the game, so it keeps its own tools and layout.
 - **Layouts are the user's.** Every layout lives in the user's `bin/editorLayout/` folder and is listed in the Layouts
   menu as Photoshop lists its workspaces (`LayoutManager`); the editor ships none. Only when the owner hands over
@@ -122,10 +125,13 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   picked itself and every system reads it there; a layer picked hands its tool canvas, Properties rows and File and Edit
   table to the shared tabs through the window's own providers, which answer for the layer picked.
 - **So far:** the World Editor (Heights over Biomes, each with an eye), the character Mesh, Topology, Sculpt, Weights,
-  Rig and UV tabs (the Body and every region within it, one region picked for all of them; no eyes), the character
+  Rig and UV tabs (the Body and every region within it, one region picked for all of them; every region but the Body
+  has an eye hiding its vertices on the part edited, `CharacterEditorManager.toggleRegionShown`), the character
   Paint tab (the paint layers of the map painted, each above the base with an eye), the Image Editor (every layer of
   the image, each with an eye; its maps are listed in the Maps tab, never here) and the Item Editor (every part of the
   item, each one material, the part picked being the one its tools lay; no eyes).
+- **Up and Down** pick the layer listed above or below the one picked while the Layers tab is worked in
+  (`LayersManager.stepLayer`, `assets/shortcuts/Layers.arpg`).
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers
   dockers have them; each runs the window's own tool action through `LayersManager.addLayer` / `removeLayer`, so the
   icon, the Tools tab's action and its shortcut do one thing.
@@ -145,7 +151,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Everything says what it acts on.** A shared tab or menu that acts on a window other than its own names that window
   after its text in parentheses, the one way, through `ActiveWindowManager.nameContext` (the window's tab title):
   "Properties (Sculpt)", "Biome Palette (World Editor)", the Tools, Layers and Maps tabs' titles, every File and Edit
-  item the tool takes ("Save (World Editor)") and the head of the hint bar ("(World Editor)"). Never build such a
+  item the tool takes ("Save (World Editor)"), the Tools menu's shared tabs as it opens ("Layers (Mesh)",
+  `EditorBranch.refreshToolsMenu`) and the head of the hint bar ("(World Editor)"). Never build such a
   label by hand.
 - **The hint bar** along the foot of the main window lists the active window's shortcuts for its current canvas and
   tool, read from the `hint`s in its `assets/shortcuts/` file (see `.claude/docs/Shortcut.md`), never hard-coded.

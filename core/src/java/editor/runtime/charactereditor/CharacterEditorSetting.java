@@ -22,6 +22,7 @@ public class CharacterEditorSetting {
     // shortcuts/CharacterEditor
     public static final String SHORTCUT_ADD_SELECTION = "CharacterEditor/AddSelection";
     public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterEditor/SubtractSelection";
+    public static final String SHORTCUT_LOOP_SELECTION = "CharacterEditor/LoopSelection";
     public static final String SHORTCUT_SNAP = "CharacterEditor/Snap";
     public static final String SHORTCUT_INVERT_STROKE = "CharacterEditor/InvertStroke";
 

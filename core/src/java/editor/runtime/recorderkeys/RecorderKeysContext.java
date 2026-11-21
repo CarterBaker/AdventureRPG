@@ -122,7 +122,7 @@ public class RecorderKeysContext extends ContextPackage
 
     @Override
     public String getRowTitle() {
-        return EditorSetting.RECORDER_TIMELINE_PROPERTIES_TITLE;
+        return recorderManager.getRowsTitle(true);
     }
 
     @Override

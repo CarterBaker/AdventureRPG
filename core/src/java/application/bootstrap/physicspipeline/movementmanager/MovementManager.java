@@ -17,7 +17,8 @@ public class MovementManager extends ManagerPackage {
      * contact and ladders, leaps, horizontal movement and the waves carrying
      * it, swimming, climbing or gravity, collision against vehicles and then
      * the world, correction, water state, position, boarding, ground offset,
-     * facing and the sound of it all. Vehicles are reached through
+     * facing, the hazards it met (a hard landing, a held breath) and the sound
+     * of it all. Vehicles are reached through
      * VehicleRiderSystem, which sweeps every move through their decks and
      * keeps whoever rides them.
      * fly() is the physics-free path for free cameras, and face() turns a body
@@ -36,6 +37,7 @@ public class MovementManager extends ManagerPackage {
     private NaturalGroundOffsetBranch naturalGroundOffsetBranch;
     private FlightBranch flightBranch;
     private FacingBranch facingBranch;
+    private HazardBranch hazardBranch;
     private MovementSoundBranch movementSoundBranch;
 
     // Cached Vectors
@@ -55,6 +57,7 @@ public class MovementManager extends ManagerPackage {
         this.naturalGroundOffsetBranch = create(NaturalGroundOffsetBranch.class);
         this.flightBranch = create(FlightBranch.class);
         this.facingBranch = create(FacingBranch.class);
+        this.hazardBranch = create(HazardBranch.class);
         this.movementSoundBranch = create(MovementSoundBranch.class);
 
         // Cached Vectors
@@ -163,7 +166,10 @@ public class MovementManager extends ManagerPackage {
         // 12. Facing — turns the body toward the heading just travelled
         facingBranch.update(entity);
 
-        // 13. Sound — steps, strokes, jumps, landings and splashes from what it just did
+        // 13. Hazards — a hard landing and a held breath, read before the sound settles what was heard
+        hazardBranch.update(entity, inWater, swimming, climbing, touchingLiquid && swimBranch.isEyeSubmerged(entity));
+
+        // 14. Sound — steps, strokes, jumps, landings and splashes from what it just did
         movementSoundBranch.update(entity, inWater, swimming, climbing, onDeck);
     }
 

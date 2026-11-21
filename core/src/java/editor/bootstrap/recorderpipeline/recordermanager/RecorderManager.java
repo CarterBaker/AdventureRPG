@@ -245,6 +245,7 @@ public class RecorderManager extends ManagerPackage {
     private DevContext devContext;
     private ContextPackage soundHost;
     private boolean looping;
+    private boolean autoKeying;
 
     // Music — the lane whose mix the Properties tab shows, and the share of a render last shown
     private int selectedLane;
@@ -645,19 +646,24 @@ public class RecorderManager extends ManagerPackage {
 
     // Transport \\
 
-    // Records a take of every armed channel, in a new media file when none is open
+    // Records a take of every armed channel, in a new media file when none is open; on an animation clip it turns
+    // the recording of keys on or off, as Blender's record button does, every bone posed while it is on keyed at the
+    // playhead
     public void record() {
 
         if (state == RecorderState.RECORDING || state == RecorderState.EXPORTING)
             return;
 
-        if (armedChannels == RecorderChannel.NONE) {
-            setStatus(EditorSetting.RECORDER_STATUS_NOTHING_ARMED);
+        if (recording != null && recording.isAnimation()) {
+            this.autoKeying = !autoKeying;
+            setStatus(autoKeying
+                    ? EditorSetting.RECORDER_STATUS_AUTO_KEY_ON
+                    : EditorSetting.RECORDER_STATUS_AUTO_KEY_OFF);
             return;
         }
 
-        if (recording != null && recording.isAnimation()) {
-            setStatus(EditorSetting.RECORDER_STATUS_ANIMATION_NOT_RECORDED);
+        if (armedChannels == RecorderChannel.NONE) {
+            setStatus(EditorSetting.RECORDER_STATUS_NOTHING_ARMED);
             return;
         }
 
@@ -2825,6 +2831,18 @@ public class RecorderManager extends ManagerPackage {
         recordingRowBranch.buildKeyRows(rows);
     }
 
+    // What the Properties tab is titled while the Keys tabs or the Timeline is worked in: the keys, or the lane's mix
+    // of a media file, which an animation clip's layer has none of
+    public String getRowsTitle(boolean keys) {
+
+        if (keys)
+            return EditorSetting.RECORDER_KEYS_PROPERTIES_TITLE;
+
+        return recording != null && recording.isAnimation()
+                ? EditorSetting.RECORDER_ANIMATION_PROPERTIES_TITLE
+                : EditorSetting.RECORDER_TIMELINE_PROPERTIES_TITLE;
+    }
+
     // Moves whenever the keys, the curve picked or anything else the recorder shows may have changed
     public int getKeyRowRevision() {
         return revision + keysRevision;
@@ -3742,6 +3760,106 @@ public class RecorderManager extends ManagerPackage {
                     draggedKeyValues.getDouble(slot) + rise);
         }
     }
+
+    // Curves At The Playhead \\
+
+    // A curve of the track picked, by its slot, laid if the queue has not reached it; null when none is picked
+    private RecordingCurveStruct resolvePickedCurve(int slot) {
+
+        if (selectedTrack == null || slot < 0 || slot >= selectedTrack.getCurveCount())
+            return null;
+
+        if (slot != selectedSlot)
+            selectCurve(keyLayer, slot);
+
+        return selectedTrack.hasCurve(slot) ? selectedTrack.getCurve(slot) : null;
+    }
+
+    // The moment within the clip selected the playhead stands at
+    private float resolvePlayheadTakeTime(RecordingClipStruct clip) {
+        return Math.clamp(clip.toChildTime(playhead), 0f, clip.getTake().getDuration());
+    }
+
+    // The value a curve of the track picked holds at the playhead, as its row shows it
+    public String formatCurveAtPlayhead(int slot) {
+
+        RecordingClipStruct clip = getSelectedClipStruct();
+
+        if (selectedTrack == null || clip == null || slot < 0 || slot >= selectedTrack.getCurveCount()
+                || !selectedTrack.hasCurve(slot))
+            return EditorSetting.RECORDER_ROW_VALUE_NONE;
+
+        RecordingCurveStruct curve = selectedTrack.getCurve(slot);
+
+        return formatValue(curve.getProperty().getKind(), curve.evaluate(resolvePlayheadTakeTime(clip)));
+    }
+
+    public boolean isCurveValueValid(int slot, String text) {
+
+        if (selectedTrack == null || slot < 0 || slot >= selectedTrack.getCurveCount()
+                || !selectedTrack.hasCurve(slot))
+            return false;
+
+        RecordingCurveStruct curve = selectedTrack.getCurve(slot);
+
+        return !Double.isNaN(RecordingCurveUtility.parseValue(curve.getProperty().getKind(), text,
+                curve.evaluate(0f), clockManager.getCalendarHandle()));
+    }
+
+    // A curve of the track picked keyed at the playhead to a typed value, and picked for the graph
+    public void setCurveAtPlayhead(int slot, String text) {
+
+        if (!isCurveValueValid(slot, text) || !canEditTimeline())
+            return;
+
+        RecordingCurveStruct curve = resolvePickedCurve(slot);
+        RecordingClipStruct clip = getSelectedClipStruct();
+
+        if (curve == null || clip == null)
+            return;
+
+        float takeTime = resolvePlayheadTakeTime(clip);
+
+        keyCurve(curve, takeTime, RecordingCurveUtility.parseValue(curve.getProperty().getKind(), text,
+                curve.evaluate(takeTime), clockManager.getCalendarHandle()));
+    }
+
+    // A curve of the track picked keyed at the playhead a number of its steps from what it holds there
+    public void stepCurveAtPlayhead(int slot, int steps) {
+
+        if (!canEditTimeline())
+            return;
+
+        RecordingCurveStruct curve = resolvePickedCurve(slot);
+        RecordingClipStruct clip = getSelectedClipStruct();
+
+        if (curve == null || clip == null)
+            return;
+
+        float takeTime = resolvePlayheadTakeTime(clip);
+
+        keyCurve(curve, takeTime, curve.evaluate(takeTime) + steps * resolveKeyValueStep());
+    }
+
+    // A curve of the track picked shown on the graph, the one after or before the curve shown now
+    public void cycleGraphCurve(int direction) {
+
+        if (selectedTrack == null || selectedTrack.getCurveCount() == 0)
+            return;
+
+        selectCurve(keyLayer, Math.floorMod(selectedSlot + direction, selectedTrack.getCurveCount()));
+    }
+
+    private void keyCurve(RecordingCurveStruct curve, float takeTime, double value) {
+
+        int keyIndex = curve.addKey(takeTime, value, CurveKeyMode.AUTO);
+
+        clearKeySelection();
+        addKeyToSelection(keyIndex);
+        finishKeyEdit(EditorSetting.RECORDER_STATUS_KEY_ADDED);
+    }
+
+    // Key Edits \\
 
     public void addKeyAtPlayhead() {
 
@@ -4997,6 +5115,16 @@ public class RecorderManager extends ManagerPackage {
 
     public boolean isLooping() {
         return looping;
+    }
+
+    // True while an animation clip is open and Record is on for it, so every bone posed is keyed
+    public boolean isAutoKeying() {
+        return autoKeying && recording != null && recording.isAnimation();
+    }
+
+    // True while Record is lit: a take recording, or keys recording on an animation clip
+    public boolean isRecordLit() {
+        return state == RecorderState.RECORDING || isAutoKeying();
     }
 
     // True while the game is paused under a running session, and for the few frames after

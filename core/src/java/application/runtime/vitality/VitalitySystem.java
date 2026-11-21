@@ -1,6 +1,7 @@
 package application.runtime.vitality;
 
 import application.bootstrap.entitypipeline.entity.EntityInstance;
+import application.bootstrap.entitypipeline.entity.EntityStateHandle;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.entitypipeline.statistics.StatisticsHandle;
 import application.bootstrap.progressionpipeline.progressionmanager.ProgressionManager;
@@ -28,9 +29,10 @@ public class VitalitySystem extends SystemPackage {
      * own layer above the scene and below every menu, closes a darkness in
      * from the edges of sight once health falls below a share — easing in,
      * half shut deep into a fight, all but black on the brink and wholly black
-     * at death — and draws bloodshot veins creeping in from the edges while
-     * fresh bleeding lasts, so a cut reads at a glance and a drowning only
-     * darkens. A level gained flashes a glow in from the edges, white for the
+     * at death, and part of the way as a held breath runs out, so a drowning
+     * dims before it hurts — and draws bloodshot veins creeping in from the
+     * edges while fresh bleeding lasts, so a cut reads at a glance and every
+     * other hurt only darkens. A level gained flashes a glow in from the edges, white for the
      * virtuous, grey between and black for the wicked, fading over a few
      * seconds. Each effect follows its target smoothly, and nothing is drawn
      * while all of them are clear. The darkness is heard as a heartbeat,
@@ -116,7 +118,10 @@ public class VitalitySystem extends SystemPackage {
 
         StatisticsHandle statisticsHandle = player.getStatisticsHandle();
 
-        approach(resolveDarkness(statisticsHandle), statisticsHandle.getBleed(), deltaTime);
+        approach(
+                Math.max(resolveDarkness(statisticsHandle), resolveBreathDarkness(player.getEntityStateHandle())),
+                statisticsHandle.getBleed(),
+                deltaTime);
         updateGlow(player, deltaTime);
         heartbeat.hold(soundListenerSystem.isAmbientHere() ? darkness : 0f);
     }
@@ -154,6 +159,15 @@ public class VitalitySystem extends SystemPackage {
                 / RuntimeSetting.VITALITY_DARKNESS_START;
 
         return (float) Math.pow(Math.max(0f, Math.min(1f, closing)), RuntimeSetting.VITALITY_DARKNESS_EASE);
+    }
+
+    // How far a breath running out closes it — none above the start, part of the way once spent
+    private float resolveBreathDarkness(EntityStateHandle entityStateHandle) {
+
+        float closing = (RuntimeSetting.VITALITY_BREATH_DARKNESS_START - entityStateHandle.getBreath())
+                / RuntimeSetting.VITALITY_BREATH_DARKNESS_START;
+
+        return Math.max(0f, Math.min(1f, closing)) * RuntimeSetting.VITALITY_BREATH_DARKNESS_MAX;
     }
 
     private void approach(float targetDarkness, float targetBleed, float deltaTime) {

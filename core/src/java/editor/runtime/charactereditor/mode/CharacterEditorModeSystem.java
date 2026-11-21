@@ -76,10 +76,12 @@ public class CharacterEditorModeSystem extends SystemPackage {
         adopt();
     }
 
-    // A paint layer above the base shown or hidden; the regions are always drawn, the one picked standing alone
+    // A paint layer above the base shown or hidden, or a region's vertices on the part edited
     public void toggleVisible(String layerKey) {
         if (mode.paintsMaps())
             characterEditorManager.togglePaintLayerVisible(Integer.parseInt(layerKey));
+        else
+            characterEditorManager.toggleRegionShown(layerKey);
     }
 
     // The paint layers top first, or the Body and every region within it
@@ -109,7 +111,8 @@ public class CharacterEditorModeSystem extends SystemPackage {
                     false));
     }
 
-    // A region's group, open by default while it holds regions: the region itself, then the regions listed under it
+    // A region's group, open by default while it holds regions: the region itself, then the regions listed under it;
+    // every region but the whole character has an eye
     private LayerNodeStruct buildRegion(CharacterRegionStruct listed) {
 
         ObjectArrayList<CharacterRegionStruct> regions = characterEditorManager.getRegions();
@@ -118,7 +121,13 @@ public class CharacterEditorModeSystem extends SystemPackage {
         for (int i = 0; i < regions.size(); i++)
             nests |= regions.get(i).getParent() == listed;
 
-        LayerNodeStruct node = new LayerNodeStruct(listed.getKey(), listed.getLabel(), listed == getRegion(), nests);
+        LayerNodeStruct node = new LayerNodeStruct(
+                listed.getKey(),
+                listed.getLabel(),
+                listed == getRegion(),
+                !listed.isWhole(),
+                characterEditorManager.isRegionShown(listed),
+                nests);
 
         for (int i = 0; i < regions.size(); i++)
             if (regions.get(i).getParent() == listed)

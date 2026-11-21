@@ -540,8 +540,25 @@ One line per session that changed this file: the date, what was added or removed
   regenerated `menus/editor/ShipViewer.arpg` (its own gizmo removed).
 - 2026-11-21: Triangles. Regenerated `shortcuts/CharacterEditor.arpg` (Triangulate Faces, Ctrl+T; Triangles to Quads,
   Alt+J).
+- 2026-11-21: Precipitation pictures. Added `sprites/weather/Snowflake.png` and `sprites/weather/Raindrop.png`;
+  rewrote `shaders/weather/precipitation/PrecipitationShader.fsh` to draw near flakes and drops from them.
+- 2026-11-21: Hazards. Rewrote `shaders/vitality/VitalityShader.fsh` (bloodshot veins as a forking, kinked web).
+- 2026-11-21: Macro crinkle. Added `shaders/surface/includes/MacroCrinkle.glsl`; regenerated
+  `shaders/surface/macro/MacroTerrainShader.vsh`, `shaders/includes/SettingsData.glsl` and `ubos/SettingsData.arpg`
+  (the crinkle's two settings).
+- 2026-11-21: Tree hand-over. Regenerated `shaders/trees/includes/TreeFade.glsl`, `TreeLeafSprig.glsl`,
+  `shaders/trees/bark/TreeBarkShader.fsh`, `shaders/trees/leaf/TreeLeafShader.fsh`,
+  `shaders/surface/macro/MacroTerrainShader.fsh`, `shaders/includes/SettingsData.glsl` and `ubos/SettingsData.arpg`
+  (grid trees hand over to macro stand-ins by distance; leaves hold their shape on a fallback texture); more limbs
+  on `trees/conifer/CoastRedwood.arpg` and `trees/fey/ElvenheartOak.arpg`.
+- 2026-11-21: Animation recording. Regenerated `menus/editor/Recorder.arpg` (the record icon an entry point, lit while
+  recording).
+- 2026-11-21: Blender selection. Regenerated `shortcuts/CharacterEditor.arpg` (Select All, Deselect All, Invert, Select
+  More and Less, Alt for loops); added `shortcuts/Layers.arpg` (Up and Down pick the next layer).
+- 2026-11-21: Tools menu context. Regenerated `menus/editor/EditorWindow.arpg` (the Tools menu names the window each
+  shared tab serves as it opens).
 
-## Textures and Sprites (2431 files)
+## Textures and Sprites (2433 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -746,6 +763,11 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/sprites/util/`
 
 - `Default`
+
+### `assets/sprites/weather/`
+
+- `Raindrop`
+- `Snowflake`
 
 ### `assets/textures/characters/standard/`
 
@@ -1633,7 +1655,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (193 files)
+## Shaders (194 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1801,7 +1823,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/surface/includes/`
 
 `Bevel.glsl`, `CloudShadow.glsl`, `Content.glsl`, `Coverage.glsl`, `FaceGradient.glsl`, `HeightDisplacement.glsl`,
-`NearTerrainNoise.glsl`, `Normal.glsl`, `PatchCulling.glsl`, `SurfaceTessellationTier.glsl`, `SurfaceTierFlat.glsl`,
+`MacroCrinkle.glsl`, `NearTerrainNoise.glsl`, `Normal.glsl`, `PatchCulling.glsl`, `SurfaceTessellationTier.glsl`, `SurfaceTierFlat.glsl`,
 `SurfaceTierFull.glsl`, `TiledSampling.glsl`
 
 ### `assets/shaders/surface/macro/`
@@ -1967,7 +1989,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3856 files)
+## Data Files (3857 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -3174,7 +3196,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/shortcuts/`
 
-`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ImageEditor.arpg`, `ItemEditor.arpg`, `MaterialViewer.arpg`, `Materials.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `CharacterEditor.arpg`, `Hierarchy.arpg`, `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `RecorderKeyGraph.arpg`,
 `RecorderKeys.arpg`, `SettlementPlanner.arpg`, `Timeline.arpg`, `Tools.arpg`, `UVEditor.arpg`, `WorldEditor.arpg`
 

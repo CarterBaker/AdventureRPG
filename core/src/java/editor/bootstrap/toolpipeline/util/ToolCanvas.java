@@ -364,6 +364,12 @@ public enum ToolCanvas {
                         EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_LINKED,
                         EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LINKED),
                 action(
+                        EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_MORE,
+                        EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MORE),
+                action(
+                        EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_LESS,
+                        EditorSetting.CHARACTER_EDITOR_KEY_SELECT_LESS),
+                action(
                         EditorSetting.CHARACTER_EDITOR_LABEL_SELECT_MIRROR,
                         EditorSetting.CHARACTER_EDITOR_KEY_SELECT_MIRROR),
                 action(

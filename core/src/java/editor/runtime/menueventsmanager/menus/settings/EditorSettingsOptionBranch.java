@@ -80,6 +80,8 @@ public class EditorSettingsOptionBranch extends BranchPackage {
         injectOptionRow(SettingsOption.TREE_DETAIL);
         injectOptionRow(SettingsOption.CHARACTER_DETAIL);
         injectOptionRow(SettingsOption.MACRO_TERRAIN);
+        injectSlider(SettingsSlider.MACRO_CRINKLE);
+        injectSlider(SettingsSlider.MACRO_CRINKLE_SIZE);
         editorSettingsBranch.injectNote(RuntimeSetting.SETTINGS_NOTE_MACRO_TERRAIN);
         editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_WORLD_APPLY);
 

@@ -384,8 +384,8 @@ public class RecorderBranch extends BranchPackage {
     }
 
     // A curve's name selects it, and a sound's name selects the first time it is heard
-    // A value's name selects its curve; a bone's or morph's summary row on the dope sheet picks it, unfolding its
-    // values beneath it
+    // A value's name selects its curve; a bone's or morph's summary row on the dope sheet picks it, its values listed
+    // in the Properties tab and its first shown on the Keys Graph
     public void pressKeyName(String rowKey) {
 
         int row = resolveKeyRow(rowKey);

@@ -303,6 +303,15 @@ through the race's genders, and an NPC's gender is drawn from its spawn.
   - They are drawn procedurally in the same overlay.
   - They fade with time and as health returns.
   - Non-bleeding damage only darkens.
+- **Hazards.** `HazardBranch` (in the movement pipeline) hurts every entity through the same damage path, each hurt a
+  share of health with no source:
+  - **A fall** onto anything but water hurts once its landing is faster than a fall from **7 blocks**, by the share of
+    the way to the speed of a fall from **32 blocks** (lethal), counted in the fall's energy.
+  - **A held breath** lasts **30 seconds** while water closes over the eyes or the head lies in a solid block, and
+    comes back in **4 seconds** once clear. Spent, it costs **10%** of health each second, as drowning or
+    asphyxiation.
+  - The darkness closes part of the way (to **0.6**) as the breath runs below **35%**, so a drowning dims before it
+    hurts.
 - **Regeneration.** The *health_regen* share per second, starting **5 seconds** after the last wound.
 - **Death:**
   - The player returns to the main menu.
@@ -397,7 +406,7 @@ directly. Nothing is saved yet. A continued character starts its progression fre
 
 ## 17. Not yet built
 
-Quests, buying and selling, shops and land, crafting and repair, fall and drowning damage sources, laws,
+Quests, buying and selling, shops and land, crafting and repair, laws,
 banishment, recruitment and titles. Their deeds and professions are defined and waiting. Hard and easy mode,
 marriage and houses come later.
 
@@ -418,4 +427,7 @@ marriage and houses come later.
 | Armor mitigation scale, critical multiplier | 50, ×2 | `ARMOR_MITIGATION_SCALE`, `CRIT_DAMAGE_MULTIPLIER` |
 | Regeneration delay | 5 s | `REGENERATION_DELAY_SECONDS` |
 | Darkness start | 70% health | `RuntimeSetting.VITALITY_DARKNESS_START` |
+| Breath darkness start, most | 35% breath, 0.6 | `RuntimeSetting.VITALITY_BREATH_DARKNESS_*` |
+| Fall safe, lethal | 7, 32 blocks | `FALL_SAFE_BLOCKS`, `FALL_LETHAL_BLOCKS` |
+| Breath held, recovered, tick, share per tick | 30 s, 4 s, 1 s, 10% | `BREATH_*` |
 | Morality range, affinity range | ±1000, ±100 | `MORALITY_MAX`, `AFFINITY_MAX` |

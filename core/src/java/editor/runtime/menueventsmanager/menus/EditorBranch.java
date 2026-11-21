@@ -4,8 +4,12 @@ import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.kernel.windowpipeline.window.WindowInstance;
+import editor.bootstrap.layerspipeline.layersmanager.LayersManager;
+import editor.bootstrap.propertiespipeline.propertiesmanager.PropertiesManager;
+import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
+import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -14,7 +18,9 @@ public class EditorBranch extends BranchPackage {
 
     /*
      * Menu event handlers for the editor toolbar. Each dropdown's operations
-     * open their tool's tab in the clicked OS window; layout operations list
+     * open their tool's tab in the clicked OS window; the Tools menu, as it
+     * opens, names after each shared tab the window it would serve now, the
+     * way the File menu names the tool it acts on; layout operations list
      * saved layouts and create, load, save over, and delete them, listing
      * them again the moment one is created or deleted so the dropdown never
      * shows a layout that is not on disk. Saving over a layout asks first,
@@ -26,6 +32,10 @@ public class EditorBranch extends BranchPackage {
     private TabManager tabManager;
     private LayoutManager layoutManager;
     private NameDialogBranch nameDialogBranch;
+    private ActiveWindowManager activeWindowManager;
+    private PropertiesManager propertiesManager;
+    private LayersManager layersManager;
+    private ToolManager toolManager;
 
     // Layouts
     private MenuInstance layoutMenu;
@@ -38,9 +48,42 @@ public class EditorBranch extends BranchPackage {
         this.tabManager = get(TabManager.class);
         this.layoutManager = get(LayoutManager.class);
         this.nameDialogBranch = get(NameDialogBranch.class);
+        this.activeWindowManager = get(ActiveWindowManager.class);
+        this.propertiesManager = get(PropertiesManager.class);
+        this.layersManager = get(LayersManager.class);
+        this.toolManager = get(ToolManager.class);
     }
 
     // Tools Dropdown \\
+
+    // Every shared tab's entry named after the window it would serve: the one its own manager follows
+    public void refreshToolsMenu(MenuInstance menu) {
+
+        ElementInstance list = menu.getEntryPoint(EditorSetting.ENTRY_TOOLS_MENU_LIST);
+
+        if (list == null)
+            return;
+
+        WindowInstance canvasWindow = toolManager.getCanvasWindow();
+
+        nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_PROPERTIES, EditorSetting.TAB_TITLE_PROPERTIES,
+                propertiesManager.getProviderWindow());
+        nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_LAYERS, EditorSetting.TAB_TITLE_LAYERS,
+                layersManager.getProviderWindow());
+        nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_TOOLS, EditorSetting.TAB_TITLE_TOOLS, canvasWindow);
+        nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_BRUSHES, EditorSetting.TAB_TITLE_BRUSHES, canvasWindow);
+        nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_STAMPS, EditorSetting.TAB_TITLE_STAMPS, canvasWindow);
+        nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_MAPS, EditorSetting.TAB_TITLE_MAPS,
+                propertiesManager.getMapsWindow());
+    }
+
+    private void nameEntry(ElementInstance list, String labelId, String title, WindowInstance window) {
+
+        ElementInstance label = list.findChildById(labelId);
+
+        if (label != null)
+            label.setFontText(activeWindowManager.nameContext(title, window));
+    }
 
     public void openHierarchy(WindowInstance window) {
         tabManager.openHierarchy(window.getGLWindow());

@@ -33,13 +33,14 @@ public class RecorderKeysSystem extends SystemPackage {
      * gestures, every row's strip showing its keys or nodes across the stretch
      * of the timeline in view. An animation clip's layer is a dope sheet, as
      * Blender's lists one: a summary row for every bone and morph it keys,
-     * marking every key of any of its values, the one picked unfolded with a
-     * row for each of its values beneath it; the Sounds layer is a row for each sound it
-     * names with a bar for every time it is heard, the selected one marked and
-     * following the cursor while it is dragged. The tab is drawn again when
-     * the recorder's revision, its keys or its view move; keys being dragged
-     * move only the selected marks on their strip, a sound carried only its
-     * bar, and the playhead follows every frame from positions built once.
+     * marking every key of any of its values, the one picked marked, its values
+     * listed in the Properties tab and the one chosen there drawn on the Keys
+     * Graph; the Sounds layer is a row for each sound it names with a bar for
+     * every time it is heard, the selected one marked and following the cursor
+     * while it is dragged. The tab is drawn again when the recorder's revision,
+     * its keys or its view move; keys being dragged move only the selected
+     * marks on their strip, a sound carried only its bar, and the playhead
+     * follows every frame from positions built once.
      */
 
     // Internal
@@ -228,7 +229,8 @@ public class RecorderKeysSystem extends SystemPackage {
         }
     }
 
-    // A summary row for every track of the animation layer, the one picked unfolded with its values beneath it
+    // A summary row for every track of the animation layer, the one picked marked; its values are the Properties
+    // tab's, and the one chosen there is the Keys Graph's
     private void injectDopeSheet(
             ObjectArrayList<RecordingCurveTrackStruct> tracks,
             int layer,
@@ -243,9 +245,6 @@ public class RecorderKeysSystem extends SystemPackage {
                     toRowKey(i, EditorSetting.RECORDER_KEY_ROW_SUMMARY));
 
             injectSummaryKeys(strip, clip, track);
-
-            if (i == layer)
-                injectTrack(track, i, clip);
         }
     }
 

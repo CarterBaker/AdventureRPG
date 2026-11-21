@@ -72,6 +72,12 @@ public class RuntimeSetting {
     public static final String UNIFORM_SKY_STAR_TEXTURE = "u_starTexture";
     public static final String UNIFORM_SKY_SUN_SQUINT = "u_sunSquint";
 
+    // Precipitation Pictures
+    public static final String SPRITE_WEATHER_SNOWFLAKE = "weather/Snowflake";
+    public static final String SPRITE_WEATHER_RAINDROP = "weather/Raindrop";
+    public static final String UNIFORM_SNOWFLAKE_TEXTURE = "u_snowflakeTexture";
+    public static final String UNIFORM_RAINDROP_TEXTURE = "u_raindropTexture";
+
     // Squint
     public static final String UNIFORM_SQUINT = "u_squint";
     public static final String UNIFORM_SQUINT_SUN_SCREEN = "u_sunScreen";
@@ -87,11 +93,14 @@ public class RuntimeSetting {
     public static final float SQUINT_OPEN_RATE = 2.5f;
     public static final float SQUINT_VISIBLE_THRESHOLD = 0.005f;
 
-    // Vitality — the darkness closes in below a share of health, easing in toward death; it, the veins of bleeding
+    // Vitality — the darkness closes in below a share of health, easing in toward death, and part of the way as a
+    // held breath runs out; it, the veins of bleeding
     // and the level-up glow each follow their targets at their own rates, and nothing is drawn below a threshold
     public static final String UNIFORM_VITALITY = "u_vitality";
     public static final String UNIFORM_VITALITY_GLOW_COLOR = "u_glowColor";
     public static final float VITALITY_BLEED_RATE = 3f;
+    public static final float VITALITY_BREATH_DARKNESS_MAX = 0.6f;
+    public static final float VITALITY_BREATH_DARKNESS_START = 0.35f;
     public static final float VITALITY_DARKNESS_EASE = 1.25f;
     public static final float VITALITY_DARKNESS_RATE = 4f;
     public static final float VITALITY_DARKNESS_START = 0.7f;
@@ -437,6 +446,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_SLIDER_VIGNETTE = "Vignette";
     public static final String SETTINGS_SLIDER_CHROMATIC_ABERRATION = "Chromatic Aberration";
     public static final String SETTINGS_SLIDER_FILM_GRAIN = "Film Grain";
+    public static final String SETTINGS_SLIDER_MACRO_CRINKLE = "Distant Crinkle";
+    public static final String SETTINGS_SLIDER_MACRO_CRINKLE_SIZE = "Crinkle Size";
     public static final String SETTINGS_SLIDER_CAMERA_SHAKE_INTENSITY = "Shake Intensity";
     public static final String SETTINGS_SLIDER_MASTER_VOLUME = "Master";
     public static final String SETTINGS_SLIDER_MUSIC_VOLUME = "Music";

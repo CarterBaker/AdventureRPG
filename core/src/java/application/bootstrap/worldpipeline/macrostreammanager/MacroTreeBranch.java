@@ -28,7 +28,9 @@ public class MacroTreeBranch extends BranchPackage {
      * from afar. resolveStandIn() is the one place a tile's resolution picks
      * how finely: the finest tiles facet each lump round over a tapered trunk,
      * coarser ones keep each lump a plain diamond, and the coarsest draw the
-     * whole crown as one spire reaching down to the root. A root under water
+     * whole crown as one spire reaching down to the root. A crown wide enough
+     * to span a good share of a cell is drawn finer than its tile asks, so a
+     * giant far off keeps its lumps and never stands as one great polygon. A root under water
      * is left out: a cell wholly dry or wholly wet answers from its corners,
      * and a shore cell asks the terrain at the root itself. Every shape
      * carries the chunk its tree roots in, so a whole tree yields at once the
@@ -79,6 +81,17 @@ public class MacroTreeBranch extends BranchPackage {
             return TreeStandIn.PLAIN;
 
         return TreeStandIn.SPIRE;
+    }
+
+    // The finer of the tile's tier and the one a crown of this radius asks for, measured in the tile's cells
+    private TreeStandIn resolveShape(TreeStandIn tier, float crownRadius, int cellsPerSide) {
+
+        float cells = crownRadius * cellsPerSide / tileSizeBlocks;
+        TreeStandIn bySize = cells >= EngineSetting.TREE_STAND_IN_FACETED_CROWN_CELLS
+                ? TreeStandIn.FACETED
+                : cells >= EngineSetting.TREE_STAND_IN_PLAIN_CROWN_CELLS ? TreeStandIn.PLAIN : TreeStandIn.SPIRE;
+
+        return bySize.ordinal() < tier.ordinal() ? bySize : tier;
     }
 
     // Worker — every tree rooted in the tile stood in, read from the lattice the tile was just sampled at
@@ -139,14 +152,16 @@ public class MacroTreeBranch extends BranchPackage {
                 site.getAge(),
                 crown);
 
+        TreeStandIn shape = resolveShape(tier, crown[EngineSetting.TREE_IMPOSTOR_CROWN_RADIUS], scratch.cellsPerSide);
+
         if (crown[EngineSetting.TREE_IMPOSTOR_CROWN_RADIUS] > 0f)
             TreeStandInUtility.emitCrown(
-                    scratch.standInCrowns, tier, treeHandle.getForm(), crown, scratch.lumps,
+                    scratch.standInCrowns, shape, treeHandle.getForm(), crown, scratch.lumps,
                     rootX, rootY, rootZ, turn,
                     leafAlbedo, PackedColorUtility.scale(leafAlbedo, EngineSetting.TREE_CANOPY_SIDE_SHADE), cover);
 
         TreeStandInUtility.emitTrunk(
-                scratch.standInTrunks, tier, rootX, rootY, rootZ,
+                scratch.standInTrunks, shape, rootX, rootY, rootZ,
                 crown[EngineSetting.TREE_IMPOSTOR_TRUNK_HALF_WIDTH], crown[EngineSetting.TREE_IMPOSTOR_TRUNK_TOP], turn,
                 barkAlbedo, PackedColorUtility.scale(barkAlbedo, EngineSetting.TREE_CANOPY_SIDE_SHADE), cover);
     }

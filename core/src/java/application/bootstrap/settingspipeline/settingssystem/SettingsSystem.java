@@ -92,7 +92,15 @@ public class SettingsSystem extends SystemPackage {
         renderSettingsData.updateUniform(
                 EngineSetting.UNIFORM_TEXTURE_ANISOTROPY,
                 textureManager.getTextureAnisotropy());
+        renderSettingsData.updateUniform(EngineSetting.UNIFORM_MACRO_CRINKLE, settings.macroCrinkle);
+        renderSettingsData.updateUniform(EngineSetting.UNIFORM_MACRO_CRINKLE_SIZE, settings.macroCrinkleSize);
+        renderSettingsData.updateUniform(EngineSetting.UNIFORM_TREE_HANDOVER, settings.macroTerrain ? 1f : 0f);
         uboManager.push(renderSettingsData);
+    }
+
+    // A render slider is read live by the world shaders, so only the uniforms change
+    public void applyRenderSettings() {
+        pushRenderSettings();
     }
 
     public void onRenderSettingsChanged() {

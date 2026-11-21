@@ -10,6 +10,7 @@ flat in int vCoverChunk;
 #include "includes/SunLightData.glsl"
 #include "includes/MacroCoverageUtility.glsl"
 #include "surface/includes/CloudShadow.glsl"
+#include "trees/includes/TreeFade.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -18,8 +19,9 @@ layout(location = 2) out vec4 gMaterial;
 // Distant macro terrain, written into the same G-buffer as the voxel surface so the deferred lighting and fog passes
 // treat it as ordinary ground. Any fragment over a chunk the grid itself draws right now is discarded, so macro terrain
 // fills every chunk the grid has not drawn — beyond its footprint, along its rim, and wherever streaming has not caught
-// up — and never overlaps one. A tree stand-in is discarded whole once the grid draws the chunk its tree roots in,
-// since the grid then draws that tree itself. The facet normal comes from screen-space derivatives of the flat
+// up — and never overlaps one. Over a chunk the grid draws, a tree stand-in shows only across the hand-over band
+// near the grid's rim, rising through the dither its tree's own look falls away through (TreeFade), so the forest
+// passes from the grid's trees to the stand-ins by distance and never at a chunk's edge. The facet normal comes from screen-space derivatives of the flat
 // position, which gives the low poly look without any normal data. A heightfield never faces down, while a tree
 // stand-in is a closed faceted shape, so its facet faces the camera and a crown's underside turns down into its
 // slope color. A gentle facet
@@ -44,13 +46,13 @@ float resolveSunVisibility() {
 }
 
 void main() {
-    bool drawnByGrid = vCoverChunk >= 0 ? isChunkDrawnByGrid(vCoverChunk) : isDrawnByChunkGrid(vTilePos);
+    bool standIn = vCoverChunk >= 0;
 
-    if (drawnByGrid)
+    if (standIn ? isChunkDrawnByGrid(vCoverChunk) && isStandInHeldBack(vLocalPos) : isDrawnByChunkGrid(vTilePos))
     discard;
 
     vec3 normal = normalize(cross(dFdx(vLocalPos), dFdy(vLocalPos)));
-    bool facesAway = vCoverChunk >= 0
+    bool facesAway = standIn
         ? dot(normal, u_inverseView[3].xyz - vLocalPos) < 0.0
         : normal.y < 0.0;
 

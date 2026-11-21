@@ -1,5 +1,6 @@
 package editor.runtime.charactereditor.sculpt;
 
+import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
@@ -9,6 +10,7 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
+import editor.runtime.EditorSetting;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.characterview.gizmo.CharacterGizmoSource;
@@ -16,7 +18,6 @@ import editor.runtime.characterview.gizmo.CharacterGizmoSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
-import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.vectors.Vector2;
@@ -66,6 +67,7 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
     // Shortcuts
     private int addSelectionShortcutID;
     private int subtractSelectionShortcutID;
+    private int loopSelectionShortcutID;
     private int snapShortcutID;
     private int invertStrokeShortcutID;
 
@@ -155,6 +157,8 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
                 CharacterEditorSetting.SHORTCUT_ADD_SELECTION);
         this.subtractSelectionShortcutID = shortcutManager.getShortcutIDFromShortcutName(
                 CharacterEditorSetting.SHORTCUT_SUBTRACT_SELECTION);
+        this.loopSelectionShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                CharacterEditorSetting.SHORTCUT_LOOP_SELECTION);
         this.snapShortcutID = shortcutManager.getShortcutIDFromShortcutName(CharacterEditorSetting.SHORTCUT_SNAP);
         this.invertStrokeShortcutID = shortcutManager.getShortcutIDFromShortcutName(
                 CharacterEditorSetting.SHORTCUT_INVERT_STROKE);
@@ -233,12 +237,6 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
             characterEditorManager.act(key);
     }
 
-    // Everything selected when nothing is, nothing otherwise
-    public void toggleSelection() {
-        if (isReady())
-            characterEditorManager.toggleSelection();
-    }
-
     // A shortcut acts only with the pointer over the view while nothing is pressed, painted, held or orbited
     private boolean isReady() {
         return characterEditorManager.getMode().editsVertices() && characterEditorMeshViewSystem.hasActiveDocument()
@@ -266,7 +264,7 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
             return;
 
         int vertexIndex = characterEditorMeshViewSystem.pickVertex(mouseX, mouseY);
-        boolean modified = shift || control;
+        boolean modified = shift || control || isShortcutHeld(loopSelectionShortcutID);
         CharacterEditorTransform toolTransform = characterEditorManager.getToolTransform();
         int gizmoAxis = characterGizmoSystem.getHoveredAxis();
 
@@ -332,7 +330,9 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
         if (boxSelecting) {
             characterEditorMeshViewSystem.collectBox(pressX, pressY, mouseX, mouseY, hits);
             characterEditorManager.selectVertices(hits, resolveSelection(shift, control, CharacterEditorSelection.ADD));
-        } else
+        } else if (isShortcutHeld(loopSelectionShortcutID))
+            pickLoop(mouseX, mouseY, shift, control);
+        else
             pickVertex(mouseX, mouseY, shift, control);
 
         this.pressed = false;
@@ -350,6 +350,23 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
         characterEditorManager.selectVertex(
                 vertexIndex,
                 resolveSelection(shift, control, CharacterEditorSelection.TOGGLE));
+    }
+
+    // A click with Alt held takes the edge loop through the edge under the pointer, as Blender's Alt+click does
+    private void pickLoop(float mouseX, float mouseY, boolean shift, boolean control) {
+
+        int face = characterEditorMeshViewSystem.pickEdge(mouseX, mouseY);
+
+        if (face == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        RiggedMeshStruct mesh = characterEditorMeshViewSystem.getActiveDocument().getMesh();
+        int corner = characterEditorMeshViewSystem.getPickedCorner();
+
+        characterEditorManager.selectLoop(
+                mesh.getFaceVertex(face, corner),
+                mesh.getFaceVertex(face, mesh.getNextCorner(face, corner)),
+                resolveSelection(shift, control, CharacterEditorSelection.ADD));
     }
 
     private CharacterEditorSelection resolveSelection(

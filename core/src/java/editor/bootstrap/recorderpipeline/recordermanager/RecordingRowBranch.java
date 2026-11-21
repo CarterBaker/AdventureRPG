@@ -24,20 +24,24 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RecordingRowBranch extends BranchPackage {
 
     /*
-     * The Properties tab's rows for a media file while a Recorder tab is
-     * worked in, its settings listed first. The Recorder tab's are its
-     * tempo, the beats of its bar and the note value of a beat, its key's
-     * root and scale; the Timeline tab's the mix of the lane selected — its
-     * name, volume, pan, mute and solo — and the clip selected's channels,
-     * mute and time ramp, with a notes clip's instrument, volume and
-     * transpose. The settings are the recording's: the channels
-     * armed for the next take, and the export's size, frame rate, format,
-     * motion blur, supersampling and range; while the Keys or Keys Graph tab
-     * is worked in, the keys selected on the curve picked instead: their
-     * moment and value, moved together, and their mode. Every row is read
-     * and changed here by its key: a number stepped, slid across its range or
-     * typed, a choice stepped through every value it may take or typed, and
-     * every change made through the one RecorderManager method that owns it.
+     * The Properties tab's rows for a media file while a Recorder tab is worked
+     * in, its settings listed first. The Recorder tab's are its tempo, the
+     * beats of its bar and the note value of a beat, its key's root and scale;
+     * the Timeline tab's the mix of the lane selected — its name, volume, pan,
+     * mute and solo — and the clip selected's channels, mute and time ramp,
+     * with a notes clip's instrument, volume and transpose. The settings are
+     * the recording's: the channels armed for the next take, and the export's
+     * size, frame rate, format, motion blur, supersampling and range; while the
+     * Keys or Keys Graph tab is worked in, the keys selected on the curve
+     * picked instead: their moment and value, moved together, and their mode.
+     * An animation clip has no mix: its Timeline rows name the layer picked,
+     * and its Keys rows list every value of the bone or morph picked at the
+     * playhead — each keyed there when it is changed, and shown on the graph —
+     * with the one the graph shows chosen among them, before its selected keys.
+     * Every row is read and changed here by its key: a number stepped, slid
+     * across its range or typed, a choice stepped through every value it may
+     * take or typed, and every change made through the one RecorderManager
+     * method that owns it.
      */
 
     // Internal
@@ -102,6 +106,12 @@ class RecordingRowBranch extends BranchPackage {
         }
 
         RecordingLaneStruct lane = recording.getLane(Math.max(0, recorderManager.getSelectedLane()));
+
+        if (recording.isAnimation()) {
+            rows.add(CharacterViewRowStruct.header(String.format(
+                    EditorSetting.RECORDER_ROWS_HEADER_ANIMATION_LAYER_FORMAT, lane.getName())));
+            return;
+        }
 
         rows.add(CharacterViewRowStruct.header(String.format(EditorSetting.RECORDER_ROWS_HEADER_LANE_FORMAT,
                 Math.max(0, recorderManager.getSelectedLane()) + 1)));
@@ -186,11 +196,18 @@ class RecordingRowBranch extends BranchPackage {
         RecordingCurveTrackStruct track = recorderManager.getSelectedTrack();
         int slot = recorderManager.getSelectedSlot();
         RecordingCurveStruct curve = recorderManager.getSelectedCurve();
+        RecordingInstance recording = recorderManager.getRecording();
+        boolean animation = recording != null && recording.isAnimation();
 
         if (track == null || slot < 0 || curve == null) {
-            rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_NO_CURVE));
+            rows.add(CharacterViewRowStruct.header(animation
+                    ? EditorSetting.RECORDER_ROWS_NO_BONE
+                    : EditorSetting.RECORDER_ROWS_NO_CURVE));
             return;
         }
+
+        if (animation)
+            buildValueRows(rows, track);
 
         rows.add(CharacterViewRowStruct.header(String.format(EditorSetting.RECORDER_ROWS_HEADER_CURVE_FORMAT,
                 track.getTrackLabel(), track.getCurveLabel(slot))));
@@ -210,6 +227,31 @@ class RecordingRowBranch extends BranchPackage {
         rows.add(CharacterViewRowStruct.number(EditorSetting.RECORDER_ROW_KEYS_VALUE,
                 EditorSetting.RECORDER_ROW_LABEL_KEYS_VALUE, getValueText(EditorSetting.RECORDER_ROW_KEYS_VALUE)));
         addChoice(rows, EditorSetting.RECORDER_ROW_KEYS_MODE, EditorSetting.RECORDER_ROW_LABEL_KEYS_MODE);
+    }
+
+    // Every value of an animation's bone or morph picked, as it stands at the playhead, then the one the graph shows
+    private void buildValueRows(ObjectArrayList<CharacterViewRowStruct> rows, RecordingCurveTrackStruct track) {
+
+        rows.add(CharacterViewRowStruct.header(track.getTrackLabel()));
+        rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_HEADER_VALUES));
+
+        for (int slot = 0; slot < track.getCurveCount(); slot++) {
+
+            String key = EditorSetting.RECORDER_KEY_CURVE_PREFIX + slot;
+
+            rows.add(CharacterViewRowStruct.number(key, track.getCurveLabel(slot), getValueText(key)));
+        }
+
+        addChoice(rows, EditorSetting.RECORDER_ROW_KEYS_GRAPH, EditorSetting.RECORDER_ROW_LABEL_KEYS_GRAPH);
+    }
+
+    // The slot of a value row's key, or INDEX_NOT_FOUND for a key that names none
+    private int resolveCurveSlot(String key) {
+
+        if (!key.startsWith(EditorSetting.RECORDER_KEY_CURVE_PREFIX))
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        return Integer.parseInt(key.substring(EditorSetting.RECORDER_KEY_CURVE_PREFIX.length()));
     }
 
     private void addChoice(ObjectArrayList<CharacterViewRowStruct> rows, String key, String label) {
@@ -239,6 +281,16 @@ class RecordingRowBranch extends BranchPackage {
     // Values \\
 
     String getValueText(String key) {
+
+        int curveSlot = resolveCurveSlot(key);
+
+        if (curveSlot != EngineSetting.INDEX_NOT_FOUND)
+            return recorderManager.formatCurveAtPlayhead(curveSlot);
+
+        if (key.equals(EditorSetting.RECORDER_ROW_KEYS_GRAPH))
+            return recorderManager.getSelectedTrack() != null
+                    ? recorderManager.getSelectedTrack().getCurveLabel(recorderManager.getSelectedSlot())
+                    : EditorSetting.RECORDER_ROW_VALUE_NONE;
 
         if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX))
             return toOnOff(resolveChannel(key, EditorSetting.RECORDER_KEY_ARM_PREFIX)
@@ -377,9 +429,31 @@ class RecordingRowBranch extends BranchPackage {
         return on ? EditorSetting.RECORDER_ROW_VALUE_ON : EditorSetting.RECORDER_ROW_VALUE_OFF;
     }
 
+    // The slot of the bone or morph picked whose curve is named, ignoring case; INDEX_NOT_FOUND when none is
+    private int findGraphSlot(String text) {
+
+        RecordingCurveTrackStruct track = recorderManager.getSelectedTrack();
+
+        if (track == null)
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        for (int slot = 0; slot < track.getCurveCount(); slot++)
+            if (track.getCurveLabel(slot).equalsIgnoreCase(text.trim()))
+                return slot;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
     // Step \\
 
     void step(String key, int steps) {
+
+        int curveSlot = resolveCurveSlot(key);
+
+        if (curveSlot != EngineSetting.INDEX_NOT_FOUND) {
+            recorderManager.stepCurveAtPlayhead(curveSlot, steps);
+            return;
+        }
 
         RecordingInstance recording = recorderManager.getRecording();
 
@@ -467,6 +541,7 @@ class RecordingRowBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStart();
             case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEnd();
             case EditorSetting.RECORDER_ROW_KEYS_MODE -> recorderManager.cycleKeyMode(direction);
+            case EditorSetting.RECORDER_ROW_KEYS_GRAPH -> recorderManager.cycleGraphCurve(direction);
             default -> {
             }
         }
@@ -496,6 +571,14 @@ class RecordingRowBranch extends BranchPackage {
     // Typed \\
 
     boolean isValueValid(String key, String text) {
+
+        int curveSlot = resolveCurveSlot(key);
+
+        if (curveSlot != EngineSetting.INDEX_NOT_FOUND)
+            return recorderManager.isCurveValueValid(curveSlot, text);
+
+        if (key.equals(EditorSetting.RECORDER_ROW_KEYS_GRAPH))
+            return findGraphSlot(text) != EngineSetting.INDEX_NOT_FOUND;
 
         if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)
                 || key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX))
@@ -527,6 +610,18 @@ class RecordingRowBranch extends BranchPackage {
 
         if (!isValueValid(key, text))
             return;
+
+        int curveSlot = resolveCurveSlot(key);
+
+        if (curveSlot != EngineSetting.INDEX_NOT_FOUND) {
+            recorderManager.setCurveAtPlayhead(curveSlot, text);
+            return;
+        }
+
+        if (key.equals(EditorSetting.RECORDER_ROW_KEYS_GRAPH)) {
+            recorderManager.cycleGraphCurve(findGraphSlot(text) - recorderManager.getSelectedSlot());
+            return;
+        }
 
         if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)
                 || key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX)) {

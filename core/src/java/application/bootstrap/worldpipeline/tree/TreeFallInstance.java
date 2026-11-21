@@ -16,7 +16,9 @@ public class TreeFallInstance extends InstancePackage {
      * cut, away from whoever cut it, gathering speed as a felled trunk does;
      * any other drops straight down. Its geometry is written by a worker and
      * published whole, then uploaded on the main thread as meshes in the
-     * chunk vertex layout. The one who felled it is who its drops fly from.
+     * chunk vertex layout. It waits, a while at most, for the stump left
+     * behind to be drawn before it falls. The one who felled it is who its
+     * drops fly from.
      */
 
     // Source
@@ -39,6 +41,7 @@ public class TreeFallInstance extends InstancePackage {
     private float drop;
     private float dropSpeed;
     private float restSeconds;
+    private float waitSeconds;
 
     // Geometry — written by the worker, then uploaded
     private volatile FloatArrayList builtBark;
@@ -110,6 +113,10 @@ public class TreeFallInstance extends InstancePackage {
 
     public void setRestSeconds(float restSeconds) {
         this.restSeconds = restSeconds;
+    }
+
+    public void setWaitSeconds(float waitSeconds) {
+        this.waitSeconds = waitSeconds;
     }
 
     // Pose \\
@@ -219,6 +226,10 @@ public class TreeFallInstance extends InstancePackage {
 
     public float getRestSeconds() {
         return restSeconds;
+    }
+
+    public float getWaitSeconds() {
+        return waitSeconds;
     }
 
     public FloatArrayList getBuiltBark() {

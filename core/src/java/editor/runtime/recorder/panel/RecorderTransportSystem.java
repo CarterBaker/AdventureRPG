@@ -15,7 +15,9 @@ public class RecorderTransportSystem extends SystemPackage {
      * Shows beside the Recorder tab's buttons what the transport is doing:
      * the status line, redrawn when the recorder's revision moves, so a
      * Record or Play that cannot start says why where it was pressed; the
-     * loop button's icon drawn in the accent color while playing loops; and
+     * loop button's icon drawn in the accent color while playing loops, and
+     * the record button's in the danger color while a take or an animation's
+     * keys are recording; and
      * the clock, the playhead against the media file's length, or the frames
      * an export has written, refreshed a few times a second.
      */
@@ -28,9 +30,11 @@ public class RecorderTransportSystem extends SystemPackage {
     private ElementInstance statusLabel;
     private ElementInstance clockLabel;
     private ElementInstance loopIcon;
+    private ElementInstance recordIcon;
 
     // Colors
     private MenuColorStruct loopingColor;
+    private MenuColorStruct recordingColor;
 
     // State
     private int shownRevision;
@@ -43,6 +47,7 @@ public class RecorderTransportSystem extends SystemPackage {
 
         // Colors
         this.loopingColor = new MenuColorStruct(ThemeColor.ACCENT, EngineSetting.COLOR_CHANNEL_MAX);
+        this.recordingColor = new MenuColorStruct(ThemeColor.DANGER, EngineSetting.COLOR_CHANNEL_MAX);
 
         // State
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -59,6 +64,7 @@ public class RecorderTransportSystem extends SystemPackage {
         this.statusLabel = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_TRANSPORT_STATUS);
         this.clockLabel = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_TRANSPORT_CLOCK);
         this.loopIcon = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_TRANSPORT_LOOP_ICON);
+        this.recordIcon = recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_TRANSPORT_RECORD_ICON);
     }
 
     // Update \\
@@ -70,6 +76,7 @@ public class RecorderTransportSystem extends SystemPackage {
             this.shownRevision = recorderManager.getRevision();
             statusLabel.setFontText(recorderManager.getStatusText());
             loopIcon.setColorOverride(recorderManager.isLooping() ? loopingColor : null);
+            recordIcon.setColorOverride(recorderManager.isRecordLit() ? recordingColor : null);
             refreshClock();
         }
 

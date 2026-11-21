@@ -11,7 +11,8 @@ public class LayersBranch extends BranchPackage {
      * of the layer it shows: a row picks its layer for the window worked in
      * last, or a draggable layer's row carries it out of the tab, a group's marker folds or opens it, and a layer's eye shows or
      * hides it; the footer's icons add a layer and delete the one picked, and
-     * its view buttons hand back the view they show.
+     * its view buttons hand back the view they show. The Up and Down keys
+     * pick the layer listed above or below the one picked.
      */
 
     // Internal
@@ -28,6 +29,14 @@ public class LayersBranch extends BranchPackage {
 
     public void selectLayer(String layerKey) {
         layersManager.selectLayer(layerKey);
+    }
+
+    public void selectPrevious() {
+        layersManager.stepLayer(-1);
+    }
+
+    public void selectNext() {
+        layersManager.stepLayer(1);
     }
 
     public void dragLayer(String layerKey, WindowInstance window) {

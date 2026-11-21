@@ -11,14 +11,15 @@
 // every sheaf stands as a half sphere of foliage. Nothing reaches past the rim. A fragment between the leaves is
 // discarded, so the sheaf reads as layered foliage the branches and sky show through, and nothing is traced and no
 // depth written, so the cards keep the early depth test. The leaves wear the species' leaf texture, repeating once per
-// block across the card, and where that texture leaves a gap so does the leaf. Light rounds the sheaf into a dome: each
-// fragment's normal leans from its card's facing toward the way out from the cluster's centre, and the clump darkens
-// toward its heart and its underside. Far off, where a leaf would shrink below a pixel, leaves and stems widen with the
-// fragment's footprint, so a distant sheaf fills in rather than shimmering away, and a stem thinner than its footprint
-// wears its leaves' shade, so no spokes show from afar. Once the widened leaves of one frond already overlap row on
-// row, the sheaf is read as solid foliage out to each frond's ragged reach, its blades never traced, so a far crown
-// costs a fraction of a near one and looks the same. A card turning edge-on to the camera draws in toward its
-// centre, so no card ever shows as a streak. Fragment stage only.
+// block across the card, and where that texture leaves a gap so does the leaf, save while the texture streams in and
+// only its blurred fallback can be read, when the traced sprig alone cuts the leaf so a crown never blinks out as its
+// look changes. Light rounds the sheaf into a dome: each fragment's normal leans from its card's facing toward the way
+// out from the cluster's centre, and the clump darkens toward its heart and its underside. Far off, where a leaf would
+// shrink below a pixel, leaves and stems widen with the fragment's footprint, so a distant sheaf fills in rather than
+// shimmering away, and a stem thinner than its footprint wears its leaves' shade, so no spokes show from afar. Once the
+// widened leaves of one frond already overlap row on row, the sheaf is read as solid foliage out to each frond's ragged
+// reach, its blades never traced, so a far crown costs a fraction of a near one and looks the same. A card turning
+// edge-on to the camera draws in toward its centre, so no card ever shows as a streak. Fragment stage only.
 
 const float TREE_LEAF_FROND_ARC       = 0.7;
 const float TREE_LEAF_FROND_MIN       = 6.0;
@@ -206,9 +207,10 @@ bool shadeTreeLeaf(
     if (kind == TREE_LEAF_MISS)
     return false;
 
-    vec4 albedo = sampleTileAlbedo(resolveTileReadGrad(tile, gradX, gradY), point, gradX, gradY);
+    TileRead read   = resolveTileReadGrad(tile, gradX, gradY);
+    vec4     albedo = sampleTileAlbedo(read, point, gradX, gradY);
 
-    if (albedo.a < TREE_LEAF_GAP_ALPHA)
+    if (albedo.a < TREE_LEAF_GAP_ALPHA && read.lowTier != TILE_TIER_FALLBACK)
     return false;
 
     if (dot(facing, camera - worldPos) < 0.0)

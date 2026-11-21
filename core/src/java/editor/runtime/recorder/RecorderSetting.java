@@ -78,6 +78,7 @@ public class RecorderSetting {
     public static final int ENTRY_TRANSPORT_STATUS = 0;
     public static final int ENTRY_TRANSPORT_CLOCK = 1;
     public static final int ENTRY_TRANSPORT_LOOP_ICON = 2;
+    public static final int ENTRY_TRANSPORT_RECORD_ICON = 3;
 
     // Entry Points — the Keys' menu; its rows and the span their strips share are EditorSetting
     // RECORDER_ENTRY_KEY_ROWS and RECORDER_ENTRY_KEY_STRIPS, which the drags and the wheel share

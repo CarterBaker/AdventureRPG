@@ -22,6 +22,9 @@ public class DamageTypeManager extends ManagerPackage {
 
     // Engine Damage Types
     private short bluntDamageTypeID;
+    private short fallDamageTypeID;
+    private short drowningDamageTypeID;
+    private short asphyxiationDamageTypeID;
 
     // Base \\
 
@@ -41,6 +44,9 @@ public class DamageTypeManager extends ManagerPackage {
 
         // Engine Damage Types
         this.bluntDamageTypeID = getDamageTypeIDFromDamageTypeName(EngineSetting.DAMAGE_TYPE_BLUNT);
+        this.fallDamageTypeID = getDamageTypeIDFromDamageTypeName(EngineSetting.DAMAGE_TYPE_FALL);
+        this.drowningDamageTypeID = getDamageTypeIDFromDamageTypeName(EngineSetting.DAMAGE_TYPE_DROWNING);
+        this.asphyxiationDamageTypeID = getDamageTypeIDFromDamageTypeName(EngineSetting.DAMAGE_TYPE_ASPHYXIATION);
     }
 
     // Management \\
@@ -103,5 +109,17 @@ public class DamageTypeManager extends ManagerPackage {
 
     public short getBluntDamageTypeID() {
         return bluntDamageTypeID;
+    }
+
+    public short getFallDamageTypeID() {
+        return fallDamageTypeID;
+    }
+
+    public short getDrowningDamageTypeID() {
+        return drowningDamageTypeID;
+    }
+
+    public short getAsphyxiationDamageTypeID() {
+        return asphyxiationDamageTypeID;
     }
 }

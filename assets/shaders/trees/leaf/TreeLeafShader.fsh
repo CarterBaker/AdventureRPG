@@ -17,10 +17,11 @@ layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
-// Leaves standing in a chunk or mega keep the world's axes, and fade between looks with their tree.
+// Leaves standing in a chunk or mega keep the world's axes, fade between looks with their tree, and hand over to the
+// macro terrain's stand-ins far out (TreeFade).
 
 void main() {
-    if (isTreeFaded())
+    if (isTreeFaded() || isTreeHandedOver(vWorldPos))
     discard;
 
     if (!shadeTreeLeaf(

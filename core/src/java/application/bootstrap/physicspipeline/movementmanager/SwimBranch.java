@@ -197,6 +197,11 @@ public class SwimBranch extends BranchPackage {
         return submerged && depthFactor >= 1f;
     }
 
+    // Whether the water just found closes over the entity's eyes
+    boolean isEyeSubmerged(EntityInstance entity) {
+        return submerged && calculateGapAboveEye(entity) > 0f;
+    }
+
     float getSpeedMultiplier(EntityInstance entity, boolean swimming) {
 
         if (swimming)

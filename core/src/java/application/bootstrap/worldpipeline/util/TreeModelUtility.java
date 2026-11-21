@@ -48,9 +48,36 @@ public final class TreeModelUtility extends EngineUtility {
         }
 
         gather(tree, model);
+        emitGathered(tree.getTreeHandle(), model, rootX, tree.getBaseY(), rootZ, detail, bark, leaves);
+    }
 
-        TreeHandle treeHandle = tree.getTreeHandle();
-        float rootY = tree.getBaseY();
+    // A shape alone as a MODEL of itself, its root centre at a point of the frame — a piece of tree too great to
+    // draw sub-voxel by sub-voxel
+    public static void emitShape(
+            TreeShapeStruct shape,
+            float rootX,
+            float rootY,
+            float rootZ,
+            TreeModelStruct model,
+            FloatArrayList bark,
+            FloatArrayList leaves) {
+
+        model.clear();
+        gatherShape(shape, model);
+        emitGathered(shape.getTreeHandle(), model, rootX, rootY, rootZ, TreeDetail.MODEL, bark, leaves);
+    }
+
+    // What was gathered of a tree drawn at a tier finer than OUTLINE
+    private static void emitGathered(
+            TreeHandle treeHandle,
+            TreeModelStruct model,
+            float rootX,
+            float rootY,
+            float rootZ,
+            TreeDetail detail,
+            FloatArrayList bark,
+            FloatArrayList leaves) {
+
         boolean modelled = detail == TreeDetail.MODEL;
 
         emitTrunk(treeHandle, model, rootX, rootY, rootZ, modelled, bark);

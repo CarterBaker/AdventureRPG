@@ -827,6 +827,10 @@ public class EngineSetting {
     public static final int TEXTURE_QUALITY_HIGH = 2;
     public static final int[] TEXTURE_ANISOTROPY_LEVELS = { 1, 2, 4, 8, 16 };
     public static final int TEXTURE_ANISOTROPY_DEFAULT = 8;
+    public static final float MACRO_CRINKLE_MAX = 2f;
+    public static final float MACRO_CRINKLE_MIN = 0f;
+    public static final float MACRO_CRINKLE_SIZE_MAX = 2f;
+    public static final float MACRO_CRINKLE_SIZE_MIN = 0.5f;
 
     // User Settings — Post Processing
     public static final float BLOOM_INTENSITY_MAX = 1f;
@@ -1090,6 +1094,9 @@ public class EngineSetting {
     public static final String UNIFORM_DELTA_TIME = "u_deltaTime";
     public static final String UNIFORM_DETAIL_RADIUS = "u_detailRadius";
     public static final String UNIFORM_CHARACTER_DETAIL = "u_characterDetail";
+    public static final String UNIFORM_MACRO_CRINKLE = "u_macroCrinkle";
+    public static final String UNIFORM_MACRO_CRINKLE_SIZE = "u_macroCrinkleSize";
+    public static final String UNIFORM_TREE_HANDOVER = "u_treeHandover";
     public static final String UNIFORM_DEST_RECT = "u_destRect";
     public static final String UNIFORM_DISTANCE_FROM_CENTER = "u_distanceFromCenter";
     public static final String UNIFORM_FACE_ORIENTATIONS = "u_faceOrientations";
@@ -2394,10 +2401,12 @@ public class EngineSetting {
     public static final float[] TREE_STAND_IN_DOME_REACHES = { 0.83f, 0.97f };
     public static final float TREE_STAND_IN_DOME_FOOT = -0.85f;
     public static final float TREE_STAND_IN_DOME_TIP = 1f;
+    public static final float TREE_STAND_IN_FACETED_CROWN_CELLS = 0.75f;
     public static final int TREE_STAND_IN_FACETED_CELLS_PER_SIDE = 32;
     public static final int TREE_STAND_IN_FACETED_SIDES = 6;
     public static final int TREE_STAND_IN_FACETED_TRUNK_SIDES = 4;
     public static final int TREE_STAND_IN_MIN_CELLS_PER_SIDE = 4;
+    public static final float TREE_STAND_IN_PLAIN_CROWN_CELLS = 0.35f;
     public static final int TREE_STAND_IN_PLAIN_CELLS_PER_SIDE = 16;
     public static final int TREE_STAND_IN_PLAIN_SIDES = 4;
     public static final int TREE_STAND_IN_PLAIN_TRUNK_SIDES = 3;
@@ -2432,6 +2441,8 @@ public class EngineSetting {
     public static final float TREE_FALL_REST_RADIANS = 1.48f;
     public static final float TREE_FALL_REST_SECONDS = 1.5f;
     public static final float TREE_FALL_START_RADIANS = 0.02f;
+    public static final float TREE_FALL_STUMP_WAIT_SECONDS = 1.5f;
+    public static final long TREE_FULL_SHAPE_MAX_CELLS = 64L * 1024L * 1024L;
     public static final int TREE_MAX_LOG_DROPS = 40;
     public static final int TREE_MAX_LOG_KINDS = 8;
     public static final int TREE_MAX_SEED_DROPS = 4;
@@ -3024,6 +3035,16 @@ public class EngineSetting {
     public static final float REGENERATION_DELAY_SECONDS = 5f;
     public static final float VITALITY_FULL = 1f;
 
+    // Hazards — a landing faster than a fall from the safe height hurts by the share of the way on to the lethal
+    // height its speed reached; a breath lasts so long under water or buried and returns once clear, and once spent
+    // every tick costs a share of health
+    public static final float BREATH_HOLD_SECONDS = 30f;
+    public static final float BREATH_RECOVER_SECONDS = 4f;
+    public static final float BREATH_TICK_SECONDS = 1f;
+    public static final float BREATH_SHARE_PER_TICK = 0.1f;
+    public static final float FALL_LETHAL_BLOCKS = 32f;
+    public static final float FALL_SAFE_BLOCKS = 7f;
+
     // Equipment
     public static final String EQUIPMENT_ITEM_MATERIAL = "items/EquipmentItemMaterial";
     public static final int EQUIPMENT_RENDER_DEPTH = 0;
@@ -3250,7 +3271,10 @@ public class EngineSetting {
     public static final float BLOW_DAMAGE_PER_MOMENTUM = 0.2f;
     public static final float BLOW_MOMENTUM_PER_DURABILITY = 20f;
     public static final float CRIT_DAMAGE_MULTIPLIER = 2f;
+    public static final String DAMAGE_TYPE_ASPHYXIATION = "asphyxiation";
     public static final String DAMAGE_TYPE_BLUNT = "blunt";
+    public static final String DAMAGE_TYPE_DROWNING = "drowning";
+    public static final String DAMAGE_TYPE_FALL = "fall";
     public static final float DEFAULT_ATTACK_ARC = 0f;
     public static final float DEFAULT_ATTACK_DAMAGE = 1f;
     public static final float DEFAULT_ATTACK_REACH = 1f;

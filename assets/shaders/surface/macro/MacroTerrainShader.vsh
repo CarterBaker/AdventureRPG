@@ -7,6 +7,7 @@ layout (location = 3) in float aCoverChunk;
 
 #include "includes/CameraData.glsl"
 #include "includes/GridCoordinateData.glsl"
+#include "surface/includes/MacroCrinkle.glsl"
 
 out vec3 vLocalPos;
 out vec2 vTilePos;
@@ -19,7 +20,8 @@ flat out int vCoverChunk;
 // 24-bit RGB triples packed by MacroBuildBranch, the average albedo of the blocks a chunk dresses that ground
 // with. The grid-relative position leaves for the fragment's facet normal and cloud shadow, and the
 // tile-local one for its chunk coverage test. A tree stand-in names the chunk of the tile its tree roots in, so
-// the whole tree yields with that chunk; ground and canopy name none and yield wherever they lie.
+// the whole tree yields with that chunk; ground and canopy name none and yield wherever they lie. Every vertex is
+// then crinkled (MacroCrinkle), and the facet normal the fragment takes follows the crinkled position.
 
 vec3 unpackColor(float packedColor) {
     int col = int(packedColor);
@@ -33,6 +35,7 @@ void main() {
     vec3 worldPos = aPos;
     worldPos.x   += u_gridPosition.x;
     worldPos.z   += u_gridPosition.y;
+    worldPos      = applyMacroCrinkle(worldPos, aCoverChunk >= 0.0);
 
     vLocalPos  = worldPos;
     vTilePos   = aPos.xz;

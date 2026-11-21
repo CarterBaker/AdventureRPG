@@ -6,20 +6,24 @@ import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.runtime.EditorSetting;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
 import editor.runtime.characterview.gizmo.CharacterGizmoSource;
 import editor.runtime.characterview.gizmo.CharacterGizmoSystem;
+import editor.runtime.characterview.util.CharacterBonePickUtility;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
-import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class CharacterEditorRigSystem extends SystemPackage implements CharacterGizmoSource {
 
@@ -68,6 +72,9 @@ public class CharacterEditorRigSystem extends SystemPackage implements Character
     private float lastMouseY;
 
     // Scratch
+    private FloatArrayList pickScreen;
+    private BooleanArrayList pickable;
+    private IntArrayList pickParents;
     private Vector2 screenScratch;
     private Vector3 rayOrigin;
     private Vector3 rayDirection;
@@ -88,6 +95,9 @@ public class CharacterEditorRigSystem extends SystemPackage implements Character
         this.startHit = new Vector3();
 
         // Scratch
+        this.pickScreen = new FloatArrayList();
+        this.pickable = new BooleanArrayList();
+        this.pickParents = new IntArrayList();
         this.screenScratch = new Vector2();
         this.rayOrigin = new Vector3();
         this.rayDirection = new Vector3();
@@ -188,34 +198,28 @@ public class CharacterEditorRigSystem extends SystemPackage implements Character
             startDrag(tool, EngineSetting.INDEX_NOT_FOUND, mouseX, mouseY);
     }
 
-    // The tab region's bone whose joint lies nearest the pointer within the pick radius, or none
+    // The tab region's bone the pointer is over, at its joint or along the segment drawn from it
+    // (CharacterBonePickUtility), or none
     private int pickJoint(float mouseX, float mouseY) {
 
-        float radius = EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS;
-        float nearest = radius * radius;
-        int picked = EngineSetting.INDEX_NOT_FOUND;
+        int boneCount = characterEditorManager.getRigBoneCount();
 
-        for (int i = 0; i < characterEditorManager.getRigBoneCount(); i++) {
+        CharacterBonePickUtility.reset(pickScreen, pickable, pickParents, boneCount);
 
-            if (!characterEditorManager.isRigBoneInRegion(characterEditorModeSystem.getRegion(), i))
-                continue;
+        for (int i = 0; i < boneCount; i++) {
 
+            pickParents.set(i, characterEditorManager.getRigBoneParent(i));
             CharacterPoseUtility.getTranslation(characterEditorManager.getRigBoneWorldMatrix(i), joint);
 
             if (!characterEditorMeshViewSystem.project(joint.x, joint.y, joint.z, screenScratch))
                 continue;
 
-            float dx = screenScratch.x - mouseX;
-            float dy = screenScratch.y - mouseY;
-            float distance = dx * dx + dy * dy;
-
-            if (distance <= nearest) {
-                nearest = distance;
-                picked = i;
-            }
+            pickScreen.set(i * 2, screenScratch.x);
+            pickScreen.set(i * 2 + 1, screenScratch.y);
+            pickable.set(i, characterEditorManager.isRigBoneInRegion(characterEditorModeSystem.getRegion(), i));
         }
 
-        return picked;
+        return CharacterBonePickUtility.pick(pickScreen, pickable, pickParents, mouseX, mouseY);
     }
 
     // A new child of the selected bone where the pointer meets the plane facing the camera through its joint

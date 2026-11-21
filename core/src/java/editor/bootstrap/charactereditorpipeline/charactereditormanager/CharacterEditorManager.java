@@ -1003,10 +1003,41 @@ public class CharacterEditorManager extends ManagerPackage {
         return pickedRegion;
     }
 
-    // Moves whenever the region picked or the regions listed change
+    // Moves whenever the region picked or the regions listed change, or a region is hidden or shown
     public int getRegionPickRevision() {
         getPickedRegion();
         return regionPickRevision;
+    }
+
+    // A region's eye in the Layers tab: open while any of its vertices on the part edited shows
+    public boolean isRegionShown(CharacterRegionStruct region) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        return document == null || !characterSelectionBranch.isRegionHidden(document, region);
+    }
+
+    // A region's eye turned: every vertex of it on the part edited hidden, or all shown again
+    public void toggleRegionShown(String regionKey) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+        CharacterRegionStruct region = findRegion(regionKey);
+
+        if (document == null || region == null || characterSculptBranch.isTransforming())
+            return;
+
+        if (!characterSelectionBranch.setRegionHidden(
+                document, region, !characterSelectionBranch.isRegionHidden(document, region)))
+            return;
+
+        characterMeshBranch.upload(document);
+        notifyRegionsShown();
+    }
+
+    // What shows of the regions changed, so the Layers tab lays their eyes out again
+    void notifyRegionsShown() {
+        regionPickRevision++;
+        notifyChanged();
     }
 
     // The region of the tab worked in last, its part picked whenever the character wears it
@@ -1232,13 +1263,13 @@ public class CharacterEditorManager extends ManagerPackage {
             characterSelectionBranch.select(document, vertexIndex, selection);
     }
 
-    // Everything when nothing is selected, nothing otherwise
-    public void toggleSelection() {
+    // The edge loop through an edge, combined with the selection as asked
+    public void selectLoop(int vertexA, int vertexB, CharacterEditorSelection selection) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
         if (document != null && !characterSculptBranch.isTransforming())
-            characterSelectionBranch.toggleAll(document);
+            characterSelectionBranch.selectLoop(document, vertexA, vertexB, selection);
     }
 
     public void selectVertices(IntArrayList vertices, CharacterEditorSelection selection) {

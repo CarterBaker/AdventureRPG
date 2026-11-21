@@ -4,6 +4,7 @@ import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
+import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -19,8 +20,10 @@ class CharacterSelectionBranch extends BranchPackage {
      * Owns which vertices of a character mesh are selected, and how much of
      * each: picked ones replacing, adding to, taking from or flipping the
      * selection, all or none, the inverse, everything joined to the
-     * selection by faces, each selected vertex's mirror, and every vertex a
-     * bone weighs on, each taken whole. A brush stroke selects as much of
+     * selection by faces, the selection grown or shrunk by one ring of faces,
+     * the edge loop running through an edge, as Blender walks one across
+     * quads, each selected vertex's mirror, and every vertex a bone weighs
+     * on, each taken whole. A brush stroke selects as much of
      * each vertex as the tip covers it, the most any stamp gave, and taking
      * away leaves no more than the tip left uncovered; the transforms and
      * weight edits then act on each vertex as far as it is selected. Also
@@ -31,8 +34,8 @@ class CharacterSelectionBranch extends BranchPackage {
      * modelled exactly symmetric still mirrors every edit — again whenever
      * the geometry has changed. Hides the selected or the unselected
      * vertices out of the way and reveals them again, as a modelling tool
-     * hides geometry to reach into tight spaces; a hidden vertex never
-     * stays selected.
+     * hides geometry to reach into tight spaces, and a whole region at once
+     * by its eye in the Layers tab; a hidden vertex never stays selected.
      */
 
     // Internal
@@ -40,6 +43,13 @@ class CharacterSelectionBranch extends BranchPackage {
 
     // Stroke
     private CharacterEditorSelection strokeSelection;
+
+    // Scratch — the selection as it stood before a ring was grown or shrunk, a loop's vertices, and every vertex's
+    // faces laid out one run after another
+    private BooleanArrayList ringScratch;
+    private IntArrayList loopScratch;
+    private IntArrayList vertexFaceStarts;
+    private IntArrayList vertexFaces;
 
     // Scratch — vertices on one point of the decimal grid chained in index order, each one's place in its chain
     private Long2IntOpenHashMap position2Vertex;
@@ -54,6 +64,10 @@ class CharacterSelectionBranch extends BranchPackage {
     protected void create() {
 
         // Scratch
+        this.ringScratch = new BooleanArrayList();
+        this.loopScratch = new IntArrayList();
+        this.vertexFaceStarts = new IntArrayList();
+        this.vertexFaces = new IntArrayList();
         this.position2Vertex = new Long2IntOpenHashMap();
         this.position2Vertex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
         this.positionNext = new IntArrayList();
@@ -156,13 +170,6 @@ class CharacterSelectionBranch extends BranchPackage {
 
     // Whole \\
 
-    // Everything when nothing is selected, nothing otherwise
-    void toggleAll(CharacterMeshDocumentInstance document) {
-
-        setAll(document, getSelectedCount(document) == 0);
-        changed(document);
-    }
-
     void selectAll(CharacterMeshDocumentInstance document, boolean selected) {
 
         setAll(document, selected);
@@ -220,6 +227,39 @@ class CharacterSelectionBranch extends BranchPackage {
         changed(document);
     }
 
+    // One ring of faces about the selection joined to it, or its rim let go, as Blender's Select More and Less
+    void growRing(CharacterMeshDocumentInstance document, boolean grow) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+        BooleanArrayList selection = document.getSelection();
+
+        ringScratch.size(selection.size());
+
+        for (int i = 0; i < selection.size(); i++)
+            ringScratch.set(i, selection.getBoolean(i));
+
+        for (int f = 0; f < mesh.getFaceCount(); f++) {
+
+            if (grow ? !touchesSelection(mesh, f, ringScratch) : !touchesUnselected(mesh, f, ringScratch))
+                continue;
+
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
+                selection.set(mesh.getFaceVertex(f, c), grow);
+        }
+
+        setWhole(document);
+        changed(document);
+    }
+
+    private boolean touchesUnselected(RiggedMeshStruct mesh, int faceIndex, BooleanArrayList selection) {
+
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
+            if (!selection.getBoolean(mesh.getFaceVertex(faceIndex, c)))
+                return true;
+
+        return false;
+    }
+
     private boolean touchesSelection(RiggedMeshStruct mesh, int faceIndex, BooleanArrayList selection) {
 
         for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
@@ -245,6 +285,142 @@ class CharacterSelectionBranch extends BranchPackage {
 
         return grew;
     }
+
+    // Loop \\
+
+    // The edge loop through an edge, walked both ways from it as Blender walks one: across each vertex four quads
+    // meet at, on to the edge sharing no face with the one it came by, until it reaches a pole, the rim or itself
+    void selectLoop(CharacterMeshDocumentInstance document, int vertexA, int vertexB, CharacterEditorSelection mode) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+
+        indexVertexFaces(mesh);
+        loopScratch.clear();
+        loopScratch.add(vertexA);
+        loopScratch.add(vertexB);
+        walkLoop(mesh, vertexA, vertexB);
+        walkLoop(mesh, vertexB, vertexA);
+        select(document, loopScratch, mode);
+    }
+
+    private void walkLoop(RiggedMeshStruct mesh, int from, int at) {
+
+        int previous = from;
+        int current = at;
+
+        while (true) {
+
+            int next = resolveLoopNext(mesh, previous, current);
+
+            if (next == EngineSetting.INDEX_NOT_FOUND || loopScratch.contains(next))
+                return;
+
+            loopScratch.add(next);
+            previous = current;
+            current = next;
+        }
+    }
+
+    // Across a vertex four quads meet at, the one neighbour sharing no face with the vertex it was reached from
+    private int resolveLoopNext(RiggedMeshStruct mesh, int previous, int vertex) {
+
+        int start = vertexFaceStarts.getInt(vertex);
+        int end = vertexFaceStarts.getInt(vertex + 1);
+
+        if (end - start != EditorSetting.CHARACTER_LOOP_VALENCE)
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        int found = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int i = start; i < end; i++) {
+
+            int face = vertexFaces.getInt(i);
+            int corners = mesh.getFaceCornerCount(face);
+
+            if (corners != EditorSetting.CHARACTER_LOOP_VALENCE)
+                return EngineSetting.INDEX_NOT_FOUND;
+
+            if (holdsVertex(mesh, face, previous))
+                continue;
+
+            int corner = findCorner(mesh, face, vertex);
+
+            for (int side = -1; side <= 1; side += 2) {
+
+                int neighbour = mesh.getFaceVertex(face, Math.floorMod(corner + side, corners));
+
+                if (!sharesFaceWith(mesh, vertex, neighbour, previous))
+                    found = neighbour;
+            }
+        }
+
+        return found;
+    }
+
+    // Whether any face about a vertex holds both of two others
+    private boolean sharesFaceWith(RiggedMeshStruct mesh, int vertex, int a, int b) {
+
+        for (int i = vertexFaceStarts.getInt(vertex); i < vertexFaceStarts.getInt(vertex + 1); i++) {
+
+            int face = vertexFaces.getInt(i);
+
+            if (holdsVertex(mesh, face, a) && holdsVertex(mesh, face, b))
+                return true;
+        }
+
+        return false;
+    }
+
+    private boolean holdsVertex(RiggedMeshStruct mesh, int faceIndex, int vertexIndex) {
+        return findCorner(mesh, faceIndex, vertexIndex) != EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private int findCorner(RiggedMeshStruct mesh, int faceIndex, int vertexIndex) {
+
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
+            if (mesh.getFaceVertex(faceIndex, c) == vertexIndex)
+                return c;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    // Every vertex's faces, one run per vertex in index order, its run starting where vertexFaceStarts says
+    private void indexVertexFaces(RiggedMeshStruct mesh) {
+
+        int vertexCount = mesh.getVertexCount();
+
+        vertexFaceStarts.size(vertexCount + 1);
+
+        for (int v = 0; v <= vertexCount; v++)
+            vertexFaceStarts.set(v, 0);
+
+        for (int f = 0; f < mesh.getFaceCount(); f++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
+                vertexFaceStarts.set(mesh.getFaceVertex(f, c) + 1,
+                        vertexFaceStarts.getInt(mesh.getFaceVertex(f, c) + 1) + 1);
+
+        for (int v = 0; v < vertexCount; v++)
+            vertexFaceStarts.set(v + 1, vertexFaceStarts.getInt(v + 1) + vertexFaceStarts.getInt(v));
+
+        vertexFaces.size(vertexFaceStarts.getInt(vertexCount));
+
+        for (int f = 0; f < mesh.getFaceCount(); f++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
+
+                int vertex = mesh.getFaceVertex(f, c);
+                int slot = vertexFaceStarts.getInt(vertex);
+
+                vertexFaces.set(slot, f);
+                vertexFaceStarts.set(vertex, slot + 1);
+            }
+
+        for (int v = vertexCount; v > 0; v--)
+            vertexFaceStarts.set(v, vertexFaceStarts.getInt(v - 1));
+
+        vertexFaceStarts.set(0, 0);
+    }
+
+    // Mirror Selection \\
 
     // Adds each selected vertex's mirror across x
     void selectMirror(CharacterMeshDocumentInstance document) {
@@ -327,6 +503,52 @@ class CharacterSelectionBranch extends BranchPackage {
         for (int i = 0; i < vertexCount; i++)
             if (!document.isHidden(i) && document.isSelected(i) == selected)
                 document.setHidden(i, true);
+
+        changed(document);
+        return true;
+    }
+
+    // Whether a region holds vertices and every one of them is hidden, as its eye in the Layers tab shows it shut
+    boolean isRegionHidden(CharacterMeshDocumentInstance document, CharacterRegionStruct region) {
+
+        boolean holds = false;
+
+        for (int i = 0; i < document.getMesh().getVertexCount(); i++) {
+
+            if (!characterEditorManager.isInRegion(document, region, i))
+                continue;
+
+            if (!document.isHidden(i))
+                return false;
+
+            holds = true;
+        }
+
+        return holds;
+    }
+
+    // A region's vertices hidden all together, or every one shown again, as its eye in the Layers tab turns; never the
+    // last vertices shown. False when nothing changed
+    boolean setRegionHidden(CharacterMeshDocumentInstance document, CharacterRegionStruct region, boolean hidden) {
+
+        int vertexCount = document.getMesh().getVertexCount();
+        int changing = 0;
+
+        for (int i = 0; i < vertexCount; i++)
+            if (document.isHidden(i) != hidden && characterEditorManager.isInRegion(document, region, i))
+                changing++;
+
+        if (changing == 0)
+            return false;
+
+        if (hidden && document.getHiddenCount() + changing >= vertexCount) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_HIDE_ALL);
+            return false;
+        }
+
+        for (int i = 0; i < vertexCount; i++)
+            if (document.isHidden(i) != hidden && characterEditorManager.isInRegion(document, region, i))
+                document.setHidden(i, hidden);
 
         changed(document);
         return true;

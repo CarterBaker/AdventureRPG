@@ -24,5 +24,14 @@ layout(std140) uniform SettingsData {
     // the driver allows; tile reads measure their footprint with it. See
     // includes/TileTextures.glsl.
     float u_textureAnisotropy;
+    // Source: application Settings — runtime, user-configurable. The height
+    // of the crinkle that roughens distant macro terrain, none at 0, and the
+    // scale of its cells. See surface/includes/MacroCrinkle.glsl.
+    float u_macroCrinkle;
+    float u_macroCrinkleSize;
+    // Source: application Settings — runtime, user-configurable. 1 while
+    // macro terrain stands trees in, so the grid's own trees hand over to
+    // them far out; 0 when it is off. See trees/includes/TreeFade.glsl.
+    float u_treeHandover;
 };
 #endif

@@ -37,8 +37,9 @@ public class AnimationEditorManager extends ManagerPackage {
      * plays the clip, its history undoes every edit of it, and the bone its
      * Keys tab shows is the bone selected here and the other way round.
      * While a clip with a rig plays on a character, the viewport is a tool
-     * canvas whose tools pose the selected bone, keying it at the playhead
-     * as a drag goes, a whole drag one step. Edits, previews, panel values
+     * canvas whose tools pose the selected bone while the Recorder's Record
+     * is on, keying it at the playhead as a drag goes, a whole drag one
+     * step, as Blender keys a pose while its record button is lit. Edits, previews, panel values
      * and panel rows each live in their own branch.
      */
 
@@ -210,6 +211,16 @@ public class AnimationEditorManager extends ManagerPackage {
 
         recorderManager.openAnimation(activeDocument.getClipName());
         return isOnTimeline();
+    }
+
+    // True while the Recorder records keys; otherwise the status says to press Record
+    private boolean isRecordingKeys() {
+
+        if (recorderManager.isAutoKeying())
+            return true;
+
+        setStatusMessage(EditorSetting.ANIMATION_EDITOR_STATUS_NOT_RECORDING);
+        return false;
     }
 
     private boolean isOnTimeline() {
@@ -498,7 +509,7 @@ public class AnimationEditorManager extends ManagerPackage {
     // Opens a drag posing the selected bone at the playhead from how it stands there; false with nothing to pose
     public boolean beginPose() {
 
-        if (getToolCanvas() == null || posing || !claimTimeline())
+        if (getToolCanvas() == null || posing || !claimTimeline() || !isRecordingKeys())
             return false;
 
         pause();
@@ -513,7 +524,7 @@ public class AnimationEditorManager extends ManagerPackage {
     // Opens a drag posing an IK handle's root and middle bones at the playhead from how they stand there
     public boolean beginChainPose(RigIkChainStruct chain) {
 
-        if (getToolCanvas() == null || posing || !claimTimeline())
+        if (getToolCanvas() == null || posing || !claimTimeline() || !isRecordingKeys())
             return false;
 
         pause();

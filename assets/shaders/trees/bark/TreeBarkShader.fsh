@@ -16,10 +16,11 @@ layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
 
-// Wood standing in a chunk or mega keeps the world's axes, and fades between looks with its tree.
+// Wood standing in a chunk or mega keeps the world's axes, fades between looks with its tree, and hands over to the
+// macro terrain's stand-ins far out (TreeFade).
 
 void main() {
-    if (isTreeFaded())
+    if (isTreeFaded() || isTreeHandedOver(vWorldPos))
     discard;
 
     shadeTreeBark(

@@ -116,4 +116,7 @@ Every tool that selects many things follows one gesture set, each modifier a hel
   Shift adding and Ctrl taking away, and a press where it covers nothing clears or boxes as above.
 
 The Keys and Keys Graph tabs (keys on a curve's row or graph), the character Mesh and Weights tabs (vertices) and the World
-Editor's Select tool (hand-placed settlements and structures) follow it.
+Editor's Select tool (hand-placed settlements and structures) follow it. The character Mesh, Topology and UV tabs add
+Blender's own keys: `A` selects all, `Alt+A` none, `Ctrl+I` inverts, `Ctrl+Numpad +` and `Ctrl+Numpad -` grow and
+shrink the selection a ring of faces, `L` takes what is linked, and a click with `Alt` held takes the edge loop
+through the edge under the pointer (`CharacterEditor/LoopSelection`, `CharacterSelectionBranch.selectLoop`).
