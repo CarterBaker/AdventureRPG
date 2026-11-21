@@ -42,10 +42,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 ## The tabs
 
 - **World Editor.** Paints the biomes and places settlements and cameras on its Biomes layer, and shapes the ground on
-  its Heights layer with one Raise brush that lowers while Ctrl is held (`WorldEditor/InvertStroke`). The biome it
-  paints is chosen in the Properties tab's palette, which lists the biomes the world itself names in its `biomes`
-  field (edited with the world in the Worlds tab), shown while the Biomes layer is picked with the chosen biome's
-  fields below it (selected in the Hierarchy as the palette is shown). The Biome Planner only plans.
+  its Heights layer with one Raise brush that lowers while Ctrl is held (`WorldEditor/InvertStroke`). On either layer,
+  Move only looks: its left drag pans the view as the right drag does. The biome it paints is chosen in the Properties
+  tab's palette, which lists the biomes the world itself names in its `biomes` field (edited with the world in the
+  Worlds tab), shown while the Biomes layer is picked with the chosen biome's fields below it (selected in the
+  Hierarchy as the palette is shown). The Biome Planner only plans.
 - **Content.** Entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab.
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
   Sculpt, Weights, Paint, Rig and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
@@ -237,11 +238,12 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **Sub-voxel items, worked as a voxel modeller's.** Every part is one material and a layer in the Layers tab, added
   and deleted by its icons or the Tools tab's Parts actions (`ITEM_EDITOR_KEY_PART_ADD`, `_REMOVE`), renamed by F2.
-  The tools (`ToolCanvas.ITEM`) are Brush, Erase, Wall, Fill and Pick; Brush and Erase stamp the Brushes tab's tip on
-  the face struck, Size in sub-voxels (none is one sub-voxel, the usual way to work), each column of the tip as deep as
-  its coverage times Strength, so a soft tip thins at its feathered edge; the stamp is shown as the sub-voxels it would
-  build or dig, merged like the item. A stroke is held to the layer it began on (`ItemBrushBranch`). The mesh is
-  greedily merged by `SubVoxelManager` as it changes.
+  The tools (`ToolCanvas.ITEM`) are Brush, Wall, Fill, Pick and Move; Brush stamps the Brushes tab's tip on the face
+  struck, building, or digging while Ctrl is held (`ItemEditor/InvertStroke`), Size in sub-voxels (none is one
+  sub-voxel, the usual way to work), each column of the tip as deep as its coverage times Strength of the Depth (one
+  layer unless raised), so a soft tip thins at its feathered edge; the stamp is shown as the sub-voxels it would build or
+  dig, merged like the item. A stroke is held to the layer it began on (`ItemBrushBranch`). Move only looks: every press
+  goes to the view camera. The mesh is greedily merged by `SubVoxelManager` as it changes.
 - **Workspace items.** New, Open, Save, Revert and Delete work on `Assets/Items/<Name>.arpg`, a sub-voxel mesh file;
   Import writes `assets/mesh/items/<Name>.arpg` and makes an item naming it in the file asked for, unless content
   already names that mesh. An item of the game opens when picked in any Hierarchy tab: the item itself, the item an

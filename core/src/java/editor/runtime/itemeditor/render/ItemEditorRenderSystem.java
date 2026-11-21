@@ -199,13 +199,16 @@ public class ItemEditorRenderSystem extends SystemPackage {
 
     // Cursor \\
 
-    // Wall marks the wall it would stand; Erase over a wall marks the wall alone; Brush and Erase otherwise show their
-    // stamp; the rest mark the cube or wall struck
+    // Nothing under Move; Wall marks the wall it would stand; Brush digging over a wall marks the wall alone; Brush
+    // otherwise shows its stamp, built or dug; the rest mark the cube or wall struck
     private void pushCursor(WindowInstance window) {
+
+        if (!itemEditorManager.isActingTool())
+            return;
 
         SubVoxelHitStruct hit = itemEditorToolSystem.getHit();
         EditorTool tool = itemEditorManager.getTool();
-        boolean wallErased = tool == EditorTool.ERASE && hit.hasTarget() && hit.isTargetWall();
+        boolean wallErased = itemEditorManager.isErasing() && hit.hasTarget() && hit.isTargetWall();
 
         if (tool == EditorTool.WALL) {
 
@@ -241,7 +244,7 @@ public class ItemEditorRenderSystem extends SystemPackage {
             return;
 
         renderManager.pushRenderCall(
-                tool == EditorTool.BRUSH ? stampBuildModel : stampDigModel,
+                itemEditorManager.isErasing() ? stampDigModel : stampBuildModel,
                 sceneFbo,
                 ItemEditorSetting.DEPTH_CURSOR,
                 window);
@@ -276,7 +279,7 @@ public class ItemEditorRenderSystem extends SystemPackage {
     private void writeStampKey(ItemDocumentInstance document, SubVoxelHitStruct hit, EditorTool tool) {
 
         stampKey[0] = document.getRevision();
-        stampKey[1] = tool.ordinal();
+        stampKey[1] = tool.ordinal() * 2 + (itemEditorManager.isErasing() ? 1 : 0);
         stampKey[2] = toolManager.getOptionRevision();
         stampKey[3] = brushManager.getRevision();
         stampKey[4] = document.getSelectedPartIndex();

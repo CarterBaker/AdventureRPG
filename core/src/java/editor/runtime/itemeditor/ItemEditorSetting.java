@@ -40,6 +40,9 @@ public class ItemEditorSetting {
     // Mouse
     public static final int BUTTON_APPLY = Buttons.LEFT;
 
+    // Shortcuts
+    public static final String SHORTCUT_INVERT_STROKE = "ItemEditor/InvertStroke";
+
     // Menus
     public static final String MENU_TOOLBAR = "editor/ItemEditor/Toolbar";
     public static final int ENTRY_STATUS = 0;

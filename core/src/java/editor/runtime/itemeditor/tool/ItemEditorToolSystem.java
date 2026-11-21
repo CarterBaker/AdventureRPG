@@ -5,6 +5,7 @@ import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.itemeditorpipeline.itemeditormanager.ItemEditorManager;
+import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.runtime.itemeditor.ItemEditorSetting;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
@@ -16,10 +17,11 @@ public class ItemEditorToolSystem extends SystemPackage {
     /*
      * Casts the pointer into the active item each frame and applies the tool
      * chosen for the item on a press that lands on it, claiming the press
-     * from the view camera; a press on nothing is the camera's. Brush and
-     * Erase then stroke for as long as the button is held, the ray handed on
-     * every frame so the stroke follows the layer it began on, and end when
-     * it is let go. Nothing is cast while the pointer is off the viewport or
+     * from the view camera; a press on nothing is the camera's, and so is
+     * every press under Move, which only looks. Brush builds, or digs while
+     * Ctrl (InvertStroke) is held, then strokes for as long as the button is
+     * held, the ray handed on every frame so the stroke follows the layer it
+     * began on, and ends when it is let go. Nothing is cast while the pointer is off the viewport or
      * the camera holds a drag. The last hit is kept for the cursor, and a
      * material dropped on the window is laid on what the pointer strikes.
      */
@@ -29,6 +31,10 @@ public class ItemEditorToolSystem extends SystemPackage {
     private SubVoxelManager subVoxelManager;
     private EditorInputSystem editorInputSystem;
     private ViewCameraSystem viewCameraSystem;
+    private ShortcutManager shortcutManager;
+
+    // Shortcuts
+    private int invertStrokeShortcutID;
 
     // Pointer
     private SubVoxelHitStruct hit;
@@ -55,6 +61,13 @@ public class ItemEditorToolSystem extends SystemPackage {
         this.subVoxelManager = get(SubVoxelManager.class);
         this.editorInputSystem = get(EditorInputSystem.class);
         this.viewCameraSystem = get(ViewCameraSystem.class);
+        this.shortcutManager = get(ShortcutManager.class);
+    }
+
+    @Override
+    protected void start() {
+        this.invertStrokeShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                ItemEditorSetting.SHORTCUT_INVERT_STROKE);
     }
 
     // Update \\
@@ -71,12 +84,17 @@ public class ItemEditorToolSystem extends SystemPackage {
             return;
         }
 
+        itemEditorManager.setInverted(shortcutManager.isHeld(invertStrokeShortcutID, context.getWindow()));
+
         if (!editorInputSystem.isPointerActive()
                 || !itemEditorManager.hasActiveDocument()
                 || viewCameraSystem.isDragging())
             return;
 
         castPointer(context.getWindow(), rawInput);
+
+        if (!itemEditorManager.isActingTool())
+            return;
 
         if (!hit.hasHit() || !editorInputSystem.takeClick(ItemEditorSetting.BUTTON_APPLY))
             return;

@@ -2826,6 +2826,7 @@ public class EditorSetting {
     public static final String TOOL_OPTION_LENGTH = "Length (cm)";
     public static final String TOOL_OPTION_WIDTH = "Width (mm)";
     public static final String TOOL_OPTION_SHAPE = "Shape";
+    public static final String TOOL_OPTION_DEPTH = "Depth";
     public static final String[] TOOL_SHAPE_NAMES = { "Sphere", "Cube", "Cylinder", "Plane" };
     public static final int TOOL_SHAPE_DEFAULT = 0;
     public static final String[] TOOL_OPTION_SWITCH_NAMES = { "Off", "On" };
@@ -2840,6 +2841,10 @@ public class EditorSetting {
     public static final float TOOL_ITEM_SIZE_MAX = 32f;
     public static final float TOOL_ITEM_SIZE_STEP = 1f;
     public static final float TOOL_ITEM_SIZE_DEFAULT = 0f;
+    public static final float TOOL_ITEM_DEPTH_MIN = 1f;
+    public static final float TOOL_ITEM_DEPTH_MAX = 32f;
+    public static final float TOOL_ITEM_DEPTH_STEP = 1f;
+    public static final float TOOL_ITEM_DEPTH_DEFAULT = 1f;
     public static final float TOOL_SCREEN_SIZE_MIN = 4f;
     public static final float TOOL_SCREEN_SIZE_MAX = 400f;
     public static final float TOOL_SCREEN_SIZE_STEP = 5f;
