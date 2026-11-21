@@ -36,8 +36,10 @@ public class CharacterEditorRigSystem extends SystemPackage implements Character
      * twin turned the mirrored way while mirroring, Scale grows or shrinks
      * the bone's size by how
      * far the pointer travels from the joint, Place stands a new child of
-     * the selected bone where it clicks, level with that bone's joint, and
-     * Erase removes the bone clicked. A press on a handle of the transform
+     * the selected bone where it clicks, level with that bone's joint,
+     * Erase removes the bone clicked, and Collider gives the bone clicked a
+     * collider, or takes its first off while Ctrl (EraseCollider) is held,
+     * through the Tools tab's own collider actions. A press on a handle of the transform
      * gizmo (CharacterGizmoSystem) drags the selected bone held to that
      * axis: Move along it, Rotate about it, Scale its size along it. A press
      * that does none of these is left to the view camera. A drag is one undo step: letting go
@@ -57,6 +59,7 @@ public class CharacterEditorRigSystem extends SystemPackage implements Character
 
     // Shortcuts
     private int snapShortcutID;
+    private int eraseColliderShortcutID;
 
     // Drag
     private EditorTool dragTool;
@@ -125,6 +128,8 @@ public class CharacterEditorRigSystem extends SystemPackage implements Character
     @Override
     protected void start() {
         this.snapShortcutID = shortcutManager.getShortcutIDFromShortcutName(CharacterEditorSetting.SHORTCUT_SNAP);
+        this.eraseColliderShortcutID = shortcutManager.getShortcutIDFromShortcutName(
+                CharacterEditorSetting.SHORTCUT_ERASE_COLLIDER);
     }
 
     // Update \\
@@ -193,6 +198,13 @@ public class CharacterEditorRigSystem extends SystemPackage implements Character
         }
 
         characterEditorManager.selectRigBone(picked);
+
+        if (tool == EditorTool.COLLIDER) {
+            characterEditorManager.act(shortcutManager.isHeld(eraseColliderShortcutID, context.getWindow())
+                    ? EditorSetting.CHARACTER_RIG_KEY_COLLIDER_REMOVE
+                    : EditorSetting.CHARACTER_RIG_KEY_COLLIDER_ADD);
+            return;
+        }
 
         if (CharacterEditorTransform.forTool(tool) != null)
             startDrag(tool, EngineSetting.INDEX_NOT_FOUND, mouseX, mouseY);
