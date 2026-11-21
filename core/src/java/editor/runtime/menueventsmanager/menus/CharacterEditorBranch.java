@@ -334,6 +334,10 @@ public class CharacterEditorBranch extends BranchPackage {
         characterEditorManager.select(key);
     }
 
+    public void toggleRowEye(String key) {
+        characterEditorManager.toggleRowEye(key);
+    }
+
     public void decreaseRow(String key) {
         characterEditorManager.step(key, -1);
     }

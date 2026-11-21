@@ -85,6 +85,7 @@ public class CharacterViewPanelStruct extends StructPackage {
 
             if (shown.getKind() != row.getKind()
                     || shown.isSelected() != row.isSelected()
+                    || shown.isShown() != row.isShown()
                     || !shown.getKey().equals(row.getKey())
                     || !shown.getLabel().equals(row.getLabel())
                     || !shown.getPairKey().equals(row.getPairKey())

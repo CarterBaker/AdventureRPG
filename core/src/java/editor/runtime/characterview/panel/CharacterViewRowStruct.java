@@ -8,7 +8,8 @@ public class CharacterViewRowStruct extends StructPackage {
     /*
      * One row of a character tool's side panel: its kind, the key every one
      * of its buttons hands back to the tool, the label it shows, the value
-     * beside it for numbers and choices, and whether an item is selected. A
+     * beside it for numbers and choices, whether an item is selected, and
+     * whether what an eye item names is shown. A
      * ranged number also carries its amount, the range it may take and the
      * step it moves by, so its slider spans that range instead of a count of
      * steps about where the value stood. A pair also carries the key, label
@@ -23,6 +24,7 @@ public class CharacterViewRowStruct extends StructPackage {
     private final String label;
     private final String value;
     private final boolean selected;
+    private final boolean shown;
 
     // Range
     private final float amount;
@@ -43,6 +45,7 @@ public class CharacterViewRowStruct extends StructPackage {
             String label,
             String value,
             boolean selected,
+            boolean shown,
             float amount,
             float rangeMin,
             float rangeMax,
@@ -59,6 +62,7 @@ public class CharacterViewRowStruct extends StructPackage {
         this.label = label;
         this.value = value;
         this.selected = selected;
+        this.shown = shown;
 
         // Range
         this.amount = amount;
@@ -80,6 +84,12 @@ public class CharacterViewRowStruct extends StructPackage {
         return unranged(CharacterViewRowKind.ITEM, key, label, "", selected);
     }
 
+    // An item with an eye beside it, open while what it names is shown
+    public static CharacterViewRowStruct eyeItem(String key, String label, boolean selected, boolean shown) {
+        return new CharacterViewRowStruct(
+                CharacterViewRowKind.EYE_ITEM, key, label, "", selected, shown, 0f, 0f, 0f, 0f, "", "", "");
+    }
+
     public static CharacterViewRowStruct number(String key, String label, String value) {
         return unranged(CharacterViewRowKind.NUMBER, key, label, value, false);
     }
@@ -94,7 +104,7 @@ public class CharacterViewRowStruct extends StructPackage {
             float rangeMax,
             float rangeStep) {
         return new CharacterViewRowStruct(
-                CharacterViewRowKind.NUMBER, key, label, value, false, amount, rangeMin, rangeMax, rangeStep,
+                CharacterViewRowKind.NUMBER, key, label, value, false, true, amount, rangeMin, rangeMax, rangeStep,
                 "", "", "");
     }
 
@@ -119,7 +129,8 @@ public class CharacterViewRowStruct extends StructPackage {
             String pairLabel,
             String pairValue) {
         return new CharacterViewRowStruct(
-                CharacterViewRowKind.PAIR, key, label, value, false, 0f, 0f, 0f, 0f, pairKey, pairLabel, pairValue);
+                CharacterViewRowKind.PAIR, key, label, value, false, true, 0f, 0f, 0f, 0f, pairKey, pairLabel,
+                pairValue);
     }
 
     private static CharacterViewRowStruct unranged(
@@ -128,7 +139,7 @@ public class CharacterViewRowStruct extends StructPackage {
             String label,
             String value,
             boolean selected) {
-        return new CharacterViewRowStruct(kind, key, label, value, selected, 0f, 0f, 0f, 0f, "", "", "");
+        return new CharacterViewRowStruct(kind, key, label, value, selected, true, 0f, 0f, 0f, 0f, "", "", "");
     }
 
     // Range \\
@@ -175,6 +186,10 @@ public class CharacterViewRowStruct extends StructPackage {
 
     public boolean isSelected() {
         return selected;
+    }
+
+    public boolean isShown() {
+        return shown;
     }
 
     public String getPairKey() {

@@ -189,10 +189,11 @@ class CharacterRowBranch extends BranchPackage {
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_BONES));
 
         for (int i = 0; i < rigHandle.getBoneCount(); i++)
-            rows.add(CharacterViewRowStruct.item(
+            rows.add(CharacterViewRowStruct.eyeItem(
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_EDITOR_KEY_BONE, i),
                     rigHandle.getBone(i).getName(),
-                    i == characterEditorManager.getSelectedBoneIndex()));
+                    i == characterEditorManager.getSelectedBoneIndex(),
+                    characterEditorManager.isBoneEyeOpen(rigHandle.getBone(i).getName())));
     }
 
     // One row per body slot a worn model may be worn in, stepping the item every preview wears there

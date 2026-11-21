@@ -59,6 +59,7 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 public class CharacterEditorManager extends ManagerPackage {
 
@@ -181,6 +182,9 @@ public class CharacterEditorManager extends ManagerPackage {
     private float proportionalRadius;
     private float snapStep;
 
+    // Hidden Bones — the bones whose eye in the Properties tab is shut, by name, each hiding every bone under it too
+    private ObjectOpenHashSet<String> hiddenBoneNames;
+
     // Parts
     private CharacterEditorShape partShape;
     private float partSize;
@@ -285,6 +289,9 @@ public class CharacterEditorManager extends ManagerPackage {
         this.regionKey2Side = new Object2ObjectOpenHashMap<>();
         this.proportionalRadius = EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_DEFAULT;
         this.snapStep = EditorSetting.CHARACTER_EDITOR_MESH_SNAP_DEFAULT;
+
+        // Hidden Bones
+        this.hiddenBoneNames = new ObjectOpenHashSet<>();
 
         // Parts
         this.partShape = CharacterEditorShape.BOX;
@@ -1192,13 +1199,78 @@ public class CharacterEditorManager extends ManagerPackage {
     public boolean isBoneShown(CharacterRegionStruct region, RigHandle rigHandle, int boneIndex) {
         return characterRegionBranch.holdsBone(region, rigHandle, boneIndex)
                 && (!region.isSided()
-                || getSide(region).namesBone(rigHandle.getBone(boneIndex).getName()));
+                || getSide(region).namesBone(rigHandle.getBone(boneIndex).getName()))
+                && !isBoneHidden(rigHandle, boneIndex);
+    }
+
+    // Whether a bone's eye or the eye of any bone above it is shut
+    boolean isBoneHidden(RigHandle rigHandle, int boneIndex) {
+
+        for (int bone = boneIndex; bone != EngineSetting.INDEX_NOT_FOUND;
+                bone = rigHandle.getBone(bone).getParentIndex())
+            if (hiddenBoneNames.contains(rigHandle.getBone(bone).getName()))
+                return true;
+
+        return false;
+    }
+
+    private boolean isRigBoneHidden(int boneIndex) {
+
+        for (int bone = boneIndex; bone != EngineSetting.INDEX_NOT_FOUND; bone = characterRigBranch.getParent(bone))
+            if (hiddenBoneNames.contains(characterRigBranch.getBoneName(bone)))
+                return true;
+
+        return false;
+    }
+
+    // The bone an eye item names: a bone of the rig being edited in the Rig tab, of the posed rig elsewhere; null for
+    // a row naming no bone
+    private String resolveEyeBoneName(String key, RigHandle rigHandle) {
+
+        String keyName = CharacterViewUtility.getKeyName(key);
+        int boneIndex = CharacterViewUtility.getKeyIndex(key);
+
+        if (keyName.equals(EditorSetting.CHARACTER_RIG_KEY_BONE))
+            return characterRigBranch.getBoneName(boneIndex);
+
+        if (keyName.equals(EditorSetting.CHARACTER_EDITOR_KEY_BONE) && rigHandle != null)
+            return rigHandle.getBone(boneIndex).getName();
+
+        return null;
+    }
+
+    // A bone's own eye in the Properties tab: open unless it was shut, whatever the bones above it show
+    public boolean isBoneEyeOpen(String boneName) {
+        return !hiddenBoneNames.contains(boneName);
+    }
+
+    // An eye item's eye turned in the Properties tab — a bone's: it and every bone under it hidden in the viewports
+    // with the vertices they carry most, or shown again, the bones below keeping their own eyes as a hidden group's
+    // layers do
+    public void toggleRowEye(String key) {
+
+        RigHandle rigHandle = resolveRegionRig();
+        String boneName = resolveEyeBoneName(key, rigHandle);
+
+        if (boneName == null || characterSculptBranch.isTransforming())
+            return;
+
+        if (!hiddenBoneNames.remove(boneName))
+            hiddenBoneNames.add(boneName);
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document != null && rigHandle != null && rigHandle.hasBone(boneName)
+                && characterSelectionBranch.setCarriedHidden(document, rigHandle, rigHandle.getBoneIndex(boneName)))
+            characterMeshBranch.upload(document);
+
+        notifyRegionsShown();
     }
 
     // Whether a bone of the rig being edited is shown in a region: one it holds, on the side shown where it is sided
     public boolean isRigBoneShown(CharacterRegionStruct region, int boneIndex) {
 
-        if (!isRigBoneInRegion(region, boneIndex))
+        if (!isRigBoneInRegion(region, boneIndex) || isRigBoneHidden(boneIndex))
             return false;
 
         return !isSided(region) || getSide(region).namesBone(characterRigBranch.getBoneName(boneIndex));

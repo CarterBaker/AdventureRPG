@@ -4,7 +4,8 @@ public enum CharacterViewRowKind {
 
     /*
      * The kinds of row a character tool's side panel lists. A header names
-     * the section below it; an item is a selectable entry; a number steps
+     * the section below it; an item is a selectable entry, and an eye item
+     * one with an eye beside it that shows or hides what it names; a number steps
      * down and up and its value opens for typing; a text is a value that
      * only opens for typing, such as a name; a choice steps back and forth
      * through its options; an action is a single button; a pair is two
@@ -14,6 +15,7 @@ public enum CharacterViewRowKind {
 
     HEADER,
     ITEM,
+    EYE_ITEM,
     NUMBER,
     TEXT,
     CHOICE,

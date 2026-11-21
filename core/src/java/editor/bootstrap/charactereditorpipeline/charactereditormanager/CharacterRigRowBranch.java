@@ -15,8 +15,9 @@ class CharacterRigRowBranch extends BranchPackage {
     /*
      * Lists the rows of the Rig panels. The left panel holds every bone of
      * the rig as it is being edited, set in under its parent and marked when
-     * it was added since the editor started, the selected one highlighted;
-     * the right panel holds the selected bone's name while it can still take
+     * it was added since the editor started, the selected one highlighted,
+     * each with an eye that hides it, the bones under it and the vertices
+     * they carry; the right panel holds the selected bone's name while it can still take
      * a new one, its parent, its bind position, rotation and size, the
      * stiffness, damping, gravity, drag and radius of the spring chain it
      * belongs to with a Yes or No for each collider the chain may rest
@@ -31,6 +32,7 @@ class CharacterRigRowBranch extends BranchPackage {
     private CharacterRigBranch characterRigBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
     private CharacterColliderBranch characterColliderBranch;
+    private CharacterEditorManager characterEditorManager;
 
     // Scratch
     private StringBuilder labelScratch;
@@ -49,6 +51,7 @@ class CharacterRigRowBranch extends BranchPackage {
         this.characterRigBranch = get(CharacterRigBranch.class);
         this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
         this.characterColliderBranch = get(CharacterColliderBranch.class);
+        this.characterEditorManager = get(CharacterEditorManager.class);
     }
 
     // List \\
@@ -58,10 +61,11 @@ class CharacterRigRowBranch extends BranchPackage {
         rows.add(CharacterViewRowStruct.header(EditorSetting.CHARACTER_EDITOR_HEADER_BONES));
 
         for (int i = 0; i < characterRigBranch.getBoneCount(); i++)
-            rows.add(CharacterViewRowStruct.item(
+            rows.add(CharacterViewRowStruct.eyeItem(
                     CharacterViewUtility.toKey(EditorSetting.CHARACTER_RIG_KEY_BONE, i),
                     toBoneLabel(i),
-                    i == characterRigBranch.getSelectedBone()));
+                    i == characterRigBranch.getSelectedBone(),
+                    characterEditorManager.isBoneEyeOpen(characterRigBranch.getBoneName(i))));
     }
 
     // A bone's name set in one step per parent above it, marked when nothing loaded is laid out by it yet
