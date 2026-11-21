@@ -7,9 +7,12 @@ import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.animationeditorpipeline.animationeditormanager.AnimationEditorManager;
 import editor.bootstrap.animationeditorpipeline.util.AnimationEditorChannel;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.animationeditor.AnimationEditorSetting;
+import editor.runtime.characterview.gizmo.CharacterGizmoSource;
+import editor.runtime.characterview.gizmo.CharacterGizmoSystem;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
@@ -21,7 +24,7 @@ import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 
-public class AnimationEditorPoseSystem extends SystemPackage {
+public class AnimationEditorPoseSystem extends SystemPackage implements CharacterGizmoSource {
 
     /*
      * Turns this tab's pointer into keys while a clip plays on a character,
@@ -31,7 +34,9 @@ public class AnimationEditorPoseSystem extends SystemPackage {
      * camera. A turn
      * follows the pointer about the joint on screen, about the line of sight
      * or the world axis X, Y or Z holds it to, and is carried into the bone's
-     * own Euler rotation exactly, the nearest form to the one it replaces; a
+     * own Euler rotation exactly, the nearest form to the one it replaces (a
+     * press on a handle of the transform gizmo, CharacterGizmoSystem, drags
+     * the selected bone held to that handle's axis from the start); a
      * move carries the joint across the plane facing the camera, or along a
      * held axis, into its parent's space; a scale grows the bone by how far
      * the pointer travels from the joint, on every axis or the one held.
@@ -47,6 +52,7 @@ public class AnimationEditorPoseSystem extends SystemPackage {
     private ViewCameraSystem viewCameraSystem;
     private AnimationEditorManager animationEditorManager;
     private CharacterViewPoseSystem characterViewPoseSystem;
+    private CharacterGizmoSystem characterGizmoSystem;
     private ShortcutManager shortcutManager;
 
     // Shortcuts
@@ -153,7 +159,13 @@ public class AnimationEditorPoseSystem extends SystemPackage {
         this.viewCameraSystem = get(ViewCameraSystem.class);
         this.animationEditorManager = get(AnimationEditorManager.class);
         this.characterViewPoseSystem = get(CharacterViewPoseSystem.class);
+        this.characterGizmoSystem = get(CharacterGizmoSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        characterGizmoSystem.addSource(this);
     }
 
     @Override
@@ -199,6 +211,19 @@ public class AnimationEditorPoseSystem extends SystemPackage {
     private void press(float mouseX, float mouseY) {
 
         EditorTool tool = animationEditorManager.getPoseTool();
+        int gizmoAxis = characterGizmoSystem.getHoveredAxis();
+
+        if (gizmoAxis != EngineSetting.INDEX_NOT_FOUND && getGizmoTransform() != null) {
+
+            editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
+            startDrag(tool, mouseX, mouseY);
+
+            if (dragTool != null)
+                this.axisLock = gizmoAxis;
+
+            return;
+        }
+
         int picked = pickJoint(mouseX, mouseY, tool == EditorTool.IK);
 
         if (picked == EngineSetting.INDEX_NOT_FOUND)
@@ -552,6 +577,27 @@ public class AnimationEditorPoseSystem extends SystemPackage {
                 channels[AnimationEditorChannel.ROTATION.toPoseIndex(0)],
                 channels[AnimationEditorChannel.ROTATION.toPoseIndex(1)],
                 channels[AnimationEditorChannel.ROTATION.toPoseIndex(2)]);
+    }
+
+    // Gizmo \\
+
+    // The transform the pose tool drags on the selected bone while no drag is held; null otherwise
+    @Override
+    public CharacterEditorTransform getGizmoTransform() {
+        return dragTool == null && characterViewPoseSystem.hasSubject()
+                && animationEditorManager.getToolCanvas() != null
+                && animationEditorManager.getSelectedBoneIndex() != EngineSetting.INDEX_NOT_FOUND
+                ? CharacterEditorTransform.forTool(animationEditorManager.getPoseTool())
+                : null;
+    }
+
+    @Override
+    public boolean resolveGizmoPivot(Vector3 out) {
+        CharacterPoseUtility.getTranslation(
+                characterViewPoseSystem.getAnimationStateHandle().getWorldMatrix(
+                        animationEditorManager.getSelectedBoneIndex()),
+                out);
+        return true;
     }
 
     // Utility \\

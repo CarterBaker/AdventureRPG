@@ -538,6 +538,8 @@ One line per session that changed this file: the date, what was added or removed
   `mesh/editor/CharacterViewBoneSphere.arpg`, the octahedral bone and joint sphere markers.
 - 2026-11-20: Viewport gizmos. Added `menus/editor/ViewGizmo.arpg` (the axis gizmo every 3D viewport shows);
   regenerated `menus/editor/ShipViewer.arpg` (its own gizmo removed).
+- 2026-11-21: Triangles. Regenerated `shortcuts/CharacterEditor.arpg` (Triangulate Faces, Ctrl+T; Triangles to Quads,
+  Alt+J).
 
 ## Textures and Sprites (2431 files)
 

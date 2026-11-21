@@ -1030,10 +1030,10 @@ class CharacterGroomBranch extends BranchPackage {
 
         out.set(0f, 0f, 0f);
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int a = mesh.getFaceVertex(faceIndex, c);
-            int b = mesh.getFaceVertex(faceIndex, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+            int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c));
 
             out.add(
                     (mesh.getY(a) - mesh.getY(b)) * (mesh.getZ(a) + mesh.getZ(b)),
@@ -1148,7 +1148,7 @@ class CharacterGroomBranch extends BranchPackage {
 
             boolean card = true;
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                 card &= cardVertices.getBoolean(mesh.getFaceVertex(f, c));
 
             faceFlags.add(card);
@@ -1161,7 +1161,7 @@ class CharacterGroomBranch extends BranchPackage {
             unused.set(v, true);
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                 unused.set(mesh.getFaceVertex(f, c), false);
 
         mesh.removeVertices(unused, new IntArrayList());

@@ -594,7 +594,7 @@ class CharacterPlacementBranch extends BranchPackage {
 
         int heaviest = EngineSetting.INDEX_NOT_FOUND;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int v = mesh.getFaceVertex(faceIndex, c);
 

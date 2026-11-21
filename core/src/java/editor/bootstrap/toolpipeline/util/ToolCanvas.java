@@ -276,6 +276,12 @@ public enum ToolCanvas {
                 action(EditorSetting.CHARACTER_EDITOR_LABEL_SUBDIVIDE, EditorSetting.CHARACTER_EDITOR_KEY_SUBDIVIDE),
                 action(EditorSetting.CHARACTER_TOPOLOGY_LABEL_FLIP_FACES, EditorSetting.CHARACTER_TOPOLOGY_KEY_FLIP_FACES),
                 action(
+                        EditorSetting.CHARACTER_TOPOLOGY_LABEL_TRIANGULATE,
+                        EditorSetting.CHARACTER_TOPOLOGY_KEY_TRIANGULATE),
+                action(
+                        EditorSetting.CHARACTER_TOPOLOGY_LABEL_JOIN_TRIANGLES,
+                        EditorSetting.CHARACTER_TOPOLOGY_KEY_JOIN_TRIANGLES),
+                action(
                         EditorSetting.CHARACTER_EDITOR_LABEL_DELETE_FACES,
                         EditorSetting.CHARACTER_EDITOR_KEY_DELETE_FACES));
     }

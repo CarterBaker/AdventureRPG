@@ -403,10 +403,10 @@ class CharacterShapeBranch extends BranchPackage {
         edges.clear();
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int a = mesh.getFaceVertex(f, c);
-                int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                 if (!isRepeatedCorner(f, c))
                     faceStarts.set(a + 1, faceStarts.getInt(a + 1) + 1);
@@ -432,7 +432,7 @@ class CharacterShapeBranch extends BranchPackage {
         shares.size(vertexCount * 2);
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                 if (!isRepeatedCorner(f, c))
                     placeRun(vertexFaces, faceStarts, mesh.getFaceVertex(f, c), 0, f);
 

@@ -152,7 +152,7 @@ class StampThumbnailBranch extends BranchPackage {
 
         for (int f = 0; f < mesh.getFaceCount(); f++) {
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int vertexIndex = mesh.getFaceVertex(f, c);
 

@@ -12,7 +12,9 @@ public class GltfImportStruct extends StructPackage {
      * (null where it names none, as outside art does), the joints its skin
      * weighs onto with the joint each hangs from and where each stands in
      * the world, whether it is skinned at all, its morph names, and its
-     * geometry as glTF vertices with the quads rebuilt from its triangles.
+     * geometry as glTF vertices with its faces rebuilt from its triangles:
+     * four vertex slots each (a triangle's fourth repeating its third), its
+     * corner count and its material.
      */
 
     // Model
@@ -34,6 +36,7 @@ public class GltfImportStruct extends StructPackage {
     int[] joints;
     float[][] morphDeltas;
     int[] quads;
+    int[] quadCorners;
     int[] quadMaterials;
 
     // Accessible \\

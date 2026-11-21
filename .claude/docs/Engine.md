@@ -60,8 +60,10 @@ writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
   its opposite) and whose middle centres it; never a gizmo of a tool's own.
 - **Selections carry the transform gizmo.** While Move, Rotate or Scale is the tool, red, green and blue handles stand
   on the selection (arrows, rings or cube-ended shafts, the tool choosing which, a fixed size on screen), and a press
-  on one drags the selection held to its axis through the tool's own transform. The character Mesh tab's is
-  `CharacterEditorGizmoSystem`, drawn through `CharacterViewRenderSystem.addGizmoSegment` / `addGizmoCube`
+  on one drags the selection held to its axis through the tool's own transform. Every character viewport creates
+  `CharacterGizmoSystem` (`editor.runtime.characterview.gizmo`) before the systems that drag, each of which implements
+  `CharacterGizmoSource` and adds itself as it wakes: the Mesh tab's vertices, the Rig tab's bone and the Animation
+  Editor's posed bone so far. It is drawn through `CharacterViewRenderSystem.addGizmoSegment` / `addGizmoCube`
   (`EditorSetting.TRANSFORM_GIZMO_*`); a tool that moves a selection uses the same handles and settings.
 - **Editor tools live in the Tools panel.** A tool is an `EditorTool` on the window's `ToolCanvas`; a one-off
   operation is a `ToolActionStruct` in the canvas's action groups, run by its context through `ToolActionProvider`

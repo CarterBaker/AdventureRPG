@@ -312,8 +312,10 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   selected) and **Dissolve Loop** (Maya's Delete Edge Loop: the loop walked straight on through every vertex four quads
   meet at and taken away with its vertices, the quads either side joined in pairs; it must close or run to open edges,
   since a pole would leave a face of more than four corners). Its action groups are Faces (Make Face, Merge, Merge by
-  Distance, Subdivide, Flip Faces, Delete Faces) and Clean Up (Delete Degenerate Faces, Select Poles, Select Triangles,
-  Select Non-Manifold), then Selection; all of it is `CharacterEdgeBranch` but Make Face, Merge and Subdivide
+  Distance, Subdivide, Flip Faces, Triangulate Faces (Ctrl+T: every selected quad split along its shorter diagonal),
+  Triangles to Quads (Alt+J: selected triangle pairs sharing an edge, texture and zone joined), Delete Faces) and
+  Clean Up (Delete Degenerate Faces, Select Poles, Select Triangles, Select Non-Manifold), then Selection; all of it is
+  `CharacterEdgeBranch` but Make Face, Merge and Subdivide
   (`CharacterSculptBranch`). Every edit honours Mirror (the twin edge, ring or loop the mirrored way, skipped where it
   is the same one or runs into it), is one undo step, and builds the faces about each edge once
   (`buildEdgeFaces`), never per face. New vertices blend through `CharacterTopologyBranch.addBetween`; faces keep their
@@ -458,9 +460,11 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   stepping through what they may name. Make, duplicate, save, revert and delete them through the File menu; copy a
   gender to add one (its Copy button names the new gender). Every gender of a race must still name the same rig.
 - **Mesh format** (`RiggedMeshArpgUtility`): a rigged mesh file holds a `mesh` object of typed arrays (see
-  `.claude/docs/ARPG.md`), quads still the unit: `positions` (each distinct vertex once), `bones` (the bone names the
+  `.claude/docs/ARPG.md`) of quads and triangles: `positions` (each distinct vertex once), `bones` (the bone names the
   file uses, resolved against the rig by name at load) with `influence_counts`, `influence_bones` and
-  `influence_weights`, `quads` (four vertex numbers a face) beside `quad_textures` and `quad_zones` (numbers into the
+  `influence_weights`, `quads` (four vertex slots a face, a triangle's fourth repeating its third), `face_corners`
+  (each face's corner count, 3 or 4, written only for a mesh holding triangles, so an all-quad file is unchanged)
+  beside `quad_textures` and `quad_zones` (numbers into the
   `textures` and `zones` name lists; `MeshZone`: skin, eye, brow, lash, hair, cloth (dyed the cloth color), mouth,
   teeth, gear (its own texture untinted, for armor)), `quad_uv_flags`
   (bit 0 the face authors its UVs, bits 1 to 4 its corners pinned for unwrapping,
@@ -910,7 +914,8 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   body's rim (`CharacterLoopUtility`: loops run as the faces beside them wind): rims of as many vertices pairing within
   `CHARACTER_STAMP_WELD_SHARE` of the radius are welded vertex to vertex at their midpoints, weights, masks and shape
   keys blended, the rim marked as a seam; any others are bridged, walked along both rims by length, quads where they
-  keep pace (`CHARACTER_STAMP_PACE_SHARE`) and triangles held as quads with one corner doubled where one steps alone,
+  keep pace (`CHARACTER_STAMP_PACE_SHARE`) and triangles where one steps alone (laid with one corner doubled and
+  settled into triangles as the edit ends),
   the strip textured and laid out in UV as the body's face beside it, the part's rim marked as a seam. A part cut from
   the same body back into its own hole welds exactly. Cards (hair-zone faces) are strands over the surface, never the
   surface: their rims are never loops (`CharacterLoopUtility.isSurface`), a hole never starts on one, and a hole cuts
@@ -977,6 +982,14 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
 - Rotation and projection math shared by every viewport gesture: `CharacterPoseUtility`.
 
 ## Traps
+
+- **Faces are quads or triangles** (`RiggedMeshStruct.getFaceCornerCount`, `isTriangle`, `getNextCorner`): walk a
+  face's corners up to its count and step round it with `getNextCorner`, never `% QUAD_VERTEX_COUNT`. A triangle keeps
+  four slots, its fourth repeating its third (`setFaceVertex` and `setFaceUV` on corner 2 keep it so), so storage stays
+  four slots a face. An edit may lay a triangle as a quad with one corner doubled, the way the older tools do;
+  `CharacterMeshBranch.finishEdit` settles every such face into a true triangle (`settleTriangles`), and a tool
+  rewriting a triangle as four slots first sets it back to a quad (`setFaceCornerCount`). Quad-only operations (Loop
+  Cut, Dissolve Loop, the topology brush's refine) stop at or refuse triangles.
 
 - **A joined part undoes with the rig.** Its mesh step holds the rig as it stood before and after
   (`CharacterMeshHistoryStruct.getRigRestore` / `getRigExpected`); undo and redo put the rig back first, through

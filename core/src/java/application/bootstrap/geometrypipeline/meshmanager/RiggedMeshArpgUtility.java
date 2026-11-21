@@ -26,7 +26,9 @@ class RiggedMeshArpgUtility extends EngineUtility {
      * quad. "positions" lists each distinct vertex once; "bones" names the
      * bones the file weighs onto, resolved against the rig by name at load,
      * with "influence_counts" per vertex over the runs of "influence_bones"
-     * and "influence_weights"; "quads" indexes four vertices per face beside
+     * and "influence_weights"; "quads" indexes four vertex slots per face
+     * (a triangle's fourth repeating its third) and, only in a mesh holding
+     * triangles, "face_corners" each face's corner count, 3 or 4, beside
      * "quad_textures" and "quad_zones", indices into the "textures" and
      * "zones" name lists, "quad_uv_flags" marking the faces that author the
      * eight floats they take in "quad_uvs" (and, in the bits above, the
@@ -107,6 +109,7 @@ class RiggedMeshArpgUtility extends EngineUtility {
         ArpgBufferStruct quadZones = ArpgUtility.validateBuffer(compactArpg, "quad_zones");
         ArpgBufferStruct uvFlags = ArpgUtility.validateBuffer(compactArpg, "quad_uv_flags");
         ArpgBufferStruct uvs = ArpgUtility.validateBuffer(compactArpg, "quad_uvs", ArpgBufferType.FLOAT32);
+        ArpgBufferStruct faceCorners = ArpgUtility.getBuffer(compactArpg, "face_corners");
         ArpgArrayStruct texturesArpg = ArpgUtility.validateArray(compactArpg, "textures");
         ArpgArrayStruct zonesArpg = ArpgUtility.validateArray(compactArpg, "zones");
         int vertexCount = positions.size() / EngineSetting.RIGGED_MESH_POSITION_FLOATS;
@@ -117,7 +120,8 @@ class RiggedMeshArpgUtility extends EngineUtility {
                 || quads.size() % EngineSetting.QUAD_VERTEX_COUNT != 0
                 || quadTextures.size() != faceCount
                 || quadZones.size() != faceCount
-                || uvFlags.size() != faceCount)
+                || uvFlags.size() != faceCount
+                || faceCorners != null && faceCorners.size() != faceCount)
             throwException("Rigged mesh blocks do not agree on its vertex and quad counts. File: " + sourceName);
 
         int[] textures = new int[texturesArpg.size()];
@@ -147,12 +151,24 @@ class RiggedMeshArpgUtility extends EngineUtility {
                 throwException("Rigged mesh quad " + f + " names a texture or zone the file does not list. File: "
                         + sourceName);
 
-            int faceIndex = mesh.addFace(
-                    validateVertex(mesh, quads.getInt(base), sourceName),
-                    validateVertex(mesh, quads.getInt(base + 1), sourceName),
-                    validateVertex(mesh, quads.getInt(base + 2), sourceName),
-                    validateVertex(mesh, quads.getInt(base + 3), sourceName),
-                    textures[texture]);
+            int corners = faceCorners != null ? faceCorners.getInt(f) : EngineSetting.QUAD_VERTEX_COUNT;
+
+            if (corners != EngineSetting.QUAD_VERTEX_COUNT && corners != EngineSetting.TRIANGLE_VERTEX_COUNT)
+                throwException("Rigged mesh face " + f + " has " + corners + " corners; a face takes 3 or 4. File: "
+                        + sourceName);
+
+            int faceIndex = corners == EngineSetting.TRIANGLE_VERTEX_COUNT
+                    ? mesh.addTriangle(
+                            validateVertex(mesh, quads.getInt(base), sourceName),
+                            validateVertex(mesh, quads.getInt(base + 1), sourceName),
+                            validateVertex(mesh, quads.getInt(base + 2), sourceName),
+                            textures[texture])
+                    : mesh.addFace(
+                            validateVertex(mesh, quads.getInt(base), sourceName),
+                            validateVertex(mesh, quads.getInt(base + 1), sourceName),
+                            validateVertex(mesh, quads.getInt(base + 2), sourceName),
+                            validateVertex(mesh, quads.getInt(base + 3), sourceName),
+                            textures[texture]);
 
             mesh.setFaceZone(faceIndex, zones[zone]);
 
@@ -502,6 +518,8 @@ class RiggedMeshArpgUtility extends EngineUtility {
 
         int faceCount = mesh.getFaceCount();
         int[] quads = new int[faceCount * EngineSetting.QUAD_VERTEX_COUNT];
+        int[] faceCorners = new int[faceCount];
+        boolean triangles = false;
         int[] quadTextures = new int[faceCount];
         int[] quadZones = new int[faceCount];
         int[] uvFlags = new int[faceCount];
@@ -529,6 +547,8 @@ class RiggedMeshArpgUtility extends EngineUtility {
                 zonesArpg.add(ArpgUtility.toEnumName(mesh.getFaceZone(f)));
             }
 
+            faceCorners[f] = mesh.getFaceCornerCount(f);
+            triangles |= mesh.isTriangle(f);
             quadTextures[f] = fileTextures[texture];
             quadZones[f] = fileZones[zone];
             uvFlags[f] = mesh.hasAuthoredUVs(f)
@@ -548,6 +568,10 @@ class RiggedMeshArpgUtility extends EngineUtility {
         }
 
         compactArpg.add("quads", ArpgUtility.toIndexBuffer(quads, quads.length));
+
+        if (triangles)
+            compactArpg.add("face_corners", ArpgUtility.toBuffer(ArpgBufferType.UINT8, faceCorners, faceCount));
+
         compactArpg.add("textures", texturesArpg);
         compactArpg.add("quad_textures", ArpgUtility.toIndexBuffer(quadTextures, faceCount));
         compactArpg.add("zones", zonesArpg);

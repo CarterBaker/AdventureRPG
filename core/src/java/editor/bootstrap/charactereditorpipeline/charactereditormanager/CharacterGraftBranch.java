@@ -631,10 +631,10 @@ class CharacterGraftBranch extends BranchPackage {
 
         for (int f = 0; f < mesh.getFaceCount(); f++) {
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int a = mesh.getFaceVertex(f, c);
-                int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                 if (a != b)
                     edgeFaces.put(CharacterLoopUtility.toDirectedKey(a, b), f);
@@ -703,7 +703,7 @@ class CharacterGraftBranch extends BranchPackage {
 
                 for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT && enclosed; c++) {
 
-                    if (mesh.getFaceVertex(f, c) == mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT))
+                    if (mesh.getFaceVertex(f, c) == mesh.getFaceVertex(f, mesh.getNextCorner(f, c)))
                         continue;
 
                     int neighbour = findNeighbour(mesh, f, c);
@@ -723,7 +723,7 @@ class CharacterGraftBranch extends BranchPackage {
     private int findNeighbour(RiggedMeshStruct mesh, int faceIndex, int corner) {
 
         int a = mesh.getFaceVertex(faceIndex, corner);
-        int b = mesh.getFaceVertex(faceIndex, (corner + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+        int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, corner));
 
         return a == b ? EngineSetting.INDEX_NOT_FOUND : edgeFaces.get(CharacterLoopUtility.toDirectedKey(b, a));
     }
@@ -734,10 +734,10 @@ class CharacterGraftBranch extends BranchPackage {
         centreScratch.set(0f, 0f, 0f);
         normalScratch.set(0f, 0f, 0f);
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int a = mesh.getFaceVertex(faceIndex, c);
-            int b = mesh.getFaceVertex(faceIndex, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+            int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c));
 
             centreScratch.add(mesh.getX(a), mesh.getY(a), mesh.getZ(a));
             normalScratch.add(
@@ -887,10 +887,10 @@ class CharacterGraftBranch extends BranchPackage {
         edgeFaces.clear();
 
         for (int f = 0; f < faceBase; f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int a = mesh.getFaceVertex(f, c);
-                int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                 if (a != b)
                     edgeFaces.put(CharacterLoopUtility.toDirectedKey(a, b), f);
@@ -961,7 +961,7 @@ class CharacterGraftBranch extends BranchPackage {
         }
 
         for (int f = faceBase; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                 mesh.setFaceVertex(f, c, vertexReplace.getInt(mesh.getFaceVertex(f, c)));
 
         for (int i = 0; i < count; i++)
@@ -1092,7 +1092,7 @@ class CharacterGraftBranch extends BranchPackage {
 
     private static void copyCornerUV(RiggedMeshStruct mesh, int fromFace, int vertexIndex, int toFace, int corner) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(fromFace); c++)
             if (mesh.getFaceVertex(fromFace, c) == vertexIndex) {
                 mesh.setFaceUV(toFace, corner, mesh.getFaceU(fromFace, c), mesh.getFaceV(fromFace, c));
                 return;

@@ -3,11 +3,14 @@ package editor.runtime.charactereditor.rig;
 import application.kernel.inputpipeline.input.RawInputHandle;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorMode;
+import editor.bootstrap.charactereditorpipeline.util.CharacterEditorTransform;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.charactereditor.CharacterEditorSetting;
 import editor.runtime.charactereditor.meshview.CharacterEditorMeshViewSystem;
 import editor.runtime.charactereditor.mode.CharacterEditorModeSystem;
+import editor.runtime.characterview.gizmo.CharacterGizmoSource;
+import editor.runtime.characterview.gizmo.CharacterGizmoSystem;
 import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
@@ -18,7 +21,7 @@ import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 
-public class CharacterEditorRigSystem extends SystemPackage {
+public class CharacterEditorRigSystem extends SystemPackage implements CharacterGizmoSource {
 
     /*
      * Turns this tab's pointer into rig edits while the Rig mode is open,
@@ -30,8 +33,10 @@ public class CharacterEditorRigSystem extends SystemPackage {
      * the bone's size by how
      * far the pointer travels from the joint, Place stands a new child of
      * the selected bone where it clicks, level with that bone's joint, and
-     * Erase removes the bone clicked. A press that does none of these is
-     * left to the view camera. A drag is one undo step: letting go
+     * Erase removes the bone clicked. A press on a handle of the transform
+     * gizmo (CharacterGizmoSystem) drags the selected bone held to that
+     * axis: Move along it, Rotate about it, Scale its size along it. A press
+     * that does none of these is left to the view camera. A drag is one undo step: letting go
      * keeps it, a right click or Escape puts the rig back, and Ctrl snaps it.
      * Edits are written only on frames the pointer moves. A bind edit never
      * moves the mesh: the skin stays where it is, as a rig tool keeps it.
@@ -43,6 +48,7 @@ public class CharacterEditorRigSystem extends SystemPackage {
     private CharacterEditorManager characterEditorManager;
     private CharacterEditorMeshViewSystem characterEditorMeshViewSystem;
     private CharacterEditorModeSystem characterEditorModeSystem;
+    private CharacterGizmoSystem characterGizmoSystem;
     private ShortcutManager shortcutManager;
 
     // Shortcuts
@@ -50,6 +56,8 @@ public class CharacterEditorRigSystem extends SystemPackage {
 
     // Drag
     private EditorTool dragTool;
+    private int dragAxis;
+    private Vector3 dragAxisVector;
     private Vector3 joint;
     private Vector2 jointScreen;
     private Vector3 startHit;
@@ -73,6 +81,8 @@ public class CharacterEditorRigSystem extends SystemPackage {
     protected void create() {
 
         // Drag
+        this.dragAxis = EngineSetting.INDEX_NOT_FOUND;
+        this.dragAxisVector = new Vector3();
         this.joint = new Vector3();
         this.jointScreen = new Vector2();
         this.startHit = new Vector3();
@@ -93,7 +103,13 @@ public class CharacterEditorRigSystem extends SystemPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterEditorMeshViewSystem = get(CharacterEditorMeshViewSystem.class);
         this.characterEditorModeSystem = get(CharacterEditorModeSystem.class);
+        this.characterGizmoSystem = get(CharacterGizmoSystem.class);
         this.shortcutManager = get(ShortcutManager.class);
+    }
+
+    @Override
+    protected void awake() {
+        characterGizmoSystem.addSource(this);
     }
 
     @Override
@@ -141,6 +157,14 @@ public class CharacterEditorRigSystem extends SystemPackage {
     private void press(float mouseX, float mouseY) {
 
         EditorTool tool = characterEditorManager.getRigTool();
+        int gizmoAxis = characterGizmoSystem.getHoveredAxis();
+
+        if (gizmoAxis != EngineSetting.INDEX_NOT_FOUND && getGizmoTransform() != null) {
+            editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
+            startDrag(tool, gizmoAxis, mouseX, mouseY);
+            return;
+        }
+
         int picked = pickJoint(mouseX, mouseY);
 
         if (picked == EngineSetting.INDEX_NOT_FOUND) {
@@ -160,8 +184,8 @@ public class CharacterEditorRigSystem extends SystemPackage {
 
         characterEditorManager.selectRigBone(picked);
 
-        if (tool == EditorTool.MOVE || tool == EditorTool.ROTATE || tool == EditorTool.SCALE)
-            startDrag(tool, mouseX, mouseY);
+        if (CharacterEditorTransform.forTool(tool) != null)
+            startDrag(tool, EngineSetting.INDEX_NOT_FOUND, mouseX, mouseY);
     }
 
     // The tab region's bone whose joint lies nearest the pointer within the pick radius, or none
@@ -210,7 +234,8 @@ public class CharacterEditorRigSystem extends SystemPackage {
 
     // Drag \\
 
-    private void startDrag(EditorTool tool, float mouseX, float mouseY) {
+    // A drag of the selected bone by the tool, free or held to an axis
+    private void startDrag(EditorTool tool, int axis, float mouseX, float mouseY) {
 
         if (!characterEditorManager.beginRigGesture())
             return;
@@ -225,6 +250,11 @@ public class CharacterEditorRigSystem extends SystemPackage {
         resolveHit(mouseX, mouseY, startHit);
 
         this.dragTool = tool;
+        this.dragAxis = axis;
+        dragAxisVector.set(
+                axis == EngineSetting.AXIS_X ? 1f : 0f,
+                axis == EngineSetting.AXIS_Y ? 1f : 0f,
+                axis == EngineSetting.AXIS_Z ? 1f : 0f);
         this.startDistance = Math.max(
                 EditorSetting.CHARACTER_VIEW_SCALE_MIN_PIXELS,
                 (float) Math.hypot(mouseX - jointScreen.x, mouseY - jointScreen.y));
@@ -269,15 +299,25 @@ public class CharacterEditorRigSystem extends SystemPackage {
         }
     }
 
+    // The pointer's travel across the plane facing the camera, or its share along the axis held
     private void applyMove(float mouseX, float mouseY, boolean snap) {
 
         resolveHit(mouseX, mouseY, hitScratch);
         hitScratch.subtract(startHit);
+
+        if (dragAxis != EngineSetting.INDEX_NOT_FOUND) {
+
+            float along = hitScratch.x * dragAxisVector.x + hitScratch.y * dragAxisVector.y
+                    + hitScratch.z * dragAxisVector.z;
+
+            hitScratch.set(dragAxisVector.x * along, dragAxisVector.y * along, dragAxisVector.z * along);
+        }
+
         hitScratch.set(snapValue(hitScratch.x, snap), snapValue(hitScratch.y, snap), snapValue(hitScratch.z, snap));
         characterEditorManager.moveRigJoint(hitScratch);
     }
 
-    // The pointer's turn about the joint on screen, a turn about the line of sight
+    // The pointer's turn about the joint on screen, a turn about the line of sight or the axis held, facing the viewer
     private void applyRotate(float mouseX, float mouseY, boolean snap) {
 
         float angle = (float) (Math.atan2(mouseY - jointScreen.y, mouseX - jointScreen.x)
@@ -288,7 +328,15 @@ public class CharacterEditorRigSystem extends SystemPackage {
             angle = (float) Math.toRadians(Math.round(Math.toDegrees(angle) / EditorSetting.CHARACTER_VIEW_SNAP_DEGREES)
                     * EditorSetting.CHARACTER_VIEW_SNAP_DEGREES);
 
-        axisScratch.set(-view.x, -view.y, -view.z).normalize();
+        if (dragAxis == EngineSetting.INDEX_NOT_FOUND)
+            axisScratch.set(-view.x, -view.y, -view.z).normalize();
+        else {
+            axisScratch.set(dragAxisVector);
+
+            if (axisScratch.x * view.x + axisScratch.y * view.y + axisScratch.z * view.z > 0f)
+                angle = -angle;
+        }
+
         CharacterPoseUtility.toAxisRotation(axisScratch, angle, turnScratch);
         characterEditorManager.rotateRigBone(turnScratch);
     }
@@ -301,7 +349,28 @@ public class CharacterEditorRigSystem extends SystemPackage {
             factor = Math.round(factor / EditorSetting.CHARACTER_VIEW_SNAP_SCALE)
                     * EditorSetting.CHARACTER_VIEW_SNAP_SCALE;
 
-        characterEditorManager.scaleRigBone(factor);
+        characterEditorManager.scaleRigBone(
+                dragAxis == EngineSetting.INDEX_NOT_FOUND || dragAxis == EngineSetting.AXIS_X ? factor : 1f,
+                dragAxis == EngineSetting.INDEX_NOT_FOUND || dragAxis == EngineSetting.AXIS_Y ? factor : 1f,
+                dragAxis == EngineSetting.INDEX_NOT_FOUND || dragAxis == EngineSetting.AXIS_Z ? factor : 1f);
+    }
+
+    // Gizmo \\
+
+    // The transform the Rig tab's tool drags on the selected bone while no drag is held; null otherwise
+    @Override
+    public CharacterEditorTransform getGizmoTransform() {
+        return characterEditorManager.getMode() == CharacterEditorMode.RIG && dragTool == null
+                && characterEditorManager.getSelectedRigBoneIndex() != EngineSetting.INDEX_NOT_FOUND
+                ? CharacterEditorTransform.forTool(characterEditorManager.getRigTool())
+                : null;
+    }
+
+    @Override
+    public boolean resolveGizmoPivot(Vector3 out) {
+        CharacterPoseUtility.getTranslation(
+                characterEditorManager.getRigBoneWorldMatrix(characterEditorManager.getSelectedRigBoneIndex()), out);
+        return true;
     }
 
     // Utility \\

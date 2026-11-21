@@ -28,7 +28,8 @@ public class GltfExportUtility extends EngineUtility {
      * normal become one glTF vertex; every texture and zone pair is a
      * material naming both in its extras and a primitive of its own; a quad
      * is two triangles fanned from one corner, the FB_ngon_encoding way, so
-     * an importer that knows it gets the quads back; the rig is a skin whose
+     * an importer that knows it gets the quads back, and a triangle is one;
+     * the rig is a skin whose
      * joints are its bones in order; morphs are targets named in the mesh's
      * extras; masks ride as the _MASKS attribute. The same mesh always
      * writes the same bytes.
@@ -81,7 +82,7 @@ public class GltfExportUtility extends EngineUtility {
         export.quads = new int[faceCount * EngineSetting.QUAD_VERTEX_COUNT];
 
         for (int f = 0; f < faceCount; f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int corner = f * EngineSetting.QUAD_VERTEX_COUNT + c;
                 float u = mesh.getFaceU(f, c);
@@ -236,12 +237,15 @@ public class GltfExportUtility extends EngineUtility {
             }
 
             int base = f * EngineSetting.QUAD_VERTEX_COUNT;
-            int start = export.quads[base] == fans.getInt(material) ? 2 : 0;
+            int corners = mesh.getFaceCornerCount(f);
+            int start = export.quads[base] == fans.getInt(material) ? corners - 2 : 0;
+            int indexCount = corners == EngineSetting.TRIANGLE_VERTEX_COUNT
+                    ? EngineSetting.TRIANGLE_INDEX_COUNT
+                    : EngineSetting.QUAD_INDEX_COUNT;
             IntArrayList indices = triangles.get(material);
 
-            for (int i = 0; i < EngineSetting.QUAD_INDEX_COUNT; i++)
-                indices.add(export.quads[base + (start + EditorSetting.GLTF_QUAD_FAN_CORNERS[i])
-                        % EngineSetting.QUAD_VERTEX_COUNT]);
+            for (int i = 0; i < indexCount; i++)
+                indices.add(export.quads[base + (start + EditorSetting.GLTF_QUAD_FAN_CORNERS[i]) % corners]);
 
             fans.set(material, export.quads[base + start]);
         }

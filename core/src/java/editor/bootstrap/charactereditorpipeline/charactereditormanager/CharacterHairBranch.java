@@ -64,7 +64,7 @@ class CharacterHairBranch extends BranchPackage {
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
             if (isCardFace(mesh, f))
-                for (int c = 1; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                for (int c = 1; c < mesh.getFaceCornerCount(f); c++)
                     union(mesh.getFaceVertex(f, 0), mesh.getFaceVertex(f, c));
 
         int[] group2Card = new int[parent.length];
@@ -113,7 +113,7 @@ class CharacterHairBranch extends BranchPackage {
         float high = -Float.MAX_VALUE;
 
         for (int i = 0; i < faces.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faces.getInt(i)); c++) {
 
                 int corner = i * EngineSetting.QUAD_VERTEX_COUNT + c;
 

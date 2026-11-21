@@ -177,7 +177,7 @@ class CharacterEdgeBranch extends BranchPackage {
 
         RiggedMeshStruct mesh = document.getMesh();
         int a = mesh.getFaceVertex(faceIndex, corner);
-        int b = mesh.getFaceVertex(faceIndex, (corner + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+        int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, corner));
 
         buildEdgeFaces(mesh);
 
@@ -376,7 +376,7 @@ class CharacterEdgeBranch extends BranchPackage {
             return;
 
         int a = mesh.getFaceVertex(faceIndex, corner);
-        int b = mesh.getFaceVertex(faceIndex, (corner + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+        int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, corner));
 
         if (a >= mirrors.size() || b >= mirrors.size())
             return;
@@ -429,7 +429,7 @@ class CharacterEdgeBranch extends BranchPackage {
         while (true) {
 
             int x = mesh.getFaceVertex(face, exit);
-            int y = mesh.getFaceVertex(face, (exit + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+            int y = mesh.getFaceVertex(face, mesh.getNextCorner(face, exit));
             int next = findOtherFace(RiggedMeshStruct.toEdgeKey(x, y), face);
 
             if (next != EngineSetting.INDEX_NOT_FOUND && ringFaceSet.contains(next)) {
@@ -536,7 +536,7 @@ class CharacterEdgeBranch extends BranchPackage {
 
         RiggedMeshStruct mesh = document.getMesh();
         int a = mesh.getFaceVertex(faceIndex, corner);
-        int b = mesh.getFaceVertex(faceIndex, (corner + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+        int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, corner));
 
         buildEdgeFaces(mesh);
         buildVertexFaces(mesh);
@@ -799,7 +799,7 @@ class CharacterEdgeBranch extends BranchPackage {
 
         for (int f = 0; f < mesh.getFaceCount(); f++) {
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                 mesh.setFaceVertex(f, c, vertexRemap.getInt(mesh.getFaceVertex(f, c)));
 
             faceFlags.add(countDistinct(mesh, f) < EngineSetting.QUAD_VERTEX_COUNT - 1);
@@ -882,6 +882,173 @@ class CharacterEdgeBranch extends BranchPackage {
             characterEditorManager.setStatusMessage(flipped + EditorSetting.CHARACTER_TOPOLOGY_MESSAGE_FACES_FLIPPED);
     }
 
+    // Triangulate \\
+
+    // Every selected quad split along its shorter diagonal into two triangles, as a modelling tool's Triangulate Faces
+    // does, each keeping its corners' UVs and pins
+    void triangulate(CharacterMeshDocumentInstance document) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+
+        if (characterEditorManager.isMirror())
+            characterSelectionBranch.extendMirror(document);
+
+        int faceCount = mesh.getFaceCount();
+        int split = 0;
+
+        for (int f = 0; f < faceCount; f++)
+            if (!mesh.isTriangle(f) && CharacterMeshUtility.isFaceSelected(mesh, f, document.getSelection()))
+                split++;
+
+        if (split == 0) {
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_TOPOLOGY_MESSAGE_TRIANGULATE_NONE);
+            return;
+        }
+
+        characterHistoryBranch.begin(document);
+
+        for (int f = 0; f < faceCount; f++)
+            if (!mesh.isTriangle(f) && CharacterMeshUtility.isFaceSelected(mesh, f, document.getSelection()))
+                splitQuad(mesh, f);
+
+        if (characterMeshBranch.finishEdit(document))
+            characterEditorManager.setStatusMessage(split + EditorSetting.CHARACTER_TOPOLOGY_MESSAGE_TRIANGULATED);
+    }
+
+    // A quad split along the shorter of its diagonals: the face keeps the triangle before it, a copy the one after
+    private void splitQuad(RiggedMeshStruct mesh, int faceIndex) {
+
+        int lead = resolveDiagonalLength(mesh, faceIndex, 0) <= resolveDiagonalLength(mesh, faceIndex, 1) ? 0 : 1;
+        int copy = mesh.duplicateFace(faceIndex);
+
+        mesh.setTriangle(faceIndex, lead, lead + 1, lead + 2);
+        mesh.setTriangle(copy, lead + 2, (lead + 3) % EngineSetting.QUAD_VERTEX_COUNT, lead);
+    }
+
+    // The squared length of the diagonal from a corner to the one opposite it
+    private float resolveDiagonalLength(RiggedMeshStruct mesh, int faceIndex, int corner) {
+
+        int a = mesh.getFaceVertex(faceIndex, corner);
+        int b = mesh.getFaceVertex(faceIndex, corner + 2);
+        float dx = mesh.getX(b) - mesh.getX(a);
+        float dy = mesh.getY(b) - mesh.getY(a);
+        float dz = mesh.getZ(b) - mesh.getZ(a);
+
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    // Every pair of selected triangles sharing an edge, a texture and a zone joined into the quad they make, as a
+    // modelling tool's Triangles to Quads does, each triangle joining the first such neighbour it finds
+    void joinTriangles(CharacterMeshDocumentInstance document) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+
+        if (characterEditorManager.isMirror())
+            characterSelectionBranch.extendMirror(document);
+
+        int faceCount = mesh.getFaceCount();
+        int joined = 0;
+
+        buildEdgeFaces(mesh);
+        faceFlags.clear();
+        faceFlags.size(faceCount);
+        characterHistoryBranch.begin(document);
+
+        for (int f = 0; f < faceCount; f++) {
+
+            if (faceFlags.getBoolean(f) || !isSelectedTriangle(document, f))
+                continue;
+
+            for (int c = 0; c < EngineSetting.TRIANGLE_VERTEX_COUNT; c++) {
+
+                int partner = findJoinPartner(document, f, c);
+
+                if (partner == EngineSetting.INDEX_NOT_FOUND)
+                    continue;
+
+                joinPair(mesh, f, c, partner);
+                faceFlags.set(partner, true);
+                joined++;
+                break;
+            }
+        }
+
+        if (joined == 0) {
+            characterHistoryBranch.cancel(document);
+            characterEditorManager.setStatusMessage(EditorSetting.CHARACTER_TOPOLOGY_MESSAGE_JOIN_NONE);
+            return;
+        }
+
+        mesh.removeFaces(faceFlags);
+
+        if (characterMeshBranch.finishEdit(document))
+            characterEditorManager.setStatusMessage(joined + EditorSetting.CHARACTER_TOPOLOGY_MESSAGE_JOINED_TRIANGLES);
+    }
+
+    private boolean isSelectedTriangle(CharacterMeshDocumentInstance document, int faceIndex) {
+        return document.getMesh().isTriangle(faceIndex)
+                && CharacterMeshUtility.isFaceSelected(document.getMesh(), faceIndex, document.getSelection());
+    }
+
+    // The other selected triangle, not yet joined, on the edge from a corner of a triangle, with its texture and zone
+    private int findJoinPartner(CharacterMeshDocumentInstance document, int faceIndex, int corner) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+        int a = mesh.getFaceVertex(faceIndex, corner);
+        int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, corner));
+        long faces = edgeFaces.get(RiggedMeshStruct.toEdgeKey(a, b));
+
+        if (edgeCounts.get(RiggedMeshStruct.toEdgeKey(a, b)) != 2)
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        int first = unpackFirst(faces);
+        int other = first == faceIndex ? unpackSecond(faces) : first;
+
+        if (faceFlags.getBoolean(other) || !isSelectedTriangle(document, other)
+                || mesh.getFaceTexture(other) != mesh.getFaceTexture(faceIndex)
+                || mesh.getFaceZone(other) != mesh.getFaceZone(faceIndex))
+            return EngineSetting.INDEX_NOT_FOUND;
+
+        return other;
+    }
+
+    // Two triangles about an edge p to q made one quad p, r, q, s: the first triangle's corners after the edge, then
+    // the second's corner across it, each corner keeping its UV and pin
+    private void joinPair(RiggedMeshStruct mesh, int faceIndex, int corner, int partner) {
+
+        int q = mesh.getNextCorner(faceIndex, corner);
+        int s = mesh.getNextCorner(faceIndex, q);
+        int r = EngineSetting.INDEX_NOT_FOUND;
+
+        for (int c = 0; c < EngineSetting.TRIANGLE_VERTEX_COUNT; c++)
+            if (!mesh.usesVertex(faceIndex, mesh.getFaceVertex(partner, c)))
+                r = c;
+
+        int[] vertices = {
+                mesh.getFaceVertex(faceIndex, corner), mesh.getFaceVertex(partner, r),
+                mesh.getFaceVertex(faceIndex, q), mesh.getFaceVertex(faceIndex, s) };
+        float[] uvs = {
+                mesh.getFaceU(faceIndex, corner), mesh.getFaceV(faceIndex, corner),
+                mesh.getFaceU(partner, r), mesh.getFaceV(partner, r),
+                mesh.getFaceU(faceIndex, q), mesh.getFaceV(faceIndex, q),
+                mesh.getFaceU(faceIndex, s), mesh.getFaceV(faceIndex, s) };
+        boolean[] pins = {
+                mesh.isCornerPinned(faceIndex, corner), mesh.isCornerPinned(partner, r),
+                mesh.isCornerPinned(faceIndex, q), mesh.isCornerPinned(faceIndex, s) };
+        boolean authored = mesh.hasAuthoredUVs(faceIndex) || mesh.hasAuthoredUVs(partner);
+
+        mesh.setFaceCornerCount(faceIndex, EngineSetting.QUAD_VERTEX_COUNT);
+
+        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+
+            mesh.setFaceVertex(faceIndex, c, vertices[c]);
+            mesh.setCornerPinned(faceIndex, c, pins[c]);
+
+            if (authored)
+                mesh.setFaceUV(faceIndex, c, uvs[c * 2], uvs[c * 2 + 1]);
+        }
+    }
+
     // A face's distinct corners walked back from its first, its UVs and pins with them
     private void reverseFace(RiggedMeshStruct mesh, int faceIndex) {
 
@@ -946,10 +1113,10 @@ class CharacterEdgeBranch extends BranchPackage {
 
         normal.set(0f, 0f, 0f);
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int a = mesh.getFaceVertex(faceIndex, c);
-            int b = mesh.getFaceVertex(faceIndex, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+            int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c));
 
             normal.add(
                     (mesh.getY(a) - mesh.getY(b)) * (mesh.getZ(a) + mesh.getZ(b)),
@@ -985,7 +1152,7 @@ class CharacterEdgeBranch extends BranchPackage {
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
             if (countDistinct(mesh, f) == EngineSetting.QUAD_VERTEX_COUNT - 1)
-                for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+                for (int c = 0; c < mesh.getFaceCornerCount(f); c++)
                     vertexList.add(mesh.getFaceVertex(f, c));
 
         selectFound(document);
@@ -1171,10 +1338,10 @@ class CharacterEdgeBranch extends BranchPackage {
     // The corner of a quad its edge to x or y starts at, whichever way it runs, or INDEX_NOT_FOUND
     private int findEdgeCorner(RiggedMeshStruct mesh, int faceIndex, int x, int y) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int from = mesh.getFaceVertex(faceIndex, c);
-            int to = mesh.getFaceVertex(faceIndex, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+            int to = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c));
 
             if (from == x && to == y || from == y && to == x)
                 return c;
@@ -1204,7 +1371,7 @@ class CharacterEdgeBranch extends BranchPackage {
 
     private int findCorner(RiggedMeshStruct mesh, int faceIndex, int vertexIndex) {
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (mesh.getFaceVertex(faceIndex, c) == vertexIndex)
                 return c;
 
@@ -1219,7 +1386,7 @@ class CharacterEdgeBranch extends BranchPackage {
         vertices.clear();
         corners.clear();
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertexIndex = mesh.getFaceVertex(faceIndex, c);
 
@@ -1248,14 +1415,17 @@ class CharacterEdgeBranch extends BranchPackage {
         }
     }
 
-    // A face written over three or four corners in order, a triangle's last corner doubled, its UVs set when its
-    // faces authored theirs and its pins cleared
+    // A face written over three or four corners in order, its UVs set when its faces authored theirs and its pins
+    // cleared: a quad, or a triangle over its four slots with its last corner doubled, which the edit's end settles
+    // into a triangle (RiggedMeshStruct.settleTriangles)
     private void writeFace(
             RiggedMeshStruct mesh,
             int faceIndex,
             IntArrayList vertices,
             FloatArrayList uvs,
             boolean authored) {
+
+        mesh.setFaceCornerCount(faceIndex, EngineSetting.QUAD_VERTEX_COUNT);
 
         for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
 

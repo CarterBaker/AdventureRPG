@@ -220,7 +220,7 @@ class CharacterSymmetryBranch extends BranchPackage {
 
         int count = 0;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++)
             if (classify(mesh, mesh.getFaceVertex(faceIndex, c)) == side)
                 count++;
 
@@ -285,7 +285,7 @@ class CharacterSymmetryBranch extends BranchPackage {
             if (!mesh.hasAuthoredUVs(f))
                 continue;
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int vertex = mesh.getFaceVertex(f, c);
 
@@ -324,6 +324,10 @@ class CharacterSymmetryBranch extends BranchPackage {
 
                 if (kept == 0 || removed == 0)
                     continue;
+
+                // A crossing triangle is cut over its four slots, its last corner doubled, as a quad; the edit's end
+                // settles what is left of it back into a triangle
+                mesh.setFaceCornerCount(f, EngineSetting.QUAD_VERTEX_COUNT);
 
                 int lead = findCutLead(mesh, f);
 
@@ -427,7 +431,7 @@ class CharacterSymmetryBranch extends BranchPackage {
                 ? EditorSetting.CHARACTER_SYMMETRY_SIDE_KEPT
                 : removed < kept ? EditorSetting.CHARACTER_SYMMETRY_SIDE_REMOVED : resolveNearerSide(mesh, faceIndex);
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertex = mesh.getFaceVertex(faceIndex, c);
 
@@ -444,7 +448,7 @@ class CharacterSymmetryBranch extends BranchPackage {
         float kept = 0f;
         float removed = 0f;
 
-        for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
             int vertex = mesh.getFaceVertex(faceIndex, c);
             int side = classify(mesh, vertex);
@@ -697,7 +701,7 @@ class CharacterSymmetryBranch extends BranchPackage {
 
         for (int f = 0; f < faceCount; f++) {
 
-            if (countSide(mesh, f, EditorSetting.CHARACTER_SYMMETRY_SIDE_CENTRE) == EngineSetting.QUAD_VERTEX_COUNT) {
+            if (countSide(mesh, f, EditorSetting.CHARACTER_SYMMETRY_SIDE_CENTRE) == mesh.getFaceCornerCount(f)) {
                 faceTwins.set(f, EngineSetting.INDEX_NOT_FOUND);
                 continue;
             }
@@ -711,7 +715,7 @@ class CharacterSymmetryBranch extends BranchPackage {
 
             mesh.setFaceZone(twin, mesh.getFaceZone(f));
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(twin); c++)
                 mesh.setCornerPinned(twin, c, mesh.isCornerPinned(f, toSourceCorner(c)));
 
             faceTwins.set(f, twin);
@@ -889,7 +893,7 @@ class CharacterSymmetryBranch extends BranchPackage {
 
             int oldFace = cornerFaces.getInt(record);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(face); c++) {
 
                 int corner = findRecord(mesh, face, c, oldFace);
 
@@ -990,7 +994,7 @@ class CharacterSymmetryBranch extends BranchPackage {
             if (!mesh.hasAuthoredUVs(face))
                 continue;
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(face); c++) {
 
                 float u = mesh.getFaceU(face, c);
                 float v = mesh.getFaceV(face, c);
@@ -1070,7 +1074,7 @@ class CharacterSymmetryBranch extends BranchPackage {
             if (twin == EngineSetting.INDEX_NOT_FOUND || !mesh.hasAuthoredUVs(face))
                 continue;
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faces.getInt(i)); c++) {
 
                 int source = toSourceCorner(c);
                 float u = mesh.getFaceU(face, source);
@@ -1092,7 +1096,7 @@ class CharacterSymmetryBranch extends BranchPackage {
         float max = -Float.MAX_VALUE;
 
         for (int i = 0; i < faces.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faces.getInt(i)); c++) {
 
                 float u = mesh.getFaceU(faces.getInt(i), c);
 

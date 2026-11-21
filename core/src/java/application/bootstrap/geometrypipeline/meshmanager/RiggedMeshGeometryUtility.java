@@ -64,7 +64,9 @@ class RiggedMeshGeometryUtility extends EngineUtility {
 
         for (int f = 0; f < faceCount; f++) {
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            int corners = mesh.getFaceCornerCount(f);
+
+            for (int c = 0; c < corners; c++) {
                 packCorner(mesh, f, c, textureTiles, storedNormals, scratch);
                 quad[c] = shareVertex(scratch, vertices);
             }
@@ -72,6 +74,10 @@ class RiggedMeshGeometryUtility extends EngineUtility {
             indices.add(quad[0]);
             indices.add(quad[1]);
             indices.add(quad[2]);
+
+            if (corners == EngineSetting.TRIANGLE_VERTEX_COUNT)
+                continue;
+
             indices.add(quad[2]);
             indices.add(quad[3]);
             indices.add(quad[0]);
@@ -288,7 +294,8 @@ class RiggedMeshGeometryUtility extends EngineUtility {
 
     // Normals \\
 
-    // Each face's diagonals crossed: its normal, as long as twice its area, so a larger face weighs more when smoothed
+    // Each face's diagonals crossed: its normal, as long as twice its area, so a larger face weighs more when smoothed;
+    // a triangle's fourth slot repeats its third, so its diagonals cross as its edges do
     private static void resolveFaceNormals(RiggedMeshStruct mesh, FloatArrayList faceNormals) {
 
         faceNormals.clear();
@@ -419,11 +426,14 @@ class RiggedMeshGeometryUtility extends EngineUtility {
         starts.clear();
         starts.size(groupCount + 1);
 
+        int cornerTotal = 0;
+
         for (int f = 0; f < faceCount; f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int group = scratch.vertexGroups.getInt(mesh.getFaceVertex(f, c));
                 starts.set(group + 1, starts.getInt(group + 1) + 1);
+                cornerTotal++;
             }
 
         for (int g = 0; g < groupCount; g++)
@@ -431,10 +441,10 @@ class RiggedMeshGeometryUtility extends EngineUtility {
 
         cursors.clear();
         cursors.addElements(0, starts.elements(), 0, groupCount);
-        scratch.groupFaces.size(faceCount * EngineSetting.QUAD_VERTEX_COUNT);
+        scratch.groupFaces.size(cornerTotal);
 
         for (int f = 0; f < faceCount; f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int group = scratch.vertexGroups.getInt(mesh.getFaceVertex(f, c));
                 int slot = cursors.getInt(group);

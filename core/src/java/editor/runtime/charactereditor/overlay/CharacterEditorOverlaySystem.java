@@ -663,10 +663,10 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         ghostEdges.clear();
 
         for (int f = 0; f < stampMesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < stampMesh.getFaceCornerCount(f); c++) {
 
                 int a = stampMesh.getFaceVertex(f, c);
-                int b = stampMesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int b = stampMesh.getFaceVertex(f, stampMesh.getNextCorner(f, c));
 
                 if (a != b && edges.add(RiggedMeshStruct.toEdgeKey(a, b))) {
                     ghostEdges.add(a);
@@ -781,10 +781,10 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         edges.clear();
 
         for (int f = 0; f < mesh.getFaceCount(); f++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(f); c++) {
 
                 int a = mesh.getFaceVertex(f, c);
-                int b = mesh.getFaceVertex(f, (c + 1) % EngineSetting.QUAD_VERTEX_COUNT);
+                int b = mesh.getFaceVertex(f, mesh.getNextCorner(f, c));
 
                 if (a == b || !characterEditorMeshViewSystem.isInRegion(a)
                         || !characterEditorMeshViewSystem.isInRegion(b)

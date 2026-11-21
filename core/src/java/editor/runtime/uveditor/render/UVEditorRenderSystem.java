@@ -212,9 +212,9 @@ public class UVEditorRenderSystem extends SystemPackage {
 
             int faceIndex = faces.getInt(i);
 
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++) {
+            for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
 
-                int next = (c + 1) % EngineSetting.QUAD_VERTEX_COUNT;
+                int next = mesh.getNextCorner(faceIndex, c);
                 int vertexA = mesh.getFaceVertex(faceIndex, c);
                 int vertexB = mesh.getFaceVertex(faceIndex, next);
                 boolean seam = mesh.isSeam(vertexA, vertexB);
@@ -231,7 +231,7 @@ public class UVEditorRenderSystem extends SystemPackage {
         }
 
         for (int i = 0; i < faces.size(); i++)
-            for (int c = 0; c < EngineSetting.QUAD_VERTEX_COUNT; c++)
+            for (int c = 0; c < mesh.getFaceCornerCount(faces.getInt(i)); c++)
                 appendCorner(document, faces.getInt(i), c);
     }
 

@@ -1678,10 +1678,11 @@ public class CharacterEditorManager extends ManagerPackage {
             characterRigBranch.rotateGesture(worldTurn, isMirror());
     }
 
-    public void scaleRigBone(float factor) {
+    // The selected bone's size scaled by a factor along each of its axes
+    public void scaleRigBone(float factorX, float factorY, float factorZ) {
 
         if (characterRigBranch.isGesturing())
-            characterRigBranch.scaleGesture(factor);
+            characterRigBranch.scaleGesture(factorX, factorY, factorZ);
     }
 
     public void endRigGesture() {

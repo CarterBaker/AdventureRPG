@@ -54,6 +54,7 @@ All of it is in `editor.bootstrap.charactereditorpipeline`:
 | masks | `_MASKS`, a float VEC4 in `RIGGED_MESH_MASK_CHANNELS` order |
 | texture and zone pair | one material, `extras.texture` and `extras.zone`, and one primitive |
 | quad | two triangles fanned from one corner, `FB_ngon_encoding` on the primitive |
+| triangle | one triangle, its first corner turned on when the face before it in the primitive leads from the same vertex |
 | rig | one skin: every bone a node in bone order with its `matrix` against its parent, `inverseBindMatrices` from the rig |
 | morphs | dense `POSITION` targets on every primitive, names in `mesh.extras.targetNames` |
 
@@ -63,10 +64,10 @@ One vertex set is shared by every primitive. The same mesh always writes the sam
 
 - The first node with a mesh and a skin is the model (the first with a mesh when none is skinned). All its
   primitives are joined; each must be indexed or plain `TRIANGLES`.
-- **Quads.** With `FB_ngon_encoding`, consecutive triangles sharing their first index are one polygon; exactly two
-  make a quad, anything else is refused. Without it, a triangle joins the one listed right after it when they share
+- **Faces.** With `FB_ngon_encoding`, consecutive triangles sharing their first index are one polygon; one is a
+  triangle face, two make a quad, more are refused. Without it, a triangle joins the one listed right after it when they share
   an edge, and otherwise the next in the list that shares an edge and lies flat against it
-  (`GLTF_QUAD_FLAT_COSINE`); a triangle left alone refuses the import with the count.
+  (`GLTF_QUAD_FLAT_COSINE`); a triangle left alone is kept as a triangle face.
 - **Vertices.** glTF vertices on one position with the same influences become one mesh vertex, as the mesh format
   merges corners. Weights are scaled to sum to one only when they are off by more than `BONE_WEIGHT_SUM_EPSILON`.
 - **Joints** become bones by node name. `JOINTS_1` (more than four influences) is refused.

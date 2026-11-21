@@ -255,6 +255,7 @@ class CharacterMeshBranch extends BranchPackage {
         if (!meshManager.fitsRiggedMeshLimit(mesh))
             return refuseEdit(document, EditorSetting.CHARACTER_EDITOR_MESSAGE_MESH_LIMIT);
 
+        mesh.settleTriangles();
         document.syncSelection();
         document.markEdited();
         characterHistoryBranch.commit(document);
