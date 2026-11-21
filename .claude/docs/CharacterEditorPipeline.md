@@ -744,7 +744,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   stepped and typed live, then a Yes or No per rig collider it rests against. **Add Collider** and **Remove Collider**
   (The Rig tab's Colliders group, `CharacterColliderBranch`) add a sphere on the selected bone, halfway to its first
   child, that every chain rests against, and remove the collider selected among the bone's; while mirroring is on a
-  sided bone's collider is added, removed, reshaped and moved with its twin (named as its mirror). The selected bone's
+  sided bone's collider is added, removed, reshaped and moved with its twin (named as its mirror). The Rig canvas's
+  **Collider** tool does both in the viewport: a click on a bone adds one there, and Ctrl+click
+  (`CharacterEditor/EraseCollider`) takes the bone's first off, each through the same actions
+  (`CharacterEditorRigSystem.press`). The selected bone's
   colliders are listed in the Properties tab; the selected one shows its Shape (a capsule runs from the joint out past
   the sphere's centre as far again; back to a sphere at the capsule's middle), Radius, Offset or Start and End, and
   Spring Chains (All or None). Rig mode draws every collider over the body as a wire sphere or capsule

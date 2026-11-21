@@ -587,6 +587,7 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-21: Item Editor tools. Regenerated `shortcuts/ItemEditor.arpg` (Ctrl held inverts the Brush to erase).
 - 2026-11-21: Bone eyes. Regenerated `menus/editor/CharacterEditor.arpg` (eye row templates for the bones the
   Properties tab lists).
+- 2026-11-21: Collider tool. Regenerated `shortcuts/CharacterEditor.arpg` (Ctrl held removes a collider).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 

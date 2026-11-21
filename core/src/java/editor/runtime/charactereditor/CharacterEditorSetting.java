@@ -24,6 +24,7 @@ public class CharacterEditorSetting {
     public static final String SHORTCUT_SUBTRACT_SELECTION = "CharacterEditor/SubtractSelection";
     public static final String SHORTCUT_LOOP_SELECTION = "CharacterEditor/LoopSelection";
     public static final String SHORTCUT_SNAP = "CharacterEditor/Snap";
+    public static final String SHORTCUT_ERASE_COLLIDER = "CharacterEditor/EraseCollider";
     public static final String SHORTCUT_INVERT_STROKE = "CharacterEditor/InvertStroke";
 
     // Mesh Input — the pointer distance in pixels a press travels before it draws a box

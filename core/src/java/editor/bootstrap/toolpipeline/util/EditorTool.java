@@ -34,7 +34,8 @@ public enum EditorTool {
      * body part is chosen in the Stamps tab, the Brush joins it where it
      * clicks, at its Scale and Turn, or lays fur combed the way it is set,
      * on the canvases that declare those options. Light turns the light
-     * a viewer shows its subject by, dragged from the subject. The
+     * a viewer shows its subject by, dragged from the subject. Collider gives
+     * the bone clicked a collider, or takes one off it while Ctrl is held. The
      * stroking tools work along a drag with a brush and carry the options
      * that shape their strokes; the rest act once per press.
      */
@@ -75,7 +76,8 @@ public enum EditorTool {
     CUT(EditorSetting.TOOL_CUT, false),
     IK(EditorSetting.TOOL_IK, false),
     POSE(EditorSetting.TOOL_POSE, false),
-    LIGHT(EditorSetting.TOOL_LIGHT, false);
+    LIGHT(EditorSetting.TOOL_LIGHT, false),
+    COLLIDER(EditorSetting.TOOL_COLLIDER, false);
 
     // Values
     public static final EditorTool[] VALUES = values();

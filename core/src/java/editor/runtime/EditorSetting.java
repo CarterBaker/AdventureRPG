@@ -2754,6 +2754,7 @@ public class EditorSetting {
     public static final String TOOL_DISSOLVE_LOOP = "Dissolve Loop";
     public static final String TOOL_DRAW = "Draw";
     public static final String TOOL_LIGHT = "Light";
+    public static final String TOOL_COLLIDER = "Collider";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";

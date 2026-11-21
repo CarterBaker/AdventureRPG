@@ -152,7 +152,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PLACE,
-                    EditorTool.ERASE },
+                    EditorTool.ERASE, EditorTool.COLLIDER },
             new ToolActionGroupStruct[] { rigActions(), rigLayers(), colliderActions(), hairActions() },
             false,
             mirror()),
