@@ -13,8 +13,10 @@ public class EntityStateHandle extends HandlePackage {
      * FacingBranch, and what MovementSoundBranch last heard of it — the stride
      * walked since its last step, whether it was in the air and how fast it
      * fell, and whether it was in water. It also keeps the breath left and the
-     * time held since the last tick a spent breath cost, for HazardBranch.
-     * Lives on EntityInstance.
+     * time held since the last tick a spent breath cost, for HazardBranch,
+     * and the ledge climb under way, for LedgeBranch: how far it rises and
+     * steps onto the ledge, how much of each it has made and how long it has
+     * taken. Lives on EntityInstance.
      */
 
     // State
@@ -42,6 +44,14 @@ public class EntityStateHandle extends HandlePackage {
 
     // Ground Offset — cosmetic only, never fed back into physics position
     private float groundOffset;
+
+    // Ledge — the rise and the step onto the ledge in blocks, the share of each made, and seconds spent
+    private float ledgeRise;
+    private float ledgeForwardX;
+    private float ledgeForwardZ;
+    private float ledgeRisen;
+    private float ledgeAdvanced;
+    private float ledgeTime;
 
     // Sound
     private float stepStride;
@@ -79,6 +89,14 @@ public class EntityStateHandle extends HandlePackage {
 
         // Ground Offset
         this.groundOffset = 0f;
+
+        // Ledge
+        this.ledgeRise = 0f;
+        this.ledgeForwardX = 0f;
+        this.ledgeForwardZ = 0f;
+        this.ledgeRisen = 0f;
+        this.ledgeAdvanced = 0f;
+        this.ledgeTime = 0f;
 
         // Sound
         this.stepStride = 0f;
@@ -184,6 +202,50 @@ public class EntityStateHandle extends HandlePackage {
         this.groundOffset = groundOffset;
     }
 
+    // A ledge climb starts in its state, with nothing of it made yet
+    public void startLedge(EntityState ledgeState, float rise, float forwardX, float forwardZ) {
+        this.movementState = ledgeState;
+        this.ledgeRise = rise;
+        this.ledgeForwardX = forwardX;
+        this.ledgeForwardZ = forwardZ;
+        this.ledgeRisen = 0f;
+        this.ledgeAdvanced = 0f;
+        this.ledgeTime = 0f;
+    }
+
+    public float getLedgeRise() {
+        return ledgeRise;
+    }
+
+    public float getLedgeForwardX() {
+        return ledgeForwardX;
+    }
+
+    public float getLedgeForwardZ() {
+        return ledgeForwardZ;
+    }
+
+    public float getLedgeRisen() {
+        return ledgeRisen;
+    }
+
+    public float getLedgeAdvanced() {
+        return ledgeAdvanced;
+    }
+
+    public void setLedgeProgress(float ledgeRisen, float ledgeAdvanced) {
+        this.ledgeRisen = ledgeRisen;
+        this.ledgeAdvanced = ledgeAdvanced;
+    }
+
+    public float getLedgeTime() {
+        return ledgeTime;
+    }
+
+    public void setLedgeTime(float ledgeTime) {
+        this.ledgeTime = ledgeTime;
+    }
+
     public float getStepStride() {
         return stepStride;
     }
@@ -215,7 +277,13 @@ public class EntityStateHandle extends HandlePackage {
     public boolean isGrounded() {
         return !isJumping()
                 && !isSwimming()
+                && !isLedging()
                 && movementState != EntityState.FALLING;
+    }
+
+    public boolean isLedging() {
+        return movementState == EntityState.CLAMBERING
+                || movementState == EntityState.MANTLING;
     }
 
     public boolean isSwimming() {

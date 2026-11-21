@@ -581,6 +581,9 @@ One line per session that changed this file: the date, what was added or removed
   holds); regenerated every content file under `contents/` (`yield` became `max_amount`), `schemas/Contents.arpg`,
   `ubos/ContentData.arpg`, `shaders/includes/ContentData.glsl`, `shaders/surface/includes/Content.glsl`,
   `Coverage.glsl` and `shaders/surface/standard/StandardSurfaceShader.vsh`.
+- 2026-11-21: Ledge climbing. Added `animations/humanoid/HumanoidClamber.arpg` and `HumanoidMantle.arpg`;
+  regenerated every stamp under `stamps/humanoid/` (each carries its tracks of both clips),
+  `animationtrees/humanoid/HumanoidAnimationTree.arpg` (clamber and mantle nodes) and `schemas/AnimationTrees.arpg`.
 
 ## Textures and Sprites (2567 files)
 
@@ -2013,7 +2016,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3860 files)
+## Data Files (3862 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2032,15 +2035,15 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `HumanoidAim.arpg`, `HumanoidAttackOverhead.arpg`, `HumanoidAttackRising.arpg`, `HumanoidAttackSlashLeft.arpg`,
 `HumanoidAttackSlashRight.arpg`, `HumanoidAttackThrust.arpg`, `HumanoidBlock.arpg`, `HumanoidChop.arpg`,
-`HumanoidDive.arpg`, `HumanoidFall.arpg`, `HumanoidGuardHigh.arpg`, `HumanoidGuardLeft.arpg`, `HumanoidGuardLow.arpg`,
-`HumanoidGuardMiddle.arpg`, `HumanoidGuardRight.arpg`, `HumanoidIdle.arpg`, `HumanoidJog.arpg`, `HumanoidJump.arpg`,
-`HumanoidLeanLeft.arpg`, `HumanoidLeanRight.arpg`, `HumanoidLookDown.arpg`, `HumanoidLookForward.arpg`,
-`HumanoidLookLeft.arpg`, `HumanoidLookRight.arpg`, `HumanoidLookUp.arpg`, `HumanoidPickUp.arpg`, `HumanoidPlace.arpg`,
-`HumanoidRecoil.arpg`, `HumanoidRun.arpg`, `HumanoidShallowWadeIdle.arpg`, `HumanoidShallowWadeRun.arpg`,
-`HumanoidStagger.arpg`, `HumanoidSurfacing.arpg`, `HumanoidSwim.arpg`, `HumanoidSwing.arpg`, `HumanoidThrow.arpg`,
-`HumanoidTread.arpg`, `HumanoidUnderwaterSwim.arpg`, `HumanoidUnderwaterTread.arpg`, `HumanoidWade.arpg`,
-`HumanoidWadeIdle.arpg`, `HumanoidWadeRun.arpg`, `HumanoidWadeShallow.arpg`, `HumanoidWalk.arpg`,
-`HumanoidWaterJump.arpg`, `HumanoidWaterLeap.arpg`
+`HumanoidClamber.arpg`, `HumanoidDive.arpg`, `HumanoidFall.arpg`, `HumanoidGuardHigh.arpg`, `HumanoidGuardLeft.arpg`,
+`HumanoidGuardLow.arpg`, `HumanoidGuardMiddle.arpg`, `HumanoidGuardRight.arpg`, `HumanoidIdle.arpg`,
+`HumanoidJog.arpg`, `HumanoidJump.arpg`, `HumanoidLeanLeft.arpg`, `HumanoidLeanRight.arpg`, `HumanoidLookDown.arpg`,
+`HumanoidLookForward.arpg`, `HumanoidLookLeft.arpg`, `HumanoidLookRight.arpg`, `HumanoidLookUp.arpg`,
+`HumanoidMantle.arpg`, `HumanoidPickUp.arpg`, `HumanoidPlace.arpg`, `HumanoidRecoil.arpg`, `HumanoidRun.arpg`,
+`HumanoidShallowWadeIdle.arpg`, `HumanoidShallowWadeRun.arpg`, `HumanoidStagger.arpg`, `HumanoidSurfacing.arpg`,
+`HumanoidSwim.arpg`, `HumanoidSwing.arpg`, `HumanoidThrow.arpg`, `HumanoidTread.arpg`, `HumanoidUnderwaterSwim.arpg`,
+`HumanoidUnderwaterTread.arpg`, `HumanoidWade.arpg`, `HumanoidWadeIdle.arpg`, `HumanoidWadeRun.arpg`,
+`HumanoidWadeShallow.arpg`, `HumanoidWalk.arpg`, `HumanoidWaterJump.arpg`, `HumanoidWaterLeap.arpg`
 
 ### `assets/animations/humanoid/expressions/`
 

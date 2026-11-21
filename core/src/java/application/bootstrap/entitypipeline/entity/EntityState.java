@@ -5,7 +5,8 @@ public enum EntityState {
     /*
      * Movement states for an entity. Used by EntityStateHandle to drive
      * physics and input response, and by an entity's animation tree, which
-     * maps each state by its lower-case name to the node it plays.
+     * maps each state by its lower-case name to the node it plays. New states
+     * join at the end, since recordings keep a state by its ordinal.
      */
 
     IDLE,
@@ -27,7 +28,9 @@ public enum EntityState {
     SHALLOW_WADING_IDLE,
     SHALLOW_WADING_RUNNING,
     WATER_JUMPING,
-    WATER_LEAPING;
+    WATER_LEAPING,
+    CLAMBERING,
+    MANTLING;
 
     // Values
     public static final EntityState[] VALUES = values();

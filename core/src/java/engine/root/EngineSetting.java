@@ -2717,6 +2717,27 @@ public class EngineSetting {
     public static final float REACH_SCALE = 4.0f;
     public static final float STEP_UP_HEIGHT_BLOCKS = SUB_BLOCK_SIZE;
 
+    // Ledges — a grounded entity walked into a ledge no higher than the clamber height climbs it with its hands, and
+    // one in the air blocked by a ledge its arms reach above its head grabs the edge and pulls itself up; each moves
+    // along a path swept clear before it starts, rising over its rise span and stepping onto the ledge over its
+    // forward span, both shares of its duration, and plays the state's clip for exactly that long
+    public static final float LEDGE_ARM_REACH_BLOCKS = 0.6f;
+    public static final float LEDGE_BLOCKED_SHARE = 0.5f;
+    public static final float LEDGE_CLAMBER_HEIGHT_BLOCKS = 1.1f;
+    public static final float LEDGE_CLAMBER_DURATION = 0.6f;
+    public static final float LEDGE_CLAMBER_RISE_START = 0f;
+    public static final float LEDGE_CLAMBER_RISE_END = 0.55f;
+    public static final float LEDGE_CLAMBER_FORWARD_START = 0.45f;
+    public static final float LEDGE_CLAMBER_FORWARD_END = 1f;
+    public static final float LEDGE_CLEARANCE_BLOCKS = 0.02f;
+    public static final float LEDGE_FORWARD_BLOCKS = 0.6f;
+    public static final float LEDGE_MANTLE_DURATION = 1f;
+    public static final float LEDGE_MANTLE_RISE_START = 0.1f;
+    public static final float LEDGE_MANTLE_RISE_END = 0.7f;
+    public static final float LEDGE_MANTLE_FORWARD_START = 0.6f;
+    public static final float LEDGE_MANTLE_FORWARD_END = 0.95f;
+    public static final float LEDGE_STALL_SHARE = 0.5f;
+
     // Entity, Rig & Player
     public static final float BLOCK_PLACEMENT_INTERVAL = 0.1f;
     public static final float BONE_WEIGHT_SUM_EPSILON = 0.001f;
