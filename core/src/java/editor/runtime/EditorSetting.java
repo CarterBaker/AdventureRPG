@@ -368,7 +368,7 @@ public class EditorSetting {
             .with(FileMenuAction.DELETE, "deleteRecording")
             .with(FileMenuAction.UNDO, "undo")
             .with(FileMenuAction.REDO, "redo");
-    public static final FileMenuTableStruct FILE_MENU_TREE_VIEWER = new FileMenuTableStruct(
+    public static final FileMenuTableStruct FILE_MENU_TREES = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.TreeViewerBranch")
             .with(FileMenuAction.NEW, "newTree")
             .with(FileMenuAction.DUPLICATE, "duplicateTree")
@@ -581,6 +581,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_SHIP_VIEWER = "Ship Viewer";
     public static final String TAB_TITLE_TOOLS = "Tools";
     public static final String TAB_TITLE_TRANSITIONS = "Transitions";
+    public static final String TAB_TITLE_TREE_PLANNER = "Tree Planner";
     public static final String TAB_TITLE_TREE_VIEWER = "Tree Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
@@ -2817,7 +2818,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
     public static final String TOOL_CANVAS_IMAGE_EDITOR = "Image Editor";
     public static final String TOOL_CANVAS_MATERIAL_VIEWER = "Material Viewer";
-    public static final String TOOL_CANVAS_TREE_VIEWER = "Tree Viewer";
+    public static final String TOOL_CANVAS_TREE = "Tree";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";
@@ -2997,9 +2998,10 @@ public class EditorSetting {
     public static final String BIOME_PLANNER_MESSAGE_PAINTED = "Painted ";
     public static final String BIOME_PLANNER_MESSAGE_RESET = "Every cell follows the centre";
 
-    // Tree Viewer — the seed its preview starts from, the age it grows its tree to and how far one step moves it,
-    // the least height a frame takes, its layers (every LOD level, then the shared tree), the Tools tab's Preview
-    // actions and its messages
+    // Trees — what the Tree Planner and Tree Viewer share: the seed the preview starts from, the age it grows its
+    // tree to and how far one step moves it, the least height a frame takes, the viewer's layers (every LOD level,
+    // then the shared tree), the Tools tab's Preview actions, the precision a stepped or typed decimal is kept to, the
+    // Palette's header and the Properties tab's title suffix, and the messages
     public static final long TREE_VIEWER_FIRST_SEED = 1L;
     public static final float TREE_VIEWER_AGE_DEFAULT = 1f;
     public static final float TREE_VIEWER_AGE_MIN = 0.05f;
@@ -3022,6 +3024,11 @@ public class EditorSetting {
     public static final String TREE_VIEWER_MESSAGE_RESEEDED = "Grown from a new seed";
     public static final String TREE_VIEWER_MESSAGE_AGED = "Grown to a new age";
     public static final String TREE_VIEWER_MESSAGE_NO_TREE = "Select a tree first";
+    public static final String TREE_VIEWER_MESSAGE_SET = "Set ";
+    public static final int TREE_PLANNER_VALUE_PRECISION = 10000;
+    public static final String TREE_PLANNER_VALUE_FORMAT = "%.2f";
+    public static final String TREE_PLANNER_PALETTE_HEADER = "Trees";
+    public static final String TREE_PLANNER_FIELDS_SUFFIX = " Fields";
 
     // Item Library — the game's item meshes, the definition file an import first offers, the pack a converted quad
     // mesh is drawn from, and the names new parts take

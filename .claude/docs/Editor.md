@@ -50,9 +50,13 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   while the Biomes layer is picked, the chosen biome selected in the Hierarchy as the palette is shown, so its fields
   are the Properties tab's. The Biome Planner only plans.
 - **Content.** Entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab.
-- **Tree Viewer.** Makes trees: the species picked in the Hierarchy, its fields (`lod_seed` among them) in the
-  Properties tab, its LOD levels in the Layers tab, the preview's New Seed, Younger and Older in the Tools tab, and New,
-  Duplicate, Save and Revert in the File menu. There is no Tree Planner.
+- **Tree Planner and Tree Viewer.** Trees are built in the Tree Planner, the generator a species grows by drawn as a
+  graph of nodes (Tree, Trunk, Limbs, Twigs, Leaves, Wood, Growth), and seen in the Tree Viewer. While either is worked
+  in, the Palette tab lists every tree species, the one picked being the Hierarchy's too; the planner's Properties tab
+  holds the fields of the node clicked in its graph (`lod_seed` under Tree), each with a slider and a typed value, and
+  the viewer's the species' whole entry. The viewer's LOD levels are its layers in the Layers tab; both tabs share the
+  Tools tab's Preview actions (New Seed, Younger, Older) and the File menu's New, Duplicate, Save and Revert
+  (`TreeViewerManager` holds what they share).
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
   Sculpt, Weights, Paint, Rig, Pose and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
   vertices selected. The Appearance tab's Properties rows hold every slider and control, and the Rig tab marks which

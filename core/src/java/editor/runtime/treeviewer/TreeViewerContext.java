@@ -4,18 +4,23 @@ import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.propertiespipeline.properties.PaletteRowSource;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.bootstrap.treeviewerpipeline.treeviewermanager.TreeViewerManager;
 import editor.runtime.EditorSetting;
+import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
+import editor.runtime.treeplanner.TreePlannerSetting;
 import editor.runtime.treeviewer.frame.TreeViewerFrameSystem;
 import editor.runtime.treeviewer.layer.TreeViewerLayerSystem;
 import editor.runtime.treeviewer.menu.TreeViewerMenuSystem;
@@ -28,20 +33,20 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TreeViewerContext extends ContextPackage
-        implements ViewCameraProvider, ToolCanvasProvider, ToolActionProvider, PropertiesProvider, LayersProvider,
-        FileMenuProvider {
+        implements ViewCameraProvider, ToolCanvasProvider, ToolActionProvider, PropertiesProvider, PaletteRowSource,
+        LayersProvider, FileMenuProvider {
 
     /*
-     * Editor tab for making trees: the species picked in the Hierarchy as the
-     * world draws it, every field of it, LOD seed included, edited live in
-     * the Properties tab. Each LOD level the world draws a tree at is a layer
-     * in the Layers tab, and last the shared tree the species' LOD seed
-     * grows, all standing on one root, the topmost layer whose eye is open
-     * the one drawn. The Tools tab's Preview actions grow the preview from a
-     * new seed or to another age, and the File menu makes, saves and reverts
-     * species. The orbit button turns the view, the pan button slides it and
-     * scrolling zooms. All state lives in TreeViewerManager; this tab only
-     * shows it.
+     * Editor tab showing trees: the species picked in the Palette tab, which
+     * lists every tree, or in the Hierarchy, as the world draws it, every
+     * field of it, LOD seed included, edited live in the Properties tab. Each
+     * LOD level the world draws a tree at is a layer in the Layers tab, and
+     * last the shared tree the species' LOD seed grows, all standing on one
+     * root, the topmost layer whose eye is open the one drawn. The Tools
+     * tab's Preview actions grow the preview from a new seed or to another
+     * age, and the File menu makes, saves and reverts species. The orbit
+     * button turns the view, the pan button slides it and scrolling zooms.
+     * All state lives in TreeViewerManager; this tab only shows it.
      */
 
     // Internal
@@ -95,7 +100,7 @@ public class TreeViewerContext extends ContextPackage
 
     @Override
     public ToolCanvas getToolCanvas() {
-        return ToolCanvas.TREE_VIEWER;
+        return ToolCanvas.TREE;
     }
 
     @Override
@@ -149,10 +154,38 @@ public class TreeViewerContext extends ContextPackage
         return PropertiesContent.INFO;
     }
 
+    // Palette \\
+
+    // Every tree species, to pick the one shown
+    @Override
+    public PaletteContent getPaletteContent() {
+        return PaletteContent.ROWS;
+    }
+
+    @Override
+    public int getPaletteRevision() {
+        return treeViewerManager.getRevision();
+    }
+
+    @Override
+    public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        treeViewerManager.buildTreeRows(rows);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getPaletteTemplates() {
+        return TreePlannerSetting.ROW_TEMPLATES;
+    }
+
+    // The tree list holds no numbers to step
+    @Override
+    public void stepPaletteRow(String key, int steps) {
+    }
+
     // File Menu \\
 
     @Override
     public FileMenuTableStruct getFileMenuTable() {
-        return EditorSetting.FILE_MENU_TREE_VIEWER;
+        return EditorSetting.FILE_MENU_TREES;
     }
 }

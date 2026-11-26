@@ -2,29 +2,43 @@ package editor.bootstrap.treeviewerpipeline.treeviewermanager;
 
 import java.util.Objects;
 
+import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
+import editor.bootstrap.treeviewerpipeline.treeviewer.TreePlannerNode;
+import editor.bootstrap.treeviewerpipeline.treeviewer.TreePlannerParameter;
 import editor.bootstrap.treeviewerpipeline.treeviewer.TreePreviewLayerStruct;
 import editor.runtime.EditorSetting;
+import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TreeViewerManager extends ManagerPackage {
 
     /*
-     * Owns what the Tree Viewer works on: the species selected in the
-     * Hierarchy, whose every field the Properties tab edits live, LOD seed
-     * included, and the seed and age the preview grows its tree from, which
-     * the Tools tab's Preview actions step. Any change to the species, its
-     * seed, its age or the shared tree LOD setting has TreePreviewBranch
-     * build the preview again on the next frame, once the species itself has
-     * been rebuilt. New, Duplicate, Save and Revert act on the species' file.
+     * Owns what the Tree Planner and Tree Viewer work on: the species picked
+     * in the Palette tab or the Hierarchy, the two always following each
+     * other, the node of its generator picked in the planner's graph, whose
+     * fields the Properties tab edits through TreeEditBranch live in every
+     * window, and the seed and age the preview grows its tree from, which the
+     * Tools tab's Preview actions step. Any change to the species, its seed,
+     * its age or the shared tree LOD setting has TreePreviewBranch build the
+     * preview again on the next frame, once the species itself has been
+     * rebuilt. New, Duplicate, Save and Revert act on the species' file.
      */
 
     // Internal
     private InfoManager infoManager;
+    private TreeEditBranch treeEditBranch;
     private TreePreviewBranch treePreviewBranch;
 
     // Selection
     private String treeName;
+    private TreePlannerNode node;
+
+    // Catalogue
+    private ObjectArrayList<String> treeNames;
+    private int shownInfoRevision;
 
     // Preview
     private long seed;
@@ -42,7 +56,15 @@ public class TreeViewerManager extends ManagerPackage {
     protected void create() {
 
         // Internal
+        this.treeEditBranch = create(TreeEditBranch.class);
         this.treePreviewBranch = create(TreePreviewBranch.class);
+
+        // Selection
+        this.node = TreePlannerNode.TREE;
+
+        // Catalogue
+        this.treeNames = new ObjectArrayList<>();
+        this.shownInfoRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Preview
         this.seed = EditorSetting.TREE_VIEWER_FIRST_SEED;
@@ -70,6 +92,11 @@ public class TreeViewerManager extends ManagerPackage {
     @Override
     protected void update() {
 
+        if (infoManager.getRevision() != shownInfoRevision) {
+            shownInfoRevision = infoManager.getRevision();
+            refreshCatalogue();
+        }
+
         if (internal.settings.treeSharedLevel != sharedLevel) {
             sharedLevel = internal.settings.treeSharedLevel;
             previewStale = true;
@@ -84,7 +111,53 @@ public class TreeViewerManager extends ManagerPackage {
         treePreviewBranch.refresh();
     }
 
+    // Catalogue \\
+
+    // Every tree species the Info files hold, by name, the revision moving only when the names do
+    private void refreshCatalogue() {
+
+        ObjectArrayList<InfoEntryStruct> entries = infoManager.getEntries(EditorSetting.INFO_SCHEMA_TREES);
+        ObjectArrayList<String> names = new ObjectArrayList<>(entries.size());
+
+        for (int i = 0; i < entries.size(); i++)
+            names.add(entries.get(i).getEntryName());
+
+        names.sort(null);
+
+        if (names.equals(treeNames))
+            return;
+
+        treeNames = names;
+        notifyChanged();
+    }
+
+    // Every species to pick, the one picked selected
+    public void buildTreeRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.TREE_PLANNER_PALETTE_HEADER));
+
+        for (int i = 0; i < treeNames.size(); i++) {
+
+            String name = treeNames.get(i);
+
+            rows.add(CharacterViewRowStruct.item(name, name, name.equals(treeName)));
+        }
+    }
+
     // Selection \\
+
+    // A species picked in the Palette tab, opened in the Hierarchy and the Info Panel alike
+    public void selectTree(String selectedName) {
+
+        infoManager.selectEntry(EditorSetting.INFO_SCHEMA_TREES, selectedName, selectedName);
+        applySelection(selectedName);
+    }
+
+    public void selectNode(TreePlannerNode selectedNode) {
+
+        this.node = selectedNode;
+        notifyChanged();
+    }
 
     private void applySelection(String selectedName) {
 
@@ -125,6 +198,95 @@ public class TreeViewerManager extends ManagerPackage {
 
         infoManager.selectEntry(EditorSetting.INFO_SCHEMA_TREES, treeName, treeName);
         return true;
+    }
+
+    // Fields \\
+
+    // The picked node's fields, a choice stepped round its names and a number slid across its bounds
+    public void buildFieldRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        rows.add(CharacterViewRowStruct.header(node.displayName + EditorSetting.TREE_PLANNER_FIELDS_SUFFIX));
+
+        if (treeName == null)
+            return;
+
+        TreePlannerParameter[] parameters = TreePlannerParameter.values();
+
+        for (int i = 0; i < parameters.length; i++) {
+
+            TreePlannerParameter parameter = parameters[i];
+
+            if (parameter.node != node)
+                continue;
+
+            rows.add(parameter.choices != null
+                    ? CharacterViewRowStruct.choice(parameter.name(), parameter.label, formatValue(parameter))
+                    : CharacterViewRowStruct.ranged(
+                            parameter.name(), parameter.label, formatValue(parameter),
+                            treeEditBranch.read(treeName, parameter), parameter.min, parameter.max, parameter.step));
+        }
+    }
+
+    // A field moved a whole number of its steps, a choice round its names
+    public void stepField(String key, int steps) {
+
+        TreePlannerParameter parameter = TreePlannerParameter.valueOf(key);
+
+        if (!treeEditBranch.step(treeName, parameter, steps)) {
+            setStatusMessage(EditorSetting.TREE_VIEWER_MESSAGE_NO_TREE);
+            return;
+        }
+
+        setStatusMessage(EditorSetting.TREE_VIEWER_MESSAGE_SET + parameter.label + " " + formatValue(parameter));
+    }
+
+    public String getFieldText(String key) {
+        return formatValue(TreePlannerParameter.valueOf(key));
+    }
+
+    public boolean isFieldValid(String key, String text) {
+        return TreePlannerParameter.valueOf(key).choices == null && parseField(text) != null;
+    }
+
+    // A field set to a value typed, held within its bounds
+    public void setField(String key, String text) {
+
+        TreePlannerParameter parameter = TreePlannerParameter.valueOf(key);
+        Float value = parseField(text);
+
+        if (value == null)
+            return;
+
+        if (!treeEditBranch.set(treeName, parameter, value)) {
+            setStatusMessage(EditorSetting.TREE_VIEWER_MESSAGE_NO_TREE);
+            return;
+        }
+
+        setStatusMessage(EditorSetting.TREE_VIEWER_MESSAGE_SET + parameter.label + " " + formatValue(parameter));
+    }
+
+    private Float parseField(String text) {
+
+        try {
+            float value = Float.parseFloat(text.trim());
+            return Float.isFinite(value) ? value : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    // A field's value as the tree tabs show it: a choice by its name, a whole number as one, a decimal to two places
+    public String formatValue(TreePlannerParameter parameter) {
+
+        float value = treeEditBranch.read(treeName, parameter);
+
+        if (parameter.choices != null)
+            return parameter.choices.getEnumConstants()[(int) value].name().toLowerCase();
+
+        if (parameter.whole)
+            return Integer.toString(Math.round(value));
+
+        return String.format(EditorSetting.TREE_PLANNER_VALUE_FORMAT, value);
     }
 
     // Actions \\
@@ -206,6 +368,10 @@ public class TreeViewerManager extends ManagerPackage {
 
     public String getTreeName() {
         return treeName;
+    }
+
+    public TreePlannerNode getNode() {
+        return node;
     }
 
     public long getSeed() {

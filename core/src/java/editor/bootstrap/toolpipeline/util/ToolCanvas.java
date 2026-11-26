@@ -48,7 +48,7 @@ public enum ToolCanvas {
      * of the colour, every map at once, while the Materials tab was worked in
      * after the Color Wheel.
      * The Material Viewer turns its light and shows the material on the
-     * shape chosen. The Tree Viewer only looks, and grows its preview from a
+     * shape chosen. The tree tabs only look, and grow their preview from a
      * new seed or to another age. The recorder's Timeline selects and cuts
      * clips, nests the selection or opens a nested clip, and exports the
      * media file, as a video or as music, or as MIDI.
@@ -194,8 +194,8 @@ public enum ToolCanvas {
             new EditorTool[] { EditorTool.LIGHT },
             false,
             shape()),
-    TREE_VIEWER(
-            EditorSetting.TOOL_CANVAS_TREE_VIEWER,
+    TREE(
+            EditorSetting.TOOL_CANVAS_TREE,
             new EditorTool[] { EditorTool.MOVE },
             new ToolActionGroupStruct[] { treePreview() },
             false),

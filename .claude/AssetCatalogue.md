@@ -619,6 +619,9 @@ One line per session that changed this file: the date, what was added or removed
   single-sided: the second surface behind it showed through the gaps as a doubled row; the flat disc tongue replaced
   by one lofted inside the lower arch), `menus/editor/EditorWindow.arpg` (Pose under Rigging in the Mesh menu),
   `schemas/Shortcuts.arpg` (the `character_pose` canvas) and `shortcuts/CharacterEditor.arpg` (Reset Pose on it).
+- 2026-11-26: Tree Planner restored. Added `menus/editor/TreePlanner.arpg` again (its generator graph and status line
+  only, with the row templates the Palette tab lists trees with and the Properties tab a node's fields with);
+  regenerated `menus/editor/EditorWindow.arpg` (the Tree Planner back in the World menu).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
@@ -2943,7 +2946,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `NewImageDialog.arpg`, `NoteLibrary.arpg`, `Palette.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
 `TabFrame.arpg`,
-`Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreeViewer.arpg`, `ViewGizmo.arpg`,
+`Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `ViewGizmo.arpg`,
 `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`

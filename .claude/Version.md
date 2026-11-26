@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 171
-Task: TeethAndPoseTab
+Delivery: 172
+Task: TreePlannerRestore
 Applied: 2026-11-26
 
 ## Log
@@ -181,3 +181,4 @@ Applied: 2026-11-26
 - 169, 2026-11-26, TreeViewerLayers
 - 170, 2026-11-26, TreeLodLadder
 - 171, 2026-11-26, TeethAndPoseTab
+- 172, 2026-11-26, TreePlannerRestore
