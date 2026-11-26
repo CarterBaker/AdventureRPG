@@ -31,7 +31,9 @@ public class PrecipitationSystem extends SystemPackage {
      * weather map, read through the cloud noise, and the rain shafts the
      * weather pass writes into its distance target are laid beneath them, so
      * that target is rendered first. Snowflakes and raindrops close enough to
-     * resolve are drawn from their own pictures, as the stars are.
+     * resolve are drawn from their own pictures, as the stars are. The
+     * wind's lines and leaves are drawn in the same pass, from the grid's
+     * WindData.
      */
 
     // Internal
@@ -119,6 +121,7 @@ public class PrecipitationSystem extends SystemPackage {
         mat.setUBO(grid.getSkyColorUBO());
         mat.setUBO(grid.getPrecipitationDataUBO());
         mat.setUBO(grid.getWeatherMapUBO());
+        mat.setUBO(grid.getWindDataUBO());
     }
 
     // Pictures \\
