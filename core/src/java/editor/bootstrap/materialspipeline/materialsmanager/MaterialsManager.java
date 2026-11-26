@@ -12,8 +12,8 @@ import editor.bootstrap.materialspipeline.materials.MaterialDropProvider;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
-import editor.runtime.colorwheel.ColorWheelContext;
 import editor.runtime.materials.MaterialsContext;
+import editor.runtime.palette.PaletteContext;
 import engine.assets.image.Pixmap;
 import engine.root.ContextPackage;
 import engine.root.EngineSetting;
@@ -41,9 +41,9 @@ public class MaterialsManager extends ManagerPackage {
      * revision moves whenever the list or what is chosen changes, the value
      * revision whenever only a value of the open material does. Painting
      * lays the material chosen instead of the colour while the Materials tab
-     * was worked in after the Color Wheel, as a texturing tool's fill swaps
-     * between a colour and a material; working in the Color Wheel again
-     * paints the colour.
+     * was worked in after the Palette, as a texturing tool's fill swaps
+     * between a colour and a material; working in the Palette again paints
+     * the colour.
      */
 
     // Internal
@@ -573,11 +573,10 @@ public class MaterialsManager extends ManagerPackage {
         return packName2MaterialNames.get(packName);
     }
 
-    // Whether painting lays the material chosen rather than the colour: the Materials tab worked in after the Color
-    // Wheel
+    // Whether painting lays the material chosen rather than the colour: the Materials tab worked in after the Palette
     public boolean isPaintingMaterial() {
 
-        WindowInstance recent = activeWindowManager.findRecent(MaterialsContext.class, ColorWheelContext.class);
+        WindowInstance recent = activeWindowManager.findRecent(MaterialsContext.class, PaletteContext.class);
 
         return recent != null && recent.getContext() instanceof MaterialsContext;
     }

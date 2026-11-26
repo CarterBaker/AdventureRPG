@@ -73,8 +73,8 @@ public class EditorBranch extends BranchPackage {
         nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_TOOLS, EditorSetting.TAB_TITLE_TOOLS, canvasWindow);
         nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_BRUSHES, EditorSetting.TAB_TITLE_BRUSHES, canvasWindow);
         nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_STAMPS, EditorSetting.TAB_TITLE_STAMPS, canvasWindow);
-        nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_MAPS, EditorSetting.TAB_TITLE_MAPS,
-                propertiesManager.getMapsWindow());
+        nameEntry(list, EditorSetting.ELEMENT_TOOLS_MENU_PALETTE, EditorSetting.TAB_TITLE_PALETTE,
+                propertiesManager.getPaletteWindow());
     }
 
     private void nameEntry(ElementInstance list, String labelId, String title, WindowInstance window) {
@@ -97,10 +97,6 @@ public class EditorBranch extends BranchPackage {
         tabManager.openLayers(window.getGLWindow());
     }
 
-    public void openColorWheel(WindowInstance window) {
-        tabManager.openColorWheel(window.getGLWindow());
-    }
-
     public void openArpgViewer(WindowInstance window) {
         tabManager.openArpgViewer(window.getGLWindow());
     }
@@ -117,8 +113,8 @@ public class EditorBranch extends BranchPackage {
         tabManager.openStamps(window.getGLWindow());
     }
 
-    public void openMaps(WindowInstance window) {
-        tabManager.openMaps(window.getGLWindow());
+    public void openPalette(WindowInstance window) {
+        tabManager.openPalette(window.getGLWindow());
     }
 
     public void openRecorder(WindowInstance window) {

@@ -600,6 +600,10 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/EditorWindow.arpg` (Settings as a gear icon, dividers closing the menus and before Layouts, the search
   box between them with its results panel, the Settings dialog's search box) and `schemas/Shortcuts.arpg` (the
   `collider` tool, which `shortcuts/CharacterEditor.arpg` names).
+- 2026-11-26: Palette tab. Added `menus/editor/Palette.arpg` (the Palette tab: the colour wheel's area over the rows,
+  the wheel and the biome grid templates); regenerated `menus/editor/Properties.arpg` (biome templates moved to the
+  Palette) and `menus/editor/EditorWindow.arpg` (Palette in the Tools menu in place of Maps and Color Wheel); deleted
+  `menus/editor/ColorWheel.arpg` (the wheel lives in the Palette).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
@@ -2885,9 +2889,9 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
-`ColorWheel.arpg`, `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
+`CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
 `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`,
-`NewImageDialog.arpg`, `NoteLibrary.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
+`NewImageDialog.arpg`, `NoteLibrary.arpg`, `Palette.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
 `TabFrame.arpg`,
 `Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `ViewGizmo.arpg`,

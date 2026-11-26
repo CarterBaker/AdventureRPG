@@ -1,7 +1,7 @@
 # ImageEditorPipeline
 
-Where the Image Editor and the Maps tab live, which method owns each operation, and the traps. Read it before touching
-the Image Editor, the Maps tab, map generation, layered images or the New Image dialog. `.claude/CLAUDE.md` still
+Where the Image Editor and the Palette tab's maps live, which method owns each operation, and the traps. Read it before touching
+the Image Editor, the Palette tab's maps, map generation, layered images or the New Image dialog. `.claude/CLAUDE.md` still
 applies in full.
 
 ---
@@ -11,7 +11,7 @@ applies in full.
 The Image Editor (Textures menu) paints layered images the way Krita and Photoshop do: File, New names an image and
 sets its size and background; its layers are listed in the Layers tab (New Layer and Delete Layer icons at its foot,
 the same keys as the Tools tab's actions); the Tools tab's tools (Brush, Erase, Smooth, Swirl, Scatter, Fill, Pick),
-the Brushes tab's brush and the Color Wheel's colour paint the layer picked; the Maps tab lists every map the image may
+the Brushes tab's brush and the Palette's colour paint the layer picked; the Palette tab lists every map the image may
 carry, and Generate and Clear under the picked map's settings make and erase it. An image is one `.arpg` file in
 the workspace, `Documents/My Games/AdventureRPG/Assets/Images/`: New names it, sets its size and writes it at once,
 and File, Open picks one there in the system's file dialog.
@@ -30,9 +30,10 @@ and File, Open picks one there in the system's file dialog.
   `MapGenerateOption`s it takes. Each map keeps its own copy of its settings. `ImageManager.generateMap` is the one
   path that generates (`ImageMapBranch`, scratch in `MapGenerateScratchStruct`, grown only for a larger image). The
   albedo is the layers themselves and is never generated.
-- **The Maps tab** (`editor.runtime.maps.MapsContext`) follows the window worked in last that implements
-  `MapsProvider`, tracked by `PropertiesManager.getMaps` as the Properties tab's provider is: the Image Editor, every character tool tab
-  and the UV Editor. Rows come from `MapRowUtility` for both, so the layout is one: map entries (generated ones
+- **The maps in the Palette tab** (`editor.runtime.palette`, `ImagePaletteSystem`, under the colour wheel) follow the
+  window worked in last that has a palette, tracked by `PropertiesManager.getPalette` as the Properties tab's provider
+  is; every `MapsProvider` (a `PaletteProvider` offering `PaletteContent.IMAGE`) lists there: the Image Editor, every
+  character tool tab and the UV Editor. Rows come from `MapRowUtility` for both, so the layout is one: map entries (generated ones
   marked), the picked map's settings, Generate, Clear.
 
 ## Code

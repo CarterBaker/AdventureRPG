@@ -1,18 +1,14 @@
-package editor.runtime.colorwheel.wheel;
+package editor.runtime.palette.wheel;
 
 import java.nio.ByteBuffer;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.menupipeline.menu.MenuInstance;
-import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
-import application.runtime.RuntimeSetting;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
-import editor.runtime.colorwheel.ColorWheelSetting;
 import editor.runtime.EditorSetting;
+import editor.runtime.palette.PaletteSetting;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
@@ -21,12 +17,13 @@ import engine.util.memory.BufferUtility;
 public class ColorWheelSystem extends SystemPackage {
 
     /*
-     * Opens the Color Wheel menu and keeps it in step with the paint colour:
-     * the wheel image drawn again only when the colour moves (a hue ring,
+     * The Palette tab's colour wheel, kept in step with the paint colour while
+     * a wheel element is bound to it: the wheel image drawn again only when
+     * the colour moves (a hue ring,
      * inside it a triangle turned so its first corner holds the hue at full
      * strength, its others white and black, and a marker on each where the
-     * colour stands), its title written once as it opens; the colour's
-     * sliders are the Properties tab's. A press on the ring turns
+     * colour stands); the colour's sliders are the Properties tab's. A press
+     * on the ring turns
      * the hue as far round as the pointer is; a press in the triangle sets
      * saturation and brightness where the pointer is, held to the triangle
      * while the drag goes on. Image rows run bottom first, as the layout's y
@@ -34,16 +31,12 @@ public class ColorWheelSystem extends SystemPackage {
      */
 
     // Internal
-    private MenuManager menuManager;
-    private FBOManager fboManager;
     private TextureManager textureManager;
     private InputManager inputManager;
     private CharacterEditorManager characterEditorManager;
 
-    // Menus
-    private MenuInstance wheelMenu;
-
-    // Wheel — its texture, the colour it shows, and its texels
+    // Wheel — the element showing it, its texture, the colour it shows, and its texels
+    private ElementInstance wheelElement;
     private int wheelTexture;
     private float shownHue;
     private float shownSaturation;
@@ -64,7 +57,7 @@ public class ColorWheelSystem extends SystemPackage {
     @Override
     protected void create() {
 
-        int size = ColorWheelSetting.WHEEL_SIZE;
+        int size = PaletteSetting.WHEEL_SIZE;
 
         // Wheel
         this.texels = BufferUtility.newByteBuffer(size * size * EngineSetting.COLOR_CHANNEL_COUNT);
@@ -72,14 +65,12 @@ public class ColorWheelSystem extends SystemPackage {
 
         // Scratch
         this.colorScratch = new Color();
-        this.corners = new float[ColorWheelSetting.WHEEL_CORNER_COUNT * 2];
-        this.weights = new float[ColorWheelSetting.WHEEL_CORNER_COUNT];
+        this.corners = new float[PaletteSetting.WHEEL_CORNER_COUNT * 2];
+        this.weights = new float[PaletteSetting.WHEEL_CORNER_COUNT];
     }
 
     @Override
     protected void get() {
-        this.menuManager = get(MenuManager.class);
-        this.fboManager = get(FBOManager.class);
         this.textureManager = get(TextureManager.class);
         this.inputManager = get(InputManager.class);
         this.characterEditorManager = get(CharacterEditorManager.class);
@@ -88,23 +79,10 @@ public class ColorWheelSystem extends SystemPackage {
     @Override
     protected void awake() {
 
-        WindowInstance window = context.getWindow();
-        int size = ColorWheelSetting.WHEEL_SIZE;
+        int size = PaletteSetting.WHEEL_SIZE;
 
-        menuManager.setMenuTargetFbo(window, fboManager.cloneFbo(RuntimeSetting.FBO_UI, window));
-        this.wheelMenu = menuManager.openMenu(ColorWheelSetting.MENU_COLOR_WHEEL, window);
         this.wheelTexture = textureManager.createTexture2D(
                 size, size, EngineSetting.GL_CLAMP_TO_EDGE, EngineSetting.GL_LINEAR);
-
-        ElementInstance title = wheelMenu.getEntryPoint(ColorWheelSetting.ENTRY_TITLE);
-
-        if (title != null)
-            title.setFontText(EditorSetting.CHARACTER_PAINT_HEADER_COLOR);
-
-        ElementInstance wheel = wheelMenu.getEntryPoint(ColorWheelSetting.ENTRY_WHEEL);
-
-        if (wheel != null && wheel.hasSprite())
-            wheel.getSpriteInstance().setTexture(wheelTexture);
     }
 
     @Override
@@ -121,10 +99,25 @@ public class ColorWheelSystem extends SystemPackage {
     @Override
     protected void update() {
 
+        if (wheelElement == null)
+            return;
+
         if (dragging && !inputManager.getRawInput(context.getWindow()).isMouseDown(EditorSetting.COMMAND_DRAG_BUTTON))
             this.dragging = false;
 
         refreshWheel();
+    }
+
+    // Management \\
+
+    // The element the wheel is shown on, given the wheel's image; null once that element is taken away
+    public void bind(ElementInstance wheel) {
+
+        this.wheelElement = wheel;
+        this.dragging = false;
+
+        if (wheel != null && wheel.hasSprite())
+            wheel.getSpriteInstance().setTexture(wheelTexture);
     }
 
     private void refreshWheel() {
@@ -145,13 +138,13 @@ public class ColorWheelSystem extends SystemPackage {
     // Drag \\
 
     // The press's part chosen on its first frame, then the colour set from the pointer every frame it stays down
-    public void drag(ElementInstance wheelElement) {
+    public void drag(ElementInstance wheel) {
 
         WindowInstance window = context.getWindow();
-        float half = ColorWheelSetting.WHEEL_SIZE * 0.5f;
-        float scale = ColorWheelSetting.WHEEL_SIZE / Math.max(1f, wheelElement.getComputedW());
-        float x = (inputManager.getHoverMouseX(window) - wheelElement.getComputedLeft()) * scale - half;
-        float y = (inputManager.getHoverMouseY(window) - wheelElement.getComputedTop()) * scale - half;
+        float half = PaletteSetting.WHEEL_SIZE * 0.5f;
+        float scale = PaletteSetting.WHEEL_SIZE / Math.max(1f, wheel.getComputedW());
+        float x = (inputManager.getHoverMouseX(window) - wheel.getComputedLeft()) * scale - half;
+        float y = (inputManager.getHoverMouseY(window) - wheel.getComputedTop()) * scale - half;
 
         resolveCorners(shownHue);
 
@@ -160,26 +153,26 @@ public class ColorWheelSystem extends SystemPackage {
             this.dragPart = resolvePart(x, y);
         }
 
-        if (dragPart == ColorWheelSetting.PART_RING)
+        if (dragPart == PaletteSetting.PART_RING)
             turnHue(x, y);
-        else if (dragPart == ColorWheelSetting.PART_TRIANGLE)
+        else if (dragPart == PaletteSetting.PART_TRIANGLE)
             pickInTriangle(x, y);
     }
 
     private int resolvePart(float x, float y) {
 
-        float half = ColorWheelSetting.WHEEL_SIZE * 0.5f;
+        float half = PaletteSetting.WHEEL_SIZE * 0.5f;
         float distance = (float) Math.hypot(x, y);
 
-        if (distance >= ColorWheelSetting.WHEEL_RING_INNER * half
-                && distance <= ColorWheelSetting.WHEEL_RING_OUTER * half)
-            return ColorWheelSetting.PART_RING;
+        if (distance >= PaletteSetting.WHEEL_RING_INNER * half
+                && distance <= PaletteSetting.WHEEL_RING_OUTER * half)
+            return PaletteSetting.PART_RING;
 
         resolveWeights(x, y);
 
         return weights[0] >= 0f && weights[1] >= 0f && weights[2] >= 0f
-                ? ColorWheelSetting.PART_TRIANGLE
-                : ColorWheelSetting.PART_NONE;
+                ? PaletteSetting.PART_TRIANGLE
+                : PaletteSetting.PART_NONE;
     }
 
     private void turnHue(float x, float y) {
@@ -217,11 +210,11 @@ public class ColorWheelSystem extends SystemPackage {
     // Every texel of the ring, the triangle and the markers, then the image uploaded whole
     private void draw(float hue, float saturation, float brightness) {
 
-        int size = ColorWheelSetting.WHEEL_SIZE;
+        int size = PaletteSetting.WHEEL_SIZE;
         float half = size * 0.5f;
-        float outer = ColorWheelSetting.WHEEL_RING_OUTER * half;
-        float inner = ColorWheelSetting.WHEEL_RING_INNER * half;
-        float soft = ColorWheelSetting.WHEEL_EDGE_SOFTNESS;
+        float outer = PaletteSetting.WHEEL_RING_OUTER * half;
+        float inner = PaletteSetting.WHEEL_RING_INNER * half;
+        float soft = PaletteSetting.WHEEL_EDGE_SOFTNESS;
 
         resolveCorners(hue);
 
@@ -234,8 +227,8 @@ public class ColorWheelSystem extends SystemPackage {
         double hueAngle = hue * Math.PI * 2.0;
         float hueX = (float) Math.cos(hueAngle) * ringMiddle;
         float hueY = (float) Math.sin(hueAngle) * ringMiddle;
-        boolean darkMark = brightness > ColorWheelSetting.WHEEL_MARKER_DARK_ABOVE
-                && saturation < ColorWheelSetting.WHEEL_MARKER_DARK_SATURATION;
+        boolean darkMark = brightness > PaletteSetting.WHEEL_MARKER_DARK_ABOVE
+                && saturation < PaletteSetting.WHEEL_MARKER_DARK_SATURATION;
 
         texels.clear();
 
@@ -294,12 +287,12 @@ public class ColorWheelSystem extends SystemPackage {
 
     // A marker's outline, as strong as the texel lies on it
     private float ring(float dx, float dy) {
-        float distance = Math.abs((float) Math.hypot(dx, dy) - ColorWheelSetting.WHEEL_MARKER_RADIUS);
-        return edge(ColorWheelSetting.WHEEL_MARKER_WIDTH - distance, ColorWheelSetting.WHEEL_EDGE_SOFTNESS);
+        float distance = Math.abs((float) Math.hypot(dx, dy) - PaletteSetting.WHEEL_MARKER_RADIUS);
+        return edge(PaletteSetting.WHEEL_MARKER_WIDTH - distance, PaletteSetting.WHEEL_EDGE_SOFTNESS);
     }
 
     private boolean isNear(float dx, float dy) {
-        float reach = ColorWheelSetting.WHEEL_MARKER_RADIUS + ColorWheelSetting.WHEEL_MARKER_WIDTH * 2f;
+        float reach = PaletteSetting.WHEEL_MARKER_RADIUS + PaletteSetting.WHEEL_MARKER_WIDTH * 2f;
         return dx * dx + dy * dy <= reach * reach;
     }
 
@@ -308,11 +301,11 @@ public class ColorWheelSystem extends SystemPackage {
     // The triangle's corners about the middle: the hue, then white and black a third and two thirds of a turn on
     private void resolveCorners(float hue) {
 
-        float radius = ColorWheelSetting.WHEEL_TRIANGLE_RADIUS * ColorWheelSetting.WHEEL_SIZE * 0.5f;
+        float radius = PaletteSetting.WHEEL_TRIANGLE_RADIUS * PaletteSetting.WHEEL_SIZE * 0.5f;
 
         setCorner(0, hue, radius);
-        setCorner(1, hue + ColorWheelSetting.WHEEL_WHITE_TURN, radius);
-        setCorner(2, hue + ColorWheelSetting.WHEEL_BLACK_TURN, radius);
+        setCorner(1, hue + PaletteSetting.WHEEL_WHITE_TURN, radius);
+        setCorner(2, hue + PaletteSetting.WHEEL_BLACK_TURN, radius);
     }
 
     private void setCorner(int corner, float turn, float radius) {
@@ -341,8 +334,8 @@ public class ColorWheelSystem extends SystemPackage {
 
     // The triangle's height in texels, turning a weight into a distance from the edge
     private float getTriangleHeight() {
-        return ColorWheelSetting.WHEEL_TRIANGLE_RADIUS * ColorWheelSetting.WHEEL_SIZE * 0.5f
-                * ColorWheelSetting.WHEEL_TRIANGLE_HEIGHT_SHARE;
+        return PaletteSetting.WHEEL_TRIANGLE_RADIUS * PaletteSetting.WHEEL_SIZE * 0.5f
+                * PaletteSetting.WHEEL_TRIANGLE_HEIGHT_SHARE;
     }
 
     // Utility \\

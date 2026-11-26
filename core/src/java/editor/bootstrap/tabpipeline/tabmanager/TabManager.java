@@ -28,7 +28,6 @@ import editor.runtime.charactereditor.CharacterRigContext;
 import editor.runtime.charactereditor.CharacterSculptContext;
 import editor.runtime.charactereditor.CharacterUVContext;
 import editor.runtime.charactereditor.CharacterWeightsContext;
-import editor.runtime.colorwheel.ColorWheelContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
@@ -36,10 +35,10 @@ import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.imageeditor.ImageEditorContext;
 import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.layers.LayersContext;
-import editor.runtime.maps.MapsContext;
 import editor.runtime.materials.MaterialsContext;
 import editor.runtime.materialviewer.MaterialViewerContext;
 import editor.runtime.notelibrary.NoteLibraryContext;
+import editor.runtime.palette.PaletteContext;
 import editor.runtime.profiler.ProfilerContext;
 import editor.runtime.properties.PropertiesContext;
 import editor.runtime.recorder.RecorderContext;
@@ -164,12 +163,8 @@ public class TabManager extends ManagerPackage {
         return openTab(EditorSetting.TAB_TITLE_LAYERS, LayersContext.class, osWindow);
     }
 
-    public TabHandle openColorWheel(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_COLOR_WHEEL, ColorWheelContext.class, osWindow);
-    }
-
-    public TabHandle openMaps(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_MAPS, MapsContext.class, osWindow);
+    public TabHandle openPalette(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_PALETTE, PaletteContext.class, osWindow);
     }
 
     public TabHandle openImageEditor(WindowInstance osWindow) {

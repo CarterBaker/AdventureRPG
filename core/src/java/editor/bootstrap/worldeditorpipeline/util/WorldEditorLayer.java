@@ -1,6 +1,6 @@
 package editor.bootstrap.worldeditorpipeline.util;
 
-import editor.bootstrap.propertiespipeline.util.PropertiesContent;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
 
@@ -13,12 +13,12 @@ public enum WorldEditorLayer {
      * layer over it that raises and lowers the ground, drawn over the biomes.
      * The layer picked is the one the editor's tools work on; each is its own
      * tool canvas, keeping its own tool and brush size, and names what the
-     * Properties tab shows while it is picked: the biome palette over the
-     * biome chosen, or the entry selected in the Hierarchy.
+     * Palette tab offers while it is picked: the biomes to paint, or nothing
+     * to pick from on the height layer.
      */
 
-    BIOMES(EditorSetting.WORLD_EDITOR_LAYER_BIOMES, ToolCanvas.BIOMES, PropertiesContent.BIOMES, true, false),
-    HEIGHTS(EditorSetting.WORLD_EDITOR_LAYER_HEIGHTS, ToolCanvas.HEIGHTS, PropertiesContent.INFO, false, true);
+    BIOMES(EditorSetting.WORLD_EDITOR_LAYER_BIOMES, ToolCanvas.BIOMES, PaletteContent.BIOMES, true, false),
+    HEIGHTS(EditorSetting.WORLD_EDITOR_LAYER_HEIGHTS, ToolCanvas.HEIGHTS, PaletteContent.NONE, false, true);
 
     // Values
     public static final WorldEditorLayer[] VALUES = values();
@@ -26,7 +26,7 @@ public enum WorldEditorLayer {
     // Internal
     private final String label;
     private final ToolCanvas toolCanvas;
-    private final PropertiesContent propertiesContent;
+    private final PaletteContent paletteContent;
     private final boolean placing;
     private final boolean overlay;
 
@@ -35,12 +35,12 @@ public enum WorldEditorLayer {
     WorldEditorLayer(
             String label,
             ToolCanvas toolCanvas,
-            PropertiesContent propertiesContent,
+            PaletteContent paletteContent,
             boolean placing,
             boolean overlay) {
         this.label = label;
         this.toolCanvas = toolCanvas;
-        this.propertiesContent = propertiesContent;
+        this.paletteContent = paletteContent;
         this.placing = placing;
         this.overlay = overlay;
     }
@@ -55,8 +55,8 @@ public enum WorldEditorLayer {
         return toolCanvas;
     }
 
-    public PropertiesContent getPropertiesContent() {
-        return propertiesContent;
+    public PaletteContent getPaletteContent() {
+        return paletteContent;
     }
 
     // True for the layer that also places what the World Editor's mode places

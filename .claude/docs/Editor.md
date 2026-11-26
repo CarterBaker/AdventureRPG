@@ -21,7 +21,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   menus, a divider closing them, the search box centred in the room left, a divider, then Layouts. Every divider in the
   bar is the same thin line, so the groups read alike. Every other menu lists a tab under the section for what it works on. The tabs whose view
   changes with the window worked in last, the ones that serve the others, all sit in the Tools menu, the first: Data
-  (Hierarchy, Properties, Layers), Canvas (Tools, Brushes, Stamps, Maps, Color Wheel) and Media (the
+  (Hierarchy, Properties, Layers), Canvas (Tools, Brushes, Stamps, Palette) and Media (the
   Recorder). A new shared tab joins the Tools menu, never another menu. The sword (`menus/Sword`,
   `EditorSetting.WINDOW_ICON`) is every editor window's OS icon, set by `EditorFrameSystem` through
   `WindowPlatform.setWindowIcon`, never drawn in the toolbar. The menus between the two dividers lay out as
@@ -45,10 +45,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **World Editor.** Paints the biomes and places settlements and cameras on its Biomes layer, and shapes the ground on
   its Heights layer with one Raise brush that lowers while Ctrl is held (`WorldEditor/InvertStroke`). On either layer,
-  Move only looks: its left drag pans the view as the right drag does. The biome it paints is chosen in the Properties
-  tab's palette, which lists the biomes the world itself names in its `biomes` field (edited with the world in the
-  Worlds tab), shown while the Biomes layer is picked with the chosen biome's fields below it (selected in the
-  Hierarchy as the palette is shown). The Biome Planner only plans.
+  Move only looks: its left drag pans the view as the right drag does. The biome it paints is chosen in the Palette
+  tab, which lists the biomes the world itself names in its `biomes` field (edited with the world in the Worlds tab)
+  while the Biomes layer is picked, the chosen biome selected in the Hierarchy as the palette is shown, so its fields
+  are the Properties tab's. The Biome Planner only plans.
 - **Content.** Entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab.
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
   Sculpt, Weights, Paint, Rig and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
@@ -58,11 +58,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   `CharacterEditorManager.toggleRowEye`): shut, it hides the bone, every bone under it and the vertices they carry most,
   the bones below keeping their own eyes as a hidden group's layers do.
 - **UV Editor.** Lays out the UVs of the faces the UV tab selects.
-- **Shared beside them.** The Properties tab (also the Animation Editor's); the Color Wheel, holding the paint colour
-  every painting window shares, its sliders in the Properties tab while it was worked in last; the Maps tab, the maps
-  of the image worked (the texture painted, or the Image Editor's image).
+- **Shared beside them.** The Properties tab (also the Animation Editor's); the Palette tab, the colour wheel holding
+  the paint colour every painting window shares over the maps of the image worked (the texture painted, or the Image
+  Editor's image), the colour's sliders in the Properties tab while the Palette was worked in last.
 - **Image Editor** (under Textures). Paints layered images as Krita does, its layers in the Layers tab and its maps in
-  the Maps tab (see `.claude/docs/ImageEditorPipeline.md`).
+  the Palette tab (see `.claude/docs/ImageEditorPipeline.md`).
 - **Recorder.** The transport and nothing else: Record, Play, Pause, Stop and the Loop switch (which runs playing round
   the range marked with I and O, or the whole media file), the clock, and the status line saying what they did or why
   they could not. A take records whether or not the game is paused, so the pause menu that frees the cursor never
@@ -134,7 +134,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Rig and UV tabs (the Body and every region within it, one region picked for all of them; every region but the Body
   has an eye hiding its vertices on the part edited, `CharacterEditorManager.toggleRegionShown`), the character
   Paint tab (the paint layers of the map painted, each above the base with an eye), the Image Editor (every layer of
-  the image, each with an eye; its maps are listed in the Maps tab, never here) and the Item Editor (every part of the
+  the image, each with an eye; its maps are listed in the Palette tab, never here) and the Item Editor (every part of the
   item, each one material, the part picked being the one its tools lay; no eyes).
 - **Up and Down** pick the layer listed above or below the one picked while the Layers tab is worked in
   (`LayersManager.stepLayer`, `assets/shortcuts/Layers.arpg`).
@@ -171,7 +171,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   page under Window Frame.
 - **Everything says what it acts on.** A shared tab or menu that acts on a window other than its own names that window
   after its text in parentheses, the one way, through `ActiveWindowManager.nameContext` (the window's tab title):
-  "Properties (Sculpt)", "Biome Palette (World Editor)", the Tools, Layers and Maps tabs' titles, every File and Edit
+  "Properties (Sculpt)", "Palette (World Editor)", the Tools, Layers and Palette tabs' titles, every File and Edit
   item the tool takes ("Save (World Editor)"), the Tools menu's shared tabs as it opens ("Layers (Mesh)",
   `EditorBranch.refreshToolsMenu`) and the head of the hint bar ("(World Editor)"). Never build such a
   label by hand.
@@ -231,9 +231,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   material brush and Export share, and hands the same images to the viewer as editor textures
   (`MaterialsManager.usePreviewTexture`, made again only when an image changes), whose shader applies the parameters
   as the brush does. A map wanting a generated image (a normal or roughness from an albedo) takes the Image Editor's
-  exported map: generate it in the Maps tab, Export, then choose the PNG.
+  exported map: generate it in the Palette tab, Export, then choose the PNG.
 - **Paint a material** as Substance Painter does: there is no material tool. The Paint tab's Brush and Fill paint the
-  Color Wheel's colour, or, while the Materials tab was worked in after the Color Wheel
+  Palette's colour, or, while the Materials tab was worked in after the Palette
   (`MaterialsManager.isPaintingMaterial`, `ActiveWindowManager.findRecent`), the material chosen there in its place:
   working in either tab switches what they lay. The material is laid on every map at once, each texel taking the material's own at its UV repeated by the Tiling, through the brush's coverage and Strength
   (`CharacterPaintBranch.stamp`); a stroke is one undo step across every map and texture it reached. Characters,
@@ -304,9 +304,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   file when a folder is picked in a schema that keeps its entries in files, a new entry otherwise). Open picks a workspace file in the system's own
   file dialog (`WorkspaceUtility.chooseFile`, LWJGL's tinyfd), listing only the files the window takes (`.arpg`, and
   `.glb` too in the character tabs) and taking a workspace file only from the folder of the window's kind. Generating maps is not a file action: Generate and Clear live under the map's settings in the
-  Maps tab. They act on the last window that takes file actions (`editor.bootstrap.filemenupipeline`,
+  Palette tab. They act on the last window that takes file actions (`editor.bootstrap.filemenupipeline`,
   `FileMenuManager.getTargetWindow`), name it at their head and after every item it takes, and mute what it does not
-  take. A shared tab (Properties, Tools, Layers, Maps, the Color Wheel) takes none, so working in it leaves the menus on
+  take. A shared tab (Properties, Tools, Layers, Palette) takes none, so working in it leaves the menus on
   the tool worked in before; the Properties tab's Ctrl+N, Ctrl+D, Ctrl+S, Ctrl+Shift+S, Ctrl+Z and Ctrl+Y run the File
   menu's items (`FileMenuBranch.run`), so a key there does what the menu says.
 - **A tool names its actions as data.** Its context implements `FileMenuProvider`, returns its
@@ -343,6 +343,20 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   own steps centred where it stood when its row was listed, through the tool's own step, so the tool's clamps still
   hold. Either way a typed value can go anywhere the setter allows.
 
+## The Palette tab
+
+- **One Palette, where a tool's choices are picked.** The Palette tab (`editor.runtime.palette`) is where the window
+  worked in last offers what its tools pick from, as Krita's and Photoshop's palettes and swatches are: Properties is for
+  the settings of what is picked, the Hierarchy for picking content by hand, Tools for tools, Brushes for brushes. A
+  window that has a palette implements `PaletteProvider`, naming its `PaletteContent` (its layer may name it), and is
+  followed through `PropertiesManager.getPalette`; the tab hands it to the `PaletteView` system for that content, as the
+  Properties tab does. So far: `IMAGE`, the colour wheel (`ColorWheelSystem`) over the maps of the image the window paints
+  (every `MapsProvider`: the Image Editor, the character tool tabs, the UV Editor), the colour's sliders in the Properties
+  tab while the Palette was worked in last; `BIOMES`, the World Editor's Biomes layer, a grid of swatches with each
+  biome's name under it, as many to a row as the tab's width holds, the one chosen highlighted and selected in the
+  Hierarchy so its fields are the Properties tab's; `NONE`, a layer with nothing to pick from. A new kind of choice is a
+  new `PaletteContent` and a `PaletteView` system, never a new window and never a list in the Properties tab.
+
 ## The Properties tab
 
 - **One shared Properties tab, never a properties or outliner window per tool.** It shows what the window worked in
@@ -351,17 +365,14 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   `CharacterViewRowSource`): what it picks from listed first (features, sliders, bones, anchors, parts, the clip, the
   recording's settings, the keys selected), then the values of what is picked, so a tool's list and its values are
   one panel, as Substance Painter's Properties and Krita's Tool Options are; `INFO` is the content entry selected in
-  the Hierarchy, the editor's Info Panel, which the Hierarchy and every content tool show; `BIOMES` is the World
-  Editor's biome palette (`BiomePropertiesSystem`, a terrain inspector's paint palette) above the `INFO` rows, named by
-  its Biomes layer (`WorldEditorLayer.getPropertiesContent`). A new kind of content is a new `PropertiesContent` and a
+  the Hierarchy, the editor's Info Panel, which the Hierarchy and every content tool show. What a window picks from is
+  never here: it is the Palette tab's (below). A new kind of content is a new `PropertiesContent` and a
   `PropertiesView` system in the Properties tab, never a new window. Its status line always works on the Hierarchy's
   selection; it takes no File or Edit actions of its own (see The File and Edit menus).
-- **Headers fold.** Every header row of a tool's rows (`ROWS`, the Maps tab, any `CharacterViewPanelSystem` panel) is a
+- **Headers fold.** Every header row of a tool's rows (`ROWS`, the Palette tab's maps, any `CharacterViewPanelSystem` panel) is a
   button that folds the rows under it shut or opens them again, its marker (`row_fold_label`, + or -) saying which; the
   panel keeps what it was handed, so a fold lays it out again without asking the tool, and the folds of a panel hold
   while it lists other windows' rows. A tool's header template carries the `toggleHeader` action and the marker.
-- **The biome palette** is a grid of swatches with each biome's name under it, as many to a row as the tab's width
-  holds, the one chosen highlighted.
 - **Info rows are laid out for editing.** Every field reads as words (`animation_tree` is Animation Tree), plain values
   before groups. A number has a slider (across its declared range when it has both ends, otherwise steps about its
   value), step buttons and a typed value; a boolean, an enum, or a string naming other content or a file is a choice

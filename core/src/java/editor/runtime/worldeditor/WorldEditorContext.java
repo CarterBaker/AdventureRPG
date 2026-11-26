@@ -4,7 +4,9 @@ import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.propertiespipeline.properties.PaletteProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
@@ -26,7 +28,8 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldEditorContext extends ContextPackage
-        implements ToolCanvasProvider, WorldEditorLayerProvider, LayersProvider, PropertiesProvider, FileMenuProvider {
+        implements ToolCanvasProvider, WorldEditorLayerProvider, LayersProvider, PropertiesProvider, PaletteProvider,
+        FileMenuProvider {
 
     /*
      * Editor tab for the world's images, one image pixel per biome cell of
@@ -41,8 +44,9 @@ public class WorldEditorContext extends ContextPackage
      * every hand placement, and shows the toolbar and status line, with every
      * player's marker when shown. A design dragged from the Settlement
      * Planner is stood where it is dropped. The tools, brushes and design are
-     * chosen in their own tabs, the biome painted in the Properties tab's
-     * palette while the Biomes layer is picked, its fields shown below it; the images, their history and
+     * chosen in their own tabs, the biome painted in the Palette tab while
+     * the Biomes layer is picked, its fields in the Properties tab; the
+     * images, their history and
      * every live update live in the editor and engine. The tab is a tool
      * canvas for as long as it is open, working on the layer picked.
      */
@@ -151,10 +155,18 @@ public class WorldEditorContext extends ContextPackage
 
     // Properties \\
 
-    // The layer picked names it: the biome palette over the biome chosen, or the placement chosen to place
+    // The entry selected in the Hierarchy, the biome chosen in the Palette tab among them
     @Override
     public PropertiesContent getPropertiesContent() {
-        return worldEditorLayerSystem.getLayer().getPropertiesContent();
+        return PropertiesContent.INFO;
+    }
+
+    // Palette \\
+
+    // The layer picked names it: the biomes to paint, or nothing to pick from
+    @Override
+    public PaletteContent getPaletteContent() {
+        return worldEditorLayerSystem.getLayer().getPaletteContent();
     }
 
     // File Menu \\

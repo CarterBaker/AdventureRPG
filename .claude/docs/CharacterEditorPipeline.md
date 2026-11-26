@@ -16,7 +16,7 @@ undoing and redoing are the editor's File and Edit menus' (`EditorSetting.FILE_M
 `FILE_MENU_ANIMATION`), shared by each tool's viewport and docker tabs; everything else is its own tab, opened
 from the editor's Entities menu (its Entity section: Appearance, Equipment and Hair; the Animation section), the Mesh
 menu (its Mesh section: Mesh, Topology, Sculpt, Paint, UV and the UV Editor; its Rigging section: Rig and Weights), the
-Tools menu (Properties; Tools, Brushes, Stamps, Maps and the Color Wheel in its Canvas section), and restored by
+Tools menu (Properties; Tools, Brushes, Stamps and the Palette in its Canvas section), and restored by
 layouts like any other. Whatever the owner sees says
 Entity, never Character (the Animation Editor's row, the command console's Entity group,
 `assets/commands/Entity.arpg`); the code keeps its `Character*` names.
@@ -30,9 +30,8 @@ Entity, never Character (the Animation Editor's row, the command console's Entit
 | Material Viewer | `editor.runtime.materialviewer.MaterialViewerContext` (Materials menu) | the material chosen on the shape the Shape option names, lit by the light its Light tool turns |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
-| Properties | `editor.runtime.properties.PropertiesContext` (Tools menu) | the rows of the window worked in last: what it picks from first (`CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows`), then the values of what is picked (`buildPropertyRows`); the material's maps and parameters for the Materials and Material Viewer tabs (`MaterialsManager.buildRows`); the colour's rows for the Color Wheel |
-| Color Wheel | `ColorWheelContext` | the paint colour: a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`); its Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) are the Properties tab's while it was worked in last |
-| Maps | `editor.runtime.maps.MapsContext` | the maps of the texture painted while a character tab or the UV Editor was worked in last (`MapsProvider`, `CharacterEditorManager.buildMapRows`): the one painted selected, its settings, Generate and Clear |
+| Properties | `editor.runtime.properties.PropertiesContext` (Tools menu) | the rows of the window worked in last: what it picks from first (`CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows`), then the values of what is picked (`buildPropertyRows`); the material's maps and parameters for the Materials and Material Viewer tabs (`MaterialsManager.buildRows`); the colour's rows for the Palette |
+| Palette | `editor.runtime.palette.PaletteContext` | the paint colour, a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), over the maps of the texture painted while a character tab or the UV Editor was worked in last (`MapsProvider`, `CharacterEditorManager.buildMapRows`): the one painted selected, its settings, Generate and Clear; the colour's Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) are the Properties tab's while it was worked in last |
 | Animation Editor | `AnimationEditorContext` | the character chosen (the player at first) posed at the recorder Timeline's playhead; the Animation Pose tool canvas while a clip plays on a character |
 | Properties | `PropertiesContext` | the value rows of the character or animation tab worked in last |
 
@@ -396,7 +395,7 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
   seams; texels within `CHARACTER_PAINT_BLEED_PIXELS` of an island edge are painted too. Fill covers the island of
   faces joined corner to corner around the face clicked (`pickFace`), Pick takes the flattened map's colour there.
 - **Material painting** (Substance Painter's material brush): there is no material tool. While the Materials tab was
-  worked in after the Color Wheel (`MaterialsManager.isPaintingMaterial`), Brush and Fill lay the material chosen in
+  worked in after the Palette (`MaterialsManager.isPaintingMaterial`), Brush and Fill lay the material chosen in
   place of the colour, stamping every map's canvas of each texture they reach (`CharacterPaintBranch.stamp`, `stampCanvas`), each texel mixed by the tip's
   coverage toward `MaterialsManager.sampleMap` at the texel's UV, the material chosen in the Materials tab read from
   its maps' textures or images, repeated by its Tiling and shaped by its parameters (see `.claude/docs/Editor.md`,
@@ -419,16 +418,16 @@ mesh view skins the part in any pose and the sculpt system stays out of it.
   into the atlas layer the map fills, only its rectangle, rows bottom first (`TextureManager.updateTextureArrayLayer`,
   `glTexSubImage3D`). The base keeps its own alpha; Erase wears the base to the default and a layer to nothing.
 - **Values.** The Layers tab picks the layer painted and shows or hides each above the base; the Properties tab names
-  it and holds its Opacity; the colour lives in the Color Wheel tab, its sliders in the Properties tab while the wheel
+  it and holds its Opacity; the colour lives in the Palette tab's wheel, its sliders in the Properties tab while the Palette
   was worked in last (Hue, Saturation and Brightness, `CHARACTER_PAINT_KEY_HSB`, a grey keeping the hue last chosen in `CharacterPaintBranch.getHue`; Red,
   Green and Blue, `CHARACTER_PAINT_KEY_COLOR`, which work with no character open, since the Image Editor paints with
-  the same colour) and the map painted is picked in the Maps tab
+  the same colour) and the map painted is picked in the Palette tab
   (`CHARACTER_PAINT_KEY_MAP_ITEM`, `CharacterPaintBranch.setMapIndex`), every key read and written through
   `CharacterPaintPropertyBranch` and listed by `CharacterPaintRowBranch`; Add Layer and Remove Layer are the canvas's
   tool actions. Save (File) writes every
   changed map flat into its image, Revert puts the atlas back as the images hold it, Undo and Redo (Edit) step the
   paint history in the Paint tab. Painted maps are the owner's art: never catalogue them.
-- **Maps** (the Maps tab, as Materialize or Bitmap2Material generate maps; the same tab and generators as the Image
+- **Maps** (the Palette tab, as Materialize or Bitmap2Material generate maps; the same tab and generators as the Image
   Editor's, see `.claude/docs/ImageEditorPipeline.md`): the texture's maps are `CHARACTER_PAINT_IMAGE_MAPS`, the
   `ImageMap`s its aliases fill. Picking one makes it the map painted; below it are that map's own settings
   (`MapGenerateOption`, each map its own copy per texture for the session, `CharacterMapBranch.getSettings`), then

@@ -2,7 +2,6 @@ package editor.runtime.properties;
 
 import editor.runtime.characterview.panel.CharacterViewPanelSystem;
 import editor.runtime.characterview.panel.CharacterViewStepTarget;
-import editor.runtime.properties.panel.BiomePropertiesSystem;
 import editor.runtime.properties.panel.InfoPropertiesSystem;
 import editor.runtime.properties.panel.PropertiesSystem;
 import editor.runtime.properties.panel.RowPropertiesSystem;
@@ -16,8 +15,8 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
      * the window worked in last provides — a tool window's rows, what it
      * picks from listed first and each number of what is picked on a slider
      * typed into its box; for the Hierarchy and every content tool the entry
-     * selected there with every field to edit, the editor's Info Panel; or
-     * for the World Editor's Biomes layer the biome palette over that entry.
+     * selected there with every field to edit, the editor's Info Panel. What
+     * a window picks from is the Palette tab's, never this one's.
      * Its toolbar and status line work on the entry selected in the
      * Hierarchy. It takes no File or Edit actions of its own, so working in
      * it leaves those menus on the last window that makes, saves and undoes
@@ -31,7 +30,6 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
     private CharacterViewPanelSystem characterViewPanelSystem;
     private RowPropertiesSystem rowPropertiesSystem;
     private InfoPropertiesSystem infoPropertiesSystem;
-    private BiomePropertiesSystem biomePropertiesSystem;
     private ToolCanvasSystem toolCanvasSystem;
 
     // Internal \\
@@ -42,7 +40,6 @@ public class PropertiesContext extends ContextPackage implements CharacterViewSt
         this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
         this.rowPropertiesSystem = create(RowPropertiesSystem.class);
         this.infoPropertiesSystem = create(InfoPropertiesSystem.class);
-        this.biomePropertiesSystem = create(BiomePropertiesSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
     }
 

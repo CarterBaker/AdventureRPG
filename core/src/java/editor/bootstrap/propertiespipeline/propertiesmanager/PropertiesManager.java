@@ -1,7 +1,7 @@
 package editor.bootstrap.propertiespipeline.propertiesmanager;
 
 import application.kernel.windowpipeline.window.WindowInstance;
-import editor.bootstrap.propertiespipeline.properties.MapsProvider;
+import editor.bootstrap.propertiespipeline.properties.PaletteProvider;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
 import engine.root.ManagerPackage;
@@ -18,8 +18,8 @@ public class PropertiesManager extends ManagerPackage {
      * Every window that provides properties opens itself here for as long as
      * it lives, through openWindow() and closeWindow(), the one pair that
      * owns them; a closed target leaves the tab with none until another is
-     * focused. The Maps tab follows the same way the window worked in last
-     * among those whose image carries maps.
+     * focused. The Palette tab follows the same way the window worked in last
+     * among those that have a palette.
      */
 
     // Internal
@@ -27,7 +27,7 @@ public class PropertiesManager extends ManagerPackage {
 
     // Windows
     private Object2ObjectOpenHashMap<WindowInstance, PropertiesProvider> window2Provider;
-    private Object2ObjectOpenHashMap<WindowInstance, MapsProvider> window2Maps;
+    private Object2ObjectOpenHashMap<WindowInstance, PaletteProvider> window2Palette;
 
     // Base \\
 
@@ -36,7 +36,7 @@ public class PropertiesManager extends ManagerPackage {
 
         // Windows
         this.window2Provider = new Object2ObjectOpenHashMap<>();
-        this.window2Maps = new Object2ObjectOpenHashMap<>();
+        this.window2Palette = new Object2ObjectOpenHashMap<>();
     }
 
     @Override
@@ -50,13 +50,13 @@ public class PropertiesManager extends ManagerPackage {
 
         window2Provider.put(window, provider);
 
-        if (provider instanceof MapsProvider maps)
-            window2Maps.put(window, maps);
+        if (provider instanceof PaletteProvider palette)
+            window2Palette.put(window, palette);
     }
 
     public void closeWindow(WindowInstance window) {
         window2Provider.remove(window);
-        window2Maps.remove(window);
+        window2Palette.remove(window);
     }
 
     // Accessible \\
@@ -74,14 +74,14 @@ public class PropertiesManager extends ManagerPackage {
         return activeWindowManager.findRecent(window2Provider);
     }
 
-    // What the window worked in last whose image carries maps shows in the Maps tab, null before any is
-    public MapsProvider getMaps() {
-        WindowInstance targetWindow = getMapsWindow();
-        return targetWindow != null ? window2Maps.get(targetWindow) : null;
+    // What the window worked in last that has a palette offers in the Palette tab, null before any is
+    public PaletteProvider getPalette() {
+        WindowInstance targetWindow = getPaletteWindow();
+        return targetWindow != null ? window2Palette.get(targetWindow) : null;
     }
 
-    // The window the Maps tab shows, null before any is worked in
-    public WindowInstance getMapsWindow() {
-        return activeWindowManager.findRecent(window2Maps);
+    // The window the Palette tab shows, null before any is worked in
+    public WindowInstance getPaletteWindow() {
+        return activeWindowManager.findRecent(window2Palette);
     }
 }

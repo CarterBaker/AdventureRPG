@@ -226,7 +226,7 @@ public class EditorSetting {
     public static final String ELEMENT_TOOLS_MENU_TOOLS = "open_tools_label";
     public static final String ELEMENT_TOOLS_MENU_BRUSHES = "open_brushes_label";
     public static final String ELEMENT_TOOLS_MENU_STAMPS = "open_stamps_label";
-    public static final String ELEMENT_TOOLS_MENU_MAPS = "open_maps_label";
+    public static final String ELEMENT_TOOLS_MENU_PALETTE = "open_palette_label";
     public static final int ENTRY_NAME_DIALOG_LABEL = 0;
     public static final int ENTRY_NAME_DIALOG_TITLE = 1;
     public static final int ENTRY_EXPORT_DIALOG_TITLE = 0;
@@ -563,8 +563,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_HIERARCHY = "Hierarchy";
     public static final String TAB_TITLE_PROPERTIES = "Properties";
     public static final String TAB_TITLE_LAYERS = "Layers";
-    public static final String TAB_TITLE_COLOR_WHEEL = "Color Wheel";
-    public static final String TAB_TITLE_MAPS = "Maps";
+    public static final String TAB_TITLE_PALETTE = "Palette";
     public static final String TAB_TITLE_IMAGE_EDITOR = "Image Editor";
     public static final String TAB_TITLE_ITEM_EDITOR = "Item Editor";
     public static final String TAB_TITLE_PROFILER = "Profiler";
@@ -2397,6 +2396,7 @@ public class EditorSetting {
 
     // Maps — the Maps tab's rows and status, shared by every window whose image carries maps
     public static final String MAPS_HEADER_NONE = "No image with maps worked in yet";
+    public static final String PALETTE_HEADER_NONE = "Nothing to pick from here";
     public static final String MAPS_HEADER_SETTINGS_SUFFIX = " Settings";
     public static final String MAPS_HEADER_ALBEDO = "The albedo is the image's own layers";
     public static final String MAPS_GENERATED_SUFFIX = " (generated)";
