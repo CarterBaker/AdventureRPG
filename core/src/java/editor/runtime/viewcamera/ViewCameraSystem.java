@@ -205,7 +205,7 @@ public class ViewCameraSystem extends SystemPackage {
     }
 
     private boolean beginsDrag(RawInputHandle rawInput, int button, int otherButton) {
-        return editorInputSystem.isClicked(button) && !editorInputSystem.isClaimed(button)
+        return editorInputSystem.isViewClicked(button) && !editorInputSystem.isClaimed(button)
                 && !rawInput.isButtonHeld(otherButton);
     }
 

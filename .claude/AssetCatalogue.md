@@ -622,10 +622,12 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-26: Tree Planner restored. Added `menus/editor/TreePlanner.arpg` again (its generator graph and status line
   only, with the row templates the Palette tab lists trees with and the Properties tab a node's fields with);
   regenerated `menus/editor/EditorWindow.arpg` (the Tree Planner back in the World menu).
+- 2026-11-26: Hand tool. Added `sprites/menus/tools/Hand.png` (the Hand's emblem); regenerated
+  `shortcuts/Tools.arpg` (`H` chooses the Hand) and `schemas/Shortcuts.arpg` (the `hand` tool).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
-## Textures and Sprites (2600 files)
+## Textures and Sprites (2601 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -830,6 +832,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `Fill`
 - `Flatten`
 - `FlipEdge`
+- `Hand`
 - `Ik`
 - `Inflate`
 - `Light`

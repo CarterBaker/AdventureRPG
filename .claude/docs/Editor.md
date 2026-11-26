@@ -45,7 +45,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **World Editor.** Paints the biomes and places settlements and cameras on its Biomes layer, and shapes the ground on
   its Heights layer with one Raise brush that lowers while Ctrl is held (`WorldEditor/InvertStroke`). On either layer,
-  Move only looks: its left drag pans the view as the right drag does. The biome it paints is chosen in the Palette
+  the Hand only looks: its left drag pans the view as the right drag does. The biome it paints is chosen in the Palette
   tab, which lists the biomes the world itself names in its `biomes` field (edited with the world in the Worlds tab)
   while the Biomes layer is picked, the chosen biome selected in the Hierarchy as the palette is shown, so its fields
   are the Properties tab's. The Biome Planner only plans.
@@ -220,6 +220,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   lists pictures instead (every PNG in the workspace's `Stamps` folder), and a picture chosen arms the Image Editor's
   Brush the same way: it presses the picture at the click, at the Brush's Scale and Turn, then puts it down (see
   `.claude/docs/ImageEditorPipeline.md`). The tab lists only the kind the canvas worked last takes.
+- **Every viewport takes the Hand**, as Photoshop's and Krita's hand: it only moves the view (`EditorTool.HAND`, key
+  `H`). While it is a window's tool, `EditorInputSystem.isClicked` gives no tool a click and every press is the view's
+  (`isViewClicked`): a left drag turns a 3D view (`ViewCameraSystem`) and slides a flat one (the UV and Image Editors'
+  `UVEditorViewSystem`, the World Editor's view). Move always moves what is selected; it never only looks. A new
+  canvas with a view lists the Hand last among its tools.
 - **A tool means one thing everywhere.** Raise builds up and Lower wears down, a soft brush fades its edge and a hard
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.
@@ -273,11 +278,11 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **Sub-voxel items, worked as a voxel modeller's.** Every part is one material and a layer in the Layers tab, added
   and deleted by its icons or the Tools tab's Parts actions (`ITEM_EDITOR_KEY_PART_ADD`, `_REMOVE`), renamed by F2.
-  The tools (`ToolCanvas.ITEM`) are Brush, Wall, Fill, Pick and Move; Brush stamps the Brushes tab's tip on the face
+  The tools (`ToolCanvas.ITEM`) are Brush, Wall, Fill, Pick and Hand; Brush stamps the Brushes tab's tip on the face
   struck, building, or digging while Ctrl is held (`ItemEditor/InvertStroke`), Size in sub-voxels (none is one
   sub-voxel, the usual way to work), each column of the tip as deep as its coverage times Strength of the Depth (one
   layer unless raised), so a soft tip thins at its feathered edge; the stamp is shown as the sub-voxels it would build or
-  dig, merged like the item. A stroke is held to the layer it began on (`ItemBrushBranch`). Move only looks: every press
+  dig, merged like the item. A stroke is held to the layer it began on (`ItemBrushBranch`). The Hand only looks: every press
   goes to the view camera. The mesh is greedily merged by `SubVoxelManager` as it changes.
 - **Workspace items.** New, Open, Save, Revert and Delete work on `Assets/Items/<Name>.arpg`, a sub-voxel mesh file;
   Import writes `assets/mesh/items/<Name>.arpg` and makes an item naming it in the file asked for, unless content

@@ -13,7 +13,7 @@ public class UVEditorViewSystem extends SystemPackage {
      * Where the UV Editor looks. The unit square of UV space is fitted to
      * the window when the tab first has a size; the wheel zooms about the
      * pointer and dragging the pan button moves the view, unless the tool
-     * system took the press. UV runs up and right, as window pixels do, so
+     * system took the press, or the left button while the Hand is the tool. UV runs up and right, as window pixels do, so
      * a UV and a window position map by one scale and offset, handed to the
      * shaders as one vector. The Image Editor looks at its image the same
      * way, its longer side spanning the unit square.
@@ -28,8 +28,9 @@ public class UVEditorViewSystem extends SystemPackage {
     private double pixelsPerUnit;
     private boolean fitted;
 
-    // Pan
+    // Pan — whether a drag moves the view, the button holding it, and where the pointer last stood
     private boolean panning;
+    private int panButton;
     private float lastMouseX;
     private float lastMouseY;
 
@@ -101,11 +102,14 @@ public class UVEditorViewSystem extends SystemPackage {
         float mouseX = rawInput.getMouseX();
         float mouseY = rawInput.getMouseY();
 
-        if (editorInputSystem.isClicked(EditorSetting.FLAT_VIEW_BUTTON_PAN)
+        if (editorInputSystem.isViewClicked(EditorSetting.FLAT_VIEW_BUTTON_PAN)
                 && !editorInputSystem.isClaimed(EditorSetting.FLAT_VIEW_BUTTON_PAN))
-            this.panning = true;
+            beginPan(EditorSetting.FLAT_VIEW_BUTTON_PAN);
+        else if (editorInputSystem.isHandHeld()
+                && editorInputSystem.isViewClicked(EditorSetting.FLAT_VIEW_BUTTON_HAND))
+            beginPan(EditorSetting.FLAT_VIEW_BUTTON_HAND);
 
-        if (!rawInput.isButtonHeld(EditorSetting.FLAT_VIEW_BUTTON_PAN))
+        if (panning && !rawInput.isButtonHeld(panButton))
             this.panning = false;
 
         if (panning) {
@@ -115,6 +119,12 @@ public class UVEditorViewSystem extends SystemPackage {
 
         this.lastMouseX = mouseX;
         this.lastMouseY = mouseY;
+    }
+
+    // A pan held for as long as the button pressed stays down
+    private void beginPan(int button) {
+        this.panning = true;
+        this.panButton = button;
     }
 
     // The scale and offset taking a UV to normalized device coordinates, as the shaders read it

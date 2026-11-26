@@ -749,9 +749,9 @@ public class ItemEditorManager extends ManagerPackage {
         return getTool() == EditorTool.BRUSH && inverted;
     }
 
-    // Whether the tool chosen acts on the item at all — Move only looks, leaving every press to the camera
+    // Whether the tool chosen acts on the item at all — the Hand only looks, leaving every press to the camera
     public boolean isActingTool() {
-        return getTool() != EditorTool.MOVE;
+        return getTool() != EditorTool.HAND;
     }
 
     // A press of the tool chosen for the item: Brush begins a stroke, building or, inverted, digging; the rest act once

@@ -156,11 +156,6 @@ public class WorldEditorToolSystem extends SystemPackage {
                 || !editorInputSystem.isClicked(WorldEditorSetting.BUTTON_APPLY))
             return;
 
-        if (worldEditorManager.getTool(layer) == EditorTool.MOVE) {
-            worldEditorViewSystem.beginPan(WorldEditorSetting.BUTTON_APPLY);
-            return;
-        }
-
         if (worldEditorManager.getTool(layer) == EditorTool.SELECT) {
             press();
             return;

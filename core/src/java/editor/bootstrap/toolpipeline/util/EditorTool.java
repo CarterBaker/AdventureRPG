@@ -35,7 +35,10 @@ public enum EditorTool {
      * clicks, at its Scale and Turn, or lays fur combed the way it is set,
      * on the canvases that declare those options. Light turns the light
      * a viewer shows its subject by, dragged from the subject. Collider gives
-     * the bone clicked a collider, or takes one off it while Ctrl is held. The
+     * the bone clicked a collider, or takes one off it while Ctrl is held. Hand
+     * only moves the view, as a painting tool's hand does: on a canvas whose
+     * tool it is, every press goes to the view, a left drag turning a 3D view
+     * and sliding a flat one, so Move always moves what is selected. The
      * stroking tools work along a drag with a brush and carry the options
      * that shape their strokes; the rest act once per press. Each tool's
      * emblem is the sprite named after it in PascalCase under the tool icon
@@ -80,7 +83,8 @@ public enum EditorTool {
     IK(EditorSetting.TOOL_IK, false),
     POSE(EditorSetting.TOOL_POSE, false),
     LIGHT(EditorSetting.TOOL_LIGHT, false),
-    COLLIDER(EditorSetting.TOOL_COLLIDER, false);
+    COLLIDER(EditorSetting.TOOL_COLLIDER, false),
+    HAND(EditorSetting.TOOL_HAND, false);
 
     // Values
     public static final EditorTool[] VALUES = values();

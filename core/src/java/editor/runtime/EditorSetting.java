@@ -733,6 +733,7 @@ public class EditorSetting {
     public static final float FLAT_VIEW_MIN_PIXELS_PER_UNIT = 32f;
     public static final float FLAT_VIEW_MAX_PIXELS_PER_UNIT = 65536f;
     public static final int FLAT_VIEW_BUTTON_PAN = Buttons.RIGHT;
+    public static final int FLAT_VIEW_BUTTON_HAND = Buttons.LEFT;
     public static final String FLAT_VIEW_UNIFORM_UV_TO_CLIP = "u_uvToClip";
 
     // View Camera — the one camera of every 3D viewport: the orbit button turns it and the pan button slides it, a
@@ -2802,6 +2803,7 @@ public class EditorSetting {
     public static final String TOOL_DRAW = "Draw";
     public static final String TOOL_LIGHT = "Light";
     public static final String TOOL_COLLIDER = "Collider";
+    public static final String TOOL_HAND = "Hand";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";

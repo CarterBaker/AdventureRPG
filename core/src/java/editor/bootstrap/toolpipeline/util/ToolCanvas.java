@@ -58,7 +58,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_BIOMES,
             new EditorTool[] {
                     EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.SWIRL, EditorTool.SCATTER,
-                    EditorTool.FILL, EditorTool.PICK, EditorTool.MOVE },
+                    EditorTool.FILL, EditorTool.PICK, EditorTool.HAND },
             false,
             imageSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT),
@@ -66,23 +66,23 @@ public enum ToolCanvas {
     HEIGHTS(
             EditorSetting.TOOL_CANVAS_HEIGHTS,
             new EditorTool[] {
-                    EditorTool.RAISE, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE, EditorTool.MOVE },
+                    EditorTool.RAISE, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE, EditorTool.HAND },
             true,
             imageSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
     SETTLEMENTS(
             EditorSetting.TOOL_CANVAS_SETTLEMENTS,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE },
+            new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE, EditorTool.HAND },
             false),
     CAMERAS(
             EditorSetting.TOOL_CANVAS_CAMERAS,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE },
+            new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE, EditorTool.HAND },
             false),
     CHARACTER_MESH(
             EditorSetting.TOOL_CANVAS_CHARACTER_MESH,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PICK,
-                    EditorTool.POSE },
+                    EditorTool.POSE, EditorTool.HAND },
             new ToolActionGroupStruct[] { meshTransform(), meshGeometry(), meshSelection(), meshPose() },
             false,
             screenSize(),
@@ -93,7 +93,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_TOPOLOGY,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.FLIP_EDGE, EditorTool.LOOP_CUT, EditorTool.DISSOLVE_LOOP,
-                    EditorTool.TOPOLOGY },
+                    EditorTool.TOPOLOGY, EditorTool.HAND },
             new ToolActionGroupStruct[] { topologyFaces(), topologyCleanUp(), meshSelection() },
             false,
             screenSize(),
@@ -106,7 +106,8 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_HAIR,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.DRAW, EditorTool.PLACE, EditorTool.BRUSH, EditorTool.NUDGE,
-                    EditorTool.SMOOTH, EditorTool.RAISE, EditorTool.LOWER, EditorTool.ERASE, EditorTool.PICK },
+                    EditorTool.SMOOTH, EditorTool.RAISE, EditorTool.LOWER, EditorTool.ERASE, EditorTool.PICK,
+                    EditorTool.HAND },
             new ToolActionGroupStruct[] { hairStrands() },
             true,
             screenSize(),
@@ -118,7 +119,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
             new EditorTool[] {
                     EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.RELAX, EditorTool.INFLATE, EditorTool.PINCH,
-                    EditorTool.CREASE, EditorTool.FLATTEN, EditorTool.NUDGE },
+                    EditorTool.CREASE, EditorTool.FLATTEN, EditorTool.NUDGE, EditorTool.HAND },
             true,
             screenSize(),
             strength(EditorSetting.TOOL_SCULPT_STRENGTH_DEFAULT),
@@ -131,7 +132,7 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_WEIGHTS,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.PICK,
-                    EditorTool.POSE },
+                    EditorTool.POSE, EditorTool.HAND },
             new ToolActionGroupStruct[] { meshWeights(), meshSelection(), meshPose() },
             true,
             screenSize(),
@@ -141,14 +142,15 @@ public enum ToolCanvas {
             wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
     CHARACTER_POSE(
             EditorSetting.TOOL_CANVAS_CHARACTER_POSE,
-            new EditorTool[] { EditorTool.POSE, EditorTool.PICK },
+            new EditorTool[] { EditorTool.POSE, EditorTool.PICK, EditorTool.HAND },
             new ToolActionGroupStruct[] { meshPose() },
             false,
             mirror()),
     CHARACTER_PAINT(
             EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL, EditorTool.PICK },
+                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL, EditorTool.PICK,
+                    EditorTool.HAND },
             new ToolActionGroupStruct[] { paintLayers() },
             true,
             screenSize(),
@@ -159,13 +161,13 @@ public enum ToolCanvas {
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
                     EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PLACE,
-                    EditorTool.ERASE, EditorTool.COLLIDER },
+                    EditorTool.ERASE, EditorTool.COLLIDER, EditorTool.HAND },
             new ToolActionGroupStruct[] { rigActions(), rigLayers(), colliderActions(), hairActions() },
             false,
             mirror()),
     CHARACTER_UV(
             EditorSetting.TOOL_CANVAS_CHARACTER_UV,
-            new EditorTool[] { EditorTool.SELECT },
+            new EditorTool[] { EditorTool.SELECT, EditorTool.HAND },
             new ToolActionGroupStruct[] { uvSeams(), uvUnwrap(), meshSelection() },
             false,
             screenSize(),
@@ -174,14 +176,15 @@ public enum ToolCanvas {
             wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
     UV_EDITOR(
             EditorSetting.TOOL_CANVAS_UV_EDITOR,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
+            new EditorTool[] {
+                    EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.HAND },
             new ToolActionGroupStruct[] { uvUnwrap(), uvIslands(), uvSelection() },
             false),
     IMAGE_EDITOR(
             EditorSetting.TOOL_CANVAS_IMAGE_EDITOR,
             new EditorTool[] {
                     EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.SWIRL, EditorTool.SCATTER,
-                    EditorTool.FILL, EditorTool.PICK },
+                    EditorTool.FILL, EditorTool.PICK, EditorTool.HAND },
             new ToolActionGroupStruct[] { imageLayers() },
             true,
             imageSize(),
@@ -191,21 +194,23 @@ public enum ToolCanvas {
             stampTurn()),
     MATERIAL_VIEWER(
             EditorSetting.TOOL_CANVAS_MATERIAL_VIEWER,
-            new EditorTool[] { EditorTool.LIGHT },
+            new EditorTool[] { EditorTool.LIGHT, EditorTool.HAND },
             false,
             shape()),
     TREE(
             EditorSetting.TOOL_CANVAS_TREE,
-            new EditorTool[] { EditorTool.MOVE },
+            new EditorTool[] { EditorTool.HAND },
             new ToolActionGroupStruct[] { treePreview() },
             false),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
-            new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK },
+            new EditorTool[] {
+                    EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK,
+                    EditorTool.HAND },
             false),
     ITEM(
             EditorSetting.TOOL_CANVAS_ITEM,
-            new EditorTool[] { EditorTool.BRUSH, EditorTool.WALL, EditorTool.FILL, EditorTool.PICK, EditorTool.MOVE },
+            new EditorTool[] { EditorTool.BRUSH, EditorTool.WALL, EditorTool.FILL, EditorTool.PICK, EditorTool.HAND },
             new ToolActionGroupStruct[] { itemParts(), itemPaint() },
             false,
             itemSize(),
