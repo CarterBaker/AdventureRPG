@@ -19,7 +19,9 @@ public class MacroChunkInstance extends InstancePackage {
      * live edit changed. Geometry waits in the sync container between build
      * and upload, while the mesh, model, position and coverage UBOs are
      * main-thread only and survive pooling, so a reused macro reuploads into
-     * the buffers it already owns. The coverage words mark
+     * the buffers it already owns; a tile built again keeps the land it drew
+     * until then as its fading model while the new land rises through the
+     * same dither as its trees. The coverage words mark
      * every chunk of the tile the grid currently draws, together with the
      * anchor and drawn revision they were resolved against, and the water
      * slot records which patch of the grid's open water mask the tile wrote.
@@ -33,6 +35,7 @@ public class MacroChunkInstance extends InstancePackage {
     // GPU
     private MeshInstance meshInstance;
     private ModelInstance modelInstance;
+    private ModelInstance fadingModelInstance;
     private ObjectArrayList<ModelInstance> treeModels;
     private ObjectArrayList<ModelInstance> fadingTreeModels;
     private float treeFadeAge;
@@ -104,6 +107,14 @@ public class MacroChunkInstance extends InstancePackage {
     public void clearModel() {
         this.meshInstance = null;
         this.modelInstance = null;
+    }
+
+    public ModelInstance getFadingModelInstance() {
+        return fadingModelInstance;
+    }
+
+    public void setFadingModelInstance(ModelInstance fadingModelInstance) {
+        this.fadingModelInstance = fadingModelInstance;
     }
 
     public void setPositionUBO(UBOInstance positionUBO) {

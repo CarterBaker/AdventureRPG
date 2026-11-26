@@ -139,6 +139,7 @@ declare are shown as ignored and never block a save.
 | (no schema) Menus, Meshes, Commands | `menus`, `mesh`, `commands` | read the Builder (`MenuBuilder`, `MeshBuilder`, `RiggedMeshArpgUtility`, `MeshLayoutUtility`, `CommandBuilder`, `SubVoxelArpgUtility`) |
 | (no schema, baked) Baked textures | `bakedtextures` | written only by the bake tool (`TextureBakeUtility`), never by hand: see Baked textures below |
 | (no schema) Lessons | `lessons` | written only by the dialogue trainer (`DialogueManager.saveLessons`), never by hand |
+| (no schema, baked) Tree impostors | `bakedimpostors` | written only by the editor's impostor bake (`TreeImpostorArpgUtility`): `source`, `frames`, `frame_texels`, `height`, `center_y`, `radius`, and `albedo` and `normal` as BC7 chains of the atlas |
 
 Sprite and world companions sit beside their PNG with the same stem (`sprites/menus/Button.arpg` next to
 `Button.png`; `worlds/TerraArcana.arpg` next to `TerraArcana.png`). Sound companions sit beside their OGG the same

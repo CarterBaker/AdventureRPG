@@ -624,6 +624,13 @@ One line per session that changed this file: the date, what was added or removed
   regenerated `menus/editor/EditorWindow.arpg` (the Tree Planner back in the World menu).
 - 2026-11-26: Hand tool. Added `sprites/menus/tools/Hand.png` (the Hand's emblem); regenerated
   `shortcuts/Tools.arpg` (`H` chooses the Hand) and `schemas/Shortcuts.arpg` (the `hand` tool).
+- 2026-11-26: Tree impostors. Added the octahedral impostor shaders `shaders/trees/impostor/TreeImpostorShader`
+  (`.vsh`, `.fsh`, `.arpg`) with `shaders/trees/includes/TreeImpostor.glsl`, the editor bake shaders
+  `shaders/editor/treeimpostor/TreeImpostorBakeBarkShader` and `TreeImpostorBakeLeafShader` (`.vsh`, `.fsh`, `.arpg`)
+  with `TreeImpostorBake.glsl`, the viewer shader `shaders/editor/treeviewer/TreeViewerImpostorShader` (`.vsh`,
+  `.fsh`, `.arpg`) and the materials `materials/trees/TreeImpostorMaterial.arpg`,
+  `materials/editor/TreeImpostorBakeBarkMaterial.arpg`, `TreeImpostorBakeLeafMaterial.arpg` and
+  `TreeViewerImpostorMaterial.arpg`; regenerated `application/fbos/FBOs.arpg` (the `TreeImpostorBake` target).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
@@ -1807,9 +1814,15 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 `ShipViewerPaintedShader.fsh`, `ShipViewerShader.fsh`
 
+### `assets/shaders/editor/treeimpostor/`
+
+`TreeImpostorBake.glsl`, `TreeImpostorBakeBarkShader.fsh`, `TreeImpostorBakeBarkShader.vsh`,
+`TreeImpostorBakeLeafShader.fsh`, `TreeImpostorBakeLeafShader.vsh`
+
 ### `assets/shaders/editor/treeviewer/`
 
-`TreeViewerBarkShader.fsh`, `TreeViewerLeafShader.fsh`, `TreeViewerLight.glsl`
+`TreeViewerBarkShader.fsh`, `TreeViewerImpostorShader.fsh`, `TreeViewerImpostorShader.vsh`, `TreeViewerLeafShader.fsh`,
+`TreeViewerLight.glsl`
 
 ### `assets/shaders/editor/imageeditor/`
 
@@ -1944,9 +1957,14 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 `TreeBarkFallingShader.fsh`, `TreeBarkFallingShader.vsh`, `TreeBarkShader.fsh`, `TreeBarkShader.vsh`
 
+### `assets/shaders/trees/impostor/`
+
+`TreeImpostorShader.fsh`, `TreeImpostorShader.vsh`
+
 ### `assets/shaders/trees/includes/`
 
-`TreeBark.glsl`, `TreeBarkShading.glsl`, `TreeFade.glsl`, `TreeFar.glsl`, `TreeLeaf.glsl`, `TreeLeafSprig.glsl`, `TreeShading.glsl`
+`TreeBark.glsl`, `TreeBarkShading.glsl`, `TreeFade.glsl`, `TreeFar.glsl`, `TreeImpostor.glsl`, `TreeLeaf.glsl`,
+`TreeLeafSprig.glsl`, `TreeShading.glsl`
 
 ### `assets/shaders/trees/leaf/`
 
@@ -2879,8 +2897,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `ItemEditorCursorPaintMaterial.arpg`, `ItemEditorCursorPlaceMaterial.arpg`, `ItemEditorGridMaterial.arpg`,
 `ItemEditorModelMaterial.arpg`, `ItemEditorStampBuildMaterial.arpg`, `ItemEditorStampDigMaterial.arpg`,
 `ImageEditorMaterial.arpg`, `MaterialViewerMaterial.arpg`, `PlacementIconMaterial.arpg`,
-`RecorderTransitionMaterial.arpg`, `ShipViewerMaterial.arpg`, `ShipViewerPaintedMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
-`TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`, `UVEditorOverlayMaterial.arpg`,
+`RecorderTransitionMaterial.arpg`, `ShipViewerMaterial.arpg`, `ShipViewerPaintedMaterial.arpg`,
+`TreeImpostorBakeBarkMaterial.arpg`, `TreeImpostorBakeLeafMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
+`TreeViewerImpostorMaterial.arpg`, `TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`,
+`UVEditorOverlayMaterial.arpg`,
 `WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
 `WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
 
@@ -2921,7 +2941,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/materials/trees/`
 
-`TreeBarkFallingMaterial.arpg`, `TreeBarkMaterial.arpg`, `TreeLeafFallingMaterial.arpg`, `TreeLeafMaterial.arpg`
+`TreeBarkFallingMaterial.arpg`, `TreeBarkMaterial.arpg`, `TreeImpostorMaterial.arpg`, `TreeLeafFallingMaterial.arpg`,
+`TreeLeafMaterial.arpg`
 
 ### `assets/materials/util/`
 
@@ -3191,9 +3212,13 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `ShipViewerPaintedShader.arpg`, `ShipViewerShader.arpg`
 
+### `assets/shaders/editor/treeimpostor/`
+
+`TreeImpostorBakeBarkShader.arpg`, `TreeImpostorBakeLeafShader.arpg`
+
 ### `assets/shaders/editor/treeviewer/`
 
-`TreeViewerBarkShader.arpg`, `TreeViewerLeafShader.arpg`
+`TreeViewerBarkShader.arpg`, `TreeViewerImpostorShader.arpg`, `TreeViewerLeafShader.arpg`
 
 ### `assets/shaders/editor/imageeditor/`
 
@@ -3283,6 +3308,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/shaders/trees/bark/`
 
 `TreeBarkFallingShader.arpg`, `TreeBarkShader.arpg`
+
+### `assets/shaders/trees/impostor/`
+
+`TreeImpostorShader.arpg`
 
 ### `assets/shaders/trees/leaf/`
 

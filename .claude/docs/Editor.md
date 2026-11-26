@@ -57,6 +57,14 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   the viewer's the species' whole entry. The viewer's LOD levels are its layers in the Layers tab; both tabs share the
   Tools tab's Preview actions (New Seed, Younger, Older) and the File menu's New, Duplicate, Save and Revert
   (`TreeViewerManager` holds what they share).
+- **Tree impostors** (`editor.bootstrap.treeimpostorpipeline`). Every species' impostor is baked by the editor, as
+  SpeedTree bakes billboards: its shared tree, grown in full from its `lod_seed`, drawn from 8 by 8 hemi-octahedral
+  directions into an albedo and a normal atlas, BC7, written to `assets/bakedimpostors/<Tree>.arpg`
+  (`TreeImpostorArpgUtility`). At editor start every species whose impostor is missing or stale (its `source` checksum
+  of the bake and the species' file) bakes a view a frame in the background; a species saved through any window bakes
+  next (`InfoManager.addSaveListener`). The Tree Viewer's status line says what bakes. Commit the baked files with the
+  trees; the game reads them and draws every tree from the Shared Tree LOD on as one GPU instance of its impostor
+  (`TreeImpostorRenderSystem`).
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
   Sculpt, Weights, Paint, Rig, Pose and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
   vertices selected. The Appearance tab's Properties rows hold every slider and control, and the Rig tab marks which
@@ -144,8 +152,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   the image, each with an eye; its maps are listed in the Palette tab, never here), the Item Editor (every part of the
   item, each one material, the part picked being the one its tools lay; no eyes) and the Tree Viewer (every LOD level
   a tree is drawn at, as a mesh viewer lists its levels of detail, LOD 0 (Full) to the coarsest, those from the Shared
-  Tree LOD setting on marked Shared, then the shared tree the species' `lod_seed` grows, each with an eye; all stand on
-  one root and only the topmost layer whose eye is open is drawn; `TreeViewerLayerSystem`).
+  Tree LOD setting on marked Impostor and drawn as the species' impostor, then the impostor itself, each with an eye;
+  all stand on one root and only the topmost layer whose eye is open is drawn; `TreeViewerLayerSystem`).
 - **Up and Down** pick the layer listed above or below the one picked while the Layers tab is worked in
   (`LayersManager.stepLayer`, `assets/shortcuts/Layers.arpg`).
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers

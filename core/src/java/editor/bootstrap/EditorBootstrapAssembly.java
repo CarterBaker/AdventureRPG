@@ -26,6 +26,7 @@ import editor.bootstrap.stamppipeline.StampPipeline;
 import editor.bootstrap.tabpipeline.TabPipeline;
 import editor.bootstrap.toolpipeline.ToolPipeline;
 import editor.bootstrap.transitionpipeline.TransitionPipeline;
+import editor.bootstrap.treeimpostorpipeline.TreeImpostorPipeline;
 import editor.bootstrap.treeviewerpipeline.TreeViewerPipeline;
 import editor.bootstrap.worldeditorpipeline.WorldEditorPipeline;
 import editor.runtime.menueventsmanager.EditorMenuEventsManager;
@@ -76,6 +77,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(CameraPlannerPipeline.class);
         create(BiomePlannerPipeline.class);
         create(TreeViewerPipeline.class);
+        create(TreeImpostorPipeline.class);
         create(ShipViewerPipeline.class);
         create(CharacterEditorPipeline.class);
         create(ImageEditorPipeline.class);

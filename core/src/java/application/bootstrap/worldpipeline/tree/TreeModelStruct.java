@@ -58,6 +58,7 @@ public class TreeModelStruct extends StructPackage {
     private final FloatArrayList reach;
     private final BooleanArrayList kept;
     private final int[] source2Segment;
+    private final IntArrayList sourcesSet;
 
     // Cells — the clusters' bounds, min corner then max, and every cell
     private final float[] bounds;
@@ -104,6 +105,7 @@ public class TreeModelStruct extends StructPackage {
         this.reach = new FloatArrayList();
         this.kept = new BooleanArrayList();
         this.source2Segment = new int[EngineSetting.TREE_MAX_SEGMENTS];
+        this.sourcesSet = new IntArrayList();
 
         Arrays.fill(source2Segment, EngineSetting.INDEX_NOT_FOUND);
 
@@ -167,6 +169,10 @@ public class TreeModelStruct extends StructPackage {
     }
 
     public void setSegmentOfSource(int sourceSegment, int segment) {
+
+        if (source2Segment[sourceSegment] == EngineSetting.INDEX_NOT_FOUND)
+            sourcesSet.add(sourceSegment);
+
         source2Segment[sourceSegment] = segment;
     }
 
@@ -205,7 +211,11 @@ public class TreeModelStruct extends StructPackage {
         leafSeed.clear();
         leafAccent.clear();
         leafSegment.clear();
-        Arrays.fill(source2Segment, EngineSetting.INDEX_NOT_FOUND);
+
+        for (int i = 0; i < sourcesSet.size(); i++)
+            source2Segment[sourcesSet.getInt(i)] = EngineSetting.INDEX_NOT_FOUND;
+
+        sourcesSet.clear();
     }
 
     // Accessible \\

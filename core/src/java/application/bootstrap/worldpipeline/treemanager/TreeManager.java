@@ -5,10 +5,12 @@ import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.combatpipeline.combat.BlowOutcome;
 import application.bootstrap.combatpipeline.combat.BlowStruct;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
+import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.bootstrap.worldpipeline.tree.TreeCastStruct;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
+import application.bootstrap.worldpipeline.tree.TreeImpostorStruct;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreePaletteHandle;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
@@ -41,11 +43,14 @@ public class TreeManager extends ManagerPackage {
      * apart from the ground on one LOD ladder, coarser the farther each one
      * stands from a player whatever draws it: in full while its root lies
      * within the tree detail distance, then at coarser levels of its own
-     * trunk, limbs and crown, and from the shared level on as its species'
-     * one shared model, by chunks, megas and the macro terrain nearest them
-     * alike; past those the macro terrain draws faceted flat-colored
-     * stand-ins and then a canopy, so a tree that changes redraws only
-     * itself. resolveTreeLod() gives the LOD of a tree only a site knows. It
+     * trunk, limbs and crown by the chunks and megas holding it and the macro
+     * terrain nearest them alike, and from the shared level on as one GPU
+     * instance of its species' baked impostor, drawn by
+     * TreeImpostorRenderSystem apart from every one of them; past those the
+     * macro terrain draws faceted flat-colored stand-ins and then a canopy,
+     * so a tree that changes redraws only itself. resolveTreeLod() gives the
+     * LOD of a tree only a site knows, and applyImpostor() takes a species'
+     * impostor baked anew. It
      * is the one way anything
      * touches a tree: castTree() finds what a ray meets, strikeTree() lands a
      * blow on it, collectWoodBoxes() gives movement the wood to collide
@@ -73,6 +78,7 @@ public class TreeManager extends ManagerPackage {
     private TreeGrowthBranch treeGrowthBranch;
     private TreePlantBranch treePlantBranch;
     private TreeSpeciesBranch treeSpeciesBranch;
+    private TreeImpostorRenderSystem treeImpostorRenderSystem;
 
     // Palette
     private Object2IntOpenHashMap<String> treeName2TreeID;
@@ -112,6 +118,7 @@ public class TreeManager extends ManagerPackage {
         this.treePlantBranch = create(TreePlantBranch.class);
         this.treeSpeciesBranch = create(TreeSpeciesBranch.class);
         create(TreeFallRenderSystem.class);
+        this.treeImpostorRenderSystem = create(TreeImpostorRenderSystem.class);
     }
 
     @Override
@@ -184,6 +191,40 @@ public class TreeManager extends ManagerPackage {
     // Throws a catchable InternalException, leaving the species as it was, when the edit cannot go live
     public void rebuildSpecies(String treeName, ArpgObjectStruct treeArpg) {
         treeSpeciesBranch.rebuild(treeName, treeArpg);
+    }
+
+    // A species' impostor taken live, its layer written again the next frame — the editor's bake of it
+    public void applyImpostor(String treeName, TreeImpostorStruct impostor) {
+
+        TreeHandle treeHandle = findTreeHandle(treeName);
+
+        if (treeHandle != null)
+            treeHandle.setImpostor(impostor);
+    }
+
+    // Impostors \\
+
+    // Main thread — a macro tile's sites laid as impostor instances, in the instance layout, in place of its last
+    public void setMacroImpostorSites(long macroCoordinate, FloatArrayList sites) {
+        treeImpostorRenderSystem.setMacroSites(macroCoordinate, sites);
+    }
+
+    public void removeMacroImpostorSites(long macroCoordinate) {
+        treeImpostorRenderSystem.removeMacroSites(macroCoordinate);
+    }
+
+    // The quad every impostor stands on and the arrays its species' impostors are written into, for whatever shows
+    // an impostor on its own
+    public MeshHandle getImpostorQuad() {
+        return treeImpostorRenderSystem.getQuad();
+    }
+
+    public int getImpostorAlbedoArray() {
+        return treeImpostorRenderSystem.getAlbedoArray();
+    }
+
+    public int getImpostorNormalArray() {
+        return treeImpostorRenderSystem.getNormalArray();
     }
 
     // On-Demand \\
@@ -318,6 +359,16 @@ public class TreeManager extends ManagerPackage {
                     + "check for a resource-name/path mismatch in the tree directory.");
 
         return handle;
+    }
+
+    // A loaded species by ID, null for the sentinel slot or one never filled
+    public TreeHandle findTreeHandleByID(short treeID) {
+        return treeID > 0 && treeID < treeID2TreeHandle.size() ? treeID2TreeHandle.get(treeID) : null;
+    }
+
+    // How many ID slots the palette holds, the sentinel included
+    public int getTreeSlotCount() {
+        return treeID2TreeHandle.size();
     }
 
     public TreeHandle getTreeHandleFromTreeID(short treeID) {

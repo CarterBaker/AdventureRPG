@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.util;
 
 import application.bootstrap.worldpipeline.tree.TreeHandle;
+import application.bootstrap.worldpipeline.tree.TreeImpostorStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 
@@ -9,12 +10,14 @@ public final class TreeLodUtility extends EngineUtility {
     /*
      * The LOD ladder every tree is drawn by, whichever chunk, mega or macro
      * tile draws it. A tree's LOD is one code: its level, plus the level
-     * count when that level draws its species' shared model rather than its
-     * own. resolveLevel() is the one place a distance picks a coarse level,
+     * count when that level is drawn as its species' impostor rather than as
+     * its own. resolveLevel() is the one place a distance picks a coarse level,
      * holding a tree on its level a margin past either end so a player
      * pacing along a line never has the trees on it redrawn back and forth.
      * The girth a level hides below grows with the distance it starts at, as
-     * a limb's width on screen shrinks with distance.
+     * a limb's width on screen shrinks with distance. writeImpostorInstance()
+     * is the one place a tree's impostor instance is laid out, for registered
+     * trees and distant terrain's sites alike.
      */
 
     // Code \\
@@ -65,7 +68,52 @@ public final class TreeLodUtility extends EngineUtility {
 
     // Shared \\
 
-    // The seed a species' shared model grows from: its LOD seed salted by its name, so species never share a tree
+    // True while a tree at a LOD is drawn as its species' impostor: from the shared level on, nothing having altered
+    // it, once its species has one baked
+    public static boolean isImpostor(TreeHandle treeHandle, int lod, boolean altered) {
+        return isShared(lod) && !altered && treeHandle.getImpostor() != null;
+    }
+
+    // One tree's impostor instance written at an offset: its root chunk as raw bits and its place in it, the height
+    // its framing sphere's centre stands at, that sphere's radius, its turn and its species' layer — false, nothing
+    // written, while its species has no impostor
+    public static boolean writeImpostorInstance(
+            TreeHandle treeHandle,
+            long seed,
+            float matureHeight,
+            float age,
+            long anchorX,
+            long anchorZ,
+            float baseY,
+            float[] out,
+            int offset) {
+
+        TreeImpostorStruct impostor = treeHandle.getImpostor();
+
+        if (impostor == null)
+            return false;
+
+        int chunkSize = EngineSetting.CHUNK_SIZE;
+        int chunkX = (int) Math.floorDiv(anchorX, chunkSize);
+        int chunkZ = (int) Math.floorDiv(anchorZ, chunkSize);
+        float scale = matureHeight * TreeShapeUtility.resolveScale(matureHeight, age) / impostor.getHeight();
+
+        out[offset + EngineSetting.TREE_IMPOSTOR_CHUNK_X_FLOAT] = Float.intBitsToFloat(chunkX);
+        out[offset + EngineSetting.TREE_IMPOSTOR_CHUNK_Z_FLOAT] = Float.intBitsToFloat(chunkZ);
+        out[offset + EngineSetting.TREE_IMPOSTOR_LOCAL_X_FLOAT] =
+                (float) (anchorX - (long) chunkX * chunkSize) + EngineSetting.TREE_ROOT_CENTER_BLOCKS;
+        out[offset + EngineSetting.TREE_IMPOSTOR_LOCAL_Z_FLOAT] =
+                (float) (anchorZ - (long) chunkZ * chunkSize) + EngineSetting.TREE_ROOT_CENTER_BLOCKS;
+        out[offset + EngineSetting.TREE_IMPOSTOR_CENTER_Y_FLOAT] = baseY + impostor.getCenterY() * scale;
+        out[offset + EngineSetting.TREE_IMPOSTOR_RADIUS_FLOAT] = impostor.getRadius() * scale;
+        out[offset + EngineSetting.TREE_IMPOSTOR_TURN_FLOAT] = BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
+                seed ^ EngineSetting.TREE_IMPOSTOR_TURN_SALT, 0, 0)) * EngineSetting.TREE_IMPOSTOR_FULL_TURN;
+        out[offset + EngineSetting.TREE_IMPOSTOR_LAYER_FLOAT] = treeHandle.getTreeID();
+
+        return true;
+    }
+
+    // The seed a species' shared tree grows from: its LOD seed salted by its name, so species never share a tree
     public static long resolveSharedSeed(TreeHandle treeHandle) {
         return ((long) treeHandle.getNameSeed() << Integer.SIZE ^ treeHandle.getLodSeed())
                 ^ EngineSetting.TREE_LOD_SHARED_SEED_SALT;

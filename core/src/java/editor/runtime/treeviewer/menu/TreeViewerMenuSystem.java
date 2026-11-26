@@ -6,7 +6,9 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
+import editor.bootstrap.treeimpostorpipeline.treeimpostormanager.TreeImpostorManager;
 import editor.bootstrap.treeviewerpipeline.treeviewermanager.TreeViewerManager;
+import editor.runtime.EditorSetting;
 import editor.runtime.treeviewer.TreeViewerSetting;
 import editor.runtime.treeviewer.layer.TreeViewerLayerSystem;
 import engine.root.EngineSetting;
@@ -17,8 +19,9 @@ public class TreeViewerMenuSystem extends SystemPackage {
     /*
      * Opens the Tree Viewer's status line over the viewport, which names the
      * species, the layer shown and how many vertices it draws, the age and
-     * seed the preview grows from and the viewer's last message, rewritten
-     * only when the viewer, its preview or its layers change.
+     * seed the preview grows from, the viewer's last message and the impostor
+     * baking, if any, rewritten only when the viewer, its preview, its layers
+     * or the bake change.
      */
 
     // Internal
@@ -26,6 +29,7 @@ public class TreeViewerMenuSystem extends SystemPackage {
     private FBOManager fboManager;
     private TreeViewerManager treeViewerManager;
     private TreeViewerLayerSystem treeViewerLayerSystem;
+    private TreeImpostorManager treeImpostorManager;
 
     // Menus
     private MenuInstance viewerMenu;
@@ -46,6 +50,7 @@ public class TreeViewerMenuSystem extends SystemPackage {
         this.fboManager = get(FBOManager.class);
         this.treeViewerManager = get(TreeViewerManager.class);
         this.treeViewerLayerSystem = get(TreeViewerLayerSystem.class);
+        this.treeImpostorManager = get(TreeImpostorManager.class);
     }
 
     @Override
@@ -62,7 +67,7 @@ public class TreeViewerMenuSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        int revision = treeViewerLayerSystem.getRevision();
+        int revision = treeViewerLayerSystem.getRevision() + treeImpostorManager.getRevision();
 
         if (revision == shownRevision)
             return;
@@ -88,6 +93,8 @@ public class TreeViewerMenuSystem extends SystemPackage {
 
         if (shown == EngineSetting.INDEX_NOT_FOUND)
             text.append(TreeViewerSetting.STATUS_HIDDEN);
+        else if (shown == EditorSetting.TREE_VIEWER_LAYER_SHARED && !treeViewerManager.isPreviewImpostorLayer(shown))
+            text.append(treeViewerLayerSystem.getName(shown)).append(TreeViewerSetting.STATUS_NO_IMPOSTOR);
         else
             text.append(treeViewerLayerSystem.getName(shown))
                     .append(' ')
@@ -104,6 +111,14 @@ public class TreeViewerMenuSystem extends SystemPackage {
 
         if (treeViewerManager.getStatusMessage() != null)
             text.append(TreeViewerSetting.STATUS_SEPARATOR).append(treeViewerManager.getStatusMessage());
+
+        if (treeImpostorManager.getBakingName() != null)
+            text.append(TreeViewerSetting.STATUS_SEPARATOR)
+                    .append(TreeViewerSetting.STATUS_BAKING)
+                    .append(treeImpostorManager.getBakingName())
+                    .append(TreeViewerSetting.STATUS_SEPARATOR)
+                    .append(treeImpostorManager.getQueuedCount())
+                    .append(TreeViewerSetting.STATUS_QUEUED);
 
         return text.toString();
     }

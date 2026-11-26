@@ -8,6 +8,7 @@ import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.treeviewerpipeline.treeviewer.TreePreviewLayerStruct;
@@ -24,16 +25,19 @@ public class TreeViewerRenderSystem extends SystemPackage {
 
     /*
      * Draws the layer the Layers tab shows into this window's scene target,
-     * its bark and leaf meshes standing on the origin, with the viewer's bark
+     * standing on the origin: its bark and leaf meshes with the viewer's bark
      * and leaf materials, which shade the wood and leaves exactly as the
      * game's G-buffer receives them and light them here, as an editor
-     * viewport has no lighting pass. Every draw takes a model of its own from
-     * ItemModelManager; the meshes are the viewer manager's and shared by
-     * every viewer.
+     * viewport has no lighting pass, or, for a layer the world draws as its
+     * impostor, the impostor's quad facing the camera with the viewer's
+     * impostor material, from the very arrays the world's instances read.
+     * Every draw takes a model of its own from ItemModelManager; the meshes
+     * are the viewer manager's and shared by every viewer.
      */
 
     // Internal
     private TreeViewerManager treeViewerManager;
+    private TreeManager treeManager;
     private TreeViewerLayerSystem treeViewerLayerSystem;
     private ItemModelManager itemModelManager;
     private MaterialManager materialManager;
@@ -47,6 +51,7 @@ public class TreeViewerRenderSystem extends SystemPackage {
     // Materials
     private int barkMaterialID;
     private int leafMaterialID;
+    private int impostorMaterialID;
 
     // Placement — every layer stands on the origin
     private Matrix4 layerMatrix;
@@ -61,6 +66,7 @@ public class TreeViewerRenderSystem extends SystemPackage {
     @Override
     protected void get() {
         this.treeViewerManager = get(TreeViewerManager.class);
+        this.treeManager = get(TreeManager.class);
         this.treeViewerLayerSystem = get(TreeViewerLayerSystem.class);
         this.itemModelManager = get(ItemModelManager.class);
         this.materialManager = get(MaterialManager.class);
@@ -77,6 +83,7 @@ public class TreeViewerRenderSystem extends SystemPackage {
         // Materials
         this.barkMaterialID = materialManager.getMaterialIDFromMaterialName(TreeViewerSetting.MATERIAL_BARK);
         this.leafMaterialID = materialManager.getMaterialIDFromMaterialName(TreeViewerSetting.MATERIAL_LEAF);
+        this.impostorMaterialID = materialManager.getMaterialIDFromMaterialName(TreeViewerSetting.MATERIAL_IMPOSTOR);
     }
 
     // Update \\
@@ -87,7 +94,9 @@ public class TreeViewerRenderSystem extends SystemPackage {
         WindowInstance window = context.getWindow();
         int shown = treeViewerLayerSystem.getShownLayer();
 
-        if (shown != EngineSetting.INDEX_NOT_FOUND) {
+        if (shown != EngineSetting.INDEX_NOT_FOUND && treeViewerManager.isPreviewImpostorLayer(shown))
+            pushImpostor(treeViewerManager.getPreviewImpostorInstance(shown), window);
+        else if (shown != EngineSetting.INDEX_NOT_FOUND) {
 
             TreePreviewLayerStruct layer = treeViewerManager.getPreviewLayer(shown);
 
@@ -96,6 +105,24 @@ public class TreeViewerRenderSystem extends SystemPackage {
         }
 
         fboRenderSystem.pushFbo(sceneFbo, RuntimeSetting.LAYER_WORLD, window);
+    }
+
+    // The impostor's quad at the sphere an instance names, its frame chosen by the camera as the world's are
+    private void pushImpostor(float[] instance, WindowInstance window) {
+
+        ModelInstance model = itemModelManager.acquireModel(treeManager.getImpostorQuad(), impostorMaterialID);
+
+        model.getMaterial().setUniform(
+                EngineSetting.UNIFORM_TREE_IMPOSTOR_ALBEDO, treeManager.getImpostorAlbedoArray());
+        model.getMaterial().setUniform(
+                EngineSetting.UNIFORM_TREE_IMPOSTOR_NORMAL, treeManager.getImpostorNormalArray());
+        model.getMaterial().setUniform(
+                TreeViewerSetting.UNIFORM_IMPOSTOR_CENTER_Y, instance[EngineSetting.TREE_IMPOSTOR_CENTER_Y_FLOAT]);
+        model.getMaterial().setUniform(
+                TreeViewerSetting.UNIFORM_IMPOSTOR_RADIUS, instance[EngineSetting.TREE_IMPOSTOR_RADIUS_FLOAT]);
+        model.getMaterial().setUniform(
+                TreeViewerSetting.UNIFORM_IMPOSTOR_LAYER, instance[EngineSetting.TREE_IMPOSTOR_LAYER_FLOAT]);
+        renderManager.pushRenderCall(model, sceneFbo, TreeViewerSetting.DEPTH_TREE, window);
     }
 
     private void pushMeshes(ObjectArrayList<MeshInstance> meshes, int materialID, WindowInstance window) {

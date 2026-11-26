@@ -721,6 +721,7 @@ public class EditorSetting {
 
     // Viewports
     public static final String FBO_EDITOR_SCENE = "EditorScene";
+    public static final String FBO_TREE_IMPOSTOR_BAKE = "TreeImpostorBake";
     public static final String FBO_EDITOR_OVERLAY = "EditorOverlay";
     public static final String MESH_EDITOR_VIEWPORT_QUAD = "editor/EditorViewportQuad";
     public static final String MESH_EDITOR_OVERLAY_VAO = "editor/CharacterMeshOverlayVAO";
@@ -3031,6 +3032,23 @@ public class EditorSetting {
     public static final String TREE_PLANNER_VALUE_FORMAT = "%.2f";
     public static final String TREE_PLANNER_PALETTE_HEADER = "Trees";
     public static final String TREE_PLANNER_FIELDS_SUFFIX = " Fields";
+
+    // Tree Impostor Bake — the materials the shared tree is drawn into the bake target with and the uniforms naming
+    // each view's camera and the map it writes, its render order, every view of both maps (albedo first), how small a
+    // frame's right may come before the world's own x stands in, how many rings out an empty texel takes a covered
+    // neighbour's colour, the weight an empty texel keeps in a smaller level, and the least sphere a frame holds
+    public static final String TREE_IMPOSTOR_BAKE_BARK_MATERIAL = "editor/TreeImpostorBakeBarkMaterial";
+    public static final String TREE_IMPOSTOR_BAKE_LEAF_MATERIAL = "editor/TreeImpostorBakeLeafMaterial";
+    public static final String UNIFORM_TREE_IMPOSTOR_BAKE_VIEW_PROJECTION = "u_bakeViewProjection";
+    public static final String UNIFORM_TREE_IMPOSTOR_BAKE_MAP = "u_bakeMap";
+    public static final int TREE_IMPOSTOR_BAKE_DEPTH = 0;
+    public static final int TREE_IMPOSTOR_BAKE_MAP_ALBEDO = 0;
+    public static final int TREE_IMPOSTOR_BAKE_VIEWS = EngineSetting.TREE_IMPOSTOR_FRAMES
+            * EngineSetting.TREE_IMPOSTOR_FRAMES * 2;
+    public static final float TREE_IMPOSTOR_MIN_ACROSS = 0.0001f;
+    public static final int TREE_IMPOSTOR_DILATE_RINGS = 4;
+    public static final float TREE_IMPOSTOR_EMPTY_WEIGHT = 0.001f;
+    public static final float TREE_IMPOSTOR_MIN_RADIUS_BLOCKS = 1f;
 
     // Item Library — the game's item meshes, the definition file an import first offers, the pack a converted quad
     // mesh is drawn from, and the names new parts take

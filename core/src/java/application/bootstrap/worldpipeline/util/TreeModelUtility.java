@@ -2,12 +2,10 @@ package application.bootstrap.worldpipeline.util;
 
 import java.util.Arrays;
 
-import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelMeshUtility;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreeModelStruct;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
-import application.bootstrap.worldpipeline.tree.TreeSharedStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -31,19 +29,15 @@ public final class TreeModelUtility extends EngineUtility {
      * sapling and a giant alike. The trunk is laid as boxes of bark, one box
      * running on up the trunk while the trunk keeps within its width and
      * girth, and every limb drawn as short boxes stepping along it. From the
-     * shared level on a tree nothing has altered draws its species' shared
-     * model instead, built once by buildShared(), scaled to the tree's own
-     * height and mirrored one of four ways by its seed. Positions are in
-     * blocks of the caller's frame.
+     * shared level on a tree nothing has altered whose species has an
+     * impostor is drawn by TreeImpostorRenderSystem instead, so nothing is
+     * laid for it here. Positions are in blocks of the caller's frame.
      */
-
-    // Mirror — the face each face becomes when a shared model is mirrored across X and across Z
-    private static final int[] FACE_MIRRORED_X = resolveMirroredFaces(EngineSetting.AXIS_X);
-    private static final int[] FACE_MIRRORED_Z = resolveMirroredFaces(EngineSetting.AXIS_Z);
 
     // Emit \\
 
-    // One tree whose root centre stands at a point of the frame, its height the world's own, drawn at a LOD
+    // One tree whose root centre stands at a point of the frame, its height the world's own, drawn at a LOD; none
+    // at all while its impostor draws it
     public static void emit(
             TreeInstance tree,
             float rootX,
@@ -53,14 +47,10 @@ public final class TreeModelUtility extends EngineUtility {
             FloatArrayList bark,
             FloatArrayList leaves) {
 
-        int level = TreeLodUtility.toLevel(lod);
-
-        if (TreeLodUtility.isShared(lod) && !tree.isAltered()) {
-            emitShared(
-                    tree.getTreeHandle(), tree.getSeed(), tree.getMatureHeight(), tree.getAge(),
-                    rootX, tree.getBaseY(), rootZ, level, bark, leaves);
+        if (TreeLodUtility.isImpostor(tree.getTreeHandle(), lod, tree.isAltered()))
             return;
-        }
+
+        int level = TreeLodUtility.toLevel(lod);
 
         model.clear();
 
@@ -73,7 +63,7 @@ public final class TreeModelUtility extends EngineUtility {
     }
 
     // A tree known only by its species, seed and age, never registered, drawn at a LOD: what distant terrain
-    // draws each tree it stands in as
+    // draws each tree it stands in as, none at all while its impostor draws it
     public static void emitSite(
             TreeHandle treeHandle,
             long seed,
@@ -86,18 +76,12 @@ public final class TreeModelUtility extends EngineUtility {
             FloatArrayList bark,
             FloatArrayList leaves) {
 
-        int level = TreeLodUtility.toLevel(lod);
-
-        if (TreeLodUtility.isShared(lod)) {
-            emitShared(
-                    treeHandle, seed, TreeSkeletonUtility.resolveMatureHeight(treeHandle, seed), age,
-                    rootX, rootY, rootZ, level, bark, leaves);
+        if (TreeLodUtility.isImpostor(treeHandle, lod, false))
             return;
-        }
 
         model.clear();
         gatherSeed(treeHandle, seed, age, model);
-        emitLevel(treeHandle, model, rootX, rootY, rootZ, level, bark, leaves);
+        emitLevel(treeHandle, model, rootX, rootY, rootZ, TreeLodUtility.toLevel(lod), bark, leaves);
     }
 
     // A shape alone at the finest coarse level, its root centre at a point of the frame — a piece of tree too great
@@ -550,147 +534,5 @@ public final class TreeModelUtility extends EngineUtility {
                 treeHandle.getPartColors()[part],
                 cells[cell + EngineSetting.TREE_MODEL_CELL_SEED],
                 leaves);
-    }
-
-    // Shared \\
-
-    // A species' shared model at every coarse level: the tree its LOD seed grows at full age, root at the origin
-    public static TreeSharedStruct buildShared(TreeHandle treeHandle) {
-
-        long seed = TreeLodUtility.resolveSharedSeed(treeHandle);
-        TreeModelStruct model = new TreeModelStruct();
-        FloatArrayList bark = new FloatArrayList();
-        FloatArrayList leaves = new FloatArrayList();
-        float[][] barkLevels = new float[EngineSetting.TREE_LOD_LEVEL_COUNT][];
-        float[][] leafLevels = new float[EngineSetting.TREE_LOD_LEVEL_COUNT][];
-
-        barkLevels[EngineSetting.TREE_LOD_FULL] = new float[0];
-        leafLevels[EngineSetting.TREE_LOD_FULL] = new float[0];
-        gatherSeed(treeHandle, seed, 1f, model);
-
-        for (int level = EngineSetting.TREE_LOD_FULL + 1; level < EngineSetting.TREE_LOD_LEVEL_COUNT; level++) {
-
-            bark.clear();
-            leaves.clear();
-            emitLevel(treeHandle, model, 0f, 0f, 0f, level, bark, leaves);
-            barkLevels[level] = bark.toFloatArray();
-            leafLevels[level] = leaves.toFloatArray();
-        }
-
-        return new TreeSharedStruct(seed, barkLevels, leafLevels, model.getSkeleton().getMatureHeight());
-    }
-
-    // A tree drawn as its species' shared model of a level, scaled to its own height and mirrored by its seed
-    private static void emitShared(
-            TreeHandle treeHandle,
-            long seed,
-            float matureHeight,
-            float age,
-            float rootX,
-            float rootY,
-            float rootZ,
-            int level,
-            FloatArrayList bark,
-            FloatArrayList leaves) {
-
-        TreeSharedStruct shared = treeHandle.getShared();
-        float scale = matureHeight * TreeShapeUtility.resolveScale(matureHeight, age) / shared.getHeight();
-        int variant = Math.min(
-                (int) (BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
-                        seed ^ EngineSetting.TREE_LOD_SHARED_SEED_SALT, 0, 0))
-                        * EngineSetting.TREE_LOD_SHARED_VARIANTS),
-                EngineSetting.TREE_LOD_SHARED_VARIANTS - 1);
-        boolean mirrorX = (variant & EngineSetting.TREE_LOD_SHARED_MIRROR_X) != 0;
-        boolean mirrorZ = (variant & EngineSetting.TREE_LOD_SHARED_MIRROR_Z) != 0;
-
-        appendShared(shared.getBark(level), true, scale, mirrorX, mirrorZ, rootX, rootY, rootZ, bark);
-        appendShared(shared.getLeaves(level), false, scale, mirrorX, mirrorZ, rootX, rootY, rootZ, leaves);
-    }
-
-    // A shared model's vertices carried to a root, scaled and mirrored, every quad wound back the right way round
-    // when it is mirrored across one axis alone
-    private static void appendShared(
-            float[] source,
-            boolean wood,
-            float scale,
-            boolean mirrorX,
-            boolean mirrorZ,
-            float rootX,
-            float rootY,
-            float rootZ,
-            FloatArrayList out) {
-
-        int stride = EngineSetting.CHUNK_VERTEX_FLOAT_COUNT;
-        int quadFloats = stride * EngineSetting.QUAD_VERTEX_COUNT;
-        boolean rewound = mirrorX != mirrorZ;
-        float signX = mirrorX ? -scale : scale;
-        float signZ = mirrorZ ? -scale : scale;
-        int start = out.size();
-
-        out.size(start + source.length);
-
-        float[] target = out.elements();
-
-        for (int quad = 0; quad < source.length; quad += quadFloats)
-            for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT; vertex++) {
-
-                int from = quad + (rewound && vertex != 0 ? EngineSetting.QUAD_VERTEX_COUNT - vertex : vertex) * stride;
-                int to = start + quad + vertex * stride;
-
-                System.arraycopy(source, from, target, to, stride);
-
-                target[to + EngineSetting.AXIS_X] = rootX + source[from + EngineSetting.AXIS_X] * signX;
-                target[to + EngineSetting.AXIS_Y] = rootY + source[from + EngineSetting.AXIS_Y] * scale;
-                target[to + EngineSetting.AXIS_Z] = rootZ + source[from + EngineSetting.AXIS_Z] * signZ;
-
-                if (wood)
-                    carryWoodVertex(target, to, scale, mirrorX, mirrorZ);
-                else
-                    carryLeafVertex(target, to, scale, signX, signZ);
-            }
-    }
-
-    // A wood vertex's face turned with the mirror and its extents scaled
-    private static void carryWoodVertex(float[] vertex, int offset, float scale, boolean mirrorX, boolean mirrorZ) {
-
-        int meta = (int) vertex[offset + EngineSetting.TREE_VERTEX_META_OFFSET];
-        int face = meta & EngineSetting.TREE_META_FACE_MASK;
-
-        if (mirrorX)
-            face = FACE_MIRRORED_X[face];
-
-        if (mirrorZ)
-            face = FACE_MIRRORED_Z[face];
-
-        vertex[offset + EngineSetting.TREE_VERTEX_META_OFFSET] = (meta & ~EngineSetting.TREE_META_FACE_MASK) | face;
-
-        for (int extent = 0; extent < EngineSetting.TREE_VERTEX_WOOD_EXTENT_FLOATS; extent++)
-            vertex[offset + EngineSetting.TREE_VERTEX_WOOD_EXTENT_OFFSET + extent] *= scale;
-    }
-
-    // A leaf vertex's way back to its cluster's centre mirrored and scaled, and its cluster's radii scaled
-    private static void carryLeafVertex(float[] vertex, int offset, float scale, float signX, float signZ) {
-
-        int toCentre = offset + EngineSetting.TREE_VERTEX_LEAF_OFFSET_OFFSET;
-
-        vertex[toCentre + EngineSetting.AXIS_X] *= signX;
-        vertex[toCentre + EngineSetting.AXIS_Y] *= scale;
-        vertex[toCentre + EngineSetting.AXIS_Z] *= signZ;
-
-        for (int radius = 0; radius < EngineSetting.TREE_VERTEX_LEAF_RADIUS_FLOATS; radius++)
-            vertex[offset + EngineSetting.TREE_VERTEX_LEAF_RADIUS_OFFSET + radius] *= scale;
-    }
-
-    // Every face's twin across an axis: the face on that axis's other side, every other face as it was
-    private static int[] resolveMirroredFaces(int axis) {
-
-        int[] faces = new int[EngineSetting.SUB_VOXEL_FACE_COUNT];
-
-        for (int face = 0; face < faces.length; face++)
-            faces[face] = SubVoxelMeshUtility.resolveAxis(face) == axis
-                    ? SubVoxelMeshUtility.resolveFace(axis, SubVoxelMeshUtility.getFaceNormal(face, axis) < 0)
-                    : face;
-
-        return faces;
     }
 }

@@ -2362,9 +2362,9 @@ public class EngineSetting {
     // never floats from the wood drawn. How near a segment must set out to the last one's end to carry its trunk on,
     // how far a trunk box runs before its top strays past a share of its foot's radius or thins below a share of
     // its girth, the steps a limb is boxed in, and the blocks past a level's start a tree keeps its level for. From
-    // the shared level on, every tree draws its species' one shared model of that level, grown from the species'
-    // LOD seed at full age, scaled to its own height and mirrored one of four ways by its seed; the shared level
-    // equal to the level count shares none. A tree with no LOD yet is judged without holding to any
+    // the shared level on, every tree nothing has altered is drawn as its species' impostor (Tree Impostor, below)
+    // wherever its species has one baked; the shared level equal to the level count shares none. A tree with no LOD
+    // yet is judged without holding to any
     public static final int TREE_LOD_NONE = -1;
     public static final int TREE_LOD_FULL = 0;
     public static final int TREE_LOD_LEVEL_COUNT = 8;
@@ -2375,12 +2375,9 @@ public class EngineSetting {
     public static final float TREE_LOD_MIN_GIRTH_BLOCKS = 0.1f;
     public static final float TREE_LOD_COVER_SHARE = 0.5f;
     public static final int TREE_LOD_KEEP_BLOCKS = 16;
-    public static final int TREE_LOD_SHARED_DEFAULT = 5;
+    public static final int TREE_LOD_SHARED_DEFAULT = 3;
     public static final int TREE_LOD_SHARED_MIN = 1;
     public static final int TREE_LOD_SHARED_MAX = TREE_LOD_LEVEL_COUNT;
-    public static final int TREE_LOD_SHARED_VARIANTS = 4;
-    public static final int TREE_LOD_SHARED_MIRROR_X = 1;
-    public static final int TREE_LOD_SHARED_MIRROR_Z = 2;
     public static final long TREE_LOD_SHARED_SEED_SALT = 0x5C1D7E93A04B26F1L;
     public static final int TREE_LOD_MAX_CELLS = 8 * 8 * 8;
     public static final int TREE_MODEL_CELL_MIN_X = 0;
@@ -2400,14 +2397,39 @@ public class EngineSetting {
     public static final float TREE_MODEL_RUN_DRIFT_SHARE = 0.5f;
     public static final float TREE_MODEL_RUN_GIRTH_SHARE = 0.7f;
 
-    // Tree Vertex — where a wood and a leaf vertex keep what a shared model is scaled and mirrored through
-    public static final int TREE_VERTEX_META_OFFSET = 5;
-    public static final int TREE_VERTEX_WOOD_EXTENT_OFFSET = 7;
-    public static final int TREE_VERTEX_WOOD_EXTENT_FLOATS = 4;
-    public static final int TREE_VERTEX_LEAF_OFFSET_OFFSET = 7;
-    public static final int TREE_VERTEX_LEAF_RADIUS_OFFSET = 10;
-    public static final int TREE_VERTEX_LEAF_RADIUS_FLOATS = 2;
-    public static final int TREE_META_FACE_MASK = (1 << TREE_META_EDGE_SHIFT) - 1;
+    // Tree Impostor — each species' shared tree, grown from its LOD seed at full age, baked by the editor into a
+    // hemi-octahedral atlas of frames across and down, each seen from its own direction over the upper hemisphere,
+    // every frame square in texels and every map a BC7 chain from the atlas down to one texel, in its own directory
+    // beside the baked textures with the bake's version in its source checksum: albedo with the coverage the cutout
+    // keeps above a share, and the object-space normal with the occlusion. In the world every tree from the shared
+    // level on is one instance of its species' camera-facing quad, laid in per-species buffers rebuilt only when
+    // the trees they hold change, at most once a check; the instance carries its root chunk (as raw bits), its
+    // place in it, the height its framing sphere's centre stands at, that sphere's radius, its turn and its species'
+    // layer. A tree's turn is rolled from its seed, and a tree leaving its impostor keeps it for a hold while the mesh
+    // taking its place lands
+    public static final String TREE_IMPOSTOR_PATH = "bakedimpostors";
+    public static final int TREE_IMPOSTOR_BAKE_VERSION = 1;
+    public static final int TREE_IMPOSTOR_FRAMES = 8;
+    public static final int TREE_IMPOSTOR_FRAME_TEXELS = 64;
+    public static final int TREE_IMPOSTOR_ATLAS_TEXELS = TREE_IMPOSTOR_FRAMES * TREE_IMPOSTOR_FRAME_TEXELS;
+    public static final float TREE_IMPOSTOR_CUTOFF = 0.5f;
+    public static final String TREE_IMPOSTOR_MATERIAL = "trees/TreeImpostorMaterial";
+    public static final String TREE_IMPOSTOR_MESH = "trees/TreeImpostorQuad";
+    public static final String UNIFORM_TREE_IMPOSTOR_ALBEDO = "u_impostorAlbedo";
+    public static final String UNIFORM_TREE_IMPOSTOR_NORMAL = "u_impostorNormal";
+    public static final int[] TREE_IMPOSTOR_INSTANCE_ATTR_SIZES = { 4, 4 };
+    public static final int TREE_IMPOSTOR_INSTANCE_FLOATS = 8;
+    public static final int TREE_IMPOSTOR_CHUNK_X_FLOAT = 0;
+    public static final int TREE_IMPOSTOR_CHUNK_Z_FLOAT = 1;
+    public static final int TREE_IMPOSTOR_LOCAL_X_FLOAT = 2;
+    public static final int TREE_IMPOSTOR_LOCAL_Z_FLOAT = 3;
+    public static final int TREE_IMPOSTOR_CENTER_Y_FLOAT = 4;
+    public static final int TREE_IMPOSTOR_RADIUS_FLOAT = 5;
+    public static final int TREE_IMPOSTOR_TURN_FLOAT = 6;
+    public static final int TREE_IMPOSTOR_LAYER_FLOAT = 7;
+    public static final long TREE_IMPOSTOR_TURN_SALT = 0x2F6B1D93C47E05A8L;
+    public static final float TREE_IMPOSTOR_HOLD_SECONDS = 2f;
+    public static final float TREE_IMPOSTOR_FULL_TURN = (float) (Math.PI * 2.0);
 
     // Tree Impostor — a tree's trunk and the few lumps its crown is judged as without growing it, what macro terrain
     // shapes its stand-ins from

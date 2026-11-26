@@ -21,7 +21,7 @@ class TreeDetailBranch extends BranchPackage {
      * the nearest grid of its world is centred on, measured between chunks
      * the way grid slots measure theirs: in full within that grid's tree
      * detail distance, else the coarse level TreeLodUtility gives that
-     * distance, drawn as its species' shared model from the grid's shared
+     * distance, drawn as its species' impostor from the grid's shared
      * level on. resolveLod() is the one place a tree's LOD is decided. The
      * anchors — every grid's world, active chunk, reach and shared level —
      * are published on the main thread the frame any of them changes and
@@ -51,9 +51,10 @@ class TreeDetailBranch extends BranchPackage {
     // Settings
     private int chunkSize;
 
-    // Walk
+    // Walk — and the revision that moves whenever a judged tree's LOD changes
     private ObjectArrayList<TreeInstance> trees;
     private float sinceCheck;
+    private int revision;
 
     // Base \\
 
@@ -99,7 +100,8 @@ class TreeDetailBranch extends BranchPackage {
         trees.clear();
     }
 
-    // A tree whose LOD changed is redrawn at its new one
+    // A tree whose LOD changed is redrawn at its new one; one passing between impostor levels changes only its
+    // instance, never what any chunk or mega draws
     private void judge(TreeInstance tree) {
 
         int lod = resolveLod(tree.getWorldHandle(), tree.getRootChunkCoordinate(), tree.getLod());
@@ -107,7 +109,14 @@ class TreeDetailBranch extends BranchPackage {
         if (lod == tree.getLod())
             return;
 
+        boolean impostor = TreeLodUtility.isImpostor(tree.getTreeHandle(), tree.getLod(), tree.isAltered());
+
         tree.setLod(lod);
+        revision++;
+
+        if (impostor && TreeLodUtility.isImpostor(tree.getTreeHandle(), lod, tree.isAltered()))
+            return;
+
         treeRebuildBranch.rebuildTree(tree, false);
     }
 
@@ -216,5 +225,11 @@ class TreeDetailBranch extends BranchPackage {
 
             return TreeLodUtility.encode(level, level >= anchorSharedLevels.getInt(nearest));
         }
+    }
+
+    // Accessible \\
+
+    int getRevision() {
+        return revision;
     }
 }

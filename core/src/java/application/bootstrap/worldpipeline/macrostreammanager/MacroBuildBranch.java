@@ -110,6 +110,8 @@ public class MacroBuildBranch extends BranchPackage {
                     sync.getTreeBark().addAll(scratch.modelBark);
                     sync.getTreeLeaves().clear();
                     sync.getTreeLeaves().addAll(scratch.modelLeaves);
+                    sync.getTreeImpostors().clear();
+                    sync.getTreeImpostors().addAll(scratch.modelImpostors);
                     sync.markBuilt(cellsPerSide, treeModels);
                 } finally {
                     sync.release();

@@ -15,12 +15,16 @@ class TreeRegistryBranch extends BranchPackage {
      * A tree a hand planted stays for the whole session, held or not, so
      * every chunk that later reaches it finds it again. Chunks generate on the
      * streaming threads and are released on the main thread, so every change
-     * is made under the registry's lock.
+     * is made under the registry's lock, and moves the revision whatever is
+     * drawn from the whole registry is built again by.
      */
 
     // Registry — both guarded by key2Tree
     private Long2ObjectOpenHashMap<TreeInstance> key2Tree;
     private ObjectArrayList<TreeInstance> plantedTrees;
+
+    // Revision — moves whenever a tree comes into the registry or leaves it
+    private volatile int revision;
 
     // Base \\
 
@@ -61,6 +65,7 @@ class TreeRegistryBranch extends BranchPackage {
 
             tree.setReferences(1);
             key2Tree.put(tree.getRegistryKey(), tree);
+            revision++;
 
             return tree;
         }
@@ -83,8 +88,10 @@ class TreeRegistryBranch extends BranchPackage {
 
             tree.setReferences(references);
 
-            if (references <= 0 && !tree.isPlanted() && key2Tree.get(tree.getRegistryKey()) == tree)
+            if (references <= 0 && !tree.isPlanted() && key2Tree.get(tree.getRegistryKey()) == tree) {
                 key2Tree.remove(tree.getRegistryKey());
+                revision++;
+            }
         }
     }
 
@@ -99,6 +106,7 @@ class TreeRegistryBranch extends BranchPackage {
             tree.setReferences(0);
             key2Tree.put(tree.getRegistryKey(), tree);
             plantedTrees.add(tree);
+            revision++;
 
             return true;
         }
@@ -124,5 +132,9 @@ class TreeRegistryBranch extends BranchPackage {
         synchronized (key2Tree) {
             out.addAll(plantedTrees);
         }
+    }
+
+    int getRevision() {
+        return revision;
     }
 }

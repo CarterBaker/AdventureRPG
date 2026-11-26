@@ -11,6 +11,12 @@ public class TreeViewerSetting {
     // Materials
     public static final String MATERIAL_BARK = "editor/TreeViewerBarkMaterial";
     public static final String MATERIAL_LEAF = "editor/TreeViewerLeafMaterial";
+    public static final String MATERIAL_IMPOSTOR = "editor/TreeViewerImpostorMaterial";
+
+    // Impostor — the uniforms placing the impostor's quad
+    public static final String UNIFORM_IMPOSTOR_CENTER_Y = "u_impostorCenterY";
+    public static final String UNIFORM_IMPOSTOR_RADIUS = "u_impostorRadius";
+    public static final String UNIFORM_IMPOSTOR_LAYER = "u_impostorLayer";
 
     // Render Order
     public static final int DEPTH_TREE = 0;
@@ -27,13 +33,16 @@ public class TreeViewerSetting {
     public static final String LAYER_KEY_SHARED = "shared";
     public static final String LAYER_NAME_FULL = "LOD 0 (Full)";
     public static final String LAYER_NAME_LEVEL = "LOD ";
-    public static final String LAYER_NAME_SHARED_SUFFIX = " (Shared)";
-    public static final String LAYER_NAME_SHARED = "Shared Tree (LOD Seed)";
+    public static final String LAYER_NAME_SHARED_SUFFIX = " (Impostor)";
+    public static final String LAYER_NAME_SHARED = "Impostor (LOD Seed)";
 
     // Text
     public static final String STATUS_PREFIX = "Tree Viewer  |  ";
     public static final String STATUS_NONE = "No tree selected in the Hierarchy";
     public static final String STATUS_HIDDEN = "Every layer is hidden";
+    public static final String STATUS_NO_IMPOSTOR = " — no impostor baked yet";
+    public static final String STATUS_BAKING = "Baking impostor: ";
+    public static final String STATUS_QUEUED = " queued";
     public static final String STATUS_SEPARATOR = "  ·  ";
     public static final String STATUS_VERTICES = " vertices";
     public static final String STATUS_AGE = "Age ";

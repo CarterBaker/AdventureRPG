@@ -28,6 +28,7 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
     private byte[] waterMask;
     private FloatArrayList treeBark;
     private FloatArrayList treeLeaves;
+    private FloatArrayList treeImpostors;
     private boolean built;
 
     // Build Record
@@ -47,6 +48,7 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
         this.treeIndices = new ShortArrayList();
         this.treeBark = new FloatArrayList();
         this.treeLeaves = new FloatArrayList();
+        this.treeImpostors = new FloatArrayList();
         this.waterMask = new byte[EngineSetting.MACRO_WATER_MASK_TEXELS_PER_TILE
                 * EngineSetting.MACRO_WATER_MASK_TEXELS_PER_TILE * EngineSetting.COLOR_CHANNEL_COUNT];
     }
@@ -103,6 +105,7 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
         treeIndices.clear();
         treeBark.clear();
         treeLeaves.clear();
+        treeImpostors.clear();
         this.built = false;
     }
 
@@ -134,6 +137,11 @@ public class MacroDataSyncContainer extends SyncContainerPackage {
 
     public FloatArrayList getTreeLeaves() {
         return treeLeaves;
+    }
+
+    // The impostor instances of the trees its tree models leave to TreeImpostorRenderSystem
+    public FloatArrayList getTreeImpostors() {
+        return treeImpostors;
     }
 
     public boolean isBuiltTreeModels() {

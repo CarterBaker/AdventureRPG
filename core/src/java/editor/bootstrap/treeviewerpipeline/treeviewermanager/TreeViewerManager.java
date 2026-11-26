@@ -2,6 +2,9 @@ package editor.bootstrap.treeviewerpipeline.treeviewermanager;
 
 import java.util.Objects;
 
+import application.bootstrap.worldpipeline.tree.TreeHandle;
+import application.bootstrap.worldpipeline.tree.TreeImpostorStruct;
+import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.treeviewerpipeline.treeviewer.TreePlannerNode;
@@ -22,13 +25,14 @@ public class TreeViewerManager extends ManagerPackage {
      * fields the Properties tab edits through TreeEditBranch live in every
      * window, and the seed and age the preview grows its tree from, which the
      * Tools tab's Preview actions step. Any change to the species, its seed,
-     * its age or the shared tree LOD setting has TreePreviewBranch build the
-     * preview again on the next frame, once the species itself has been
-     * rebuilt. New, Duplicate, Save and Revert act on the species' file.
+     * its age, its impostor or the shared tree LOD setting has
+     * TreePreviewBranch build the preview again on the next frame, once the
+     * species itself has been rebuilt. New, Duplicate, Save and Revert act on the species' file.
      */
 
     // Internal
     private InfoManager infoManager;
+    private TreeManager treeManager;
     private TreeEditBranch treeEditBranch;
     private TreePreviewBranch treePreviewBranch;
 
@@ -44,6 +48,7 @@ public class TreeViewerManager extends ManagerPackage {
     private long seed;
     private float age;
     private int sharedLevel;
+    private TreeImpostorStruct shownImpostor;
     private boolean previewStale;
 
     // Status
@@ -74,6 +79,7 @@ public class TreeViewerManager extends ManagerPackage {
     @Override
     protected void get() {
         this.infoManager = get(InfoManager.class);
+        this.treeManager = get(TreeManager.class);
     }
 
     @Override
@@ -95,6 +101,15 @@ public class TreeViewerManager extends ManagerPackage {
         if (infoManager.getRevision() != shownInfoRevision) {
             shownInfoRevision = infoManager.getRevision();
             refreshCatalogue();
+        }
+
+        TreeHandle treeHandle = treeName != null ? treeManager.findTreeHandle(treeName) : null;
+        TreeImpostorStruct impostor = treeHandle != null ? treeHandle.getImpostor() : null;
+
+        if (impostor != shownImpostor) {
+            shownImpostor = impostor;
+            previewStale = true;
+            notifyChanged();
         }
 
         if (internal.settings.treeSharedLevel != sharedLevel) {
@@ -398,6 +413,14 @@ public class TreeViewerManager extends ManagerPackage {
 
     public TreePreviewLayerStruct getPreviewLayer(int layer) {
         return treePreviewBranch.getLayer(layer);
+    }
+
+    public boolean isPreviewImpostorLayer(int layer) {
+        return treePreviewBranch.isImpostorLayer(layer);
+    }
+
+    public float[] getPreviewImpostorInstance(int layer) {
+        return treePreviewBranch.getImpostorInstance(layer);
     }
 
     public float getPreviewHeight() {

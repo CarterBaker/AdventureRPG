@@ -42,9 +42,12 @@ class MacroRenderSystem extends SystemPackage {
      * faces the camera, and its coverage is re-resolved before drawing only
      * when the grid's anchor or drawn chunks changed, so macro terrain fills
      * exactly the ground the chunk grid leaves open and meets it with no hole
-     * and no overlap. A reupload writes into the macro's existing buffers, a
-     * hidden macro keeps them for its next tenant, and only disposal frees
-     * them, so streaming macros in and out never churns GPU objects. A
+     * and no overlap. A tile drawn before and built again keeps its old land
+     * as its fading model and rises its new land over it through the trees'
+     * dither, the old one given up once the new stands whole, so a rebuild
+     * never flashes; a tile first drawn writes into the macro's existing
+     * buffers, a hidden macro keeps them for its next tenant, and only
+     * disposal frees them. A
      * tile's trees are models of their own beside its land: its canopy and
      * stand-ins in the land's layout and material, and near the grid the
      * models of the trees themselves in the grid's own bark and leaf
@@ -54,7 +57,9 @@ class MacroRenderSystem extends SystemPackage {
      * TREE_FADE_SECONDS, falling away through that dither as its new ones
      * rise through it, as a chunk's or mega's trees do, so no tree ever
      * changes its look at once; its trees are made again only when it is
-     * built again, and given up whenever it is hidden.
+     * built again, and given up whenever it is hidden. Its trees at impostor
+     * levels it hands to TreeManager as instances, taken back when it is
+     * hidden or disposed.
      */
 
     // Internal
@@ -189,9 +194,17 @@ class MacroRenderSystem extends SystemPackage {
         macro.setRendered(true);
         macro.setHasGeometry(!sync.getIndices().isEmpty());
         uploadTreeModels(macro, sync, drawn);
+        treeManager.setMacroImpostorSites(macro.getCoordinate(), sync.getTreeImpostors());
 
         if (!macro.hasGeometry())
             return;
+
+        if (meshInstance != null && drawn) {
+            disposeFadingLand(macro);
+            macro.setFadingModelInstance(macro.getModelInstance());
+            macro.clearModel();
+            meshInstance = null;
+        }
 
         if (meshInstance == null) {
 
@@ -206,6 +219,18 @@ class MacroRenderSystem extends SystemPackage {
             meshManager.updateMesh(meshInstance, sync.getVertices(), sync.getIndices());
             macro.getModelInstance().updateMeshData(meshInstance.getMeshData());
         }
+    }
+
+    // The land a tile drew before it was built again given up, once its new land has risen whole
+    private void disposeFadingLand(MacroChunkInstance macro) {
+
+        ModelInstance fading = macro.getFadingModelInstance();
+
+        if (fading == null)
+            return;
+
+        modelManager.removeMesh(fading);
+        macro.setFadingModelInstance(null);
     }
 
     // Tree Models \\
@@ -281,18 +306,36 @@ class MacroRenderSystem extends SystemPackage {
         models.clear();
     }
 
-    // The fade between a tile's old trees and its new ones run on by a frame, the old ones given up once it ends
+    // The fade between a tile's old land and trees and its new ones run on by a frame, the old ones given up once it
+    // ends
     private void advanceTreeFade(MacroChunkInstance macro) {
 
         int step = worldRenderManager.resolveTreeFadeStep(macro.getTreeFadeAge());
 
-        if (step == EngineSetting.TREE_FADE_STEPS)
+        if (step == EngineSetting.TREE_FADE_STEPS) {
             disposeModels(macro.getFadingTreeModels());
-        else
+            disposeFadingLand(macro);
+        } else
             macro.setTreeFadeAge(macro.getTreeFadeAge() + internal.getDeltaTime());
 
         applyTreeFade(macro.getTreeModels(), worldRenderManager.getTreeFade(step, true));
         applyTreeFade(macro.getFadingTreeModels(), worldRenderManager.getTreeFade(step, false));
+        applyLandFade(macro, step);
+    }
+
+    // Land built again rises over the land it replaces, which stands whole until then; land with none to replace
+    // stands whole at once, so a tile first drawn never shows a hole
+    private void applyLandFade(MacroChunkInstance macro, int step) {
+
+        ModelInstance fading = macro.getFadingModelInstance();
+
+        macro.getModelInstance().getMaterial().setUniform(
+                EngineSetting.UNIFORM_TREE_FADE,
+                fading != null ? worldRenderManager.getTreeFade(step, true) : EngineSetting.TREE_FADE_SHOWN);
+
+        if (fading != null)
+            fading.getMaterial().setUniform(
+                    EngineSetting.UNIFORM_TREE_FADE, worldRenderManager.getTreeFade(step, false));
     }
 
     private void applyTreeFade(ObjectArrayList<ModelInstance> models, Float fade) {
@@ -314,6 +357,8 @@ class MacroRenderSystem extends SystemPackage {
 
     void hideMacro(MacroChunkInstance macro) {
         disposeTreeModels(macro);
+        disposeFadingLand(macro);
+        treeManager.removeMacroImpostorSites(macro.getCoordinate());
         macro.setRendered(false);
         macro.setHasGeometry(false);
     }
@@ -328,6 +373,8 @@ class MacroRenderSystem extends SystemPackage {
         }
 
         disposeTreeModels(macro);
+        disposeFadingLand(macro);
+        treeManager.removeMacroImpostorSites(macro.getCoordinate());
 
         UBOInstance positionUBO = macro.getPositionUBO();
 
@@ -365,6 +412,10 @@ class MacroRenderSystem extends SystemPackage {
 
             refreshCoverage(macro, grid);
             worldRenderManager.pushSurfaceModel(macro.getModelInstance(), grid, worldFbo, window);
+
+            if (macro.getFadingModelInstance() != null)
+                worldRenderManager.pushSurfaceModel(macro.getFadingModelInstance(), grid, worldFbo, window);
+
             pushModels(macro.getTreeModels(), grid, window, worldFbo);
             pushModels(macro.getFadingTreeModels(), grid, window, worldFbo);
         }

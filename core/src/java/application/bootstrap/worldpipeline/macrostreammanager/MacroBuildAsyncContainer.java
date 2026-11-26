@@ -56,10 +56,13 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
     float[] crown;
     float[] lumps;
 
-    // Tree Models — each tree's own OUTLINE in the bark and leaf layouts; set when the tile draws them
+    // Tree Models — each tree at its LOD in the bark and leaf layouts, or as its impostor instance from the shared
+    // level on; set when the tile draws them
     boolean treeModels;
     FloatArrayList modelBark;
     FloatArrayList modelLeaves;
+    FloatArrayList modelImpostors;
+    float[] impostor;
     TreeModelStruct model;
 
     // Settlements — blocks structures, walls and bridges stand above the ground, zero where none do
@@ -92,6 +95,8 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
         this.lumps = new float[EngineSetting.TREE_IMPOSTOR_LUMPS_MAX_FLOATS];
         this.modelBark = new FloatArrayList();
         this.modelLeaves = new FloatArrayList();
+        this.modelImpostors = new FloatArrayList();
+        this.impostor = new float[EngineSetting.TREE_IMPOSTOR_INSTANCE_FLOATS];
         this.model = new TreeModelStruct();
         this.structureHeights = new float[MAX_SAMPLE_COUNT];
         this.structureTopColors = new float[MAX_SAMPLE_COUNT];
@@ -113,6 +118,7 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
         sites.clear();
         modelBark.clear();
         modelLeaves.clear();
+        modelImpostors.clear();
     }
 
     // Lattice \\

@@ -16,11 +16,12 @@ public class TreeViewerLayerSystem extends SystemPackage {
     /*
      * The Tree Viewer's layers, one for every LOD level the world draws a
      * tree at, as a game engine's mesh viewer lists its levels of detail, and
-     * last the shared tree the species' LOD seed grows, each with an eye.
+     * last the impostor baked from the shared tree the species' LOD seed
+     * grows, each with an eye.
      * Every layer stands on the same root, so the viewer draws only the
      * topmost layer whose eye is open, as an image editor shows the top layer
-     * over those beneath; a level from the shared level on is named shared,
-     * since the world draws it as the shared tree's own. The layer picked is
+     * over those beneath; a level from the shared level on is named for the
+     * impostor the world draws it as. The layer picked is
      * the Layers tab's choice and nothing more. Layers are keyed by stable
      * names, so the choice holds as the preview is built again.
      */
@@ -111,7 +112,7 @@ public class TreeViewerLayerSystem extends SystemPackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
-    // A layer's name, a level drawn as the shared tree's own marked so
+    // A layer's name, a level the world draws as its impostor marked so
     public String getName(int layer) {
 
         if (layer == EditorSetting.TREE_VIEWER_LAYER_SHARED)

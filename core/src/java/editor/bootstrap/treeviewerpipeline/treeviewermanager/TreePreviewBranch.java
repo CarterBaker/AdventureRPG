@@ -18,12 +18,14 @@ class TreePreviewBranch extends BranchPackage {
      * Builds the Tree Viewer's preview: one tree of the selected species,
      * grown from the viewer's seed to its age, drawn at every LOD level the
      * world draws trees at, each level from the shared level on as the
-     * species' shared model, and last the shared tree itself, grown in full
-     * from the species' LOD seed — every layer through the very code the
-     * world draws it with and with its root at the origin, so each stands
-     * where the others do. A build runs on the WorldStreaming thread, one at
-     * a time; the main thread uploads what it built and lets the old meshes
-     * go, and a request made while a build runs is built once that one lands.
+     * species' impostor once it has one, and last the impostor itself, as
+     * baked from the shared tree its LOD seed grows — every layer through the
+     * very code the world draws it with and with its root at the origin, so
+     * each stands where the others do. An impostor layer holds no meshes,
+     * only where its quad stands and how wide, as an instance of it would.
+     * A build runs on the WorldStreaming thread, one at a time; the main
+     * thread uploads what it built and lets the old meshes go, and a request
+     * made while a build runs is built once that one lands.
      */
 
     // Internal
@@ -35,6 +37,9 @@ class TreePreviewBranch extends BranchPackage {
 
     // Build — the worker's scratch and what it publishes, read by the main thread once built is set
     private TreeModelStruct model;
+    private float[] builtTreeInstance;
+    private float[] builtSharedInstance;
+    private boolean[] builtImpostorLayers;
     private float builtHeight;
     private volatile boolean built;
     private boolean building;
@@ -48,6 +53,11 @@ class TreePreviewBranch extends BranchPackage {
 
     // Frame — the height of the tallest tree of the preview, in blocks
     private float height;
+
+    // Impostor — which layers draw it, and its instance for the preview's tree and for the shared tree
+    private boolean[] impostorLayers;
+    private float[] treeInstance;
+    private float[] sharedInstance;
 
     // Revision
     private int revision;
@@ -65,6 +75,14 @@ class TreePreviewBranch extends BranchPackage {
 
         // Build
         this.model = new TreeModelStruct();
+        this.builtTreeInstance = new float[EngineSetting.TREE_IMPOSTOR_INSTANCE_FLOATS];
+        this.builtSharedInstance = new float[EngineSetting.TREE_IMPOSTOR_INSTANCE_FLOATS];
+        this.builtImpostorLayers = new boolean[EditorSetting.TREE_VIEWER_LAYER_COUNT];
+
+        // Impostor
+        this.impostorLayers = new boolean[EditorSetting.TREE_VIEWER_LAYER_COUNT];
+        this.treeInstance = new float[EngineSetting.TREE_IMPOSTOR_INSTANCE_FLOATS];
+        this.sharedInstance = new float[EngineSetting.TREE_IMPOSTOR_INSTANCE_FLOATS];
     }
 
     @Override
@@ -112,7 +130,7 @@ class TreePreviewBranch extends BranchPackage {
         }
 
         TreeInstance tree = createTree(treeHandle, requestedSeed, requestedAge);
-        TreeInstance sharedTree = createTree(treeHandle, treeHandle.getShared().getSeed(), 1f);
+        TreeInstance sharedTree = createTree(treeHandle, TreeLodUtility.resolveSharedSeed(treeHandle), 1f);
         int sharedLevel = requestedSharedLevel;
 
         building = true;
@@ -136,32 +154,54 @@ class TreePreviewBranch extends BranchPackage {
                 buildLevel(tree, level, sharedLevel, layers[level]);
 
             TreePreviewLayerStruct shared = layers[EditorSetting.TREE_VIEWER_LAYER_SHARED];
+            TreeHandle treeHandle = tree.getTreeHandle();
 
             shared.getBuiltBark().clear();
             shared.getBuiltLeaves().clear();
-            treeManager.buildShapeGeometry(sharedTree.getShape(), shared.getBuiltBark(), shared.getBuiltLeaves());
+            builtImpostorLayers[EditorSetting.TREE_VIEWER_LAYER_SHARED] =
+                    writeInstance(sharedTree, builtSharedInstance);
+            writeInstance(tree, builtTreeInstance);
 
             builtHeight = Math.max(
-                    Math.max(tree.getShape().getMaxY(), sharedTree.getShape().getMaxY()),
+                    Math.max(tree.getShape().getMaxY(), treeHandle.getImpostor() != null
+                            ? builtSharedInstance[EngineSetting.TREE_IMPOSTOR_CENTER_Y_FLOAT]
+                                    + builtSharedInstance[EngineSetting.TREE_IMPOSTOR_RADIUS_FLOAT]
+                            : 0f),
                     EditorSetting.TREE_VIEWER_MIN_FRAME_BLOCKS);
         } finally {
             built = true;
         }
     }
 
+    // The preview's tree at a level, as its impostor where the world would draw it so
     private void buildLevel(TreeInstance tree, int level, int sharedLevel, TreePreviewLayerStruct layer) {
+
+        int lod = TreeLodUtility.encode(level, level >= sharedLevel);
 
         layer.getBuiltBark().clear();
         layer.getBuiltLeaves().clear();
+        builtImpostorLayers[level] = TreeLodUtility.isImpostor(tree.getTreeHandle(), lod, false);
+
+        if (builtImpostorLayers[level])
+            return;
 
         if (level == EngineSetting.TREE_LOD_FULL) {
             treeManager.buildShapeGeometry(tree.getShape(), layer.getBuiltBark(), layer.getBuiltLeaves());
             return;
         }
 
-        TreeModelUtility.emit(
-                tree, 0f, 0f, TreeLodUtility.encode(level, level >= sharedLevel),
-                model, layer.getBuiltBark(), layer.getBuiltLeaves());
+        TreeModelUtility.emit(tree, 0f, 0f, lod, model, layer.getBuiltBark(), layer.getBuiltLeaves());
+    }
+
+    // A tree's impostor instance with its root at the origin and never turned, false while its species has none
+    private boolean writeInstance(TreeInstance tree, float[] out) {
+
+        boolean written = TreeLodUtility.writeImpostorInstance(
+                tree.getTreeHandle(), tree.getSeed(), tree.getMatureHeight(), tree.getAge(), 0L, 0L, 0f, out, 0);
+
+        out[EngineSetting.TREE_IMPOSTOR_TURN_FLOAT] = 0f;
+
+        return written;
     }
 
     // Main thread — every layer's old meshes let go and its new vertices uploaded, then given back
@@ -178,14 +218,19 @@ class TreePreviewBranch extends BranchPackage {
             treeManager.disposeTreeMeshes(layer.getLeafMeshes());
             treeManager.uploadTreeMeshes(layer.getBuiltBark(), layer.getBarkMeshes());
             treeManager.uploadTreeMeshes(layer.getBuiltLeaves(), layer.getLeafMeshes());
-            layer.setVertexCount((layer.getBuiltBark().size() + layer.getBuiltLeaves().size())
-                    / EngineSetting.CHUNK_VERTEX_FLOAT_COUNT);
+            impostorLayers[i] = builtImpostorLayers[i];
+            layer.setVertexCount(impostorLayers[i]
+                    ? EngineSetting.QUAD_VERTEX_COUNT
+                    : (layer.getBuiltBark().size() + layer.getBuiltLeaves().size())
+                            / EngineSetting.CHUNK_VERTEX_FLOAT_COUNT);
             layer.getBuiltBark().clear();
             layer.getBuiltBark().trim();
             layer.getBuiltLeaves().clear();
             layer.getBuiltLeaves().trim();
         }
 
+        System.arraycopy(builtTreeInstance, 0, treeInstance, 0, treeInstance.length);
+        System.arraycopy(builtSharedInstance, 0, sharedInstance, 0, sharedInstance.length);
         height = builtHeight;
         revision++;
     }
@@ -196,6 +241,7 @@ class TreePreviewBranch extends BranchPackage {
             treeManager.disposeTreeMeshes(layers[i].getBarkMeshes());
             treeManager.disposeTreeMeshes(layers[i].getLeafMeshes());
             layers[i].setVertexCount(0);
+            impostorLayers[i] = false;
         }
     }
 
@@ -207,6 +253,15 @@ class TreePreviewBranch extends BranchPackage {
 
     float getHeight() {
         return height;
+    }
+
+    boolean isImpostorLayer(int layer) {
+        return impostorLayers[layer];
+    }
+
+    // The instance an impostor layer draws: the shared tree's for the impostor's own layer, the preview tree's else
+    float[] getImpostorInstance(int layer) {
+        return layer == EditorSetting.TREE_VIEWER_LAYER_SHARED ? sharedInstance : treeInstance;
     }
 
     int getRevision() {

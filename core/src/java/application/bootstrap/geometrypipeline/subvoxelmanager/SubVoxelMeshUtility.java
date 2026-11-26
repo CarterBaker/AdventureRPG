@@ -265,7 +265,7 @@ public class SubVoxelMeshUtility extends EngineUtility {
     }
 
     // The face whose normal runs along an axis, toward its positive or negative side
-    public static int resolveFace(int axis, boolean positive) {
+    static int resolveFace(int axis, boolean positive) {
 
         for (int face = 0; face < EngineSetting.SUB_VOXEL_FACE_COUNT; face++)
             if (FACE_NORMALS[face][axis] == (positive ? 1 : -1))

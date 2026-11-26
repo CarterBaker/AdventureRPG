@@ -69,6 +69,7 @@ public class InfoManager extends ManagerPackage {
     private ObjectArrayList<Consumer<InfoEntryStruct>> anySchemaListeners;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2ChangeListeners;
     private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2DeleteListeners;
+    private Object2ObjectOpenHashMap<String, ObjectArrayList<Consumer<InfoEntryStruct>>> schemaName2SaveListeners;
 
     // Dependencies
     private Object2ObjectOpenHashMap<String, ObjectArrayList<InfoSchemaHandle>> schemaName2ReferrerSchemas;
@@ -121,6 +122,7 @@ public class InfoManager extends ManagerPackage {
         this.anySchemaListeners = new ObjectArrayList<>();
         this.schemaName2ChangeListeners = new Object2ObjectOpenHashMap<>();
         this.schemaName2DeleteListeners = new Object2ObjectOpenHashMap<>();
+        this.schemaName2SaveListeners = new Object2ObjectOpenHashMap<>();
 
         // Dependencies
         this.schemaName2ReferrerSchemas = new Object2ObjectOpenHashMap<>();
@@ -221,6 +223,11 @@ public class InfoManager extends ManagerPackage {
 
     public void addDeleteListener(String schemaName, Consumer<InfoEntryStruct> listener) {
         schemaName2DeleteListeners.computeIfAbsent(schemaName, name -> new ObjectArrayList<>()).add(listener);
+    }
+
+    // A listener told of every entry of a schema once its file is written, by whatever saved it
+    public void addSaveListener(String schemaName, Consumer<InfoEntryStruct> listener) {
+        schemaName2SaveListeners.computeIfAbsent(schemaName, name -> new ObjectArrayList<>()).add(listener);
     }
 
     // Documents \\
@@ -951,6 +958,7 @@ public class InfoManager extends ManagerPackage {
         for (int i = 0; i < writable.size(); i++) {
             infoLibraryBranch.save(writable.get(i));
             writable.get(i).markSaved();
+            notifyEntries(schemaName2SaveListeners, writable.get(i).getSchema(), writable.get(i));
         }
 
         notifyChanged();

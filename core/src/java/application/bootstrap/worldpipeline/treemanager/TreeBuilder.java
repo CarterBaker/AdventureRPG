@@ -7,7 +7,6 @@ import application.bootstrap.itempipeline.tooltypemanager.ToolTypeManager;
 import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.tree.TreeData;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
-import application.bootstrap.worldpipeline.util.TreeModelUtility;
 import engine.root.BuilderPackage;
 import engine.root.UtilityPackage.InternalException;
 import engine.util.arpg.ArpgObjectStruct;
@@ -17,8 +16,8 @@ class TreeBuilder extends BuilderPackage {
 
     /*
      * Parses a tree species ARPG into a TreeData through TreeArpgUtility,
-     * wraps it in a TreeHandle and grows the shared far models its LOD seed
-     * gives every tree of it. Every texture, tool type and item the species
+     * wraps it in a TreeHandle and reads the impostor baked for it, if any,
+     * through TreeImpostorArpgUtility. Every texture, tool type and item the species
      * names is resolved here, once, so a malformed or dangling species fails
      * at boot rather than when its first tree grows.
      */
@@ -60,7 +59,7 @@ class TreeBuilder extends BuilderPackage {
 
         TreeHandle treeHandle = create(TreeHandle.class);
         treeHandle.constructor(treeData);
-        treeHandle.setShared(TreeModelUtility.buildShared(treeHandle));
+        treeHandle.setImpostor(TreeImpostorArpgUtility.tryRead(treeName));
 
         return treeHandle;
     }

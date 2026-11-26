@@ -6,15 +6,15 @@ public class TreeHandle extends HandlePackage {
 
     /*
      * Persistent tree species record. Wraps TreeData and delegates all access
-     * through it, and holds the shared far models its LOD seed grows, built
-     * once whenever its data is and read by any thread.
+     * through it, and holds the impostor baked from the shared tree its LOD
+     * seed grows, null until one is, read by any thread.
      */
 
     // Internal
     private TreeData treeData;
 
-    // Shared
-    private volatile TreeSharedStruct shared;
+    // Impostor
+    private volatile TreeImpostorStruct impostor;
 
     // Constructor \\
 
@@ -48,12 +48,12 @@ public class TreeHandle extends HandlePackage {
         return treeData.getLodSeed();
     }
 
-    public TreeSharedStruct getShared() {
-        return shared;
+    public TreeImpostorStruct getImpostor() {
+        return impostor;
     }
 
-    public void setShared(TreeSharedStruct shared) {
-        this.shared = shared;
+    public void setImpostor(TreeImpostorStruct impostor) {
+        this.impostor = impostor;
     }
 
     public TreeForm getForm() {
