@@ -32,8 +32,11 @@ class ItemBrushBranch extends BranchPackage {
      * outward from the face into empty cells and, inverted, digs them inward
      * through filled ones. A stroke is held to the layer of cells its
      * press began on, the way a voxel editor drags along a face, so building
-     * never climbs toward the camera; stamps are laid along it every brush
-     * spacing. Fill gathers the run of cubes of one part joined face to face.
+     * never climbs toward the camera; a press becomes a drag only once the
+     * pointer has travelled TOOL_ITEM_DRAG_THRESHOLD sub-voxels from it, so a
+     * click lays one stamp however the hand shakes, and a drag lays stamps
+     * along it every Spacing sub-voxels (the Tools tab's option), never closer
+     * than the brush's own spacing. Fill gathers the run of cubes of one part joined face to face.
      */
 
     // Internal
@@ -41,9 +44,10 @@ class ItemBrushBranch extends BranchPackage {
     private ToolManager toolManager;
     private BrushManager brushManager;
 
-    // Stroke — whether one is held, whether it builds or digs, the axis its plane faces along and which way, the
-    // layer of cells it is held to and where on that layer the last stamp was laid
+    // Stroke — whether one is held, whether it has become a drag, whether it builds or digs, the axis its plane faces
+    // along and which way, the layer of cells it is held to and where on that layer the last stamp was laid
     private boolean stroking;
+    private boolean dragging;
     private boolean strokeAdding;
     private int strokeAxis;
     private int strokeSign;
@@ -92,6 +96,7 @@ class ItemBrushBranch extends BranchPackage {
             return;
 
         this.stroking = true;
+        this.dragging = false;
         this.strokeAdding = adding;
         this.strokeAxis = faceAxis;
         this.strokeSign = faceSign;
@@ -102,7 +107,8 @@ class ItemBrushBranch extends BranchPackage {
         stamp(document);
     }
 
-    // The pointer's ray met with the stroke's layer, a stamp laid every brush spacing from the last one toward it
+    // The pointer's ray met with the stroke's layer, a stamp laid every Spacing from the last one toward it once the
+    // press has become a drag
     void strokeTo(ItemDocumentInstance document, Vector3 origin, Vector3 direction) {
 
         if (!stroking || !projectOnLayer(origin, direction))
@@ -113,7 +119,15 @@ class ItemBrushBranch extends BranchPackage {
         float du = cell[uAxis] - lastU;
         float dv = cell[vAxis] - lastV;
         float distance = (float) Math.sqrt(du * du + dv * dv);
-        float spacing = BrushUtility.resolveSpacing(brushManager.getActiveBrush(), getRadius());
+
+        if (!dragging && distance < EditorSetting.TOOL_ITEM_DRAG_THRESHOLD)
+            return;
+
+        this.dragging = true;
+
+        float spacing = Math.max(
+                BrushUtility.resolveSpacing(brushManager.getActiveBrush(), getRadius()),
+                toolManager.getOption(ToolCanvas.ITEM, ToolOption.SPACING));
         int steps = (int) (distance / spacing);
 
         if (steps == 0)

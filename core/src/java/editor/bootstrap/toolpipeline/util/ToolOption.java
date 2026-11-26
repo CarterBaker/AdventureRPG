@@ -37,7 +37,8 @@ public enum ToolOption {
     XRAY(EditorSetting.TOOL_OPTION_XRAY, true),
     WIREFRAME(EditorSetting.TOOL_OPTION_WIREFRAME, true),
     SHAPE(EditorSetting.TOOL_OPTION_SHAPE, true),
-    DEPTH(EditorSetting.TOOL_OPTION_DEPTH);
+    DEPTH(EditorSetting.TOOL_OPTION_DEPTH),
+    SPACING(EditorSetting.TOOL_OPTION_SPACING);
 
     // Values
     public static final ToolOption[] VALUES = values();

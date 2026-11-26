@@ -2891,6 +2891,7 @@ public class EditorSetting {
     public static final String TOOL_OPTION_WIDTH = "Width (mm)";
     public static final String TOOL_OPTION_SHAPE = "Shape";
     public static final String TOOL_OPTION_DEPTH = "Depth";
+    public static final String TOOL_OPTION_SPACING = "Spacing";
     public static final String[] TOOL_SHAPE_NAMES = { "Sphere", "Cube", "Cylinder", "Plane" };
     public static final int TOOL_SHAPE_DEFAULT = 0;
     public static final String[] TOOL_OPTION_SWITCH_NAMES = { "Off", "On" };
@@ -2909,6 +2910,14 @@ public class EditorSetting {
     public static final float TOOL_ITEM_DEPTH_MAX = 32f;
     public static final float TOOL_ITEM_DEPTH_STEP = 1f;
     public static final float TOOL_ITEM_DEPTH_DEFAULT = 1f;
+
+    // Item Spacing — the sub-voxels the pointer travels between two stamps of a drag, and how far it must travel from
+    // the press before a press becomes a drag at all, so a click lays one stamp however the hand shakes
+    public static final float TOOL_ITEM_SPACING_MIN = 1f;
+    public static final float TOOL_ITEM_SPACING_MAX = 16f;
+    public static final float TOOL_ITEM_SPACING_STEP = 1f;
+    public static final float TOOL_ITEM_SPACING_DEFAULT = 1f;
+    public static final float TOOL_ITEM_DRAG_THRESHOLD = 2f;
     public static final float TOOL_SCREEN_SIZE_MIN = 4f;
     public static final float TOOL_SCREEN_SIZE_MAX = 400f;
     public static final float TOOL_SCREEN_SIZE_STEP = 5f;

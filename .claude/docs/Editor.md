@@ -234,8 +234,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Every viewport takes the Hand**, as Photoshop's and Krita's hand: it only moves the view (`EditorTool.HAND`, key
   `H`). While it is a window's tool, `EditorInputSystem.isClicked` gives no tool a click and every press is the view's
   (`isViewClicked`): a left drag turns a 3D view (`ViewCameraSystem`) and slides a flat one (the UV and Image Editors'
-  `UVEditorViewSystem`, the World Editor's view). Move always moves what is selected; it never only looks. A new
-  canvas with a view lists the Hand last among its tools.
+  `UVEditorViewSystem`, the World Editor's view). Move always moves what is selected; it never only looks.
+- **Every canvas lists its tools in one order:** the Hand first (the null tool, and so the tool a canvas starts on, as
+  `ToolCanvas.getDefaultTool` takes the first), the Brush second where the canvas takes one, then the rest.
 - **A tool means one thing everywhere.** Raise builds up and Lower wears down, a soft brush fades its edge and a hard
   one keeps it, on whichever canvas takes them. A canvas whose values cannot blend (biome colors name biomes) simply
   does not take the tools that blend.
@@ -289,11 +290,13 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **Sub-voxel items, worked as a voxel modeller's.** Every part is one material and a layer in the Layers tab, added
   and deleted by its icons or the Tools tab's Parts actions (`ITEM_EDITOR_KEY_PART_ADD`, `_REMOVE`), renamed by F2.
-  The tools (`ToolCanvas.ITEM`) are Brush, Wall, Fill, Pick and Hand; Brush stamps the Brushes tab's tip on the face
+  The tools (`ToolCanvas.ITEM`) are Hand, Brush, Wall, Fill and Pick; Brush stamps the Brushes tab's tip on the face
   struck, building, or digging while Ctrl is held (`ItemEditor/InvertStroke`), Size in sub-voxels (none is one
   sub-voxel, the usual way to work), each column of the tip as deep as its coverage times Strength of the Depth (one
   layer unless raised), so a soft tip thins at its feathered edge; the stamp is shown as the sub-voxels it would build or
-  dig, merged like the item. A stroke is held to the layer it began on (`ItemBrushBranch`). The Hand only looks: every press
+  dig, merged like the item. A stroke is held to the layer it began on (`ItemBrushBranch`); a press becomes a drag only once
+  the pointer has gone `TOOL_ITEM_DRAG_THRESHOLD` sub-voxels from it, so a click lays one stamp however the hand shakes,
+  and a drag lays its stamps the Brush's Spacing apart (a Tools tab option, in sub-voxels, one by default). The Hand only looks: every press
   goes to the view camera. The mesh is greedily merged by `SubVoxelManager` as it changes.
 - **Workspace items.** New, Open, Save, Revert and Delete work on `Assets/Items/<Name>.arpg`, a sub-voxel mesh file;
   Import writes `assets/mesh/items/<Name>.arpg` and makes an item naming it in the file asked for, unless content

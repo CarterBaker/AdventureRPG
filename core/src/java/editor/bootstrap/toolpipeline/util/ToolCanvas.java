@@ -57,8 +57,8 @@ public enum ToolCanvas {
     BIOMES(
             EditorSetting.TOOL_CANVAS_BIOMES,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.SWIRL, EditorTool.SCATTER,
-                    EditorTool.FILL, EditorTool.PICK, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.SWIRL, EditorTool.SCATTER,
+                    EditorTool.FILL, EditorTool.PICK },
             false,
             imageSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT),
@@ -66,23 +66,23 @@ public enum ToolCanvas {
     HEIGHTS(
             EditorSetting.TOOL_CANVAS_HEIGHTS,
             new EditorTool[] {
-                    EditorTool.RAISE, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.RAISE, EditorTool.SMOOTH, EditorTool.FLATTEN, EditorTool.ERASE },
             true,
             imageSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
     SETTLEMENTS(
             EditorSetting.TOOL_CANVAS_SETTLEMENTS,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE, EditorTool.HAND },
+            new EditorTool[] { EditorTool.HAND, EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE },
             false),
     CAMERAS(
             EditorSetting.TOOL_CANVAS_CAMERAS,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE, EditorTool.HAND },
+            new EditorTool[] { EditorTool.HAND, EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE },
             false),
     CHARACTER_MESH(
             EditorSetting.TOOL_CANVAS_CHARACTER_MESH,
             new EditorTool[] {
-                    EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PICK,
-                    EditorTool.POSE, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE,
+                    EditorTool.PICK, EditorTool.POSE },
             new ToolActionGroupStruct[] { meshTransform(), meshGeometry(), meshSelection(), meshPose() },
             false,
             screenSize(),
@@ -92,8 +92,8 @@ public enum ToolCanvas {
     CHARACTER_TOPOLOGY(
             EditorSetting.TOOL_CANVAS_CHARACTER_TOPOLOGY,
             new EditorTool[] {
-                    EditorTool.SELECT, EditorTool.FLIP_EDGE, EditorTool.LOOP_CUT, EditorTool.DISSOLVE_LOOP,
-                    EditorTool.TOPOLOGY, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.SELECT, EditorTool.FLIP_EDGE, EditorTool.LOOP_CUT,
+                    EditorTool.DISSOLVE_LOOP, EditorTool.TOPOLOGY },
             new ToolActionGroupStruct[] { topologyFaces(), topologyCleanUp(), meshSelection() },
             false,
             screenSize(),
@@ -105,9 +105,9 @@ public enum ToolCanvas {
     CHARACTER_HAIR(
             EditorSetting.TOOL_CANVAS_CHARACTER_HAIR,
             new EditorTool[] {
-                    EditorTool.SELECT, EditorTool.DRAW, EditorTool.PLACE, EditorTool.BRUSH, EditorTool.NUDGE,
-                    EditorTool.SMOOTH, EditorTool.RAISE, EditorTool.LOWER, EditorTool.ERASE, EditorTool.PICK,
-                    EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.BRUSH, EditorTool.SELECT, EditorTool.DRAW, EditorTool.PLACE,
+                    EditorTool.NUDGE, EditorTool.SMOOTH, EditorTool.RAISE, EditorTool.LOWER, EditorTool.ERASE,
+                    EditorTool.PICK },
             new ToolActionGroupStruct[] { hairStrands() },
             true,
             screenSize(),
@@ -118,8 +118,8 @@ public enum ToolCanvas {
     CHARACTER_SCULPT(
             EditorSetting.TOOL_CANVAS_CHARACTER_SCULPT,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.RELAX, EditorTool.INFLATE, EditorTool.PINCH,
-                    EditorTool.CREASE, EditorTool.FLATTEN, EditorTool.NUDGE, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.BRUSH, EditorTool.SMOOTH, EditorTool.RELAX, EditorTool.INFLATE,
+                    EditorTool.PINCH, EditorTool.CREASE, EditorTool.FLATTEN, EditorTool.NUDGE },
             true,
             screenSize(),
             strength(EditorSetting.TOOL_SCULPT_STRENGTH_DEFAULT),
@@ -131,8 +131,8 @@ public enum ToolCanvas {
     CHARACTER_WEIGHTS(
             EditorSetting.TOOL_CANVAS_CHARACTER_WEIGHTS,
             new EditorTool[] {
-                    EditorTool.SELECT, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.PICK,
-                    EditorTool.POSE, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.BRUSH, EditorTool.SELECT, EditorTool.ERASE, EditorTool.SMOOTH,
+                    EditorTool.PICK, EditorTool.POSE },
             new ToolActionGroupStruct[] { meshWeights(), meshSelection(), meshPose() },
             true,
             screenSize(),
@@ -142,15 +142,15 @@ public enum ToolCanvas {
             wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
     CHARACTER_POSE(
             EditorSetting.TOOL_CANVAS_CHARACTER_POSE,
-            new EditorTool[] { EditorTool.POSE, EditorTool.PICK, EditorTool.HAND },
+            new EditorTool[] { EditorTool.HAND, EditorTool.POSE, EditorTool.PICK },
             new ToolActionGroupStruct[] { meshPose() },
             false,
             mirror()),
     CHARACTER_PAINT(
             EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL, EditorTool.PICK,
-                    EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.FILL,
+                    EditorTool.PICK },
             new ToolActionGroupStruct[] { paintLayers() },
             true,
             screenSize(),
@@ -160,14 +160,14 @@ public enum ToolCanvas {
     CHARACTER_RIG(
             EditorSetting.TOOL_CANVAS_CHARACTER_RIG,
             new EditorTool[] {
-                    EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.PLACE,
-                    EditorTool.ERASE, EditorTool.COLLIDER, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE,
+                    EditorTool.PLACE, EditorTool.ERASE, EditorTool.COLLIDER },
             new ToolActionGroupStruct[] { rigActions(), rigLayers(), colliderActions(), hairActions() },
             false,
             mirror()),
     CHARACTER_UV(
             EditorSetting.TOOL_CANVAS_CHARACTER_UV,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.HAND },
+            new EditorTool[] { EditorTool.HAND, EditorTool.SELECT },
             new ToolActionGroupStruct[] { uvSeams(), uvUnwrap(), meshSelection() },
             false,
             screenSize(),
@@ -177,14 +177,14 @@ public enum ToolCanvas {
     UV_EDITOR(
             EditorSetting.TOOL_CANVAS_UV_EDITOR,
             new EditorTool[] {
-                    EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.SELECT, EditorTool.MOVE, EditorTool.ROTATE, EditorTool.SCALE },
             new ToolActionGroupStruct[] { uvUnwrap(), uvIslands(), uvSelection() },
             false),
     IMAGE_EDITOR(
             EditorSetting.TOOL_CANVAS_IMAGE_EDITOR,
             new EditorTool[] {
-                    EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.SWIRL, EditorTool.SCATTER,
-                    EditorTool.FILL, EditorTool.PICK, EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.SMOOTH, EditorTool.SWIRL,
+                    EditorTool.SCATTER, EditorTool.FILL, EditorTool.PICK },
             new ToolActionGroupStruct[] { imageLayers() },
             true,
             imageSize(),
@@ -194,7 +194,7 @@ public enum ToolCanvas {
             stampTurn()),
     MATERIAL_VIEWER(
             EditorSetting.TOOL_CANVAS_MATERIAL_VIEWER,
-            new EditorTool[] { EditorTool.LIGHT, EditorTool.HAND },
+            new EditorTool[] { EditorTool.HAND, EditorTool.LIGHT },
             false,
             shape()),
     TREE(
@@ -205,17 +205,18 @@ public enum ToolCanvas {
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
             new EditorTool[] {
-                    EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK,
-                    EditorTool.HAND },
+                    EditorTool.HAND, EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE,
+                    EditorTool.IK },
             false),
     ITEM(
             EditorSetting.TOOL_CANVAS_ITEM,
-            new EditorTool[] { EditorTool.BRUSH, EditorTool.WALL, EditorTool.FILL, EditorTool.PICK, EditorTool.HAND },
+            new EditorTool[] { EditorTool.HAND, EditorTool.BRUSH, EditorTool.WALL, EditorTool.FILL, EditorTool.PICK },
             new ToolActionGroupStruct[] { itemParts(), itemPaint() },
             false,
             itemSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT),
-            itemDepth()),
+            itemDepth(),
+            itemSpacing()),
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
@@ -634,6 +635,16 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_ITEM_DEPTH_MAX,
                 EditorSetting.TOOL_ITEM_DEPTH_STEP,
                 EditorSetting.TOOL_ITEM_DEPTH_DEFAULT);
+    }
+
+    // How far apart an item brush's stamps lie along a drag, in sub-voxels
+    private static ToolOptionStruct itemSpacing() {
+        return new ToolOptionStruct(
+                ToolOption.SPACING,
+                EditorSetting.TOOL_ITEM_SPACING_MIN,
+                EditorSetting.TOOL_ITEM_SPACING_MAX,
+                EditorSetting.TOOL_ITEM_SPACING_STEP,
+                EditorSetting.TOOL_ITEM_SPACING_DEFAULT);
     }
 
     private static ToolOptionStruct screenSize() {
