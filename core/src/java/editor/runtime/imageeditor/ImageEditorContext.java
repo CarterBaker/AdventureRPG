@@ -5,8 +5,9 @@ import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.imageeditorpipeline.imageeditormanager.ImageEditorManager;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
-import editor.bootstrap.propertiespipeline.properties.MapsProvider;
+import editor.bootstrap.propertiespipeline.properties.PaletteRowSource;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
@@ -27,7 +28,7 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class ImageEditorContext extends ContextPackage
-        implements ToolCanvasProvider, ToolActionProvider, LayersProvider, PropertiesProvider, MapsProvider,
+        implements ToolCanvasProvider, ToolActionProvider, LayersProvider, PropertiesProvider, PaletteRowSource,
         CharacterViewRowSource, FileMenuProvider {
 
     /*
@@ -35,8 +36,8 @@ public class ImageEditorContext extends ContextPackage
      * as Krita is: File, New names an image and sets its size and
      * background; its layers are listed in the Layers tab, added and deleted
      * by the tab's icons or the Tools tab's actions, the one picked painted
-     * with the Tools tab's tools, the Brushes tab's brush and the Color
-     * Wheel's colour; its maps are listed in the Maps tab, each a special
+     * with the Tools tab's tools, the Brushes tab's brush and the Palette's
+     * colour; its maps are listed in the Palette tab, each a special
      * layer the Layers tab never shows, made by Generate from the map's own
      * settings and erased by Clear, the map picked shown and painted here in
      * place of the layers; the Properties tab steps through the images and
@@ -163,25 +164,31 @@ public class ImageEditorContext extends ContextPackage
         imageEditorManager.step(key, steps);
     }
 
-    // Maps \\
+    // Palette \\
+
+    // The colour wheel over the maps of the image worked
+    @Override
+    public PaletteContent getPaletteContent() {
+        return PaletteContent.IMAGE;
+    }
 
     @Override
-    public int getMapsRevision() {
+    public int getPaletteRevision() {
         return imageEditorManager.getRevision();
     }
 
     @Override
-    public void buildMapsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+    public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
         imageEditorManager.buildMapRows(rows);
     }
 
     @Override
-    public CharacterViewTemplateStruct getMapsTemplates() {
+    public CharacterViewTemplateStruct getPaletteTemplates() {
         return EditorSetting.IMAGE_EDITOR_ROW_TEMPLATES;
     }
 
     @Override
-    public void stepMapsRow(String key, int steps) {
+    public void stepPaletteRow(String key, int steps) {
         imageEditorManager.step(key, steps);
     }
 

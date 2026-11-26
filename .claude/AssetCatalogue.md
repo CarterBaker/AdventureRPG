@@ -604,10 +604,15 @@ One line per session that changed this file: the date, what was added or removed
   the wheel and the biome grid templates); regenerated `menus/editor/Properties.arpg` (biome templates moved to the
   Palette) and `menus/editor/EditorWindow.arpg` (Palette in the Tools menu in place of Maps and Color Wheel); deleted
   `menus/editor/ColorWheel.arpg` (the wheel lives in the Palette).
+- 2026-11-26: Palette standard. Regenerated `menus/editor/AnimationTreeEditor.arpg` (no list or properties panel of its
+  own: the tree's layers and nodes are picked in the Palette tab and set in the Properties tab).
+- 2026-11-26: Tool icons and Materials grid. Added the 31 tool emblems under `sprites/menus/tools/` (one per editor
+  tool, shown beside its name in the Tools tab); regenerated `menus/editor/Tools.arpg` (the tool rows' emblem) and
+  `menus/editor/Materials.arpg` (the material rows replaced by a grid row and its tiles).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
-## Textures and Sprites (2569 files)
+## Textures and Sprites (2600 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -799,6 +804,40 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `TitleGlint`
 - `TitleSlit`
 - `TitleSword`
+
+### `assets/sprites/menus/tools/`
+
+- `Brush`
+- `Collider`
+- `Crease`
+- `Cut`
+- `DissolveLoop`
+- `Draw`
+- `Erase`
+- `Fill`
+- `Flatten`
+- `FlipEdge`
+- `Ik`
+- `Inflate`
+- `Light`
+- `LoopCut`
+- `Lower`
+- `Move`
+- `Nudge`
+- `Pick`
+- `Pinch`
+- `Place`
+- `Pose`
+- `Raise`
+- `Relax`
+- `Rotate`
+- `Scale`
+- `Scatter`
+- `Select`
+- `Smooth`
+- `Swirl`
+- `Topology`
+- `Wall`
 
 ### `assets/sprites/menus/wood/`
 

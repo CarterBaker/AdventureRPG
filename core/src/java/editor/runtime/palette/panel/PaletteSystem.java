@@ -22,9 +22,10 @@ public class PaletteSystem extends SystemPackage {
     /*
      * Binds the Palette tab to a UI render target and opens its menu, then
      * hands it to the view of whatever the window worked in last that has a
-     * palette offers — the colour wheel over its image's maps, the biomes it
-     * paints, or nothing to pick from — the colour wheel when no such window
-     * has been worked in yet. When the window or what it offers changes, the
+     * palette offers — the colour wheel over the rows of a window that
+     * paints, the list a tool picks from, the biomes it paints, or nothing to
+     * pick from — the colour wheel when no such window has been worked in
+     * yet. When the window or what it offers changes, the
      * outgoing view takes its parts away and the incoming one fills the tab
      * at once; otherwise a view fills it again only when what it shows moves,
      * and the title is written after each fill, naming the window shown in
@@ -38,8 +39,8 @@ public class PaletteSystem extends SystemPackage {
     private PropertiesManager propertiesManager;
     private ActiveWindowManager activeWindowManager;
     private ImagePaletteSystem imagePaletteSystem;
+    private RowPaletteSystem rowPaletteSystem;
     private BiomePaletteSystem biomePaletteSystem;
-    private EmptyPaletteSystem emptyPaletteSystem;
 
     // Menus
     private MenuInstance paletteMenu;
@@ -60,8 +61,8 @@ public class PaletteSystem extends SystemPackage {
         this.propertiesManager = get(PropertiesManager.class);
         this.activeWindowManager = get(ActiveWindowManager.class);
         this.imagePaletteSystem = get(ImagePaletteSystem.class);
+        this.rowPaletteSystem = get(RowPaletteSystem.class);
         this.biomePaletteSystem = get(BiomePaletteSystem.class);
-        this.emptyPaletteSystem = get(EmptyPaletteSystem.class);
     }
 
     @Override
@@ -75,8 +76,9 @@ public class PaletteSystem extends SystemPackage {
         // Views
         this.content2View = new PaletteView[PaletteContent.VALUES.length];
         content2View[PaletteContent.IMAGE.ordinal()] = imagePaletteSystem;
+        content2View[PaletteContent.ROWS.ordinal()] = rowPaletteSystem;
         content2View[PaletteContent.BIOMES.ordinal()] = biomePaletteSystem;
-        content2View[PaletteContent.NONE.ordinal()] = emptyPaletteSystem;
+        content2View[PaletteContent.NONE.ordinal()] = rowPaletteSystem;
     }
 
     // Update \\

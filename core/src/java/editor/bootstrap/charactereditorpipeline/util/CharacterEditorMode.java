@@ -1,5 +1,6 @@
 package editor.bootstrap.charactereditorpipeline.util;
 
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
 
@@ -41,8 +42,18 @@ public enum CharacterEditorMode {
             false,
             false,
             CharacterEditorPose.IDLE,
-            null),
-    EQUIPMENT(EditorSetting.CHARACTER_EDITOR_MODE_EQUIPMENT, null, false, false, false, false, null, null),
+            null,
+            PaletteContent.NONE),
+    EQUIPMENT(
+            EditorSetting.CHARACTER_EDITOR_MODE_EQUIPMENT,
+            null,
+            false,
+            false,
+            false,
+            false,
+            null,
+            null,
+            PaletteContent.ROWS),
     MESH(
             EditorSetting.CHARACTER_EDITOR_MODE_MESH,
             ToolCanvas.CHARACTER_MESH,
@@ -51,7 +62,8 @@ public enum CharacterEditorMode {
             true,
             true,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_MESH_HINT),
+            EditorSetting.CHARACTER_EDITOR_STATUS_MESH_HINT,
+            PaletteContent.ROWS),
     TOPOLOGY(
             EditorSetting.CHARACTER_EDITOR_MODE_TOPOLOGY,
             ToolCanvas.CHARACTER_TOPOLOGY,
@@ -60,7 +72,8 @@ public enum CharacterEditorMode {
             true,
             false,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_TOPOLOGY_HINT),
+            EditorSetting.CHARACTER_EDITOR_STATUS_TOPOLOGY_HINT,
+            PaletteContent.ROWS),
     SCULPT(
             EditorSetting.CHARACTER_EDITOR_MODE_SCULPT,
             ToolCanvas.CHARACTER_SCULPT,
@@ -69,7 +82,8 @@ public enum CharacterEditorMode {
             false,
             false,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_SCULPT_HINT),
+            EditorSetting.CHARACTER_EDITOR_STATUS_SCULPT_HINT,
+            PaletteContent.ROWS),
     WEIGHTS(
             EditorSetting.CHARACTER_EDITOR_MODE_WEIGHTS,
             ToolCanvas.CHARACTER_WEIGHTS,
@@ -78,7 +92,8 @@ public enum CharacterEditorMode {
             true,
             true,
             null,
-            null),
+            null,
+            PaletteContent.ROWS),
     PAINT(
             EditorSetting.CHARACTER_EDITOR_MODE_PAINT,
             ToolCanvas.CHARACTER_PAINT,
@@ -87,7 +102,8 @@ public enum CharacterEditorMode {
             false,
             false,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_PAINT_HINT),
+            EditorSetting.CHARACTER_EDITOR_STATUS_PAINT_HINT,
+            PaletteContent.IMAGE),
     HAIR(
             EditorSetting.CHARACTER_EDITOR_MODE_HAIR,
             ToolCanvas.CHARACTER_HAIR,
@@ -96,7 +112,8 @@ public enum CharacterEditorMode {
             false,
             false,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_HAIR_HINT),
+            EditorSetting.CHARACTER_EDITOR_STATUS_HAIR_HINT,
+            PaletteContent.ROWS),
     RIG(
             EditorSetting.CHARACTER_EDITOR_MODE_RIG,
             ToolCanvas.CHARACTER_RIG,
@@ -105,7 +122,8 @@ public enum CharacterEditorMode {
             false,
             true,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_RIG_HINT),
+            EditorSetting.CHARACTER_EDITOR_STATUS_RIG_HINT,
+            PaletteContent.ROWS),
     UV(
             EditorSetting.CHARACTER_EDITOR_MODE_UV,
             ToolCanvas.CHARACTER_UV,
@@ -114,7 +132,8 @@ public enum CharacterEditorMode {
             true,
             false,
             null,
-            EditorSetting.CHARACTER_EDITOR_STATUS_UV_HINT);
+            EditorSetting.CHARACTER_EDITOR_STATUS_UV_HINT,
+            PaletteContent.IMAGE);
 
     // Values
     public static final CharacterEditorMode[] VALUES = values();
@@ -128,6 +147,7 @@ public enum CharacterEditorMode {
     private final boolean drawsBones;
     private final CharacterEditorPose standingPose;
     private final String hint;
+    private final PaletteContent paletteContent;
 
     // Constructor \\
 
@@ -139,7 +159,8 @@ public enum CharacterEditorMode {
             boolean vertexOverlay,
             boolean drawsBones,
             CharacterEditorPose standingPose,
-            String hint) {
+            String hint,
+            PaletteContent paletteContent) {
         this.label = label;
         this.toolCanvas = toolCanvas;
         this.meshMode = meshMode;
@@ -148,12 +169,19 @@ public enum CharacterEditorMode {
         this.drawsBones = drawsBones;
         this.standingPose = standingPose;
         this.hint = hint;
+        this.paletteContent = paletteContent;
     }
 
     // Accessible \\
 
     public String getLabel() {
         return label;
+    }
+
+    // What the Palette tab offers while this mode is worked in: the colour wheel over the maps and parts painted, the
+    // list it picks from, or nothing
+    public PaletteContent getPaletteContent() {
+        return paletteContent;
     }
 
     public boolean isMeshMode() {

@@ -513,10 +513,16 @@ public class AnimationTreeEditorManager extends ManagerPackage {
             animationTreePropertyBranch.setValue(activeDocument, key, text);
     }
 
-    public void buildListRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+    public void buildSimulationRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         if (activeDocument != null)
-            animationTreeRowBranch.buildListRows(activeDocument, rows);
+            animationTreeRowBranch.buildSimulationRows(rows);
+    }
+
+    public void buildPickRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (activeDocument != null)
+            animationTreeRowBranch.buildPickRows(activeDocument, rows);
     }
 
     public void buildPropertyRows(ObjectArrayList<CharacterViewRowStruct> rows) {

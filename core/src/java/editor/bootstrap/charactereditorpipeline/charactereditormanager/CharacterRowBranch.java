@@ -71,9 +71,10 @@ class CharacterRowBranch extends BranchPackage {
         this.characterSliderBranch = get(CharacterSliderBranch.class);
     }
 
-    // List \\
+    // Settings \\
 
-    void buildListRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
+    // The preview's choices and, for Appearance, every setting of the character, as the Properties tab lists them
+    void buildSettingRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         CharacterEditorMode mode = characterEditorManager.getMode();
         boolean genders = document.hasPreview() && document.getPreviewData().getGenderCount() > 1;
@@ -94,19 +95,27 @@ class CharacterRowBranch extends BranchPackage {
             addChoice(document, rows, EditorSetting.CHARACTER_EDITOR_KEY_SIDE,
                     EditorSetting.CHARACTER_EDITOR_LABEL_SIDE);
 
+        if (mode != CharacterEditorMode.APPEARANCE || characterPropertyBranch.resolveRig(document) == null)
+            return;
+
+        addCreatorRows(document, rows);
+        addFeatureRows(document, rows);
+        addColorRows(document, rows);
+        characterSliderBranch.buildRows(document, rows);
+        addBuildRows(document, rows);
+    }
+
+    // Picks \\
+
+    // What the mode's tools pick from, as the Palette tab lists it: the gear and anchors, the parts, the bones
+    void buildPickRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
+
         RigHandle rigHandle = characterPropertyBranch.resolveRig(document);
 
         if (rigHandle == null)
             return;
 
-        switch (mode) {
-            case APPEARANCE -> {
-                addCreatorRows(document, rows);
-                addFeatureRows(document, rows);
-                addColorRows(document, rows);
-                characterSliderBranch.buildRows(document, rows);
-                addBuildRows(document, rows);
-            }
+        switch (characterEditorManager.getMode()) {
             case EQUIPMENT -> {
                 addGearRows(document, rows);
                 addAnchorRows(rows);

@@ -30,8 +30,8 @@ Entity, never Character (the Animation Editor's row, the command console's Entit
 | Material Viewer | `editor.runtime.materialviewer.MaterialViewerContext` (Materials menu) | the material chosen on the shape the Shape option names, lit by the light its Light tool turns |
 | UV Editor | `editor.runtime.uveditor.UVEditorContext` | the UVs of the faces selected, over the tile they are textured with (see UV below) |
 | Character Paint | `CharacterPaintContext` | the whole character, the Paint canvas; the paint layers of the map painted in the Layers tab |
-| Properties | `editor.runtime.properties.PropertiesContext` (Tools menu) | the rows of the window worked in last: what it picks from first (`CharacterEditorManager.buildListRows`, `AnimationEditorManager.buildListRows`), then the values of what is picked (`buildPropertyRows`); the material's maps and parameters for the Materials and Material Viewer tabs (`MaterialsManager.buildRows`); the colour's rows for the Palette |
-| Palette | `editor.runtime.palette.PaletteContext` | the paint colour, a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), over the maps of the texture painted while a character tab or the UV Editor was worked in last (`MapsProvider`, `CharacterEditorManager.buildMapRows`): the one painted selected, its settings, Generate and Clear; the colour's Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) are the Properties tab's while it was worked in last |
+| Properties | `editor.runtime.properties.PropertiesContext` (Tools menu) | the settings of the window worked in last: the preview's choices and Appearance's rows (`CharacterEditorManager.buildSettingRows`), the values of what is picked (`buildPropertyRows`), the clip's settings (`AnimationEditorManager.buildClipRows`); the material's maps and parameters for the Materials and Material Viewer tabs (`MaterialsManager.buildRows`); the colour's rows for the Palette |
+| Palette | `editor.runtime.palette.PaletteContext` | what the mode picks from (`CharacterEditorManager.buildPickRows`, `CharacterEditorMode.getPaletteContent`: Equipment's gear and anchors, the modelling tabs' parts, Mesh, Weights and Rig's bones; `AnimationEditorManager.buildPickRows`, the clip's bones) and, for Paint and UV, the paint colour, a hue ring with a saturation and brightness triangle turned to the hue (`ColorWheelSystem`), over the maps of the texture painted while a character tab or the UV Editor was worked in last (`MapsProvider`, `CharacterEditorManager.buildMapRows`): the one painted selected, its settings, Generate and Clear; the colour's Hue, Saturation, Brightness and Red, Green, Blue ranged rows (`CharacterEditorManager.buildColorRows`) are the Properties tab's while it was worked in last |
 | Animation Editor | `AnimationEditorContext` | the character chosen (the player at first) posed at the recorder Timeline's playhead; the Animation Pose tool canvas while a clip plays on a character |
 | Properties | `PropertiesContext` | the value rows of the character or animation tab worked in last |
 
@@ -131,10 +131,11 @@ Entity, never Character (the Animation Editor's row, the command console's Entit
   step buttons take; the value box still opens for typing. A ranged row spans its declared range instead, its knob set
   where the value stands on every refill and refresh, a drag still handing over whole steps of the row's own step. A number row template carries the track and knob ids in
   its `CharacterViewTemplateStruct`.
-- **One panel.** A tool's list and its values are one panel, the Properties tab, never an outliner or a docker per
-  tool: a viewport implements `PropertiesProvider` with `PropertiesContent.ROWS` and `CharacterViewRowSource`, its
-  `buildRows` listing what it picks from first and the values of what is picked after, under one revision that moves
-  with both. `RowPropertiesSystem` fills the tab through `CharacterViewPanelSystem` only when that revision moves, and
+- **Two shared tabs, never a docker per tool.** What a tool picks from is the Palette tab's and the settings of what is
+  picked the Properties tab's (see `.claude/docs/Editor.md`, The Palette tab): a viewport implements
+  `PropertiesProvider` with `PropertiesContent.ROWS` and `CharacterViewRowSource`, its `buildRows` listing the values
+  of what is picked and its own settings, and `PaletteRowSource`, its `buildPaletteRows` listing what it picks from,
+  each under a revision that moves with what it lists. `RowPropertiesSystem` fills the tab through `CharacterViewPanelSystem` only when that revision moves, and
   the tab's File and Edit menus act on the tool whose rows it shows. Row templates stay in the tool's own menu
   (`EditorSetting.CHARACTER_EDITOR_ROW_TEMPLATES`, `ANIMATION_EDITOR_ROW_TEMPLATES`) so
   their buttons route to the tool's branch. A tool without a text row template must never list a `TEXT` row.
@@ -349,7 +350,7 @@ The UV tool is two tabs that work together, as Blender's UV Editing workspace pa
 the Character UV tab (`CharacterEditorMode.UV`, `ToolCanvas.CHARACTER_UV`: Select with the brush, the Seams, Unwrap and
 Selection groups) and the UV Editor (`UVEditorContext`, `ToolCanvas.UV_EDITOR`: Select, Move, Rotate, Scale, the
 Unwrap, Islands and Selection groups). Both work in the UV mode on the region picked for the modelling tabs
-(`CharacterModeProvider`), so the Properties tab lists the parts, then the UVs selected.
+(`CharacterModeProvider`), so the Palette tab lists the parts and the Properties tab the UVs selected.
 
 - **Data.** UVs are per face corner (`RiggedMeshStruct.getFaceU` / `setFaceUV`); seams are vertex pairs
   (`isSeam` / `setSeam`, keyed by `toEdgeKey`, renumbered by `removeVertices`); pins are four bits a face

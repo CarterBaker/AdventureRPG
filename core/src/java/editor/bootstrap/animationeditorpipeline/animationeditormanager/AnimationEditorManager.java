@@ -466,10 +466,16 @@ public class AnimationEditorManager extends ManagerPackage {
             animationPropertyBranch.setValue(activeDocument, key, text);
     }
 
-    public void buildListRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+    public void buildClipRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         if (activeDocument != null)
-            animationRowBranch.buildListRows(activeDocument, rows);
+            animationRowBranch.buildClipRows(activeDocument, rows);
+    }
+
+    public void buildPickRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (activeDocument != null)
+            animationRowBranch.buildPickRows(activeDocument, rows);
     }
 
     public void buildPropertyRows(ObjectArrayList<CharacterViewRowStruct> rows) {

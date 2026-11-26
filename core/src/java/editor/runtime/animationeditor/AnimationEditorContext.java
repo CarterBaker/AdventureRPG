@@ -4,7 +4,9 @@ import editor.bootstrap.animationeditorpipeline.animationeditormanager.Animation
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import editor.bootstrap.propertiespipeline.properties.PaletteRowSource;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
@@ -30,7 +32,8 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class AnimationEditorContext extends ContextPackage
-        implements ToolCanvasProvider, ViewCameraProvider, PropertiesProvider, CharacterViewRowSource, FileMenuProvider {
+        implements ToolCanvasProvider, ViewCameraProvider, PropertiesProvider, PaletteRowSource, CharacterViewRowSource,
+        FileMenuProvider {
 
     /*
      * Editor tab for keyframing animation clips on a character: the
@@ -113,12 +116,11 @@ public class AnimationEditorContext extends ContextPackage
         return EditorSetting.ANIMATION_PROPERTIES_TITLE;
     }
 
-    // The bone picked first, its key and values at the playhead, then the clip and every bone to pick from, then how
-    // the bones are drawn
+    // The bone picked first, its key and values at the playhead, then the clip's settings, then how the bones are drawn
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
         animationEditorManager.buildPropertyRows(rows);
-        animationEditorManager.buildListRows(rows);
+        animationEditorManager.buildClipRows(rows);
         characterEditorManager.buildBoneDisplayRows(rows);
     }
 
@@ -129,6 +131,34 @@ public class AnimationEditorContext extends ContextPackage
 
     @Override
     public void stepRow(String key, int steps) {
+        animationEditorManager.step(key, steps);
+    }
+
+    // Palette \\
+
+    // Every bone the clip keys, to pick the one posed and keyed
+    @Override
+    public PaletteContent getPaletteContent() {
+        return PaletteContent.ROWS;
+    }
+
+    @Override
+    public int getPaletteRevision() {
+        return animationEditorManager.getRevision();
+    }
+
+    @Override
+    public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        animationEditorManager.buildPickRows(rows);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getPaletteTemplates() {
+        return EditorSetting.ANIMATION_EDITOR_ROW_TEMPLATES;
+    }
+
+    @Override
+    public void stepPaletteRow(String key, int steps) {
         animationEditorManager.step(key, steps);
     }
 

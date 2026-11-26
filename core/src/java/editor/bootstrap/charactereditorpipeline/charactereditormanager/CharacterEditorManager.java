@@ -940,10 +940,16 @@ public class CharacterEditorManager extends ManagerPackage {
                 || keyName.equals(EditorSetting.CHARACTER_PAINT_KEY_HSB);
     }
 
-    public void buildListRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+    public void buildSettingRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         if (activeDocument != null)
-            characterRowBranch.buildListRows(activeDocument, rows);
+            characterRowBranch.buildSettingRows(activeDocument, rows);
+    }
+
+    public void buildPickRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        if (activeDocument != null)
+            characterRowBranch.buildPickRows(activeDocument, rows);
     }
 
     public void buildPropertyRows(ObjectArrayList<CharacterViewRowStruct> rows) {

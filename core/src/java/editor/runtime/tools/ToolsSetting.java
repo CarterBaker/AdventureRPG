@@ -30,6 +30,7 @@ public class ToolsSetting {
 
     // Elements
     public static final String ELEMENT_TOOL_LABEL = "tools_tool_label";
+    public static final String ELEMENT_TOOL_ICON = "tools_tool_icon";
     public static final String ELEMENT_ACTION_GROUP_LABEL = "tools_action_group_label";
     public static final String ELEMENT_ACTION_LABEL = "tools_action_label";
     public static final String ELEMENT_OPTION_LABEL = "tools_option_label";

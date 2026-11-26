@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 166
-Task: PaletteTab
+Delivery: 168
+Task: ToolIconsMaterialsGrid
 Applied: 2026-11-26
 
 ## Log
@@ -176,3 +176,5 @@ Applied: 2026-11-26
 - 164, 2026-11-26, WindStreaks
 - 165, 2026-11-26, EditorCleanup
 - 166, 2026-11-26, PaletteTab
+- 167, 2026-11-26, PaletteStandard
+- 168, 2026-11-26, ToolIconsMaterialsGrid

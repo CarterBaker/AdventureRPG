@@ -3,6 +3,9 @@ package editor.runtime.materials.panel;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
+import application.bootstrap.menupipeline.util.StripLayoutUtility;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
@@ -18,13 +21,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class MaterialsPanelSystem extends SystemPackage {
 
     /*
-     * Binds this window to a UI render target and shows the materials. When
-     * the materials' revision moves it refills the list — the workspace
-     * material open, then a header for every pack and a row for each of its
-     * materials by thumbnail and name, the thumbnails made a few a frame
-     * until every row has its own, the chosen one marked, each picked up to
-     * drag it onto an item's part — and the chosen material's details and how
-     * it is laid. The status line says what the last file action did, else names
+     * Binds this window to a UI render target and shows the materials as a
+     * material library's grid. When the materials' revision moves, or the
+     * tab's width changes how many tiles fit a row, it refills the list — the
+     * workspace material open, then a header for every pack and under it a
+     * grid of its materials, each a tile showing what the material looks like
+     * (its albedo) over its name, as many to a row as the width holds
+     * (StripLayoutUtility), the previews made a few a frame until every tile
+     * has its own, the chosen one marked, each picked up to drag it onto an
+     * item's part — and the chosen material's details and how it is laid. The status line says what the last file action did, else names
      * the material chosen, or what letting go will do while one is carried.
      */
 
@@ -42,7 +47,14 @@ public class MaterialsPanelSystem extends SystemPackage {
     private int shownRevision;
     private boolean shownDragging;
 
-    // Thumbnails — the rows still waiting on theirs, by the material each lists, made a few a frame
+    // Grid — how many tiles a row held when laid out, the row being filled, its size and each tile's
+    private int shownPerRow;
+    private ElementInstance gridRow;
+    private int gridCount;
+    private DimensionVector2Struct gridRowSize;
+    private DimensionVector2Struct tileSize;
+
+    // Thumbnails — the tiles still waiting on theirs, by the material each shows, made a few a frame
     private ObjectArrayList<ElementInstance> pendingRows;
     private ObjectArrayList<String> pendingNames;
 
@@ -53,6 +65,9 @@ public class MaterialsPanelSystem extends SystemPackage {
 
         // State
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
+
+        // Grid
+        this.shownPerRow = EngineSetting.INDEX_NOT_FOUND;
 
         // Thumbnails
         this.pendingRows = new ObjectArrayList<>();
@@ -102,6 +117,8 @@ public class MaterialsPanelSystem extends SystemPackage {
             refreshMaterials();
             refreshDetails();
             refreshStatus();
+        } else if (resolvePerRow() != shownPerRow) {
+            refreshMaterials();
         }
 
         if (materialsManager.isDragging() != shownDragging) {
@@ -112,7 +129,7 @@ public class MaterialsPanelSystem extends SystemPackage {
         fillThumbnails();
     }
 
-    // The rows still waiting on a thumbnail given theirs, a few a frame from the end of the list
+    // The tiles still waiting on a preview given theirs, a few a frame from the end of the list
     private void fillThumbnails() {
 
         for (int i = 0; i < EditorSetting.MATERIALS_THUMBNAILS_PER_FRAME && !pendingRows.isEmpty(); i++) {
@@ -133,12 +150,13 @@ public class MaterialsPanelSystem extends SystemPackage {
 
     // Materials \\
 
-    // A header for every pack, then a row for each of its materials, each picked up to drag it onto a part
+    // A header for every pack, then a grid of its materials, each picked up to drag it onto a part
     private void refreshMaterials() {
 
         menuManager.ejectAll(materialsMenu, MaterialsSetting.ENTRY_MATERIALS);
         pendingRows.clear();
         pendingNames.clear();
+        sizeGrid(resolvePerRow());
 
         ObjectArrayList<String> packNames = materialsManager.getPackNames();
         MaterialDocumentStruct document = materialsManager.getDocument();
@@ -159,6 +177,7 @@ public class MaterialsPanelSystem extends SystemPackage {
                 continue;
 
             injectHeader(MaterialsSetting.ENTRY_MATERIALS, packNames.get(p));
+            this.gridRow = null;
 
             for (int i = 0; i < materialNames.size(); i++)
                 injectMaterial(materialNames.get(i), materialNames.get(i).equals(selected));
@@ -172,24 +191,71 @@ public class MaterialsPanelSystem extends SystemPackage {
             injectText(MaterialsSetting.ENTRY_MATERIALS, MaterialsSetting.TEXT_NO_MATERIALS);
     }
 
+    // A material's tile, in a new grid row once the one being filled holds as many as fit
     private void injectMaterial(String materialName, boolean selected) {
 
-        ElementInstance row = menuManager.inject(
-                materialsMenu,
-                MaterialsSetting.ENTRY_MATERIALS,
-                selected ? MaterialsSetting.TEMPLATE_MATERIAL_ROW_SELECTED : MaterialsSetting.TEMPLATE_MATERIAL_ROW);
+        if (gridRow == null || gridCount == shownPerRow) {
+            this.gridRow = menuManager.inject(
+                    materialsMenu,
+                    MaterialsSetting.ENTRY_MATERIALS,
+                    MaterialsSetting.TEMPLATE_GRID_ROW,
+                    row -> row.setSizeOverride(gridRowSize));
+            this.gridCount = 0;
+        }
 
-        row.setOnDragArgOverride(materialName);
-        row.findChildById(MaterialsSetting.ELEMENT_ROW_LABEL).setFontText(
-                CharacterViewUtility.toResourceLabel(materialName));
+        ElementInstance tile = menuManager.inject(
+                gridRow,
+                selected ? MaterialsSetting.TEMPLATE_MATERIAL_TILE_SELECTED : MaterialsSetting.TEMPLATE_MATERIAL_TILE,
+                element -> {
+                    element.setSizeOverride(tileSize);
+                    element.setOnDragArgOverride(materialName);
+                    element.findChildById(MaterialsSetting.ELEMENT_ROW_LABEL).setFontText(
+                            CharacterViewUtility.toResourceLabel(materialName));
+                });
+
+        gridCount++;
 
         if (materialsManager.hasThumbnail(materialName)) {
-            setThumbnail(row, materialsManager.resolveThumbnail(materialName));
+            setThumbnail(tile, materialsManager.resolveThumbnail(materialName));
             return;
         }
 
-        pendingRows.add(row);
+        pendingRows.add(tile);
         pendingNames.add(materialName);
+    }
+
+    // Grid \\
+
+    // How many tiles a row of the tab's width holds
+    private int resolvePerRow() {
+
+        ElementInstance list = materialsMenu.getEntryPoint(MaterialsSetting.ENTRY_MATERIALS);
+
+        return StripLayoutUtility.resolvePerRow(
+                list.getComputedW(),
+                Integer.MAX_VALUE,
+                MaterialsSetting.TILE_MIN_WIDTH_PIXELS,
+                MaterialsSetting.TILE_SPACING_PIXELS);
+    }
+
+    // Every tile as wide as a row of that many shares, its preview square above its name
+    private void sizeGrid(int perRow) {
+
+        float width = StripLayoutUtility.resolveWidth(
+                materialsMenu.getEntryPoint(MaterialsSetting.ENTRY_MATERIALS).getComputedW(),
+                perRow,
+                MaterialsSetting.TILE_MAX_WIDTH_PIXELS,
+                MaterialsSetting.TILE_SPACING_PIXELS);
+        float height = width + MaterialsSetting.TILE_LABEL_PIXELS;
+
+        this.shownPerRow = perRow;
+        this.gridRow = null;
+        this.tileSize = new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(width),
+                DimensionValueStruct.ofAbsolute(height));
+        this.gridRowSize = new DimensionVector2Struct(
+                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX),
+                DimensionValueStruct.ofAbsolute(height));
     }
 
     // The open material of the workspace, chosen by a press

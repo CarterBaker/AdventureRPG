@@ -39,11 +39,18 @@ class AnimationTreeRowBranch extends BranchPackage {
         this.animationTreePropertyBranch = get(AnimationTreePropertyBranch.class);
     }
 
-    // List \\
+    // Simulation \\
 
-    void buildListRows(TreeDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
-
+    // How the character the tree plays on is simulated, as the Properties tab lists it
+    void buildSimulationRows(ObjectArrayList<CharacterViewRowStruct> rows) {
         addSimulationRows(rows);
+    }
+
+    // Picks \\
+
+    // Every layer and node of the tree, the ones picked marked, as the Palette tab lists them
+    void buildPickRows(TreeDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
+
         addLayerRows(rows);
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.ANIMATION_TREE_EDITOR_HEADER_NODES));

@@ -2395,7 +2395,6 @@ public class EditorSetting {
     public static final float MAP_GENERATE_MIN_GLOW_SOFTNESS = 0.001f;
 
     // Maps — the Maps tab's rows and status, shared by every window whose image carries maps
-    public static final String MAPS_HEADER_NONE = "No image with maps worked in yet";
     public static final String PALETTE_HEADER_NONE = "Nothing to pick from here";
     public static final String MAPS_HEADER_SETTINGS_SUFFIX = " Settings";
     public static final String MAPS_HEADER_ALBEDO = "The albedo is the image's own layers";
@@ -2760,7 +2759,9 @@ public class EditorSetting {
     public static final float BRUSH_THUMBNAIL_PATH_STEP = 0.25f;
     public static final int BRUSH_THUMBNAIL_SEED = 0x3C6EF372;
 
-    // Tools — sizes are brush radii, in image pixels on the world's layers and window pixels on a character
+    // Tools — sizes are brush radii, in image pixels on the world's layers and window pixels on a character; every
+    // tool's emblem is its PascalCase name under the icon folder
+    public static final String TOOL_ICON_FOLDER = "menus/tools/";
     public static final String TOOL_SELECT = "Select";
     public static final String TOOL_BRUSH = "Brush";
     public static final String TOOL_ERASE = "Erase";
@@ -3108,7 +3109,7 @@ public class EditorSetting {
 
     // Material Thumbnails — the side of each in texels, the map it is made from (albedo) and how many the Materials
     // tab makes a frame
-    public static final int MATERIALS_THUMBNAIL_SIZE = 32;
+    public static final int MATERIALS_THUMBNAIL_SIZE = 96;
     public static final int MATERIALS_THUMBNAIL_MAP = 0;
     public static final int MATERIALS_THUMBNAILS_PER_FRAME = 6;
 

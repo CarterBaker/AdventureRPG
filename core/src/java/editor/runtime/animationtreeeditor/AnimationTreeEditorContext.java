@@ -3,13 +3,16 @@ package editor.runtime.animationtreeeditor;
 import editor.bootstrap.animationtreeeditorpipeline.animationtreeeditormanager.AnimationTreeEditorManager;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
+import editor.bootstrap.propertiespipeline.properties.PaletteRowSource;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.EditorSetting;
 import editor.runtime.animationtreeeditor.menu.AnimationTreeEditorMenuSystem;
 import editor.runtime.animationtreeeditor.preview.AnimationTreeEditorPreviewSystem;
-import editor.runtime.characterview.panel.CharacterViewPanelSystem;
-import editor.runtime.characterview.panel.CharacterViewStepTarget;
+import editor.runtime.characterview.panel.CharacterViewRowSource;
+import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.characterview.pose.CharacterViewPoseSystem;
 import editor.runtime.characterview.render.CharacterViewRenderSystem;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
@@ -20,9 +23,10 @@ import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.viewcamera.ViewGizmoSystem;
 import engine.root.ContextPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class AnimationTreeEditorContext extends ContextPackage
-        implements ViewCameraProvider, CharacterViewStepTarget, PropertiesProvider, FileMenuProvider {
+        implements ViewCameraProvider, PropertiesProvider, CharacterViewRowSource, PaletteRowSource, FileMenuProvider {
 
     /*
      * Editor tab for building animation trees: layers and their blend and
@@ -32,8 +36,10 @@ public class AnimationTreeEditorContext extends ContextPackage
      * parameter, through any action. All state lives in
      * AnimationTreeEditorManager and every edit in InfoManager; this tab
      * reads input, orbits the camera, plays and draws the character, and
-     * shows the toolbar and panels, whose number sliders step the tree's
-     * values through the manager.
+     * shows the toolbar; the tree's layers and nodes are picked in the
+     * Palette tab and the values of what is picked, with how the character
+     * is simulated, set in the Properties tab, whose number sliders step them
+     * through the manager.
      */
 
     // Internal
@@ -43,7 +49,6 @@ public class AnimationTreeEditorContext extends ContextPackage
     private ViewCameraSystem viewCameraSystem;
     private AnimationTreeEditorPreviewSystem animationTreeEditorPreviewSystem;
     private CharacterViewRenderSystem characterViewRenderSystem;
-    private CharacterViewPanelSystem characterViewPanelSystem;
     private AnimationTreeEditorMenuSystem animationTreeEditorMenuSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
     private FileMenuSourceSystem fileMenuSourceSystem;
@@ -57,7 +62,6 @@ public class AnimationTreeEditorContext extends ContextPackage
         this.viewCameraSystem = create(ViewCameraSystem.class);
         this.animationTreeEditorPreviewSystem = create(AnimationTreeEditorPreviewSystem.class);
         this.characterViewRenderSystem = create(CharacterViewRenderSystem.class);
-        this.characterViewPanelSystem = create(CharacterViewPanelSystem.class);
         this.animationTreeEditorMenuSystem = create(AnimationTreeEditorMenuSystem.class);
         create(ViewGizmoSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
@@ -77,7 +81,57 @@ public class AnimationTreeEditorContext extends ContextPackage
     // Rows \\
 
     @Override
+    public int getRowRevision() {
+        return animationTreeEditorManager.getRevision();
+    }
+
+    @Override
+    public String getRowTitle() {
+        return AnimationTreeEditorSetting.PROPERTIES_TITLE;
+    }
+
+    // How the character is simulated, then the values of the layer or node picked
+    @Override
+    public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        animationTreeEditorManager.buildSimulationRows(rows);
+        animationTreeEditorManager.buildPropertyRows(rows);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getRowTemplates() {
+        return AnimationTreeEditorSetting.ROW_TEMPLATES;
+    }
+
+    @Override
     public void stepRow(String key, int steps) {
+        animationTreeEditorManager.step(key, steps);
+    }
+
+    // Palette \\
+
+    // Every layer and node of the tree, to pick the one worked on
+    @Override
+    public PaletteContent getPaletteContent() {
+        return PaletteContent.ROWS;
+    }
+
+    @Override
+    public int getPaletteRevision() {
+        return animationTreeEditorManager.getRevision();
+    }
+
+    @Override
+    public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        animationTreeEditorManager.buildPickRows(rows);
+    }
+
+    @Override
+    public CharacterViewTemplateStruct getPaletteTemplates() {
+        return AnimationTreeEditorSetting.ROW_TEMPLATES;
+    }
+
+    @Override
+    public void stepPaletteRow(String key, int steps) {
         animationTreeEditorManager.step(key, steps);
     }
 
@@ -90,10 +144,10 @@ public class AnimationTreeEditorContext extends ContextPackage
 
     // Properties \\
 
-    // What this tool works on is content selected in the Hierarchy, shown in the Properties tab for editing
+    // The values of the layer or node picked in the Palette tab
     @Override
     public PropertiesContent getPropertiesContent() {
-        return PropertiesContent.INFO;
+        return PropertiesContent.ROWS;
     }
 
     // File Menu \\

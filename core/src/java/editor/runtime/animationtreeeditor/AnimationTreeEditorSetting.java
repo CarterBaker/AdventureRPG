@@ -1,17 +1,18 @@
 package editor.runtime.animationtreeeditor;
 
+import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
+
 public class AnimationTreeEditorSetting {
 
     /*
      * Constants used only by AnimationTreeEditorContext — its toolbar menu
-     * and the row templates its two panels are filled from.
+     * and the row templates its rows are filled from in the Palette and
+     * Properties tabs.
      */
 
     // Menus
     public static final String MENU_TOOLBAR = "editor/AnimationTreeEditor/Toolbar";
     public static final int ENTRY_STATUS = 0;
-    public static final int ENTRY_LIST = 1;
-    public static final int ENTRY_PROPERTIES = 2;
 
     // Templates
     public static final String TEMPLATE_HEADER_ROW = "editor/AnimationTreeEditor/animation_tree_editor_header_row";
@@ -30,4 +31,28 @@ public class AnimationTreeEditorSetting {
     public static final String ELEMENT_ROW_INCREASE = "animation_tree_editor_row_increase";
     public static final String ELEMENT_ROW_TRACK = "animation_tree_editor_row_track";
     public static final String ELEMENT_ROW_KNOB = "animation_tree_editor_row_knob";
+
+    // Rows — the templates and elements every row of the tree is filled through
+    public static final CharacterViewTemplateStruct ROW_TEMPLATES = new CharacterViewTemplateStruct(
+            TEMPLATE_HEADER_ROW,
+            TEMPLATE_ITEM_ROW,
+            TEMPLATE_ITEM_ROW_SELECTED,
+            TEMPLATE_NUMBER_ROW,
+            null,
+            TEMPLATE_CHOICE_ROW,
+            TEMPLATE_ACTION_ROW,
+            null,
+            ELEMENT_ROW_LABEL,
+            ELEMENT_ROW_VALUE,
+            ELEMENT_ROW_VALUE_BUTTON,
+            ELEMENT_ROW_DECREASE,
+            ELEMENT_ROW_INCREASE,
+            ELEMENT_ROW_TRACK,
+            ELEMENT_ROW_KNOB,
+            null,
+            null,
+            null);
+
+    // Properties — the title the Properties tab gives the tree's rows
+    public static final String PROPERTIES_TITLE = "Animation Tree";
 }

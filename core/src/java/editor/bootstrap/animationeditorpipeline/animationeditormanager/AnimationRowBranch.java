@@ -33,14 +33,20 @@ class AnimationRowBranch extends BranchPackage {
         this.animationPropertyBranch = get(AnimationPropertyBranch.class);
     }
 
-    // List \\
+    // Clip \\
 
-    void buildListRows(AnimationDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
-
+    // The clip's settings, as the Properties tab lists them: the character it plays on and whether it loops
+    void buildClipRows(AnimationDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
         rows.add(CharacterViewRowStruct.header(EditorSetting.ANIMATION_EDITOR_HEADER_CLIP));
         addChoice(document, rows, EditorSetting.ANIMATION_EDITOR_KEY_CHARACTER,
                 EditorSetting.ANIMATION_EDITOR_LABEL_CHARACTER);
         addChoice(document, rows, EditorSetting.ANIMATION_EDITOR_KEY_LOOP, EditorSetting.ANIMATION_EDITOR_LABEL_LOOP);
+    }
+
+    // Picks \\
+
+    // Every bone the clip keys, with how many keys it holds, as the Palette tab lists them
+    void buildPickRows(AnimationDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         RigHandle rigHandle = document.getRigHandle();
 

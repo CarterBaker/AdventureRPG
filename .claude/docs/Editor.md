@@ -54,7 +54,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Sculpt, Weights, Paint, Rig and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
   vertices selected. The Appearance tab's Properties rows hold every slider and control, and the Rig tab marks which
   bone channels are sliders. The Hair tab grooms strands painted with the material chosen in the Materials tab. Every
-  bone the Properties tab lists (Mesh, Weights, Rig) has an eye, as a layer has (`CharacterViewRowKind.EYE_ITEM`,
+  bone the Palette tab lists (Mesh, Weights, Rig) has an eye, as a layer has (`CharacterViewRowKind.EYE_ITEM`,
   `CharacterEditorManager.toggleRowEye`): shut, it hides the bone, every bone under it and the vertices they carry most,
   the bones below keeping their own eyes as a hidden group's layers do.
 - **UV Editor.** Lays out the UVs of the faces the UV tab selects.
@@ -192,6 +192,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **Every editor tool lives in the Tools tab**, chosen there or by the shared tool keys, for whatever canvas was
   worked in last (see `.claude/docs/Engine.md` and `.claude/docs/Shortcut.md`). A tool is never a panel button.
+- **Every tool has an emblem.** Each `EditorTool` shows its icon beside its name, the sprite named after it in
+  PascalCase under `menus/tools/` (`EditorTool.getIcon`, `EditorSetting.TOOL_ICON_FOLDER`): a new tool adds its 16-pixel
+  white emblem there, in the same line style as the rest.
 - **Brushes live in the Brushes tab, never in the Tools tab.** The Tools tab shows tools, their actions and their
   options only. Every stroking tool on every canvas stamps with the one brush chosen in the Brushes tab, and so does
   Select wherever the canvas sizes a brush (the character Mesh and Weights tabs' vertices), selecting as much as the tip
@@ -215,8 +218,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **One list of materials.** The Materials tab (`editor.runtime.materials`, under the Materials menu) lists the
   workspace material open, then every texture of every baked pack, pack by pack, as Substance and Blender list a
-  material library, each beside a thumbnail of its albedo (`MaterialThumbnailBranch`, made a few a frame,
-  `MATERIALS_THUMBNAILS_PER_FRAME`, and kept while the editor runs). `MaterialsManager` (`editor.bootstrap.materialspipeline`) keeps the material chosen, which every
+  material library, as a grid of tiles under each pack's header, each showing what the material looks like (its
+  albedo, `MaterialThumbnailBranch`, made a few a frame, `MATERIALS_THUMBNAILS_PER_FRAME`, and kept while the editor
+  runs) over its name, as many to a row as the tab's width holds. `MaterialsManager` (`editor.bootstrap.materialspipeline`) keeps the material chosen, which every
   window that lays a material reads: the Hair tab's new strands and Brush lay it (hair, `characters/standard`'s strand
   textures, draws as intended; any other is the owner's choice), the Item Editor gives it to a new part, the Paint
   tab's Brush and Fill lay it in place of the colour and the Material Viewer shows it. A row pressed is chosen and picked up; let go over a
@@ -348,28 +352,39 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **One Palette, where a tool's choices are picked.** The Palette tab (`editor.runtime.palette`) is where the window
   worked in last offers what its tools pick from, as Krita's and Photoshop's palettes and swatches are: Properties is for
   the settings of what is picked, the Hierarchy for picking content by hand, Tools for tools, Brushes for brushes. A
-  window that has a palette implements `PaletteProvider`, naming its `PaletteContent` (its layer may name it), and is
-  followed through `PropertiesManager.getPalette`; the tab hands it to the `PaletteView` system for that content, as the
-  Properties tab does. So far: `IMAGE`, the colour wheel (`ColorWheelSystem`) over the maps of the image the window paints
-  (every `MapsProvider`: the Image Editor, the character tool tabs, the UV Editor), the colour's sliders in the Properties
-  tab while the Palette was worked in last; `BIOMES`, the World Editor's Biomes layer, a grid of swatches with each
-  biome's name under it, as many to a row as the tab's width holds, the one chosen highlighted and selected in the
-  Hierarchy so its fields are the Properties tab's; `NONE`, a layer with nothing to pick from. A new kind of choice is a
-  new `PaletteContent` and a `PaletteView` system, never a new window and never a list in the Properties tab.
+  window that has a palette implements `PaletteProvider`, naming its `PaletteContent` (its mode or layer may name it),
+  and is followed through `PropertiesManager.getPalette`; the tab hands it to the `PaletteView` system for that content,
+  as the Properties tab does. A window whose palette is a list implements `PaletteRowSource`
+  (`buildPaletteRows`, its revision, templates and slider steps), the one path every listed palette takes
+  (`RowPaletteSystem`). The contents: `IMAGE`, the colour wheel (`ColorWheelSystem`) over the window's rows (the maps of
+  the image it paints, and the parts it picks from), for the Image Editor, the UV Editor and the Paint and UV tabs, the
+  colour's sliders in the Properties tab while the Palette was worked in last; `ROWS`, the list a tool picks from (the
+  Equipment tab's gear and anchors, the modelling tabs' parts, the Mesh, Weights and Rig tabs' bones, the Animation
+  Editor's bones, the Animation Tree Editor's layers and nodes), the Properties tab keeping that window's settings
+  while the Palette is worked in; `BIOMES`, the World Editor's Biomes layer, a grid of swatches with each biome's name
+  under it, as many to a row as the tab's width holds, the one chosen highlighted and selected in the Hierarchy so its
+  fields are the Properties tab's; `NONE`, a mode or layer with nothing to pick from (Appearance, Heights).
+- **The standard every tool follows.** What a tool picks from (parts, bones, gear, nodes, takes, biomes, colours) is
+  the Palette's; the settings of what is picked are the Properties tab's; content is picked by hand in the Hierarchy;
+  tools are the Tools tab's and brushes the Brushes tab's; a canvas's jobs are layers in the Layers tab. A tool never
+  lists what it picks from in the Properties tab or in a panel of its own. A new kind of choice is a new
+  `PaletteContent` and a `PaletteView` system, never a new window. Still to move: the Recorder's takes (now the Layers
+  tab's Takes view), with the media workflow.
 
 ## The Properties tab
 
 - **One shared Properties tab, never a properties or outliner window per tool.** It shows what the window worked in
   last provides (`editor.bootstrap.propertiespipeline`): a window implements `PropertiesProvider`, names its
-  `PropertiesContent` and creates a `PropertiesSourceSystem`. `ROWS` are a tool window's rows (the window is also a
-  `CharacterViewRowSource`): what it picks from listed first (features, sliders, bones, anchors, parts, the clip, the
-  recording's settings, the keys selected), then the values of what is picked, so a tool's list and its values are
-  one panel, as Substance Painter's Properties and Krita's Tool Options are; `INFO` is the content entry selected in
-  the Hierarchy, the editor's Info Panel, which the Hierarchy and every content tool show. What a window picks from is
-  never here: it is the Palette tab's (below). A new kind of content is a new `PropertiesContent` and a
+  `PropertiesContent` and creates a `PropertiesSourceSystem`. `ROWS` are a tool window's settings (the window is also a
+  `CharacterViewRowSource`): the values of what is picked (the bone, key, node, part or UVs selected), then the
+  settings of the window itself (the preview's gender, pose and side, Appearance's sliders and features, the clip, the
+  recording's settings, the keys selected, how bones are drawn), as Substance Painter's Properties and Krita's Tool
+  Options are; `INFO` is the content entry selected in the Hierarchy, the editor's Info Panel, which the Hierarchy and
+  every content tool show. What a window picks from is never here: it is the Palette tab's (above). A new kind of
+  content is a new `PropertiesContent` and a
   `PropertiesView` system in the Properties tab, never a new window. Its status line always works on the Hierarchy's
   selection; it takes no File or Edit actions of its own (see The File and Edit menus).
-- **Headers fold.** Every header row of a tool's rows (`ROWS`, the Palette tab's maps, any `CharacterViewPanelSystem` panel) is a
+- **Headers fold.** Every header row of a tool's rows (`ROWS`, the Palette tab's rows, any `CharacterViewPanelSystem` panel) is a
   button that folds the rows under it shut or opens them again, its marker (`row_fold_label`, + or -) saying which; the
   panel keeps what it was handed, so a fold lays it out again without asking the tool, and the folds of a panel hold
   while it lists other windows' rows. A tool's header template carries the `toggleHeader` action and the marker.

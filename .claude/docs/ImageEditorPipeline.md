@@ -32,8 +32,8 @@ and File, Open picks one there in the system's file dialog.
   albedo is the layers themselves and is never generated.
 - **The maps in the Palette tab** (`editor.runtime.palette`, `ImagePaletteSystem`, under the colour wheel) follow the
   window worked in last that has a palette, tracked by `PropertiesManager.getPalette` as the Properties tab's provider
-  is; every `MapsProvider` (a `PaletteProvider` offering `PaletteContent.IMAGE`) lists there: the Image Editor, every
-  character tool tab and the UV Editor. Rows come from `MapRowUtility` for both, so the layout is one: map entries (generated ones
+  is; every `PaletteRowSource` offering `PaletteContent.IMAGE` lists its maps there (`buildPaletteRows`): the Image
+  Editor, the UV Editor and the character Paint and UV tabs. Rows come from `MapRowUtility` for both, so the layout is one: map entries (generated ones
   marked), the picked map's settings, Generate, Clear.
 
 ## Code

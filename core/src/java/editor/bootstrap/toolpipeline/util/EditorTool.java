@@ -37,7 +37,10 @@ public enum EditorTool {
      * a viewer shows its subject by, dragged from the subject. Collider gives
      * the bone clicked a collider, or takes one off it while Ctrl is held. The
      * stroking tools work along a drag with a brush and carry the options
-     * that shape their strokes; the rest act once per press.
+     * that shape their strokes; the rest act once per press. Each tool's
+     * emblem is the sprite named after it in PascalCase under the tool icon
+     * folder (Flip Edge is menus/tools/FlipEdge), the one every list of tools
+     * shows beside its name.
      */
 
     SELECT(EditorSetting.TOOL_SELECT, false, ToolOption.SIZE),
@@ -86,6 +89,7 @@ public enum EditorTool {
     private final String label;
     private final boolean stroke;
     private final ToolOption[] options;
+    private final String icon;
 
     // Constructor \\
 
@@ -93,12 +97,40 @@ public enum EditorTool {
         this.label = label;
         this.stroke = stroke;
         this.options = options;
+        this.icon = EditorSetting.TOOL_ICON_FOLDER + toPascalCase(name());
+    }
+
+    // An enum name read as a resource name: each word between underscores opened in upper case, the rest lower
+    private static String toPascalCase(String enumName) {
+
+        StringBuilder pascal = new StringBuilder(enumName.length());
+        boolean wordStart = true;
+
+        for (int i = 0; i < enumName.length(); i++) {
+
+            char character = enumName.charAt(i);
+
+            if (character == '_') {
+                wordStart = true;
+                continue;
+            }
+
+            pascal.append(wordStart ? character : Character.toLowerCase(character));
+            wordStart = false;
+        }
+
+        return pascal.toString();
     }
 
     // Accessible \\
 
     public String getLabel() {
         return label;
+    }
+
+    // The sprite of the tool's emblem
+    public String getIcon() {
+        return icon;
     }
 
     public boolean isStroke() {

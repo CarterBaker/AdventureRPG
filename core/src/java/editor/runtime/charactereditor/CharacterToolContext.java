@@ -7,8 +7,9 @@ import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
 import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
-import editor.bootstrap.propertiespipeline.properties.MapsProvider;
+import editor.bootstrap.propertiespipeline.properties.PaletteRowSource;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
@@ -51,7 +52,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public abstract class CharacterToolContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, ViewCameraProvider, ViewCameraShareProvider,
-        PropertiesProvider, MapsProvider, CharacterViewRowSource, FileMenuProvider, LayersProvider,
+        PropertiesProvider, PaletteRowSource, CharacterViewRowSource, FileMenuProvider, LayersProvider,
         CharacterModeProvider {
 
     /*
@@ -68,7 +69,9 @@ public abstract class CharacterToolContext extends ContextPackage
      * Stamps tab to the body. Each tool tab is a tool canvas worked
      * with the Tools and Brushes tabs, its actions listed in the Tools tab
      * and its values and those of what is picked in the Properties tab while
-     * the tab is worked in, the maps of the part's texture in the Maps tab;
+     * the tab is worked in, what its tools pick from in the Palette tab (the
+     * gear, parts or bones, and under the colour wheel the maps of the part's
+     * texture for the tabs that paint);
      * the File and Edit menus act on the character.
      * All state lives in CharacterEditorManager, the region, the bone and the
      * vertices selected shared by every tab; a tab keeps its mode, reads
@@ -232,7 +235,7 @@ public abstract class CharacterToolContext extends ContextPackage
     @Override
     public void buildRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
-        characterEditorManager.buildListRows(rows);
+        characterEditorManager.buildSettingRows(rows);
         characterEditorManager.buildPropertyRows(rows);
 
         if (getMode().drawsBones())
@@ -249,25 +252,36 @@ public abstract class CharacterToolContext extends ContextPackage
         characterEditorManager.step(key, steps);
     }
 
-    // Maps \\
+    // Palette \\
 
+    // The mode names it: the colour wheel over what is painted, the list its tools pick from, or nothing
     @Override
-    public int getMapsRevision() {
-        return characterEditorManager.getRevision();
+    public PaletteContent getPaletteContent() {
+        return getMode().getPaletteContent();
     }
 
     @Override
-    public void buildMapsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-        characterEditorManager.buildMapRows(rows);
+    public int getPaletteRevision() {
+        return getRowRevision();
+    }
+
+    // What the mode's tools pick from, then the maps of the part's texture where the tab paints
+    @Override
+    public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        characterEditorManager.buildPickRows(rows);
+
+        if (getPaletteContent() == PaletteContent.IMAGE)
+            characterEditorManager.buildMapRows(rows);
     }
 
     @Override
-    public CharacterViewTemplateStruct getMapsTemplates() {
+    public CharacterViewTemplateStruct getPaletteTemplates() {
         return getRowTemplates();
     }
 
     @Override
-    public void stepMapsRow(String key, int steps) {
+    public void stepPaletteRow(String key, int steps) {
         stepRow(key, steps);
     }
 

@@ -6,6 +6,7 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.menupipeline.util.ThemeColor;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
+import application.bootstrap.shaderpipeline.spritemanager.SpriteManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.tabpipeline.activewindowmanager.ActiveWindowManager;
@@ -28,8 +29,8 @@ public class ToolsMenuSystem extends SystemPackage {
     /*
      * Opens the Tools menu: under the name of what the tools target works on,
      * the target window named after it in parentheses,
-     * one row per tool it takes, the tool in use highlighted and every row
-     * carrying its tool's name, then each group of actions it lists under its
+     * one row per tool it takes, its emblem beside its name, the tool in use
+     * highlighted and every row carrying its tool's name, then each group of actions it lists under its
      * title, every action row carrying the action's key; and under that
      * tool's name, one row per option both it and the canvas have, laid out
      * for its kind: a number on a slider between step buttons and in a box
@@ -44,11 +45,15 @@ public class ToolsMenuSystem extends SystemPackage {
     // Internal
     private MenuManager menuManager;
     private FBOManager fboManager;
+    private SpriteManager spriteManager;
     private ToolManager toolManager;
     private ActiveWindowManager activeWindowManager;
 
     // Menus
     private MenuInstance toolsMenu;
+
+    // Icons — every tool's emblem texture, resolved the first time the tool is listed
+    private int[] tool2IconTexture;
 
     // Rows
     private ObjectArrayList<ElementInstance> toolElements;
@@ -69,6 +74,9 @@ public class ToolsMenuSystem extends SystemPackage {
     @Override
     protected void create() {
 
+        // Icons
+        this.tool2IconTexture = new int[EditorTool.VALUES.length];
+
         // Rows
         this.toolElements = new ObjectArrayList<>();
         this.optionElements = new ObjectArrayList<>();
@@ -88,6 +96,7 @@ public class ToolsMenuSystem extends SystemPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
+        this.spriteManager = get(SpriteManager.class);
         this.toolManager = get(ToolManager.class);
         this.activeWindowManager = get(ActiveWindowManager.class);
     }
@@ -166,7 +175,24 @@ public class ToolsMenuSystem extends SystemPackage {
                 element -> {
                     element.setActionArgOverride(ArpgUtility.toEnumName(tool));
                     setChildText(element, ToolsSetting.ELEMENT_TOOL_LABEL, tool.getLabel());
+
+                    ElementInstance icon = element.findChildById(ToolsSetting.ELEMENT_TOOL_ICON);
+
+                    if (icon != null && icon.hasSprite())
+                        icon.getSpriteInstance().setTexture(resolveIcon(tool));
                 });
+    }
+
+    private int resolveIcon(EditorTool tool) {
+
+        int texture = tool2IconTexture[tool.ordinal()];
+
+        if (texture == 0) {
+            texture = spriteManager.getSpriteHandleFromSpriteName(tool.getIcon()).getGpuHandle();
+            tool2IconTexture[tool.ordinal()] = texture;
+        }
+
+        return texture;
     }
 
     // Actions \\

@@ -15,8 +15,9 @@ public class MaterialsSetting {
     public static final String TEMPLATE_HEADER_ROW = "editor/Materials/materials_header_row";
     public static final String TEMPLATE_TEXT_ROW = "editor/Materials/materials_text_row";
     public static final String TEMPLATE_DETAIL_ROW = "editor/Materials/materials_detail_row";
-    public static final String TEMPLATE_MATERIAL_ROW = "editor/Materials/materials_material_row";
-    public static final String TEMPLATE_MATERIAL_ROW_SELECTED = "editor/Materials/materials_material_row_selected";
+    public static final String TEMPLATE_GRID_ROW = "editor/Materials/materials_grid_row";
+    public static final String TEMPLATE_MATERIAL_TILE = "editor/Materials/materials_material_tile";
+    public static final String TEMPLATE_MATERIAL_TILE_SELECTED = "editor/Materials/materials_material_tile_selected";
     public static final String TEMPLATE_DOCUMENT_ROW = "editor/Materials/materials_document_row";
     public static final String TEMPLATE_DOCUMENT_ROW_SELECTED = "editor/Materials/materials_document_row_selected";
 
@@ -24,6 +25,12 @@ public class MaterialsSetting {
     public static final String ELEMENT_ROW_LABEL = "materials_row_label";
     public static final String ELEMENT_ROW_THUMBNAIL = "materials_row_thumbnail";
     public static final String ELEMENT_ROW_VALUE = "materials_row_value";
+
+    // Grid — a tile's narrowest and widest, the gap between tiles and the room its name takes under its preview
+    public static final float TILE_MIN_WIDTH_PIXELS = 76f;
+    public static final float TILE_MAX_WIDTH_PIXELS = 112f;
+    public static final float TILE_SPACING_PIXELS = 4f;
+    public static final float TILE_LABEL_PIXELS = 18f;
 
     // Entry Points
     public static final int ENTRY_STATUS = 0;
