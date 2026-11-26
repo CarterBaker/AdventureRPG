@@ -1,6 +1,10 @@
 #version 400 core
 
-in vec2       vAtlas;
+in vec2       vQuad;
+flat in vec2  vFrameA;
+flat in vec2  vFrameB;
+flat in vec2  vFrameC;
+flat in vec3  vWeights;
 flat in float vLayer;
 
 #include "trees/includes/TreeImpostor.glsl"
@@ -8,15 +12,14 @@ flat in float vLayer;
 
 out vec4 FragColor;
 
-// The impostor in the Tree Viewer: cut out and lit by the viewer's light exactly as its frame was baked.
+// The impostor in the Tree Viewer: blended from its three nearest frames, cut out and lit by the viewer's light.
 void main() {
-    vec3 layered = vec3(vAtlas, vLayer);
-    vec4 albedo  = texture(u_impostorAlbedo, layered);
+    vec4 albedo = sampleTreeImpostor(u_impostorAlbedo, vQuad, vFrameA, vFrameB, vFrameC, vWeights, vLayer);
 
     if (albedo.a < TREE_IMPOSTOR_CUTOFF)
     discard;
 
-    vec3 normal = texture(u_impostorNormal, layered).xyz * 2.0 - 1.0;
+    vec3 normal = sampleTreeImpostor(u_impostorNormal, vQuad, vFrameA, vFrameB, vFrameC, vWeights, vLayer).xyz;
 
-    FragColor = vec4(albedo.rgb * resolveTreeViewerLight(mat3(u_view) * normal, 1.0), 1.0);
+    FragColor = vec4(albedo.rgb * resolveTreeViewerLight(mat3(u_view) * (normal * 2.0 - 1.0), 1.0), 1.0);
 }

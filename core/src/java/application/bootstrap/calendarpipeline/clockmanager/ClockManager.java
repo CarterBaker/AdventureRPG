@@ -260,6 +260,11 @@ public class ClockManager extends ManagerPackage {
         return clockHandle;
     }
 
+    // The seconds the shaders' u_time reads, for whatever times a shader's fade against it
+    public float getShaderTime() {
+        return internalBuffer.getElapsedTime();
+    }
+
     public long getElapsedMillis() {
         return internal.getTime() - clockHandle.getWorldEpochStart();
     }

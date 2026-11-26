@@ -1225,8 +1225,10 @@ public class EngineSetting {
     public static final int MACRO_COVERAGE_BITS_PER_WORD = Integer.SIZE;
     public static final String MACRO_COVERAGE_UBO = "MacroCoverageData";
     public static final float MACRO_COVER_OWN_CHUNK = -1f;
-    public static final int MACRO_COVERAGE_WORD_COUNT = MACRO_CHUNK_SIZE * MACRO_CHUNK_SIZE
+    public static final int MACRO_COVERAGE_MASK_WORDS = MACRO_CHUNK_SIZE * MACRO_CHUNK_SIZE
             / MACRO_COVERAGE_BITS_PER_WORD;
+    public static final int MACRO_COVERAGE_TREE_BIT_OFFSET = MACRO_CHUNK_SIZE * MACRO_CHUNK_SIZE;
+    public static final int MACRO_COVERAGE_WORD_COUNT = MACRO_COVERAGE_MASK_WORDS * 2;
     public static final int MACRO_COVERAGE_VECTOR_COUNT = MACRO_COVERAGE_WORD_COUNT / VECTOR4_COMPONENT_COUNT;
     public static final String MACRO_MATERIAL = "surface/MacroTerrainMaterial";
     public static final int MACRO_POOL_MAX_OVERFLOW = 16;
@@ -2362,12 +2364,13 @@ public class EngineSetting {
     // never floats from the wood drawn. How near a segment must set out to the last one's end to carry its trunk on,
     // how far a trunk box runs before its top strays past a share of its foot's radius or thins below a share of
     // its girth, the steps a limb is boxed in, and the blocks past a level's start a tree keeps its level for. From
-    // the shared level on, every tree nothing has altered is drawn as its species' impostor (Tree Impostor, below)
-    // wherever its species has one baked; the shared level equal to the level count shares none. A tree with no LOD
-    // yet is judged without holding to any
+    // the shared level on a tree stands at the one last stage, its species' impostor (Tree Impostor, below), drawn
+    // as such while nothing has altered it and its species has one baked; the shared level equal to the level count
+    // never reaches it. A tree with no LOD yet is judged without holding to any
     public static final int TREE_LOD_NONE = -1;
     public static final int TREE_LOD_FULL = 0;
     public static final int TREE_LOD_LEVEL_COUNT = 8;
+    public static final int TREE_LOD_IMPOSTOR = TREE_LOD_LEVEL_COUNT;
     public static final float[] TREE_LOD_START_BLOCKS = { 0f, 0f, 64f, 128f, 192f, 288f, 416f, 576f };
     public static final int[] TREE_LOD_CELLS_PER_AXIS = { 0, 8, 6, 5, 4, 3, 3, 2 };
     public static final int[] TREE_LOD_MAX_TIERS = { 0, 8, 6, 5, 4, 4, 3, 2 };
@@ -2405,8 +2408,10 @@ public class EngineSetting {
     // level on is one instance of its species' camera-facing quad, laid in per-species buffers rebuilt only when
     // the trees they hold change, at most once a check; the instance carries its root chunk (as raw bits), its
     // place in it, the height its framing sphere's centre stands at, that sphere's radius, its turn and its species'
-    // layer. A tree's turn is rolled from its seed, and a tree leaving its impostor keeps it for a hold while the mesh
-    // taking its place lands
+    // layer, then when its fade starts on the shaders' clock and which way it runs. A tree's turn is rolled from its
+    // seed; a tree reaching its impostor rises in over the fade, one leaving it keeps it for a hold while the mesh
+    // taking its place lands and falls away over the hold's last fade, and one arriving there stands whole from long
+    // before; the instances are laid again no more often than an interval
     public static final String TREE_IMPOSTOR_PATH = "bakedimpostors";
     public static final int TREE_IMPOSTOR_BAKE_VERSION = 1;
     public static final int TREE_IMPOSTOR_FRAMES = 8;
@@ -2417,8 +2422,8 @@ public class EngineSetting {
     public static final String TREE_IMPOSTOR_MESH = "trees/TreeImpostorQuad";
     public static final String UNIFORM_TREE_IMPOSTOR_ALBEDO = "u_impostorAlbedo";
     public static final String UNIFORM_TREE_IMPOSTOR_NORMAL = "u_impostorNormal";
-    public static final int[] TREE_IMPOSTOR_INSTANCE_ATTR_SIZES = { 4, 4 };
-    public static final int TREE_IMPOSTOR_INSTANCE_FLOATS = 8;
+    public static final int[] TREE_IMPOSTOR_INSTANCE_ATTR_SIZES = { 4, 4, 2 };
+    public static final int TREE_IMPOSTOR_INSTANCE_FLOATS = 10;
     public static final int TREE_IMPOSTOR_CHUNK_X_FLOAT = 0;
     public static final int TREE_IMPOSTOR_CHUNK_Z_FLOAT = 1;
     public static final int TREE_IMPOSTOR_LOCAL_X_FLOAT = 2;
@@ -2427,6 +2432,13 @@ public class EngineSetting {
     public static final int TREE_IMPOSTOR_RADIUS_FLOAT = 5;
     public static final int TREE_IMPOSTOR_TURN_FLOAT = 6;
     public static final int TREE_IMPOSTOR_LAYER_FLOAT = 7;
+    public static final int TREE_IMPOSTOR_FADE_START_FLOAT = 8;
+    public static final int TREE_IMPOSTOR_FADE_DIRECTION_FLOAT = 9;
+    public static final float TREE_IMPOSTOR_RISING = 1f;
+    public static final float TREE_IMPOSTOR_FALLING = -1f;
+    public static final float TREE_IMPOSTOR_WHOLE_START = -1000000f;
+    public static final float TREE_IMPOSTOR_FADE_SECONDS = 0.3f;
+    public static final float TREE_IMPOSTOR_LAY_SECONDS = 0.2f;
     public static final long TREE_IMPOSTOR_TURN_SALT = 0x2F6B1D93C47E05A8L;
     public static final float TREE_IMPOSTOR_HOLD_SECONDS = 2f;
     public static final float TREE_IMPOSTOR_FULL_TURN = (float) (Math.PI * 2.0);

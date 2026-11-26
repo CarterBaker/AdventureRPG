@@ -631,6 +631,14 @@ One line per session that changed this file: the date, what was added or removed
   `.fsh`, `.arpg`) and the materials `materials/trees/TreeImpostorMaterial.arpg`,
   `materials/editor/TreeImpostorBakeBarkMaterial.arpg`, `TreeImpostorBakeLeafMaterial.arpg` and
   `TreeViewerImpostorMaterial.arpg`; regenerated `application/fbos/FBOs.arpg` (the `TreeImpostorBake` target).
+- 2026-11-26: One impostor stage, blended and faded. Added `shaders/trees/includes/TreeDither.glsl` (the trees'
+  dither pattern, out of `TreeFade.glsl`) and `TreeImpostorFade.glsl`; regenerated
+  `shaders/trees/includes/TreeImpostor.glsl`, `shaders/trees/impostor/TreeImpostorShader.vsh` and `.fsh` and
+  `shaders/editor/treeviewer/TreeViewerImpostorShader.vsh` and `.fsh` (the three nearest frames blended, each instance
+  rising in and falling away through the dither), `TreeFade.glsl`, `TreeFar.glsl`,
+  `shaders/includes/MacroCoverageData.glsl`, `MacroCoverageUtility.glsl`, `ubos/MacroCoverageData.arpg` and
+  `shaders/surface/macro/MacroTerrainShader.fsh` (a second coverage mask, so a macro tile's trees yield only once the
+  grid has that chunk's trees on the GPU).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
@@ -1963,8 +1971,8 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/trees/includes/`
 
-`TreeBark.glsl`, `TreeBarkShading.glsl`, `TreeFade.glsl`, `TreeFar.glsl`, `TreeImpostor.glsl`, `TreeLeaf.glsl`,
-`TreeLeafSprig.glsl`, `TreeShading.glsl`
+`TreeBark.glsl`, `TreeBarkShading.glsl`, `TreeDither.glsl`, `TreeFade.glsl`, `TreeFar.glsl`, `TreeImpostor.glsl`,
+`TreeImpostorFade.glsl`, `TreeLeaf.glsl`, `TreeLeafSprig.glsl`, `TreeShading.glsl`
 
 ### `assets/shaders/trees/leaf/`
 

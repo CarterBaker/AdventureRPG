@@ -25,28 +25,23 @@ public class MacroTreeBranch extends BranchPackage {
      * Async — the trees the macro terrain nearer than its canopy stands in one
      * by one, on a tile sampled finely enough to show them. Every wild tree
      * rooted in the tile is found exactly where chunk placement finds it,
-     * through TreeManager.collectSites(), and stood on the tile's own surface
-     * under the crown its form lays out — the lumps it is judged as, sized from
-     * its mature height and age — in the flat colors its bark and leaves show
-     * from afar. resolveStandIn() is the one place a tile's resolution picks
-     * how finely. A tile near the grid draws every tree as a model of itself
-     * instead — at the LOD the tree's own distance gives it, the very look
-     * the grid would draw it with, every vertex naming the chunk its tree
-     * roots in, so a forest keeps its look as it passes from the grid to
-     * the macro terrain and a tree yields whole the moment the grid draws
-     * its chunk; from the shared level on it hands each tree over as its
-     * impostor instance instead, which TreeImpostorRenderSystem leaves out
-     * while the grid holds the tree's chunk. Beyond them the finest tiles facet
-     * each lump round over a tapered trunk,
-     * coarser ones keep each lump a plain diamond, and the coarsest draw the
-     * whole crown as one spire reaching down to the root. A crown wide enough
-     * to span a good share of a cell is drawn finer than its tile asks, so a
-     * giant far off keeps its lumps and never stands as one great polygon. A root under water
-     * is left out: a cell wholly dry or wholly wet answers from its corners,
-     * and a shore cell asks the terrain at the root itself. Every shape
-     * carries the chunk its tree roots in, so a whole tree yields at once the
-     * moment the chunk grid takes that chunk over, never split across the
-     * seam. The shapes are laid into the tile's mesh by MacroMeshBranch.
+     * through TreeManager.collectSites(), stood on the tile's own surface and
+     * handed over as its species' impostor instance, which
+     * TreeImpostorRenderSystem draws while the grid does not hold the tree's
+     * chunk. A tile near the grid whose tree stands nearer than the impostor
+     * stage draws it as a model of itself at its own LOD instead, the very
+     * look the grid would draw it with, every vertex naming the chunk its
+     * tree roots in, so it yields whole the moment the grid draws that chunk.
+     * Only a species with no impostor baked yet falls back to the flat-colored
+     * stand-ins its crown is judged as: resolveStandIn() is the one place a
+     * tile's resolution picks how finely, the finest tiles faceting each lump
+     * round over a tapered trunk, coarser ones keeping each lump a plain
+     * diamond and the coarsest drawing the whole crown as one spire reaching
+     * down to the root, and a crown spanning a good share of a cell drawn
+     * finer than its tile asks. A root under water is left out: a cell wholly
+     * dry or wholly wet answers from its corners, and a shore cell asks the
+     * terrain at the root itself. The shapes are laid into the tile's mesh by
+     * MacroMeshBranch.
      */
 
     // Internal
@@ -152,15 +147,16 @@ public class MacroTreeBranch extends BranchPackage {
         TreeHandle treeHandle = site.getTreeHandle();
         float rootY = resolveSurface(scratch, rootX, rootZ);
         float cover = blockZ / chunkSize * macroChunkSize + blockX / chunkSize;
+        int lod = scratch.treeModels
+                ? treeManager.resolveTreeLod(worldHandle, site.getAnchorX(), site.getAnchorZ())
+                : EngineSetting.TREE_LOD_IMPOSTOR;
+
+        if (TreeLodUtility.isImpostor(treeHandle, lod, false)) {
+            addImpostor(scratch, site, rootY);
+            return;
+        }
 
         if (scratch.treeModels) {
-
-            int lod = treeManager.resolveTreeLod(worldHandle, site.getAnchorX(), site.getAnchorZ());
-
-            if (TreeLodUtility.isImpostor(treeHandle, lod, false)) {
-                addImpostor(scratch, site, rootY);
-                return;
-            }
 
             int barkStart = scratch.modelBark.size();
             int leafStart = scratch.modelLeaves.size();
@@ -202,8 +198,11 @@ public class MacroTreeBranch extends BranchPackage {
 
         if (TreeLodUtility.writeImpostorInstance(
                 treeHandle, site.getSeed(), TreeSkeletonUtility.resolveMatureHeight(treeHandle, site.getSeed()),
-                site.getAge(), site.getAnchorX(), site.getAnchorZ(), rootY, scratch.impostor, 0))
+                site.getAge(), site.getAnchorX(), site.getAnchorZ(), rootY, scratch.impostor, 0)) {
+            scratch.impostor[EngineSetting.TREE_IMPOSTOR_FADE_START_FLOAT] = EngineSetting.TREE_IMPOSTOR_WHOLE_START;
+            scratch.impostor[EngineSetting.TREE_IMPOSTOR_FADE_DIRECTION_FLOAT] = EngineSetting.TREE_IMPOSTOR_RISING;
             scratch.modelImpostors.addElements(scratch.modelImpostors.size(), scratch.impostor);
+        }
     }
 
     // Every vertex a tree model just laid names the chunk its tree roots in, so the whole tree yields with that chunk

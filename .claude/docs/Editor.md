@@ -63,8 +63,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   (`TreeImpostorArpgUtility`). At editor start every species whose impostor is missing or stale (its `source` checksum
   of the bake and the species' file) bakes a view a frame in the background; a species saved through any window bakes
   next (`InfoManager.addSaveListener`). The Tree Viewer's status line says what bakes. Commit the baked files with the
-  trees; the game reads them and draws every tree from the Shared Tree LOD on as one GPU instance of its impostor
-  (`TreeImpostorRenderSystem`).
+  trees; the game reads them and draws every tree at the impostor stage (from the Shared Tree LOD on, the one last
+  stage of the ladder), distant terrain's included, as one GPU instance of its impostor (`TreeImpostorRenderSystem`),
+  the three nearest frames blended, crossfading with its mesh through the trees' dither.
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
   Sculpt, Weights, Paint, Rig, Pose and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
   vertices selected. The Appearance tab's Properties rows hold every slider and control, and the Rig tab marks which
@@ -150,10 +151,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   has an eye hiding its vertices on the part edited, `CharacterEditorManager.toggleRegionShown`), the character
   Paint tab (the paint layers of the map painted, each above the base with an eye), the Image Editor (every layer of
   the image, each with an eye; its maps are listed in the Palette tab, never here), the Item Editor (every part of the
-  item, each one material, the part picked being the one its tools lay; no eyes) and the Tree Viewer (every LOD level
-  a tree is drawn at, as a mesh viewer lists its levels of detail, LOD 0 (Full) to the coarsest, those from the Shared
-  Tree LOD setting on marked Impostor and drawn as the species' impostor, then the impostor itself, each with an eye;
-  all stand on one root and only the topmost layer whose eye is open is drawn; `TreeViewerLayerSystem`).
+  item, each one material, the part picked being the one its tools lay; no eyes) and the Tree Viewer (every mesh level
+  a tree is drawn at before the Shared Tree LOD setting's impostor stage, as a mesh viewer lists its levels of detail,
+  LOD 0 (Full) on, then the impostor, each with an eye; all stand on one root and only the topmost layer whose eye is
+  open is drawn; `TreeViewerLayerSystem`).
 - **Up and Down** pick the layer listed above or below the one picked while the Layers tab is worked in
   (`LayersManager.stepLayer`, `assets/shortcuts/Layers.arpg`).
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers

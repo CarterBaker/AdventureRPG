@@ -176,7 +176,7 @@ class TreePreviewBranch extends BranchPackage {
     // The preview's tree at a level, as its impostor where the world would draw it so
     private void buildLevel(TreeInstance tree, int level, int sharedLevel, TreePreviewLayerStruct layer) {
 
-        int lod = TreeLodUtility.encode(level, level >= sharedLevel);
+        int lod = TreeLodUtility.resolveLod(level, sharedLevel);
 
         layer.getBuiltBark().clear();
         layer.getBuiltLeaves().clear();

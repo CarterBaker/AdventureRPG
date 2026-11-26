@@ -114,6 +114,14 @@ class TreeRegistryBranch extends BranchPackage {
 
     // Accessible \\
 
+    // The tree registered at a key, null when none is — never held for it
+    TreeInstance find(long key) {
+
+        synchronized (key2Tree) {
+            return key2Tree.get(key);
+        }
+    }
+
     // Every registered tree copied out, so the caller walks them without holding the lock
     void collectTrees(ObjectArrayList<TreeInstance> out) {
 

@@ -3,6 +3,7 @@
 
 #include "includes/CameraData.glsl"
 #include "includes/SettingsData.glsl"
+#include "trees/includes/TreeDither.glsl"
 #include "trees/includes/TreeFar.glsl"
 
 // A standing tree's look hands over to its next one by screen-door dither rather than at once: while a chunk or mega
@@ -18,20 +19,6 @@
 // grid's farthest trees take, so the hand-over shows no change.
 
 uniform float u_treeFade;
-
-const float TREE_FADE_PATTERN[16] = float[16](
-    0.0, 8.0, 2.0, 10.0,
-    12.0, 4.0, 14.0, 6.0,
-    3.0, 11.0, 1.0, 9.0,
-    15.0, 7.0, 13.0, 5.0);
-const float TREE_FADE_STEPS = 16.0;
-
-// This fragment's place in the dither pattern, from 0 to 1
-float resolveTreeFadeThreshold() {
-    ivec2 cell = ivec2(gl_FragCoord.xy) & 3;
-
-    return (TREE_FADE_PATTERN[cell.y * 4 + cell.x] + 0.5) / TREE_FADE_STEPS;
-}
 
 // True where this fragment's look has not risen in yet or has already fallen away
 bool isTreeFaded() {

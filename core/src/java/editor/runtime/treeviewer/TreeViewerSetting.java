@@ -33,8 +33,7 @@ public class TreeViewerSetting {
     public static final String LAYER_KEY_SHARED = "shared";
     public static final String LAYER_NAME_FULL = "LOD 0 (Full)";
     public static final String LAYER_NAME_LEVEL = "LOD ";
-    public static final String LAYER_NAME_SHARED_SUFFIX = " (Impostor)";
-    public static final String LAYER_NAME_SHARED = "Impostor (LOD Seed)";
+    public static final String LAYER_NAME_SHARED = "Impostor";
 
     // Text
     public static final String STATUS_PREFIX = "Tree Viewer  |  ";

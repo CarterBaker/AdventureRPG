@@ -19,10 +19,10 @@ layout(location = 2) out vec4 gMaterial;
 // Distant macro terrain, written into the same G-buffer as the voxel surface so the deferred lighting and fog passes
 // treat it as ordinary ground. Any fragment over a chunk the grid itself draws right now is discarded, so macro terrain
 // fills every chunk the grid has not drawn — beyond its footprint, along its rim, and wherever streaming has not caught
-// up — and never overlaps one. A tree stand-in yields whole while the grid draws the chunk its tree roots in, so a
-// tree is never drawn twice and never missing. A tile's canopy and stand-ins are a model of their own, and when the
-// tile is built again they fall away through the dither their new ones rise through (u_treeFade), so trees never
-// change their look at once; the land's fade is always zero. The facet normal comes from screen-space derivatives of
+// up — and never overlaps one. A tree stand-in yields whole once the grid has the trees of the chunk its tree roots
+// in on the GPU, so a tree is never drawn twice and never missing. A tile's canopy and stand-ins are a model of their
+// own, and when the tile is built again they, and its land, fall away through the dither their new ones rise through
+// (u_treeFade), so neither trees nor ground ever change their look at once. The facet normal comes from screen-space derivatives of
 // the flat position, which gives the low poly look without any normal data. A heightfield never faces down, while a tree
 // stand-in is a closed faceted shape, so its facet faces the camera and a crown's underside turns down into its
 // slope color. A gentle facet
@@ -52,7 +52,7 @@ void main() {
     if (isTreeFaded())
     discard;
 
-    if (standIn ? isChunkDrawnByGrid(vCoverChunk) : isDrawnByChunkGrid(vTilePos))
+    if (standIn ? isTreesDrawnByGrid(vCoverChunk) : isDrawnByChunkGrid(vTilePos))
     discard;
 
     vec3 normal = normalize(cross(dFdx(vLocalPos), dFdy(vLocalPos)));

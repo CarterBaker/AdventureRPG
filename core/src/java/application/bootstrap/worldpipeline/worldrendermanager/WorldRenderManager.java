@@ -109,6 +109,8 @@ public class WorldRenderManager extends ManagerPackage {
     private TreeEntries chunkTrees;
     private TreeEntries megaTrees;
     private LongOpenHashSet drawnMegaTrees;
+    private LongOpenHashSet drawnChunkTrees;
+    private int treeDrawnRevision;
 
     // Tree Fades — every fade step's value for the look rising in and the look falling away, boxed once
     private Float[] treeFadeRising;
@@ -169,6 +171,7 @@ public class WorldRenderManager extends ManagerPackage {
         this.chunkTrees = new TreeEntries();
         this.megaTrees = new TreeEntries();
         this.drawnMegaTrees = new LongOpenHashSet();
+        this.drawnChunkTrees = new LongOpenHashSet();
 
         // Tree Fades
         this.treeFadeRising = new Float[EngineSetting.TREE_FADE_STEPS + 1];
@@ -601,8 +604,18 @@ public class WorldRenderManager extends ManagerPackage {
     // draws the chunk any more
     public boolean addChunkTrees(long coordinate, DynamicPacketInstance treePacket) {
 
-        if (!updateTrees(coordinate, treePacket, chunkTrees))
+        if (!updateTrees(coordinate, treePacket, chunkTrees)) {
+
+            if (drawnChunkTrees.remove(coordinate))
+                drawnRevision++;
+
             return false;
+        }
+
+        if (drawnChunkTrees.add(coordinate)) {
+            drawnRevision++;
+            treeDrawnRevision++;
+        }
 
         updateTextureUser(treeTextureUsers, coordinate, treePacket.getTiles());
 
@@ -611,6 +624,12 @@ public class WorldRenderManager extends ManagerPackage {
 
     // A chunk's trees taken down fall away rather than vanish, under whatever draws the ground they stood on next
     public void removeChunkTrees(long coordinate) {
+
+        if (drawnChunkTrees.remove(coordinate)) {
+            drawnRevision++;
+            treeDrawnRevision++;
+        }
+
         retireTrees(coordinate, chunkTrees);
         removeTextureUser(treeTextureUsers, coordinate);
     }
@@ -620,7 +639,10 @@ public class WorldRenderManager extends ManagerPackage {
         if (!updateTrees(coordinate, treePacket, megaTrees))
             return false;
 
-        drawnMegaTrees.add(coordinate);
+        if (drawnMegaTrees.add(coordinate)) {
+            drawnRevision++;
+            treeDrawnRevision++;
+        }
 
         return true;
     }
@@ -811,6 +833,34 @@ public class WorldRenderManager extends ManagerPackage {
 
     int getDrawnRevision() {
         return drawnRevision;
+    }
+
+    // True once the grid's own trees over a chunk are on the GPU, none at all included — whichever of its chunk or
+    // its mega draws the chunk now — so whatever stood in for them until then yields only once they stand: a first
+    // look stands whole at once, and a redrawn one rises in while the look before it stands whole
+    boolean isChunkTreesShown(GridInstance grid, long chunkCoordinate) {
+
+        if (grid.getGridSlotForChunk(chunkCoordinate) == null)
+            return false;
+
+        long megaCoordinate = Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate);
+
+        if (grid.getMegaRenderQueue().containsKey(megaCoordinate) && megaEntries.containsKey(megaCoordinate)
+                || isMegaStandingIn(grid, megaCoordinate))
+            return drawnMegaTrees.contains(megaCoordinate);
+
+        return drawnChunkTrees.contains(chunkCoordinate);
+    }
+
+    // True while a chunk's trees are on the GPU, drawn by the chunk itself or by its mega, in any grid
+    public boolean isChunkTreesOnGpu(long chunkCoordinate) {
+        return drawnChunkTrees.contains(chunkCoordinate)
+                || drawnMegaTrees.contains(Coordinate2Long.toMegaChunkCoordinate(chunkCoordinate));
+    }
+
+    // Moves whenever a chunk's or mega's trees come onto the GPU or leave it
+    public int getTreeDrawnRevision() {
+        return treeDrawnRevision;
     }
 
     boolean isChunkDrawn(GridInstance grid, long chunkCoordinate) {
@@ -1046,7 +1096,9 @@ public class WorldRenderManager extends ManagerPackage {
     public void removeMegaInstance(long coordinate) {
         removeEntries(coordinate, megaEntries);
         removeTrees(coordinate, megaTrees);
-        drawnMegaTrees.remove(coordinate);
+
+        if (drawnMegaTrees.remove(coordinate))
+            treeDrawnRevision++;
     }
 
     private void removeEntries(

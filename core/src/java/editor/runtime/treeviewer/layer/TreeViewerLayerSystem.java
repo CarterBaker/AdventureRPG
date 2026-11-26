@@ -14,14 +14,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class TreeViewerLayerSystem extends SystemPackage {
 
     /*
-     * The Tree Viewer's layers, one for every LOD level the world draws a
-     * tree at, as a game engine's mesh viewer lists its levels of detail, and
-     * last the impostor baked from the shared tree the species' LOD seed
-     * grows, each with an eye.
+     * The Tree Viewer's layers, one for every mesh level the world draws a
+     * tree at before its impostor stage, as a game engine's mesh viewer lists
+     * its levels of detail, and last that stage itself, the impostor baked
+     * from the shared tree the species' LOD seed grows in full, each with an
+     * eye.
      * Every layer stands on the same root, so the viewer draws only the
      * topmost layer whose eye is open, as an image editor shows the top layer
-     * over those beneath; a level from the shared level on is named for the
-     * impostor the world draws it as. The layer picked is
+     * over those beneath; levels from the shared level on are the impostor
+     * stage's and not listed. The layer picked is
      * the Layers tab's choice and nothing more. Layers are keyed by stable
      * names, so the choice holds as the preview is built again.
      */
@@ -54,11 +55,17 @@ public class TreeViewerLayerSystem extends SystemPackage {
 
     // Layers \\
 
-    // Every layer, finest first, the one picked active, each with its eye
+    // Every listed layer, finest first, the one picked active, each with its eye
     public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
         for (int layer = 0; layer < layer2Shown.length; layer++)
-            roots.add(new LayerNodeStruct(
-                    toKey(layer), getName(layer), layer == pickedLayer, true, layer2Shown[layer], false));
+            if (isListed(layer))
+                roots.add(new LayerNodeStruct(
+                        toKey(layer), getName(layer), layer == pickedLayer, true, layer2Shown[layer], false));
+    }
+
+    // Every mesh level before the impostor stage, and the impostor
+    private boolean isListed(int layer) {
+        return layer == EditorSetting.TREE_VIEWER_LAYER_SHARED || layer < treeViewerManager.getSharedLevel();
     }
 
     public void select(String layerKey) {
@@ -106,13 +113,12 @@ public class TreeViewerLayerSystem extends SystemPackage {
     public int getShownLayer() {
 
         for (int layer = 0; layer < layer2Shown.length; layer++)
-            if (layer2Shown[layer])
+            if (layer2Shown[layer] && isListed(layer))
                 return layer;
 
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
-    // A layer's name, a level the world draws as its impostor marked so
     public String getName(int layer) {
 
         if (layer == EditorSetting.TREE_VIEWER_LAYER_SHARED)
@@ -121,9 +127,7 @@ public class TreeViewerLayerSystem extends SystemPackage {
         if (layer == EngineSetting.TREE_LOD_FULL)
             return TreeViewerSetting.LAYER_NAME_FULL;
 
-        String name = TreeViewerSetting.LAYER_NAME_LEVEL + layer;
-
-        return layer >= treeViewerManager.getSharedLevel() ? name + TreeViewerSetting.LAYER_NAME_SHARED_SUFFIX : name;
+        return TreeViewerSetting.LAYER_NAME_LEVEL + layer;
     }
 
     public int getRevision() {

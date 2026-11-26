@@ -9,29 +9,34 @@ public final class TreeLodUtility extends EngineUtility {
 
     /*
      * The LOD ladder every tree is drawn by, whichever chunk, mega or macro
-     * tile draws it. A tree's LOD is one code: its level, plus the level
-     * count when that level is drawn as its species' impostor rather than as
-     * its own. resolveLevel() is the one place a distance picks a coarse level,
-     * holding a tree on its level a margin past either end so a player
-     * pacing along a line never has the trees on it redrawn back and forth.
-     * The girth a level hides below grows with the distance it starts at, as
-     * a limb's width on screen shrinks with distance. writeImpostorInstance()
-     * is the one place a tree's impostor instance is laid out, for registered
-     * trees and distant terrain's sites alike.
+     * tile draws it: its own mesh levels, from the full tree on, then one
+     * last stage, its species' impostor, from the shared level on. A tree's
+     * LOD is its mesh level, or TREE_LOD_IMPOSTOR at that last stage, which
+     * falls back to the coarsest mesh level while its species has no impostor
+     * or something altered the tree. resolveLevel() is the one place a
+     * distance picks a mesh level, holding a tree on its level a margin past
+     * either end so a player pacing along a line never has the trees on it
+     * redrawn back and forth. The girth a level hides below grows with the
+     * distance it starts at, as a limb's width on screen shrinks with
+     * distance. writeImpostorInstance() is the one place a tree's impostor
+     * instance is laid out, for registered trees and distant terrain's sites
+     * alike.
      */
 
     // Code \\
 
-    public static int encode(int level, boolean shared) {
-        return shared && level != EngineSetting.TREE_LOD_FULL ? level + EngineSetting.TREE_LOD_LEVEL_COUNT : level;
+    // The LOD a tree at a mesh level stands at: the impostor stage from the shared level on
+    public static int resolveLod(int level, int sharedLevel) {
+        return level >= sharedLevel ? EngineSetting.TREE_LOD_IMPOSTOR : level;
     }
 
+    // The mesh level a LOD draws its tree at: its own, or the coarsest at the impostor stage
     public static int toLevel(int lod) {
-        return lod % EngineSetting.TREE_LOD_LEVEL_COUNT;
+        return lod == EngineSetting.TREE_LOD_IMPOSTOR ? EngineSetting.TREE_LOD_LEVEL_COUNT - 1 : lod;
     }
 
-    public static boolean isShared(int lod) {
-        return lod >= EngineSetting.TREE_LOD_LEVEL_COUNT;
+    public static boolean isImpostorStage(int lod) {
+        return lod == EngineSetting.TREE_LOD_IMPOSTOR;
     }
 
     // Level \\
@@ -66,12 +71,12 @@ public final class TreeLodUtility extends EngineUtility {
                 EngineSetting.TREE_LOD_START_BLOCKS[level] * EngineSetting.TREE_LOD_GIRTH_PER_BLOCK);
     }
 
-    // Shared \\
+    // Impostor \\
 
-    // True while a tree at a LOD is drawn as its species' impostor: from the shared level on, nothing having altered
+    // True while a tree at a LOD is drawn as its species' impostor: at the impostor stage, nothing having altered
     // it, once its species has one baked
     public static boolean isImpostor(TreeHandle treeHandle, int lod, boolean altered) {
-        return isShared(lod) && !altered && treeHandle.getImpostor() != null;
+        return isImpostorStage(lod) && !altered && treeHandle.getImpostor() != null;
     }
 
     // One tree's impostor instance written at an offset: its root chunk as raw bits and its place in it, the height

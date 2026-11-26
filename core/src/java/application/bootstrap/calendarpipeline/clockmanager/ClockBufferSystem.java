@@ -77,4 +77,10 @@ class ClockBufferSystem extends SystemPackage {
         timeData.updateUniform(EngineSetting.UNIFORM_CURRENT_DAY, clockHandle.getCurrentDayOfMonth());
         uboManager.push(timeData);
     }
+
+    // Accessible \\
+
+    float getElapsedTime() {
+        return elapsedTime;
+    }
 }

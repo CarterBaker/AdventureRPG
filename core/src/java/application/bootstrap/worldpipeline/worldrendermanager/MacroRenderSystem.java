@@ -443,7 +443,8 @@ class MacroRenderSystem extends SystemPackage {
         pushCoverage(macro);
     }
 
-    // Only the stretch of the tile inside the grid's square footprint can hold a drawn chunk
+    // Only the stretch of the tile inside the grid's square footprint can hold a drawn chunk: the first mask marks
+    // every chunk whose ground the grid draws, the second every chunk whose trees the grid shows whole
     private void resolveCoverage(MacroChunkInstance macro, GridInstance grid) {
 
         Arrays.fill(coverageScratch, 0);
@@ -468,13 +469,20 @@ class MacroRenderSystem extends SystemPackage {
         for (int z = firstZ; z < endZ; z++) {
             for (int x = firstX; x < endX; x++) {
 
-                if (!worldRenderManager.isChunkDrawn(grid, Coordinate2Long.pack(originX + x, originZ + z)))
-                    continue;
-
+                long chunkCoordinate = Coordinate2Long.pack(originX + x, originZ + z);
                 int index = z * macroChunkSize + x;
-                coverageScratch[index / coverageBitsPerWord] |= 1 << (index % coverageBitsPerWord);
+
+                if (worldRenderManager.isChunkDrawn(grid, chunkCoordinate))
+                    markCoverage(index);
+
+                if (worldRenderManager.isChunkTreesShown(grid, chunkCoordinate))
+                    markCoverage(index + EngineSetting.MACRO_COVERAGE_TREE_BIT_OFFSET);
             }
         }
+    }
+
+    private void markCoverage(int bit) {
+        coverageScratch[bit / coverageBitsPerWord] |= 1 << (bit % coverageBitsPerWord);
     }
 
     private void pushCoverage(MacroChunkInstance macro) {

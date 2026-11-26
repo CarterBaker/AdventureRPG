@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.treemanager;
 
 import java.nio.ByteBuffer;
 
+import application.bootstrap.calendarpipeline.clockmanager.ClockManager;
 import application.bootstrap.geometrypipeline.compositebuffer.CompositeBufferInstance;
 import application.bootstrap.geometrypipeline.compositebuffermanager.CompositeBufferManager;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
@@ -17,40 +18,46 @@ import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeImpostorStruct;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.util.TreeLodUtility;
+import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import it.unimi.dsi.fastutil.objects.Reference2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 
 public class TreeImpostorRenderSystem extends SystemPackage {
 
     /*
-     * Draws every tree at an impostor level as one GPU instance of a single
+     * Draws every tree at its impostor stage as one GPU instance of a single
      * camera-facing quad, all species in one instanced draw, each instance
-     * naming its species' layer of the impostor arrays. Instances live apart
-     * from every chunk, mega and macro tile: the registered trees at impostor
-     * levels and the sites the macro terrain hands over, those whose root
-     * chunk the grid holds left to the registry, so no tree shows twice. The
-     * instance data is laid again only when the registry, a tree's LOD, a
-     * macro tile's sites or a species' impostor changed, so a tree passing
-     * between impostor levels rebuilds nothing else. A tree leaving its
-     * impostor keeps it for a hold, long enough for the mesh its chunk or
-     * mega draws instead to land, so it never blinks out between them. Each
-     * species' impostor is written into its layer the frame it is first seen
-     * or baked anew.
+     * naming its species' layer of the impostor arrays and the three frames
+     * nearest the view blended. Instances live apart from every chunk, mega
+     * and macro tile: the registered trees at their impostor stage, and the
+     * sites the macro terrain hands over, those the grid shows itself left out
+     * by their registry key, so no tree shows twice and none goes missing. The
+     * instance data is laid again only when the registry, a tree's LOD, the
+     * trees the grid has on the GPU, a macro tile's sites or a species'
+     * impostor changed, at most once an interval, so a tree at its impostor
+     * stage rebuilds nothing else. Every instance carries the time its fade
+     * starts on the shaders' clock: a tree whose LOD has just brought it to
+     * its impostor rises in through the trees' dither while its mesh stands,
+     * and one leaving it keeps it for a hold, falling away only once the mesh
+     * taking its place has risen; trees arriving already there stand whole.
+     * Each species' impostor is written into its layer the frame it is first
+     * seen or baked anew.
      */
 
     // Internal
     private TreeManager treeManager;
     private TreeRegistryBranch treeRegistryBranch;
     private TreeDetailBranch treeDetailBranch;
+    private WorldRenderManager worldRenderManager;
+    private ClockManager clockManager;
     private WorldStreamManager worldStreamManager;
     private VAOManager vaoManager;
     private MeshManager meshManager;
@@ -70,6 +77,7 @@ public class TreeImpostorRenderSystem extends SystemPackage {
 
     // Macro — every tile's sites, laid as instances, and the revision moving with them
     private Long2ObjectOpenHashMap<FloatArrayList> macroCoordinate2Sites;
+    private ObjectArrayList<FloatArrayList> siteLists;
     private ObjectArrayList<FloatArrayList> siteListPool;
     private int macroRevision;
 
@@ -78,13 +86,22 @@ public class TreeImpostorRenderSystem extends SystemPackage {
     private ReferenceOpenHashSet<TreeInstance> nowShown;
     private ObjectArrayList<TreeInstance> holdTrees;
     private FloatArrayList holdSeconds;
+    private FloatArrayList holdFallStarts;
+
+    // Fades — the trees in the registry at the last laying, and when each tree shown began rising
+    private ReferenceOpenHashSet<TreeInstance> registeredTrees;
+    private ReferenceOpenHashSet<TreeInstance> nowRegistered;
+    private Reference2FloatOpenHashMap<TreeInstance> riseStarts;
+    private Reference2FloatOpenHashMap<TreeInstance> nowRiseStarts;
 
     // Laying — the revisions the instances were last laid at, and the scratch they are laid through
     private int laidRegistryRevision;
     private int laidDetailRevision;
     private int laidMacroRevision;
     private int laidImpostorRevision;
+    private int laidTreeDrawnRevision;
     private int impostorRevision;
+    private float sinceLaid;
     private ObjectArrayList<TreeInstance> trees;
     private float[] instance;
 
@@ -95,6 +112,7 @@ public class TreeImpostorRenderSystem extends SystemPackage {
 
         // Macro
         this.macroCoordinate2Sites = new Long2ObjectOpenHashMap<>();
+        this.siteLists = new ObjectArrayList<>();
         this.siteListPool = new ObjectArrayList<>();
 
         // Hold
@@ -102,6 +120,13 @@ public class TreeImpostorRenderSystem extends SystemPackage {
         this.nowShown = new ReferenceOpenHashSet<>();
         this.holdTrees = new ObjectArrayList<>();
         this.holdSeconds = new FloatArrayList();
+        this.holdFallStarts = new FloatArrayList();
+
+        // Fades
+        this.registeredTrees = new ReferenceOpenHashSet<>();
+        this.nowRegistered = new ReferenceOpenHashSet<>();
+        this.riseStarts = new Reference2FloatOpenHashMap<>();
+        this.nowRiseStarts = new Reference2FloatOpenHashMap<>();
 
         // Laying
         this.laidRegistryRevision = EngineSetting.INDEX_NOT_FOUND;
@@ -114,6 +139,8 @@ public class TreeImpostorRenderSystem extends SystemPackage {
         this.treeManager = get(TreeManager.class);
         this.treeRegistryBranch = get(TreeRegistryBranch.class);
         this.treeDetailBranch = get(TreeDetailBranch.class);
+        this.worldRenderManager = get(WorldRenderManager.class);
+        this.clockManager = get(ClockManager.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.vaoManager = get(VAOManager.class);
         this.meshManager = get(MeshManager.class);
@@ -187,6 +214,7 @@ public class TreeImpostorRenderSystem extends SystemPackage {
 
         uploadLayers();
         advanceHolds(internal.getDeltaTime());
+        sinceLaid += internal.getDeltaTime();
 
         if (isStale())
             layInstances();
@@ -251,6 +279,7 @@ public class TreeImpostorRenderSystem extends SystemPackage {
 
         stored.addAll(sites);
         macroCoordinate2Sites.put(macroCoordinate, stored);
+        siteLists.add(stored);
         macroRevision++;
     }
 
@@ -261,6 +290,7 @@ public class TreeImpostorRenderSystem extends SystemPackage {
         if (stored == null)
             return;
 
+        siteLists.remove(stored);
         stored.clear();
         siteListPool.push(stored);
         macroRevision++;
@@ -282,71 +312,112 @@ public class TreeImpostorRenderSystem extends SystemPackage {
 
             holdTrees.remove(i);
             holdSeconds.removeFloat(i);
+            holdFallStarts.removeFloat(i);
             impostorRevision++;
         }
     }
 
     // Laying \\
 
+    // Due when what the instances are laid from moved since, and no sooner than an interval after the last laying
     private boolean isStale() {
-        return treeRegistryBranch.getRevision() != laidRegistryRevision
-                || treeDetailBranch.getRevision() != laidDetailRevision
-                || macroRevision != laidMacroRevision
-                || impostorRevision != laidImpostorRevision;
+        return sinceLaid >= EngineSetting.TREE_IMPOSTOR_LAY_SECONDS
+                && (treeRegistryBranch.getRevision() != laidRegistryRevision
+                        || treeDetailBranch.getRevision() != laidDetailRevision
+                        || worldRenderManager.getTreeDrawnRevision() != laidTreeDrawnRevision
+                        || macroRevision != laidMacroRevision
+                        || impostorRevision != laidImpostorRevision);
     }
 
-    // Every instance laid afresh: the registered trees at impostor levels and those held, then every macro site
-    // whose root chunk the grid does not hold
+    // Every instance laid afresh: the registered trees at their impostor stage and those held, then every macro site
+    // the grid does not show itself
     private void layInstances() {
 
+        float now = clockManager.getShaderTime();
+
+        sinceLaid = 0f;
         laidRegistryRevision = treeRegistryBranch.getRevision();
         laidDetailRevision = treeDetailBranch.getRevision();
+        laidTreeDrawnRevision = worldRenderManager.getTreeDrawnRevision();
         laidMacroRevision = macroRevision;
         laidImpostorRevision = impostorRevision;
 
         buffer.clear();
         nowShown.clear();
+        nowRegistered.clear();
+        nowRiseStarts.clear();
         treeRegistryBranch.collectTrees(trees);
 
-        for (int i = 0; i < trees.size(); i++) {
+        for (int i = 0; i < trees.size(); i++)
+            layTree(trees.get(i), now);
 
-            TreeInstance tree = trees.get(i);
+        for (int i = 0; i < holdTrees.size(); i++)
+            if (!nowShown.contains(holdTrees.get(i)))
+                addTree(holdTrees.get(i), holdFallStarts.getFloat(i), EngineSetting.TREE_IMPOSTOR_FALLING);
 
-            if (TreeLodUtility.isImpostor(tree.getTreeHandle(), tree.getLod(), tree.isAltered())) {
-                nowShown.add(tree);
-                addTree(tree);
-                continue;
-            }
+        trees.clear();
+        swapLaying();
+
+        for (int i = 0; i < siteLists.size(); i++)
+            addSites(siteLists.get(i));
+    }
+
+    // A registered tree at its impostor stage laid, rising when its LOD has just brought it there and whole when it
+    // came into the registry already there; one leaving its impostor held, falling away at its hold's end
+    private void layTree(TreeInstance tree, float now) {
+
+        nowRegistered.add(tree);
+
+        if (!TreeLodUtility.isImpostor(tree.getTreeHandle(), tree.getLod(), tree.isAltered())) {
 
             if (shownTrees.contains(tree) && !holdTrees.contains(tree)) {
                 holdTrees.add(tree);
                 holdSeconds.add(EngineSetting.TREE_IMPOSTOR_HOLD_SECONDS);
+                holdFallStarts.add(now + EngineSetting.TREE_IMPOSTOR_HOLD_SECONDS
+                        - EngineSetting.TREE_IMPOSTOR_FADE_SECONDS);
             }
+
+            return;
         }
 
-        for (int i = 0; i < holdTrees.size(); i++)
-            if (!nowShown.contains(holdTrees.get(i)))
-                addTree(holdTrees.get(i));
+        float start = shownTrees.contains(tree)
+                ? riseStarts.getFloat(tree)
+                : registeredTrees.contains(tree) ? now : EngineSetting.TREE_IMPOSTOR_WHOLE_START;
 
-        trees.clear();
-
-        ReferenceOpenHashSet<TreeInstance> swap = shownTrees;
-        shownTrees = nowShown;
-        nowShown = swap;
-
-        ObjectIterator<FloatArrayList> sites = macroCoordinate2Sites.values().iterator();
-
-        while (sites.hasNext())
-            addSites(sites.next());
+        nowShown.add(tree);
+        nowRiseStarts.put(tree, start);
+        addTree(tree, start, EngineSetting.TREE_IMPOSTOR_RISING);
     }
 
-    private void addTree(TreeInstance tree) {
-        if (TreeLodUtility.writeImpostorInstance(
+    // This laying's sets taken as the last, the last ones emptied for the next
+    private void swapLaying() {
+
+        ReferenceOpenHashSet<TreeInstance> shown = shownTrees;
+        ReferenceOpenHashSet<TreeInstance> registered = registeredTrees;
+        Reference2FloatOpenHashMap<TreeInstance> starts = riseStarts;
+
+        shownTrees = nowShown;
+        nowShown = shown;
+        registeredTrees = nowRegistered;
+        nowRegistered = registered;
+        riseStarts = nowRiseStarts;
+        nowRiseStarts = starts;
+    }
+
+    private void addTree(TreeInstance tree, float fadeStart, float fadeDirection) {
+
+        if (!TreeLodUtility.writeImpostorInstance(
                 tree.getTreeHandle(), tree.getSeed(), tree.getMatureHeight(), tree.getAge(),
                 tree.getAnchorX(), tree.getAnchorZ(), tree.getBaseY(), instance, 0))
-            buffer.addInstance(instance);
+            return;
+
+        instance[EngineSetting.TREE_IMPOSTOR_FADE_START_FLOAT] = fadeStart;
+        instance[EngineSetting.TREE_IMPOSTOR_FADE_DIRECTION_FLOAT] = fadeDirection;
+        buffer.addInstance(instance);
     }
 
+    // Every site of a macro tile laid, but for those the grid shows itself: a tree registered there drawn by its
+    // impostor, held, or standing in trees the grid has on the GPU
     private void addSites(FloatArrayList sites) {
 
         float[] elements = sites.elements();
@@ -354,16 +425,28 @@ public class TreeImpostorRenderSystem extends SystemPackage {
 
         for (int offset = 0; offset + floats <= sites.size(); offset += floats) {
 
-            long rootChunk = Coordinate2Long.pack(
-                    Float.floatToRawIntBits(elements[offset + EngineSetting.TREE_IMPOSTOR_CHUNK_X_FLOAT]),
-                    Float.floatToRawIntBits(elements[offset + EngineSetting.TREE_IMPOSTOR_CHUNK_Z_FLOAT]));
+            TreeInstance tree = treeRegistryBranch.find(resolveSiteKey(elements, offset));
 
-            if (worldStreamManager.getChunkInstance(rootChunk) != null)
+            if (tree != null && (shownTrees.contains(tree) || holdTrees.contains(tree)
+                    || worldRenderManager.isChunkTreesOnGpu(tree.getRootChunkCoordinate())))
                 continue;
 
             System.arraycopy(elements, offset, instance, 0, floats);
             buffer.addInstance(instance);
         }
+    }
+
+    // The registry key of the tree a site's instance stands for, from its root chunk, its place in it and its layer
+    private long resolveSiteKey(float[] elements, int offset) {
+
+        int chunkSize = EngineSetting.CHUNK_SIZE;
+        long anchorX = (long) Float.floatToRawIntBits(elements[offset + EngineSetting.TREE_IMPOSTOR_CHUNK_X_FLOAT])
+                * chunkSize + (long) Math.floor(elements[offset + EngineSetting.TREE_IMPOSTOR_LOCAL_X_FLOAT]);
+        long anchorZ = (long) Float.floatToRawIntBits(elements[offset + EngineSetting.TREE_IMPOSTOR_CHUNK_Z_FLOAT])
+                * chunkSize + (long) Math.floor(elements[offset + EngineSetting.TREE_IMPOSTOR_LOCAL_Z_FLOAT]);
+
+        return TreeInstance.toRegistryKey(
+                anchorX, anchorZ, (short) elements[offset + EngineSetting.TREE_IMPOSTOR_LAYER_FLOAT]);
     }
 
     // Accessible \\

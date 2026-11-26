@@ -14,6 +14,13 @@ bool isChunkDrawnByGrid(int index) {
     return ((vector[word % MACRO_COVERAGE_WORDS_PER_VECTOR] >> (index % MACRO_COVERAGE_BITS_PER_WORD)) & 1) != 0;
 }
 
+// True where the chunk grid has the trees of one chunk of this macro tile on the GPU, so a tree this tile draws in
+// their stead yields only once they stand, never leaving the chunk bare.
+
+bool isTreesDrawnByGrid(int index) {
+    return isChunkDrawnByGrid(index + MACRO_COVERAGE_TREE_BIT_OFFSET);
+}
+
 // True where the chunk grid draws the chunk of this macro tile that a tile-local position lies over.
 
 bool isDrawnByChunkGrid(vec2 tilePos) {

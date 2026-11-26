@@ -211,9 +211,10 @@ class TreeDetailBranch extends BranchPackage {
             if (nearest == EngineSetting.INDEX_NOT_FOUND)
                 return EngineSetting.TREE_LOD_FULL + 1;
 
-            int currentLevel = currentLod == EngineSetting.TREE_LOD_NONE
-                    ? EngineSetting.TREE_LOD_NONE
-                    : TreeLodUtility.toLevel(currentLod);
+            int sharedLevel = anchorSharedLevels.getInt(nearest);
+            int currentLevel = currentLod == EngineSetting.TREE_LOD_IMPOSTOR
+                    ? Math.min(sharedLevel, EngineSetting.TREE_LOD_LEVEL_COUNT - 1)
+                    : currentLod;
             int reachSq = currentLevel == EngineSetting.TREE_LOD_FULL
                     ? anchorKeepsSq.getInt(nearest)
                     : anchorReachesSq.getInt(nearest);
@@ -223,7 +224,7 @@ class TreeDetailBranch extends BranchPackage {
 
             int level = TreeLodUtility.resolveLevel((float) Math.sqrt(nearestSq) * chunkSize, currentLevel);
 
-            return TreeLodUtility.encode(level, level >= anchorSharedLevels.getInt(nearest));
+            return TreeLodUtility.resolveLod(level, sharedLevel);
         }
     }
 
