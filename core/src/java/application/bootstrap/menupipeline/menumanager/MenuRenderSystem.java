@@ -464,8 +464,8 @@ public class MenuRenderSystem extends SystemPackage {
         float availableW = resolveTextWidth(element);
         float availableH = element.getComputedH() - EngineSetting.FONT_FIT_PADDING_Y_PIXELS * 2f;
 
-        if (font.getTextWidth() > 0f && availableW > 0f)
-            scale = Math.min(scale, availableW / font.getTextWidth());
+        if (font.getWholeTextWidth() > 0f && availableW > 0f)
+            scale = Math.min(scale, availableW / font.getWholeTextWidth());
 
         if (font.getTextHeight() > 0f && availableH > 0f)
             scale = Math.min(scale, availableH / font.getTextHeight());
@@ -478,8 +478,7 @@ public class MenuRenderSystem extends SystemPackage {
 
         float availableW = resolveTextWidth(element);
 
-        if (availableW > 0f && font.getTextWidth() * scale > availableW)
-            font.fitWidth(availableW / scale);
+        font.fitWidth(availableW > 0f ? availableW / scale : Float.POSITIVE_INFINITY);
     }
 
     private float resolveTextWidth(ElementInstance element) {

@@ -14,6 +14,7 @@ import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
 import editor.runtime.menueventsmanager.menus.ExportDialogBranch;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
+import editor.runtime.menueventsmanager.menus.search.EditorSearchBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsBranch;
 import engine.input.Input;
 import engine.root.ContextPackage;
@@ -58,6 +59,7 @@ public class ShortcutManager extends ManagerPackage {
     private NameDialogBranch nameDialogBranch;
     private ExportDialogBranch exportDialogBranch;
     private EditorSettingsBranch editorSettingsBranch;
+    private EditorSearchBranch editorSearchBranch;
 
     // Palette
     private Object2IntOpenHashMap<String> shortcutName2ShortcutID;
@@ -98,6 +100,7 @@ public class ShortcutManager extends ManagerPackage {
         this.nameDialogBranch = get(NameDialogBranch.class);
         this.exportDialogBranch = get(ExportDialogBranch.class);
         this.editorSettingsBranch = get(EditorSettingsBranch.class);
+        this.editorSearchBranch = get(EditorSearchBranch.class);
     }
 
     @Override
@@ -319,7 +322,10 @@ public class ShortcutManager extends ManagerPackage {
 
     // A dialog taking typed text, or the settings dialog, keeps every key to itself
     private boolean isWithheld() {
-        return nameDialogBranch.isOpen() || exportDialogBranch.isOpen() || editorSettingsBranch.isOpen();
+        return nameDialogBranch.isOpen()
+                || exportDialogBranch.isOpen()
+                || editorSettingsBranch.isOpen()
+                || editorSearchBranch.isFocused();
     }
 
     // Hints \\

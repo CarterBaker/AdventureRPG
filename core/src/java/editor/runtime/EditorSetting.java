@@ -112,9 +112,10 @@ public class EditorSetting {
     public static final String MENU_EDITOR_TOOLBAR = "editor/EditorWindow/Toolbar";
     public static final String MENU_EDITOR_TITLE_BAR = "editor/EditorWindow/TitleBar";
 
-    // Menu Bar — the main window's menus between the divider after File and Edit and the right-hand menus: each its
+    // Menu Bar — the main window's menus between the divider after File, Edit and Settings and the search: each its
     // preferred width while the bar has room, all shrinking together as it narrows, then wrapping onto more rows,
-    // the bar growing and the dock shrinking beneath it
+    // the bar growing and the dock shrinking beneath it; a divider closes them, and the search is centred between it
+    // and the divider before Layouts, as wide as the room left allows within its bounds
     public static final String MENU_BAR_ELEMENT = "toolbar";
     public static final String[] MENU_BAR_MENU_ELEMENTS = {
             "tools_menu",
@@ -126,8 +127,17 @@ public class EditorSetting {
             "world_menu",
             "media_menu",
             "debug_menu" };
-    public static final float MENU_BAR_LEFT_PIXELS = 82f;
-    public static final float MENU_BAR_RIGHT_RESERVE_PIXELS = 332f;
+    public static final String MENU_BAR_END_DIVIDER_ELEMENT = "menus_divider";
+    public static final float MENU_BAR_LEFT_PIXELS = 114f;
+    public static final float MENU_BAR_RIGHT_EDGE_PIXELS = 240f;
+    public static final float MENU_BAR_DIVIDER_WIDTH_PIXELS = 12f;
+    public static final float MENU_BAR_SEARCH_GAP_PIXELS = 12f;
+    public static final float MENU_BAR_SEARCH_MIN_WIDTH_PIXELS = 160f;
+    public static final float MENU_BAR_SEARCH_MAX_WIDTH_PIXELS = 320f;
+    public static final float MENU_BAR_RIGHT_RESERVE_PIXELS = MENU_BAR_RIGHT_EDGE_PIXELS
+            + MENU_BAR_DIVIDER_WIDTH_PIXELS
+            + 2f * MENU_BAR_SEARCH_GAP_PIXELS
+            + MENU_BAR_SEARCH_MIN_WIDTH_PIXELS;
     public static final float MENU_BAR_MENU_WIDTH_PIXELS = 100f;
     public static final float MENU_BAR_MENU_MIN_WIDTH_PIXELS = 72f;
     public static final float MENU_BAR_ROW_PIXELS = 32f;
@@ -135,6 +145,32 @@ public class EditorSetting {
     public static final float MENU_BAR_DOCK_INSET_X_PIXELS = 8f;
     public static final float MENU_BAR_DOCK_INSET_Y_PIXELS = 60f;
     public static final String MENU_EDITOR_NAME_DIALOG = "editor/EditorWindow/NameDialog";
+
+    // Search — the toolbar's search everywhere over the toolbar menus' items, and the Settings dialog's search over
+    // its rows, both typed through SearchFieldStruct
+    public static final int SEARCH_QUERY_MAX_LENGTH = 48;
+    public static final String SEARCH_CARET = "|";
+    public static final String SEARCH_EDITOR_PLACEHOLDER = "Search the editor";
+    public static final String SEARCH_SETTINGS_PLACEHOLDER = "Search settings";
+    public static final String SEARCH_SECTION_SUFFIX = "_header";
+    public static final String SEARCH_PATH_SEPARATOR = " / ";
+    public static final int SEARCH_RESULTS_MAX = 10;
+    public static final float SEARCH_RESULT_ROW_PIXELS = 28f;
+    public static final float SEARCH_RESULTS_PADDING_PIXELS = 14f;
+    public static final float SEARCH_RESULTS_MIN_WIDTH_PIXELS = 320f;
+    public static final int ENTRY_SEARCH_RESULTS = 4;
+    public static final String MENU_EDITOR_SEARCH_RESULTS_PANEL = "editor/EditorWindow/search_results_panel";
+    public static final String MENU_EDITOR_SEARCH_RESULT_TEMPLATE = "editor/EditorWindow/search_result_template";
+    public static final String ELEMENT_SEARCH_MENU = "search_menu";
+    public static final String ELEMENT_SEARCH_LABEL = "search_label";
+    public static final String ELEMENT_SEARCH_RESULTS_CONTENT = "search_results_content";
+    public static final String ELEMENT_SEARCH_RESULTS_LIST = "search_results_list";
+    public static final String ELEMENT_SEARCH_RESULT_LABEL = "search_result_label";
+    public static final String ELEMENT_SEARCH_RESULT_PATH = "search_result_path";
+    public static final String ELEMENT_SETTINGS_SEARCH = "settings_dialog_search";
+    public static final String ELEMENT_SETTINGS_SEARCH_LABEL = "settings_dialog_search_label";
+    public static final String SETTINGS_STATUS_SEARCH_NONE = "No setting matches the search.";
+    public static final String SETTINGS_STATUS_SEARCH_COUNT = " settings match the search.";
     public static final String MENU_EDITOR_EXPORT_DIALOG = "editor/EditorWindow/ExportDialog";
     public static final String MENU_EDITOR_LAYOUT_ITEM_TEMPLATE = "editor/EditorWindow/layout_item_template";
     public static final String MENU_EDITOR_SETTINGS_DIALOG = "editor/EditorWindow/SettingsDialog";
@@ -160,6 +196,7 @@ public class EditorSetting {
     public static final String ELEMENT_SETTINGS_TAB_MARKER = "settings_tab_marker";
     public static final String ELEMENT_SETTINGS_ROW_LABEL = "settings_row_label";
     public static final String ELEMENT_SETTINGS_ROW_VALUE = "settings_row_value";
+    public static final String ELEMENT_SETTINGS_SECTION_HEADER = "settings_section_header";
     public static final String ELEMENT_SETTINGS_ROW_PREVIOUS = "settings_row_previous";
     public static final String ELEMENT_SETTINGS_ROW_NEXT = "settings_row_next";
     public static final String ELEMENT_SETTINGS_SLIDER_TRACK = "settings_slider_track";

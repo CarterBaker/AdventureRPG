@@ -602,10 +602,10 @@ public class ElementInstance extends InstancePackage {
     // without text
     public float resolveTextWidth(float fontSize) {
 
-        if (fontInstance == null || fontInstance.getTextWidth() <= 0f)
+        if (fontInstance == null || fontInstance.getWholeTextWidth() <= 0f)
             return 0f;
 
-        return fontInstance.getTextWidth() * fontSize / fontInstance.getHandle().getRasterPixelSize()
+        return fontInstance.getWholeTextWidth() * fontSize / fontInstance.getHandle().getRasterPixelSize()
                 + EngineSetting.FONT_FIT_PADDING_X_PIXELS * 2f;
     }
 

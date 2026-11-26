@@ -37,6 +37,7 @@ import editor.runtime.menueventsmanager.menus.SoundLibraryBranch;
 import editor.runtime.menueventsmanager.menus.WorldEditorBranch;
 import editor.runtime.menueventsmanager.menus.WorldMapBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsBranch;
+import editor.runtime.menueventsmanager.menus.search.EditorSearchBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsColorBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsOptionBranch;
 import editor.runtime.menueventsmanager.menus.settings.EditorSettingsShortcutBranch;
@@ -60,6 +61,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(ExportDialogBranch.class);
         create(NewImageDialogBranch.class);
         create(EditorBranch.class);
+        create(EditorSearchBranch.class);
         create(FileMenuBranch.class);
         create(EditorFrameBranch.class);
         create(TabBranch.class);

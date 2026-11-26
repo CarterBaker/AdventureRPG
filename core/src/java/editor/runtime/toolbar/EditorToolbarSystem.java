@@ -11,6 +11,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.runtime.EditorSetting;
 import editor.runtime.dock.EditorDockSystem;
+import editor.runtime.menueventsmanager.menus.search.EditorSearchBranch;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -27,13 +28,16 @@ public class EditorToolbarSystem extends SystemPackage {
      * re-raised whenever anything has been brought up over it, and given an
      * input rect: the strip above the dock canvas while idle, so it never
      * covers the tabs hover and focus resolve against, and the whole window
-     * while one of its dropdowns is hovered open. Only input changes — the
+     * while one of its dropdowns is hovered open or the search lists its
+     * results below it. Only input changes — the
      * toolbar is never resized for it, so its FBO and layout stay stable. The
      * main window's menus are laid out as every tab strip is
      * (StripLayoutUtility), again only when the window's width moves: each at
      * its preferred width while the bar has room, all shrinking together as it
      * narrows, then wrapping onto more rows, the bar growing and the dock
-     * shrinking beneath it, so no menu is ever hidden.
+     * shrinking beneath it, so no menu is ever hidden. A divider closes the
+     * menus' first row, and the search is centred in the room between it and
+     * the divider before Layouts.
      */
 
     // Internal
@@ -41,12 +45,16 @@ public class EditorToolbarSystem extends SystemPackage {
     private MenuManager menuManager;
     private ElementHitSystem elementHitSystem;
     private EditorDockSystem editorDockSystem;
+    private EditorSearchBranch editorSearchBranch;
 
     // Menus
     private MenuInstance toolbarMenu;
 
-    // Menu Bar — the menus laid out, the bar behind them, the dock beneath and the width they were laid out for
+    // Menu Bar — the menus laid out, the divider after them, the search, the bar behind them, the dock beneath and
+    // the width they were laid out for
     private ObjectArrayList<ElementInstance> barMenus;
+    private ElementInstance endDivider;
+    private ElementInstance search;
     private ElementInstance bar;
     private ElementInstance dock;
     private int shownWidth;
@@ -66,6 +74,7 @@ public class EditorToolbarSystem extends SystemPackage {
         this.menuManager = get(MenuManager.class);
         this.elementHitSystem = get(ElementHitSystem.class);
         this.editorDockSystem = get(EditorDockSystem.class);
+        this.editorSearchBranch = get(EditorSearchBranch.class);
     }
 
     @Override
@@ -79,6 +88,8 @@ public class EditorToolbarSystem extends SystemPackage {
 
         this.toolbarMenu = menuManager.openMenuWindow(menuName, context.getWindow());
         this.bar = findElement(toolbarMenu, EditorSetting.MENU_BAR_ELEMENT);
+        this.endDivider = findElement(toolbarMenu, EditorSetting.MENU_BAR_END_DIVIDER_ELEMENT);
+        this.search = findElement(toolbarMenu, EditorSetting.ELEMENT_SEARCH_MENU);
         this.dock = findElement(editorDockSystem.getBaseMenu(), EditorSetting.MENU_BAR_DOCK_ELEMENT);
 
         for (String menuElement : EditorSetting.MENU_BAR_MENU_ELEMENTS) {
@@ -106,7 +117,10 @@ public class EditorToolbarSystem extends SystemPackage {
         if (w > 0 && w != shownWidth && !barMenus.isEmpty())
             layoutMenuBar(w);
 
-        float inputTop = elementHitSystem.getHoveredMenu() == toolbarMenu ? 0f : editorDockSystem.getDockTop();
+        float inputTop = elementHitSystem.getHoveredMenu() == toolbarMenu
+                || editorSearchBranch.isShowingResults(toolbarMenu)
+                ? 0f
+                : editorDockSystem.getDockTop();
         toolbarWindow.setInputRect(0, inputTop, w, h - inputTop);
 
         if (!windowManager.isFrontmost(toolbarWindow))
@@ -147,6 +161,17 @@ public class EditorToolbarSystem extends SystemPackage {
             menu.setSizeOverride(menuSize);
         }
 
+        float menusEnd = EditorSetting.MENU_BAR_LEFT_PIXELS + Math.min(count, perRow) * menuWidth;
+        float searchStart = menusEnd + EditorSetting.MENU_BAR_DIVIDER_WIDTH_PIXELS;
+        float searchRoom = width - EditorSetting.MENU_BAR_RIGHT_EDGE_PIXELS - searchStart;
+        float searchWidth = Math.clamp(
+                searchRoom - 2f * EditorSetting.MENU_BAR_SEARCH_GAP_PIXELS,
+                EditorSetting.MENU_BAR_SEARCH_MIN_WIDTH_PIXELS,
+                EditorSetting.MENU_BAR_SEARCH_MAX_WIDTH_PIXELS);
+
+        placeOnFirstRow(endDivider, menusEnd, EditorSetting.MENU_BAR_DIVIDER_WIDTH_PIXELS);
+        placeOnFirstRow(search, searchStart + (searchRoom - searchWidth) * 0.5f, searchWidth);
+
         if (bar != null)
             bar.setSizeOverride(new DimensionVector2Struct(
                     DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX),
@@ -160,6 +185,19 @@ public class EditorToolbarSystem extends SystemPackage {
                     DimensionValueStruct.ofPercentWithOffset(
                             EngineSetting.PERCENT_MAX,
                             -EditorSetting.MENU_BAR_DOCK_INSET_Y_PIXELS - extra)));
+    }
+
+    private void placeOnFirstRow(ElementInstance element, float x, float width) {
+
+        if (element == null)
+            return;
+
+        element.setPositionOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(x),
+                DimensionValueStruct.ofAbsolute(0f)));
+        element.setSizeOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(width),
+                DimensionValueStruct.ofAbsolute(EditorSetting.MENU_BAR_ROW_PIXELS)));
     }
 
     // Utility \\

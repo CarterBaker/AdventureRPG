@@ -15,14 +15,16 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   choice every other tab sees at once. Tabs never keep private copies of a shared choice.
 - **Name a tab for what it holds.** A list of brushes is the Brushes tab; a window that paints the world's images is
   the World Editor. Never a generic name that hides what the tab is for.
-- **File and Edit are icons; shared tabs live in the Tools menu.** The toolbar (`menus/editor/EditorWindow.arpg`)
-  opens with File and Edit as square icon buttons (`menus/FileIcon`, a floppy disk; `menus/EditIcon`, a pencil), a thin
-  divider, then the menus. Every other menu lists a tab under the section for what it works on. The tabs whose view
+- **File, Edit and Settings are icons; shared tabs live in the Tools menu.** The toolbar
+  (`menus/editor/EditorWindow.arpg`) opens with File, Edit and Settings as square icon buttons (`menus/FileIcon`, a
+  floppy disk; `menus/EditIcon`, a pencil; `menus/GearIcon`, a gear opening the Settings dialog), a thin divider, the
+  menus, a divider closing them, the search box centred in the room left, a divider, then Layouts. Every divider in the
+  bar is the same thin line, so the groups read alike. Every other menu lists a tab under the section for what it works on. The tabs whose view
   changes with the window worked in last, the ones that serve the others, all sit in the Tools menu, the first: Data
   (Hierarchy, Properties, Layers), Canvas (Tools, Brushes, Stamps, Maps, Color Wheel) and Media (the
   Recorder). A new shared tab joins the Tools menu, never another menu. The sword (`menus/Sword`,
   `EditorSetting.WINDOW_ICON`) is every editor window's OS icon, set by `EditorFrameSystem` through
-  `WindowPlatform.setWindowIcon`, never drawn in the toolbar. The menus between the divider and Settings lay out as
+  `WindowPlatform.setWindowIcon`, never drawn in the toolbar. The menus between the two dividers lay out as
   equal cells (`StripLayoutUtility`'s grid helpers, in `EditorToolbarSystem`): each at its preferred width while the bar has
   room, all shrinking together as it narrows, then wrapping onto more rows, the bar growing and the dock shrinking
   beneath it. A dropdown's height is `"fit"`: `MenuBuilder` makes it the height of the rows it holds as it loads, so a
@@ -139,6 +141,21 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers
   dockers have them; each runs the window's own tool action through `LayersManager.addLayer` / `removeLayer`, so the
   icon, the Tools tab's action and its shortcut do one thing.
+
+## Search
+
+- **One way to type a search.** Every search box types and matches through `SearchFieldStruct`
+  (`editor.runtime.menueventsmanager.menus.search`): a click focuses it, it takes any character the editor font draws,
+  matches ignoring case, shows its placeholder muted while empty and unfocused, Escape clears it and a click elsewhere
+  puts it down. While one is focused the shortcuts hold off (`ShortcutManager.isWithheld`), as for every typing dialog.
+- **The toolbar's search** (`EditorSearchBranch`) is a search everywhere over the toolbar menus' items, read from each
+  menu's own dropdown data the first time it is used (an item is any node with an action and a name; a node whose id
+  ends `_header` names the section below it), so a menu item added is found with nothing more to write. Matches list
+  under the box, names opening with the query first, then names holding it, then items whose menu or section holds it;
+  Up and Down mark one, Enter or a click runs the menu item's own action. Never keep a second list of the menus.
+- **The Settings dialog's search** (`EditorSettingsBranch`) filters the rows of every page by name and value, each
+  page under a header of its own name, a section kept whole when its name or its page's matches; choosing a page
+  clears it.
 
 ## The active window
 

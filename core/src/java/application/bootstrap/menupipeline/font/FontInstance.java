@@ -2,6 +2,7 @@ package application.bootstrap.menupipeline.font;
 
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.texture.TextureHandle;
+import application.bootstrap.shaderpipeline.uniforms.UniformAttributeStruct;
 import application.bootstrap.shaderpipeline.uniforms.UniformStruct;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
@@ -11,9 +12,11 @@ public class FontInstance extends InstancePackage {
 
     /*
      * Per-label font state: its color material, a glyph layout rebuilt by
-     * setText() and cut back to a width behind an ellipsis by fitWidth(), and
-     * screen-space instance data rebuilt by prepareComposite() only when
-     * scale or position change.
+     * setText() only when the text changes and cut back to a width behind an
+     * ellipsis by fitWidth() only when that width changes, and screen-space
+     * instance data rebuilt by prepareComposite() only when the layout, scale
+     * or position change, so a label drawn unchanged frame after frame lays
+     * nothing out again.
      */
 
     static final int FLOATS_PER_GLYPH = 8; // screenX,Y,W,H, u0,v0,uw,vh
@@ -21,11 +24,14 @@ public class FontInstance extends InstancePackage {
     // Internal
     private FontHandle handle;
     private MaterialInstance material;
+    private UniformAttributeStruct<Vector4> colorAttribute;
 
     // Glyph layout — atlas-pixel space, rebuilt by setText
     // Per glyph: cursorX, baselineOffsetY, w, h, u0, v0, uw, vh
     private float[] glyphLayout = new float[0];
     private int glyphCount;
+    private String laidText;
+    private float fittedWidth = Float.NaN;
 
     // Instance data — screen-pixel space, rebuilt by prepareComposite
     private float[] instanceData = new float[0];
@@ -39,6 +45,7 @@ public class FontInstance extends InstancePackage {
 
     // Metrics
     private float textWidth;
+    private float wholeTextWidth;
     private float textHeight;
     private float textBottom;
     private float textTop;
@@ -51,6 +58,7 @@ public class FontInstance extends InstancePackage {
 
     // Constructor \\
 
+    @SuppressWarnings("unchecked")
     public void constructor(FontHandle handle, MaterialInstance material) {
 
         this.handle = handle;
@@ -59,17 +67,31 @@ public class FontInstance extends InstancePackage {
 
         UniformStruct<?> colorUniform = material.getUniform(EngineSetting.SPRITE_COLOR_UNIFORM);
 
-        if (colorUniform != null) {
-            Object val = colorUniform.attribute().getValue();
-            if (val instanceof Vector4 v)
-                color.set(v.x, v.y, v.z, v.w);
-        }
+        if (colorUniform == null)
+            throwException("Uniform '" + EngineSetting.SPRITE_COLOR_UNIFORM + "' not found in material '"
+                    + material.getMaterialName() + "'");
+
+        this.colorAttribute = (UniformAttributeStruct<Vector4>) colorUniform.attribute();
+
+        if (colorAttribute.getValue() instanceof Vector4 v)
+            color.set(v.x, v.y, v.z, v.w);
     }
 
     // Text \\
 
+    // Lays the text out whole; the same text again keeps the layout it has
     public void setText(String text) {
 
+        if (text == null ? laidText == null : text.equals(laidText))
+            return;
+
+        layoutWhole(text);
+    }
+
+    private void layoutWhole(String text) {
+
+        laidText = text;
+        fittedWidth = Float.NaN;
         glyphCount = 0;
         textWidth = 0f;
         textHeight = 0f;
@@ -77,6 +99,7 @@ public class FontInstance extends InstancePackage {
         textTop = 0f;
 
         if (text == null || text.isEmpty()) {
+            wholeTextWidth = 0f;
             textDirty = true;
             return;
         }
@@ -90,13 +113,22 @@ public class FontInstance extends InstancePackage {
         if (cursorX > 0f)
             cursorX -= letterSpacing();
         textWidth = cursorX;
+        wholeTextWidth = cursorX;
         textDirty = true;
         lastScale = Float.NaN;
     }
 
-    // Cuts the laid-out text back to the last glyph that leaves room for the ellipsis within the width, in atlas
-    // pixels, and lays the ellipsis after it; text that already fits is left whole
+    // Cuts the text back to the last glyph that leaves room for the ellipsis within the width, in atlas pixels, and
+    // lays the ellipsis after it; text that fits is laid whole, and the width it was last fitted to changes nothing
     public void fitWidth(float maxWidth) {
+
+        if (maxWidth == fittedWidth)
+            return;
+
+        if (textWidth < wholeTextWidth)
+            layoutWhole(laidText);
+
+        fittedWidth = maxWidth;
 
         if (textWidth <= maxWidth)
             return;
@@ -252,8 +284,12 @@ public class FontInstance extends InstancePackage {
     // Color \\
 
     public void setColor(float r, float g, float b, float a) {
+
+        if (color.x == r && color.y == g && color.z == b && color.w == a)
+            return;
+
         color.set(r, g, b, a);
-        material.setUniform(EngineSetting.SPRITE_COLOR_UNIFORM, color);
+        colorAttribute.set(color);
     }
 
     public Vector4 getColor() {
@@ -294,6 +330,10 @@ public class FontInstance extends InstancePackage {
 
     public float getTextWidth() {
         return textWidth;
+    }
+
+    public float getWholeTextWidth() {
+        return wholeTextWidth;
     }
 
     public float getTextHeight() {

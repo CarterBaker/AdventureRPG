@@ -595,10 +595,15 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-26: Wind. Added `shaders/weather/includes/WindStreaks.glsl`; regenerated
   `shaders/weather/precipitation/PrecipitationShader.fsh`, `shaders/includes/WindData.glsl` and `ubos/WindData.arpg`
   (cartoon wind lines and swirls on gusts, leaves blown and falling where trees stand near).
+- 2026-11-26: Editor cleanup. Added `sprites/menus/GearIcon.png` (Settings beside File and Edit) and
+  `sprites/menus/SearchIcon.png` (the toolbar's and Settings dialog's search boxes); regenerated
+  `menus/editor/EditorWindow.arpg` (Settings as a gear icon, dividers closing the menus and before Layouts, the search
+  box between them with its results panel, the Settings dialog's search box) and `schemas/Shortcuts.arpg` (the
+  `collider` tool, which `shortcuts/CharacterEditor.arpg` names).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
-## Textures and Sprites (2567 files)
+## Textures and Sprites (2569 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -619,6 +624,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `EyeIcon`
 - `FileIcon`
 - `FrameOutline`
+- `GearIcon`
 - `LoopIcon`
 - `MaximizeIcon`
 - `MinimizeIcon`
@@ -630,6 +636,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 - `PlayIcon`
 - `RecordIcon`
 - `RewindIcon`
+- `SearchIcon`
 - `Shadow`
 - `SkipEndIcon`
 - `StatusBar`

@@ -12,12 +12,16 @@ import application.kernel.inputpipeline.inputmanager.InputManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.runtime.EditorSetting;
 import editor.runtime.menueventsmanager.menus.NameDialogBranch;
+import editor.runtime.menueventsmanager.menus.search.SearchFieldStruct;
 import editor.runtime.slider.SliderUtility;
+import engine.input.Buttons;
 import engine.input.Input;
+import engine.input.InputListener;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class EditorSettingsBranch extends BranchPackage {
+public class EditorSettingsBranch extends BranchPackage implements InputListener {
 
     /*
      * The editor's settings dialog, opened from the toolbar over the whole
@@ -28,7 +32,12 @@ public class EditorSettingsBranch extends BranchPackage {
      * settings a Preview tab streams by apply once the dialog closes, which
      * also writes the editor's settings file. Escape, the close button or
      * Done closes it, unless a page is waiting for keys, which Escape then
-     * cancels. The page last shown opens again next time.
+     * cancels. The page last shown opens again next time. The search box in
+     * its header, once clicked, takes the typing: while it holds a query the
+     * list shows every page's rows whose name or value holds it, each page
+     * under its own header, a section's rows kept whole when the section's
+     * name or its page's holds it; Escape clears it and a click elsewhere
+     * puts it down.
      */
 
     // Internal
@@ -48,6 +57,11 @@ public class EditorSettingsBranch extends BranchPackage {
     private ElementInstance placedTrack;
     private int placedStep;
 
+    // Search — the dialog's search box, the window input it types through and the rows a search takes away
+    private SearchFieldStruct searchField;
+    private Input textInput;
+    private ObjectArrayList<ElementInstance> unmatchedRows;
+
     // Dialog
     private MenuInstance dialog;
     private ElementInstance statusLabel;
@@ -62,6 +76,10 @@ public class EditorSettingsBranch extends BranchPackage {
         // Colors
         this.activeTabColor = new MenuColorStruct(ThemeColor.ACCENT, EditorSetting.SETTINGS_TAB_ACTIVE_ALPHA);
         this.activeTabMarkerColor = new MenuColorStruct(ThemeColor.ACCENT, EngineSetting.MENU_THEME_ALPHA_DEFAULT);
+
+        // Search
+        this.searchField = new SearchFieldStruct(EditorSetting.SEARCH_SETTINGS_PLACEHOLDER);
+        this.unmatchedRows = new ObjectArrayList<>();
     }
 
     @Override
@@ -105,6 +123,10 @@ public class EditorSettingsBranch extends BranchPackage {
         this.statusLabel = requireEntryPoint(EditorSetting.ENTRY_SETTINGS_DIALOG_STATUS);
         this.worldSettingsChanged = false;
 
+        searchField.bind(findElement(EditorSetting.ELEMENT_SETTINGS_SEARCH_LABEL));
+        this.textInput = inputManager.getRawInput(dialog.getWindow());
+        textInput.addListener(this);
+
         showTab(activeTab != null ? activeTab : EditorSettingsTab.VALUES[0]);
     }
 
@@ -115,6 +137,12 @@ public class EditorSettingsBranch extends BranchPackage {
             return;
 
         cancelCaptures();
+
+        textInput.removeListener(this);
+        this.textInput = null;
+        searchField.clear();
+        searchField.blur();
+        searchField.bind(null);
 
         if (worldSettingsChanged)
             settingsSystem.onRenderSettingsChanged();
@@ -130,6 +158,23 @@ public class EditorSettingsBranch extends BranchPackage {
 
     public boolean isOpen() {
         return dialog != null;
+    }
+
+    private ElementInstance findElement(String id) {
+
+        ObjectArrayList<ElementInstance> elements = dialog.getElements();
+
+        for (int i = 0; i < elements.size(); i++) {
+
+            ElementInstance found = elements.get(i).getElementData().getId().equals(id)
+                    ? elements.get(i)
+                    : elements.get(i).findChildById(id);
+
+            if (found != null)
+                return found;
+        }
+
+        return null;
     }
 
     private ElementInstance requireEntryPoint(int entryPoint) {
@@ -149,9 +194,10 @@ public class EditorSettingsBranch extends BranchPackage {
 
         EditorSettingsTab tab = EditorSettingsTab.valueOf(tabName);
 
-        if (dialog == null || tab == activeTab)
+        if (dialog == null || tab == activeTab && searchField.isEmpty())
             return;
 
+        searchField.clear();
         showTab(tab);
     }
 
@@ -208,13 +254,30 @@ public class EditorSettingsBranch extends BranchPackage {
 
     // Options \\
 
-    // Fills the option list with the page on show, keeping where it is scrolled to
+    // Fills the option list with the page on show, or with every page's rows the search matches, keeping where it is
+    // scrolled to
     void refreshOptions() {
 
         menuManager.ejectAll(dialog, EditorSetting.ENTRY_SETTINGS_DIALOG_OPTIONS);
         this.placedTrack = null;
 
-        switch (activeTab) {
+        if (searchField.isEmpty()) {
+            populate(activeTab);
+            return;
+        }
+
+        int matched = 0;
+
+        for (EditorSettingsTab tab : EditorSettingsTab.VALUES)
+            matched += populateMatches(tab);
+
+        setStatus(matched > 0
+                ? matched + EditorSetting.SETTINGS_STATUS_SEARCH_COUNT
+                : EditorSetting.SETTINGS_STATUS_SEARCH_NONE);
+    }
+
+    private void populate(EditorSettingsTab tab) {
+        switch (tab) {
             case GENERAL -> editorSettingsOptionBranch.populateGeneral();
             case SHORTCUTS -> editorSettingsShortcutBranch.populateShortcuts();
             case COLORS -> editorSettingsColorBranch.populateColors();
@@ -223,6 +286,135 @@ public class EditorSettingsBranch extends BranchPackage {
             case GAMEPLAY -> editorSettingsOptionBranch.populateGameplay();
             case CONTROLS -> editorSettingsOptionBranch.populateControls();
         }
+    }
+
+    // A page laid under a header of its own name, then every row the search does not match taken away, and the
+    // headers left with no row; returns the rows kept
+    private int populateMatches(EditorSettingsTab tab) {
+
+        ObjectArrayList<ElementInstance> rows = dialog.getEntryPoint(EditorSetting.ENTRY_SETTINGS_DIALOG_OPTIONS)
+                .getChildren();
+        int pageStart = rows.size();
+
+        injectSectionHeader(tab.getTitle());
+        populate(tab);
+
+        boolean pageMatches = searchField.matches(tab.getTitle());
+        ElementInstance header = null;
+        boolean headerMatches = false;
+        boolean headerKept = false;
+        int kept = 0;
+
+        unmatchedRows.clear();
+
+        for (int i = pageStart + 1; i < rows.size(); i++) {
+
+            ElementInstance row = rows.get(i);
+
+            if (isSectionHeader(row)) {
+
+                if (header != null && !headerKept)
+                    unmatchedRows.add(header);
+
+                header = row;
+                headerMatches = matchesRow(row);
+                headerKept = false;
+                continue;
+            }
+
+            if (pageMatches || headerMatches || matchesRow(row)) {
+                headerKept = true;
+                kept++;
+            } else {
+                unmatchedRows.add(row);
+            }
+        }
+
+        if (header != null && !headerKept)
+            unmatchedRows.add(header);
+
+        if (kept == 0)
+            unmatchedRows.add(rows.get(pageStart));
+
+        for (int i = 0; i < unmatchedRows.size(); i++)
+            menuManager.eject(dialog, EditorSetting.ENTRY_SETTINGS_DIALOG_OPTIONS, unmatchedRows.get(i));
+
+        unmatchedRows.clear();
+
+        return kept;
+    }
+
+    private boolean isSectionHeader(ElementInstance row) {
+        return row.getElementData().getId().equals(EditorSetting.ELEMENT_SETTINGS_SECTION_HEADER);
+    }
+
+    private boolean matchesRow(ElementInstance row) {
+
+        ElementInstance label = row.findChildById(EditorSetting.ELEMENT_SETTINGS_ROW_LABEL);
+        ElementInstance value = row.findChildById(EditorSetting.ELEMENT_SETTINGS_ROW_VALUE);
+
+        return label != null && searchField.matches(label.getText())
+                || value != null && searchField.matches(value.getText());
+    }
+
+    // Search \\
+
+    // The search box pressed: it takes the typing until it is put down
+    public void focusSearch() {
+
+        if (dialog == null)
+            return;
+
+        cancelCaptures();
+        searchField.focus();
+    }
+
+    @Override
+    public void onChar(char character) {
+
+        if (dialog != null && !nameDialogBranch.isOpen() && searchField.type(character))
+            refreshOptions();
+    }
+
+    // True when the search box took the keys this frame
+    private boolean updateSearch(Input rawInput) {
+
+        if (!searchField.isFocused())
+            return false;
+
+        if (rawInput.isMouseClicked(Buttons.LEFT) && !isPointerOver(EditorSetting.ELEMENT_SETTINGS_SEARCH)) {
+            searchField.blur();
+            return false;
+        }
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE)) {
+
+            searchField.blur();
+
+            if (searchField.clear())
+                showTab(activeTab);
+
+            return true;
+        }
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_BACKSPACE) && searchField.erase())
+            refreshOptions();
+
+        return true;
+    }
+
+    private boolean isPointerOver(String id) {
+
+        ElementInstance element = findElement(id);
+        WindowInstance window = dialog.getWindow();
+        float x = inputManager.getHoverMouseX(window);
+        float y = inputManager.getHoverMouseY(window);
+
+        return element != null
+                && x >= element.getComputedLeft()
+                && x <= element.getComputedLeft() + element.getComputedW()
+                && y >= element.getComputedTop()
+                && y <= element.getComputedTop() + element.getComputedH();
     }
 
     ElementInstance injectRow(String masterKey, Consumer<ElementInstance> customizer) {
@@ -293,7 +485,9 @@ public class EditorSettingsBranch extends BranchPackage {
 
     private void updateKeys(Input rawInput) {
 
-        if (editorSettingsShortcutBranch.updateCapture(rawInput) || editorSettingsOptionBranch.updateCapture(rawInput))
+        if (editorSettingsShortcutBranch.updateCapture(rawInput)
+                || editorSettingsOptionBranch.updateCapture(rawInput)
+                || updateSearch(rawInput))
             return;
 
         if (rawInput.isKeyClicked(EditorSetting.KEY_ESCAPE))

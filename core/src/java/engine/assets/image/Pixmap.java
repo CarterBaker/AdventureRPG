@@ -53,19 +53,7 @@ public class Pixmap {
         this.height = image.getHeight();
         this.pixels = BufferUtility.newByteBuffer(width * height * EngineSetting.COLOR_CHANNEL_COUNT);
 
-        int[] argb = new int[width * height];
-        image.getRGB(0, 0, width, height, argb, 0, width);
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int c = argb[y * width + x];
-                int idx = (y * width + x) * 4;
-                pixels.put(idx, (byte) ((c >> 16) & 0xFF));
-                pixels.put(idx + 1, (byte) ((c >> 8) & 0xFF));
-                pixels.put(idx + 2, (byte) (c & 0xFF));
-                pixels.put(idx + 3, (byte) ((c >> 24) & 0xFF));
-            }
-        }
+        PixmapUtility.writeRGBA(image, false, pixels);
     }
 
     // Draw \\
