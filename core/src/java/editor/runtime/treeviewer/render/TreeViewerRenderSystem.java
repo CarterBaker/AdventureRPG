@@ -14,6 +14,7 @@ import editor.bootstrap.treeplannerpipeline.treeplanner.TreePreviewTierStruct;
 import editor.bootstrap.treeplannerpipeline.treeplannermanager.TreePlannerManager;
 import editor.runtime.EditorSetting;
 import editor.runtime.treeviewer.TreeViewerSetting;
+import editor.runtime.treeviewer.layer.TreeViewerLayerSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
@@ -23,7 +24,7 @@ public class TreeViewerRenderSystem extends SystemPackage {
 
     /*
      * Draws the Tree Planner's row into this window's scene target: every
-     * tier's bark and leaf meshes, each tier carried to its place along the
+     * tier shown in the Layers tab, its bark and leaf meshes, each tier carried to its place along the
      * row by a matrix of its own, with the viewer's bark and leaf materials,
      * which shade the wood and leaves exactly as the game's G-buffer receives
      * them and light them here, as an editor viewport has no lighting pass.
@@ -33,6 +34,7 @@ public class TreeViewerRenderSystem extends SystemPackage {
 
     // Internal
     private TreePlannerManager treePlannerManager;
+    private TreeViewerLayerSystem treeViewerLayerSystem;
     private ItemModelManager itemModelManager;
     private MaterialManager materialManager;
     private RenderManager renderManager;
@@ -60,6 +62,7 @@ public class TreeViewerRenderSystem extends SystemPackage {
     @Override
     protected void get() {
         this.treePlannerManager = get(TreePlannerManager.class);
+        this.treeViewerLayerSystem = get(TreeViewerLayerSystem.class);
         this.itemModelManager = get(ItemModelManager.class);
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
@@ -93,6 +96,9 @@ public class TreeViewerRenderSystem extends SystemPackage {
         placeTiers();
 
         for (int i = 0; i < tierMatrices.length; i++) {
+
+            if (!treeViewerLayerSystem.isShown(i))
+                continue;
 
             TreePreviewTierStruct tier = treePlannerManager.getPreviewTier(i);
 

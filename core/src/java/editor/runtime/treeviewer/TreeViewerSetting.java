@@ -4,8 +4,8 @@ public class TreeViewerSetting {
 
     /*
      * Constants used only by TreeViewerContext — its materials and render
-     * order, the frame its camera holds, its menu, and the names its status
-     * line gives each tier of the row, in TreeDetail order.
+     * order, the frame its camera holds, its menu, and the names its layers
+     * and status line give each tier of the row, in TreeDetail order.
      */
 
     // Materials
@@ -15,7 +15,7 @@ public class TreeViewerSetting {
     // Render Order
     public static final int DEPTH_TREE = 0;
 
-    // Frame — its middle a share of the tree's height up; one tier, or the whole row
+    // Frame — its middle a share of the tree's height up; one tier, or every tier shown
     public static final float FRAME_HEIGHT_SHARE = 0.5f;
     public static final int FRAME_ALL = -1;
 

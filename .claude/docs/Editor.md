@@ -134,8 +134,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Rig and UV tabs (the Body and every region within it, one region picked for all of them; every region but the Body
   has an eye hiding its vertices on the part edited, `CharacterEditorManager.toggleRegionShown`), the character
   Paint tab (the paint layers of the map painted, each above the base with an eye), the Image Editor (every layer of
-  the image, each with an eye; its maps are listed in the Palette tab, never here) and the Item Editor (every part of the
-  item, each one material, the part picked being the one its tools lay; no eyes).
+  the image, each with an eye; its maps are listed in the Palette tab, never here), the Item Editor (every part of the
+  item, each one material, the part picked being the one its tools lay; no eyes) and the Tree Viewer (every detail a
+  tree is drawn at, as a mesh viewer lists its levels of detail: Full, Model, Sketch and Outline, each with an eye, the
+  one picked framed and every one shown while none is; `TreeViewerLayerSystem`).
 - **Up and Down** pick the layer listed above or below the one picked while the Layers tab is worked in
   (`LayersManager.stepLayer`, `assets/shortcuts/Layers.arpg`).
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers

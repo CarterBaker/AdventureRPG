@@ -609,6 +609,8 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-26: Tool icons and Materials grid. Added the 31 tool emblems under `sprites/menus/tools/` (one per editor
   tool, shown beside its name in the Tools tab); regenerated `menus/editor/Tools.arpg` (the tool rows' emblem) and
   `menus/editor/Materials.arpg` (the material rows replaced by a grid row and its tiles).
+- 2026-11-26: Tree Viewer layers. Regenerated `menus/editor/TreeViewer.arpg` (no toolbar of frame buttons: the details
+  are layers in the Layers tab).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 

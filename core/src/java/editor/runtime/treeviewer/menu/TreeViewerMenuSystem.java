@@ -15,8 +15,7 @@ import engine.root.SystemPackage;
 public class TreeViewerMenuSystem extends SystemPackage {
 
     /*
-     * Opens the Tree Viewer's toolbar and status line over the viewport. The
-     * toolbar frames the whole row or one tier; the status line names the
+     * Opens the Tree Viewer's status line over the viewport, which names the
      * species and how many vertices each tier draws it with, from the
      * fullest to the plainest, rewritten only when the planner or its row
      * changes.
