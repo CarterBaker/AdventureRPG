@@ -2,12 +2,9 @@ package application.bootstrap.weatherpipeline.precipitationmanager;
 
 import application.bootstrap.weatherpipeline.precipitation.PrecipitationInstance;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
-import application.bootstrap.worldpipeline.chunk.ChunkData;
-import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.ColumnHeightUtility;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemSpaceSystem;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -129,25 +126,21 @@ class PrecipitationOcclusionBranch extends BranchPackage {
             int columnX,
             int columnZ) {
 
-        long chunkCoordinate = WorldWrapUtility.wrapAroundWorld(
-                world,
-                Coordinate2Long.pack(
-                        Math.floorDiv(columnX, EngineSetting.CHUNK_SIZE),
-                        Math.floorDiv(columnZ, EngineSetting.CHUNK_SIZE)));
-        ChunkInstance chunk = worldStreamManager.getChunkInstance(chunkCoordinate);
+        int blockTop = ColumnHeightUtility.findColumnTop(worldStreamManager, blockManager, world, columnX, columnZ);
 
-        if (chunk == null || !chunk.getChunkDataSyncContainer().hasData(ChunkData.GENERATION_DATA)) {
+        if (blockTop == EngineSetting.INDEX_NOT_FOUND) {
             precipitation.clearColumn(slot);
             return;
         }
 
-        int blockX = Math.floorMod(columnX, EngineSetting.CHUNK_SIZE);
-        int blockZ = Math.floorMod(columnZ, EngineSetting.CHUNK_SIZE);
-        int blockTop = ColumnHeightUtility.findColumnTop(chunk, blockManager, blockX, blockZ)
-                * EngineSetting.PRECIPITATION_HEIGHTS_PER_BLOCK;
-        int itemTop = worldItemSpaceSystem.findColumnTop(world, chunkCoordinate, blockX, blockZ);
+        int itemTop = worldItemSpaceSystem.findColumnTop(
+                world,
+                ColumnHeightUtility.resolveColumnChunk(world, columnX, columnZ),
+                Math.floorMod(columnX, EngineSetting.CHUNK_SIZE),
+                Math.floorMod(columnZ, EngineSetting.CHUNK_SIZE));
 
-        precipitation.setColumn(slot, columnX, columnZ, Math.max(blockTop, itemTop));
+        precipitation.setColumn(
+                slot, columnX, columnZ, Math.max(blockTop * EngineSetting.PRECIPITATION_HEIGHTS_PER_BLOCK, itemTop));
     }
 
     // Utility \\

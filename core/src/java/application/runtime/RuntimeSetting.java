@@ -78,6 +78,160 @@ public class RuntimeSetting {
     public static final String UNIFORM_SNOWFLAKE_TEXTURE = "u_snowflakeTexture";
     public static final String UNIFORM_RAINDROP_TEXTURE = "u_raindropTexture";
 
+    // Particles — every kind drawn into the precipitation target on one shared card or ribbon; the wind gusts from a
+    // breeze at the start to a gale at the full speed
+    public static final String PARTICLE_VAO = "util/vao/ParticleVAO";
+    public static final String PARTICLE_QUAD_MESH = "particles/ParticleQuad";
+    public static final String PARTICLE_RIBBON_MESH = "particles/ParticleRibbon";
+    public static final int PARTICLE_RIBBON_SEGMENTS = 64;
+    public static final float PARTICLE_GUST_START = 3f;
+    public static final float PARTICLE_GUST_FULL = 9f;
+    public static final float PARTICLE_FULL_TURN = (float) (Math.PI * 2.0);
+
+    // Wind Lines — spawned ahead of the camera in the open air a second at a full gust, each inked in, curled and
+    // erased over its life while the wind carries it; a line's floats, then its instance's
+    public static final String WIND_LINE_MATERIAL = "particles/WindLineMaterial";
+    public static final long WIND_LINE_RANDOM_SEED = 0x57494E44L;
+    public static final int WIND_LINE_CAPACITY = 24;
+    public static final float WIND_LINE_RATE = 2.5f;
+    public static final float WIND_LINE_LIFE_MIN = 2.2f;
+    public static final float WIND_LINE_LIFE_MAX = 3.4f;
+    public static final float WIND_LINE_REACH_MIN = 5f;
+    public static final float WIND_LINE_REACH_MAX = 26f;
+    public static final float WIND_LINE_RETIRE_REACH = 48f;
+    public static final float WIND_LINE_SPREAD_RADIANS = 1.2f;
+    public static final float WIND_LINE_HEIGHT_MIN = -1.5f;
+    public static final float WIND_LINE_HEIGHT_MAX = 4f;
+    public static final float WIND_LINE_CLEARANCE = 0.8f;
+    public static final float WIND_LINE_CLEARANCE_SPREAD = 2.5f;
+    public static final float WIND_LINE_SHELTER = 1f;
+    public static final float WIND_LINE_STRAIGHT_MIN = 3.5f;
+    public static final float WIND_LINE_STRAIGHT_MAX = 6.5f;
+    public static final float WIND_LINE_RADIUS_MIN = 0.35f;
+    public static final float WIND_LINE_RADIUS_MAX = 0.7f;
+    public static final float WIND_LINE_LOOP_AT_MIN = 0.35f;
+    public static final float WIND_LINE_LOOP_AT_MAX = 0.65f;
+    public static final float WIND_LINE_WAVE_MIN = 0.08f;
+    public static final float WIND_LINE_WAVE_MAX = 0.25f;
+    public static final float WIND_LINE_OPACITY = 0.85f;
+    public static final float WIND_LINE_OPACITY_MIN_SHARE = 0.6f;
+    public static final float WIND_LINE_DRIFT_SHARE = 0.45f;
+    public static final float WIND_LINE_MIN_HEADING = 0.0001f;
+    public static final int WIND_LINE_AGE = 0;
+    public static final int WIND_LINE_LIFE = 1;
+    public static final int WIND_LINE_HEADING_X = 2;
+    public static final int WIND_LINE_HEADING_Z = 3;
+    public static final int WIND_LINE_STRAIGHT = 4;
+    public static final int WIND_LINE_RADIUS = 5;
+    public static final int WIND_LINE_LOOP_AT = 6;
+    public static final int WIND_LINE_WAVE = 7;
+    public static final int WIND_LINE_SEED = 8;
+    public static final int WIND_LINE_OPACITY_SHARE = 9;
+    public static final int WIND_LINE_FLOATS = 10;
+    public static final int[] WIND_LINE_INSTANCE_ATTR_SIZES = { 4, 4, 4 };
+    public static final int WIND_LINE_INSTANCE_FLOATS = 12;
+
+    // Falling Leaves — torn from the leaf clusters of the trees standing near the camera, a few in calm air and many
+    // in a gust; each drifts with the wind as it falls, rests on the ground a while, then fades; a leaf's floats, then
+    // its instance's
+    public static final String LEAF_MATERIAL = "particles/LeafMaterial";
+    public static final String SPRITE_WEATHER_LEAF = "weather/Leaf";
+    public static final String UNIFORM_LEAF_TEXTURE = "u_leafTexture";
+    public static final long LEAF_RANDOM_SEED = 0x4C454146L;
+    public static final int LEAF_CAPACITY = 160;
+    public static final int LEAF_SOURCE_CHUNKS = 2;
+    public static final float LEAF_SOURCE_REACH = 36f;
+    public static final float LEAF_SOURCE_SECONDS = 1f;
+    public static final int LEAF_SOURCE_FULL = 6;
+    public static final float LEAF_RATE_CALM = 1.2f;
+    public static final float LEAF_RATE_GUST = 9f;
+    public static final float LEAF_RETIRE_REACH = 56f;
+    public static final float LEAF_LIFE_MAX = 30f;
+    public static final float LEAF_FALL_SPEED = 0.8f;
+    public static final float LEAF_GUST_FALL_SHARE = 0.45f;
+    public static final float LEAF_DRIFT_SHARE = 0.6f;
+    public static final float LEAF_DRAG = 1.5f;
+    public static final float LEAF_SHELL_MIN = 0.55f;
+    public static final float LEAF_SIZE_MIN = 0.14f;
+    public static final float LEAF_SIZE_MAX = 0.22f;
+    public static final float LEAF_SPIN_MIN = 0.6f;
+    public static final float LEAF_SPIN_MAX = 2.2f;
+    public static final float LEAF_SHADE_MIN = 0.85f;
+    public static final float LEAF_SHADE_MAX = 1.1f;
+    public static final float LEAF_DRY_SHARE = 0.2f;
+    public static final float LEAF_DRY_MIX = 0.6f;
+    public static final float LEAF_DRY_RED = 0.86f;
+    public static final float LEAF_DRY_GREEN = 0.55f;
+    public static final float LEAF_DRY_BLUE = 0.18f;
+    public static final float LEAF_COLOR_SCALE = 1f / 255f;
+    public static final float LEAF_FADE_IN_SECONDS = 0.4f;
+    public static final float LEAF_REST_SECONDS = 6f;
+    public static final float LEAF_SETTLE_SECONDS = 0.35f;
+    public static final float LEAF_FADE_OUT_SECONDS = 1.5f;
+    public static final float LEAF_REST_LIFT = 0.03f;
+    public static final float LEAF_AIRBORNE = -1f;
+    public static final int LEAF_AGE = 0;
+    public static final int LEAF_VELOCITY_X = 1;
+    public static final int LEAF_VELOCITY_Z = 2;
+    public static final int LEAF_SEED = 3;
+    public static final int LEAF_RED = 4;
+    public static final int LEAF_GREEN = 5;
+    public static final int LEAF_BLUE = 6;
+    public static final int LEAF_GROUND = 7;
+    public static final int LEAF_COLUMN_X = 8;
+    public static final int LEAF_COLUMN_Z = 9;
+    public static final int LEAF_REST = 10;
+    public static final int LEAF_SIZE = 11;
+    public static final int LEAF_SPIN = 12;
+    public static final int LEAF_FLOATS = 13;
+    public static final int[] LEAF_INSTANCE_ATTR_SIZES = { 4, 4, 4 };
+    public static final int LEAF_INSTANCE_FLOATS = 12;
+
+    // Bubbles — breathed out while the camera is under water, a puff now and then beside the view that rises past its
+    // sides: seldom and few just under the surface, often and many deep down; each pops at the surface; a bubble's
+    // floats, then its instance's
+    public static final String BUBBLE_MATERIAL = "particles/BubbleMaterial";
+    public static final String SPRITE_WATER_BUBBLE = "water/Bubble";
+    public static final String UNIFORM_BUBBLE_TEXTURE = "u_bubbleTexture";
+    public static final long BUBBLE_RANDOM_SEED = 0x42554242L;
+    public static final int BUBBLE_CAPACITY = 48;
+    public static final float BUBBLE_DEPTH_MIN = 0.15f;
+    public static final float BUBBLE_DEPTH_SHALLOW = 0.4f;
+    public static final float BUBBLE_DEPTH_DEEP = 4f;
+    public static final float BUBBLE_BREATH_SHALLOW_SECONDS = 7f;
+    public static final float BUBBLE_BREATH_DEEP_SECONDS = 2.6f;
+    public static final float BUBBLE_BREATH_JITTER = 0.25f;
+    public static final float BUBBLE_PUFF_SHALLOW = 1f;
+    public static final float BUBBLE_PUFF_DEEP = 4f;
+    public static final float BUBBLE_PUFF_EXTRA_SHALLOW = 1f;
+    public static final float BUBBLE_PUFF_EXTRA_DEEP = 4f;
+    public static final float BUBBLE_PUFF_GAP_SECONDS = 0.07f;
+    public static final float BUBBLE_FORWARD_MIN = 0.25f;
+    public static final float BUBBLE_FORWARD_MAX = 0.5f;
+    public static final float BUBBLE_SIDE_MIN = 0.28f;
+    public static final float BUBBLE_SIDE_MAX = 0.5f;
+    public static final float BUBBLE_DROP = 0.22f;
+    public static final float BUBBLE_RADIUS_MIN = 0.025f;
+    public static final float BUBBLE_RADIUS_MAX = 0.07f;
+    public static final float BUBBLE_RISE_BASE = 0.6f;
+    public static final float BUBBLE_RISE_PER_RADIUS = 12f;
+    public static final float BUBBLE_RISE_ACCELERATION = 0.4f;
+    public static final float BUBBLE_SPREAD_SPEED = 0.35f;
+    public static final float BUBBLE_DRAG = 2.5f;
+    public static final float BUBBLE_LIFE_MAX = 6f;
+    public static final float BUBBLE_RETIRE_REACH = 10f;
+    public static final float BUBBLE_FADE_IN_SECONDS = 0.12f;
+    public static final float BUBBLE_POP_BLOCKS = 0.08f;
+    public static final int BUBBLE_AGE = 0;
+    public static final int BUBBLE_RADIUS = 1;
+    public static final int BUBBLE_SEED = 2;
+    public static final int BUBBLE_RISE = 3;
+    public static final int BUBBLE_VELOCITY_X = 4;
+    public static final int BUBBLE_VELOCITY_Z = 5;
+    public static final int BUBBLE_FLOATS = 6;
+    public static final int[] BUBBLE_INSTANCE_ATTR_SIZES = { 4, 4 };
+    public static final int BUBBLE_INSTANCE_FLOATS = 8;
+
     // Squint
     public static final String UNIFORM_SQUINT = "u_squint";
     public static final String UNIFORM_SQUINT_SUN_SCREEN = "u_sunScreen";

@@ -20,11 +20,13 @@
  * lie over it. From below, the sky shows through Snell's window and the rest of the surface mirrors the depths,
  * under the same fog the underwater pass lays over the scene. Detail falls away with distance: ripples fade
  * out, waves settle to a calmer slope, and the caustics and the reflection march stop, so far water neither
- * sparkles nor costs what near water does. Running water speaks in the cartoon's own foam: a river's top faces
- * drift their ripples downstream and draw rifts, white dashes streaming the way its column runs; the pool at a
- * fall's foot churns with billowing puffs; and the falling faces themselves pour with white streaks. Each joins the
- * whitecap field, so it takes the same hard cel edge every foam line has. The flow code is LiquidFlowUtility's:
- * zero still, one to WATER_FLOW_DIRECTIONS a way round from east toward south, and WATER_FLOW_CHURN churning.
+ * sparkles nor costs what near water does. Running water runs as cartoon rapids: a river's top faces drift their
+ * ripples downstream, stand in rows of V-shaped waves whose points lead downstream and whose crests break white,
+ * bumping the surface the light catches, streak with long white dashes racing the way the column runs, and take a
+ * paler, aerated tint; the pool at a fall's foot churns with billowing puffs; and the falling faces themselves pour
+ * with white streaks. Each joins the whitecap field, so it takes the same hard cel edge every foam line has. The
+ * flow code is LiquidFlowUtility's: zero still, one to WATER_FLOW_DIRECTIONS a way round from east toward south,
+ * and WATER_FLOW_CHURN churning.
  *
  * The engine prepends a program's includes to every one of its stages, so nothing here may touch what only a
  * fragment stage has. A fragment shader resolves its WaterSurface from its own gl_FragCoord, measures the foam
@@ -65,21 +67,34 @@ const float WATER_DETAIL_FADE_END      = 640.0;
 const float WATER_FAR_WAVE_SLOPE_SHARE = 0.35;
 const float WATER_FLOW_DIRECTIONS      = 16.0;
 const float WATER_FLOW_CHURN           = 17.0;
-const float WATER_FLOW_SPEED           = 1.4;
-const float WATER_RIFT_ACROSS_SCALE    = 1.6;
-const float WATER_RIFT_ALONG_SCALE     = 0.3;
-const float WATER_RIFT_THRESHOLD       = 0.68;
-const float WATER_RIFT_GAIN            = 4.0;
+const float WATER_FLOW_SPEED           = 2.4;
+const float WATER_RIFT_ACROSS_SCALE    = 2.4;
+const float WATER_RIFT_ALONG_SCALE     = 0.22;
+const float WATER_RIFT_THRESHOLD       = 0.6;
+const float WATER_RIFT_GAIN            = 5.0;
+const float WATER_RAPID_BAND_RATE      = 0.9;
+const float WATER_RAPID_LANE_RATE      = 0.45;
+const float WATER_RAPID_SLANT          = 0.7;
+const float WATER_RAPID_DRIFT          = 0.35;
+const float WATER_RAPID_WARP           = 0.6;
+const float WATER_RAPID_WARP_SCALE     = 0.35;
+const float WATER_RAPID_CREST          = 0.3;
+const float WATER_RAPID_BREAKUP_SCALE  = 0.8;
+const float WATER_RAPID_BREAKUP        = 0.4;
+const float WATER_RAPID_GAIN           = 3.5;
+const float WATER_RAPID_HEIGHT         = 0.035;
+const float WATER_RAPID_TINT_SHARE     = 0.22;
+const vec3  WATER_RAPID_TINT           = vec3(0.62, 0.9, 0.92);
 const float WATER_CHURN_SCALE          = 0.9;
 const float WATER_CHURN_DETAIL_SCALE   = 2.3;
-const float WATER_CHURN_SPEED          = 0.7;
-const float WATER_CHURN_THRESHOLD      = 0.42;
+const float WATER_CHURN_SPEED          = 0.9;
+const float WATER_CHURN_THRESHOLD      = 0.38;
 const float WATER_CHURN_GAIN           = 3.0;
 const float WATER_FALL_ACROSS_SCALE    = 2.2;
 const float WATER_FALL_ALONG_SCALE     = 0.25;
-const float WATER_FALL_SPEED           = 3.5;
-const float WATER_FALL_THRESHOLD       = 0.45;
-const float WATER_FALL_GAIN            = 3.0;
+const float WATER_FALL_SPEED           = 5.0;
+const float WATER_FALL_THRESHOLD       = 0.4;
+const float WATER_FALL_GAIN            = 3.5;
 const float WATER_FLOW_NOISE_PERIOD    = 64.0;
 const uint  WATER_FLOW_SEED            = 5153u;
 const float WATER_TWO_PI               = 6.28318531;
@@ -164,8 +179,47 @@ float sampleFlowNoise(vec2 lattice, uint seed) {
     return periodicGradientNoise2D(lattice, vec2(WATER_FLOW_NOISE_PERIOD), seed) * 0.5 + 0.5;
 }
 
-// The foam running water adds, crossing one half where it shows: rifts streaming down a river, puffs churning at a
-// fall's foot, streaks pouring down a fall's face; none on still or tidal water
+// Where a point of running water stands among the rapids' rows of V-shaped waves: the phase of the row it is in,
+// whole at every crest, each row's middle leading its arms downstream and creeping slowly that way, warped so no two
+// rows run true; and, through lane, which side of its V's middle it stands on
+float resolveRapidPhase(vec2 pos, vec2 down, vec2 across, out float lane) {
+    float time = u_oceanSurface.w;
+    float warp = sampleFlowNoise(pos * WATER_RAPID_WARP_SCALE, WATER_FLOW_SEED + 4u) - 0.5;
+
+    lane = fract(dot(pos, across) * WATER_RAPID_LANE_RATE) - 0.5;
+
+    return dot(pos, down) * WATER_RAPID_BAND_RATE + abs(lane) * WATER_RAPID_SLANT - time * WATER_RAPID_DRIFT
+        + warp * WATER_RAPID_WARP;
+}
+
+// The white caps breaking along the rapids' crests, crossing one half where they show, broken into lumps
+float resolveRapidFoam(vec2 pos, vec2 down, vec2 across) {
+    float lane;
+    float phase   = resolveRapidPhase(pos, down, across, lane);
+    float crest   = abs(fract(phase) - 0.5) * 2.0 - (1.0 - 2.0 * WATER_RAPID_CREST);
+    float breakup = sampleFlowNoise(pos * WATER_RAPID_BREAKUP_SCALE - down * (u_oceanSurface.w * WATER_FLOW_SPEED),
+        WATER_FLOW_SEED + 5u) - WATER_RAPID_BREAKUP;
+
+    return 0.5 + min(crest, breakup) * WATER_RAPID_GAIN;
+}
+
+// The slope of the rapids' standing waves on running water's top faces, nothing elsewhere
+vec2 resolveRapidSlope(WaterFragment fragment) {
+
+    if (fragment.tidal > 0.5 || !isRunningFlow(fragment.flow))
+    return vec2(0.0);
+
+    vec2  down   = resolveFlowDirection(fragment.flow);
+    vec2  across = vec2(-down.y, down.x);
+    float lane;
+    float phase  = resolveRapidPhase(fragment.worldPos.xz, down, across, lane);
+    vec2  rise   = down * WATER_RAPID_BAND_RATE + across * (sign(lane) * WATER_RAPID_SLANT * WATER_RAPID_LANE_RATE);
+
+    return rise * (cos(phase * WATER_TWO_PI) * WATER_TWO_PI * WATER_RAPID_HEIGHT);
+}
+
+// The foam running water adds, crossing one half where it shows: the rapids' breaking crests and rifts streaming
+// down a river, puffs churning at a fall's foot, streaks pouring down a fall's face; none on still or tidal water
 float resolveFlowFoam(WaterFragment fragment, vec3 faceNormal) {
     float time = u_oceanSurface.w;
     vec3  pos  = fragment.worldPos;
@@ -196,7 +250,8 @@ float resolveFlowFoam(WaterFragment fragment, vec3 faceNormal) {
     vec2 rift   = vec2(dot(pos.xz, across) * WATER_RIFT_ACROSS_SCALE,
         (dot(pos.xz, down) - time * WATER_FLOW_SPEED) * WATER_RIFT_ALONG_SCALE);
 
-    return 0.5 + (sampleFlowNoise(rift, WATER_FLOW_SEED + 3u) - WATER_RIFT_THRESHOLD) * WATER_RIFT_GAIN;
+    return max(0.5 + (sampleFlowNoise(rift, WATER_FLOW_SEED + 3u) - WATER_RIFT_THRESHOLD) * WATER_RIFT_GAIN,
+        resolveRapidFoam(pos.xz, down, across));
 }
 
 // Where a top face's ripples are read: carried downstream on running water, in place elsewhere
@@ -276,6 +331,9 @@ vec3 shadeFromAbove(WaterSurface surface, vec2 foamEdges) {
     vec3  color = mix(transmitted, reflection, fresnel) + resolveGlints(normal, viewDir);
     float foam  = resolveFoam(surface.foamValues, foamEdges);
 
+    if (fragment.tidal < 0.5 && isRunningFlow(fragment.flow))
+    color = mix(color, WATER_RAPID_TINT * light, WATER_RAPID_TINT_SHARE);
+
     color = mix(color, WATER_FOAM_COLOR * light, foam);
     color = applyAtmosphericFog(color, fragment.worldPos, -viewDir, resolveWaterLitAmount(normal));
 
@@ -344,6 +402,8 @@ bool resolveWaterSurface(WaterFragment fragment, vec3 fragCoord, out WaterSurfac
         if (fragment.tidal > 0.5)
         slope += sampleOceanSlope(fragment.worldPos.xz, surface.state)
             * mix(WATER_FAR_WAVE_SLOPE_SHARE, 1.0, surface.detail);
+
+        slope += resolveRapidSlope(fragment) * mix(WATER_FAR_WAVE_SLOPE_SHARE, 1.0, surface.detail);
 
         surface.normal = slopeToNormal(slope);
     }

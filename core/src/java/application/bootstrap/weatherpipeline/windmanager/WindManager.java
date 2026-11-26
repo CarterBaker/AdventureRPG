@@ -6,12 +6,10 @@ import application.bootstrap.shaderpipeline.ubomanager.UBOManager;
 import application.bootstrap.weatherpipeline.wind.WindData;
 import application.bootstrap.weatherpipeline.wind.WindHandle;
 import application.bootstrap.weatherpipeline.wind.WindInstance;
-import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
-import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WindManager extends ManagerPackage {
@@ -89,31 +87,8 @@ public class WindManager extends ManagerPackage {
         windData.updateUniform(EngineSetting.UNIFORM_WIND_DIRECTION, windInstance.getLocalWindDirection());
         windData.updateUniform(EngineSetting.UNIFORM_WIND_SPEED, windInstance.getLocalWindSpeed());
         windData.updateUniform(EngineSetting.UNIFORM_TEMPERATURE, grid.getTemperatureInstance().getTemperature());
-        windData.updateUniform(EngineSetting.UNIFORM_WIND_FOLIAGE, resolveFoliage(grid));
 
         uboManager.push(windData);
-    }
-
-    // How thick the trees stand about the grid's active chunk, from none to WIND_FOLIAGE_TREES and more in it and the
-    // chunks around it, for the leaves the wind tears loose
-    private float resolveFoliage(GridInstance grid) {
-
-        long center = grid.getActiveChunkCoordinate();
-        int centerX = Coordinate2Long.unpackX(center);
-        int centerZ = Coordinate2Long.unpackY(center);
-        int trees = 0;
-
-        for (int dz = -1; dz <= 1; dz++)
-            for (int dx = -1; dx <= 1; dx++) {
-
-                ChunkInstance chunk = worldStreamManager.getChunkInstance(
-                        Coordinate2Long.pack(centerX + dx, centerZ + dz));
-
-                if (chunk != null)
-                    trees += chunk.getTreePaletteHandle().getTrees().length;
-            }
-
-        return Math.min(1f, trees / (float) EngineSetting.WIND_FOLIAGE_TREES);
     }
 
     // Hold \\

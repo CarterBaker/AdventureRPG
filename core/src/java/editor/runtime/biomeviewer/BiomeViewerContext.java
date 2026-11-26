@@ -7,9 +7,12 @@ import application.runtime.postprocessing.PostProcessingManager;
 import application.runtime.sky.SkySystem;
 import application.runtime.sky.SquintSystem;
 import application.runtime.tree.TreeSystem;
+import application.runtime.water.BubbleSystem;
 import application.runtime.water.WaterSystem;
+import application.runtime.weather.FallingLeafSystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
+import application.runtime.weather.WindLineSystem;
 import application.runtime.world.WorldSystem;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
@@ -48,6 +51,9 @@ public class BiomeViewerContext extends ContextPackage implements PropertiesProv
     private WeatherSystem weatherSystem;
     private WaterSystem waterSystem;
     private PrecipitationSystem precipitationSystem;
+    private WindLineSystem windLineSystem;
+    private FallingLeafSystem fallingLeafSystem;
+    private BubbleSystem bubbleSystem;
     private SquintSystem squintSystem;
     private TreeSystem treeSystem;
 
@@ -75,6 +81,9 @@ public class BiomeViewerContext extends ContextPackage implements PropertiesProv
         this.weatherSystem = create(WeatherSystem.class);
         this.waterSystem = create(WaterSystem.class);
         this.precipitationSystem = create(PrecipitationSystem.class);
+        this.windLineSystem = create(WindLineSystem.class);
+        this.fallingLeafSystem = create(FallingLeafSystem.class);
+        this.bubbleSystem = create(BubbleSystem.class);
         this.squintSystem = create(SquintSystem.class);
         this.treeSystem = create(TreeSystem.class);
 

@@ -32,8 +32,9 @@ public class PrecipitationSystem extends SystemPackage {
      * weather pass writes into its distance target are laid beneath them, so
      * that target is rendered first. Snowflakes and raindrops close enough to
      * resolve are drawn from their own pictures, as the stars are. The
-     * wind's lines and leaves are drawn in the same pass, from the grid's
-     * WindData.
+     * target also takes the particles drawn over it (the wind's lines, the
+     * falling leaves and, under the sea, the bubbles), so it is composited
+     * whether or not anything falls.
      */
 
     // Internal
@@ -95,6 +96,8 @@ public class PrecipitationSystem extends SystemPackage {
     @Override
     protected void lateUpdate() {
 
+        postEffectsSystem.pushSceneLayer(precipitationFbo, RuntimeSetting.LAYER_PRECIPITATION);
+
         if (waterSystem.isCameraSubmerged())
             return;
 
@@ -105,7 +108,6 @@ public class PrecipitationSystem extends SystemPackage {
                 precipitationFbo,
                 RuntimeSetting.PASS_DRAW_DEPTH,
                 context.getWindow());
-        postEffectsSystem.pushSceneLayer(precipitationFbo, RuntimeSetting.LAYER_PRECIPITATION);
     }
 
     // Grid Precipitation \\
@@ -121,7 +123,6 @@ public class PrecipitationSystem extends SystemPackage {
         mat.setUBO(grid.getSkyColorUBO());
         mat.setUBO(grid.getPrecipitationDataUBO());
         mat.setUBO(grid.getWeatherMapUBO());
-        mat.setUBO(grid.getWindDataUBO());
     }
 
     // Pictures \\

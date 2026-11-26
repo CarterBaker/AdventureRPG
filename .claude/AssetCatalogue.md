@@ -645,8 +645,17 @@ One line per session that changed this file: the date, what was added or removed
   point, so it is sized to the layouts it lists).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
+- 2026-11-26: World-space wind, leaves, bubbles and rapids. Added `sprites/weather/Leaf.png`, `sprites/water/Bubble.png`,
+  `shaders/particles/includes/ParticleScene.glsl`, `shaders/particles/windline/WindLineShader` (`.vsh`, `.fsh`,
+  `.arpg`), `shaders/particles/leaf/LeafShader` (`.vsh`, `.fsh`, `.arpg`), `shaders/particles/bubble/BubbleShader`
+  (`.vsh`, `.fsh`, `.arpg`), `materials/particles/WindLineMaterial.arpg`, `LeafMaterial.arpg`, `BubbleMaterial.arpg`
+  and `mesh/util/vao/ParticleVAO.arpg` (wind lines, falling leaves and breath bubbles as particles in the world);
+  removed `shaders/weather/includes/WindStreaks.glsl` (replaced by the particles); regenerated
+  `shaders/weather/precipitation/PrecipitationShader.fsh` (wind taken out), `shaders/liquid/UnderwaterShader.fsh`
+  (bubbles taken out), `shaders/liquid/includes/WaterShading.glsl` (cartoon rapids on running water),
+  `shaders/includes/WindData.glsl` and `ubos/WindData.arpg` (`u_windFoliage` dropped).
 
-## Textures and Sprites (2601 files)
+## Textures and Sprites (2603 files)
 
 One line per image set: the name before the last underscore, then the suffixes present (`AbyssalOoze: a, ao, h, n, spec`
 is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bare name, such as `TerraArcana.png`.
@@ -889,8 +898,13 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `Default`
 
+### `assets/sprites/water/`
+
+- `Bubble`
+
 ### `assets/sprites/weather/`
 
+- `Leaf`
 - `Raindrop`
 - `Snowflake`
 
@@ -1780,7 +1794,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (195 files)
+## Shaders (201 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1906,6 +1920,22 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 `OceanSurface.glsl`, `OceanTessellation.glsl`, `WaterLight.glsl`, `WaterReflection.glsl`, `WaterSceneData.glsl`,
 `WaterShading.glsl`
 
+### `assets/shaders/particles/bubble/`
+
+`BubbleShader.fsh`, `BubbleShader.vsh`
+
+### `assets/shaders/particles/includes/`
+
+`ParticleScene.glsl`
+
+### `assets/shaders/particles/leaf/`
+
+`LeafShader.fsh`, `LeafShader.vsh`
+
+### `assets/shaders/particles/windline/`
+
+`WindLineShader.fsh`, `WindLineShader.vsh`
+
 ### `assets/shaders/postprocessing/effects/`
 
 `PostBlurShader.fsh`, `PostCompositeShader.fsh`, `PostEffectShader.vsh`, `PostPrefilterShader.fsh`
@@ -1992,7 +2022,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/weather/includes/`
 
-`CloudComposite.glsl`, `CloudDome.glsl`, `CloudMarch.glsl`, `CloudRain.glsl`, `CloudVisual.glsl`, `WindStreaks.glsl`
+`CloudComposite.glsl`, `CloudDome.glsl`, `CloudMarch.glsl`, `CloudRain.glsl`, `CloudVisual.glsl`
 
 ### `assets/shaders/weather/precipitation/`
 
@@ -2125,7 +2155,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3862 files)
+## Data Files (3869 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -2930,6 +2960,10 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `MacroWaterMaterial.arpg`, `UnderwaterMaterial.arpg`, `WaterMaterial.arpg`
 
+### `assets/materials/particles/`
+
+`BubbleMaterial.arpg`, `LeafMaterial.arpg`, `WindLineMaterial.arpg`
+
 ### `assets/materials/postprocessing/`
 
 `LightingMaterial.arpg`, `PostBlurMaterial.arpg`, `PostCompositeMaterial.arpg`, `PostPrefilterMaterial.arpg`,
@@ -3103,7 +3137,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/mesh/util/vao/`
 
 `ChunkVAO.arpg`, `DockChromeVAO.arpg`, `ItemVAO.arpg`, `LabelVAO.arpg`, `MacroVAO.arpg`, `MacroWaterVAO.arpg`,
-`PaintedItemVAO.arpg`, `QuadVAO.arpg`, `SubVoxelVAO.arpg`
+`PaintedItemVAO.arpg`, `ParticleVAO.arpg`, `QuadVAO.arpg`, `SubVoxelVAO.arpg`
 
 ### `assets/mesh/worn/armor/`
 
@@ -3280,6 +3314,18 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/shaders/liquid/`
 
 `MacroWaterShader.arpg`, `UnderwaterShader.arpg`, `WaterShader.arpg`
+
+### `assets/shaders/particles/bubble/`
+
+`BubbleShader.arpg`
+
+### `assets/shaders/particles/leaf/`
+
+`LeafShader.arpg`
+
+### `assets/shaders/particles/windline/`
+
+`WindLineShader.arpg`
 
 ### `assets/shaders/postprocessing/effects/`
 

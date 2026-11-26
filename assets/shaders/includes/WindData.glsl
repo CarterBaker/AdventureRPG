@@ -11,14 +11,10 @@
 // "weather + season" derived, per-location atmospheric values. Held here so
 // systems such as breath fog, frost overlays, or heat shimmer can read it
 // without plumbing a new block.
-//
-// u_windFoliage is how thick the trees stand about the grid's active chunk, from none to one, so the wind tears leaves
-// loose only where trees are (WindStreaks).
 layout(std140) uniform WindData {
     vec3  u_windDirection;
     float u_windSpeed;
     float u_temperature;
-    float u_windFoliage;
 };
 
 #endif

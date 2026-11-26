@@ -13,7 +13,6 @@ out vec4 fragColor;
 #include "includes/WeatherMapUtility.glsl"
 #include "weather/includes/CloudDome.glsl"
 #include "weather/includes/CloudRain.glsl"
-#include "weather/includes/WindStreaks.glsl"
 
 uniform sampler2D u_sceneDepth;
 uniform sampler2D u_waterDepth;
@@ -48,12 +47,8 @@ uniform sampler2D u_raindropTexture;
  * pixels is drawn from its picture: a turning snowflake facing the camera, or
  * a raindrop stretched down its streak; farther ones fade to the plain
  * shapes, which read the same once smaller than the picture's detail.
- * The wind's lines, swirls and leaves (WindStreaks) are laid over it all,
- * lit by the same sky. Written premultiplied for the composite.
+ * Written premultiplied for the composite.
  */
-
-const float PRECIPITATION_WIND_LIGHT     = 1.6;
-const float PRECIPITATION_WIND_LIGHT_MIN = 0.2;
 
 struct PrecipitationKind {
     float fallSpeed;
@@ -456,12 +451,10 @@ void main() {
     vec2  shaft      = sampleRainShaft(u_cloudDistance, uv);
     bool  falling    = intensity > PRECIPITATION_EPSILON;
 
-    float sceneDistance = resolveSceneDistance(uv);
-    vec4  wind          = resolveWind(dir, sceneDistance, pixelAngle);
-
-    if (!falling && shaft.y <= PRECIPITATION_EPSILON && wind.a <= PRECIPITATION_EPSILON)
+    if (!falling && shaft.y <= PRECIPITATION_EPSILON)
     discard;
 
+    float sceneDistance = resolveSceneDistance(uv);
     float shaftCover    = resolveRainShaftOpacity(shaft, sceneDistance);
     float dropDistance  = min(sceneDistance, resolveCloudSurfaceDistance(uv));
     float rain          = falling && snow < 1.0
@@ -472,7 +465,7 @@ void main() {
     : 0.0;
     float coverage      = mix(rain, flakes, snow);
 
-    if (coverage <= PRECIPITATION_EPSILON && shaftCover <= PRECIPITATION_EPSILON && wind.a <= PRECIPITATION_EPSILON)
+    if (coverage <= PRECIPITATION_EPSILON && shaftCover <= PRECIPITATION_EPSILON)
     discard;
 
     vec3  skyLight   = mix(u_skyHorizonColor, u_skyZenithColor, PRECIPITATION_ZENITH_SHARE);
@@ -481,9 +474,5 @@ void main() {
     * RAIN_SHAFT_SHADE;
     float shaftShown = shaftCover * (1.0 - coverage);
 
-    vec4  weather    = vec4(dropColor * coverage + shaftColor * shaftShown, coverage + shaftShown);
-
-    wind.rgb *= clamp(skyLight * PRECIPITATION_WIND_LIGHT, vec3(PRECIPITATION_WIND_LIGHT_MIN), vec3(1.0));
-
-    fragColor = wind + weather * (1.0 - wind.a);
+    fragColor = vec4(dropColor * coverage + shaftColor * shaftShown, coverage + shaftShown);
 }

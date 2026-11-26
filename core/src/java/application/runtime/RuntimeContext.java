@@ -24,9 +24,12 @@ import application.runtime.sound.SoundListenerSystem;
 import application.runtime.tree.TreeSystem;
 import application.runtime.vehicle.VehicleSystem;
 import application.runtime.vitality.VitalitySystem;
+import application.runtime.weather.FallingLeafSystem;
 import application.runtime.weather.PrecipitationSystem;
+import application.runtime.water.BubbleSystem;
 import application.runtime.water.WaterSystem;
 import application.runtime.weather.WeatherSystem;
+import application.runtime.weather.WindLineSystem;
 import application.runtime.world.WorldSystem;
 import engine.root.ContextPackage;
 
@@ -54,6 +57,9 @@ public class RuntimeContext extends ContextPackage {
     private WeatherSystem weatherSystem;
     private WaterSystem waterSystem;
     private PrecipitationSystem precipitationSystem;
+    private WindLineSystem windLineSystem;
+    private FallingLeafSystem fallingLeafSystem;
+    private BubbleSystem bubbleSystem;
     private SquintSystem squintSystem;
     private VitalitySystem vitalitySystem;
     private ScreenshotSystem screenshotSystem;
@@ -89,6 +95,9 @@ public class RuntimeContext extends ContextPackage {
         this.weatherSystem = create(WeatherSystem.class);
         this.waterSystem = create(WaterSystem.class);
         this.precipitationSystem = create(PrecipitationSystem.class);
+        this.windLineSystem = create(WindLineSystem.class);
+        this.fallingLeafSystem = create(FallingLeafSystem.class);
+        this.bubbleSystem = create(BubbleSystem.class);
         this.squintSystem = create(SquintSystem.class);
         this.vitalitySystem = create(VitalitySystem.class);
         this.screenshotSystem = create(ScreenshotSystem.class);
