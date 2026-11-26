@@ -1341,6 +1341,14 @@ public class EngineSetting {
     public static final int QUAD_RECORD_LIQUID_LEVEL_BITS = 7;
     public static final int QUAD_RECORD_LIQUID_TIDAL_SHIFT = QUAD_RECORD_LIQUID_LEVEL_SHIFT
             + QUAD_RECORD_LIQUID_LEVEL_BITS;
+    public static final int QUAD_RECORD_LIQUID_FLOW_SHIFT = QUAD_RECORD_LIQUID_TIDAL_SHIFT + 1;
+    public static final int QUAD_RECORD_LIQUID_FLOW_BITS = 5;
+
+    // Liquid Flow — the way a column's water runs, one code per block column: still, one of a ring of directions
+    // (east first, turning toward south), or churning where water pours onto it from beside
+    public static final int LIQUID_FLOW_DIRECTIONS = 16;
+    public static final byte LIQUID_FLOW_STILL = 0;
+    public static final byte LIQUID_FLOW_CHURN = (byte) (LIQUID_FLOW_DIRECTIONS + 1);
 
     // Coverage — a covering's ID and level packed into one short per cell, the same with the face it shows on packed
     // into one exact float per vertex, and the table the surface shader reads every covering's tiles from

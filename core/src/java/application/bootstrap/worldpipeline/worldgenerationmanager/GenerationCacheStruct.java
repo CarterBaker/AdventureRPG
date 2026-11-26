@@ -7,8 +7,8 @@ public class GenerationCacheStruct extends StructPackage {
 
     /*
      * Per-chunk memo of computeColumn(): the identity biome and, per block
-     * column, ground height, dressing blocks, sea reach and still water,
-     * smoothing octants, the band its caves and sea caves may hollow with how
+     * column, ground height, dressing blocks, sea reach and still water, the
+     * way a river's water runs there, smoothing octants, the band its caves and sea caves may hollow with how
      * much of each kind of cave it holds, its veins, the lowest cell the
      * tide reaches and the tunnel a cave river hollows through it, with the
      * chunk's vein palette, the heights each vein
@@ -32,6 +32,7 @@ public class GenerationCacheStruct extends StructPackage {
     private final short[] topCoverage = new short[COLUMN_COUNT];
     private final boolean[] oceanWater = new boolean[COLUMN_COUNT];
     private final int[] lakeLevelBlocks = new int[COLUMN_COUNT];
+    private final byte[] flow = new byte[COLUMN_COUNT];
     private final byte[] groundMask = new byte[COLUMN_COUNT];
     private final byte[] capMask = new byte[COLUMN_COUNT];
     private final TerrainSurfaceProfileStruct[] profile = new TerrainSurfaceProfileStruct[COLUMN_COUNT];
@@ -98,6 +99,7 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(column.columnTopCoverage, 0, topCoverage, 0, COLUMN_COUNT);
         System.arraycopy(column.columnOceanWater, 0, oceanWater, 0, COLUMN_COUNT);
         System.arraycopy(column.columnLakeLevelBlocks, 0, lakeLevelBlocks, 0, COLUMN_COUNT);
+        System.arraycopy(column.columnFlow, 0, flow, 0, COLUMN_COUNT);
         System.arraycopy(column.columnGroundMask, 0, groundMask, 0, COLUMN_COUNT);
         System.arraycopy(column.columnCapMask, 0, capMask, 0, COLUMN_COUNT);
         System.arraycopy(column.columnProfile, 0, profile, 0, COLUMN_COUNT);
@@ -163,6 +165,7 @@ public class GenerationCacheStruct extends StructPackage {
         System.arraycopy(topCoverage, 0, column.columnTopCoverage, 0, COLUMN_COUNT);
         System.arraycopy(oceanWater, 0, column.columnOceanWater, 0, COLUMN_COUNT);
         System.arraycopy(lakeLevelBlocks, 0, column.columnLakeLevelBlocks, 0, COLUMN_COUNT);
+        System.arraycopy(flow, 0, column.columnFlow, 0, COLUMN_COUNT);
         System.arraycopy(groundMask, 0, column.columnGroundMask, 0, COLUMN_COUNT);
         System.arraycopy(capMask, 0, column.columnCapMask, 0, COLUMN_COUNT);
         System.arraycopy(profile, 0, column.columnProfile, 0, COLUMN_COUNT);
@@ -229,6 +232,11 @@ public class GenerationCacheStruct extends StructPackage {
 
     public boolean hasOceanWater(int columnIndex) {
         return oceanWater[columnIndex];
+    }
+
+    // The way a column's water runs (LiquidFlowUtility), for the water meshed over it
+    public byte getFlow(int columnIndex) {
+        return flow[columnIndex];
     }
 
     // The lowest cell the tide re-levels in this column, past the tide band where it reaches none

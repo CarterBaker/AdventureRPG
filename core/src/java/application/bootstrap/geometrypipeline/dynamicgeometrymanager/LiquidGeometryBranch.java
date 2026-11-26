@@ -13,7 +13,9 @@ import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.chunk.ChunkNeighborHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkCoordinateUtility;
+import application.bootstrap.worldpipeline.util.LiquidFlowUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import application.bootstrap.worldpipeline.worldgenerationmanager.GenerationCacheStruct;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -28,8 +30,12 @@ class LiquidGeometryBranch extends BranchPackage {
      * Geometry branch for liquid blocks. Settled water emits only its UP
      * faces; flowing water emits every exposed face; both greedily merged. Faces
      * against opaque blocks are dropped, and each face becomes one packed
-     * record of its first corner, extents, fill level and tidal flag, from
-     * which the water shader rebuilds its corners and surface flags.
+     * record of its first corner, extents, fill level, tidal flag and flow,
+     * from which the water shader rebuilds its corners and surface flags. A
+     * top face carries the way its column's water runs, as world generation
+     * left it in the chunk's terrain cache, or churns where water pours onto
+     * it from beside, the foot of a fall; every other face stands still, and
+     * only faces carrying the same flow merge.
      */
 
     // Internal
@@ -118,6 +124,7 @@ class LiquidGeometryBranch extends BranchPackage {
 
         short level = blockPaletteHandle.getLiquidLevel(xyz);
         boolean tidal = subChunkInstance.isLiquidTidal(xyz);
+        byte flow = resolveFlow(chunkInstance, subChunkInstance, xyz, direction3Vector, blockHandle);
         boolean tidalSurface = tidal
                 && isBeneathOpenSurface(chunkInstance, subChunkInstance, xyz, blockHandle);
 
@@ -131,7 +138,7 @@ class LiquidGeometryBranch extends BranchPackage {
         while (tryExpand(
                 chunkInstance, subChunkInstance, biomePaletteHandle, blockPaletteHandle,
                 xyz, direction3Vector, tangentA, tangentB, sizeA, sizeB,
-                level, tidal, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
+                level, tidal, flow, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
             accumulatedBatch.or(batchReturn);
             sizeA++;
         }
@@ -139,12 +146,12 @@ class LiquidGeometryBranch extends BranchPackage {
         while (tryExpand(
                 chunkInstance, subChunkInstance, biomePaletteHandle, blockPaletteHandle,
                 xyz, direction3Vector, tangentB, tangentA, sizeB, sizeA,
-                level, tidal, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
+                level, tidal, flow, biomeHandle, blockHandle, accumulatedBatch, batchReturn)) {
             accumulatedBatch.or(batchReturn);
             sizeB++;
         }
 
-        finalizeFace(quadPacket, xyz, sizeA, sizeB, direction3Vector, blockHandle, level, tidalSurface);
+        finalizeFace(quadPacket, xyz, sizeA, sizeB, direction3Vector, blockHandle, level, tidalSurface, flow);
     }
 
     private boolean tryExpand(
@@ -160,6 +167,7 @@ class LiquidGeometryBranch extends BranchPackage {
             int tangentSize,
             short level,
             boolean tidal,
+            byte flow,
             BiomeHandle biomeHandle,
             BlockHandle blockHandle,
             BitSet accumulatedBatch,
@@ -190,7 +198,8 @@ class LiquidGeometryBranch extends BranchPackage {
                     comparativeLevel != level ||
                     subChunkInstance.isLiquidTidal(checkXYZ) != tidal ||
                     accumulatedBatch.get(ChunkCoordinateUtility.getIndex(checkXYZ)) ||
-                    !hasExposedFace(chunkInstance, subChunkInstance, checkXYZ, direction3Vector, blockHandle)) {
+                    !hasExposedFace(chunkInstance, subChunkInstance, checkXYZ, direction3Vector, blockHandle) ||
+                    resolveFlow(chunkInstance, subChunkInstance, checkXYZ, direction3Vector, blockHandle) != flow) {
                 batchReturn.clear();
                 return false;
             }
@@ -199,6 +208,63 @@ class LiquidGeometryBranch extends BranchPackage {
         }
 
         return true;
+    }
+
+    // Flow \\
+
+    // The way a top face's water runs: churning under water pouring onto it from beside, else its column's flow as
+    // world generation cached it, still when the cache is gone; every other face is still
+    private byte resolveFlow(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int xyz,
+            Direction3Vector direction3Vector,
+            BlockHandle blockHandle) {
+
+        if (direction3Vector != Direction3Vector.UP)
+            return LiquidFlowUtility.STILL;
+
+        if (isPouredOnto(chunkInstance, subChunkInstance, xyz, blockHandle))
+            return LiquidFlowUtility.CHURN;
+
+        GenerationCacheStruct cache = chunkInstance.getTerrainCache();
+
+        if (!cache.isValidFor(chunkInstance.getCoordinate()))
+            return LiquidFlowUtility.STILL;
+
+        return cache.getFlow(Coordinate3Int.unpackZ(xyz) * CHUNK_SIZE + Coordinate3Int.unpackX(xyz));
+    }
+
+    // Whether the same liquid stands beside the cell above, pouring down onto this one
+    private boolean isPouredOnto(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int xyz,
+            BlockHandle blockHandle) {
+
+        SubChunkInstance aboveSubChunkInstance = getComparativeSubChunkInstance(
+                chunkInstance, subChunkInstance, xyz, Direction3Vector.UP);
+
+        if (aboveSubChunkInstance == null || aboveSubChunkInstance == ERROR)
+            return false;
+
+        int aboveXYZ = ChunkCoordinateUtility.getNeighborAndWrap(xyz, Direction3Vector.UP);
+
+        for (Direction3Vector lateral : Direction3Vector.VALUES) {
+
+            if (!isLateral(lateral))
+                continue;
+
+            SubChunkInstance besideSubChunkInstance = getComparativeSubChunkInstance(
+                    chunkInstance, aboveSubChunkInstance, aboveXYZ, lateral);
+
+            if (besideSubChunkInstance != null && besideSubChunkInstance != ERROR
+                    && besideSubChunkInstance.getBlock(ChunkCoordinateUtility.getNeighborAndWrap(aboveXYZ, lateral))
+                            == blockHandle.getBlockID())
+                return true;
+        }
+
+        return false;
     }
 
     // Face Exposure \\
@@ -299,7 +365,8 @@ class LiquidGeometryBranch extends BranchPackage {
 
     // Face Finalization \\
 
-    // One record per merged face: its first corner and extents, the level it holds and whether it rides the tide
+    // One record per merged face: its first corner and extents, the level it holds, whether it rides the tide and the
+    // way it runs
     private void finalizeFace(
             QuadPacketInstance quadPacket,
             int xyz,
@@ -308,7 +375,8 @@ class LiquidGeometryBranch extends BranchPackage {
             Direction3Vector direction3Vector,
             BlockHandle blockHandle,
             short level,
-            boolean tidalSurface) {
+            boolean tidalSurface,
+            byte flow) {
 
         int vertXYZ = ChunkCoordinateUtility.convertToVertSpace(xyz, direction3Vector);
         IntArrayList records = quadPacket.getRecords(blockHandle.getMaterialID(), EngineSetting.QUAD_RECORD_LIQUID_INTS);
@@ -317,6 +385,6 @@ class LiquidGeometryBranch extends BranchPackage {
                 Coordinate3Int.unpackX(vertXYZ) * SUB_BLOCK_DIVISIONS,
                 Coordinate3Int.unpackY(vertXYZ) * SUB_BLOCK_DIVISIONS,
                 Coordinate3Int.unpackZ(vertXYZ) * SUB_BLOCK_DIVISIONS));
-        records.add(QuadRecordUtility.packLiquid(direction3Vector.index, sizeA, sizeB, level, tidalSurface));
+        records.add(QuadRecordUtility.packLiquid(direction3Vector.index, sizeA, sizeB, level, tidalSurface, flow));
     }
 }

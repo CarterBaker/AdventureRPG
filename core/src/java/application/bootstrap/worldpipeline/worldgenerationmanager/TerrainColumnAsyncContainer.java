@@ -91,6 +91,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     short[] columnTopCoverage;
     boolean[] columnOceanWater;
     int[] columnLakeLevelBlocks;
+    byte[] columnFlow;
     byte[] columnGroundMask;
     byte[] columnCapMask;
     TerrainSurfaceProfileStruct[] columnProfile;
@@ -187,6 +188,7 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
         this.columnTopCoverage = new short[COLUMN_COUNT];
         this.columnOceanWater = new boolean[COLUMN_COUNT];
         this.columnLakeLevelBlocks = new int[COLUMN_COUNT];
+        this.columnFlow = new byte[COLUMN_COUNT];
         this.columnGroundMask = new byte[COLUMN_COUNT];
         this.columnCapMask = new byte[COLUMN_COUNT];
         this.columnProfile = new TerrainSurfaceProfileStruct[COLUMN_COUNT];
