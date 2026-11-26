@@ -15,7 +15,9 @@ public enum CharacterEditorMode {
      * texture maps it is coloured by, Rig the bones themselves and the
      * slider channels they offer, and UV the seams that cut the part's
      * surface and the faces unwrapped flat, their UVs laid out in the UV
-     * Editor beside it, and Hair the strands of the groom open, grown over
+     * Editor beside it, Pose the bones turned about their joints as a
+     * modeller's pose mode turns them, the mesh following, a pose held only
+     * to work in that every modelling tab shows, and Hair the strands of the groom open, grown over
      * the part's surface and turned into cards when exported. Sculpt's Brush also places the body part chosen in
      * the Stamps tab, its bones grafted onto the rig and its mesh merged into
      * the body. Each mode that takes viewport input is its own tool
@@ -133,7 +135,17 @@ public enum CharacterEditorMode {
             false,
             null,
             EditorSetting.CHARACTER_EDITOR_STATUS_UV_HINT,
-            PaletteContent.IMAGE);
+            PaletteContent.IMAGE),
+    POSE(
+            EditorSetting.CHARACTER_EDITOR_MODE_POSE,
+            ToolCanvas.CHARACTER_POSE,
+            true,
+            false,
+            false,
+            true,
+            null,
+            EditorSetting.CHARACTER_EDITOR_STATUS_POSE_HINT,
+            PaletteContent.ROWS);
 
     // Values
     public static final CharacterEditorMode[] VALUES = values();
@@ -227,9 +239,14 @@ public enum CharacterEditorMode {
         return toolCanvas == ToolCanvas.CHARACTER_SCULPT;
     }
 
-    // True for a mesh mode whose tools select and shape the part's vertices: every one but Paint and Hair
+    // True for the mode that turns the bones of the edit pose, never the vertices
+    public boolean posesBones() {
+        return toolCanvas == ToolCanvas.CHARACTER_POSE;
+    }
+
+    // True for a mesh mode whose tools select and shape the part's vertices: every one but Paint, Hair and Pose
     public boolean editsVertices() {
-        return meshMode && !paintsMaps() && !groomsHair();
+        return meshMode && !paintsMaps() && !groomsHair() && !posesBones();
     }
 
     // True for the mode that edits the rig, which draws the colliders its bones carry
@@ -247,8 +264,8 @@ public enum CharacterEditorMode {
         return toolCanvas != null;
     }
 
-    // True for a mode whose viewport draws the rig's bones, and lists how they are drawn in the Properties tab: Mesh
-    // and Weights the posed character's, Rig the rig being edited
+    // True for a mode whose viewport draws the rig's bones, and lists how they are drawn in the Properties tab: Mesh,
+    // Weights and Pose the posed character's, Rig the rig being edited
     public boolean drawsBones() {
         return drawsBones;
     }
@@ -260,7 +277,7 @@ public enum CharacterEditorMode {
 
     // True for a mode whose tab lists the regions as its layers, every edit held to the region picked
     public boolean takesRegions() {
-        return isModeling() && !paintsMaps() && !groomsHair();
+        return isModeling() && !paintsMaps() && !groomsHair() && !posesBones();
     }
 
     // True for a mode whose tab lists layers in the Layers tab: the regions, or the paint layers

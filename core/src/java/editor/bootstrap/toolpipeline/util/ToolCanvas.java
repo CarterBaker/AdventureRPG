@@ -139,6 +139,12 @@ public enum ToolCanvas {
             mirror(),
             xray(),
             wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
+    CHARACTER_POSE(
+            EditorSetting.TOOL_CANVAS_CHARACTER_POSE,
+            new EditorTool[] { EditorTool.POSE, EditorTool.PICK },
+            new ToolActionGroupStruct[] { meshPose() },
+            false,
+            mirror()),
     CHARACTER_PAINT(
             EditorSetting.TOOL_CANVAS_CHARACTER_PAINT,
             new EditorTool[] {

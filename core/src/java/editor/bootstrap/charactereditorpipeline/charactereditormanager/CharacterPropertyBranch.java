@@ -52,6 +52,7 @@ class CharacterPropertyBranch extends BranchPackage {
     private CharacterEditBranch characterEditBranch;
     private CharacterMeshPropertyBranch characterMeshPropertyBranch;
     private CharacterRigPropertyBranch characterRigPropertyBranch;
+    private CharacterPosePropertyBranch characterPosePropertyBranch;
     private CharacterPaintPropertyBranch characterPaintPropertyBranch;
     private CharacterUVBranch characterUVBranch;
     private CharacterGroomBranch characterGroomBranch;
@@ -67,6 +68,7 @@ class CharacterPropertyBranch extends BranchPackage {
         this.characterEditBranch = get(CharacterEditBranch.class);
         this.characterMeshPropertyBranch = get(CharacterMeshPropertyBranch.class);
         this.characterRigPropertyBranch = get(CharacterRigPropertyBranch.class);
+        this.characterPosePropertyBranch = get(CharacterPosePropertyBranch.class);
         this.characterPaintPropertyBranch = get(CharacterPaintPropertyBranch.class);
         this.characterUVBranch = get(CharacterUVBranch.class);
         this.characterGroomBranch = get(CharacterGroomBranch.class);
@@ -110,6 +112,9 @@ class CharacterPropertyBranch extends BranchPackage {
         if (isRigKey(key))
             return characterRigPropertyBranch.getValueText(key);
 
+        if (isPoseKey(key))
+            return characterPosePropertyBranch.getValueText(key);
+
         if (isPaintKey(key))
             return characterPaintPropertyBranch.getValueText(key);
 
@@ -135,6 +140,9 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isRigKey(key))
             return characterRigPropertyBranch.isValueValid(key, text);
+
+        if (isPoseKey(key))
+            return characterPosePropertyBranch.isValueValid(key, text);
 
         if (isPaintKey(key))
             return characterPaintPropertyBranch.isValueValid(key, text);
@@ -162,6 +170,11 @@ class CharacterPropertyBranch extends BranchPackage {
 
         if (isRigKey(key)) {
             characterRigPropertyBranch.setValue(key, text);
+            return;
+        }
+
+        if (isPoseKey(key)) {
+            characterPosePropertyBranch.setValue(key, text);
             return;
         }
 
@@ -200,6 +213,11 @@ class CharacterPropertyBranch extends BranchPackage {
             return;
         }
 
+        if (isPoseKey(key)) {
+            characterPosePropertyBranch.step(key, direction);
+            return;
+        }
+
         if (isPaintKey(key)) {
             characterPaintPropertyBranch.step(key, direction);
             return;
@@ -229,6 +247,10 @@ class CharacterPropertyBranch extends BranchPackage {
 
     private boolean isRigKey(String key) {
         return characterRigPropertyBranch.handles(CharacterViewUtility.getKeyName(key));
+    }
+
+    private boolean isPoseKey(String key) {
+        return characterPosePropertyBranch.handles(CharacterViewUtility.getKeyName(key));
     }
 
     private boolean isPaintKey(String key) {

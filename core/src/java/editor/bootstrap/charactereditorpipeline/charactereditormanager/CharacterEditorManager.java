@@ -249,6 +249,7 @@ public class CharacterEditorManager extends ManagerPackage {
         this.characterRigRowBranch = create(CharacterRigRowBranch.class);
         this.characterMeshPropertyBranch = create(CharacterMeshPropertyBranch.class);
         this.characterMeshRowBranch = create(CharacterMeshRowBranch.class);
+        create(CharacterPosePropertyBranch.class);
         this.characterRegionBranch = create(CharacterRegionBranch.class);
         this.characterDigitBranch = create(CharacterDigitBranch.class);
         this.characterHairBranch = create(CharacterHairBranch.class);
@@ -2908,7 +2909,7 @@ public class CharacterEditorManager extends ManagerPackage {
     // Pick, which takes a colour
     public boolean isBoneTool() {
 
-        if (!mode.editsVertices())
+        if (!mode.editsVertices() && !mode.posesBones())
             return false;
 
         EditorTool tool = toolManager.getTool(mode.getToolCanvas());

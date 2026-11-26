@@ -51,6 +51,7 @@ class CharacterRowBranch extends BranchPackage {
     private CharacterEditorManager characterEditorManager;
     private CharacterPropertyBranch characterPropertyBranch;
     private CharacterMeshRowBranch characterMeshRowBranch;
+    private CharacterPosePropertyBranch characterPosePropertyBranch;
     private CharacterRigRowBranch characterRigRowBranch;
     private CharacterPaintRowBranch characterPaintRowBranch;
     private CharacterUVBranch characterUVBranch;
@@ -64,6 +65,7 @@ class CharacterRowBranch extends BranchPackage {
         this.characterEditorManager = get(CharacterEditorManager.class);
         this.characterPropertyBranch = get(CharacterPropertyBranch.class);
         this.characterMeshRowBranch = get(CharacterMeshRowBranch.class);
+        this.characterPosePropertyBranch = get(CharacterPosePropertyBranch.class);
         this.characterRigRowBranch = get(CharacterRigRowBranch.class);
         this.characterPaintRowBranch = get(CharacterPaintRowBranch.class);
         this.characterUVBranch = get(CharacterUVBranch.class);
@@ -126,6 +128,7 @@ class CharacterRowBranch extends BranchPackage {
             }
             case TOPOLOGY, SCULPT, PAINT, UV, HAIR -> characterMeshRowBranch.addPartRows(document, rows);
             case RIG -> characterRigRowBranch.addBoneRows(rows);
+            case POSE -> addBoneRows(rigHandle, rows);
         }
     }
 
@@ -263,6 +266,7 @@ class CharacterRowBranch extends BranchPackage {
             case RIG -> characterRigRowBranch.buildPropertyRows(rows);
             case UV -> characterUVBranch.buildPropertyRows(rows);
             case HAIR -> characterGroomBranch.buildPropertyRows(rows);
+            case POSE -> characterPosePropertyBranch.buildPropertyRows(rows);
         }
     }
 

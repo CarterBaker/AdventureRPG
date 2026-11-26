@@ -295,6 +295,13 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   `AnimationStateHandle` postures, which every pose (the tree, a struck clip, the rest) now carries. A tab with an
   edit pose counts as posed: select, weigh and transform in it (pose a thumb out of the way to reach the fingers),
   Reset Pose before sculpting.
+- **The Pose tab** (`CharacterPoseContext`, `CharacterEditorMode.POSE`, `ToolCanvas.CHARACTER_POSE`) is the edit pose's
+  own tab, as a modeller's pose mode is: Pose and Pick its tools, Reset Pose its action (Alt+R), Mirror its option; the
+  Palette tab lists every bone (with its eye) to pick, and the Properties tab the bone picked and its turn about each
+  axis in degrees (`CharacterPosePropertyBranch`, key `pose_turn`, stepped by `CHARACTER_EDITOR_POSE_TURN_STEP`), every
+  change through `setEditPoseTurn`. It poses the bones and never edits a vertex (`CharacterEditorMode.posesBones`,
+  kept out of `editsVertices` and `takesRegions`); the pose it holds is the one every modelling tab shows. Keying a
+  pose into a clip is the Animation Editor's (Record, then pose there).
 - **Sculpt tools.** Brush, Smooth, Relax (even spacing along the surface without shrinking), Inflate, Pinch, Crease
   (a sharp line drawn in under the brush's centre, a ridge inverted: lid folds and lip lines), Flatten and Nudge, all
   in `CharacterShapeBranch.resolveMove`.
@@ -657,8 +664,10 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   the A-pose). Additive clips (Lean, Look) never key the arms. Key a new clip the same way; the Animation Editor's
   pose and IK tools already work against the bind rotation. Both genders
   wear `features/humanoid/eyes/HumanoidEyes` (`HumanoidEyesMesh`, drawn from the eye zone's raw UVs with
-  `CharacterEyeMaterial`) and `features/humanoid/teeth/HumanoidTeeth` (`HumanoidTeethMesh`: a UV-mapped strip per
-  row of teeth, the upper on the head in front of the lower on the jaw, and the tongue; `CharacterTeethMaterial`; nine
+  `CharacterEyeMaterial`) and `features/humanoid/teeth/HumanoidTeeth` (`HumanoidTeethMesh`: a single-sided UV-mapped
+  strip per row of teeth facing out, the upper on the head in front of the lower on the jaw, as teeth cards are made,
+  never a second surface behind them, which shows through the gaps between the teeth as a doubled row; and the tongue,
+  lofted inside the lower arch, widest at its root, rounded at its tip, domed with a shallow groove down its middle; `CharacterTeethMaterial`; nine
   variants, from Standard to Braces, each an image set whose tint mask keeps metal from taking the teeth color).
   `HumanoidRig` names its `parts` (head showing hair, eyes and teeth and taking the face; ears; eyes holding the eyes;
   mouth holding the teeth; hands; feet) and seven

@@ -553,6 +553,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_CHARACTER_WEIGHTS = "Weights";
     public static final String TAB_TITLE_CHARACTER_PAINT = "Paint";
     public static final String TAB_TITLE_CHARACTER_RIG = "Rig";
+    public static final String TAB_TITLE_CHARACTER_POSE = "Pose";
     public static final String TAB_TITLE_CHARACTER_UV = "UV";
     public static final String TAB_TITLE_CHARACTER_TOPOLOGY = "Topology";
     public static final String TAB_TITLE_CHARACTER_HAIR = "Hair";
@@ -1128,6 +1129,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MODE_RIG = "Rig";
     public static final String CHARACTER_EDITOR_MODE_PAINT = "Paint";
     public static final String CHARACTER_EDITOR_MODE_UV = "UV";
+    public static final String CHARACTER_EDITOR_MODE_POSE = "Pose";
     public static final String CHARACTER_EDITOR_POSE_REST = "Bind";
     public static final String CHARACTER_EDITOR_POSE_IDLE = "Idle";
     public static final String CHARACTER_EDITOR_POSE_WALK = "Walk";
@@ -1237,6 +1239,7 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_KEY_HIDE_UNSELECTED = "hide_unselected";
     public static final String CHARACTER_EDITOR_KEY_REVEAL = "reveal";
     public static final String CHARACTER_EDITOR_KEY_POSE_RESET = "pose_reset";
+    public static final String CHARACTER_EDITOR_KEY_POSE_TURN = "pose_turn";
     public static final String CHARACTER_EDITOR_KEY_GRAB = "grab";
     public static final String CHARACTER_EDITOR_KEY_ROTATE = "rotate";
     public static final String CHARACTER_EDITOR_KEY_SCALE = "scale";
@@ -1282,6 +1285,10 @@ public class EditorSetting {
     public static final float CHARACTER_EDITOR_MESH_SNAP_MAX = 0.5f;
     public static final float CHARACTER_EDITOR_MESH_SNAP_STEP = 0.005f;
     public static final float CHARACTER_EDITOR_MESH_ROTATE_STEP = 15f;
+
+    // Pose — a bone's turn in the edit pose about each of its axes, in degrees, stepped this far
+    public static final float CHARACTER_EDITOR_POSE_TURN_STEP = 5f;
+    public static final String[] CHARACTER_EDITOR_POSE_TURN_LABELS = { "Turn X", "Turn Y", "Turn Z" };
     public static final float CHARACTER_EDITOR_PART_SIZE_DEFAULT = 0.1f;
     public static final float CHARACTER_EDITOR_PART_SIZE_MIN = 0.005f;
     public static final float CHARACTER_EDITOR_PART_SIZE_MAX = 2f;
@@ -1391,6 +1398,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_STATUS_RIG_HINT = "Click a joint to pick its bone; Move drags it,"
             + " Rotate turns its bind, Scale sizes it, Place adds a child, Erase removes one; the mesh stays put (Pose"
             + " on the Mesh layer moves it); drag off the joints to orbit";
+    public static final String CHARACTER_EDITOR_STATUS_POSE_HINT = "Pose turns the bone whose joint you drag, Pick"
+            + " picks one; the pose holds in every modelling tab until Reset Pose; drag off the joints to orbit";
     public static final String CHARACTER_EDITOR_STATUS_TRANSFORM_HINT = "X Y Z hold to an axis, Ctrl snaps, click or "
             + "Enter confirms, right click or Esc cancels";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_EMPTY = "A mesh needs at least one face";
@@ -2804,6 +2813,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_CHARACTER_UV = "UV";
     public static final String TOOL_CANVAS_CHARACTER_TOPOLOGY = "Topology";
     public static final String TOOL_CANVAS_CHARACTER_HAIR = "Hair";
+    public static final String TOOL_CANVAS_CHARACTER_POSE = "Pose";
     public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
     public static final String TOOL_CANVAS_IMAGE_EDITOR = "Image Editor";
     public static final String TOOL_CANVAS_MATERIAL_VIEWER = "Material Viewer";

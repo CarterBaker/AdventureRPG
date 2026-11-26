@@ -615,6 +615,10 @@ One line per session that changed this file: the date, what was added or removed
   Hierarchy, Properties, Layers and Tools tabs and the Tree Viewer); regenerated `menus/editor/EditorWindow.arpg` (no
   Tree Planner in the World menu) and `schemas/Trees.arpg` (`lod_seed`, the seed each species' shared far model grows
   from).
+- 2026-11-26: Teeth and Pose tab. Regenerated `mesh/characters/humanoid/HumanoidTeethMesh.arpg` (each row of teeth
+  single-sided: the second surface behind it showed through the gaps as a doubled row; the flat disc tongue replaced
+  by one lofted inside the lower arch), `menus/editor/EditorWindow.arpg` (Pose under Rigging in the Mesh menu),
+  `schemas/Shortcuts.arpg` (the `character_pose` canvas) and `shortcuts/CharacterEditor.arpg` (Reset Pose on it).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 

@@ -167,6 +167,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openCharacterWeights(window.getGLWindow());
     }
 
+    public void openCharacterPose(WindowInstance window) {
+        tabManager.openCharacterPose(window.getGLWindow());
+    }
+
     public void openCharacterPaint(WindowInstance window) {
         tabManager.openCharacterPaint(window.getGLWindow());
     }

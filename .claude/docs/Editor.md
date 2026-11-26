@@ -33,7 +33,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   tab, the editor's one list of materials, and the Material Viewer (see Materials below).
   The Entities menu (once Characters) holds what only an entity has (its Entity section: Appearance, Equipment, Hair;
   then Animation); the Mesh menu holds the general modelling tools any rigged model takes
-  (its Mesh section: Mesh, Topology, Sculpt, Paint, UV, UV Editor; its Rigging section: Rig, Weights). A tab or tool
+  (its Mesh section: Mesh, Topology, Sculpt, Paint, UV, UV Editor; its Rigging section: Rig, Weights, Pose). A tab or tool
   shown to the owner says Entity, never Character; the code's `Character*` class names stay as they are. The Debug
   menu's Output section holds the ARPG Viewer beside the consoles. Its Preview opens `DevContext`, the game as it runs with the command console's systems; there is no other runtime
   tab. The Command Console is one window whose view follows the window worked in last
@@ -54,7 +54,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Properties tab, its LOD levels in the Layers tab, the preview's New Seed, Younger and Older in the Tools tab, and New,
   Duplicate, Save and Revert in the File menu. There is no Tree Planner.
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
-  Sculpt, Weights, Paint, Rig and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
+  Sculpt, Weights, Paint, Rig, Pose and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
   vertices selected. The Appearance tab's Properties rows hold every slider and control, and the Rig tab marks which
   bone channels are sliders. The Hair tab grooms strands painted with the material chosen in the Materials tab. Every
   bone the Palette tab lists (Mesh, Weights, Rig) has an eye, as a layer has (`CharacterViewRowKind.EYE_ITEM`,

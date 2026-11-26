@@ -237,9 +237,13 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
             characterEditorManager.act(key);
     }
 
-    // A shortcut acts only with the pointer over the view while nothing is pressed, painted, held or orbited
+    // A shortcut acts only with the pointer over the view while nothing is pressed, painted, held or orbited, on a
+    // mode that edits the vertices or poses the bones (its shortcuts are kept to the canvases they name)
     private boolean isReady() {
-        return characterEditorManager.getMode().editsVertices() && characterEditorMeshViewSystem.hasActiveDocument()
+
+        CharacterEditorMode mode = characterEditorManager.getMode();
+
+        return (mode.editsVertices() || mode.posesBones()) && characterEditorMeshViewSystem.hasActiveDocument()
                 && transform == null && !stroking && !pressed && editorInputSystem.isPointerActive()
                 && !viewCameraSystem.isDragging();
     }

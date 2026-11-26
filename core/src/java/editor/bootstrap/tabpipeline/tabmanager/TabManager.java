@@ -24,6 +24,7 @@ import editor.runtime.charactereditor.CharacterMeshContext;
 import editor.runtime.charactereditor.CharacterHairContext;
 import editor.runtime.charactereditor.CharacterTopologyContext;
 import editor.runtime.charactereditor.CharacterPaintContext;
+import editor.runtime.charactereditor.CharacterPoseContext;
 import editor.runtime.charactereditor.CharacterRigContext;
 import editor.runtime.charactereditor.CharacterSculptContext;
 import editor.runtime.charactereditor.CharacterUVContext;
@@ -196,6 +197,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openCharacterWeights(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_CHARACTER_WEIGHTS, CharacterWeightsContext.class, osWindow);
+    }
+
+    public TabHandle openCharacterPose(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_CHARACTER_POSE, CharacterPoseContext.class, osWindow);
     }
 
     public TabHandle openCharacterPaint(WindowInstance osWindow) {
