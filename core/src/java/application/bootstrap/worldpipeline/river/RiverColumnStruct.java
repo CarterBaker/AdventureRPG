@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.river;
 
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.util.LiquidFlowUtility;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
 
@@ -8,8 +9,8 @@ public class RiverColumnStruct extends StructPackage {
 
     /*
      * What the rivers make of one block column, written in place by
-     * RiverManager: the ground they leave it, the still water they stand
-     * over it, the part of the river it lies in — channel, bank, the wall of
+     * RiverManager: the ground they leave it, the water they stand over it
+     * and the way it runs, the part of the river it lies in — channel, bank, the wall of
      * the cut, a tunnel, the curtain pouring into the sea or the trench past
      * it — the band a tunnel hollows through it with the level of its water,
      * how high caves may reach under a river and how low beside a tunnel, and
@@ -32,6 +33,7 @@ public class RiverColumnStruct extends StructPackage {
     // Ground
     private int groundHeightBlocks;
     private int waterLevelBlocks;
+    private byte flow;
     private byte zone;
     private BiomeHandle biome;
 
@@ -49,6 +51,7 @@ public class RiverColumnStruct extends StructPackage {
     public void reset(int groundHeightBlocks) {
         this.groundHeightBlocks = groundHeightBlocks;
         this.waterLevelBlocks = NONE;
+        this.flow = LiquidFlowUtility.STILL;
         this.zone = ZONE_NONE;
         this.biome = null;
         this.tunnelFloorY = NONE;
@@ -66,6 +69,11 @@ public class RiverColumnStruct extends StructPackage {
 
     public void setWaterLevel(int waterLevelBlocks) {
         this.waterLevelBlocks = waterLevelBlocks;
+    }
+
+    // The way the column's water runs, as its faces carry it (LiquidFlowUtility)
+    public void setFlow(byte flow) {
+        this.flow = flow;
     }
 
     public void setTunnel(int floorY, int ceilingY, int levelY) {
@@ -98,6 +106,10 @@ public class RiverColumnStruct extends StructPackage {
 
     public int getWaterLevelBlocks() {
         return waterLevelBlocks;
+    }
+
+    public byte getFlow() {
+        return flow;
     }
 
     public byte getZone() {

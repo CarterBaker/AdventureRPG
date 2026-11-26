@@ -7,6 +7,7 @@ import application.bootstrap.worldpipeline.river.RiverGatherStruct;
 import application.bootstrap.worldpipeline.river.RiverNetworkStruct;
 import application.bootstrap.worldpipeline.river.RiverPathStruct;
 import application.bootstrap.worldpipeline.river.RiverQueryStruct;
+import application.bootstrap.worldpipeline.util.LiquidFlowUtility;
 import application.bootstrap.worldpipeline.util.RiverPathUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
@@ -203,6 +204,8 @@ class RiverColumnBranch extends BranchPackage {
         byte zone = RiverPathStruct.ZONE_OPEN;
         BiomeHandle biome = null;
         int carveTop = Integer.MAX_VALUE;
+        float flowX = 0f;
+        float flowZ = 0f;
 
         for (int i = 0; i < gather.size(); i++) {
 
@@ -230,6 +233,8 @@ class RiverColumnBranch extends BranchPackage {
             depth = query.getDepthBlocks();
             zone = query.getZone();
             biome = query.getBiome();
+            flowX = query.getFlowX();
+            flowZ = query.getFlowZ();
         }
 
         if (biome == null)
@@ -306,8 +311,10 @@ class RiverColumnBranch extends BranchPackage {
             columnZone = columnZone == RiverColumnStruct.ZONE_NONE ? RiverColumnStruct.ZONE_WALL : columnZone;
         }
 
-        if (water != RiverColumnStruct.NONE && water > ground)
+        if (water != RiverColumnStruct.NONE && water > ground) {
             out.setWaterLevel(water);
+            out.setFlow(LiquidFlowUtility.toCode(flowX, flowZ));
+        }
 
         if (columnZone != RiverColumnStruct.ZONE_NONE || ground != groundHeight)
             out.setGround(ground, columnZone, biome);

@@ -20,7 +20,11 @@
  * lie over it. From below, the sky shows through Snell's window and the rest of the surface mirrors the depths,
  * under the same fog the underwater pass lays over the scene. Detail falls away with distance: ripples fade
  * out, waves settle to a calmer slope, and the caustics and the reflection march stop, so far water neither
- * sparkles nor costs what near water does.
+ * sparkles nor costs what near water does. Running water speaks in the cartoon's own foam: a river's top faces
+ * drift their ripples downstream and draw rifts, white dashes streaming the way its column runs; the pool at a
+ * fall's foot churns with billowing puffs; and the falling faces themselves pour with white streaks. Each joins the
+ * whitecap field, so it takes the same hard cel edge every foam line has. The flow code is LiquidFlowUtility's:
+ * zero still, one to WATER_FLOW_DIRECTIONS a way round from east toward south, and WATER_FLOW_CHURN churning.
  *
  * The engine prepends a program's includes to every one of its stages, so nothing here may touch what only a
  * fragment stage has. A fragment shader resolves its WaterSurface from its own gl_FragCoord, measures the foam
@@ -59,12 +63,33 @@ const float WATER_DISTANCE_EPSILON     = 0.0001;
 const float WATER_DETAIL_FADE_START    = 160.0;
 const float WATER_DETAIL_FADE_END      = 640.0;
 const float WATER_FAR_WAVE_SLOPE_SHARE = 0.35;
+const float WATER_FLOW_DIRECTIONS      = 16.0;
+const float WATER_FLOW_CHURN           = 17.0;
+const float WATER_FLOW_SPEED           = 1.4;
+const float WATER_RIFT_ACROSS_SCALE    = 1.6;
+const float WATER_RIFT_ALONG_SCALE     = 0.3;
+const float WATER_RIFT_THRESHOLD       = 0.68;
+const float WATER_RIFT_GAIN            = 4.0;
+const float WATER_CHURN_SCALE          = 0.9;
+const float WATER_CHURN_DETAIL_SCALE   = 2.3;
+const float WATER_CHURN_SPEED          = 0.7;
+const float WATER_CHURN_THRESHOLD      = 0.42;
+const float WATER_CHURN_GAIN           = 3.0;
+const float WATER_FALL_ACROSS_SCALE    = 2.2;
+const float WATER_FALL_ALONG_SCALE     = 0.25;
+const float WATER_FALL_SPEED           = 3.5;
+const float WATER_FALL_THRESHOLD       = 0.45;
+const float WATER_FALL_GAIN            = 3.0;
+const float WATER_FLOW_NOISE_PERIOD    = 64.0;
+const uint  WATER_FLOW_SEED            = 5153u;
+const float WATER_TWO_PI               = 6.28318531;
 
 struct WaterFragment {
     vec3  worldPos;
     vec3  faceNormal;
     float tidal;
     vec4  oceanState;
+    float flow;
 };
 
 // Everything shading needs about one fragment, resolved before its foam edges, which only the fragment stage
@@ -121,6 +146,64 @@ vec2 resolveFoamValues(OceanState state, float displacement, float shoreDepth, f
 
 float resolveFoam(vec2 foamValues, vec2 foamEdges) {
     return max(resolveCelMask(foamValues.x, foamEdges.x), resolveCelMask(foamValues.y, foamEdges.y));
+}
+
+// ── Flow ──────────────────────────────────────────────────────────────────
+
+bool isRunningFlow(float flow) {
+    return flow > 0.5 && flow < WATER_FLOW_DIRECTIONS + 0.5;
+}
+
+// The way a running flow code points across the world's x and z
+vec2 resolveFlowDirection(float flow) {
+    float angle = (floor(flow + 0.5) - 1.0) / WATER_FLOW_DIRECTIONS * WATER_TWO_PI;
+    return vec2(cos(angle), sin(angle));
+}
+
+float sampleFlowNoise(vec2 lattice, uint seed) {
+    return periodicGradientNoise2D(lattice, vec2(WATER_FLOW_NOISE_PERIOD), seed) * 0.5 + 0.5;
+}
+
+// The foam running water adds, crossing one half where it shows: rifts streaming down a river, puffs churning at a
+// fall's foot, streaks pouring down a fall's face; none on still or tidal water
+float resolveFlowFoam(WaterFragment fragment, vec3 faceNormal) {
+    float time = u_oceanSurface.w;
+    vec3  pos  = fragment.worldPos;
+
+    if (fragment.tidal > 0.5)
+    return 0.0;
+
+    if (faceNormal.y < 0.5) {
+        vec2  across = vec2(-faceNormal.z, faceNormal.x);
+        vec2  fall   = vec2(dot(pos.xz, across) * WATER_FALL_ACROSS_SCALE,
+            (pos.y + time * WATER_FALL_SPEED) * WATER_FALL_ALONG_SCALE);
+        return 0.5 + (sampleFlowNoise(fall, WATER_FLOW_SEED) - WATER_FALL_THRESHOLD) * WATER_FALL_GAIN;
+    }
+
+    if (fragment.flow > WATER_FLOW_CHURN - 0.5) {
+        float billow = sampleFlowNoise(pos.xz * WATER_CHURN_SCALE + vec2(0.0, time * WATER_CHURN_SPEED),
+            WATER_FLOW_SEED + 1u);
+        float detail = sampleFlowNoise(pos.xz * WATER_CHURN_DETAIL_SCALE - vec2(time * WATER_CHURN_SPEED),
+            WATER_FLOW_SEED + 2u);
+        return 0.5 + (billow * 0.65 + detail * 0.35 - WATER_CHURN_THRESHOLD) * WATER_CHURN_GAIN;
+    }
+
+    if (!isRunningFlow(fragment.flow))
+    return 0.0;
+
+    vec2 down   = resolveFlowDirection(fragment.flow);
+    vec2 across = vec2(-down.y, down.x);
+    vec2 rift   = vec2(dot(pos.xz, across) * WATER_RIFT_ACROSS_SCALE,
+        (dot(pos.xz, down) - time * WATER_FLOW_SPEED) * WATER_RIFT_ALONG_SCALE);
+
+    return 0.5 + (sampleFlowNoise(rift, WATER_FLOW_SEED + 3u) - WATER_RIFT_THRESHOLD) * WATER_RIFT_GAIN;
+}
+
+// Where a top face's ripples are read: carried downstream on running water, in place elsewhere
+vec2 resolveRipplePosition(WaterFragment fragment) {
+    return isRunningFlow(fragment.flow)
+        ? fragment.worldPos.xz - resolveFlowDirection(fragment.flow) * (u_oceanSurface.w * WATER_FLOW_SPEED)
+        : fragment.worldPos.xz;
 }
 
 // ── Glint ─────────────────────────────────────────────────────────────────
@@ -255,7 +338,7 @@ bool resolveWaterSurface(WaterFragment fragment, vec3 fragCoord, out WaterSurfac
 
     if (faceNormal.y > 0.5) {
         vec2 slope = surface.detail > 0.0
-            ? sampleOceanRippleSlope(fragment.worldPos.xz, fragment.oceanState.x) * surface.detail
+            ? sampleOceanRippleSlope(resolveRipplePosition(fragment), fragment.oceanState.x) * surface.detail
             : vec2(0.0);
 
         if (fragment.tidal > 0.5)
@@ -275,6 +358,7 @@ bool resolveWaterSurface(WaterFragment fragment, vec3 fragCoord, out WaterSurfac
             : max(fragment.worldPos.y - straightPos.y, 0.0);
         surface.foamValues = resolveFoamValues(surface.state, fragment.oceanState.w, surface.shoreDepth,
             sampleFoamNoise(fragment.worldPos.xz), fragment.tidal);
+        surface.foamValues.x = max(surface.foamValues.x, resolveFlowFoam(fragment, faceNormal));
     }
 
     return true;

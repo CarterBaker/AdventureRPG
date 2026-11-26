@@ -8,7 +8,8 @@ public class RiverQueryStruct extends StructPackage {
     /*
      * Where one point stands against a reach's centreline, written in place
      * by RiverPathUtility.locate(): its distance from the line, how far along
-     * the reach the nearest place on it lies, the channel's half width and
+     * the reach the nearest place on it lies, the way the reach runs there
+     * downstream as a unit vector in x and z, the channel's half width and
      * depth there interpolated between its points, and the level, zone and
      * biome of the nearer point. Reused per worker, never allocated per
      * query.
@@ -17,6 +18,8 @@ public class RiverQueryStruct extends StructPackage {
     // Line
     private double distance;
     private float along;
+    private float flowX;
+    private float flowZ;
 
     // Channel
     private int levelBlocks;
@@ -30,6 +33,8 @@ public class RiverQueryStruct extends StructPackage {
     public void set(
             double distance,
             float along,
+            float flowX,
+            float flowZ,
             int levelBlocks,
             float halfWidthBlocks,
             float depthBlocks,
@@ -39,6 +44,8 @@ public class RiverQueryStruct extends StructPackage {
         // Line
         this.distance = distance;
         this.along = along;
+        this.flowX = flowX;
+        this.flowZ = flowZ;
 
         // Channel
         this.levelBlocks = levelBlocks;
@@ -56,6 +63,14 @@ public class RiverQueryStruct extends StructPackage {
 
     public float getAlong() {
         return along;
+    }
+
+    public float getFlowX() {
+        return flowX;
+    }
+
+    public float getFlowZ() {
+        return flowZ;
     }
 
     public int getLevelBlocks() {

@@ -378,7 +378,8 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     // A river cuts the column's ground and stands its water before the column is dressed, so dressing, smoothing and
-    // caves all read the river's ground, and records the tunnel a cave river hollows through it
+    // caves all read the river's ground, and records the way its water runs and the tunnel a cave river hollows
+    // through it
     private void resolveColumnRiver(
             TerrainColumnAsyncContainer column,
             WorldHandle worldHandle,
@@ -395,6 +396,8 @@ public class WorldGenerationManager extends ManagerPackage {
 
         if (river.hasWater())
             column.columnLakeLevelBlocks[columnIndex] = river.getWaterLevelBlocks();
+
+        column.columnFlow[columnIndex] = river.getFlow();
 
         column.columnTunnelFloorY[columnIndex] = river.getTunnelFloorY();
         column.columnTunnelCeilingY[columnIndex] = river.getTunnelCeilingY();

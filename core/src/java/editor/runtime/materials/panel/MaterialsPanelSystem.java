@@ -21,9 +21,10 @@ public class MaterialsPanelSystem extends SystemPackage {
      * Binds this window to a UI render target and shows the materials. When
      * the materials' revision moves it refills the list — the workspace
      * material open, then a header for every pack and a row for each of its
-     * materials by name, the chosen one marked, each picked up to drag it
-     * onto an item's part — and the chosen material's details and how it is
-     * laid. The status line says what the last file action did, else names
+     * materials by thumbnail and name, the thumbnails made a few a frame
+     * until every row has its own, the chosen one marked, each picked up to
+     * drag it onto an item's part — and the chosen material's details and how
+     * it is laid. The status line says what the last file action did, else names
      * the material chosen, or what letting go will do while one is carried.
      */
 
@@ -41,6 +42,10 @@ public class MaterialsPanelSystem extends SystemPackage {
     private int shownRevision;
     private boolean shownDragging;
 
+    // Thumbnails — the rows still waiting on theirs, by the material each lists, made a few a frame
+    private ObjectArrayList<ElementInstance> pendingRows;
+    private ObjectArrayList<String> pendingNames;
+
     // Base \\
 
     @Override
@@ -48,6 +53,10 @@ public class MaterialsPanelSystem extends SystemPackage {
 
         // State
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
+
+        // Thumbnails
+        this.pendingRows = new ObjectArrayList<>();
+        this.pendingNames = new ObjectArrayList<>();
     }
 
     @Override
@@ -99,6 +108,27 @@ public class MaterialsPanelSystem extends SystemPackage {
             this.shownDragging = materialsManager.isDragging();
             refreshStatus();
         }
+
+        fillThumbnails();
+    }
+
+    // The rows still waiting on a thumbnail given theirs, a few a frame from the end of the list
+    private void fillThumbnails() {
+
+        for (int i = 0; i < EditorSetting.MATERIALS_THUMBNAILS_PER_FRAME && !pendingRows.isEmpty(); i++) {
+
+            int last = pendingRows.size() - 1;
+
+            setThumbnail(pendingRows.remove(last), materialsManager.resolveThumbnail(pendingNames.remove(last)));
+        }
+    }
+
+    private void setThumbnail(ElementInstance row, int texture) {
+
+        ElementInstance thumbnail = row.findChildById(MaterialsSetting.ELEMENT_ROW_THUMBNAIL);
+
+        if (thumbnail != null && thumbnail.hasSprite())
+            thumbnail.getSpriteInstance().setTexture(texture);
     }
 
     // Materials \\
@@ -107,6 +137,8 @@ public class MaterialsPanelSystem extends SystemPackage {
     private void refreshMaterials() {
 
         menuManager.ejectAll(materialsMenu, MaterialsSetting.ENTRY_MATERIALS);
+        pendingRows.clear();
+        pendingNames.clear();
 
         ObjectArrayList<String> packNames = materialsManager.getPackNames();
         MaterialDocumentStruct document = materialsManager.getDocument();
@@ -150,6 +182,14 @@ public class MaterialsPanelSystem extends SystemPackage {
         row.setOnDragArgOverride(materialName);
         row.findChildById(MaterialsSetting.ELEMENT_ROW_LABEL).setFontText(
                 CharacterViewUtility.toResourceLabel(materialName));
+
+        if (materialsManager.hasThumbnail(materialName)) {
+            setThumbnail(row, materialsManager.resolveThumbnail(materialName));
+            return;
+        }
+
+        pendingRows.add(row);
+        pendingNames.add(materialName);
     }
 
     // The open material of the workspace, chosen by a press

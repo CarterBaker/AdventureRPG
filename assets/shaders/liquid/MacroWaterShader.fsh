@@ -20,7 +20,9 @@ void main() {
 
     WaterSurface surface;
 
-    if (!resolveWaterSurface(WaterFragment(vWorldPos, vFaceNormal, vTidal, vOceanState), gl_FragCoord.xyz, surface))
+    WaterFragment fragment = WaterFragment(vWorldPos, vFaceNormal, vTidal, vOceanState, 0.0);
+
+    if (!resolveWaterSurface(fragment, gl_FragCoord.xyz, surface))
     discard;
 
     vec2 foamEdges = max(fwidth(surface.foamValues), vec2(WATER_FOAM_EDGE_MIN));

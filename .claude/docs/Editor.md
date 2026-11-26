@@ -198,7 +198,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 
 - **One list of materials.** The Materials tab (`editor.runtime.materials`, under the Materials menu) lists the
   workspace material open, then every texture of every baked pack, pack by pack, as Substance and Blender list a
-  material library. `MaterialsManager` (`editor.bootstrap.materialspipeline`) keeps the material chosen, which every
+  material library, each beside a thumbnail of its albedo (`MaterialThumbnailBranch`, made a few a frame,
+  `MATERIALS_THUMBNAILS_PER_FRAME`, and kept while the editor runs). `MaterialsManager` (`editor.bootstrap.materialspipeline`) keeps the material chosen, which every
   window that lays a material reads: the Hair tab's new strands and Brush lay it (hair, `characters/standard`'s strand
   textures, draws as intended; any other is the owner's choice), the Item Editor gives it to a new part, the Paint
   tab's Brush and Fill lay it in place of the colour and the Material Viewer shows it. A row pressed is chosen and picked up; let go over a

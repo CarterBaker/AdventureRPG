@@ -53,6 +53,7 @@ public class MaterialsManager extends ManagerPackage {
     private ActiveWindowManager activeWindowManager;
     private MaterialDocumentBranch materialDocumentBranch;
     private MaterialSampleBranch materialSampleBranch;
+    private MaterialThumbnailBranch materialThumbnailBranch;
     private MaterialRowBranch materialRowBranch;
     private MaterialHistoryBranch materialHistoryBranch;
 
@@ -86,6 +87,7 @@ public class MaterialsManager extends ManagerPackage {
         // Internal
         this.materialDocumentBranch = create(MaterialDocumentBranch.class);
         this.materialSampleBranch = create(MaterialSampleBranch.class);
+        this.materialThumbnailBranch = create(MaterialThumbnailBranch.class);
         this.materialRowBranch = create(MaterialRowBranch.class);
         this.materialHistoryBranch = create(MaterialHistoryBranch.class);
 
@@ -300,6 +302,15 @@ public class MaterialsManager extends ManagerPackage {
 
     // The editor texture holding a map's image of the material laid, before its parameters, as the Material Viewer
     // reads it; zero until its first upload
+    public boolean hasThumbnail(String materialName) {
+        return materialThumbnailBranch.hasThumbnail(materialName);
+    }
+
+    // The material's thumbnail in the Materials tab, made from its albedo the first time it is asked for
+    public int resolveThumbnail(String materialName) {
+        return materialThumbnailBranch.resolveThumbnail(materialName);
+    }
+
     public int usePreviewTexture(int map) {
         return materialSampleBranch.usePreviewTexture(getChosenDocument(), selectedMaterial, map);
     }

@@ -143,7 +143,8 @@ public final class RiverPathUtility extends EngineUtility {
 
     // Locate \\
 
-    // Where a point stands against a run of the reach's segments, written out — returns its distance from them
+    // Where a point stands against a run of the reach's segments, written out, the way the nearest runs downstream
+    // with it — returns its distance from them
     public static double locate(
             RiverPathStruct path,
             double x,
@@ -155,6 +156,7 @@ public final class RiverPathUtility extends EngineUtility {
         double nearestSq = Double.MAX_VALUE;
         int nearestSegment = firstSegment;
         double nearestT = 0.0;
+        double nearestLength = 0.0;
 
         for (int i = firstSegment; i <= lastSegment; i++) {
 
@@ -176,15 +178,20 @@ public final class RiverPathUtility extends EngineUtility {
             nearestSq = distanceSq;
             nearestSegment = i;
             nearestT = t;
+            nearestLength = Math.sqrt(lengthSq);
         }
 
         int next = nearestSegment + 1;
         int nearer = nearestT < 0.5 ? nearestSegment : next;
         float fraction = (float) nearestT;
 
+        double flowScale = nearestLength > 0.0 ? 1.0 / nearestLength : 0.0;
+
         out.set(
                 Math.sqrt(nearestSq),
                 lerp(path.getPointDistance(nearestSegment), path.getPointDistance(next), fraction),
+                (float) ((path.getPointX(next) - path.getPointX(nearestSegment)) * flowScale),
+                (float) ((path.getPointZ(next) - path.getPointZ(nearestSegment)) * flowScale),
                 path.getPointLevel(nearer),
                 lerp(path.getPointHalfWidth(nearestSegment), path.getPointHalfWidth(next), fraction),
                 lerp(path.getPointDepth(nearestSegment), path.getPointDepth(next), fraction),

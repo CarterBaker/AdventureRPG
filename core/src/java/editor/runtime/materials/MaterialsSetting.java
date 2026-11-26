@@ -22,6 +22,7 @@ public class MaterialsSetting {
 
     // Elements
     public static final String ELEMENT_ROW_LABEL = "materials_row_label";
+    public static final String ELEMENT_ROW_THUMBNAIL = "materials_row_thumbnail";
     public static final String ELEMENT_ROW_VALUE = "materials_row_value";
 
     // Entry Points
