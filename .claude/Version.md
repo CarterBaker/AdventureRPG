@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 176
-Task: MacroWholeSwap
+Delivery: 177
+Task: LayoutsDropdownFit
 Applied: 2026-11-26
 
 ## Log
@@ -186,3 +186,4 @@ Applied: 2026-11-26
 - 174, 2026-11-26, TreeImpostors
 - 175, 2026-11-26, TreeImpostorStage
 - 176, 2026-11-26, MacroWholeSwap
+- 177, 2026-11-26, LayoutsDropdownFit

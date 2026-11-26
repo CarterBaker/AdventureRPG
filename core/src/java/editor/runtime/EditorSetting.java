@@ -215,6 +215,13 @@ public class EditorSetting {
 
     // Entry point indices
     public static final int ENTRY_LAYOUTS_LIST = 0;
+    public static final int ENTRY_LAYOUTS_PANEL = 5;
+
+    // Layouts — a saved layout's row, the dropdown's width, and the room it takes besides its rows (New Layout, the
+    // separator and the panel's insets), so the dropdown is always as tall as the layouts it lists
+    public static final float LAYOUTS_ROW_PIXELS = 28f;
+    public static final float LAYOUTS_DROPDOWN_WIDTH_PIXELS = 240f;
+    public static final float LAYOUTS_DROPDOWN_BASE_PIXELS = 51f;
     public static final int ENTRY_FILE_MENU_LIST = 1;
     public static final int ENTRY_EDIT_MENU_LIST = 2;
     public static final int ENTRY_TOOLS_MENU_LIST = 3;

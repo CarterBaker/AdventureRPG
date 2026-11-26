@@ -3,6 +3,8 @@ package editor.runtime.menueventsmanager.menus;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
+import application.bootstrap.menupipeline.util.DimensionValueStruct;
+import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.layerspipeline.layersmanager.LayersManager;
 import editor.bootstrap.propertiespipeline.propertiesmanager.PropertiesManager;
@@ -11,6 +13,7 @@ import editor.bootstrap.tabpipeline.layoutmanager.LayoutManager;
 import editor.bootstrap.tabpipeline.tabmanager.TabManager;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.runtime.EditorSetting;
+import engine.root.EngineSetting;
 import engine.root.BranchPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -313,6 +316,25 @@ public class EditorBranch extends BranchPackage {
 
         for (int i = 0; i < layoutNames.size(); i++)
             injectLayoutItem(menu, layoutNames.get(i));
+
+        fitLayoutList(menu, list, layoutNames.size());
+    }
+
+    // The list as tall as its rows and the dropdown as tall as the list, so every saved layout shows
+    private void fitLayoutList(MenuInstance menu, ElementInstance list, int layoutCount) {
+
+        float listHeight = layoutCount * EditorSetting.LAYOUTS_ROW_PIXELS;
+
+        list.setSizeOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofPercent(EngineSetting.PERCENT_MAX),
+                DimensionValueStruct.ofAbsolute(listHeight)));
+
+        ElementInstance panel = menu.getEntryPoint(EditorSetting.ENTRY_LAYOUTS_PANEL);
+
+        if (panel != null)
+            panel.setSizeOverride(new DimensionVector2Struct(
+                    DimensionValueStruct.ofAbsolute(EditorSetting.LAYOUTS_DROPDOWN_WIDTH_PIXELS),
+                    DimensionValueStruct.ofAbsolute(listHeight + EditorSetting.LAYOUTS_DROPDOWN_BASE_PIXELS)));
     }
 
     private void injectLayoutItem(MenuInstance menu, String layoutName) {

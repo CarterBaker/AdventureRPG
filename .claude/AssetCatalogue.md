@@ -641,6 +641,8 @@ One line per session that changed this file: the date, what was added or removed
   grid has that chunk's trees on the GPU).
 - 2026-11-26: Macro tiles swap whole. Regenerated `shaders/surface/macro/MacroTerrainShader.fsh` (its notes: a tile's
   land, canopy and stand-ins are never dithered, since interleaved surfaces are inked as edges by the lighting pass).
+- 2026-11-26: Layouts dropdown. Regenerated `menus/editor/EditorWindow.arpg` (the Layouts dropdown panel an entry
+  point, so it is sized to the layouts it lists).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 

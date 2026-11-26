@@ -28,7 +28,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   equal cells (`StripLayoutUtility`'s grid helpers, in `EditorToolbarSystem`): each at its preferred width while the bar has
   room, all shrinking together as it narrows, then wrapping onto more rows, the bar growing and the dock shrinking
   beneath it. A dropdown's height is `"fit"`: `MenuBuilder` makes it the height of the rows it holds as it loads, so a
-  row added or removed never leaves a dropdown clipped or padded; never count a dropdown's height by hand. The
+  row added or removed never leaves a dropdown clipped or padded; never count a dropdown's height by hand. A dropdown
+  filled as it opens (Layouts, its saved layouts) is sized to the rows it was filled with in the same call
+  (`EditorBranch.fitLayoutList`), so it holds every one. The
   Materials menu, after Textures, holds the Materials
   tab, the editor's one list of materials, and the Material Viewer (see Materials below).
   The Entities menu (once Characters) holds what only an entity has (its Entity section: Appearance, Equipment, Hair;
