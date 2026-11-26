@@ -592,6 +592,9 @@ One line per session that changed this file: the date, what was added or removed
 - 2026-11-26: Water effects. Regenerated `shaders/liquid/WaterShader.vsh`, `WaterShader.tcs`, `WaterShader.tes`,
   `WaterShader.fsh`, `MacroWaterShader.fsh`, `UnderwaterShader.fsh` and `shaders/liquid/includes/WaterShading.glsl`
   (river rifts along each column's flow, churn at a fall's foot, streaks down falling faces, rising bubbles).
+- 2026-11-26: Wind. Added `shaders/weather/includes/WindStreaks.glsl`; regenerated
+  `shaders/weather/precipitation/PrecipitationShader.fsh`, `shaders/includes/WindData.glsl` and `ubos/WindData.arpg`
+  (cartoon wind lines and swirls on gusts, leaves blown and falling where trees stand near).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
@@ -1692,7 +1695,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (194 files)
+## Shaders (195 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1893,7 +1896,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/weather/includes/`
 
-`CloudComposite.glsl`, `CloudDome.glsl`, `CloudMarch.glsl`, `CloudRain.glsl`, `CloudVisual.glsl`
+`CloudComposite.glsl`, `CloudDome.glsl`, `CloudMarch.glsl`, `CloudRain.glsl`, `CloudVisual.glsl`, `WindStreaks.glsl`
 
 ### `assets/shaders/weather/precipitation/`
 

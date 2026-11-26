@@ -2642,6 +2642,8 @@ public class EngineSetting {
     public static final String UNIFORM_TEMPERATURE = "u_temperature";
     public static final String UNIFORM_WIND_DIRECTION = "u_windDirection";
     public static final String UNIFORM_WIND_SPEED = "u_windSpeed";
+    public static final String UNIFORM_WIND_FOLIAGE = "u_windFoliage";
+    public static final int WIND_FOLIAGE_TREES = 8;
     public static final String WIND_DATA_UBO = "WindData";
     public static final float WIND_DIURNAL_PEAK_TIME = 0.65f;
     public static final float WIND_DIURNAL_STRENGTH = 0.25f;
