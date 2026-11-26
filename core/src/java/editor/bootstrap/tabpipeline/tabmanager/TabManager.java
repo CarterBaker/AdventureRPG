@@ -56,7 +56,6 @@ import editor.runtime.stamps.StampsContext;
 import editor.runtime.timeline.TimelineContext;
 import editor.runtime.tools.ToolsContext;
 import editor.runtime.transitions.TransitionsContext;
-import editor.runtime.treeplanner.TreePlannerContext;
 import editor.runtime.treeviewer.TreeViewerContext;
 import editor.runtime.uveditor.UVEditorContext;
 import editor.runtime.worldeditor.WorldEditorContext;
@@ -285,10 +284,6 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openBiomeViewer(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_BIOME_VIEWER, BiomeViewerContext.class, osWindow);
-    }
-
-    public TabHandle openTreePlanner(WindowInstance osWindow) {
-        return openTab(EditorSetting.TAB_TITLE_TREE_PLANNER, TreePlannerContext.class, osWindow);
     }
 
     public TabHandle openTreeViewer(WindowInstance osWindow) {

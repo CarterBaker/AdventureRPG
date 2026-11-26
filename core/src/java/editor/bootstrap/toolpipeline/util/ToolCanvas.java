@@ -48,7 +48,8 @@ public enum ToolCanvas {
      * of the colour, every map at once, while the Materials tab was worked in
      * after the Color Wheel.
      * The Material Viewer turns its light and shows the material on the
-     * shape chosen. The recorder's Timeline selects and cuts
+     * shape chosen. The Tree Viewer only looks, and grows its preview from a
+     * new seed or to another age. The recorder's Timeline selects and cuts
      * clips, nests the selection or opens a nested clip, and exports the
      * media file, as a video or as music, or as MIDI.
      */
@@ -187,6 +188,11 @@ public enum ToolCanvas {
             new EditorTool[] { EditorTool.LIGHT },
             false,
             shape()),
+    TREE_VIEWER(
+            EditorSetting.TOOL_CANVAS_TREE_VIEWER,
+            new EditorTool[] { EditorTool.MOVE },
+            new ToolActionGroupStruct[] { treePreview() },
+            false),
     ANIMATION_POSE(
             EditorSetting.TOOL_CANVAS_ANIMATION_POSE,
             new EditorTool[] { EditorTool.ROTATE, EditorTool.SELECT, EditorTool.MOVE, EditorTool.SCALE, EditorTool.IK },
@@ -428,6 +434,14 @@ public enum ToolCanvas {
                 EditorSetting.ITEM_EDITOR_HEADER_PARTS,
                 action(EditorSetting.ITEM_EDITOR_LABEL_PART_ADD, EditorSetting.ITEM_EDITOR_KEY_PART_ADD),
                 action(EditorSetting.ITEM_EDITOR_LABEL_PART_REMOVE, EditorSetting.ITEM_EDITOR_KEY_PART_REMOVE));
+    }
+
+    private static ToolActionGroupStruct treePreview() {
+        return new ToolActionGroupStruct(
+                EditorSetting.TREE_VIEWER_HEADER_PREVIEW,
+                action(EditorSetting.TREE_VIEWER_LABEL_RESEED, EditorSetting.TREE_VIEWER_KEY_RESEED),
+                action(EditorSetting.TREE_VIEWER_LABEL_YOUNGER, EditorSetting.TREE_VIEWER_KEY_YOUNGER),
+                action(EditorSetting.TREE_VIEWER_LABEL_OLDER, EditorSetting.TREE_VIEWER_KEY_OLDER));
     }
 
     private static ToolActionGroupStruct itemPaint() {

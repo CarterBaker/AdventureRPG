@@ -6,6 +6,7 @@ import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.tree.TreeData;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
+import application.bootstrap.worldpipeline.util.TreeModelUtility;
 import engine.root.BranchPackage;
 import engine.root.UtilityPackage.InternalException;
 import engine.util.arpg.ArpgObjectStruct;
@@ -20,9 +21,9 @@ class TreeSpeciesBranch extends BranchPackage {
      * be registered, and the species must already exist; the edit is parsed
      * and proven whole before anything changes, so a refused edit leaves the
      * species as it was. An accepted one replaces the species' data under its
-     * own ID, and every tree of it standing in the loaded world grows again
-     * from its seed and is redrawn. Every refusal is a catchable
-     * InternalException.
+     * own ID, its shared far models are grown again, and every tree of it
+     * standing in the loaded world grows again from its seed and is redrawn.
+     * Every refusal is a catchable InternalException.
      */
 
     // Internal
@@ -68,6 +69,7 @@ class TreeSpeciesBranch extends BranchPackage {
                 itemName -> resolveItemID(treeName, itemName));
 
         treeHandle.constructor(treeData);
+        treeHandle.setShared(TreeModelUtility.buildShared(treeHandle));
         treeManager.updateMaxReach(treeHandle);
         regrowTrees(treeHandle);
     }

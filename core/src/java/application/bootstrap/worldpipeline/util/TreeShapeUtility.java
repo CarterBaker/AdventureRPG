@@ -29,7 +29,8 @@ public final class TreeShapeUtility extends EngineUtility {
      * rolled from the tree's seed and the cluster, so a cluster keeps its
      * look as the tree grows and loses limbs. evaluateModel() reads the same
      * wood and leaves off a skeleton nothing has cut, without laying out its
-     * nodes, for a tree drawn coarser than in full.
+     * nodes, each segment linked to the one it sets out from and each cluster
+     * to the segment it hangs on, for a tree drawn coarser than in full.
      */
 
     // Scale \\
@@ -145,6 +146,7 @@ public final class TreeShapeUtility extends EngineUtility {
             if (share <= 0f)
                 continue;
 
+            model.setSegmentOfSource(segment, model.getSegmentCount());
             model.addSegment(
                     scale * skeleton.getStartX(segment),
                     scale * skeleton.getStartY(segment),
@@ -155,7 +157,8 @@ public final class TreeShapeUtility extends EngineUtility {
                     Math.max(EngineSetting.TREE_MIN_RADIUS_BLOCKS, scale * skeleton.getStartRadius(segment)),
                     Math.max(EngineSetting.TREE_MIN_RADIUS_BLOCKS, scale * along(
                             skeleton.getStartRadius(segment), skeleton.getEndRadius(segment), share)),
-                    skeleton.getDepth(segment));
+                    skeleton.getDepth(segment),
+                    model.getSegmentOfSource(skeleton.getParent(segment)));
         }
 
         for (int leaf = 0; leaf < skeleton.getLeafCount(); leaf++) {
@@ -170,7 +173,8 @@ public final class TreeShapeUtility extends EngineUtility {
                     Math.max(minLeafRadius, scale * skeleton.getLeafRadiusH(leaf)),
                     Math.max(minLeafRadius, scale * skeleton.getLeafRadiusV(leaf)),
                     rollLeaf(seed, EngineSetting.TREE_LEAF_SEED_SALT, leaf),
-                    rollLeaf(seed, EngineSetting.TREE_LEAF_ACCENT_SALT, leaf) < accentChance);
+                    rollLeaf(seed, EngineSetting.TREE_LEAF_ACCENT_SALT, leaf) < accentChance,
+                    model.getSegmentOfSource(skeleton.getLeafSegment(leaf)));
         }
     }
 

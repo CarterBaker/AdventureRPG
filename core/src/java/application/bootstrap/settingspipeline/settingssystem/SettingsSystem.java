@@ -143,12 +143,14 @@ public class SettingsSystem extends SystemPackage {
                 settings.maxRenderDistance,
                 settings.treeDetailDistance,
                 EngineSetting.MACRO_RENDER_DISTANCE_BLOCKS * playMacros,
-                settings.treeModelDistance);
+                settings.treeModelDistance,
+                settings.treeSharedLevel);
         menuRange.set(
                 settings.menuRenderDistance * menuChunks,
                 settings.menuTreeDetailDistance,
                 EngineSetting.MACRO_RENDER_DISTANCE_BLOCKS * menuMacros,
-                settings.treeModelDistance);
+                settings.treeModelDistance,
+                settings.treeSharedLevel);
     }
 
     // Post Processing \\

@@ -25,12 +25,12 @@ public class MacroTreeBranch extends BranchPackage {
      * by one, on a tile sampled finely enough to show them. Every wild tree
      * rooted in the tile is found exactly where chunk placement finds it,
      * through TreeManager.collectSites(), and stood on the tile's own surface
-     * under the very crown a far mega outlines — the same lumps, sized from
+     * under the crown its form lays out — the lumps it is judged as, sized from
      * its mature height and age — in the flat colors its bark and leaves show
      * from afar. resolveStandIn() is the one place a tile's resolution picks
      * how finely. A tile near the grid draws every tree as a model of itself
-     * instead — its OUTLINE in its own bark and leaves, the very look the
-     * grid's farthest trees take, every vertex naming the chunk its tree
+     * instead — at the LOD the tree's own distance gives it, the very look
+     * the grid would draw it with, every vertex naming the chunk its tree
      * roots in, so a forest keeps its look as it passes from the grid to
      * the macro terrain and a tree yields whole the moment the grid draws
      * its chunk. Beyond them the finest tiles facet
@@ -148,8 +148,6 @@ public class MacroTreeBranch extends BranchPackage {
 
         TreeHandle treeHandle = site.getTreeHandle();
         float rootY = resolveSurface(scratch, rootX, rootZ);
-        float matureHeight = TreeSkeletonUtility.resolveMatureHeight(treeHandle, site.getSeed());
-
         float cover = blockZ / chunkSize * macroChunkSize + blockX / chunkSize;
 
         if (scratch.treeModels) {
@@ -157,13 +155,16 @@ public class MacroTreeBranch extends BranchPackage {
             int barkStart = scratch.modelBark.size();
             int leafStart = scratch.modelLeaves.size();
 
-            TreeModelUtility.emitOutline(
-                    treeHandle, site.getSeed(), matureHeight, site.getAge(), rootX, rootY, rootZ,
+            TreeModelUtility.emitSite(
+                    treeHandle, site.getSeed(), site.getAge(), rootX, rootY, rootZ,
+                    treeManager.resolveTreeLod(worldHandle, site.getAnchorX(), site.getAnchorZ()),
                     scratch.model, scratch.modelBark, scratch.modelLeaves);
             markCover(scratch.modelBark, barkStart, cover);
             markCover(scratch.modelLeaves, leafStart, cover);
             return;
         }
+
+        float matureHeight = TreeSkeletonUtility.resolveMatureHeight(treeHandle, site.getSeed());
         float turn = TreeStandInUtility.resolveTurn(site.getSeed());
         float[] crown = scratch.crown;
         int leafAlbedo = treeHandle.getPartAlbedos()[EngineSetting.TREE_PART_LEAF];

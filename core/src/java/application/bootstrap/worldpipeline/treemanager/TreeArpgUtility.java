@@ -48,6 +48,7 @@ class TreeArpgUtility extends EngineUtility {
             ToIntFunction<String> resolveItemID) {
 
         String displayName = parseDisplayName(treeArpg, treeName);
+        int lodSeed = parseLodSeed(treeArpg, treeName);
         TreeForm form = parseForm(treeArpg, treeName);
         TreeTrunkStruct trunk = parseTrunk(objectOrEmpty(treeArpg, "trunk"), treeName);
         TreeBranchStruct branches = parseBranches(objectOrEmpty(treeArpg, "branches"), treeName);
@@ -56,7 +57,7 @@ class TreeArpgUtility extends EngineUtility {
         TreeGrowthStruct growth = parseGrowth(objectOrEmpty(treeArpg, "growth"), treeName, resolveItemID);
 
         return new TreeData(
-                treeName, displayName, treeID, RegistryUtility.toNameSeed(treeName),
+                treeName, displayName, treeID, RegistryUtility.toNameSeed(treeName), lodSeed,
                 form, trunk, branches, leaves, wood, growth,
                 computeReach(form, trunk, branches, leaves),
                 computeHeightReach(trunk, leaves),
@@ -77,6 +78,16 @@ class TreeArpgUtility extends EngineUtility {
             return treeName.substring(treeName.lastIndexOf('/') + 1);
 
         return displayName;
+    }
+
+    private static int parseLodSeed(ArpgObjectStruct treeArpg, String treeName) {
+
+        int lodSeed = ArpgUtility.getInt(treeArpg, "lod_seed", EngineSetting.TREE_DEFAULT_LOD_SEED);
+
+        if (lodSeed < 0 || lodSeed > EngineSetting.TREE_MAX_LOD_SEED)
+            throw fail(treeName, "\"lod_seed\" must lie between 0 and " + EngineSetting.TREE_MAX_LOD_SEED + ".");
+
+        return lodSeed;
     }
 
     private static TreeForm parseForm(ArpgObjectStruct treeArpg, String treeName) {

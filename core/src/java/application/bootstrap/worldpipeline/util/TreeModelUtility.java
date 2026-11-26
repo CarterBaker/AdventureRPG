@@ -2,11 +2,12 @@ package application.bootstrap.worldpipeline.util;
 
 import java.util.Arrays;
 
-import application.bootstrap.worldpipeline.tree.TreeDetail;
+import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelMeshUtility;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreeModelStruct;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
+import application.bootstrap.worldpipeline.tree.TreeSharedStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -14,45 +15,93 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList;
 public final class TreeModelUtility extends EngineUtility {
 
     /*
-     * Draws a tree coarser than in full, in the very bark and leaf layouts
-     * and materials the grown tree uses, so it keeps its place, its lean and
-     * its crown as it passes from one tier to the next. MODEL and SKETCH read
-     * what stands of the tree: its own shape when an axe or a hand altered
-     * it, so a stump stands as a stump, or else the skeleton its seed grows,
-     * evaluated at its age in a thread's scratch and never kept. Its trunk is
-     * laid as boxes of bark, one box running on up the trunk while the trunk
-     * keeps within its width and girth, and MODEL adds its thick limbs as
-     * short boxes stepping along them. Its leaf clusters merge by the cells
-     * of a lattice laid over the crown, finer for MODEL than for SKETCH, each
-     * cell drawn as one cluster reaching over the clusters it holds. OUTLINE
-     * grows nothing: a trunk box under the lumps its form lays its crown out
-     * as, sized from its mature height and age. Positions are in blocks of
-     * the caller's frame.
+     * Draws a tree at a coarse level of the LOD ladder, in the very bark and
+     * leaf layouts and materials the grown tree uses, so it keeps its place,
+     * its lean and its crown as it passes from one level to the next. A level
+     * of its own reads what stands of the tree: its own shape when an axe or
+     * a hand altered it, so a stump stands as a stump, or else the skeleton
+     * its seed grows, evaluated at its age in a thread's scratch and never
+     * kept. Its leaf clusters merge by the cells of a lattice laid over the
+     * crown, coarser each level, each cell drawn as one cluster reaching over
+     * the clusters it holds. Its wood is judged against the same cells: a
+     * limb is drawn while it is as thick as its level's girth or while any
+     * cluster it carries lies past half a cell from where it sets out, and
+     * the limb it sets out from is drawn whenever it is, so every cluster
+     * drawn lies within the reach of drawn wood and none ever floats, on a
+     * sapling and a giant alike. The trunk is laid as boxes of bark, one box
+     * running on up the trunk while the trunk keeps within its width and
+     * girth, and every limb drawn as short boxes stepping along it. From the
+     * shared level on a tree nothing has altered draws its species' shared
+     * model instead, built once by buildShared(), scaled to the tree's own
+     * height and mirrored one of four ways by its seed. Positions are in
+     * blocks of the caller's frame.
      */
+
+    // Mirror — the face each face becomes when a shared model is mirrored across X and across Z
+    private static final int[] FACE_MIRRORED_X = resolveMirroredFaces(EngineSetting.AXIS_X);
+    private static final int[] FACE_MIRRORED_Z = resolveMirroredFaces(EngineSetting.AXIS_Z);
 
     // Emit \\
 
-    // One tree whose root centre stands at a point of the frame, its height the world's own
+    // One tree whose root centre stands at a point of the frame, its height the world's own, drawn at a LOD
     public static void emit(
             TreeInstance tree,
             float rootX,
             float rootZ,
-            TreeDetail detail,
+            int lod,
             TreeModelStruct model,
             FloatArrayList bark,
             FloatArrayList leaves) {
 
-        if (detail == TreeDetail.OUTLINE && !tree.isAltered()) {
-            emitOutline(tree, rootX, rootZ, model, bark, leaves);
+        int level = TreeLodUtility.toLevel(lod);
+
+        if (TreeLodUtility.isShared(lod) && !tree.isAltered()) {
+            emitShared(
+                    tree.getTreeHandle(), tree.getSeed(), tree.getMatureHeight(), tree.getAge(),
+                    rootX, tree.getBaseY(), rootZ, level, bark, leaves);
             return;
         }
 
-        gather(tree, model);
-        emitGathered(tree.getTreeHandle(), model, rootX, tree.getBaseY(), rootZ, detail, bark, leaves);
+        model.clear();
+
+        if (tree.isAltered())
+            gatherShape(tree.getShape(), model);
+        else
+            gatherSeed(tree.getTreeHandle(), tree.getSeed(), tree.getAge(), model);
+
+        emitLevel(tree.getTreeHandle(), model, rootX, tree.getBaseY(), rootZ, level, bark, leaves);
     }
 
-    // A shape alone as a MODEL of itself, its root centre at a point of the frame — a piece of tree too great to
-    // draw sub-voxel by sub-voxel
+    // A tree known only by its species, seed and age, never registered, drawn at a LOD: what distant terrain
+    // draws each tree it stands in as
+    public static void emitSite(
+            TreeHandle treeHandle,
+            long seed,
+            float age,
+            float rootX,
+            float rootY,
+            float rootZ,
+            int lod,
+            TreeModelStruct model,
+            FloatArrayList bark,
+            FloatArrayList leaves) {
+
+        int level = TreeLodUtility.toLevel(lod);
+
+        if (TreeLodUtility.isShared(lod)) {
+            emitShared(
+                    treeHandle, seed, TreeSkeletonUtility.resolveMatureHeight(treeHandle, seed), age,
+                    rootX, rootY, rootZ, level, bark, leaves);
+            return;
+        }
+
+        model.clear();
+        gatherSeed(treeHandle, seed, age, model);
+        emitLevel(treeHandle, model, rootX, rootY, rootZ, level, bark, leaves);
+    }
+
+    // A shape alone at the finest coarse level, its root centre at a point of the frame — a piece of tree too great
+    // to draw sub-voxel by sub-voxel
     public static void emitShape(
             TreeShapeStruct shape,
             float rootX,
@@ -64,77 +113,124 @@ public final class TreeModelUtility extends EngineUtility {
 
         model.clear();
         gatherShape(shape, model);
-        emitGathered(shape.getTreeHandle(), model, rootX, rootY, rootZ, TreeDetail.MODEL, bark, leaves);
+        emitLevel(shape.getTreeHandle(), model, rootX, rootY, rootZ, EngineSetting.TREE_LOD_FULL + 1, bark, leaves);
     }
 
-    // What was gathered of a tree drawn at a tier finer than OUTLINE
-    private static void emitGathered(
+    // What was gathered of a tree drawn at one of its own coarse levels
+    private static void emitLevel(
             TreeHandle treeHandle,
             TreeModelStruct model,
             float rootX,
             float rootY,
             float rootZ,
-            TreeDetail detail,
+            int level,
             FloatArrayList bark,
             FloatArrayList leaves) {
 
-        boolean modelled = detail == TreeDetail.MODEL;
+        float cellSize = resolveCellSize(model, level);
 
-        emitTrunk(treeHandle, model, rootX, rootY, rootZ, modelled, bark);
-
-        if (modelled)
-            emitLimbs(treeHandle, model, rootX, rootY, rootZ, bark);
-
-        emitCrown(
-                treeHandle, model, rootX, rootY, rootZ,
-                modelled ? EngineSetting.TREE_MODEL_CELLS_PER_AXIS : EngineSetting.TREE_SKETCH_CELLS_PER_AXIS,
-                modelled ? EngineSetting.TREE_MODEL_MAX_TIERS : EngineSetting.TREE_SKETCH_MAX_TIERS,
-                leaves);
+        judgeWood(model, level, cellSize);
+        emitTrunk(treeHandle, model, rootX, rootY, rootZ, bark);
+        emitLimbs(treeHandle, model, rootX, rootY, rootZ, bark);
+        emitCrown(treeHandle, model, rootX, rootY, rootZ, level, cellSize, leaves);
     }
 
     // Gather \\
 
-    // What stands of the tree, from its own shape once altered and from its seed's skeleton otherwise
-    private static void gather(TreeInstance tree, TreeModelStruct model) {
-
-        model.clear();
-
-        if (tree.isAltered()) {
-            gatherShape(tree.getShape(), model);
-            return;
-        }
-
-        TreeSkeletonUtility.grow(tree.getTreeHandle(), tree.getSeed(), model.getSkeleton());
-        TreeShapeUtility.evaluateModel(
-                tree.getTreeHandle(), tree.getSeed(), model.getSkeleton(), tree.getAge(), model);
+    // The skeleton a seed grows, evaluated at an age
+    private static void gatherSeed(TreeHandle treeHandle, long seed, float age, TreeModelStruct model) {
+        TreeSkeletonUtility.grow(treeHandle, seed, model.getSkeleton());
+        TreeShapeUtility.evaluateModel(treeHandle, seed, model.getSkeleton(), age, model);
     }
 
+    // What stands of an altered tree, each piece linked through the skeleton its seed grows to the piece before it
+    // on the same limb or to the limb it sets out from
     private static void gatherShape(TreeShapeStruct shape, TreeModelStruct model) {
 
-        for (int segment = 0; segment < shape.getSegmentCount(); segment++)
+        TreeSkeletonUtility.grow(shape.getTreeHandle(), shape.getSeed(), model.getSkeleton());
+
+        for (int segment = 0; segment < shape.getSegmentCount(); segment++) {
+
+            int source = shape.getSourceSegment(segment);
+            int previous = model.getSegmentOfSource(source);
+            int parent = previous != EngineSetting.INDEX_NOT_FOUND
+                    ? previous
+                    : model.getSegmentOfSource(model.getSkeleton().getParent(source));
+
+            model.setSegmentOfSource(source, model.getSegmentCount());
             model.addSegment(
                     shape.getStartX(segment), shape.getStartY(segment), shape.getStartZ(segment),
                     shape.getEndX(segment), shape.getEndY(segment), shape.getEndZ(segment),
-                    shape.getStartRadius(segment), shape.getEndRadius(segment), shape.getDepth(segment));
+                    shape.getStartRadius(segment), shape.getEndRadius(segment), shape.getDepth(segment), parent);
+        }
 
         for (int leaf = 0; leaf < shape.getLeafCount(); leaf++)
             model.addLeaf(
                     shape.getLeafX(leaf), shape.getLeafY(leaf), shape.getLeafZ(leaf),
                     shape.getLeafRadiusH(leaf), shape.getLeafRadiusV(leaf),
-                    shape.getLeafSeed(leaf), shape.isLeafAccent(leaf));
+                    shape.getLeafSeed(leaf), shape.isLeafAccent(leaf),
+                    model.getSegmentOfSource(model.getSkeleton().getLeafSegment(shape.getLeafSource(leaf))));
+    }
+
+    // Wood \\
+
+    // Every segment marked drawn or hidden at a level: the trunk always, a limb at its level's girth or carrying a
+    // cluster past half a cell, and every limb a drawn one sets out from
+    private static void judgeWood(TreeModelStruct model, int level, float cellSize) {
+
+        model.resetCarry();
+
+        for (int leaf = 0; leaf < model.getLeafCount(); leaf++)
+            carryLeaf(model, leaf);
+
+        float girth = TreeLodUtility.resolveGirth(level);
+        float cover = cellSize * EngineSetting.TREE_LOD_COVER_SHARE;
+
+        for (int segment = 0; segment < model.getSegmentCount(); segment++)
+            model.setKept(segment, model.getDepth(segment) == 0
+                    || model.getStartRadius(segment) >= girth
+                    || model.getReach(segment) > cover);
+
+        for (int segment = model.getSegmentCount() - 1; segment >= 0; segment--) {
+
+            int parent = model.getParent(segment);
+
+            if (model.isKept(segment) && parent != EngineSetting.INDEX_NOT_FOUND)
+                model.setKept(parent, true);
+        }
+    }
+
+    // A cluster's reach past its rim taken into every segment carrying it, from where each sets out
+    private static void carryLeaf(TreeModelStruct model, int leaf) {
+
+        float leafX = model.getLeafX(leaf);
+        float leafY = model.getLeafY(leaf);
+        float leafZ = model.getLeafZ(leaf);
+        float rim = model.getLeafRadiusH(leaf);
+
+        for (int segment = model.getLeafSegment(leaf); segment != EngineSetting.INDEX_NOT_FOUND;
+                segment = model.getParent(segment)) {
+
+            float dx = leafX - model.getStartX(segment);
+            float dy = leafY - model.getStartY(segment);
+            float dz = leafZ - model.getStartZ(segment);
+            float reach = (float) Math.sqrt(dx * dx + dy * dy + dz * dz) - rim;
+
+            if (reach > model.getReach(segment))
+                model.setReach(segment, reach);
+        }
     }
 
     // Trunk \\
 
     // The trunk's segments as boxes of bark, a box running on while the next segment carries on from its top
-    // within its width and girth; the top of a stem shows, so its last box is capped when modelled
+    // within its width and girth; the top of a stem shows, so its last box is capped
     private static void emitTrunk(
             TreeHandle treeHandle,
             TreeModelStruct model,
             float rootX,
             float rootY,
             float rootZ,
-            boolean modelled,
             FloatArrayList bark) {
 
         int first = EngineSetting.INDEX_NOT_FOUND;
@@ -154,7 +250,7 @@ public final class TreeModelUtility extends EngineUtility {
                     continue;
                 }
 
-                emitRun(treeHandle, model, first, last, rootX, rootY, rootZ, modelled && !joins, bark);
+                emitRun(treeHandle, model, first, last, rootX, rootY, rootZ, !joins, bark);
             }
 
             first = segment;
@@ -162,7 +258,7 @@ public final class TreeModelUtility extends EngineUtility {
         }
 
         if (first != EngineSetting.INDEX_NOT_FOUND)
-            emitRun(treeHandle, model, first, last, rootX, rootY, rootZ, modelled, bark);
+            emitRun(treeHandle, model, first, last, rootX, rootY, rootZ, true, bark);
     }
 
     // True when a segment sets out from where another ends
@@ -219,8 +315,7 @@ public final class TreeModelUtility extends EngineUtility {
 
     // Limbs \\
 
-    // Every limb thick enough to show past the crown, as a few capped boxes stepping along each of its segments:
-    // first where every limb sets out, then on along them while the model has boxes to spare
+    // Every limb segment the level draws, as capped boxes stepping along it
     private static void emitLimbs(
             TreeHandle treeHandle,
             TreeModelStruct model,
@@ -229,56 +324,19 @@ public final class TreeModelUtility extends EngineUtility {
             float rootZ,
             FloatArrayList bark) {
 
-        int boxes = emitLimbSegments(treeHandle, model, rootX, rootY, rootZ, true, 0, bark);
-
-        emitLimbSegments(treeHandle, model, rootX, rootY, rootZ, false, boxes, bark);
+        for (int segment = 0; segment < model.getSegmentCount(); segment++)
+            if (model.getDepth(segment) != 0 && model.isKept(segment))
+                emitLimbSegment(treeHandle, model, segment, rootX, rootY, rootZ, bark);
     }
 
-    // The limb segments that set out from their parent, or those carrying a limb on, up to the model's boxes — the
-    // boxes spent by the end
-    private static int emitLimbSegments(
-            TreeHandle treeHandle,
-            TreeModelStruct model,
-            float rootX,
-            float rootY,
-            float rootZ,
-            boolean settingOut,
-            int boxes,
-            FloatArrayList bark) {
-
-        int previous = EngineSetting.INDEX_NOT_FOUND;
-
-        for (int segment = 0; segment < model.getSegmentCount(); segment++) {
-
-            if (model.getDepth(segment) != EngineSetting.TREE_MODEL_LIMB_DEPTH)
-                continue;
-
-            boolean carriesOn = previous != EngineSetting.INDEX_NOT_FOUND && joins(model, previous, segment);
-
-            previous = segment;
-
-            if (carriesOn == settingOut
-                    || model.getStartRadius(segment) < EngineSetting.TREE_MODEL_LIMB_MIN_RADIUS_BLOCKS)
-                continue;
-
-            boxes = emitLimbSegment(treeHandle, model, segment, rootX, rootY, rootZ, boxes, bark);
-
-            if (boxes >= EngineSetting.TREE_MODEL_MAX_LIMB_BOXES)
-                break;
-        }
-
-        return boxes;
-    }
-
-    // One segment as capped boxes stepping along it, each no wider than the limb across — the boxes spent by the end
-    private static int emitLimbSegment(
+    // One segment as capped boxes stepping along it, each no wider than the limb across
+    private static void emitLimbSegment(
             TreeHandle treeHandle,
             TreeModelStruct model,
             int segment,
             float rootX,
             float rootY,
             float rootZ,
-            int boxes,
             FloatArrayList bark) {
 
         float radius = TreeImpostorUtility.resolveHalfWidth(
@@ -290,9 +348,6 @@ public final class TreeModelUtility extends EngineUtility {
         int pieces = Math.clamp((int) Math.ceil(reach / (radius * 2f)), 1, EngineSetting.TREE_MODEL_LIMB_PIECES);
 
         for (int piece = 0; piece < pieces; piece++) {
-
-            if (boxes >= EngineSetting.TREE_MODEL_MAX_LIMB_BOXES)
-                break;
 
             float from = (float) piece / pieces;
             float to = (float) (piece + 1) / pieces;
@@ -309,10 +364,7 @@ public final class TreeModelUtility extends EngineUtility {
                     Math.min(fromX, toX) - radius, Math.min(fromY, toY) - radius, Math.min(fromZ, toZ) - radius,
                     Math.max(fromX, toX) + radius, Math.max(fromY, toY) + radius, Math.max(fromZ, toZ) + radius,
                     true, bark);
-            boxes++;
         }
-
-        return boxes;
     }
 
     private static void emitBarkBox(
@@ -338,16 +390,53 @@ public final class TreeModelUtility extends EngineUtility {
 
     // Crown \\
 
-    // The clusters merged by a lattice of cube cells over their centres, as many across as given and as many tiers
-    // as fit up to the most given, each cell drawn as one cluster over the bounds of those it holds
+    // The side of a level's lattice cells over the clusters' bounds, which it leaves in the model's bounds; none
+    // without clusters
+    private static float resolveCellSize(TreeModelStruct model, int level) {
+
+        int count = model.getLeafCount();
+
+        if (count == 0)
+            return 0f;
+
+        float[] bounds = model.getBounds();
+
+        Arrays.fill(bounds, 0, EngineSetting.AXIS_COUNT, Float.MAX_VALUE);
+        Arrays.fill(bounds, EngineSetting.AXIS_COUNT, EngineSetting.AXIS_COUNT * 2, -Float.MAX_VALUE);
+
+        for (int leaf = 0; leaf < count; leaf++) {
+            bounds[EngineSetting.AXIS_X] = Math.min(bounds[EngineSetting.AXIS_X], model.getLeafX(leaf));
+            bounds[EngineSetting.AXIS_Y] = Math.min(bounds[EngineSetting.AXIS_Y], model.getLeafY(leaf));
+            bounds[EngineSetting.AXIS_Z] = Math.min(bounds[EngineSetting.AXIS_Z], model.getLeafZ(leaf));
+            bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_X] = Math.max(
+                    bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_X], model.getLeafX(leaf));
+            bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_Y] = Math.max(
+                    bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_Y], model.getLeafY(leaf));
+            bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_Z] = Math.max(
+                    bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_Z], model.getLeafZ(leaf));
+        }
+
+        float spanX = bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_X] - bounds[EngineSetting.AXIS_X];
+        float spanY = bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_Y] - bounds[EngineSetting.AXIS_Y];
+        float spanZ = bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_Z] - bounds[EngineSetting.AXIS_Z];
+
+        return Math.max(
+                Math.max(
+                        Math.max(spanX, spanZ) / EngineSetting.TREE_LOD_CELLS_PER_AXIS[level],
+                        spanY / EngineSetting.TREE_LOD_MAX_TIERS[level]),
+                EngineSetting.TREE_MODEL_MIN_CELL_BLOCKS);
+    }
+
+    // The clusters merged by a lattice of cube cells over their centres, as many across and as many tiers up as
+    // the level allows, each cell drawn as one cluster over the bounds of those it holds
     private static void emitCrown(
             TreeHandle treeHandle,
             TreeModelStruct model,
             float rootX,
             float rootY,
             float rootZ,
-            int cellsPerAxis,
-            int maxTiers,
+            int level,
+            float cellSize,
             FloatArrayList leaves) {
 
         int count = model.getLeafCount();
@@ -355,28 +444,16 @@ public final class TreeModelUtility extends EngineUtility {
         if (count == 0)
             return;
 
-        float minX = Float.MAX_VALUE;
-        float minY = Float.MAX_VALUE;
-        float minZ = Float.MAX_VALUE;
-        float maxX = -Float.MAX_VALUE;
-        float maxY = -Float.MAX_VALUE;
-        float maxZ = -Float.MAX_VALUE;
-
-        for (int leaf = 0; leaf < count; leaf++) {
-            minX = Math.min(minX, model.getLeafX(leaf));
-            minY = Math.min(minY, model.getLeafY(leaf));
-            minZ = Math.min(minZ, model.getLeafZ(leaf));
-            maxX = Math.max(maxX, model.getLeafX(leaf));
-            maxY = Math.max(maxY, model.getLeafY(leaf));
-            maxZ = Math.max(maxZ, model.getLeafZ(leaf));
-        }
-
-        float cellSize = Math.max(
-                Math.max(Math.max(maxX - minX, maxZ - minZ) / cellsPerAxis, (maxY - minY) / maxTiers),
-                EngineSetting.TREE_MODEL_MIN_CELL_BLOCKS);
-        int cellsX = resolveCells(maxX - minX, cellSize, cellsPerAxis);
-        int cellsY = resolveCells(maxY - minY, cellSize, maxTiers);
-        int cellsZ = resolveCells(maxZ - minZ, cellSize, cellsPerAxis);
+        float[] bounds = model.getBounds();
+        float minX = bounds[EngineSetting.AXIS_X];
+        float minY = bounds[EngineSetting.AXIS_Y];
+        float minZ = bounds[EngineSetting.AXIS_Z];
+        int cellsX = resolveCells(bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_X] - minX, cellSize,
+                EngineSetting.TREE_LOD_CELLS_PER_AXIS[level]);
+        int cellsY = resolveCells(bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_Y] - minY, cellSize,
+                EngineSetting.TREE_LOD_MAX_TIERS[level]);
+        int cellsZ = resolveCells(bounds[EngineSetting.AXIS_COUNT + EngineSetting.AXIS_Z] - minZ, cellSize,
+                EngineSetting.TREE_LOD_CELLS_PER_AXIS[level]);
         int cellCount = cellsX * cellsY * cellsZ;
         float[] cells = model.getCells();
 
@@ -475,25 +552,36 @@ public final class TreeModelUtility extends EngineUtility {
                 leaves);
     }
 
-    // Outline \\
+    // Shared \\
 
-    // A tree nothing has altered, sized from its species, mature height and age: a trunk box rising into the lumps
-    // its form lays its crown out as, each lump's seed rolled from the tree's
-    private static void emitOutline(
-            TreeInstance tree,
-            float rootX,
-            float rootZ,
-            TreeModelStruct model,
-            FloatArrayList bark,
-            FloatArrayList leaves) {
-        emitOutline(
-                tree.getTreeHandle(), tree.getSeed(), tree.getMatureHeight(), tree.getAge(),
-                rootX, tree.getBaseY(), rootZ, model, bark, leaves);
+    // A species' shared model at every coarse level: the tree its LOD seed grows at full age, root at the origin
+    public static TreeSharedStruct buildShared(TreeHandle treeHandle) {
+
+        long seed = TreeLodUtility.resolveSharedSeed(treeHandle);
+        TreeModelStruct model = new TreeModelStruct();
+        FloatArrayList bark = new FloatArrayList();
+        FloatArrayList leaves = new FloatArrayList();
+        float[][] barkLevels = new float[EngineSetting.TREE_LOD_LEVEL_COUNT][];
+        float[][] leafLevels = new float[EngineSetting.TREE_LOD_LEVEL_COUNT][];
+
+        barkLevels[EngineSetting.TREE_LOD_FULL] = new float[0];
+        leafLevels[EngineSetting.TREE_LOD_FULL] = new float[0];
+        gatherSeed(treeHandle, seed, 1f, model);
+
+        for (int level = EngineSetting.TREE_LOD_FULL + 1; level < EngineSetting.TREE_LOD_LEVEL_COUNT; level++) {
+
+            bark.clear();
+            leaves.clear();
+            emitLevel(treeHandle, model, 0f, 0f, 0f, level, bark, leaves);
+            barkLevels[level] = bark.toFloatArray();
+            leafLevels[level] = leaves.toFloatArray();
+        }
+
+        return new TreeSharedStruct(seed, barkLevels, leafLevels, model.getSkeleton().getMatureHeight());
     }
 
-    // A tree known only by its species, seed, mature height and age, never grown, drawn as its OUTLINE: what distant
-    // terrain draws each tree as before its stand-ins take over
-    public static void emitOutline(
+    // A tree drawn as its species' shared model of a level, scaled to its own height and mirrored by its seed
+    private static void emitShared(
             TreeHandle treeHandle,
             long seed,
             float matureHeight,
@@ -501,47 +589,108 @@ public final class TreeModelUtility extends EngineUtility {
             float rootX,
             float rootY,
             float rootZ,
-            TreeModelStruct model,
+            int level,
             FloatArrayList bark,
             FloatArrayList leaves) {
 
-        float[] crown = model.getCrown();
-        float[] lumps = model.getLumps();
+        TreeSharedStruct shared = treeHandle.getShared();
+        float scale = matureHeight * TreeShapeUtility.resolveScale(matureHeight, age) / shared.getHeight();
+        int variant = Math.min(
+                (int) (BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
+                        seed ^ EngineSetting.TREE_LOD_SHARED_SEED_SALT, 0, 0))
+                        * EngineSetting.TREE_LOD_SHARED_VARIANTS),
+                EngineSetting.TREE_LOD_SHARED_VARIANTS - 1);
+        boolean mirrorX = (variant & EngineSetting.TREE_LOD_SHARED_MIRROR_X) != 0;
+        boolean mirrorZ = (variant & EngineSetting.TREE_LOD_SHARED_MIRROR_Z) != 0;
 
-        TreeImpostorUtility.estimateCrown(treeHandle, matureHeight, age, crown);
+        appendShared(shared.getBark(level), true, scale, mirrorX, mirrorZ, rootX, rootY, rootZ, bark);
+        appendShared(shared.getLeaves(level), false, scale, mirrorX, mirrorZ, rootX, rootY, rootZ, leaves);
+    }
 
-        float halfWidth = crown[EngineSetting.TREE_IMPOSTOR_TRUNK_HALF_WIDTH];
-        float trunkTop = crown[EngineSetting.TREE_IMPOSTOR_TRUNK_TOP];
+    // A shared model's vertices carried to a root, scaled and mirrored, every quad wound back the right way round
+    // when it is mirrored across one axis alone
+    private static void appendShared(
+            float[] source,
+            boolean wood,
+            float scale,
+            boolean mirrorX,
+            boolean mirrorZ,
+            float rootX,
+            float rootY,
+            float rootZ,
+            FloatArrayList out) {
 
-        if (trunkTop > 0f)
-            emitBarkBox(
-                    treeHandle,
-                    model,
-                    rootX - halfWidth, rootY - EngineSetting.TREE_TRUNK_SINK_BLOCKS, rootZ - halfWidth,
-                    rootX + halfWidth, rootY + trunkTop, rootZ + halfWidth,
-                    false, bark);
+        int stride = EngineSetting.CHUNK_VERTEX_FLOAT_COUNT;
+        int quadFloats = stride * EngineSetting.QUAD_VERTEX_COUNT;
+        boolean rewound = mirrorX != mirrorZ;
+        float signX = mirrorX ? -scale : scale;
+        float signZ = mirrorZ ? -scale : scale;
+        int start = out.size();
 
-        if (crown[EngineSetting.TREE_IMPOSTOR_CROWN_RADIUS] <= 0f)
-            return;
+        out.size(start + source.length);
 
-        int count = TreeImpostorUtility.layoutCrown(treeHandle.getForm(), crown, lumps);
-        int[] tiles = treeHandle.getPartTiles();
+        float[] target = out.elements();
 
-        for (int lump = 0; lump < count; lump++) {
+        for (int quad = 0; quad < source.length; quad += quadFloats)
+            for (int vertex = 0; vertex < EngineSetting.QUAD_VERTEX_COUNT; vertex++) {
 
-            int offset = lump * EngineSetting.TREE_IMPOSTOR_LUMP_FLOATS;
+                int from = quad + (rewound && vertex != 0 ? EngineSetting.QUAD_VERTEX_COUNT - vertex : vertex) * stride;
+                int to = start + quad + vertex * stride;
 
-            TreeMeshUtility.emitCluster(
-                    rootX,
-                    rootY + lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_CENTER_Y],
-                    rootZ,
-                    lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_RADIUS_H],
-                    lumps[offset + EngineSetting.TREE_IMPOSTOR_LUMP_RADIUS_V],
-                    tiles[EngineSetting.TREE_PART_LEAF],
-                    treeHandle.getPartColors()[EngineSetting.TREE_PART_LEAF],
-                    BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
-                            seed ^ EngineSetting.TREE_IMPOSTOR_SEED_SALT, lump, 0)),
-                    leaves);
-        }
+                System.arraycopy(source, from, target, to, stride);
+
+                target[to + EngineSetting.AXIS_X] = rootX + source[from + EngineSetting.AXIS_X] * signX;
+                target[to + EngineSetting.AXIS_Y] = rootY + source[from + EngineSetting.AXIS_Y] * scale;
+                target[to + EngineSetting.AXIS_Z] = rootZ + source[from + EngineSetting.AXIS_Z] * signZ;
+
+                if (wood)
+                    carryWoodVertex(target, to, scale, mirrorX, mirrorZ);
+                else
+                    carryLeafVertex(target, to, scale, signX, signZ);
+            }
+    }
+
+    // A wood vertex's face turned with the mirror and its extents scaled
+    private static void carryWoodVertex(float[] vertex, int offset, float scale, boolean mirrorX, boolean mirrorZ) {
+
+        int meta = (int) vertex[offset + EngineSetting.TREE_VERTEX_META_OFFSET];
+        int face = meta & EngineSetting.TREE_META_FACE_MASK;
+
+        if (mirrorX)
+            face = FACE_MIRRORED_X[face];
+
+        if (mirrorZ)
+            face = FACE_MIRRORED_Z[face];
+
+        vertex[offset + EngineSetting.TREE_VERTEX_META_OFFSET] = (meta & ~EngineSetting.TREE_META_FACE_MASK) | face;
+
+        for (int extent = 0; extent < EngineSetting.TREE_VERTEX_WOOD_EXTENT_FLOATS; extent++)
+            vertex[offset + EngineSetting.TREE_VERTEX_WOOD_EXTENT_OFFSET + extent] *= scale;
+    }
+
+    // A leaf vertex's way back to its cluster's centre mirrored and scaled, and its cluster's radii scaled
+    private static void carryLeafVertex(float[] vertex, int offset, float scale, float signX, float signZ) {
+
+        int toCentre = offset + EngineSetting.TREE_VERTEX_LEAF_OFFSET_OFFSET;
+
+        vertex[toCentre + EngineSetting.AXIS_X] *= signX;
+        vertex[toCentre + EngineSetting.AXIS_Y] *= scale;
+        vertex[toCentre + EngineSetting.AXIS_Z] *= signZ;
+
+        for (int radius = 0; radius < EngineSetting.TREE_VERTEX_LEAF_RADIUS_FLOATS; radius++)
+            vertex[offset + EngineSetting.TREE_VERTEX_LEAF_RADIUS_OFFSET + radius] *= scale;
+    }
+
+    // Every face's twin across an axis: the face on that axis's other side, every other face as it was
+    private static int[] resolveMirroredFaces(int axis) {
+
+        int[] faces = new int[EngineSetting.SUB_VOXEL_FACE_COUNT];
+
+        for (int face = 0; face < faces.length; face++)
+            faces[face] = SubVoxelMeshUtility.resolveAxis(face) == axis
+                    ? SubVoxelMeshUtility.resolveFace(axis, SubVoxelMeshUtility.getFaceNormal(face, axis) < 0)
+                    : face;
+
+        return faces;
     }
 }

@@ -50,6 +50,9 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   while the Biomes layer is picked, the chosen biome selected in the Hierarchy as the palette is shown, so its fields
   are the Properties tab's. The Biome Planner only plans.
 - **Content.** Entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab.
+- **Tree Viewer.** Makes trees: the species picked in the Hierarchy, its fields (`lod_seed` among them) in the
+  Properties tab, its LOD levels in the Layers tab, the preview's New Seed, Younger and Older in the Tools tab, and New,
+  Duplicate, Save and Revert in the File menu. There is no Tree Planner.
 - **Character tool tabs.** Making a race's character is split into Appearance, Equipment, Hair, Mesh, Topology,
   Sculpt, Weights, Paint, Rig and UV (see `.claude/docs/CharacterEditorPipeline.md`), all sharing the region, bone and
   vertices selected. The Appearance tab's Properties rows hold every slider and control, and the Rig tab marks which
@@ -135,9 +138,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   has an eye hiding its vertices on the part edited, `CharacterEditorManager.toggleRegionShown`), the character
   Paint tab (the paint layers of the map painted, each above the base with an eye), the Image Editor (every layer of
   the image, each with an eye; its maps are listed in the Palette tab, never here), the Item Editor (every part of the
-  item, each one material, the part picked being the one its tools lay; no eyes) and the Tree Viewer (every detail a
-  tree is drawn at, as a mesh viewer lists its levels of detail: Full, Model, Sketch and Outline, each with an eye, the
-  one picked framed and every one shown while none is; `TreeViewerLayerSystem`).
+  item, each one material, the part picked being the one its tools lay; no eyes) and the Tree Viewer (every LOD level
+  a tree is drawn at, as a mesh viewer lists its levels of detail, LOD 0 (Full) to the coarsest, those from the Shared
+  Tree LOD setting on marked Shared, then the shared tree the species' `lod_seed` grows, each with an eye; all stand on
+  one root and only the topmost layer whose eye is open is drawn; `TreeViewerLayerSystem`).
 - **Up and Down** pick the layer listed above or below the one picked while the Layers tab is worked in
   (`LayersManager.stepLayer`, `assets/shortcuts/Layers.arpg`).
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers

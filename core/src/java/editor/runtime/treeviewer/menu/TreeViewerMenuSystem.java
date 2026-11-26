@@ -6,9 +6,9 @@ import application.bootstrap.menupipeline.menumanager.MenuManager;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
-import editor.bootstrap.treeplannerpipeline.treeplanner.TreePreviewTierStruct;
-import editor.bootstrap.treeplannerpipeline.treeplannermanager.TreePlannerManager;
+import editor.bootstrap.treeviewerpipeline.treeviewermanager.TreeViewerManager;
 import editor.runtime.treeviewer.TreeViewerSetting;
+import editor.runtime.treeviewer.layer.TreeViewerLayerSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
@@ -16,15 +16,16 @@ public class TreeViewerMenuSystem extends SystemPackage {
 
     /*
      * Opens the Tree Viewer's status line over the viewport, which names the
-     * species and how many vertices each tier draws it with, from the
-     * fullest to the plainest, rewritten only when the planner or its row
-     * changes.
+     * species, the layer shown and how many vertices it draws, the age and
+     * seed the preview grows from and the viewer's last message, rewritten
+     * only when the viewer, its preview or its layers change.
      */
 
     // Internal
     private MenuManager menuManager;
     private FBOManager fboManager;
-    private TreePlannerManager treePlannerManager;
+    private TreeViewerManager treeViewerManager;
+    private TreeViewerLayerSystem treeViewerLayerSystem;
 
     // Menus
     private MenuInstance viewerMenu;
@@ -43,7 +44,8 @@ public class TreeViewerMenuSystem extends SystemPackage {
     protected void get() {
         this.menuManager = get(MenuManager.class);
         this.fboManager = get(FBOManager.class);
-        this.treePlannerManager = get(TreePlannerManager.class);
+        this.treeViewerManager = get(TreeViewerManager.class);
+        this.treeViewerLayerSystem = get(TreeViewerLayerSystem.class);
     }
 
     @Override
@@ -60,7 +62,7 @@ public class TreeViewerMenuSystem extends SystemPackage {
     @Override
     protected void update() {
 
-        int revision = treePlannerManager.getRevision() + treePlannerManager.getPreviewRevision();
+        int revision = treeViewerLayerSystem.getRevision();
 
         if (revision == shownRevision)
             return;
@@ -70,29 +72,39 @@ public class TreeViewerMenuSystem extends SystemPackage {
         ElementInstance label = viewerMenu.getEntryPoint(TreeViewerSetting.ENTRY_STATUS);
 
         if (label != null)
-            label.setFontText(TreeViewerSetting.STATUS_PREFIX + describeRow());
+            label.setFontText(TreeViewerSetting.STATUS_PREFIX + describe());
     }
 
-    // The species and every tier's vertex count, left to right
-    private String describeRow() {
+    // The species, the layer shown with its vertex count, the preview's age and seed and the last message
+    private String describe() {
 
-        String treeName = treePlannerManager.getTreeName();
+        String treeName = treeViewerManager.getTreeName();
 
         if (treeName == null)
             return TreeViewerSetting.STATUS_NONE;
 
-        StringBuilder text = new StringBuilder(treePlannerManager.getDisplayName(treeName));
+        StringBuilder text = new StringBuilder(treeName).append(TreeViewerSetting.STATUS_SEPARATOR);
+        int shown = treeViewerLayerSystem.getShownLayer();
 
-        for (int i = 0; i < treePlannerManager.getPreviewTierCount(); i++) {
-
-            TreePreviewTierStruct tier = treePlannerManager.getPreviewTier(i);
-
-            text.append(TreeViewerSetting.STATUS_TIER_SEPARATOR)
-                    .append(TreeViewerSetting.TIER_NAMES[tier.getDetail().ordinal()])
+        if (shown == EngineSetting.INDEX_NOT_FOUND)
+            text.append(TreeViewerSetting.STATUS_HIDDEN);
+        else
+            text.append(treeViewerLayerSystem.getName(shown))
                     .append(' ')
-                    .append(tier.getVertexCount());
-        }
+                    .append(treeViewerManager.getPreviewLayer(shown).getVertexCount())
+                    .append(TreeViewerSetting.STATUS_VERTICES);
 
-        return text.append(TreeViewerSetting.STATUS_VERTICES).toString();
+        text.append(TreeViewerSetting.STATUS_SEPARATOR)
+                .append(TreeViewerSetting.STATUS_AGE)
+                .append(Math.round(treeViewerManager.getAge() * TreeViewerSetting.STATUS_PERCENT))
+                .append(TreeViewerSetting.STATUS_PERCENT_SIGN)
+                .append(TreeViewerSetting.STATUS_SEPARATOR)
+                .append(TreeViewerSetting.STATUS_SEED)
+                .append(treeViewerManager.getSeed());
+
+        if (treeViewerManager.getStatusMessage() != null)
+            text.append(TreeViewerSetting.STATUS_SEPARATOR).append(treeViewerManager.getStatusMessage());
+
+        return text.toString();
     }
 }

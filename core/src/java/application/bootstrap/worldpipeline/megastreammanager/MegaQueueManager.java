@@ -297,8 +297,7 @@ class MegaQueueManager extends ManagerPackage {
                     } else
                         deferredUploads.add(megaCoord);
                 }
-                case TREE_BUILD -> treeBuildBranch.buildTrees(
-                        mega, treeBuildBranch.resolveDetail(gridSlotHandle.getDetailLevel()));
+                case TREE_BUILD -> treeBuildBranch.buildTrees(mega);
                 case TREE_RENDER -> {
                     if (gpuUploadsThisFrame < megaGpuUploadBudget) {
                         treeRenderBranch.renderTrees(mega, sync);
@@ -328,11 +327,6 @@ class MegaQueueManager extends ManagerPackage {
 
         try {
             GridSlotDetailLevel slotLevel = gridSlotHandle.getDetailLevel();
-
-            // Trees built at a detail the mega's distance no longer calls for are built again
-            if (sync.getData()[MegaData.TREE_DATA.index]
-                    && mega.getTreeDetail() != treeBuildBranch.resolveDetail(slotLevel))
-                MegaDataUtility.cascadeClear(MegaData.TREE_DATA, sync.getData());
 
             MegaData toDump = MegaDataUtility.nextToDump(sync.getData(), slotLevel);
 

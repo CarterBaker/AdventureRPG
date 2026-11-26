@@ -6,7 +6,6 @@ import application.bootstrap.geometrypipeline.quadpacket.QuadRecordUtility;
 import application.bootstrap.geometrypipeline.vao.VAOHandle;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
-import application.bootstrap.worldpipeline.tree.TreeDetail;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderInstance;
@@ -25,18 +24,15 @@ public class MegaChunkInstance extends WorldRenderInstance {
      * forces a full rebuild from every member, which MegaMergeBranch runs only
      * while holding all their locks. Either way every bucket is reserved
      * before a record is copied, so it grows at most once. finalizeGeometry()
-     * marks the packet ready once every chunk is present. The stand-ins for the trees rooted in its chunks live
-     * in a packet of their own, drawn at the detail the mega's distance last
-     * built them at, so a tree that changes never re-merges the ground.
+     * marks the packet ready once every chunk is present. The trees rooted
+     * in its chunks live in a packet of their own, each drawn at its own LOD,
+     * so a tree that changes never re-merges the ground.
      */
 
     // Internal
     private MegaDataSyncContainer megaDataSyncContainer;
     private MegaBatchHandle megaBatchStruct;
     private DynamicPacketInstance treePacketInstance;
-
-    // Trees — the detail the stand-ins were last built at, null until they are
-    private volatile TreeDetail treeDetail;
 
     // State
     private int megaScale;
@@ -84,7 +80,6 @@ public class MegaChunkInstance extends WorldRenderInstance {
         megaBatchStruct.constructor(megaChunkCoordinate, megaScale);
         treePacketInstance.constructor(vaoHandle);
         megaDataSyncContainer.resetData();
-        this.treeDetail = null;
     }
 
     // Reset \\
@@ -94,7 +89,6 @@ public class MegaChunkInstance extends WorldRenderInstance {
         getQuadPacket().clear();
         treePacketInstance.clear();
         megaBatchStruct.reset();
-        this.treeDetail = null;
     }
 
     // Geometry \\
@@ -182,14 +176,6 @@ public class MegaChunkInstance extends WorldRenderInstance {
 
     public DynamicPacketInstance getTreePacketInstance() {
         return treePacketInstance;
-    }
-
-    public TreeDetail getTreeDetail() {
-        return treeDetail;
-    }
-
-    public void setTreeDetail(TreeDetail treeDetail) {
-        this.treeDetail = treeDetail;
     }
 
     public boolean isReadyToRender() {

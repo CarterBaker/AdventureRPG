@@ -92,6 +92,10 @@ public class SettingsUtility extends EngineUtility {
                 settings.treeDetailDistance,
                 EngineSetting.TREE_DETAIL_DISTANCE_MIN,
                 EngineSetting.TREE_DETAIL_DISTANCE_MAX);
+        settings.treeSharedLevel = Math.clamp(
+                settings.treeSharedLevel,
+                EngineSetting.TREE_LOD_SHARED_MIN,
+                EngineSetting.TREE_LOD_SHARED_MAX);
         settings.characterDetailDistance = Math.clamp(
                 settings.characterDetailDistance,
                 EngineSetting.CHARACTER_DETAIL_DISTANCE_MIN,

@@ -18,6 +18,7 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.vectors.Vector3;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -37,12 +38,15 @@ public class TreeManager extends ManagerPackage {
      * that stands each tree in on its own. A tree stays virtual — its height
      * and age, nothing grown — until something near enough needs its shape,
      * and gives the shape back once nothing has for a while. Trees are drawn
-     * apart from the ground, coarser the farther they stand: in full while
-     * their root lies within the tree detail distance, as models of their own
-     * trunk, limbs and crown by the chunks beyond it, as sketches and then
-     * outlines by the megas past those, as faceted flat-colored stand-ins by
-     * the macro terrain nearest them, and as a canopy by the macro terrain
-     * beyond that, so a tree that changes redraws only itself. It is the one way anything
+     * apart from the ground on one LOD ladder, coarser the farther each one
+     * stands from a player whatever draws it: in full while its root lies
+     * within the tree detail distance, then at coarser levels of its own
+     * trunk, limbs and crown, and from the shared level on as its species'
+     * one shared model, by chunks, megas and the macro terrain nearest them
+     * alike; past those the macro terrain draws faceted flat-colored
+     * stand-ins and then a canopy, so a tree that changes redraws only
+     * itself. resolveTreeLod() gives the LOD of a tree only a site knows. It
+     * is the one way anything
      * touches a tree: castTree() finds what a ray meets, strikeTree() lands a
      * blow on it, collectWoodBoxes() gives movement the wood to collide
      * with, and plant() roots a seed. buildShapeGeometry() draws a shape
@@ -207,6 +211,16 @@ public class TreeManager extends ManagerPackage {
             long maxZ,
             ObjectArrayList<TreeSiteStruct> out) {
         treeSiteBranch.collectSites(worldHandle, minX, minZ, maxX, maxZ, out);
+    }
+
+    // Any thread — the LOD a tree rooted at a block column is drawn at, judged as every registered tree is
+    public int resolveTreeLod(WorldHandle worldHandle, long anchorX, long anchorZ) {
+        return treeDetailBranch.resolveLod(
+                worldHandle,
+                Coordinate2Long.pack(
+                        (int) Math.floorDiv(anchorX, EngineSetting.CHUNK_SIZE),
+                        (int) Math.floorDiv(anchorZ, EngineSetting.CHUNK_SIZE)),
+                EngineSetting.TREE_LOD_NONE);
     }
 
     // Every tree a palette holds let go, the palette left empty

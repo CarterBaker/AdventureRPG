@@ -457,6 +457,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_OPTION_TERRAIN_DETAIL = "Detail";
     public static final String SETTINGS_OPTION_TREE_DETAIL = "Tree Detail";
     public static final String SETTINGS_OPTION_TREE_MODEL_DISTANCE = "Tree Model Distance";
+    public static final String SETTINGS_OPTION_TREE_SHARED_LEVEL = "Shared Tree LOD";
     public static final String SETTINGS_OPTION_CHARACTER_DETAIL = "Character Detail";
     public static final String SETTINGS_OPTION_MACRO_TERRAIN = "Distant Terrain";
     public static final String SETTINGS_OPTION_CHUNK_STREAMING = "Chunks";
@@ -496,6 +497,7 @@ public class RuntimeSetting {
     public static final String SETTINGS_VALUE_OFF = "Off";
     public static final String SETTINGS_FORMAT_BLOCKS = "%d blocks";
     public static final String SETTINGS_FORMAT_CHUNKS = "%d chunks";
+    public static final String SETTINGS_FORMAT_LEVEL = "Level %d";
     public static final String SETTINGS_FORMAT_FIELD_OF_VIEW = "%.0f";
     public static final String SETTINGS_FORMAT_SENSITIVITY = "%.2f";
     public static final String SETTINGS_FORMAT_PIXELS = "%d px";
@@ -509,6 +511,7 @@ public class RuntimeSetting {
     public static final int SETTINGS_TERRAIN_DETAIL_STEP = 8;
     public static final int SETTINGS_TREE_DETAIL_STEP = 1;
     public static final int SETTINGS_TREE_MODEL_DISTANCE_STEP = 250;
+    public static final int SETTINGS_TREE_SHARED_LEVEL_STEP = 1;
     public static final int SETTINGS_CHARACTER_DETAIL_STEP = 2;
     public static final float SETTINGS_FIELD_OF_VIEW_STEP = 5f;
     public static final float SETTINGS_SLIDER_PERCENT_SCALE = 100f;

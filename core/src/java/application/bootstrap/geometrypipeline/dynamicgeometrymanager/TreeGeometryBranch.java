@@ -5,7 +5,6 @@ import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.shaderpipeline.texture.TextureTileSetStruct;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
-import application.bootstrap.worldpipeline.tree.TreeDetail;
 import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
@@ -36,8 +35,8 @@ class TreeGeometryBranch extends BranchPackage {
      * faces from its root to its crown. Any wood a leaf cluster wholly hides
      * is left out, and each leaf cluster is drawn by the chunk its centre
      * lies in. A tree beyond the tree detail distance is never grown here:
-     * the chunk its root stands in draws it whole as a model, and every other
-     * chunk leaves it be. Only the chunk's own tree palette is ever read,
+     * the chunk its root stands in draws it whole at its own LOD, and every
+     * other chunk leaves it be. Only the chunk's own tree palette is ever read,
      * never a neighbor, so a build needs no lock but the chunk's own. Wood
      * goes to the bark material and leaves to the leaf material.
      */
@@ -179,7 +178,7 @@ class TreeGeometryBranch extends BranchPackage {
         return scratch.getVerts();
     }
 
-    // A tree beyond the tree detail distance drawn whole as a model of itself by the chunk its root stands in
+    // A tree beyond the tree detail distance drawn whole at its LOD by the chunk its root stands in
     private void emitModel(
             TreeGeometryAsyncContainer scratch,
             TreeInstance tree,
@@ -193,7 +192,7 @@ class TreeGeometryBranch extends BranchPackage {
                         + EngineSetting.TREE_ROOT_CENTER_BLOCKS,
                 WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, tree.getAnchorZ(), chunkOriginZ)
                         + EngineSetting.TREE_ROOT_CENTER_BLOCKS,
-                TreeDetail.MODEL,
+                tree.getLod(),
                 scratch.getModel(),
                 scratch.getVerts(treeManager.getBarkMaterialID()),
                 scratch.getVerts(treeManager.getLeafMaterialID()));

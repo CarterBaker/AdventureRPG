@@ -1,24 +1,19 @@
-package editor.bootstrap.treeplannerpipeline.treeplanner;
+package editor.bootstrap.treeviewerpipeline.treeviewer;
 
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
-import application.bootstrap.worldpipeline.tree.TreeDetail;
 import engine.root.StructPackage;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class TreePreviewTierStruct extends StructPackage {
+public class TreePreviewLayerStruct extends StructPackage {
 
     /*
-     * One tier of the tree preview's row: the detail it draws its tree at,
-     * the bark and leaf vertices a worker last built for it in blocks from
-     * the centre of the tree's root, and the meshes the main thread uploaded
-     * from them, with how many vertices they hold. Only one build runs at a
-     * time, and the main thread uploads and empties what it built before the
-     * next one starts.
+     * One layer of the tree preview: the bark and leaf vertices a worker last
+     * built for it in blocks from the centre of the tree's root, and the
+     * meshes the main thread uploaded from them, with how many vertices they
+     * hold. Only one build runs at a time, and the main thread uploads and
+     * empties what it built before the next one starts.
      */
-
-    // Detail
-    private final TreeDetail detail;
 
     // Built
     private final FloatArrayList builtBark;
@@ -31,10 +26,7 @@ public class TreePreviewTierStruct extends StructPackage {
 
     // Constructor \\
 
-    public TreePreviewTierStruct(TreeDetail detail) {
-
-        // Detail
-        this.detail = detail;
+    public TreePreviewLayerStruct() {
 
         // Built
         this.builtBark = new FloatArrayList();
@@ -46,10 +38,6 @@ public class TreePreviewTierStruct extends StructPackage {
     }
 
     // Accessible \\
-
-    public TreeDetail getDetail() {
-        return detail;
-    }
 
     public FloatArrayList getBuiltBark() {
         return builtBark;

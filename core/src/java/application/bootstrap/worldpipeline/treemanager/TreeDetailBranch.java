@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.treemanager;
 
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
+import application.bootstrap.worldpipeline.util.TreeLodUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -15,19 +16,24 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class TreeDetailBranch extends BranchPackage {
 
     /*
-     * Decides which trees are drawn in full: those whose root chunk lies
-     * within a grid's own tree detail distance of the chunk that grid of their
-     * world is centred on, measured between chunks the way grid slots measure
-     * theirs. The anchors — every grid's world, active chunk and reach — are
-     * published on the main thread the frame any of them changes and read
-     * under their lock on any thread, so a tree first grown on a streaming
-     * thread starts with its flag set. A tree drawn in full keeps its detail
-     * until its root lies a margin of chunks past the distance, so a player
-     * pacing along the line never has the trees on it redrawn back and forth.
-     * Every registered tree is judged again whenever the anchors change and
-     * once a check besides, and each one that crosses the line is redrawn
-     * through TreeRebuildBranch alone, its old look standing until the new one
-     * lands.
+     * Decides the LOD every tree is drawn at, whichever chunk, mega or macro
+     * tile draws it, from the distance between its root chunk and the chunk
+     * the nearest grid of its world is centred on, measured between chunks
+     * the way grid slots measure theirs: in full within that grid's tree
+     * detail distance, else the coarse level TreeLodUtility gives that
+     * distance, drawn as its species' shared model from the grid's shared
+     * level on. resolveLod() is the one place a tree's LOD is decided. The
+     * anchors — every grid's world, active chunk, reach and shared level —
+     * are published on the main thread the frame any of them changes and
+     * read under their lock on any thread, so a tree first grown on a
+     * streaming thread starts with its LOD set. A tree drawn in full keeps
+     * its detail until its root lies a margin of chunks past the distance,
+     * and a coarse level holds a margin of blocks past either end, so a
+     * player pacing along a line never has the trees on it redrawn back and
+     * forth. Every registered tree is judged again whenever the anchors
+     * change and once a check besides, and each one whose LOD changed is
+     * redrawn through TreeRebuildBranch alone, its old look standing until
+     * the new one lands.
      */
 
     // Internal
@@ -35,11 +41,15 @@ class TreeDetailBranch extends BranchPackage {
     private TreeRegistryBranch treeRegistryBranch;
     private TreeRebuildBranch treeRebuildBranch;
 
-    // Anchors — all four guarded by anchorChunks
+    // Anchors — all five guarded by anchorChunks
     private LongArrayList anchorChunks;
     private ObjectArrayList<WorldHandle> anchorWorlds;
     private IntArrayList anchorReachesSq;
     private IntArrayList anchorKeepsSq;
+    private IntArrayList anchorSharedLevels;
+
+    // Settings
+    private int chunkSize;
 
     // Walk
     private ObjectArrayList<TreeInstance> trees;
@@ -55,6 +65,10 @@ class TreeDetailBranch extends BranchPackage {
         this.anchorWorlds = new ObjectArrayList<>();
         this.anchorReachesSq = new IntArrayList();
         this.anchorKeepsSq = new IntArrayList();
+        this.anchorSharedLevels = new IntArrayList();
+
+        // Settings
+        this.chunkSize = EngineSetting.CHUNK_SIZE;
 
         // Walk
         this.trees = new ObjectArrayList<>();
@@ -85,15 +99,15 @@ class TreeDetailBranch extends BranchPackage {
         trees.clear();
     }
 
-    // A tree whose side of the line changed is redrawn at its new detail
+    // A tree whose LOD changed is redrawn at its new one
     private void judge(TreeInstance tree) {
 
-        boolean detailed = isDetailed(tree, tree.isDetailed());
+        int lod = resolveLod(tree.getWorldHandle(), tree.getRootChunkCoordinate(), tree.getLod());
 
-        if (detailed == tree.isDetailed())
+        if (lod == tree.getLod())
             return;
 
-        tree.setDetailed(detailed);
+        tree.setLod(lod);
         treeRebuildBranch.rebuildTree(tree, false);
     }
 
@@ -113,6 +127,7 @@ class TreeDetailBranch extends BranchPackage {
             anchorWorlds.clear();
             anchorReachesSq.clear();
             anchorKeepsSq.clear();
+            anchorSharedLevels.clear();
 
             for (int i = 0; i < grids.size(); i++) {
 
@@ -124,6 +139,7 @@ class TreeDetailBranch extends BranchPackage {
                 anchorWorlds.add(grid.getWorldHandle());
                 anchorReachesSq.add(distance * distance);
                 anchorKeepsSq.add(keep * keep);
+                anchorSharedLevels.add(grid.getTreeSharedLevel());
             }
 
             return true;
@@ -142,7 +158,8 @@ class TreeDetailBranch extends BranchPackage {
 
             if (grid.getActiveChunkCoordinate() != anchorChunks.getLong(i)
                     || grid.getWorldHandle() != anchorWorlds.get(i)
-                    || distance * distance != anchorReachesSq.getInt(i))
+                    || distance * distance != anchorReachesSq.getInt(i)
+                    || grid.getTreeSharedLevel() != anchorSharedLevels.getInt(i))
                 return true;
         }
 
@@ -151,19 +168,20 @@ class TreeDetailBranch extends BranchPackage {
 
     // Detail \\
 
-    // Any thread — a tree first grown takes its flag from where the grids stand now
+    // Any thread — a tree first grown takes its LOD from where the grids stand now
     void adopt(TreeInstance tree) {
-        tree.setDetailed(isDetailed(tree, false));
+        tree.setLod(resolveLod(tree.getWorldHandle(), tree.getRootChunkCoordinate(), EngineSetting.TREE_LOD_NONE));
     }
 
-    // Any thread — true when the tree's root chunk lies within the distance of an anchor in its world, or within the
-    // margin past it for a tree already drawn in full
-    private boolean isDetailed(TreeInstance tree, boolean keeping) {
-
-        WorldHandle worldHandle = tree.getWorldHandle();
-        long rootChunk = tree.getRootChunkCoordinate();
+    // Any thread — the LOD a tree rooted in a chunk is drawn at, judged against the nearest anchor in its world and
+    // held near its current one, TREE_LOD_NONE holding to none; the finest coarse level while no grid stands in its
+    // world
+    int resolveLod(WorldHandle worldHandle, long rootChunk, int currentLod) {
 
         synchronized (anchorChunks) {
+
+            int nearest = EngineSetting.INDEX_NOT_FOUND;
+            int nearestSq = Integer.MAX_VALUE;
 
             for (int i = 0; i < anchorChunks.size(); i++) {
 
@@ -173,14 +191,30 @@ class TreeDetailBranch extends BranchPackage {
                 long delta = WorldWrapUtility.unwrapToGridCoordinate(worldHandle, anchorChunks.getLong(i), rootChunk);
                 int deltaX = Coordinate2Long.unpackX(delta);
                 int deltaZ = Coordinate2Long.unpackY(delta);
+                int distanceSq = deltaX * deltaX + deltaZ * deltaZ;
 
-                int reachSq = keeping ? anchorKeepsSq.getInt(i) : anchorReachesSq.getInt(i);
-
-                if (deltaX * deltaX + deltaZ * deltaZ <= reachSq)
-                    return true;
+                if (distanceSq < nearestSq) {
+                    nearest = i;
+                    nearestSq = distanceSq;
+                }
             }
 
-            return false;
+            if (nearest == EngineSetting.INDEX_NOT_FOUND)
+                return EngineSetting.TREE_LOD_FULL + 1;
+
+            int currentLevel = currentLod == EngineSetting.TREE_LOD_NONE
+                    ? EngineSetting.TREE_LOD_NONE
+                    : TreeLodUtility.toLevel(currentLod);
+            int reachSq = currentLevel == EngineSetting.TREE_LOD_FULL
+                    ? anchorKeepsSq.getInt(nearest)
+                    : anchorReachesSq.getInt(nearest);
+
+            if (nearestSq <= reachSq)
+                return EngineSetting.TREE_LOD_FULL;
+
+            int level = TreeLodUtility.resolveLevel((float) Math.sqrt(nearestSq) * chunkSize, currentLevel);
+
+            return TreeLodUtility.encode(level, level >= anchorSharedLevels.getInt(nearest));
         }
     }
 }

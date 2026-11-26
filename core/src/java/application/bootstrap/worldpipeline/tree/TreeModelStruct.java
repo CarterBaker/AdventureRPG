@@ -14,10 +14,13 @@ public class TreeModelStruct extends StructPackage {
      * One thread's scratch for drawing trees coarser than in full: a skeleton
      * grown into again for every tree, the growth, severs and leaf marks it is
      * evaluated at an age with, the wood and leaf clusters the tree stands as
-     * in blocks from the centre of its root, the cells its clusters merge
-     * into, TREE_MODEL_CELL_FLOATS apiece, the crown and lumps an outline is
-     * sized and laid out by, and the box each box of bark is written through.
-     * Nothing is ever cut or broken off a
+     * in blocks from the centre of its root, each segment with the one it
+     * sets out from and each cluster with the segment it hangs on, the reach
+     * of the clusters every segment carries and whether it is drawn at the
+     * level being drawn, the segment each skeleton segment was last gathered
+     * into, the bounds of its clusters, the cells they merge into,
+     * TREE_MODEL_CELL_FLOATS apiece, and the box each box of bark is written through. Nothing is ever cut or
+     * broken off a
      * tree drawn from its seed, so the severs stay whole and the marks clear.
      * Kept warm between trees, so drawing one allocates nothing once its lists
      * have grown.
@@ -39,6 +42,7 @@ public class TreeModelStruct extends StructPackage {
     private final FloatArrayList startRadius;
     private final FloatArrayList endRadius;
     private final IntArrayList depth;
+    private final IntArrayList parent;
 
     // Leaves — blocks
     private final FloatArrayList leafX;
@@ -48,13 +52,16 @@ public class TreeModelStruct extends StructPackage {
     private final FloatArrayList leafRadiusV;
     private final FloatArrayList leafSeed;
     private final BooleanArrayList leafAccent;
+    private final IntArrayList leafSegment;
 
-    // Cells
+    // Carry — per segment, and per skeleton segment
+    private final FloatArrayList reach;
+    private final BooleanArrayList kept;
+    private final int[] source2Segment;
+
+    // Cells — the clusters' bounds, min corner then max, and every cell
+    private final float[] bounds;
     private final float[] cells;
-
-    // Outline
-    private final float[] crown;
-    private final float[] lumps;
 
     // Box — its corner, its size and the corner being written
     private final float[] box;
@@ -81,6 +88,7 @@ public class TreeModelStruct extends StructPackage {
         this.startRadius = new FloatArrayList();
         this.endRadius = new FloatArrayList();
         this.depth = new IntArrayList();
+        this.parent = new IntArrayList();
 
         // Leaves
         this.leafX = new FloatArrayList();
@@ -90,13 +98,18 @@ public class TreeModelStruct extends StructPackage {
         this.leafRadiusV = new FloatArrayList();
         this.leafSeed = new FloatArrayList();
         this.leafAccent = new BooleanArrayList();
+        this.leafSegment = new IntArrayList();
+
+        // Carry
+        this.reach = new FloatArrayList();
+        this.kept = new BooleanArrayList();
+        this.source2Segment = new int[EngineSetting.TREE_MAX_SEGMENTS];
+
+        Arrays.fill(source2Segment, EngineSetting.INDEX_NOT_FOUND);
 
         // Cells
-        this.cells = new float[EngineSetting.TREE_MODEL_MAX_CELLS * EngineSetting.TREE_MODEL_CELL_FLOATS];
-
-        // Outline
-        this.crown = new float[EngineSetting.TREE_IMPOSTOR_CROWN_FLOATS];
-        this.lumps = new float[EngineSetting.TREE_IMPOSTOR_LUMPS_MAX_FLOATS];
+        this.bounds = new float[EngineSetting.AXIS_COUNT * 2];
+        this.cells = new float[EngineSetting.TREE_LOD_MAX_CELLS * EngineSetting.TREE_MODEL_CELL_FLOATS];
 
         // Box
         this.box = new float[EngineSetting.AXIS_COUNT * 3];
@@ -113,7 +126,8 @@ public class TreeModelStruct extends StructPackage {
             float toZ,
             float fromRadius,
             float toRadius,
-            int segmentDepth) {
+            int segmentDepth,
+            int parentSegment) {
 
         startX.add(fromX);
         startY.add(fromY);
@@ -124,9 +138,19 @@ public class TreeModelStruct extends StructPackage {
         startRadius.add(fromRadius);
         endRadius.add(toRadius);
         depth.add(segmentDepth);
+        parent.add(parentSegment);
     }
 
-    public void addLeaf(float x, float y, float z, float radiusH, float radiusV, float seed, boolean accent) {
+    public void addLeaf(
+            float x,
+            float y,
+            float z,
+            float radiusH,
+            float radiusV,
+            float seed,
+            boolean accent,
+            int segment) {
+
         leafX.add(x);
         leafY.add(y);
         leafZ.add(z);
@@ -134,6 +158,30 @@ public class TreeModelStruct extends StructPackage {
         leafRadiusV.add(radiusV);
         leafSeed.add(seed);
         leafAccent.add(accent);
+        leafSegment.add(segment);
+    }
+
+    // The segment a skeleton segment was last gathered into, or none
+    public int getSegmentOfSource(int sourceSegment) {
+        return sourceSegment >= 0 ? source2Segment[sourceSegment] : EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    public void setSegmentOfSource(int sourceSegment, int segment) {
+        source2Segment[sourceSegment] = segment;
+    }
+
+    // Every segment's carried reach cleared and every segment marked hidden, ready to judge a level
+    public void resetCarry() {
+
+        int count = getSegmentCount();
+
+        reach.size(count);
+        kept.size(count);
+
+        for (int segment = 0; segment < count; segment++) {
+            reach.set(segment, 0f);
+            kept.set(segment, false);
+        }
     }
 
     // Every segment and leaf of the last tree let go
@@ -148,6 +196,7 @@ public class TreeModelStruct extends StructPackage {
         startRadius.clear();
         endRadius.clear();
         depth.clear();
+        parent.clear();
         leafX.clear();
         leafY.clear();
         leafZ.clear();
@@ -155,6 +204,8 @@ public class TreeModelStruct extends StructPackage {
         leafRadiusV.clear();
         leafSeed.clear();
         leafAccent.clear();
+        leafSegment.clear();
+        Arrays.fill(source2Segment, EngineSetting.INDEX_NOT_FOUND);
     }
 
     // Accessible \\
@@ -215,6 +266,26 @@ public class TreeModelStruct extends StructPackage {
         return depth.getInt(segment);
     }
 
+    public int getParent(int segment) {
+        return parent.getInt(segment);
+    }
+
+    public float getReach(int segment) {
+        return reach.getFloat(segment);
+    }
+
+    public void setReach(int segment, float carried) {
+        reach.set(segment, carried);
+    }
+
+    public boolean isKept(int segment) {
+        return kept.getBoolean(segment);
+    }
+
+    public void setKept(int segment, boolean shown) {
+        kept.set(segment, shown);
+    }
+
     public int getLeafCount() {
         return leafX.size();
     }
@@ -247,16 +318,16 @@ public class TreeModelStruct extends StructPackage {
         return leafAccent.getBoolean(leaf);
     }
 
+    public int getLeafSegment(int leaf) {
+        return leafSegment.getInt(leaf);
+    }
+
+    public float[] getBounds() {
+        return bounds;
+    }
+
     public float[] getCells() {
         return cells;
-    }
-
-    public float[] getCrown() {
-        return crown;
-    }
-
-    public float[] getLumps() {
-        return lumps;
     }
 
     public float[] getBox() {

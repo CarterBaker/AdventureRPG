@@ -368,8 +368,8 @@ public class EditorSetting {
             .with(FileMenuAction.DELETE, "deleteRecording")
             .with(FileMenuAction.UNDO, "undo")
             .with(FileMenuAction.REDO, "redo");
-    public static final FileMenuTableStruct FILE_MENU_TREE_PLANNER = new FileMenuTableStruct(
-            "editor.runtime.menueventsmanager.menus.TreePlannerBranch")
+    public static final FileMenuTableStruct FILE_MENU_TREE_VIEWER = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.TreeViewerBranch")
             .with(FileMenuAction.NEW, "newTree")
             .with(FileMenuAction.DUPLICATE, "duplicateTree")
             .with(FileMenuAction.SAVE, "save")
@@ -580,7 +580,6 @@ public class EditorSetting {
     public static final String TAB_TITLE_SHIP_VIEWER = "Ship Viewer";
     public static final String TAB_TITLE_TOOLS = "Tools";
     public static final String TAB_TITLE_TRANSITIONS = "Transitions";
-    public static final String TAB_TITLE_TREE_PLANNER = "Tree Planner";
     public static final String TAB_TITLE_TREE_VIEWER = "Tree Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
@@ -2808,6 +2807,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_UV_EDITOR = "UV Editor";
     public static final String TOOL_CANVAS_IMAGE_EDITOR = "Image Editor";
     public static final String TOOL_CANVAS_MATERIAL_VIEWER = "Material Viewer";
+    public static final String TOOL_CANVAS_TREE_VIEWER = "Tree Viewer";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";
@@ -2987,31 +2987,31 @@ public class EditorSetting {
     public static final String BIOME_PLANNER_MESSAGE_PAINTED = "Painted ";
     public static final String BIOME_PLANNER_MESSAGE_RESET = "Every cell follows the centre";
 
-    // Tree Planner — the seed its preview starts from, the age it grows its tree to and how far one step moves it,
-    // the room between the tiers of its row in reaches of the species, never less than a few blocks, the least height
-    // a frame takes, the precision a stepped decimal is kept to, and its status and messages
-    public static final long TREE_PLANNER_FIRST_SEED = 1L;
-    public static final float TREE_PLANNER_AGE_DEFAULT = 1f;
-    public static final float TREE_PLANNER_AGE_MIN = 0.05f;
-    public static final float TREE_PLANNER_AGE_STEP = 0.1f;
-    public static final float TREE_PLANNER_TIER_SPACING_REACHES = 2.2f;
-    public static final float TREE_PLANNER_TIER_MIN_SPACING_BLOCKS = 4f;
-    public static final float TREE_PLANNER_MIN_FRAME_BLOCKS = 2f;
-    public static final int TREE_PLANNER_VALUE_PRECISION = 10000;
-    public static final String TREE_PLANNER_VALUE_FORMAT = "%.2f";
-    public static final float TREE_PLANNER_PERCENT = 100f;
-    public static final String TREE_PLANNER_PERCENT_SIGN = "%";
-    public static final String TREE_PLANNER_STATUS_TREE = "Tree: ";
-    public static final String TREE_PLANNER_STATUS_AGE = "  ·  Age ";
-    public static final String TREE_PLANNER_STATUS_SEED = "  ·  Seed ";
-    public static final String TREE_PLANNER_STATUS_NONE = "No tree selected — pick one in the list or the Hierarchy";
-    public static final String TREE_PLANNER_MESSAGE_SET = "Set ";
-    public static final String TREE_PLANNER_MESSAGE_SAVED = "Saved ";
-    public static final String TREE_PLANNER_MESSAGE_SAVE_FAILED = "Could not save ";
-    public static final String TREE_PLANNER_MESSAGE_REVERTED = "Reverted ";
-    public static final String TREE_PLANNER_MESSAGE_RESEEDED = "Grown from a new seed";
-    public static final String TREE_PLANNER_MESSAGE_AGED = "Grown to a new age";
-    public static final String TREE_PLANNER_MESSAGE_NO_TREE = "Select a tree first";
+    // Tree Viewer — the seed its preview starts from, the age it grows its tree to and how far one step moves it,
+    // the least height a frame takes, its layers (every LOD level, then the shared tree), the Tools tab's Preview
+    // actions and its messages
+    public static final long TREE_VIEWER_FIRST_SEED = 1L;
+    public static final float TREE_VIEWER_AGE_DEFAULT = 1f;
+    public static final float TREE_VIEWER_AGE_MIN = 0.05f;
+    public static final float TREE_VIEWER_AGE_STEP = 0.1f;
+    public static final int TREE_VIEWER_STEP_DOWN = -1;
+    public static final int TREE_VIEWER_STEP_UP = 1;
+    public static final float TREE_VIEWER_MIN_FRAME_BLOCKS = 2f;
+    public static final int TREE_VIEWER_LAYER_SHARED = EngineSetting.TREE_LOD_LEVEL_COUNT;
+    public static final int TREE_VIEWER_LAYER_COUNT = TREE_VIEWER_LAYER_SHARED + 1;
+    public static final String TREE_VIEWER_HEADER_PREVIEW = "Preview";
+    public static final String TREE_VIEWER_KEY_RESEED = "tree_viewer_reseed";
+    public static final String TREE_VIEWER_KEY_YOUNGER = "tree_viewer_younger";
+    public static final String TREE_VIEWER_KEY_OLDER = "tree_viewer_older";
+    public static final String TREE_VIEWER_LABEL_RESEED = "New Seed";
+    public static final String TREE_VIEWER_LABEL_YOUNGER = "Younger";
+    public static final String TREE_VIEWER_LABEL_OLDER = "Older";
+    public static final String TREE_VIEWER_MESSAGE_SAVED = "Saved ";
+    public static final String TREE_VIEWER_MESSAGE_SAVE_FAILED = "Could not save ";
+    public static final String TREE_VIEWER_MESSAGE_REVERTED = "Reverted ";
+    public static final String TREE_VIEWER_MESSAGE_RESEEDED = "Grown from a new seed";
+    public static final String TREE_VIEWER_MESSAGE_AGED = "Grown to a new age";
+    public static final String TREE_VIEWER_MESSAGE_NO_TREE = "Select a tree first";
 
     // Item Library — the game's item meshes, the definition file an import first offers, the pack a converted quad
     // mesh is drawn from, and the names new parts take

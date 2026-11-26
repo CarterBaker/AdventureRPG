@@ -6,7 +6,8 @@ public class TreeData extends DataPackage {
 
     /*
      * Persistent tree species record: registry and display names, the name
-     * seed every one of its trees is salted with, its form, trunk, branching,
+     * seed every one of its trees is salted with, the LOD seed its one shared
+     * far model is grown from, its form, trunk, branching,
      * leaves, wood and growth, and how far a grown tree can reach from its
      * root sideways and upward, in blocks. Its four parts — bark, heartwood,
      * leaves and accent leaves — are resolved once at load to the texture
@@ -20,6 +21,7 @@ public class TreeData extends DataPackage {
     private final String displayName;
     private final short treeID;
     private final int nameSeed;
+    private final int lodSeed;
 
     private final TreeForm form;
     private final TreeTrunkStruct trunk;
@@ -42,6 +44,7 @@ public class TreeData extends DataPackage {
             String displayName,
             short treeID,
             int nameSeed,
+            int lodSeed,
             TreeForm form,
             TreeTrunkStruct trunk,
             TreeBranchStruct branches,
@@ -60,6 +63,7 @@ public class TreeData extends DataPackage {
         this.displayName = displayName;
         this.treeID = treeID;
         this.nameSeed = nameSeed;
+        this.lodSeed = lodSeed;
 
         this.form = form;
         this.trunk = trunk;
@@ -92,6 +96,10 @@ public class TreeData extends DataPackage {
 
     public int getNameSeed() {
         return nameSeed;
+    }
+
+    public int getLodSeed() {
+        return lodSeed;
     }
 
     public TreeForm getForm() {

@@ -2206,6 +2206,7 @@ public class EngineSetting {
     public static final float TREE_DEFAULT_LEAF_SQUASH = 0.75f;
     public static final String TREE_DEFAULT_LEAF_TEXTURE = "items/standard/LeavesBroad";
     public static final float TREE_DEFAULT_LOG_LENGTH_BLOCKS = 1f;
+    public static final int TREE_DEFAULT_LOD_SEED = 0;
     public static final int TREE_DEFAULT_MAX_BRANCH_COUNT = 6;
     public static final float TREE_DEFAULT_MAX_HEIGHT_BLOCKS = 16f;
     public static final int TREE_DEFAULT_MIN_BRANCH_COUNT = 4;
@@ -2231,6 +2232,7 @@ public class EngineSetting {
     public static final int TREE_MAX_BRANCH_LEVELS = 5;
     public static final int TREE_MAX_BRANCH_SEGMENTS = 12;
     public static final float TREE_MAX_HEIGHT_BLOCKS = 240f;
+    public static final int TREE_MAX_LOD_SEED = 9999;
     public static final int TREE_MAX_STEMS = 12;
     public static final float TREE_MAX_TRUNK_RADIUS_BLOCKS = 16f;
     public static final float TREE_NO_SPREAD = 0f;
@@ -2334,8 +2336,8 @@ public class EngineSetting {
     // Tree Lifetime — how long a tree nothing has touched keeps its grown shape before letting it go
     public static final float TREE_SHAPE_IDLE_SECONDS = 30f;
 
-    // Tree Detail — how often every tree is judged against the tree detail distance besides whenever a grid moves,
-    // and the chunks past it a tree drawn in full keeps its detail for
+    // Tree Detail — how often every tree is judged against the LOD ladder besides whenever a grid moves, and the
+    // chunks past the tree detail distance a tree drawn in full keeps its detail for
     public static final float TREE_DETAIL_CHECK_SECONDS = 1f;
     public static final int TREE_DETAIL_KEEP_CHUNKS = 1;
 
@@ -2351,12 +2353,36 @@ public class EngineSetting {
     public static final String UNIFORM_TREE_FAR = "u_treeFar";
     public static final float TREE_FAR_ON = 1f;
 
-    // Tree Model — how a tree drawn coarser than in full keeps its own wood and crown: how near a segment must set
-    // out to the last one's end to carry its trunk on, how far a trunk box runs before its top strays past a share
-    // of its foot's radius or thins below a share of its girth, the depth and girth of a limb that shows with the
-    // steps and boxes it takes, and the lattice its clusters merge on — cells across and tiers up for MODEL and for
-    // SKETCH, never smaller than a block, each merged cluster pulled in to a share of its bounds and its cell laid
-    // out as below
+    // Tree LOD — the ladder every tree is drawn by, whatever chunk, mega or macro tile draws it, judged from its own
+    // distance to the grid: level 0 grown in full within the tree detail distance, then each coarser level from the
+    // distance it starts at, its crown merged on a lattice of cells across and tiers up, never smaller than a block,
+    // each merged cluster pulled in to a share of its bounds and its cell laid out as below. A limb thinner than its
+    // level's girth (the level's distance times the girth a block of distance hides, never under the least girth)
+    // is left out only when every cluster it carries lies within half a cell of where it sets out, so a cluster
+    // never floats from the wood drawn. How near a segment must set out to the last one's end to carry its trunk on,
+    // how far a trunk box runs before its top strays past a share of its foot's radius or thins below a share of
+    // its girth, the steps a limb is boxed in, and the blocks past a level's start a tree keeps its level for. From
+    // the shared level on, every tree draws its species' one shared model of that level, grown from the species'
+    // LOD seed at full age, scaled to its own height and mirrored one of four ways by its seed; the shared level
+    // equal to the level count shares none. A tree with no LOD yet is judged without holding to any
+    public static final int TREE_LOD_NONE = -1;
+    public static final int TREE_LOD_FULL = 0;
+    public static final int TREE_LOD_LEVEL_COUNT = 8;
+    public static final float[] TREE_LOD_START_BLOCKS = { 0f, 0f, 64f, 128f, 192f, 288f, 416f, 576f };
+    public static final int[] TREE_LOD_CELLS_PER_AXIS = { 0, 8, 6, 5, 4, 3, 3, 2 };
+    public static final int[] TREE_LOD_MAX_TIERS = { 0, 8, 6, 5, 4, 4, 3, 2 };
+    public static final float TREE_LOD_GIRTH_PER_BLOCK = 0.0015f;
+    public static final float TREE_LOD_MIN_GIRTH_BLOCKS = 0.1f;
+    public static final float TREE_LOD_COVER_SHARE = 0.5f;
+    public static final int TREE_LOD_KEEP_BLOCKS = 16;
+    public static final int TREE_LOD_SHARED_DEFAULT = 5;
+    public static final int TREE_LOD_SHARED_MIN = 1;
+    public static final int TREE_LOD_SHARED_MAX = TREE_LOD_LEVEL_COUNT;
+    public static final int TREE_LOD_SHARED_VARIANTS = 4;
+    public static final int TREE_LOD_SHARED_MIRROR_X = 1;
+    public static final int TREE_LOD_SHARED_MIRROR_Z = 2;
+    public static final long TREE_LOD_SHARED_SEED_SALT = 0x5C1D7E93A04B26F1L;
+    public static final int TREE_LOD_MAX_CELLS = 8 * 8 * 8;
     public static final int TREE_MODEL_CELL_MIN_X = 0;
     public static final int TREE_MODEL_CELL_MIN_Y = 1;
     public static final int TREE_MODEL_CELL_MIN_Z = 2;
@@ -2367,24 +2393,24 @@ public class EngineSetting {
     public static final int TREE_MODEL_CELL_ACCENTS = 7;
     public static final int TREE_MODEL_CELL_SEED = 8;
     public static final int TREE_MODEL_CELL_FLOATS = 9;
-    public static final int TREE_MODEL_CELLS_PER_AXIS = 3;
     public static final float TREE_MODEL_JOIN_BLOCKS = 0.05f;
-    public static final int TREE_MODEL_LIMB_DEPTH = 1;
-    public static final float TREE_MODEL_LIMB_MIN_RADIUS_BLOCKS = 0.125f;
     public static final int TREE_MODEL_LIMB_PIECES = 2;
-    public static final int TREE_MODEL_MAX_LIMB_BOXES = 10;
-    public static final int TREE_MODEL_MAX_TIERS = 5;
-    public static final int TREE_MODEL_MAX_CELLS = TREE_MODEL_CELLS_PER_AXIS * TREE_MODEL_CELLS_PER_AXIS
-            * TREE_MODEL_MAX_TIERS;
     public static final float TREE_MODEL_MERGE_REACH_SHARE = 0.85f;
     public static final float TREE_MODEL_MIN_CELL_BLOCKS = 1f;
     public static final float TREE_MODEL_RUN_DRIFT_SHARE = 0.5f;
     public static final float TREE_MODEL_RUN_GIRTH_SHARE = 0.7f;
-    public static final int TREE_SKETCH_CELLS_PER_AXIS = 2;
-    public static final int TREE_SKETCH_MAX_TIERS = 2;
 
-    // Tree Impostor — a tree's trunk and the few lumps its crown is judged as without growing it, what a far mega
-    // outlines and macro terrain shapes, and the salt each outlined lump's seed is rolled with
+    // Tree Vertex — where a wood and a leaf vertex keep what a shared model is scaled and mirrored through
+    public static final int TREE_VERTEX_META_OFFSET = 5;
+    public static final int TREE_VERTEX_WOOD_EXTENT_OFFSET = 7;
+    public static final int TREE_VERTEX_WOOD_EXTENT_FLOATS = 4;
+    public static final int TREE_VERTEX_LEAF_OFFSET_OFFSET = 7;
+    public static final int TREE_VERTEX_LEAF_RADIUS_OFFSET = 10;
+    public static final int TREE_VERTEX_LEAF_RADIUS_FLOATS = 2;
+    public static final int TREE_META_FACE_MASK = (1 << TREE_META_EDGE_SHIFT) - 1;
+
+    // Tree Impostor — a tree's trunk and the few lumps its crown is judged as without growing it, what macro terrain
+    // shapes its stand-ins from
     public static final float TREE_IMPOSTOR_COLUMNAR_TAPER = 0.45f;
     public static final float TREE_IMPOSTOR_CONIFER_TAPER = 0.9f;
     public static final int TREE_IMPOSTOR_CONE_TIERS = 3;
@@ -2399,7 +2425,6 @@ public class EngineSetting {
     public static final int TREE_IMPOSTOR_LUMP_RADIUS_V = 2;
     public static final int TREE_IMPOSTOR_LUMPS_MAX_FLOATS = TREE_IMPOSTOR_CONE_TIERS * TREE_IMPOSTOR_LUMP_FLOATS;
     public static final float TREE_IMPOSTOR_PALM_SQUASH = 0.35f;
-    public static final long TREE_IMPOSTOR_SEED_SALT = 0x3A9E61C4F07B28D5L;
     public static final float TREE_IMPOSTOR_TIER_RADIUS_SHARE = 0.75f;
     public static final int TREE_IMPOSTOR_TRUNK_HALF_WIDTH = 4;
     public static final float TREE_IMPOSTOR_TRUNK_REACH_SHARE = 0.5f;

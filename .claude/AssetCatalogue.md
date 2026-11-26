@@ -611,6 +611,10 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/Materials.arpg` (the material rows replaced by a grid row and its tiles).
 - 2026-11-26: Tree Viewer layers. Regenerated `menus/editor/TreeViewer.arpg` (no toolbar of frame buttons: the details
   are layers in the Layers tab).
+- 2026-11-26: Tree LOD ladder. Deleted `menus/editor/TreePlanner.arpg` (the Tree Planner's jobs moved to the
+  Hierarchy, Properties, Layers and Tools tabs and the Tree Viewer); regenerated `menus/editor/EditorWindow.arpg` (no
+  Tree Planner in the World menu) and `schemas/Trees.arpg` (`lod_seed`, the seed each species' shared far model grows
+  from).
 - 2026-11-21: Height midlevel. Regenerated `shaders/surface/includes/HeightDisplacement.glsl` (relief measured from
   the tile's own mean height, so tiles with no height map stop sinking every block 0.06 of a block).
 
@@ -2935,7 +2939,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `NewImageDialog.arpg`, `NoteLibrary.arpg`, `Palette.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,
 `TabFrame.arpg`,
-`Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreePlanner.arpg`, `TreeViewer.arpg`, `ViewGizmo.arpg`,
+`Timeline.arpg`, `Tools.arpg`, `Transitions.arpg`, `TreeViewer.arpg`, `ViewGizmo.arpg`,
 `WorldEditor.arpg`, `WorldMap.arpg`
 
 ### `assets/menus/util/`

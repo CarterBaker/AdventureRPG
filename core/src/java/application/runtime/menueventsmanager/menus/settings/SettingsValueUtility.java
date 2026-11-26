@@ -59,6 +59,13 @@ public class SettingsValueUtility extends EngineUtility {
                         EngineSetting.TREE_MODEL_DISTANCE_MAX);
                 settingsSystem.applyTreeDetail();
             }
+            case TREE_SHARED_LEVEL -> {
+                settings.treeSharedLevel = Math.clamp(
+                        settings.treeSharedLevel + step * RuntimeSetting.SETTINGS_TREE_SHARED_LEVEL_STEP,
+                        EngineSetting.TREE_LOD_SHARED_MIN,
+                        EngineSetting.TREE_LOD_SHARED_MAX);
+                settingsSystem.applyTreeDetail();
+            }
             case CHARACTER_DETAIL -> {
                 settings.characterDetailDistance = Math.clamp(
                         settings.characterDetailDistance + step * RuntimeSetting.SETTINGS_CHARACTER_DETAIL_STEP,
@@ -160,6 +167,9 @@ public class SettingsValueUtility extends EngineUtility {
             case TREE_MODEL_DISTANCE -> String.format(
                     RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
                     settings.treeModelDistance);
+            case TREE_SHARED_LEVEL -> settings.treeSharedLevel >= EngineSetting.TREE_LOD_SHARED_MAX
+                    ? RuntimeSetting.SETTINGS_VALUE_OFF
+                    : String.format(RuntimeSetting.SETTINGS_FORMAT_LEVEL, settings.treeSharedLevel);
             case CHARACTER_DETAIL -> String.format(
                     RuntimeSetting.SETTINGS_FORMAT_BLOCKS,
                     settings.characterDetailDistance);

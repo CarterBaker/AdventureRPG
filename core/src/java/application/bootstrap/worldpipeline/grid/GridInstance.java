@@ -585,6 +585,11 @@ public class GridInstance extends InstancePackage {
         return range.getTreeDetailDistance();
     }
 
+    // The LOD level from which its trees draw their species' shared model, followed live from the range
+    public int getTreeSharedLevel() {
+        return range.getTreeSharedLevel();
+    }
+
     // How far beyond its rim the macro terrain draws trees as models of themselves, followed live from the range
     public float getTreeModelBlocks() {
         return range.getTreeModelBlocks();

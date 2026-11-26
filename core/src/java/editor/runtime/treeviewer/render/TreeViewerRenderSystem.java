@@ -10,8 +10,8 @@ import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
-import editor.bootstrap.treeplannerpipeline.treeplanner.TreePreviewTierStruct;
-import editor.bootstrap.treeplannerpipeline.treeplannermanager.TreePlannerManager;
+import editor.bootstrap.treeviewerpipeline.treeviewer.TreePreviewLayerStruct;
+import editor.bootstrap.treeviewerpipeline.treeviewermanager.TreeViewerManager;
 import editor.runtime.EditorSetting;
 import editor.runtime.treeviewer.TreeViewerSetting;
 import editor.runtime.treeviewer.layer.TreeViewerLayerSystem;
@@ -23,17 +23,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class TreeViewerRenderSystem extends SystemPackage {
 
     /*
-     * Draws the Tree Planner's row into this window's scene target: every
-     * tier shown in the Layers tab, its bark and leaf meshes, each tier carried to its place along the
-     * row by a matrix of its own, with the viewer's bark and leaf materials,
-     * which shade the wood and leaves exactly as the game's G-buffer receives
-     * them and light them here, as an editor viewport has no lighting pass.
-     * Every draw takes a model of its own from ItemModelManager; the meshes
-     * are the planner's and shared by every viewer.
+     * Draws the layer the Layers tab shows into this window's scene target,
+     * its bark and leaf meshes standing on the origin, with the viewer's bark
+     * and leaf materials, which shade the wood and leaves exactly as the
+     * game's G-buffer receives them and light them here, as an editor
+     * viewport has no lighting pass. Every draw takes a model of its own from
+     * ItemModelManager; the meshes are the viewer manager's and shared by
+     * every viewer.
      */
 
     // Internal
-    private TreePlannerManager treePlannerManager;
+    private TreeViewerManager treeViewerManager;
     private TreeViewerLayerSystem treeViewerLayerSystem;
     private ItemModelManager itemModelManager;
     private MaterialManager materialManager;
@@ -48,20 +48,19 @@ public class TreeViewerRenderSystem extends SystemPackage {
     private int barkMaterialID;
     private int leafMaterialID;
 
-    // Placement — one matrix per tier, set again only when the row is built again
-    private Matrix4[] tierMatrices;
-    private int placedRevision;
+    // Placement — every layer stands on the origin
+    private Matrix4 layerMatrix;
 
     // Base \\
 
     @Override
     protected void create() {
-        this.placedRevision = EngineSetting.INDEX_NOT_FOUND;
+        this.layerMatrix = new Matrix4();
     }
 
     @Override
     protected void get() {
-        this.treePlannerManager = get(TreePlannerManager.class);
+        this.treeViewerManager = get(TreeViewerManager.class);
         this.treeViewerLayerSystem = get(TreeViewerLayerSystem.class);
         this.itemModelManager = get(ItemModelManager.class);
         this.materialManager = get(MaterialManager.class);
@@ -78,12 +77,6 @@ public class TreeViewerRenderSystem extends SystemPackage {
         // Materials
         this.barkMaterialID = materialManager.getMaterialIDFromMaterialName(TreeViewerSetting.MATERIAL_BARK);
         this.leafMaterialID = materialManager.getMaterialIDFromMaterialName(TreeViewerSetting.MATERIAL_LEAF);
-
-        // Placement
-        this.tierMatrices = new Matrix4[treePlannerManager.getPreviewTierCount()];
-
-        for (int i = 0; i < tierMatrices.length; i++)
-            tierMatrices[i] = new Matrix4();
     }
 
     // Update \\
@@ -92,52 +85,26 @@ public class TreeViewerRenderSystem extends SystemPackage {
     protected void update() {
 
         WindowInstance window = context.getWindow();
+        int shown = treeViewerLayerSystem.getShownLayer();
 
-        placeTiers();
+        if (shown != EngineSetting.INDEX_NOT_FOUND) {
 
-        for (int i = 0; i < tierMatrices.length; i++) {
+            TreePreviewLayerStruct layer = treeViewerManager.getPreviewLayer(shown);
 
-            if (!treeViewerLayerSystem.isShown(i))
-                continue;
-
-            TreePreviewTierStruct tier = treePlannerManager.getPreviewTier(i);
-
-            pushMeshes(tier.getBarkMeshes(), barkMaterialID, tierMatrices[i], window);
-            pushMeshes(tier.getLeafMeshes(), leafMaterialID, tierMatrices[i], window);
+            pushMeshes(layer.getBarkMeshes(), barkMaterialID, window);
+            pushMeshes(layer.getLeafMeshes(), leafMaterialID, window);
         }
 
         fboRenderSystem.pushFbo(sceneFbo, RuntimeSetting.LAYER_WORLD, window);
     }
 
-    // Each tier carried along the row to where its root stands
-    private void placeTiers() {
-
-        int revision = treePlannerManager.getPreviewRevision();
-
-        if (revision == placedRevision)
-            return;
-
-        placedRevision = revision;
-
-        for (int i = 0; i < tierMatrices.length; i++)
-            tierMatrices[i].set(
-                    1f, 0f, 0f, treePlannerManager.getPreviewTierOffsetX(i),
-                    0f, 1f, 0f, 0f,
-                    0f, 0f, 1f, 0f,
-                    0f, 0f, 0f, 1f);
-    }
-
-    private void pushMeshes(
-            ObjectArrayList<MeshInstance> meshes,
-            int materialID,
-            Matrix4 tierMatrix,
-            WindowInstance window) {
+    private void pushMeshes(ObjectArrayList<MeshInstance> meshes, int materialID, WindowInstance window) {
 
         for (int i = 0; i < meshes.size(); i++) {
 
             ModelInstance model = itemModelManager.acquireModel(meshes.get(i).getMeshData(), materialID);
 
-            model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, tierMatrix);
+            model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, layerMatrix);
             renderManager.pushRenderCall(model, sceneFbo, TreeViewerSetting.DEPTH_TREE, window);
         }
     }
