@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.architecture;
 
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.worldpipeline.layout.LayoutRoadKind;
 import application.bootstrap.worldpipeline.road.RoadHandle;
 import application.bootstrap.worldpipeline.structurelist.StructureListHandle;
@@ -65,5 +66,17 @@ public class ArchitectureHandle extends HandlePackage {
 
     public boolean hasWall() {
         return architectureData.hasWall();
+    }
+
+    public short resolveBlockID(short blockSlotID, short authoredBlockID) {
+        return architectureData.resolveBlockID(blockSlotID, authoredBlockID);
+    }
+
+    public boolean fillsBlockSlot(short blockSlotID) {
+        return architectureData.fillsBlockSlot(blockSlotID);
+    }
+
+    public ItemDefinitionHandle getFurnitureItem(short furnishingID) {
+        return architectureData.getFurnitureItem(furnishingID);
     }
 }

@@ -2039,6 +2039,10 @@ public class EngineSetting {
     public static final int STRUCTURE_FOOTPRINT_EMPTY = Integer.MIN_VALUE;
     public static final char STRUCTURE_LAYER_SKIP_CHARACTER = ' ';
 
+    // Architecture Slots — a slot is named as its group and its place ("siding/wall"); a furniture slot is a
+    // furnishing table, its group the table's folder
+    public static final char ARCHITECTURE_SLOT_SEPARATOR = '/';
+
     // Roads — centrelines a few blocks a point, bent by a few seeded harmonics, and the defaults of every optional
     // road field
     public static final int DEFAULT_ROAD_BRIDGE_MIN_HEIGHT_BLOCKS = 4;

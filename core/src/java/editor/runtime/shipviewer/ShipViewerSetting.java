@@ -3,21 +3,14 @@ package editor.runtime.shipviewer;
 public class ShipViewerSetting {
 
     /*
-     * Constants used only by ShipViewerContext — its material and render
-     * order, its cutaway, its menu, and the text of its status line and deck
+     * Constants used only by ShipViewerContext — its render order, its cutaway, its menu, and the text of its status line and deck
      * label.
      */
-
-    // Materials
-    public static final String MATERIAL_SHIP = "editor/ShipViewerMaterial";
-    public static final String MATERIAL_SHIP_PAINTED = "editor/ShipViewerPaintedMaterial";
-    public static final String UNIFORM_CUTAWAY_HEIGHT = "u_cutawayHeight";
 
     // Render Order
     public static final int DEPTH_SHIP = 0;
 
-    // Cutaway — model blocks; every deck shown clips at no height, a deck shown clips just under the floor above it
-    public static final float CUTAWAY_NONE = 100000f;
+    // Cutaway — model blocks; a deck shown clips just under the floor above it
     public static final float CUTAWAY_EPSILON = 0.01f;
     public static final int DECK_ALL = -1;
 

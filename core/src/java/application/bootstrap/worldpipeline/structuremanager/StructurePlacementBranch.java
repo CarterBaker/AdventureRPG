@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.structuremanager;
 
+import application.bootstrap.worldpipeline.architecture.ArchitectureHandle;
+import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.structure.StructureFixedPlacementStruct;
@@ -40,6 +42,7 @@ class StructurePlacementBranch extends BranchPackage {
     private BiomeManager biomeManager;
     private WorldGenerationManager worldGenerationManager;
     private SettlementManager settlementManager;
+    private ArchitectureManager architectureManager;
     private StructureStampBranch structureStampBranch;
     private StructurePlacementAsyncContainer placementContainer;
 
@@ -64,6 +67,7 @@ class StructurePlacementBranch extends BranchPackage {
         this.biomeManager = get(BiomeManager.class);
         this.worldGenerationManager = get(WorldGenerationManager.class);
         this.settlementManager = get(SettlementManager.class);
+        this.architectureManager = get(ArchitectureManager.class);
         this.structureStampBranch = get(StructureStampBranch.class);
     }
 
@@ -169,7 +173,7 @@ class StructurePlacementBranch extends BranchPackage {
             return;
 
         stampStructure(
-                scratch, structureHandle, anchorX, anchorZ,
+                scratch, structureHandle, null, anchorX, anchorZ,
                 resolveAnchorY(scratch, structureHandle, anchorX, anchorZ), quarterTurns);
     }
 
@@ -202,12 +206,13 @@ class StructurePlacementBranch extends BranchPackage {
                 ? placement.getWorldY()
                 : resolveAnchorY(scratch, structureHandle, anchorX, anchorZ);
 
-        stampStructure(scratch, structureHandle, anchorX, anchorZ, anchorY, quarterTurns);
+        stampStructure(scratch, structureHandle, null, anchorX, anchorZ, anchorY, quarterTurns);
     }
 
     // World Placement \\
 
-    // Every structure the world's placements stand up by hand, unruled, anchored on the ground
+    // Every structure the world's placements stand up by hand, unruled, anchored on the ground, built in the
+    // architecture the placement names or as authored
     private void generateWorldPlacements(StructurePlacementAsyncContainer scratch, WorldPlacementStruct[] placements) {
 
         for (int i = 0; i < placements.length; i++) {
@@ -225,7 +230,12 @@ class StructurePlacementBranch extends BranchPackage {
                 continue;
 
             stampStructure(
-                    scratch, structureHandle, anchorX, anchorZ,
+                    scratch, structureHandle,
+                    placement.hasArchitecture()
+                            ? architectureManager.getArchitectureHandleFromArchitectureName(
+                                    placement.getArchitectureName())
+                            : null,
+                    anchorX, anchorZ,
                     resolveAnchorY(scratch, structureHandle, anchorX, anchorZ), placement.getQuarterTurns());
         }
     }
@@ -445,6 +455,7 @@ class StructurePlacementBranch extends BranchPackage {
     private void stampStructure(
             StructurePlacementAsyncContainer scratch,
             StructureHandle structureHandle,
+            ArchitectureHandle architectureHandle,
             long anchorX,
             long anchorZ,
             int anchorY,
@@ -455,6 +466,6 @@ class StructurePlacementBranch extends BranchPackage {
 
         structureStampBranch.stamp(
                 scratch.worldHandle, scratch.chunkCoordinate, scratch.subChunks,
-                structureHandle, anchorX, anchorZ, anchorY, quarterTurns);
+                structureHandle, architectureHandle, anchorX, anchorZ, anchorY, quarterTurns);
     }
 }

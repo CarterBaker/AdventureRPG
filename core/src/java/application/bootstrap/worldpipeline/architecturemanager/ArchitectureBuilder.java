@@ -2,6 +2,10 @@ package application.bootstrap.worldpipeline.architecturemanager;
 
 import java.io.File;
 
+import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
+import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.worldpipeline.architecture.ArchitectureData;
 import application.bootstrap.worldpipeline.architecture.ArchitectureHandle;
 import application.bootstrap.worldpipeline.architecture.ArchitectureWallStruct;
@@ -14,12 +18,15 @@ import application.bootstrap.worldpipeline.settlementmanager.SettlementManager;
 import application.bootstrap.worldpipeline.structurelist.StructureListHandle;
 import application.bootstrap.worldpipeline.structurelistmanager.StructureListManager;
 import engine.root.BuilderPackage;
+import engine.root.EngineSetting;
 import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.shorts.Short2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 
 class ArchitectureBuilder extends BuilderPackage {
@@ -33,8 +40,11 @@ class ArchitectureBuilder extends BuilderPackage {
      * layout asks for to a structure list, its optional "settlements" the
      * settlement types it builds, and its optional "wall" the block, cap,
      * height and thickness of the curtain wall around walled settlements.
-     * Every road, list, settlement and block is resolved here, so a
-     * malformed architecture fails at boot.
+     * Its optional "blocks" fill block slots, each group a map of its places
+     * to whole solid blocks, and its optional "furniture" map furnishing
+     * tables to the one item standing wherever a structure furnishes from
+     * them. Every road, list, settlement, block, table and item is resolved
+     * here, so a malformed architecture fails at boot.
      */
 
     // Internal
@@ -43,6 +53,8 @@ class ArchitectureBuilder extends BuilderPackage {
     private StructureListManager structureListManager;
     private SettlementManager settlementManager;
     private BlockManager blockManager;
+    private FurnishingManager furnishingManager;
+    private ItemDefinitionManager itemDefinitionManager;
 
     // Base \\
 
@@ -53,6 +65,8 @@ class ArchitectureBuilder extends BuilderPackage {
         this.structureListManager = get(StructureListManager.class);
         this.settlementManager = get(SettlementManager.class);
         this.blockManager = get(BlockManager.class);
+        this.furnishingManager = get(FurnishingManager.class);
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
     }
 
     // Build \\
@@ -83,7 +97,9 @@ class ArchitectureBuilder extends BuilderPackage {
                 roads,
                 parseRoles(arpg),
                 parseSettlements(arpg),
-                parseWall(arpg, architectureName));
+                parseWall(arpg, architectureName),
+                parseBlockSlots(arpg, architectureName),
+                parseFurniture(arpg));
 
         ArchitectureHandle architectureHandle = create(ArchitectureHandle.class);
         architectureHandle.constructor(architectureData);
@@ -148,5 +164,61 @@ class ArchitectureBuilder extends BuilderPackage {
                 thicknessBlocks,
                 capBlock.getMapColorForFace(Direction3Vector.UP),
                 wallBlock.getMapColorForFace(Direction3Vector.NORTH));
+    }
+
+    // Slots \\
+
+    // Every place of every group a whole solid block fills, keyed by the slot's ID
+    private Short2ShortOpenHashMap parseBlockSlots(ArpgObjectStruct arpg, String architectureName) {
+
+        Short2ShortOpenHashMap blockSlotID2BlockID = new Short2ShortOpenHashMap();
+        blockSlotID2BlockID.defaultReturnValue(EngineSetting.REGISTRY_RESERVED_ID);
+
+        if (!ArpgUtility.hasObject(arpg, "blocks"))
+            return blockSlotID2BlockID;
+
+        ArpgObjectStruct blocksArpg = arpg.getAsObject("blocks");
+
+        for (String group : blocksArpg.keySet()) {
+
+            ArpgObjectStruct groupArpg = blocksArpg.getAsObject(group);
+
+            for (String place : groupArpg.keySet()) {
+
+                short blockSlotID = architectureManager.registerBlockSlotName(
+                        group + EngineSetting.ARCHITECTURE_SLOT_SEPARATOR + place, architectureName);
+                BlockHandle blockHandle = blockManager.getSolidBlockHandleFromBlockName(
+                        groupArpg.get(place).getAsString(), architectureName);
+
+                if (blockHandle.getGeometry() != DynamicGeometryType.FULL)
+                    throwException("Architecture \"" + architectureName + "\" fills block slot \"" + group
+                            + EngineSetting.ARCHITECTURE_SLOT_SEPARATOR + place + "\" with \""
+                            + blockHandle.getBlockName() + "\" — a block slot takes a whole block, so the "
+                            + "shapes a structure lays it in still hold.");
+
+                blockSlotID2BlockID.put(blockSlotID, blockHandle.getBlockID());
+            }
+        }
+
+        return blockSlotID2BlockID;
+    }
+
+    // Every furnishing table this fills with one item of its own, keyed by the table's ID
+    private Short2ObjectOpenHashMap<ItemDefinitionHandle> parseFurniture(ArpgObjectStruct arpg) {
+
+        Short2ObjectOpenHashMap<ItemDefinitionHandle> furnishingID2Item = new Short2ObjectOpenHashMap<>();
+
+        if (!ArpgUtility.hasObject(arpg, "furniture"))
+            return furnishingID2Item;
+
+        ArpgObjectStruct furnitureArpg = arpg.getAsObject("furniture");
+
+        for (String furnishingName : furnitureArpg.keySet())
+            furnishingID2Item.put(
+                    furnishingManager.getFurnishingIDFromFurnishingName(furnishingName),
+                    itemDefinitionManager.getItemHandleFromItemName(
+                            furnitureArpg.get(furnishingName).getAsString()));
+
+        return furnishingID2Item;
     }
 }

@@ -69,9 +69,9 @@ public class ShipViewerRenderSystem extends SystemPackage {
     protected void create() {
         this.restMatrix = new Matrix4();
         this.itemMatrix = new Matrix4();
-        this.cutawayHeight = ShipViewerSetting.CUTAWAY_NONE;
+        this.cutawayHeight = EditorSetting.ITEM_VIEWER_CUTAWAY_NONE;
         this.shownCutaway = cutawayHeight;
-        this.itemCutaway = ShipViewerSetting.CUTAWAY_NONE;
+        this.itemCutaway = EditorSetting.ITEM_VIEWER_CUTAWAY_NONE;
     }
 
     @Override
@@ -92,10 +92,10 @@ public class ShipViewerRenderSystem extends SystemPackage {
         this.sceneFbo = fboManager.cloneFbo(EditorSetting.FBO_EDITOR_SCENE, context.getWindow());
 
         // Materials
-        this.shipMaterialID = materialManager.getMaterialIDFromMaterialName(ShipViewerSetting.MATERIAL_SHIP);
+        this.shipMaterialID = materialManager.getMaterialIDFromMaterialName(EditorSetting.ITEM_VIEWER_MATERIAL);
         itemModelManager.registerPaintedTwin(
                 shipMaterialID,
-                materialManager.getMaterialIDFromMaterialName(ShipViewerSetting.MATERIAL_SHIP_PAINTED));
+                materialManager.getMaterialIDFromMaterialName(EditorSetting.ITEM_VIEWER_PAINTED_MATERIAL));
     }
 
     // Update \\
@@ -133,7 +133,7 @@ public class ShipViewerRenderSystem extends SystemPackage {
             ModelInstance model = itemModelManager.acquireModel(meshes.get(i).getMeshData(), shipMaterialID);
 
             model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, restMatrix);
-            model.getMaterial().setUniform(ShipViewerSetting.UNIFORM_CUTAWAY_HEIGHT, shownCutaway);
+            model.getMaterial().setUniform(EditorSetting.ITEM_VIEWER_UNIFORM_CUTAWAY_HEIGHT, shownCutaway);
             renderManager.pushRenderCall(model, sceneFbo, ShipViewerSetting.DEPTH_SHIP, window);
         }
     }
@@ -163,7 +163,7 @@ public class ShipViewerRenderSystem extends SystemPackage {
             ModelInstance model = itemModelManager.acquireModel(item.getMeshHandle(), shipMaterialID);
 
             model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, itemMatrix);
-            model.getMaterial().setUniform(ShipViewerSetting.UNIFORM_CUTAWAY_HEIGHT, itemCutaway);
+            model.getMaterial().setUniform(EditorSetting.ITEM_VIEWER_UNIFORM_CUTAWAY_HEIGHT, itemCutaway);
             renderManager.pushRenderCall(model, sceneFbo, ShipViewerSetting.DEPTH_SHIP, window);
         }
     }

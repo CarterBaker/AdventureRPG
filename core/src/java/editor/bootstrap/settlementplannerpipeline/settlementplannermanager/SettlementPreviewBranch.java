@@ -1,6 +1,7 @@
 package editor.bootstrap.settlementplannerpipeline.settlementplannermanager;
 
 import application.bootstrap.mappipeline.mapmanager.MapManager;
+import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
 import application.bootstrap.worldpipeline.layout.LayoutDraftStruct;
 import application.bootstrap.worldpipeline.layout.LayoutPlanStruct;
 import application.bootstrap.worldpipeline.layoutmanager.LayoutManager;
@@ -36,6 +37,7 @@ class SettlementPreviewBranch extends BranchPackage {
     private SettlementManager settlementManager;
     private StructureManager structureManager;
     private LayoutManager layoutManager;
+    private ArchitectureManager architectureManager;
     private SettlementPlannerManager settlementPlannerManager;
 
     // Request — main thread
@@ -68,6 +70,7 @@ class SettlementPreviewBranch extends BranchPackage {
         this.settlementManager = get(SettlementManager.class);
         this.structureManager = get(StructureManager.class);
         this.layoutManager = get(LayoutManager.class);
+        this.architectureManager = get(ArchitectureManager.class);
         this.settlementPlannerManager = get(SettlementPlannerManager.class);
     }
 
@@ -165,7 +168,11 @@ class SettlementPreviewBranch extends BranchPackage {
         LayoutDraftStruct draft = new LayoutDraftStruct(
                 worldHandle,
                 anchorX + EngineSetting.BLOCK_CENTER_OFFSET,
-                anchorZ + EngineSetting.BLOCK_CENTER_OFFSET);
+                anchorZ + EngineSetting.BLOCK_CENTER_OFFSET,
+                placement.hasArchitecture()
+                        ? architectureManager.getArchitectureHandleFromArchitectureName(
+                                placement.getArchitectureName())
+                        : null);
         int ground = layoutManager.probeGround(worldHandle, anchorX, anchorZ);
 
         layoutManager.placeLotAt(

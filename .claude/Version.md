@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 185
-Task: BlenderVertexSelection
+Delivery: 186
+Task: ArchitectureBuilder
 Applied: 2026-11-27
 
 ## Log
@@ -195,3 +195,4 @@ Applied: 2026-11-27
 - 183, 2026-11-27, PosedSculpt
 - 184, 2026-11-27, PosedEditing
 - 185, 2026-11-27, BlenderVertexSelection
+- 186, 2026-11-27, ArchitectureBuilder

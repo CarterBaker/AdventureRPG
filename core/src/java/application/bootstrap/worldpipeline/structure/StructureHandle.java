@@ -80,6 +80,10 @@ public class StructureHandle extends HandlePackage {
         return structureData.getBlockGeometry();
     }
 
+    public short[] getBlockSlotIDs() {
+        return structureData.getBlockSlotIDs();
+    }
+
     public int getMinOffsetX() {
         return structureData.getMinOffsetX();
     }

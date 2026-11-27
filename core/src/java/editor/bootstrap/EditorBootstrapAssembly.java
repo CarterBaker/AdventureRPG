@@ -2,6 +2,7 @@ package editor.bootstrap;
 
 import editor.bootstrap.animationeditorpipeline.AnimationEditorPipeline;
 import editor.bootstrap.animationtreeeditorpipeline.AnimationTreeEditorPipeline;
+import editor.bootstrap.architecturebuilderpipeline.ArchitectureBuilderPipeline;
 import editor.bootstrap.biomeplannerpipeline.BiomePlannerPipeline;
 import editor.bootstrap.brushpipeline.BrushPipeline;
 import editor.bootstrap.cameraplannerpipeline.CameraPlannerPipeline;
@@ -79,6 +80,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(TreeViewerPipeline.class);
         create(TreeImpostorPipeline.class);
         create(ShipViewerPipeline.class);
+        create(ArchitectureBuilderPipeline.class);
         create(CharacterEditorPipeline.class);
         create(ImageEditorPipeline.class);
         create(AnimationEditorPipeline.class);

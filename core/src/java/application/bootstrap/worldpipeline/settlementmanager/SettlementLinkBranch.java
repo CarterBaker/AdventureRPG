@@ -85,7 +85,7 @@ class SettlementLinkBranch extends BranchPackage {
                     worldHandle, architectureHandle.getRoad(byRoad ? LayoutRoadKind.ROAD : LayoutRoadKind.PATH),
                     scratch.pointX, scratch.pointZ, from.getExitY(fromExit), to.getExitY(toExit));
 
-            LayoutDraftStruct draft = new LayoutDraftStruct(worldHandle, fromX, fromZ);
+            LayoutDraftStruct draft = new LayoutDraftStruct(worldHandle, fromX, fromZ, architectureHandle);
 
             settlementTrailBranch.addRoad(draft, road);
             laySideTrails(draft, scratch, architectureHandle, random, road);

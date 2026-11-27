@@ -11,6 +11,7 @@ import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingMana
 import application.bootstrap.furnishingpipeline.util.FurnishingArpgUtility;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.lootpipeline.loottablemanager.LootTableManager;
+import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.BlockRotationType;
@@ -53,7 +54,10 @@ class StructureBuilder extends BuilderPackage {
      * by single characters, each a block with its facing, spin and an
      * optional sub-block "shape" or raw "mask" for a partial block, an
      * optional "covering" grown over it to its "coverage" level, and an
-     * optional "content" a whole block holds. Its
+     * optional "content" a whole block holds, and an optional architecture
+     * block "slot" ("siding/wall") it is laid in, so the architecture
+     * building it lays its own block there, the block named being the one
+     * laid where none does. Its
      * "layers" lay those keys row by row, a row running along x and each row
      * one step along z, over one or more heights, with a space leaving a cell
      * untouched; its "blocks" then lay single "position"s or inclusive
@@ -77,6 +81,7 @@ class StructureBuilder extends BuilderPackage {
     private FurnishingManager furnishingManager;
     private LootTableManager lootTableManager;
     private NpcManager npcManager;
+    private ArchitectureManager architectureManager;
 
     // Palette
     private Object2ObjectOpenHashMap<String, StructurePaletteEntryStruct> key2PaletteEntry;
@@ -91,6 +96,7 @@ class StructureBuilder extends BuilderPackage {
     private ShortArrayList blockCoverages;
     private ShortArrayList blockContents;
     private ObjectArrayList<DynamicGeometryType> blockGeometry;
+    private ShortArrayList blockSlotIDs;
     private Long2IntOpenHashMap position2BlockIndex;
 
     // Base \\
@@ -111,6 +117,7 @@ class StructureBuilder extends BuilderPackage {
         this.blockCoverages = new ShortArrayList();
         this.blockContents = new ShortArrayList();
         this.blockGeometry = new ObjectArrayList<>();
+        this.blockSlotIDs = new ShortArrayList();
         this.position2BlockIndex = new Long2IntOpenHashMap();
         this.position2BlockIndex.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
     }
@@ -125,6 +132,7 @@ class StructureBuilder extends BuilderPackage {
         this.furnishingManager = get(FurnishingManager.class);
         this.lootTableManager = get(LootTableManager.class);
         this.npcManager = get(NpcManager.class);
+        this.architectureManager = get(ArchitectureManager.class);
     }
 
     // Build \\
@@ -189,6 +197,7 @@ class StructureBuilder extends BuilderPackage {
                 blockCoverages.toShortArray(),
                 blockContents.toShortArray(),
                 blockGeometry.toArray(new DynamicGeometryType[0]),
+                blockSlotIDs.toShortArray(),
                 minOffsetX, maxOffsetX, min(offsetY), max(offsetY), minOffsetZ, maxOffsetZ, horizontalReachBlocks,
                 footprint, footprintTopOffsetY, footprintTopColors, footprintSideColors,
                 yOffsetBlocks, foundationBlockID, foundation, clearTerrain,
@@ -255,13 +264,38 @@ class StructureBuilder extends BuilderPackage {
 
         BlockHandle blockHandle = blockManager.getBlockHandleFromBlockName(ArpgUtility.validateString(entry, "block"));
         int mask = parseMask(entry, blockHandle, structureName);
+        short coverage = parseCoverage(entry, blockHandle, structureName);
+        short content = parseContent(entry, blockHandle, mask, structureName);
 
         return new StructurePaletteEntryStruct(
                 blockHandle,
                 parseOrientation(entry, blockHandle, structureName),
                 mask,
-                parseCoverage(entry, blockHandle, structureName),
-                parseContent(entry, blockHandle, mask, structureName));
+                coverage,
+                content,
+                parseBlockSlot(entry, blockHandle, coverage, content, structureName));
+    }
+
+    // Block Slot Parsing \\
+
+    // The architecture block slot a whole bare block is laid in, RESERVED when it names none
+    private short parseBlockSlot(
+            ArpgObjectStruct entry,
+            BlockHandle blockHandle,
+            short coverage,
+            short content,
+            String structureName) {
+
+        if (!entry.has("slot"))
+            return EngineSetting.REGISTRY_RESERVED_ID;
+
+        if (blockHandle.getGeometry() != DynamicGeometryType.FULL || coverage != CoverageUtility.NONE
+                || content != ContentUtility.NONE)
+            throwException("Structure \"" + structureName + "\" lays \"" + blockHandle.getBlockName()
+                    + "\" in a block slot — only a whole bare block, with no covering or content, takes a slot, "
+                    + "so the block an architecture lays there fits every shape it is laid in.");
+
+        return architectureManager.registerBlockSlotName(entry.get("slot").getAsString(), structureName);
     }
 
     // Layer Parsing \\
@@ -322,6 +356,7 @@ class StructureBuilder extends BuilderPackage {
         blockCoverages.clear();
         blockContents.clear();
         blockGeometry.clear();
+        blockSlotIDs.clear();
         position2BlockIndex.clear();
     }
 
@@ -409,6 +444,7 @@ class StructureBuilder extends BuilderPackage {
             blockCoverages.set(index, entry.getCoverage());
             blockContents.set(index, entry.getContent());
             blockGeometry.set(index, blockHandle.getGeometry());
+            blockSlotIDs.set(index, entry.getBlockSlotID());
             return;
         }
 
@@ -427,6 +463,7 @@ class StructureBuilder extends BuilderPackage {
         blockCoverages.add(entry.getCoverage());
         blockContents.add(entry.getContent());
         blockGeometry.add(blockHandle.getGeometry());
+        blockSlotIDs.add(entry.getBlockSlotID());
     }
 
     private void validateExtent(int offset, String structureName) {

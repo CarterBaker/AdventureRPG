@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.layout;
 
+import application.bootstrap.worldpipeline.architecture.ArchitectureHandle;
 import application.bootstrap.worldpipeline.road.RoadPathStruct;
 import engine.root.StructPackage;
 
@@ -7,7 +8,8 @@ public class LayoutPlanStruct extends StructPackage {
 
     /*
      * A planned layout, immutable once sealed: the roads it lays, the walls
-     * it raises and the structures it stands on its lots, a settlement, the
+     * it raises and the structures it stands on its lots, built in its
+     * architecture or, where it has none, as authored: a settlement, the
      * roads between settlements, or any other pathed arrangement. Every
      * position is in the layout's own unwrapped blocks, measured around its
      * reference column, so the whole plan stays continuous across the
@@ -18,6 +20,9 @@ public class LayoutPlanStruct extends StructPackage {
     // Reference — wrapped world blocks
     private final double referenceX;
     private final double referenceZ;
+
+    // Style
+    private final ArchitectureHandle architectureHandle;
 
     // Contents
     private final RoadPathStruct[] paths;
@@ -35,6 +40,7 @@ public class LayoutPlanStruct extends StructPackage {
     public LayoutPlanStruct(
             double referenceX,
             double referenceZ,
+            ArchitectureHandle architectureHandle,
             RoadPathStruct[] paths,
             LayoutWallStruct[] walls,
             LayoutLotStruct[] lots,
@@ -46,6 +52,9 @@ public class LayoutPlanStruct extends StructPackage {
         // Reference
         this.referenceX = referenceX;
         this.referenceZ = referenceZ;
+
+        // Style
+        this.architectureHandle = architectureHandle;
 
         // Contents
         this.paths = paths;
@@ -67,6 +76,11 @@ public class LayoutPlanStruct extends StructPackage {
 
     public double getReferenceZ() {
         return referenceZ;
+    }
+
+    // The architecture its structures are built in, null to build each as authored
+    public ArchitectureHandle getArchitectureHandle() {
+        return architectureHandle;
     }
 
     public RoadPathStruct[] getPaths() {

@@ -59,6 +59,16 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   the viewer's the species' whole entry. The viewer's LOD levels are its layers in the Layers tab; both tabs share the
   Tools tab's Preview actions (New Seed, Younger, Older) and the File menu's New, Duplicate, Save and Revert
   (`TreeViewerManager` holds what they share).
+- **Architecture Builder** (`editor.bootstrap.architecturebuilderpipeline`, under Planners in the World menu). An
+  architecture is a style blueprint: its `blocks` fill the block slots structures name in their palettes (`"slot":
+  "siding/wall"`, the block named being the one laid where no architecture fills the slot), and its `furniture` fills
+  furnishing tables (`beds/Parents`) with one item of its own, so every structure a settlement stands up takes its
+  look (`StructureStampBranch`, the architecture carried on `LayoutPlanStruct`). The slots are the tab's layers in the
+  Layers tab, Blocks over Furniture, each grouped (Siding, Roof...; Beds, House...); the slot picked shows in the
+  viewport, a block as a wall of its pieces and furniture as its piece, a group or kind every slot it holds. The
+  Palette tab lists every architecture, then what the slot picked may take (As Built first), a row chosen filling
+  it through `InfoManager.editEntry`; the Properties tab holds the whole entry; the File menu makes, saves and reverts
+  (`ArchitectureBuilderManager` holds what is shared). Only a whole bare block takes a slot.
 - **Tree impostors** (`editor.bootstrap.treeimpostorpipeline`). Every species' impostor is baked by the editor, as
   SpeedTree bakes billboards: its shared tree, grown in full from its `lod_seed`, drawn from 8 by 8 hemi-octahedral
   directions into an albedo and a normal atlas, BC7, written to `assets/bakedimpostors/<Tree>.arpg`

@@ -12,7 +12,9 @@ public class StructureData extends DataPackage {
      * Persistent structure record. Blocks are parallel arrays of
      * origin-relative offsets with names already resolved to ID, orientation,
      * sub-block mask, coverage, content and geometry, so stamping is a straight
-     * walk over primitives. Unlisted positions are left untouched; listed air
+     * walk over primitives, each block also naming the architecture block
+     * slot it is laid in, if any, so the architecture building it may lay a
+     * block of its own there. Unlisted positions are left untouched; listed air
      * carves, and a structure that clears terrain also carves the ground
      * standing inside its footprint. The footprint grid spans the horizontal
      * bounds and holds, per column, whether any block is listed there and the
@@ -39,6 +41,7 @@ public class StructureData extends DataPackage {
     private final short[] blockCoverages;
     private final short[] blockContents;
     private final DynamicGeometryType[] blockGeometry;
+    private final short[] blockSlotIDs;
 
     // Bounds
     private final int minOffsetX;
@@ -90,6 +93,7 @@ public class StructureData extends DataPackage {
             short[] blockCoverages,
             short[] blockContents,
             DynamicGeometryType[] blockGeometry,
+            short[] blockSlotIDs,
             int minOffsetX,
             int maxOffsetX,
             int minOffsetY,
@@ -127,6 +131,7 @@ public class StructureData extends DataPackage {
         this.blockCoverages = blockCoverages;
         this.blockContents = blockContents;
         this.blockGeometry = blockGeometry;
+        this.blockSlotIDs = blockSlotIDs;
 
         // Bounds
         this.minOffsetX = minOffsetX;
@@ -216,6 +221,11 @@ public class StructureData extends DataPackage {
 
     public DynamicGeometryType[] getBlockGeometry() {
         return blockGeometry;
+    }
+
+    // The block slot each block is laid in, RESERVED for a block laid as authored whatever builds it
+    public short[] getBlockSlotIDs() {
+        return blockSlotIDs;
     }
 
     public int getMinOffsetX() {

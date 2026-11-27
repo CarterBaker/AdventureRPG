@@ -91,7 +91,7 @@ class LayoutStampBranch extends BranchPackage {
                 continue;
 
             structureManager.stampStructure(
-                    worldHandle, chunkCoordinate, subChunks, lot.getStructureHandle(),
+                    worldHandle, chunkCoordinate, subChunks, lot.getStructureHandle(), plan.getArchitectureHandle(),
                     lot.getAnchorX(), lot.getAnchorZ(), lot.getAnchorY(), lot.getQuarterTurns());
         }
     }

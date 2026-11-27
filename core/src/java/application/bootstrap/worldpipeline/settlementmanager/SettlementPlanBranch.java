@@ -76,7 +76,7 @@ class SettlementPlanBranch extends BranchPackage {
             LayoutRandomStruct random = new LayoutRandomStruct(site.getSeed());
             double centerX = site.getCenterX() + EngineSetting.BLOCK_CENTER_OFFSET;
             double centerZ = site.getCenterZ() + EngineSetting.BLOCK_CENTER_OFFSET;
-            LayoutDraftStruct draft = new LayoutDraftStruct(worldHandle, centerX, centerZ);
+            LayoutDraftStruct draft = new LayoutDraftStruct(worldHandle, centerX, centerZ, architectureHandle);
             float centerY = resolveCenterY(worldHandle, centerX, centerZ);
 
             double ringRadius = placeCenter(draft, site, random, centerX, centerZ, centerY);

@@ -7,6 +7,7 @@ import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingMana
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
+import application.bootstrap.worldpipeline.architecture.ArchitectureHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.structure.StructureSpawnStruct;
@@ -36,10 +37,13 @@ class StructureStampBranch extends BranchPackage {
      * its share independently. A structure that clears terrain first carves
      * the ground standing inside its footprint down to its lowest block, or
      * underground only the space it fills; its blocks are then laid turned,
+     * each block slot taking the block of the architecture building it, if
+     * that fills the slot,
      * orientation and sub-block mask alike, a foundation is filled from its
      * lowest solid blocks down to the ground, or underground down through any
      * open cave to the first solid block, and every place it comes furnished at whose item corner falls in the
-     * chunk draws its furniture as a world item, carrying the loot table a
+     * chunk draws its furniture as a world item, the architecture's own
+     * piece where it fills the table, carrying the loot table a
      * container found there is filled from. Every spot it is lived at whose
      * block falls in the chunk records its NPC as a world spawn. Every roll is
      * salted by the world, the structure and its anchor, so a structure
@@ -90,6 +94,7 @@ class StructureStampBranch extends BranchPackage {
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
             StructureHandle structureHandle,
+            ArchitectureHandle architectureHandle,
             long anchorX,
             long anchorZ,
             int anchorY,
@@ -103,14 +108,18 @@ class StructureStampBranch extends BranchPackage {
         if (structureHandle.isClearTerrain())
             clearFootprint(chunkCoordinate, subChunks, structureHandle, relativeX, relativeZ, anchorY, quarterTurns);
 
-        layBlocks(chunkCoordinate, subChunks, structureHandle, relativeX, relativeZ, anchorY, quarterTurns);
+        layBlocks(
+                chunkCoordinate, subChunks, structureHandle, architectureHandle,
+                relativeX, relativeZ, anchorY, quarterTurns);
 
         long placementSeed = BiomeFieldUtility.hashCell(
                 worldHandle.getSeed() ^ EngineSetting.STRUCTURE_FURNISHING_SALT
                         ^ (structureHandle.getNameSeed() * EngineSetting.STRUCTURE_NAME_SEED_MULTIPLIER),
                 (int) anchorX, (int) anchorZ);
 
-        furnish(subChunks, structureHandle, relativeX, relativeZ, anchorY, quarterTurns, placementSeed);
+        furnish(
+                subChunks, structureHandle, architectureHandle,
+                relativeX, relativeZ, anchorY, quarterTurns, placementSeed);
         populate(subChunks, structureHandle, relativeX, relativeZ, anchorY, quarterTurns, placementSeed);
     }
 
@@ -161,6 +170,7 @@ class StructureStampBranch extends BranchPackage {
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
             StructureHandle structureHandle,
+            ArchitectureHandle architectureHandle,
             long relativeX,
             long relativeZ,
             int anchorY,
@@ -177,6 +187,7 @@ class StructureStampBranch extends BranchPackage {
         short[] blockCoverages = structureHandle.getBlockCoverages();
         short[] blockContents = structureHandle.getBlockContents();
         DynamicGeometryType[] blockGeometry = structureHandle.getBlockGeometry();
+        short[] blockSlotIDs = structureHandle.getBlockSlotIDs();
 
         boolean foundation = structureHandle.hasFoundation();
 
@@ -195,7 +206,8 @@ class StructureStampBranch extends BranchPackage {
             DynamicGeometryType geometry = blockGeometry[i];
 
             ChunkWriteUtility.writeBlock(
-                    subChunks, (int) localX, worldY, (int) localZ, blockIDs[i],
+                    subChunks, (int) localX, worldY, (int) localZ,
+                    resolveBlockID(architectureHandle, blockSlotIDs[i], blockIDs[i]),
                     StructurePlacementUtility.rotateOrientation(blockOrientations[i], quarterTurns),
                     StructurePlacementUtility.rotateMask(blockMasks[i] & EngineSetting.SUB_BLOCK_MASK_FULL,
                             quarterTurns),
@@ -213,6 +225,15 @@ class StructureStampBranch extends BranchPackage {
             layFoundation(
                     scratch, chunkCoordinate, subChunks, structureHandle.getFoundationBlockID(),
                     isUnderground(structureHandle));
+    }
+
+    // The block a structure lays at one of its places: the architecture's where it fills the place's slot
+    private short resolveBlockID(ArchitectureHandle architectureHandle, short blockSlotID, short authoredBlockID) {
+
+        if (architectureHandle == null || blockSlotID == EngineSetting.REGISTRY_RESERVED_ID)
+            return authoredBlockID;
+
+        return architectureHandle.resolveBlockID(blockSlotID, authoredBlockID);
     }
 
     private void layFoundation(
@@ -268,6 +289,7 @@ class StructureStampBranch extends BranchPackage {
     private void furnish(
             SubChunkInstance[] subChunks,
             StructureHandle structureHandle,
+            ArchitectureHandle architectureHandle,
             long relativeX,
             long relativeZ,
             int anchorY,
@@ -295,9 +317,7 @@ class StructureStampBranch extends BranchPackage {
             if (BiomeFieldUtility.hash01(slotSeed) >= slot.getChance())
                 continue;
 
-            ItemDefinitionHandle item = furnishingManager.drawItem(
-                    slot.getFurnishingID(),
-                    BiomeFieldUtility.hash01(slotSeed ^ EngineSetting.STRUCTURE_FURNISHING_ITEM_SALT));
+            ItemDefinitionHandle item = drawFurniture(architectureHandle, slot.getFurnishingID(), slotSeed);
             int orientation = itemRotationBufferSystem.turnOrientation(slot.getOrientation(), quarterTurns);
 
             subChunks[subY / subVoxelResolution / chunkSize].getWorldItemPaletteHandle().addItem(new WorldItemStruct(
@@ -306,6 +326,18 @@ class StructureStampBranch extends BranchPackage {
                     slot.getLootTableID(),
                     null));
         }
+    }
+
+    // The architecture's own piece where it fills the table, else one drawn from the table by the place's roll
+    private ItemDefinitionHandle drawFurniture(ArchitectureHandle architectureHandle, short furnishingID, long slotSeed) {
+
+        ItemDefinitionHandle item = architectureHandle != null ? architectureHandle.getFurnitureItem(furnishingID) : null;
+
+        return item != null
+                ? item
+                : furnishingManager.drawItem(
+                        furnishingID,
+                        BiomeFieldUtility.hash01(slotSeed ^ EngineSetting.STRUCTURE_FURNISHING_ITEM_SALT));
     }
 
     // Residents \\

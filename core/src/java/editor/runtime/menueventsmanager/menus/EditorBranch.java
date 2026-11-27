@@ -240,6 +240,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openTreePlanner(window.getGLWindow());
     }
 
+    public void openArchitectureBuilder(WindowInstance window) {
+        tabManager.openArchitectureBuilder(window.getGLWindow());
+    }
+
     public void openTreeViewer(WindowInstance window) {
         tabManager.openTreeViewer(window.getGLWindow());
     }

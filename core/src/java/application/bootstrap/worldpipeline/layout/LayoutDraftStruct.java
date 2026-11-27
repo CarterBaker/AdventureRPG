@@ -1,5 +1,6 @@
 package application.bootstrap.worldpipeline.layout;
 
+import application.bootstrap.worldpipeline.architecture.ArchitectureHandle;
 import application.bootstrap.worldpipeline.road.RoadPathStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.StructPackage;
@@ -10,7 +11,8 @@ public class LayoutDraftStruct extends StructPackage {
 
     /*
      * A layout while it is being planned: the world and reference column it
-     * is measured around, the roads, walls and lots laid so far, and every
+     * is measured around, the architecture its structures are built in, null
+     * to build each as authored, the roads, walls and lots laid so far, and every
      * centreline a lot must keep clear of, each with how close a lot may come
      * to it. LayoutManager fits lots against it and seals it into an
      * immutable LayoutPlanStruct once planning ends.
@@ -20,6 +22,9 @@ public class LayoutDraftStruct extends StructPackage {
     private final WorldHandle worldHandle;
     private final double referenceX;
     private final double referenceZ;
+
+    // Style
+    private final ArchitectureHandle architectureHandle;
 
     // Contents
     private final ObjectArrayList<RoadPathStruct> paths;
@@ -32,12 +37,19 @@ public class LayoutDraftStruct extends StructPackage {
 
     // Constructor \\
 
-    public LayoutDraftStruct(WorldHandle worldHandle, double referenceX, double referenceZ) {
+    public LayoutDraftStruct(
+            WorldHandle worldHandle,
+            double referenceX,
+            double referenceZ,
+            ArchitectureHandle architectureHandle) {
 
         // World
         this.worldHandle = worldHandle;
         this.referenceX = referenceX;
         this.referenceZ = referenceZ;
+
+        // Style
+        this.architectureHandle = architectureHandle;
 
         // Contents
         this.paths = new ObjectArrayList<>();
@@ -80,6 +92,10 @@ public class LayoutDraftStruct extends StructPackage {
 
     public double getReferenceZ() {
         return referenceZ;
+    }
+
+    public ArchitectureHandle getArchitectureHandle() {
+        return architectureHandle;
     }
 
     public ObjectArrayList<RoadPathStruct> getPaths() {

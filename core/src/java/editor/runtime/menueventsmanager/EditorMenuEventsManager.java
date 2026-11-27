@@ -2,6 +2,7 @@ package editor.runtime.menueventsmanager;
 
 import editor.runtime.menueventsmanager.menus.AnimationEditorBranch;
 import editor.runtime.menueventsmanager.menus.AnimationTreeEditorBranch;
+import editor.runtime.menueventsmanager.menus.ArchitectureBuilderBranch;
 import editor.runtime.menueventsmanager.menus.BiomePlannerBranch;
 import editor.runtime.menueventsmanager.menus.BiomeViewerBranch;
 import editor.runtime.menueventsmanager.menus.CameraPlannerBranch;
@@ -81,6 +82,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(BiomeViewerBranch.class);
         create(TreeViewerBranch.class);
         create(ShipViewerBranch.class);
+        create(ArchitectureBuilderBranch.class);
         create(CharacterEditorBranch.class);
         create(ImageEditorBranch.class);
         create(AnimationEditorBranch.class);

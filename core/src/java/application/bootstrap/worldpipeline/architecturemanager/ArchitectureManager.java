@@ -14,13 +14,20 @@ public class ArchitectureManager extends ManagerPackage {
      * what may grow on them and that every settlement and the roads between
      * them are built in. Every architecture is resolved in awake(), before
      * any chunk generates, so worker threads only ever read the palette.
-     * Architecture IDs are assigned in registration order.
+     * Architecture IDs are assigned in registration order. It also owns the
+     * block slots, the named places a structure lays a building material at
+     * ("siding/wall") that an architecture fills with a block of its own,
+     * registered by whichever structure or architecture names one first.
      */
 
     // Palette
     private Object2IntOpenHashMap<String> architectureName2ArchitectureID;
     private ObjectArrayList<ArchitectureHandle> architectureID2ArchitectureHandle;
     private ObjectArrayList<ArchitectureHandle> architectureHandles;
+
+    // Block Slots
+    private Object2IntOpenHashMap<String> blockSlotName2BlockSlotID;
+    private ObjectArrayList<String> blockSlotID2BlockSlotName;
 
     // Base \\
 
@@ -31,6 +38,10 @@ public class ArchitectureManager extends ManagerPackage {
         this.architectureName2ArchitectureID = RegistryUtility.createNameIndex();
         this.architectureID2ArchitectureHandle = RegistryUtility.createPalette();
         this.architectureHandles = new ObjectArrayList<>();
+
+        // Block Slots
+        this.blockSlotName2BlockSlotID = RegistryUtility.createNameIndex();
+        this.blockSlotID2BlockSlotName = RegistryUtility.createPalette();
 
         create(ArchitectureLoader.class);
     }
@@ -58,6 +69,21 @@ public class ArchitectureManager extends ManagerPackage {
 
         architectureID2ArchitectureHandle.set(architectureID, architectureHandle);
         architectureHandles.add(architectureHandle);
+    }
+
+    // A block slot's ID, registered on first use; a slot is named as its group and its place, "group/place"
+    public short registerBlockSlotName(String blockSlotName, String ownerName) {
+
+        int separator = blockSlotName.indexOf(EngineSetting.ARCHITECTURE_SLOT_SEPARATOR);
+
+        if (separator <= 0 || separator == blockSlotName.length() - 1
+                || blockSlotName.indexOf(EngineSetting.ARCHITECTURE_SLOT_SEPARATOR, separator + 1) >= 0)
+            throwException("\"" + ownerName + "\" names block slot \"" + blockSlotName
+                    + "\" — a block slot is named as its group and its place, \"group/place\".");
+
+        return (short) RegistryUtility.registerHandle(
+                blockSlotName2BlockSlotID, blockSlotID2BlockSlotName, blockSlotName, blockSlotName,
+                EngineSetting.REGISTRY_SHORT_ID_COUNT);
     }
 
     // On-Demand \\
@@ -107,5 +133,10 @@ public class ArchitectureManager extends ManagerPackage {
 
     public ObjectArrayList<ArchitectureHandle> getArchitectureHandles() {
         return architectureHandles;
+    }
+
+    // Every block slot any structure or architecture names by ID, the reserved slot 0 null
+    public ObjectArrayList<String> getBlockSlotNames() {
+        return blockSlotID2BlockSlotName;
     }
 }

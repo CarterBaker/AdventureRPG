@@ -12,6 +12,7 @@ import application.bootstrap.vehiclepipeline.vehicle.VehiclePartRole;
 import application.bootstrap.vehiclepipeline.vehicle.VehiclePartStruct;
 import application.bootstrap.vehiclepipeline.vehiclemanager.VehicleManager;
 import editor.bootstrap.shipviewerpipeline.shipviewermanager.ShipViewerManager;
+import editor.runtime.EditorSetting;
 import editor.runtime.shipviewer.ShipViewerSetting;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import engine.root.EngineSetting;
@@ -333,7 +334,7 @@ public class ShipViewerSystem extends SystemPackage implements ViewCameraSubject
     public float getCutawayHeight() {
 
         if (deck == ShipViewerSetting.DECK_ALL)
-            return ShipViewerSetting.CUTAWAY_NONE;
+            return EditorSetting.ITEM_VIEWER_CUTAWAY_NONE;
 
         return (deck + 1) * EngineSetting.SHIP_DECK_HEIGHT * EngineSetting.SUB_BLOCK_SIZE
                 - ShipViewerSetting.CUTAWAY_EPSILON;

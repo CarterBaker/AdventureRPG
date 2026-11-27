@@ -352,6 +352,7 @@ class LayoutLotBranch extends BranchPackage {
         return new LayoutPlanStruct(
                 draft.getReferenceX(),
                 draft.getReferenceZ(),
+                draft.getArchitectureHandle(),
                 draft.getPaths().toArray(new RoadPathStruct[0]),
                 draft.getWalls().toArray(new LayoutWallStruct[0]),
                 draft.getLots().toArray(new LayoutLotStruct[0]),

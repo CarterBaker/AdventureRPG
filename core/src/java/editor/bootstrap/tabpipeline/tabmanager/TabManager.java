@@ -5,6 +5,7 @@ import application.kernel.windowpipeline.window.WindowInstance;
 import application.kernel.windowpipeline.windowmanager.WindowManager;
 import editor.runtime.animationeditor.AnimationEditorContext;
 import editor.runtime.animationtreeeditor.AnimationTreeEditorContext;
+import editor.runtime.architecturebuilder.ArchitectureBuilderContext;
 import editor.runtime.arpgviewer.ArpgViewerContext;
 import editor.runtime.biomeplanner.BiomePlannerContext;
 import editor.runtime.biomeviewer.BiomeViewerContext;
@@ -295,6 +296,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openTreePlanner(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_TREE_PLANNER, TreePlannerContext.class, osWindow);
+    }
+
+    public TabHandle openArchitectureBuilder(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_ARCHITECTURE_BUILDER, ArchitectureBuilderContext.class, osWindow);
     }
 
     public TabHandle openTreeViewer(WindowInstance osWindow) {

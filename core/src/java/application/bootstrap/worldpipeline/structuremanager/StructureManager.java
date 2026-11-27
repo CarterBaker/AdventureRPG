@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.structuremanager;
 import java.util.Arrays;
 import java.util.Comparator;
 
+import application.bootstrap.worldpipeline.architecture.ArchitectureHandle;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -109,18 +110,21 @@ public class StructureManager extends ManagerPackage {
                 worldHandle, chunkCoordinate, subChunks, structureHandles, worldManager.getPlacements(worldHandle));
     }
 
-    // Worker — one structure's share of a chunk, laid at an anchor and turned clockwise by whole quarter turns
+    // Worker — one structure's share of a chunk, built in an architecture or as authored when it is null, laid at an
+    // anchor and turned clockwise by whole quarter turns
     public void stampStructure(
             WorldHandle worldHandle,
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
             StructureHandle structureHandle,
+            ArchitectureHandle architectureHandle,
             long anchorX,
             long anchorZ,
             int anchorY,
             int quarterTurns) {
         structureStampBranch.stamp(
-                worldHandle, chunkCoordinate, subChunks, structureHandle, anchorX, anchorZ, anchorY, quarterTurns);
+                worldHandle, chunkCoordinate, subChunks, structureHandle, architectureHandle,
+                anchorX, anchorZ, anchorY, quarterTurns);
     }
 
     // Accessible \\

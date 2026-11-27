@@ -383,6 +383,12 @@ public class EditorSetting {
             .with(FileMenuAction.DUPLICATE, "duplicateTree")
             .with(FileMenuAction.SAVE, "save")
             .with(FileMenuAction.REVERT, "revert");
+    public static final FileMenuTableStruct FILE_MENU_ARCHITECTURES = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.ArchitectureBuilderBranch")
+            .with(FileMenuAction.NEW, "newArchitecture")
+            .with(FileMenuAction.DUPLICATE, "duplicateArchitecture")
+            .with(FileMenuAction.SAVE, "save")
+            .with(FileMenuAction.REVERT, "revert");
     public static final FileMenuTableStruct FILE_MENU_BIOME_PLANNER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.BiomePlannerBranch")
             .with(FileMenuAction.NEW, "newBiome")
@@ -592,6 +598,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_TRANSITIONS = "Transitions";
     public static final String TAB_TITLE_FILTERS = "Filters";
     public static final String TAB_TITLE_TREE_PLANNER = "Tree Planner";
+    public static final String TAB_TITLE_ARCHITECTURE_BUILDER = "Architecture Builder";
     public static final String TAB_TITLE_TREE_VIEWER = "Tree Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
@@ -3072,6 +3079,31 @@ public class EditorSetting {
     public static final String TREE_PLANNER_PALETTE_HEADER = "Trees";
     public static final String TREE_PLANNER_FIELDS_SUFFIX = " Fields";
 
+    // Item Viewer Material — the material the Ship Viewer and the Architecture Builder draw meshes and items with as
+    // the game's G-buffer receives them, its painted twin, and the cutaway height above which it clips, every model
+    // blocks high unless a viewer cuts it away
+    public static final String ITEM_VIEWER_MATERIAL = "editor/ShipViewerMaterial";
+    public static final String ITEM_VIEWER_PAINTED_MATERIAL = "editor/ShipViewerPaintedMaterial";
+    public static final String ITEM_VIEWER_UNIFORM_CUTAWAY_HEIGHT = "u_cutawayHeight";
+    public static final float ITEM_VIEWER_CUTAWAY_NONE = 100000f;
+
+    // Architecture Builder — the roots of its layers and the separator between a layer's kind and its slot or group,
+    // the prefixes its Palette rows carry, the text of its labels and the messages of its file actions
+    public static final String ARCHITECTURE_BUILDER_LAYER_BLOCKS = "Blocks";
+    public static final String ARCHITECTURE_BUILDER_LAYER_FURNITURE = "Furniture";
+    public static final char ARCHITECTURE_BUILDER_LAYER_SEPARATOR = ':';
+    public static final String ARCHITECTURE_BUILDER_ROW_ARCHITECTURE = "architecture:";
+    public static final String ARCHITECTURE_BUILDER_ROW_FILL = "fill:";
+    public static final String ARCHITECTURE_BUILDER_ROW_EMPTY = "empty";
+    public static final String ARCHITECTURE_BUILDER_PALETTE_ARCHITECTURES = "Architectures";
+    public static final String ARCHITECTURE_BUILDER_LABEL_SEPARATOR = "  ·  ";
+    public static final String ARCHITECTURE_BUILDER_EMPTY_BLOCK = "As Built";
+    public static final String ARCHITECTURE_BUILDER_EMPTY_FURNITURE = "Drawn From Its Table";
+    public static final String ARCHITECTURE_BUILDER_MESSAGE_NONE = "Select an architecture first";
+    public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVED = "Saved ";
+    public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVE_FAILED = "Could not save ";
+    public static final String ARCHITECTURE_BUILDER_MESSAGE_REVERTED = "Reverted ";
+
     // Tree Impostor Bake — the materials the shared tree is drawn into the bake target with and the uniforms naming
     // each view's camera and the map it writes, its render order, every view of both maps (albedo first), how small a
     // frame's right may come before the world's own x stands in, how many rings out an empty texel takes a covered
@@ -3265,6 +3297,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_NOTE_SETS = "NoteSets";
     public static final String INFO_SCHEMA_BLOCKS = "Blocks";
     public static final String INFO_SCHEMA_SHADERS = "Shaders";
+    public static final String INFO_SCHEMA_ARCHITECTURES = "Architectures";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_ITEM_EQUIP_FIELD = "equip";
     public static final String INFO_ITEM_WORN_MESH_FIELD = "mesh";

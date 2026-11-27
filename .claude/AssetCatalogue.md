@@ -675,6 +675,14 @@ One line per session that changed this file: the date, what was added or removed
   `mesh/worn/clothing/CrimsonCloakFemale.arpg`, `CrimsonCloakMale.arpg` (each naming its own rig).
 - 2026-11-27: Blender-style vertex selection. Regenerated `shortcuts/CharacterEditor.arpg` (O turns proportional
   editing on and off in the Mesh tab).
+- 2026-11-27: Architecture slots and the Architecture Builder. Added `menus/editor/ArchitectureBuilder.arpg` and the
+  bed tables `furnishings/beds/Large.arpg`, `Small.arpg`, `Parents.arpg` and `KidsBunk.arpg`; regenerated
+  `architectures/Tudor.arpg` and `Fachwerk.arpg` (`blocks` slots), every structure under `structures/tudor/`,
+  `structures/fachwerk/` and `structures/shared/` (palette `slot`s, beds from the new tables),
+  `schemas/Architectures.arpg` (`blocks`, `furniture`), `schemas/Structures.arpg` (`slot`) and
+  `menus/editor/EditorWindow.arpg` (Architecture Builder under Planners in the World menu); removed
+  `furnishings/house/Bed.arpg`, `furnishings/keep/Bed.arpg` and `furnishings/tavern/Bed.arpg`, replaced by the bed
+  tables.
 
 ## Textures and Sprites (2603 files)
 
@@ -2835,18 +2843,22 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `HumanoidTeeth.arpg`
 
+### `assets/furnishings/beds/`
+
+`KidsBunk.arpg`, `Large.arpg`, `Parents.arpg`, `Small.arpg`
+
 ### `assets/furnishings/farm/`
 
 `Stores.arpg`
 
 ### `assets/furnishings/house/`
 
-`Bed.arpg`, `Bench.arpg`, `Chair.arpg`, `Door.arpg`, `Hearth.arpg`, `Light.arpg`, `Rug.arpg`, `Shelf.arpg`,
+`Bench.arpg`, `Chair.arpg`, `Door.arpg`, `Hearth.arpg`, `Light.arpg`, `Rug.arpg`, `Shelf.arpg`,
 `SmallTable.arpg`, `Storage.arpg`, `Table.arpg`
 
 ### `assets/furnishings/keep/`
 
-`Bed.arpg`, `Seat.arpg`, `Table.arpg`
+`Seat.arpg`, `Table.arpg`
 
 ### `assets/furnishings/ship/`
 
@@ -2856,7 +2868,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/furnishings/tavern/`
 
-`Bed.arpg`, `Bench.arpg`, `Casks.arpg`, `LongTable.arpg`
+`Bench.arpg`, `Casks.arpg`, `LongTable.arpg`
 
 ### `assets/genders/`
 
@@ -3031,7 +3043,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/menus/editor/`
 
-`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`,
+`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArchitectureBuilder.arpg`, `ArpgViewer.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `Filters.arpg`,
 `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`,
