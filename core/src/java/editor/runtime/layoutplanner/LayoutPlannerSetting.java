@@ -7,7 +7,7 @@ public class LayoutPlannerSetting {
     /*
      * Constants used only by LayoutPlannerContext — how long its design must
      * rest before the preview is planned again, the margin round the preview,
-     * its render order, its menu, the row templates the Palette tab lists its
+     * its menu, the row templates the Palette tab lists its
      * choices with and the Properties tab its node's fields with, and the
      * text of its status line.
      */
@@ -15,12 +15,8 @@ public class LayoutPlannerSetting {
     // Planning — frames the design rests unchanged before it is planned again, so a dragged slider plans once
     public static final int PLAN_REST_FRAMES = 12;
 
-    // Shown — blocks of margin round everything the plan lays, and the least the view frames
+    // Shown — blocks of margin round everything the plan lays
     public static final int MARGIN_BLOCKS = 2;
-    public static final float MIN_RADIUS_BLOCKS = 1f;
-
-    // Render Order
-    public static final int DEPTH_LAYOUT = 0;
 
     // Menus — entry points in the order the menu lists them
     public static final String MENU_VIEWER = "editor/LayoutPlanner/Viewer";

@@ -21,7 +21,6 @@ import editor.runtime.menueventsmanager.menus.StructureEditorBranch;
 import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.structureeditor.menu.StructureEditorMenuSystem;
-import editor.runtime.structureeditor.render.StructureEditorRenderSystem;
 import editor.runtime.structureeditor.tool.StructureEditorToolSystem;
 import editor.runtime.structureeditor.view.StructureEditorViewSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
@@ -29,6 +28,8 @@ import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.viewcamera.ViewGizmoSystem;
+import editor.runtime.voxelpreview.VoxelPreviewRenderSystem;
+import editor.runtime.voxelpreview.VoxelPreviewSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -59,7 +60,7 @@ public class StructureEditorContext extends ContextPackage
     private EditorInputSystem editorInputSystem;
     private StructureEditorViewSystem structureEditorViewSystem;
     private StructureEditorToolSystem structureEditorToolSystem;
-    private StructureEditorRenderSystem structureEditorRenderSystem;
+    private VoxelPreviewSystem voxelPreviewSystem;
     private StructureEditorMenuSystem structureEditorMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
@@ -71,10 +72,11 @@ public class StructureEditorContext extends ContextPackage
     @Override
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
+        this.voxelPreviewSystem = create(VoxelPreviewSystem.class);
         this.structureEditorViewSystem = create(StructureEditorViewSystem.class);
         this.structureEditorToolSystem = create(StructureEditorToolSystem.class);
         create(ViewCameraSystem.class);
-        this.structureEditorRenderSystem = create(StructureEditorRenderSystem.class);
+        create(VoxelPreviewRenderSystem.class);
         this.structureEditorMenuSystem = create(StructureEditorMenuSystem.class);
         create(ViewGizmoSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
@@ -98,7 +100,7 @@ public class StructureEditorContext extends ContextPackage
 
     @Override
     public ViewCameraSubject getViewCameraSubject() {
-        return structureEditorViewSystem;
+        return voxelPreviewSystem;
     }
 
     // Tools \\

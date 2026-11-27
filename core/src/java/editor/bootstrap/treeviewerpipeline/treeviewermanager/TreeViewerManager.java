@@ -7,6 +7,7 @@ import application.bootstrap.worldpipeline.tree.TreeImpostorStruct;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
+import editor.bootstrap.propertiespipeline.util.PlannerFieldUtility;
 import editor.bootstrap.treeviewerpipeline.treeviewer.TreePlannerNode;
 import editor.bootstrap.treeviewerpipeline.treeviewer.TreePlannerParameter;
 import editor.bootstrap.treeviewerpipeline.treeviewer.TreePreviewLayerStruct;
@@ -22,7 +23,7 @@ public class TreeViewerManager extends ManagerPackage {
      * Owns what the Tree Planner and Tree Viewer work on: the species picked
      * in the Palette tab or the Hierarchy, the two always following each
      * other, the node of its generator picked in the planner's graph, whose
-     * fields the Properties tab edits through TreeEditBranch live in every
+     * fields the Properties tab edits through PlannerFieldUtility live in every
      * window, and the seed and age the preview grows its tree from, which the
      * Tools tab's Preview actions step. Any change to the species, its seed,
      * its age, its impostor or the shared tree LOD setting has
@@ -33,7 +34,6 @@ public class TreeViewerManager extends ManagerPackage {
     // Internal
     private InfoManager infoManager;
     private TreeManager treeManager;
-    private TreeEditBranch treeEditBranch;
     private TreePreviewBranch treePreviewBranch;
 
     // Selection
@@ -61,7 +61,6 @@ public class TreeViewerManager extends ManagerPackage {
     protected void create() {
 
         // Internal
-        this.treeEditBranch = create(TreeEditBranch.class);
         this.treePreviewBranch = create(TreePreviewBranch.class);
 
         // Selection
@@ -234,11 +233,7 @@ public class TreeViewerManager extends ManagerPackage {
             if (parameter.node != node)
                 continue;
 
-            rows.add(parameter.choices != null
-                    ? CharacterViewRowStruct.choice(parameter.name(), parameter.label, formatValue(parameter))
-                    : CharacterViewRowStruct.ranged(
-                            parameter.name(), parameter.label, formatValue(parameter),
-                            treeEditBranch.read(treeName, parameter), parameter.min, parameter.max, parameter.step));
+            rows.add(PlannerFieldUtility.toRow(infoManager, EditorSetting.INFO_SCHEMA_TREES, treeName, parameter));
         }
     }
 
@@ -247,7 +242,7 @@ public class TreeViewerManager extends ManagerPackage {
 
         TreePlannerParameter parameter = TreePlannerParameter.valueOf(key);
 
-        if (!treeEditBranch.step(treeName, parameter, steps)) {
+        if (!PlannerFieldUtility.step(infoManager, EditorSetting.INFO_SCHEMA_TREES, treeName, parameter, steps)) {
             setStatusMessage(EditorSetting.TREE_VIEWER_MESSAGE_NO_TREE);
             return;
         }
@@ -260,19 +255,19 @@ public class TreeViewerManager extends ManagerPackage {
     }
 
     public boolean isFieldValid(String key, String text) {
-        return TreePlannerParameter.valueOf(key).choices == null && parseField(text) != null;
+        return TreePlannerParameter.valueOf(key).choices == null && PlannerFieldUtility.parse(text) != null;
     }
 
     // A field set to a value typed, held within its bounds
     public void setField(String key, String text) {
 
         TreePlannerParameter parameter = TreePlannerParameter.valueOf(key);
-        Float value = parseField(text);
+        Float value = PlannerFieldUtility.parse(text);
 
         if (value == null)
             return;
 
-        if (!treeEditBranch.set(treeName, parameter, value)) {
+        if (!PlannerFieldUtility.set(infoManager, EditorSetting.INFO_SCHEMA_TREES, treeName, parameter, value)) {
             setStatusMessage(EditorSetting.TREE_VIEWER_MESSAGE_NO_TREE);
             return;
         }
@@ -280,28 +275,9 @@ public class TreeViewerManager extends ManagerPackage {
         setStatusMessage(EditorSetting.TREE_VIEWER_MESSAGE_SET + parameter.label + " " + formatValue(parameter));
     }
 
-    private Float parseField(String text) {
-
-        try {
-            float value = Float.parseFloat(text.trim());
-            return Float.isFinite(value) ? value : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    // A field's value as the tree tabs show it: a choice by its name, a whole number as one, a decimal to two places
+    // A field's value as the tree tabs show it
     public String formatValue(TreePlannerParameter parameter) {
-
-        float value = treeEditBranch.read(treeName, parameter);
-
-        if (parameter.choices != null)
-            return parameter.choices.getEnumConstants()[(int) value].name().toLowerCase();
-
-        if (parameter.whole)
-            return Integer.toString(Math.round(value));
-
-        return String.format(EditorSetting.TREE_PLANNER_VALUE_FORMAT, value);
+        return PlannerFieldUtility.format(infoManager, EditorSetting.INFO_SCHEMA_TREES, treeName, parameter);
     }
 
     // Actions \\

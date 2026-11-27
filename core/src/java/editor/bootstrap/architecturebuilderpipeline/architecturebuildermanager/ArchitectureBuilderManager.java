@@ -14,6 +14,7 @@ import editor.bootstrap.architecturebuilderpipeline.architecturebuilder.Architec
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
+import editor.bootstrap.propertiespipeline.util.PaletteRowUtility;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
@@ -169,15 +170,9 @@ public class ArchitectureBuilderManager extends ManagerPackage {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.ARCHITECTURE_BUILDER_PALETTE_ARCHITECTURES));
 
-        ObjectArrayList<InfoEntryStruct> entries = infoManager.getEntries(EditorSetting.INFO_SCHEMA_ARCHITECTURES);
-
-        for (int i = 0; i < entries.size(); i++) {
-
-            String name = entries.get(i).getEntryName();
-
-            rows.add(CharacterViewRowStruct.item(
-                    EditorSetting.ARCHITECTURE_BUILDER_ROW_ARCHITECTURE + name, name, name.equals(architectureName)));
-        }
+        PaletteRowUtility.addEntryRows(
+                infoManager, rows, EditorSetting.INFO_SCHEMA_ARCHITECTURES,
+                EditorSetting.ARCHITECTURE_BUILDER_ROW_ARCHITECTURE, architectureName);
 
         if (architectureName == null || !isSlot(layerKey))
             return;

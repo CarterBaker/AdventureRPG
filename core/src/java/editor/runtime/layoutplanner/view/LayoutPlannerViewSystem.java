@@ -1,9 +1,6 @@
 package editor.runtime.layoutplanner.view;
 
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
-import application.bootstrap.geometrypipeline.mesh.MeshInstance;
-import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
-import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
 import application.bootstrap.worldpipeline.architecture.ArchitectureHandle;
 import application.bootstrap.worldpipeline.architecturemanager.ArchitectureManager;
@@ -23,15 +20,13 @@ import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import editor.bootstrap.layoutplannerpipeline.layoutplanner.LayoutPlannerNode;
 import editor.bootstrap.layoutplannerpipeline.layoutplannermanager.LayoutPlannerManager;
 import editor.runtime.layoutplanner.LayoutPlannerSetting;
-import editor.runtime.viewcamera.ViewCameraSubject;
+import editor.runtime.voxelpreview.VoxelPreviewSystem;
+import editor.runtime.voxelpreview.VoxelPreviewUtility;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
-import engine.util.mathematics.extras.Direction3Vector;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class LayoutPlannerViewSystem extends SystemPackage implements ViewCameraSubject {
+public class LayoutPlannerViewSystem extends SystemPackage {
 
     /*
      * Plans the settlement the Layout Planner designs and lays out what the
@@ -43,10 +38,9 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
      * then every structure it stands on its lots, built in that architecture
      * and turned as it will stand, every road along its centreline at its
      * width and every curtain wall at its height and thickness, gates left
-     * open, is rasterized into a sub-voxel grid with one part to each tile
-     * and greedily meshed by SubVoxelManager, the old meshes freed. A stage
-     * whose eye is shut in the Layers tab is left out. Positions are blocks
-     * from the plan's low corner, so nothing lies below zero.
+     * open, is laid into the window's VoxelPreviewSystem. A stage whose eye
+     * is shut in the Layers tab is left out. Positions are blocks from the
+     * plan's low corner, so nothing lies below zero.
      */
 
     // Internal
@@ -56,12 +50,10 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
     private WorldManager worldManager;
     private BlockManager blockManager;
     private SubVoxelManager subVoxelManager;
-    private MeshManager meshManager;
+    private VoxelPreviewSystem voxelPreviewSystem;
 
-    // Meshing
-    private SubVoxelGridStruct grid;
-    private Int2IntOpenHashMap blockID2Part;
-    private IntArrayList partTiles;
+    // Tiles — each block's tile, resolved the first time it is laid
+    private Int2IntOpenHashMap blockID2Tile;
 
     // Plan — what was asked for last, and how long it has rested
     private int askedRevision;
@@ -69,14 +61,10 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
     private WorldHandle askedWorld;
     private int restFrames;
 
-    // Shown — the meshes, the low corner they are laid from and what the plan holds
-    private ObjectArrayList<MeshInstance> meshes;
+    // Shown — the low corner the plan is laid from and what the plan holds
     private double originX;
     private double originZ;
     private int originY;
-    private int maxX;
-    private int maxY;
-    private int maxZ;
     private boolean planned;
     private int lotCount;
     private int roadCount;
@@ -87,19 +75,14 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
     @Override
     protected void create() {
 
-        // Meshing
-        this.grid = new SubVoxelGridStruct();
-        this.blockID2Part = new Int2IntOpenHashMap();
-        this.blockID2Part.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
-        this.partTiles = new IntArrayList();
+        // Tiles
+        this.blockID2Tile = new Int2IntOpenHashMap();
+        this.blockID2Tile.defaultReturnValue(EngineSetting.INDEX_NOT_FOUND);
 
         // Plan
         this.askedRevision = EngineSetting.INDEX_NOT_FOUND;
         this.askedSettlementRevision = EngineSetting.INDEX_NOT_FOUND;
         this.restFrames = EngineSetting.INDEX_NOT_FOUND;
-
-        // Shown
-        this.meshes = new ObjectArrayList<>();
     }
 
     @Override
@@ -110,12 +93,7 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
         this.worldManager = get(WorldManager.class);
         this.blockManager = get(BlockManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
-        this.meshManager = get(MeshManager.class);
-    }
-
-    @Override
-    protected void dispose() {
-        releaseMeshes();
+        this.voxelPreviewSystem = get(VoxelPreviewSystem.class);
     }
 
     // Update \\
@@ -145,7 +123,7 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
     // The design planned afresh and laid out, or nothing shown when there is nothing to plan
     private void replan(WorldHandle world) {
 
-        releaseMeshes();
+        voxelPreviewSystem.begin();
         this.planned = false;
         this.lotCount = 0;
         this.roadCount = 0;
@@ -159,29 +137,20 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
             return;
 
         WorldPlacementStruct placement = layoutPlannerManager.resolvePlacement(world.getPlacements());
-
         LayoutPlanStruct plan = settlementManager.planPlacement(world, placement).getLayout();
 
         layOut(plan);
+        voxelPreviewSystem.finish();
         this.planned = true;
         this.lotCount = plan.getLots().length;
         this.roadCount = plan.getPaths().length;
-    }
-
-    private void layOut(LayoutPlanStruct plan) {
-
-        grid.clear();
-        blockID2Part.clear();
-        partTiles.clear();
+    }    private void layOut(LayoutPlanStruct plan) {
 
         int margin = LayoutPlannerSetting.MARGIN_BLOCKS;
 
         this.originX = Math.floor(plan.getMinX()) - margin;
         this.originZ = Math.floor(plan.getMinZ()) - margin;
         this.originY = resolveLowestY(plan) - margin;
-        this.maxX = (int) Math.ceil(plan.getMaxX() - originX) + margin;
-        this.maxZ = (int) Math.ceil(plan.getMaxZ() - originZ) + margin;
-        this.maxY = 0;
 
         if (!layoutPlannerManager.isHidden(LayoutPlannerNode.STREETS))
             for (int i = 0; i < plan.getPaths().length; i++)
@@ -194,9 +163,6 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
         if (!layoutPlannerManager.isHidden(LayoutPlannerNode.LOTS))
             for (int i = 0; i < plan.getLots().length; i++)
                 layLot(plan.getLots()[i], plan.getArchitectureHandle());
-
-        if (!grid.isEmpty())
-            meshes.addAll(subVoxelManager.createGridMeshes(grid, partTiles.toIntArray()));
     }
 
     // The lowest height anything the plan lays reaches
@@ -298,101 +264,30 @@ public class LayoutPlannerViewSystem extends SystemPackage implements ViewCamera
         }
     }
 
-    // One block rasterized, a partial one only the octants it fills; air and anything outside the grid left out
+    // One block laid by its tile, air left out
     private void layBlock(int x, int y, int z, short blockID, int mask) {
-
-        if (x < 0 || y < 0 || z < 0)
-            return;
-
-        int part = resolvePart(blockID);
-
-        if (part == EngineSetting.INDEX_NOT_FOUND)
-            return;
-
-        this.maxY = Math.max(maxY, y + 1);
-        this.maxX = Math.max(maxX, x + 1);
-        this.maxZ = Math.max(maxZ, z + 1);
-
-        if (mask == SubBlockUtility.MASK_FULL) {
-            grid.fillBlock(x, y, z, part, false);
-            return;
-        }
-
-        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
-        int halfCell = resolution / SubBlockUtility.DIVISIONS;
-
-        for (int octant = 0; octant < SubBlockUtility.OCTANT_COUNT; octant++) {
-
-            if (!SubBlockUtility.hasOctant(mask, octant))
-                continue;
-
-            int minX = x * resolution + SubBlockUtility.getOctantX(octant) * halfCell;
-            int minY = y * resolution + SubBlockUtility.getOctantY(octant) * halfCell;
-            int minZ = z * resolution + SubBlockUtility.getOctantZ(octant) * halfCell;
-
-            grid.fillBox(minX, minY, minZ, minX + halfCell, minY + halfCell, minZ + halfCell, part, false);
-        }
+        voxelPreviewSystem.layBlock(x, y, z, resolveTile(blockID), mask);
     }
 
-    // The grid part a block is drawn as, given one the first time it is met; INDEX_NOT_FOUND for air or past the
-    // parts a grid holds
-    private int resolvePart(short blockID) {
+    // A block's tile, INDEX_NOT_FOUND for air
+    private int resolveTile(short blockID) {
 
-        int part = blockID2Part.get(blockID);
+        int tile = blockID2Tile.get(blockID);
 
-        if (part != EngineSetting.INDEX_NOT_FOUND || partTiles.size() >= EngineSetting.SUB_VOXEL_MAX_PARTS)
-            return part;
+        if (tile != EngineSetting.INDEX_NOT_FOUND || blockID2Tile.containsKey(blockID))
+            return tile;
 
         BlockHandle blockHandle = blockManager.getBlockHandleFromBlockID(blockID);
 
-        if (blockHandle.getGeometry() == DynamicGeometryType.NONE)
-            return EngineSetting.INDEX_NOT_FOUND;
+        tile = blockHandle.getGeometry() == DynamicGeometryType.NONE
+                ? EngineSetting.INDEX_NOT_FOUND
+                : VoxelPreviewUtility.resolveBlockTile(subVoxelManager, blockHandle);
+        blockID2Tile.put(blockID, tile);
 
-        part = partTiles.size();
-        partTiles.add(blockHandle.getItemTextureName() != null
-                ? subVoxelManager.resolveTile(blockHandle.getItemTextureName())
-                : blockHandle.getTextureForFace(Direction3Vector.NORTH));
-        blockID2Part.put(blockID, part);
-
-        return part;
-    }
-
-    private void releaseMeshes() {
-
-        for (int i = 0; i < meshes.size(); i++)
-            meshManager.removeMesh(meshes.get(i));
-
-        meshes.clear();
+        return tile;
     }
 
     // Accessible \\
-
-    @Override
-    public boolean isShown() {
-        return !meshes.isEmpty();
-    }
-
-    // The middle of what is shown on an axis, in blocks from its low corner
-    @Override
-    public float getCenter(int axis) {
-        return switch (axis) {
-            case EngineSetting.AXIS_X -> maxX * 0.5f;
-            case EngineSetting.AXIS_Y -> maxY * 0.5f;
-            default -> maxZ * 0.5f;
-        };
-    }
-
-    // Half the diagonal of what is shown, in blocks, never smaller than a block
-    @Override
-    public float getBoundingRadius() {
-        return Math.max(
-                LayoutPlannerSetting.MIN_RADIUS_BLOCKS,
-                0.5f * (float) Math.sqrt((double) maxX * maxX + (double) maxY * maxY + (double) maxZ * maxZ));
-    }
-
-    public ObjectArrayList<MeshInstance> getMeshes() {
-        return meshes;
-    }
 
     // Whether the last plan stood up a settlement, and what it holds
     public boolean isPlanned() {

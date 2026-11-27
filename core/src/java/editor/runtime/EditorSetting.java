@@ -3096,10 +3096,14 @@ public class EditorSetting {
     public static final String TREE_VIEWER_MESSAGE_AGED = "Grown to a new age";
     public static final String TREE_VIEWER_MESSAGE_NO_TREE = "Select a tree first";
     public static final String TREE_VIEWER_MESSAGE_SET = "Set ";
-    public static final int TREE_PLANNER_VALUE_PRECISION = 10000;
-    public static final String TREE_PLANNER_VALUE_FORMAT = "%.2f";
+    public static final int PLANNER_VALUE_PRECISION = 10000;
+    public static final String PLANNER_VALUE_FORMAT = "%.2f";
     public static final String TREE_PLANNER_PALETTE_HEADER = "Trees";
     public static final String TREE_PLANNER_FIELDS_SUFFIX = " Fields";
+
+    // Voxel Preview — the least an editor's voxel preview frames, in blocks, and its render order
+    public static final float VOXEL_PREVIEW_MIN_RADIUS_BLOCKS = 1f;
+    public static final int VOXEL_PREVIEW_DEPTH = 0;
 
     // Item Viewer Material — the material the Ship Viewer and the Architecture Builder draw meshes and items with as
     // the game's G-buffer receives them, its painted twin, and the cutaway height above which it clips, every model
@@ -3141,8 +3145,9 @@ public class EditorSetting {
     public static final float LAYOUT_PLANNER_MAX_OVERPASSES = 8f;
     public static final float LAYOUT_PLANNER_MAX_TOWER_SPACING_BLOCKS = 128f;
     public static final float LAYOUT_PLANNER_MAX_OUTPOSTS = 8f;
-    public static final int LAYOUT_PLANNER_VALUE_PRECISION = 10000;
-    public static final String LAYOUT_PLANNER_VALUE_FORMAT = "%.2f";
+    public static final String LAYOUT_PLANNER_ROLE_KEY_PREFIX = "ROLE_";
+    public static final String LAYOUT_PLANNER_LABEL_CENTER = "Center";
+    public static final String LAYOUT_PLANNER_LABEL_FILL = "Fill";
     public static final int LAYOUT_PLANNER_STEP_DOWN = -1;
     public static final int LAYOUT_PLANNER_STEP_UP = 1;
     public static final int LAYOUT_PLANNER_SUMMARY_PARAMETERS = 2;

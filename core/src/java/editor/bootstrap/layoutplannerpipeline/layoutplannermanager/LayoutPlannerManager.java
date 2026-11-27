@@ -9,9 +9,14 @@ import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.layoutplannerpipeline.layoutplanner.LayoutPlannerNode;
 import editor.bootstrap.layoutplannerpipeline.layoutplanner.LayoutPlannerParameter;
+import editor.bootstrap.layoutplannerpipeline.layoutplanner.LayoutPlannerRole;
+import editor.bootstrap.propertiespipeline.util.PaletteRowUtility;
+import editor.bootstrap.propertiespipeline.util.PlannerFieldUtility;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import engine.root.ManagerPackage;
+import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class LayoutPlannerManager extends ManagerPackage {
@@ -26,14 +31,14 @@ public class LayoutPlannerManager extends ManagerPackage {
      * lists the layout as nodes, Settlement the root and its stages under it,
      * each labelled with what its fields say; the Properties tab holds the
      * fields of the node picked, each with a slider and a typed value, edited
-     * in the type's entry through LayoutPlannerEditBranch. The Tools tab's
+     * in the type's entry through PlannerFieldUtility, and its roles, each
+     * stepped round every role an architecture fills. The Tools tab's
      * Preview actions plan the next layout or site, and the File menu makes,
      * saves and reverts settlement types.
      */
 
     // Internal
     private InfoManager infoManager;
-    private LayoutPlannerEditBranch layoutPlannerEditBranch;
 
     // Choice
     private String settlementName;
@@ -53,9 +58,6 @@ public class LayoutPlannerManager extends ManagerPackage {
 
     @Override
     protected void create() {
-
-        // Internal
-        this.layoutPlannerEditBranch = create(LayoutPlannerEditBranch.class);
 
         // Choice
         this.node = LayoutPlannerNode.SETTLEMENT;
@@ -193,30 +195,17 @@ public class LayoutPlannerManager extends ManagerPackage {
     public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.LAYOUT_PLANNER_PALETTE_SETTLEMENTS));
-        addEntryRows(rows, EditorSetting.INFO_SCHEMA_SETTLEMENTS, EditorSetting.LAYOUT_PLANNER_ROW_SETTLEMENT,
-                settlementName);
+        PaletteRowUtility.addEntryRows(
+                infoManager, rows, EditorSetting.INFO_SCHEMA_SETTLEMENTS,
+                EditorSetting.LAYOUT_PLANNER_ROW_SETTLEMENT, settlementName);
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.LAYOUT_PLANNER_PALETTE_ARCHITECTURES));
         rows.add(CharacterViewRowStruct.item(
                 EditorSetting.LAYOUT_PLANNER_ROW_ARCHITECTURE, EditorSetting.LAYOUT_PLANNER_LABEL_BY_BIOME,
                 architectureName.isEmpty()));
-        addEntryRows(rows, EditorSetting.INFO_SCHEMA_ARCHITECTURES, EditorSetting.LAYOUT_PLANNER_ROW_ARCHITECTURE,
-                architectureName);
-    }
-
-    private void addEntryRows(
-            ObjectArrayList<CharacterViewRowStruct> rows,
-            String schemaName,
-            String prefix,
-            String chosen) {
-
-        ObjectArrayList<InfoEntryStruct> entries = infoManager.getEntries(schemaName);
-
-        for (int i = 0; i < entries.size(); i++) {
-
-            String name = entries.get(i).getEntryName();
-            rows.add(CharacterViewRowStruct.item(prefix + name, name, name.equals(chosen)));
-        }
+        PaletteRowUtility.addEntryRows(
+                infoManager, rows, EditorSetting.INFO_SCHEMA_ARCHITECTURES,
+                EditorSetting.LAYOUT_PLANNER_ROW_ARCHITECTURE, architectureName);
     }
 
     // A Palette row chosen: a settlement type to design, or the architecture its preview is built in
@@ -245,26 +234,33 @@ public class LayoutPlannerManager extends ManagerPackage {
 
         for (int i = 0; i < parameters.length; i++) {
 
-            LayoutPlannerParameter parameter = parameters[i];
-
-            if (parameter.node != node)
+            if (parameters[i].node != node)
                 continue;
 
-            rows.add(parameter.choices != null
-                    ? CharacterViewRowStruct.choice(parameter.name(), parameter.label, formatValue(parameter))
-                    : CharacterViewRowStruct.ranged(
-                            parameter.name(), parameter.label, formatValue(parameter),
-                            layoutPlannerEditBranch.read(settlementName, parameter),
-                            parameter.min, parameter.max, parameter.step));
+            rows.add(PlannerFieldUtility.toRow(
+                    infoManager, EditorSetting.INFO_SCHEMA_SETTLEMENTS, settlementName, parameters[i]));
         }
+
+        LayoutPlannerRole[] roles = LayoutPlannerRole.values();
+
+        for (int i = 0; i < roles.length; i++)
+            if (roles[i].node == node)
+                rows.add(CharacterViewRowStruct.choice(roles[i].name(), roles[i].label, readRole(roles[i])));
     }
 
-    // A field moved a whole number of its steps, a choice round its names
+    // A field moved a whole number of its steps, a choice round its names, a role round every role an architecture
+    // fills
     public void stepField(String key, int steps) {
+
+        if (isRole(key)) {
+            stepRole(LayoutPlannerRole.valueOf(key), steps);
+            return;
+        }
 
         LayoutPlannerParameter parameter = LayoutPlannerParameter.valueOf(key);
 
-        if (!layoutPlannerEditBranch.step(settlementName, parameter, steps)) {
+        if (!PlannerFieldUtility.step(
+                infoManager, EditorSetting.INFO_SCHEMA_SETTLEMENTS, settlementName, parameter, steps)) {
             setStatusMessage(EditorSetting.LAYOUT_PLANNER_MESSAGE_NONE);
             return;
         }
@@ -273,23 +269,33 @@ public class LayoutPlannerManager extends ManagerPackage {
     }
 
     public String getFieldText(String key) {
-        return formatValue(LayoutPlannerParameter.valueOf(key));
+        return isRole(key)
+                ? readRole(LayoutPlannerRole.valueOf(key))
+                : formatValue(LayoutPlannerParameter.valueOf(key));
     }
 
     public boolean isFieldValid(String key, String text) {
-        return LayoutPlannerParameter.valueOf(key).choices == null && parseField(text) != null;
+        return isRole(key)
+                ? gatherRoles().contains(text.strip())
+                : LayoutPlannerParameter.valueOf(key).choices == null && PlannerFieldUtility.parse(text) != null;
     }
 
     // A field set to a value typed, held within its bounds
     public void setField(String key, String text) {
 
+        if (isRole(key)) {
+            writeRole(LayoutPlannerRole.valueOf(key), text.strip());
+            return;
+        }
+
         LayoutPlannerParameter parameter = LayoutPlannerParameter.valueOf(key);
-        Float value = parseField(text);
+        Float value = PlannerFieldUtility.parse(text);
 
         if (value == null)
             return;
 
-        if (!layoutPlannerEditBranch.set(settlementName, parameter, value)) {
+        if (!PlannerFieldUtility.set(
+                infoManager, EditorSetting.INFO_SCHEMA_SETTLEMENTS, settlementName, parameter, value)) {
             setStatusMessage(EditorSetting.LAYOUT_PLANNER_MESSAGE_NONE);
             return;
         }
@@ -297,28 +303,93 @@ public class LayoutPlannerManager extends ManagerPackage {
         setStatusMessage(EditorSetting.LAYOUT_PLANNER_MESSAGE_SET + parameter.label + " " + formatValue(parameter));
     }
 
-    private Float parseField(String text) {
-
-        try {
-            float value = Float.parseFloat(text.trim());
-            return Float.isFinite(value) ? value : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
+    private String formatValue(LayoutPlannerParameter parameter) {
+        return PlannerFieldUtility.format(
+                infoManager, EditorSetting.INFO_SCHEMA_SETTLEMENTS, settlementName, parameter);
     }
 
-    // A field's value as the planner shows it: a choice by its name, a whole number as one, a decimal to two places
-    private String formatValue(LayoutPlannerParameter parameter) {
+    // Roles \\
 
-        float value = layoutPlannerEditBranch.read(settlementName, parameter);
+    private boolean isRole(String key) {
+        return key.startsWith(EditorSetting.LAYOUT_PLANNER_ROLE_KEY_PREFIX);
+    }
 
-        if (parameter.choices != null)
-            return parameter.choices.getEnumConstants()[Math.round(value)].name().toLowerCase();
+    // The role a field names, empty while the type names none
+    private String readRole(LayoutPlannerRole role) {
 
-        if (parameter.whole)
-            return Integer.toString(Math.round(value));
+        InfoEntryStruct entry = findEntry();
 
-        return String.format(EditorSetting.LAYOUT_PLANNER_VALUE_FORMAT, value);
+        if (entry == null)
+            return "";
+
+        ArpgObjectStruct holder = role.group.isEmpty()
+                ? entry.getArpg()
+                : ArpgUtility.hasObject(entry.getArpg(), role.group) ? entry.getArpg().getAsObject(role.group) : null;
+
+        return holder != null ? ArpgUtility.getString(holder, role.key, "") : "";
+    }
+
+    // A role field stepped round every role an architecture fills, in order
+    private void stepRole(LayoutPlannerRole role, int steps) {
+
+        ObjectArrayList<String> roleNames = gatherRoles();
+
+        if (roleNames.isEmpty())
+            return;
+
+        int current = Math.max(0, roleNames.indexOf(readRole(role)));
+
+        writeRole(role, roleNames.get(Math.floorMod(current + steps, roleNames.size())));
+    }
+
+    private void writeRole(LayoutPlannerRole role, String roleName) {
+
+        if (findEntry() == null) {
+            setStatusMessage(EditorSetting.LAYOUT_PLANNER_MESSAGE_NONE);
+            return;
+        }
+
+        infoManager.editEntry(
+                EditorSetting.INFO_SCHEMA_SETTLEMENTS, settlementName, settlementName,
+                settlementArpg -> resolveGroup(settlementArpg, role.group).addProperty(role.key, roleName));
+        setStatusMessage(EditorSetting.LAYOUT_PLANNER_MESSAGE_SET + role.label + " " + roleName);
+    }
+
+    private ArpgObjectStruct resolveGroup(ArpgObjectStruct settlementArpg, String group) {
+
+        if (group.isEmpty())
+            return settlementArpg;
+
+        if (!ArpgUtility.hasObject(settlementArpg, group))
+            settlementArpg.add(group, new ArpgObjectStruct());
+
+        return settlementArpg.getAsObject(group);
+    }
+
+    // Every role any architecture fills, sorted
+    private ObjectArrayList<String> gatherRoles() {
+
+        ObjectArrayList<String> roleNames = new ObjectArrayList<>();
+        ObjectArrayList<InfoEntryStruct> architectures =
+                infoManager.getEntries(EditorSetting.INFO_SCHEMA_ARCHITECTURES);
+
+        for (int i = 0; i < architectures.size(); i++)
+            if (ArpgUtility.hasObject(architectures.get(i).getArpg(), "roles"))
+                for (String roleName : architectures.get(i).getArpg().getAsObject("roles").keySet())
+                    if (!roleNames.contains(roleName))
+                        roleNames.add(roleName);
+
+        roleNames.sort(null);
+
+        return roleNames;
+    }
+
+    private InfoEntryStruct findEntry() {
+
+        if (settlementName == null || !infoManager.hasDocument(EditorSetting.INFO_SCHEMA_SETTLEMENTS, settlementName))
+            return null;
+
+        return infoManager.findEntry(EditorSetting.INFO_SCHEMA_SETTLEMENTS, settlementName, settlementName);
     }
 
     // Actions \\

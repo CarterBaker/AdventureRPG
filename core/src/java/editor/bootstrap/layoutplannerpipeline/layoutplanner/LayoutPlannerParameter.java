@@ -1,10 +1,11 @@
 package editor.bootstrap.layoutplannerpipeline.layoutplanner;
 
 import application.bootstrap.worldpipeline.layout.LayoutRoadKind;
+import editor.bootstrap.propertiespipeline.util.PlannerParameter;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 
-public enum LayoutPlannerParameter {
+public enum LayoutPlannerParameter implements PlannerParameter {
 
     /*
      * Every number and choice of a settlement type the Layout Planner edits,
@@ -116,7 +117,61 @@ public enum LayoutPlannerParameter {
         this.choices = choices;
     }
 
+
+    // Planner Parameter \\
+
+    @Override
+    public String getGroup() {
+        return group;
+    }
+
+    @Override
+    public String getKey() {
+        return key;
+    }
+
+    @Override
+    public int getEnd() {
+        return end;
+    }
+
+    @Override
+    public String getLabel() {
+        return label;
+    }
+
+    @Override
+    public float getStep() {
+        return step;
+    }
+
+    @Override
+    public float getMin() {
+        return min;
+    }
+
+    @Override
+    public float getMax() {
+        return max;
+    }
+
+    @Override
+    public boolean isWhole() {
+        return whole;
+    }
+
+    @Override
+    public float getFallback() {
+        return fallback;
+    }
+
+    @Override
+    public Class<? extends Enum<?>> getChoices() {
+        return choices;
+    }
+
     // Whether it is one end of a range held as a two-number array
+    @Override
     public boolean isRangeEnd() {
         return end != EngineSetting.INDEX_NOT_FOUND;
     }

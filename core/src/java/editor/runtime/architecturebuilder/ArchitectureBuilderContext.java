@@ -11,7 +11,6 @@ import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.runtime.EditorSetting;
 import editor.runtime.architecturebuilder.menu.ArchitectureBuilderMenuSystem;
-import editor.runtime.architecturebuilder.render.ArchitectureBuilderRenderSystem;
 import editor.runtime.architecturebuilder.view.ArchitectureBuilderViewSystem;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
@@ -23,6 +22,8 @@ import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.viewcamera.ViewGizmoSystem;
+import editor.runtime.voxelpreview.VoxelPreviewRenderSystem;
+import editor.runtime.voxelpreview.VoxelPreviewSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -48,7 +49,7 @@ public class ArchitectureBuilderContext extends ContextPackage
     private ArchitectureBuilderManager architectureBuilderManager;
     private EditorInputSystem editorInputSystem;
     private ArchitectureBuilderViewSystem architectureBuilderViewSystem;
-    private ArchitectureBuilderRenderSystem architectureBuilderRenderSystem;
+    private VoxelPreviewSystem voxelPreviewSystem;
     private ArchitectureBuilderMenuSystem architectureBuilderMenuSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
     private LayersSourceSystem layersSourceSystem;
@@ -59,9 +60,10 @@ public class ArchitectureBuilderContext extends ContextPackage
     @Override
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
+        this.voxelPreviewSystem = create(VoxelPreviewSystem.class);
         this.architectureBuilderViewSystem = create(ArchitectureBuilderViewSystem.class);
         create(ViewCameraSystem.class);
-        this.architectureBuilderRenderSystem = create(ArchitectureBuilderRenderSystem.class);
+        create(VoxelPreviewRenderSystem.class);
         this.architectureBuilderMenuSystem = create(ArchitectureBuilderMenuSystem.class);
         create(ViewGizmoSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
@@ -83,7 +85,7 @@ public class ArchitectureBuilderContext extends ContextPackage
 
     @Override
     public ViewCameraSubject getViewCameraSubject() {
-        return architectureBuilderViewSystem;
+        return voxelPreviewSystem;
     }
 
     // Layers \\

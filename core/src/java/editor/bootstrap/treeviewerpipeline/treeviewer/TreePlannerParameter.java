@@ -1,9 +1,10 @@
 package editor.bootstrap.treeviewerpipeline.treeviewer;
 
 import application.bootstrap.worldpipeline.tree.TreeForm;
+import editor.bootstrap.propertiespipeline.util.PlannerParameter;
 import engine.root.EngineSetting;
 
-public enum TreePlannerParameter {
+public enum TreePlannerParameter implements PlannerParameter {
 
     /*
      * Every field of a tree species the Tree Planner edits, one row of its
@@ -133,7 +134,61 @@ public enum TreePlannerParameter {
         this.choices = choices;
     }
 
+
+    // Planner Parameter \\
+
+    @Override
+    public String getGroup() {
+        return group;
+    }
+
+    @Override
+    public String getKey() {
+        return key;
+    }
+
+    @Override
+    public int getEnd() {
+        return end;
+    }
+
+    @Override
+    public String getLabel() {
+        return label;
+    }
+
+    @Override
+    public float getStep() {
+        return step;
+    }
+
+    @Override
+    public float getMin() {
+        return min;
+    }
+
+    @Override
+    public float getMax() {
+        return max;
+    }
+
+    @Override
+    public boolean isWhole() {
+        return whole;
+    }
+
+    @Override
+    public float getFallback() {
+        return fallback;
+    }
+
+    @Override
+    public Class<? extends Enum<?>> getChoices() {
+        return choices;
+    }
+
     // True for one end of a range, the other end of which is its partner
+    @Override
     public boolean isRangeEnd() {
         return end != EngineSetting.INDEX_NOT_FOUND;
     }

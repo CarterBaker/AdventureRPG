@@ -20,7 +20,6 @@ import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.layoutplanner.menu.LayoutPlannerMenuSystem;
-import editor.runtime.layoutplanner.render.LayoutPlannerRenderSystem;
 import editor.runtime.layoutplanner.view.LayoutPlannerViewSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
@@ -28,6 +27,8 @@ import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.viewcamera.ViewGizmoSystem;
+import editor.runtime.voxelpreview.VoxelPreviewRenderSystem;
+import editor.runtime.voxelpreview.VoxelPreviewSystem;
 import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -55,7 +56,7 @@ public class LayoutPlannerContext extends ContextPackage
     private LayoutPlannerManager layoutPlannerManager;
     private EditorInputSystem editorInputSystem;
     private LayoutPlannerViewSystem layoutPlannerViewSystem;
-    private LayoutPlannerRenderSystem layoutPlannerRenderSystem;
+    private VoxelPreviewSystem voxelPreviewSystem;
     private LayoutPlannerMenuSystem layoutPlannerMenuSystem;
     private ToolCanvasSystem toolCanvasSystem;
     private PropertiesSourceSystem propertiesSourceSystem;
@@ -67,9 +68,10 @@ public class LayoutPlannerContext extends ContextPackage
     @Override
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
+        this.voxelPreviewSystem = create(VoxelPreviewSystem.class);
         this.layoutPlannerViewSystem = create(LayoutPlannerViewSystem.class);
         create(ViewCameraSystem.class);
-        this.layoutPlannerRenderSystem = create(LayoutPlannerRenderSystem.class);
+        create(VoxelPreviewRenderSystem.class);
         this.layoutPlannerMenuSystem = create(LayoutPlannerMenuSystem.class);
         create(ViewGizmoSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
@@ -92,7 +94,7 @@ public class LayoutPlannerContext extends ContextPackage
 
     @Override
     public ViewCameraSubject getViewCameraSubject() {
-        return layoutPlannerViewSystem;
+        return voxelPreviewSystem;
     }
 
     // Tools \\

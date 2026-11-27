@@ -7,8 +7,8 @@ public class StructureEditorSetting {
 
     /*
      * Constants used only by StructureEditorContext — the button its tools
-     * apply with, how far the pointer's ray is walked through the cells, its
-     * render order, its menu, the row templates the Palette tab lists its
+     * apply with, how far the pointer's ray is walked through the cells, the
+     * width of an NPC's marker, its menu, the row templates the Palette tab lists its
      * choices with, and the text of its status line.
      */
 
@@ -18,12 +18,8 @@ public class StructureEditorSetting {
     // Cast — the most cells the pointer's ray walks before it gives up
     public static final int CAST_MAX_STEPS = 512;
 
-    // Render Order
-    public static final int DEPTH_STRUCTURE = 0;
-
-    // Shown — the view frames at least a block, and an NPC's marker post is this many sub-voxels across
+    // Shown — an NPC's marker post is this many sub-voxels across
     public static final int SPAWN_MARKER_WIDTH_SUB_VOXELS = 4;
-    public static final float MIN_RADIUS_BLOCKS = 1f;
 
     // Menus — entry points in the order the menu lists them
     public static final String MENU_VIEWER = "editor/StructureEditor/Viewer";

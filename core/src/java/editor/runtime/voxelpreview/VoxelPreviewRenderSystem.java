@@ -1,7 +1,6 @@
-package editor.runtime.architecturebuilder.render;
+package editor.runtime.voxelpreview;
 
 import application.bootstrap.geometrypipeline.model.ModelInstance;
-import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
 import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
@@ -12,27 +11,23 @@ import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.runtime.EditorSetting;
-import editor.runtime.architecturebuilder.ArchitectureBuilderSetting;
-import editor.runtime.architecturebuilder.view.ArchitectureBuilderViewSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class ArchitectureBuilderRenderSystem extends SystemPackage {
+public class VoxelPreviewRenderSystem extends SystemPackage {
 
     /*
-     * Draws what the Architecture Builder shows into this window's scene
-     * target: every item ArchitectureBuilderViewSystem lays out, standing
-     * unturned at its corner, with the item viewer material the Ship Viewer
-     * draws its cargo with, which shades faces as the game's G-buffer
-     * receives them and lights them here, never cut away. Nothing is meshed
-     * for the builder, and every draw takes a model of its own from
-     * ItemModelManager.
+     * Draws what the window's VoxelPreviewSystem lays into its scene target:
+     * every mesh where it stands, its corner at the model origin, and every
+     * item turned and stood at its corner, with the item viewer material the
+     * Ship Viewer draws hulls and cargo with, which shades faces as the
+     * game's G-buffer receives them and lights them here, never cut away.
+     * Every draw takes a model of its own from ItemModelManager.
      */
 
     // Internal
-    private ArchitectureBuilderViewSystem architectureBuilderViewSystem;
+    private VoxelPreviewSystem voxelPreviewSystem;
     private ItemModelManager itemModelManager;
     private ItemRotationBufferSystem itemRotationBufferSystem;
     private MaterialManager materialManager;
@@ -44,9 +39,10 @@ public class ArchitectureBuilderRenderSystem extends SystemPackage {
     private FBOInstance sceneFbo;
 
     // Materials
-    private int itemMaterialID;
+    private int previewMaterialID;
 
-    // Placement — one item's model grid where it stands, and the cutaway boxed once for every draw
+    // Placement — the meshes where they stand, one item's place, and the cutaway boxed once for every draw
+    private Matrix4 restMatrix;
     private Matrix4 itemMatrix;
     private Float cutawayNone;
 
@@ -54,13 +50,14 @@ public class ArchitectureBuilderRenderSystem extends SystemPackage {
 
     @Override
     protected void create() {
+        this.restMatrix = new Matrix4();
         this.itemMatrix = new Matrix4();
         this.cutawayNone = EditorSetting.ITEM_VIEWER_CUTAWAY_NONE;
     }
 
     @Override
     protected void get() {
-        this.architectureBuilderViewSystem = get(ArchitectureBuilderViewSystem.class);
+        this.voxelPreviewSystem = get(VoxelPreviewSystem.class);
         this.itemModelManager = get(ItemModelManager.class);
         this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
         this.materialManager = get(MaterialManager.class);
@@ -75,9 +72,9 @@ public class ArchitectureBuilderRenderSystem extends SystemPackage {
         this.sceneFbo = fboManager.cloneFbo(EditorSetting.FBO_EDITOR_SCENE, context.getWindow());
 
         // Materials
-        this.itemMaterialID = materialManager.getMaterialIDFromMaterialName(EditorSetting.ITEM_VIEWER_MATERIAL);
+        this.previewMaterialID = materialManager.getMaterialIDFromMaterialName(EditorSetting.ITEM_VIEWER_MATERIAL);
         itemModelManager.registerPaintedTwin(
-                itemMaterialID,
+                previewMaterialID,
                 materialManager.getMaterialIDFromMaterialName(EditorSetting.ITEM_VIEWER_PAINTED_MATERIAL));
     }
 
@@ -88,26 +85,29 @@ public class ArchitectureBuilderRenderSystem extends SystemPackage {
 
         WindowInstance window = context.getWindow();
 
-        pushItems(architectureBuilderViewSystem.getItems(), window);
+        for (int i = 0; i < voxelPreviewSystem.getMeshes().size(); i++)
+            push(itemModelManager.acquireModel(voxelPreviewSystem.getMeshes().get(i).getMeshData(), previewMaterialID),
+                    restMatrix, window);
+
+        for (int i = 0; i < voxelPreviewSystem.getItems().size(); i++) {
+
+            itemRotationBufferSystem.composeTransform(
+                    voxelPreviewSystem.getItemCorner(i, EngineSetting.AXIS_X),
+                    voxelPreviewSystem.getItemCorner(i, EngineSetting.AXIS_Y),
+                    voxelPreviewSystem.getItemCorner(i, EngineSetting.AXIS_Z),
+                    voxelPreviewSystem.getItemOrientation(i),
+                    itemMatrix);
+            push(itemModelManager.acquireModel(voxelPreviewSystem.getItems().get(i).getMeshHandle(), previewMaterialID),
+                    itemMatrix, window);
+        }
+
         fboRenderSystem.pushFbo(sceneFbo, RuntimeSetting.LAYER_WORLD, window);
     }
 
-    // Every item laid out, unturned at its corner
-    private void pushItems(ObjectArrayList<ItemDefinitionHandle> items, WindowInstance window) {
+    private void push(ModelInstance model, Matrix4 placement, WindowInstance window) {
 
-        for (int i = 0; i < items.size(); i++) {
-
-            itemRotationBufferSystem.composeTransform(
-                    architectureBuilderViewSystem.getCornerX(i),
-                    architectureBuilderViewSystem.getCornerY(i),
-                    0f,
-                    EngineSetting.DEFAULT_BLOCK_ORIENTATION,
-                    itemMatrix);
-
-            ModelInstance model = itemModelManager.acquireModel(items.get(i).getMeshHandle(), itemMaterialID);
-            model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, itemMatrix);
-            model.getMaterial().setUniform(EditorSetting.ITEM_VIEWER_UNIFORM_CUTAWAY_HEIGHT, cutawayNone);
-            renderManager.pushRenderCall(model, sceneFbo, ArchitectureBuilderSetting.DEPTH_PREVIEW, window);
-        }
+        model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, placement);
+        model.getMaterial().setUniform(EditorSetting.ITEM_VIEWER_UNIFORM_CUTAWAY_HEIGHT, cutawayNone);
+        renderManager.pushRenderCall(model, sceneFbo, EditorSetting.VOXEL_PREVIEW_DEPTH, window);
     }
 }

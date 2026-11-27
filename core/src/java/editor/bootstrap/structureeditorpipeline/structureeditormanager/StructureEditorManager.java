@@ -16,6 +16,7 @@ import application.bootstrap.worldpipeline.util.CoverageUtility;
 import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
+import editor.bootstrap.propertiespipeline.util.PaletteRowUtility;
 import editor.bootstrap.structureeditorpipeline.structureeditor.StructureEditorLayer;
 import editor.bootstrap.structureeditorpipeline.structureeditor.StructureEditorPartStruct;
 import editor.bootstrap.structureeditorpipeline.structureeditor.StructureEditorStepStruct;
@@ -26,6 +27,7 @@ import editor.bootstrap.toolpipeline.util.ToolOption;
 import editor.runtime.EditorSetting;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.label.LabelUtility;
+import editor.runtime.voxelpreview.VoxelPreviewUtility;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
@@ -418,8 +420,9 @@ public class StructureEditorManager extends ManagerPackage {
     public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.STRUCTURE_EDITOR_PALETTE_STRUCTURES));
-        addEntryRows(rows, EditorSetting.INFO_SCHEMA_STRUCTURES, EditorSetting.STRUCTURE_EDITOR_ROW_STRUCTURE,
-                structureName);
+        PaletteRowUtility.addEntryRows(
+                infoManager, rows, EditorSetting.INFO_SCHEMA_STRUCTURES,
+                EditorSetting.STRUCTURE_EDITOR_ROW_STRUCTURE, structureName);
 
         if (structureName == null)
             return;
@@ -438,20 +441,24 @@ public class StructureEditorManager extends ManagerPackage {
 
         rows.add(CharacterViewRowStruct.header(layer.label));
         rows.add(CharacterViewRowStruct.item(prefix, EditorSetting.STRUCTURE_EDITOR_LABEL_NONE, chosen.isEmpty()));
-        addEntryRows(rows, layer.schemaName, prefix, chosen);
+        PaletteRowUtility.addEntryRows(
+                infoManager, rows, layer.schemaName, prefix, chosen);
     }
 
     // Every furnishing table, then the loot its containers are filled with, then the turn it stands at
     private void addFurnitureRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         rows.add(CharacterViewRowStruct.header(layer.label));
-        addEntryRows(rows, layer.schemaName, EditorSetting.STRUCTURE_EDITOR_ROW_FURNISHING, chosenFurnishing);
+        PaletteRowUtility.addEntryRows(
+                infoManager, rows, layer.schemaName, EditorSetting.STRUCTURE_EDITOR_ROW_FURNISHING, chosenFurnishing);
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.STRUCTURE_EDITOR_PALETTE_LOOT));
         rows.add(CharacterViewRowStruct.item(
                 EditorSetting.STRUCTURE_EDITOR_ROW_LOOT, EditorSetting.STRUCTURE_EDITOR_LABEL_NONE,
                 chosenLoot.isEmpty()));
-        addEntryRows(rows, EditorSetting.INFO_SCHEMA_LOOT_TABLES, EditorSetting.STRUCTURE_EDITOR_ROW_LOOT, chosenLoot);
+        PaletteRowUtility.addEntryRows(
+                infoManager, rows, EditorSetting.INFO_SCHEMA_LOOT_TABLES,
+                EditorSetting.STRUCTURE_EDITOR_ROW_LOOT, chosenLoot);
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.STRUCTURE_EDITOR_PALETTE_TURN));
 
@@ -462,22 +469,6 @@ public class StructureEditorManager extends ManagerPackage {
                     spin == chosenSpin));
     }
 
-    // Every entry of a schema as a row naming it behind a prefix, the chosen one marked
-    private void addEntryRows(
-            ObjectArrayList<CharacterViewRowStruct> rows,
-            String schemaName,
-            String prefix,
-            String chosen) {
-
-        ObjectArrayList<InfoEntryStruct> entries = infoManager.getEntries(schemaName);
-
-        for (int i = 0; i < entries.size(); i++) {
-
-            String name = entries.get(i).getEntryName();
-            rows.add(CharacterViewRowStruct.item(prefix + name, name, name.equals(chosen)));
-        }
-    }
-
     // The architectures it may be shown built in, the slots the one chosen fills, its own entries and every block
     private void addBlockRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
@@ -485,8 +476,9 @@ public class StructureEditorManager extends ManagerPackage {
         rows.add(CharacterViewRowStruct.item(
                 EditorSetting.STRUCTURE_EDITOR_ROW_ARCHITECTURE, EditorSetting.STRUCTURE_EDITOR_LABEL_AS_AUTHORED,
                 architectureName.isEmpty()));
-        addEntryRows(rows, EditorSetting.INFO_SCHEMA_ARCHITECTURES, EditorSetting.STRUCTURE_EDITOR_ROW_ARCHITECTURE,
-                architectureName);
+        PaletteRowUtility.addEntryRows(
+                infoManager, rows, EditorSetting.INFO_SCHEMA_ARCHITECTURES,
+                EditorSetting.STRUCTURE_EDITOR_ROW_ARCHITECTURE, architectureName);
 
         if (!slot2Block.isEmpty()) {
 
@@ -1187,9 +1179,7 @@ public class StructureEditorManager extends ManagerPackage {
         if (blockHandle.getGeometry() == DynamicGeometryType.NONE)
             return EngineSetting.INDEX_NOT_FOUND;
 
-        return blockHandle.getItemTextureName() != null
-                ? subVoxelManager.resolveTile(blockHandle.getItemTextureName())
-                : blockHandle.getTextureForFace(Direction3Vector.NORTH);
+        return VoxelPreviewUtility.resolveBlockTile(subVoxelManager, blockHandle);
     }
 
     // The tile an NPC's marker is drawn with

@@ -6,7 +6,7 @@ public class ArchitectureBuilderSetting {
 
     /*
      * Constants used only by ArchitectureBuilderContext — how its preview
-     * lays slots out, its render order, its menu, the row templates the
+     * lays slots out, its menu, the row templates the
      * Palette tab lists architectures and slot fillings with, and the text of
      * its status line.
      */
@@ -14,11 +14,6 @@ public class ArchitectureBuilderSetting {
     // Preview — a block slot shown as a square wall of its block's pieces, every slot shown a gap apart along x
     public static final int PREVIEW_WALL_PIECES = 8;
     public static final float PREVIEW_GAP_BLOCKS = 1f;
-    public static final float PREVIEW_DEPTH_BLOCKS = 1f;
-    public static final float PREVIEW_MIN_RADIUS_BLOCKS = 1f;
-
-    // Render Order
-    public static final int DEPTH_PREVIEW = 0;
 
     // Menus — entry points in the order the menu lists them
     public static final String MENU_VIEWER = "editor/ArchitectureBuilder/Viewer";
