@@ -192,7 +192,8 @@ public class CharacterEditorBoneSystem extends SystemPackage {
     // The bone weighing most on the vertex under the pointer, or none off the mesh
     private int pickVertexBone(float mouseX, float mouseY) {
 
-        int vertexIndex = characterEditorMeshViewSystem.pickVertex(mouseX, mouseY);
+        int vertexIndex = characterEditorMeshViewSystem.pickVertex(
+                mouseX, mouseY, EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS);
 
         if (vertexIndex == EngineSetting.INDEX_NOT_FOUND)
             return EngineSetting.INDEX_NOT_FOUND;

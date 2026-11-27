@@ -115,8 +115,16 @@ Every tool that selects many things follows one gesture set, each modifier a hel
 - Where the canvas takes a brush, **Select strokes it**: a drag selects what the brush covers, replacing the selection,
   Shift adding and Ctrl taking away, and a press where it covers nothing clears or boxes as above.
 
-The Keys and Keys Graph tabs (keys on a curve's row or graph), the character Mesh and Weights tabs (vertices) and the World
-Editor's Select tool (hand-placed settlements and structures) follow it. The character Mesh, Topology and UV tabs add
+The Keys and Keys Graph tabs (keys on a curve's row or graph) and the World Editor's Select tool (hand-placed
+settlements and structures) follow it. The character tabs that select vertices (Mesh, Topology, Weights, UV;
+`CharacterEditorSculptSystem`) follow Blender's circle select instead, at the owner's request: every gesture (a Select
+stroke, a box, a click, an Alt loop) adds to the selection and Ctrl takes away; Shift toggles a clicked vertex; a click
+picks the nearest vertex within Blender's select distance (`CHARACTER_VIEW_CLICK_PICK_RADIUS_PIXELS`), and a click on
+nothing with no modifier clears the selection (as does `Alt+A`). The character Mesh, Topology and UV tabs add
 Blender's own keys: `A` selects all, `Alt+A` none, `Ctrl+I` inverts, `Ctrl+Numpad +` and `Ctrl+Numpad -` grow and
 shrink the selection a ring of faces, `L` takes what is linked, and a click with `Alt` held takes the edge loop
-through the edge under the pointer (`CharacterEditor/LoopSelection`, `CharacterSelectionBranch.selectLoop`).
+through the edge under the pointer (`CharacterEditor/LoopSelection`, `CharacterSelectionBranch.selectLoop`). The Mesh
+tab's `O` turns proportional editing on and off (`CharacterEditorSculptSystem.cycleMesh`), and while a transform is
+held with it on, the wheel and `Page Up` / `Page Down` resize its radius as Blender's do (wheel toward you and Page Up
+grow it, by `CHARACTER_EDITOR_MESH_RADIUS_WHEEL_FACTOR` a step), the wheel claimed from the camera
+(`EditorInputSystem.claimWheel`) and the radius drawn as a circle about the pivot.

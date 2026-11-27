@@ -22,7 +22,9 @@ public class EditorInputSystem extends SystemPackage {
      * while the window is also the active one. The press that activates a
      * tab makes it active that same frame, so it acts inside it. A tool that acts on a click
      * claims its button for that frame, so the view camera, which reads input
-     * late, leaves that press to the tool; claims clear every frame. While
+     * late, leaves that press to the tool, and a tool that takes the wheel
+     * (a transform resizing its proportional radius) claims it the same
+     * way, so the view does not zoom; claims clear every frame. While
      * the window's tool is the Hand, which only moves the view, no tool sees a
      * click: every press is the view's, read through isViewClicked().
      */
@@ -37,8 +39,9 @@ public class EditorInputSystem extends SystemPackage {
     // Raw Input
     private RawInputHandle rawInputHandle;
 
-    // Claim — one bit per mouse button a tool took this frame
+    // Claim — one bit per mouse button a tool took this frame, and whether it took the wheel
     private int claimedButtons;
+    private boolean wheelClaimed;
 
     // Base \\
 
@@ -65,6 +68,7 @@ public class EditorInputSystem extends SystemPackage {
 
         inputManager.writeRawInput(rawInputHandle, window);
         claimedButtons = 0;
+        wheelClaimed = false;
     }
 
     // Claim \\
@@ -76,6 +80,15 @@ public class EditorInputSystem extends SystemPackage {
 
     public boolean isClaimed(int button) {
         return (claimedButtons & 1 << button) != 0;
+    }
+
+    // The wheel a tool acts on this frame, kept from the view camera
+    public void claimWheel() {
+        wheelClaimed = true;
+    }
+
+    public boolean isWheelClaimed() {
+        return wheelClaimed;
     }
 
     // A click over the view that a tool takes, claimed in the same call

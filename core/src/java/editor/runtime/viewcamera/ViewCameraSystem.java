@@ -21,7 +21,8 @@ public class ViewCameraSystem extends SystemPackage {
      * turns the view, a drag with the pan button slides the point it turns
      * about so what is shown follows the pointer, and each notch of the wheel
      * zooms by one factor, the distance measured in the subject's bounding
-     * radius so the frame holds as it grows, shrinks or changes; zoomed in as
+     * radius so the frame holds as it grows, shrinks or changes (unless a
+     * tool claimed the wheel that frame); zoomed in as
      * far as it goes, the wheel dollies the point it turns about forward along
      * the view, as Blender's dolly does, and the near plane follows the
      * distance so nothing close to the lens is clipped. A drag
@@ -126,7 +127,7 @@ public class ViewCameraSystem extends SystemPackage {
         else if (dragButton == EditorSetting.VIEW_CAMERA_BUTTON_PAN)
             slide(rawInput.getDeltaX(), rawInput.getDeltaY());
 
-        if (editorInputSystem.isPointerOver() && rawInput.getScrollY() != 0f)
+        if (editorInputSystem.isPointerOver() && !editorInputSystem.isWheelClaimed() && rawInput.getScrollY() != 0f)
             zoom(rawInput.getScrollY());
 
         placeCamera();

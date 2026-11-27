@@ -29,7 +29,8 @@ class CharacterSculptBranch extends BranchPackage {
      * Maya and Blender edit a skinned mesh on its cage), each vertex as far as it is
      * selected, so a soft brush's selection fades out at its edge, easing
      * unselected vertices within the proportional radius along by their
-     * distance; with mirror on, a vertex whose mirror moves too follows it
+     * distance, a radius resized while it is held taking its vertices again
+     * at once (as Blender's wheel resizes it mid-grab); with mirror on, a vertex whose mirror moves too follows it
      * from the negative side, an unmoved mirror is placed opposite, and a
      * vertex on the centre plane stays on it. Topology edits — extrude,
      * duplicate, delete, make face, merge, subdivide, symmetrize and new
@@ -46,6 +47,7 @@ class CharacterSculptBranch extends BranchPackage {
 
     // Transform
     private CharacterMeshDocumentInstance transformDocument;
+    private int transformSelectedCount;
     private IntArrayList transformVertices;
     private FloatArrayList transformStarts;
     private FloatArrayList transformFactors;
@@ -55,6 +57,11 @@ class CharacterSculptBranch extends BranchPackage {
     private Vector3 transformPivot;
     private FloatArrayList transformInverses;
     private Matrix4[] transformSkinning;
+
+    // Proportional — every vertex's bind position as the transform found it, and each unselected vertex's distance
+    // to the nearest selected one
+    private FloatArrayList transformOrigins;
+    private FloatArrayList vertex2Distance;
 
     // Scratch
     private Vector3 pointScratch;
@@ -87,6 +94,10 @@ class CharacterSculptBranch extends BranchPackage {
         this.vertex2Slot = new IntArrayList();
         this.transformPivot = new Vector3();
         this.transformInverses = new FloatArrayList();
+
+        // Proportional
+        this.transformOrigins = new FloatArrayList();
+        this.vertex2Distance = new FloatArrayList();
 
         // Scratch
         this.pointScratch = new Vector3();
@@ -173,11 +184,16 @@ class CharacterSculptBranch extends BranchPackage {
             if (document.isSelected(i))
                 holdVertex(mesh, i, document.getSelectionWeight(i));
 
+        this.transformSelectedCount = transformVertices.size();
+
         if (skinningMatrices != null)
             resolvePosedPivot();
 
-        if (characterEditorManager.isProportional())
+        if (characterEditorManager.isProportional()) {
+            holdOrigins(mesh);
+            resolveProportionalDistances(document);
             holdProportional(document);
+        }
 
         resolveTransformMirrors(document);
         this.transformDocument = document;
@@ -253,12 +269,25 @@ class CharacterSculptBranch extends BranchPackage {
                 blendScratch, mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex), out);
     }
 
-    // Unselected vertices within the radius of the nearest selected one, eased by their distance to it
-    private void holdProportional(CharacterMeshDocumentInstance document) {
+    // Every vertex's bind position as the transform finds it, to put back what a resized radius lets go
+    private void holdOrigins(RiggedMeshStruct mesh) {
+
+        transformOrigins.clear();
+
+        for (int i = 0; i < mesh.getVertexCount(); i++) {
+            transformOrigins.add(mesh.getX(i));
+            transformOrigins.add(mesh.getY(i));
+            transformOrigins.add(mesh.getZ(i));
+        }
+    }
+
+    // Each unselected vertex's distance on the cage to the nearest selected one, measured once a transform so a
+    // resized radius holds its vertices again without measuring
+    private void resolveProportionalDistances(CharacterMeshDocumentInstance document) {
 
         RiggedMeshStruct mesh = document.getMesh();
-        float radius = characterEditorManager.getProportionalRadius();
-        int selectedCount = transformVertices.size();
+
+        vertex2Distance.size(mesh.getVertexCount());
 
         for (int i = 0; i < mesh.getVertexCount(); i++) {
 
@@ -269,7 +298,7 @@ class CharacterSculptBranch extends BranchPackage {
 
             resolveStart(mesh, i, normalScratch);
 
-            for (int s = 0; s < selectedCount; s++) {
+            for (int s = 0; s < transformSelectedCount; s++) {
 
                 int base = s * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
                 float dx = normalScratch.x - transformStarts.getFloat(base);
@@ -279,12 +308,75 @@ class CharacterSculptBranch extends BranchPackage {
                 nearest = Math.min(nearest, dx * dx + dy * dy + dz * dz);
             }
 
-            float factor = CharacterMeshUtility.falloff((float) Math.sqrt(nearest), radius)
+            vertex2Distance.set(i, (float) Math.sqrt(nearest));
+        }
+    }
+
+    // Unselected vertices within the radius of the nearest selected one, eased by their distance to it
+    private void holdProportional(CharacterMeshDocumentInstance document) {
+
+        RiggedMeshStruct mesh = document.getMesh();
+        float radius = characterEditorManager.getProportionalRadius();
+
+        for (int i = 0; i < mesh.getVertexCount(); i++) {
+
+            if (document.isSelected(i))
+                continue;
+
+            float factor = CharacterMeshUtility.falloff(vertex2Distance.getFloat(i), radius)
                     * characterEditorManager.getRegionShare(document, characterEditorManager.getRegion(), i);
 
             if (factor > 0f)
                 holdVertex(mesh, i, factor);
         }
+    }
+
+    // Takes a new proportional radius while a transform is held: every vertex it moved goes back where it found it,
+    // and the vertices within the new radius are held in place of the last ones, for the next update to carry
+    void resizeProportional() {
+
+        CharacterMeshDocumentInstance document = transformDocument;
+
+        if (document == null || !characterEditorManager.isProportional())
+            return;
+
+        RiggedMeshStruct mesh = document.getMesh();
+
+        for (int s = 0; s < transformVertices.size(); s++) {
+
+            int mirror = transformMirrors.getInt(s);
+
+            restoreOrigin(mesh, transformVertices.getInt(s));
+
+            if (mirror != EngineSetting.INDEX_NOT_FOUND)
+                restoreOrigin(mesh, mirror);
+        }
+
+        for (int s = transformSelectedCount; s < transformVertices.size(); s++)
+            vertex2Slot.set(transformVertices.getInt(s), EngineSetting.INDEX_NOT_FOUND);
+
+        transformVertices.size(transformSelectedCount);
+        transformFactors.size(transformSelectedCount);
+        transformStarts.size(transformSelectedCount * EngineSetting.RIGGED_MESH_POSITION_FLOATS);
+
+        if (transformSkinning != null)
+            transformInverses.size(transformSelectedCount * blendScratch.val.length);
+
+        transformMirrors.clear();
+        transformFollowers.clear();
+        holdProportional(document);
+        resolveTransformMirrors(document);
+    }
+
+    private void restoreOrigin(RiggedMeshStruct mesh, int vertexIndex) {
+
+        int base = vertexIndex * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+
+        mesh.setPosition(
+                vertexIndex,
+                transformOrigins.getFloat(base),
+                transformOrigins.getFloat(base + 1),
+                transformOrigins.getFloat(base + 2));
     }
 
     // A held vertex on the negative side whose mirror is held too follows it rather than moving itself

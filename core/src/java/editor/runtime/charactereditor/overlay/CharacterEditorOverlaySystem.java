@@ -35,6 +35,7 @@ import editor.runtime.input.EditorInputSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -145,6 +146,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private Vector3 colliderAxis;
     private Vector3 colliderSide;
     private Vector3 colliderUp;
+    private Vector2 screenCenter;
+    private Vector2 screenEdge;
     private Matrix4 ghostScratch;
 
     // Base \\
@@ -186,6 +189,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         this.colliderAxis = new Vector3();
         this.colliderSide = new Vector3();
         this.colliderUp = new Vector3();
+        this.screenCenter = new Vector2();
+        this.screenEdge = new Vector2();
         this.ghostScratch = new Matrix4();
     }
 
@@ -861,7 +866,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
     // Guides \\
 
-    // The box being dragged, the brush and a held transform's axis; false when none shows
+    // The box being dragged, the brush, a held transform's axis and proportional radius; false when none shows
     private boolean buildGuides() {
 
         RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
@@ -877,6 +882,9 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         if (characterEditorSculptSystem.hasTransformAxis())
             appendAxisGuide();
+
+        if (characterEditorSculptSystem.isProportionalShown())
+            appendProportionalGuide();
 
         if (characterEditorEdgeSystem.hasHoveredEdge())
             appendEdgeGuide();
@@ -957,6 +965,43 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                 pivot.y + axis.y * length,
                 pivot.z + axis.z * length,
                 CharacterEditorSetting.GUIDE_HALF_PIXELS);
+    }
+
+    // The proportional radius as a circle on screen about the pivot, as Blender draws it while a transform is held:
+    // as wide as the radius measures at the pivot's depth
+    private void appendProportionalGuide() {
+
+        Vector3 pivot = characterEditorSculptSystem.getPivot();
+        Vector3 view = context.getWindow().getActiveCamera().getDirection();
+        Vector3 up = context.getWindow().getActiveCamera().getUp();
+        float radius = characterEditorManager.getProportionalRadius();
+        int segments = CharacterEditorSetting.PROPORTIONAL_GUIDE_SEGMENTS;
+
+        pointA.set(view.y * up.z - view.z * up.y, view.z * up.x - view.x * up.z, view.x * up.y - view.y * up.x)
+                .normalize();
+        pointB.set(pivot).add(pointA.x * radius, pointA.y * radius, pointA.z * radius);
+
+        if (!characterEditorMeshViewSystem.project(pivot.x, pivot.y, pivot.z, screenCenter)
+                || !characterEditorMeshViewSystem.project(pointB.x, pointB.y, pointB.z, screenEdge))
+            return;
+
+        float reach = (float) Math.hypot(screenEdge.x - screenCenter.x, screenEdge.y - screenCenter.y);
+        float centerX = screenCenter.x;
+        float centerY = screenCenter.y;
+
+        setColor(CharacterEditorSetting.COLOR_GUIDE);
+
+        for (int i = 0; i < segments; i++) {
+
+            double from = Math.PI * 2.0 * i / segments;
+            double to = Math.PI * 2.0 * (i + 1) / segments;
+
+            appendScreenLine(
+                    centerX + (float) Math.cos(from) * reach,
+                    centerY + (float) Math.sin(from) * reach,
+                    centerX + (float) Math.cos(to) * reach,
+                    centerY + (float) Math.sin(to) * reach);
+        }
     }
 
     // The edge an edge tool would act on, brighter and wider than the wireframe

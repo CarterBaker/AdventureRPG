@@ -61,10 +61,12 @@ public class CharacterEditorSetting {
     public static final float GUIDE_HALF_PIXELS = 1f;
     public static final float EDGE_HOVER_HALF_PIXELS = 2f;
 
-    // Overlay — guides; screen guides sit this many near planes from the camera, an axis runs this far each way
+    // Overlay — guides; screen guides sit this many near planes from the camera, an axis runs this far each way, and
+    // the brush and the proportional radius are drawn as circles of this many segments
     public static final float GUIDE_NEAR_SCALE = 2f;
     public static final float AXIS_GUIDE_LENGTH = 4f;
     public static final int BRUSH_GUIDE_SEGMENTS = 32;
+    public static final int PROPORTIONAL_GUIDE_SEGMENTS = 64;
 
     // Overlay — colliders: each circle of a wire sphere or capsule is drawn in this many segments; a capsule shorter
     // than the epsilon is drawn as a sphere, and a ring's side is found against the up axis unless the axis lies within

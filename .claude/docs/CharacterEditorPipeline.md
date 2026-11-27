@@ -144,8 +144,12 @@ Entity, never Character (the Animation Editor's row, the command console's Entit
   Brushes window's. A tool strokes the
   brush where the canvas sizes one and the tool carries Size (`ToolCanvas.strokes`), so on the mesh and the weights Select sweeps the
   brush over vertices, each selected as much as the tip covers it (a hard brush whole, a soft one fading at its edge;
-  Shift adds, Ctrl takes away, a press where the brush covers nothing still clears or boxes). Move, Rotate, Scale and
-  the numeric transforms carry each vertex as far as it is selected, and Assign, Add, Subtract and Smooth weights reach
+  every stroke, box and click adds to the selection as Blender's circle select does and Ctrl takes away, a press where
+  the brush covers nothing still clears or boxes; see `.claude/docs/Shortcut.md`, Selection conventions). Move, Rotate,
+  Scale and the numeric transforms carry each vertex as far as it is selected, the proportional radius (O) resized
+  mid-transform by the wheel or Page Up and Down (`CharacterSculptBranch.resizeProportional`, which puts back what it
+  moved and holds the vertices within the new radius from distances measured once), and Assign, Add, Subtract and
+  Smooth weights reach
   it as far. Add a tool to a canvas in `ToolCanvas`, never as a panel button. The mesh's one-off operations (transform,
   geometry, weights, selection) are the canvas's action groups (`ToolActionGroupStruct`), shown in the Tools window
   under the tools and run by `CharacterToolContext.runToolAction` through `CharacterEditorManager.act`, the same key

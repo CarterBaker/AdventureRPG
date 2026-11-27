@@ -673,6 +673,8 @@ One line per session that changed this file: the date, what was added or removed
   bones, chains and colliders moved onto those rigs), `schemas/Rigs.arpg` (`follows`), and the meshes
   `mesh/characters/humanoid/hair/FemaleLongHairMesh.arpg`, `FemaleMediumHairMesh.arpg` and
   `mesh/worn/clothing/CrimsonCloakFemale.arpg`, `CrimsonCloakMale.arpg` (each naming its own rig).
+- 2026-11-27: Blender-style vertex selection. Regenerated `shortcuts/CharacterEditor.arpg` (O turns proportional
+  editing on and off in the Mesh tab).
 
 ## Textures and Sprites (2603 files)
 

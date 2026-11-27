@@ -212,6 +212,8 @@ public class EditorSetting {
     public static final int KEY_ENTER = 257;
     public static final int KEY_ENTER_NUMPAD = 335;
     public static final int KEY_ESCAPE = 256;
+    public static final int KEY_PAGE_UP = 266;
+    public static final int KEY_PAGE_DOWN = 267;
 
     // Entry point indices
     public static final int ENTRY_LAYOUTS_LIST = 0;
@@ -959,11 +961,13 @@ public class EditorSetting {
             null);
 
     // Character View — viewport gestures: the buttons, the GLFW keys a transform locks its axis with, pointer
-    // distances in pixels, snapping, and the undo history they record
+    // distances in pixels (a click picks the nearest vertex as far off as Blender's select distance), snapping, and
+    // the undo history they record
     public static final int CHARACTER_VIEW_BUTTON_SELECT = Buttons.LEFT;
     public static final int CHARACTER_VIEW_BUTTON_CANCEL = Buttons.RIGHT;
     public static final int[] CHARACTER_VIEW_KEY_AXES = { 88, 89, 90 };
     public static final float CHARACTER_VIEW_PICK_RADIUS_PIXELS = 12f;
+    public static final float CHARACTER_VIEW_CLICK_PICK_RADIUS_PIXELS = 75f;
     public static final float CHARACTER_VIEW_PICK_SEGMENT_PIXELS = 7f;
     public static final float CHARACTER_VIEW_SCALE_MIN_PIXELS = 4f;
     public static final float CHARACTER_VIEW_SNAP_DEGREES = 15f;
@@ -1292,6 +1296,7 @@ public class EditorSetting {
     public static final float CHARACTER_EDITOR_MESH_RADIUS_MIN = 0.005f;
     public static final float CHARACTER_EDITOR_MESH_RADIUS_MAX = 2f;
     public static final float CHARACTER_EDITOR_MESH_RADIUS_STEP = 0.01f;
+    public static final float CHARACTER_EDITOR_MESH_RADIUS_WHEEL_FACTOR = 1.1f;
     public static final float CHARACTER_EDITOR_MESH_SNAP_DEFAULT = 0.005f;
     public static final float CHARACTER_EDITOR_MESH_SNAP_MAX = 0.5f;
     public static final float CHARACTER_EDITOR_MESH_SNAP_STEP = 0.005f;

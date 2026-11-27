@@ -2472,6 +2472,17 @@ public class CharacterEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
+    // The proportional radius grown by one factor a step (shrunk for a negative step) within its range, as the wheel
+    // and Page Up and Page Down size it during a transform, the transform held taking it at once
+    public void resizeProportional(float steps) {
+
+        setProportionalRadius(CharacterViewUtility.clamp(
+                proportionalRadius * (float) Math.pow(EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_WHEEL_FACTOR, steps),
+                EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_MIN,
+                EditorSetting.CHARACTER_EDITOR_MESH_RADIUS_MAX));
+        characterSculptBranch.resizeProportional();
+    }
+
     void setSnapStep(float snapStep) {
 
         this.snapStep = snapStep;

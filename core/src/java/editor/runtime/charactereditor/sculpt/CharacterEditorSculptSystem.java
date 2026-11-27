@@ -31,10 +31,13 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
      * Turns this tab's pointer and keys into mesh edits while a mesh mode
      * is open. A press works the mesh only where it lands on it; a press
      * beside it is left to the view camera, a click there still clearing
-     * the selection. The Select tool sweeps the brush: a stroke selects
-     * each vertex under it as much as the tip covers it, replacing the
-     * selection, Shift adding and Ctrl taking away, and a press where the
-     * brush covers nothing still boxes with either of them held; in Mesh
+     * the selection. Every select gesture joins the selection, as Blender's
+     * circle select does, and Ctrl takes away: the Select tool sweeps the
+     * brush, a stroke selecting each vertex under it as much as the tip
+     * covers it, a press where the brush covers nothing still boxes with a
+     * modifier held, and a click picks the vertex nearest it within
+     * Blender's select distance (Shift toggling it) or, on nothing with no
+     * modifier, clears the selection; in Mesh
      * mode the Move, Rotate and Scale tools drag the selection from a
      * vertex instead, picking it first when it is not selected, or along one
      * axis from a handle of the transform gizmo (CharacterGizmoSystem),
@@ -47,9 +50,11 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
      * the last stamp; the frame's stamps are shown together once they are
      * all laid. A transform asked for — by its Tools panel action or
      * its shortcut, G, R or S — holds the selection to the pointer: X, Y
-     * and Z lock it to an axis, Ctrl snaps it, a click or Enter confirms
-     * and a right click or Escape puts it back, each click claimed from the
-     * camera. The tab's shortcuts run here only with the pointer over the
+     * and Z lock it to an axis, Ctrl snaps it, the wheel and Page Up and
+     * Page Down grow and shrink the proportional radius while proportional
+     * editing is on (the wheel claimed from the camera), a click or Enter
+     * confirms and a right click or Escape puts it back, each click claimed
+     * from the camera. The tab's shortcuts run here only with the pointer over the
      * view and nothing under way, each the action of the same key, so a key
      * and its button do exactly the same thing; the modifiers a selection
      * and a transform read are held shortcuts too.
@@ -237,6 +242,13 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
             characterEditorManager.act(key);
     }
 
+    // One of the panel's choices on the mesh stepped on by its row key, only while the mesh is edited (O turns
+    // proportional editing on and off, as Blender's O does)
+    public void cycleMesh(String key) {
+        if (isReady() && characterEditorManager.getMode() == CharacterEditorMode.MESH)
+            characterEditorManager.cycle(key, 1);
+    }
+
     // A shortcut acts only with the pointer over the view while nothing is pressed, painted, held or orbited, on a
     // mode that edits the vertices or poses the bones (its shortcuts are kept to the canvases they name)
     private boolean isReady() {
@@ -263,11 +275,11 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
         boolean control = isShortcutHeld(subtractSelectionShortcutID);
 
         if (characterEditorManager.isBrushTool()
-                && (beginStroke(mouseX, mouseY, resolveSelection(shift, control, CharacterEditorSelection.ADD))
-                        || !characterEditorManager.isSelectStroke()))
+                && (beginStroke(mouseX, mouseY, resolveSelection(control)) || !characterEditorManager.isSelectStroke()))
             return;
 
-        int vertexIndex = characterEditorMeshViewSystem.pickVertex(mouseX, mouseY);
+        int vertexIndex = characterEditorMeshViewSystem.pickVertex(
+                mouseX, mouseY, EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS);
         boolean modified = shift || control || isShortcutHeld(loopSelectionShortcutID);
         CharacterEditorTransform toolTransform = characterEditorManager.getToolTransform();
         int gizmoAxis = characterGizmoSystem.getHoveredAxis();
@@ -333,9 +345,9 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
 
         if (boxSelecting) {
             characterEditorMeshViewSystem.collectBox(pressX, pressY, mouseX, mouseY, hits);
-            characterEditorManager.selectVertices(hits, resolveSelection(shift, control, CharacterEditorSelection.ADD));
+            characterEditorManager.selectVertices(hits, resolveSelection(control));
         } else if (isShortcutHeld(loopSelectionShortcutID))
-            pickLoop(mouseX, mouseY, shift, control);
+            pickLoop(mouseX, mouseY, control);
         else
             pickVertex(mouseX, mouseY, shift, control);
 
@@ -343,21 +355,28 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
         this.boxSelecting = false;
     }
 
-    // A click on a vertex picks it; a click on nothing clears the selection unless a modifier is held
+    // A click joins the vertex nearest it within Blender's select distance to the selection, Shift toggling it and
+    // Ctrl taking it out; a click on nothing clears the selection unless a modifier is held
     private void pickVertex(float mouseX, float mouseY, boolean shift, boolean control) {
 
-        int vertexIndex = characterEditorMeshViewSystem.pickVertex(mouseX, mouseY);
+        int vertexIndex = characterEditorMeshViewSystem.pickVertex(
+                mouseX, mouseY, EditorSetting.CHARACTER_VIEW_CLICK_PICK_RADIUS_PIXELS);
 
-        if (vertexIndex == EngineSetting.INDEX_NOT_FOUND && (shift || control))
+        if (vertexIndex == EngineSetting.INDEX_NOT_FOUND) {
+
+            if (!shift && !control)
+                characterEditorManager.selectVertex(vertexIndex, CharacterEditorSelection.REPLACE);
+
             return;
+        }
 
         characterEditorManager.selectVertex(
                 vertexIndex,
-                resolveSelection(shift, control, CharacterEditorSelection.TOGGLE));
+                shift && !control ? CharacterEditorSelection.TOGGLE : resolveSelection(control));
     }
 
-    // A click with Alt held takes the edge loop through the edge under the pointer, as Blender's Alt+click does
-    private void pickLoop(float mouseX, float mouseY, boolean shift, boolean control) {
+    // A click with Alt held joins the edge loop through the edge under the pointer, as Blender's Alt+click takes it
+    private void pickLoop(float mouseX, float mouseY, boolean control) {
 
         int face = characterEditorMeshViewSystem.pickEdge(mouseX, mouseY);
 
@@ -370,18 +389,12 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
         characterEditorManager.selectLoop(
                 mesh.getFaceVertex(face, corner),
                 mesh.getFaceVertex(face, mesh.getNextCorner(face, corner)),
-                resolveSelection(shift, control, CharacterEditorSelection.ADD));
+                resolveSelection(control));
     }
 
-    private CharacterEditorSelection resolveSelection(
-            boolean shift,
-            boolean control,
-            CharacterEditorSelection shifted) {
-
-        if (control)
-            return CharacterEditorSelection.SUBTRACT;
-
-        return shift ? shifted : CharacterEditorSelection.REPLACE;
+    // Every select gesture adds to the selection, and takes away with Ctrl held
+    private CharacterEditorSelection resolveSelection(boolean control) {
+        return control ? CharacterEditorSelection.SUBTRACT : CharacterEditorSelection.ADD;
     }
 
     // Stroke \\
@@ -555,6 +568,7 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
         }
 
         lockAxis(rawInput);
+        resizeProportional(rawInput);
         applyTransform(rawInput);
 
         boolean released = draggingTransform && !rawInput.isButtonHeld(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
@@ -581,6 +595,28 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
             if (rawInput.isKeyClicked(EditorSetting.CHARACTER_VIEW_KEY_AXES[axis]))
                 holdAxis(transformAxis == axis ? EngineSetting.INDEX_NOT_FOUND : axis);
         }
+    }
+
+    // While proportional editing is on, each notch of the wheel toward the user and Page Up grow the radius, and each
+    // notch away and Page Down shrink it, as Blender's do; the wheel is kept from the view camera meanwhile
+    private void resizeProportional(RawInputHandle rawInput) {
+
+        if (!characterEditorManager.isProportional())
+            return;
+
+        float steps = -rawInput.getScrollY();
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_PAGE_UP))
+            steps += 1f;
+
+        if (rawInput.isKeyClicked(EditorSetting.KEY_PAGE_DOWN))
+            steps -= 1f;
+
+        if (rawInput.getScrollY() != 0f)
+            editorInputSystem.claimWheel();
+
+        if (steps != 0f)
+            characterEditorManager.resizeProportional(steps);
     }
 
     // The transform held to one axis through the pivot, or freed with none, from where the pointer stands now
@@ -731,6 +767,11 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
 
     public boolean isTransforming() {
         return transform != null;
+    }
+
+    // Whether a transform is held with proportional editing on, its radius drawn about the pivot
+    public boolean isProportionalShown() {
+        return transform != null && characterEditorManager.isProportional();
     }
 
     // Whether the transform held is locked to a line, drawn through the pivot along the axis vector

@@ -230,13 +230,12 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
 
     // Picking \\
 
-    // The active part's visible vertex nearest a pixel within the pick radius, or INDEX_NOT_FOUND
-    public int pickVertex(float pixelX, float pixelY) {
+    // The active part's visible vertex nearest a pixel within a radius in pixels, or INDEX_NOT_FOUND
+    public int pickVertex(float pixelX, float pixelY, float radius) {
 
         if (activeDocument == null)
             return EngineSetting.INDEX_NOT_FOUND;
 
-        float radius = EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS;
         float nearest = radius * radius;
         int found = EngineSetting.INDEX_NOT_FOUND;
 
