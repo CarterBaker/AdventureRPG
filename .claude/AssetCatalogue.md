@@ -654,6 +654,15 @@ One line per session that changed this file: the date, what was added or removed
   `shaders/weather/precipitation/PrecipitationShader.fsh` (wind taken out), `shaders/liquid/UnderwaterShader.fsh`
   (bubbles taken out), `shaders/liquid/includes/WaterShading.glsl` (cartoon rapids on running water),
   `shaders/includes/WindData.glsl` and `ubos/WindData.arpg` (`u_windFoliage` dropped).
+- 2026-11-27: Item materials. Added `shaders/includes/GBufferSurface.glsl` (the world target's metalness and emissive
+  layer), `shaders/includes/MaterialSpecular.glsl` (the one roughness and metalness highlight rule) and
+  `shaders/items/includes/ItemSurface.glsl`; regenerated `application/fbos/FBOs.arpg` (`MainScene`'s `surface` target),
+  `shaders/includes/GBufferData.glsl`, `shaders/items/includes/BlockAlbedo.glsl`, every item shader under
+  `shaders/items/standard/`, `equipment/`, `vehicle/` and `painted/` (`Standard`, `Equipment`, `Vehicle`), the
+  character shader and `shaders/characters/includes/CharacterMaterial.glsl`, the tree, terrain and impostor world
+  shaders (`surface/standard/`, `surface/macro/`, `trees/bark/`, `trees/leaf/`, `trees/impostor/`) and
+  `shaders/postprocessing/lighting/LightingShader.fsh` with `includes/SkyReflection.glsl` (metals reflect in their own
+  colour and mirror the sky, emissive texels glow).
 
 ## Textures and Sprites (2603 files)
 
@@ -1794,7 +1803,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (201 files)
+## Shaders (204 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1874,11 +1883,12 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/includes/`
 
 `BlockOrientationMapData.glsl`, `CameraData.glsl`, `CelestialData.glsl`, `ContentData.glsl`, `CoveringData.glsl`,
-`GBufferData.glsl`, `GBufferNormal.glsl`, `GridCoordinateData.glsl`, `ItemRotationData.glsl`, `MacroCoverageData.glsl`,
-`MacroCoverageUtility.glsl`, `MacroWaterData.glsl`, `MoonLightData.glsl`, `NaturalNoiseData.glsl`, `NoiseUtility.glsl`,
-`OceanData.glsl`, `OrthoData.glsl`, `PlayerPositionData.glsl`, `PostProcessData.glsl`, `PrecipitationData.glsl`,
-`QuadRecord.glsl`, `SettingsData.glsl`, `SkyColorData.glsl`, `SliceData.glsl`, `SunLightData.glsl`, `TileTextures.glsl`,
-`TimeData.glsl`, `WeatherMapData.glsl`, `WeatherMapUtility.glsl`, `WindData.glsl`
+`GBufferData.glsl`, `GBufferNormal.glsl`, `GBufferSurface.glsl`, `GridCoordinateData.glsl`, `ItemRotationData.glsl`,
+`MacroCoverageData.glsl`, `MacroCoverageUtility.glsl`, `MacroWaterData.glsl`, `MaterialSpecular.glsl`,
+`MoonLightData.glsl`, `NaturalNoiseData.glsl`, `NoiseUtility.glsl`, `OceanData.glsl`, `OrthoData.glsl`,
+`PlayerPositionData.glsl`, `PostProcessData.glsl`, `PrecipitationData.glsl`, `QuadRecord.glsl`, `SettingsData.glsl`,
+`SkyColorData.glsl`, `SliceData.glsl`, `SunLightData.glsl`, `TileTextures.glsl`, `TimeData.glsl`, `WeatherMapData.glsl`,
+`WeatherMapUtility.glsl`, `WindData.glsl`
 
 ### `assets/shaders/items/equipment/`
 
@@ -1886,7 +1896,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/items/includes/`
 
-`BlockAlbedo.glsl`, `BlockRepeat.glsl`, `PaintedAlbedo.glsl`
+`BlockAlbedo.glsl`, `BlockRepeat.glsl`, `ItemSurface.glsl`, `PaintedAlbedo.glsl`
 
 ### `assets/shaders/items/inventory/`
 

@@ -7,11 +7,13 @@ in vec3 vModelPosition;
 flat in int vFace;
 
 #include "items/includes/BlockAlbedo.glsl"
+#include "includes/GBufferSurface.glsl"
 
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
+layout(location = 3) out vec4 gSurface;
 
 /*
  * World items write the same G-buffer as the terrain they rest on, so the
@@ -24,7 +26,8 @@ layout(location = 2) out vec4 gMaterial;
 const float ITEM_SPECULAR = 0.18;
 
 void main() {
-    vec4 albedo = sampleBlockAlbedo(vTile, vModelPosition, vFace);
+    ItemSurface surface = sampleBlockSurface(vTile, vModelPosition, vFace, ITEM_SPECULAR);
+    vec4        albedo  = surface.albedo;
 
     if (albedo.a < 0.01)
     discard;
@@ -37,5 +40,6 @@ void main() {
     // Blending is enabled for this pass, so every target writes alpha = 1.0.
     gAlbedo   = vec4(albedo.rgb, 1.0);
     gNormal   = vec4(normalView, 1.0);
-    gMaterial = vec4(1.0, ITEM_SPECULAR, 1.0, 1.0);
+    gMaterial = vec4(1.0, surface.specular, surface.ao, 1.0);
+    gSurface  = encodeGBufferSurface(surface.metallic, surface.emissive);
 }

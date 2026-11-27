@@ -11,10 +11,12 @@ flat in int vCoverChunk;
 #include "includes/MacroCoverageUtility.glsl"
 #include "surface/includes/CloudShadow.glsl"
 #include "trees/includes/TreeFade.glsl"
+#include "includes/GBufferSurface.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
+layout(location = 3) out vec4 gSurface;
 
 // Distant macro terrain, written into the same G-buffer as the voxel surface so the deferred lighting and fog passes
 // treat it as ordinary ground. Any fragment over a chunk the grid itself draws right now is discarded, so macro terrain
@@ -69,4 +71,5 @@ void main() {
     gAlbedo   = vec4(albedo, 1.0);
     gNormal   = vec4(normalize(mat3(u_view) * normal), 1.0);
     gMaterial = vec4(resolveSunVisibility(), MACRO_SPECULAR, MACRO_AO, 1.0);
+    gSurface  = GBUFFER_SURFACE_NONE;
 }

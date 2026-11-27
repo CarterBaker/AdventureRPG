@@ -21,6 +21,7 @@ uniform sampler2D u_cloudColor;
 uniform sampler2D u_cloudDistance;
 
 const float LIGHTING_DISTANCE_EPSILON = 0.001;
+const float LIGHTING_DIELECTRIC_REFLECTANCE = 0.04;
 
 void main() {
     float depth = texture(u_gDepth, v_texCoord).r;
@@ -40,10 +41,16 @@ void main() {
     float specular      = material.g;
     float vertAO        = material.b;
 
+    vec4  surface  = texture(u_gSurface, v_texCoord);
+    float metallic = surface.r;
+    float emissive = surface.g;
+
     float ssaoAO = texture(u_ssaoTex, v_texCoord).r;
     float ao     = vertAO * ssaoAO;
 
-    vec3 specColor = vec3(0.04);
+    // A metal reflects in its own colour and scatters no diffuse light; a dielectric reflects a little white
+    vec3 specColor = mix(vec3(LIGHTING_DIELECTRIC_REFLECTANCE), albedo, metallic);
+    vec3 diffuse   = albedo * (1.0 - metallic);
 
     vec3 fragPosView  = reconstructViewPos(v_texCoord);
     vec3 fragPosWorld = (u_inverseView * vec4(fragPosView, 1.0)).xyz;
@@ -63,7 +70,7 @@ void main() {
     float sunSpec     = pow(max(dot(normalView, sunHalf), 0.0), specPower) * specular;
 
     vec3 sunContrib = u_sunColor * u_sunIntensity * sunVisibility
-    * (albedo * sunDiff + specColor * sunSpec);
+    * (diffuse * sunDiff + specColor * sunSpec);
 
     vec3  moonDirView = normalize(mat3(u_view) * u_moonDirection);
     float moonDiff    = max(dot(normalView, moonDirView), 0.0);
@@ -73,21 +80,25 @@ void main() {
     float moonSpec    = pow(max(dot(normalView, moonHalf), 0.0), specPower) * specular * 0.25;
 
     vec3 moonContrib = u_moonColor * moonTint * moonInt
-    * (albedo * moonDiff + specColor * moonSpec);
+    * (diffuse * moonDiff + specColor * moonSpec);
 
     // A character, marked by its smooth normal, is lit in toon tones with a rim; everything else as before
     vec3 lit = isSmoothNormal(storedNormal)
-        ? resolveToonLight(albedo, normalView, viewDir, sunDiff, sunVisibility, sunSpec, moonDiff, skyAmbient,
+        ? resolveToonLight(diffuse, normalView, viewDir, sunDiff, sunVisibility, sunSpec, moonDiff, skyAmbient,
                            u_sunColor * u_sunIntensity, u_moonColor * moonTint * moonInt)
-        : albedo * skyAmbient + sunContrib + moonContrib;
+        : diffuse * skyAmbient + sunContrib + moonContrib;
 
     vec3  toFragment   = fragPosWorld - u_cameraPosition;
     float fragDistance = length(toFragment);
     vec3  fragDir      = toFragment / max(fragDistance, LIGHTING_DISTANCE_EPSILON);
 
     if (isSmoothNormal(storedNormal))
-    lit += resolveSkyReflection(normal, -fragDir, specular, ao)
+    lit += resolveSkyReflection(normal, -fragDir, specular, ao) * (1.0 - metallic)
         + resolveCorneaHighlight(normalView, sunHalf, specular, u_sunColor * u_sunIntensity * sunVisibility);
+
+    // Any metal mirrors the sky in its own colour, and an emissive texel gives off its own light whatever lights it
+    lit += resolveMetalReflection(normal, -fragDir, specular, ao, albedo) * metallic
+        + albedo * emissive;
 
     float litAmount = clamp(sunDiff + moonDiff * 0.5, 0.0, 1.0);
 

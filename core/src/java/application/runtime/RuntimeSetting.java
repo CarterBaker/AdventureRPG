@@ -266,6 +266,7 @@ public class RuntimeSetting {
     public static final String ATTACHMENT_ALBEDO = "albedo";
     public static final String ATTACHMENT_NORMAL = "normal";
     public static final String ATTACHMENT_MATERIAL = "material";
+    public static final String ATTACHMENT_SURFACE = "surface";
     public static final String ATTACHMENT_AO = "ao";
     public static final String ATTACHMENT_COLOR = "color";
     public static final String ATTACHMENT_DISTANCE = "distance";
@@ -274,6 +275,7 @@ public class RuntimeSetting {
     public static final String UNIFORM_G_ALBEDO = "u_gAlbedo";
     public static final String UNIFORM_G_NORMAL = "u_gNormal";
     public static final String UNIFORM_G_MATERIAL = "u_gMaterial";
+    public static final String UNIFORM_G_SURFACE = "u_gSurface";
     public static final String UNIFORM_G_DEPTH = "u_gDepth";
     public static final String UNIFORM_SSAO_TEXTURE = "u_ssaoTex";
     public static final String UNIFORM_CLOUD_COLOR = "u_cloudColor";

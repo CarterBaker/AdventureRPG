@@ -4,6 +4,7 @@
 uniform sampler2D u_gAlbedo;
 uniform sampler2D u_gNormal;
 uniform sampler2D u_gMaterial;
+uniform sampler2D u_gSurface;
 uniform sampler2D u_gDepth;
 uniform sampler2D u_ssaoTex;
 

@@ -6,11 +6,13 @@ in vec3 vViewPosition;
 flat in int vFace;
 
 #include "items/includes/BlockAlbedo.glsl"
+#include "includes/GBufferSurface.glsl"
 
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
+layout(location = 3) out vec4 gSurface;
 
 /*
  * A vehicle's faces are merged across block boundaries, so a face carries only
@@ -36,7 +38,8 @@ float resolveDitherThreshold() {
 }
 
 void main() {
-    vec4 albedo = sampleBlockAlbedo(vTile, vModelPosition, vFace);
+    ItemSurface surface = sampleBlockSurface(vTile, vModelPosition, vFace, VEHICLE_SPECULAR);
+    vec4        albedo  = surface.albedo;
 
     if (albedo.a < resolveDitherThreshold())
     discard;
@@ -46,5 +49,6 @@ void main() {
     // Blending is enabled for this pass, so every target writes alpha = 1.0.
     gAlbedo   = vec4(albedo.rgb, 1.0);
     gNormal   = vec4(normalView, 1.0);
-    gMaterial = vec4(1.0, VEHICLE_SPECULAR, 1.0, 1.0);
+    gMaterial = vec4(1.0, surface.specular, surface.ao, 1.0);
+    gSurface  = encodeGBufferSurface(surface.metallic, surface.emissive);
 }

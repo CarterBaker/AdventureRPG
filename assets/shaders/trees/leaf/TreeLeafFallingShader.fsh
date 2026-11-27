@@ -11,6 +11,7 @@ flat in int   vTile;
 flat in vec3  vColor;
 
 #include "trees/includes/TreeLeafSprig.glsl"
+#include "includes/GBufferSurface.glsl"
 
 // The same transform the vertices fell by, so a cluster's dome of light turns with it.
 uniform mat4 u_model;
@@ -18,8 +19,11 @@ uniform mat4 u_model;
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
+layout(location = 3) out vec4 gSurface;
 
 void main() {
+    gSurface = GBUFFER_SURFACE_NONE;
+
     if (!shadeTreeLeaf(
         vWorldPos, vCard, vCenter, vRadii, vCardRadii, vUnderside, vSeed, vTile, vColor, mat3(u_model),
         gAlbedo, gNormal, gMaterial))

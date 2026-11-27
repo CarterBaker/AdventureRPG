@@ -22,10 +22,12 @@ flat in float vContent;
 #include "surface/includes/CloudShadow.glsl"
 #include "surface/includes/Coverage.glsl"
 #include "surface/includes/Content.glsl"
+#include "includes/GBufferSurface.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
+layout(location = 3) out vec4 gSurface;
 
 /*
  * Material detail follows the same detail strength the TES displaces with,
@@ -113,10 +115,12 @@ void main() {
     // This pass draws with blending ENABLED (GL_SRC_ALPHA,
     // GL_ONE_MINUS_SRC_ALPHA — see RenderSystem.drawToMappedTargets), so
     // every output's alpha controls whether the write happens at all. All
-    // three targets must output alpha = 1.0; gMaterial packs
+    // four targets must output alpha = 1.0; gMaterial packs
     // r = sun visibility (1 = full sun, 0 = fully cloud-shadowed),
-    // g = specular, b = ao, a = 1.0 (forced, no data).
+    // g = specular, b = ao, a = 1.0 (forced, no data), and gSurface holds
+    // metalness and emissive (GBufferSurface.glsl), none for terrain.
     gAlbedo   = vec4(albedo, 1.0);
     gNormal   = vec4(normalView, 1.0);
     gMaterial = vec4(sunVisibility, specular, ao, 1.0);
+    gSurface  = GBUFFER_SURFACE_NONE;
 }

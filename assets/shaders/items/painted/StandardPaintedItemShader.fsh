@@ -5,12 +5,14 @@ in vec3 vViewPosition;
 in vec2 vUV;
 flat in int vTile;
 
-#include "items/includes/PaintedAlbedo.glsl"
+#include "items/includes/ItemSurface.glsl"
+#include "includes/GBufferSurface.glsl"
 
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
+layout(location = 3) out vec4 gSurface;
 
 /*
  * A painted world item writes the same G-buffer as a sub-voxel one, so the
@@ -20,7 +22,8 @@ layout(location = 2) out vec4 gMaterial;
 const float ITEM_SPECULAR = 0.18;
 
 void main() {
-    vec4 albedo = samplePaintedAlbedo(vTile, vUV);
+    ItemSurface surface = sampleItemSurface(vTile, vUV, ITEM_SPECULAR);
+    vec4        albedo  = surface.albedo;
 
     if (albedo.a < 0.01)
     discard;
@@ -33,5 +36,6 @@ void main() {
     // Blending is enabled for this pass, so every target writes alpha = 1.0.
     gAlbedo   = vec4(albedo.rgb, 1.0);
     gNormal   = vec4(normalView, 1.0);
-    gMaterial = vec4(1.0, ITEM_SPECULAR, 1.0, 1.0);
+    gMaterial = vec4(1.0, surface.specular, surface.ao, 1.0);
+    gSurface  = encodeGBufferSurface(surface.metallic, surface.emissive);
 }

@@ -15,11 +15,13 @@ flat in int v_tile;
 #include "characters/includes/CharacterHidden.glsl"
 #include "characters/includes/CharacterNormal.glsl"
 #include "includes/GBufferNormal.glsl"
+#include "includes/GBufferSurface.glsl"
 
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
+layout(location = 3) out vec4 gSurface;
 
 /*
  * Characters write the same G-buffer as the world surface so the deferred
@@ -51,8 +53,9 @@ void main() {
 
     // Blending is enabled for this pass, so every target writes alpha = 1.0.
     // gMaterial packs r = sun visibility, g = specular, b = ao (see
-    // StandardSurfaceShader.fsh).
+    // StandardSurfaceShader.fsh); gSurface its metalness and glow.
     gAlbedo   = vec4(surface.albedo, 1.0);
     gNormal   = vec4(encodeSmoothNormal(normalView), 1.0);
     gMaterial = vec4(1.0, surface.specular, material.ao, 1.0);
+    gSurface  = encodeGBufferSurface(material.metallic, material.emissive);
 }

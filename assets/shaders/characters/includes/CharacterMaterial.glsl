@@ -3,16 +3,17 @@
 
 #include "includes/TileTextures.glsl"
 #include "includes/SettingsData.glsl"
+#include "includes/MaterialSpecular.glsl"
 
 // A character's material maps, read from its tile: the normal map bends the smooth normal
 // through a tangent frame rebuilt from screen-space derivatives (the mesh carries no tangents), AO darkens, metallic
-// and roughness shape the highlight, and the tint mask says which texels take the player's colors. Ambient occlusion
-// and metallic come from the tile's material map, roughness and the tint mask from its extra set. Fine detail fades
-// out between CHARACTER_DETAIL_FADE_START of the Character Detail distance and all of it. The frame is resolved once
-// per fragment, in uniform control flow, so overlays sampled inside branches take its derivatives explicitly.
+// and roughness shape the highlight, emissive makes texels glow, and the tint mask says which texels take the player's
+// colors. Ambient occlusion and metallic come from the tile's material map, roughness, the tint mask and emissive from
+// its extra set. Fine detail fades out between CHARACTER_DETAIL_FADE_START of the Character Detail distance and all of
+// it. The frame is resolved once per fragment, in uniform control flow, so overlays sampled inside branches take its
+// derivatives explicitly.
 
 const float CHARACTER_DETAIL_FADE_START = 0.75;
-const float CHARACTER_ROUGHNESS_NEUTRAL = 0.5;
 
 struct CharacterFrame {
     mat3  basis;
@@ -28,6 +29,7 @@ struct CharacterMaterial {
     float metallic;
     float roughness;
     float tint;
+    float emissive;
 };
 
 float resolveCharacterDetail(vec3 viewPosition) {
@@ -70,6 +72,7 @@ CharacterMaterial sampleCharacterMaterial(TileRead tile, vec2 uv, CharacterFrame
     material.metallic  = maps.b;
     material.roughness = extra.g;
     material.tint      = extra.b;
+    material.emissive  = extra.a;
 
     return material;
 }
@@ -79,11 +82,9 @@ vec3 resolveCharacterAlbedo(vec3 base, vec3 shaded, CharacterMaterial material) 
     return mix(base, shaded, material.tint);
 }
 
-// The zone's highlight scaled by roughness about its neutral, and a metal's highlight taking the place of it
+// The zone's highlight shaped by the material's roughness and metalness (MaterialSpecular)
 float resolveCharacterSpecular(float zoneSpecular, CharacterMaterial material) {
-    float dielectric = zoneSpecular * (1.0 - material.roughness) / (1.0 - CHARACTER_ROUGHNESS_NEUTRAL);
-
-    return mix(dielectric, 1.0 - material.roughness, material.metallic);
+    return resolveMaterialSpecular(zoneSpecular, material.metallic, material.roughness);
 }
 
 #endif

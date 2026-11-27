@@ -4,12 +4,14 @@
 #include "includes/SkyColorData.glsl"
 #include "includes/SunLightData.glsl"
 
-// Glossy characters — wet eyes, metal — mirror the sky: the environment is the sky the sky shader paints, from the
+// Glossy characters — wet eyes, varnish — mirror the sky: the environment is the sky the sky shader paints, from the
 // horizon band up to the zenith with the sun-side glow, dimmed below the horizon where the ground would be. How much
 // a surface mirrors comes from the specular it stored past REFLECTION_GLOSS_START, weighted by Fresnel and held back by
 // its occlusion. Characters write that specular falling with the Character Detail distance, so their reflections fade
 // with it. A cornea — specular past CORNEA_GLOSS_START, the wet eye up close — also mirrors the light itself as a
-// small sharp catchlight, as a real eye does, fading with the same specular.
+// small sharp catchlight, as a real eye does, fading with the same specular. Any metal, character, item or otherwise,
+// mirrors the same sky tinted by its reflectance, its albedo, rising toward white at grazing angles (Schlick); a rough
+// metal's reflection dims toward METAL_REFLECTION_ROUGH of a polished one's, the sky being too smooth to blur.
 
 const float REFLECTION_GLOSS_START = 0.5;
 const float REFLECTION_FRESNEL_BASE = 0.04;
@@ -21,6 +23,7 @@ const float CORNEA_POWER = 1200.0;
 const float CORNEA_EDGE_LOW = 0.3;
 const float CORNEA_EDGE_HIGH = 0.55;
 const float CORNEA_STRENGTH = 1.4;
+const float METAL_REFLECTION_ROUGH = 0.2;
 
 vec3 resolveSkyEnvironment(vec3 direction) {
     float up   = direction.y;
@@ -42,6 +45,14 @@ vec3 resolveSkyReflection(vec3 normal, vec3 toEye, float specular, float occlusi
     float fresnel = REFLECTION_FRESNEL_BASE + (1.0 - REFLECTION_FRESNEL_BASE) * pow(1.0 - facing, 5.0);
 
     return resolveSkyEnvironment(reflect(-toEye, normal)) * gloss * mix(0.25, 1.0, fresnel) * occlusion;
+}
+
+vec3 resolveMetalReflection(vec3 normal, vec3 toEye, float specular, float occlusion, vec3 reflectance) {
+    float facing  = clamp(dot(normal, toEye), 0.0, 1.0);
+    vec3  fresnel = reflectance + (1.0 - reflectance) * pow(1.0 - facing, 5.0);
+
+    return resolveSkyEnvironment(reflect(-toEye, normal)) * fresnel * mix(METAL_REFLECTION_ROUGH, 1.0, specular)
+        * occlusion;
 }
 
 // The light's own reflection on a cornea, a crisp catchlight, as bright as the light it mirrors

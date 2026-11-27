@@ -63,6 +63,7 @@ public class LightingSystem extends SystemPackage {
         mat.setUniform(RuntimeSetting.UNIFORM_G_ALBEDO, worldFbo.getColorTexture(RuntimeSetting.ATTACHMENT_ALBEDO));
         mat.setUniform(RuntimeSetting.UNIFORM_G_NORMAL, worldFbo.getColorTexture(RuntimeSetting.ATTACHMENT_NORMAL));
         mat.setUniform(RuntimeSetting.UNIFORM_G_MATERIAL, worldFbo.getColorTexture(RuntimeSetting.ATTACHMENT_MATERIAL));
+        mat.setUniform(RuntimeSetting.UNIFORM_G_SURFACE, worldFbo.getColorTexture(RuntimeSetting.ATTACHMENT_SURFACE));
         mat.setUniform(RuntimeSetting.UNIFORM_G_DEPTH, worldFbo.getDepthTexture());
         mat.setUniform(RuntimeSetting.UNIFORM_SSAO_TEXTURE, ssaoFbo.getColorTexture(RuntimeSetting.ATTACHMENT_AO));
     }

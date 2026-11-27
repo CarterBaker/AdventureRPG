@@ -14,10 +14,12 @@ flat in vec2  vFade;
 #include "trees/includes/TreeShading.glsl"
 #include "trees/includes/TreeImpostor.glsl"
 #include "trees/includes/TreeImpostorFade.glsl"
+#include "includes/GBufferSurface.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
 layout(location = 2) out vec4 gMaterial;
+layout(location = 3) out vec4 gSurface;
 
 // A far tree's impostor written into the G-buffer as its tree would be: the albedo, darkened by the occlusion it was
 // baked with, blended from the three nearest frames and cut out where they show no tree, the baked normal turned with
@@ -39,4 +41,5 @@ void main() {
     gAlbedo   = vec4(albedo.rgb, 1.0);
     gNormal   = vec4(normalize(mat3(u_view) * normal), 1.0);
     gMaterial = vec4(resolveTreeSunVisibility(vWorldPos), TREE_IMPOSTOR_SPECULAR, 1.0, 1.0);
+    gSurface  = GBUFFER_SURFACE_NONE;
 }
