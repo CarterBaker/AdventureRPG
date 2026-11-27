@@ -72,14 +72,6 @@ public class SettingsUtility extends EngineUtility {
                 settings.textureAnisotropy,
                 EngineSetting.TEXTURE_ANISOTROPY_LEVELS[0],
                 EngineSetting.TEXTURE_ANISOTROPY_LEVELS[EngineSetting.TEXTURE_ANISOTROPY_LEVELS.length - 1]);
-        settings.macroPaint = Math.clamp(
-                settings.macroPaint,
-                EngineSetting.MACRO_PAINT_MIN,
-                EngineSetting.MACRO_PAINT_MAX);
-        settings.macroBlocks = Math.clamp(
-                settings.macroBlocks,
-                EngineSetting.MACRO_BLOCKS_MIN,
-                EngineSetting.MACRO_BLOCKS_MAX);
         settings.maxRenderDistance = Math.clamp(
                 settings.maxRenderDistance,
                 EngineSetting.RENDER_DISTANCE_MIN,

@@ -82,8 +82,6 @@ public class EditorSettingsOptionBranch extends BranchPackage {
         injectOptionRow(SettingsOption.TREE_SHARED_LEVEL);
         injectOptionRow(SettingsOption.CHARACTER_DETAIL);
         injectOptionRow(SettingsOption.MACRO_TERRAIN);
-        injectSlider(SettingsSlider.MACRO_PAINT);
-        injectSlider(SettingsSlider.MACRO_BLOCKS);
         editorSettingsBranch.injectNote(RuntimeSetting.SETTINGS_NOTE_MACRO_TERRAIN);
         editorSettingsBranch.injectNote(EditorSetting.SETTINGS_NOTE_WORLD_APPLY);
 

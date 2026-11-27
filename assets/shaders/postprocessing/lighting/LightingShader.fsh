@@ -13,6 +13,7 @@ out vec4 fragColor;
 #include "postprocessing/lighting/includes/AtmosphericFog.glsl"
 #include "postprocessing/lighting/includes/Outline.glsl"
 #include "postprocessing/lighting/includes/ToonLighting.glsl"
+#include "postprocessing/lighting/includes/PaintedLighting.glsl"
 #include "postprocessing/lighting/includes/SkyReflection.glsl"
 #include "weather/includes/CloudComposite.glsl"
 
@@ -44,6 +45,7 @@ void main() {
     vec4  surface  = texture(u_gSurface, v_texCoord);
     float metallic = surface.r;
     float emissive = surface.g;
+    float painted  = surface.b;
 
     float ssaoAO = texture(u_ssaoTex, v_texCoord).r;
     float ao     = vertAO * ssaoAO;
@@ -82,17 +84,22 @@ void main() {
     vec3 moonContrib = u_moonColor * moonTint * moonInt
     * (diffuse * moonDiff + specColor * moonSpec);
 
-    // A character, marked by its smooth normal, is lit in toon tones with a rim; everything else as before
-    vec3 lit = isSmoothNormal(storedNormal)
-        ? resolveToonLight(diffuse, normalView, viewDir, sunDiff, sunVisibility, sunSpec, moonDiff, skyAmbient,
-                           u_sunColor * u_sunIntensity, u_moonColor * moonTint * moonInt)
-        : diffuse * skyAmbient + sunContrib + moonContrib;
+    // Painted macro terrain is lit in a backdrop's flat tones; a character, marked by its smooth normal, in toon tones
+    // with a rim; everything else as before
+    bool smoothSurface = isSmoothNormal(storedNormal) && painted < 0.5;
+    vec3 lit = painted > 0.5
+        ? resolvePaintedLight(diffuse, sunDiff, sunVisibility, moonDiff, skyAmbient,
+                              u_sunColor * u_sunIntensity, u_moonColor * moonTint * moonInt)
+        : smoothSurface
+            ? resolveToonLight(diffuse, normalView, viewDir, sunDiff, sunVisibility, sunSpec, moonDiff, skyAmbient,
+                               u_sunColor * u_sunIntensity, u_moonColor * moonTint * moonInt)
+            : diffuse * skyAmbient + sunContrib + moonContrib;
 
     vec3  toFragment   = fragPosWorld - u_cameraPosition;
     float fragDistance = length(toFragment);
     vec3  fragDir      = toFragment / max(fragDistance, LIGHTING_DISTANCE_EPSILON);
 
-    if (isSmoothNormal(storedNormal))
+    if (smoothSurface)
     lit += resolveSkyReflection(normal, -fragDir, specular, ao) * (1.0 - metallic)
         + resolveCorneaHighlight(normalView, sunHalf, specular, u_sunColor * u_sunIntensity * sunVisibility);
 
@@ -104,6 +111,9 @@ void main() {
 
     // Ink outlines on the lit surface, beneath the fog and clouds laid over it.
     lit = applyOutline(lit, resolveOutline(ivec2(gl_FragCoord.xy), depth, normalView, fragDistance));
+
+    // Painted terrain layers back into the horizon's haze before the fog
+    lit = applyPaintedHaze(lit, fragDistance, painted);
 
     lit = applyAtmosphericFog(lit, fragPosWorld, fragDir, litAmount);
 

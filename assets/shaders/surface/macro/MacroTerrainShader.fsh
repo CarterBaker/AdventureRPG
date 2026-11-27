@@ -13,6 +13,7 @@ flat in int vCoverChunk;
 #include "surface/includes/MacroPaint.glsl"
 #include "trees/includes/TreeFade.glsl"
 #include "includes/GBufferSurface.glsl"
+#include "includes/GBufferNormal.glsl"
 
 layout(location = 0) out vec4 gAlbedo;
 layout(location = 1) out vec4 gNormal;
@@ -30,10 +31,11 @@ layout(location = 3) out vec4 gSurface;
 // heightfield never faces down, while a tree stand-in is a closed faceted shape, so its facet faces the camera and a
 // crown's underside turns down into its slope color. A gentle facet shows its top color and a steep one turns to its
 // slope color, the way a stepped voxel hillside shows more block sides the steeper it climbs, painted as a cartoon
-// backdrop's mountains are (MacroPaint), its footprint measured here since only a fragment stage can. Sun visibility
-// under the cloud layers is the same the voxel surface writes, so cloud shadows run on across the seam. All three
-// targets must output alpha = 1.0, since this pass draws with blending enabled; gMaterial packs sun visibility,
-// specular and ao.
+// backdrop's mountains are (MacroPaint). The surface is marked painted, so the lighting pass lights it in a backdrop's
+// flat tones and hazes it with distance, and its normal is stored smooth, so the outline pass inks its silhouettes but
+// never the folds between its facets. Sun visibility under the cloud layers is the same the voxel surface writes, so
+// cloud shadows run on across the seam. All three targets must output alpha = 1.0, since this pass draws with blending
+// enabled; gMaterial packs sun visibility, specular and ao.
 
 const float MACRO_SPECULAR           = 0.0;
 const float MACRO_AO                 = 1.0;
@@ -65,11 +67,10 @@ void main() {
     if (facesAway)
     normal = -normal;
 
-    vec3 painted = anchorMacroPaint(vLocalPos);
-    vec3 albedo  = paintMacroGround(vTopColor, vSideColor, normal, painted, fwidth(painted), !standIn);
+    vec3 albedo = paintMacroGround(vTopColor, vSideColor, normal, anchorMacroPaint(vLocalPos), !standIn);
 
     gAlbedo   = vec4(albedo, 1.0);
-    gNormal   = vec4(normalize(mat3(u_view) * normal), 1.0);
+    gNormal   = vec4(encodeSmoothNormal(normalize(mat3(u_view) * normal)), 1.0);
     gMaterial = vec4(resolveSunVisibility(), MACRO_SPECULAR, MACRO_AO, 1.0);
-    gSurface  = GBUFFER_SURFACE_NONE;
+    gSurface  = GBUFFER_SURFACE_PAINTED;
 }

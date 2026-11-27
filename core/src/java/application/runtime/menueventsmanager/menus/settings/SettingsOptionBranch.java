@@ -65,8 +65,6 @@ public class SettingsOptionBranch extends BranchPackage {
         injectOptionRow(session, SettingsOption.TREE_SHARED_LEVEL);
         injectOptionRow(session, SettingsOption.CHARACTER_DETAIL);
         injectOptionRow(session, SettingsOption.MACRO_TERRAIN);
-        injectSlider(session, SettingsSlider.MACRO_PAINT);
-        injectSlider(session, SettingsSlider.MACRO_BLOCKS);
         settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_MACRO_TERRAIN);
         settingsMenuBranch.injectNote(session, RuntimeSetting.SETTINGS_NOTE_WORLD_APPLY);
 

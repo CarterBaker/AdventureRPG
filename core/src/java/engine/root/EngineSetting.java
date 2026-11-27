@@ -832,10 +832,6 @@ public class EngineSetting {
     public static final int TEXTURE_QUALITY_HIGH = 2;
     public static final int[] TEXTURE_ANISOTROPY_LEVELS = { 1, 2, 4, 8, 16 };
     public static final int TEXTURE_ANISOTROPY_DEFAULT = 8;
-    public static final float MACRO_PAINT_MAX = 2f;
-    public static final float MACRO_PAINT_MIN = 0f;
-    public static final float MACRO_BLOCKS_MAX = 2f;
-    public static final float MACRO_BLOCKS_MIN = 0f;
 
     // User Settings — Post Processing
     public static final float BLOOM_INTENSITY_MAX = 1f;
@@ -1099,8 +1095,6 @@ public class EngineSetting {
     public static final String UNIFORM_DELTA_TIME = "u_deltaTime";
     public static final String UNIFORM_DETAIL_RADIUS = "u_detailRadius";
     public static final String UNIFORM_CHARACTER_DETAIL = "u_characterDetail";
-    public static final String UNIFORM_MACRO_PAINT = "u_macroPaint";
-    public static final String UNIFORM_MACRO_BLOCKS = "u_macroBlocks";
     public static final String UNIFORM_DEST_RECT = "u_destRect";
     public static final String UNIFORM_DISTANCE_FROM_CENTER = "u_distanceFromCenter";
     public static final String UNIFORM_FACE_ORIENTATIONS = "u_faceOrientations";

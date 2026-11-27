@@ -92,8 +92,6 @@ public class SettingsSystem extends SystemPackage {
         renderSettingsData.updateUniform(
                 EngineSetting.UNIFORM_TEXTURE_ANISOTROPY,
                 textureManager.getTextureAnisotropy());
-        renderSettingsData.updateUniform(EngineSetting.UNIFORM_MACRO_PAINT, settings.macroPaint);
-        renderSettingsData.updateUniform(EngineSetting.UNIFORM_MACRO_BLOCKS, settings.macroBlocks);
         uboManager.push(renderSettingsData);
     }
 

@@ -25,8 +25,6 @@ public enum SettingsSlider {
     VIGNETTE(RuntimeSetting.SETTINGS_SLIDER_VIGNETTE, true, false),
     CHROMATIC_ABERRATION(RuntimeSetting.SETTINGS_SLIDER_CHROMATIC_ABERRATION, true, false),
     FILM_GRAIN(RuntimeSetting.SETTINGS_SLIDER_FILM_GRAIN, true, false),
-    MACRO_PAINT(RuntimeSetting.SETTINGS_SLIDER_MACRO_PAINT, false, true),
-    MACRO_BLOCKS(RuntimeSetting.SETTINGS_SLIDER_MACRO_BLOCKS, false, true),
     CAMERA_SHAKE_INTENSITY(RuntimeSetting.SETTINGS_SLIDER_CAMERA_SHAKE_INTENSITY, false, false),
     MASTER_VOLUME(RuntimeSetting.SETTINGS_SLIDER_MASTER_VOLUME, false, false),
     MUSIC_VOLUME(RuntimeSetting.SETTINGS_SLIDER_MUSIC_VOLUME, false, false),

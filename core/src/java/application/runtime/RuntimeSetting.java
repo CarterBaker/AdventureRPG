@@ -692,8 +692,6 @@ public class RuntimeSetting {
     public static final String SETTINGS_SLIDER_VIGNETTE = "Vignette";
     public static final String SETTINGS_SLIDER_CHROMATIC_ABERRATION = "Chromatic Aberration";
     public static final String SETTINGS_SLIDER_FILM_GRAIN = "Film Grain";
-    public static final String SETTINGS_SLIDER_MACRO_PAINT = "Distant Paint";
-    public static final String SETTINGS_SLIDER_MACRO_BLOCKS = "Distant Blocks";
     public static final String SETTINGS_SLIDER_CAMERA_SHAKE_INTENSITY = "Shake Intensity";
     public static final String SETTINGS_SLIDER_MASTER_VOLUME = "Master";
     public static final String SETTINGS_SLIDER_MUSIC_VOLUME = "Music";

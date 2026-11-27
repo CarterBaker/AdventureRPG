@@ -707,6 +707,13 @@ One line per session that changed this file: the date, what was added or removed
   per block so merged faces stop cracking) and `shaders/liquid/includes/WaterShading.glsl` (thin bank foam on rivers,
   sparse short ripple dashes in place of the hatching, no white crests, falls mostly azure, only pouring faces shaded
   as falls); regenerated `shaders/particles/waterfallspray/WaterfallSprayShader.fsh` (rounded foam, not stars).
+- 2026-11-27: Painted macro lighting. Added `shaders/postprocessing/lighting/includes/PaintedLighting.glsl`
+  (distant terrain lit in three flat tones with cool blue shade, hazing into the horizon); rewrote
+  `shaders/surface/includes/MacroPaint.glsl` (steepness blend along a blobby edge, meadow patches, cool rock, pale
+  peaks; the block pattern, strata and flat steps removed); regenerated `MacroTerrainShader.fsh`,
+  `shaders/postprocessing/lighting/LightingShader.fsh`, `shaders/includes/GBufferSurface.glsl`,
+  `shaders/includes/SettingsData.glsl` and `ubos/SettingsData.arpg` (the Distant Paint and Distant Blocks settings
+  removed).
 
 ## Textures and Sprites (2603 files)
 
@@ -2012,7 +2019,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/postprocessing/lighting/includes/`
 
-`AtmosphericFog.glsl`, `Outline.glsl`, `SkyReflection.glsl`, `ToonLighting.glsl`
+`AtmosphericFog.glsl`, `Outline.glsl`, `PaintedLighting.glsl`, `SkyReflection.glsl`, `ToonLighting.glsl`
 
 ### `assets/shaders/postprocessing/ssao/`
 
