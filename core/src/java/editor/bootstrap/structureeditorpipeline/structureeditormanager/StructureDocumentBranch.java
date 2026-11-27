@@ -1,5 +1,6 @@
 package editor.bootstrap.structureeditorpipeline.structureeditormanager;
 
+import editor.bootstrap.structureeditorpipeline.structureeditor.StructureEditorPartStruct;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -16,27 +17,29 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class StructureDocumentBranch extends BranchPackage {
 
     /*
-     * Reads a structure's entry into the cells the Structure Editor paints
+     * Reads a structure's entry into the layers the Structure Editor paints
      * and writes them back, the one place the editor speaks the structure
-     * format. Every block the "palette", "layers" and "blocks" lay is one
-     * cell, keyed by its position as authored before the origin is taken
-     * away, holding the block entry it is laid with (block, slot, shape,
-     * facing, spin, covering, coverage, content); a later entry overwrites an
-     * earlier one at the same cell, as StructureBuilder reads them, and a
-     * block entry laid below zero is dropped, as no layer can lay it. Written
-     * back, the cells become one palette keyed by single characters, every
-     * entry the structure already keyed keeping its key, layers row by row
-     * from the corner and the origin given; "blocks" is folded into the
-     * layers. Cell entries are never changed in place: an edit lays a new
-     * one.
+     * format. The structure's own "layers", "blocks", "furnishings" and
+     * "spawns" read as its first layer, then every one of its "parts" as a
+     * layer above it in order. Every block a layer lays is one cell, keyed by
+     * its position from the corner, holding the block entry it is laid with
+     * (block, slot, shape, facing, spin, covering, coverage, content); a
+     * later entry overwrites an earlier one at the same cell, as
+     * StructureBuilder reads them, and one laid below zero is dropped, as no
+     * layer row can lay it. Written back, every layer becomes a part, lowest
+     * first, sharing one palette keyed by single characters, every entry the
+     * structure already keyed keeping its key, its blocks as layer rows from
+     * the corner; the structure's own layers, blocks, furnishings and spawns
+     * are folded into its parts. Entries are never changed in place: an edit
+     * lays a new one.
      */
 
     // Read \\
 
-    // Every cell a structure entry lays, its earlier cells cleared, and its origin
-    void read(ArpgObjectStruct structureArpg, Long2ObjectOpenHashMap<ArpgObjectStruct> cells, int[] origin) {
+    // Every layer a structure entry holds, lowest first, and its origin
+    void read(ArpgObjectStruct structureArpg, ObjectArrayList<StructureEditorPartStruct> parts, int[] origin) {
 
-        cells.clear();
+        parts.clear();
 
         int[] authored = readVector(structureArpg, "origin");
 
@@ -45,13 +48,54 @@ class StructureDocumentBranch extends BranchPackage {
 
         Object2ObjectOpenHashMap<String, ArpgObjectStruct> key2Entry = readPalette(structureArpg);
 
-        if (ArpgUtility.hasArray(structureArpg, "layers"))
-            for (ArpgElementStruct layer : structureArpg.getAsArray("layers"))
+        if (isHoldingContent(structureArpg) || !ArpgUtility.hasArray(structureArpg, "parts"))
+            parts.add(readPart(structureArpg, EditorSetting.STRUCTURE_EDITOR_FIRST_LAYER_NAME, key2Entry));
+
+        if (!ArpgUtility.hasArray(structureArpg, "parts"))
+            return;
+
+        for (ArpgElementStruct part : structureArpg.getAsArray("parts"))
+            parts.add(readPart(
+                    part.getAsObject(),
+                    ArpgUtility.getString(part.getAsObject(), "name", EditorSetting.STRUCTURE_EDITOR_LAYER_NAME),
+                    key2Entry));
+    }
+
+    private boolean isHoldingContent(ArpgObjectStruct arpg) {
+        return ArpgUtility.hasArray(arpg, "layers") || ArpgUtility.hasArray(arpg, "blocks")
+                || ArpgUtility.hasArray(arpg, "furnishings") || ArpgUtility.hasArray(arpg, "spawns");
+    }
+
+    private StructureEditorPartStruct readPart(
+            ArpgObjectStruct partArpg,
+            String name,
+            Object2ObjectOpenHashMap<String, ArpgObjectStruct> key2Entry) {
+
+        StructureEditorPartStruct part = new StructureEditorPartStruct(name);
+        Long2ObjectOpenHashMap<ArpgObjectStruct> cells = part.getCells();
+
+        if (ArpgUtility.hasArray(partArpg, "layers"))
+            for (ArpgElementStruct layer : partArpg.getAsArray("layers"))
                 readLayer(layer.getAsObject(), key2Entry, cells);
 
-        if (ArpgUtility.hasArray(structureArpg, "blocks"))
-            for (ArpgElementStruct block : structureArpg.getAsArray("blocks"))
+        if (ArpgUtility.hasArray(partArpg, "blocks"))
+            for (ArpgElementStruct block : partArpg.getAsArray("blocks"))
                 readBlock(block.getAsObject(), key2Entry, cells);
+
+        readEntries(partArpg, "furnishings", part.getFurnishings());
+        readEntries(partArpg, "spawns", part.getSpawns());
+
+        return part;
+    }
+
+    private void readEntries(ArpgObjectStruct partArpg, String key, ObjectArrayList<ArpgObjectStruct> out) {
+
+        if (!ArpgUtility.hasArray(partArpg, key))
+            return;
+
+        for (ArpgElementStruct entry : partArpg.getAsArray(key))
+            if (entry.isObject())
+                out.add(entry.getAsObject().deepCopy());
     }
 
     private Object2ObjectOpenHashMap<String, ArpgObjectStruct> readPalette(ArpgObjectStruct structureArpg) {
@@ -82,7 +126,7 @@ class StructureDocumentBranch extends BranchPackage {
         int height = ArpgUtility.getInt(layerArpg, "height", 1);
         ArpgArrayStruct rows = layerArpg.getAsArray("rows");
 
-        for (int y = baseY; y < baseY + height; y++)
+        for (int y = Math.max(0, baseY); y < baseY + height; y++)
             for (int z = 0; z < rows.size(); z++)
                 readRow(rows.get(z).getAsString(), y, z, key2Entry, cells);
     }
@@ -153,28 +197,63 @@ class StructureDocumentBranch extends BranchPackage {
 
     // Write \\
 
-    // The cells and origin written into a structure entry as one palette, its layers and its origin — false, the
-    // entry untouched, when they hold more distinct block entries than palette keys exist
-    boolean write(ArpgObjectStruct structureArpg, Long2ObjectOpenHashMap<ArpgObjectStruct> cells, int[] origin) {
+    // Every layer and the origin written into a structure entry as one shared palette and a part to each layer —
+    // false, the entry untouched, when the layers lay more distinct block entries than palette keys exist
+    boolean write(ArpgObjectStruct structureArpg, ObjectArrayList<StructureEditorPartStruct> parts, int[] origin) {
 
         Object2ObjectOpenHashMap<String, String> text2Key = new Object2ObjectOpenHashMap<>();
         ArpgObjectStruct paletteArpg = new ArpgObjectStruct();
 
-        if (!keyEntries(structureArpg, cells, text2Key, paletteArpg))
+        if (!keyEntries(structureArpg, parts, text2Key, paletteArpg))
             return false;
+
+        ArpgArrayStruct partsArpg = new ArpgArrayStruct();
+
+        for (int i = 0; i < parts.size(); i++)
+            partsArpg.add(writePart(parts.get(i), text2Key));
 
         writeOrigin(structureArpg, origin);
         structureArpg.add("palette", paletteArpg);
-        structureArpg.add("layers", writeLayers(cells, text2Key, resolveBounds(cells)));
+        structureArpg.remove("layers");
         structureArpg.remove("blocks");
+        structureArpg.remove("furnishings");
+        structureArpg.remove("spawns");
+        structureArpg.add("parts", partsArpg);
 
         return true;
     }
 
-    // Every distinct entry the cells lay given a key, keeping each key the entry already gave it
+    private ArpgObjectStruct writePart(
+            StructureEditorPartStruct part,
+            Object2ObjectOpenHashMap<String, String> text2Key) {
+
+        ArpgObjectStruct partArpg = new ArpgObjectStruct();
+
+        partArpg.addProperty("name", part.getName());
+        partArpg.add("layers", writeLayers(part.getCells(), text2Key));
+        writeEntries(partArpg, "furnishings", part.getFurnishings());
+        writeEntries(partArpg, "spawns", part.getSpawns());
+
+        return partArpg;
+    }
+
+    private void writeEntries(ArpgObjectStruct partArpg, String key, ObjectArrayList<ArpgObjectStruct> entries) {
+
+        if (entries.isEmpty())
+            return;
+
+        ArpgArrayStruct entriesArpg = new ArpgArrayStruct();
+
+        for (int i = 0; i < entries.size(); i++)
+            entriesArpg.add(entries.get(i).deepCopy());
+
+        partArpg.add(key, entriesArpg);
+    }
+
+    // Every distinct entry the layers lay given a key, keeping each key the entry already gave it
     private boolean keyEntries(
             ArpgObjectStruct structureArpg,
-            Long2ObjectOpenHashMap<ArpgObjectStruct> cells,
+            ObjectArrayList<StructureEditorPartStruct> parts,
             Object2ObjectOpenHashMap<String, String> text2Key,
             ArpgObjectStruct paletteArpg) {
 
@@ -187,25 +266,26 @@ class StructureDocumentBranch extends BranchPackage {
                 .object2ObjectEntrySet())
             text2OldKey.put(ArpgUtility.formatCompactText(keyed.getValue()), keyed.getKey());
 
-        for (Long2ObjectMap.Entry<ArpgObjectStruct> cell : cells.long2ObjectEntrySet()) {
+        for (int i = 0; i < parts.size(); i++)
+            for (Long2ObjectMap.Entry<ArpgObjectStruct> cell : parts.get(i).getCells().long2ObjectEntrySet()) {
 
-            String text = ArpgUtility.formatCompactText(cell.getValue());
+                String text = ArpgUtility.formatCompactText(cell.getValue());
 
-            if (text2Key.containsKey(text))
-                continue;
+                if (text2Key.containsKey(text))
+                    continue;
 
-            String oldKey = text2OldKey.get(text);
+                String oldKey = text2OldKey.get(text);
 
-            if (oldKey == null) {
-                text2Key.put(text, null);
-                fresh.add(cell.getValue());
-                continue;
+                if (oldKey == null) {
+                    text2Key.put(text, null);
+                    fresh.add(cell.getValue());
+                    continue;
+                }
+
+                text2Key.put(text, oldKey);
+                key2Entry.put(oldKey, cell.getValue());
+                usedKeys.add(oldKey);
             }
-
-            text2Key.put(text, oldKey);
-            key2Entry.put(oldKey, cell.getValue());
-            usedKeys.add(oldKey);
-        }
 
         String pool = EditorSetting.STRUCTURE_EDITOR_PALETTE_KEYS;
         int next = 0;
@@ -232,25 +312,6 @@ class StructureDocumentBranch extends BranchPackage {
         return true;
     }
 
-    // Minimum and maximum x, y and z of every cell
-    private int[] resolveBounds(Long2ObjectOpenHashMap<ArpgObjectStruct> cells) {
-
-        int[] bounds = { Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE,
-                Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE };
-
-        for (long position : cells.keySet()) {
-
-            bounds[0] = Math.min(bounds[0], Coordinate3Long.unpackX(position));
-            bounds[1] = Math.min(bounds[1], Coordinate3Long.unpackY(position));
-            bounds[2] = Math.min(bounds[2], Coordinate3Long.unpackZ(position));
-            bounds[3] = Math.max(bounds[3], Coordinate3Long.unpackX(position));
-            bounds[4] = Math.max(bounds[4], Coordinate3Long.unpackY(position));
-            bounds[5] = Math.max(bounds[5], Coordinate3Long.unpackZ(position));
-        }
-
-        return bounds;
-    }
-
     // The origin written whenever it lies off the corner or the entry already names one
     private void writeOrigin(ArpgObjectStruct structureArpg, int[] origin) {
 
@@ -264,29 +325,39 @@ class StructureDocumentBranch extends BranchPackage {
         structureArpg.add("origin", originArpg);
     }
 
-    // One layer for every height holding a cell, its rows along z and each row's characters along x
+    // One layer row set for every height holding a cell, its rows along z from the corner and each row's characters
+    // along x
     private ArpgArrayStruct writeLayers(
             Long2ObjectOpenHashMap<ArpgObjectStruct> cells,
-            Object2ObjectOpenHashMap<String, String> text2Key,
-            int[] bounds) {
+            Object2ObjectOpenHashMap<String, String> text2Key) {
 
         ArpgArrayStruct layers = new ArpgArrayStruct();
 
         if (cells.isEmpty())
             return layers;
 
+        int maxX = 0;
+        int maxY = 0;
+        int maxZ = 0;
+
+        for (long cell : cells.keySet()) {
+            maxX = Math.max(maxX, Coordinate3Long.unpackX(cell));
+            maxY = Math.max(maxY, Coordinate3Long.unpackY(cell));
+            maxZ = Math.max(maxZ, Coordinate3Long.unpackZ(cell));
+        }
+
         StringBuilder row = new StringBuilder();
 
-        for (int y = bounds[1]; y <= bounds[4]; y++) {
+        for (int y = 0; y <= maxY; y++) {
 
             ArpgArrayStruct rows = new ArpgArrayStruct();
-            int lastRow = EngineSetting.INDEX_NOT_FOUND;
+            int lastRow = 0;
 
-            for (int z = 0; z <= bounds[5]; z++) {
+            for (int z = 0; z <= maxZ; z++) {
 
                 row.setLength(0);
 
-                for (int x = 0; x <= bounds[3]; x++) {
+                for (int x = 0; x <= maxX; x++) {
 
                     ArpgObjectStruct entry = cells.get(Coordinate3Long.pack(x, y, z));
                     row.append(entry == null
@@ -295,14 +366,13 @@ class StructureDocumentBranch extends BranchPackage {
                 }
 
                 String trimmed = row.toString().stripTrailing();
-
                 rows.add(trimmed);
 
                 if (!trimmed.isEmpty())
                     lastRow = rows.size();
             }
 
-            if (lastRow == EngineSetting.INDEX_NOT_FOUND)
+            if (lastRow == 0)
                 continue;
 
             while (rows.size() > lastRow)

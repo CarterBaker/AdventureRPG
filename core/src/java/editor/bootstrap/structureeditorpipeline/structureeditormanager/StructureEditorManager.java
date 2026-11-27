@@ -3,8 +3,11 @@ package editor.bootstrap.structureeditorpipeline.structureeditormanager;
 import java.util.Objects;
 
 import application.bootstrap.contentpipeline.contentmanager.ContentManager;
+import application.bootstrap.furnishingpipeline.furnishingmanager.FurnishingManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryType;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
+import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.block.SubBlockShape;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
@@ -14,6 +17,7 @@ import editor.bootstrap.infopipeline.infoentry.InfoEntryStruct;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.structureeditorpipeline.structureeditor.StructureEditorLayer;
+import editor.bootstrap.structureeditorpipeline.structureeditor.StructureEditorPartStruct;
 import editor.bootstrap.structureeditorpipeline.structureeditor.StructureEditorStepStruct;
 import editor.bootstrap.toolpipeline.toolmanager.ToolManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
@@ -38,24 +42,29 @@ public class StructureEditorManager extends ManagerPackage {
 
     /*
      * Owns the Structure Editor's shared state: the structure painted, the
-     * one the Hierarchy and the Palette tab pick, its cells read from its
-     * entry, the layer picked (Blocks, Coverage, Contents), the architecture
-     * it is shown built in and what each layer paints with. The Palette tab
-     * lists every structure, then for the Blocks layer the architectures, the
-     * slots the one chosen fills, every block entry the structure lays and
-     * every block, and for the Coverage and Contents layers every covering or
-     * content after None. A press hands the tool's work to the cells: the
+     * one the Hierarchy and the Palette tab pick, read from its entry as a
+     * stack of layers (a floor, a roof, any alteration), each laying its own
+     * cells, furniture and NPCs, the layer picked and, within it, the job
+     * picked: Blocks, Coverage, Contents, Furniture or Entities, fixed in
+     * every layer. Layers are added, removed, moved up and down, renamed and
+     * shown or hidden as a painting tool's are; a higher layer wins a cell a
+     * lower one also lays, and only shown layers are drawn and struck. The
+     * Palette tab lists every structure, then what the job paints with: the
+     * architectures the structure may be shown built in, the slots the one
+     * chosen fills, the structure's own block entries and every block; every
+     * covering or content after None; every furnishing table, the loot its
+     * containers are filled with and the turn it stands at; every NPC. The
      * Brush lays the block chosen against the face struck, or paints every
-     * cell within its Size that can take the covering or content chosen, the
-     * covering at the level its Strength gives; Erase takes blocks away or
-     * empties cells of their covering or content; Fill does the same to every
-     * cell joined to the one struck that is laid alike; Pick takes up what the
-     * cell struck holds. No cell ever lies below zero: a block laid past the
-     * structure's low edge shifts every cell and the origin up together, so
-     * every offset from the origin holds. A stroke is one step of the editor's own history and
-     * is written into the entry through InfoManager.editEntry() when it ends,
-     * so the file is saved and reverted as any content; any other change to
-     * the entry reads the cells again.
+     * cell of the layer within its Size that can take the covering or content
+     * chosen, the covering at its Strength's level, or stands the furniture
+     * or NPC chosen in the cell against the face; Erase takes away what the
+     * job lays; Fill works every cell of the layer joined to the one struck
+     * and laid alike; Pick takes up what the cell holds. No cell lies below
+     * zero: building past the low edge shifts every layer and the origin up
+     * together. Every stroke and layer change is one step of the editor's own
+     * history, written into the entry through InfoManager.editEntry() when it
+     * ends, so the file is saved and reverted as any content; any other
+     * change to the entry reads the layers again.
      */
 
     // Internal
@@ -64,23 +73,36 @@ public class StructureEditorManager extends ManagerPackage {
     private BlockManager blockManager;
     private CoveringManager coveringManager;
     private ContentManager contentManager;
+    private FurnishingManager furnishingManager;
+    private ItemDefinitionManager itemDefinitionManager;
     private SubVoxelManager subVoxelManager;
     private StructureDocumentBranch structureDocumentBranch;
     private StructurePaintBranch structurePaintBranch;
+    private StructurePlaceBranch structurePlaceBranch;
 
-    // Document
+    // Document — every layer, lowest first, the one picked, and the origin
     private String structureName;
-    private Long2ObjectOpenHashMap<ArpgObjectStruct> cells;
+    private ObjectArrayList<StructureEditorPartStruct> parts;
+    private int partIndex;
     private int[] origin;
     private boolean committing;
+
+    // Shown — every shown layer's cells, a higher layer's winning, made again whenever the revision moves
+    private Long2ObjectOpenHashMap<ArpgObjectStruct> shownCells;
+    private int shownRevision;
 
     // Choice
     private StructureEditorLayer layer;
     private String architectureName;
     private Object2ObjectOpenHashMap<String, String> slot2Block;
+    private Object2ObjectOpenHashMap<String, String> furnishing2Item;
     private ArpgObjectStruct chosenEntry;
     private String chosenCovering;
     private String chosenContent;
+    private String chosenFurnishing;
+    private String chosenLoot;
+    private int chosenSpin;
+    private String chosenNpc;
 
     // Palette — the structure's own block entries as last listed, which their rows name by index
     private ObjectArrayList<ArpgObjectStruct> listedEntries;
@@ -92,7 +114,7 @@ public class StructureEditorManager extends ManagerPackage {
     private LongArrayList fillQueue;
     private LongOpenHashSet fillSeen;
 
-    // History — the cells and origin before each step, and the steps undone
+    // History — everything before each step, and the steps undone
     private ObjectArrayList<StructureEditorStepStruct> undoSteps;
     private ObjectArrayList<StructureEditorStepStruct> redoSteps;
 
@@ -109,17 +131,26 @@ public class StructureEditorManager extends ManagerPackage {
         // Internal
         this.structureDocumentBranch = create(StructureDocumentBranch.class);
         this.structurePaintBranch = create(StructurePaintBranch.class);
+        this.structurePlaceBranch = create(StructurePlaceBranch.class);
 
         // Document
-        this.cells = new Long2ObjectOpenHashMap<>();
+        this.parts = new ObjectArrayList<>();
         this.origin = new int[EngineSetting.AXIS_COUNT];
+
+        // Shown
+        this.shownCells = new Long2ObjectOpenHashMap<>();
+        this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
 
         // Choice
         this.layer = StructureEditorLayer.BLOCKS;
         this.architectureName = "";
         this.slot2Block = new Object2ObjectOpenHashMap<>();
+        this.furnishing2Item = new Object2ObjectOpenHashMap<>();
         this.chosenCovering = "";
         this.chosenContent = "";
+        this.chosenFurnishing = "";
+        this.chosenLoot = "";
+        this.chosenNpc = "";
 
         // Palette
         this.listedEntries = new ObjectArrayList<>();
@@ -143,6 +174,8 @@ public class StructureEditorManager extends ManagerPackage {
         this.blockManager = get(BlockManager.class);
         this.coveringManager = get(CoveringManager.class);
         this.contentManager = get(ContentManager.class);
+        this.furnishingManager = get(FurnishingManager.class);
+        this.itemDefinitionManager = get(ItemDefinitionManager.class);
         this.subVoxelManager = get(SubVoxelManager.class);
     }
 
@@ -174,10 +207,10 @@ public class StructureEditorManager extends ManagerPackage {
         this.structureName = selectedName;
         undoSteps.clear();
         redoSteps.clear();
-        readCells();
+        readParts();
     }
 
-    // The entry changed from anywhere but a stroke of this editor read again, its history let go
+    // The entry changed from anywhere but this editor read again, its history let go
     private void applyChange(InfoEntryStruct entry) {
 
         if (committing || !entry.getEntryName().equals(structureName))
@@ -185,7 +218,7 @@ public class StructureEditorManager extends ManagerPackage {
 
         undoSteps.clear();
         redoSteps.clear();
-        readCells();
+        readParts();
     }
 
     private void applyDelete(InfoEntryStruct entry) {
@@ -194,7 +227,7 @@ public class StructureEditorManager extends ManagerPackage {
             return;
 
         this.structureName = null;
-        cells.clear();
+        parts.clear();
         notifyChanged();
     }
 
@@ -204,14 +237,22 @@ public class StructureEditorManager extends ManagerPackage {
             chooseArchitecture(architectureName);
     }
 
-    private void readCells() {
+    // Every layer read from the entry, the same one picked by name where it still stands, the top one otherwise
+    private void readParts() {
 
+        String pickedName = parts.isEmpty() ? null : part().getName();
         InfoEntryStruct entry = findEntry();
 
+        parts.clear();
+
         if (entry != null)
-            structureDocumentBranch.read(entry.getArpg(), cells, origin);
-        else
-            cells.clear();
+            structureDocumentBranch.read(entry.getArpg(), parts, origin);
+
+        this.partIndex = Math.max(0, parts.size() - 1);
+
+        for (int i = 0; i < parts.size(); i++)
+            if (parts.get(i).getName().equals(pickedName))
+                this.partIndex = i;
 
         notifyChanged();
     }
@@ -230,29 +271,150 @@ public class StructureEditorManager extends ManagerPackage {
 
     // Layers \\
 
+    // Every layer, top first, each a group holding its fixed jobs, its eye showing or hiding all it lays
     public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
 
-        StructureEditorLayer[] layers = StructureEditorLayer.values();
+        StructureEditorLayer[] jobs = StructureEditorLayer.values();
 
-        for (int i = 0; i < layers.length; i++)
-            roots.add(new LayerNodeStruct(layers[i].name(), layers[i].label, layers[i] == layer, false));
+        for (int i = parts.size() - 1; i >= 0; i--) {
+
+            StructureEditorPartStruct part = parts.get(i);
+            LayerNodeStruct group = new LayerNodeStruct(
+                    part.getName(), part.getName(), i == partIndex, true, part.isShown(), i == partIndex);
+
+            for (int j = 0; j < jobs.length; j++)
+                group.addChild(new LayerNodeStruct(
+                        toLayerKey(part, jobs[j]), jobs[j].label, i == partIndex && jobs[j] == layer, false));
+
+            roots.add(group);
+        }
     }
 
+    // A layer picked keeps the job picked; a job picked is picked in its layer
     public void selectLayer(String layerKey) {
 
-        StructureEditorLayer selected = StructureEditorLayer.valueOf(layerKey);
+        int separator = layerKey.lastIndexOf(EditorSetting.STRUCTURE_EDITOR_LAYER_SEPARATOR);
+        int picked = findPart(separator < 0 ? layerKey : layerKey.substring(0, separator));
 
-        if (selected == layer)
+        if (picked == EngineSetting.INDEX_NOT_FOUND)
             return;
 
         endStroke();
-        this.layer = selected;
+        this.partIndex = picked;
+
+        if (separator >= 0)
+            this.layer = StructureEditorLayer.valueOf(layerKey.substring(separator + 1));
+
         notifyChanged();
+    }
+
+    // A layer's eye: shown or hidden in the editor only, never in the game
+    public void toggleLayerShown(String layerKey) {
+
+        int picked = findPart(layerKey);
+
+        if (picked == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        parts.get(picked).setShown(!parts.get(picked).isShown());
+        notifyChanged();
+    }
+
+    // A new empty layer standing just above the one picked, and picked
+    public void addLayer() {
+
+        if (structureName == null)
+            return;
+
+        beginStep();
+        parts.add(partIndex + 1, new StructureEditorPartStruct(resolveFreeName()));
+        this.partIndex++;
+        this.strokeChanged = true;
+        endStroke();
+    }
+
+    // The layer picked taken away with all it lays, the last layer always kept
+    public void removeLayer() {
+
+        if (structureName == null || parts.size() <= 1) {
+            setStatusMessage(EditorSetting.STRUCTURE_EDITOR_MESSAGE_LAST_LAYER);
+            return;
+        }
+
+        beginStep();
+        parts.remove(partIndex);
+        this.partIndex = Math.min(partIndex, parts.size() - 1);
+        this.strokeChanged = true;
+        endStroke();
+    }
+
+    // The layer picked moved one place up or down the stack, staying picked
+    public void moveLayer(int direction) {
+
+        int target = partIndex + direction;
+
+        if (structureName == null || target < 0 || target >= parts.size())
+            return;
+
+        beginStep();
+        parts.add(target, parts.remove(partIndex));
+        this.partIndex = target;
+        this.strokeChanged = true;
+        endStroke();
+    }
+
+    // Whether a name may be given to the layer picked: not empty, not another layer's, never holding the separator
+    public boolean isLayerNameAvailable(String name) {
+        return !name.isBlank() && name.indexOf(EditorSetting.STRUCTURE_EDITOR_LAYER_SEPARATOR) < 0
+                && (findPart(name) == EngineSetting.INDEX_NOT_FOUND || findPart(name) == partIndex);
+    }
+
+    public void renameLayer(String name) {
+
+        if (structureName == null || parts.isEmpty() || !isLayerNameAvailable(name))
+            return;
+
+        beginStep();
+        part().setName(name.strip());
+        this.strokeChanged = true;
+        endStroke();
+    }
+
+    public String getLayerName() {
+        return parts.isEmpty() ? "" : part().getName();
+    }
+
+    private String resolveFreeName() {
+
+        int number = parts.size() + 1;
+
+        while (findPart(EditorSetting.STRUCTURE_EDITOR_LAYER_NAME + EditorSetting.INFO_LABEL_WORD_SEPARATOR
+                + number) != EngineSetting.INDEX_NOT_FOUND)
+            number++;
+
+        return EditorSetting.STRUCTURE_EDITOR_LAYER_NAME + EditorSetting.INFO_LABEL_WORD_SEPARATOR + number;
+    }
+
+    private int findPart(String name) {
+
+        for (int i = 0; i < parts.size(); i++)
+            if (parts.get(i).getName().equals(name))
+                return i;
+
+        return EngineSetting.INDEX_NOT_FOUND;
+    }
+
+    private String toLayerKey(StructureEditorPartStruct part, StructureEditorLayer job) {
+        return part.getName() + EditorSetting.STRUCTURE_EDITOR_LAYER_SEPARATOR + job.name();
+    }
+
+    private StructureEditorPartStruct part() {
+        return parts.get(partIndex);
     }
 
     // Palette \\
 
-    // Every structure, then what the layer picked paints with
+    // Every structure, then what the job picked paints with
     public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         rows.add(CharacterViewRowStruct.header(EditorSetting.STRUCTURE_EDITOR_PALETTE_STRUCTURES));
@@ -262,19 +424,42 @@ public class StructureEditorManager extends ManagerPackage {
         if (structureName == null)
             return;
 
-        if (layer == StructureEditorLayer.BLOCKS) {
-            addBlockRows(rows);
-            return;
+        switch (layer) {
+            case BLOCKS -> addBlockRows(rows);
+            case COVERAGE -> addChoiceRows(rows, EditorSetting.STRUCTURE_EDITOR_ROW_COVERING, chosenCovering);
+            case CONTENTS -> addChoiceRows(rows, EditorSetting.STRUCTURE_EDITOR_ROW_CONTENT, chosenContent);
+            case FURNITURE -> addFurnitureRows(rows);
+            case ENTITIES -> addChoiceRows(rows, EditorSetting.STRUCTURE_EDITOR_ROW_NPC, chosenNpc);
         }
+    }
 
-        String prefix = layer == StructureEditorLayer.COVERAGE
-                ? EditorSetting.STRUCTURE_EDITOR_ROW_COVERING
-                : EditorSetting.STRUCTURE_EDITOR_ROW_CONTENT;
-        String chosen = layer == StructureEditorLayer.COVERAGE ? chosenCovering : chosenContent;
+    // None, then every entry of the job's schema
+    private void addChoiceRows(ObjectArrayList<CharacterViewRowStruct> rows, String prefix, String chosen) {
 
         rows.add(CharacterViewRowStruct.header(layer.label));
         rows.add(CharacterViewRowStruct.item(prefix, EditorSetting.STRUCTURE_EDITOR_LABEL_NONE, chosen.isEmpty()));
         addEntryRows(rows, layer.schemaName, prefix, chosen);
+    }
+
+    // Every furnishing table, then the loot its containers are filled with, then the turn it stands at
+    private void addFurnitureRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+
+        rows.add(CharacterViewRowStruct.header(layer.label));
+        addEntryRows(rows, layer.schemaName, EditorSetting.STRUCTURE_EDITOR_ROW_FURNISHING, chosenFurnishing);
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.STRUCTURE_EDITOR_PALETTE_LOOT));
+        rows.add(CharacterViewRowStruct.item(
+                EditorSetting.STRUCTURE_EDITOR_ROW_LOOT, EditorSetting.STRUCTURE_EDITOR_LABEL_NONE,
+                chosenLoot.isEmpty()));
+        addEntryRows(rows, EditorSetting.INFO_SCHEMA_LOOT_TABLES, EditorSetting.STRUCTURE_EDITOR_ROW_LOOT, chosenLoot);
+
+        rows.add(CharacterViewRowStruct.header(EditorSetting.STRUCTURE_EDITOR_PALETTE_TURN));
+
+        for (int spin = 0; spin < EngineSetting.ENCODED_FACE_SPIN_COUNT; spin++)
+            rows.add(CharacterViewRowStruct.item(
+                    EditorSetting.STRUCTURE_EDITOR_ROW_TURN + spin,
+                    EditorSetting.STRUCTURE_EDITOR_TURN_LABELS[spin],
+                    spin == chosenSpin));
     }
 
     // Every entry of a schema as a row naming it behind a prefix, the chosen one marked
@@ -345,22 +530,23 @@ public class StructureEditorManager extends ManagerPackage {
         }
     }
 
-    // Every distinct block entry the structure lays, in the order first met
+    // Every distinct block entry any layer lays, in the order first met
     private void gatherListedEntries() {
 
         listedEntries.clear();
 
         ObjectArrayList<String> texts = new ObjectArrayList<>();
 
-        for (ArpgObjectStruct entry : cells.values()) {
+        for (int i = 0; i < parts.size(); i++)
+            for (ArpgObjectStruct entry : parts.get(i).getCells().values()) {
 
-            String text = ArpgUtility.formatCompactText(entry);
+                String text = ArpgUtility.formatCompactText(entry);
 
-            if (!texts.contains(text)) {
-                texts.add(text);
-                listedEntries.add(entry);
+                if (!texts.contains(text)) {
+                    texts.add(text);
+                    listedEntries.add(entry);
+                }
             }
-        }
     }
 
     private boolean isChosen(ArpgObjectStruct entry) {
@@ -368,31 +554,45 @@ public class StructureEditorManager extends ManagerPackage {
                 && ArpgUtility.formatCompactText(chosenEntry).equals(ArpgUtility.formatCompactText(entry));
     }
 
-    // A Palette row chosen: a structure to paint, an architecture to show it in, or what the layer paints with
+    // A Palette row chosen: a structure, an architecture to show it in, or what the job paints with
     public void choosePaletteRow(String rowKey) {
 
         if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_STRUCTURE))
-            selectStructure(rowKey.substring(EditorSetting.STRUCTURE_EDITOR_ROW_STRUCTURE.length()));
+            selectStructure(after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_STRUCTURE));
         else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_ARCHITECTURE))
-            chooseArchitecture(rowKey.substring(EditorSetting.STRUCTURE_EDITOR_ROW_ARCHITECTURE.length()));
+            chooseArchitecture(after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_ARCHITECTURE));
         else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_SLOT))
-            chooseSlot(rowKey.substring(EditorSetting.STRUCTURE_EDITOR_ROW_SLOT.length()));
+            chooseSlot(after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_SLOT));
         else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_ENTRY))
-            chooseEntry(listedEntries.get(
-                    Integer.parseInt(rowKey.substring(EditorSetting.STRUCTURE_EDITOR_ROW_ENTRY.length()))));
+            chooseEntry(listedEntries.get(Integer.parseInt(after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_ENTRY))));
         else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_BLOCK))
-            chooseBlock(rowKey.substring(EditorSetting.STRUCTURE_EDITOR_ROW_BLOCK.length()));
+            chooseBlock(after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_BLOCK));
         else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_COVERING))
-            chooseCovering(rowKey.substring(EditorSetting.STRUCTURE_EDITOR_ROW_COVERING.length()));
+            this.chosenCovering = after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_COVERING);
+        else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_CONTENT))
+            this.chosenContent = after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_CONTENT);
+        else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_FURNISHING))
+            this.chosenFurnishing = after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_FURNISHING);
+        else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_LOOT))
+            this.chosenLoot = after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_LOOT);
+        else if (rowKey.startsWith(EditorSetting.STRUCTURE_EDITOR_ROW_TURN))
+            this.chosenSpin = Integer.parseInt(after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_TURN));
         else
-            chooseContent(rowKey.substring(EditorSetting.STRUCTURE_EDITOR_ROW_CONTENT.length()));
+            this.chosenNpc = after(rowKey, EditorSetting.STRUCTURE_EDITOR_ROW_NPC);
+
+        notifyChanged();
     }
 
-    // The architecture the structure is shown built in, empty to show it as authored
+    private String after(String rowKey, String prefix) {
+        return rowKey.substring(prefix.length());
+    }
+
+    // The architecture the structure is shown built in, empty to show it as authored: its block and furniture slots
     private void chooseArchitecture(String chosenName) {
 
         this.architectureName = chosenName;
         slot2Block.clear();
+        furnishing2Item.clear();
 
         InfoEntryStruct entry = chosenName.isEmpty()
                 ? null
@@ -408,6 +608,14 @@ public class StructureEditorManager extends ManagerPackage {
                         slot2Block.put(
                                 group + EngineSetting.ARCHITECTURE_SLOT_SEPARATOR + place,
                                 blocksArpg.getAsObject(group).get(place).getAsString());
+        }
+
+        if (entry != null && ArpgUtility.hasObject(entry.getArpg(), "furniture")) {
+
+            ArpgObjectStruct furnitureArpg = entry.getArpg().getAsObject("furniture");
+
+            for (String table : furnitureArpg.keySet())
+                furnishing2Item.put(table, furnitureArpg.get(table).getAsString());
         }
 
         notifyChanged();
@@ -430,21 +638,7 @@ public class StructureEditorManager extends ManagerPackage {
     }
 
     private void chooseEntry(ArpgObjectStruct entry) {
-
         this.chosenEntry = entry;
-        notifyChanged();
-    }
-
-    private void chooseCovering(String coveringName) {
-
-        this.chosenCovering = coveringName;
-        notifyChanged();
-    }
-
-    private void chooseContent(String contentName) {
-
-        this.chosenContent = contentName;
-        notifyChanged();
     }
 
     // Tools \\
@@ -454,8 +648,13 @@ public class StructureEditorManager extends ManagerPackage {
 
         EditorTool tool = toolManager.getTool(ToolCanvas.STRUCTURE);
 
-        if (structureName == null || tool == EditorTool.HAND)
+        if (structureName == null || parts.isEmpty() || tool == EditorTool.HAND)
             return;
+
+        if (!part().isShown()) {
+            setStatusMessage(EditorSetting.STRUCTURE_EDITOR_MESSAGE_HIDDEN);
+            return;
+        }
 
         long cell = cellX >= 0 && cellY >= 0 && cellZ >= 0
                 ? Coordinate3Long.pack(cellX, cellY, cellZ)
@@ -485,12 +684,11 @@ public class StructureEditorManager extends ManagerPackage {
         if (!stroking)
             return;
 
-        boolean building = layer == StructureEditorLayer.BLOCKS
-                && toolManager.getTool(ToolCanvas.STRUCTURE) == EditorTool.BRUSH;
-        int centerX = building && face != null ? cellX + face.x : cellX;
-        int centerY = building && face != null ? cellY + face.y : cellY;
-        int centerZ = building && face != null ? cellZ + face.z : cellZ;
-        long center = Coordinate3Long.pack(centerX, centerY, centerZ);
+        boolean against = isBuilding() && face != null;
+        int centerX = against ? cellX + face.x : cellX;
+        int centerY = against ? cellY + face.y : cellY;
+        int centerZ = against ? cellZ + face.z : cellZ;
+        long center = Coordinate3Long.pack(Math.max(0, centerX), Math.max(0, centerY), Math.max(0, centerZ));
 
         if (center == lastStrokeCell)
             return;
@@ -503,13 +701,23 @@ public class StructureEditorManager extends ManagerPackage {
         endStroke();
     }
 
-    // Every cell within the Brush's Size of a centre given the tool's work, the structure shifted up first where
-    // the Brush builds past its low edge
+    // Whether the tool puts something new against the face struck: the Brush laying blocks, furniture or NPCs
+    private boolean isBuilding() {
+        return toolManager.getTool(ToolCanvas.STRUCTURE) == EditorTool.BRUSH
+                && (layer == StructureEditorLayer.BLOCKS || layer == StructureEditorLayer.FURNITURE
+                        || layer == StructureEditorLayer.ENTITIES);
+    }
+
+    // Every cell within the Brush's Size of a centre given the tool's work, furniture and NPCs one cell alone; the
+    // structure shifted up first where the tool builds past its low edge
     private void stamp(int centerX, int centerY, int centerZ) {
 
-        int reach = Math.max(0, Math.round(toolManager.getOption(ToolCanvas.STRUCTURE, ToolOption.SIZE)) - 1);
+        boolean single = layer == StructureEditorLayer.FURNITURE || layer == StructureEditorLayer.ENTITIES;
+        int reach = single
+                ? 0
+                : Math.max(0, Math.round(toolManager.getOption(ToolCanvas.STRUCTURE, ToolOption.SIZE)) - 1);
 
-        if (layer == StructureEditorLayer.BLOCKS && toolManager.getTool(ToolCanvas.STRUCTURE) == EditorTool.BRUSH) {
+        if (isBuilding()) {
 
             int shiftX = Math.max(0, reach - centerX);
             int shiftY = Math.max(0, reach - centerY);
@@ -528,22 +736,27 @@ public class StructureEditorManager extends ManagerPackage {
                         apply(Coordinate3Long.pack(x, y, z));
     }
 
-    // Every cell and the origin moved up together, the stroke's last cell with them
+    // Every layer's cells and the origin moved up together, so furniture and NPCs, placed from the origin, hold
     private void shift(int shiftX, int shiftY, int shiftZ) {
 
         if (shiftX == 0 && shiftY == 0 && shiftZ == 0)
             return;
 
-        Long2ObjectOpenHashMap<ArpgObjectStruct> shifted = new Long2ObjectOpenHashMap<>(cells.size());
+        for (int i = 0; i < parts.size(); i++) {
 
-        for (Long2ObjectOpenHashMap.Entry<ArpgObjectStruct> cell : cells.long2ObjectEntrySet())
-            shifted.put(Coordinate3Long.pack(
-                    Coordinate3Long.unpackX(cell.getLongKey()) + shiftX,
-                    Coordinate3Long.unpackY(cell.getLongKey()) + shiftY,
-                    Coordinate3Long.unpackZ(cell.getLongKey()) + shiftZ), cell.getValue());
+            Long2ObjectOpenHashMap<ArpgObjectStruct> cells = parts.get(i).getCells();
+            Long2ObjectOpenHashMap<ArpgObjectStruct> shifted = new Long2ObjectOpenHashMap<>(cells.size());
 
-        cells.clear();
-        cells.putAll(shifted);
+            for (Long2ObjectOpenHashMap.Entry<ArpgObjectStruct> cell : cells.long2ObjectEntrySet())
+                shifted.put(Coordinate3Long.pack(
+                        Coordinate3Long.unpackX(cell.getLongKey()) + shiftX,
+                        Coordinate3Long.unpackY(cell.getLongKey()) + shiftY,
+                        Coordinate3Long.unpackZ(cell.getLongKey()) + shiftZ), cell.getValue());
+
+            cells.clear();
+            cells.putAll(shifted);
+        }
+
         origin[0] += shiftX;
         origin[1] += shiftY;
         origin[2] += shiftZ;
@@ -551,12 +764,13 @@ public class StructureEditorManager extends ManagerPackage {
         this.strokeChanged = true;
     }
 
-    // Every cell joined face to face to the one struck and laid alike given the tool's work
+    // Every cell of the layer joined face to face to the one struck and laid alike given the tool's work
     private void fill(long start) {
 
+        Long2ObjectOpenHashMap<ArpgObjectStruct> cells = part().getCells();
         ArpgObjectStruct match = cells.get(start);
 
-        if (match == null)
+        if (match == null || layer == StructureEditorLayer.FURNITURE || layer == StructureEditorLayer.ENTITIES)
             return;
 
         fillQueue.clear();
@@ -578,8 +792,7 @@ public class StructureEditorManager extends ManagerPackage {
                 if (x + direction.x < 0 || y + direction.y < 0 || z + direction.z < 0)
                     continue;
 
-                long neighbour = Coordinate3Long.pack(
-                        x + direction.x, y + direction.y, z + direction.z);
+                long neighbour = Coordinate3Long.pack(x + direction.x, y + direction.y, z + direction.z);
 
                 if (cells.get(neighbour) == match && fillSeen.add(neighbour))
                     fillQueue.add(neighbour);
@@ -590,81 +803,160 @@ public class StructureEditorManager extends ManagerPackage {
             apply(cell);
     }
 
-    // One cell given the tool's work on the layer picked
+    // One cell given the tool's work on the job picked, in the layer picked
     private void apply(long cell) {
 
         EditorTool tool = toolManager.getTool(ToolCanvas.STRUCTURE);
-        ArpgObjectStruct entry = cells.get(cell);
 
-        if (layer == StructureEditorLayer.BLOCKS) {
-            applyBlock(cell, entry, tool);
-            return;
+        switch (layer) {
+            case BLOCKS -> applyBlock(cell, tool);
+            case COVERAGE, CONTENTS -> applyPaint(cell, tool);
+            case FURNITURE -> applyFurniture(cell, tool);
+            case ENTITIES -> applySpawn(cell, tool);
         }
-
-        if (entry == null)
-            return;
-
-        ArpgObjectStruct painted = tool == EditorTool.ERASE
-                ? structurePaintBranch.clear(layer, entry)
-                : structurePaintBranch.paint(layer, entry, resolveChoice(), resolveCoverageLevel());
-
-        if (painted != entry)
-            setCell(cell, painted);
     }
 
     // The Brush lays the block chosen in empty cells, Fill lays it over the cells filled, Erase takes blocks away
-    private void applyBlock(long cell, ArpgObjectStruct entry, EditorTool tool) {
+    private void applyBlock(long cell, EditorTool tool) {
+
+        Long2ObjectOpenHashMap<ArpgObjectStruct> cells = part().getCells();
+        ArpgObjectStruct entry = cells.get(cell);
 
         if (tool == EditorTool.ERASE) {
 
             if (entry != null) {
                 cells.remove(cell);
-                this.strokeChanged = true;
-                notifyChanged();
+                markChanged();
             }
 
             return;
         }
 
         if (chosenEntry == null) {
-            setStatusMessage(EditorSetting.STRUCTURE_EDITOR_MESSAGE_NO_BLOCK);
+            setStatusMessage(EditorSetting.STRUCTURE_EDITOR_MESSAGE_NO_CHOICE);
             return;
         }
 
-        if (tool == EditorTool.BRUSH && entry != null)
+        if ((tool == EditorTool.BRUSH && entry != null)
+                || (entry == null && countCells() >= EngineSetting.STRUCTURE_MAX_BLOCK_COUNT))
             return;
 
-        if (cells.size() >= EngineSetting.STRUCTURE_MAX_BLOCK_COUNT && entry == null)
-            return;
-
-        setCell(cell, chosenEntry);
+        cells.put(cell, chosenEntry);
+        markChanged();
     }
 
-    private void setCell(long cell, ArpgObjectStruct entry) {
+    // A covering or a content painted on, or taken from, a cell the layer lays
+    private void applyPaint(long cell, EditorTool tool) {
 
-        cells.put(cell, entry);
-        this.strokeChanged = true;
-        notifyChanged();
-    }
-
-    // What the cell struck holds taken up as the layer's choice
-    private void pick(long cell) {
-
+        Long2ObjectOpenHashMap<ArpgObjectStruct> cells = part().getCells();
         ArpgObjectStruct entry = cells.get(cell);
 
         if (entry == null)
             return;
 
-        if (layer == StructureEditorLayer.BLOCKS)
-            chooseEntry(entry);
-        else if (layer == StructureEditorLayer.COVERAGE)
-            chooseCovering(ArpgUtility.getString(entry, layer.field, ""));
-        else
-            chooseContent(ArpgUtility.getString(entry, layer.field, ""));
+        ArpgObjectStruct painted = tool == EditorTool.ERASE
+                ? structurePaintBranch.clear(layer, entry)
+                : structurePaintBranch.paint(
+                        layer, entry, layer == StructureEditorLayer.COVERAGE ? chosenCovering : chosenContent,
+                        resolveCoverageLevel());
+
+        if (painted == entry)
+            return;
+
+        cells.put(cell, painted);
+        markChanged();
     }
 
-    private String resolveChoice() {
-        return layer == StructureEditorLayer.COVERAGE ? chosenCovering : chosenContent;
+    // The furniture chosen stood in the cell, any standing there before replaced; Erase takes it away
+    private void applyFurniture(long cell, EditorTool tool) {
+
+        ObjectArrayList<ArpgObjectStruct> furnishings = part().getFurnishings();
+        boolean removed = structurePlaceBranch.remove(furnishings, cell, origin);
+
+        if (tool == EditorTool.BRUSH) {
+
+            if (chosenFurnishing.isEmpty()) {
+                setStatusMessage(EditorSetting.STRUCTURE_EDITOR_MESSAGE_NO_CHOICE);
+                return;
+            }
+
+            furnishings.add(structurePlaceBranch.createFurnishing(
+                    chosenFurnishing, chosenLoot, chosenSpin, cell, origin));
+            removed = true;
+        }
+
+        if (removed)
+            markChanged();
+    }
+
+    // The NPC chosen placed in the cell, any living there before replaced; Erase takes them away
+    private void applySpawn(long cell, EditorTool tool) {
+
+        ObjectArrayList<ArpgObjectStruct> spawns = part().getSpawns();
+        boolean removed = structurePlaceBranch.remove(spawns, cell, origin);
+
+        if (tool == EditorTool.BRUSH) {
+
+            if (chosenNpc.isEmpty()) {
+                setStatusMessage(EditorSetting.STRUCTURE_EDITOR_MESSAGE_NO_CHOICE);
+                return;
+            }
+
+            spawns.add(structurePlaceBranch.createSpawn(chosenNpc, cell, origin));
+            removed = true;
+        }
+
+        if (removed)
+            markChanged();
+    }
+
+    // What the cell struck holds in the layer taken up as the job's choice
+    private void pick(long cell) {
+
+        StructureEditorPartStruct part = part();
+
+        switch (layer) {
+            case BLOCKS -> pickEntry(part.getCells().get(cell));
+            case COVERAGE -> pickValue(part.getCells().get(cell), true);
+            case CONTENTS -> pickValue(part.getCells().get(cell), false);
+            case FURNITURE -> pickFurnishing(structurePlaceBranch.find(part.getFurnishings(), cell, origin));
+            case ENTITIES -> pickNpc(structurePlaceBranch.find(part.getSpawns(), cell, origin));
+        }
+
+        notifyChanged();
+    }
+
+    private void pickEntry(ArpgObjectStruct entry) {
+
+        if (entry != null)
+            chooseEntry(entry);
+    }
+
+    private void pickValue(ArpgObjectStruct entry, boolean covering) {
+
+        if (entry == null)
+            return;
+
+        if (covering)
+            this.chosenCovering = ArpgUtility.getString(entry, layer.field, "");
+        else
+            this.chosenContent = ArpgUtility.getString(entry, layer.field, "");
+    }
+
+    private void pickFurnishing(ArpgObjectStruct entry) {
+
+        if (entry == null)
+            return;
+
+        this.chosenFurnishing = ArpgUtility.getString(entry, "furnishing", "");
+        this.chosenLoot = ArpgUtility.getString(entry, "loot", "");
+        this.chosenSpin = ArpgUtility.getInt(entry, "spin", 0);
+    }
+
+    private void pickNpc(ArpgObjectStruct entry) {
+
+        if (entry != null)
+            this.chosenNpc = ArpgUtility.getString(entry, "npc", "");
     }
 
     // The covering's level the Brush's Strength gives, never under one
@@ -673,11 +965,27 @@ public class StructureEditorManager extends ManagerPackage {
                 toolManager.getOption(ToolCanvas.STRUCTURE, ToolOption.STRENGTH) * CoverageUtility.LEVEL_MAX));
     }
 
+    private int countCells() {
+
+        int count = 0;
+
+        for (int i = 0; i < parts.size(); i++)
+            count += parts.get(i).getCells().size();
+
+        return count;
+    }
+
+    private void markChanged() {
+
+        this.strokeChanged = true;
+        notifyChanged();
+    }
+
     // History \\
 
     private void beginStep() {
 
-        undoSteps.add(new StructureEditorStepStruct(cells, origin));
+        undoSteps.add(new StructureEditorStepStruct(parts, origin, partIndex));
         redoSteps.clear();
 
         if (undoSteps.size() > EditorSetting.STRUCTURE_EDITOR_HISTORY_STEPS)
@@ -686,7 +994,7 @@ public class StructureEditorManager extends ManagerPackage {
         this.strokeChanged = false;
     }
 
-    // The stroke ended and written into the entry, or forgotten when it changed nothing
+    // The step ended and written into the entry, or forgotten when it changed nothing
     private void endStroke() {
 
         boolean ended = stroking || strokeChanged;
@@ -698,16 +1006,12 @@ public class StructureEditorManager extends ManagerPackage {
 
         if (!strokeChanged) {
             undoSteps.remove(undoSteps.size() - 1);
+            notifyChanged();
             return;
         }
 
         this.strokeChanged = false;
         commit();
-    }
-
-    // Moves with the revision, but only once a stroke has ended
-    public int getListRevision() {
-        return listRevision;
     }
 
     public void undo() {
@@ -728,18 +1032,22 @@ public class StructureEditorManager extends ManagerPackage {
         if (structureName == null || from.isEmpty())
             return;
 
-        to.add(new StructureEditorStepStruct(cells, origin));
+        to.add(new StructureEditorStepStruct(parts, origin, partIndex));
 
         StructureEditorStepStruct step = from.remove(from.size() - 1);
 
-        cells.clear();
-        cells.putAll(step.getCells());
+        parts.clear();
+
+        for (int i = 0; i < step.getParts().size(); i++)
+            parts.add(new StructureEditorPartStruct(step.getParts().get(i)));
+
         System.arraycopy(step.getOrigin(), 0, origin, 0, EngineSetting.AXIS_COUNT);
+        this.partIndex = Math.min(step.getPartIndex(), parts.size() - 1);
         commit();
         setStatusMessage(message);
     }
 
-    // The cells written into the structure's entry, the file marked changed and every window told
+    // Every layer written into the structure's entry, the file marked changed and every window told
     private void commit() {
 
         if (findEntry() == null)
@@ -751,7 +1059,7 @@ public class StructureEditorManager extends ManagerPackage {
             infoManager.editEntry(
                     EditorSetting.INFO_SCHEMA_STRUCTURES, structureName, structureName,
                     structureArpg -> {
-                        if (!structureDocumentBranch.write(structureArpg, cells, origin))
+                        if (!structureDocumentBranch.write(structureArpg, parts, origin))
                             setStatusMessage(EditorSetting.STRUCTURE_EDITOR_MESSAGE_TOO_MANY);
                     });
         } finally {
@@ -797,7 +1105,64 @@ public class StructureEditorManager extends ManagerPackage {
 
     // Shown \\
 
-    // The tile a cell is drawn with on the layer picked: its covering's or content's where it holds one, else its
+    // Every shown layer's cells, a higher layer's winning a cell a lower one lays
+    public Long2ObjectOpenHashMap<ArpgObjectStruct> getShownCells() {
+
+        if (shownRevision == revision)
+            return shownCells;
+
+        this.shownRevision = revision;
+        shownCells.clear();
+
+        for (int i = 0; i < parts.size(); i++)
+            if (parts.get(i).isShown())
+                shownCells.putAll(parts.get(i).getCells());
+
+        return shownCells;
+    }
+
+    // Whether the pointer's ray stops at a cell: a block of any shown layer, or furniture or an NPC the layer picked
+    // places there while its job is picked
+    public boolean strikes(long cell) {
+
+        if (getShownCells().containsKey(cell))
+            return true;
+
+        if (parts.isEmpty() || !part().isShown())
+            return false;
+
+        return (layer == StructureEditorLayer.FURNITURE
+                && structurePlaceBranch.find(part().getFurnishings(), cell, origin) != null)
+                || (layer == StructureEditorLayer.ENTITIES
+                        && structurePlaceBranch.find(part().getSpawns(), cell, origin) != null);
+    }
+
+    // Every shown layer, lowest first, for the furniture and NPCs it places
+    public ObjectArrayList<StructureEditorPartStruct> getParts() {
+        return parts;
+    }
+
+    // The block an entry stands in from the corner, Long.MIN_VALUE when it stands below it
+    public long resolvePlacedCell(ArpgObjectStruct entry) {
+        return structurePlaceBranch.resolveCell(entry, origin);
+    }
+
+    // The furniture standing in a furnished place: the architecture's own piece for its table, else the first its
+    // table draws; null for a table that is not content yet
+    public ItemDefinitionHandle resolveFurnitureItem(ArpgObjectStruct entry) {
+
+        String table = ArpgUtility.getString(entry, "furnishing", "");
+        String itemName = furnishing2Item.get(table);
+
+        if (itemName != null && itemDefinitionManager.hasItem(itemName))
+            return itemDefinitionManager.getItemHandleFromItemName(itemName);
+
+        return furnishingManager.hasFurnishing(table)
+                ? furnishingManager.getFurnishingHandleFromFurnishingName(table).getItems()[0]
+                : null;
+    }
+
+    // The tile a cell is drawn with on the job picked: its covering's or content's where it holds one, else its
     // block's, laid as the architecture chosen fills its slot; INDEX_NOT_FOUND for a cell that draws nothing
     public int resolveCellTile(ArpgObjectStruct entry) {
 
@@ -825,6 +1190,11 @@ public class StructureEditorManager extends ManagerPackage {
         return blockHandle.getItemTextureName() != null
                 ? subVoxelManager.resolveTile(blockHandle.getItemTextureName())
                 : blockHandle.getTextureForFace(Direction3Vector.NORTH);
+    }
+
+    // The tile an NPC's marker is drawn with
+    public int resolveSpawnTile() {
+        return subVoxelManager.resolveTile(EditorSetting.STRUCTURE_EDITOR_SPAWN_MARKER_TEXTURE);
     }
 
     // The octants a cell fills as authored
@@ -857,7 +1227,8 @@ public class StructureEditorManager extends ManagerPackage {
     }
 
     private String toBlockLabel(String blockName) {
-        return blockManager.hasBlock(blockName) ? blockManager.getBlockHandleFromBlockName(blockName).getLocalName()
+        return blockManager.hasBlock(blockName)
+                ? blockManager.getBlockHandleFromBlockName(blockName).getLocalName()
                 : blockName;
     }
 
@@ -866,7 +1237,7 @@ public class StructureEditorManager extends ManagerPackage {
     private void setStatusMessage(String message) {
 
         this.statusMessage = message;
-        this.revision++;
+        notifyChanged();
     }
 
     // The revision moved, and the lists' with it unless a stroke is under way, so the Palette and Layers tabs are
@@ -886,11 +1257,6 @@ public class StructureEditorManager extends ManagerPackage {
         return structureName;
     }
 
-    // Every cell laid, keyed by its position from the structure's corner through Coordinate3Long
-    public Long2ObjectOpenHashMap<ArpgObjectStruct> getCells() {
-        return cells;
-    }
-
     public StructureEditorLayer getLayer() {
         return layer;
     }
@@ -898,6 +1264,15 @@ public class StructureEditorManager extends ManagerPackage {
     // The architecture it is shown built in, empty while shown as authored
     public String getArchitectureName() {
         return architectureName;
+    }
+
+    // The origin on an axis, in blocks from the structure's corner
+    public int getOrigin(int axis) {
+        return origin[axis];
+    }
+
+    public int getCellCount() {
+        return countCells();
     }
 
     public boolean isStroking() {
@@ -908,8 +1283,13 @@ public class StructureEditorManager extends ManagerPackage {
         return statusMessage;
     }
 
-    // Moves whenever the cells, the layer, the architecture or a choice change, a stroke's stamps included
+    // Moves whenever the layers, a job, the architecture or a choice change, a stroke's stamps included
     public int getRevision() {
         return revision;
+    }
+
+    // Moves with the revision, but only once a stroke has ended
+    public int getListRevision() {
+        return listRevision;
     }
 }

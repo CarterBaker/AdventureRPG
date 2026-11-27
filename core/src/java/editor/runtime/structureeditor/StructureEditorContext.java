@@ -9,6 +9,7 @@ import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
 import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.structureeditorpipeline.structureeditormanager.StructureEditorManager;
+import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
 import editor.bootstrap.toolpipeline.util.ToolCanvas;
 import editor.runtime.EditorSetting;
@@ -16,6 +17,7 @@ import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import editor.runtime.characterview.panel.CharacterViewTemplateStruct;
 import editor.runtime.filemenusource.FileMenuSourceSystem;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.menueventsmanager.menus.StructureEditorBranch;
 import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.structureeditor.menu.StructureEditorMenuSystem;
@@ -31,19 +33,19 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class StructureEditorContext extends ContextPackage
-        implements ViewCameraProvider, ToolCanvasProvider, LayersProvider, PaletteRowSource, PropertiesProvider,
-        FileMenuProvider {
+        implements ViewCameraProvider, ToolCanvasProvider, ToolActionProvider, LayersProvider, PaletteRowSource,
+        PropertiesProvider, FileMenuProvider {
 
     /*
-     * Editor tab for painting structures as a voxel modeller paints models.
-     * Its canvas does three jobs, its layers in the Layers tab: Blocks lays
-     * and takes away blocks, Coverage paints the coverings grown over them
-     * and Contents the contents whole blocks hold, each with the Tools tab's
-     * Hand, Brush, Erase, Fill and Pick, a covering at the Brush's Strength.
-     * The Palette tab lists every structure, then what the layer picked
-     * paints with: for blocks the architectures it may be shown built in, the
-     * slots the one chosen fills, the structure's own block entries and every
-     * block, for coverage and contents every covering or content, each laid
+     * Editor tab for building structures as a voxel modeller builds models,
+     * in a stack of layers (a floor, a roof, any alteration) the Layers tab
+     * lists, each added, deleted, moved, renamed and shown or hidden through
+     * the Tools tab's Layers actions and its eye, and each holding five fixed
+     * jobs: Blocks lays and takes away blocks, Coverage paints the coverings
+     * grown over them, Contents the contents whole blocks hold, Furniture
+     * stands furnishings and Entities places the NPCs who live there, each
+     * with the Tools tab's Hand, Brush, Erase, Fill and Pick. The Palette tab
+     * lists every structure, then what the job picked paints with, each laid
      * only where the game takes it. The Properties tab holds the structure's
      * whole entry (where and how it places, its terrain, rules, biomes,
      * furnishings and spawns), and the File and Edit menus make, save, revert,
@@ -53,6 +55,7 @@ public class StructureEditorContext extends ContextPackage
 
     // Internal
     private StructureEditorManager structureEditorManager;
+    private StructureEditorBranch structureEditorBranch;
     private EditorInputSystem editorInputSystem;
     private StructureEditorViewSystem structureEditorViewSystem;
     private StructureEditorToolSystem structureEditorToolSystem;
@@ -83,6 +86,7 @@ public class StructureEditorContext extends ContextPackage
     @Override
     protected void get() {
         this.structureEditorManager = get(StructureEditorManager.class);
+        this.structureEditorBranch = get(StructureEditorBranch.class);
     }
 
     @Override
@@ -102,6 +106,12 @@ public class StructureEditorContext extends ContextPackage
     @Override
     public ToolCanvas getToolCanvas() {
         return ToolCanvas.STRUCTURE;
+    }
+
+    // The Layers actions, the same keys the Layers tab's New Layer and Delete Layer icons run
+    @Override
+    public void runToolAction(String actionKey) {
+        structureEditorBranch.runLayerAction(actionKey, getWindow());
     }
 
     // Layers \\
@@ -126,20 +136,20 @@ public class StructureEditorContext extends ContextPackage
         structureEditorManager.selectLayer(layerKey);
     }
 
-    // Every layer is always shown
+    // A layer's eye shows or hides all it lays, in the editor only
     @Override
     public void toggleLayerVisible(String layerKey) {
+        structureEditorManager.toggleLayerShown(layerKey);
     }
 
-    // The canvas's jobs are fixed, so the stack takes no new layers
     @Override
     public String getAddLayerKey() {
-        return "";
+        return EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_ADD;
     }
 
     @Override
     public String getRemoveLayerKey() {
-        return "";
+        return EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_REMOVE;
     }
 
     // Palette \\

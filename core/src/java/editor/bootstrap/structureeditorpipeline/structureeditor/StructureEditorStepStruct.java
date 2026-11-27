@@ -1,37 +1,46 @@
 package editor.bootstrap.structureeditorpipeline.structureeditor;
 
 import engine.root.StructPackage;
-import engine.util.arpg.ArpgObjectStruct;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class StructureEditorStepStruct extends StructPackage {
 
     /*
-     * One step of the Structure Editor's history: every cell and the origin
-     * as they stood before the step, so undoing a stroke that shifted the
-     * structure off its corner puts the origin back with the cells.
+     * One step of the Structure Editor's history: every layer, its cells,
+     * furniture and NPCs, and the origin as they stood before the step, so
+     * undoing a stroke that shifted the structure off its corner, or a layer
+     * added, removed, moved or renamed, puts everything back together.
      */
 
     // Snapshot
-    private final Long2ObjectOpenHashMap<ArpgObjectStruct> cells;
+    private final ObjectArrayList<StructureEditorPartStruct> parts;
     private final int[] origin;
+    private final int partIndex;
 
     // Constructor \\
 
-    public StructureEditorStepStruct(Long2ObjectOpenHashMap<ArpgObjectStruct> cells, int[] origin) {
+    public StructureEditorStepStruct(ObjectArrayList<StructureEditorPartStruct> parts, int[] origin, int partIndex) {
 
         // Snapshot
-        this.cells = new Long2ObjectOpenHashMap<>(cells);
+        this.parts = new ObjectArrayList<>(parts.size());
         this.origin = origin.clone();
+        this.partIndex = partIndex;
+
+        for (int i = 0; i < parts.size(); i++)
+            this.parts.add(new StructureEditorPartStruct(parts.get(i)));
     }
 
     // Accessible \\
 
-    public Long2ObjectOpenHashMap<ArpgObjectStruct> getCells() {
-        return cells;
+    public ObjectArrayList<StructureEditorPartStruct> getParts() {
+        return parts;
     }
 
     public int[] getOrigin() {
         return origin;
+    }
+
+    public int getPartIndex() {
+        return partIndex;
     }
 }

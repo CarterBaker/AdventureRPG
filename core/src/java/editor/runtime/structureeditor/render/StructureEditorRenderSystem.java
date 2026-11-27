@@ -2,7 +2,9 @@ package editor.runtime.structureeditor.render;
 
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemmodelmanager.ItemModelManager;
+import application.bootstrap.itempipeline.itemrotationmanager.ItemRotationBufferSystem;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
@@ -22,15 +24,18 @@ public class StructureEditorRenderSystem extends SystemPackage {
 
     /*
      * Draws the structure StructureEditorViewSystem meshes into this window's
-     * scene target where it stands, its corner at the model origin, with the
-     * item viewer material the Ship Viewer draws hulls with, which shades
-     * faces as the game's G-buffer receives them and lights them here, never
-     * cut away. Every draw takes a model of its own from ItemModelManager.
+     * scene target where it stands, its corner at the model origin, and every
+     * piece of furniture it lays out, turned and stood at its corner, with
+     * the item viewer material the Ship Viewer draws hulls and cargo with,
+     * which shades faces as the game's G-buffer receives them and lights them
+     * here, never cut away. Every draw takes a model of its own from
+     * ItemModelManager.
      */
 
     // Internal
     private StructureEditorViewSystem structureEditorViewSystem;
     private ItemModelManager itemModelManager;
+    private ItemRotationBufferSystem itemRotationBufferSystem;
     private MaterialManager materialManager;
     private RenderManager renderManager;
     private FBOManager fboManager;
@@ -42,8 +47,10 @@ public class StructureEditorRenderSystem extends SystemPackage {
     // Materials
     private int structureMaterialID;
 
-    // Placement — the structure where it stands, and the cutaway boxed once for every draw
+    // Placement — the structure where it stands, one piece of furniture's place, and the cutaway boxed once for
+    // every draw
     private Matrix4 restMatrix;
+    private Matrix4 itemMatrix;
     private Float cutawayNone;
 
     // Base \\
@@ -51,6 +58,7 @@ public class StructureEditorRenderSystem extends SystemPackage {
     @Override
     protected void create() {
         this.restMatrix = new Matrix4();
+        this.itemMatrix = new Matrix4();
         this.cutawayNone = EditorSetting.ITEM_VIEWER_CUTAWAY_NONE;
     }
 
@@ -58,6 +66,7 @@ public class StructureEditorRenderSystem extends SystemPackage {
     protected void get() {
         this.structureEditorViewSystem = get(StructureEditorViewSystem.class);
         this.itemModelManager = get(ItemModelManager.class);
+        this.itemRotationBufferSystem = get(ItemRotationBufferSystem.class);
         this.materialManager = get(MaterialManager.class);
         this.renderManager = get(RenderManager.class);
         this.fboManager = get(FBOManager.class);
@@ -84,6 +93,7 @@ public class StructureEditorRenderSystem extends SystemPackage {
         WindowInstance window = context.getWindow();
 
         pushMeshes(structureEditorViewSystem.getMeshes(), window);
+        pushFurniture(structureEditorViewSystem.getFurnitureItems(), window);
         fboRenderSystem.pushFbo(sceneFbo, RuntimeSetting.LAYER_WORLD, window);
     }
 
@@ -93,6 +103,25 @@ public class StructureEditorRenderSystem extends SystemPackage {
 
             ModelInstance model = itemModelManager.acquireModel(meshes.get(i).getMeshData(), structureMaterialID);
             model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, restMatrix);
+            model.getMaterial().setUniform(EditorSetting.ITEM_VIEWER_UNIFORM_CUTAWAY_HEIGHT, cutawayNone);
+            renderManager.pushRenderCall(model, sceneFbo, StructureEditorSetting.DEPTH_STRUCTURE, window);
+        }
+    }
+
+    // Every piece of furniture turned and stood at its corner
+    private void pushFurniture(ObjectArrayList<ItemDefinitionHandle> items, WindowInstance window) {
+
+        for (int i = 0; i < items.size(); i++) {
+
+            itemRotationBufferSystem.composeTransform(
+                    structureEditorViewSystem.getFurnitureCorner(i, EngineSetting.AXIS_X),
+                    structureEditorViewSystem.getFurnitureCorner(i, EngineSetting.AXIS_Y),
+                    structureEditorViewSystem.getFurnitureCorner(i, EngineSetting.AXIS_Z),
+                    structureEditorViewSystem.getFurnitureOrientation(i),
+                    itemMatrix);
+
+            ModelInstance model = itemModelManager.acquireModel(items.get(i).getMeshHandle(), structureMaterialID);
+            model.getMaterial().setUniform(EngineSetting.UNIFORM_ITEM_MODEL, itemMatrix);
             model.getMaterial().setUniform(EditorSetting.ITEM_VIEWER_UNIFORM_CUTAWAY_HEIGHT, cutawayNone);
             renderManager.pushRenderCall(model, sceneFbo, StructureEditorSetting.DEPTH_STRUCTURE, window);
         }

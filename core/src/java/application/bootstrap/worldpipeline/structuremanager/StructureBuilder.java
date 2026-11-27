@@ -69,7 +69,10 @@ class StructureBuilder extends BuilderPackage {
      * and the "chance" it is lived in, and "clear_terrain" whether the ground
      * inside its footprint is carved away before it is laid. Every block,
      * biome, table, NPC and value is resolved and validated here, so a
-     * malformed structure fails at boot.
+     * malformed structure fails at boot. Its optional "parts", as an editor
+     * stacks its layers, each lay "layers", "blocks", "furnishings" and
+     * "spawns" of their own over the structure's, the first listed lowest and
+     * a later part winning a cell an earlier one lays; the palette is shared.
      */
 
     // Internal
@@ -148,6 +151,7 @@ class StructureBuilder extends BuilderPackage {
         parsePalette(arpg, structureName);
         parseLayers(arpg, structureName, origin);
         parseBlocks(arpg, structureName, origin);
+        parseParts(arpg, structureName, origin);
 
         if (blockIDs.isEmpty())
             throwException("Structure \"" + structureName
@@ -185,6 +189,13 @@ class StructureBuilder extends BuilderPackage {
         ObjectArrayList<FurnishingSlotStruct> furnishings = FurnishingArpgUtility.parseSlots(
                 arpg, "furnishings", structureName, furnishingManager, lootTableManager);
         ObjectArrayList<StructureSpawnStruct> spawns = parseSpawns(arpg, structureName);
+
+        if (ArpgUtility.hasArray(arpg, "parts"))
+            for (ArpgElementStruct part : arpg.getAsArray("parts")) {
+                furnishings.addAll(FurnishingArpgUtility.parseSlots(
+                        part.getAsObject(), "furnishings", structureName, furnishingManager, lootTableManager));
+                spawns.addAll(parseSpawns(part.getAsObject(), structureName));
+            }
 
         StructureRulesStruct rules = parseRules(arpg, structureName);
         StructureFrequencyStruct frequency = parseFrequency(arpg, structureName);
@@ -340,6 +351,21 @@ class StructureBuilder extends BuilderPackage {
                         + "', which its \"palette\" does not list.");
 
             putBlock(x - origin[0], y - origin[1], z - origin[2], entry, structureName);
+        }
+    }
+
+    // Part Parsing \\
+
+    // Every part's layers and blocks laid after the structure's own, bottom part first, so a part listed later wins
+    // a cell both lay
+    private void parseParts(ArpgObjectStruct arpg, String structureName, int[] origin) {
+
+        if (!ArpgUtility.hasArray(arpg, "parts"))
+            return;
+
+        for (ArpgElementStruct part : arpg.getAsArray("parts")) {
+            parseLayers(part.getAsObject(), structureName, origin);
+            parseBlocks(part.getAsObject(), structureName, origin);
         }
     }
 

@@ -21,7 +21,8 @@ public class StructureEditorSetting {
     // Render Order
     public static final int DEPTH_STRUCTURE = 0;
 
-    // Shown — the view frames at least a block
+    // Shown — the view frames at least a block, and an NPC's marker post is this many sub-voxels across
+    public static final int SPAWN_MARKER_WIDTH_SUB_VOXELS = 4;
     public static final float MIN_RADIUS_BLOCKS = 1f;
 
     // Menus — entry points in the order the menu lists them
@@ -62,6 +63,7 @@ public class StructureEditorSetting {
     public static final String STATUS_NONE = "No structure chosen — pick one in the Palette tab or the Hierarchy";
     public static final String STATUS_SEPARATOR = "  ·  ";
     public static final String STATUS_BLOCKS = " blocks";
+    public static final String STATUS_LAYER_SEPARATOR = " / ";
     public static final String STATUS_AS_AUTHORED = "as authored";
     public static final String STATUS_BUILT_IN = "built in ";
 }

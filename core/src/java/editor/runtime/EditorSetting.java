@@ -3118,11 +3118,29 @@ public class EditorSetting {
     public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVE_FAILED = "Could not save ";
     public static final String ARCHITECTURE_BUILDER_MESSAGE_REVERTED = "Reverted ";
 
-    // Structure Editor — its layers, the prefixes its Palette rows carry, the characters its palette keys are drawn
+    // Structure Editor — its jobs and the layers holding them, its layer actions, the marker an NPC is drawn with,
+    // the prefixes its Palette rows carry, the characters its palette keys are drawn
     // from in order, how many strokes its history holds, the text of its labels and its messages
     public static final String STRUCTURE_EDITOR_LAYER_BLOCKS = "Blocks";
     public static final String STRUCTURE_EDITOR_LAYER_COVERAGE = "Coverage";
     public static final String STRUCTURE_EDITOR_LAYER_CONTENTS = "Contents";
+    public static final String STRUCTURE_EDITOR_LAYER_FURNITURE = "Furniture";
+    public static final String STRUCTURE_EDITOR_LAYER_ENTITIES = "Entities";
+    public static final char STRUCTURE_EDITOR_LAYER_SEPARATOR = ':';
+    public static final String STRUCTURE_EDITOR_FIRST_LAYER_NAME = "Ground";
+    public static final String STRUCTURE_EDITOR_LAYER_NAME = "Layer";
+    public static final String STRUCTURE_EDITOR_HEADER_LAYERS = "Layers";
+    public static final String STRUCTURE_EDITOR_KEY_LAYER_ADD = "structure_layer_add";
+    public static final String STRUCTURE_EDITOR_KEY_LAYER_REMOVE = "structure_layer_remove";
+    public static final String STRUCTURE_EDITOR_KEY_LAYER_UP = "structure_layer_up";
+    public static final String STRUCTURE_EDITOR_KEY_LAYER_DOWN = "structure_layer_down";
+    public static final String STRUCTURE_EDITOR_KEY_LAYER_RENAME = "structure_layer_rename";
+    public static final String STRUCTURE_EDITOR_LABEL_LAYER_ADD = "New Layer";
+    public static final String STRUCTURE_EDITOR_LABEL_LAYER_REMOVE = "Delete Layer";
+    public static final String STRUCTURE_EDITOR_LABEL_LAYER_UP = "Move Layer Up";
+    public static final String STRUCTURE_EDITOR_LABEL_LAYER_DOWN = "Move Layer Down";
+    public static final String STRUCTURE_EDITOR_LABEL_LAYER_RENAME = "Rename Layer";
+    public static final String STRUCTURE_EDITOR_SPAWN_MARKER_TEXTURE = "items/standard/Crimson";
     public static final String STRUCTURE_EDITOR_ROW_STRUCTURE = "structure:";
     public static final String STRUCTURE_EDITOR_ROW_ARCHITECTURE = "architecture:";
     public static final String STRUCTURE_EDITOR_ROW_SLOT = "slot:";
@@ -3130,6 +3148,14 @@ public class EditorSetting {
     public static final String STRUCTURE_EDITOR_ROW_BLOCK = "block:";
     public static final String STRUCTURE_EDITOR_ROW_COVERING = "covering:";
     public static final String STRUCTURE_EDITOR_ROW_CONTENT = "content:";
+    public static final String STRUCTURE_EDITOR_ROW_FURNISHING = "furnishing:";
+    public static final String STRUCTURE_EDITOR_ROW_LOOT = "loot:";
+    public static final String STRUCTURE_EDITOR_ROW_TURN = "turn:";
+    public static final String STRUCTURE_EDITOR_ROW_NPC = "npc:";
+    public static final String STRUCTURE_EDITOR_PALETTE_LOOT = "Loot";
+    public static final String STRUCTURE_EDITOR_PALETTE_TURN = "Turn";
+    public static final String[] STRUCTURE_EDITOR_TURN_LABELS = { "As Placed", "Quarter Turn", "Half Turn",
+            "Three Quarter Turn" };
     public static final String STRUCTURE_EDITOR_PALETTE_KEYS =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.#*+=-!?$%&@^~:;,|/<>()[]{}";
     public static final int STRUCTURE_EDITOR_HISTORY_STEPS = 64;
@@ -3142,7 +3168,9 @@ public class EditorSetting {
     public static final String STRUCTURE_EDITOR_LABEL_NONE = "None";
     public static final String STRUCTURE_EDITOR_LABEL_SEPARATOR = "  ·  ";
     public static final String STRUCTURE_EDITOR_MESSAGE_NONE = "Select a structure first";
-    public static final String STRUCTURE_EDITOR_MESSAGE_NO_BLOCK = "Choose a block in the Palette tab first";
+    public static final String STRUCTURE_EDITOR_MESSAGE_NO_CHOICE = "Choose what to place in the Palette tab first";
+    public static final String STRUCTURE_EDITOR_MESSAGE_LAST_LAYER = "A structure keeps at least one layer";
+    public static final String STRUCTURE_EDITOR_MESSAGE_HIDDEN = "The layer picked is hidden — show it to work on it";
     public static final String STRUCTURE_EDITOR_MESSAGE_TOO_MANY =
             "Too many different blocks for one palette — not written";
     public static final String STRUCTURE_EDITOR_MESSAGE_UNDONE = "Undone";
@@ -3347,6 +3375,9 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_ARCHITECTURES = "Architectures";
     public static final String INFO_SCHEMA_COVERINGS = "Coverings";
     public static final String INFO_SCHEMA_CONTENTS = "Contents";
+    public static final String INFO_SCHEMA_FURNISHINGS = "Furnishings";
+    public static final String INFO_SCHEMA_NPCS = "Npcs";
+    public static final String INFO_SCHEMA_LOOT_TABLES = "LootTables";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_ITEM_EQUIP_FIELD = "equip";
     public static final String INFO_ITEM_WORN_MESH_FIELD = "mesh";

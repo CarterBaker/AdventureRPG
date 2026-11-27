@@ -4,7 +4,9 @@ import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.meshmanager.MeshManager;
 import application.bootstrap.geometrypipeline.subvoxel.SubVoxelGridStruct;
 import application.bootstrap.geometrypipeline.subvoxelmanager.SubVoxelManager;
+import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import editor.bootstrap.structureeditorpipeline.structureeditor.StructureEditorPartStruct;
 import editor.bootstrap.structureeditorpipeline.structureeditormanager.StructureEditorManager;
 import editor.runtime.structureeditor.StructureEditorSetting;
 import editor.runtime.structureeditor.tool.StructureEditorHitStruct;
@@ -12,9 +14,11 @@ import editor.runtime.viewcamera.ViewCameraSubject;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.arpg.ArpgObjectStruct;
+import engine.util.arpg.ArpgUtility;
 import engine.util.mathematics.extras.Coordinate3Long;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -23,15 +27,17 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class StructureEditorViewSystem extends SystemPackage implements ViewCameraSubject {
 
     /*
-     * Lays out what the Structure Editor shows: every cell of the structure
-     * as the layer picked draws it, a whole block filling its cell and a
-     * partial block only the octants it fills, rasterized into a sub-voxel
-     * grid with one part to each tile and greedily meshed by SubVoxelManager,
-     * one block a model block from the structure's corner. The meshes are
-     * made again only when the editor's revision moves, the old ones freed.
-     * It also walks the pointer's ray through the cells, cell by cell, to the
-     * first one laid, or to the ground plane under the structure where it
-     * strikes none.
+     * Lays out what the Structure Editor shows of every shown layer: each
+     * cell as the job picked draws it, a whole block filling its cell and a
+     * partial block only the octants it fills, and each NPC as a marker post
+     * standing in its cell, rasterized into a sub-voxel grid with one part to
+     * each tile and greedily meshed by SubVoxelManager, one block a model
+     * block from the structure's corner; and each piece of furniture by the
+     * corner of its model grid and its turn, for the render system to draw.
+     * The layout is made again only when the editor's revision moves, the old
+     * meshes freed. It also walks the pointer's ray through the cells, cell
+     * by cell, to the first one it stops at, or to the ground plane under the
+     * structure where it stops at none.
      */
 
     // Faces — the face a ray enters a cell through, by the axis it crossed and whether it was stepping up that axis
@@ -50,8 +56,11 @@ public class StructureEditorViewSystem extends SystemPackage implements ViewCame
     private Int2IntOpenHashMap tile2Part;
     private IntArrayList partTiles;
 
-    // Shown
+    // Shown — the meshes, and every piece of furniture with its corner in model blocks and its orientation
     private ObjectArrayList<MeshInstance> meshes;
+    private ObjectArrayList<ItemDefinitionHandle> furnitureItems;
+    private FloatArrayList furnitureCorners;
+    private IntArrayList furnitureOrientations;
     private int maxX;
     private int maxY;
     private int maxZ;
@@ -70,6 +79,9 @@ public class StructureEditorViewSystem extends SystemPackage implements ViewCame
 
         // Shown
         this.meshes = new ObjectArrayList<>();
+        this.furnitureItems = new ObjectArrayList<>();
+        this.furnitureCorners = new FloatArrayList();
+        this.furnitureOrientations = new IntArrayList();
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
@@ -99,19 +111,29 @@ public class StructureEditorViewSystem extends SystemPackage implements ViewCame
         rebuild();
     }
 
-    // Every cell rasterized as the layer draws it and meshed afresh
+    // Every shown cell and NPC rasterized as the job draws them and meshed afresh, and every shown furniture laid out
     private void rebuild() {
 
         releaseMeshes();
         grid.clear();
         tile2Part.clear();
         partTiles.clear();
+        furnitureItems.clear();
+        furnitureCorners.clear();
+        furnitureOrientations.clear();
         this.maxX = 0;
         this.maxY = 0;
         this.maxZ = 0;
 
-        for (Long2ObjectMap.Entry<ArpgObjectStruct> cell : structureEditorManager.getCells().long2ObjectEntrySet())
+        for (Long2ObjectMap.Entry<ArpgObjectStruct> cell : structureEditorManager.getShownCells()
+                .long2ObjectEntrySet())
             rasterize(cell.getLongKey(), cell.getValue());
+
+        ObjectArrayList<StructureEditorPartStruct> parts = structureEditorManager.getParts();
+
+        for (int i = 0; i < parts.size(); i++)
+            if (parts.get(i).isShown())
+                layPlaced(parts.get(i));
 
         if (!grid.isEmpty())
             meshes.addAll(subVoxelManager.createGridMeshes(grid, partTiles.toIntArray()));
@@ -123,9 +145,7 @@ public class StructureEditorViewSystem extends SystemPackage implements ViewCame
         int y = Coordinate3Long.unpackY(cell);
         int z = Coordinate3Long.unpackZ(cell);
 
-        this.maxX = Math.max(maxX, x + 1);
-        this.maxY = Math.max(maxY, y + 1);
-        this.maxZ = Math.max(maxZ, z + 1);
+        extend(cell);
 
         int part = resolvePart(structureEditorManager.resolveCellTile(entry));
 
@@ -152,6 +172,69 @@ public class StructureEditorViewSystem extends SystemPackage implements ViewCame
 
             grid.fillBox(minX, minY, minZ, minX + half, minY + half, minZ + half, part, false);
         }
+    }
+
+    // Every NPC of a layer as a marker post in its cell, every piece of its furniture by its corner and turn
+    private void layPlaced(StructureEditorPartStruct part) {
+
+        int markerPart = resolvePart(structureEditorManager.resolveSpawnTile());
+        ObjectArrayList<ArpgObjectStruct> spawns = part.getSpawns();
+
+        for (int i = 0; i < spawns.size(); i++) {
+
+            long cell = structureEditorManager.resolvePlacedCell(spawns.get(i));
+
+            if (cell != Long.MIN_VALUE && markerPart != EngineSetting.INDEX_NOT_FOUND)
+                layMarker(cell, markerPart);
+        }
+
+        ObjectArrayList<ArpgObjectStruct> furnishings = part.getFurnishings();
+
+        for (int i = 0; i < furnishings.size(); i++)
+            layFurniture(furnishings.get(i));
+    }
+
+    // A thin post through the middle of an NPC's cell, as tall as the cell
+    private void layMarker(long cell, int part) {
+
+        int resolution = EngineSetting.SUB_VOXEL_RESOLUTION;
+        int inset = (resolution - StructureEditorSetting.SPAWN_MARKER_WIDTH_SUB_VOXELS) / 2;
+        int minX = Coordinate3Long.unpackX(cell) * resolution + inset;
+        int minY = Coordinate3Long.unpackY(cell) * resolution;
+        int minZ = Coordinate3Long.unpackZ(cell) * resolution + inset;
+
+        grid.fillBox(
+                minX, minY, minZ,
+                minX + StructureEditorSetting.SPAWN_MARKER_WIDTH_SUB_VOXELS, minY + resolution,
+                minZ + StructureEditorSetting.SPAWN_MARKER_WIDTH_SUB_VOXELS,
+                part, false);
+        extend(cell);
+    }
+
+    private void layFurniture(ArpgObjectStruct entry) {
+
+        long cell = structureEditorManager.resolvePlacedCell(entry);
+        ItemDefinitionHandle item = structureEditorManager.resolveFurnitureItem(entry);
+
+        if (cell == Long.MIN_VALUE || item == null)
+            return;
+
+        furnitureItems.add(item);
+
+        for (int axis = 0; axis < EngineSetting.AXIS_COUNT; axis++)
+            furnitureCorners.add(structureEditorManager.getOrigin(axis)
+                    + entry.getAsArray("corner").get(axis).getAsInt() / (float) EngineSetting.SUB_VOXEL_RESOLUTION);
+
+        furnitureOrientations.add(EngineSetting.DEFAULT_BLOCK_ORIENTATION
+                + Math.floorMod(ArpgUtility.getInt(entry, "spin", 0), EngineSetting.ENCODED_FACE_SPIN_COUNT));
+        extend(cell);
+    }
+
+    private void extend(long cell) {
+
+        this.maxX = Math.max(maxX, Coordinate3Long.unpackX(cell) + 1);
+        this.maxY = Math.max(maxY, Coordinate3Long.unpackY(cell) + 1);
+        this.maxZ = Math.max(maxZ, Coordinate3Long.unpackZ(cell) + 1);
     }
 
     // The grid part a tile is drawn as, given one the first time it is met; INDEX_NOT_FOUND past the parts a grid
@@ -222,7 +305,7 @@ public class StructureEditorViewSystem extends SystemPackage implements ViewCame
             int stepSign = axis == EngineSetting.AXIS_X ? stepX : axis == EngineSetting.AXIS_Y ? stepY : stepZ;
 
             if (cellX >= 0 && cellY >= 0 && cellZ >= 0
-                    && structureEditorManager.getCells().containsKey(Coordinate3Long.pack(cellX, cellY, cellZ))) {
+                    && structureEditorManager.strikes(Coordinate3Long.pack(cellX, cellY, cellZ))) {
                 hit.set(cellX, cellY, cellZ, ENTERED_FACES[axis * 2 + (stepSign > 0 ? 0 : 1)]);
                 return;
             }
@@ -248,10 +331,10 @@ public class StructureEditorViewSystem extends SystemPackage implements ViewCame
 
     // Accessible \\
 
-    // True while anything is laid
+    // True while anything is shown
     @Override
     public boolean isShown() {
-        return !structureEditorManager.getCells().isEmpty();
+        return !meshes.isEmpty() || !furnitureItems.isEmpty();
     }
 
     // The middle of the structure's bounds on an axis, in blocks from its corner
@@ -275,5 +358,19 @@ public class StructureEditorViewSystem extends SystemPackage implements ViewCame
     // Every mesh drawn, in model blocks from the structure's corner
     public ObjectArrayList<MeshInstance> getMeshes() {
         return meshes;
+    }
+
+    // Every piece of furniture drawn, its corner and orientation by the same index
+    public ObjectArrayList<ItemDefinitionHandle> getFurnitureItems() {
+        return furnitureItems;
+    }
+
+    // A piece of furniture's corner on an axis, in model blocks from the structure's corner
+    public float getFurnitureCorner(int index, int axis) {
+        return furnitureCorners.getFloat(index * EngineSetting.AXIS_COUNT + axis);
+    }
+
+    public int getFurnitureOrientation(int index) {
+        return furnitureOrientations.getInt(index);
     }
 }

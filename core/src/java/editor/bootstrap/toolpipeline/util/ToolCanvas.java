@@ -220,6 +220,7 @@ public enum ToolCanvas {
     STRUCTURE(
             EditorSetting.TOOL_CANVAS_STRUCTURE,
             new EditorTool[] { EditorTool.HAND, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.FILL, EditorTool.PICK },
+            new ToolActionGroupStruct[] { structureLayers() },
             false,
             structureSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
@@ -453,6 +454,18 @@ public enum ToolCanvas {
                 EditorSetting.ITEM_EDITOR_HEADER_PARTS,
                 action(EditorSetting.ITEM_EDITOR_LABEL_PART_ADD, EditorSetting.ITEM_EDITOR_KEY_PART_ADD),
                 action(EditorSetting.ITEM_EDITOR_LABEL_PART_REMOVE, EditorSetting.ITEM_EDITOR_KEY_PART_REMOVE));
+    }
+
+    private static ToolActionGroupStruct structureLayers() {
+        return new ToolActionGroupStruct(
+                EditorSetting.STRUCTURE_EDITOR_HEADER_LAYERS,
+                action(EditorSetting.STRUCTURE_EDITOR_LABEL_LAYER_ADD, EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_ADD),
+                action(EditorSetting.STRUCTURE_EDITOR_LABEL_LAYER_REMOVE,
+                        EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_REMOVE),
+                action(EditorSetting.STRUCTURE_EDITOR_LABEL_LAYER_UP, EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_UP),
+                action(EditorSetting.STRUCTURE_EDITOR_LABEL_LAYER_DOWN, EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_DOWN),
+                action(EditorSetting.STRUCTURE_EDITOR_LABEL_LAYER_RENAME,
+                        EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_RENAME));
     }
 
     private static ToolActionGroupStruct treePreview() {

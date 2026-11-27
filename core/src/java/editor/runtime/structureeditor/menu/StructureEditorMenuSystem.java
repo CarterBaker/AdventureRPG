@@ -15,8 +15,8 @@ public class StructureEditorMenuSystem extends SystemPackage {
 
     /*
      * Opens the Structure Editor's menu over the viewport: the status line
-     * names the structure painted, how many blocks it lays, the layer picked
-     * and the architecture it is shown built in, then the last message, or
+     * names the structure painted, how many blocks it lays, the layer and job
+     * picked and the architecture it is shown built in, then the last message, or
      * why nothing is shown, rewritten only when the editor's revision moves.
      * The axis gizmo is every viewport's own (ViewGizmoSystem).
      */
@@ -87,8 +87,9 @@ public class StructureEditorMenuSystem extends SystemPackage {
         String message = structureEditorManager.getStatusMessage();
 
         return structureName + StructureEditorSetting.STATUS_SEPARATOR
-                + structureEditorManager.getCells().size() + StructureEditorSetting.STATUS_BLOCKS
-                + StructureEditorSetting.STATUS_SEPARATOR + structureEditorManager.getLayer().label
+                + structureEditorManager.getCellCount() + StructureEditorSetting.STATUS_BLOCKS
+                + StructureEditorSetting.STATUS_SEPARATOR + structureEditorManager.getLayerName()
+                + StructureEditorSetting.STATUS_LAYER_SEPARATOR + structureEditorManager.getLayer().label
                 + StructureEditorSetting.STATUS_SEPARATOR
                 + (architectureName.isEmpty()
                         ? StructureEditorSetting.STATUS_AS_AUTHORED
