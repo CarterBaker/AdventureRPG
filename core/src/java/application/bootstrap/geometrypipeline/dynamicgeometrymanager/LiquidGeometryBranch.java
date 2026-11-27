@@ -28,20 +28,22 @@ class LiquidGeometryBranch extends BranchPackage {
 
     /*
      * Geometry branch for liquid blocks. Settled water emits its UP faces and
-     * the faces it pours over open air from, a river stepping down its
-     * channel or a fall off a cliff; flowing water emits every exposed face;
-     * all greedily merged. Faces against opaque blocks are dropped, and each
-     * face becomes one packed record of its first corner, extents, fill
-     * level, tidal flag, flow and fall, from which the water shader rebuilds
-     * its corners and surface flags. A top face carries the way its column's
-     * water runs, as world generation left it in the chunk's terrain cache,
-     * or churns where water pours onto it from beside, the foot of a fall,
-     * carrying the drop poured onto it; an upright face carries how far above
-     * its top edge its fall's lip stands, and stands full height wherever the
-     * same liquid lies over it, so a falling column pours as one sheet; only
-     * faces carrying the same flow and fall merge. Each merged churning face
-     * is recorded as the foot of a fall in its subchunk's LiquidFallStruct,
-     * where the spray at the foot is thrown up from.
+     * the faces it pours over open air from, a river stepping down its channel
+     * or a fall off a cliff; flowing water emits every exposed face; all
+     * greedily merged. Faces against opaque blocks are dropped, and each face
+     * becomes one packed record of its first corner, extents, fill level,
+     * tidal flag, flow and fall, from which the water shader rebuilds its
+     * corners and surface flags. A top face carries the way its column's water
+     * runs, as world generation left it in the chunk's terrain cache, or
+     * churns where water pours onto it from beside, the foot of a fall,
+     * carrying the drop poured onto it; an upright face water pours out
+     * through, over open air or onto the same liquid standing lower, falls,
+     * carrying how far above its top edge its fall's lip stands, while every
+     * other upright face stands still; an upright face stands full height
+     * wherever the same liquid lies over it, so a falling column pours as one
+     * sheet; only faces carrying the same flow and fall merge. Each merged
+     * churning face is recorded as the foot of a fall in its subchunk's
+     * LiquidFallStruct, where the spray at the foot is thrown up from.
      */
 
     // Internal
@@ -239,14 +241,20 @@ class LiquidGeometryBranch extends BranchPackage {
 
     // Flow \\
 
-    // The way a top face's water runs: churning under water pouring onto it from beside, else its column's flow as
-    // world generation cached it, still when the cache is gone; every other face is still
+    // The way a face's water runs: an upright face falling where water pours out through it, a top face churning
+    // under water pouring onto it from beside, else its column's flow as world generation cached it, still when the
+    // cache is gone; every other face is still
     private byte resolveFlow(
             ChunkInstance chunkInstance,
             SubChunkInstance subChunkInstance,
             int xyz,
             Direction3Vector direction3Vector,
             BlockHandle blockHandle) {
+
+        if (isLateral(direction3Vector))
+            return isPouring(chunkInstance, subChunkInstance, xyz, direction3Vector, blockHandle)
+                    ? LiquidFlowUtility.FALL
+                    : LiquidFlowUtility.STILL;
 
         if (direction3Vector != Direction3Vector.UP)
             return LiquidFlowUtility.STILL;
@@ -316,7 +324,7 @@ class LiquidGeometryBranch extends BranchPackage {
         return subChunkInstance.getLiquidLevel(xyz);
     }
 
-    // What a face carries of the fall it belongs to: an upright face the height of its fall's lip, the topmost cell
+    // What a face carries of the fall it belongs to: a falling face the height of its fall's lip, the topmost cell
     // of the run of the same liquid above it that shows the same face, and a churning top face the drop poured onto
     // it; nothing on any other face
     private int resolveFall(
@@ -327,7 +335,7 @@ class LiquidGeometryBranch extends BranchPackage {
             BlockHandle blockHandle,
             byte flow) {
 
-        if (isLateral(direction3Vector))
+        if (flow == LiquidFlowUtility.FALL)
             return resolveLipY(chunkInstance, subChunkInstance, xyz, direction3Vector, blockHandle);
 
         if (flow != LiquidFlowUtility.CHURN)
@@ -362,7 +370,7 @@ class LiquidGeometryBranch extends BranchPackage {
             int aboveXYZ = ChunkCoordinateUtility.getNeighborAndWrap(cellXYZ, Direction3Vector.UP);
 
             if (aboveSubChunkInstance.getBlock(aboveXYZ) != blockHandle.getBlockID()
-                    || !hasExposedFace(chunkInstance, aboveSubChunkInstance, aboveXYZ, direction3Vector, blockHandle))
+                    || !isPouring(chunkInstance, aboveSubChunkInstance, aboveXYZ, direction3Vector, blockHandle))
                 break;
 
             cellSubChunkInstance = aboveSubChunkInstance;
@@ -519,6 +527,29 @@ class LiquidGeometryBranch extends BranchPackage {
                         .getGeometry() == DynamicGeometryType.NONE;
     }
 
+    // Whether water pours out through an upright face: over open air, or down onto the same liquid standing lower
+    private boolean isPouring(
+            ChunkInstance chunkInstance,
+            SubChunkInstance subChunkInstance,
+            int xyz,
+            Direction3Vector direction3Vector,
+            BlockHandle blockHandle) {
+
+        if (isOpenFall(chunkInstance, subChunkInstance, xyz, direction3Vector))
+            return true;
+
+        SubChunkInstance comparativeSubChunkInstance = getComparativeSubChunkInstance(
+                chunkInstance, subChunkInstance, xyz, direction3Vector);
+
+        if (comparativeSubChunkInstance == null || comparativeSubChunkInstance == ERROR)
+            return false;
+
+        int comparativeXYZ = ChunkCoordinateUtility.getNeighborAndWrap(xyz, direction3Vector);
+
+        return comparativeSubChunkInstance.getBlock(comparativeXYZ) == blockHandle.getBlockID()
+                && comparativeSubChunkInstance.getLiquidLevel(comparativeXYZ) < subChunkInstance.getLiquidLevel(xyz);
+    }
+
     private boolean isLateral(Direction3Vector direction3Vector) {
         return direction3Vector != Direction3Vector.UP && direction3Vector != Direction3Vector.DOWN;
     }
@@ -581,7 +612,7 @@ class LiquidGeometryBranch extends BranchPackage {
                 Coordinate3Int.unpackX(vertXYZ) * SUB_BLOCK_DIVISIONS,
                 Coordinate3Int.unpackY(vertXYZ) * SUB_BLOCK_DIVISIONS,
                 Coordinate3Int.unpackZ(vertXYZ) * SUB_BLOCK_DIVISIONS));
-        int recordFall = isLateral(direction3Vector)
+        int recordFall = flow == LiquidFlowUtility.FALL
                 ? Math.min(Math.max(fall - resolveTotalY(subChunkInstance, xyz) - sizeB, 0),
                         EngineSetting.LIQUID_FALL_MAX_BLOCKS)
                 : fall;

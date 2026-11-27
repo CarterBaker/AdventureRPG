@@ -698,6 +698,15 @@ One line per session that changed this file: the date, what was added or removed
   `shaders/particles/waterfallspray/WaterfallSprayShader` (`.vsh`, `.fsh`, `.arpg`) and
   `materials/particles/WaterfallSprayMaterial.arpg` (splashes, foam and mist at the foot of every fall, sized by
   its drop).
+- 2026-11-27: Painted macro terrain. Removed `shaders/surface/includes/MacroCrinkle.glsl` (the vertex crinkle,
+  replaced); added `shaders/surface/includes/MacroPaint.glsl` (distant ground painted in flat steps, brush patches,
+  cliff strata and a faint block pattern near the rim); regenerated `shaders/surface/includes/MacroGround.glsl`,
+  `shaders/surface/macro/MacroTerrainShader.vsh`, `MacroTerrainShader.fsh`, `shaders/trees/includes/TreeFar.glsl`,
+  `shaders/includes/SettingsData.glsl` and `ubos/SettingsData.arpg` (`u_macroPaint`, `u_macroBlocks`).
+- 2026-11-27: River water fixes. Regenerated `shaders/liquid/WaterShader.tcs` (near water tessellated a vertex
+  per block so merged faces stop cracking) and `shaders/liquid/includes/WaterShading.glsl` (thin bank foam on rivers,
+  sparse short ripple dashes in place of the hatching, no white crests, falls mostly azure, only pouring faces shaded
+  as falls); regenerated `shaders/particles/waterfallspray/WaterfallSprayShader.fsh` (rounded foam, not stars).
 
 ## Textures and Sprites (2603 files)
 
@@ -2033,7 +2042,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 ### `assets/shaders/surface/includes/`
 
 `Bevel.glsl`, `CloudShadow.glsl`, `Content.glsl`, `Coverage.glsl`, `FaceGradient.glsl`, `HeightDisplacement.glsl`,
-`MacroCrinkle.glsl`, `MacroGround.glsl`, `NearTerrainNoise.glsl`, `Normal.glsl`, `PatchCulling.glsl`, `SurfaceTessellationTier.glsl`, `SurfaceTierFlat.glsl`,
+`MacroGround.glsl`, `MacroPaint.glsl`, `NearTerrainNoise.glsl`, `Normal.glsl`, `PatchCulling.glsl`, `SurfaceTessellationTier.glsl`, `SurfaceTierFlat.glsl`,
 `SurfaceTierFull.glsl`, `TiledSampling.glsl`
 
 ### `assets/shaders/surface/macro/`

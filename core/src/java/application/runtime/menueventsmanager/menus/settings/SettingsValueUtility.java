@@ -231,8 +231,8 @@ public class SettingsValueUtility extends EngineUtility {
             case VIGNETTE -> settings.vignette = value;
             case CHROMATIC_ABERRATION -> settings.chromaticAberration = value;
             case FILM_GRAIN -> settings.filmGrain = value;
-            case MACRO_CRINKLE -> settings.macroCrinkle = value;
-            case MACRO_CRINKLE_SIZE -> settings.macroCrinkleSize = value;
+            case MACRO_PAINT -> settings.macroPaint = value;
+            case MACRO_BLOCKS -> settings.macroBlocks = value;
             case CAMERA_SHAKE_INTENSITY -> settings.cameraShakeIntensity = value;
             case MASTER_VOLUME -> settings.masterVolume = value;
             case MUSIC_VOLUME -> settings.musicVolume = value;
@@ -265,7 +265,7 @@ public class SettingsValueUtility extends EngineUtility {
                     resolveValue(settings, slider));
             case OUTLINE_STRENGTH, DEPTH_OF_FIELD_STRENGTH, DEPTH_OF_FIELD_BLUR, DEPTH_OF_FIELD_THIRD_PERSON_STRENGTH,
                     BLOOM_INTENSITY, BRIGHTNESS, CONTRAST, SATURATION, VIGNETTE, CHROMATIC_ABERRATION, FILM_GRAIN,
-                    MACRO_CRINKLE, MACRO_CRINKLE_SIZE, CAMERA_SHAKE_INTENSITY, MASTER_VOLUME, MUSIC_VOLUME, EFFECT_VOLUME, AMBIENT_VOLUME,
+                    MACRO_PAINT, MACRO_BLOCKS, CAMERA_SHAKE_INTENSITY, MASTER_VOLUME, MUSIC_VOLUME, EFFECT_VOLUME, AMBIENT_VOLUME,
                     INTERFACE_VOLUME, VOICE_VOLUME -> String.format(
                             RuntimeSetting.SETTINGS_FORMAT_PERCENT,
                             resolveValue(settings, slider) * RuntimeSetting.SETTINGS_SLIDER_PERCENT_SCALE);
@@ -286,8 +286,8 @@ public class SettingsValueUtility extends EngineUtility {
             case VIGNETTE -> settings.vignette;
             case CHROMATIC_ABERRATION -> settings.chromaticAberration;
             case FILM_GRAIN -> settings.filmGrain;
-            case MACRO_CRINKLE -> settings.macroCrinkle;
-            case MACRO_CRINKLE_SIZE -> settings.macroCrinkleSize;
+            case MACRO_PAINT -> settings.macroPaint;
+            case MACRO_BLOCKS -> settings.macroBlocks;
             case CAMERA_SHAKE_INTENSITY -> settings.cameraShakeIntensity;
             case MASTER_VOLUME -> settings.masterVolume;
             case MUSIC_VOLUME -> settings.musicVolume;
@@ -312,8 +312,8 @@ public class SettingsValueUtility extends EngineUtility {
             case VIGNETTE -> EngineSetting.VIGNETTE_MIN;
             case CHROMATIC_ABERRATION -> EngineSetting.CHROMATIC_ABERRATION_MIN;
             case FILM_GRAIN -> EngineSetting.FILM_GRAIN_MIN;
-            case MACRO_CRINKLE -> EngineSetting.MACRO_CRINKLE_MIN;
-            case MACRO_CRINKLE_SIZE -> EngineSetting.MACRO_CRINKLE_SIZE_MIN;
+            case MACRO_PAINT -> EngineSetting.MACRO_PAINT_MIN;
+            case MACRO_BLOCKS -> EngineSetting.MACRO_BLOCKS_MIN;
             case CAMERA_SHAKE_INTENSITY -> EngineSetting.CAMERA_SHAKE_INTENSITY_MIN;
             case MASTER_VOLUME, MUSIC_VOLUME, EFFECT_VOLUME, AMBIENT_VOLUME, INTERFACE_VOLUME,
                     VOICE_VOLUME -> EngineSetting.VOLUME_MIN;
@@ -334,8 +334,8 @@ public class SettingsValueUtility extends EngineUtility {
             case VIGNETTE -> EngineSetting.VIGNETTE_MAX;
             case CHROMATIC_ABERRATION -> EngineSetting.CHROMATIC_ABERRATION_MAX;
             case FILM_GRAIN -> EngineSetting.FILM_GRAIN_MAX;
-            case MACRO_CRINKLE -> EngineSetting.MACRO_CRINKLE_MAX;
-            case MACRO_CRINKLE_SIZE -> EngineSetting.MACRO_CRINKLE_SIZE_MAX;
+            case MACRO_PAINT -> EngineSetting.MACRO_PAINT_MAX;
+            case MACRO_BLOCKS -> EngineSetting.MACRO_BLOCKS_MAX;
             case CAMERA_SHAKE_INTENSITY -> EngineSetting.CAMERA_SHAKE_INTENSITY_MAX;
             case MASTER_VOLUME, MUSIC_VOLUME, EFFECT_VOLUME, AMBIENT_VOLUME, INTERFACE_VOLUME,
                     VOICE_VOLUME -> EngineSetting.VOLUME_MAX;

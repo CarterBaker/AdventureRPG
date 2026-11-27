@@ -72,14 +72,14 @@ public class SettingsUtility extends EngineUtility {
                 settings.textureAnisotropy,
                 EngineSetting.TEXTURE_ANISOTROPY_LEVELS[0],
                 EngineSetting.TEXTURE_ANISOTROPY_LEVELS[EngineSetting.TEXTURE_ANISOTROPY_LEVELS.length - 1]);
-        settings.macroCrinkle = Math.clamp(
-                settings.macroCrinkle,
-                EngineSetting.MACRO_CRINKLE_MIN,
-                EngineSetting.MACRO_CRINKLE_MAX);
-        settings.macroCrinkleSize = Math.clamp(
-                settings.macroCrinkleSize,
-                EngineSetting.MACRO_CRINKLE_SIZE_MIN,
-                EngineSetting.MACRO_CRINKLE_SIZE_MAX);
+        settings.macroPaint = Math.clamp(
+                settings.macroPaint,
+                EngineSetting.MACRO_PAINT_MIN,
+                EngineSetting.MACRO_PAINT_MAX);
+        settings.macroBlocks = Math.clamp(
+                settings.macroBlocks,
+                EngineSetting.MACRO_BLOCKS_MIN,
+                EngineSetting.MACRO_BLOCKS_MAX);
         settings.maxRenderDistance = Math.clamp(
                 settings.maxRenderDistance,
                 EngineSetting.RENDER_DISTANCE_MIN,

@@ -9,7 +9,8 @@ public class LiquidFlowUtility extends EngineUtility {
      * The one place the way a column's water runs becomes the code its water
      * faces carry to the water shader: STILL for water that stands, one of
      * LIQUID_FLOW_DIRECTIONS directions round from east toward south for
-     * water that runs, and CHURN for water a fall pours onto from beside. A
+     * water that runs, CHURN for water a fall pours onto from beside, and
+     * FALL for the upright face water pours out through. A
      * direction is the nearest of the ring to the way given, so a river's
      * bends turn its faces' codes a step at a time and long straight reaches
      * still merge into wide faces. It is also the one place the foot of a
@@ -21,6 +22,7 @@ public class LiquidFlowUtility extends EngineUtility {
     // Settings
     public static final byte STILL = EngineSetting.LIQUID_FLOW_STILL;
     public static final byte CHURN = EngineSetting.LIQUID_FLOW_CHURN;
+    public static final byte FALL = EngineSetting.LIQUID_FLOW_FALL;
 
     // Code \\
 
@@ -38,7 +40,7 @@ public class LiquidFlowUtility extends EngineUtility {
     }
 
     public static boolean isRunning(byte code) {
-        return code != STILL && code != CHURN;
+        return code > STILL && code <= EngineSetting.LIQUID_FLOW_DIRECTIONS;
     }
 
     // Fall Foot \\

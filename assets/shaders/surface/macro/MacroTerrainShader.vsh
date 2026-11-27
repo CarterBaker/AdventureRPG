@@ -21,8 +21,8 @@ flat out int vCoverChunk;
 // with. The grid-relative position leaves for the fragment's facet normal and cloud shadow, and the
 // tile-local one for its chunk coverage test. A tree stand-in names the chunk of the tile its tree roots in, so
 // the whole tree yields with that chunk; ground and canopy name none and yield wherever they lie. Every vertex is
-// then placed on the macro ground (MacroGround: crinkled, and sunk beneath the grid's rim so no seam opens there),
-// and the facet normal the fragment takes follows the placed position.
+// then placed on the macro ground (MacroGround: sunk beneath the grid's rim so no seam opens there), and the facet
+// normal the fragment takes follows the placed position.
 
 vec3 unpackColor(float packedColor) {
     int col = int(packedColor);
@@ -36,7 +36,7 @@ void main() {
     vec3 worldPos = aPos;
     worldPos.x   += u_gridPosition.x;
     worldPos.z   += u_gridPosition.y;
-    worldPos      = placeOnMacroGround(worldPos, aCoverChunk >= 0.0);
+    worldPos      = placeOnMacroGround(worldPos);
 
     vLocalPos  = worldPos;
     vTilePos   = aPos.xz;

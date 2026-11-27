@@ -21,17 +21,18 @@
  * under the same fog the underwater pass lays over the scene. Detail falls away with distance: ripples fade
  * out, waves settle to a calmer slope, and the caustics and the reflection march stop, so far water neither
  * sparkles nor costs what near water does. Running fresh water is a cartoon river: its body takes the river's
- * own bright azure palette and is seen through as though deeper, so the bed only tints it; its top faces drift
- * their ripples downstream, stand in rows of V-shaped waves whose points lead downstream and whose crests now and
- * then break white, bumping the surface the light catches, and streak with long pale dashes racing the way the
- * column runs; the pool at a fall's foot churns with billowing puffs, whiter the further the water dropped onto it;
- * and a fall's face is a sheet of the same azure that all but hides what stands behind it, pouring with pale threads
- * and white water from a glassy lip, both carried at one pace through the time the water has been falling, so they
- * race faster and stretch longer the further down the face they are, and the white breaks through more as the drop
- * grows. White water joins the whitecap field and the pale streaks are a third field cut the same way, so each
- * takes the same hard cel edge every foam line has. The flow code is LiquidFlowUtility's: zero still, one to
- * WATER_FLOW_DIRECTIONS a way round from east toward south, and WATER_FLOW_CHURN churning; the fall is the height
- * of an upright face's lip, or the drop poured onto a churning top face.
+ * own bright azure palette and is seen through as though far deeper, so it reads as solid color the bed only
+ * tints; its top faces drift their ripples downstream, stand in rows of gentle V-shaped waves whose points lead
+ * downstream, bumping the surface the light catches, and carry a sparse scatter of short curved pale dashes racing
+ * the way the column runs, its banks ringed by a thin clean foam line rather than the sea's broad wash; the pool at a
+ * fall's foot churns with billowing puffs, whiter the further the water dropped onto it; and a fall's face is a sheet
+ * of the same azure that all but hides what stands behind it, pouring with a few pale threads and white streaks from a
+ * glassy lip, both carried at one pace through the time the water has been falling, so they race faster and stretch
+ * longer the further down the face they are, and the white breaks through more as the drop grows. White water joins
+ * the whitecap field and the pale marks are a third field cut the same way, so each takes the same hard cel edge
+ * every foam line has. The flow code is LiquidFlowUtility's: zero still, one to WATER_FLOW_DIRECTIONS a way round
+ * from east toward south, WATER_FLOW_CHURN churning and WATER_FLOW_FALL on an upright face water pours out through;
+ * the fall is the height of a falling face's lip, or the drop poured onto a churning top face.
  *
  * The engine prepends a program's includes to every one of its stages, so nothing here may touch what only a
  * fragment stage has. A fragment shader resolves its WaterSurface from its own gl_FragCoord, measures the foam
@@ -72,25 +73,32 @@ const float WATER_DETAIL_FADE_END      = 640.0;
 const float WATER_FAR_WAVE_SLOPE_SHARE = 0.35;
 const float WATER_FLOW_DIRECTIONS      = 16.0;
 const float WATER_FLOW_CHURN           = 17.0;
+const float WATER_FLOW_FALL            = 18.0;
 const float WATER_FLOW_SPEED           = 2.4;
-const float WATER_LINE_ACROSS_SCALE    = 2.4;
-const float WATER_LINE_ALONG_SCALE     = 0.22;
-const float WATER_LINE_THRESHOLD       = 0.6;
-const float WATER_LINE_GAIN            = 5.0;
+const float WATER_DASH_ALONG_BLOCKS    = 2.6;
+const float WATER_DASH_ACROSS_BLOCKS   = 0.9;
+const float WATER_DASH_DENSITY         = 0.22;
+const float WATER_DASH_LENGTH          = 0.42;
+const float WATER_DASH_WIDTH           = 0.09;
+const float WATER_DASH_BEND            = 0.6;
+const float WATER_DASH_JITTER          = 0.12;
+const uint  WATER_DASH_HASH_X          = 0x8DA6B343u;
+const uint  WATER_DASH_HASH_Y          = 0xD8163841u;
+const uint  WATER_DASH_HASH_MIX        = 0x2C1B3C6Du;
+const uint  WATER_DASH_HASH_STEP       = 0x297A2D39u;
+const float WATER_DASH_HASH_SCALE      = 1.0 / 4294967295.0;
+const float WATER_RIVER_SHORE_SHARE    = 0.25;
+const float WATER_RIVER_NOISE_SHARE    = 0.2;
 const float WATER_RAPID_BAND_RATE      = 0.9;
 const float WATER_RAPID_LANE_RATE      = 0.45;
 const float WATER_RAPID_SLANT          = 0.7;
 const float WATER_RAPID_DRIFT          = 0.35;
 const float WATER_RAPID_WARP           = 0.6;
 const float WATER_RAPID_WARP_SCALE     = 0.35;
-const float WATER_RAPID_CREST          = 0.3;
-const float WATER_RAPID_BREAKUP_SCALE  = 0.8;
-const float WATER_RAPID_BREAKUP        = 0.55;
-const float WATER_RAPID_GAIN           = 3.5;
 const float WATER_RAPID_HEIGHT         = 0.035;
 const vec3  WATER_STREAK_COLOR         = vec3(0.80, 0.96, 1.00);
 const float WATER_RIVER_DEPTH_GAIN     = 1.6;
-const float WATER_RIVER_THICKNESS_GAIN = 3.0;
+const float WATER_RIVER_THICKNESS_GAIN = 5.0;
 const float WATER_CHURN_SCALE          = 0.9;
 const float WATER_CHURN_DETAIL_SCALE   = 2.3;
 const float WATER_CHURN_SPEED          = 0.9;
@@ -103,13 +111,13 @@ const float WATER_FALL_LIP_START       = 0.08;
 const float WATER_FALL_PACE            = 1.0;
 const float WATER_FALL_ACROSS_SCALE    = 2.2;
 const float WATER_FALL_ALONG_SCALE     = 2.4;
-const float WATER_FALL_THRESHOLD       = 0.52;
+const float WATER_FALL_THRESHOLD       = 0.66;
 const float WATER_FALL_GAIN            = 3.5;
 const float WATER_FALL_WHITE_DROP      = 8.0;
-const float WATER_FALL_WHITE_SHARE     = 0.22;
+const float WATER_FALL_WHITE_SHARE     = 0.18;
 const float WATER_FALL_THREAD_ACROSS   = 4.5;
 const float WATER_FALL_THREAD_ALONG    = 0.9;
-const float WATER_FALL_THREAD_CUT      = 0.58;
+const float WATER_FALL_THREAD_CUT      = 0.68;
 const float WATER_FALL_THREAD_GAIN     = 6.0;
 const float WATER_FALL_LIP_BLOCKS      = 0.16;
 const float WATER_FALL_LIP_GAIN        = 8.0;
@@ -167,18 +175,26 @@ float resolveCelMask(float value, float edge) {
     return smoothstep(0.5 - edge, 0.5 + edge, value);
 }
 
-// The whitecap and shore foam fields, each cut into foam where it crosses one half
-vec2 resolveFoamValues(OceanState state, float displacement, float shoreDepth, float foamNoise, float tidal) {
+// The whitecap and shore foam fields, each cut into foam where it crosses one half; a river's shore foam reaches only
+// a sliver out from its banks and barely breaks up, a thin clean line
+vec2 resolveFoamValues(
+    OceanState state,
+    float displacement,
+    float shoreDepth,
+    float foamNoise,
+    float tidal,
+    float river) {
     float whitecap = tidal > 0.5 ? resolveOceanWhitecap(state, displacement) : 0.0;
     float cap      = whitecap * WATER_WHITECAP_GAIN - foamNoise + 0.5;
 
-    float shoreReach = WATER_SHORE_FOAM_DEPTH * (1.0 + state.seaState * WATER_SHORE_STATE_GAIN);
+    float shoreReach = WATER_SHORE_FOAM_DEPTH * (1.0 + state.seaState * WATER_SHORE_STATE_GAIN)
+        * mix(1.0, WATER_RIVER_SHORE_SHARE, river);
     float shore      = 1.0 - smoothstep(0.0, shoreReach, shoreDepth);
     float ring       = 0.5 + 0.5 * sin(shoreDepth * WATER_SHORE_RING_FREQUENCY
         - u_oceanSurface.w * WATER_SHORE_RING_SPEED);
 
     return vec2(cap, shore * (1.0 - WATER_SHORE_RING_SHARE + WATER_SHORE_RING_SHARE * ring)
-        + (foamNoise - 0.5) * WATER_FOAM_NOISE_SHARE);
+        + (foamNoise - 0.5) * WATER_FOAM_NOISE_SHARE * mix(1.0, WATER_RIVER_NOISE_SHARE, river));
 }
 
 float resolveFoam(vec3 foamValues, vec3 foamEdges) {
@@ -195,12 +211,12 @@ bool isRunningFlow(float flow) {
     return flow > 0.5 && flow < WATER_FLOW_DIRECTIONS + 0.5;
 }
 
-// Whether a fragment lies on a fall's face: an upright face off the tide
+// Whether a fragment lies on a fall's face: an upright face off the tide that water pours out through
 bool isFallingWater(WaterFragment fragment, vec3 faceNormal) {
-    return fragment.tidal < 0.5 && abs(faceNormal.y) < 0.5;
+    return fragment.tidal < 0.5 && abs(faceNormal.y) < 0.5 && fragment.flow > WATER_FLOW_FALL - 0.5;
 }
 
-// Whether a top face is fresh water on the move: a river running, or the pool churning at a fall's foot
+// Whether a face is fresh water on the move: a river running, the pool churning at a fall's foot, or a fall
 bool isRiverWater(WaterFragment fragment) {
     return fragment.tidal < 0.5 && fragment.flow > 0.5;
 }
@@ -235,17 +251,6 @@ float resolveRapidPhase(vec2 pos, vec2 down, vec2 across, out float lane) {
         + warp * WATER_RAPID_WARP;
 }
 
-// The white caps breaking along the rapids' crests, crossing one half where they show, broken into lumps
-float resolveRapidFoam(vec2 pos, vec2 down, vec2 across) {
-    float lane;
-    float phase   = resolveRapidPhase(pos, down, across, lane);
-    float crest   = abs(fract(phase) - 0.5) * 2.0 - (1.0 - 2.0 * WATER_RAPID_CREST);
-    float breakup = sampleFlowNoise(pos * WATER_RAPID_BREAKUP_SCALE - down * (u_oceanSurface.w * WATER_FLOW_SPEED),
-        WATER_FLOW_SEED + 5u) - WATER_RAPID_BREAKUP;
-
-    return 0.5 + min(crest, breakup) * WATER_RAPID_GAIN;
-}
-
 // The slope of the rapids' standing waves on running water's top faces, nothing elsewhere
 vec2 resolveRapidSlope(WaterFragment fragment) {
 
@@ -262,8 +267,8 @@ vec2 resolveRapidSlope(WaterFragment fragment) {
 }
 
 // The white water running water adds, crossing one half where it shows: white breaking through a fall's face, more
-// the further it has fallen; puffs churning at a fall's foot, more the further the water dropped onto it; and the
-// rapids' breaking crests down a river; none on still or tidal water
+// the further it has fallen, and puffs churning at a fall's foot, more the further the water dropped onto it; none on
+// a running river, still or tidal water, whose white is only its banks' foam line
 float resolveFlowFoam(WaterFragment fragment, vec3 faceNormal) {
     float time = u_oceanSurface.w;
     vec3  pos  = fragment.worldPos;
@@ -288,17 +293,47 @@ float resolveFlowFoam(WaterFragment fragment, vec3 faceNormal) {
         return 0.5 + (billow * 0.65 + detail * 0.35 - WATER_CHURN_THRESHOLD + drop) * WATER_CHURN_GAIN;
     }
 
-    if (!isRunningFlow(fragment.flow) || abs(faceNormal.y) < 0.5)
     return 0.0;
-
-    vec2 down = resolveFlowDirection(fragment.flow);
-
-    return resolveRapidFoam(pos.xz, down, vec2(-down.y, down.x));
 }
 
-// The pale streaks running water carries, crossing one half where they show: long dashes racing down a river the way
-// its column runs, and thin threads pouring down a fall's face under the glassy band where it curls over its lip
-float resolveFlowStreaks(WaterFragment fragment, vec3 faceNormal) {
+vec3 hashWaterDash(ivec2 cell) {
+    uvec2 folded = uvec2(cell);
+    uint  first  = folded.x * WATER_DASH_HASH_X ^ folded.y * WATER_DASH_HASH_Y;
+
+    first ^= first >> 15;
+    first *= WATER_DASH_HASH_MIX;
+    first ^= first >> 13;
+
+    uint second = first * WATER_DASH_HASH_STEP;
+    second ^= second >> 15;
+
+    uint third = second * WATER_DASH_HASH_MIX;
+    third ^= third >> 13;
+
+    return vec3(uvec3(first, second, third)) * WATER_DASH_HASH_SCALE;
+}
+
+// One short curved dash in a few of the cells of a grid laid along the flow and carried downstream, 1 at its middle
+// and fading to 0 at its rim, nothing in the empty cells, so the field crosses one half only round a dash
+float resolveRippleDash(vec2 pos, vec2 down, vec2 across) {
+    vec2  flowPos = vec2(dot(pos, down) - u_oceanSurface.w * WATER_FLOW_SPEED, dot(pos, across));
+    vec2  grid    = flowPos / vec2(WATER_DASH_ALONG_BLOCKS, WATER_DASH_ACROSS_BLOCKS);
+    vec3  hash    = hashWaterDash(ivec2(floor(grid)));
+
+    if (hash.x > WATER_DASH_DENSITY)
+    return 0.0;
+
+    vec2 local = fract(grid) - 0.5 - (hash.yz - 0.5) * (WATER_DASH_JITTER * 2.0);
+
+    local.y += local.x * local.x * WATER_DASH_BEND;
+
+    return clamp(1.0 - length(local / vec2(WATER_DASH_LENGTH, WATER_DASH_WIDTH)), 0.0, 1.0);
+}
+
+// The pale marks running water carries, crossing one half where they show: a sparse scatter of short curved dashes
+// racing down a river the way its column runs, thinning away with the detail, and a few threads pouring down a fall's
+// face under the glassy band where it curls over its lip
+float resolveFlowStreaks(WaterFragment fragment, vec3 faceNormal, float detail) {
     float time = u_oceanSurface.w;
     vec3  pos  = fragment.worldPos;
 
@@ -314,12 +349,9 @@ float resolveFlowStreaks(WaterFragment fragment, vec3 faceNormal) {
     if (fragment.tidal > 0.5 || !isRunningFlow(fragment.flow) || faceNormal.y < 0.5)
     return 0.0;
 
-    vec2 down   = resolveFlowDirection(fragment.flow);
-    vec2 across = vec2(-down.y, down.x);
-    vec2 line   = vec2(dot(pos.xz, across) * WATER_LINE_ACROSS_SCALE,
-        (dot(pos.xz, down) - time * WATER_FLOW_SPEED) * WATER_LINE_ALONG_SCALE);
+    vec2 down = resolveFlowDirection(fragment.flow);
 
-    return 0.5 + (sampleFlowNoise(line, WATER_FLOW_SEED + 3u) - WATER_LINE_THRESHOLD) * WATER_LINE_GAIN;
+    return resolveRippleDash(pos.xz, down, vec2(-down.y, down.x)) * detail;
 }
 
 // Where a top face's ripples are read: carried downstream on running water, in place elsewhere
@@ -509,13 +541,13 @@ bool resolveWaterSurface(WaterFragment fragment, vec3 fragCoord, out WaterSurfac
     if (!surface.fromBelow) {
         vec3 straightPos = viewToWorld(reconstructWaterViewPos(surface.screenUV, surface.sceneDepth));
 
-        surface.shoreDepth = surface.sceneDepth >= 1.0 || isFallingWater(fragment, faceNormal)
+        surface.shoreDepth = surface.sceneDepth >= 1.0 || (fragment.tidal < 0.5 && abs(faceNormal.y) < 0.5)
             ? WATER_UNSEEN_DEPTH_BLOCKS
             : max(fragment.worldPos.y - straightPos.y, 0.0);
         surface.foamValues = vec3(
             resolveFoamValues(surface.state, fragment.oceanState.w, surface.shoreDepth,
-                sampleFoamNoise(fragment.worldPos.xz), fragment.tidal),
-            resolveFlowStreaks(fragment, faceNormal));
+                sampleFoamNoise(fragment.worldPos.xz), fragment.tidal, isRiverWater(fragment) ? 1.0 : 0.0),
+            resolveFlowStreaks(fragment, faceNormal, surface.detail));
         surface.foamValues.x = max(surface.foamValues.x, resolveFlowFoam(fragment, faceNormal));
     }
 

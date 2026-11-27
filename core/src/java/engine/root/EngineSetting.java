@@ -832,10 +832,10 @@ public class EngineSetting {
     public static final int TEXTURE_QUALITY_HIGH = 2;
     public static final int[] TEXTURE_ANISOTROPY_LEVELS = { 1, 2, 4, 8, 16 };
     public static final int TEXTURE_ANISOTROPY_DEFAULT = 8;
-    public static final float MACRO_CRINKLE_MAX = 2f;
-    public static final float MACRO_CRINKLE_MIN = 0f;
-    public static final float MACRO_CRINKLE_SIZE_MAX = 2f;
-    public static final float MACRO_CRINKLE_SIZE_MIN = 0.5f;
+    public static final float MACRO_PAINT_MAX = 2f;
+    public static final float MACRO_PAINT_MIN = 0f;
+    public static final float MACRO_BLOCKS_MAX = 2f;
+    public static final float MACRO_BLOCKS_MIN = 0f;
 
     // User Settings — Post Processing
     public static final float BLOOM_INTENSITY_MAX = 1f;
@@ -1099,8 +1099,8 @@ public class EngineSetting {
     public static final String UNIFORM_DELTA_TIME = "u_deltaTime";
     public static final String UNIFORM_DETAIL_RADIUS = "u_detailRadius";
     public static final String UNIFORM_CHARACTER_DETAIL = "u_characterDetail";
-    public static final String UNIFORM_MACRO_CRINKLE = "u_macroCrinkle";
-    public static final String UNIFORM_MACRO_CRINKLE_SIZE = "u_macroCrinkleSize";
+    public static final String UNIFORM_MACRO_PAINT = "u_macroPaint";
+    public static final String UNIFORM_MACRO_BLOCKS = "u_macroBlocks";
     public static final String UNIFORM_DEST_RECT = "u_destRect";
     public static final String UNIFORM_DISTANCE_FROM_CENTER = "u_distanceFromCenter";
     public static final String UNIFORM_FACE_ORIENTATIONS = "u_faceOrientations";
@@ -1349,10 +1349,12 @@ public class EngineSetting {
             + QUAD_RECORD_LIQUID_FLOW_BITS;
 
     // Liquid Flow — the way a column's water runs, one code per block column: still, one of a ring of directions
-    // (east first, turning toward south), or churning where water pours onto it from beside
+    // (east first, turning toward south), or churning where water pours onto it from beside; an upright face water
+    // pours out through, over open air or down onto the same liquid standing lower, falls
     public static final int LIQUID_FLOW_DIRECTIONS = 16;
     public static final byte LIQUID_FLOW_STILL = 0;
     public static final byte LIQUID_FLOW_CHURN = (byte) (LIQUID_FLOW_DIRECTIONS + 1);
+    public static final byte LIQUID_FLOW_FALL = (byte) (LIQUID_FLOW_DIRECTIONS + 2);
 
     // Liquid Falls — water pouring over open air: an upright face carries how far above its top edge its fall's lip
     // stands and a churning top face the drop poured onto it, both held to the most the record's fall bits hold; the

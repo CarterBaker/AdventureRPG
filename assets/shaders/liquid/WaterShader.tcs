@@ -18,11 +18,15 @@ out float teFlow[];
 out float teFall[];
 
 #include "liquid/includes/OceanTessellation.glsl"
+#include "surface/includes/SurfaceTessellationTier.glsl"
 
-// Tessellation-level control point. Only patches that ride the tide are subdivided; still and flowing water
-// keeps its four corners. Corners arrive as the origin, then along tangent A, across both, then along
-// tangent B, so outer levels 0 and 2 run along B, 1 and 3 along A, as on the solid surface. See
-// OceanTessellation.glsl for why every shared vertex lands in the same place on both patches.
+// Tessellation-level control point. Patches that ride the tide are subdivided by the sea's density (see
+// OceanTessellation.glsl for why every shared vertex lands in the same place on both patches). Still and flowing
+// water near enough for the shore warp to move it takes a vertex on every whole block of every edge: greedy merging
+// leaves a long face meeting several short ones along one edge, and the warp moves every vertex by its own position,
+// so only with a vertex wherever a neighbour has a corner do both edges bend alike and no crack opens between them;
+// further out it keeps its four corners. Corners arrive as the origin, then along tangent A, across both, then along
+// tangent B, so outer levels 0 and 2 run along B, 1 and 3 along A, as on the solid surface.
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -60,6 +64,15 @@ void main() {
             outer3 = resolveOceanEdgeLevel(p3, p2, center, normal, patchDensity);
             innerA = resolveOceanInnerLevel(p0, p1, patchDensity);
             innerB = resolveOceanInnerLevel(p0, p3, patchDensity);
+        }
+        else if (computeDistanceFromPlayerSq((p0 + p2) * 0.5) <= getNearDensityMaxSqDist()) {
+
+            innerA = max(round(distance(p0, p1)), 1.0);
+            innerB = max(round(distance(p0, p3)), 1.0);
+            outer0 = innerB;
+            outer1 = innerA;
+            outer2 = innerB;
+            outer3 = innerA;
         }
 
         gl_TessLevelOuter[0] = outer0;

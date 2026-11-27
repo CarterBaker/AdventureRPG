@@ -203,11 +203,11 @@ public class RuntimeSetting {
     public static final int SPRAY_KIND_FOAM = 1;
     public static final int SPRAY_KIND_MIST = 2;
     public static final int SPRAY_KINDS = 3;
-    public static final float[] SPRAY_RATE_PER_BLOCK = { 5f, 1.6f, 0.9f };
+    public static final float[] SPRAY_RATE_PER_BLOCK = { 4f, 0.7f, 0.9f };
     public static final float[] SPRAY_RATE_PER_DROP = { 0.35f, 0.12f, 0.2f };
     public static final float[] SPRAY_RATE_MAX_PER_BLOCK = { 40f, 6f, 6f };
-    public static final float[] SPRAY_SIZE_MIN = { 0.05f, 0.22f, 0.9f };
-    public static final float[] SPRAY_SIZE_MAX = { 0.12f, 0.42f, 1.6f };
+    public static final float[] SPRAY_SIZE_MIN = { 0.05f, 0.18f, 0.9f };
+    public static final float[] SPRAY_SIZE_MAX = { 0.12f, 0.34f, 1.6f };
     public static final float[] SPRAY_SIZE_PER_DROP = { 0.012f, 0.03f, 0.18f };
     public static final float[] SPRAY_SIZE_LIMIT = { 0.3f, 1.2f, 6f };
     public static final float[] SPRAY_LIFE_MIN = { 0.6f, 2.5f, 2.2f };
@@ -692,8 +692,8 @@ public class RuntimeSetting {
     public static final String SETTINGS_SLIDER_VIGNETTE = "Vignette";
     public static final String SETTINGS_SLIDER_CHROMATIC_ABERRATION = "Chromatic Aberration";
     public static final String SETTINGS_SLIDER_FILM_GRAIN = "Film Grain";
-    public static final String SETTINGS_SLIDER_MACRO_CRINKLE = "Distant Crinkle";
-    public static final String SETTINGS_SLIDER_MACRO_CRINKLE_SIZE = "Crinkle Size";
+    public static final String SETTINGS_SLIDER_MACRO_PAINT = "Distant Paint";
+    public static final String SETTINGS_SLIDER_MACRO_BLOCKS = "Distant Blocks";
     public static final String SETTINGS_SLIDER_CAMERA_SHAKE_INTENSITY = "Shake Intensity";
     public static final String SETTINGS_SLIDER_MASTER_VOLUME = "Master";
     public static final String SETTINGS_SLIDER_MUSIC_VOLUME = "Music";
