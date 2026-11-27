@@ -1420,7 +1420,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED = "A mesh file could not be written";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_REVERTED = "The mesh file could not be read";
     public static final String CHARACTER_EDITOR_MESSAGE_POSE_PLAYING =
-            "Sculpt strokes need a still pose: pick Bind or a struck pose under Pose (Idle, Walk and Run move)";
+            "Sculpt strokes need a still pose: pick Bind or a struck pose under Pose, and turn Preview Springs off"
+                    + " (Idle, Walk, Run and the springs move)";
     public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_EXTRUDE = "Select faces or edges to extrude";
     public static final String CHARACTER_EDITOR_MESSAGE_NO_FACES = "Select whole faces first";
     public static final String CHARACTER_EDITOR_MESSAGE_FACE_VERTICES = "Select 3 or 4 vertices to make a face";
@@ -2755,8 +2756,9 @@ public class EditorSetting {
     public static final int CHARACTER_STAMP_FIRST_NUMBER = 2;
     public static final String CHARACTER_STAMP_MESSAGE_PLACED = "Joined the part ";
     public static final String CHARACTER_STAMP_MESSAGE_ANIMATED = "; its animations joined clips: ";
-    public static final String CHARACTER_STAMP_MESSAGE_BODY_ONLY = "A part joins the body in the Bind pose: pick the"
-            + " Body or a body layer and Bind under Pose, or press Esc to put the part down";
+    public static final String CHARACTER_STAMP_MESSAGE_BODY_ONLY = "A part joins the body in a still pose: pick the"
+            + " Body or a body layer, a still pose under Pose and Preview Springs off, or press Esc to put the part"
+            + " down";
     public static final String CHARACTER_STAMP_MESSAGE_FAR = "A part attaches near a joint or a yellow attach point";
     public static final String CHARACTER_STAMP_MESSAGE_ROOT = "A root part starts the body over at its centre;"
             + " click to replace the body with it (Undo brings it back)";

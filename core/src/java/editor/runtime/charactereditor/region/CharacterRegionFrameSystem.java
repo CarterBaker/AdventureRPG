@@ -12,6 +12,7 @@ import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 
@@ -28,8 +29,9 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
      * mouth. While the region's part is open the frame is the box of every
      * vertex those bones carry at least the pick share of, the bone found by
      * name in the mesh's own rig, worked out again only once the mesh
-     * changes; otherwise it is about the bones' joints as
-     * the preview stands. The radius reaches past the farthest point by a
+     * changes, its centre carried each frame where the preview poses the
+     * frame bone, so a posed part is framed where it stands; otherwise it is
+     * about the bones' joints as the preview stands. The radius reaches past the farthest point by a
      * margin, never less than a set least.
      */
 
@@ -45,6 +47,8 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
     private CharacterMeshDocumentInstance framedDocument;
     private int framedRevision;
     private int framedBone;
+    private int framedMeshBone;
+    private Vector3 boxCenter;
 
     // Scratch
     private BooleanArrayList chainBones;
@@ -59,6 +63,7 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
 
         // Frame
         this.center = new Vector3();
+        this.boxCenter = new Vector3();
 
         // Scratch
         this.chainBones = new BooleanArrayList();
@@ -92,6 +97,10 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
 
         if (characterEditorManager.isRegionOpen(region)) {
             frameMesh(characterEditorManager.getActiveMeshDocument(), frameBone);
+
+            if (framed)
+                poseBoxCenter();
+
             return;
         }
 
@@ -119,7 +128,8 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
             return;
         }
 
-        resolveChain(meshRig, meshRig.getBoneIndex(frameBoneName));
+        this.framedMeshBone = meshRig.getBoneIndex(frameBoneName);
+        resolveChain(meshRig, framedMeshBone);
         low.set(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE);
         high.set(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE);
 
@@ -146,11 +156,20 @@ public class CharacterRegionFrameSystem extends SystemPackage implements ViewCam
         if (!found)
             return;
 
-        center.set(low).add(high).divide(2f);
+        boxCenter.set(low).add(high).divide(2f);
         this.radius = Math.max(
                 high.subtract(low).length() * EditorSetting.CHARACTER_REGION_FRAME_SIZE_SHARE
                         * EditorSetting.CHARACTER_REGION_FRAME_MARGIN,
                 EditorSetting.CHARACTER_REGION_FRAME_MIN_RADIUS);
+    }
+
+    // The box's centre, taken in the bind pose, carried by the frame bone's skinning as the preview poses it
+    private void poseBoxCenter() {
+
+        Matrix4 skinning = characterViewPoseSystem.getSkinningMatrices(
+                framedDocument.getMesh().getRigHandle())[framedMeshBone];
+
+        CharacterPoseUtility.transformPoint(skinning, boxCenter.x, boxCenter.y, boxCenter.z, center);
     }
 
     // Marks the bone and every bone below it, parents standing before children

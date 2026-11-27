@@ -46,6 +46,12 @@ class CharacterPlacementBranch extends BranchPackage {
      * the rig's root. Fur is laid over a patch about the point aimed at,
      * anywhere on the body, its cards found by CharacterFurBranch. A
      * placement's twin is the same part mirrored across the body. The body's open loops are found once per edit.
+     * Aimed on a posed body, the aim comes in already carried back to the
+     * bind pose, where every placement is worked out and joined; the
+     * pointer's turn, made on screen, is carried there through the turn the
+     * pose gives the host bone, and the placement keeps that bone's
+     * skinning, so its ghost and the attach points are shown where the pose
+     * stands them.
      */
 
     // Internal
@@ -83,6 +89,9 @@ class CharacterPlacementBranch extends BranchPackage {
     private Vector3 axis;
     private Matrix4 align;
     private Matrix4 twist;
+    private Matrix4 blendScratch;
+    private Matrix4 poseTurn;
+    private Matrix4 bindTilt;
 
     // Base \\
 
@@ -113,6 +122,9 @@ class CharacterPlacementBranch extends BranchPackage {
         this.axis = new Vector3();
         this.align = new Matrix4();
         this.twist = new Matrix4();
+        this.blendScratch = new Matrix4();
+        this.poseTurn = new Matrix4();
+        this.bindTilt = new Matrix4();
     }
 
     @Override
@@ -226,6 +238,41 @@ class CharacterPlacementBranch extends BranchPackage {
         out.set(loopCentres.getFloat(loop), loopCentres.getFloat(loop + 1), loopCentres.getFloat(loop + 2));
     }
 
+    // Where an attach point stands as the view poses the body through the skinning matrices, or in the bind pose
+    // without them: a joint carried by its own bone's, a loop's centre the mean of its vertices each carried by its
+    // own blend, as the view skins them
+    void getShownAttachPoint(int attachPoint, Matrix4[] skinningMatrices, Vector3 out) {
+
+        getAttachPoint(attachPoint, out);
+
+        if (skinningMatrices == null)
+            return;
+
+        if (attachPoint < attachJoints.size()) {
+            CharacterPoseUtility.transformPoint(
+                    skinningMatrices[attachJoints.getInt(attachPoint)], out.x, out.y, out.z, out);
+            return;
+        }
+
+        RiggedMeshStruct mesh = loopDocument.getMesh();
+        IntArrayList loop = loops.get(attachPoint - attachJoints.size());
+
+        out.set(0f, 0f, 0f);
+
+        for (int i = 0; i < loop.size(); i++) {
+
+            int vertexIndex = loop.getInt(i);
+
+            CharacterMeshUtility.resolveBlend(mesh, vertexIndex, skinningMatrices, blendScratch);
+            CharacterPoseUtility.transformPoint(
+                    blendScratch, mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex),
+                    jointScratch);
+            out.add(jointScratch);
+        }
+
+        out.divide(Math.max(1, loop.size()));
+    }
+
     // Whether an attach point is an open loop's centre, which a part snaps to, rather than a joint
     boolean isLoopPoint(int attachPoint) {
         return attachPoint >= attachJoints.size() && attachPoint < getAttachPointCount();
@@ -276,7 +323,8 @@ class CharacterPlacementBranch extends BranchPackage {
     // Placement \\
 
     // A placement at an open loop of the body, taken by its attach point, or at a face of the body where the ray met
-    // it; a root part, which has no plug, is placed at the rig's root whatever is aimed at
+    // it, the point and normal in the bind pose; a root part, which has no plug, is placed at the rig's root whatever
+    // is aimed at. The skinning matrices are the pose the view shows, null in the bind pose
     void resolve(
             CharacterMeshDocumentInstance document,
             StampHandle stampHandle,
@@ -285,6 +333,7 @@ class CharacterPlacementBranch extends BranchPackage {
             Vector3 point,
             Vector3 normal,
             Matrix4 tilt,
+            Matrix4[] skinningMatrices,
             CharacterPartPlacementStruct out) {
 
         sync(document);
@@ -297,6 +346,7 @@ class CharacterPlacementBranch extends BranchPackage {
 
         if (!stampHandle.hasPlug()) {
             resolveRoot(stampHandle, out);
+            resolvePosed(0, skinningMatrices, out);
             return;
         }
 
@@ -348,7 +398,8 @@ class CharacterPlacementBranch extends BranchPackage {
         String stampSide = resolveStampSide(stampHandle);
 
         out.setMirrored(!stampSide.isEmpty() && !out.getSide().isEmpty() && !stampSide.equals(out.getSide()));
-        compose(stampHandle.getPlug(), tilt, out);
+        resolvePosed(hostBone, skinningMatrices, out);
+        compose(stampHandle.getPlug(), toBindTilt(tilt, out.getPosed()), out);
     }
 
     // A root part placed to start a blank model's body, where no body stands to aim at
@@ -395,7 +446,10 @@ class CharacterPlacementBranch extends BranchPackage {
 
     // The same part placed mirrored across the body: its point, normal and turn reflected in x, its side swapped,
     // joining the open loop there when one lies within its radius, a hole cut otherwise
-    void resolveTwin(CharacterMeshDocumentInstance document, CharacterPartPlacementStruct placement,
+    void resolveTwin(
+            CharacterMeshDocumentInstance document,
+            CharacterPartPlacementStruct placement,
+            Matrix4[] skinningMatrices,
             CharacterPartPlacementStruct out) {
 
         sync(document);
@@ -432,6 +486,7 @@ class CharacterPlacementBranch extends BranchPackage {
         }
 
         refuseOverLimit(mesh.getFaceCount() + placement.getStampHandle().getMesh().getFaceCount() * 2, out);
+        resolvePosed(mesh.getRigHandle().getBoneIndex(out.getHostBoneName()), skinningMatrices, out);
         CharacterPoseUtility.reflectX(placement.getRotation(), out.getRotation());
 
         float[] m = out.getTransform().val;
@@ -514,6 +569,30 @@ class CharacterPlacementBranch extends BranchPackage {
         m[13] = point.y;
         m[14] = point.z;
         m[15] = 1f;
+    }
+
+    // Posed \\
+
+    // The matrix carrying a placement's bind pose to where the view poses it: the skinning of the bone it hangs from,
+    // the identity in the bind pose
+    private void resolvePosed(int boneIndex, Matrix4[] skinningMatrices, CharacterPartPlacementStruct out) {
+
+        if (skinningMatrices == null) {
+            out.getPosed().set(1f);
+            return;
+        }
+
+        out.getPosed().set(skinningMatrices[boneIndex]);
+    }
+
+    // The pointer's turn, made about the view's axes on the posed body, as the same turn in the bind pose: R⁻¹ · tilt
+    // · R, R the turn the pose gives the host bone, so the part turns on screen as the pointer moves whatever the pose
+    private Matrix4 toBindTilt(Matrix4 tilt, Matrix4 posed) {
+
+        CharacterPoseUtility.extractRotation(posed, poseTurn);
+        bindTilt.set(poseTurn).inverse().multiply(tilt).multiply(poseTurn);
+
+        return bindTilt;
     }
 
     // The shortest turn carrying one unit direction onto another, about the axis square to both; half a turn about

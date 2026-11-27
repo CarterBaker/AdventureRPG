@@ -24,6 +24,7 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintCanv
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPaintStampStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterPartPlacementStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
+import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStrandStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterBoneDisplay;
 import editor.bootstrap.charactereditorpipeline.util.CharacterBoneKind;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorColor;
@@ -1488,8 +1489,9 @@ public class CharacterEditorManager extends ManagerPackage {
         characterSculptBranch.cancelTransform();
     }
 
-    // Strokes work on a still surface, in the bind pose or one struck; struck while a movement plays, the surface
-    // moving under the brush, a stroke is refused and the status says why
+    // Sculpt strokes work on a still surface, in the bind pose or one struck, since a stroke shapes the posed copy it
+    // took as it began; struck while a pose plays, the surface moving under the brush, one is refused and the status
+    // says why
     private boolean refusePlayingPose() {
 
         if (!isPosePlaying())
@@ -1531,10 +1533,8 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (isSelectStroke())
             characterSelectionBranch.beginStroke(document, selection);
-        else if (toolManager.getTool(mode.getToolCanvas()) == EditorTool.TOPOLOGY) {
-            if (!refusePlayingPose())
-                characterTopologyBranch.beginStroke(document);
-        }
+        else if (toolManager.getTool(mode.getToolCanvas()) == EditorTool.TOPOLOGY)
+            characterTopologyBranch.beginStroke(document);
         else if (mode == CharacterEditorMode.SCULPT) {
             if (!refusePlayingPose())
                 characterShapeBranch.beginStroke(document, isPosed() ? skinningMatrices : null);
@@ -1932,10 +1932,10 @@ public class CharacterEditorManager extends ManagerPackage {
                 && getActiveStamp() != null;
     }
 
-    // True while the part armed can be placed: parts join the body alone in the bind pose, so the body must be the
-    // part open and the view unposed
+    // True while the part armed can be placed: parts join the body alone, so the body must be the part open, in the
+    // bind pose or one held still, where the placement aimed is carried back to the bind pose it joins in
     public boolean placesStamp() {
-        return armsStamp() && activePartKey.equals(EditorSetting.CHARACTER_EDITOR_PART_BODY) && !isPosed();
+        return armsStamp() && activePartKey.equals(EditorSetting.CHARACTER_EDITOR_PART_BODY) && !isPosePlaying();
     }
 
     // The part let go once it is placed, or when Escape puts it down, so the Brush strokes again
@@ -1957,8 +1957,9 @@ public class CharacterEditorManager extends ManagerPackage {
         return characterPlacementBranch.getAttachPointCount();
     }
 
-    public void getAttachPoint(int attachPoint, Vector3 out) {
-        characterPlacementBranch.getAttachPoint(attachPoint, out);
+    // Where an attach point stands as the view shows it, through the pose struck this frame while posed
+    public void getAttachPoint(int attachPoint, Matrix4[] skinningMatrices, Vector3 out) {
+        characterPlacementBranch.getShownAttachPoint(attachPoint, isPosed() ? skinningMatrices : null, out);
     }
 
     // Whether an attach point is an open loop's centre, which a part snaps to and joins, rather than a joint
@@ -1966,14 +1967,16 @@ public class CharacterEditorManager extends ManagerPackage {
         return characterPlacementBranch.isLoopPoint(attachPoint);
     }
 
-    // Where the part chosen would join: at an open loop by its attach point, or where a ray met a face of the body,
-    // tilted as the pointer turned it once set down; nothing is shown without a part or a body
+    // Where the part chosen would join: at an open loop by its attach point, or where a ray met a face of the body
+    // (the point and normal carried back to the bind pose), tilted as the pointer turned it once set down, shown
+    // through the pose struck this frame while posed; nothing is shown without a part or a body
     public void resolvePlacement(
             int attachPoint,
             int faceIndex,
             Vector3 point,
             Vector3 normal,
             Matrix4 tilt,
+            Matrix4[] skinningMatrices,
             CharacterPartPlacementStruct out) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
@@ -1984,7 +1987,16 @@ public class CharacterEditorManager extends ManagerPackage {
             return;
         }
 
-        characterPlacementBranch.resolve(document, stampHandle, attachPoint, faceIndex, point, normal, tilt, out);
+        characterPlacementBranch.resolve(
+                document,
+                stampHandle,
+                attachPoint,
+                faceIndex,
+                point,
+                normal,
+                tilt,
+                isPosed() ? skinningMatrices : null,
+                out);
     }
 
     // Whether a placement joins its twin across the body too: while mirroring, for a part placed off the centre
@@ -1992,12 +2004,33 @@ public class CharacterEditorManager extends ManagerPackage {
         return isMirror() && placement.isShown() && !placement.isRoot() && !placement.getSide().isEmpty();
     }
 
-    public void resolvePlacementTwin(CharacterPartPlacementStruct placement, CharacterPartPlacementStruct out) {
+    public void resolvePlacementTwin(
+            CharacterPartPlacementStruct placement,
+            Matrix4[] skinningMatrices,
+            CharacterPartPlacementStruct out) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
         if (document != null)
-            characterPlacementBranch.resolveTwin(document, placement, out);
+            characterPlacementBranch.resolveTwin(document, placement, isPosed() ? skinningMatrices : null, out);
+    }
+
+    // Where a fur placement's card stands as the view shows it, carried by its root's skinning while posed
+    public void resolveFurFrame(
+            CharacterPartPlacementStruct placement,
+            int card,
+            Matrix4[] skinningMatrices,
+            Matrix4 out) {
+
+        CharacterMeshDocumentInstance document = getActiveMeshDocument();
+
+        if (document == null) {
+            out.set(placement.getFurFrame(card));
+            return;
+        }
+
+        characterFurBranch.resolveShownFrame(
+                document.getMesh(), placement, card, isPosed() ? skinningMatrices : null, out);
     }
 
     // Joins the part where it is placed, or lays the fur, and its twin with it when one is given, as one edit
@@ -2126,8 +2159,10 @@ public class CharacterEditorManager extends ManagerPackage {
             characterGroomBranch.beginDraw(point, normal, resolveRootBone(faceIndex), getHairWidth());
     }
 
-    public void extendHairDraw(Vector3 point) {
-        characterGroomBranch.extendDraw(point);
+    // The strand drawn carried on toward a point where the view shows it, through the pose struck this frame while
+    // posed
+    public void extendHairDraw(Vector3 point, Matrix4[] skinningMatrices) {
+        characterGroomBranch.extendDraw(point, isPosed() ? skinningMatrices : null);
     }
 
     public void endHairDraw() {
@@ -2163,8 +2198,20 @@ public class CharacterEditorManager extends ManagerPackage {
             characterGroomBranch.beginStroke(isMirror(), getHairTool() == EditorTool.SELECT ? selection : null);
     }
 
-    public void strokeHair(IntArrayList strands, IntArrayList points, FloatArrayList weights, Vector3 drag) {
-        characterGroomBranch.stroke(getHairTool(), strands, points, weights, drag);
+    // One frame of a hair stroke, its drag as the view shows it, through the pose struck this frame while posed
+    public void strokeHair(
+            IntArrayList strands,
+            IntArrayList points,
+            FloatArrayList weights,
+            Vector3 drag,
+            Matrix4[] skinningMatrices) {
+        characterGroomBranch.stroke(getHairTool(), strands, points, weights, drag, isPosed() ? skinningMatrices : null);
+    }
+
+    // The skinning matrix a strand is shown posed by, the bone it grows from's in the pose struck this frame; null
+    // in the bind pose, where it stands as the groom holds it
+    public Matrix4 resolveStrandSkinning(CharacterStrandStruct strand, Matrix4[] skinningMatrices) {
+        return characterGroomBranch.resolveSkinning(strand, isPosed() ? skinningMatrices : null);
     }
 
     public void endHairStroke() {
@@ -2700,16 +2747,27 @@ public class CharacterEditorManager extends ManagerPackage {
                 : pose.getLabel();
     }
 
-    // Whether a modelling mode shows the character out of its bind pose, so its edits work through the skinning
+    // Whether a modelling mode shows the character out of its bind pose, so its edits work through the skinning: a
+    // pose picked, the edit pose, or the springs previewed, which play whatever pose is picked
     public boolean isPosed() {
-        return mode.isMeshMode() && mode.picksPose()
-                && (pose != CharacterEditorPose.REST || getPoseClipIndex() != EngineSetting.INDEX_NOT_FOUND
-                || editPosed);
+        return mode.isMeshMode() && (isSpringPlaying() || mode.picksPose() && isPoseChosen());
     }
 
-    // Whether a modelling mode shows the character moving, Idle, Walk or Run played, so no stroke holds still on it
+    // Whether a modelling mode shows the character moving, Idle, Walk or Run played or the springs previewed, so no
+    // stroke holds still on it
     public boolean isPosePlaying() {
-        return isPosed() && pose.isPlayed();
+        return isPosed() && (pose.isPlayed() || isSpringPlaying());
+    }
+
+    // Whether the pose picked leaves the bind pose: a movement, a clip struck or the edit pose
+    private boolean isPoseChosen() {
+        return pose != CharacterEditorPose.REST || getPoseClipIndex() != EngineSetting.INDEX_NOT_FOUND || editPosed;
+    }
+
+    // Whether the preview simulates its springs, playing the pose picked (Idle while none plays) in every tab that
+    // takes tools, as CharacterEditorPreviewSystem.strikePose plays it
+    private boolean isSpringPlaying() {
+        return mode.isModeling() && springPreview;
     }
 
     // Edit Pose \\

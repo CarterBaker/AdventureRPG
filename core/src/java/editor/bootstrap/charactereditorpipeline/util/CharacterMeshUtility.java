@@ -19,9 +19,9 @@ public class CharacterMeshUtility extends EngineUtility {
      * falloff of proportional edits and brushes, turning a point about an
      * axis, the exact key of a position on the editor's decimal grid so a
      * point and its mirror across x find each other, the grid cell a point
-     * falls in for searches near it, a vertex's blended skinning matrix, the
-     * mirrored name of a left or right bone, and the starting shapes of a
-     * new part. Every
+     * falls in for searches near it, a face's normal, a vertex's blended
+     * skinning matrix, the mirrored name of a left or right bone, and the
+     * starting shapes of a new part. Every
      * position written is rounded to the editor's precision first.
      */
 
@@ -111,6 +111,33 @@ public class CharacterMeshUtility extends EngineUtility {
                 CharacterViewUtility.round(x),
                 CharacterViewUtility.round(y),
                 CharacterViewUtility.round(z));
+    }
+
+    // A face's Newell normal from its corners in the bind pose, made unit; straight up for no face or one with no area
+    public static void resolveFaceNormal(RiggedMeshStruct mesh, int faceIndex, Vector3 out) {
+
+        out.set(0f, 1f, 0f);
+
+        if (faceIndex == EngineSetting.INDEX_NOT_FOUND)
+            return;
+
+        out.set(0f, 0f, 0f);
+
+        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
+
+            int a = mesh.getFaceVertex(faceIndex, c);
+            int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c));
+
+            out.add(
+                    (mesh.getY(a) - mesh.getY(b)) * (mesh.getZ(a) + mesh.getZ(b)),
+                    (mesh.getZ(a) - mesh.getZ(b)) * (mesh.getX(a) + mesh.getX(b)),
+                    (mesh.getX(a) - mesh.getX(b)) * (mesh.getY(a) + mesh.getY(b)));
+        }
+
+        if (out.length() > EditorSetting.CHARACTER_HAIR_EPSILON)
+            out.normalize();
+        else
+            out.set(0f, 1f, 0f);
     }
 
     // Skinning \\

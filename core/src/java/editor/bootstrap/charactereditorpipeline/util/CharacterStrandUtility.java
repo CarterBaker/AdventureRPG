@@ -2,7 +2,10 @@ package editor.bootstrap.charactereditorpipeline.util;
 
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStrandStruct;
 import editor.runtime.EditorSetting;
+import editor.runtime.characterview.util.CharacterPoseUtility;
 import engine.root.EngineUtility;
+import engine.util.mathematics.matrices.Matrix4;
+import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 
 public class CharacterStrandUtility extends EngineUtility {
@@ -16,7 +19,8 @@ public class CharacterStrandUtility extends EngineUtility {
      * square to each tangent as it goes, a rotation-minimising frame), the
      * width narrowing from the root to the taper at the tip. Each row holds
      * three floats per column, followed by the v the row stands at, 1 at the
-     * root to 0 at the tip.
+     * root to 0 at the tip. A strand is shown posed by the skinning of the
+     * bone its card is weighed onto, a point at a time.
      */
 
     // Card \\
@@ -84,6 +88,23 @@ public class CharacterStrandUtility extends EngineUtility {
 
             rows.add(1f - share);
         }
+    }
+
+    // Pose \\
+
+    // A point carried where the view poses a strand by its skinning matrix, as it stands without one
+    public static void resolveShownPoint(Matrix4 skinning, float x, float y, float z, Vector3 out) {
+
+        if (skinning == null) {
+            out.set(x, y, z);
+            return;
+        }
+
+        CharacterPoseUtility.transformPoint(skinning, x, y, z, out);
+    }
+
+    public static void resolveShownPoint(CharacterStrandStruct strand, int pointIndex, Matrix4 skinning, Vector3 out) {
+        resolveShownPoint(skinning, strand.getX(pointIndex), strand.getY(pointIndex), strand.getZ(pointIndex), out);
     }
 
     // How many floats one row of corners and its v takes

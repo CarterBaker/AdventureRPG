@@ -8,6 +8,7 @@ import editor.bootstrap.charactereditorpipeline.charactereditormanager.Character
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterGroomStruct;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStrandStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterEditorSelection;
+import editor.bootstrap.charactereditorpipeline.util.CharacterStrandUtility;
 import editor.bootstrap.shortcutpipeline.shortcutmanager.ShortcutManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.EditorSetting;
@@ -18,6 +19,7 @@ import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector2;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -35,7 +37,10 @@ public class CharacterEditorGroomSystem extends SystemPackage {
      * with the share of the tip each takes and how far the pointer moved in
      * the world across them, and Select, Shift adding and Ctrl taking away,
      * selects the strands it reaches. A press that reaches nothing is left to
-     * the view camera, a selecting one clearing the selection first.
+     * the view camera, a selecting one clearing the selection first. On a
+     * posed body every strand is reached where the pose shows it, and what
+     * the pointer lays on the surface is carried back to the bind pose the
+     * groom keeps.
      */
 
     // Internal
@@ -72,6 +77,7 @@ public class CharacterEditorGroomSystem extends SystemPackage {
     private Vector3 hitPoint;
     private Vector3 hitNormal;
     private Vector3 previousHit;
+    private Vector3 shownPoint;
 
     // Base \\
 
@@ -96,6 +102,7 @@ public class CharacterEditorGroomSystem extends SystemPackage {
         this.hitPoint = new Vector3();
         this.hitNormal = new Vector3();
         this.previousHit = new Vector3();
+        this.shownPoint = new Vector3();
     }
 
     @Override
@@ -180,6 +187,7 @@ public class CharacterEditorGroomSystem extends SystemPackage {
             return;
 
         editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
+        characterEditorMeshViewSystem.toBindSurface(face, hitPoint, hitNormal);
         characterEditorManager.placeHairStrand(hitPoint, hitNormal, face);
     }
 
@@ -198,6 +206,7 @@ public class CharacterEditorGroomSystem extends SystemPackage {
     private int pickStrand(float mouseX, float mouseY) {
 
         CharacterGroomStruct groom = characterEditorManager.getGroom();
+        Matrix4[] skinningMatrices = characterEditorMeshViewSystem.getSkinningMatrices();
         float radius = EditorSetting.CHARACTER_VIEW_PICK_RADIUS_PIXELS;
         float nearest = radius * radius;
         int picked = EngineSetting.INDEX_NOT_FOUND;
@@ -208,10 +217,11 @@ public class CharacterEditorGroomSystem extends SystemPackage {
         for (int s = 0; s < groom.getStrandCount(); s++) {
 
             CharacterStrandStruct strand = groom.getStrand(s);
+            Matrix4 skinning = characterEditorManager.resolveStrandSkinning(strand, skinningMatrices);
 
             for (int p = 0; p < strand.getPointCount(); p++) {
 
-                if (!projectShown(strand, p))
+                if (!projectShown(strand, p, skinning))
                     continue;
 
                 float dx = screen.x - mouseX;
@@ -230,7 +240,8 @@ public class CharacterEditorGroomSystem extends SystemPackage {
 
     // Draw \\
 
-    // A strand rooted on the surface pressed, drawn on across the plane through the root that faces the camera
+    // A strand rooted on the surface pressed, drawn on across the plane through the root as the view shows it that
+    // faces the camera
     private void beginDraw(float mouseX, float mouseY) {
 
         int face = characterEditorMeshViewSystem.pickSurface(mouseX, mouseY, hitPoint, hitNormal);
@@ -239,13 +250,14 @@ public class CharacterEditorGroomSystem extends SystemPackage {
             return;
 
         editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
+        planePoint.set(hitPoint);
+        characterEditorMeshViewSystem.toBindSurface(face, hitPoint, hitNormal);
         characterEditorManager.beginHairDraw(hitPoint, hitNormal, face);
 
         if (!characterEditorManager.isDrawingHair())
             return;
 
         characterEditorMeshViewSystem.resolveRay(mouseX, mouseY, rayOrigin, rayDirection);
-        planePoint.set(hitPoint);
         planeNormal.set(rayDirection).multiply(-1f);
         this.drawing = true;
     }
@@ -260,7 +272,7 @@ public class CharacterEditorGroomSystem extends SystemPackage {
 
         characterEditorMeshViewSystem.resolveRay(rawInput.getMouseX(), rawInput.getMouseY(), rayOrigin, rayDirection);
         CharacterPoseUtility.resolvePlaneHit(rayOrigin, rayDirection, planePoint, planeNormal, hitPoint);
-        characterEditorManager.extendHairDraw(hitPoint);
+        characterEditorManager.extendHairDraw(hitPoint, characterEditorMeshViewSystem.getSkinningMatrices());
     }
 
     // Stroke \\
@@ -292,7 +304,8 @@ public class CharacterEditorGroomSystem extends SystemPackage {
         this.lastMouseX = mouseX;
         this.lastMouseY = mouseY;
         drag.set(0f, 0f, 0f);
-        characterEditorManager.strokeHair(strands, points, weights, drag);
+        characterEditorManager.strokeHair(
+                strands, points, weights, drag, characterEditorMeshViewSystem.getSkinningMatrices());
     }
 
     private void updateStroke(RawInputHandle rawInput) {
@@ -313,7 +326,8 @@ public class CharacterEditorGroomSystem extends SystemPackage {
 
         if (!strands.isEmpty()) {
             resolveDrag(mouseX, mouseY);
-            characterEditorManager.strokeHair(strands, points, weights, drag);
+            characterEditorManager.strokeHair(
+                    strands, points, weights, drag, characterEditorMeshViewSystem.getSkinningMatrices());
         }
 
         this.lastMouseX = mouseX;
@@ -332,10 +346,11 @@ public class CharacterEditorGroomSystem extends SystemPackage {
     }
 
     // Every shown point of every strand under the preset's tip, listed strand by strand with the share of the tip it
-    // takes at the tool's strength, the points' middle kept for the drag
+    // takes at the tool's strength, the points' middle as the view shows them kept for the drag
     private void collectUnderBrush(float mouseX, float mouseY) {
 
         CharacterGroomStruct groom = characterEditorManager.getGroom();
+        Matrix4[] skinningMatrices = characterEditorMeshViewSystem.getSkinningMatrices();
         BrushHandle brush = brushManager.getActiveBrush();
         float radius = characterEditorManager.getBrushRadius();
         float strength = characterEditorManager.getBrushStrength();
@@ -352,10 +367,11 @@ public class CharacterEditorGroomSystem extends SystemPackage {
         for (int s = 0; s < groom.getStrandCount(); s++) {
 
             CharacterStrandStruct strand = groom.getStrand(s);
+            Matrix4 skinning = characterEditorManager.resolveStrandSkinning(strand, skinningMatrices);
 
             for (int p = 0; p < strand.getPointCount(); p++) {
 
-                if (!projectShown(strand, p))
+                if (!projectShown(strand, p, skinning))
                     continue;
 
                 float coverage = BrushUtility.resolveCoverage(brush, screen.x - mouseX, screen.y - mouseY, radius);
@@ -366,7 +382,7 @@ public class CharacterEditorGroomSystem extends SystemPackage {
                 strands.add(s);
                 points.add(p);
                 weights.add(coverage * strength);
-                centre.add(strand.getX(p), strand.getY(p), strand.getZ(p));
+                centre.add(shownPoint);
                 count++;
             }
         }
@@ -387,14 +403,13 @@ public class CharacterEditorGroomSystem extends SystemPackage {
         drag.set(hitPoint).subtract(previousHit);
     }
 
-    // A strand's point on the window, written to the screen scratch; false behind the camera or hidden by the body
-    private boolean projectShown(CharacterStrandStruct strand, int pointIndex) {
+    // A strand's point as the view poses it by the strand's skinning (none in the bind pose), kept in the shown point
+    // scratch, and on the window, written to the screen scratch; false behind the camera or hidden by the body
+    private boolean projectShown(CharacterStrandStruct strand, int pointIndex, Matrix4 skinning) {
 
-        float x = strand.getX(pointIndex);
-        float y = strand.getY(pointIndex);
-        float z = strand.getZ(pointIndex);
+        CharacterStrandUtility.resolveShownPoint(strand, pointIndex, skinning, shownPoint);
 
-        return characterEditorMeshViewSystem.project(x, y, z, screen)
-                && characterEditorMeshViewSystem.isPointShown(x, y, z);
+        return characterEditorMeshViewSystem.project(shownPoint.x, shownPoint.y, shownPoint.z, screen)
+                && characterEditorMeshViewSystem.isPointShown(shownPoint.x, shownPoint.y, shownPoint.z);
     }
 }

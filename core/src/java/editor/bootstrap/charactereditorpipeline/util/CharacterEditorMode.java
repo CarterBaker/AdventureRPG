@@ -21,8 +21,9 @@ public enum CharacterEditorMode {
      * the part's surface and turned into cards when exported. Sculpt's Brush also places the body part chosen in
      * the Stamps tab, its bones grafted onto the rig and its mesh merged into
      * the body. Each mode that takes viewport input is its own tool
-     * canvas; the mesh modes edit the part's mesh file, Rig holds the bind
-     * pose so the character stands exactly as its mesh and rig are authored,
+     * canvas; the mesh modes edit the part's mesh file in any pose, their
+     * edits carried back to the bind pose, Rig holds the bind pose so the
+     * character stands exactly as its mesh and rig are authored,
      * and those that show the vertices draw them over the body. Each carries
      * the hint the status bar shows while it is open, and every other mode
      * either stands in the one pose it names, as Appearance stands idle the
@@ -110,7 +111,7 @@ public enum CharacterEditorMode {
             EditorSetting.CHARACTER_EDITOR_MODE_HAIR,
             ToolCanvas.CHARACTER_HAIR,
             true,
-            true,
+            false,
             false,
             false,
             null,

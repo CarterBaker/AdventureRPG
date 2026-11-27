@@ -217,10 +217,16 @@ Paint, the modes whose tools select and shape vertices (`CharacterEditorSculptSy
 is Sculpt, whose Brush places the part chosen in the Stamps tab instead of stroking
 (`CharacterEditorManager.armsStamp`; see Stamps below).
 
-- **Poses.** Every mode that picks a pose (Equipment, Mesh, Sculpt, Weights) lists one Pose row, stepped by
+- **Poses.** Every mode that picks a pose (`picksPose`: Equipment and every modelling tab but Rig, Hair among them)
+  lists one Pose row, stepped by
   `CharacterEditorManager.stepPose` through Bind (the default: the mesh exactly as its file holds it in a mesh mode),
   each clip the rig names in `poses` (struck still at its start, `CharacterEditorPreviewSystem.strikeClip`, labelled
-  by `CharacterViewUtility.toResourceLabel`), then Idle, Walk and Run played. Rig holds the bind pose. Grab, Rotate
+  by `CharacterViewUtility.toResourceLabel`), then Idle, Walk and Run played. Rig holds the bind pose, as Blender's
+  armature Edit Mode shows the rest pose. `isPosed` is set by a pose picked, the edit pose or Preview Springs (which
+  plays the pose picked in every modelling tab); `isPosePlaying` by Idle, Walk, Run or Preview Springs. Every edit
+  works posed the same way: the view's pose goes in as `CharacterEditorMeshViewSystem.getSkinningMatrices` (passed as
+  null unless `isPosed`), the edit is made where the view shows the surface and written back to the bind pose the
+  files keep, and mirroring is done in the bind pose. Grab, Rotate
   and Scale work in any pose, on the cage as the view shows it (Maya's and Blender's on-cage editing of a skinned mesh):
   `CharacterEditorSculptSystem` hands `CharacterEditorManager.beginTransform` the pose's skinning matrices
   (`CharacterEditorMeshViewSystem.getSkinningMatrices`) while `isPosed`, and `CharacterSculptBranch.holdVertex` keeps
@@ -234,10 +240,15 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   works every tool on the posed surface the view shows (`placeSurface`, B times the unrounded bind copy), carries each
   move back through the linear part of B⁻¹ (`toBindMove`), shares and mirrors it in the bind pose, so symmetry holds
   whatever the pose, and lays the posed surface again from the moved bind point. So a part posed out of the way (a
-  thumb, an arm off the body) is sculpted where it stands. Only a played movement (Idle, Walk, Run;
-  `isPosePlaying`) refuses a stroke, with `CHARACTER_EDITOR_MESSAGE_POSE_PLAYING`, the surface moving under the brush;
-  placing a stamp's part still needs Bind (`placesStamp`). Selecting and painting weights work in any pose, the mesh
-  view skinning every vertex by it. A pose is a
+  thumb, an arm off the body) is sculpted where it stands. Only a playing pose (`isPosePlaying`) refuses a sculpt
+  stroke, with `CHARACTER_EDITOR_MESSAGE_POSE_PLAYING`, since the stroke's posed copy would no longer match the surface
+  moving under the brush; the Topology brush only gathers the cover of each vertex, so it strokes in any pose. A surface
+  aimed at (a stamp's part, a strand drawn or placed) is carried back exactly:
+  `CharacterEditorMeshViewSystem.toBindSurface` takes the last pick's point on the same triangle among the bind corners
+  (its barycentric place) and the face's bind normal (`CharacterMeshUtility.resolveFaceNormal`). Selecting, painting
+  weights and texture painting work in any pose, the mesh view skinning every vertex by it each frame; the vertex
+  overlay rebuilds every frame while a pose plays, and the region framed follows its frame bone
+  (`CharacterRegionFrameSystem.poseBoxCenter`). A pose is a
   plain clip on the rig (`animations/humanoid/poses/`); add one by naming it in the rig's `poses`.
 - **Mirror pairs.** `CharacterSelectionBranch.resolveMirror` pairs each vertex with the one at its mirrored position
   on the decimal grid, then pairs every vertex left without a twin with the nearest one likewise left across x within
@@ -819,7 +830,8 @@ guide curves turned into game cards (Blender's hair curves, Maya XGen, Unreal's 
 grows from, its texture, its width at the root and the taper the tip narrows to) is a workspace file in
 `Assets/Hair/<Name>.arpg` (`rig`, `source`, `strands`, each strand's `points` a float32 typed array), owned by
 `CharacterGroomBranch` with its own undo history of whole copies. The tab works on the whole character, its mesh mode
-reaching the surface of the part picked in the Properties tab's Parts (the body), and holds the bind pose.
+reaching the surface of the part picked in the Properties tab's Parts (the body), in the pose picked under Pose as
+every modelling tab is.
 
 - **Tools** (`CharacterEditorGroomSystem`): Draw roots a strand on the surface pressed and carries it along the drag
   across the plane through the root facing the camera, a point every `CHARACTER_HAIR_POINT_SPACING`; Place grows a
@@ -850,8 +862,17 @@ reaching the surface of the part picked in the Properties tab's Parts (the body)
   written on a rig of its own following the export's character rig (`CharacterGroomBranch.assignHairRig`); one loaded
   already keeps its rig, and lays no chains until it has one of its own.
   Grooms and exports are the owner's work: never catalogue them.
-- The overlay draws every strand (`CharacterEditorOverlaySystem.syncGroomOverlay`, rebuilt only when the groom moves):
-  its root, its guide line and its card's two sides, the selected ones in the selection's colour.
+- The overlay draws every strand (`CharacterEditorOverlaySystem.syncGroomOverlay`, rebuilt when the groom or the
+  editor's state moves, and every frame while a pose plays): its root, its guide line and its card's two sides, the
+  selected ones in the selection's colour.
+- **Posed grooming** (Blender's curves sculpting on a deformed surface). A strand is posed rigidly by the skinning of
+  the bone it grows from (`CharacterGroomBranch.resolveSkinning`, the bone its exported card is weighed wholly onto;
+  none for a bone the body's rig lacks), shown and reached there (`CharacterStrandUtility.resolveShownPoint`). Draw and
+  Place root on the surface carried back by `toBindSurface`; Draw's points and Nudge's drag are carried back through
+  the strand's skinning (`extendDraw`, `toBindDrag`), and a twin takes its strand's bind drag mirrored, so the pair
+  stays mirrored whatever the pose. Smooth, Raise, Lower, Erase, Select and Brush work along a strand, which the pose
+  only moves rigidly, so they need nothing more. Every hair edit reads the pose of its own frame, so grooming works
+  while a pose plays too.
 - **Not industry standard yet:** the viewport shows the guides and card outlines, not the rendered cards; the cards are
   seen once exported and imported.
 
@@ -935,10 +956,16 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   `CharacterEditorManager.armsStamp`; its Scale, Turn and Comb are the Brush's options on the Sculpt canvas, shown with
   Mirror; `CharacterEditorStampSystem` in every character tool tab, acting only while armed). No stamp is in use until
   one is picked in the Stamps tab or the Hierarchy; joining puts it down (`disarmStamp`), and so does Escape before it
-  is set down, so the Brush sculpts again. It places only on the Body in the Bind pose (`placesStamp`), and says so
-  otherwise. The stamp in use follows the pointer over the body in the bind pose, snapping to an open loop whose centre projects
-  within `CHARACTER_STAMP_LOOP_SNAP_PIXELS`, otherwise aimed at the face under it
-  (`CharacterEditorMeshViewSystem.pickSurface`: the hit point and the face's Newell normal).
+  is set down, so the Brush sculpts again. It places only on the Body in a still pose (`placesStamp`: not while a
+  pose plays), and says so otherwise. The stamp in use follows the pointer over the body as the view poses it,
+  snapping to an open loop whose centre (shown posed: `CharacterPlacementBranch.getShownAttachPoint`, the mean of its
+  posed vertices; a joint by its bone's skinning) projects within `CHARACTER_STAMP_LOOP_SNAP_PIXELS`, otherwise aimed
+  at the face under it (`CharacterEditorMeshViewSystem.pickSurface`, carried back by `toBindSurface`: the bind point
+  and the face's bind Newell normal). Every placement is worked out and joined in the bind pose; it keeps the host
+  bone's skinning (`CharacterPartPlacementStruct.getPosed`), which the overlay lays over its ghost (a fur card's ghost
+  takes its root's blended skinning instead, `CharacterFurBranch.resolveShownFrame`), and the pointer's tilt, made
+  about the view's axes, is carried into the bind pose as R⁻¹ · tilt · R, R the host bone's posed turn
+  (`toBindTilt`), so the part turns on screen with the pointer whatever the pose.
   `CharacterPlacementBranch.resolve` works the placement out (`CharacterPartPlacementStruct`): it must lie within
   `CHARACTER_STAMP_ATTACH_REACH_SHARE` of the rig's height of an attach point (the joint of a bone that carries the body
   and is at least `CHARACTER_STAMP_JOINT_SIZE_SHARE` of that height across, or an open loop's centre: the yellow dots),

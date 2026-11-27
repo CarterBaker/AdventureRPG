@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 183
-Task: PosedSculpt
+Delivery: 184
+Task: PosedEditing
 Applied: 2026-11-27
 
 ## Log
@@ -193,3 +193,4 @@ Applied: 2026-11-27
 - 181, 2026-11-26, MediaWorkflow
 - 182, 2026-11-27, FollowerRigs
 - 183, 2026-11-27, PosedSculpt
+- 184, 2026-11-27, PosedEditing

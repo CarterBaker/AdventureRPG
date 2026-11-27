@@ -17,7 +17,8 @@ public class CharacterPartPlacementStruct extends StructPackage {
      * radius, the bone its top bones hang from and the side its bones are
      * named for, whether it is mirrored across the body, and the matrix
      * carrying the stamp's space into the bind pose, its turn and scale kept
-     * apart for the bones. A part joins either an open loop already in the
+     * apart for the bones, with the one carrying the bind pose to where the
+     * view poses it, the host bone's skinning, for the ghost. A part joins either an open loop already in the
      * body or a hole cut where it is aimed; a root part starts the body over.
      * A fur stamp's placement holds instead the cards it lays, each card's
      * frame in the bind pose and the face it roots on with where on it. The
@@ -45,6 +46,9 @@ public class CharacterPartPlacementStruct extends StructPackage {
     private float scale;
     private boolean mirrored;
 
+    // Posed — the bind pose carried to where the view poses it: the host bone's skinning, the identity unposed
+    private final Matrix4 posed;
+
     // Fur — each card's frame, the face it roots on and its place there (u then v), as many as the count
     private final ObjectArrayList<Matrix4> furFrames;
     private final IntArrayList furFaces;
@@ -70,6 +74,9 @@ public class CharacterPartPlacementStruct extends StructPackage {
         this.rotation = new Matrix4();
         this.scale = 1f;
 
+        // Posed
+        this.posed = new Matrix4(1f);
+
         // Fur
         this.furFrames = new ObjectArrayList<>();
         this.furFaces = new IntArrayList();
@@ -89,6 +96,7 @@ public class CharacterPartPlacementStruct extends StructPackage {
         this.hostBoneName = null;
         this.side = "";
         this.attachPoint = EngineSetting.INDEX_NOT_FOUND;
+        posed.set(1f);
         clearFur();
     }
 
@@ -114,6 +122,7 @@ public class CharacterPartPlacementStruct extends StructPackage {
         this.rotation.set(other.rotation);
         this.scale = other.scale;
         this.mirrored = other.mirrored;
+        this.posed.set(other.posed);
         this.refusal = other.refusal;
         this.shown = other.shown;
     }
@@ -239,6 +248,10 @@ public class CharacterPartPlacementStruct extends StructPackage {
 
     public boolean isMirrored() {
         return mirrored;
+    }
+
+    public Matrix4 getPosed() {
+        return posed;
     }
 
     public String getRefusal() {

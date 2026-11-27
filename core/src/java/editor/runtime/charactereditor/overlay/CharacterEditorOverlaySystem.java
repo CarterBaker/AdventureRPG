@@ -133,6 +133,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private int builtStampDocumentRevision;
     private CharacterGroomStruct builtGroom;
     private int builtGroomRevision;
+    private int builtGroomManagerRevision;
 
     // Scratch
     private float[] colorScratch;
@@ -144,6 +145,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private Vector3 colliderAxis;
     private Vector3 colliderSide;
     private Vector3 colliderUp;
+    private Matrix4 ghostScratch;
 
     // Base \\
 
@@ -184,6 +186,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         this.colliderAxis = new Vector3();
         this.colliderSide = new Vector3();
         this.colliderUp = new Vector3();
+        this.ghostScratch = new Matrix4();
     }
 
     @Override
@@ -302,22 +305,32 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                     window);
     }
 
-    // Rebuilds only when another groom opened or the one open changed
+    // Rebuilds only when another groom opened, the one open changed, the editor's state (the pose among it) moved or
+    // a pose plays, each strand drawn where the view poses it
     private void syncGroomOverlay() {
 
         CharacterGroomStruct groom = characterEditorManager.getGroom();
 
-        if (groom == builtGroom && characterEditorManager.getGroomRevision() == builtGroomRevision)
+        if (groom == builtGroom && characterEditorManager.getGroomRevision() == builtGroomRevision
+                && characterEditorManager.getRevision() == builtGroomManagerRevision
+                && !characterEditorManager.isPosePlaying())
             return;
 
         this.builtGroom = groom;
         this.builtGroomRevision = characterEditorManager.getGroomRevision();
+        this.builtGroomManagerRevision = characterEditorManager.getRevision();
         groomVertices.clear();
         groomIndices.clear();
 
+        Matrix4[] skinningMatrices = characterEditorMeshViewSystem.getSkinningMatrices();
+
         if (groom != null)
-            for (int s = 0; s < groom.getStrandCount(); s++)
-                appendStrand(groom.getStrand(s));
+            for (int s = 0; s < groom.getStrandCount(); s++) {
+
+                CharacterStrandStruct strand = groom.getStrand(s);
+
+                appendStrand(strand, characterEditorManager.resolveStrandSkinning(strand, skinningMatrices));
+            }
 
         if (groomIndices.isEmpty())
             return;
@@ -334,47 +347,57 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         groomModel.updateMeshData(groomOverlay.getMeshData());
     }
 
-    // A strand's root dot, its guide line through its points and its card's two sides, as the export lays the card
-    private void appendStrand(CharacterStrandStruct strand) {
+    // A strand's root dot, its guide line through its points and its card's two sides, as the export lays the card,
+    // carried by the strand's skinning where the view poses it (none in the bind pose)
+    private void appendStrand(CharacterStrandStruct strand, Matrix4 skinning) {
 
         int rowFloats = CharacterStrandUtility.getRowFloats();
         int last = (EditorSetting.CHARACTER_HAIR_CARD_U.length - 1) * 3;
 
         setColor(strand.isSelected() ? CharacterEditorSetting.COLOR_SELECTED : CharacterEditorSetting.COLOR_STRAND);
-        appendDot(groomVertices, groomIndices, strand.getX(0), strand.getY(0), strand.getZ(0),
+        CharacterStrandUtility.resolveShownPoint(strand, 0, skinning, pointA);
+        appendDot(groomVertices, groomIndices, pointA.x, pointA.y, pointA.z,
                 CharacterEditorSetting.STRAND_ROOT_HALF_PIXELS);
 
-        for (int i = 0; i + 1 < strand.getPointCount(); i++)
+        for (int i = 0; i + 1 < strand.getPointCount(); i++) {
+            CharacterStrandUtility.resolveShownPoint(strand, i, skinning, pointA);
+            CharacterStrandUtility.resolveShownPoint(strand, i + 1, skinning, pointB);
             appendLine(
                     groomVertices,
                     groomIndices,
-                    strand.getX(i),
-                    strand.getY(i),
-                    strand.getZ(i),
-                    strand.getX(i + 1),
-                    strand.getY(i + 1),
-                    strand.getZ(i + 1),
+                    pointA.x,
+                    pointA.y,
+                    pointA.z,
+                    pointB.x,
+                    pointB.y,
+                    pointB.z,
                     CharacterEditorSetting.STRAND_HALF_PIXELS);
+        }
 
         CharacterStrandUtility.resolveCardRows(strand, cardRows);
         setColor(CharacterEditorSetting.COLOR_STRAND_CARD);
 
         for (int i = 0; i + 1 < strand.getPointCount(); i++) {
-            appendCardSide(i * rowFloats, (i + 1) * rowFloats);
-            appendCardSide(i * rowFloats + last, (i + 1) * rowFloats + last);
+            appendCardSide(i * rowFloats, (i + 1) * rowFloats, skinning);
+            appendCardSide(i * rowFloats + last, (i + 1) * rowFloats + last, skinning);
         }
     }
 
-    private void appendCardSide(int from, int to) {
+    private void appendCardSide(int from, int to, Matrix4 skinning) {
+
+        CharacterStrandUtility.resolveShownPoint(
+                skinning, cardRows.getFloat(from), cardRows.getFloat(from + 1), cardRows.getFloat(from + 2), pointA);
+        CharacterStrandUtility.resolveShownPoint(
+                skinning, cardRows.getFloat(to), cardRows.getFloat(to + 1), cardRows.getFloat(to + 2), pointB);
         appendLine(
                 groomVertices,
                 groomIndices,
-                cardRows.getFloat(from),
-                cardRows.getFloat(from + 1),
-                cardRows.getFloat(from + 2),
-                cardRows.getFloat(to),
-                cardRows.getFloat(to + 1),
-                cardRows.getFloat(to + 2),
+                pointA.x,
+                pointA.y,
+                pointA.z,
+                pointB.x,
+                pointB.y,
+                pointB.z,
                 CharacterEditorSetting.STRAND_CARD_HALF_PIXELS);
     }
 
@@ -590,7 +613,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
 
         for (int i = 0; i < characterEditorManager.getAttachPointCount(); i++) {
 
-            characterEditorManager.getAttachPoint(i, pointA);
+            characterEditorManager.getAttachPoint(i, characterEditorMeshViewSystem.getSkinningMatrices(), pointA);
             setColor(i == active ? CharacterEditorSetting.COLOR_ATTACH_ACTIVE : CharacterEditorSetting.COLOR_ATTACH);
             appendDot(
                     stampVertices,
@@ -604,8 +627,8 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
         }
     }
 
-    // The part's edges carried to where it would join, or every fur card's where it would lie, green where it can and
-    // red where it cannot
+    // The part's edges carried to where it would join, or every fur card's where it would lie, as the view poses the
+    // body, green where it can and red where it cannot
     private void appendGhost(CharacterPartPlacementStruct placement) {
 
         syncGhostEdges(placement.getStampHandle());
@@ -614,12 +637,16 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
                 : CharacterEditorSetting.COLOR_STAMP_INVALID);
 
         if (!placement.getStampHandle().hasFur()) {
-            appendGhostEdges(placement.getStampHandle().getMesh(), placement.getTransform());
+            ghostScratch.set(placement.getPosed()).multiply(placement.getTransform());
+            appendGhostEdges(placement.getStampHandle().getMesh(), ghostScratch);
             return;
         }
 
-        for (int c = 0; c < placement.getFurCount(); c++)
-            appendGhostEdges(placement.getStampHandle().getMesh(), placement.getFurFrame(c));
+        for (int c = 0; c < placement.getFurCount(); c++) {
+            characterEditorManager.resolveFurFrame(
+                    placement, c, characterEditorMeshViewSystem.getSkinningMatrices(), ghostScratch);
+            appendGhostEdges(placement.getStampHandle().getMesh(), ghostScratch);
+        }
     }
 
     // A stamp's edges carried by a transform
@@ -681,8 +708,7 @@ public class CharacterEditorOverlaySystem extends SystemPackage {
     private void syncMeshOverlay() {
 
         CharacterMeshDocumentInstance document = characterEditorMeshViewSystem.getActiveDocument();
-        boolean posePlayed = characterEditorManager.getMode() == CharacterEditorMode.WEIGHTS
-                && characterEditorManager.getPose().isPlayed();
+        boolean posePlayed = characterEditorManager.isPosePlaying();
         boolean dots = characterEditorManager.getMode().showsVertices();
         boolean wireframe = characterEditorManager.isWireframe();
 

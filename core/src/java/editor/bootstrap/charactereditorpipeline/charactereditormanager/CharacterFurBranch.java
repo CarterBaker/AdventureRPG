@@ -1,5 +1,7 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
@@ -37,7 +39,9 @@ class CharacterFurBranch extends BranchPackage {
      * along its strand each corner stands. A laid card takes the weights and
      * shape keys of the face it roots on, blended at its root, so it rides
      * the body as it moves and reshapes, and its faces keep the card's
-     * texture, zone and UVs. Laying is one edit of the body.
+     * texture, zone and UVs. Laying is one edit of the body. On a posed
+     * body each card's ghost is carried by the skinning its root blends, so
+     * it stands where the pose will carry the card once laid.
      */
 
     // Internal
@@ -58,6 +62,7 @@ class CharacterFurBranch extends BranchPackage {
     private Vector3 combScratch;
     private Vector3 sideScratch;
     private Vector3 pointScratch;
+    private Matrix4 blendScratch;
 
     // Base \\
 
@@ -75,6 +80,7 @@ class CharacterFurBranch extends BranchPackage {
         this.combScratch = new Vector3();
         this.sideScratch = new Vector3();
         this.pointScratch = new Vector3();
+        this.blendScratch = new Matrix4();
     }
 
     @Override
@@ -327,6 +333,38 @@ class CharacterFurBranch extends BranchPackage {
 
             out.add(mesh.getX(corner) * share, mesh.getY(corner) * share, mesh.getZ(corner) * share);
         }
+    }
+
+    // A card's frame carried to where the view poses it: the skinning matrices of its root's corners blended by the
+    // share each holds of the root, as its weights are blended once laid, times its frame in the bind pose
+    void resolveShownFrame(
+            RiggedMeshStruct mesh,
+            CharacterPartPlacementStruct placement,
+            int card,
+            Matrix4[] skinningMatrices,
+            Matrix4 out) {
+
+        Matrix4 frame = placement.getFurFrame(card);
+
+        if (skinningMatrices == null) {
+            out.set(frame);
+            return;
+        }
+
+        resolveShares(mesh, placement.getFurFace(card), placement.getFurU(card), placement.getFurV(card));
+        Arrays.fill(out.val, 0f);
+
+        for (int i = 0; i < rootCorners.size(); i++) {
+
+            float share = rootShares.getFloat(i);
+
+            CharacterMeshUtility.resolveBlend(mesh, rootCorners.getInt(i), skinningMatrices, blendScratch);
+
+            for (int k = 0; k < out.val.length; k++)
+                out.val[k] += blendScratch.val[k] * share;
+        }
+
+        out.multiply(frame);
     }
 
     // The share each of a face's corners holds of a place on it: (1 - u)(1 - v), u(1 - v), uv and (1 - u)v

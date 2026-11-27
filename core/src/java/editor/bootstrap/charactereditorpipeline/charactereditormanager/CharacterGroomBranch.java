@@ -21,6 +21,7 @@ import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.materialspipeline.materialsmanager.MaterialsManager;
 import editor.bootstrap.toolpipeline.util.EditorTool;
 import editor.runtime.characterview.panel.CharacterViewRowStruct;
+import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
@@ -32,6 +33,7 @@ import engine.util.arpg.ArpgElementStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
 import engine.util.io.FileUtility;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -60,7 +62,11 @@ class CharacterGroomBranch extends BranchPackage {
      * along the card's middle, as wide as the card. Every edit is one undo
      * step, a whole copy of the groom; with mirror on, a new strand comes
      * with its twin across x and every stroke reaches each strand's twin the
-     * mirrored way.
+     * mirrored way. On a posed body each strand is shown, drawn and combed
+     * where the pose carries it, by the skinning of the bone it grows from
+     * as its card is weighed, and every point and drag the pointer gives is
+     * carried back through that bone to the bind pose the groom keeps, so a
+     * mirrored edit stays mirrored whatever the pose.
      */
 
     // Internal
@@ -113,6 +119,8 @@ class CharacterGroomBranch extends BranchPackage {
     private Vector3 tangent;
     private Vector3 side;
     private Vector3 mirrored;
+    private Vector3 bindDrag;
+    private Matrix4 inverseScratch;
 
     // Base \\
 
@@ -147,6 +155,8 @@ class CharacterGroomBranch extends BranchPackage {
         this.tangent = new Vector3();
         this.side = new Vector3();
         this.mirrored = new Vector3();
+        this.bindDrag = new Vector3();
+        this.inverseScratch = new Matrix4();
     }
 
     @Override
@@ -419,13 +429,21 @@ class CharacterGroomBranch extends BranchPackage {
         edited();
     }
 
-    // The strand drawn carried on toward a point, a point laid at every spacing along the way
-    void extendDraw(Vector3 point) {
+    // The strand drawn carried on toward a point, a point laid at every spacing along the way; the point is where the
+    // view poses it through the skinning matrices when given, carried back to the bind pose first
+    void extendDraw(Vector3 point, Matrix4[] skinningMatrices) {
 
         if (drawnStrand == EngineSetting.INDEX_NOT_FOUND)
             return;
 
         CharacterStrandStruct strand = groom.getStrand(drawnStrand);
+        Matrix4 skinning = resolveSkinning(strand, skinningMatrices);
+
+        if (skinning != null) {
+            inverseScratch.set(skinning).inverse();
+            CharacterPoseUtility.transformPoint(inverseScratch, point.x, point.y, point.z, point);
+        }
+
         float spacing = EditorSetting.CHARACTER_HAIR_POINT_SPACING;
         boolean extended = false;
 
@@ -588,8 +606,15 @@ class CharacterGroomBranch extends BranchPackage {
 
     // One frame of a stroke: the points under the brush listed strand by strand with the share of the brush each
     // takes, worked by the tool, and the same points of each strand's twin the mirrored way; drag is how far the
-    // pointer moved in the world, for Nudge
-    void stroke(EditorTool tool, IntArrayList strands, IntArrayList points, FloatArrayList weights, Vector3 drag) {
+    // pointer moved in the world as the view shows it, for Nudge, carried back to the bind pose through each strand's
+    // skinning when the skinning matrices are given
+    void stroke(
+            EditorTool tool,
+            IntArrayList strands,
+            IntArrayList points,
+            FloatArrayList weights,
+            Vector3 drag,
+            Matrix4[] skinningMatrices) {
 
         if (groom == null || openStep == null || strands.isEmpty())
             return;
@@ -615,12 +640,13 @@ class CharacterGroomBranch extends BranchPackage {
                 end++;
             }
 
-            work(tool, strandIndex, drag, false);
+            toBindDrag(groom.getStrand(strandIndex), drag, skinningMatrices);
+            work(tool, strandIndex, bindDrag, false);
 
             int twin = strandIndex < twins.size() ? twins.getInt(strandIndex) : EngineSetting.INDEX_NOT_FOUND;
 
             if (twin != EngineSetting.INDEX_NOT_FOUND)
-                work(tool, twin, drag, true);
+                work(tool, twin, bindDrag, true);
 
             start = end;
         }
@@ -654,6 +680,21 @@ class CharacterGroomBranch extends BranchPackage {
             default -> {
             }
         }
+    }
+
+    // The drag the view shows carried back to the bind pose through the turn and scale of a strand's skinning, kept
+    // in the bind drag scratch; the twin takes it mirrored there, so the pair stays mirrored whatever the pose
+    private void toBindDrag(CharacterStrandStruct strand, Vector3 drag, Matrix4[] skinningMatrices) {
+
+        Matrix4 skinning = resolveSkinning(strand, skinningMatrices);
+
+        bindDrag.set(drag);
+
+        if (skinning == null)
+            return;
+
+        inverseScratch.set(skinning).inverse();
+        CharacterPoseUtility.transformDirection(inverseScratch, drag.x, drag.y, drag.z, bindDrag);
     }
 
     private float resolveMostWeight() {
@@ -836,6 +877,25 @@ class CharacterGroomBranch extends BranchPackage {
             resolveTwins(characterEditorManager.isMirror());
     }
 
+    // Pose \\
+
+    // The skinning matrix a strand is posed by, that of the bone it grows from on the body's rig, as its card is
+    // weighed wholly onto it; null in the bind pose (no skinning matrices) or for a bone the body's rig lacks, where
+    // the strand stands as the groom holds it
+    Matrix4 resolveSkinning(CharacterStrandStruct strand, Matrix4[] skinningMatrices) {
+
+        CharacterMeshDocumentInstance document = characterEditorManager.getActiveMeshDocument();
+
+        if (skinningMatrices == null || document == null)
+            return null;
+
+        RigHandle rigHandle = document.getMesh().getRigHandle();
+
+        return rigHandle.hasBone(strand.getBoneName())
+                ? skinningMatrices[rigHandle.getBoneIndex(strand.getBoneName())]
+                : null;
+    }
+
     // Selection \\
 
     void selectAll(boolean selected) {
@@ -977,7 +1037,7 @@ class CharacterGroomBranch extends BranchPackage {
             width = Math.max(width, (float) Math.sqrt(CharacterMeshUtility.distanceSquared(pointA, pointB)) * 2f);
         }
 
-        resolveFaceNormal(mesh, face, side);
+        CharacterMeshUtility.resolveFaceNormal(mesh, face, side);
 
         CharacterStrandStruct strand = new CharacterStrandStruct(
                 side,
@@ -1020,33 +1080,6 @@ class CharacterGroomBranch extends BranchPackage {
         return heaviest != EngineSetting.INDEX_NOT_FOUND
                 ? mesh.getRigHandle().getBone(heaviest).getName()
                 : EditorSetting.CHARACTER_HAIR_DEFAULT_BONE;
-    }
-
-    // A face's Newell normal made unit, straight up for none
-    private static void resolveFaceNormal(RiggedMeshStruct mesh, int faceIndex, Vector3 out) {
-
-        out.set(0f, 1f, 0f);
-
-        if (faceIndex == EngineSetting.INDEX_NOT_FOUND)
-            return;
-
-        out.set(0f, 0f, 0f);
-
-        for (int c = 0; c < mesh.getFaceCornerCount(faceIndex); c++) {
-
-            int a = mesh.getFaceVertex(faceIndex, c);
-            int b = mesh.getFaceVertex(faceIndex, mesh.getNextCorner(faceIndex, c));
-
-            out.add(
-                    (mesh.getY(a) - mesh.getY(b)) * (mesh.getZ(a) + mesh.getZ(b)),
-                    (mesh.getZ(a) - mesh.getZ(b)) * (mesh.getX(a) + mesh.getX(b)),
-                    (mesh.getX(a) - mesh.getX(b)) * (mesh.getY(a) + mesh.getY(b)));
-        }
-
-        if (out.length() > EditorSetting.CHARACTER_HAIR_EPSILON)
-            out.normalize();
-        else
-            out.set(0f, 1f, 0f);
     }
 
     // Export \\

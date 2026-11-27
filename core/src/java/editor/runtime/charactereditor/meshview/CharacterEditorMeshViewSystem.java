@@ -3,6 +3,7 @@ package editor.runtime.charactereditor.meshview;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import editor.bootstrap.charactereditorpipeline.charactereditormanager.CharacterEditorManager;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
+import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.bootstrap.charactereditorpipeline.util.CharacterRegionStruct;
 import editor.bootstrap.brushpipeline.brushmanager.BrushManager;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
@@ -339,6 +340,23 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         resolveFaceNormal(activeDocument.getMesh(), picked, normalOut);
 
         return picked;
+    }
+
+    // Where the surface last picked stands in the bind pose: the same point of the same triangle among its corners as
+    // the mesh file holds them, and that face's normal there, so what is aimed on a posed body is laid where the mesh
+    // keeps it, exactly however the pose carries the face
+    public void toBindSurface(int faceIndex, Vector3 pointOut, Vector3 normalOut) {
+
+        RiggedMeshStruct mesh = activeDocument.getMesh();
+        int a = mesh.getFaceVertex(faceIndex, 0);
+        int b = mesh.getFaceVertex(faceIndex, castCornerB);
+        int c = mesh.getFaceVertex(faceIndex, castCornerC);
+
+        pointOut.set(
+                mesh.getX(a) + (mesh.getX(b) - mesh.getX(a)) * hitU + (mesh.getX(c) - mesh.getX(a)) * hitV,
+                mesh.getY(a) + (mesh.getY(b) - mesh.getY(a)) * hitU + (mesh.getY(c) - mesh.getY(a)) * hitV,
+                mesh.getZ(a) + (mesh.getZ(b) - mesh.getZ(a)) * hitU + (mesh.getZ(c) - mesh.getZ(a)) * hitV);
+        CharacterMeshUtility.resolveFaceNormal(mesh, faceIndex, normalOut);
     }
 
     // The active part's face under a window pixel whose edge, as the view shows it, passes nearest the pixel, that

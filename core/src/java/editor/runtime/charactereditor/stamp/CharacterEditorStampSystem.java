@@ -24,8 +24,9 @@ public class CharacterEditorStampSystem extends SystemPackage {
 
     /*
      * Turns the Sculpt Brush into a placing tool while a part is chosen in
-     * the Stamps tab: the part follows the pointer over the body in the
-     * bind pose, snapping to an open loop whose centre lies near the pointer,
+     * the Stamps tab: the part follows the pointer over the body as the view
+     * poses it, the point aimed carried back to the bind pose it joins in,
+     * snapping to an open loop whose centre lies near the pointer,
      * green where it can join and red where it cannot, its twin across the
      * body shown with it while mirroring. A click where it is green sets it
      * down; moving the pointer then turns it about the point it joins at,
@@ -38,7 +39,8 @@ public class CharacterEditorStampSystem extends SystemPackage {
      * part is put down, and
      * Escape puts it down unplaced, so the Brush strokes again. The placement
      * is worked out again only when the pointer, the view, the part, the
-     * tool's options or the body have moved.
+     * tool's options, the editor's state (the pose among it) or the body
+     * have moved.
      */
 
     // Internal
@@ -74,6 +76,7 @@ public class CharacterEditorStampSystem extends SystemPackage {
     private int builtOptionRevision;
     private int builtStampRevision;
     private int builtDocumentRevision;
+    private int builtManagerRevision;
     private boolean builtMirror;
     private Vector3 builtCameraPosition;
     private Vector3 builtCameraDirection;
@@ -300,6 +303,9 @@ public class CharacterEditorStampSystem extends SystemPackage {
                 ? characterEditorMeshViewSystem.pickSurface(mouseX, mouseY, aimPoint, aimNormal)
                 : EngineSetting.INDEX_NOT_FOUND;
 
+        if (aimFace != EngineSetting.INDEX_NOT_FOUND)
+            characterEditorMeshViewSystem.toBindSurface(aimFace, aimPoint, aimNormal);
+
         resolve(mouseX, mouseY);
     }
 
@@ -315,7 +321,8 @@ public class CharacterEditorStampSystem extends SystemPackage {
             if (!characterEditorManager.isLoopAttachPoint(i))
                 continue;
 
-            characterEditorManager.getAttachPoint(i, attachScratch);
+            characterEditorManager.getAttachPoint(
+                    i, characterEditorMeshViewSystem.getSkinningMatrices(), attachScratch);
 
             if (!characterEditorMeshViewSystem.project(
                     attachScratch.x, attachScratch.y, attachScratch.z, screenScratch))
@@ -349,11 +356,14 @@ public class CharacterEditorStampSystem extends SystemPackage {
             return;
         }
 
-        characterEditorManager.resolvePlacement(aimAttachPoint, aimFace, aimPoint, aimNormal, tilt, placement);
+        Matrix4[] skinningMatrices = characterEditorMeshViewSystem.getSkinningMatrices();
+
+        characterEditorManager.resolvePlacement(
+                aimAttachPoint, aimFace, aimPoint, aimNormal, tilt, skinningMatrices, placement);
         this.twinShown = characterEditorManager.placesTwin(placement);
 
         if (twinShown)
-            characterEditorManager.resolvePlacementTwin(placement, twin);
+            characterEditorManager.resolvePlacementTwin(placement, skinningMatrices, twin);
 
         if (placement.isRoot())
             characterEditorManager.showPlacementMessage(EditorSetting.CHARACTER_STAMP_MESSAGE_ROOT);
@@ -365,8 +375,8 @@ public class CharacterEditorStampSystem extends SystemPackage {
 
     // Built \\
 
-    // Whether the pointer, the view, the part, the tool's options, the mirror or the body moved since the placement
-    // was last worked out
+    // Whether the pointer, the view, the part, the tool's options, the mirror, the editor's state or the body moved
+    // since the placement was last worked out
     private boolean hasMoved(float mouseX, float mouseY) {
 
         CameraInstance camera = context.getWindow().getActiveCamera();
@@ -377,6 +387,7 @@ public class CharacterEditorStampSystem extends SystemPackage {
                 || toolManager.getOptionRevision() != builtOptionRevision
                 || stampManager.getRevision() != builtStampRevision
                 || document.getRevision() != builtDocumentRevision
+                || characterEditorManager.getRevision() != builtManagerRevision
                 || characterEditorManager.isMirror() != builtMirror
                 || !camera.getPosition().equals(builtCameraPosition)
                 || !camera.getDirection().equals(builtCameraDirection);
@@ -391,6 +402,7 @@ public class CharacterEditorStampSystem extends SystemPackage {
         this.builtOptionRevision = toolManager.getOptionRevision();
         this.builtStampRevision = stampManager.getRevision();
         this.builtDocumentRevision = characterEditorMeshViewSystem.getActiveDocument().getRevision();
+        this.builtManagerRevision = characterEditorManager.getRevision();
         this.builtMirror = characterEditorManager.isMirror();
         builtCameraPosition.set(camera.getPosition());
         builtCameraDirection.set(camera.getDirection());
