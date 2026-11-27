@@ -32,6 +32,7 @@ import editor.runtime.menueventsmanager.menus.ToolBranch;
 import editor.runtime.menueventsmanager.menus.TransitionsBranch;
 import editor.runtime.menueventsmanager.menus.TreeViewerBranch;
 import editor.runtime.menueventsmanager.menus.ShipViewerBranch;
+import editor.runtime.menueventsmanager.menus.StructureEditorBranch;
 import editor.runtime.menueventsmanager.menus.SettlementPlannerBranch;
 import editor.runtime.menueventsmanager.menus.SoundLibraryBranch;
 import editor.runtime.menueventsmanager.menus.WorldEditorBranch;
@@ -83,6 +84,7 @@ public class EditorMenuEventsManager extends ManagerPackage {
         create(TreeViewerBranch.class);
         create(ShipViewerBranch.class);
         create(ArchitectureBuilderBranch.class);
+        create(StructureEditorBranch.class);
         create(CharacterEditorBranch.class);
         create(ImageEditorBranch.class);
         create(AnimationEditorBranch.class);

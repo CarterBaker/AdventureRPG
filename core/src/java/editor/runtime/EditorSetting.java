@@ -389,6 +389,14 @@ public class EditorSetting {
             .with(FileMenuAction.DUPLICATE, "duplicateArchitecture")
             .with(FileMenuAction.SAVE, "save")
             .with(FileMenuAction.REVERT, "revert");
+    public static final FileMenuTableStruct FILE_MENU_STRUCTURES = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.StructureEditorBranch")
+            .with(FileMenuAction.NEW, "newStructure")
+            .with(FileMenuAction.DUPLICATE, "duplicateStructure")
+            .with(FileMenuAction.SAVE, "save")
+            .with(FileMenuAction.REVERT, "revert")
+            .with(FileMenuAction.UNDO, "undo")
+            .with(FileMenuAction.REDO, "redo");
     public static final FileMenuTableStruct FILE_MENU_BIOME_PLANNER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.BiomePlannerBranch")
             .with(FileMenuAction.NEW, "newBiome")
@@ -599,6 +607,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_FILTERS = "Filters";
     public static final String TAB_TITLE_TREE_PLANNER = "Tree Planner";
     public static final String TAB_TITLE_ARCHITECTURE_BUILDER = "Architecture Builder";
+    public static final String TAB_TITLE_STRUCTURE_EDITOR = "Structure Editor";
     public static final String TAB_TITLE_TREE_VIEWER = "Tree Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
@@ -2857,6 +2866,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_TREE = "Tree";
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
+    public static final String TOOL_CANVAS_STRUCTURE = "Structure";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";
     public static final String TOOL_ACTION_HEADER_NESTING = "Nesting";
     public static final String TOOL_ACTION_LABEL_NEST_SELECTION = "Nest Selection";
@@ -2936,6 +2946,10 @@ public class EditorSetting {
     public static final float TOOL_ITEM_SIZE_MAX = 32f;
     public static final float TOOL_ITEM_SIZE_STEP = 1f;
     public static final float TOOL_ITEM_SIZE_DEFAULT = 0f;
+    public static final float TOOL_STRUCTURE_SIZE_MIN = 1f;
+    public static final float TOOL_STRUCTURE_SIZE_MAX = 8f;
+    public static final float TOOL_STRUCTURE_SIZE_STEP = 1f;
+    public static final float TOOL_STRUCTURE_SIZE_DEFAULT = 1f;
     public static final float TOOL_ITEM_DEPTH_MIN = 1f;
     public static final float TOOL_ITEM_DEPTH_MAX = 32f;
     public static final float TOOL_ITEM_DEPTH_STEP = 1f;
@@ -3103,6 +3117,39 @@ public class EditorSetting {
     public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVED = "Saved ";
     public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVE_FAILED = "Could not save ";
     public static final String ARCHITECTURE_BUILDER_MESSAGE_REVERTED = "Reverted ";
+
+    // Structure Editor — its layers, the prefixes its Palette rows carry, the characters its palette keys are drawn
+    // from in order, how many strokes its history holds, the text of its labels and its messages
+    public static final String STRUCTURE_EDITOR_LAYER_BLOCKS = "Blocks";
+    public static final String STRUCTURE_EDITOR_LAYER_COVERAGE = "Coverage";
+    public static final String STRUCTURE_EDITOR_LAYER_CONTENTS = "Contents";
+    public static final String STRUCTURE_EDITOR_ROW_STRUCTURE = "structure:";
+    public static final String STRUCTURE_EDITOR_ROW_ARCHITECTURE = "architecture:";
+    public static final String STRUCTURE_EDITOR_ROW_SLOT = "slot:";
+    public static final String STRUCTURE_EDITOR_ROW_ENTRY = "entry:";
+    public static final String STRUCTURE_EDITOR_ROW_BLOCK = "block:";
+    public static final String STRUCTURE_EDITOR_ROW_COVERING = "covering:";
+    public static final String STRUCTURE_EDITOR_ROW_CONTENT = "content:";
+    public static final String STRUCTURE_EDITOR_PALETTE_KEYS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.#*+=-!?$%&@^~:;,|/<>()[]{}";
+    public static final int STRUCTURE_EDITOR_HISTORY_STEPS = 64;
+    public static final String STRUCTURE_EDITOR_PALETTE_STRUCTURES = "Structures";
+    public static final String STRUCTURE_EDITOR_PALETTE_ARCHITECTURES = "Built In";
+    public static final String STRUCTURE_EDITOR_PALETTE_SLOTS = " Slots";
+    public static final String STRUCTURE_EDITOR_PALETTE_ENTRIES = "This Structure";
+    public static final String STRUCTURE_EDITOR_PALETTE_BLOCKS = "Blocks";
+    public static final String STRUCTURE_EDITOR_LABEL_AS_AUTHORED = "As Authored";
+    public static final String STRUCTURE_EDITOR_LABEL_NONE = "None";
+    public static final String STRUCTURE_EDITOR_LABEL_SEPARATOR = "  ·  ";
+    public static final String STRUCTURE_EDITOR_MESSAGE_NONE = "Select a structure first";
+    public static final String STRUCTURE_EDITOR_MESSAGE_NO_BLOCK = "Choose a block in the Palette tab first";
+    public static final String STRUCTURE_EDITOR_MESSAGE_TOO_MANY =
+            "Too many different blocks for one palette — not written";
+    public static final String STRUCTURE_EDITOR_MESSAGE_UNDONE = "Undone";
+    public static final String STRUCTURE_EDITOR_MESSAGE_REDONE = "Redone";
+    public static final String STRUCTURE_EDITOR_MESSAGE_SAVED = "Saved ";
+    public static final String STRUCTURE_EDITOR_MESSAGE_SAVE_FAILED = "Could not save ";
+    public static final String STRUCTURE_EDITOR_MESSAGE_REVERTED = "Reverted ";
 
     // Tree Impostor Bake — the materials the shared tree is drawn into the bake target with and the uniforms naming
     // each view's camera and the map it writes, its render order, every view of both maps (albedo first), how small a
@@ -3298,6 +3345,8 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_BLOCKS = "Blocks";
     public static final String INFO_SCHEMA_SHADERS = "Shaders";
     public static final String INFO_SCHEMA_ARCHITECTURES = "Architectures";
+    public static final String INFO_SCHEMA_COVERINGS = "Coverings";
+    public static final String INFO_SCHEMA_CONTENTS = "Contents";
     public static final String INFO_ITEM_MESH_FIELD = "mesh";
     public static final String INFO_ITEM_EQUIP_FIELD = "equip";
     public static final String INFO_ITEM_WORN_MESH_FIELD = "mesh";

@@ -683,6 +683,8 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/EditorWindow.arpg` (Architecture Builder under Planners in the World menu); removed
   `furnishings/house/Bed.arpg`, `furnishings/keep/Bed.arpg` and `furnishings/tavern/Bed.arpg`, replaced by the bed
   tables.
+- 2026-11-27: Structure Editor. Added `menus/editor/StructureEditor.arpg` (status line and Palette row templates);
+  regenerated `menus/editor/EditorWindow.arpg` (Structure Editor under Planners in the World menu).
 
 ## Textures and Sprites (2603 files)
 
@@ -3043,7 +3045,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/menus/editor/`
 
-`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArchitectureBuilder.arpg`, `ArpgViewer.arpg`,
+`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArchitectureBuilder.arpg`, `ArpgViewer.arpg`, `StructureEditor.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `Filters.arpg`,
 `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`,

@@ -56,6 +56,7 @@ import editor.runtime.shipviewer.ShipViewerContext;
 import editor.runtime.shipwright.ShipwrightContext;
 import editor.runtime.soundlibrary.SoundLibraryContext;
 import editor.runtime.stamps.StampsContext;
+import editor.runtime.structureeditor.StructureEditorContext;
 import editor.runtime.timeline.TimelineContext;
 import editor.runtime.tools.ToolsContext;
 import editor.runtime.transitions.TransitionsContext;
@@ -300,6 +301,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openArchitectureBuilder(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_ARCHITECTURE_BUILDER, ArchitectureBuilderContext.class, osWindow);
+    }
+
+    public TabHandle openStructureEditor(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_STRUCTURE_EDITOR, StructureEditorContext.class, osWindow);
     }
 
     public TabHandle openTreeViewer(WindowInstance osWindow) {

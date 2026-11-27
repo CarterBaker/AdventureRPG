@@ -217,6 +217,12 @@ public enum ToolCanvas {
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT),
             itemDepth(),
             itemSpacing()),
+    STRUCTURE(
+            EditorSetting.TOOL_CANVAS_STRUCTURE,
+            new EditorTool[] { EditorTool.HAND, EditorTool.BRUSH, EditorTool.ERASE, EditorTool.FILL, EditorTool.PICK },
+            false,
+            structureSize(),
+            strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.HAND, EditorTool.SELECT, EditorTool.CUT },
@@ -650,6 +656,15 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_ITEM_SPACING_MAX,
                 EditorSetting.TOOL_ITEM_SPACING_STEP,
                 EditorSetting.TOOL_ITEM_SPACING_DEFAULT);
+    }
+
+    private static ToolOptionStruct structureSize() {
+        return new ToolOptionStruct(
+                ToolOption.SIZE,
+                EditorSetting.TOOL_STRUCTURE_SIZE_MIN,
+                EditorSetting.TOOL_STRUCTURE_SIZE_MAX,
+                EditorSetting.TOOL_STRUCTURE_SIZE_STEP,
+                EditorSetting.TOOL_STRUCTURE_SIZE_DEFAULT);
     }
 
     private static ToolOptionStruct screenSize() {

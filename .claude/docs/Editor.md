@@ -69,6 +69,18 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   Palette tab lists every architecture, then what the slot picked may take (As Built first), a row chosen filling
   it through `InfoManager.editEntry`; the Properties tab holds the whole entry; the File menu makes, saves and reverts
   (`ArchitectureBuilderManager` holds what is shared). Only a whole bare block takes a slot.
+- **Structure Editor** (`editor.bootstrap.structureeditorpipeline`, under Planners in the World menu). Paints a
+  structure's blocks as a voxel modeller paints a model, drawn through the sub-voxel grid mesher (one part to each
+  tile, partial blocks by their octants). Its layers are Blocks, Coverage and Contents, each worked with the
+  `ToolCanvas.STRUCTURE` tools: Hand, Brush (Size in blocks; Strength gives a covering's level), Erase, Fill (every
+  cell joined to the one struck and laid alike) and Pick. The Palette tab lists every structure, then for Blocks the
+  architecture it is shown built in (As Authored first), that architecture's slots, the structure's own block entries
+  and every block, and for Coverage and Contents every covering or content after None; a covering or content is
+  painted only where the game takes it (`StructurePaintBranch`: a host it names, a whole bare block, never a slotted
+  one). Cells are keyed from the structure's corner and never lie below zero: building past the low edge shifts every
+  cell and the origin up together. A stroke is one step of the editor's own Undo and Redo and is written through
+  `InfoManager.editEntry` as one palette and its layers (`StructureDocumentBranch`, `blocks` folded in); the
+  Properties tab holds the whole entry (placement rules, terrain, biomes, furnishings, spawns).
 - **Tree impostors** (`editor.bootstrap.treeimpostorpipeline`). Every species' impostor is baked by the editor, as
   SpeedTree bakes billboards: its shared tree, grown in full from its `lod_seed`, drawn from 8 by 8 hemi-octahedral
   directions into an albedo and a normal atlas, BC7, written to `assets/bakedimpostors/<Tree>.arpg`
