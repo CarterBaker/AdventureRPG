@@ -14,6 +14,7 @@ import editor.bootstrap.imagepipeline.ImagePipeline;
 import editor.bootstrap.infopipeline.InfoPipeline;
 import editor.bootstrap.itemeditorpipeline.ItemEditorPipeline;
 import editor.bootstrap.layerspipeline.LayersPipeline;
+import editor.bootstrap.layoutplannerpipeline.LayoutPlannerPipeline;
 import editor.bootstrap.materialspipeline.MaterialsPipeline;
 import editor.bootstrap.notelibrarypipeline.NoteLibraryPipeline;
 import editor.bootstrap.propertiespipeline.PropertiesPipeline;
@@ -83,6 +84,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(ShipViewerPipeline.class);
         create(ArchitectureBuilderPipeline.class);
         create(StructureEditorPipeline.class);
+        create(LayoutPlannerPipeline.class);
         create(CharacterEditorPipeline.class);
         create(ImageEditorPipeline.class);
         create(AnimationEditorPipeline.class);

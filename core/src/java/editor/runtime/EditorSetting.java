@@ -397,6 +397,12 @@ public class EditorSetting {
             .with(FileMenuAction.REVERT, "revert")
             .with(FileMenuAction.UNDO, "undo")
             .with(FileMenuAction.REDO, "redo");
+    public static final FileMenuTableStruct FILE_MENU_LAYOUTS = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.LayoutPlannerBranch")
+            .with(FileMenuAction.NEW, "newSettlement")
+            .with(FileMenuAction.DUPLICATE, "duplicateSettlement")
+            .with(FileMenuAction.SAVE, "save")
+            .with(FileMenuAction.REVERT, "revert");
     public static final FileMenuTableStruct FILE_MENU_BIOME_PLANNER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.BiomePlannerBranch")
             .with(FileMenuAction.NEW, "newBiome")
@@ -608,6 +614,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_TREE_PLANNER = "Tree Planner";
     public static final String TAB_TITLE_ARCHITECTURE_BUILDER = "Architecture Builder";
     public static final String TAB_TITLE_STRUCTURE_EDITOR = "Structure Editor";
+    public static final String TAB_TITLE_LAYOUT_PLANNER = "Layout Planner";
     public static final String TAB_TITLE_TREE_VIEWER = "Tree Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
@@ -2867,6 +2874,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_ANIMATION_POSE = "Animation Pose";
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_STRUCTURE = "Structure";
+    public static final String TOOL_CANVAS_LAYOUT = "Layout";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";
     public static final String TOOL_ACTION_HEADER_NESTING = "Nesting";
     public static final String TOOL_ACTION_LABEL_NEST_SELECTION = "Nest Selection";
@@ -3117,6 +3125,45 @@ public class EditorSetting {
     public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVED = "Saved ";
     public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVE_FAILED = "Could not save ";
     public static final String ARCHITECTURE_BUILDER_MESSAGE_REVERTED = "Reverted ";
+
+    // Layout Planner — the bounds and defaults of the numbers it edits, how they are stepped, written and shown, the
+    // prefixes its Palette rows carry, its Preview actions, the text of its labels and its messages
+    public static final float LAYOUT_PLANNER_MAX_WEIGHT = 20f;
+    public static final float LAYOUT_PLANNER_MAX_REACH_BLOCKS = 448f;
+    public static final float LAYOUT_PLANNER_DEFAULT_RADIUS_BLOCKS = 90f;
+    public static final float LAYOUT_PLANNER_MAX_HEIGHT_BLOCKS = 2048f;
+    public static final float LAYOUT_PLANNER_MAX_SLOPE_BLOCKS = 64f;
+    public static final float LAYOUT_PLANNER_MAX_SPOKES = 12f;
+    public static final float LAYOUT_PLANNER_MAX_BRANCHES = 8f;
+    public static final float LAYOUT_PLANNER_MAX_STREET_BLOCKS = 256f;
+    public static final float LAYOUT_PLANNER_MAX_SETBACK_BLOCKS = 8f;
+    public static final float LAYOUT_PLANNER_MAX_LOTS = 200f;
+    public static final float LAYOUT_PLANNER_MAX_OVERPASSES = 8f;
+    public static final float LAYOUT_PLANNER_MAX_TOWER_SPACING_BLOCKS = 128f;
+    public static final float LAYOUT_PLANNER_MAX_OUTPOSTS = 8f;
+    public static final int LAYOUT_PLANNER_VALUE_PRECISION = 10000;
+    public static final String LAYOUT_PLANNER_VALUE_FORMAT = "%.2f";
+    public static final int LAYOUT_PLANNER_STEP_DOWN = -1;
+    public static final int LAYOUT_PLANNER_STEP_UP = 1;
+    public static final int LAYOUT_PLANNER_SUMMARY_PARAMETERS = 2;
+    public static final String LAYOUT_PLANNER_ROW_SETTLEMENT = "settlement:";
+    public static final String LAYOUT_PLANNER_ROW_ARCHITECTURE = "architecture:";
+    public static final String LAYOUT_PLANNER_PALETTE_SETTLEMENTS = "Settlements";
+    public static final String LAYOUT_PLANNER_PALETTE_ARCHITECTURES = "Built In";
+    public static final String LAYOUT_PLANNER_FIELDS_SUFFIX = " Fields";
+    public static final String LAYOUT_PLANNER_HEADER_PREVIEW = "Preview";
+    public static final String LAYOUT_PLANNER_KEY_NEXT_LAYOUT = "layout_next_layout";
+    public static final String LAYOUT_PLANNER_KEY_NEXT_SITE = "layout_next_site";
+    public static final String LAYOUT_PLANNER_LABEL_NEXT_LAYOUT = "Next Layout";
+    public static final String LAYOUT_PLANNER_LABEL_NEXT_SITE = "Next Site";
+    public static final String LAYOUT_PLANNER_LABEL_BY_BIOME = "As The Ground Picks";
+    public static final String LAYOUT_PLANNER_LABEL_SEPARATOR = "  ·  ";
+    public static final String LAYOUT_PLANNER_VALUE_SEPARATOR = " / ";
+    public static final String LAYOUT_PLANNER_MESSAGE_NONE = "Select a settlement first";
+    public static final String LAYOUT_PLANNER_MESSAGE_SET = "Set ";
+    public static final String LAYOUT_PLANNER_MESSAGE_SAVED = "Saved ";
+    public static final String LAYOUT_PLANNER_MESSAGE_SAVE_FAILED = "Could not save ";
+    public static final String LAYOUT_PLANNER_MESSAGE_REVERTED = "Reverted ";
 
     // Structure Editor — its jobs and the layers holding them, its layer actions, the marker an NPC is drawn with,
     // the prefixes its Palette rows carry, the characters its palette keys are drawn

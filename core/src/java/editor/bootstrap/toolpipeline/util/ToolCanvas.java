@@ -224,6 +224,11 @@ public enum ToolCanvas {
             false,
             structureSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
+    LAYOUT(
+            EditorSetting.TOOL_CANVAS_LAYOUT,
+            new EditorTool[] { EditorTool.HAND },
+            new ToolActionGroupStruct[] { layoutPreview() },
+            false),
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.HAND, EditorTool.SELECT, EditorTool.CUT },
@@ -466,6 +471,13 @@ public enum ToolCanvas {
                 action(EditorSetting.STRUCTURE_EDITOR_LABEL_LAYER_DOWN, EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_DOWN),
                 action(EditorSetting.STRUCTURE_EDITOR_LABEL_LAYER_RENAME,
                         EditorSetting.STRUCTURE_EDITOR_KEY_LAYER_RENAME));
+    }
+
+    private static ToolActionGroupStruct layoutPreview() {
+        return new ToolActionGroupStruct(
+                EditorSetting.LAYOUT_PLANNER_HEADER_PREVIEW,
+                action(EditorSetting.LAYOUT_PLANNER_LABEL_NEXT_LAYOUT, EditorSetting.LAYOUT_PLANNER_KEY_NEXT_LAYOUT),
+                action(EditorSetting.LAYOUT_PLANNER_LABEL_NEXT_SITE, EditorSetting.LAYOUT_PLANNER_KEY_NEXT_SITE));
     }
 
     private static ToolActionGroupStruct treePreview() {

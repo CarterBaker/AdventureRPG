@@ -687,6 +687,8 @@ One line per session that changed this file: the date, what was added or removed
   regenerated `menus/editor/EditorWindow.arpg` (Structure Editor under Planners in the World menu).
 - 2026-11-27: Structure layers. Regenerated `schemas/Structures.arpg` (`parts`, each with its own name, layers,
   blocks, furnishings and spawns) for the Structure Editor's stack of layers.
+- 2026-11-27: Layout Planner. Added `menus/editor/LayoutPlanner.arpg` (status line, Palette and Properties row
+  templates); regenerated `menus/editor/EditorWindow.arpg` (Layout Planner under Planners in the World menu).
 
 ## Textures and Sprites (2603 files)
 
@@ -3047,7 +3049,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/menus/editor/`
 
-`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArchitectureBuilder.arpg`, `ArpgViewer.arpg`, `StructureEditor.arpg`,
+`AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArchitectureBuilder.arpg`, `ArpgViewer.arpg`, `LayoutPlanner.arpg`, `StructureEditor.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
 `CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `Filters.arpg`,
 `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`,

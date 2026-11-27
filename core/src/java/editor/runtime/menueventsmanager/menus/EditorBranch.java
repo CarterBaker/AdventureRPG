@@ -248,6 +248,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openStructureEditor(window.getGLWindow());
     }
 
+    public void openLayoutPlanner(WindowInstance window) {
+        tabManager.openLayoutPlanner(window.getGLWindow());
+    }
+
     public void openTreeViewer(WindowInstance window) {
         tabManager.openTreeViewer(window.getGLWindow());
     }

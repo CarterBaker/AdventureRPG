@@ -87,6 +87,18 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   editor's own Undo and Redo and is written through `InfoManager.editEntry` (`StructureDocumentBranch`, the
   structure's own layers, blocks, furnishings and spawns folded into its parts); the Properties tab holds the whole
   entry (placement rules, terrain, biomes, each furnishing's chance).
+- **Layout Planner** (`editor.bootstrap.layoutplannerpipeline`, under Planners in the World menu). Designs how a
+  settlement type lays itself out, as the Tree Planner designs trees: the layout's nodes are its layers in the Layers
+  tab, Settlement the root and Ground, Streets, Lots, Overpasses, Wall and Outposts under it, each labelled with what
+  its fields say, the eyes of Streets, Lots and Wall hiding what they lay in the preview. The node picked opens its
+  numbers and ranges in the Properties tab (`LayoutPlannerParameter`, edited in the type's entry by
+  `LayoutPlannerEditBranch`, so the type is rebuilt live); its roles and the names it builds with stay the Info
+  Panel's. The viewport shows the settlement as generation plans it (`SettlementManager.planPlacement`, once the design
+  has rested `PLAN_REST_FRAMES`), at a place the world names and a numbered layout (the Tools tab's Next Site and Next
+  Layout), in the architecture the Palette tab picks below every type (As The Ground Picks first): every lot's
+  structure built in that architecture and turned as it stands, roads at their width and walls at their height, all
+  rasterized into one sub-voxel grid and greedily meshed. Only types and architectures the game has registered are
+  planned.
 - **Tree impostors** (`editor.bootstrap.treeimpostorpipeline`). Every species' impostor is baked by the editor, as
   SpeedTree bakes billboards: its shared tree, grown in full from its `lod_seed`, drawn from 8 by 8 hemi-octahedral
   directions into an albedo and a normal atlas, BC7, written to `assets/bakedimpostors/<Tree>.arpg`

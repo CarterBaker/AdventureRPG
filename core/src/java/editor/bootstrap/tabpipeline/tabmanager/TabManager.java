@@ -38,6 +38,7 @@ import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.imageeditor.ImageEditorContext;
 import editor.runtime.itemeditor.ItemEditorContext;
 import editor.runtime.layers.LayersContext;
+import editor.runtime.layoutplanner.LayoutPlannerContext;
 import editor.runtime.materials.MaterialsContext;
 import editor.runtime.materialviewer.MaterialViewerContext;
 import editor.runtime.notelibrary.NoteLibraryContext;
@@ -305,6 +306,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openStructureEditor(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_STRUCTURE_EDITOR, StructureEditorContext.class, osWindow);
+    }
+
+    public TabHandle openLayoutPlanner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_LAYOUT_PLANNER, LayoutPlannerContext.class, osWindow);
     }
 
     public TabHandle openTreeViewer(WindowInstance osWindow) {
