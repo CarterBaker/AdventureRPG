@@ -187,6 +187,58 @@ public class RuntimeSetting {
     public static final int[] LEAF_INSTANCE_ATTR_SIZES = { 4, 4, 4 };
     public static final int LEAF_INSTANCE_FLOATS = 12;
 
+    // Waterfall Spray — thrown up at the foot of every fall near the camera, gathered from the feet the geometry
+    // build keeps per subchunk: splashes leaping and falling back, foam riding off on the pool away from the fall and
+    // mist rising and swelling over a tall one, each kind's rate, size and reach growing with the drop; the tables
+    // are indexed by kind (splash, foam, mist); a particle's floats, then its instance's
+    public static final String SPRAY_MATERIAL = "particles/WaterfallSprayMaterial";
+    public static final long SPRAY_RANDOM_SEED = 0x53505241L;
+    public static final int SPRAY_CAPACITY = 1536;
+    public static final int SPRAY_SOURCE_CAPACITY = 96;
+    public static final int SPRAY_SOURCE_CHUNKS = 3;
+    public static final float SPRAY_SOURCE_REACH = 64f;
+    public static final float SPRAY_SOURCE_SECONDS = 1f;
+    public static final float SPRAY_RETIRE_REACH = 80f;
+    public static final int SPRAY_KIND_SPLASH = 0;
+    public static final int SPRAY_KIND_FOAM = 1;
+    public static final int SPRAY_KIND_MIST = 2;
+    public static final int SPRAY_KINDS = 3;
+    public static final float[] SPRAY_RATE_PER_BLOCK = { 5f, 1.6f, 0.9f };
+    public static final float[] SPRAY_RATE_PER_DROP = { 0.35f, 0.12f, 0.2f };
+    public static final float[] SPRAY_RATE_MAX_PER_BLOCK = { 40f, 6f, 6f };
+    public static final float[] SPRAY_SIZE_MIN = { 0.05f, 0.22f, 0.9f };
+    public static final float[] SPRAY_SIZE_MAX = { 0.12f, 0.42f, 1.6f };
+    public static final float[] SPRAY_SIZE_PER_DROP = { 0.012f, 0.03f, 0.18f };
+    public static final float[] SPRAY_SIZE_LIMIT = { 0.3f, 1.2f, 6f };
+    public static final float[] SPRAY_LIFE_MIN = { 0.6f, 2.5f, 2.2f };
+    public static final float[] SPRAY_LIFE_MAX = { 1.4f, 5f, 4.2f };
+    public static final float[] SPRAY_GRAVITY = { 22f, 0f, -0.6f };
+    public static final float[] SPRAY_DRAG = { 0.4f, 0.6f, 1.2f };
+    public static final float[] SPRAY_FADE_IN_SECONDS = { 0.05f, 0.3f, 0.6f };
+    public static final float[] SPRAY_FADE_OUT_SECONDS = { 0.15f, 1.2f, 1.6f };
+    public static final float[] SPRAY_DROP_MIN = { 0f, 0f, 2f };
+    public static final float[] SPRAY_DROP_FULL = { 1f, 1f, 14f };
+    public static final float[] SPRAY_SPEED_BASE = { 2.2f, 0.8f, 0.5f };
+    public static final float[] SPRAY_SPEED_PER_ROOT_DROP = { 1.6f, 0.35f, 0.25f };
+    public static final float[] SPRAY_SPEED_LIMIT = { 11f, 3f, 3f };
+    public static final float[] SPRAY_UPWARD = { 1f, 0f, 0.6f };
+    public static final float[] SPRAY_AWAY = { 0.3f, 1f, 0.8f };
+    public static final float[] SPRAY_SCATTER = { 0.55f, 0.45f, 0.5f };
+    public static final float[] SPRAY_LIFT = { 0.05f, 0.06f, 0.2f };
+    public static final float SPRAY_SPEED_JITTER_MIN = 0.5f;
+    public static final int SPRAY_AGE = 0;
+    public static final int SPRAY_LIFE = 1;
+    public static final int SPRAY_KIND = 2;
+    public static final int SPRAY_SIZE = 3;
+    public static final int SPRAY_SEED = 4;
+    public static final int SPRAY_VELOCITY_X = 5;
+    public static final int SPRAY_VELOCITY_Y = 6;
+    public static final int SPRAY_VELOCITY_Z = 7;
+    public static final int SPRAY_FLOOR = 8;
+    public static final int SPRAY_FLOATS = 9;
+    public static final int[] SPRAY_INSTANCE_ATTR_SIZES = { 4, 4 };
+    public static final int SPRAY_INSTANCE_FLOATS = 8;
+
     // Bubbles — breathed out while the camera is under water, a puff now and then beside the view that rises past its
     // sides: seldom and few just under the surface, often and many deep down; each pops at the surface; a bubble's
     // floats, then its instance's

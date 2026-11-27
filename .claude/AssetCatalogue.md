@@ -691,6 +691,13 @@ One line per session that changed this file: the date, what was added or removed
   templates); regenerated `menus/editor/EditorWindow.arpg` (Layout Planner under Planners in the World menu).
 - 2026-11-27: Road Planner. Added `menus/editor/RoadPlanner.arpg` (the Biome Planner's grid with road actions and
   Palette row templates); regenerated `menus/editor/EditorWindow.arpg` (Road Planner under Planners in the World menu).
+- 2026-11-27: River water and waterfalls. Regenerated `shaders/liquid/WaterShader.vsh`, `WaterShader.tcs`,
+  `WaterShader.tes`, `WaterShader.fsh`, `MacroWaterShader.fsh`, `shaders/liquid/includes/WaterShading.glsl` and
+  `WaterLight.glsl` (rivers in a cartoon azure palette with pale flow streaks, falls poured as sheets from a
+  glassy lip, accelerating down their face, whiter with the drop); added
+  `shaders/particles/waterfallspray/WaterfallSprayShader` (`.vsh`, `.fsh`, `.arpg`) and
+  `materials/particles/WaterfallSprayMaterial.arpg` (splashes, foam and mist at the foot of every fall, sized by
+  its drop).
 
 ## Textures and Sprites (2603 files)
 
@@ -1970,6 +1977,10 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 `LeafShader.fsh`, `LeafShader.vsh`
 
+### `assets/shaders/particles/waterfallspray/`
+
+`WaterfallSprayShader.fsh`, `WaterfallSprayShader.vsh`
+
 ### `assets/shaders/particles/windline/`
 
 `WindLineShader.fsh`, `WindLineShader.vsh`
@@ -3004,7 +3015,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/materials/particles/`
 
-`BubbleMaterial.arpg`, `LeafMaterial.arpg`, `WindLineMaterial.arpg`
+`BubbleMaterial.arpg`, `LeafMaterial.arpg`, `WaterfallSprayMaterial.arpg`, `WindLineMaterial.arpg`
 
 ### `assets/materials/postprocessing/`
 

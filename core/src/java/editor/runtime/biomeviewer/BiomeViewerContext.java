@@ -9,6 +9,7 @@ import application.runtime.sky.SquintSystem;
 import application.runtime.tree.TreeSystem;
 import application.runtime.water.BubbleSystem;
 import application.runtime.water.WaterSystem;
+import application.runtime.water.WaterfallSpraySystem;
 import application.runtime.weather.FallingLeafSystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.weather.WeatherSystem;
@@ -54,6 +55,7 @@ public class BiomeViewerContext extends ContextPackage implements PropertiesProv
     private WindLineSystem windLineSystem;
     private FallingLeafSystem fallingLeafSystem;
     private BubbleSystem bubbleSystem;
+    private WaterfallSpraySystem waterfallSpraySystem;
     private SquintSystem squintSystem;
     private TreeSystem treeSystem;
 
@@ -84,6 +86,7 @@ public class BiomeViewerContext extends ContextPackage implements PropertiesProv
         this.windLineSystem = create(WindLineSystem.class);
         this.fallingLeafSystem = create(FallingLeafSystem.class);
         this.bubbleSystem = create(BubbleSystem.class);
+        this.waterfallSpraySystem = create(WaterfallSpraySystem.class);
         this.squintSystem = create(SquintSystem.class);
         this.treeSystem = create(TreeSystem.class);
 

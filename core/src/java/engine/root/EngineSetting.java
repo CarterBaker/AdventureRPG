@@ -1345,12 +1345,33 @@ public class EngineSetting {
             + QUAD_RECORD_LIQUID_LEVEL_BITS;
     public static final int QUAD_RECORD_LIQUID_FLOW_SHIFT = QUAD_RECORD_LIQUID_TIDAL_SHIFT + 1;
     public static final int QUAD_RECORD_LIQUID_FLOW_BITS = 5;
+    public static final int QUAD_RECORD_LIQUID_FALL_SHIFT = QUAD_RECORD_LIQUID_FLOW_SHIFT
+            + QUAD_RECORD_LIQUID_FLOW_BITS;
 
     // Liquid Flow — the way a column's water runs, one code per block column: still, one of a ring of directions
     // (east first, turning toward south), or churning where water pours onto it from beside
     public static final int LIQUID_FLOW_DIRECTIONS = 16;
     public static final byte LIQUID_FLOW_STILL = 0;
     public static final byte LIQUID_FLOW_CHURN = (byte) (LIQUID_FLOW_DIRECTIONS + 1);
+
+    // Liquid Falls — water pouring over open air: an upright face carries how far above its top edge its fall's lip
+    // stands and a churning top face the drop poured onto it, both held to the most the record's fall bits hold; the
+    // foot of a fall is kept per subchunk as one packed word: the cell it churns, the pool face's extents along x and
+    // z less one, the drop and the side it pours from
+    public static final int LIQUID_FALL_DROP_BITS = 8;
+    public static final int LIQUID_FALL_MAX_BLOCKS = (1 << LIQUID_FALL_DROP_BITS) - 1;
+    public static final int LIQUID_FALL_FOOT_NONE = 0;
+    public static final int LIQUID_FALL_FOOT_CELL_BITS = 4;
+    public static final int LIQUID_FALL_FOOT_CELL_MASK = (1 << LIQUID_FALL_FOOT_CELL_BITS) - 1;
+    public static final int LIQUID_FALL_FOOT_Y_SHIFT = LIQUID_FALL_FOOT_CELL_BITS;
+    public static final int LIQUID_FALL_FOOT_Z_SHIFT = LIQUID_FALL_FOOT_Y_SHIFT + LIQUID_FALL_FOOT_CELL_BITS;
+    public static final int LIQUID_FALL_FOOT_SIZE_X_SHIFT = LIQUID_FALL_FOOT_Z_SHIFT + LIQUID_FALL_FOOT_CELL_BITS;
+    public static final int LIQUID_FALL_FOOT_SIZE_Z_SHIFT = LIQUID_FALL_FOOT_SIZE_X_SHIFT
+            + LIQUID_FALL_FOOT_CELL_BITS;
+    public static final int LIQUID_FALL_FOOT_DROP_SHIFT = LIQUID_FALL_FOOT_SIZE_Z_SHIFT + LIQUID_FALL_FOOT_CELL_BITS;
+    public static final int LIQUID_FALL_FOOT_SIDE_SHIFT = LIQUID_FALL_FOOT_DROP_SHIFT + LIQUID_FALL_DROP_BITS;
+    public static final int LIQUID_FALL_FOOT_SIDE_MASK = 3;
+    public static final int LIQUID_FALL_FEET_INITIAL = 8;
 
     // Coverage — a covering's ID and level packed into one short per cell, the same with the face it shows on packed
     // into one exact float per vertex, and the table the surface shader reads every covering's tiles from

@@ -11,7 +11,8 @@
  * Light and color for water, shared by the surface and the underwater pass. Everything is lit by the same
  * sun, moon and sky the deferred pass uses, so water follows the time of day: turquoise shallows and deep
  * blue at noon, warm at sunset, dark slate under the moon. Direct light is cel banded into a few flat steps
- * with thin soft edges, the depth palette steps from shallow to mid to deep the same way, and light under the
+ * with thin soft edges, the depth palette steps from shallow to mid to deep the same way (running fresh water
+ * through a palette of its own, the bright azure of a cartoon river), and light under the
  * surface dims with depth into a fog tinted by what little sky reaches it. Caustics are a drifting cellular
  * pattern on the same world-anchored lattice as the sea noise, kept to bright cartoon lines.
  */
@@ -20,6 +21,9 @@ const vec3  WATER_SHALLOW_COLOR        = vec3(0.22, 0.80, 0.76);
 const vec3  WATER_MID_COLOR            = vec3(0.07, 0.50, 0.66);
 const vec3  WATER_DEEP_COLOR           = vec3(0.02, 0.16, 0.36);
 const vec3  WATER_FOAM_COLOR           = vec3(0.96, 0.99, 1.00);
+const vec3  WATER_RIVER_SHALLOW_COLOR  = vec3(0.36, 0.78, 0.97);
+const vec3  WATER_RIVER_MID_COLOR      = vec3(0.17, 0.57, 0.91);
+const vec3  WATER_RIVER_DEEP_COLOR     = vec3(0.09, 0.37, 0.76);
 const vec3  WATER_ABSORPTION           = vec3(0.42, 0.13, 0.08);
 const vec3  WATER_MOON_TINT            = vec3(0.58, 0.74, 1.00);
 const float WATER_MID_DEPTH_BLOCKS     = 2.5;
@@ -90,13 +94,22 @@ float resolveWaterLitAmount(vec3 normal) {
 
 // ── Palette ───────────────────────────────────────────────────────────────
 
-vec3 resolveWaterBodyColor(float depthBlocks) {
-    float mid  = smoothstep(WATER_MID_DEPTH_BLOCKS - WATER_DEPTH_BAND_SOFTNESS,
+// A palette stepped from its shallow color to its mid and deep ones as the water deepens, each step a thin soft edge
+vec3 resolveWaterPalette(float depthBlocks, vec3 shallow, vec3 middle, vec3 deep) {
+    float mid    = smoothstep(WATER_MID_DEPTH_BLOCKS - WATER_DEPTH_BAND_SOFTNESS,
         WATER_MID_DEPTH_BLOCKS + WATER_DEPTH_BAND_SOFTNESS, depthBlocks);
-    float deep = smoothstep(WATER_DEEP_DEPTH_BLOCKS - WATER_DEPTH_BAND_SOFTNESS,
+    float bottom = smoothstep(WATER_DEEP_DEPTH_BLOCKS - WATER_DEPTH_BAND_SOFTNESS,
         WATER_DEEP_DEPTH_BLOCKS + WATER_DEPTH_BAND_SOFTNESS, depthBlocks);
 
-    return mix(mix(WATER_SHALLOW_COLOR, WATER_MID_COLOR, mid), WATER_DEEP_COLOR, deep);
+    return mix(mix(shallow, middle, mid), deep, bottom);
+}
+
+vec3 resolveWaterBodyColor(float depthBlocks) {
+    return resolveWaterPalette(depthBlocks, WATER_SHALLOW_COLOR, WATER_MID_COLOR, WATER_DEEP_COLOR);
+}
+
+vec3 resolveRiverBodyColor(float depthBlocks) {
+    return resolveWaterPalette(depthBlocks, WATER_RIVER_SHALLOW_COLOR, WATER_RIVER_MID_COLOR, WATER_RIVER_DEEP_COLOR);
 }
 
 vec3 resolveWaterTransmittance(float thicknessBlocks) {

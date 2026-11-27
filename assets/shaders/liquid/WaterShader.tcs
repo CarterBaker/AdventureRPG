@@ -7,6 +7,7 @@ in  float tcLevel[];
 in  float tcSurface[];
 in  float tcTidal[];
 in  float tcFlow[];
+in  float tcFall[];
 
 out vec3  teWorldPos[];
 out vec3  teNormal[];
@@ -14,6 +15,7 @@ out float teLevel[];
 out float teSurface[];
 out float teTidal[];
 out float teFlow[];
+out float teFall[];
 
 #include "liquid/includes/OceanTessellation.glsl"
 
@@ -30,6 +32,7 @@ void main() {
     teSurface [gl_InvocationID] = tcSurface [gl_InvocationID];
     teTidal   [gl_InvocationID] = tcTidal   [gl_InvocationID];
     teFlow    [gl_InvocationID] = tcFlow    [gl_InvocationID];
+    teFall    [gl_InvocationID] = tcFall    [gl_InvocationID];
 
     if (gl_InvocationID == 0) {
 

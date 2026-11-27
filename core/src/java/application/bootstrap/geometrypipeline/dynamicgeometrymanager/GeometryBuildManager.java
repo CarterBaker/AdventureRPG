@@ -105,6 +105,7 @@ class GeometryBuildManager extends ManagerPackage {
         quadPacket.clear();
         quadPacket.beginGenerating();
         subChunkInstance.beginBlockTypeTally();
+        subChunkInstance.getLiquidFalls().clear();
 
         if (subChunkInstance.isKnownEmpty()) {
             subChunkInstance.finalizeBlockTypeTally();

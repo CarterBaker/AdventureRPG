@@ -41,12 +41,20 @@ public final class QuadRecordUtility extends EngineUtility {
 
     // Liquid \\
 
-    public static int packLiquid(int face, int sizeA, int sizeB, int level, boolean tidalSurface, byte flow) {
+    public static int packLiquid(
+            int face,
+            int sizeA,
+            int sizeB,
+            int level,
+            boolean tidalSurface,
+            byte flow,
+            int fall) {
         return face
                 | ((sizeA - 1) << EngineSetting.QUAD_RECORD_LIQUID_SIZE_A_SHIFT)
                 | ((sizeB - 1) << EngineSetting.QUAD_RECORD_LIQUID_SIZE_B_SHIFT)
                 | (level << EngineSetting.QUAD_RECORD_LIQUID_LEVEL_SHIFT)
                 | ((tidalSurface ? 1 : 0) << EngineSetting.QUAD_RECORD_LIQUID_TIDAL_SHIFT)
-                | (flow << EngineSetting.QUAD_RECORD_LIQUID_FLOW_SHIFT);
+                | (flow << EngineSetting.QUAD_RECORD_LIQUID_FLOW_SHIFT)
+                | (fall << EngineSetting.QUAD_RECORD_LIQUID_FALL_SHIFT);
     }
 }

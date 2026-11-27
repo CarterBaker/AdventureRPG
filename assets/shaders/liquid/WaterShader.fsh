@@ -4,6 +4,7 @@ in vec3  vWorldPos;
 flat in vec3 vFaceNormal;
 in float vTidal;
 flat in float vFlow;
+flat in float vFall;
 in vec4  vOceanState;
 
 out vec4 FragColor;
@@ -16,12 +17,12 @@ out vec4 FragColor;
 void main() {
     WaterSurface surface;
 
-    WaterFragment fragment = WaterFragment(vWorldPos, vFaceNormal, vTidal, vOceanState, vFlow);
+    WaterFragment fragment = WaterFragment(vWorldPos, vFaceNormal, vTidal, vOceanState, vFlow, vFall);
 
     if (!resolveWaterSurface(fragment, gl_FragCoord.xyz, surface))
     discard;
 
-    vec2 foamEdges = max(fwidth(surface.foamValues), vec2(WATER_FOAM_EDGE_MIN));
+    vec3 foamEdges = max(fwidth(surface.foamValues), vec3(WATER_FOAM_EDGE_MIN));
 
     FragColor = vec4(shadeWaterSurface(surface, foamEdges), 1.0);
 }

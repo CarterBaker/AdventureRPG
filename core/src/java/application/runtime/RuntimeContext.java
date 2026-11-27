@@ -28,6 +28,7 @@ import application.runtime.weather.FallingLeafSystem;
 import application.runtime.weather.PrecipitationSystem;
 import application.runtime.water.BubbleSystem;
 import application.runtime.water.WaterSystem;
+import application.runtime.water.WaterfallSpraySystem;
 import application.runtime.weather.WeatherSystem;
 import application.runtime.weather.WindLineSystem;
 import application.runtime.world.WorldSystem;
@@ -60,6 +61,7 @@ public class RuntimeContext extends ContextPackage {
     private WindLineSystem windLineSystem;
     private FallingLeafSystem fallingLeafSystem;
     private BubbleSystem bubbleSystem;
+    private WaterfallSpraySystem waterfallSpraySystem;
     private SquintSystem squintSystem;
     private VitalitySystem vitalitySystem;
     private ScreenshotSystem screenshotSystem;
@@ -98,6 +100,7 @@ public class RuntimeContext extends ContextPackage {
         this.windLineSystem = create(WindLineSystem.class);
         this.fallingLeafSystem = create(FallingLeafSystem.class);
         this.bubbleSystem = create(BubbleSystem.class);
+        this.waterfallSpraySystem = create(WaterfallSpraySystem.class);
         this.squintSystem = create(SquintSystem.class);
         this.vitalitySystem = create(VitalitySystem.class);
         this.screenshotSystem = create(ScreenshotSystem.class);

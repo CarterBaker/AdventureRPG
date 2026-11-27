@@ -7,11 +7,13 @@ in float teLevel[];
 in float teSurface[];
 in float teTidal[];
 in float teFlow[];
+in float teFall[];
 
 out vec3  vWorldPos;
 flat out vec3 vFaceNormal;
 out float vTidal;
 flat out float vFlow;
+flat out float vFall;
 out vec4  vOceanState;
 
 #include "includes/CameraData.glsl"
@@ -87,6 +89,7 @@ void main() {
     vWorldPos   = worldPos;
     vFaceNormal = teNormal[0];
     vFlow       = teFlow[0];
+    vFall       = teFall[0];
 
     gl_Position = u_viewProjection * vec4(applyShoreWarp(worldPos), 1.0);
 }

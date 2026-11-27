@@ -71,6 +71,9 @@ public class SubChunkInstance extends WorldRenderInstance {
     private ShortOpenHashSet containedLiquidBlockIDs;
     private float liquidFlowAccumulator;
 
+    // Liquid Falls — the feet of the falls its last geometry build found
+    private LiquidFallStruct liquidFalls;
+
     // Empty Fast Path — set only by WorldGenerationManager when a subchunk
     // is proven to hold no blocks at all
     private boolean knownEmpty;
@@ -106,6 +109,7 @@ public class SubChunkInstance extends WorldRenderInstance {
 
         this.containedLiquidBlockIDs = new ShortOpenHashSet();
         this.liquidFlowAccumulator = 0f;
+        this.liquidFalls = new LiquidFallStruct();
 
         this.knownEmpty = false;
         this.uniformFill = false;
@@ -147,6 +151,7 @@ public class SubChunkInstance extends WorldRenderInstance {
         Arrays.fill(blockTypeCounts, 0);
         containedLiquidBlockIDs.clear();
         liquidFlowAccumulator = 0f;
+        liquidFalls.release();
         knownEmpty = false;
         uniformFill = false;
         opaqueInterior = false;
@@ -281,6 +286,12 @@ public class SubChunkInstance extends WorldRenderInstance {
 
     public boolean isLiquidStable() {
         return !hasActiveLiquid();
+    }
+
+    // Liquid Falls \\
+
+    public LiquidFallStruct getLiquidFalls() {
+        return liquidFalls;
     }
 
     // Empty Fast Path \\
