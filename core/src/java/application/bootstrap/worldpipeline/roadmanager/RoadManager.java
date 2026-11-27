@@ -6,6 +6,8 @@ import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.root.UtilityPackage.InternalException;
+import engine.util.arpg.ArpgObjectStruct;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -30,6 +32,9 @@ public class RoadManager extends ManagerPackage {
     // Palette
     private Object2IntOpenHashMap<String> roadName2RoadID;
     private ObjectArrayList<RoadHandle> roadID2RoadHandle;
+
+    // Live Edit — raised by every live edit, so whatever was planned from the old types is planned again
+    private int revision;
 
     // Base \\
 
@@ -96,6 +101,26 @@ public class RoadManager extends ManagerPackage {
             SubChunkInstance[] subChunks,
             RoadPathStruct path) {
         roadStampBranch.stamp(worldHandle, chunkCoordinate, subChunks, path);
+    }
+
+    // Live Edit \\
+
+    // A loaded road type rebuilt in place from an edit, every plan naming it planned again; throws a catchable
+    // InternalException, leaving the type as it was, when the edit cannot go live
+    public synchronized void rebuildRoad(String roadName, ArpgObjectStruct roadArpg) {
+
+        RoadHandle roadHandle = RegistryUtility.getHandle(roadName2RoadID, roadID2RoadHandle, roadName);
+
+        if (roadHandle == null)
+            throw new InternalException("Road \"" + roadName
+                    + "\" is not a loaded road — only a road the game started with can be edited live.");
+
+        roadHandle.constructor(((RoadLoader) internalLoader).parse(roadArpg, roadName, roadHandle.getRoadID()));
+        revision++;
+    }
+
+    public int getRevision() {
+        return revision;
     }
 
     // Accessible \\

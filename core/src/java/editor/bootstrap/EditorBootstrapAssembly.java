@@ -19,6 +19,7 @@ import editor.bootstrap.materialspipeline.MaterialsPipeline;
 import editor.bootstrap.notelibrarypipeline.NoteLibraryPipeline;
 import editor.bootstrap.propertiespipeline.PropertiesPipeline;
 import editor.bootstrap.recorderpipeline.RecorderPipeline;
+import editor.bootstrap.roadplannerpipeline.RoadPlannerPipeline;
 import editor.bootstrap.sceneassetspipeline.SceneAssetsPipeline;
 import editor.bootstrap.settlementplannerpipeline.SettlementPlannerPipeline;
 import editor.bootstrap.shipviewerpipeline.ShipViewerPipeline;
@@ -79,6 +80,7 @@ public class EditorBootstrapAssembly extends AssemblyPackage {
         create(SettlementPlannerPipeline.class);
         create(CameraPlannerPipeline.class);
         create(BiomePlannerPipeline.class);
+        create(RoadPlannerPipeline.class);
         create(TreeViewerPipeline.class);
         create(TreeImpostorPipeline.class);
         create(ShipViewerPipeline.class);

@@ -3,14 +3,13 @@ package editor.runtime.biomeplanner.menu;
 import application.bootstrap.menupipeline.element.ElementInstance;
 import application.bootstrap.menupipeline.menu.MenuInstance;
 import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.MenuColorStruct;
 import application.bootstrap.renderpipeline.fbomanager.FBOManager;
 import application.kernel.windowpipeline.window.WindowInstance;
 import application.runtime.RuntimeSetting;
 import editor.bootstrap.biomeplannerpipeline.biomeplannermanager.BiomePlannerManager;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
+import editor.runtime.biomegrid.BiomeGridUtility;
 import editor.runtime.biomeplanner.BiomePlannerSetting;
-import engine.graphics.color.PackedColorUtility;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 
@@ -76,24 +75,9 @@ public class BiomePlannerMenuSystem extends SystemPackage {
 
     private void refreshCells() {
         for (int cell = 0; cell < biomePlannerManager.getCellCount(); cell++)
-            refreshCell(cell, plannerMenu.getEntryPoint(BiomePlannerSetting.ENTRY_FIRST_CELL + cell));
-    }
-
-    private void refreshCell(int cell, ElementInstance element) {
-
-        if (element == null)
-            return;
-
-        ElementInstance swatch = element.findChildById(BiomePlannerSetting.ELEMENT_CELL_SWATCH);
-        ElementInstance label = element.findChildById(BiomePlannerSetting.ELEMENT_CELL_LABEL);
-        int mapColor = biomePlannerManager.getCellMapColor(cell);
-
-        if (swatch != null && mapColor != EngineSetting.INDEX_NOT_FOUND)
-            swatch.setColorOverride(new MenuColorStruct(PackedColorUtility.toColor(mapColor)));
-
-        if (label != null)
-            label.setFontText(worldEditorManager.getBiomeDisplayName(biomePlannerManager.getCellBiomeName(cell))
-                    + describeCell(cell));
+            BiomeGridUtility.refreshCell(
+                    plannerMenu.getEntryPoint(BiomePlannerSetting.ENTRY_FIRST_CELL + cell), cell, describeCell(cell),
+                    biomePlannerManager, worldEditorManager);
     }
 
     private String describeCell(int cell) {

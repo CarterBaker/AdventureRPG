@@ -21,6 +21,7 @@ import engine.util.mathematics.extras.WeightedTableUtility;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 
@@ -40,7 +41,9 @@ public class SettlementManager extends ManagerPackage {
      * chunk generates. A settlement type edited live keeps its handle and ID
      * and takes the new data, the tables are rebuilt, and the revision rises
      * so every cell is settled again. The editor may plan any hand placement
-     * afresh, uncached, to preview it before or after it stands. Settlement
+     * afresh, uncached, to preview it before or after it stands, and may give
+     * a world layouts of its own to stand beside its settlements, a road a
+     * planner draws, laid, drawn and kept off exactly as they are. Settlement
      * IDs are assigned in registration order.
      */
 
@@ -62,10 +65,17 @@ public class SettlementManager extends ManagerPackage {
     // Live Edit
     private volatile int revision;
 
+    // Planned — every world's layouts an editor tool stands beside its settlements, replaced whole on each change so
+    // workers only ever read a finished table
+    private volatile Object2ObjectOpenHashMap<WorldHandle, LayoutPlanStruct[]> world2PlannedLayouts;
+
     // Base \\
 
     @Override
     protected void create() {
+
+        // Planned
+        this.world2PlannedLayouts = new Object2ObjectOpenHashMap<>();
 
         // Palette
         this.settlementName2SettlementID = RegistryUtility.createNameIndex();
@@ -228,6 +238,26 @@ public class SettlementManager extends ManagerPackage {
             double maxZ,
             ObjectArrayList<LayoutPlanStruct> out) {
         settlementCollectBranch.collect(worldHandle, minX, minZ, maxX, maxZ, out);
+    }
+
+    // The layouts a tool stands on a world beside its settlements, none once given none; the world restreams to
+    // show them through whoever changed them
+    public synchronized void setPlannedLayouts(WorldHandle worldHandle, LayoutPlanStruct[] layouts) {
+
+        Object2ObjectOpenHashMap<WorldHandle, LayoutPlanStruct[]> planned =
+                new Object2ObjectOpenHashMap<>(world2PlannedLayouts);
+
+        if (layouts.length == 0)
+            planned.remove(worldHandle);
+        else
+            planned.put(worldHandle, layouts);
+
+        this.world2PlannedLayouts = planned;
+    }
+
+    // Any thread — the layouts a tool stands on a world, null while it stands none
+    public LayoutPlanStruct[] getPlannedLayouts(WorldHandle worldHandle) {
+        return world2PlannedLayouts.get(worldHandle);
     }
 
     // Editor \\

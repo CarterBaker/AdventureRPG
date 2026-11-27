@@ -229,6 +229,11 @@ public enum ToolCanvas {
             new EditorTool[] { EditorTool.HAND },
             new ToolActionGroupStruct[] { layoutPreview() },
             false),
+    ROAD(
+            EditorSetting.TOOL_CANVAS_ROAD,
+            new EditorTool[] { EditorTool.PLACE, EditorTool.BRUSH, EditorTool.ERASE },
+            new ToolActionGroupStruct[] { roadActions() },
+            false),
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
             new EditorTool[] { EditorTool.HAND, EditorTool.SELECT, EditorTool.CUT },
@@ -478,6 +483,12 @@ public enum ToolCanvas {
                 EditorSetting.LAYOUT_PLANNER_HEADER_PREVIEW,
                 action(EditorSetting.LAYOUT_PLANNER_LABEL_NEXT_LAYOUT, EditorSetting.LAYOUT_PLANNER_KEY_NEXT_LAYOUT),
                 action(EditorSetting.LAYOUT_PLANNER_LABEL_NEXT_SITE, EditorSetting.LAYOUT_PLANNER_KEY_NEXT_SITE));
+    }
+
+    private static ToolActionGroupStruct roadActions() {
+        return new ToolActionGroupStruct(
+                EditorSetting.ROAD_PLANNER_HEADER_ROAD,
+                action(EditorSetting.ROAD_PLANNER_LABEL_CLEAR, EditorSetting.ROAD_PLANNER_KEY_CLEAR));
     }
 
     private static ToolActionGroupStruct treePreview() {

@@ -49,6 +49,7 @@ import editor.runtime.recorder.RecorderContext;
 import editor.runtime.recorderkeygraph.RecorderKeyGraphContext;
 import editor.runtime.recorderkeys.RecorderKeysContext;
 import editor.runtime.recordings.RecordingsContext;
+import editor.runtime.roadplanner.RoadPlannerContext;
 import editor.runtime.sceneassets.SceneAssetsContext;
 import editor.runtime.EditorSecondaryWindowContext;
 import editor.runtime.EditorSetting;
@@ -310,6 +311,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openLayoutPlanner(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_LAYOUT_PLANNER, LayoutPlannerContext.class, osWindow);
+    }
+
+    public TabHandle openRoadPlanner(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_ROAD_PLANNER, RoadPlannerContext.class, osWindow);
     }
 
     public TabHandle openTreeViewer(WindowInstance osWindow) {

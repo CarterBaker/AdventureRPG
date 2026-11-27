@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.settlementmanager;
 
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.layout.LayoutPlanStruct;
+import application.bootstrap.worldpipeline.roadmanager.RoadManager;
 import application.bootstrap.worldpipeline.settlement.SettlementPlanStruct;
 import application.bootstrap.worldpipeline.settlement.SettlementSiteStruct;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
@@ -30,6 +31,7 @@ class SettlementCacheBranch extends BranchPackage {
     private WorldManager worldManager;
     private BiomeManager biomeManager;
     private SettlementManager settlementManager;
+    private RoadManager roadManager;
     private SettlementSiteBranch settlementSiteBranch;
     private SettlementPlanBranch settlementPlanBranch;
     private SettlementLinkBranch settlementLinkBranch;
@@ -49,6 +51,7 @@ class SettlementCacheBranch extends BranchPackage {
         this.worldManager = get(WorldManager.class);
         this.biomeManager = get(BiomeManager.class);
         this.settlementManager = get(SettlementManager.class);
+        this.roadManager = get(RoadManager.class);
         this.settlementSiteBranch = get(SettlementSiteBranch.class);
         this.settlementPlanBranch = get(SettlementPlanBranch.class);
         this.settlementLinkBranch = get(SettlementLinkBranch.class);
@@ -173,11 +176,12 @@ class SettlementCacheBranch extends BranchPackage {
         return cell != null && cell.getWorldHandle() == worldHandle && cell.getRevision() == revision;
     }
 
-    // Hand placements generation stands up, settlement types and biomes together, so a change to any settles every
-    // cell again; the first two only ever rise, so their sum changes whenever either does
+    // Hand placements generation stands up, settlement types, road types and biomes together, so a change to any
+    // settles every cell again; the first three only ever rise, so their sum changes whenever any does
     private long resolveRevision() {
         return Coordinate2Long.pack(
-                worldManager.getGenerationRevision() + settlementManager.getRevision(), biomeManager.getRevision());
+                worldManager.getGenerationRevision() + settlementManager.getRevision() + roadManager.getRevision(),
+                biomeManager.getRevision());
     }
 
     // Wrap \\

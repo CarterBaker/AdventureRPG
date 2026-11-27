@@ -1,5 +1,7 @@
 package application.bootstrap.worldpipeline.roadmanager;
 
+import application.bootstrap.worldpipeline.road.RoadData;
+import engine.util.arpg.ArpgObjectStruct;
 import java.io.File;
 
 import application.bootstrap.worldpipeline.road.RoadHandle;
@@ -61,6 +63,11 @@ class RoadLoader extends LoaderPackage {
         RoadHandle roadHandle = internalBuilder.build(file, roadName);
 
         roadManager.addRoadHandle(roadHandle);
+    }
+
+    // A road type's data parsed from ARPG through the same builder a file loads through
+    RoadData parse(ArpgObjectStruct arpg, String roadName, short roadID) {
+        return internalBuilder.parse(arpg, roadName, roadID);
     }
 
     // On-Demand \\

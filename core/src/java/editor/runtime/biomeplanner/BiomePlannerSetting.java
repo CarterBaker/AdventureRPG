@@ -13,10 +13,6 @@ public class BiomePlannerSetting {
     public static final int ENTRY_FIRST_CELL = 0;
     public static final int ENTRY_STATUS = 9;
 
-    // Elements
-    public static final String ELEMENT_CELL_SWATCH = "biome_planner_cell_swatch";
-    public static final String ELEMENT_CELL_LABEL = "biome_planner_cell_label";
-
     // Text
     public static final String CELL_CENTRE_SUFFIX = "  (centre)";
     public static final String CELL_FOLLOWING_SUFFIX = "  (follows)";

@@ -105,6 +105,16 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   structure built in that architecture and turned as it stands, roads at their width and walls at their height, all
   rasterized into one sub-voxel grid and greedily meshed. Only types and architectures the game has registered are
   planned.
+- **Road Planner** (`editor.bootstrap.roadplannerpipeline`, under Planners in the World menu). Makes roads on the
+  Biome Planner's own grid (`BiomePlannerManager`, the cells shown through `BiomeGridUtility` as the Biome Planner
+  shows them): its Brush paints the biome the Palette tab picks into a cell, so the rivers, mountains and lakes the
+  road meets are the biomes'; Place lays the road through a cell (in order) and Erase takes it off
+  (`ToolCanvas.ROAD`, Clear Road under the Tools tab's Road actions). The road runs cell centre to cell centre, each
+  leg bent as settlement links bend, settled through `RoadManager.planPath` and handed to the planner's world with
+  `SettlementManager.setPlannedLayouts`, which `SettlementCollectBranch` lays before anything the world grows, so the
+  Biome Viewer (the toolbar's button) shows it as the game builds it, bridges and tunnels included. The Properties
+  tab holds the road type's entry, rebuilt live (`RoadManager.rebuildRoad`, its revision settling every settlement
+  cell again); the Palette lists road types over the biomes.
 - **Tree impostors** (`editor.bootstrap.treeimpostorpipeline`). Every species' impostor is baked by the editor, as
   SpeedTree bakes billboards: its shared tree, grown in full from its `lod_seed`, drawn from 8 by 8 hemi-octahedral
   directions into an albedo and a normal atlas, BC7, written to `assets/bakedimpostors/<Tree>.arpg`

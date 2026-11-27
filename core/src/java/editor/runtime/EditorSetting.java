@@ -403,6 +403,12 @@ public class EditorSetting {
             .with(FileMenuAction.DUPLICATE, "duplicateSettlement")
             .with(FileMenuAction.SAVE, "save")
             .with(FileMenuAction.REVERT, "revert");
+    public static final FileMenuTableStruct FILE_MENU_ROADS = new FileMenuTableStruct(
+            "editor.runtime.menueventsmanager.menus.RoadPlannerBranch")
+            .with(FileMenuAction.NEW, "newRoad")
+            .with(FileMenuAction.DUPLICATE, "duplicateRoad")
+            .with(FileMenuAction.SAVE, "save")
+            .with(FileMenuAction.REVERT, "revert");
     public static final FileMenuTableStruct FILE_MENU_BIOME_PLANNER = new FileMenuTableStruct(
             "editor.runtime.menueventsmanager.menus.BiomePlannerBranch")
             .with(FileMenuAction.NEW, "newBiome")
@@ -615,6 +621,7 @@ public class EditorSetting {
     public static final String TAB_TITLE_ARCHITECTURE_BUILDER = "Architecture Builder";
     public static final String TAB_TITLE_STRUCTURE_EDITOR = "Structure Editor";
     public static final String TAB_TITLE_LAYOUT_PLANNER = "Layout Planner";
+    public static final String TAB_TITLE_ROAD_PLANNER = "Road Planner";
     public static final String TAB_TITLE_TREE_VIEWER = "Tree Viewer";
     public static final String TAB_TITLE_WORLD_EDITOR = "World Editor";
     public static final String TAB_TITLE_WORLD_MAP = "World Map";
@@ -2875,6 +2882,7 @@ public class EditorSetting {
     public static final String TOOL_CANVAS_ITEM = "Item";
     public static final String TOOL_CANVAS_STRUCTURE = "Structure";
     public static final String TOOL_CANVAS_LAYOUT = "Layout";
+    public static final String TOOL_CANVAS_ROAD = "Road";
     public static final String TOOL_CANVAS_RECORDER = "Timeline";
     public static final String TOOL_ACTION_HEADER_NESTING = "Nesting";
     public static final String TOOL_ACTION_LABEL_NEST_SELECTION = "Nest Selection";
@@ -3101,6 +3109,10 @@ public class EditorSetting {
     public static final String TREE_PLANNER_PALETTE_HEADER = "Trees";
     public static final String TREE_PLANNER_FIELDS_SUFFIX = " Fields";
 
+    // Biome Grid — the elements every planner shows the biome planner's grid cells with
+    public static final String BIOME_GRID_ELEMENT_CELL_SWATCH = "biome_planner_cell_swatch";
+    public static final String BIOME_GRID_ELEMENT_CELL_LABEL = "biome_planner_cell_label";
+
     // Voxel Preview — the least an editor's voxel preview frames, in blocks, and its render order
     public static final float VOXEL_PREVIEW_MIN_RADIUS_BLOCKS = 1f;
     public static final int VOXEL_PREVIEW_DEPTH = 0;
@@ -3129,6 +3141,21 @@ public class EditorSetting {
     public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVED = "Saved ";
     public static final String ARCHITECTURE_BUILDER_MESSAGE_SAVE_FAILED = "Could not save ";
     public static final String ARCHITECTURE_BUILDER_MESSAGE_REVERTED = "Reverted ";
+
+    // Road Planner — the prefixes its Palette rows carry, its Road actions and its messages
+    public static final String ROAD_PLANNER_ROW_ROAD = "road:";
+    public static final String ROAD_PLANNER_ROW_BIOME = "biome:";
+    public static final String ROAD_PLANNER_PALETTE_ROADS = "Roads";
+    public static final String ROAD_PLANNER_PALETTE_BIOMES = "Biomes";
+    public static final String ROAD_PLANNER_HEADER_ROAD = "Road";
+    public static final String ROAD_PLANNER_KEY_CLEAR = "road_clear";
+    public static final String ROAD_PLANNER_LABEL_CLEAR = "Clear Road";
+    public static final String ROAD_PLANNER_MESSAGE_NONE = "Select a road first";
+    public static final String ROAD_PLANNER_MESSAGE_CLEARED = "Road cleared";
+    public static final String ROAD_PLANNER_MESSAGE_REFUSED = "Road edit not applied — ";
+    public static final String ROAD_PLANNER_MESSAGE_SAVED = "Saved ";
+    public static final String ROAD_PLANNER_MESSAGE_SAVE_FAILED = "Could not save ";
+    public static final String ROAD_PLANNER_MESSAGE_REVERTED = "Reverted ";
 
     // Layout Planner — the bounds and defaults of the numbers it edits, how they are stepped, written and shown, the
     // prefixes its Palette rows carry, its Preview actions, the text of its labels and its messages
@@ -3425,6 +3452,7 @@ public class EditorSetting {
     public static final String INFO_SCHEMA_BLOCKS = "Blocks";
     public static final String INFO_SCHEMA_SHADERS = "Shaders";
     public static final String INFO_SCHEMA_ARCHITECTURES = "Architectures";
+    public static final String INFO_SCHEMA_ROADS = "Roads";
     public static final String INFO_SCHEMA_COVERINGS = "Coverings";
     public static final String INFO_SCHEMA_CONTENTS = "Contents";
     public static final String INFO_SCHEMA_FURNISHINGS = "Furnishings";

@@ -252,6 +252,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openLayoutPlanner(window.getGLWindow());
     }
 
+    public void openRoadPlanner(WindowInstance window) {
+        tabManager.openRoadPlanner(window.getGLWindow());
+    }
+
     public void openTreeViewer(WindowInstance window) {
         tabManager.openTreeViewer(window.getGLWindow());
     }

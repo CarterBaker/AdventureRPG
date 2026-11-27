@@ -50,7 +50,14 @@ class RoadBuilder extends BuilderPackage {
     RoadHandle build(File file, String roadName) {
 
         short roadID = roadManager.registerRoadName(roadName);
-        ArpgObjectStruct arpg = ArpgUtility.loadObject(file);
+        RoadHandle roadHandle = create(RoadHandle.class);
+        roadHandle.constructor(parse(ArpgUtility.loadObject(file), roadName, roadID));
+
+        return roadHandle;
+    }
+
+    // A road type's data from its ARPG, every block resolved; the one parse a file loaded and a live edit share
+    RoadData parse(ArpgObjectStruct arpg, String roadName, short roadID) {
 
         float widthBlocks = ArpgUtility.validateFloat(arpg, "width_blocks");
 
@@ -105,7 +112,7 @@ class RoadBuilder extends BuilderPackage {
         RoadBridgeStruct bridge = parseBridge(arpg, roadName);
         RoadTunnelStruct tunnel = parseTunnel(arpg, roadName);
 
-        RoadData roadData = new RoadData(
+        return new RoadData(
                 roadName,
                 roadID,
                 RegistryUtility.toNameSeed(roadName),
@@ -126,11 +133,6 @@ class RoadBuilder extends BuilderPackage {
                         ? blockManager.getBlockHandleFromBlockID(bridge.getDeckBlockID())
                                 .getMapColorForFace(Direction3Vector.UP)
                         : surfaceBlock.getMapColorForFace(Direction3Vector.UP));
-
-        RoadHandle roadHandle = create(RoadHandle.class);
-        roadHandle.constructor(roadData);
-
-        return roadHandle;
     }
 
     // Crossings \\

@@ -17,13 +17,15 @@ class SettlementCollectBranch extends BranchPackage {
      * site is settled first and planned only when it stands near enough to
      * reach the stretch, and a road only when both its ends stand and the
      * straight run between them, widened by how far a road may wander, comes
-     * near enough. Roads come before settlements, so a settlement's walls and
+     * near enough. The layouts a tool plans on the world come first, then
+     * roads before settlements, so a settlement's walls and
      * buildings stand over the roads leading in, and each in the fixed order
      * of its wrapped cell, so every caller lays and sees overlapping layouts
      * alike.
      */
 
     // Internal
+    private SettlementManager settlementManager;
     private SettlementCacheBranch settlementCacheBranch;
     private SettlementCollectAsyncContainer collectContainer;
 
@@ -36,6 +38,7 @@ class SettlementCollectBranch extends BranchPackage {
 
     @Override
     protected void get() {
+        this.settlementManager = get(SettlementManager.class);
         this.settlementCacheBranch = get(SettlementCacheBranch.class);
     }
 
@@ -51,6 +54,7 @@ class SettlementCollectBranch extends BranchPackage {
             ObjectArrayList<LayoutPlanStruct> out) {
 
         out.clear();
+        collectPlanned(worldHandle, out);
 
         int countX = settlementCacheBranch.resolveCellCountX(worldHandle);
         int countZ = settlementCacheBranch.resolveCellCountZ(worldHandle);
@@ -67,6 +71,18 @@ class SettlementCollectBranch extends BranchPackage {
         } finally {
             scratch.reset();
         }
+    }
+
+    // Every layout a tool plans on the world, laid before anything the world grows itself
+    private void collectPlanned(WorldHandle worldHandle, ObjectArrayList<LayoutPlanStruct> out) {
+
+        LayoutPlanStruct[] planned = settlementManager.getPlannedLayouts(worldHandle);
+
+        if (planned == null)
+            return;
+
+        for (int i = 0; i < planned.length; i++)
+            out.add(planned[i]);
     }
 
     // A single point widened by a margin, gathered into the thread's own list
