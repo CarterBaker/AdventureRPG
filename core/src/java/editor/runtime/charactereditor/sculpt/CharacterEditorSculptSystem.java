@@ -402,7 +402,7 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
             return false;
 
         editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
-        characterEditorManager.beginStroke(selection);
+        characterEditorManager.beginStroke(selection, characterEditorMeshViewSystem.getSkinningMatrices());
         this.stroking = true;
         this.strokeX = mouseX;
         this.strokeY = mouseY;

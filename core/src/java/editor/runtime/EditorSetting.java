@@ -1419,9 +1419,8 @@ public class EditorSetting {
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_LIMIT = "That edit would pass the mesh vertex limit";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED = "A mesh file could not be written";
     public static final String CHARACTER_EDITOR_MESSAGE_MESH_NOT_REVERTED = "The mesh file could not be read";
-    public static final String CHARACTER_EDITOR_MESSAGE_POSED =
-            "Sculpt strokes work only in the Bind pose: pick Bind under Pose and Reset Pose (Grab, Rotate and Scale"
-                    + " work posed)";
+    public static final String CHARACTER_EDITOR_MESSAGE_POSE_PLAYING =
+            "Sculpt strokes need a still pose: pick Bind or a struck pose under Pose (Idle, Walk and Run move)";
     public static final String CHARACTER_EDITOR_MESSAGE_NOTHING_TO_EXTRUDE = "Select faces or edges to extrude";
     public static final String CHARACTER_EDITOR_MESSAGE_NO_FACES = "Select whole faces first";
     public static final String CHARACTER_EDITOR_MESSAGE_FACE_VERTICES = "Select 3 or 4 vertices to make a face";

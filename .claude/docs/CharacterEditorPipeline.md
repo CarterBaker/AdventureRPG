@@ -224,12 +224,20 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   and Scale work in any pose, on the cage as the view shows it (Maya's and Blender's on-cage editing of a skinned mesh):
   `CharacterEditorSculptSystem` hands `CharacterEditorManager.beginTransform` the pose's skinning matrices
   (`CharacterEditorMeshViewSystem.getSkinningMatrices`) while `isPosed`, and `CharacterSculptBranch.holdVertex` keeps
-  each held vertex's posed start and the inverse of its blended matrix B = Σ wᵢ Mᵢ (`resolveBlend`; affine under
+  each held vertex's posed start and the inverse of its blended matrix B = Σ wᵢ Mᵢ
+  (`CharacterMeshUtility.resolveBlend`, the one blend every posed edit takes; affine under
   linear blend skinning, so exact); the pivot is the weighted centre of the posed starts, every move is made posed and
   written back to the bind pose through B⁻¹ (`toBindPose`) before rounding, and twins are then placed mirrored in the
   bind pose, so symmetry holds whatever the pose. Numeric transforms (typed Move, Size, Rotate) stay in the bind pose.
-  Sculpt strokes work only in Bind: one struck posed is refused with `CHARACTER_EDITOR_MESSAGE_POSED`; selecting and
-  painting weights work in any pose, the mesh view skinning every vertex by it. A pose is a
+  Sculpt strokes work posed too, as Blender sculpts a deformed mesh through its crazyspace: `CharacterShapeBranch`
+  takes the pose's skinning matrices at the stroke's start (`beginStroke(document, skinningMatrices)`, null in Bind),
+  works every tool on the posed surface the view shows (`placeSurface`, B times the unrounded bind copy), carries each
+  move back through the linear part of B⁻¹ (`toBindMove`), shares and mirrors it in the bind pose, so symmetry holds
+  whatever the pose, and lays the posed surface again from the moved bind point. So a part posed out of the way (a
+  thumb, an arm off the body) is sculpted where it stands. Only a played movement (Idle, Walk, Run;
+  `isPosePlaying`) refuses a stroke, with `CHARACTER_EDITOR_MESSAGE_POSE_PLAYING`, the surface moving under the brush;
+  placing a stamp's part still needs Bind (`placesStamp`). Selecting and painting weights work in any pose, the mesh
+  view skinning every vertex by it. A pose is a
   plain clip on the rig (`animations/humanoid/poses/`); add one by naming it in the rig's `poses`.
 - **Mirror pairs.** `CharacterSelectionBranch.resolveMirror` pairs each vertex with the one at its mirrored position
   on the decimal grid, then pairs every vertex left without a twin with the nearest one likewise left across x within
@@ -293,8 +301,8 @@ is Sculpt, whose Brush places the part chosen in the Stamps tab instead of strok
   (`CharacterEditorManager.setEditPoseTurn`, a turn per bone in its own frame, mirrored onto the twin while mirroring,
   never saved; Reset Pose, Alt+R, clears it); `CharacterEditorPreviewSystem.applyEditPose` lays it on the preview as
   `AnimationStateHandle` postures, which every pose (the tree, a struck clip, the rest) now carries. A tab with an
-  edit pose counts as posed: select, weigh and transform in it (pose a thumb out of the way to reach the fingers),
-  Reset Pose before sculpting.
+  edit pose counts as posed: select, weigh, transform and sculpt in it (pose a thumb out of the way to reach the
+  fingers).
 - **The Pose tab** (`CharacterPoseContext`, `CharacterEditorMode.POSE`, `ToolCanvas.CHARACTER_POSE`) is the edit pose's
   own tab, as a modeller's pose mode is: Pose and Pick its tools, Reset Pose its action (Alt+R), Mirror its option; the
   Palette tab lists every bone (with its eye) to pick, and the Properties tab the bone picked and its turn about each
@@ -1099,8 +1107,9 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   bone is let go only while it has a morph, and its morph cleared only while it drives a bone.
 - **Posed transforms map back through the skinning.** A transform held posed writes bind positions through each
   vertex's inverse blended matrix, taken when it begins; a vertex weighed onto no bone moves as it is. Sculpt strokes
-  stay bind-only and are refused posed: the preview poses on the GPU and the mesh view skins on the CPU, but edits are
-  written to the bind-pose file.
+  map back the same way, a move at a time, through B⁻¹'s linear part: the preview poses on the GPU and the mesh view
+  skins on the CPU, but edits are written to the bind-pose file. Mirror a posed move in the bind pose, never across the
+  posed x, or an asymmetric pose breaks the symmetry.
 - **Symmetrize after a lopsided hair rig.** Hair chains laid on asymmetric cards have no mirrored twin chain, so a
   symmetrized hair's new side weighs onto the kept side's chains (the status line counts them); run Rig Hair Locks and
   Weigh Onto Locks on the symmetric hair to give it chains of its own.

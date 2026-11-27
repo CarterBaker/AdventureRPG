@@ -1488,14 +1488,14 @@ public class CharacterEditorManager extends ManagerPackage {
         characterSculptBranch.cancelTransform();
     }
 
-    // Sculpt strokes work only in the bind pose, where vertices stand as the mesh file holds them; struck in any other
-    // pose, a stroke is refused and the status says why (transforms work posed, through the skinning)
-    private boolean refusePosedEdit() {
+    // Strokes work on a still surface, in the bind pose or one struck; struck while a movement plays, the surface
+    // moving under the brush, a stroke is refused and the status says why
+    private boolean refusePlayingPose() {
 
-        if (!isPosed())
+        if (!isPosePlaying())
             return false;
 
-        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_POSED);
+        setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_POSE_PLAYING);
         return true;
     }
 
@@ -1520,8 +1520,9 @@ public class CharacterEditorManager extends ManagerPackage {
     // Strokes \\
 
     // A brush stroke on the active part: its selection with the Select tool, combined with it as asked, its faces with
-    // the Topology tool, its shape in Sculpt mode and its weights otherwise
-    public void beginStroke(CharacterEditorSelection selection) {
+    // the Topology tool, its shape in Sculpt mode (on the cage the view poses it on while posed, skinningMatrices the
+    // pose struck this frame) and its weights otherwise
+    public void beginStroke(CharacterEditorSelection selection, Matrix4[] skinningMatrices) {
 
         CharacterMeshDocumentInstance document = getActiveMeshDocument();
 
@@ -1531,12 +1532,12 @@ public class CharacterEditorManager extends ManagerPackage {
         if (isSelectStroke())
             characterSelectionBranch.beginStroke(document, selection);
         else if (toolManager.getTool(mode.getToolCanvas()) == EditorTool.TOPOLOGY) {
-            if (!refusePosedEdit())
+            if (!refusePlayingPose())
                 characterTopologyBranch.beginStroke(document);
         }
         else if (mode == CharacterEditorMode.SCULPT) {
-            if (!refusePosedEdit())
-                characterShapeBranch.beginStroke(document);
+            if (!refusePlayingPose())
+                characterShapeBranch.beginStroke(document, isPosed() ? skinningMatrices : null);
         }
         else
             characterWeightBranch.beginStroke(document);
@@ -2699,11 +2700,16 @@ public class CharacterEditorManager extends ManagerPackage {
                 : pose.getLabel();
     }
 
-    // Whether a modelling mode shows the character out of its bind pose, so its vertices may not be moved
+    // Whether a modelling mode shows the character out of its bind pose, so its edits work through the skinning
     public boolean isPosed() {
         return mode.isMeshMode() && mode.picksPose()
                 && (pose != CharacterEditorPose.REST || getPoseClipIndex() != EngineSetting.INDEX_NOT_FOUND
                 || editPosed);
+    }
+
+    // Whether a modelling mode shows the character moving, Idle, Walk or Run played, so no stroke holds still on it
+    public boolean isPosePlaying() {
+        return isPosed() && pose.isPlayed();
     }
 
     // Edit Pose \\

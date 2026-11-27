@@ -5,9 +5,11 @@ import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocum
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterStampStruct;
 import editor.bootstrap.charactereditorpipeline.util.CharacterMeshUtility;
 import editor.bootstrap.toolpipeline.util.EditorTool;
+import editor.runtime.characterview.util.CharacterPoseUtility;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -32,9 +34,15 @@ class CharacterShapeBranch extends BranchPackage {
      * cut, and Relax evens the spacing of the vertices along the surface
      * without wearing the shape down; an inverted stroke does the opposite.
      * With mirror on, every move is handed across x to the vertex's mirror
-     * and the two share it where both lie under the brush. Positions are written rounded
-     * to the editor's precision; the manager shows them once a frame however
-     * many stamps the frame held.
+     * and the two share it where both lie under the brush. Struck on a
+     * posed mesh, a stroke works on the skinned surface as the view shows
+     * it (as Blender sculpts a deformed mesh through its crazyspace): every
+     * move is made posed, carried back to the bind pose through the inverse
+     * of its vertex's blended skinning matrix, shared and mirrored there, so
+     * symmetry holds whatever the pose, and the posed surface is laid again
+     * from the moved bind point. Positions are written rounded to the
+     * editor's precision; the manager shows them once a frame however many
+     * stamps the frame held.
      */
 
     // Internal
@@ -49,6 +57,10 @@ class CharacterShapeBranch extends BranchPackage {
     private FloatArrayList positions;
     private IntArrayList mirrors;
     private boolean mirrored;
+
+    // Pose — the skinning the stroke works through, null in the bind pose, and the unrounded bind positions under it
+    private Matrix4[] skinningMatrices;
+    private FloatArrayList bindPositions;
 
     // Topology — each vertex's faces and neighbours, packed one run per vertex
     private IntArrayList faceStarts;
@@ -69,6 +81,8 @@ class CharacterShapeBranch extends BranchPackage {
     private Vector3 areaCenter;
     private Vector3 move;
     private Vector3 faceScratch;
+    private Vector3 pointScratch;
+    private Matrix4 blendScratch;
 
     // Base \\
 
@@ -78,6 +92,9 @@ class CharacterShapeBranch extends BranchPackage {
         // Stroke
         this.positions = new FloatArrayList();
         this.mirrors = new IntArrayList();
+
+        // Pose
+        this.bindPositions = new FloatArrayList();
 
         // Topology
         this.faceStarts = new IntArrayList();
@@ -98,6 +115,8 @@ class CharacterShapeBranch extends BranchPackage {
         this.areaCenter = new Vector3();
         this.move = new Vector3();
         this.faceScratch = new Vector3();
+        this.pointScratch = new Vector3();
+        this.blendScratch = new Matrix4();
     }
 
     @Override
@@ -110,22 +129,34 @@ class CharacterShapeBranch extends BranchPackage {
 
     // Stroke \\
 
-    void beginStroke(CharacterMeshDocumentInstance document) {
+    // Opens a stroke on the surface the skinning matrices pose when given (the pose struck this frame), in the bind
+    // pose otherwise
+    void beginStroke(CharacterMeshDocumentInstance document, Matrix4[] skinningMatrices) {
 
         this.mesh = document.getMesh();
         this.strokeDocument = document;
+        this.skinningMatrices = skinningMatrices;
 
         int vertexCount = mesh.getVertexCount();
         int floats = vertexCount * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
 
         characterHistoryBranch.begin(document);
         positions.clear();
-        positions.ensureCapacity(floats);
+        positions.size(floats);
+        bindPositions.clear();
+
+        if (skinningMatrices != null)
+            bindPositions.ensureCapacity(floats);
 
         for (int v = 0; v < vertexCount; v++) {
-            positions.add(mesh.getX(v));
-            positions.add(mesh.getY(v));
-            positions.add(mesh.getZ(v));
+
+            if (skinningMatrices != null) {
+                bindPositions.add(mesh.getX(v));
+                bindPositions.add(mesh.getY(v));
+                bindPositions.add(mesh.getZ(v));
+            }
+
+            placeSurface(v, mesh.getX(v), mesh.getY(v), mesh.getZ(v));
         }
 
         this.mirrored = characterEditorManager.isMirror();
@@ -158,6 +189,7 @@ class CharacterShapeBranch extends BranchPackage {
 
         for (int i = 0; i < vertices.size(); i++) {
             resolveMove(tool, vertices.getInt(i), strengths.getFloat(i), stamp);
+            toBindMove(vertices.getInt(i));
             moves.add(move.x);
             moves.add(move.y);
             moves.add(move.z);
@@ -176,7 +208,9 @@ class CharacterShapeBranch extends BranchPackage {
 
         this.mesh = null;
         this.strokeDocument = null;
+        this.skinningMatrices = null;
         positions.clear();
+        bindPositions.clear();
         mirrors.clear();
     }
 
@@ -241,6 +275,18 @@ class CharacterShapeBranch extends BranchPackage {
         }
     }
 
+    // A move made on the posed surface carried back to the bind pose through the linear part of its vertex's blended
+    // skinning matrix, so it is shared and mirrored where the mesh file holds the vertex
+    private void toBindMove(int vertexIndex) {
+
+        if (skinningMatrices == null)
+            return;
+
+        CharacterMeshUtility.resolveBlend(mesh, vertexIndex, skinningMatrices, blendScratch);
+        blendScratch.inverse();
+        CharacterPoseUtility.transformDirection(blendScratch, move.x, move.y, move.z, move);
+    }
+
     // A vertex's move, and with mirror on its mirror's, added to what each takes from this stamp
     private void share(int vertexIndex, float dx, float dy, float dz) {
 
@@ -268,8 +314,11 @@ class CharacterShapeBranch extends BranchPackage {
         shares.set(vertexIndex, shares.getFloat(vertexIndex) + 1f);
     }
 
-    // Every vertex the stamp reached moved by the mean of what it took, written rounded, the stamp's moves cleared
+    // Every vertex the stamp reached moved in the bind pose by the mean of what it took, written rounded and laid
+    // again on the surface the stroke works on, the stamp's moves cleared
     private void apply() {
+
+        FloatArrayList bind = skinningMatrices != null ? bindPositions : positions;
 
         for (int i = 0; i < touched.size(); i++) {
 
@@ -278,7 +327,7 @@ class CharacterShapeBranch extends BranchPackage {
             float share = shares.getFloat(vertexIndex);
 
             for (int axis = 0; axis < EngineSetting.RIGGED_MESH_POSITION_FLOATS; axis++) {
-                positions.set(base + axis, positions.getFloat(base + axis) + accumulated.getFloat(base + axis) / share);
+                bind.set(base + axis, bind.getFloat(base + axis) + accumulated.getFloat(base + axis) / share);
                 accumulated.set(base + axis, 0f);
             }
 
@@ -286,12 +335,31 @@ class CharacterShapeBranch extends BranchPackage {
             CharacterMeshUtility.setRoundedPosition(
                     mesh,
                     vertexIndex,
-                    positions.getFloat(base),
-                    positions.getFloat(base + 1),
-                    positions.getFloat(base + 2));
+                    bind.getFloat(base),
+                    bind.getFloat(base + 1),
+                    bind.getFloat(base + 2));
+            placeSurface(vertexIndex, bind.getFloat(base), bind.getFloat(base + 1), bind.getFloat(base + 2));
         }
 
         touched.clear();
+    }
+
+    // Where a vertex at a bind position stands on the surface the stroke works on: posed by its blended skinning
+    // matrix while posed, the bind position itself otherwise
+    private void placeSurface(int vertexIndex, float x, float y, float z) {
+
+        int base = vertexIndex * EngineSetting.RIGGED_MESH_POSITION_FLOATS;
+
+        if (skinningMatrices == null)
+            pointScratch.set(x, y, z);
+        else {
+            CharacterMeshUtility.resolveBlend(mesh, vertexIndex, skinningMatrices, blendScratch);
+            CharacterPoseUtility.transformPoint(blendScratch, x, y, z, pointScratch);
+        }
+
+        positions.set(base, pointScratch.x);
+        positions.set(base + 1, pointScratch.y);
+        positions.set(base + 2, pointScratch.z);
     }
 
     // Area \\

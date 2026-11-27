@@ -1,7 +1,5 @@
 package editor.bootstrap.charactereditorpipeline.charactereditormanager;
 
-import java.util.Arrays;
-
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.bootstrap.charactereditorpipeline.charactermesh.CharacterMeshDocumentInstance;
@@ -202,7 +200,7 @@ class CharacterSculptBranch extends BranchPackage {
             return;
         }
 
-        resolveBlend(mesh, vertexIndex, transformSkinning, blendScratch);
+        CharacterMeshUtility.resolveBlend(mesh, vertexIndex, transformSkinning, blendScratch);
         CharacterPoseUtility.transformPoint(
                 blendScratch, mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex), pointScratch);
         transformStarts.add(pointScratch.x);
@@ -212,34 +210,6 @@ class CharacterSculptBranch extends BranchPackage {
 
         for (int i = 0; i < blendScratch.val.length; i++)
             transformInverses.add(blendScratch.val[i]);
-    }
-
-    // B = Σ wᵢ Mᵢ, a vertex's skinning matrices blended by its weights: affine under linear blend skinning, so its
-    // inverse carries a posed point back to the bind pose exactly
-    private void resolveBlend(RiggedMeshStruct mesh, int vertexIndex, Matrix4[] skinningMatrices, Matrix4 out) {
-
-        int influenceCount = mesh.getInfluenceCount(vertexIndex);
-
-        if (influenceCount == 0) {
-            out.set(1f);
-            return;
-        }
-
-        Arrays.fill(out.val, 0f);
-
-        for (int i = 0; i < influenceCount; i++) {
-
-            float[] m = skinningMatrices[mesh.getInfluenceBone(vertexIndex, i)].val;
-            float w = mesh.getInfluenceWeight(vertexIndex, i);
-
-            for (int k = 0; k < out.val.length; k++)
-                out.val[k] += m[k] * w;
-        }
-
-        out.val[3] = 0f;
-        out.val[7] = 0f;
-        out.val[11] = 0f;
-        out.val[15] = 1f;
     }
 
     // The pivot the posed selection turns and scales about: its weighted centre on the posed cage
@@ -278,7 +248,7 @@ class CharacterSculptBranch extends BranchPackage {
             return;
         }
 
-        resolveBlend(mesh, vertexIndex, skinningMatrices, blendScratch);
+        CharacterMeshUtility.resolveBlend(mesh, vertexIndex, skinningMatrices, blendScratch);
         CharacterPoseUtility.transformPoint(
                 blendScratch, mesh.getX(vertexIndex), mesh.getY(vertexIndex), mesh.getZ(vertexIndex), out);
     }

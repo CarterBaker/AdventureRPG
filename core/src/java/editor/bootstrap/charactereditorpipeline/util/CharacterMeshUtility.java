@@ -1,10 +1,13 @@
 package editor.bootstrap.charactereditorpipeline.util;
 
+import java.util.Arrays;
+
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import editor.runtime.characterview.util.CharacterViewUtility;
 import editor.runtime.EditorSetting;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -16,8 +19,9 @@ public class CharacterMeshUtility extends EngineUtility {
      * falloff of proportional edits and brushes, turning a point about an
      * axis, the exact key of a position on the editor's decimal grid so a
      * point and its mirror across x find each other, the grid cell a point
-     * falls in for searches near it, the mirrored name of a
-     * left or right bone, and the starting shapes of a new part. Every
+     * falls in for searches near it, a vertex's blended skinning matrix, the
+     * mirrored name of a left or right bone, and the starting shapes of a
+     * new part. Every
      * position written is rounded to the editor's precision first.
      */
 
@@ -107,6 +111,36 @@ public class CharacterMeshUtility extends EngineUtility {
                 CharacterViewUtility.round(x),
                 CharacterViewUtility.round(y),
                 CharacterViewUtility.round(z));
+    }
+
+    // Skinning \\
+
+    // B = Σ wᵢ Mᵢ, a vertex's skinning matrices blended by its weights: affine under linear blend skinning, so its
+    // inverse carries a posed point back to the bind pose exactly; the identity for a vertex weighed onto no bone
+    public static void resolveBlend(RiggedMeshStruct mesh, int vertexIndex, Matrix4[] skinningMatrices, Matrix4 out) {
+
+        int influenceCount = mesh.getInfluenceCount(vertexIndex);
+
+        if (influenceCount == 0) {
+            out.set(1f);
+            return;
+        }
+
+        Arrays.fill(out.val, 0f);
+
+        for (int i = 0; i < influenceCount; i++) {
+
+            float[] m = skinningMatrices[mesh.getInfluenceBone(vertexIndex, i)].val;
+            float w = mesh.getInfluenceWeight(vertexIndex, i);
+
+            for (int k = 0; k < out.val.length; k++)
+                out.val[k] += m[k] * w;
+        }
+
+        out.val[3] = 0f;
+        out.val[7] = 0f;
+        out.val[11] = 0f;
+        out.val[15] = 1f;
     }
 
     // Bones \\
