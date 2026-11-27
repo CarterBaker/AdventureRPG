@@ -290,7 +290,7 @@ public class CharacterEditorPreviewSystem extends SystemPackage implements Chara
     public Matrix4 getBoneWorldMatrix(int boneIndex) {
         return drawsEditedRig
                 ? characterEditorManager.getRigBoneWorldMatrix(boneIndex)
-                : characterViewPoseSystem.getAnimationStateHandle().getWorldMatrix(boneIndex);
+                : characterViewPoseSystem.getWorldMatrix(getPosedRig(), boneIndex);
     }
 
     // The bone's width, the mean of its size across
@@ -323,7 +323,12 @@ public class CharacterEditorPreviewSystem extends SystemPackage implements Chara
                 : characterEditorManager.getSelectedBoneIndex();
     }
 
+    // The rig whose bones the posed character shows: the part edited's own rig where it follows the character's,
+    // posed by its follower, the character's otherwise
     private RigHandle getPosedRig() {
-        return characterViewPoseSystem.getRaceData().getRigHandle();
+
+        RigHandle boneRig = characterEditorManager.getBoneRig();
+
+        return boneRig != null ? boneRig : characterViewPoseSystem.getRaceData().getRigHandle();
     }
 }

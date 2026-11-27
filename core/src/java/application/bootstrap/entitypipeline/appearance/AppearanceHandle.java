@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
 import application.bootstrap.animationpipeline.animation.AnimationClipUtility;
+import application.bootstrap.entitypipeline.animationtree.AnimationFollowerStruct;
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.feature.FeatureHandle;
 import application.bootstrap.entitypipeline.feature.FeatureSlot;
@@ -23,6 +24,7 @@ import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import engine.graphics.color.Color;
 import engine.root.EngineSetting;
 import engine.root.HandlePackage;
+import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
 
 public class AppearanceHandle extends HandlePackage {
@@ -48,7 +50,12 @@ public class AppearanceHandle extends HandlePackage {
      * bones those models cover gathered into one mask cut from the body.
      * resolveSprings() runs each of the rig's spring chains only while the
      * body, a feature or a worn model weighs onto it, so long hair and a cape
-     * swing and a bald, bare body simulates nothing. Every array is allocated once
+     * swing and a bald, bare body simulates nothing. A feature or worn model
+     * skinned to a rig of its own that follows the body's — a hair style's or
+     * a cloak's own skeleton, bones and spring chains and all — is posed by a
+     * follower of that rig (the leader pose approach), laid over the body's
+     * pose once the body has animated (followPose) and simulating its own
+     * chains in the body's frame. Every array is allocated once
      * in constructor(). Lives on EntityInstance.
      */
 
@@ -97,6 +104,11 @@ public class AppearanceHandle extends HandlePackage {
     private boolean[] coveredFeatures;
     private int wornRevision;
     private short wornGenderID;
+
+    // Followers — indexed by FeatureSlot and by EquipmentSlot ordinal, the pose of the feature's or worn model's own
+    // rig where it follows the body's, null where it is skinned to the body's rig itself
+    private AnimationFollowerStruct[] featureFollowers;
+    private AnimationFollowerStruct[] wornFollowers;
 
     // Proportions
     private float weightRatio;
@@ -157,6 +169,10 @@ public class AppearanceHandle extends HandlePackage {
         this.coveredBones = new SkinnedBoneMaskStruct();
         this.coveredFeatures = new boolean[FeatureSlot.VALUES.length];
         this.wornRevision = EngineSetting.INDEX_NOT_FOUND;
+
+        // Followers
+        this.featureFollowers = new AnimationFollowerStruct[FeatureSlot.VALUES.length];
+        this.wornFollowers = new AnimationFollowerStruct[EquipmentSlot.VALUES.length];
 
         // Proportions
         this.weightRatio = weightRatio;
@@ -546,13 +562,23 @@ public class AppearanceHandle extends HandlePackage {
 
     // Springs \\
 
-    // Each spring chain of the rig runs only while something worn weighs onto one of its bones
+    // Each spring chain of the rig runs only while something worn on the rig weighs onto one of its bones, and every
+    // feature and worn model on a rig of its own following the body's is posed by a follower of that rig, each of its
+    // chains running only while the model weighs onto it
     public void resolveSprings() {
 
         RigHandle rigHandle = appearanceData.getRigHandle();
 
         for (int c = 0; c < rigHandle.getSpringChainCount(); c++)
             animationStateHandle.setSpringActive(c, isWorn(rigHandle.getSpringChain(c)));
+
+        for (int i = 0; i < features.length; i++)
+            featureFollowers[i] = resolveFollower(featureFollowers[i],
+                    features[i] != null ? features[i].getMeshHandle() : null);
+
+        for (int i = 0; i < wornModels.length; i++)
+            wornFollowers[i] = resolveFollower(wornFollowers[i],
+                    wornModels[i] != null ? wornModels[i].getMeshHandle() : null);
     }
 
     private boolean isWorn(RigSpringChainStruct chain) {
@@ -564,21 +590,140 @@ public class AppearanceHandle extends HandlePackage {
         return false;
     }
 
+    // True when the body, or a feature or worn model skinned to the body's own rig, weighs onto the bone
     private boolean weighsOnto(int boneIndex) {
 
         if (getBodyMesh().weighsOnto(boneIndex))
             return true;
 
+        RigHandle rigHandle = appearanceData.getRigHandle();
+
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             if (features[featureSlot.ordinal()] != null && !coveredFeatures[featureSlot.ordinal()]
+                    && features[featureSlot.ordinal()].getMeshHandle().getRigHandle() == rigHandle
                     && features[featureSlot.ordinal()].getMeshHandle().weighsOnto(boneIndex))
                 return true;
 
         for (ItemWornModelStruct wornModel : wornModels)
-            if (wornModel != null && wornModel.getMeshHandle().weighsOnto(boneIndex))
+            if (wornModel != null && wornModel.getMeshHandle().getRigHandle() == rigHandle
+                    && wornModel.getMeshHandle().weighsOnto(boneIndex))
                 return true;
 
         return false;
+    }
+
+    // Followers \\
+
+    // The follower a mesh on a rig of its own is posed by, kept while it follows that rig as it stands, each chain
+    // running while the mesh weighs onto it; null for no mesh or one on the body's own rig
+    private AnimationFollowerStruct resolveFollower(AnimationFollowerStruct current, MeshHandle meshHandle) {
+
+        if (meshHandle == null || !meshHandle.hasRig() || !meshHandle.getRigHandle().isFollower())
+            return null;
+
+        RigHandle rigHandle = meshHandle.getRigHandle();
+        AnimationFollowerStruct follower = current != null && current.getRigHandle() == rigHandle && current.isCurrent()
+                ? current
+                : new AnimationFollowerStruct(rigHandle);
+
+        for (int c = 0; c < rigHandle.getSpringChainCount(); c++)
+            follower.setActive(c, weighsOnChain(meshHandle, rigHandle.getSpringChain(c)));
+
+        return follower;
+    }
+
+    private static boolean weighsOnChain(MeshHandle meshHandle, RigSpringChainStruct chain) {
+
+        for (int j = 0; j < chain.getBoneCount(); j++)
+            if (meshHandle.weighsOnto(chain.getBone(j)))
+                return true;
+
+        return false;
+    }
+
+    // Every follower laid over the body's pose as it now stands, its springs stepped by the time given; a follower
+    // whose rig has changed since it was made is made again first
+    public void followPose(float deltaTime) {
+
+        if (isFollowerStale(featureFollowers) || isFollowerStale(wornFollowers))
+            resolveSprings();
+
+        for (int i = 0; i < featureFollowers.length; i++)
+            if (featureFollowers[i] != null && !coveredFeatures[i])
+                featureFollowers[i].follow(animationStateHandle, deltaTime);
+
+        for (int i = 0; i < wornFollowers.length; i++)
+            if (wornFollowers[i] != null)
+                wornFollowers[i].follow(animationStateHandle, deltaTime);
+    }
+
+    private static boolean isFollowerStale(AnimationFollowerStruct[] followers) {
+
+        for (int i = 0; i < followers.length; i++)
+            if (followers[i] != null && !followers[i].isCurrent())
+                return true;
+
+        return false;
+    }
+
+    // How the body stands turned and sized in the world and how far it travelled, handed to every follower's springs
+    public void setSpringFrame(Matrix4 bodyFrame, float travelX, float travelY, float travelZ) {
+
+        for (int i = 0; i < featureFollowers.length; i++)
+            if (featureFollowers[i] != null)
+                featureFollowers[i].setFrame(bodyFrame, travelX, travelY, travelZ);
+
+        for (int i = 0; i < wornFollowers.length; i++)
+            if (wornFollowers[i] != null)
+                wornFollowers[i].setFrame(bodyFrame, travelX, travelY, travelZ);
+    }
+
+    // How fast the air moves past the body, handed to every follower's springs
+    public void setSpringWind(float x, float y, float z) {
+
+        for (int i = 0; i < featureFollowers.length; i++)
+            if (featureFollowers[i] != null)
+                featureFollowers[i].setWind(x, y, z);
+
+        for (int i = 0; i < wornFollowers.length; i++)
+            if (wornFollowers[i] != null)
+                wornFollowers[i].setWind(x, y, z);
+    }
+
+    // Every follower's chains started afresh at the next pose, as an editor striking a still pose asks
+    public void resetFollowerSprings() {
+
+        for (int i = 0; i < featureFollowers.length; i++)
+            if (featureFollowers[i] != null)
+                featureFollowers[i].reset();
+
+        for (int i = 0; i < wornFollowers.length; i++)
+            if (wornFollowers[i] != null)
+                wornFollowers[i].reset();
+    }
+
+    // The follower a feature worn on a rig of its own is posed by, null where it is skinned to the body's rig
+    public AnimationFollowerStruct getFeatureFollower(FeatureSlot featureSlot) {
+        return featureFollowers[featureSlot.ordinal()];
+    }
+
+    // The follower a slot's worn model on a rig of its own is posed by, null where it is skinned to the body's rig
+    public AnimationFollowerStruct getWornFollower(EquipmentSlot equipmentSlot) {
+        return wornFollowers[equipmentSlot.ordinal()];
+    }
+
+    // The follower of the rig, as a feature or worn model wears it; null when nothing worn is on that rig
+    public AnimationFollowerStruct findFollower(RigHandle rigHandle) {
+
+        for (int i = 0; i < featureFollowers.length; i++)
+            if (featureFollowers[i] != null && featureFollowers[i].getRigHandle() == rigHandle)
+                return featureFollowers[i];
+
+        for (int i = 0; i < wornFollowers.length; i++)
+            if (wornFollowers[i] != null && wornFollowers[i].getRigHandle() == rigHandle)
+                return wornFollowers[i];
+
+        return null;
     }
 
     // Draw \\
@@ -643,6 +788,7 @@ public class AppearanceHandle extends HandlePackage {
         }
 
         animationStateHandle.refreshPose();
+        followPose(0f);
     }
 
     // Each bone's move, turn and scale summed over the bone sliders driving it, each at its own value with every

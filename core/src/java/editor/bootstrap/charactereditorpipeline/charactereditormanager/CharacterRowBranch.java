@@ -109,7 +109,8 @@ class CharacterRowBranch extends BranchPackage {
 
     // Picks \\
 
-    // What the mode's tools pick from, as the Palette tab lists it: the gear and anchors, the parts, the bones
+    // What the mode's tools pick from, as the Palette tab lists it: the gear and anchors, the parts, the bones (on the
+    // Mesh and Weights tabs those of the rig the part edited is on, its own rig's after the character's)
     void buildPickRows(CharacterDocumentInstance document, ObjectArrayList<CharacterViewRowStruct> rows) {
 
         RigHandle rigHandle = characterPropertyBranch.resolveRig(document);
@@ -124,7 +125,7 @@ class CharacterRowBranch extends BranchPackage {
             }
             case MESH, WEIGHTS -> {
                 characterMeshRowBranch.addPartRows(document, rows);
-                addBoneRows(rigHandle, rows);
+                addBoneRows(characterEditorManager.getBoneRig(), rows);
             }
             case TOPOLOGY, SCULPT, PAINT, UV, HAIR -> characterMeshRowBranch.addPartRows(document, rows);
             case RIG -> characterRigRowBranch.addBoneRows(rows);

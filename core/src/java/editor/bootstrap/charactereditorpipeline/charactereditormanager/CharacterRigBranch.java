@@ -54,7 +54,12 @@ class CharacterRigBranch extends BranchPackage {
      * it, and their stiffness, damping, gravity, drag and radius apply at
      * once to every character simulating them. The colliders the chains rest
      * against are CharacterColliderBranch's, read with the bones and edited
-     * through the same path.
+     * through the same path. A rig of its own that follows the character's —
+     * a hair style's or a cloak's skeleton — opens with the character's
+     * bones, which are the character's to edit: every edit leaves them as the
+     * character's rig holds them, and a drag or a typed value on one is
+     * refused, saying so, while the rig's own bones, chains and colliders are
+     * edited as any rig's.
      */
 
     // Internal
@@ -390,7 +395,35 @@ class CharacterRigBranch extends BranchPackage {
                 EditorSetting.INFO_SCHEMA_RIGS,
                 rigHandle.getRigName(),
                 rigHandle.getRigName(),
-                editor);
+                editor.andThen(this::keepLeaderBones));
+    }
+
+    // In a rig following the character's, every bone they share written back as the character's rig holds it, its
+    // sliders left to the character
+    private void keepLeaderBones(ArpgObjectStruct rigArpg) {
+
+        if (!rigHandle.isFollower())
+            return;
+
+        InfoEntryStruct leaderEntry = infoManager.findEntry(
+                EditorSetting.INFO_SCHEMA_RIGS,
+                rigHandle.getLeaderRig().getRigName(),
+                rigHandle.getLeaderRig().getRigName());
+
+        if (leaderEntry == null)
+            return;
+
+        ArpgArrayStruct leaderBones = leaderEntry.getArpg().getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+        ArpgArrayStruct bones = rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+        int shared = Math.min(rigHandle.getSharedBoneCount(), Math.min(leaderBones.size(), bones.size()));
+
+        for (int i = 0; i < shared; i++) {
+
+            ArpgObjectStruct bone = leaderBones.get(i).getAsObject().deepCopy();
+
+            bone.remove(EditorSetting.CHARACTER_RIG_FIELD_SLIDERS);
+            bones.set(i, bone);
+        }
     }
 
     private void replace(ArpgObjectStruct snapshot) {
@@ -403,6 +436,9 @@ class CharacterRigBranch extends BranchPackage {
 
     // One axis of a bone's position, rotation or size
     void setComponent(int boneIndex, String field, int axis, float value) {
+
+        if (refuseLeaderBone(boneIndex))
+            return;
 
         float defaultValue = field.equals(EditorSetting.CHARACTER_EDITOR_FIELD_SIZE)
                 ? EngineSetting.DEFAULT_BONE_SIZE
@@ -427,7 +463,8 @@ class CharacterRigBranch extends BranchPackage {
 
         ArpgObjectStruct rigArpg = getRigArpg();
 
-        if (rigArpg == null || selectedBone == EngineSetting.INDEX_NOT_FOUND || refuseShared())
+        if (rigArpg == null || selectedBone == EngineSetting.INDEX_NOT_FOUND || refuseShared()
+                || refuseLeaderBone(selectedBone))
             return false;
 
         history.begin(rigArpg);
@@ -1808,6 +1845,17 @@ class CharacterRigBranch extends BranchPackage {
     }
 
     // Accessible \\
+
+    // True, saying why, when the bone is one a rig following the character's shares with it
+    private boolean refuseLeaderBone(int boneIndex) {
+
+        if (rigHandle == null || !rigHandle.isFollower() || boneIndex >= rigHandle.getSharedBoneCount())
+            return false;
+
+        characterEditorManager.setStatusMessage(
+                EditorSetting.CHARACTER_RIG_MESSAGE_LEADER_BONE + rigHandle.getLeaderRig().getRigName());
+        return true;
+    }
 
     // True, saying why, while the rig is the one every item shares, whose bones no model may change
     boolean refuseShared() {

@@ -44,8 +44,24 @@ class RigBuilder extends BuilderPackage {
      * "hair", the editor's own layers), the "bones" it holds, and optionally
      * the worn slot it "holds", the worn slots it "shows" and whether the
      * "face" is shaped there; its optional "poses" the animation clips its
-     * editors strike as poses.
+     * editors strike as poses. Its optional "follows" names the rig it
+     * follows, as a worn piece's or a hair style's own skeleton follows the
+     * body it is worn on (the leader pose approach): its bones open with the
+     * leader's first bones, by the same names under the same parents in the
+     * same order, which the leader poses, and every bone after them is its
+     * own, named as none of the leader's is; a rig that follows another may
+     * not be followed itself.
      */
+
+    // Internal
+    private RigManager rigManager;
+
+    // Base \\
+
+    @Override
+    protected void get() {
+        this.rigManager = get(RigManager.class);
+    }
 
     // Build \\
 
@@ -90,6 +106,7 @@ class RigBuilder extends BuilderPackage {
         RigColliderStruct[] colliders = parseColliders(arpg, boneName2Index, sourceName);
         RigSpringChainStruct[] springChains = parseSpringChains(
                 arpg, bones, boneName2Index, ikChains, colliders, sourceName);
+        RigHandle leaderRig = parseLeader(arpg, rigName, sourceName);
 
         return new RigData(
                 rigName,
@@ -99,7 +116,59 @@ class RigBuilder extends BuilderPackage {
                 springChains,
                 colliders,
                 parseParts(arpg, boneName2Index, sourceName),
-                parsePoses(arpg));
+                parsePoses(arpg),
+                leaderRig,
+                leaderRig != null ? resolveSharedBones(bones, leaderRig, sourceName) : 0);
+    }
+
+    // Leader \\
+
+    // The rig this one follows, null when it names none
+    private RigHandle parseLeader(ArpgObjectStruct arpg, String rigName, String sourceName) {
+
+        if (!ArpgUtility.hasString(arpg, "follows"))
+            return null;
+
+        String leaderName = arpg.get("follows").getAsString();
+
+        if (leaderName.equals(rigName))
+            throwException("Rig follows itself: " + sourceName);
+
+        RigHandle leaderRig = rigManager.getRigHandleFromRigName(leaderName);
+
+        if (leaderRig.isFollower())
+            throwException("Rig follows \"" + leaderName + "\", which follows another rig itself: " + sourceName);
+
+        return leaderRig;
+    }
+
+    // How many of the rig's first bones are the leader's first bones, by name and under the same parent; every bone
+    // after them must be the rig's own
+    private int resolveSharedBones(RigBoneStruct[] bones, RigHandle leaderRig, String sourceName) {
+
+        int shared = 0;
+
+        while (shared < bones.length && shared < leaderRig.getBoneCount()
+                && bones[shared].getName().equals(leaderRig.getBone(shared).getName())) {
+
+            if (bones[shared].getParentIndex() != leaderRig.getBone(shared).getParentIndex())
+                throwException("Bone \"" + bones[shared].getName() + "\" hangs from another parent than in the rig it "
+                        + "follows, \"" + leaderRig.getRigName() + "\": " + sourceName);
+
+            shared++;
+        }
+
+        if (shared == 0)
+            throwException("Rig follows \"" + leaderRig.getRigName() + "\" but does not open with its root bone \""
+                    + leaderRig.getBone(0).getName() + "\": " + sourceName);
+
+        for (int i = shared; i < bones.length; i++)
+            if (leaderRig.hasBone(bones[i].getName()))
+                throwException("Bone \"" + bones[i].getName() + "\" is the leader's but stands among the rig's own; "
+                        + "the bones shared with \"" + leaderRig.getRigName() + "\" must open the rig in its order: "
+                        + sourceName);
+
+        return shared;
     }
 
     // Parse \\

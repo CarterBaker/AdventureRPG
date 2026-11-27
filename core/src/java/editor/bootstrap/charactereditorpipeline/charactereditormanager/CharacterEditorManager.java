@@ -679,18 +679,79 @@ public class CharacterEditorManager extends ManagerPackage {
         setStatusMessage(refusal != null ? refusal : EditorSetting.CHARACTER_MODEL_MESSAGE_IMPORTED_ITEM + itemName);
     }
 
+    // The part edited — a feature or a worn model on the character's own rig — given a rig of its own following the
+    // character's, as every hair style and garment carries its own skeleton (the leader pose approach): the
+    // character's bones and nothing of its own yet, written and made known, and the part's file written naming it,
+    // its unsaved edits with it; the part stands on its rig once the editor starts again, as any change to the bones a
+    // mesh is laid out by takes hold, and its own bones, chains and colliders are then rigged on it
+    void giveRigOfItsOwn() {
+
+        if (activeDocument != null && activeDocument.isModel()) {
+            moveModelToNewRig(true);
+            return;
+        }
+
+        CharacterMeshDocumentInstance part = getActiveMeshDocument();
+        RigHandle characterRig = activeDocument != null ? activeDocument.getRigHandle() : null;
+
+        if (part == null || characterRig == null || activePartKey.equals(EditorSetting.CHARACTER_EDITOR_PART_BODY)
+                || part.getMesh().getRigHandle() != characterRig) {
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_OWN_RIG_PART);
+            return;
+        }
+
+        String meshName = part.getMeshName();
+        int folderEnd = meshName.lastIndexOf(EditorSetting.INFO_FOLDER_SEPARATOR);
+        String folder = folderEnd > 0 ? FileUtility.getFileName(meshName.substring(0, folderEnd)) : "";
+        String stem = FileUtility.getFileName(meshName);
+
+        if (stem.endsWith(EditorSetting.CHARACTER_HAIR_MESH_SUFFIX))
+            stem = stem.substring(0, stem.length() - EditorSetting.CHARACTER_HAIR_MESH_SUFFIX.length());
+
+        String rigName = characterWorkspaceBranch.resolveNewRigName(folder.isEmpty()
+                ? stem
+                : folder + EditorSetting.INFO_FOLDER_SEPARATOR + stem);
+        String refusal = characterWorkspaceBranch.writeFollowerRig(rigName, characterRig);
+
+        if (refusal != null) {
+            setStatusMessage(refusal);
+            return;
+        }
+
+        part.getSourceArpg().addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, rigName);
+
+        if (!characterMeshBranch.save(part)) {
+            setStatusMessage(EditorSetting.CHARACTER_EDITOR_MESSAGE_MESH_NOT_SAVED);
+            return;
+        }
+
+        setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_OWN_RIG + rigName);
+    }
+
     // The model open moved onto a rig of its own, a copy of the one it stands on, saved first, then opened again on it
     public void newModelRig() {
+        moveModelToNewRig(false);
+    }
+
+    // The model open moved onto a rig of its own, a copy of the one it stands on or one following it, saved first,
+    // then opened again on it; a model already on a rig following another keeps it
+    private void moveModelToNewRig(boolean follow) {
 
         if (activeDocument == null || !activeDocument.isModel() || activeDocument.isBlank()) {
             setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_NEW_MODEL_ONLY);
             return;
         }
 
+        if (follow && activeDocument.getRigHandle().isFollower()) {
+            setStatusMessage(
+                    EditorSetting.CHARACTER_RIG_MESSAGE_OWN_RIG_ALREADY + activeDocument.getRigHandle().getRigName());
+            return;
+        }
+
         saveActiveTemplate();
 
         String modelName = activeDocument.getModelName();
-        String refusal = characterWorkspaceBranch.moveToNewRig(activeDocument);
+        String refusal = characterWorkspaceBranch.moveToNewRig(activeDocument, follow);
 
         if (refusal != null) {
             setStatusMessage(refusal);
@@ -736,7 +797,7 @@ public class CharacterEditorManager extends ManagerPackage {
         if (!activeDocument.hasPreview())
             return;
 
-        if (selectedBoneIndex >= activeDocument.getPreviewData().getRigHandle().getBoneCount())
+        if (selectedBoneIndex >= getBoneRig().getBoneCount())
             this.selectedBoneIndex = 0;
     }
 
@@ -1769,12 +1830,29 @@ public class CharacterEditorManager extends ManagerPackage {
 
     // Rig \\
 
-    // Follows the rig the active character is built on; false while there is none to edit
+    // Follows the rig the bones are edited on (getBoneRig); false while there is none to edit
     boolean syncRig() {
 
-        characterRigBranch.sync(activeDocument != null ? activeDocument.getRigHandle() : null);
+        characterRigBranch.sync(getBoneRig());
 
         return characterRigBranch.hasRig();
+    }
+
+    // The rig whose bones the modelling tabs list, select, show, weigh onto and edit: the part edited's own rig while
+    // it is on a rig following the character's (the character's bones first, then the part's own, so every bone of
+    // the character keeps its place), the character's rig otherwise; null without a character
+    public RigHandle getBoneRig() {
+
+        if (activeDocument == null)
+            return null;
+
+        RigHandle characterRig = activeDocument.hasPreview()
+                ? activeDocument.getPreviewData().getRigHandle()
+                : activeDocument.getRigHandle();
+        CharacterMeshDocumentInstance part = getActiveMeshDocument();
+        RigHandle partRig = part != null ? part.getMesh().getRigHandle() : null;
+
+        return partRig != null && partRig.getLeaderRig() == characterRig ? partRig : characterRig;
     }
 
     public void selectRigBone(int boneIndex) {
@@ -1995,6 +2073,11 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (!region.isRootPinned() || document == null || !isRegionPart(document, region)) {
             setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_REGION);
+            return;
+        }
+
+        if (!document.getMesh().getRigHandle().isFollower()) {
+            setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_OWN_RIG);
             return;
         }
 
@@ -2219,7 +2302,7 @@ public class CharacterEditorManager extends ManagerPackage {
     }
 
     // An export brought into the game as the hair feature named, its mesh shown again where it was loaded already,
-    // and with springs asked its long strands given spring chains on the open character's rig and weighed onto them
+    // and with springs asked its long strands given spring chains on the hair's own rig and weighed onto them
     public void importHair(File file, String featureName, boolean springs) {
 
         String meshName = characterGroomBranch.importExport(file, featureName);
@@ -2238,11 +2321,12 @@ public class CharacterEditorManager extends ManagerPackage {
 
         if (springs && document != null) {
 
-            if (!syncRig() || !characterRigBranch.getRigName().equals(meshHandle.getRigHandle().getRigName())) {
-                setStatusMessage(EditorSetting.CHARACTER_HAIR_MESSAGE_SPRINGS_NO_RIG);
+            if (!meshHandle.getRigHandle().isFollower()) {
+                setStatusMessage(EditorSetting.CHARACTER_RIG_MESSAGE_HAIR_OWN_RIG);
                 return;
             }
 
+            characterRigBranch.sync(meshHandle.getRigHandle());
             characterGroomBranch.laySprings(document);
             saveRigFile();
         }
@@ -2383,7 +2467,7 @@ public class CharacterEditorManager extends ManagerPackage {
     // The bone the rig tab selected, picked for the weights too while the loaded rig holds it
     void followRigBone(String boneName) {
 
-        RigHandle rigHandle = resolveRegionRig();
+        RigHandle rigHandle = getBoneRig();
 
         if (rigHandle != null && rigHandle.hasBone(boneName))
             this.selectedBoneIndex = rigHandle.getBoneIndex(boneName);
@@ -2755,9 +2839,7 @@ public class CharacterEditorManager extends ManagerPackage {
 
     public String getSelectedBoneName() {
 
-        RigHandle rigHandle = activeDocument != null && activeDocument.hasPreview()
-                ? activeDocument.getPreviewData().getRigHandle()
-                : null;
+        RigHandle rigHandle = getBoneRig();
 
         return rigHandle != null && selectedBoneIndex < rigHandle.getBoneCount()
                 ? rigHandle.getBone(selectedBoneIndex).getName()

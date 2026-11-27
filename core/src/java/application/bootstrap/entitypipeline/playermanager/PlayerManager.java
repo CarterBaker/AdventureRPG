@@ -387,6 +387,15 @@ public class PlayerManager extends ManagerPackage {
         return photo != null && photo.isPlayerHidden();
     }
 
+    // The player struck still in a pose, every worn piece on a rig of its own following it
+    private void strikePhotoPose(EntityInstance player, AnimationClipHandle pose) {
+
+        player.getAnimationStateHandle().poseClip(pose, 0f);
+
+        if (player.getAppearanceHandle() != null)
+            player.getAppearanceHandle().followPose(0f);
+    }
+
     // The player held in their pose, or the stance they were caught in, and the camera flown while no menu holds input
     private void updatePhoto(
             PlayerPhotoStruct photo,
@@ -396,7 +405,7 @@ public class PlayerManager extends ManagerPackage {
             boolean inputLocked) {
 
         if (photo.getPose() != null)
-            player.getAnimationStateHandle().poseClip(photo.getPose(), 0f);
+            strikePhotoPose(player, photo.getPose());
         else
             player.updateAnimation(0f);
 

@@ -437,10 +437,11 @@ class CharacterWorkspaceBranch extends BranchPackage {
 
     // Rig \\
 
-    // The model moved onto a rig of its own: a copy of the one it stands on, named after it, with a rest pose and an
-    // animation tree playing it to preview it by, written among the game's rigs and clips and made known at once;
-    // the model's file then names it. Null when it was, else why not
-    String moveToNewRig(CharacterDocumentInstance document) {
+    // The model moved onto a rig of its own, named after it, with a rest pose and an animation tree playing it to
+    // preview it by, written among the game's rigs and clips and made known at once; the model's file then names it.
+    // The rig is a copy of the one the model stands on, or, to follow it, as a garment's skeleton follows the body
+    // wearing it, its bones alone with the rig followed named. Null when it was, else why not
+    String moveToNewRig(CharacterDocumentInstance document, boolean follow) {
 
         String sourceRig = document.getRigHandle().getRigName();
         InfoEntryStruct source = infoManager.findEntry(EditorSetting.INFO_SCHEMA_RIGS, sourceRig, sourceRig);
@@ -453,7 +454,9 @@ class CharacterWorkspaceBranch extends BranchPackage {
         String folder = rigName.toLowerCase(Locale.ROOT) + EditorSetting.INFO_FOLDER_SEPARATOR;
         String clipName = folder + rigName + EditorSetting.CHARACTER_RIG_REST_CLIP_SUFFIX;
         String treeName = folder + rigName + EditorSetting.CHARACTER_RIG_REST_TREE_SUFFIX;
-        ArpgObjectStruct rigArpg = source.getArpg().deepCopy().getAsObject();
+        ArpgObjectStruct rigArpg = follow
+                ? buildFollowerRig(sourceRig, source.getArpg())
+                : source.getArpg().deepCopy().getAsObject();
         String rootBone = rigArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES).get(0).getAsObject()
                 .get(EditorSetting.CHARACTER_RIG_FIELD_NAME).getAsString();
 
@@ -482,8 +485,50 @@ class CharacterWorkspaceBranch extends BranchPackage {
                 : EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_WRITTEN + document.getModelName();
     }
 
-    // The model's name and Rig, numbered past every rig of the game already holding it
-    private String resolveNewRigName(String stem) {
+    // A rig of its own for a part worn on the character's rig, following it (the leader pose approach): the
+    // character's bones as its rig holds them, their sliders left to the character, and nothing of its own yet,
+    // written among the game's rigs under the name given and made known at once. Null when it was, else why not
+    String writeFollowerRig(String rigName, RigHandle leaderRig) {
+
+        String leaderName = leaderRig.getRigName();
+        InfoEntryStruct leader = infoManager.findEntry(EditorSetting.INFO_SCHEMA_RIGS, leaderName, leaderName);
+
+        if (leader == null)
+            return EditorSetting.CHARACTER_MODEL_MESSAGE_NOT_READ + leaderName;
+
+        String refusal = writeContent(
+                EditorSetting.INFO_SCHEMA_RIGS, rigName, buildFollowerRig(leaderName, leader.getArpg()));
+
+        if (refusal != null)
+            return refusal;
+
+        rigManager.addRigFile(rigName, ArpgUtility.resolveFile(new File(EngineSetting.RIG_PATH), rigName));
+        return null;
+    }
+
+    // A rig following another: the leader named, then every bone of its, their sliders left to the leader
+    private static ArpgObjectStruct buildFollowerRig(String leaderName, ArpgObjectStruct leaderArpg) {
+
+        ArpgObjectStruct rigArpg = new ArpgObjectStruct();
+        ArpgArrayStruct bones = new ArpgArrayStruct();
+        ArpgArrayStruct leaderBones = leaderArpg.getAsArray(EditorSetting.CHARACTER_RIG_FIELD_BONES);
+
+        for (int i = 0; i < leaderBones.size(); i++) {
+
+            ArpgObjectStruct bone = leaderBones.get(i).getAsObject().deepCopy();
+
+            bone.remove(EditorSetting.CHARACTER_RIG_FIELD_SLIDERS);
+            bones.add(bone);
+        }
+
+        rigArpg.addProperty(EditorSetting.CHARACTER_RIG_FIELD_FOLLOWS, leaderName);
+        rigArpg.add(EditorSetting.CHARACTER_RIG_FIELD_BONES, bones);
+
+        return rigArpg;
+    }
+
+    // The stem and Rig, numbered past every rig of the game already holding it
+    String resolveNewRigName(String stem) {
 
         String rigName = stem + EditorSetting.CHARACTER_RIG_NEW_SUFFIX;
         int number = 2;
@@ -631,7 +676,8 @@ class CharacterWorkspaceBranch extends BranchPackage {
                 EditorSetting.INFO_SCHEMA_ITEMS,
                 item.getDefinitionName(),
                 item.getEntryName(),
-                itemArpg -> wearModel(itemArpg, meshName, genderName, sideName, document.getRigHandle().getRigName()));
+                itemArpg -> wearModel(itemArpg, meshName, genderName, sideName,
+                        resolveWearerRig(document.getRigHandle()).getRigName()));
 
         return infoManager.saveDocument(EditorSetting.INFO_SCHEMA_ITEMS, item.getDefinitionName())
                 ? null
@@ -677,10 +723,15 @@ class CharacterWorkspaceBranch extends BranchPackage {
         itemArpg.add(EngineSetting.ITEM_WORN_FIELD, worn);
     }
 
-    // Whether a worn model's mesh is the one imported or another skinned to the same rig
+    // Whether a worn model's mesh is the one imported or another worn on a body of the same rig
     private boolean isOnRig(String wornMeshName, String meshName, String rigName) {
-        return wornMeshName.equals(meshName)
-                || rigName.equals(meshManager.getMeshHandleFromMeshName(wornMeshName).getRigHandle().getRigName());
+        return wornMeshName.equals(meshName) || rigName.equals(
+                resolveWearerRig(meshManager.getMeshHandleFromMeshName(wornMeshName).getRigHandle()).getRigName());
+    }
+
+    // The rig of the body a mesh on the rig is worn on: the one it follows, or itself
+    private static RigHandle resolveWearerRig(RigHandle rigHandle) {
+        return rigHandle.isFollower() ? rigHandle.getLeaderRig() : rigHandle;
     }
 
     private InfoEntryStruct findItem(String itemName) {

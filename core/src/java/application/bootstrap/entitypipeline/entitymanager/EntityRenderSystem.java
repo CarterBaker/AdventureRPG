@@ -1,5 +1,6 @@
 package application.bootstrap.entitypipeline.entitymanager;
 
+import application.bootstrap.entitypipeline.animationtree.AnimationFollowerStruct;
 import application.bootstrap.entitypipeline.appearance.AppearanceHandle;
 import application.bootstrap.entitypipeline.appearance.AppearanceIsolationStruct;
 import application.bootstrap.entitypipeline.entity.EntityInstance;
@@ -13,6 +14,7 @@ import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.race.RaceGenderStruct;
 import application.bootstrap.geometrypipeline.mesh.MeshHandle;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import application.bootstrap.geometrypipeline.rig.RigMathUtility;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedAppearanceStruct;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedBoneMaskStruct;
@@ -53,7 +55,10 @@ public class EntityRenderSystem extends SystemPackage {
      * each feature with its own material when it names one. Gear with a
      * model worn on the character's rig is skinned by the body's own bones,
      * its morphs following the body's, and the body bones it covers are cut
-     * from the body beneath it; any other gear rides its anchor rigidly.
+     * from the body beneath it; any other gear rides its anchor rigidly. A
+     * feature or worn model on a rig of its own that follows the body's is
+     * skinned by its follower's pose instead, the mask and the bones its
+     * springs carry laid onto that rig.
      * Seen from its own eyes, its head and everything the head carries is
      * masked away.
      * pushPreview() draws a posed character outside any world for editors,
@@ -84,6 +89,7 @@ public class EntityRenderSystem extends SystemPackage {
     private AppearanceIsolationStruct wholeIsolation;
     private AppearanceIsolationStruct headlessIsolation;
     private SkinnedBoneMaskStruct bodyMaskScratch;
+    private SkinnedBoneMaskStruct followerMaskScratch;
     private Matrix4 anchorScratch;
     private Matrix4 equipmentScratch;
 
@@ -111,6 +117,7 @@ public class EntityRenderSystem extends SystemPackage {
         this.wholeIsolation = new AppearanceIsolationStruct();
         this.headlessIsolation = new AppearanceIsolationStruct();
         this.bodyMaskScratch = new SkinnedBoneMaskStruct();
+        this.followerMaskScratch = new SkinnedBoneMaskStruct();
 
         for (FeatureSlot featureSlot : FeatureSlot.VALUES)
             headlessIsolation.setFeature(featureSlot, true, true);
@@ -270,13 +277,15 @@ public class EntityRenderSystem extends SystemPackage {
 
             FeatureHandle feature = appearance.getFeature(featureSlot);
 
-            appearanceScratch.setBoneMask(isolation.isFeatureMasked(featureSlot) ? boneMask : noMask);
             appearanceScratch.setVariant(feature.getVariants(), appearance.getFeatureVariant(featureSlot));
-            pushCharacterPart(
+            pushWornPart(
                     feature.getMeshHandle(),
                     feature.hasMaterial()
                             ? resolveFeatureMaterial(feature.getMaterial(), featureMaterial2ViewMaterial)
                             : material,
+                    isolation.isFeatureMasked(featureSlot) ? boneMask : noMask,
+                    appearance.getFeatureFollower(featureSlot),
+                    raceGender.getRigHandle(),
                     skinningMatrices,
                     targetFbo,
                     window);
@@ -314,7 +323,6 @@ public class EntityRenderSystem extends SystemPackage {
         if (appearance == null || !isolation.isBodyShown())
             return;
 
-        appearanceScratch.setBoneMask(boneMask);
         appearanceScratch.setVariant(null, EngineSetting.INDEX_NOT_FOUND);
 
         for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
@@ -327,15 +335,43 @@ public class EntityRenderSystem extends SystemPackage {
             appearanceScratch.setMorphSources(
                     wornModel.getMeshHandle(),
                     wornModel.getMorphSources(raceGender.getMeshHandle()));
-            pushCharacterPart(
+            pushWornPart(
                     wornModel.getMeshHandle(),
                     wornModel.hasMaterial()
                             ? resolveFeatureMaterial(wornModel.getMaterial(), featureMaterial2ViewMaterial)
                             : material,
+                    boneMask,
+                    appearance.getWornFollower(equipmentSlot),
+                    raceGender.getRigHandle(),
                     skinningMatrices,
                     targetFbo,
                     window);
         }
+    }
+
+    // A feature or worn model through the mask: skinned by the body's own bones, or on a rig of its own by its
+    // follower's pose, the mask and the bones the springs carry laid onto that rig and the body's put back after
+    private void pushWornPart(
+            MeshHandle meshHandle,
+            MaterialInstance material,
+            SkinnedBoneMaskStruct boneMask,
+            AnimationFollowerStruct follower,
+            RigHandle bodyRig,
+            Matrix4[] skinningMatrices,
+            FBOInstance targetFbo,
+            WindowInstance window) {
+
+        if (follower == null) {
+            appearanceScratch.setBoneMask(boneMask);
+            pushCharacterPart(meshHandle, material, skinningMatrices, targetFbo, window);
+            return;
+        }
+
+        followerMaskScratch.follow(boneMask, follower.getRigHandle());
+        appearanceScratch.setBoneMask(followerMaskScratch);
+        appearanceScratch.setSpringBones(follower.getRigHandle().getSpringBoneMask());
+        pushCharacterPart(meshHandle, material, follower.getSkinningMatrices(), targetFbo, window);
+        appearanceScratch.setSpringBones(bodyRig.getSpringBoneMask());
     }
 
     // A feature's or worn model's own material in the world, or the viewport's copy of it in a preview

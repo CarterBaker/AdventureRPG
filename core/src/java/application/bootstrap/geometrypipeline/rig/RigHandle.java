@@ -14,7 +14,10 @@ public class RigHandle extends HandlePackage {
      * replaced in place when the rig is edited: the bones it was loaded with
      * always kept by name, parent and place, bones after them free to come,
      * go and change, each such change counted in the structure revision so
-     * whatever is laid out by the bones lays itself out again.
+     * whatever is laid out by the bones lays itself out again. A rig that
+     * follows another (a worn piece's or a hair style's own skeleton
+     * following the body's) shares the leader's first bones and is worn on
+     * it.
      */
 
     // Internal
@@ -68,6 +71,26 @@ public class RigHandle extends HandlePackage {
 
     public String getRigName() {
         return rigData.getRigName();
+    }
+
+    // The rig this one follows, null for a rig of its own
+    public RigHandle getLeaderRig() {
+        return rigData.getLeaderRig();
+    }
+
+    public boolean isFollower() {
+        return rigData.getLeaderRig() != null;
+    }
+
+    // How many of the leader's first bones this rig shares, by name and parent, at the same places; none for a rig of
+    // its own
+    public int getSharedBoneCount() {
+        return rigData.getSharedBoneCount();
+    }
+
+    // True when a mesh skinned to this rig is worn on a body of the rig given: the body's own rig, or one following it
+    public boolean isWornOn(RigHandle bodyRig) {
+        return this == bodyRig || rigData.getLeaderRig() == bodyRig;
     }
 
     public int getBoneCount() {

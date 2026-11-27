@@ -1,6 +1,5 @@
 package editor.runtime.charactereditor.bone;
 
-import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.geometrypipeline.mesh.RiggedMeshStruct;
 import application.bootstrap.geometrypipeline.rig.RigBoneStruct;
 import application.bootstrap.geometrypipeline.rig.RigHandle;
@@ -33,7 +32,8 @@ public class CharacterEditorBoneSystem extends SystemPackage {
      * is clicked, or, on the mesh away from every joint, the bone weighing
      * most on the vertex clicked, so the weight tools act on it. Pose picks
      * the bone whose joint is pressed and turns it about the joint as the
-     * pointer circles it on screen, about the line of sight, everything it
+     * pointer circles it on screen (the character's own bones; a part's own
+     * rig is posed by the character's and its springs, never by hand), about the line of sight, everything it
      * carries following in the edit pose, and its twin across the body the
      * mirrored way while mirroring; Ctrl snaps the turn. Letting go keeps the
      * turn, a right click or Escape puts the bone back. Turns are written
@@ -157,16 +157,16 @@ public class CharacterEditorBoneSystem extends SystemPackage {
         editorInputSystem.claim(EditorSetting.CHARACTER_VIEW_BUTTON_SELECT);
         characterEditorManager.pickBone(picked);
 
-        if (posing)
+        if (posing && picked < characterViewPoseSystem.getAnimationStateHandle().getRigHandle().getBoneCount())
             startDrag(picked, mouseX, mouseY);
     }
 
     // The shown bone the pointer is over, at its posed joint or along the segment drawn from it
-    // (CharacterBonePickUtility), or none
+    // (CharacterBonePickUtility), or none; the bones are those of the rig the part edited is on, its own rig's posed
+    // by its follower
     private int pickJoint(float mouseX, float mouseY) {
 
-        AnimationStateHandle state = characterViewPoseSystem.getAnimationStateHandle();
-        RigHandle rigHandle = state.getRigHandle();
+        RigHandle rigHandle = characterEditorManager.getBoneRig();
         int boneCount = rigHandle.getBoneCount();
 
         CharacterBonePickUtility.reset(pickScreen, pickable, pickParents, boneCount);
@@ -176,7 +176,7 @@ public class CharacterEditorBoneSystem extends SystemPackage {
             RigBoneStruct bone = rigHandle.getBone(i);
 
             pickParents.set(i, bone.isRoot() ? EngineSetting.INDEX_NOT_FOUND : bone.getParentIndex());
-            CharacterPoseUtility.getTranslation(state.getWorldMatrix(i), jointScratch);
+            CharacterPoseUtility.getTranslation(characterViewPoseSystem.getWorldMatrix(rigHandle, i), jointScratch);
 
             if (!characterEditorMeshViewSystem.project(jointScratch.x, jointScratch.y, jointScratch.z, screenScratch))
                 continue;

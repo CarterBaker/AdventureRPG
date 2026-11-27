@@ -1573,6 +1573,7 @@ public class EditorSetting {
     public static final String CHARACTER_HAIR_FIELD_MESH = "mesh";
     public static final String CHARACTER_HAIR_SLOT = "hair";
     public static final String CHARACTER_HAIR_MESH_SUFFIX = "Mesh";
+    public static final String CHARACTER_HAIR_RIG_FOLDER = "hair/";
     public static final String CHARACTER_HAIR_DEFAULT_FEATURE_FOLDER = "humanoid/hair/";
     public static final String CHARACTER_HAIR_DEFAULT_BONE = "head";
     public static final String CHARACTER_HAIR_DEFAULT_TEXTURE = "characters/standard/Hair";
@@ -1866,6 +1867,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_KEY_REVERT = "rig_revert";
     public static final String CHARACTER_RIG_KEY_DIGITS = "rig_digits";
     public static final String CHARACTER_RIG_KEY_RIG_NEW = "rig_new";
+    public static final String CHARACTER_RIG_KEY_RIG_OWN = "rig_own";
     public static final String CHARACTER_RIG_KEY_IK_ADD = "rig_ik_add";
     public static final String CHARACTER_RIG_KEY_IK_REMOVE = "rig_ik_remove";
     public static final String CHARACTER_RIG_KEY_PART_ADD = "rig_part_add";
@@ -1899,6 +1901,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_LABEL_SAVE = "Save Rig";
     public static final String CHARACTER_RIG_LABEL_DIGITS = "Rig Digits";
     public static final String CHARACTER_RIG_LABEL_RIG_NEW = "New Rig For The Model";
+    public static final String CHARACTER_RIG_LABEL_RIG_OWN = "Rig Of Its Own";
     public static final String CHARACTER_RIG_LABEL_IK_ADD = "Add IK Handle";
     public static final String CHARACTER_RIG_LABEL_IK_REMOVE = "Remove IK Handle";
     public static final String CHARACTER_RIG_LABEL_PART_ADD = "Add Layer From Bone";
@@ -1931,6 +1934,7 @@ public class EditorSetting {
     public static final String CHARACTER_RIG_MESSAGE_SHARED =
             "Every item shares this rig: give the model a rig of its own with New Rig For The Model first";
     public static final String CHARACTER_RIG_MESSAGE_NEW = "The model now stands on a rig of its own: ";
+    public static final String CHARACTER_RIG_MESSAGE_LEADER_BONE = "This bone is the character's: edit it on ";
     public static final String CHARACTER_RIG_MESSAGE_NEW_MODEL_ONLY =
             "New Rig gives a workspace model with a body a rig of its own";
     public static final String CHARACTER_RIG_MESSAGE_DIGITS =
@@ -1945,6 +1949,13 @@ public class EditorSetting {
             " hair locks rigged on spring chains; weigh onto them with Weigh Onto Locks";
     public static final String CHARACTER_RIG_MESSAGE_NO_HAIR = "No new hair locks long enough for spring bones";
     public static final String CHARACTER_RIG_MESSAGE_HAIR_REGION = "Rig and weigh hair locks on the Hair layers";
+    public static final String CHARACTER_RIG_MESSAGE_HAIR_OWN_RIG =
+            "The hair stands on the character's own rig: give it Rig Of Its Own first, then start the editor again";
+    public static final String CHARACTER_RIG_MESSAGE_OWN_RIG_PART =
+            "Pick the layer of a hair style or a worn model on the character's own rig to give it a rig of its own";
+    public static final String CHARACTER_RIG_MESSAGE_OWN_RIG_ALREADY = "The model stands on a rig of its own already: ";
+    public static final String CHARACTER_RIG_MESSAGE_OWN_RIG =
+            "Saved on a rig of its own, taken up once the editor starts again: ";
     public static final String CHARACTER_RIG_MESSAGE_HAIR_WEIGHED = " hair vertices weighed onto the locks";
     public static final String CHARACTER_RIG_MESSAGE_HAIR_UNRIGGED = "Rig the hair locks first";
     public static final String CHARACTER_RIG_MESSAGE_SPRING_ADDED = "Spring chain added: ";
@@ -2003,6 +2014,7 @@ public class EditorSetting {
     // from a joint dragged, the bone field they are written in, and the Rig tab's rows that offer them
     public static final long CHARACTER_RIG_SLIDER_SIGNATURE_PRIME = 1000003L;
     public static final String CHARACTER_RIG_FIELD_SLIDERS = "sliders";
+    public static final String CHARACTER_RIG_FIELD_FOLLOWS = "follows";
     public static final String CHARACTER_RIG_KEY_SLIDER = "rig_slider";
     public static final String CHARACTER_RIG_HEADER_SLIDERS = "Sliders";
 

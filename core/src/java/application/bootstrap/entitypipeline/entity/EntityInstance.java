@@ -270,6 +270,9 @@ public class EntityInstance extends InstancePackage {
                 phase,
                 sequence,
                 deltaTime);
+
+        if (appearanceHandle != null)
+            appearanceHandle.followPose(deltaTime);
     }
 
     // How the body stands turned and sized for its springs, and how far it moved since the last update, measured
@@ -284,11 +287,14 @@ public class EntityInstance extends InstancePackage {
         springTurn.set(0f, entityStateHandle.getBodyYaw(), 0f);
         springScale.set(scale, scale, scale);
         RigMathUtility.composeLocal(springOrigin, springTurn, springScale, springFrame, springScratchA, springScratchB);
-        animationStateHandle.setSpringFrame(
-                springFrame,
-                Coordinate2Long.unpackX(delta) * EngineSetting.CHUNK_SIZE + position.x - springPosition.x,
-                position.y - springPosition.y,
-                Coordinate2Long.unpackY(delta) * EngineSetting.CHUNK_SIZE + position.z - springPosition.z);
+        float travelX = Coordinate2Long.unpackX(delta) * EngineSetting.CHUNK_SIZE + position.x - springPosition.x;
+        float travelY = position.y - springPosition.y;
+        float travelZ = Coordinate2Long.unpackY(delta) * EngineSetting.CHUNK_SIZE + position.z - springPosition.z;
+
+        animationStateHandle.setSpringFrame(springFrame, travelX, travelY, travelZ);
+
+        if (appearanceHandle != null)
+            appearanceHandle.setSpringFrame(springFrame, travelX, travelY, travelZ);
 
         this.springChunkCoordinate = chunkCoordinate;
         springPosition.set(position);
@@ -308,6 +314,9 @@ public class EntityInstance extends InstancePackage {
         float speed = windHandle.getGlobalWindSpeed() * EngineSetting.RIG_SPRING_WIND_SHARE * gust;
 
         animationStateHandle.setSpringWind(direction.x * speed, direction.y * speed, direction.z * speed);
+
+        if (appearanceHandle != null)
+            appearanceHandle.setSpringWind(direction.x * speed, direction.y * speed, direction.z * speed);
     }
 
     // Statistics \\

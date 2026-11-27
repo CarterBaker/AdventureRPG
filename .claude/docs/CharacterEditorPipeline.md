@@ -535,9 +535,27 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
 - **Assets.** Every armor and clothing item wears a quick model per body (`worn/armor/`, `worn/clothing/`, `Male`
   and `Female`, paired pieces `Left` and `Right`): the body's own faces under the garment offset along their normals,
   so each keeps the body's weights and shape morphs, in the gear zone with the item's texture box-projected; the
-  helmet hides the hair. The cloak is a sheet hung down the back on `HumanoidRig`'s cape chains (`cape_l`, `cape_c`,
-  `cape_r`, five joints each from `upper_torso`, resting against `back`, `hips`, `chest`, the shoulders, thighs and
-  shins). Replace them by modelling over the body and importing as worn gear.
+  helmet hides the hair. The cloak is a sheet hung down the back on its own rig's cape chains
+  (`clothing/CrimsonCloakRig`: `cape_l`, `cape_c`, `cape_r`, five joints each from `upper_torso`, resting against
+  `back`, `hips`, `chest`, the shoulders, thighs and shins). Replace them by modelling over the body and importing as
+  worn gear.
+- **Every worn piece carries its own skeleton** (the leader pose approach, as Unreal's Leader Pose and Blender's Child
+  Of constraints set it up). The body's rig holds the body alone; a hair style or a garment with bones of its own
+  stands on a rig of its own that `follows` the body's (`RigData.getLeaderRig`): its bones open with every bone of the
+  body's rig, by the same names under the same parents in the same order (`RigBuilder.resolveSharedBones` refuses any
+  other order, and a follower may not be followed), then its own bones, spring chains and colliders. Since the body's
+  bones keep their numbers in every follower, everything laid out by them (masks, anchors, weights onto body bones,
+  selections) reads the same on both. A mesh on a follower is worn on the body it follows
+  (`RigHandle.isWornOn`, used by `AppearanceData.isCompatible` and `ItemWornModelStruct.fits`; a worn model's `hides`
+  name the body's bones). At run time `AppearanceHandle` holds an `AnimationFollowerStruct` for each feature and worn
+  model on a follower (`resolveSprings`, made again when the rig's structure changes), laid over the body's pose once
+  the body has animated (`followPose`, from `EntityInstance` after every animation update, photo mode and the editors'
+  preview): every shared bone stands where the body's posed bone stands, sized as the body sizes it, skinning the piece
+  by the follower's own bind; every own bone hangs from its parent at its bind place; its chains simulate in the body's
+  frame and wind (`setSpringFrame`, `setSpringWind`), each running while the piece weighs onto it. `EntityRenderSystem`
+  draws such a piece by its follower's matrices, the mask laid onto the follower (`SkinnedBoneMaskStruct.follow`: an
+  own bone hidden with the body bone it hangs from) and the follower's spring bones. Follower rigs live beside the rest
+  (`rigs/hair/`, `rigs/clothing/`), named after the piece.
 - **Bone masks.** A skinned draw's palette row carries a `SkinnedBoneMaskStruct` and its `SkinnedMaskMode`
   (`SkinnedAppearanceStruct.setBoneMask`): `HIDE` cuts every fragment the masked bones move at all (a character seen
   from its own eyes: `AppearanceData.getHeadMask`, the head and everything below it, eyes and teeth included), `SHOW`
@@ -721,7 +739,8 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   stiffness. Editor previews blow no wind. On top of the chains, the character vertex shader flutters every
   non-hair vertex the spring bones carry (`CharacterCloth.glsl`, by the share the spring bones carry, read from the
   rig's spring bone mask each draw writes after its variant texel, `SkinnedAppearanceStruct.setSpringBones`), so a
-  cape ripples while its chains swing it. A chain runs only while something worn weighs onto it (`AppearanceHandle.resolveSprings`, reading
+  cape ripples while its chains swing it. A chain of the body's own rig runs only while something on that rig weighs
+  onto it, and a follower's while its piece does (`AppearanceHandle.resolveSprings`, reading
   `MeshHandle.weighsOnto`, set for every rigged mesh in `MeshManager.applyRiggedMesh`), so a bald or short-haired
   character simulates nothing. Settings apply live, and so does a new or changed chain: a change of structure moves
   the rig's structure revision and every pose lays its springs out again.
@@ -742,7 +761,17 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   `CHARACTER_HAIR_LOCK_RADIUS`) and lays one chain per lock from the bone its card roots weigh onto, one bone per
   `CHARACTER_HAIR_LOCK_SEGMENT` and a tip, named `hair_<lock>_<joint>`, its spring named `hair_<lock>` with
   `CHARACTER_RIG_SPRING_DEFAULTS`; a lock rooted within the lock radius of a hair chain already rigged takes that
-  chain, so every style shares one set. **Add Spring Chain** / **Remove Spring Chain** make or drop a chain from the
+  chain. The chains are laid on the hair's own rig: Rig Hair Locks refuses hair still on the character's rig, which
+  the Rig tab's **Rig Of Its Own** (`CharacterEditorManager.giveRigOfItsOwn`) gives a rig of its own following the
+  character's (`CharacterWorkspaceBranch.writeFollowerRig`, named after the mesh beside its folder,
+  `rigs/<folder>/<Name>Rig`), its mesh file then naming it, taken up once the editor starts again as any change to the
+  bones a mesh is laid out by is; on a workspace model it moves the model onto a follower of its rig, as New Rig For
+  The Model moves it onto a copy, so a garment modelled there is rigged with its own chains and imported as worn gear.
+  While the part edited stands on a follower, the modelling tabs list, show, pick and weigh onto that rig's bones
+  (`CharacterEditorManager.getBoneRig`), every part is skinned by its own rig
+  (`CharacterViewPoseSystem.getSkinningMatrices`, the appearance's follower or one of the preview's own), and the Rig
+  tab edits the follower: its shared bones are the character's, written back as the character's rig holds them after
+  every edit (`CharacterRigBranch.keepLeaderBones`), a drag or typed value on one refused. **Add Spring Chain** / **Remove Spring Chain** make or drop a chain from the
   selected bone down its single children (and its twin), for hand-built chains. The Weights tab's **Weigh Onto Locks**
   (`CharacterWeightBranch.weighLocks`) hands each long card to the hair chain whose joints lie nearest its line
   (`CharacterHairBranch.findChain`, roots within `CHARACTER_HAIR_WEIGHT_REACH`), by how far down the card each vertex
@@ -764,11 +793,12 @@ modelled in, plus worn feature meshes (`FeatureSlot`: hair). Nothing is a textur
   moves. **Preview Springs**
   (Rig and Weights) makes every modelling tab play the pose chosen (Idle at rest) with the springs simulated, until
   pressed again. The Animation Editor never lists, picks or keys a spring bone (`AnimationEditorManager.isKeyedBone`).
-- **Assets.** `HumanoidRig` carries 14 hair chains (`hair_1` to `hair_14`, five joints each, radius 0.012) laid by Rig
-  Hair Locks on `FemaleLongHairMesh`, every one resting against its five colliders: `head` (sphere on `head`), `neck`
-  (capsule on `head`), `shoulder_l` / `shoulder_r` (capsules on the upper arms) and `chest` (capsule across
-  `upper_torso`), sized inside the female body's skin with every hair joint clear of them at rest;
-  `FemaleLongHairMesh` and `FemaleMediumHairMesh` are weighed onto them by Weigh Onto Locks.
+- **Assets.** `HumanoidRig` holds the body alone. `FemaleLongHairMesh` stands on `hair/FemaleLongHairRig` and
+  `FemaleMediumHairMesh` on `hair/FemaleMediumHairRig`, each following `HumanoidRig` with 14 hair chains of its own
+  (`hair_1` to `hair_14`, five joints each, radius 0.012, laid by Rig Hair Locks on the long hair) resting against its
+  five colliders: `head` (sphere on `head`), `neck` (capsule on `head`), `shoulder_l` / `shoulder_r` (capsules on the
+  upper arms) and `chest` (capsule across `upper_torso`), sized inside the female body's skin with every hair joint
+  clear of them at rest; each hair is weighed onto its own rig's chains by Weigh Onto Locks.
   `MaleShortHairMesh` and `MaleMediumHairMesh` are short and stay on the head.
 - **Toon lighting.** Characters write a smooth normal (`GBufferNormal.glsl`); the lighting pass lights those pixels
   in toon tones with a rim (`ToonLighting.glsl`), and the editor viewport's character shader uses the same function.
@@ -808,7 +838,9 @@ reaching the surface of the part picked in the Properties tab's Parts (the body)
   picks an export from Exports/Hair, asks the hair feature it becomes (`folder/Name`, the source offered; an existing
   hair feature has its mesh replaced) and whether to lay spring chains, then writes
   `mesh/characters/<feature>Mesh.arpg`, makes or edits `features/<feature>` and, when asked, runs Rig Hair Locks and
-  Weigh Onto Locks on it against the open character's rig (which must be the hair's) and saves the mesh and the rig.
+  Weigh Onto Locks on it against the hair's own rig and saves the mesh and the rig. A hair mesh new to the game is
+  written on a rig of its own following the export's character rig (`CharacterGroomBranch.assignHairRig`); one loaded
+  already keeps its rig, and lays no chains until it has one of its own.
   Grooms and exports are the owner's work: never catalogue them.
 - The overlay draws every strand (`CharacterEditorOverlaySystem.syncGroomOverlay`, rebuilt only when the groom moves):
   its root, its guide line and its card's two sides, the selected ones in the selection's colour.
@@ -1018,9 +1050,13 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
 - **The body is near the mesh limit.** The Human body holds about 15,000 of the 16,383 quads a rigged mesh takes, so
   only small parts join it whole; cut parts away first (Mesh tab) or join them to a smaller body.
 
-- **Weighed meshes name the rig's bones.** A hair mesh weighed onto locks names `hair_*` bones; reverting or removing
-  them from the rig without the meshes weighed onto them stops every mesh load (and the editor) with an unknown bone.
-  Re-lay and re-weigh through the tools, rig first.
+- **Weighed meshes name the rig's bones.** A hair mesh weighed onto locks names `hair_*` bones of its own rig;
+  reverting or removing them from the rig without the meshes weighed onto them stops every mesh load (and the editor)
+  with an unknown bone. Re-lay and re-weigh through the tools, rig first. A mesh made before the hair and cape bones
+  left `HumanoidRig` (a workspace groom export or model naming `hair_*` or `cape_*` on it) no longer loads on it: open
+  it on a follower holding those bones.
+- **A follower follows the body's bones as loaded.** Its shared bones must stay the body's first bones in order; a bone
+  added to the body after them is not the follower's, and a follower's own bone may not take a body bone's name.
 - **Colliders sit inside the skin.** A collider poking out of the body pushes hair off the surface at rest, and a hair
   joint inside a collider at rest is pushed out on the first step. Size them against the body's own vertices and the
   chains' rest joints; a collider a chain names must exist, or the rig refuses to load.

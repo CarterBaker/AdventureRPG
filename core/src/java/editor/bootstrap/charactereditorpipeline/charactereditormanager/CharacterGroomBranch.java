@@ -69,6 +69,7 @@ class CharacterGroomBranch extends BranchPackage {
     private CharacterHairBranch characterHairBranch;
     private CharacterRigBranch characterRigBranch;
     private CharacterWeightBranch characterWeightBranch;
+    private CharacterWorkspaceBranch characterWorkspaceBranch;
     private MeshManager meshManager;
     private RigManager rigManager;
     private InfoManager infoManager;
@@ -155,6 +156,7 @@ class CharacterGroomBranch extends BranchPackage {
         this.characterHairBranch = get(CharacterHairBranch.class);
         this.characterRigBranch = get(CharacterRigBranch.class);
         this.characterWeightBranch = get(CharacterWeightBranch.class);
+        this.characterWorkspaceBranch = get(CharacterWorkspaceBranch.class);
         this.meshManager = get(MeshManager.class);
         this.rigManager = get(RigManager.class);
         this.infoManager = get(InfoManager.class);
@@ -1285,6 +1287,11 @@ class CharacterGroomBranch extends BranchPackage {
                 + EditorSetting.CHARACTER_HAIR_MESH_SUFFIX;
         File meshFile = ArpgUtility.resolveFile(new File(EngineSetting.MESH_PATH), meshName);
 
+        this.refusal = assignHairRig(meshArpg, meshName, featureName);
+
+        if (refusal != null)
+            return null;
+
         meshFile.getParentFile().mkdirs();
 
         if (!ArpgUtility.tryWriteObject(meshFile, meshArpg)) {
@@ -1309,6 +1316,34 @@ class CharacterGroomBranch extends BranchPackage {
         return meshName;
     }
 
+    // The rig the imported hair stands on, written into its mesh: the one its mesh is loaded on already where it was,
+    // so every handle keeps its rig, else a rig of its own following the export's character rig, written and made
+    // known now, as every hair style carries its own skeleton; null when it is set, else why not
+    private String assignHairRig(ArpgObjectStruct meshArpg, String meshName, String featureName) {
+
+        if (meshManager.hasMesh(meshName)) {
+            meshArpg.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG,
+                    meshManager.getMeshHandleFromMeshName(meshName).getRigHandle().getRigName());
+            return null;
+        }
+
+        RigHandle exportRig = rigManager.getRigHandleFromRigName(
+                ArpgUtility.validateString(meshArpg, EditorSetting.CHARACTER_MODEL_FIELD_RIG));
+
+        if (exportRig.isFollower())
+            return null;
+
+        String rigName = characterWorkspaceBranch.resolveNewRigName(
+                EditorSetting.CHARACTER_HAIR_RIG_FOLDER + FileUtility.getFileName(featureName));
+        String rigRefusal = characterWorkspaceBranch.writeFollowerRig(rigName, exportRig);
+
+        if (rigRefusal != null)
+            return rigRefusal;
+
+        meshArpg.addProperty(EditorSetting.CHARACTER_MODEL_FIELD_RIG, rigName);
+        return null;
+    }
+
     // A new hair feature's fields, every default replaced: its slot and the mesh it wears
     private static void fillFeature(ArpgObjectStruct feature, String meshName) {
 
@@ -1321,8 +1356,8 @@ class CharacterGroomBranch extends BranchPackage {
         feature.addProperty(EditorSetting.CHARACTER_HAIR_FIELD_MESH, meshName);
     }
 
-    // The imported mesh's long strands given spring chains on the open character's rig and weighed onto them, through
-    // the Rig and Weights tabs' own Rig Hair Locks and Weigh Onto Locks, then the mesh and the rig saved
+    // The imported mesh's long strands given spring chains on the hair's own rig and weighed onto them, through the Rig
+    // and Weights tabs' own Rig Hair Locks and Weigh Onto Locks, then the mesh and the rig saved
     void laySprings(CharacterMeshDocumentInstance document) {
 
         characterRigBranch.addHairLocks(document.getMesh());

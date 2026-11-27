@@ -17,7 +17,8 @@ class RigLoader extends LoaderPackage {
      * RigManager. Supports on-demand loading for rigs not yet in the
      * palette at runtime, and rebuilds a loaded rig's data from its ARPG as
      * it stands for the rig to take in place, or builds one never registered
-     * for an editor's own fragment of bones.
+     * for an editor's own fragment of bones. A rig that follows another loads
+     * its leader first, on demand, so a leader asked for early is loaded once.
      */
 
     // Internal
@@ -61,6 +62,10 @@ class RigLoader extends LoaderPackage {
     protected void load(File file) {
 
         String rigName = FileUtility.getPathWithFileNameWithoutExtension(root, file);
+
+        if (rigManager.hasRig(rigName))
+            return;
+
         RigHandle handle = internalBuilder.build(file, rigName);
 
         if (handle == null)

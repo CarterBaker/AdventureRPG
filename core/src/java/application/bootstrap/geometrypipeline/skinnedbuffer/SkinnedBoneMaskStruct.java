@@ -51,6 +51,29 @@ public class SkinnedBoneMaskStruct extends StructPackage {
         bits[channel] = (int) bits[channel] | bit;
     }
 
+    public void removeBone(int boneIndex) {
+
+        int channel = boneIndex / EngineSetting.SKINNED_BONE_MASK_BITS;
+        int bit = 1 << (boneIndex % EngineSetting.SKINNED_BONE_MASK_BITS);
+
+        bits[channel] = (int) bits[channel] & ~bit;
+    }
+
+    // A leader's mask laid onto a rig that follows it: every bone they share as the leader's, every bone of the
+    // follower's own as its parent, so a worn piece's own bones are hidden and shown with the body bone they hang from
+    public void follow(SkinnedBoneMaskStruct leaderMask, RigHandle followerRig) {
+
+        set(leaderMask);
+
+        for (int i = followerRig.getSharedBoneCount(); i < followerRig.getBoneCount(); i++) {
+
+            removeBone(i);
+
+            if (hasBone(followerRig.getBone(i).getParentIndex()))
+                addBone(i);
+        }
+    }
+
     // A bone and every bone below it, which a rig lists after it
     public void addBranch(RigHandle rigHandle, int boneIndex) {
 

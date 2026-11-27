@@ -71,7 +71,7 @@ class WornModelBranch extends BranchPackage {
 
             if (findFit(wornModels, wornModel) != null)
                 throwException("Item '" + itemName + "' names two worn models for the rig \""
-                        + wornModel.getMeshHandle().getRigHandle().getRigName()
+                        + wornModel.getWearerRig().getRigName()
                         + "\" and the same gender and side — each rig, gender and side is worn as one model.");
 
             wornModels.add(wornModel);
@@ -90,7 +90,9 @@ class WornModelBranch extends BranchPackage {
                     + "\", which has no rig — a worn model is skinned onto the rig of the body wearing it.");
 
         SkinnedBoneMaskStruct coveredBones = new SkinnedBoneMaskStruct();
-        boolean covers = parseCoveredBones(wornArpg, meshHandle.getRigHandle(), coveredBones, itemName);
+        RigHandle meshRig = meshHandle.getRigHandle();
+        boolean covers = parseCoveredBones(
+                wornArpg, meshRig.isFollower() ? meshRig.getLeaderRig() : meshRig, coveredBones, itemName);
 
         return new ItemWornModelStruct(
                 meshHandle,
@@ -170,7 +172,7 @@ class WornModelBranch extends BranchPackage {
             ItemWornModelStruct wornModel) {
 
         for (int i = 0; i < wornModels.size(); i++)
-            if (wornModels.get(i).fits(wornModel.getMeshHandle().getRigHandle())
+            if (wornModels.get(i).fits(wornModel.getWearerRig())
                     && wornModels.get(i).isFittedTo(wornModel.getGenderID())
                     && wornModels.get(i).isOnSide(wornModel.getEquipmentSide()))
                 return wornModels.get(i);

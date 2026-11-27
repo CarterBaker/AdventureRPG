@@ -71,8 +71,17 @@ public class ItemWornModelStruct extends StructPackage {
 
     // Fit \\
 
+    // True when the model is worn on a body of the rig: skinned to that rig, or to a rig of its own following it
     public boolean fits(RigHandle rigHandle) {
-        return meshHandle.getRigHandle() == rigHandle;
+        return meshHandle.getRigHandle().isWornOn(rigHandle);
+    }
+
+    // The rig of the body the model is worn on: the one its own rig follows, or its own
+    public RigHandle getWearerRig() {
+
+        RigHandle rigHandle = meshHandle.getRigHandle();
+
+        return rigHandle.isFollower() ? rigHandle.getLeaderRig() : rigHandle;
     }
 
     public boolean isFittedTo(short genderID) {

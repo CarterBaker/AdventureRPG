@@ -27,7 +27,8 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
     /*
      * Places the character's mesh parts where this tab's viewport shows them
      * while a mesh mode is open: every vertex of every worn part skinned on the
-     * CPU by the pose the preview strikes, exactly as the shader skins it. From
+     * CPU by the pose the preview strikes, exactly as the shader skins it, a
+     * part on a rig of its own by that rig's follower. From
      * those positions it projects vertices onto the window, finds the active
      * part's vertex nearest the pointer, the ones inside a box or under the
      * brush preset's tip at the strength it has there, and — unless X-Ray is on
@@ -164,10 +165,10 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
             visibility.size(getVertexCount());
     }
 
-    // Each vertex moved by its bones' skinning matrices in proportion to their weights
+    // Each vertex moved by its bones' skinning matrices in proportion to their weights, those of the rig the part is on
     private void skin(RiggedMeshStruct mesh, FloatArrayList positions) {
 
-        Matrix4[] skinningMatrices = getSkinningMatrices();
+        Matrix4[] skinningMatrices = characterViewPoseSystem.getSkinningMatrices(mesh.getRigHandle());
         int vertexCount = mesh.getVertexCount();
 
         positions.clear();
@@ -207,9 +208,11 @@ public class CharacterEditorMeshViewSystem extends SystemPackage {
         }
     }
 
-    // The skinning matrices of the pose struck this frame, the ones every vertex shown is skinned by
+    // The skinning matrices of the pose struck this frame the active part's vertices are skinned by: its own rig's
+    // where it is on a rig following the character's, the character's otherwise
     public Matrix4[] getSkinningMatrices() {
-        return characterViewPoseSystem.getAnimationStateHandle().getSkinningMatrices();
+        return characterViewPoseSystem.getSkinningMatrices(
+                activeDocument != null ? activeDocument.getMesh().getRigHandle() : null);
     }
 
     // Screen \\

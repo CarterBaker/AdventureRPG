@@ -1,6 +1,7 @@
 package editor.runtime.characterview.pose;
 
 import application.bootstrap.animationpipeline.animation.AnimationClipHandle;
+import application.bootstrap.entitypipeline.animationtree.AnimationFollowerStruct;
 import application.bootstrap.entitypipeline.animationtree.AnimationParameter;
 import application.bootstrap.entitypipeline.animationtree.AnimationStateHandle;
 import application.bootstrap.entitypipeline.animationtree.AnimationTreeHandle;
@@ -9,12 +10,14 @@ import application.bootstrap.entitypipeline.entity.EntityAction;
 import application.bootstrap.entitypipeline.entity.EntityState;
 import application.bootstrap.entitypipeline.race.RaceData;
 import application.bootstrap.entitypipeline.race.RaceGenderStruct;
+import application.bootstrap.geometrypipeline.rig.RigHandle;
 import editor.runtime.EditorSetting;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.matrices.Matrix4;
 import engine.util.mathematics.vectors.Vector3;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class CharacterViewPoseSystem extends SystemPackage implements ViewCameraSubject {
 
@@ -29,7 +32,12 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
      * pose a mesh is authored in, from one clip at a time, or played through
      * the tree, travelling forward at the pace it is played at so its spring
      * chains trail, bounce and settle as they would on the move while it
-     * stays where the camera frames it. It is what the viewport's camera
+     * stays where the camera frames it. Every feature and worn model on a
+     * rig of its own that follows the character's is posed after it by the
+     * appearance's follower, as the game poses it, and a part on such a rig
+     * the character does not wear by a follower of its own made when first
+     * asked for, so every part is skinned and its bones shown by the rig it is
+     * on. It is what the viewport's camera
      * frames: a sphere about a share of the model's height, reaching down to
      * its feet.
      */
@@ -44,6 +52,9 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
     // Springs — the preview stands unturned at its own size
     private Matrix4 springFrame;
 
+    // Followers — a follower for each rig of its own a part is on that the character does not wear, made when asked
+    private ObjectArrayList<AnimationFollowerStruct> detachedFollowers;
+
     // Base \\
 
     @Override
@@ -51,6 +62,9 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
 
         // Springs
         this.springFrame = new Matrix4(1f);
+
+        // Followers
+        this.detachedFollowers = new ObjectArrayList<>();
     }
 
     // Subject \\
@@ -73,6 +87,7 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
         this.animationStateHandle = create(AnimationStateHandle.class);
         animationStateHandle.constructor(resolveTree(), EntityState.IDLE);
         this.appearanceHandle = raceData.hasAppearance() ? createAppearance() : null;
+        detachedFollowers.clear();
     }
 
     private AppearanceHandle createAppearance() {
@@ -110,14 +125,18 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
         this.fixedTreeHandle = null;
         this.animationStateHandle = null;
         this.appearanceHandle = null;
+        detachedFollowers.clear();
     }
 
     // Pose \\
 
     public void poseRest() {
 
-        if (animationStateHandle != null)
-            animationStateHandle.poseRest();
+        if (animationStateHandle == null)
+            return;
+
+        animationStateHandle.poseRest();
+        followStill();
     }
 
     // The bind pose at unit proportions and unshaped, so every skinned vertex stands exactly where its mesh file puts
@@ -133,6 +152,7 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
         }
 
         animationStateHandle.poseRest();
+        followStill();
     }
 
     // A turn in Euler degrees laid over every pose of a bone until it is set again
@@ -144,8 +164,11 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
 
     public void poseClip(AnimationClipHandle clip, float time) {
 
-        if (animationStateHandle != null)
-            animationStateHandle.poseClip(clip, time);
+        if (animationStateHandle == null)
+            return;
+
+        animationStateHandle.poseClip(clip, time);
+        followStill();
     }
 
     public void setParameter(AnimationParameter parameter, float value) {
@@ -168,6 +191,72 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
 
         animationStateHandle.setSpringFrame(springFrame, 0f, 0f, travelSpeed * deltaTime);
         animationStateHandle.update(movementState, action, null, actionPhase, actionSequence, deltaTime);
+
+        if (appearanceHandle != null) {
+            appearanceHandle.setSpringFrame(springFrame, 0f, 0f, travelSpeed * deltaTime);
+            appearanceHandle.followPose(deltaTime);
+        }
+
+        followDetached(deltaTime, false);
+    }
+
+    // Followers \\
+
+    // Every follower laid over a pose struck still, its springs started afresh there
+    private void followStill() {
+
+        if (appearanceHandle != null) {
+            appearanceHandle.resetFollowerSprings();
+            appearanceHandle.followPose(0f);
+        }
+
+        followDetached(0f, true);
+    }
+
+    private void followDetached(float deltaTime, boolean still) {
+
+        for (int i = 0; i < detachedFollowers.size(); i++) {
+
+            if (still)
+                detachedFollowers.get(i).reset();
+
+            detachedFollowers.get(i).follow(animationStateHandle, deltaTime);
+        }
+    }
+
+    // The follower a part on a rig of its own is posed by: the appearance's while the character wears it, else one of
+    // the preview's own, made and posed at once the first time it is asked for, or again once its rig has changed;
+    // null for the character's own rig or a rig not following it
+    private AnimationFollowerStruct resolveFollower(RigHandle rigHandle) {
+
+        if (animationStateHandle == null || rigHandle == null
+                || rigHandle.getLeaderRig() != animationStateHandle.getRigHandle())
+            return null;
+
+        AnimationFollowerStruct worn = appearanceHandle != null ? appearanceHandle.findFollower(rigHandle) : null;
+
+        if (worn != null)
+            return worn;
+
+        for (int i = 0; i < detachedFollowers.size(); i++) {
+
+            AnimationFollowerStruct follower = detachedFollowers.get(i);
+
+            if (follower.getRigHandle() != rigHandle)
+                continue;
+
+            if (follower.isCurrent())
+                return follower;
+
+            detachedFollowers.remove(i);
+            break;
+        }
+
+        AnimationFollowerStruct follower = new AnimationFollowerStruct(rigHandle);
+
+        follower.follow(animationStateHandle, 0f);
+        detachedFollowers.add(follower);
+        return follower;
     }
 
     // Accessible \\
@@ -186,6 +275,26 @@ public class CharacterViewPoseSystem extends SystemPackage implements ViewCamera
 
     public AnimationStateHandle getAnimationStateHandle() {
         return animationStateHandle;
+    }
+
+    // What a mesh on the rig is skinned by: the follower's pose for a rig of its own following the character's, the
+    // character's own pose otherwise
+    public Matrix4[] getSkinningMatrices(RigHandle rigHandle) {
+
+        AnimationFollowerStruct follower = resolveFollower(rigHandle);
+
+        return follower != null ? follower.getSkinningMatrices() : animationStateHandle.getSkinningMatrices();
+    }
+
+    // Where a bone of the rig stands: posed by the follower for a rig of its own following the character's, by the
+    // character's own pose otherwise
+    public Matrix4 getWorldMatrix(RigHandle rigHandle, int boneIndex) {
+
+        AnimationFollowerStruct follower = resolveFollower(rigHandle);
+
+        return follower != null
+                ? follower.getWorldMatrix(boneIndex)
+                : animationStateHandle.getWorldMatrix(boneIndex);
     }
 
     public AppearanceHandle getAppearanceHandle() {

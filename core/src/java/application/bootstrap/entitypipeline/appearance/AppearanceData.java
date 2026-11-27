@@ -187,8 +187,9 @@ public class AppearanceData extends DataPackage {
 
     // Compatibility \\
 
+    // True when the feature's mesh is skinned to the character's rig, or to a rig of its own following it
     public boolean isCompatible(FeatureHandle featureHandle) {
-        return featureHandle.getMeshHandle().getRigHandle() == rigHandle;
+        return featureHandle.getMeshHandle().getRigHandle().isWornOn(rigHandle);
     }
 
     // Build \\

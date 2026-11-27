@@ -22,11 +22,18 @@ public class RigData extends DataPackage {
      * of the body its editors work on closely, any the rig chooses, each by
      * the bones it holds, and the clips its editors strike as poses.
      * Bind-pose world matrices and their inverses are baked once per rig
-     * whenever it is built.
+     * whenever it is built. A rig may follow another, as a worn piece's own
+     * skeleton follows the body wearing it: its first bones are the leader's
+     * first bones by name and parent, posed by the leader, and every bone
+     * after them is its own.
      */
 
     // Identity
     private final String rigName;
+
+    // Leader — the rig this one follows and how many of its first bones it shares, null and none for a rig of its own
+    private final RigHandle leaderRig;
+    private final int sharedBoneCount;
 
     // Bones
     private final RigBoneStruct[] bones;
@@ -63,10 +70,16 @@ public class RigData extends DataPackage {
             RigSpringChainStruct[] springChains,
             RigColliderStruct[] colliders,
             RigPartStruct[] parts,
-            String[] poseNames) {
+            String[] poseNames,
+            RigHandle leaderRig,
+            int sharedBoneCount) {
 
         // Identity
         this.rigName = rigName;
+
+        // Leader
+        this.leaderRig = leaderRig;
+        this.sharedBoneCount = sharedBoneCount;
 
         // Bones
         this.bones = bones;
@@ -162,10 +175,11 @@ public class RigData extends DataPackage {
     // Structure \\
 
     // True when another rig holds the same bones by name, in the same order, under the same parents, and the same
-    // spring chains of the same bones, every live pose and simulation being laid out by them
+    // spring chains of the same bones, following the same leader, every live pose and simulation being laid out by them
     public boolean hasSameStructure(RigData other) {
 
-        if (other.bones.length != bones.length || other.springChains.length != springChains.length)
+        if (other.bones.length != bones.length || other.springChains.length != springChains.length
+                || other.leaderRig != leaderRig || other.sharedBoneCount != sharedBoneCount)
             return false;
 
         for (int i = 0; i < bones.length; i++)
@@ -211,6 +225,14 @@ public class RigData extends DataPackage {
 
     public String getRigName() {
         return rigName;
+    }
+
+    public RigHandle getLeaderRig() {
+        return leaderRig;
+    }
+
+    public int getSharedBoneCount() {
+        return sharedBoneCount;
     }
 
     public RigBoneStruct[] getBones() {

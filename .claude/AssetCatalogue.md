@@ -667,6 +667,12 @@ One line per session that changed this file: the date, what was added or removed
   `menus/editor/Recorder.arpg` (the Palette tab's take rows), `menus/editor/EditorWindow.arpg` (Tracks named
   Recordings, Filters under Transitions), `shortcuts/RecorderKeys.arpg` and `shortcuts/RecorderKeyGraph.arpg`
   (Ctrl+C and Ctrl+V copy and paste keys).
+- 2026-11-27: Worn pieces carry their own skeletons. Added `rigs/hair/FemaleLongHairRig.arpg`,
+  `rigs/hair/FemaleMediumHairRig.arpg` and `rigs/clothing/CrimsonCloakRig.arpg` (each following `HumanoidRig` with the
+  hair or cape chains and colliders of its own); regenerated `rigs/HumanoidRig.arpg` (the body alone, its hair and cape
+  bones, chains and colliders moved onto those rigs), `schemas/Rigs.arpg` (`follows`), and the meshes
+  `mesh/characters/humanoid/hair/FemaleLongHairMesh.arpg`, `FemaleMediumHairMesh.arpg` and
+  `mesh/worn/clothing/CrimsonCloakFemale.arpg`, `CrimsonCloakMale.arpg` (each naming its own rig).
 
 ## Textures and Sprites (2603 files)
 
@@ -2169,7 +2175,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3870 files)
+## Data Files (3873 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -3204,6 +3210,14 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 ### `assets/rigs/`
 
 `HumanoidRig.arpg`, `ItemRig.arpg`
+
+### `assets/rigs/clothing/`
+
+`CrimsonCloakRig.arpg`
+
+### `assets/rigs/hair/`
+
+`FemaleLongHairRig.arpg`, `FemaleMediumHairRig.arpg`
 
 ### `assets/roads/`
 
