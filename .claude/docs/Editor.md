@@ -84,29 +84,55 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Recorder.** The transport and nothing else: Record, Play, Pause, Stop and the Loop switch (which runs playing round
   the range marked with I and O, or the whole media file), the clock, and the status line saying what they did or why
   they could not. A take records whether or not the game is paused, so the pause menu that frees the cursor never
-  stops it; music plays with no Preview tab, through the Recorder or Timeline tab. Back is a Recorder shortcut.
+  stops it; music plays with no Preview tab, through the Recorder or Timeline tab. Back is a Recorder shortcut. Stop,
+  as Premiere's, never sends the Preview back: stopping a take or playback holds the Preview at the playhead (the take
+  saved), so Play or Record picks up from there and scrubbing shows the timeline there, and the media file can be
+  edited, undone and redone while it is held; Stop again (or opening another file) ends the session and the Dev window
+  returns to where it stood (`RecorderManager.stop`).
 - **Timeline.** The clips, laid on lanes as Premiere lays them: five at first and one more each time the highest takes
   a clip, each strip only its number and the name its ... gives it. Its title names what is open. Once zoomed, its
   view scrolls under the cursor with a left drag on its empty lanes or a right drag anywhere over its lanes or ruler,
-  clips included.
-- **Keys and Keys Graph.** The Keys tab holds the rows of the layer picked in the Layers tab, and for an animation it is
-  a dope sheet as Blender's is: a summary row for every bone and morph marking every key it holds, the one picked (in
-  the Layers tab, the Animation Editor or by its name here) marked, its values (position, rotation and scale on each
-  axis) listed in the Properties tab at the playhead, each keyed there when changed, with the one the graph shows chosen
-  there; the Keys Graph the curve selected, a key clicked twice freeing or joining its handles. Each opens its own menu
-  through a shared `RecorderRowSystem`, and the pane tab worked in last is the one the recorder's deletes act on.
-- **Recording in the shared tabs.** The Layers tab lists the take's tracks (camera, player, characters, items, vehicles,
-  weather, clock, sounds) or, in its Takes view, every take of the open recording, each dragged onto the Timeline's
-  lanes to lay it; each pane keeps its own view (the Timeline opens on the Takes, the Keys and Keys Graph on the take's
-  layers). The Tools tab holds every take, clip, key, sound, transition and node action. The Properties tab lists the
-  channels armed and the export first, then the clip's channels, mute and time ramp (the lane and clip selected, its mix
-  too) while the Recorder or Timeline is worked in on a media file (an animation clip has no mix: only its layer's
+  clips included. Its tools are Hand, Select and Cut (`ToolCanvas.RECORDER`): with the Hand every left drag on the
+  lanes, the Keys rows or the graph only moves the view, as Premiere's Hand does (`RecorderManager.isHanding`). A
+  filter from the Filters tab is dropped on a clip as a transition is dropped on an edge, and the clip's bar names it.
+- **Keys and Keys Graph.** The Keys tab is the Dope Sheet and the Keys Graph the Graph Editor, as Blender names them.
+  The Keys tab holds the rows of the layer picked in the Layers tab, and for an animation it is a dope sheet as
+  Blender's is: a summary row for every bone and morph marking every key it holds, the one picked (in the Layers tab,
+  the Animation Editor or by its name here) marked, with a row for each of its values under it; its values (position,
+  rotation and scale on each axis) are also listed in the Properties tab at the playhead, each keyed there when
+  changed, with the one the graph shows chosen there; the Keys Graph the curve shown, a key clicked twice freeing or
+  joining its handles. One selection of keys spans every curve (`RecordingKeySelectionStruct`), whichever tab picked
+  them, and the same keys show selected on their rows, their summary rows and the graph: a key clicked on a value's
+  row, or every key a bone or morph holds at a moment clicked on its summary row, is selected alone, with Shift added,
+  with Ctrl taken out; a left drag on nothing boxes the keys of every row it crosses (or, on the graph, the curve's
+  keys within the moments and values), Shift adding and Ctrl taking out; Ctrl+A selects every key the tab lists. The
+  keys selected drag together, all along in time and those of the curve shown also in value on the graph; the
+  Properties tab moves them all to a typed time, sets the shown key's value and gives them all a mode; Delete deletes
+  them; Ctrl+C copies and Ctrl+V pastes them at the playhead onto the same values of the take shown. A right drag over
+  the rows or the graph moves the view (on the graph its values too). This holds alike for a media file, a song, an
+  entity's animation and an item's, all edited on the same tabs. Each opens its own menu through a shared
+  `RecorderRowSystem`, and the pane tab worked in last is the one the recorder's deletes act on.
+- **Recording in the shared tabs.** While any Recorder tab is worked in, the Palette tab lists every take of the open
+  recording (`RecorderManager.buildTakeRows`), a take pressed picked for the take actions and dragged onto the
+  Timeline's lanes to lay it, and the Layers tab the selected clip's take's tracks (camera, player, characters, items,
+  vehicles, weather, clock, sounds), the one picked what the Keys tab shows. The Recorder tab's own layers are the
+  channels, each eye open while the next take records it, and the Preview tab's are the same channels, each eye open
+  while the Preview plays it from the timeline during a session, shut to leave it live (`buildChannelLayers`); the
+  export renders what the Preview plays. The Tools tab holds every take, clip, key, sound, transition, filter and node
+  action. The Properties tab lists the export first, then the clip's channels, mute, time ramp and filter (the lane
+  and clip selected, its mix too) while the Recorder or Timeline is worked in on a media file (an animation clip has no mix: only its layer's
   name), the file's tempo, meter and key while the Recorder is, and the keys selected first (their time and value, moved
   together, and their mode) while the Keys or Keys Graph is. Delete removes what is selected in the pane worked in last;
   Edit, Undo and Redo (Ctrl+Z, Ctrl+Y) step through every edit of the open recording (`RecordingHistoryBranch`); File,
   Export exports.
-- **Tracks** (`RecordingsContext`). Every media file, video and music in one list; its rows drag onto the Timeline to
-  lay.
+- **Recordings** (`RecordingsContext`). Every media file, video and music in one list, each with its own takes (the
+  Palette's while it is open); its rows drag onto the Timeline to lay.
+- **Filters** (`FiltersContext`, under Transitions in the Media menu). Every photo filter photo mode offers but the
+  plain one, the one picked marked with its contrast, vignette and grain; a filter dragged onto a clip lays it over
+  everything the clip shows (`RecorderManager.placeFilter`), or the Tools tab's Apply Filter lays the one picked on the
+  clip selected, and the clip's Filter row in the Properties tab changes or removes it. The Preview lays the filter of
+  the outermost clip holding one on the way down to what plays, faded in and out with that clip's transitions as its
+  sounds are (`PostEffectsSystem.blendPhotoLook`), and the export renders it.
 - **Note Library** (under Library in the Media menu, with the Sound Library). Empty until an instrument or a note set
   is picked in the Hierarchy, then the notes it plays, each sounded by its button and dragged onto the Timeline as a
   note clip that is stretched and cut like any clip. A library's drag, like Record, makes a media file when none is
@@ -119,13 +145,13 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **Animations are edited on the same timeline.** There is no animation timeline of its own: the Animation Editor is the
   viewport, showing the character chosen (the player at first) posed at the Timeline's playhead, beside the Recorder,
   Timeline, Keys, Keys Graph and Layers tabs. While animations are worked on (the Animation Editor worked in since any
-  Dev window) the Tracks tab lists the clips on that character's rig instead of the media files, and a clip clicked
+  Dev window) the Recordings tab lists the clips on that character's rig instead of the media files, and a clip clicked
   there or picked in the Hierarchy opens on the Timeline in the media file's place (saved first), each of its layers
   (its own tracks and morphs, then every part a stamp joined) a clip on a lane of its own, together the one clip; the
   layer pressed is the one whose bones (nested as the rig nests them) and morphs the Layers tab lists, each axis of each
   channel a curve on the Keys and Keys Graph tabs, keyed, moved and bent like any take's; Record turns the recording of
   keys on and off as Blender's record button does, and only while it is lit does posing in the Animation Editor key the
-  bones moved at the playhead; the Tracks tab's Media / Animations switch turns its list either way between; the
+  bones moved at the playhead; the Recordings tab's Media / Animations switch turns its list either way between; the
   Recorder plays it, Undo and Redo step one history for every edit of it, a pose drag one step, and the bone picked in
   the Layers tab is the Animation Editor's and the other way round (see `.claude/docs/CharacterEditorPipeline.md`,
   Animation). Its clip is never moved, cut or recorded into, and it saves, reverts and deletes as content.
@@ -156,7 +182,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   item, each one material, the part picked being the one its tools lay; no eyes) and the Tree Viewer (every mesh level
   a tree is drawn at before the Shared Tree LOD setting's impostor stage, as a mesh viewer lists its levels of detail,
   LOD 0 (Full) on, then the impostor, each with an eye; all stand on one root and only the topmost layer whose eye is
-  open is drawn; `TreeViewerLayerSystem`).
+  open is drawn; `TreeViewerLayerSystem`), the Recorder panes (the selected clip's take's tracks), the Recorder
+  (the channels the next take records) and the Preview (the channels it plays from the timeline).
 - **Up and Down** pick the layer listed above or below the one picked while the Layers tab is worked in
   (`LayersManager.stepLayer`, `assets/shortcuts/Layers.arpg`).
 - **New Layer and Delete Layer** are the icons at the foot of the Layers tab, as Photoshop's and Krita's Layers
@@ -389,7 +416,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   the image it paints, and the parts it picks from), for the Image Editor, the UV Editor and the Paint and UV tabs, the
   colour's sliders in the Properties tab while the Palette was worked in last; `ROWS`, the list a tool picks from (the
   Equipment tab's gear and anchors, the modelling tabs' parts, the Mesh, Weights and Rig tabs' bones, the Animation
-  Editor's bones, the Animation Tree Editor's layers and nodes), the Properties tab keeping that window's settings
+  Editor's bones, the Animation Tree Editor's layers and nodes, every Recorder tab's takes), the Properties tab keeping
+  that window's settings
   while the Palette is worked in; `BIOMES`, the World Editor's Biomes layer, a grid of swatches with each biome's name
   under it, as many to a row as the tab's width holds, the one chosen highlighted and selected in the Hierarchy so its
   fields are the Properties tab's; `NONE`, a mode or layer with nothing to pick from (Appearance, Heights).
@@ -397,8 +425,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   the Palette's; the settings of what is picked are the Properties tab's; content is picked by hand in the Hierarchy;
   tools are the Tools tab's and brushes the Brushes tab's; a canvas's jobs are layers in the Layers tab. A tool never
   lists what it picks from in the Properties tab or in a panel of its own. A new kind of choice is a new
-  `PaletteContent` and a `PaletteView` system, never a new window. Still to move: the Recorder's takes (now the Layers
-  tab's Takes view), with the media workflow.
+  `PaletteContent` and a `PaletteView` system, never a new window.
 
 ## The Properties tab
 

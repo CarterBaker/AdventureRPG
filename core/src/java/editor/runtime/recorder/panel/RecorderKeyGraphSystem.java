@@ -1,29 +1,27 @@
 package editor.runtime.recorder.panel;
 
 import application.bootstrap.menupipeline.element.ElementInstance;
-import application.bootstrap.menupipeline.menumanager.MenuManager;
-import application.bootstrap.menupipeline.util.DimensionValueStruct;
-import application.bootstrap.menupipeline.util.DimensionVector2Struct;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingKeySelectionStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
 import editor.runtime.EditorSetting;
 import editor.runtime.recorder.RecorderSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.curves.CurveKeyMode;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 public class RecorderKeyGraphSystem extends SystemPackage {
 
     /*
-     * Fills the Keys Graph tab: the curve selected on the Keys tab drawn
+     * Fills the Keys Graph tab: the curve shown from the Keys tab drawn
      * across the stretch of the timeline in view, between the least and
-     * greatest values framed, with its keys — every selected one marked — the
+     * greatest values framed, with its keys — every one of them among the
+     * keys selected on any curve marked — the
      * handles of the key shown and the box a selection is being drawn with,
      * from marks made once and placed again, so a mark that has not moved is
      * left alone. Its title names the curve, and the line beneath it the
@@ -35,7 +33,6 @@ public class RecorderKeyGraphSystem extends SystemPackage {
      */
 
     // Internal
-    private MenuManager menuManager;
     private RecorderManager recorderManager;
     private RecorderRowSystem recorderRowSystem;
 
@@ -48,7 +45,6 @@ public class RecorderKeyGraphSystem extends SystemPackage {
     private RecorderPlayheadStruct playhead;
 
     // Marks
-    private DimensionVector2Struct hiddenPosition;
     private RecorderMarkPoolStruct segmentPool;
     private RecorderMarkPoolStruct handleLinePool;
     private RecorderMarkPoolStruct keyPool;
@@ -73,18 +69,12 @@ public class RecorderKeyGraphSystem extends SystemPackage {
     @Override
     protected void create() {
 
-        // Marks
-        this.hiddenPosition = new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(RecorderSetting.HIDDEN_PANEL_PIXELS),
-                DimensionValueStruct.ofAbsolute(0f));
-
         // State
         this.shownRevision = EngineSetting.INDEX_NOT_FOUND;
     }
 
     @Override
     protected void get() {
-        this.menuManager = get(MenuManager.class);
         this.recorderManager = get(RecorderManager.class);
         this.recorderRowSystem = get(RecorderRowSystem.class);
     }
@@ -254,7 +244,7 @@ public class RecorderKeyGraphSystem extends SystemPackage {
         }
 
         for (int i = 0; i < pools.length; i++)
-            setAsideUnused(pools[i]);
+            recorderRowSystem.setAsideUnused(pools[i]);
     }
 
     // The selected curve across the view as a line through its keys, every key in view drawn whether or not the clip
@@ -264,17 +254,19 @@ public class RecorderKeyGraphSystem extends SystemPackage {
 
         placeCurveLine(clip, curve, width, height);
 
-        IntArrayList selectedKeys = recorderManager.getSelectedKeys();
+        RecordingKeySelectionStruct selection = recorderManager.getKeySelection();
+        RecordingCurveTrackStruct track = recorderManager.getSelectedTrack();
+        int slot = recorderManager.getSelectedSlot();
         int shownKey = recorderManager.getSelectedKey();
-        int selectedSlot = 0;
+        int selectedEntry = selection.findFirstOn(track, slot);
         float lastX = Float.NEGATIVE_INFINITY;
 
         for (int i = 0; i < curve.size(); i++) {
 
-            boolean selected = selectedSlot < selectedKeys.size() && selectedKeys.getInt(selectedSlot) == i;
+            boolean selected = selection.isAt(selectedEntry, track, slot, i);
 
             if (selected)
-                selectedSlot++;
+                selectedEntry++;
 
             float time = clip.toTimelineTime(curve.getTime(i));
 
@@ -300,7 +292,7 @@ public class RecorderKeyGraphSystem extends SystemPackage {
                             toGraphY(curve.getValue(i) + curve.getOutValue(i), height));
             }
 
-            placePoint(selected ? selectedKeyPool : keyPool, x, y);
+            recorderRowSystem.placePoint(selected ? selectedKeyPool : keyPool, x, y);
         }
     }
 
@@ -319,10 +311,7 @@ public class RecorderKeyGraphSystem extends SystemPackage {
         float bottom = valued ? Math.clamp(toGraphY(drag.getPressValue(), height), 0f, height) : 0f;
         float top = valued ? Math.clamp(toGraphY(drag.getReachValue(), height), 0f, height) : height;
 
-        placeLine(boxPool, left, bottom, right, bottom, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
-        placeLine(boxPool, right, bottom, right, top, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
-        placeLine(boxPool, right, top, left, top, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
-        placeLine(boxPool, left, top, left, bottom, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
+        recorderRowSystem.placeBox(boxPool, left, bottom, right, top);
     }
 
     // The curve sampled every few pixels across the part in view of all it reaches — the whole of its take, and any
@@ -352,81 +341,16 @@ public class RecorderKeyGraphSystem extends SystemPackage {
             float x = toGraphX(time, width);
             float y = toGraphY(curve.evaluate(clip.toChildTime(time)), height);
 
-            placeLine(segmentPool, lastX, lastY, x, y, RecorderSetting.GRAPH_LINE_PIXELS);
+            recorderRowSystem.placeLine(segmentPool, lastX, lastY, x, y, RecorderSetting.GRAPH_LINE_PIXELS);
             lastX = x;
             lastY = y;
         }
     }
 
     private void placeHandle(float keyX, float keyY, float handleX, float handleY) {
-        placeLine(handleLinePool, keyX, keyY, handleX, handleY, RecorderSetting.GRAPH_HANDLE_LINE_PIXELS);
-        placePoint(handlePool, handleX, handleY);
-    }
-
-    // A line from one point to another, laid from its start and turned toward its end
-    private void placeLine(
-            RecorderMarkPoolStruct pool,
-            float fromX,
-            float fromY,
-            float toX,
-            float toY,
-            float thickness) {
-
-        float length = (float) Math.hypot(toX - fromX, toY - fromY);
-
-        if (length <= 0f)
-            return;
-
-        float degrees = (float) Math.toDegrees(Math.atan2(toY - fromY, toX - fromX));
-        int index = takeMark(pool);
-
-        if (pool.isPlaced(index, fromX, fromY, length, degrees))
-            return;
-
-        ElementInstance line = pool.get(index);
-
-        line.setPositionOverride(new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(fromX),
-                DimensionValueStruct.ofAbsolute(fromY)));
-        line.setSizeOverride(new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(length),
-                DimensionValueStruct.ofAbsolute(thickness)));
-        line.setRotation(degrees);
-    }
-
-    private void placePoint(RecorderMarkPoolStruct pool, float x, float y) {
-
-        int index = takeMark(pool);
-
-        if (pool.isPlaced(index, x, y, 0f, RecorderSetting.KEY_DIAMOND_DEGREES))
-            return;
-
-        ElementInstance point = pool.get(index);
-
-        point.setPositionOverride(new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(x),
-                DimensionValueStruct.ofAbsolute(y)));
-        point.setRotation(RecorderSetting.KEY_DIAMOND_DEGREES);
-    }
-
-    // The pool's next mark, made from its template the first time the pool runs short
-    private int takeMark(RecorderMarkPoolStruct pool) {
-
-        if (pool.isExhausted())
-            pool.add(menuManager.inject(pool.getContainer(), pool.getTemplate(), null));
-
-        return pool.next();
-    }
-
-    // The marks the last drawing used and this one did not, set aside off the graph
-    private void setAsideUnused(RecorderMarkPoolStruct pool) {
-
-        for (int i = pool.getUsed(); i < pool.getShown(); i++) {
-            pool.get(i).setPositionOverride(hiddenPosition);
-            pool.forget(i);
-        }
-
-        pool.setShown(pool.getUsed());
+        recorderRowSystem.placeLine(
+                handleLinePool, keyX, keyY, handleX, handleY, RecorderSetting.GRAPH_HANDLE_LINE_PIXELS);
+        recorderRowSystem.placePoint(handlePool, handleX, handleY);
     }
 
     // Utility \\

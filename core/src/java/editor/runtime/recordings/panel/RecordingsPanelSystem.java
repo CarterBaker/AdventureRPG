@@ -32,7 +32,7 @@ public class RecordingsPanelSystem extends SystemPackage {
      * they are worked on — the Animation Editor worked in since a Dev window,
      * or an animation open on the timeline when neither was — and back to the
      * media files when they are, and the toolbar's switch turns it either way
-     * in between (RecorderManager keeps which, for every Tracks tab). When the recorder's, the animation
+     * in between (RecorderManager keeps which, for every Recordings tab). When the recorder's, the animation
      * editor's or the content's revision moves, or what it lists changes, it
      * refills the list — a row for every media file in the media directory
      * beside the player's saves, video and music alike, most recently changed

@@ -204,16 +204,25 @@ public class RecordingInstance extends InstancePackage {
 
             if (clip.getTake() != null) {
                 playing.set(clip, childTime);
+                filterBy(clip, time, playing);
                 return playing;
             }
 
             if (clip.getChild() != null
-                    && clip.getChild().findPlaying(channel, childTime, without, carried, playing) != null)
+                    && clip.getChild().findPlaying(channel, childTime, without, carried, playing) != null) {
+                filterBy(clip, time, playing);
                 return playing;
+            }
 
             boundLane = clip.getLane();
             boundIndex = found;
         }
+    }
+
+    // A clip found on the way down holding a filter speaks for what plays, the outermost last and so kept
+    private void filterBy(RecordingClipStruct clip, float time, RecordingPlayingStruct playing) {
+        if (clip.hasFilter())
+            playing.filterBy(clip, time);
     }
 
     // The clip of the highest lane, then the later laid, that covers the channel at the time and ranks below the

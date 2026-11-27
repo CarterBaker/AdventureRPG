@@ -32,6 +32,7 @@ import editor.runtime.charactereditor.CharacterWeightsContext;
 import editor.runtime.commandconsole.CommandConsoleContext;
 import editor.runtime.console.ConsoleContext;
 import editor.runtime.dev.DevContext;
+import editor.runtime.filters.FiltersContext;
 import editor.runtime.hierarchy.HierarchyContext;
 import editor.runtime.imageeditor.ImageEditorContext;
 import editor.runtime.itemeditor.ItemEditorContext;
@@ -353,6 +354,10 @@ public class TabManager extends ManagerPackage {
 
     public TabHandle openTransitions(WindowInstance osWindow) {
         return openTab(EditorSetting.TAB_TITLE_TRANSITIONS, TransitionsContext.class, osWindow);
+    }
+
+    public TabHandle openFilters(WindowInstance osWindow) {
+        return openTab(EditorSetting.TAB_TITLE_FILTERS, FiltersContext.class, osWindow);
     }
 
     // The first open tab of a kind brought forward, or a new one opened when there is none

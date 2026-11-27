@@ -1118,7 +1118,7 @@ skinned mesh (the compact rigged layout, with UVs, seams, masks and morphs), rig
   playhead, playback, undo and redo are the recorder's; `AnimationEditorManager.getTime` reads its playhead. The
   Animation Editor's Properties rows key a bone's pose at the playhead on every axis it keys or that leaves its
   default (at least its first rotation axis), and its bone's keys are every moment any of its curves holds one.
-- **The Tracks tab** (`RecordingsPanelSystem`) lists `AnimationEditorManager.collectCharacterClips` while animations
+- **The Recordings tab** (`RecordingsPanelSystem`) lists `AnimationEditorManager.collectCharacterClips` while animations
   are worked on, turning there and back as the work moves and by its Media / Animations switch in between
   (`RecorderManager.showAnimationTracks`); a row clicked runs `AnimationEditorManager.openClip`, through `InfoManager.selectEntry`, so the
   Hierarchy, the Info Panel, the Animation Editor and the Timeline all follow.

@@ -9,11 +9,11 @@ import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderDragKind;
 import editor.bootstrap.recorderpipeline.recording.RecorderNodeKind;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
-import editor.bootstrap.recorderpipeline.recording.RecordingBoneTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingDragStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingKeySelectionStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingSoundTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingViewStruct;
@@ -33,13 +33,16 @@ public class RecorderKeysSystem extends SystemPackage {
      * gestures, every row's strip showing its keys or nodes across the stretch
      * of the timeline in view. An animation clip's layer is a dope sheet, as
      * Blender's lists one: a summary row for every bone and morph it keys,
-     * marking every key of any of its values, the one picked marked, its values
-     * listed in the Properties tab and the one chosen there drawn on the Keys
-     * Graph; the Sounds layer is a row for each sound it names with a bar for
-     * every time it is heard, the selected one marked and following the cursor
-     * while it is dragged. The tab is drawn again when the recorder's revision,
-     * its keys or its view move; keys being dragged move only the selected
-     * marks on their strip, a sound carried only its bar, and the playhead
+     * marking every key of any of its values, and under the one picked a row
+     * for each of its values, its keys picked one by one; the values are also
+     * listed in the Properties tab and the one shown drawn on the Keys Graph.
+     * The Sounds layer is a row for each sound it names with a bar for every
+     * time it is heard, the selected one marked and following the cursor while
+     * it is dragged. Every key selected on any curve is marked, on its value's
+     * row and on its summary row, and a box drawn across the rows is drawn
+     * over them. The tab is drawn again when the recorder's revision, its keys
+     * or its view move; keys being dragged move only the selected marks, a
+     * sound carried only its bar, a box only its sides, and the playhead
      * follows every frame from positions built once.
      */
 
@@ -51,14 +54,25 @@ public class RecorderKeysSystem extends SystemPackage {
     // Menus
     private MenuInstance recorderMenu;
     private ElementInstance keysTitle;
+    private ElementInstance keyArea;
     private RecorderPlayheadStruct playhead;
 
-    // Strips
+    // Strips — the steps a strip has marked, and on a summary row whether a selected key lies there and the value and
+    // key it stands for
     private boolean[] stepTaken;
-    private DimensionVector2Struct hiddenPosition;
+    private boolean[] stepSelected;
+    private int[] stepSlot;
+    private int[] stepKey;
+
+    // Selected — every selected key's mark, with the track, slot and key it follows while keys are dragged
     private ObjectArrayList<ElementInstance> selectedDiamonds;
+    private ObjectArrayList<RecordingCurveTrackStruct> selectedDiamondTracks;
+    private IntArrayList selectedDiamondSlots;
     private IntArrayList selectedDiamondKeys;
     private ElementInstance selectedSoundBar;
+
+    // Box
+    private RecorderMarkPoolStruct boxPool;
 
     // State
     private int shownRevision;
@@ -75,10 +89,14 @@ public class RecorderKeysSystem extends SystemPackage {
 
         // Strips
         this.stepTaken = new boolean[RecorderSetting.TIMELINE_STEPS + 1];
-        this.hiddenPosition = new DimensionVector2Struct(
-                DimensionValueStruct.ofAbsolute(RecorderSetting.HIDDEN_PANEL_PIXELS),
-                DimensionValueStruct.ofAbsolute(0f));
+        this.stepSelected = new boolean[RecorderSetting.TIMELINE_STEPS + 1];
+        this.stepSlot = new int[RecorderSetting.TIMELINE_STEPS + 1];
+        this.stepKey = new int[RecorderSetting.TIMELINE_STEPS + 1];
+
+        // Selected
         this.selectedDiamonds = new ObjectArrayList<>();
+        this.selectedDiamondTracks = new ObjectArrayList<>();
+        this.selectedDiamondSlots = new IntArrayList();
         this.selectedDiamondKeys = new IntArrayList();
 
         // State
@@ -101,7 +119,10 @@ public class RecorderKeysSystem extends SystemPackage {
                 recorderRowSystem.requireEntryPoint(RecorderSetting.ENTRY_KEYS_PLAYHEAD));
 
         recorderRowSystem.requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_ROWS);
-        recorderRowSystem.requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_STRIPS);
+        this.keyArea = recorderRowSystem.requireEntryPoint(EditorSetting.RECORDER_ENTRY_KEY_STRIPS);
+
+        // Box
+        this.boxPool = new RecorderMarkPoolStruct(RecorderSetting.TEMPLATE_GRAPH_BOX, keyArea);
     }
 
     // Update \\
@@ -149,15 +170,43 @@ public class RecorderKeysSystem extends SystemPackage {
                 : RecorderSetting.TEXT_KEYS_TITLE);
 
         refreshRows(clip);
+        placeBox();
     }
 
-    // Keys being dragged or a sound carried: only the selected marks on their strip and the selected sound's bar move
+    // Keys being dragged, a sound carried or a box drawn: only the selected marks, the selected sound's bar or the
+    // box move
     private void refreshCurve() {
 
         this.shownCurveRevision = recorderManager.getCurveRevision();
 
         moveSelectedDiamonds(recorderManager.getKeyClip());
         moveSelectedSoundBar();
+        placeBox();
+    }
+
+    // The box a selection is being drawn with across the rows, from the moment and height it was pressed at to the
+    // cursor's
+    private void placeBox() {
+
+        RecordingDragStruct drag = recorderManager.getDrag();
+        float width = keyArea.getComputedW();
+        float height = keyArea.getComputedH();
+
+        boxPool.begin();
+
+        if (drag.getKind() == RecorderDragKind.KEYS_BOX && drag.isMoved() && width > 0f && height > 0f) {
+
+            RecordingViewStruct view = recorderManager.getView();
+            float bottom = keyArea.getComputedTop();
+
+            recorderRowSystem.placeBox(boxPool,
+                    Math.clamp(view.toFraction(drag.getPressTime()) * width, 0f, width),
+                    Math.clamp(drag.getPressY() - bottom, 0f, height),
+                    Math.clamp(view.toFraction(drag.getReachTime()) * width, 0f, width),
+                    Math.clamp(drag.getReachY() - bottom, 0f, height));
+        }
+
+        recorderRowSystem.setAsideUnused(boxPool);
     }
 
     // The name of the layer shown, or what to pick when none is
@@ -179,6 +228,8 @@ public class RecorderKeysSystem extends SystemPackage {
 
         menuManager.ejectAll(recorderMenu, EditorSetting.RECORDER_ENTRY_KEY_ROWS);
         selectedDiamonds.clear();
+        selectedDiamondTracks.clear();
+        selectedDiamondSlots.clear();
         selectedDiamondKeys.clear();
         this.selectedSoundBar = null;
 
@@ -198,7 +249,7 @@ public class RecorderKeysSystem extends SystemPackage {
 
         if (layer == EditorSetting.RECORDER_KEY_TRACK_SOUNDS && soundTrack != null)
             injectSounds(soundTrack, clip);
-        else if (layer >= 0 && layer < tracks.size() && tracks.get(layer) instanceof RecordingBoneTrackStruct)
+        else if (recorderManager.isDopeSheet())
             injectDopeSheet(tracks, layer, clip);
         else if (layer >= 0 && layer < tracks.size())
             injectTrack(tracks.get(layer), layer, clip);
@@ -216,21 +267,31 @@ public class RecorderKeysSystem extends SystemPackage {
                     toRowKey(trackIndex, EditorSetting.RECORDER_KEY_ROW_GESTURES)), body, RecorderNodeKind.GESTURE);
         }
 
+        injectCurveRows(track, trackIndex, clip, RecorderSetting.FORMAT_CURVE_ROW);
+    }
+
+    // A row for every value of the track, the one shown marked, each with every key it holds
+    private void injectCurveRows(
+            RecordingCurveTrackStruct track,
+            int trackIndex,
+            RecordingClipStruct clip,
+            String labelFormat) {
+
         for (int slot = 0; slot < track.getCurveCount(); slot++) {
 
-            boolean selected = track == recorderManager.getSelectedTrack() && slot == recorderManager.getSelectedSlot();
+            boolean shown = track == recorderManager.getSelectedTrack() && slot == recorderManager.getSelectedSlot();
             ElementInstance strip = injectRow(
-                    selected ? RecorderSetting.TEMPLATE_KEY_CURVE_ROW_SELECTED : RecorderSetting.TEMPLATE_KEY_CURVE_ROW,
-                    track.getCurveLabel(slot),
+                    shown ? RecorderSetting.TEMPLATE_KEY_CURVE_ROW_SELECTED : RecorderSetting.TEMPLATE_KEY_CURVE_ROW,
+                    String.format(labelFormat, track.getCurveLabel(slot)),
                     toRowKey(trackIndex, slot));
 
             if (track.hasCurve(slot))
-                injectKeys(strip, clip, track.getCurve(slot), selected);
+                injectKeys(strip, clip, track, slot);
         }
     }
 
-    // A summary row for every track of the animation layer, the one picked marked; its values are the Properties
-    // tab's, and the one chosen there is the Keys Graph's
+    // A summary row for every bone and morph of the animation layer, the one picked marked with a row for each of its
+    // values under it; its values are also the Properties tab's, and the one shown is the Keys Graph's
     private void injectDopeSheet(
             ObjectArrayList<RecordingCurveTrackStruct> tracks,
             int layer,
@@ -245,11 +306,17 @@ public class RecorderKeysSystem extends SystemPackage {
                     toRowKey(i, EditorSetting.RECORDER_KEY_ROW_SUMMARY));
 
             injectSummaryKeys(strip, clip, track);
+
+            if (i == layer)
+                injectCurveRows(track, i, clip, RecorderSetting.FORMAT_CHANNEL_ROW);
         }
     }
 
-    // One mark for every step of the view where any value of the track holds a key
+    // One mark for every step of the view where any value of the track holds a key, marked selected where any key
+    // selected lies, and kept to follow that key while keys are dragged
     private void injectSummaryKeys(ElementInstance strip, RecordingClipStruct clip, RecordingCurveTrackStruct track) {
+
+        RecordingKeySelectionStruct selection = recorderManager.getKeySelection();
 
         clearSteps();
 
@@ -259,18 +326,46 @@ public class RecorderKeysSystem extends SystemPackage {
                 continue;
 
             RecordingCurveStruct curve = track.getCurve(slot);
+            int selectedEntry = selection.findFirstOn(track, slot);
 
             for (int i = 0; i < curve.size(); i++) {
 
+                boolean selected = selection.isAt(selectedEntry, track, slot, i);
+
+                if (selected)
+                    selectedEntry++;
+
                 int step = resolveKeyStep(clip, curve.getTime(i));
 
-                if (step == EngineSetting.INDEX_NOT_FOUND || stepTaken[step])
+                if (step == EngineSetting.INDEX_NOT_FOUND || stepTaken[step] && (!selected || stepSelected[step]))
                     continue;
 
                 stepTaken[step] = true;
-                injectDiamond(strip, RecorderSetting.TEMPLATE_KEY_DIAMOND, step);
+                stepSelected[step] = selected;
+                stepSlot[step] = slot;
+                stepKey[step] = i;
             }
         }
+
+        for (int step = 0; step < stepTaken.length; step++) {
+
+            if (!stepTaken[step])
+                continue;
+
+            ElementInstance diamond = injectDiamond(strip, stepSelected[step]
+                    ? RecorderSetting.TEMPLATE_KEY_DIAMOND_SELECTED
+                    : RecorderSetting.TEMPLATE_KEY_DIAMOND, step);
+
+            if (stepSelected[step])
+                keepSelectedDiamond(diamond, track, stepSlot[step], stepKey[step]);
+        }
+    }
+
+    private void keepSelectedDiamond(ElementInstance diamond, RecordingCurveTrackStruct track, int slot, int key) {
+        selectedDiamonds.add(diamond);
+        selectedDiamondTracks.add(track);
+        selectedDiamondSlots.add(slot);
+        selectedDiamondKeys.add(key);
     }
 
     // One row, its name and its strip both handing back the row's key; its strip comes back
@@ -278,7 +373,7 @@ public class RecorderKeysSystem extends SystemPackage {
 
         ElementInstance row = menuManager.inject(recorderMenu, EditorSetting.RECORDER_ENTRY_KEY_ROWS, template);
         ElementInstance name = row.findChildById(RecorderSetting.ELEMENT_KEY_NAME);
-        ElementInstance strip = row.findChildById(RecorderSetting.ELEMENT_KEY_STRIP);
+        ElementInstance strip = row.findChildById(EditorSetting.RECORDER_ELEMENT_KEY_STRIP);
 
         name.setActionArgOverride(rowKey);
         name.findChildById(RecorderSetting.ELEMENT_ROW_LABEL).setFontText(label);
@@ -295,20 +390,21 @@ public class RecorderKeysSystem extends SystemPackage {
     private void injectKeys(
             ElementInstance strip,
             RecordingClipStruct clip,
-            RecordingCurveStruct curve,
-            boolean marked) {
+            RecordingCurveTrackStruct track,
+            int slot) {
 
-        IntArrayList selectedKeys = recorderManager.getSelectedKeys();
-        int selectedSlot = 0;
+        RecordingKeySelectionStruct selection = recorderManager.getKeySelection();
+        RecordingCurveStruct curve = track.getCurve(slot);
+        int selectedEntry = selection.findFirstOn(track, slot);
 
         clearSteps();
 
         for (int i = 0; i < curve.size(); i++) {
 
-            boolean selected = marked && selectedSlot < selectedKeys.size() && selectedKeys.getInt(selectedSlot) == i;
+            boolean selected = selection.isAt(selectedEntry, track, slot, i);
 
             if (selected)
-                selectedSlot++;
+                selectedEntry++;
 
             int step = resolveKeyStep(clip, curve.getTime(i));
 
@@ -321,11 +417,8 @@ public class RecorderKeysSystem extends SystemPackage {
                     ? RecorderSetting.TEMPLATE_KEY_DIAMOND_SELECTED
                     : RecorderSetting.TEMPLATE_KEY_DIAMOND, step);
 
-            if (!selected)
-                continue;
-
-            selectedDiamonds.add(diamond);
-            selectedDiamondKeys.add(i);
+            if (selected)
+                keepSelectedDiamond(diamond, track, slot, i);
         }
     }
 
@@ -342,22 +435,22 @@ public class RecorderKeysSystem extends SystemPackage {
     // Each selected key's mark follows its key along its strip, set aside while it lies outside the view
     private void moveSelectedDiamonds(RecordingClipStruct clip) {
 
-        RecordingCurveStruct curve = recorderManager.getSelectedCurve();
-
-        if (clip == null || curve == null)
+        if (clip == null)
             return;
 
         for (int i = 0; i < selectedDiamonds.size(); i++) {
 
+            RecordingCurveTrackStruct track = selectedDiamondTracks.get(i);
+            int slot = selectedDiamondSlots.getInt(i);
             int key = selectedDiamondKeys.getInt(i);
 
-            if (key >= curve.size())
+            if (!track.hasCurve(slot) || key >= track.getCurve(slot).size())
                 continue;
 
-            int step = resolveKeyStep(clip, curve.getTime(key));
+            int step = resolveKeyStep(clip, track.getCurve(slot).getTime(key));
 
             selectedDiamonds.get(i).setPositionOverride(step == EngineSetting.INDEX_NOT_FOUND
-                    ? hiddenPosition
+                    ? recorderRowSystem.getHiddenPosition()
                     : recorderRowSystem.getStepPosition(step));
         }
     }
@@ -375,8 +468,10 @@ public class RecorderKeysSystem extends SystemPackage {
     }
 
     private void clearSteps() {
-        for (int i = 0; i < stepTaken.length; i++)
+        for (int i = 0; i < stepTaken.length; i++) {
             stepTaken[i] = false;
+            stepSelected[i] = false;
+        }
     }
 
     // The character's movements or gestures on the selected clip across the view, each named
@@ -488,6 +583,6 @@ public class RecorderKeysSystem extends SystemPackage {
         selectedSoundBar.setPositionOverride(recorderManager.getView().contains(landing)
                 ? recorderRowSystem.getStepPosition(
                         Math.min(recorderRowSystem.toViewStep(landing), RecorderSetting.TIMELINE_STEPS - 1))
-                : hiddenPosition);
+                : recorderRowSystem.getHiddenPosition());
     }
 }

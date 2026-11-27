@@ -2,15 +2,13 @@ package editor.runtime.recorderkeygraph;
 
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
-import application.kernel.windowpipeline.window.WindowInstance;
-import editor.bootstrap.layerspipeline.layers.LayerDragProvider;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
-import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.propertiespipeline.properties.PaletteRowSource;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
-import editor.bootstrap.recorderpipeline.recording.RecorderLayerView;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
@@ -31,8 +29,8 @@ import engine.root.ContextPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class RecorderKeyGraphContext extends ContextPackage
-        implements RecorderTabProvider, ToolCanvasProvider, ToolActionProvider, LayersProvider, LayerViewsProvider,
-        LayerDragProvider, FileMenuProvider, PropertiesProvider, CharacterViewRowSource {
+        implements RecorderTabProvider, ToolCanvasProvider, ToolActionProvider, LayersProvider, PaletteRowSource,
+        FileMenuProvider, PropertiesProvider, CharacterViewRowSource {
 
     /*
      * Editor tab for the graph of the value selected on the Keys tab: its
@@ -148,23 +146,17 @@ public class RecorderKeyGraphContext extends ContextPackage
 
     @Override
     public String getLayerTitle() {
-        return recorderManager.getLayerTitle(getRecorderPane());
+        return recorderManager.getLayerTitle();
     }
 
     @Override
     public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
-        recorderManager.buildLayers(roots, getRecorderPane());
+        recorderManager.buildLayers(roots);
     }
 
     @Override
     public void selectLayer(String layerKey) {
         recorderManager.selectLayer(layerKey);
-    }
-
-    // A take of the Takes view is carried onto the Timeline's lanes
-    @Override
-    public void dragLayer(String layerKey, WindowInstance window) {
-        recorderBranch.dragLayer(layerKey, window);
     }
 
     // Every layer of a take is always shown, so none has an eye
@@ -179,27 +171,34 @@ public class RecorderKeyGraphContext extends ContextPackage
 
     @Override
     public String getRemoveLayerKey() {
-        return recorderManager.getRemoveLayerKey(getRecorderPane());
+        return "";
+    }
+
+    // Palette \\
+
+    @Override
+    public PaletteContent getPaletteContent() {
+        return PaletteContent.ROWS;
     }
 
     @Override
-    public int getLayerViewCount() {
-        return RecorderLayerView.VALUES.length;
+    public int getPaletteRevision() {
+        return recorderManager.getLayerRevision();
     }
 
     @Override
-    public String getLayerViewLabel(int view) {
-        return RecorderLayerView.VALUES[view].getLabel();
+    public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recorderManager.buildTakeRows(rows);
     }
 
     @Override
-    public int getLayerView() {
-        return recorderManager.getLayerView(getRecorderPane()).ordinal();
+    public CharacterViewTemplateStruct getPaletteTemplates() {
+        return EditorSetting.RECORDER_TAKE_ROW_TEMPLATES;
     }
 
+    // A take row has no number to slide
     @Override
-    public void showLayerView(int view) {
-        recorderManager.showLayerView(getRecorderPane(), RecorderLayerView.VALUES[view]);
+    public void stepPaletteRow(String key, int steps) {
     }
 
     // File Menu \\

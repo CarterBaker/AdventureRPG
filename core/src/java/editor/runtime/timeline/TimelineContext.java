@@ -2,15 +2,13 @@ package editor.runtime.timeline;
 
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuProvider;
 import editor.bootstrap.filemenupipeline.filemenu.FileMenuTableStruct;
-import application.kernel.windowpipeline.window.WindowInstance;
-import editor.bootstrap.layerspipeline.layers.LayerDragProvider;
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
-import editor.bootstrap.layerspipeline.layers.LayerViewsProvider;
 import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.propertiespipeline.properties.PaletteRowSource;
 import editor.bootstrap.propertiespipeline.properties.PropertiesProvider;
+import editor.bootstrap.propertiespipeline.util.PaletteContent;
 import editor.bootstrap.propertiespipeline.util.PropertiesContent;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
-import editor.bootstrap.recorderpipeline.recording.RecorderLayerView;
 import editor.bootstrap.recorderpipeline.recording.RecorderPane;
 import editor.bootstrap.toolpipeline.tool.ToolActionProvider;
 import editor.bootstrap.toolpipeline.tool.ToolCanvasProvider;
@@ -34,7 +32,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class TimelineContext extends ContextPackage
         implements ToolCanvasProvider, ToolActionProvider, RecorderTabProvider, RecorderSoundHost, FileMenuProvider,
-        PropertiesProvider, LayersProvider, LayerViewsProvider, LayerDragProvider,
+        PropertiesProvider, LayersProvider, PaletteRowSource,
         CharacterViewRowSource {
 
     /*
@@ -54,10 +52,10 @@ public class TimelineContext extends ContextPackage
      * transition and node selected, nests clips and exports MIDI, and File's
      * Export sends the media file out as a video or as music. Working in it
      * makes the clips what the recorder's deletes act on. The Properties tab
-     * arms the channels and sets the export, then shows the mix of the lane
-     * selected and the clip selected's channels, mute, time ramp and
-     * instrument; the Layers tab every take of the open recording to lay, or
-     * the layers of its take.
+     * sets the export, then shows the mix of the lane selected and the clip
+     * selected's channels, mute, time ramp and instrument; the Palette tab
+     * every take of the open recording to pick and lay, and the Layers tab
+     * the layers of the selected clip's take.
      */
 
     // Internal
@@ -162,23 +160,17 @@ public class TimelineContext extends ContextPackage
 
     @Override
     public String getLayerTitle() {
-        return recorderManager.getLayerTitle(getRecorderPane());
+        return recorderManager.getLayerTitle();
     }
 
     @Override
     public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
-        recorderManager.buildLayers(roots, getRecorderPane());
+        recorderManager.buildLayers(roots);
     }
 
     @Override
     public void selectLayer(String layerKey) {
         recorderManager.selectLayer(layerKey);
-    }
-
-    // A take of the Takes view is carried onto the Timeline's lanes
-    @Override
-    public void dragLayer(String layerKey, WindowInstance window) {
-        recorderBranch.dragLayer(layerKey, window);
     }
 
     // Every layer of a take is always shown, so none has an eye
@@ -193,27 +185,34 @@ public class TimelineContext extends ContextPackage
 
     @Override
     public String getRemoveLayerKey() {
-        return recorderManager.getRemoveLayerKey(getRecorderPane());
+        return "";
+    }
+
+    // Palette \\
+
+    @Override
+    public PaletteContent getPaletteContent() {
+        return PaletteContent.ROWS;
     }
 
     @Override
-    public int getLayerViewCount() {
-        return RecorderLayerView.VALUES.length;
+    public int getPaletteRevision() {
+        return recorderManager.getLayerRevision();
     }
 
     @Override
-    public String getLayerViewLabel(int view) {
-        return RecorderLayerView.VALUES[view].getLabel();
+    public void buildPaletteRows(ObjectArrayList<CharacterViewRowStruct> rows) {
+        recorderManager.buildTakeRows(rows);
     }
 
     @Override
-    public int getLayerView() {
-        return recorderManager.getLayerView(getRecorderPane()).ordinal();
+    public CharacterViewTemplateStruct getPaletteTemplates() {
+        return EditorSetting.RECORDER_TAKE_ROW_TEMPLATES;
     }
 
+    // A take row has no number to slide
     @Override
-    public void showLayerView(int view) {
-        recorderManager.showLayerView(getRecorderPane(), RecorderLayerView.VALUES[view]);
+    public void stepPaletteRow(String key, int steps) {
     }
 
     // File Menu \\

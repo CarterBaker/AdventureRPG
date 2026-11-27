@@ -28,10 +28,12 @@ class RecordingRowBranch extends BranchPackage {
      * in, its settings listed first. The Recorder tab's are its tempo, the
      * beats of its bar and the note value of a beat, its key's root and scale;
      * the Timeline tab's the mix of the lane selected — its name, volume, pan,
-     * mute and solo — and the clip selected's channels, mute and time ramp,
+     * mute and solo — and the clip selected's channels, mute, time ramp and,
+     * for a clip with a picture, its photo filter,
      * with a notes clip's instrument, volume and transpose. The settings are
-     * the recording's: the channels armed for the next take, and the export's
-     * size, frame rate, format, motion blur, supersampling and range; while the
+     * the recording's export: its size, frame rate, format, motion blur,
+     * supersampling and range (the channels armed for the next take are the
+     * Recorder's layers in the Layers tab); while the
      * Keys or Keys Graph tab is worked in, the keys selected on the curve
      * picked instead: their moment and value, moved together, and their mode.
      * An animation clip has no mix: its Timeline rows name the layer picked,
@@ -145,6 +147,9 @@ class RecordingRowBranch extends BranchPackage {
         addChoice(rows, EditorSetting.RECORDER_KEY_CLIP_MUTE, EditorSetting.RECORDER_ROW_LABEL_MUTED);
         addChoice(rows, EditorSetting.RECORDER_KEY_CLIP_RAMP, EditorSetting.RECORDER_ROW_LABEL_TIME_RAMP);
 
+        if (selected.showsPicture() || selected.hasFilter())
+            addChoice(rows, EditorSetting.RECORDER_KEY_CLIP_FILTER, EditorSetting.RECORDER_ROW_LABEL_FILTER);
+
         RecordingClipStruct clip = findMusicClip();
 
         if (clip == null)
@@ -166,13 +171,8 @@ class RecordingRowBranch extends BranchPackage {
                 1f));
     }
 
-    // The recording's settings: every channel armed or not, then its export
+    // The recording's settings: its export
     void buildSettingsRows(ObjectArrayList<CharacterViewRowStruct> rows) {
-
-        rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_HEADER_RECORD));
-
-        for (RecorderChannel channel : RecorderChannel.VALUES)
-            addChoice(rows, EditorSetting.RECORDER_KEY_ARM_PREFIX + channel.getKey(), channel.getLabel());
 
         if (recorderManager.getRecording() == null) {
             rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_NO_EXPORT));
@@ -212,7 +212,7 @@ class RecordingRowBranch extends BranchPackage {
         rows.add(CharacterViewRowStruct.header(String.format(EditorSetting.RECORDER_ROWS_HEADER_CURVE_FORMAT,
                 track.getTrackLabel(), track.getCurveLabel(slot))));
 
-        int count = recorderManager.getSelectedKeys().size();
+        int count = recorderManager.getKeySelection().size();
 
         if (count == 0 || recorderManager.resolveKeyTime() < 0f) {
             rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_ROWS_NO_KEY));
@@ -292,10 +292,6 @@ class RecordingRowBranch extends BranchPackage {
                     ? recorderManager.getSelectedTrack().getCurveLabel(recorderManager.getSelectedSlot())
                     : EditorSetting.RECORDER_ROW_VALUE_NONE;
 
-        if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX))
-            return toOnOff(resolveChannel(key, EditorSetting.RECORDER_KEY_ARM_PREFIX)
-                    .isIn(recorderManager.getArmedChannels()));
-
         RecordingInstance recording = recorderManager.getRecording();
 
         if (recording == null)
@@ -346,6 +342,9 @@ class RecordingRowBranch extends BranchPackage {
                     : EditorSetting.RECORDER_ROW_VALUE_NONE;
             case EditorSetting.RECORDER_KEY_CLIP_MUTE -> findSelectedClip() != null
                     ? toOnOff(findSelectedClip().isMuted())
+                    : EditorSetting.RECORDER_ROW_VALUE_NONE;
+            case EditorSetting.RECORDER_KEY_CLIP_FILTER -> findSelectedClip() != null
+                    ? recorderManager.describeFilter(findSelectedClip().getFilterName())
                     : EditorSetting.RECORDER_ROW_VALUE_NONE;
             case EditorSetting.RECORDER_KEY_CLIP_RAMP -> findSelectedClip() != null
                     ? formatRamp(findSelectedClip().getTimeRampSeconds())
@@ -498,11 +497,6 @@ class RecordingRowBranch extends BranchPackage {
         if (direction == 0)
             return;
 
-        if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)) {
-            recorderManager.toggleArm(resolveChannel(key, EditorSetting.RECORDER_KEY_ARM_PREFIX));
-            return;
-        }
-
         RecordingInstance recording = recorderManager.getRecording();
 
         if (recording == null)
@@ -533,6 +527,7 @@ class RecordingRowBranch extends BranchPackage {
             }
             case EditorSetting.RECORDER_KEY_CLIP_MUTE -> recorderManager.toggleClipMute();
             case EditorSetting.RECORDER_KEY_CLIP_RAMP -> recorderManager.cycleClipTimeRamp(direction);
+            case EditorSetting.RECORDER_KEY_CLIP_FILTER -> recorderManager.cycleClipFilter(direction);
             case EditorSetting.RECORDER_KEY_RESOLUTION -> recorderManager.cycleResolution(direction);
             case EditorSetting.RECORDER_KEY_FRAME_RATE -> recorderManager.cycleFrameRate(direction);
             case EditorSetting.RECORDER_KEY_FORMAT -> recorderManager.cycleFormat(direction);
@@ -580,8 +575,7 @@ class RecordingRowBranch extends BranchPackage {
         if (key.equals(EditorSetting.RECORDER_ROW_KEYS_GRAPH))
             return findGraphSlot(text) != EngineSetting.INDEX_NOT_FOUND;
 
-        if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)
-                || key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX))
+        if (key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX))
             return isOnOff(text);
 
         return switch (key) {
@@ -594,6 +588,7 @@ class RecordingRowBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_MOTION_BLUR -> findIndex(
                     EditorSetting.RECORDER_EXPORT_MOTION_BLUR_SAMPLES, text) != EngineSetting.INDEX_NOT_FOUND;
             case EditorSetting.RECORDER_KEY_CLIP_RAMP -> findRamp(text) != EngineSetting.INDEX_NOT_FOUND;
+            case EditorSetting.RECORDER_KEY_CLIP_FILTER -> recorderManager.isClipFilterValid(text);
             case EditorSetting.RECORDER_ROW_LANE_NAME -> text.length() <= EditorSetting.RECORDER_LABEL_MAX_LENGTH;
             case EditorSetting.RECORDER_ROW_KEY_ROOT -> NoteUtility.parseNoteName(
                     text.trim() + EditorSetting.RECORDER_ROW_KEY_OCTAVE) != EngineSetting.INDEX_NOT_FOUND;
@@ -623,8 +618,7 @@ class RecordingRowBranch extends BranchPackage {
             return;
         }
 
-        if (key.startsWith(EditorSetting.RECORDER_KEY_ARM_PREFIX)
-                || key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX)) {
+        if (key.startsWith(EditorSetting.RECORDER_KEY_CLIP_CHANNEL_PREFIX)) {
 
             if (!getValueText(key).equalsIgnoreCase(text.trim()))
                 cycle(key, 1);
@@ -717,6 +711,7 @@ class RecordingRowBranch extends BranchPackage {
                 if (selected != null)
                     recorderManager.cycleClipTimeRamp(findRamp(text) - findRamp(selected.getTimeRampSeconds()));
             }
+            case EditorSetting.RECORDER_KEY_CLIP_FILTER -> recorderManager.setClipFilter(text);
             case EditorSetting.RECORDER_KEY_RANGE_START -> recorderManager.setRangeStartAt(number);
             case EditorSetting.RECORDER_KEY_RANGE_END -> recorderManager.setRangeEndAt(number);
             default -> {

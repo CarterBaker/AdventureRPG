@@ -53,7 +53,6 @@ public class RecorderSetting {
     public static final String ELEMENT_NODE_LABEL = "recorder_node_label";
     public static final String ELEMENT_RULER_LABEL = "recorder_ruler_label";
     public static final String ELEMENT_KEY_NAME = "recorder_key_name";
-    public static final String ELEMENT_KEY_STRIP = "recorder_key_strip";
     public static final String ELEMENT_GRAPH_LINES = "recorder_key_graph_lines";
     public static final String ELEMENT_GRAPH_POINTS = "recorder_key_graph_points";
     public static final String ELEMENT_MIXER_NAME = "timeline_mixer_name";
@@ -171,11 +170,14 @@ public class RecorderSetting {
     // Formats — a clip's name on its bar, by the kind of its source in RecordingSourceKind order: a take's, a nested
     // recording's, a song's and a notes clip's instrument
     public static final String[] FORMAT_CLIP_LABELS = { "%s", "[%s]", "%s", "%s" };
+    public static final String FORMAT_CLIP_FILTERED = "%s  (%s)";
     public static final String FORMAT_VIEW = "%s to %s";
     public static final String FORMAT_KEYS_TITLE = "Keys: %s";
     public static final String FORMAT_GRAPH_NOW = "Now %s  |  %d keys";
     public static final String FORMAT_GRAPH_KEY = "Now %s  |  %d keys  |  key at %s: %s, %s";
     public static final String FORMAT_CURVE_HEADER = "%s: %s";
     public static final String FORMAT_SOUND_ROW = "%s (%d)";
+    public static final String FORMAT_CURVE_ROW = "%s";
+    public static final String FORMAT_CHANNEL_ROW = "    %s";
     public static final String FORMAT_PROGRESS = "Frame %d of %d";
 }

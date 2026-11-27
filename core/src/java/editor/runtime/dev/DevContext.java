@@ -2,6 +2,11 @@ package editor.runtime.dev;
 
 import application.runtime.RuntimeContext;
 import editor.bootstrap.commandpipeline.command.CommandStruct;
+import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
+import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
+import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
+import editor.runtime.EditorSetting;
 import editor.runtime.dev.command.DevCommandSystem;
 import editor.runtime.dev.freecamera.FreeCameraSystem;
 import editor.runtime.dev.item.DevItemSystem;
@@ -14,8 +19,10 @@ import editor.runtime.dev.sceneassets.DevSceneAssetsSystem;
 import editor.runtime.dev.teleport.DevTeleportSystem;
 import editor.runtime.dev.time.DevTimeSystem;
 import editor.runtime.dev.vehicle.DevVehicleSystem;
+import editor.runtime.layerssource.LayersSourceSystem;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class DevContext extends RuntimeContext {
+public class DevContext extends RuntimeContext implements LayersProvider {
 
     /*
      * Dev mode entry point for testing. Runs every system RuntimeContext runs,
@@ -29,7 +36,9 @@ public class DevContext extends RuntimeContext {
      * capturing and playing it back, its interface, sounds and transitions
      * included, and rendering its export — which its record, play, stop and mark commands
      * drive too. The scene assets system tells the Scene Assets tab what the
-     * window shows while that tab watches it.
+     * window shows while that tab watches it. Its layers in the Layers tab
+     * are the recorder's channels, each eye open while it plays the
+     * channel from the timeline during a session, shut to leave it live.
      * The editor opens it as its Preview tab.
      * Dev-only systems live beside it in the editor's runtime, never in the
      * game's.
@@ -55,6 +64,10 @@ public class DevContext extends RuntimeContext {
     // Scene Assets
     private DevSceneAssetsSystem devSceneAssetsSystem;
 
+    // Layers
+    private LayersSourceSystem layersSourceSystem;
+    private RecorderManager recorderManager;
+
     // Internal \\
 
     @Override
@@ -79,6 +92,14 @@ public class DevContext extends RuntimeContext {
 
         // Scene Assets
         this.devSceneAssetsSystem = create(DevSceneAssetsSystem.class);
+
+        // Layers
+        this.layersSourceSystem = create(LayersSourceSystem.class);
+    }
+
+    @Override
+    protected void get() {
+        this.recorderManager = get(RecorderManager.class);
     }
 
     // Management \\
@@ -91,5 +112,46 @@ public class DevContext extends RuntimeContext {
     public void finishTake() {
         devRecorderOverlaySystem.finishTake();
         devRecorderSoundSystem.finishTake();
+    }
+
+    // Layers \\
+
+    @Override
+    public int getLayerRevision() {
+        return recorderManager.getLayerRevision();
+    }
+
+    @Override
+    public String getLayerTitle() {
+        return EditorSetting.RECORDER_LAYERS_TITLE_PREVIEW;
+    }
+
+    @Override
+    public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
+        recorderManager.buildChannelLayers(roots, true);
+    }
+
+    // A channel is played or left live by its eye alone; there is no channel to pick
+    @Override
+    public void selectLayer(String layerKey) {
+    }
+
+    @Override
+    public void toggleLayerVisible(String layerKey) {
+
+        RecorderChannel channel = recorderManager.resolveChannelLayer(layerKey);
+
+        if (channel != null)
+            recorderManager.togglePreviewChannel(channel);
+    }
+
+    @Override
+    public String getAddLayerKey() {
+        return "";
+    }
+
+    @Override
+    public String getRemoveLayerKey() {
+        return "";
     }
 }

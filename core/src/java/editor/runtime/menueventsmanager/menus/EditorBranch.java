@@ -274,6 +274,10 @@ public class EditorBranch extends BranchPackage {
         tabManager.openTransitions(window.getGLWindow());
     }
 
+    public void openFilters(WindowInstance window) {
+        tabManager.openFilters(window.getGLWindow());
+    }
+
     // Debug Dropdown \\
 
     public void openPreview(WindowInstance window) {

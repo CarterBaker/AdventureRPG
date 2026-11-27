@@ -29,7 +29,7 @@ public class AnimationEditorManager extends ManagerPackage {
      * Owns the animation editor's shared state — the open clips, the active
      * one, the selected bone, the character it plays on (the player until
      * another is chosen) and the copied pose. Clips are ARPG entries owned by
-     * InfoManager: selecting one there, or in the Tracks tab, opens it here
+     * InfoManager: selecting one there, or in the Recordings tab, opens it here
      * and on the recorder's timeline, every edit goes back through it, and
      * every change to an open clip, made here, on the Keys tabs or in the
      * Info Panel, rebuilds its preview live. The timeline is the recorder's:
@@ -378,7 +378,7 @@ public class AnimationEditorManager extends ManagerPackage {
         return rigHandle != null ? entityManager.getTemplateNamesForRig(rigHandle) : new ObjectArrayList<>();
     }
 
-    // The rig the character chosen is posed on, whose clips the Tracks tab lists; null with none chosen
+    // The rig the character chosen is posed on, whose clips the Recordings tab lists; null with none chosen
     public RigHandle getCharacterRig() {
         return characterName != null && entityManager.hasTemplate(characterName)
                 ? entityManager.getEntityHandleFromTemplateName(characterName).getEntityData().getRaceData()
@@ -386,7 +386,7 @@ public class AnimationEditorManager extends ManagerPackage {
                 : null;
     }
 
-    // The clips posed on the rig of the character chosen, by name, as the Tracks tab lists them
+    // The clips posed on the rig of the character chosen, by name, as the Recordings tab lists them
     public void collectCharacterClips(ObjectArrayList<String> clipNames) {
 
         clipNames.clear();

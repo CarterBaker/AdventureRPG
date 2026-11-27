@@ -258,16 +258,48 @@ public class PostEffectsSystem extends SystemPackage {
             float vignette,
             float grain) {
 
-        MaterialInstance composite = compositePass.getMaterial();
+        writePhotoLook(filter, 1f, exposure, contrast, saturation, vignette, grain);
+    }
 
-        for (int channel = 0; channel < RuntimeSetting.UNIFORM_PHOTO_ROWS.length; channel++)
-            composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_ROWS[channel], filter.writeRow(channel, photoRow));
+    // A filter's look over this window's grading at a share of its strength, from none at 0 to the whole look at 1,
+    // as a recording's clip fades its filter in and out with its transitions
+    public void blendPhotoLook(PhotoFilterHandle filter, float amount) {
+        writePhotoLook(filter, Math.clamp(amount, 0f, 1f), 1f, 1f, 1f, 0f, 0f);
+    }
+
+    // The one way a look is written: every row of the filter's matrix, its contrast, vignette and grain eased from
+    // the neutral look by the amount, with the exposure, contrast, saturation, vignette and grain given on top
+    private void writePhotoLook(
+            PhotoFilterHandle filter,
+            float amount,
+            float exposure,
+            float contrast,
+            float saturation,
+            float vignette,
+            float grain) {
+
+        MaterialInstance composite = compositePass.getMaterial();
+        float[] identity = EngineSetting.PHOTO_FILTER_IDENTITY;
+
+        for (int channel = 0; channel < RuntimeSetting.UNIFORM_PHOTO_ROWS.length; channel++) {
+
+            int offset = channel * EngineSetting.VECTOR4_COMPONENT_COUNT;
+
+            filter.writeRow(channel, photoRow);
+            photoRow.set(
+                    identity[offset] + (photoRow.x - identity[offset]) * amount,
+                    identity[offset + 1] + (photoRow.y - identity[offset + 1]) * amount,
+                    identity[offset + 2] + (photoRow.z - identity[offset + 2]) * amount,
+                    identity[offset + 3] + (photoRow.w - identity[offset + 3]) * amount);
+            composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_ROWS[channel], photoRow);
+        }
 
         composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_EXPOSURE, exposure);
-        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_CONTRAST, contrast * filter.getContrast());
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_CONTRAST,
+                contrast * (1f + (filter.getContrast() - 1f) * amount));
         composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_SATURATION, saturation);
-        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_VIGNETTE, vignette + filter.getVignette());
-        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_GRAIN, grain + filter.getGrain());
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_VIGNETTE, vignette + filter.getVignette() * amount);
+        composite.setUniform(RuntimeSetting.UNIFORM_PHOTO_GRAIN, grain + filter.getGrain() * amount);
     }
 
     // The neutral look every window shows outside photo mode

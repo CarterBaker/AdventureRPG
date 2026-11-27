@@ -43,7 +43,7 @@ public class RecorderBranch extends BranchPackage {
      * through the text dialog, and deleting a take asks for its name to be
      * typed back. Dragging along the ruler
      * moves the playhead to the moment under the cursor. A take pressed in the
-     * Layers tab's Takes view is picked up, and letting go over the lanes
+     * Palette tab is picked up, and letting go over the lanes
      * lays it there, or where it was pressed picks it; the take picked is
      * laid at the playhead, renamed or deleted by the take actions. A sound pressed in the sound library is picked up and laid
      * as a take of its own over the lanes of whichever Recorder tab the
@@ -67,8 +67,9 @@ public class RecorderBranch extends BranchPackage {
      * On the Keys tab a name selects its curve, a press on a
      * row's strip or on the graph is handed to the recorder once to take hold
      * of a key, a handle or a node, or on nothing to scroll the view as it
-     * travels; with Shift a key pressed joins the keys selected and a press
-     * on nothing boxes keys to add, with Ctrl to take away; a sound's bar on
+     * travels; a press on nothing boxes keys across every row or the graph,
+     * with Shift to add them, with Ctrl to take them away, and the pan
+     * button drags the rows' or the graph's view along; a sound's bar on
      * the Sounds layer is selected and dragged along its row to retime it, and
      * its volume, pitch and length are typed in the text dialog, while the
      * Sound Library's selection is what a sound is added from or replaced
@@ -158,7 +159,7 @@ public class RecorderBranch extends BranchPackage {
             return;
         }
 
-        int button = drag.getKind() == RecorderDragKind.SCROLL ? EditorSetting.RECORDER_BUTTON_PAN : Buttons.LEFT;
+        int button = drag.getKind().isPanned() ? EditorSetting.RECORDER_BUTTON_PAN : Buttons.LEFT;
 
         if (!inputManager.getRawInput(drag.getWindow()).isMouseDown(button))
             recorderManager.endDrag();
@@ -248,22 +249,34 @@ public class RecorderBranch extends BranchPackage {
             recorderManager.zoomView(resolveTime(window, hovered), factor);
     }
 
-    // The pan button pressed over the lanes or the ruler drags the view along under the cursor until let go, over a
-    // clip as much as over nothing, so a zoomed timeline scrolls wherever it is held
+    // The pan button pressed over the lanes, the ruler or the Keys rows' strips drags the view along under the cursor
+    // until let go, over a clip or a key as much as over nothing, so a zoomed timeline scrolls wherever it is held;
+    // over the Keys graph it drags the graph's values along with it
     private void panTimeline() {
 
         RecordingDragStruct drag = recorderManager.getDrag();
 
         if (drag.isActive()) {
 
+            WindowInstance dragWindow = drag.getWindow();
+
             if (drag.getKind() == RecorderDragKind.SCROLL)
                 recorderManager.dragTo(
-                        inputManager.getHoverMouseX(drag.getWindow()),
-                        inputManager.getHoverMouseY(drag.getWindow()),
+                        inputManager.getHoverMouseX(dragWindow),
+                        inputManager.getHoverMouseY(dragWindow),
                         false,
                         0f,
                         0,
                         resolveSecondsPerPixel(scrolledStrip),
+                        false);
+            else if (drag.getKind() == RecorderDragKind.GRAPH_PAN && scrolledStrip.getComputedH() > 0f)
+                recorderManager.dragKeysTo(
+                        inputManager.getHoverMouseX(dragWindow),
+                        inputManager.getHoverMouseY(dragWindow),
+                        resolveTime(dragWindow, scrolledStrip),
+                        resolveValue(dragWindow, scrolledStrip),
+                        resolveSecondsPerPixel(scrolledStrip),
+                        0.0,
                         false);
 
             return;
@@ -277,16 +290,32 @@ public class RecorderBranch extends BranchPackage {
         MenuInstance timelineMenu = findMenu(window, EditorSetting.RECORDER_TIMELINE_MENU);
         ElementInstance lanes = findEntry(timelineMenu, EditorSetting.RECORDER_ENTRY_CLIP_LANES);
         ElementInstance ruler = findEntry(timelineMenu, EditorSetting.RECORDER_ENTRY_RULER);
-        ElementInstance strip = isUnderCursor(window, lanes) ? lanes : isUnderCursor(window, ruler) ? ruler : null;
+        ElementInstance keyStrips = findEntry(
+                findMenu(window, EditorSetting.RECORDER_KEYS_MENU), EditorSetting.RECORDER_ENTRY_KEY_STRIPS);
+        ElementInstance graph = findEntry(
+                findMenu(window, EditorSetting.RECORDER_KEY_GRAPH_MENU), EditorSetting.RECORDER_ENTRY_KEY_GRAPH);
+        ElementInstance strip = isUnderCursor(window, lanes) ? lanes
+                : isUnderCursor(window, ruler) ? ruler
+                        : isUnderCursor(window, keyStrips) ? keyStrips
+                                : isUnderCursor(window, graph) ? graph : null;
 
         if (strip == null || strip.getComputedW() <= 0f)
             return;
 
         this.scrolledStrip = strip;
-        recorderManager.pressViewScroll(
-                window,
-                inputManager.getHoverMouseX(window),
-                inputManager.getHoverMouseY(window));
+
+        if (strip == graph)
+            recorderManager.pressGraphPan(
+                    resolveTime(window, graph),
+                    resolveValue(window, graph),
+                    window,
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window));
+        else
+            recorderManager.pressViewScroll(
+                    window,
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window));
     }
 
     // Recordings \\
@@ -383,9 +412,9 @@ public class RecorderBranch extends BranchPackage {
         recorderManager.deleteSelection();
     }
 
-    // A curve's name selects it, and a sound's name selects the first time it is heard
-    // A value's name selects its curve; a bone's or morph's summary row on the dope sheet picks it, its values listed
-    // in the Properties tab and its first shown on the Keys Graph
+    // A value's name shows its curve on the Keys Graph, keeping the keys selected, and a sound's name selects the first
+    // time it is heard; a bone's or morph's summary row on the dope sheet picks it, its values listed in the
+    // Properties tab and under its own row, and its first shown on the Keys Graph
     public void pressKeyName(String rowKey) {
 
         int row = resolveKeyRow(rowKey);
@@ -396,7 +425,8 @@ public class RecorderBranch extends BranchPackage {
             recorderManager.selectKeyLayer(resolveKeyTrack(rowKey));
     }
 
-    // A press on a row's strip is settled once, where it began, and what it took hold of follows the cursor
+    // A press on a row's strip is settled once, where it began, and what it took hold of follows the cursor; a box
+    // reaches over every row between where it was pressed and the cursor
     public void dragKeyStrip(String rowKey, WindowInstance window, ElementInstance strip) {
 
         if (strip.getComputedW() <= 0f)
@@ -422,6 +452,38 @@ public class RecorderBranch extends BranchPackage {
                 resolveSecondsPerPixel(strip),
                 0.0,
                 isSnapping(window));
+
+        if (recorderManager.getDrag().getKind() == RecorderDragKind.KEYS_BOX)
+            reachBoxRows(window);
+    }
+
+    // The rows of the Keys tab whose strips stand between the height the box was pressed at and the cursor's
+    private void reachBoxRows(WindowInstance window) {
+
+        RecordingDragStruct drag = recorderManager.getDrag();
+        ElementInstance rows = findEntry(findMenu(window, EditorSetting.RECORDER_KEYS_MENU),
+                EditorSetting.RECORDER_ENTRY_KEY_ROWS);
+
+        if (rows == null)
+            return;
+
+        float low = Math.min(drag.getPressY(), drag.getReachY());
+        float high = Math.max(drag.getPressY(), drag.getReachY());
+        ObjectArrayList<ElementInstance> children = rows.getChildren();
+
+        recorderManager.clearBoxRows();
+
+        for (int i = 0; i < children.size(); i++) {
+
+            ElementInstance strip = children.get(i).findChildById(EditorSetting.RECORDER_ELEMENT_KEY_STRIP);
+            String rowKey = strip != null ? strip.getEffectiveOnDragArg() : null;
+
+            if (rowKey == null || strip.getComputedTop() > high
+                    || strip.getComputedTop() + strip.getComputedH() < low)
+                continue;
+
+            recorderManager.addBoxRow(resolveKeyTrack(rowKey), resolveKeyRow(rowKey));
+        }
     }
 
     public void dragGraph(WindowInstance window, ElementInstance graph) {
@@ -554,11 +616,11 @@ public class RecorderBranch extends BranchPackage {
 
     // Takes \\
 
-    // A take pressed in the Layers tab's Takes view is picked up on the press and carried over the Timeline's lanes
+    // A take pressed in the Palette tab is picked up on the press and carried over the Timeline's lanes
     // under the cursor until let go, or picked when let go where it was pressed
-    public void dragLayer(String layerKey, WindowInstance window) {
+    public void dragTake(String rowKey, WindowInstance window) {
 
-        int takeIndex = recorderManager.findLayerTake(layerKey);
+        int takeIndex = recorderManager.findTakeRow(rowKey);
 
         if (takeIndex == EngineSetting.INDEX_NOT_FOUND)
             return;
@@ -662,6 +724,22 @@ public class RecorderBranch extends BranchPackage {
         dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
     }
 
+    // A filter is picked up on the press wherever it was pressed, and carried over the lanes of the Recorder tab under
+    // the cursor until let go
+    public void dragFilter(String filterName, WindowInstance window) {
+
+        if (!recorderManager.getDrag().isActive())
+            recorderManager.beginFilterDrag(
+                    filterName,
+                    window,
+                    inputManager.getHoverMouseX(window),
+                    inputManager.getHoverMouseY(window));
+
+        WindowInstance hovered = windowManager.getHoveredWindow();
+
+        dragOver(window, hovered, hovered != null ? findLanes(hovered) : null);
+    }
+
     // The span the Keys tab's strips share, when the cursor is over those strips in the window; null otherwise
     private ElementInstance findKeyStrips(WindowInstance window) {
 
@@ -671,7 +749,7 @@ public class RecorderBranch extends BranchPackage {
         return isUnderCursor(window, keyStrips) && keyStrips.getComputedW() > 0f ? keyStrips : null;
     }
 
-    // The take picked in the Layers tab's Takes view laid at the playhead, renamed as typed, or deleted once its name
+    // The take picked in the Palette tab laid at the playhead, renamed as typed, or deleted once its name
     // is typed to confirm
     private void placeTake() {
 
@@ -928,6 +1006,8 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_NODE_REMOVE -> recorderManager.removeNode();
             case EditorSetting.RECORDER_KEY_KEY_ADD -> recorderManager.addKeyAtPlayhead();
             case EditorSetting.RECORDER_KEY_KEY_DELETE -> recorderManager.deleteKeys();
+            case EditorSetting.RECORDER_KEY_KEY_COPY -> recorderManager.copyKeys();
+            case EditorSetting.RECORDER_KEY_KEY_PASTE -> recorderManager.pasteKeys();
             case EditorSetting.RECORDER_KEY_KEY_MODE -> recorderManager.cycleKeyMode();
             case EditorSetting.RECORDER_KEY_KEY_VALUE -> openKeyValue(window);
             case EditorSetting.RECORDER_KEY_FRAME_KEYS -> recorderManager.frameKeys();
@@ -945,6 +1025,8 @@ public class RecorderBranch extends BranchPackage {
             case EditorSetting.RECORDER_KEY_TRANSITION_LENGTH -> openTransitionLength(window);
             case EditorSetting.RECORDER_KEY_TRANSITION_REPLACE -> recorderManager.replaceTransition();
             case EditorSetting.RECORDER_KEY_TRANSITION_REMOVE -> recorderManager.removeTransition();
+            case EditorSetting.RECORDER_KEY_FILTER_APPLY -> recorderManager.applyFilter();
+            case EditorSetting.RECORDER_KEY_FILTER_REMOVE -> recorderManager.removeFilter();
             case EditorSetting.RECORDER_KEY_EXPORT_MIDI -> recorderManager.exportMidi();
             default -> throwException("Unknown recorder setting: " + settingKey);
         }

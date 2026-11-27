@@ -663,6 +663,10 @@ One line per session that changed this file: the date, what was added or removed
   shaders (`surface/standard/`, `surface/macro/`, `trees/bark/`, `trees/leaf/`, `trees/impostor/`) and
   `shaders/postprocessing/lighting/LightingShader.fsh` with `includes/SkyReflection.glsl` (metals reflect in their own
   colour and mirror the sky, emissive texels glow).
+- 2026-11-27: Media workflow. Added `menus/editor/Filters.arpg` (the Filters tab, beside Transitions); regenerated
+  `menus/editor/Recorder.arpg` (the Palette tab's take rows), `menus/editor/EditorWindow.arpg` (Tracks named
+  Recordings, Filters under Transitions), `shortcuts/RecorderKeys.arpg` and `shortcuts/RecorderKeyGraph.arpg`
+  (Ctrl+C and Ctrl+V copy and paste keys).
 
 ## Textures and Sprites (2603 files)
 
@@ -2165,7 +2169,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3869 files)
+## Data Files (3870 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -3021,7 +3025,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 `AnimationEditor.arpg`, `AnimationTreeEditor.arpg`, `ArpgViewer.arpg`,
 `BiomePlanner.arpg`, `BiomeViewer.arpg`, `Brushes.arpg`, `CameraPlanner.arpg`, `CharacterDock.arpg`, `CharacterEditor.arpg`,
-`CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`,
+`CommandConsole.arpg`, `Console.arpg`, `EditorWindow.arpg`, `Filters.arpg`,
 `ImageEditor.arpg`, `ItemEditor.arpg`, `Layers.arpg`, `MaterialViewer.arpg`, `Materials.arpg`,
 `NewImageDialog.arpg`, `NoteLibrary.arpg`, `Palette.arpg`, `Profiler.arpg`, `Properties.arpg`, `Recorder.arpg`,
 `Recordings.arpg`, `SceneAssets.arpg`, `SettlementPlanner.arpg`, `ShipViewer.arpg`, `SoundLibrary.arpg`, `Stamps.arpg`,

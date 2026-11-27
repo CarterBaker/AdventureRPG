@@ -16,7 +16,7 @@ public class RecordingDragStruct extends StructPackage {
      * the key taken hold of and the value under the cursor when it was,
      * whether the press adds to the keys selected or takes from them and
      * whether the key pressed was among them already, the moment and value a
-     * box reaches to, and where it would land now — its start and lane, and
+     * box reaches to and how high the cursor has travelled, and where it would land now — its start and lane, and
      * whether the cursor is over the lanes at all, or over the Keys pane's
      * rows, where a sound from the sound library is added to the take shown —
      * and the clip edge a transition is aimed at, named by one number.
@@ -32,6 +32,7 @@ public class RecordingDragStruct extends StructPackage {
     // Press
     private float pressX;
     private float pressY;
+    private float reachY;
     private float pressTime;
     private float grabOffset;
     private float viewStart;
@@ -85,6 +86,7 @@ public class RecordingDragStruct extends StructPackage {
         // Press
         this.pressX = pressX;
         this.pressY = pressY;
+        this.reachY = pressY;
         this.pressTime = pressTime;
         this.grabOffset = grabOffset;
         this.viewStart = viewStart;
@@ -148,6 +150,9 @@ public class RecordingDragStruct extends StructPackage {
 
     // Travel past the threshold from where the press began makes it a drag for good
     public void travel(float x, float y, float threshold) {
+
+        this.reachY = y;
+
         if (Math.abs(x - pressX) > threshold || Math.abs(y - pressY) > threshold)
             this.moved = true;
     }
@@ -196,6 +201,15 @@ public class RecordingDragStruct extends StructPackage {
 
     public float getPressX() {
         return pressX;
+    }
+
+    public float getPressY() {
+        return pressY;
+    }
+
+    // How high the cursor stands now, as it last travelled
+    public float getReachY() {
+        return reachY;
     }
 
     public float getPressTime() {

@@ -3,7 +3,7 @@ package editor.runtime.recordings;
 public class RecordingsSetting {
 
     /*
-     * Constants used only by RecordingsContext, the Tracks tab — the row
+     * Constants used only by RecordingsContext, the Recordings tab — the row
      * templates its panels are filled from and their elements, its entry
      * points, and every word the tab shows for media files and for the
      * animations of the character chosen.

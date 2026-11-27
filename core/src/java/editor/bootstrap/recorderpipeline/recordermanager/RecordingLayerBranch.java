@@ -2,13 +2,13 @@ package editor.bootstrap.recorderpipeline.recordermanager;
 
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
-import editor.bootstrap.recorderpipeline.recording.RecorderLayerView;
 import editor.bootstrap.recorderpipeline.recording.RecordingBoneTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCurveTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
 import editor.runtime.EditorSetting;
+import editor.runtime.characterview.panel.CharacterViewRowStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -17,18 +17,21 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 class RecordingLayerBranch extends BranchPackage {
 
     /*
-     * The Layers tab's stack for the recorder. In the Layers view, the
-     * selected clip's take as layers, in the order the take recorded them:
-     * the camera and the player, the characters, items and vehicles each in a
-     * group of their own, the weather, the clock and the Sounds layer, the
-     * one picked being what the Keys tab shows; an animation clip layer's
-     * bones in a group of their own, nested as its rig nests them, then its
-     * morphs. In the Takes view, every take
-     * in the bin with its channels and its length, the one picked being the
-     * one the take actions lay, rename and delete, each dragged onto the
-     * Timeline's lanes to lay it there. Every key is a stable name:
-     * a track by its place in the take, a take by its place in the bin, a
-     * group by what it holds.
+     * The Layers tab's stack for the recorder: the selected clip's take as
+     * layers, in the order the take recorded them: the camera and the player,
+     * the characters, items and vehicles each in a group of their own, the
+     * weather, the clock and the Sounds layer, the one picked being what the
+     * Keys tab shows; an animation clip layer's bones in a group of their
+     * own, nested as its rig nests them, then its morphs. The takes
+     * themselves are the Palette tab's rows: every take in the bin with its
+     * channels and its length, the one picked being the one the take actions
+     * lay, rename and delete, each dragged onto the Timeline's lanes to lay
+     * it there. Every channel is also a layer whose
+     * eye says whether it is in a mask, one stack for the Recorder's channels
+     * armed for the next take and one for the Preview's, what it plays from
+     * the timeline. Every key is a stable name: a track by its place in the
+     * take, a take by its place in the bin, a group by what it holds, a
+     * channel by its own key.
      */
 
     // Internal
@@ -53,22 +56,17 @@ class RecordingLayerBranch extends BranchPackage {
 
     // Build \\
 
-    void buildLayers(ObjectArrayList<LayerNodeStruct> roots, RecorderLayerView view) {
+    // Every channel as a layer whose eye is open while the mask holds it
+    void buildChannels(ObjectArrayList<LayerNodeStruct> roots, int channelMask) {
 
-        if (view == RecorderLayerView.TAKES)
-            buildTakes(roots);
-        else
-            buildTracks(roots);
+        RecorderChannel[] channels = RecorderChannel.VALUES;
+
+        for (int i = 0; i < channels.length; i++)
+            roots.add(new LayerNodeStruct(channels[i].getKey(), channels[i].getLabel(),
+                    false, true, channels[i].isIn(channelMask), false));
     }
 
-    String resolveTitle(RecorderLayerView view) {
-
-        RecordingInstance recording = recorderManager.getRecording();
-
-        if (view == RecorderLayerView.TAKES)
-            return recording != null
-                    ? String.format(EditorSetting.RECORDER_LAYERS_TITLE_TAKES_FORMAT, recording.getRecordingName())
-                    : EditorSetting.RECORDER_LAYERS_TITLE_NO_RECORDING;
+    String resolveTitle() {
 
         RecordingClipStruct clip = recorderManager.getKeyClip();
 
@@ -78,7 +76,7 @@ class RecordingLayerBranch extends BranchPackage {
     }
 
     // Every track of the take the Keys tab shows, the characters, items and vehicles grouped, then its sounds
-    private void buildTracks(ObjectArrayList<LayerNodeStruct> roots) {
+    void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
 
         RecordingClipStruct clip = recorderManager.getKeyClip();
         RecordingTakeStruct take = clip != null ? clip.getTake() : null;
@@ -231,18 +229,24 @@ class RecordingLayerBranch extends BranchPackage {
                 false));
     }
 
-    // Every take in the bin with its channels and its length, the one picked active
-    private void buildTakes(ObjectArrayList<LayerNodeStruct> roots) {
+    // The Palette tab's rows: every take in the bin with its channels and its length under the media file's name, the
+    // one picked marked
+    void buildTakeRows(ObjectArrayList<CharacterViewRowStruct> rows) {
 
         RecordingInstance recording = recorderManager.getRecording();
 
-        if (recording == null)
+        if (recording == null) {
+            rows.add(CharacterViewRowStruct.header(EditorSetting.RECORDER_LAYERS_TITLE_NO_RECORDING));
             return;
+        }
 
         ObjectArrayList<RecordingTakeStruct> takes = recording.getTakes();
 
+        rows.add(CharacterViewRowStruct.header(
+                String.format(EditorSetting.RECORDER_PALETTE_TAKES_FORMAT, recording.getRecordingName())));
+
         for (int i = 0; i < takes.size(); i++)
-            roots.add(LayerNodeStruct.draggable(
+            rows.add(CharacterViewRowStruct.item(
                     EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX + i,
                     describeTake(takes.get(i)),
                     i == recorderManager.getSelectedTake()));
@@ -269,8 +273,7 @@ class RecordingLayerBranch extends BranchPackage {
 
     // Select \\
 
-    // A track's layer shows its keys, the Sounds layer its sounds, and a take is picked for the take actions; a
-    // group only folds
+    // A track's layer shows its keys and the Sounds layer its sounds; a group only folds
     void selectLayer(String layerKey) {
 
         if (layerKey.equals(EditorSetting.RECORDER_LAYER_KEY_SOUNDS))
@@ -278,10 +281,9 @@ class RecordingLayerBranch extends BranchPackage {
         else if (layerKey.startsWith(EditorSetting.RECORDER_LAYER_KEY_TRACK_PREFIX))
             recorderManager.selectKeyLayer(Integer.parseInt(
                     layerKey.substring(EditorSetting.RECORDER_LAYER_KEY_TRACK_PREFIX.length())));
-        else if (layerKey.startsWith(EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX))
-            recorderManager.selectTake(findTake(layerKey));
     }
 
+    // The take a Palette row's key names, -1 for any other key
     int findTake(String layerKey) {
         return layerKey.startsWith(EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX)
                 ? Integer.parseInt(layerKey.substring(EditorSetting.RECORDER_LAYER_KEY_TAKE_PREFIX.length()))

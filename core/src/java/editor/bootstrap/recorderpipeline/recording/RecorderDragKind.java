@@ -4,7 +4,7 @@ public enum RecorderDragKind {
 
     /*
      * What the Recorder tab is carrying under the cursor: nothing, a take
-     * picked up from the Layers tab's Takes view to lay on the timeline, a sound picked up from
+     * picked up from the Palette tab to lay on the timeline, a sound picked up from
      * the sound library to lay as a take of its own or to add to the Sounds
      * layer of the Keys pane, a saved recording picked up from the
      * Recordings tab to lay nested in the open one, a note picked up from the
@@ -17,13 +17,15 @@ public enum RecorderDragKind {
      * along, the lanes or the ruler dragged with the pan button to scroll the
      * view along whatever lies under the press, a key being retimed on its row of the Keys tab or moved in time
      * and value on its graph, one of a key's handles being bent, a press on
-     * nothing on the Keys pane's rows or graph, which scrolls the view along
-     * as it travels — on the graph its values too — or else moves the
-     * playhead, or a box drawn with Shift or Ctrl across a curve's row or its
-     * graph to select the keys within it, or take them out; a transition
+     * nothing on the Keys pane's rows while a session holds the keys, which
+     * scrolls the view along as it travels or else moves the playhead, the
+     * graph held with the pan button and dragged along in moments and values,
+     * or a box drawn across the Keys tab's rows or the graph to select the
+     * keys within it, with Shift to add them or Ctrl to take them out; a transition
      * picked up from the transitions tool to lay on the clip edge it is let go
      * over, or the far side of a transition laid on a clip being dragged to
-     * make it run longer or shorter.
+     * make it run longer or shorter, or a photo filter picked up from the
+     * filters tool to lay on the clip it is let go over.
      */
 
     NONE,
@@ -44,11 +46,13 @@ public enum RecorderDragKind {
     HANDLE_OUT,
     KEYS_PRESS,
     GRAPH_PRESS,
+    GRAPH_PAN,
     KEYS_BOX,
     GRAPH_BOX,
     SOUND_EVENT,
     TRANSITION,
-    TRANSITION_LENGTH;
+    TRANSITION_LENGTH,
+    FILTER;
 
     // Accessible \\
 
@@ -62,9 +66,9 @@ public enum RecorderDragKind {
         return this == TRIM_START || this == TRIM_END || this == CUT || this == NODE || this == TRANSITION_LENGTH;
     }
 
-    // True for what is let go on a clip's edge, and lands only where there is one
+    // True for what is let go on a clip or its edge, and lands only where there is one
     public boolean isAimed() {
-        return this == TRANSITION;
+        return this == TRANSITION || this == FILTER;
     }
 
     // True for a key or a handle edited live on the Keys tab while it is dragged
@@ -72,9 +76,19 @@ public enum RecorderDragKind {
         return this == KEY || this == GRAPH_KEY || this == HANDLE_IN || this == HANDLE_OUT;
     }
 
-    // True for a press on nothing on the Keys pane, which scrolls the view as it travels
+    // True for a press on nothing on the Keys pane, or the graph held to pan, which scrolls the view as it travels
     public boolean isPress() {
-        return this == KEYS_PRESS || this == GRAPH_PRESS;
+        return this == KEYS_PRESS || this == GRAPH_PRESS || this == GRAPH_PAN;
+    }
+
+    // True for the graph scrolled, which moves its values along with the view
+    public boolean isGraphPress() {
+        return this == GRAPH_PRESS || this == GRAPH_PAN;
+    }
+
+    // True for what follows the pan button rather than the left one
+    public boolean isPanned() {
+        return this == SCROLL || this == GRAPH_PAN;
     }
 
     // True for a box drawn on the Keys pane to select keys by

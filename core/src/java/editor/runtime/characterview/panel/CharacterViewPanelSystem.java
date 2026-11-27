@@ -20,7 +20,8 @@ public class CharacterViewPanelSystem extends SystemPackage {
     /*
      * Fills a character tool's side panels from the rows the tool lists, one
      * injected template per row, with the row's key handed to every button
-     * inside it so a click names the row it came from. A panel is emptied
+     * inside it and to the row's own press and drag, so a click or a row
+     * carried away names the row it came from. A panel is emptied
      * and refilled only when what it lists changes; while the same rows are
      * listed, only the values that moved are set in place, so a slider being
      * dragged keeps its row. A number row's slider spans a fixed count of
@@ -184,6 +185,7 @@ public class CharacterViewPanelSystem extends SystemPackage {
         return menuManager.inject(panel.getMenu(), panel.getEntryPoint(), resolveTemplate(row, templates), element -> {
 
             element.setActionArgOverride(header ? row.getLabel() : row.getKey());
+            element.setOnDragArgOverride(header ? row.getLabel() : row.getKey());
             setText(element, templates.getLabelElement(), row.getLabel());
             setText(element, templates.getValueElement(), row.getValue());
             setKey(element, templates.getValueButtonElement(), row.getKey());

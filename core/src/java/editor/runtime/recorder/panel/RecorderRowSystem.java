@@ -24,8 +24,9 @@ public class RecorderRowSystem extends SystemPackage {
      * Binds one Recorder tab to a UI render target and opens the menu its
      * context names, and holds what every Recorder tab fills its panels
      * with: header and text rows on any of the menu's entry points, the steps
-     * across the view the strips, the graph and their playheads stand on, and
-     * the times and the way down to the recording open they show. While a
+     * across the view the strips, the graph and their playheads stand on, the
+     * pooled marks they draw lines, points and boxes with, and the times and
+     * the way down to the recording open they show. While a
      * pane tab is the active window, it is the pane the recorder's keys and
      * deletes act on. Created first in every Recorder tab, so the menu is open
      * before any panel looks for it.
@@ -47,6 +48,9 @@ public class RecorderRowSystem extends SystemPackage {
     // Steps — every step across the view as a percentage of it, made once
     private DimensionVector2Struct[] stepPositions;
 
+    // Marks — where a mark no drawing needs is set aside, off its panel
+    private DimensionVector2Struct hiddenPosition;
+
     // Scratch — text built for a row or a label
     private StringBuilder textScratch;
 
@@ -62,6 +66,11 @@ public class RecorderRowSystem extends SystemPackage {
             stepPositions[i] = new DimensionVector2Struct(
                     DimensionValueStruct.ofPercent(toStepPercent(i)),
                     DimensionValueStruct.ofAbsolute(0f));
+
+        // Marks
+        this.hiddenPosition = new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(RecorderSetting.HIDDEN_PANEL_PIXELS),
+                DimensionValueStruct.ofAbsolute(0f));
 
         // Scratch
         this.textScratch = new StringBuilder();
@@ -171,6 +180,86 @@ public class RecorderRowSystem extends SystemPackage {
         int step = inView ? toViewStep(time) : EngineSetting.INDEX_NOT_FOUND;
 
         playhead.place(inView, step, inView ? stepPositions[step] : null);
+    }
+
+    // Marks \\
+
+    public DimensionVector2Struct getHiddenPosition() {
+        return hiddenPosition;
+    }
+
+    // A line from one point to another, laid from its start and turned toward its end
+    public void placeLine(
+            RecorderMarkPoolStruct pool,
+            float fromX,
+            float fromY,
+            float toX,
+            float toY,
+            float thickness) {
+
+        float length = (float) Math.hypot(toX - fromX, toY - fromY);
+
+        if (length <= 0f)
+            return;
+
+        float degrees = (float) Math.toDegrees(Math.atan2(toY - fromY, toX - fromX));
+        int index = takeMark(pool);
+
+        if (pool.isPlaced(index, fromX, fromY, length, degrees))
+            return;
+
+        ElementInstance line = pool.get(index);
+
+        line.setPositionOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(fromX),
+                DimensionValueStruct.ofAbsolute(fromY)));
+        line.setSizeOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(length),
+                DimensionValueStruct.ofAbsolute(thickness)));
+        line.setRotation(degrees);
+    }
+
+    // The four sides of a box between two corners
+    public void placeBox(RecorderMarkPoolStruct pool, float left, float bottom, float right, float top) {
+        placeLine(pool, left, bottom, right, bottom, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
+        placeLine(pool, right, bottom, right, top, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
+        placeLine(pool, right, top, left, top, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
+        placeLine(pool, left, top, left, bottom, RecorderSetting.GRAPH_BOX_LINE_PIXELS);
+    }
+
+    public void placePoint(RecorderMarkPoolStruct pool, float x, float y) {
+
+        int index = takeMark(pool);
+
+        if (pool.isPlaced(index, x, y, 0f, RecorderSetting.KEY_DIAMOND_DEGREES))
+            return;
+
+        ElementInstance point = pool.get(index);
+
+        point.setPositionOverride(new DimensionVector2Struct(
+                DimensionValueStruct.ofAbsolute(x),
+                DimensionValueStruct.ofAbsolute(y)));
+        point.setRotation(RecorderSetting.KEY_DIAMOND_DEGREES);
+    }
+
+    // The pool's next mark, made from its template the first time the pool runs short
+    private int takeMark(RecorderMarkPoolStruct pool) {
+
+        if (pool.isExhausted())
+            pool.add(menuManager.inject(pool.getContainer(), pool.getTemplate(), null));
+
+        return pool.next();
+    }
+
+    // The marks the last drawing used and this one did not, set aside off their panel
+    public void setAsideUnused(RecorderMarkPoolStruct pool) {
+
+        for (int i = pool.getUsed(); i < pool.getShown(); i++) {
+            pool.get(i).setPositionOverride(hiddenPosition);
+            pool.forget(i);
+        }
+
+        pool.setShown(pool.getUsed());
     }
 
     // Text \\

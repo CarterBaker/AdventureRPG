@@ -219,7 +219,7 @@ public enum ToolCanvas {
             itemSpacing()),
     RECORDER(
             EditorSetting.TOOL_CANVAS_RECORDER,
-            new EditorTool[] { EditorTool.SELECT, EditorTool.CUT },
+            new EditorTool[] { EditorTool.HAND, EditorTool.SELECT, EditorTool.CUT },
             new ToolActionGroupStruct[] {
                     recorderTakes(), recorderClip(), recorderKeys(), recorderSounds(), recorderTransition(),
                     recorderNode(), timelineNesting(), timelineExport() },
@@ -529,7 +529,7 @@ public enum ToolCanvas {
                 action(EditorSetting.TOOL_ACTION_LABEL_EXPORT_MIDI, EditorSetting.RECORDER_KEY_EXPORT_MIDI));
     }
 
-    // The take picked in the Layers tab's Takes view
+    // The take picked in the Palette tab
     private static ToolActionGroupStruct recorderTakes() {
         return new ToolActionGroupStruct(
                 EditorSetting.TOOL_ACTION_HEADER_TAKES,
@@ -550,6 +550,8 @@ public enum ToolCanvas {
                         EditorSetting.RECORDER_KEY_TRANSITION_PREFIX + RecorderClipEdge.START.getKey()),
                 action(EditorSetting.TOOL_ACTION_LABEL_TRANSITION_OUT,
                         EditorSetting.RECORDER_KEY_TRANSITION_PREFIX + RecorderClipEdge.END.getKey()),
+                action(EditorSetting.TOOL_ACTION_LABEL_FILTER_APPLY, EditorSetting.RECORDER_KEY_FILTER_APPLY),
+                action(EditorSetting.TOOL_ACTION_LABEL_FILTER_REMOVE, EditorSetting.RECORDER_KEY_FILTER_REMOVE),
                 action(EditorSetting.TOOL_ACTION_LABEL_REMOVE_CLIP, EditorSetting.RECORDER_KEY_CLIP_REMOVE));
     }
 
@@ -559,6 +561,8 @@ public enum ToolCanvas {
                 EditorSetting.TOOL_ACTION_HEADER_KEYS,
                 action(EditorSetting.TOOL_ACTION_LABEL_KEY_ADD, EditorSetting.RECORDER_KEY_KEY_ADD),
                 action(EditorSetting.TOOL_ACTION_LABEL_KEY_DELETE, EditorSetting.RECORDER_KEY_KEY_DELETE),
+                action(EditorSetting.TOOL_ACTION_LABEL_KEY_COPY, EditorSetting.RECORDER_KEY_KEY_COPY),
+                action(EditorSetting.TOOL_ACTION_LABEL_KEY_PASTE, EditorSetting.RECORDER_KEY_KEY_PASTE),
                 action(EditorSetting.TOOL_ACTION_LABEL_KEY_MODE, EditorSetting.RECORDER_KEY_KEY_MODE),
                 action(EditorSetting.TOOL_ACTION_LABEL_KEY_VALUE, EditorSetting.RECORDER_KEY_KEY_VALUE),
                 action(EditorSetting.TOOL_ACTION_LABEL_FRAME_KEYS, EditorSetting.RECORDER_KEY_FRAME_KEYS),

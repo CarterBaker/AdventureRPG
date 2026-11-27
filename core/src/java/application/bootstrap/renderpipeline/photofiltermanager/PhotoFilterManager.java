@@ -91,6 +91,11 @@ public class PhotoFilterManager extends ManagerPackage {
         return handle;
     }
 
+    // How many filters the palette holds, the sentinel slot left out; their IDs run from 1 to this
+    public int getPhotoFilterCount() {
+        return photoFilterID2PhotoFilterHandle.size() - 1;
+    }
+
     // The filter a number of places after another in palette order, round from the last to the first
     public short stepPhotoFilterID(short photoFilterID, int direction) {
 

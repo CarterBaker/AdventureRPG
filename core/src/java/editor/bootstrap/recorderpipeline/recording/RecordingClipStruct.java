@@ -33,7 +33,9 @@ public class RecordingClipStruct extends StructPackage {
      * it is muted. Its time ramp is how long each jump of a take's clock is
      * swept through, a cut at zero. Each edge may hold a transition, named
      * with how long it runs inside the clip from that edge; the two never run
-     * past each other, so a clip shortened under them plays them shorter.
+     * past each other, so a clip shortened under them plays them shorter. A
+     * clip may hold one photo filter, named, laid over everything its picture
+     * shows and fading in and out with its transitions.
      */
 
     // Source
@@ -56,6 +58,9 @@ public class RecordingClipStruct extends StructPackage {
     private int channelMask;
     private boolean muted;
     private float timeRampSeconds;
+
+    // Filter — the photo filter laid over the clip's picture, null for none
+    private String filterName;
 
     // Transitions — indexed by edge, a null name for none
     private final String[] transitionNames;
@@ -148,6 +153,7 @@ public class RecordingClipStruct extends StructPackage {
         copy.bindSong(song);
         copy.setMuted(muted);
         copy.setTimeRampSeconds(timeRampSeconds);
+        copy.setFilterName(filterName);
 
         for (int i = 0; i < RecorderClipEdge.VALUES.length; i++)
             if (transitionNames[i] != null)
@@ -401,6 +407,20 @@ public class RecordingClipStruct extends StructPackage {
 
     public void setTimeRampSeconds(float timeRampSeconds) {
         this.timeRampSeconds = timeRampSeconds;
+    }
+
+    // Filter \\
+
+    public String getFilterName() {
+        return filterName;
+    }
+
+    public boolean hasFilter() {
+        return filterName != null;
+    }
+
+    public void setFilterName(String filterName) {
+        this.filterName = filterName;
     }
 
     // Transitions \\

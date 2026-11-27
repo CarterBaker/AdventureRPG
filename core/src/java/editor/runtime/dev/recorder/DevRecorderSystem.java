@@ -23,6 +23,7 @@ import application.bootstrap.itempipeline.itemdefinition.ItemDefinitionHandle;
 import application.bootstrap.itempipeline.itemdefinitionmanager.ItemDefinitionManager;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
 import application.bootstrap.renderpipeline.fbo.FBOInstance;
+import application.bootstrap.renderpipeline.photofilter.PhotoFilterHandle;
 import application.bootstrap.savepipeline.savemanager.SaveManager;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleHandle;
 import application.bootstrap.vehiclepipeline.vehicle.VehicleInstance;
@@ -34,12 +35,15 @@ import application.bootstrap.worldpipeline.util.WorldPositionStruct;
 import application.bootstrap.worldpipeline.util.WorldPositionUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.runtime.postprocessing.PostEffectsSystem;
 import application.runtime.world.WorldSystem;
 import editor.bootstrap.recorderpipeline.recordermanager.RecorderManager;
 import editor.bootstrap.recorderpipeline.recording.RecorderChannel;
 import editor.bootstrap.recorderpipeline.recording.RecorderCurveProperty;
 import editor.bootstrap.recorderpipeline.recording.RecordingBodyTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingCameraTrackStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingClipStruct;
+import editor.bootstrap.recorderpipeline.recording.RecordingInstance;
 import editor.bootstrap.recorderpipeline.recording.RecordingPlayingStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingProjectileTrackStruct;
 import editor.bootstrap.recorderpipeline.recording.RecordingTakeStruct;
@@ -83,13 +87,18 @@ public class DevRecorderSystem extends SystemPackage {
      * frame plays the side of it DevRecorderTransitionSystem picked — the
      * timeline with the transition's clip or without it — and each side's
      * puppets move on from that side's own last frame. The interface plays
-     * through DevRecorderOverlaySystem. A
+     * through DevRecorderOverlaySystem. The photo filter of the clip the
+     * picture plays from is laid over the window, faded in and out with that
+     * clip's transitions, and let go when none is or the session ends. A
      * take records each live channel after the frame has moved, at the take's
      * own time: the camera, the player, the clock, the weather, and every
      * resident, thrown item and vehicle near the window. Starting a take hands
      * each live channel over from what was playing, so a performance carries
      * on from where the timeline stood. While the session is suspended — the
-     * game paused — nothing is recorded, and what plays holds still.
+     * game paused — nothing is recorded, and what plays holds still. While
+     * the session holds at the playhead the media file may be edited, undone
+     * or redone; once it is another recording standing in its place, every
+     * puppet, item and vehicle is let go and made again from it.
      */
 
     // Internal
@@ -111,9 +120,14 @@ public class DevRecorderSystem extends SystemPackage {
     private VehicleRenderSystem vehicleRenderSystem;
     private WorldSystem worldSystem;
     private DevRecorderOverlaySystem devRecorderOverlaySystem;
+    private PostEffectsSystem postEffectsSystem;
 
-    // Session
+    // Filter — whether a clip's photo filter is laid over the window, so the look is let go when none is
+    private boolean filterShown;
+
+    // Session — whether one runs here, and the recording it last played
     private boolean sessionActive;
+    private RecordingInstance playedRecording;
     private int seenTakeCount;
     private float[] lastPlayheads;
 
@@ -230,6 +244,7 @@ public class DevRecorderSystem extends SystemPackage {
         this.vehicleRenderSystem = get(VehicleRenderSystem.class);
         this.worldSystem = get(WorldSystem.class);
         this.devRecorderOverlaySystem = get(DevRecorderOverlaySystem.class);
+        this.postEffectsSystem = get(PostEffectsSystem.class);
     }
 
     // The window is going, its player with it, so only the shared clock and weather are put back
@@ -239,6 +254,7 @@ public class DevRecorderSystem extends SystemPackage {
         if (sessionActive) {
             clockManager.holdClock(snapshotElapsedMillis);
             releaseWeather();
+            releaseFilter();
             releasePuppets();
             this.sessionActive = false;
         }
@@ -261,6 +277,9 @@ public class DevRecorderSystem extends SystemPackage {
 
         if (!sessionActive)
             return;
+
+        if (recorderManager.getRecording() != playedRecording)
+            adoptRecording();
 
         if (recorderManager.isTaking() && recorderManager.getTakeCount() != seenTakeCount)
             beginTake();
@@ -294,6 +313,7 @@ public class DevRecorderSystem extends SystemPackage {
         this.snapshotGustTime = windManager.getGustTime();
 
         this.sessionActive = true;
+        this.playedRecording = recorderManager.getRecording();
         lastPlayheads[EditorSetting.RECORDER_TRANSITION_SIDE_WITH] = recorderManager.getPlayhead();
         lastPlayheads[EditorSetting.RECORDER_TRANSITION_SIDE_WITHOUT] = recorderManager.getPlayhead();
         this.clockHeld = false;
@@ -322,12 +342,24 @@ public class DevRecorderSystem extends SystemPackage {
         playerManager.pushPlayerPositionForWindow(windowID);
         clockManager.holdClock(snapshotElapsedMillis);
         releaseWeather();
+        releaseFilter();
 
         releasePuppets();
         resident2Track.clear();
         projectile2Track.clear();
         vehicle2Track.clear();
         this.sessionActive = false;
+        this.playedRecording = null;
+    }
+
+    // Another recording stands in place of the one played, as an undone or redone edit leaves it: everything made
+    // from the last one is let go, to be made again from this one as it plays
+    private void adoptRecording() {
+        this.playedRecording = recorderManager.getRecording();
+        releasePuppets();
+        resident2Track.clear();
+        projectile2Track.clear();
+        vehicle2Track.clear();
     }
 
     private void releasePuppets() {
@@ -456,7 +488,39 @@ public class DevRecorderSystem extends SystemPackage {
         else
             this.clockHeld = false;
 
+        playFilter(RecorderChannel.CAMERA.isIn(played)
+                ? recorderManager.findPlaying(RecorderChannel.CAMERA, time, playing)
+                : null);
+
         playerManager.pushPlayerPositionForWindow(context.getWindow().getWindowID());
+    }
+
+    // The filter of the clip the picture plays from laid over the window at the share its transitions let through,
+    // or the neutral look again once no clip holds one
+    private void playFilter(RecordingPlayingStruct found) {
+
+        RecordingClipStruct filtered = found != null ? found.getFilterClip() : null;
+        PhotoFilterHandle filter = filtered != null
+                ? recorderManager.resolveFilterHandle(filtered.getFilterName())
+                : null;
+
+        if (filter == null) {
+            releaseFilter();
+            return;
+        }
+
+        postEffectsSystem.blendPhotoLook(filter,
+                recorderManager.resolveClipGain(filtered, found.getFilterTime()));
+        this.filterShown = true;
+    }
+
+    private void releaseFilter() {
+
+        if (!filterShown)
+            return;
+
+        postEffectsSystem.clearPhotoLook();
+        this.filterShown = false;
     }
 
     // The anchor stands so its eye is on the camera, and the camera is placed in the frame of the anchor's chunk

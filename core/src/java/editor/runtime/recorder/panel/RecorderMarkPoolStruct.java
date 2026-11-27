@@ -8,8 +8,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class RecorderMarkPoolStruct extends StructPackage {
 
     /*
-     * The marks of one kind the Keys graph draws — the stretches of its line,
-     * its keys, the handles of the key selected — made once from their
+     * The marks of one kind the Keys graph or the Keys rows draw — the
+     * stretches of the graph's line, its keys, the handles of the key
+     * selected, the sides of a box drawn to select by — made once from their
      * template into the graph's layer for them and kept, so drawing the graph
      * again only places them. Each remembers where it was last placed, so one
      * that has not moved is left as it stands, and those a drawing no longer

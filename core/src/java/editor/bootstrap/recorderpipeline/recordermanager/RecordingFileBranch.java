@@ -385,6 +385,10 @@ class RecordingFileBranch extends BranchPackage {
             clipArpg.add("channels", buildChannels(clip.getStoredChannelMask()));
             clipArpg.addProperty("muted", clip.isMuted());
             clipArpg.addProperty("time_ramp", clip.getTimeRampSeconds());
+
+            if (clip.hasFilter())
+                clipArpg.addProperty("filter", clip.getFilterName());
+
             addTransitions(clipArpg, clip);
             clipsArpg.add(clipArpg);
         }
@@ -868,6 +872,7 @@ class RecordingFileBranch extends BranchPackage {
 
             clip.setMuted(ArpgUtility.getBoolean(clipArpg, "muted", false));
             clip.setTimeRampSeconds(ArpgUtility.getFloat(clipArpg, "time_ramp", 0f));
+            clip.setFilterName(ArpgUtility.getString(clipArpg, "filter", null));
             parseTransitions(clipArpg, clip);
             recording.addClip(clip);
         }

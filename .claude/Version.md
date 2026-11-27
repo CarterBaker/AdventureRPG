@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 180
-Task: ItemMaterials
+Delivery: 181
+Task: MediaWorkflow
 Applied: 2026-11-26
 
 ## Log
@@ -190,3 +190,4 @@ Applied: 2026-11-26
 - 178, 2026-11-26, WorldParticles
 - 179, 2026-11-26, ItemSpacingToolOrder
 - 180, 2026-11-26, ItemMaterials
+- 181, 2026-11-26, MediaWorkflow

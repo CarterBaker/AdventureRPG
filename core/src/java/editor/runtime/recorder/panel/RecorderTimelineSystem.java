@@ -514,8 +514,13 @@ public class RecorderTimelineSystem extends SystemPackage {
                     injected.setSizeOverride(size);
                 });
 
-        bar.findChildById(RecorderSetting.ELEMENT_CLIP_LABEL).setFontText(String.format(
-                RecorderSetting.FORMAT_CLIP_LABELS[clip.getSourceKind().ordinal()], clip.resolveLabelName()));
+        String label = String.format(
+                RecorderSetting.FORMAT_CLIP_LABELS[clip.getSourceKind().ordinal()], clip.resolveLabelName());
+
+        bar.findChildById(RecorderSetting.ELEMENT_CLIP_LABEL).setFontText(clip.hasFilter()
+                ? String.format(RecorderSetting.FORMAT_CLIP_FILTERED, label,
+                        recorderManager.describeFilter(clip.getFilterName()))
+                : label);
     }
 
     // A mark across each transition laid on the clip, over the part of it in view, named after the transition; too
