@@ -181,8 +181,11 @@ public class CoverageTickBranch extends BranchPackage {
 
         for (int sample = 0; sample < samplesPerSubChunk; sample++) {
 
-            float roll = roll(EngineSetting.COVERAGE_SAMPLE_SALT, sample, chunkSalt + subChunkY);
-            int index = (int) (roll * ChunkCoordinateUtility.BLOCK_COORDINATE_COUNT);
+            int index = rollIndex(
+                    EngineSetting.COVERAGE_SAMPLE_SALT,
+                    sample,
+                    chunkSalt + subChunkY,
+                    ChunkCoordinateUtility.BLOCK_COORDINATE_COUNT);
             int packedXYZ = ChunkCoordinateUtility.getBlockCoordinate(index);
             short coverage = subChunk.getCoverage(packedXYZ);
 
@@ -268,11 +271,14 @@ public class CoverageTickBranch extends BranchPackage {
             int cellIndex,
             int cellSalt) {
 
-        float directionRoll = roll(EngineSetting.COVERAGE_SPREAD_DIRECTION_SALT, cellIndex, cellSalt);
-        float heightRoll = roll(EngineSetting.COVERAGE_SPREAD_HEIGHT_SALT, cellIndex, cellSalt);
-        Direction3Vector direction = LATERAL_DIRECTIONS[(int) (directionRoll * LATERAL_DIRECTIONS.length)];
         int reach = EngineSetting.COVERAGE_SPREAD_REACH_Y;
-        int targetY = worldY + (int) (heightRoll * (reach * 2 + 1)) - reach;
+        Direction3Vector direction = LATERAL_DIRECTIONS[rollIndex(
+                EngineSetting.COVERAGE_SPREAD_DIRECTION_SALT,
+                cellIndex,
+                cellSalt,
+                LATERAL_DIRECTIONS.length)];
+        int targetY = worldY + rollIndex(EngineSetting.COVERAGE_SPREAD_HEIGHT_SALT, cellIndex, cellSalt, reach * 2 + 1)
+                - reach;
 
         if (targetY < 0 || targetY >= worldHeight * chunkSize)
             return;
@@ -425,6 +431,11 @@ public class CoverageTickBranch extends BranchPackage {
 
     private float roll(long salt, int a, int b) {
         return BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(passCount ^ salt, a, b));
+    }
+
+    // The float roll can round up to exactly one, so the index is held below the count
+    private int rollIndex(long salt, int a, int b, int count) {
+        return Math.min((int) (roll(salt, a, b) * count), count - 1);
     }
 
     private short readBlock(ChunkInstance chunk, int localX, int worldY, int localZ) {

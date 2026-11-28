@@ -3,6 +3,8 @@
 in vec2 vQuadUV;
 
 uniform sampler2D u_tileTexture;
+uniform sampler2D u_daylightTexture;
+uniform sampler2D u_weatherTexture;
 uniform vec4      u_viewRect;
 uniform vec4      u_uvRect;
 uniform float     u_face;
@@ -17,6 +19,16 @@ uniform vec3 u_cubeAxisX;
 uniform vec3 u_cubeAxisY;
 uniform vec3 u_cubeAxisZ;
 
+uniform vec2  u_weatherOffset;
+uniform float u_showDayNight;
+uniform float u_showWeather;
+uniform vec4  u_nightColor;
+uniform float u_nightStrength;
+uniform vec4  u_cloudColor;
+uniform float u_cloudStrength;
+uniform vec4  u_rainColor;
+uniform float u_rainStrength;
+
 uniform float u_shadeFloor;
 
 out vec4 FragColor;
@@ -28,7 +40,10 @@ out vec4 FragColor;
 // there by the equal-angle mapping the world's blocks are laid by (GlobeUtility), as shares of the face; every pixel
 // outside the tile's square of its face is left to the tiles beside it. Inside, the tile texture is read with its
 // rows running down the face's t axis, as the tile was generated, from the part of a coarser tile standing in for one
-// still generating, and shaded by how squarely the ground faces the eye.
+// still generating, and shaded by how squarely the ground faces the eye. The shared overlays lie over the world's
+// image, its six faces side by side, each a whole number of overlay texels wide, so the place is read at its share of
+// the image, held half a texel inside its own face so the face beside it never bleeds in: the weather, slid by the
+// weather flow, tints rain and lays cloud, and day and night shades the night side.
 
 const vec3 FACE_NORMAL[6] = vec3[](
         vec3(1.0, 0.0, 0.0), vec3(-1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0),
@@ -40,6 +55,14 @@ const vec3 FACE_T[6] = vec3[](
         vec3(0.0, -1.0, 0.0), vec3(0.0, -1.0, 0.0), vec3(0.0, 0.0, 1.0),
         vec3(0.0, 0.0, -1.0), vec3(0.0, -1.0, 0.0), vec3(0.0, -1.0, 0.0));
 const float QUARTER_PI = 0.78539816;
+const float FACE_COUNT = 6.0;
+
+// A face's place as a share of the image, kept half a texel of the overlay read inside the face
+vec2 toImage(int face, vec2 share, sampler2D overlay) {
+    float inset = 0.5 / float(textureSize(overlay, 0).x);
+    float left  = float(face) / FACE_COUNT;
+    return vec2(clamp(left + share.x / FACE_COUNT, left + inset, left + 1.0 / FACE_COUNT - inset), share.y);
+}
 
 int locateFace(vec3 d) {
     vec3 a = abs(d);
@@ -83,6 +106,17 @@ void main() {
 
     vec2 local = (share - u_faceRect.xy) / (u_faceRect.zw - u_faceRect.xy);
     vec3 color = texture(u_tileTexture, mix(u_uvRect.xy, u_uvRect.zw, local)).rgb;
+
+    if (u_showWeather > 0.5) {
+        vec2 weather = texture(u_weatherTexture, toImage(face, share, u_weatherTexture) - u_weatherOffset).rg;
+        color = mix(color, u_rainColor.rgb, weather.g * u_rainStrength);
+        color = mix(color, u_cloudColor.rgb, weather.r * u_cloudStrength);
+    }
+
+    if (u_showDayNight > 0.5) {
+        float night = texture(u_daylightTexture, toImage(face, share, u_daylightTexture)).r;
+        color = mix(color, color * u_nightColor.rgb, night * u_nightStrength);
+    }
 
     FragColor = vec4(color * mix(u_shadeFloor, 1.0, max(dot(point, -ray), 0.0)), 1.0);
 }

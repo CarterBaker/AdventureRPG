@@ -68,6 +68,9 @@ public class WorldMapSetting {
     public static final String MENU_STATUS = "editor/WorldMap/Status";
     public static final int ENTRY_STATUS = 0;
     public static final int ENTRY_FOLLOW_LABEL = 1;
-    public static final int ENTRY_DAY_NIGHT_LABEL = 2;
-    public static final int ENTRY_WEATHER_LABEL = 3;
+
+    // Layers
+    public static final String LAYER_DAY_NIGHT = "Day And Night";
+    public static final String LAYER_WEATHER = "Weather";
+    public static final String LAYER_PLAYER = "Player";
 }

@@ -63,7 +63,10 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
 - **World Map.** Shows the active world from above, its tiles generated on the fly (`MapManager`). A globe world is
   shown on its globe, orbited and zoomed by the shared view camera: the tile pyramid stands on the block cube's faces,
   refined per tile by how large it shows and culled at the horizon (`MapManager.resolveGlobeView`), each tile drawn as
-  a ray-cast quad kept to its square of its face (`editor/worldmap/WorldMapGlobeTileShader`). Every globe view, the
+  a ray-cast quad kept to its square of its face (`editor/worldmap/WorldMapGlobeTileShader`). Its layers in the Layers
+  tab are Player over Weather over Day And Night, each shown or hidden by its eye (`WorldMapLayerSystem`), never a
+  button of the map's own; the overlays lie over the world's image, on a globe a whole number of texels to each face
+  (`MapOverlayBranch`). Every globe view, the
   World Editor's and the map's, casts its rays and projects through one `GlobeViewStruct`.
 - **Content.** Entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab.
 - **Tree Planner and Tree Viewer.** Trees are built in the Tree Planner, the generator a species grows by drawn as a
@@ -244,7 +247,8 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   keys are stable names (an enum's name, `region/mode`, a layer document's name), never IDs. The window keeps the layer
   picked itself and every system reads it there; a layer picked hands its tool canvas, Properties rows and File and Edit
   table to the shared tabs through the window's own providers, which answer for the layer picked.
-- **So far:** the World Editor (Heights over Biomes, and on a globe the Cube over both, each with an eye), the character Mesh, Topology, Sculpt, Weights,
+- **So far:** the World Editor (Heights over Biomes, and on a globe the Cube over both, each with an eye), the World Map
+  (Player, Weather and Day And Night, each with an eye), the character Mesh, Topology, Sculpt, Weights,
   Rig and UV tabs (the Body and every region within it, one region picked for all of them; every region but the Body
   has an eye hiding its vertices on the part edited, `CharacterEditorManager.toggleRegionShown`), the character
   Paint tab (the paint layers of the map painted, each above the base with an eye), the Image Editor (every layer of

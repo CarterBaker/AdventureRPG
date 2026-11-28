@@ -2369,10 +2369,6 @@ public class EditorSetting {
     public static final String WORLD_MAP_STATUS_DEGREES_FORMAT = "%.2f°";
     public static final String WORLD_MAP_FOLLOW_ON = "Following";
     public static final String WORLD_MAP_FOLLOW_OFF = "Follow";
-    public static final String WORLD_MAP_DAY_NIGHT_ON = "Day/Night On";
-    public static final String WORLD_MAP_DAY_NIGHT_OFF = "Day/Night Off";
-    public static final String WORLD_MAP_WEATHER_ON = "Weather On";
-    public static final String WORLD_MAP_WEATHER_OFF = "Weather Off";
 
     // Settlement Planner
     public static final int SETTLEMENT_PLANNER_LAYOUT_DEFAULT = 1;

@@ -23,9 +23,8 @@ public class WorldMapMenuSystem extends SystemPackage {
     /*
      * Opens the status bar over the world map. It names the block under the
      * pointer, or the view's centre while the pointer is elsewhere, with the
-     * biome there, the follow button shows whether the view is on the
-     * character, and the overlay buttons whether day and night and weather
-     * show. The biome is sampled only when the named block changes, and every
+     * biome there, and the follow button shows whether the view is on the
+     * character. The biome is sampled only when the named block changes, and every
      * label rewrites only on change.
      */
 
@@ -47,8 +46,6 @@ public class WorldMapMenuSystem extends SystemPackage {
     private String biomeName;
     private String shownStatus;
     private String shownFollow;
-    private String shownDayNight;
-    private String shownWeather;
 
     // Base \\
 
@@ -97,24 +94,6 @@ public class WorldMapMenuSystem extends SystemPackage {
         if (!follow.equals(shownFollow)) {
             shownFollow = follow;
             setEntryText(WorldMapSetting.ENTRY_FOLLOW_LABEL, follow);
-        }
-
-        String dayNight = worldMapViewSystem.isShowingDayNight()
-                ? EditorSetting.WORLD_MAP_DAY_NIGHT_ON
-                : EditorSetting.WORLD_MAP_DAY_NIGHT_OFF;
-
-        if (!dayNight.equals(shownDayNight)) {
-            shownDayNight = dayNight;
-            setEntryText(WorldMapSetting.ENTRY_DAY_NIGHT_LABEL, dayNight);
-        }
-
-        String weather = worldMapViewSystem.isShowingWeather()
-                ? EditorSetting.WORLD_MAP_WEATHER_ON
-                : EditorSetting.WORLD_MAP_WEATHER_OFF;
-
-        if (!weather.equals(shownWeather)) {
-            shownWeather = weather;
-            setEntryText(WorldMapSetting.ENTRY_WEATHER_LABEL, weather);
         }
     }
 

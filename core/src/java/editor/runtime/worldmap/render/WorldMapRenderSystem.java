@@ -48,7 +48,8 @@ public class WorldMapRenderSystem extends SystemPackage {
      * only to the most tiles a frame has needed. On a globe each tile is a
      * quad over the window rectangle it shows in, whose shader casts the
      * view's rays at the ball and keeps only what lands on the tile's square
-     * of its block face; icons and the arrow stand where the ball shows
+     * of its block face, reading the overlays at that place's share of the
+     * world's image; icons and the arrow stand where the ball shows
      * their place, hidden on its far side.
      */
 
@@ -82,6 +83,8 @@ public class WorldMapRenderSystem extends SystemPackage {
 
     // Overlays
     private Vector2 weatherOffset;
+    private float showDayNight;
+    private float showWeather;
 
     // Marker
     private Vector2 markerCenter;
@@ -154,6 +157,8 @@ public class WorldMapRenderSystem extends SystemPackage {
 
         if (window.getWidth() > 0 && window.getHeight() > 0) {
 
+            resolveOverlays();
+
             if (worldMapViewSystem.isShown())
                 renderGlobeTiles(window);
             else
@@ -173,11 +178,6 @@ public class WorldMapRenderSystem extends SystemPackage {
         MapViewStruct mapView = worldMapViewSystem.getMapView();
         float width = window.getWidth();
         float height = window.getHeight();
-        float showDayNight = mapView.isShowingDayNight() && mapManager.hasDayNightOverlay() ? 1f : 0f;
-        float showWeather = mapView.isShowingWeather() && mapManager.hasWeatherOverlay() ? 1f : 0f;
-
-        if (showWeather > 0f)
-            weatherOffset.set(mapManager.getWeatherOffsetU(), mapManager.getWeatherOffsetV());
 
         for (int i = 0; i < mapView.getDrawCount(); i++) {
 
@@ -197,17 +197,37 @@ public class WorldMapRenderSystem extends SystemPackage {
             material.setUniform(WorldMapSetting.UNIFORM_UV_RECT, uvRect);
             material.setUniform(WorldMapSetting.UNIFORM_TILE_TEXTURE, draw.getTexture());
             material.setUniform(WorldMapSetting.UNIFORM_WORLD_RECT, worldRect);
-            material.setUniform(WorldMapSetting.UNIFORM_SHOW_DAY_NIGHT, showDayNight);
-            material.setUniform(WorldMapSetting.UNIFORM_SHOW_WEATHER, showWeather);
+            applyOverlays(material);
 
-            if (showDayNight > 0f)
-                material.setUniform(WorldMapSetting.UNIFORM_DAYLIGHT_TEXTURE, mapManager.getDaylightTexture());
-
-            if (showWeather > 0f) {
-                material.setUniform(WorldMapSetting.UNIFORM_WEATHER_TEXTURE, mapManager.getWeatherTexture());
-                material.setUniform(WorldMapSetting.UNIFORM_WEATHER_OFFSET, weatherOffset);
-            }
             renderManager.pushRenderCall(tileModel, sceneFbo, WorldMapSetting.DEPTH_TILES, window);
+        }
+    }
+
+    // Overlays \\
+
+    // Whether each shared overlay is shown and ready this frame, and where the weather has drifted
+    private void resolveOverlays() {
+
+        MapViewStruct mapView = worldMapViewSystem.getMapView();
+
+        this.showDayNight = mapView.isShowingDayNight() && mapManager.hasDayNightOverlay() ? 1f : 0f;
+        this.showWeather = mapView.isShowingWeather() && mapManager.hasWeatherOverlay() ? 1f : 0f;
+
+        if (showWeather > 0f)
+            weatherOffset.set(mapManager.getWeatherOffsetU(), mapManager.getWeatherOffsetV());
+    }
+
+    private void applyOverlays(MaterialInstance material) {
+
+        material.setUniform(WorldMapSetting.UNIFORM_SHOW_DAY_NIGHT, showDayNight);
+        material.setUniform(WorldMapSetting.UNIFORM_SHOW_WEATHER, showWeather);
+
+        if (showDayNight > 0f)
+            material.setUniform(WorldMapSetting.UNIFORM_DAYLIGHT_TEXTURE, mapManager.getDaylightTexture());
+
+        if (showWeather > 0f) {
+            material.setUniform(WorldMapSetting.UNIFORM_WEATHER_TEXTURE, mapManager.getWeatherTexture());
+            material.setUniform(WorldMapSetting.UNIFORM_WEATHER_OFFSET, weatherOffset);
         }
     }
 
@@ -267,6 +287,7 @@ public class WorldMapRenderSystem extends SystemPackage {
             material.setUniform(WorldMapSetting.UNIFORM_CUBE_AXIS_X, cubeAxisX);
             material.setUniform(WorldMapSetting.UNIFORM_CUBE_AXIS_Y, cubeAxisY);
             material.setUniform(WorldMapSetting.UNIFORM_CUBE_AXIS_Z, cubeAxisZ);
+            applyOverlays(material);
 
             renderManager.pushRenderCall(tileModel, sceneFbo, WorldMapSetting.DEPTH_TILES, window);
         }
@@ -366,7 +387,7 @@ public class WorldMapRenderSystem extends SystemPackage {
 
     private void renderMarker(WindowInstance window) {
 
-        if (!worldMapViewSystem.hasPlayer())
+        if (!worldMapViewSystem.isShowingPlayer())
             return;
 
         float width = window.getWidth();

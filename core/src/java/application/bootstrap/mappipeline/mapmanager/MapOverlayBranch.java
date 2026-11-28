@@ -10,6 +10,7 @@ import application.bootstrap.weatherpipeline.util.SkyColorUtility;
 import application.bootstrap.weatherpipeline.weather.WeatherHandle;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.weatherpipeline.weatherpatternmanager.WeatherPatternManager;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.graphics.color.PackedColorUtility;
 import engine.root.BranchPackage;
@@ -25,8 +26,11 @@ class MapOverlayBranch extends BranchPackage {
      * Dev window and preview agrees. Day and night is a grid of texels over
      * the world, each the darkness of the visual time of day ClockManager
      * gives that spot, so the night side follows longitude and bends with the
-     * season by latitude, rebuilt every frame it is shown. The
-     * weather covers the whole world in noise space, each texel the cloud
+     * season by latitude, rebuilt every frame it is shown. On a globe both
+     * grids lie over the image's faces side by side, a whole number of texels
+     * to each face, so a view reads each face without the next bleeding in,
+     * and every day and night texel takes the time of its place on its face.
+     * The weather covers the whole world in noise space, each texel the cloud
      * cover and precipitation of the weather cell beneath it, resampled a
      * budget of texels per frame and uploaded once a pass completes; views
      * slide it by the weather flow, so clouds drift smoothly between passes.
@@ -45,6 +49,7 @@ class MapOverlayBranch extends BranchPackage {
 
     // Day and Night
     private int daylightTexture;
+    private int daylightColumns;
     private byte[] daylightPixels;
     private ByteBuffer daylightBuffer;
     private long dayNightRequestFrame;
@@ -66,10 +71,6 @@ class MapOverlayBranch extends BranchPackage {
     protected void create() {
 
         // Day and Night
-        this.daylightPixels = new byte[EngineSetting.MAP_OVERLAY_DAYLIGHT_COLUMNS
-                * EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS
-                * EngineSetting.COLOR_CHANNEL_COUNT];
-        this.daylightBuffer = BufferUtility.newByteBuffer(daylightPixels.length);
         this.dayNightRequestFrame = EngineSetting.INDEX_NOT_FOUND;
 
         // Weather
@@ -130,7 +131,9 @@ class MapOverlayBranch extends BranchPackage {
         this.weatherReady = false;
         this.weatherCursor = 0;
 
-        int texelsX = EngineSetting.MAP_OVERLAY_WEATHER_TEXELS;
+        resolveDaylightGrid();
+
+        int texelsX = alignToFaces(EngineSetting.MAP_OVERLAY_WEATHER_TEXELS);
         int texelsZ = Math.max(1, (int) Math.round(
                 texelsX * (double) nextWorldHandle.getWorldScale().y / nextWorldHandle.getWorldScale().x));
 
@@ -148,18 +151,42 @@ class MapOverlayBranch extends BranchPackage {
                 texelsX, texelsZ, EngineSetting.GL_REPEAT, EngineSetting.GL_LINEAR);
     }
 
+    // A texel count across the world, on a globe the nearest below it that gives every face the same whole number
+    private int alignToFaces(int texels) {
+
+        if (!worldHandle.isGlobe())
+            return texels;
+
+        return Math.max(1, texels / EngineSetting.GLOBE_FACE_COUNT) * EngineSetting.GLOBE_FACE_COUNT;
+    }
+
     // Day and Night \\
+
+    // On a globe every face holds a square of the rows, so the grid is as many faces of them wide
+    private void resolveDaylightGrid() {
+
+        int columns = worldHandle.isGlobe()
+                ? EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS * EngineSetting.GLOBE_FACE_COUNT
+                : EngineSetting.MAP_OVERLAY_DAYLIGHT_COLUMNS;
+
+        if (columns == daylightColumns)
+            return;
+
+        if (daylightTexture != 0)
+            textureManager.deleteTexture2D(daylightTexture);
+
+        this.daylightColumns = columns;
+        this.daylightPixels = new byte[columns * EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS
+                * EngineSetting.COLOR_CHANNEL_COUNT];
+        this.daylightBuffer = BufferUtility.newByteBuffer(daylightPixels.length);
+        this.daylightTexture = textureManager.createTexture2D(
+                columns, EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS, EngineSetting.GL_REPEAT, EngineSetting.GL_LINEAR);
+    }
 
     private void refreshDaylight() {
 
-        int columns = EngineSetting.MAP_OVERLAY_DAYLIGHT_COLUMNS;
+        int columns = daylightColumns;
         int rows = EngineSetting.MAP_OVERLAY_DAYLIGHT_ROWS;
-
-        if (daylightTexture == 0)
-            this.daylightTexture = textureManager.createTexture2D(
-                    columns, rows, EngineSetting.GL_REPEAT, EngineSetting.GL_LINEAR);
-
-        int worldWidthChunks = worldHandle.getWorldScale().x / EngineSetting.CHUNK_SIZE;
         int worldHeightChunks = worldHandle.getWorldScale().y / EngineSetting.CHUNK_SIZE;
 
         for (int row = 0; row < rows; row++) {
@@ -168,10 +195,9 @@ class MapOverlayBranch extends BranchPackage {
 
             for (int column = 0; column < columns; column++) {
 
-                int chunkX = (int) ((column + 0.5) / columns * worldWidthChunks);
                 double visualTimeOfDay = clockManager.computeVisualTimeOfDay(
                         worldHandle,
-                        Coordinate2Long.pack(chunkX, chunkZ));
+                        Coordinate2Long.pack(resolveDaylightChunkX(column), chunkZ));
                 float night = 1f - SkyColorUtility.smoothstep(
                         EngineSetting.MAP_NIGHT_ELEVATION_DARK,
                         EngineSetting.MAP_NIGHT_ELEVATION_LIGHT,
@@ -189,6 +215,22 @@ class MapOverlayBranch extends BranchPackage {
         textureManager.updateTexture2D(daylightTexture, 0, 0, columns, rows, daylightBuffer);
 
         this.daylightReady = true;
+    }
+
+    // The chunk column a texel column stands over: across the world's width, or on a globe at its place on its face,
+    // in the canonical layout that spaces the faces apart
+    private int resolveDaylightChunkX(int column) {
+
+        if (!worldHandle.isGlobe())
+            return (int) ((column + 0.5) / daylightColumns * (worldHandle.getWorldScale().x / EngineSetting.CHUNK_SIZE));
+
+        int faceBlocks = GlobeUtility.getFaceBlocks(worldHandle);
+        int faceColumns = daylightColumns / EngineSetting.GLOBE_FACE_COUNT;
+        int face = column / faceColumns;
+        double blockX = GlobeUtility.faceOriginX(face, faceBlocks)
+                + (column - face * faceColumns + 0.5) / faceColumns * faceBlocks;
+
+        return (int) Math.floor(blockX / EngineSetting.CHUNK_SIZE);
     }
 
     // Weather \\

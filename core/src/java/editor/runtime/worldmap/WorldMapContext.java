@@ -1,17 +1,23 @@
 package editor.runtime.worldmap;
 
+import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
+import editor.bootstrap.layerspipeline.layers.LayersProvider;
+import editor.runtime.EditorSetting;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.placementicon.PlacementIconSystem;
 import editor.runtime.viewcamera.ViewCameraProvider;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.viewcamera.ViewGizmoSystem;
+import editor.runtime.worldmap.layer.WorldMapLayerSystem;
 import editor.runtime.worldmap.menu.WorldMapMenuSystem;
 import editor.runtime.worldmap.render.WorldMapRenderSystem;
 import editor.runtime.worldmap.view.WorldMapViewSystem;
 import engine.root.ContextPackage;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class WorldMapContext extends ContextPackage implements ViewCameraProvider {
+public class WorldMapContext extends ContextPackage implements ViewCameraProvider, LayersProvider {
 
     /*
      * Editor tab showing the whole world from above, like a game's map. It
@@ -24,14 +30,16 @@ public class WorldMapContext extends ContextPackage implements ViewCameraProvide
      * Editor. An arrow
      * marks the character's position and facing, and the view follows it
      * until dragged; dragging the arrow itself moves the character to
-     * wherever it is dropped. The shared day and night and weather can be shown over
-     * it, and live world and biome edits sharpen into it as they land. A
+     * wherever it is dropped. The shared day and night and weather, and the
+     * arrow itself, are layers in the Layers tab, each shown or hidden by its
+     * eye, and live world and biome edits sharpen into it as they land. A
      * globe world is shown on its globe, orbited and zoomed by the shared
      * view camera with its axis gizmo.
      */
 
     // Internal
     private EditorInputSystem editorInputSystem;
+    private WorldMapLayerSystem worldMapLayerSystem;
     private WorldMapViewSystem worldMapViewSystem;
     private PlacementIconSystem placementIconSystem;
     private WorldMapRenderSystem worldMapRenderSystem;
@@ -42,12 +50,14 @@ public class WorldMapContext extends ContextPackage implements ViewCameraProvide
     @Override
     protected void create() {
         this.editorInputSystem = create(EditorInputSystem.class);
+        this.worldMapLayerSystem = create(WorldMapLayerSystem.class);
         this.worldMapViewSystem = create(WorldMapViewSystem.class);
         this.placementIconSystem = create(PlacementIconSystem.class);
         this.worldMapRenderSystem = create(WorldMapRenderSystem.class);
         this.worldMapMenuSystem = create(WorldMapMenuSystem.class);
         create(ViewCameraSystem.class);
         create(ViewGizmoSystem.class);
+        create(LayersSourceSystem.class);
     }
 
     @Override
@@ -69,11 +79,41 @@ public class WorldMapContext extends ContextPackage implements ViewCameraProvide
         worldMapViewSystem.toggleFollow();
     }
 
-    public void toggleDayNight() {
-        worldMapViewSystem.toggleDayNight();
+    // Layers \
+
+    @Override
+    public int getLayerRevision() {
+        return worldMapLayerSystem.getRevision();
     }
 
-    public void toggleWeather() {
-        worldMapViewSystem.toggleWeather();
+    @Override
+    public String getLayerTitle() {
+        return EditorSetting.TAB_TITLE_WORLD_MAP;
+    }
+
+    @Override
+    public void buildLayers(ObjectArrayList<LayerNodeStruct> roots) {
+        worldMapLayerSystem.buildLayers(roots);
+    }
+
+    @Override
+    public void selectLayer(String layerKey) {
+        worldMapLayerSystem.select(layerKey);
+    }
+
+    @Override
+    public void toggleLayerVisible(String layerKey) {
+        worldMapLayerSystem.toggleShown(layerKey);
+    }
+
+    // The map's layers are fixed: none is added or deleted
+    @Override
+    public String getAddLayerKey() {
+        return "";
+    }
+
+    @Override
+    public String getRemoveLayerKey() {
+        return "";
     }
 }

@@ -4,8 +4,8 @@ The last delivery applied to this project. `.claude/Delivery.bat` writes this fi
 delivery and pushes it alone to `refs/delivery/status`; never edit it by hand. Claude compares that copy with
 the one on `main` to know whether the last delivery applied was committed and pushed.
 
-Delivery: 196
-Task: MeshGizmoToggle
+Delivery: 197
+Task: WorldMapLayers
 Applied: 2026-11-28
 
 ## Log
@@ -206,3 +206,4 @@ Applied: 2026-11-28
 - 194, 2026-11-27, PaintedMacroLighting
 - 195, 2026-11-28, GlobeWorld
 - 196, 2026-11-28, MeshGizmoToggle
+- 197, 2026-11-28, WorldMapLayers

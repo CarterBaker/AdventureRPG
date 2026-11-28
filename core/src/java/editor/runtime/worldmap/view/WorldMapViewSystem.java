@@ -18,6 +18,8 @@ import editor.runtime.input.EditorInputSystem;
 import editor.runtime.viewcamera.ViewCameraSubject;
 import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.worldmap.WorldMapSetting;
+import editor.runtime.worldmap.layer.WorldMapLayer;
+import editor.runtime.worldmap.layer.WorldMapLayerSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -32,12 +34,12 @@ public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubje
      * active world and only it, never a world of the editor's own such as
      * the biome planner's, north up, and tracks the character of the first
      * streaming grid standing in it, its position and facing every frame
-     * through the engine's map markers. It
-     * also holds which shared overlays, day and night and weather, this map
-     * shows. Scrolling zooms about the pointer, from a few pixels per block
+     * through the engine's map markers. The
+     * shared overlays, day and night and weather, and the character's arrow
+     * show as the map's layers say. Scrolling zooms about the pointer, from a few pixels per block
      * out to the whole world, and dragging pans; panning lets go of the
      * character, and following snaps the view back onto it. A press on the
-     * character's arrow picks it up instead, and dropping it anywhere else
+     * character's arrow, while shown, picks it up instead, and dropping it anywhere else
      * moves that window's character to the block column under it. A click
      * that does not drag selects the biome under the pointer in the
      * hierarchy. The settled view is handed to the engine's map each frame,
@@ -70,9 +72,8 @@ public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubje
     private double blocksPerPixel;
     private boolean following;
 
-    // Overlays
-    private boolean showingDayNight;
-    private boolean showingWeather;
+    // Layers
+    private WorldMapLayerSystem worldMapLayerSystem;
 
     // Pan
     private boolean panning;
@@ -112,6 +113,7 @@ public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubje
     @Override
     protected void get() {
         this.editorInputSystem = get(EditorInputSystem.class);
+        this.worldMapLayerSystem = get(WorldMapLayerSystem.class);
         this.worldStreamManager = get(WorldStreamManager.class);
         this.worldManager = get(WorldManager.class);
         this.mapManager = get(MapManager.class);
@@ -161,7 +163,7 @@ public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubje
         WindowInstance window = context.getWindow();
 
         mapView.set(worldHandle, centerX, centerZ, blocksPerPixel, window.getWidth(), window.getHeight());
-        mapView.setOverlays(showingDayNight, showingWeather);
+        mapView.setOverlays(isShowingDayNight(), isShowingWeather());
     }
 
     // Globe \\
@@ -281,7 +283,7 @@ public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubje
 
         WindowInstance window = context.getWindow();
 
-        if (!hasPlayer)
+        if (!isShowingPlayer())
             return false;
 
         GlobeUtility.resolveDirection(worldHandle, playerMarker.getX(), playerMarker.getZ(), globeDirection);
@@ -488,7 +490,7 @@ public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubje
     // Whether a screen point lies on the character's arrow, at the copy of its position nearest the view's centre
     private boolean isOverMarker(float screenX, float screenY) {
 
-        if (!hasPlayer)
+        if (!isShowingPlayer())
             return false;
 
         float deltaX = screenX - mapView.worldToScreenX(centerX + WorldWrapUtility.wrappedDelta(
@@ -524,14 +526,6 @@ public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubje
 
     public void toggleFollow() {
         following = !following;
-    }
-
-    public void toggleDayNight() {
-        showingDayNight = !showingDayNight;
-    }
-
-    public void toggleWeather() {
-        showingWeather = !showingWeather;
     }
 
     // Conversion — window pixels, y up, to world blocks and back \\
@@ -575,11 +569,16 @@ public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubje
     }
 
     public boolean isShowingDayNight() {
-        return showingDayNight;
+        return worldMapLayerSystem.isShown(WorldMapLayer.DAY_NIGHT);
     }
 
     public boolean isShowingWeather() {
-        return showingWeather;
+        return worldMapLayerSystem.isShown(WorldMapLayer.WEATHER);
+    }
+
+    // The character's arrow, drawn and grabbed only while its layer is shown
+    public boolean isShowingPlayer() {
+        return hasPlayer && worldMapLayerSystem.isShown(WorldMapLayer.PLAYER);
     }
 
     public boolean hasPlayer() {

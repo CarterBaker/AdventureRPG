@@ -730,6 +730,9 @@ One line per session that changed this file: the date, what was added or removed
   from the owner's map to cube faces and stay the owner's, uncatalogued.
 - 2026-11-28: Globe worlds, World Map. Added `shaders/editor/worldmap/WorldMapGlobeTileShader.fsh` and `.arpg` and
   `materials/editor/WorldMapGlobeTileMaterial.arpg` (a globe world's map tiles drawn on its globe).
+- 2026-11-28: World Map layers. Rewrote `shaders/editor/worldmap/WorldMapGlobeTileShader.fsh` and
+  `materials/editor/WorldMapGlobeTileMaterial.arpg` (day and night and weather on the globe) and `menus/editor/WorldMap.arpg`
+  (its Day/Night and Weather buttons removed: they are Layers tab eyes now).
 
 ## Textures and Sprites (2603 files)
 

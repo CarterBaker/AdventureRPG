@@ -341,6 +341,7 @@ public class MapManager extends ManagerPackage {
 
         view.beginDraws(0);
         requestBaseTiles();
+        requestOverlays(view);
 
         for (int face = 0; face < EngineSetting.GLOBE_FACE_COUNT; face++)
             for (int tileZ = 0; tileZ < getTilesAcrossZ(0); tileZ++)
