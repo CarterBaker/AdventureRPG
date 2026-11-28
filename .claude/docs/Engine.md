@@ -64,7 +64,9 @@ writing or changing any Java code. `.claude/CLAUDE.md` still applies in full.
   `CharacterGizmoSystem` (`editor.runtime.characterview.gizmo`) before the systems that drag, each of which implements
   `CharacterGizmoSource` and adds itself as it wakes: the Mesh tab's vertices, the Rig tab's bone and the Animation
   Editor's posed bone so far. It is drawn through `CharacterViewRenderSystem.addGizmoSegment` / `addGizmoCube`
-  (`EditorSetting.TRANSFORM_GIZMO_*`); a tool that moves a selection uses the same handles and settings.
+  (`EditorSetting.TRANSFORM_GIZMO_*`); a tool that moves a selection uses the same handles and settings. A canvas
+  whose Tools tab lists the Gizmo switch (`ToolOption.GIZMO`, the Mesh tab's so far) hides the handles while it is
+  off, a press on the selection then dragging it freely, X, Y and Z still holding it to an axis.
 - **Editor tools live in the Tools panel.** A tool is an `EditorTool` on the window's `ToolCanvas`; a one-off
   operation is a `ToolActionStruct` in the canvas's action groups, run by its context through `ToolActionProvider`
   with the same key its shortcut uses. Never add a tool or tool action as a panel button.

@@ -41,7 +41,8 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
      * mode the Move, Rotate and Scale tools drag the selection from a
      * vertex instead, picking it first when it is not selected, or along one
      * axis from a handle of the transform gizmo (CharacterGizmoSystem),
-     * letting go to confirm, each vertex carried as far as it is selected; in Sculpt
+     * letting go to confirm, each vertex carried as far as it is selected,
+     * the gizmo standing only while the Tools panel's Gizmo is on; in Sculpt
      * mode every tool strokes the surface the brush covers, Ctrl inverting
      * the stroke, and in Weights mode the Brush, Erase and Smooth tools
      * stroke the weights. Each stamp of a stroke is placed on the mesh at
@@ -50,7 +51,9 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
      * the last stamp; the frame's stamps are shown together once they are
      * all laid. A transform asked for — by its Tools panel action or
      * its shortcut, G, R or S — holds the selection to the pointer: X, Y
-     * and Z lock it to an axis, Ctrl snaps it, the wheel and Page Up and
+     * and Z lock it to an axis (as they lock a drag from a vertex or a
+     * handle), the window's other shortcuts waiting until it ends, Ctrl
+     * snaps it, the wheel and Page Up and
      * Page Down grow and shrink the proportional radius while proportional
      * editing is on (the wheel claimed from the camera), a click or Enter
      * confirms and a right click or Escape puts it back, each click claimed
@@ -215,14 +218,14 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
     // Drops whatever the pointer was holding when the mesh modes close or lose their mesh
     private void abandon() {
 
-        if (transform != null)
+        if (transform != null) {
             characterEditorManager.cancelTransform();
+            endTransform();
+        }
 
         if (stroking)
             characterEditorManager.endStroke();
 
-        this.transform = null;
-        this.draggingTransform = false;
         this.stroking = false;
         this.pressed = false;
         this.boxSelecting = false;
@@ -532,6 +535,7 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
             return;
 
         this.transform = requested;
+        shortcutManager.holdGesture(context.getWindow());
         this.transformAxis = EngineSetting.INDEX_NOT_FOUND;
         this.customAxis = requestedAxis;
         this.startMouseX = mouseX;
@@ -582,9 +586,11 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
         }
     }
 
+    // The transform let go, the window's shortcuts running again
     private void endTransform() {
         this.transform = null;
         this.draggingTransform = false;
+        shortcutManager.releaseGesture(context.getWindow());
     }
 
     // X, Y or Z holds the transform to that axis, the same key again frees it
@@ -793,10 +799,12 @@ public class CharacterEditorSculptSystem extends SystemPackage implements Charac
 
     // Gizmo \\
 
-    // The transform the Mesh tab's tool drags while none is held, null outside the Mesh tab or while one is
+    // The transform the Mesh tab's tool drags while none is held, null outside the Mesh tab, while one is or while
+    // the Tools panel's Gizmo is off
     @Override
     public CharacterEditorTransform getGizmoTransform() {
         return transform == null && characterEditorMeshViewSystem.hasActiveDocument()
+                && characterEditorManager.isGizmo()
                 ? characterEditorManager.getToolTransform()
                 : null;
     }

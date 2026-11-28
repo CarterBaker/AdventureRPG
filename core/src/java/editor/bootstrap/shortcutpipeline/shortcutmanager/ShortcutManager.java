@@ -48,7 +48,8 @@ public class ShortcutManager extends ManagerPackage {
      * keys of some of its shortcuts, as a played keyboard would: while it does,
      * the one check at dispatch skips every other shortcut on the same chord
      * there, and a shortcut marked claimed runs only while its window claims
-     * it.
+     * it. A window holding a modal gesture (a transform under way) reads that
+     * gesture's keys itself, so none of its shortcuts runs until it lets go.
      */
 
     // Internal
@@ -73,6 +74,9 @@ public class ShortcutManager extends ManagerPackage {
     // Claims — the window claiming the keys of its shortcuts, and those shortcuts
     private WindowInstance claimWindow;
     private int[] claimShortcutIDs;
+
+    // Gesture — the window whose modal gesture keeps its keys, or none
+    private WindowInstance gestureWindow;
 
     // Status
     private int revision;
@@ -215,7 +219,7 @@ public class ShortcutManager extends ManagerPackage {
 
         WindowInstance window = activeWindowManager.getActiveWindow();
 
-        if (window == null || window.getContext() == null || isWithheld())
+        if (window == null || window.getContext() == null || isWithheld() || window == gestureWindow)
             return;
 
         Input input = inputManager.getRawInput(window);
@@ -297,6 +301,17 @@ public class ShortcutManager extends ManagerPackage {
 
         this.claimWindow = null;
         this.claimShortcutIDs = null;
+    }
+
+    // A modal gesture under way in the window keeps every key there to itself until it lets go
+    public void holdGesture(WindowInstance window) {
+        this.gestureWindow = window;
+    }
+
+    public void releaseGesture(WindowInstance window) {
+
+        if (gestureWindow == window)
+            this.gestureWindow = null;
     }
 
     // The one claim check at dispatch: a claimed shortcut waits for its window to claim it, and while the window

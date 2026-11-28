@@ -93,7 +93,8 @@ public enum ToolCanvas {
             screenSize(),
             mirror(),
             xray(),
-            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON)),
+            wireframe(EditorSetting.TOOL_OPTION_SWITCH_ON),
+            gizmo()),
     CHARACTER_TOPOLOGY(
             EditorSetting.TOOL_CANVAS_CHARACTER_TOPOLOGY,
             new EditorTool[] {
@@ -745,6 +746,10 @@ public enum ToolCanvas {
 
     private static ToolOptionStruct wireframe(int defaultIndex) {
         return toggle(ToolOption.WIREFRAME, defaultIndex);
+    }
+
+    private static ToolOptionStruct gizmo() {
+        return toggle(ToolOption.GIZMO, EditorSetting.TOOL_OPTION_SWITCH_ON);
     }
 
     // The face size the topology brush evens faces toward, in millimetres

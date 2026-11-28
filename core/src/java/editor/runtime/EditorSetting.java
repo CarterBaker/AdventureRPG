@@ -2947,6 +2947,7 @@ public class EditorSetting {
     public static final String TOOL_OPTION_MIRROR = "Mirror";
     public static final String TOOL_OPTION_XRAY = "X-Ray";
     public static final String TOOL_OPTION_WIREFRAME = "Wireframe";
+    public static final String TOOL_OPTION_GIZMO = "Gizmo";
     public static final String TOOL_OPTION_DETAIL = "Detail (mm)";
     public static final String TOOL_OPTION_LENGTH = "Length (cm)";
     public static final String TOOL_OPTION_WIDTH = "Width (mm)";

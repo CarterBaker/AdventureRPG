@@ -16,7 +16,8 @@ public enum ToolOption {
      * layers of cubes one stamp of an item's brush builds or digs at most. Mirror makes
      * every edit to one side of a character to its twin across the body as
      * well, X-Ray picks through the surface as if it were glass, Wireframe
-     * draws the edges of the mesh worked over its surface, and Shape which
+     * draws the edges of the mesh worked over its surface, Gizmo stands the
+     * transform handles on the selection, and Shape which
      * shape a viewer shows a material on. Each canvas declares the range, step and
      * starting value of every option it honours, since each measures in its
      * own units. Most options belong to the tools that carry them; a canvas
@@ -36,6 +37,7 @@ public enum ToolOption {
     MIRROR(EditorSetting.TOOL_OPTION_MIRROR, true),
     XRAY(EditorSetting.TOOL_OPTION_XRAY, true),
     WIREFRAME(EditorSetting.TOOL_OPTION_WIREFRAME, true),
+    GIZMO(EditorSetting.TOOL_OPTION_GIZMO, true),
     SHAPE(EditorSetting.TOOL_OPTION_SHAPE, true),
     DEPTH(EditorSetting.TOOL_OPTION_DEPTH),
     SPACING(EditorSetting.TOOL_OPTION_SPACING);

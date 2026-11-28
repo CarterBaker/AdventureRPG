@@ -2949,6 +2949,15 @@ public class CharacterEditorManager extends ManagerPackage {
         return isCanvasSwitchOn(ToolOption.WIREFRAME);
     }
 
+    // The Tools panel's Gizmo on the mode's canvas: the transform handles stand on the selection; on wherever the
+    // canvas has no such switch
+    public boolean isGizmo() {
+
+        ToolCanvas canvas = mode.getToolCanvas();
+
+        return canvas == null || canvas.findOption(ToolOption.GIZMO) == null || isCanvasSwitchOn(ToolOption.GIZMO);
+    }
+
     // The face size, in metres, the topology brush evens the faces it covers toward: the Tools panel's Detail
     float getTopologyDetail() {
         return toolManager.getOption(ToolCanvas.CHARACTER_TOPOLOGY, ToolOption.DETAIL)

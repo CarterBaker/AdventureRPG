@@ -13,7 +13,9 @@ modifier in any editor tool. `.claude/CLAUDE.md` still applies in full.
   (`ShortcutManager.rebindShortcut`). Editor code never reads a key or a modifier with `isKeyClicked`, `isKeyDown`
   or `isKeyHeld` to act on it; it adds a shortcut instead. The only exceptions are text entry (the name dialog, the
   command console), the Settings dialog waiting for a rebind's keys, a dialog's own Enter and Escape, and the keys
-  of a modal gesture already under way (a transform's X, Y, Z, Enter and Escape).
+  of a modal gesture already under way (a transform's X, Y, Z, Enter and Escape). While one is, its window holds the
+  keys (`ShortcutManager.holdGesture` / `releaseGesture`) and none of its shortcuts runs, so `Y` locks an axis
+  rather than choosing the Pose tool.
 - **One route.** A pressed shortcut runs a `class` and `method` exactly as a menu button does, through
   `ElementHitSystem.executeAction`, on the instance registered in the tool's context, inside its crash boundary. A
   shortcut and its button therefore always do the same thing.
