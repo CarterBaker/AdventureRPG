@@ -17,6 +17,7 @@ public class WorldMapSetting {
     // Materials
     public static final String MATERIAL_TILE = "editor/WorldMapTileMaterial";
     public static final String MATERIAL_MARKER = "editor/WorldMapMarkerMaterial";
+    public static final String MATERIAL_GLOBE_TILE = "editor/WorldMapGlobeTileMaterial";
 
     // Uniforms
     public static final String UNIFORM_VIEW_RECT = "u_viewRect";
@@ -31,6 +32,15 @@ public class WorldMapSetting {
     public static final String UNIFORM_WEATHER_OFFSET = "u_weatherOffset";
     public static final String UNIFORM_SHOW_DAY_NIGHT = "u_showDayNight";
     public static final String UNIFORM_SHOW_WEATHER = "u_showWeather";
+    public static final String UNIFORM_FACE = "u_face";
+    public static final String UNIFORM_FACE_RECT = "u_faceRect";
+    public static final String UNIFORM_GLOBE_CAMERA = "u_globeCamera";
+    public static final String UNIFORM_GLOBE_FORWARD = "u_globeForward";
+    public static final String UNIFORM_GLOBE_RIGHT = "u_globeRight";
+    public static final String UNIFORM_GLOBE_UP = "u_globeUp";
+    public static final String UNIFORM_CUBE_AXIS_X = "u_cubeAxisX";
+    public static final String UNIFORM_CUBE_AXIS_Y = "u_cubeAxisY";
+    public static final String UNIFORM_CUBE_AXIS_Z = "u_cubeAxisZ";
 
     // Render Order
     public static final int DEPTH_TILES = 0;
@@ -41,6 +51,10 @@ public class WorldMapSetting {
     public static final double DEFAULT_BLOCKS_PER_PIXEL = 4.0;
     public static final double MIN_BLOCKS_PER_PIXEL = 0.125;
     public static final double ZOOM_STEP = 1.25;
+
+    // Globe — a globe world is shown on a ball of this radius, the character's facing found a step away
+    public static final float GLOBE_RADIUS = 1f;
+    public static final double GLOBE_HEADING_STEP_BLOCKS = 1.0;
 
     // Marker
     public static final float MARKER_SIZE_PIXELS = 14f;

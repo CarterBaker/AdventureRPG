@@ -872,6 +872,16 @@ public class EngineSetting {
     public static final int SUB_VOXEL_RESOLUTION = 16;
     public static final int WORLD_HEIGHT = 64;
 
+    // Globe — a globe world's image holds its six cube faces side by side in the standard cube map order, each as
+    // tall as the image, and its cube rotation turns the block grid's cube inside the globe, in degrees about X, Y
+    // and Z. Its canonical coordinates lay face after face along x a stride of face spans apart, with a margin of
+    // spans before and after each face, so a place measured past a face's edge still names that face
+    public static final int GLOBE_FACE_COUNT = 6;
+    public static final float GLOBE_CUBE_ROTATION_MAX_DEGREES = 180f;
+    public static final int GLOBE_FACE_STRIDE_SPANS = 3;
+    public static final int GLOBE_FACE_MARGIN_SPANS = 1;
+    public static final int GLOBE_GREAT_CIRCLE_FACES = 4;
+
     // Natural Noise
     public static final float NATURAL_DETAIL_NORMAL_AMPLITUDE_BLOCKS = 0.22f;
     public static final float NATURAL_EDGE_WARP_DETAIL_SHARE = 0.5f;
@@ -938,6 +948,7 @@ public class EngineSetting {
     public static final int TRIANGLE_INDEX_COUNT = 3;
     public static final int TRIANGLE_VERTEX_COUNT = 3;
     public static final String UBO_TIME_DATA_NAME = "TimeData";
+    public static final String WORLD_SHAPE_UBO = "WorldShapeData";
 
     // Texture Compression — BC7 mode 6 for colour and packed maps, BC5 for normal maps, as the GPU reads them
     public static final int GL_COMPRESSED_RGBA_BPTC_UNORM = 0x8E8C;
@@ -1100,6 +1111,7 @@ public class EngineSetting {
     public static final String UNIFORM_FACE_ORIENTATIONS = "u_faceOrientations";
     public static final String UNIFORM_FONT_ATLAS = "u_fontAtlas";
     public static final String UNIFORM_GRID_POSITION = "u_gridPosition";
+    public static final String UNIFORM_HORIZON_CURVATURE = "u_horizonCurvature";
     public static final String UNIFORM_MACRO_COVERAGE = "u_macroCoverage";
     public static final String UNIFORM_NATURAL_NOISE_LATTICE = "u_naturalNoiseLattice";
     public static final String UNIFORM_PLAYER_CHUNK_X = "u_playerChunkX";
@@ -1170,6 +1182,7 @@ public class EngineSetting {
     // Block & World
     public static final String AIR_BLOCK_NAME = "TerraArcanaBlocks/Air";
     public static final double BLOCK_CENTER_OFFSET = 0.5;
+    public static final double PIXEL_CENTER_OFFSET = 0.5;
     public static final int BLOCK_MAP_COLOR_UNDEFINED = -1;
     public static final int BLOCK_TEXTURE_UNDEFINED = -1;
     public static final float BLOCK_VISCOSITY_UNDEFINED = -1.0f;
@@ -1279,6 +1292,13 @@ public class EngineSetting {
     // World Map — the shared day and night and weather overlays any view can show, and how far a world image edit
     // reaches past the pixels it changed, through the biome field's blend and warp
     public static final int MAP_EDIT_MARGIN_PIXELS = 2;
+
+    // Map Globe — a globe tile's reach from its middle as a share of its side, how many steps along each side its
+    // window rectangle is found from, and how far that rectangle is widened for the bow of its edges between them
+    public static final double MAP_GLOBE_TILE_REACH = 0.8;
+    public static final int MAP_GLOBE_TILE_BOUND_STEPS = 2;
+    public static final float MAP_GLOBE_TILE_BOW_SHARE = 0.1f;
+    public static final float MAP_GLOBE_TILE_BOW_PIXELS = 2f;
     public static final float MAP_NIGHT_ELEVATION_DARK = -0.2f;
     public static final float MAP_NIGHT_ELEVATION_LIGHT = 0.1f;
     public static final int MAP_OVERLAY_DAYLIGHT_COLUMNS = 256;
@@ -2151,6 +2171,9 @@ public class EngineSetting {
     public static final float SETTLEMENT_LINK_OUTPOST_CHANCE = 0.6f;
     public static final double SETTLEMENT_LINK_REACH_BLOCKS = 768.0;
     public static final int SETTLEMENT_LINK_SOUTH = 1;
+    public static final int SETTLEMENT_LINK_WEST = 2;
+    public static final int SETTLEMENT_LINK_NORTH = 3;
+    public static final int SETTLEMENT_LINK_SIDES = 4;
     public static final float SETTLEMENT_LINK_TRAIL_END_FRACTION = 0.8f;
     public static final int SETTLEMENT_LINK_TRAIL_MAX_BLOCKS = 110;
     public static final int SETTLEMENT_LINK_TRAIL_MIN_BLOCKS = 30;

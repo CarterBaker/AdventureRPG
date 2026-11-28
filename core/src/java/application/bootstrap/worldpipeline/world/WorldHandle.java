@@ -4,6 +4,7 @@ import java.io.File;
 
 import engine.assets.image.Pixmap;
 import engine.root.HandlePackage;
+import engine.util.mathematics.matrices.Matrix3Double;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -48,6 +49,22 @@ public class WorldHandle extends HandlePackage {
 
     public Vector2Int getWorldScale() {
         return data.getWorldScale();
+    }
+
+    public WorldShape getShape() {
+        return data.getShape();
+    }
+
+    public boolean isGlobe() {
+        return data.getShape() == WorldShape.GLOBE;
+    }
+
+    public Vector3 getCubeRotation() {
+        return data.getCubeRotation();
+    }
+
+    public Matrix3Double getGlobeFromCube() {
+        return data.getGlobeFromCube();
     }
 
     public File getHeightFile() {

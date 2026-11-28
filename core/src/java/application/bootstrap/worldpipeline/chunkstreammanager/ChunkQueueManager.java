@@ -16,6 +16,7 @@ import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.gridslot.GridSlotDetailLevel;
 import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worlditemmanager.WorldItemPlacementSystem;
@@ -96,6 +97,9 @@ class ChunkQueueManager extends ManagerPackage {
     private ObjectArrayList<ChunkInstance> chunkPool;
     private int chunkPoolMaxOverflow;
 
+    // Frame — main-thread scratch for the frame a grid's chart gives a chunk
+    private GlobeFrameStruct frameScratch;
+
     // Streaming
     private int maxChunkStreamPerBatch;
     private int maxChunkUnloadsPerFrame;
@@ -148,6 +152,7 @@ class ChunkQueueManager extends ManagerPackage {
         // Pool
         this.chunkPool = new ObjectArrayList<>();
         this.chunkPoolMaxOverflow = EngineSetting.CHUNK_POOL_MAX_OVERFLOW;
+        this.frameScratch = new GlobeFrameStruct();
 
         // Streaming
         this.maxChunkStreamPerBatch = EngineSetting.MAX_CHUNK_STREAM_PER_BATCH;
@@ -211,16 +216,31 @@ class ChunkQueueManager extends ManagerPackage {
     }
 
     // Every chunk the grid left behind queued to unload, and the loads requeued nearest first from a fresh scan
+    // A chunk the grid left behind unloads; on a globe whose chart restarted or whose cut moved near a corner, a
+    // chunk the chart now lays on another face cell or turns another way unloads too, and the scan loads it again
     void onGridMoved(GridInstance grid) {
 
         LongLinkedOpenHashSet unloadRequests = grid.getUnloadRequests();
-        var activeIterator = grid.getActiveChunks().keySet().iterator();
+        boolean checkFrames = grid.takeStaleFrames();
+        var activeIterator = grid.getActiveChunks().long2ObjectEntrySet().fastIterator();
 
         while (activeIterator.hasNext()) {
 
-            long chunkCoordinate = activeIterator.nextLong();
+            var entry = activeIterator.next();
+            long chunkCoordinate = entry.getLongKey();
 
-            if (grid.getGridSlotForChunk(chunkCoordinate) == null)
+            if (grid.getGridSlotForChunk(chunkCoordinate) == null) {
+                unloadRequests.add(chunkCoordinate);
+                continue;
+            }
+
+            if (!checkFrames)
+                continue;
+
+            grid.resolveFrame(chunkCoordinate, frameScratch);
+            GlobeFrameStruct frame = entry.getValue().getFrame();
+
+            if (!frame.matches(frameScratch.getCanonicalCoordinate(), frameScratch.getTurns()))
                 unloadRequests.add(chunkCoordinate);
         }
 
@@ -237,13 +257,12 @@ class ChunkQueueManager extends ManagerPackage {
         Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks = grid.getActiveChunks();
         LongLinkedOpenHashSet loadRequests = grid.getLoadRequests();
         LongLinkedOpenHashSet unloadRequests = grid.getUnloadRequests();
-        WorldHandle worldHandle = grid.getWorldHandle();
 
         for (int i = grid.getTotalSlots() - 1; i >= 0; i--) {
 
             long chunkCoordinate = grid.getChunkCoordinateForSlot(grid.getGridCoordinate(i));
 
-            if (!region.reachesChunk(worldHandle, chunkCoordinate))
+            if (!region.reaches(grid, chunkCoordinate, 1))
                 continue;
 
             ChunkInstance chunkInstance = activeChunks.get(chunkCoordinate);
@@ -342,10 +361,13 @@ class ChunkQueueManager extends ManagerPackage {
                 iterator.remove();
 
                 ChunkInstance freshInstance = create(ChunkInstance.class);
+                grid.resolveFrame(chunkCoordinate, frameScratch);
                 freshInstance.constructor(
                         worldRenderManager,
                         grid.getWorldHandle(),
                         chunkCoordinate,
+                        frameScratch.getCanonicalCoordinate(),
+                        frameScratch.getTurns(),
                         chunkStreamManager.getChunkVAO(),
                         airBlockId,
                         blockManager,
@@ -367,10 +389,13 @@ class ChunkQueueManager extends ManagerPackage {
                 chunkPool.pop();
                 iterator.remove();
 
+                grid.resolveFrame(chunkCoordinate, frameScratch);
                 pooledInstance.constructor(
                         worldRenderManager,
                         grid.getWorldHandle(),
                         chunkCoordinate,
+                        frameScratch.getCanonicalCoordinate(),
+                        frameScratch.getTurns(),
                         chunkStreamManager.getChunkVAO(),
                         airBlockId,
                         blockManager,

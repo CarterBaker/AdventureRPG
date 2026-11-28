@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
@@ -12,14 +13,15 @@ public class StillWaterAsyncContainer extends AsyncContainerPackage {
      * relative to their host: the biome field at a lake's heart and a small
      * ring of memos holding each lake's level, since every macro sample and
      * every point the surface is read at around one lake asks for the same
-     * level. Every memo carries the world and biome revision it was read
-     * under.
+     * level, with the point the heart is read at. Every memo carries the
+     * world and biome revision it was read under.
      */
 
     static final int LEVEL_CACHE_SIZE = EngineSetting.LAKE_LEVEL_CACHE_SIZE;
 
     // Heart
     BiomeBlendStruct blend;
+    SurfacePointStruct point;
 
     // Lake Levels
     long[] lakeHashes;
@@ -32,6 +34,7 @@ public class StillWaterAsyncContainer extends AsyncContainerPackage {
     protected void create() {
 
         this.blend = new BiomeBlendStruct();
+        this.point = new SurfacePointStruct();
 
         this.lakeHashes = new long[LEVEL_CACHE_SIZE];
         this.lakeWorlds = new WorldHandle[LEVEL_CACHE_SIZE];

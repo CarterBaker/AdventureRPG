@@ -10,7 +10,6 @@ import application.bootstrap.worldpipeline.river.RiverQueryStruct;
 import application.bootstrap.worldpipeline.util.LiquidFlowUtility;
 import application.bootstrap.worldpipeline.util.RiverPathUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -64,11 +63,12 @@ class RiverColumnBranch extends BranchPackage {
 
         out.clear(fromX, fromZ);
 
+        RiverQueryAsyncContainer scratch = queryContainer.getInstance();
         RiverNetworkStruct network = riverNetworkBranch.getNetwork(worldHandle);
         int cellX = network.toCellX(fromX);
         int cellZ = network.toCellZ(fromZ);
 
-        if (!network.isNear(network.toIndex(cellX, cellZ)))
+        if (!network.isNear(network.toIndex(cellX, cellZ, scratch.fold)))
             return;
 
         int radius = RiverNetworkStruct.NEAR_RADIUS_CELLS;
@@ -76,14 +76,18 @@ class RiverColumnBranch extends BranchPackage {
         for (int offsetZ = -radius; offsetZ <= radius; offsetZ++) {
             for (int offsetX = -radius; offsetX <= radius; offsetX++) {
 
-                int index = network.toIndex(cellX + offsetX, cellZ + offsetZ);
+                int index = network.toIndex(cellX + offsetX, cellZ + offsetZ, scratch.fold);
 
-                if (!network.isRiver(index) || !canReach(network, worldHandle, index, fromX, fromZ, spanBlocks))
+                if (!network.isRiver(index)
+                        || !canReach(scratch, network, worldHandle, index, fromX, fromZ, spanBlocks))
                     continue;
 
                 RiverPathStruct path = riverCacheBranch.getPath(network, index);
-                double localFromX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, fromX, path.getOriginX());
-                double localFromZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, fromZ, path.getOriginZ());
+
+                scratch.transform.measure(worldHandle, fromX, fromZ, path.getOriginX(), path.getOriginZ());
+
+                double localFromX = scratch.transform.getDeltaX();
+                double localFromZ = scratch.transform.getDeltaZ();
                 double localToX = localFromX + spanBlocks;
                 double localToZ = localFromZ + spanBlocks;
 
@@ -108,6 +112,7 @@ class RiverColumnBranch extends BranchPackage {
     // keeps within a corridor about the line between them, its meanders swing no further than their widest and its
     // valley cuts no wider than its widest, and a reach to the sea runs on past its last heart to find the shore
     private boolean canReach(
+            RiverQueryAsyncContainer scratch,
             RiverNetworkStruct network,
             WorldHandle worldHandle,
             int index,
@@ -115,13 +120,19 @@ class RiverColumnBranch extends BranchPackage {
             double fromZ,
             double spanBlocks) {
 
-        int target = network.getDownstreamIndex(index);
+        int target = network.getDownstreamIndex(index, scratch.fold);
         double originX = network.getNodeX(index);
         double originZ = network.getNodeZ(index);
-        double endX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, network.getNodeX(target), originX);
-        double endZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, network.getNodeZ(target), originZ);
-        double localFromX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, fromX, originX);
-        double localFromZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, fromZ, originZ);
+
+        scratch.transform.measure(worldHandle, network.getNodeX(target), network.getNodeZ(target), originX, originZ);
+
+        double endX = scratch.transform.getDeltaX();
+        double endZ = scratch.transform.getDeltaZ();
+
+        scratch.transform.measure(worldHandle, fromX, fromZ, originX, originZ);
+
+        double localFromX = scratch.transform.getDeltaX();
+        double localFromZ = scratch.transform.getDeltaZ();
         double bound = network.getCellSizeBlocks() * EngineSetting.RIVER_TRACE_CORRIDOR
                 + EngineSetting.RIVER_TRACE_STEP_BLOCKS
                 + EngineSetting.RIVER_MEANDER_MAX_AMPLITUDE_BLOCKS
@@ -340,11 +351,12 @@ class RiverColumnBranch extends BranchPackage {
         if (oceanWater || lakeWater)
             return;
 
+        RiverQueryAsyncContainer scratch = queryContainer.getInstance();
         RiverNetworkStruct network = riverNetworkBranch.getNetwork(worldHandle);
         int cellX = network.toCellX(worldX);
         int cellZ = network.toCellZ(worldZ);
 
-        if (!network.isNear(network.toIndex(cellX, cellZ)))
+        if (!network.isNear(network.toIndex(cellX, cellZ, scratch.fold)))
             return;
 
         int radius = RiverNetworkStruct.NEAR_RADIUS_CELLS;
@@ -355,7 +367,7 @@ class RiverColumnBranch extends BranchPackage {
         for (int offsetZ = -radius; offsetZ <= radius; offsetZ++) {
             for (int offsetX = -radius; offsetX <= radius; offsetX++) {
 
-                int index = network.toIndex(cellX + offsetX, cellZ + offsetZ);
+                int index = network.toIndex(cellX + offsetX, cellZ + offsetZ, scratch.fold);
 
                 if (!network.isRiver(index))
                     continue;
@@ -366,13 +378,20 @@ class RiverColumnBranch extends BranchPackage {
                 if (halfWidth * 2f * EngineSetting.RIVER_COARSE_WIDTH_GAIN < spacingBlocks)
                     continue;
 
-                int target = network.getDownstreamIndex(index);
+                int target = network.getDownstreamIndex(index, scratch.fold);
                 double originX = network.getNodeX(index);
                 double originZ = network.getNodeZ(index);
-                double endX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, network.getNodeX(target), originX);
-                double endZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, network.getNodeZ(target), originZ);
-                double localX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, worldX, originX);
-                double localZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, worldZ, originZ);
+
+                scratch.transform.measure(
+                        worldHandle, network.getNodeX(target), network.getNodeZ(target), originX, originZ);
+
+                double endX = scratch.transform.getDeltaX();
+                double endZ = scratch.transform.getDeltaZ();
+
+                scratch.transform.measure(worldHandle, worldX, worldZ, originX, originZ);
+
+                double localX = scratch.transform.getDeltaX();
+                double localZ = scratch.transform.getDeltaZ();
                 double distance = RiverPathUtility.distanceToSegment(localX, localZ, 0.0, 0.0, endX, endZ);
                 double edge = distance - Math.max(halfWidth, spacingBlocks * 0.5);
 

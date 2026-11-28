@@ -6,6 +6,7 @@ layout (location = 2) in float aSideColor;
 layout (location = 3) in float aCoverChunk;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "includes/GridCoordinateData.glsl"
 #include "surface/includes/MacroGround.glsl"
 
@@ -44,5 +45,5 @@ void main() {
     vSideColor = unpackColor(aSideColor);
     vCoverChunk = int(aCoverChunk);
 
-    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(curveToHorizon(worldPos), 1.0);
 }

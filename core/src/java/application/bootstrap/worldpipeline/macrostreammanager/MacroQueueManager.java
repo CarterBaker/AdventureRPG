@@ -3,8 +3,8 @@ package application.bootstrap.worldpipeline.macrostreammanager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroDataSyncContainer;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldEditRegionStruct;
-import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.WorldRenderManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.threadpipeline.thread.ThreadHandle;
@@ -29,7 +29,9 @@ class MacroQueueManager extends ManagerPackage {
      * macro with a build reserved is never recycled, so a pooled macro never
      * has work in flight. A removed grid releases its distant sea with it. A
      * live edit rebuilds only the tiles its region reaches, each drawing its
-     * old mesh until the new one lands.
+     * old mesh until the new one lands. On a globe a tile the chart comes to
+     * lay on another face cell, or turned another way, is built again from
+     * its new frame.
      */
 
     // Internal
@@ -53,6 +55,9 @@ class MacroQueueManager extends ManagerPackage {
     // GPU Upload Throttle
     private int macroGpuUploadBudget;
     private int gpuUploadsThisFrame;
+
+    // Frame
+    private GlobeFrameStruct frameScratch;
 
     // Internal \\
 
@@ -78,6 +83,9 @@ class MacroQueueManager extends ManagerPackage {
 
         // GPU Upload Throttle
         this.macroGpuUploadBudget = EngineSetting.MAX_MACRO_GPU_UPLOADS_PER_FRAME;
+
+        // Frame
+        this.frameScratch = new GlobeFrameStruct();
     }
 
     @Override
@@ -126,7 +134,6 @@ class MacroQueueManager extends ManagerPackage {
 
     void restreamRegion(GridInstance grid, WorldEditRegionStruct region) {
 
-        WorldHandle worldHandle = grid.getWorldHandle();
         ObjectIterator<Long2ObjectMap.Entry<MacroChunkInstance>> iterator = grid.getActiveMacroChunks()
                 .long2ObjectEntrySet()
                 .fastIterator();
@@ -135,7 +142,7 @@ class MacroQueueManager extends ManagerPackage {
 
             MacroChunkInstance macro = iterator.next().getValue();
 
-            if (region.reachesArea(worldHandle, macro.getCoordinate(), EngineSetting.MACRO_CHUNK_SIZE))
+            if (region.reaches(grid, macro.getCoordinate(), EngineSetting.MACRO_CHUNK_SIZE))
                 invalidateMacro(macro);
         }
     }
@@ -167,6 +174,7 @@ class MacroQueueManager extends ManagerPackage {
     }
 
     private void placeMacro(GridInstance grid, MacroChunkInstance macro) {
+        refreshFrame(grid, macro);
         ringBranch.resolveTarget(grid, macro);
         worldRenderManager.placeMacroInstance(macro, grid);
     }
@@ -226,6 +234,8 @@ class MacroQueueManager extends ManagerPackage {
                 continue;
             }
 
+            refreshFrame(grid, macro);
+
             switch (determineOperation(macro)) {
                 case BUILD -> buildBranch.buildMacro(macro);
                 case RENDER -> {
@@ -265,6 +275,22 @@ class MacroQueueManager extends ManagerPackage {
         } finally {
             sync.release();
         }
+    }
+
+    // Frame \\
+
+    // The frame the chart lays the tile's heart in now; a tile whose frame moved drops what it built from the old one
+    private void refreshFrame(GridInstance grid, MacroChunkInstance macro) {
+
+        grid.resolveFrame(macro.getHomeChunk(), frameScratch);
+
+        GlobeFrameStruct frame = macro.getFrame();
+
+        if (frame.matches(frameScratch.getCanonicalCoordinate(), frameScratch.getTurns()))
+            return;
+
+        invalidateMacro(macro);
+        frame.set(frameScratch.getCanonicalCoordinate(), frameScratch.getTurns());
     }
 
     // Unload \\

@@ -12,6 +12,8 @@ import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.root.UtilityPackage.InternalException;
@@ -44,7 +46,10 @@ public class SettlementManager extends ManagerPackage {
      * afresh, uncached, to preview it before or after it stands, and may give
      * a world layouts of its own to stand beside its settlements, a road a
      * planner draws, laid, drawn and kept off exactly as they are. Settlement
-     * IDs are assigned in registration order.
+     * IDs are assigned in registration order. On a globe the cells are every
+     * cube face's own, a chunk asks for what reaches the place it truly
+     * stands, and each layout is laid into it through the transform from the
+     * chunk's chart into the layout's frame.
      */
 
     // Internal
@@ -53,6 +58,7 @@ public class SettlementManager extends ManagerPackage {
     private SettlementSiteBranch settlementSiteBranch;
     private SettlementPlanBranch settlementPlanBranch;
     private SettlementCollectBranch settlementCollectBranch;
+    private SettlementStampAsyncContainer stampContainer;
 
     // Palette
     private Object2IntOpenHashMap<String> settlementName2SettlementID;
@@ -73,6 +79,9 @@ public class SettlementManager extends ManagerPackage {
 
     @Override
     protected void create() {
+
+        // Internal
+        this.stampContainer = create(SettlementStampAsyncContainer.class);
 
         // Planned
         this.world2PlannedLayouts = new Object2ObjectOpenHashMap<>();
@@ -208,17 +217,32 @@ public class SettlementManager extends ManagerPackage {
     // Generation \\
 
     // Worker — every settlement and road between settlements reaching a freshly generated chunk, laid into it
-    public void generateSettlements(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance[] subChunks) {
+    public void generateSettlements(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            GlobeFrameStruct frame,
+            SubChunkInstance[] subChunks) {
 
+        SettlementStampAsyncContainer scratch = stampContainer.getInstance();
+        SurfacePointStruct home = scratch.home;
         double half = EngineSetting.CHUNK_SIZE * 0.5;
-        ObjectArrayList<LayoutPlanStruct> layouts = settlementCollectBranch.collectAround(
-                worldHandle,
-                (double) Coordinate2Long.unpackX(chunkCoordinate) * EngineSetting.CHUNK_SIZE + half,
-                (double) Coordinate2Long.unpackY(chunkCoordinate) * EngineSetting.CHUNK_SIZE + half,
-                half);
+        double centerX = (double) Coordinate2Long.unpackX(chunkCoordinate) * EngineSetting.CHUNK_SIZE + half;
+        double centerZ = (double) Coordinate2Long.unpackY(chunkCoordinate) * EngineSetting.CHUNK_SIZE + half;
 
-        for (int i = 0; i < layouts.size(); i++)
-            layoutManager.stampLayout(worldHandle, chunkCoordinate, subChunks, layouts.get(i));
+        home.setHome(worldHandle, chunkCoordinate, frame.getCanonicalCoordinate(), frame.getTurns());
+        home.resolve(centerX, centerZ);
+
+        ObjectArrayList<LayoutPlanStruct> layouts = settlementCollectBranch.collectAround(
+                worldHandle, home.getCanonicalX(), home.getCanonicalZ(), half);
+
+        for (int i = 0; i < layouts.size(); i++) {
+
+            LayoutPlanStruct layout = layouts.get(i);
+
+            scratch.chunkToLayout.setChartToFrame(
+                    home, centerX, centerZ, layout.getReferenceX(), layout.getReferenceZ());
+            layoutManager.stampLayout(worldHandle, chunkCoordinate, subChunks, layout, scratch.chunkToLayout);
+        }
     }
 
     // Any thread — true when a settlement or road claims ground within a margin of a world column

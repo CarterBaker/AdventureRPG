@@ -6,6 +6,7 @@ import application.bootstrap.weatherpipeline.weather.WeatherInstance;
 import application.bootstrap.weatherpipeline.weather.WeatherWindowStruct;
 import application.bootstrap.weatherpipeline.weathermanager.WeatherManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -26,6 +27,10 @@ public class WeatherPatternManager extends ManagerPackage {
      * local WeatherInstance following the cell overhead. The weather over any
      * point of noise space can also be sampled, from its live cell or resolved
      * exactly as that cell would be, so a map shows what every player sees.
+     * A globe has no wrap of its own, so its pattern repeats over a square
+     * as wide as its strip, far wider than any window, laid over the chart
+     * of the grid reading it: a cell's weather is the biome's where that
+     * chart lays the copy of the cell nearest the grid, on the cube.
      */
 
     // Internal
@@ -54,6 +59,7 @@ public class WeatherPatternManager extends ManagerPackage {
 
     // Scratch
     private final WeatherWindowStruct windowScratch = new WeatherWindowStruct();
+    private final GlobeFrameStruct frameScratch = new GlobeFrameStruct();
 
     // Base \\
 
@@ -122,13 +128,15 @@ public class WeatherPatternManager extends ManagerPackage {
 
         int pixelBlocks = EngineSetting.CHUNKS_PER_PIXEL * EngineSetting.CHUNK_SIZE;
         int pixelCountX = Math.max(1, activeWorld.getWorldScale().x / pixelBlocks);
-        int pixelCountZ = Math.max(1, activeWorld.getWorldScale().y / pixelBlocks);
+        int pixelCountZ = activeWorld.isGlobe()
+                ? pixelCountX
+                : Math.max(1, activeWorld.getWorldScale().y / pixelBlocks);
         int cellPixels = resolveLargestDivisor(
                 greatestCommonDivisor(pixelCountX, pixelCountZ), EngineSetting.WEATHER_CELL_SIZE_PIXELS);
 
         this.mapWorld = activeWorld;
         this.worldWidthBlocks = activeWorld.getWorldScale().x;
-        this.worldHeightBlocks = activeWorld.getWorldScale().y;
+        this.worldHeightBlocks = (double) pixelCountZ * pixelBlocks;
         this.cellSizeChunks = (double) cellPixels * EngineSetting.CHUNKS_PER_PIXEL;
         this.cellSizeBlocks = cellSizeChunks * EngineSetting.CHUNK_SIZE;
         this.worldCellCountX = pixelCountX / cellPixels;
@@ -302,7 +310,51 @@ public class WeatherPatternManager extends ManagerPackage {
                 (int) Math.floor(worldXBlocks / EngineSetting.CHUNK_SIZE),
                 (int) Math.floor(worldZBlocks / EngineSetting.CHUNK_SIZE));
 
-        return weatherManager.resolveWeather(worldChunkCoordinate, noisePercentile);
+        return weatherManager.resolveWeather(resolveGlobeChunk(worldChunkCoordinate), noisePercentile);
+    }
+
+    // The face cell a chunk of the pattern stands over on a globe, through the chart of the first grid on it: the
+    // copy of the chunk nearest that grid's active chunk, folded onto the cube; a torus chunk is its own
+    private long resolveGlobeChunk(long patternChunk) {
+
+        if (!mapWorld.isGlobe())
+            return patternChunk;
+
+        GridInstance grid = findMapGrid();
+
+        if (grid == null)
+            return patternChunk;
+
+        long reference = grid.getActiveChunkCoordinate();
+        int periodXChunks = (int) (worldWidthBlocks / EngineSetting.CHUNK_SIZE);
+        int periodZChunks = (int) (worldHeightBlocks / EngineSetting.CHUNK_SIZE);
+
+        grid.resolveFrame(
+                Coordinate2Long.pack(
+                        nearestCopy(Coordinate2Long.unpackX(patternChunk), Coordinate2Long.unpackX(reference),
+                                periodXChunks),
+                        nearestCopy(Coordinate2Long.unpackY(patternChunk), Coordinate2Long.unpackY(reference),
+                                periodZChunks)),
+                frameScratch);
+
+        return frameScratch.getCanonicalCoordinate();
+    }
+
+    private GridInstance findMapGrid() {
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++) {
+
+            GridInstance grid = (GridInstance) elements[i];
+
+            if (grid.getWorldHandle() == mapWorld)
+                return grid;
+        }
+
+        return null;
     }
 
     private void advanceCellTransitions(float deltaTime) {
@@ -363,6 +415,11 @@ public class WeatherPatternManager extends ManagerPackage {
     }
 
     // Utility \\
+
+    // The copy of a value repeating every period that lies nearest a reference
+    private int nearestCopy(int value, int reference, int period) {
+        return reference + Math.floorMod(value - reference + period / 2, period) - period / 2;
+    }
 
     private double wrap(double value, double period) {
 

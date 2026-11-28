@@ -14,20 +14,29 @@ public class ClockInstance extends InstancePackage {
      * held for that grid's lifetime — never shared, never rebuilt. Solar
      * elevation is the vertical component of the sun's direction for that
      * same visual time, from -1 (nadir) through 0 (horizon) to 1 (zenith).
+     * The north heading is the angle from the grid's +Z toward its +X at
+     * which true north lies there, which turns the sky onto the grid.
      */
 
     // State
     private double visualTimeOfDay;
     private double locationOffset;
     private double latitudeFactor;
+    private double northHeading;
     private double solarElevation;
 
     // Update \\
 
-    public void update(double visualTimeOfDay, double locationOffset, double latitudeFactor) {
+    public void update(
+            double visualTimeOfDay,
+            double locationOffset,
+            double latitudeFactor,
+            double northHeading) {
+
         this.visualTimeOfDay = visualTimeOfDay;
         this.locationOffset = locationOffset;
         this.latitudeFactor = latitudeFactor;
+        this.northHeading = northHeading;
         this.solarElevation = CelestialUtility.resolveSolarElevation(visualTimeOfDay);
     }
 
@@ -43,6 +52,10 @@ public class ClockInstance extends InstancePackage {
 
     public double getLatitudeFactor() {
         return latitudeFactor;
+    }
+
+    public double getNorthHeading() {
+        return northHeading;
     }
 
     public double getSolarElevation() {

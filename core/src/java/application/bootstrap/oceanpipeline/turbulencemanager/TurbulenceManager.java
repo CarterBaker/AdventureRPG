@@ -202,14 +202,14 @@ public class TurbulenceManager extends ManagerPackage {
 
         double originX = (double) Coordinate2Long.unpackX(grid.getActiveChunkCoordinate()) * EngineSetting.CHUNK_SIZE;
 
-        return (float) WorldWrapUtility.wrappedDelta(worldBlockX, originX, grid.getWorldHandle().getWorldScale().x);
+        return (float) WorldWrapUtility.wrappedBlockDeltaX(grid.getWorldHandle(), worldBlockX, originX);
     }
 
     public float toRelativeZ(GridInstance grid, double worldBlockZ) {
 
         double originZ = (double) Coordinate2Long.unpackY(grid.getActiveChunkCoordinate()) * EngineSetting.CHUNK_SIZE;
 
-        return (float) WorldWrapUtility.wrappedDelta(worldBlockZ, originZ, grid.getWorldHandle().getWorldScale().y);
+        return (float) WorldWrapUtility.wrappedBlockDeltaZ(grid.getWorldHandle(), worldBlockZ, originZ);
     }
 
     // Grid Factory \\

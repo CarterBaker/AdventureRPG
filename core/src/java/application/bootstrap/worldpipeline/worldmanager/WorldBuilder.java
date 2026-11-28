@@ -3,17 +3,20 @@ package application.bootstrap.worldpipeline.worldmanager;
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
 
+import application.bootstrap.worldpipeline.util.GlobeUtility;
 import application.bootstrap.worldpipeline.util.WorldElevationUtility;
 import application.bootstrap.worldpipeline.util.WorldPlacementArpgUtility;
 import application.bootstrap.worldpipeline.world.WorldData;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
+import application.bootstrap.worldpipeline.world.WorldShape;
 import engine.assets.image.Pixmap;
 import engine.root.BuilderPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.arpg.ArpgUtility;
+import engine.util.mathematics.matrices.Matrix3Double;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.registry.RegistryUtility;
 import engine.util.mathematics.vectors.Vector3;
@@ -37,7 +40,10 @@ class WorldBuilder extends BuilderPackage {
      * no files, a neutral height layer, every default, a seed taken from its
      * name so it generates the same each time, nothing placed or grown on
      * it, time held at noon so it is always seen in daylight, and biome borders running straight along its pixel edges, so the
-     * areas painted on it keep their shape.
+     * areas painted on it keep their shape. The shape says whether the world
+     * wraps as a torus or is a globe, whose image must hold its six cube faces
+     * side by side, and a globe's cube rotation turns its block grid's cube
+     * inside the globe; a virtual world is always a torus.
      */
 
     // Internal
@@ -108,12 +114,21 @@ class WorldBuilder extends BuilderPackage {
 
         long seed = resolveWorldSeed(arpg, arpgFile);
 
+        WorldShape shape = ArpgUtility.getEnum(arpg, "shape", WorldShape.class, WorldShape.TORUS);
+        Vector3 cubeRotation = resolveCubeRotation(arpg, worldName);
+
+        if (shape == WorldShape.GLOBE)
+            validateGlobeImage(file, pixmap);
+
         WorldData data = new WorldData(
                 worldName,
                 worldID,
                 file,
                 pixmap,
                 worldScale,
+                shape,
+                cubeRotation,
+                resolveGlobeFromCube(cubeRotation),
                 heightFile,
                 heightLayer,
                 gravityMultiplier,
@@ -142,6 +157,9 @@ class WorldBuilder extends BuilderPackage {
                 null,
                 pixmap,
                 calculateWorldScale(pixmap),
+                WorldShape.TORUS,
+                new Vector3(),
+                resolveGlobeFromCube(new Vector3()),
                 null,
                 WorldElevationUtility.createNeutralLayer(pixmap.getWidth(), pixmap.getHeight()),
                 EngineSetting.DEFAULT_GRAVITY_MULTIPLIER,
@@ -163,6 +181,53 @@ class WorldBuilder extends BuilderPackage {
         handle.constructor(data);
 
         return handle;
+    }
+
+    // Shape \\
+
+    private Vector3 resolveCubeRotation(ArpgObjectStruct arpg, String worldName) {
+
+        Vector3 cubeRotation = new Vector3();
+
+        if (!arpg.has("cube_rotation"))
+            return cubeRotation;
+
+        ArpgArrayStruct degrees = arpg.getAsArray("cube_rotation");
+
+        if (degrees.size() != 3)
+            throwException("World \"" + worldName + "\" has a cube_rotation of " + degrees.size()
+                    + " values — it takes three, the degrees about X, Y and Z.");
+
+        cubeRotation.set(
+                degrees.get(0).getAsFloat(),
+                degrees.get(1).getAsFloat(),
+                degrees.get(2).getAsFloat());
+
+        float limit = EngineSetting.GLOBE_CUBE_ROTATION_MAX_DEGREES;
+
+        if (Math.abs(cubeRotation.x) > limit || Math.abs(cubeRotation.y) > limit || Math.abs(cubeRotation.z) > limit)
+            throwException("World \"" + worldName + "\" has a cube_rotation beyond " + limit
+                    + " degrees about an axis — each of its three angles lies within -" + limit + " and " + limit
+                    + ".");
+
+        return cubeRotation;
+    }
+
+    private Matrix3Double resolveGlobeFromCube(Vector3 cubeRotation) {
+
+        Matrix3Double globeFromCube = new Matrix3Double();
+        GlobeUtility.resolveGlobeFromCube(cubeRotation, globeFromCube);
+
+        return globeFromCube;
+    }
+
+    private void validateGlobeImage(File file, Pixmap pixmap) {
+
+        if (pixmap.getWidth() != pixmap.getHeight() * EngineSetting.GLOBE_FACE_COUNT)
+            throwException("Globe world image \"" + file.getPath() + "\" is " + pixmap.getWidth() + "x"
+                    + pixmap.getHeight() + " — a globe's image holds its " + EngineSetting.GLOBE_FACE_COUNT
+                    + " square cube faces side by side, so it is " + EngineSetting.GLOBE_FACE_COUNT
+                    + " times as wide as it is tall.");
     }
 
     // Height \\

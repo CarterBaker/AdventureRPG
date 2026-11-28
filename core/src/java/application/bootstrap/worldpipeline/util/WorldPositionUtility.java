@@ -6,7 +6,9 @@ import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeom
 import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -20,10 +22,23 @@ public class WorldPositionUtility extends EngineUtility {
      * Spawn helpers: picks a random chunk inside a world and finds the nearest
      * safe standing height in a column. settleChunk() is the one place a
      * chunk-local position that has moved past its chunk's edge is handed to
-     * the chunk it now lies in, wrapped around the world.
+     * the chunk it now lies in, wrapped around the world. toCanonical() gives
+     * a position a grid holds in its chart as the face cell it stands on, its
+     * chunk-local position turned into that face's axes, for anything kept
+     * past the grid, such as a save.
      */
 
     public static long getRandomChunk(WorldHandle worldHandle) {
+
+        if (worldHandle.isGlobe()) {
+
+            int faceChunks = GlobeUtility.getFaceChunks(worldHandle);
+            int face = ThreadLocalRandom.current().nextInt(0, EngineSetting.GLOBE_FACE_COUNT);
+
+            return Coordinate2Long.pack(
+                    (int) GlobeUtility.faceOriginX(face, faceChunks) + ThreadLocalRandom.current().nextInt(0, faceChunks),
+                    ThreadLocalRandom.current().nextInt(0, faceChunks));
+        }
 
         Vector2Int scale = worldHandle.getWorldScale();
 
@@ -47,6 +62,28 @@ public class WorldPositionUtility extends EngineUtility {
 
         WorldWrapUtility.wrapAroundChunk(position);
         worldPositionStruct.setChunkCoordinate(WorldWrapUtility.wrapAroundWorld(worldHandle, chunkCoordinate));
+    }
+
+    // The canonical form of a position the grid holds in its chart — a torus grid's positions already are
+    public static void toCanonical(
+            GridInstance grid,
+            WorldPositionStruct chartPosition,
+            GlobeFrameStruct frameScratch,
+            WorldPositionStruct out) {
+
+        grid.resolveFrame(chartPosition.getChunkCoordinate(), frameScratch);
+
+        Vector3 position = chartPosition.getPosition();
+        float center = EngineSetting.CHUNK_SIZE * 0.5f;
+        float x = position.x - center;
+        float z = position.z - center;
+        int turns = frameScratch.getTurns();
+
+        out.setChunkCoordinate(frameScratch.getCanonicalCoordinate());
+        out.getPosition().set(
+                (float) GlobeUtility.turnX(x, z, turns) + center,
+                position.y,
+                (float) GlobeUtility.turnZ(x, z, turns) + center);
     }
 
     public static int findSafeSpawnHeight(

@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.macrostreammanager;
 import application.bootstrap.mappipeline.util.MapShadeUtility;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroDataSyncContainer;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.TerrainSurfaceSampleStruct;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
@@ -83,6 +84,9 @@ public class MacroBuildBranch extends BranchPackage {
         MacroDataSyncContainer sync = macro.getMacroDataSyncContainer();
         WorldHandle worldHandle = macro.getWorldHandle();
         long coordinate = macro.getCoordinate();
+        long homeChunk = macro.getHomeChunk();
+        long homeCanonical = macro.getFrame().getCanonicalCoordinate();
+        int homeTurns = macro.getFrame().getTurns();
         int cellsPerSide = macro.getTargetCellsPerSide();
         boolean treeModels = macro.isTargetTreeModels();
 
@@ -94,6 +98,7 @@ public class MacroBuildBranch extends BranchPackage {
                 scratch.cellsPerSide = cellsPerSide;
                 scratch.standIns = macroTreeBranch.drawsStandIns(cellsPerSide) || treeModels;
                 scratch.treeModels = treeModels;
+                scratch.home.setHome(worldHandle, homeChunk, homeCanonical, homeTurns);
                 sampleLattice(scratch, worldHandle, coordinate);
                 macroTreeBranch.sampleStandIns(scratch, worldHandle, coordinate);
 
@@ -132,20 +137,26 @@ public class MacroBuildBranch extends BranchPackage {
         int samplesPerSide = scratch.getSamplesPerSide();
         float cellSizeBlocks = tileSizeBlocks / scratch.cellsPerSide;
         TerrainSurfaceSampleStruct sample = scratch.sample;
+        SurfacePointStruct home = scratch.home;
 
         scratch.minHeightBlocks = Float.MAX_VALUE;
         scratch.openWaterCount = 0;
         scratch.canopyCount = 0;
         scratch.structureCount = 0;
 
-        macroSettlementBranch.gatherLayouts(scratch, worldHandle, originX, originZ, cellSizeBlocks);
+        home.resolve(originX + tileSizeBlocks * 0.5, originZ + tileSizeBlocks * 0.5);
+        macroSettlementBranch.gatherLayouts(
+                scratch, worldHandle, home.getCanonicalX(), home.getCanonicalZ(), cellSizeBlocks);
 
         for (int z = 0; z < samplesPerSide; z++) {
             for (int x = 0; x < samplesPerSide; x++) {
 
                 int index = z * samplesPerSide + x;
-                double sampleX = originX + x * cellSizeBlocks;
-                double sampleZ = originZ + z * cellSizeBlocks;
+
+                home.resolve(originX + x * cellSizeBlocks, originZ + z * cellSizeBlocks);
+
+                double sampleX = home.getCanonicalX();
+                double sampleZ = home.getCanonicalZ();
 
                 worldGenerationManager.sampleSurface(worldHandle, sampleX, sampleZ, cellSizeBlocks, sample);
 

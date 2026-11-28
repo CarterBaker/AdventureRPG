@@ -5,6 +5,7 @@ layout (location = 8) in vec4 aInstance1; // centre height, radius, turn, layer
 layout (location = 9) in vec2 aInstance2; // fade start, fade direction
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "includes/PlayerPositionData.glsl"
 #include "includes/SettingsData.glsl"
 #include "trees/includes/TreeImpostor.glsl"
@@ -42,5 +43,5 @@ void main() {
     vTurn     = aInstance1.z;
     vFade     = aInstance2;
 
-    gl_Position = u_viewProjection * vec4(vWorldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(curveToHorizon(vWorldPos), 1.0);
 }

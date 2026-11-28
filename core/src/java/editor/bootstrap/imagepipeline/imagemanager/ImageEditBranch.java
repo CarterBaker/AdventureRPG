@@ -1,5 +1,6 @@
 package editor.bootstrap.imagepipeline.imagemanager;
 
+import application.bootstrap.worldpipeline.util.GlobeUtility;
 import editor.bootstrap.brushpipeline.brush.BrushHandle;
 import editor.bootstrap.brushpipeline.util.BrushField;
 import editor.bootstrap.brushpipeline.util.BrushUtility;
@@ -12,6 +13,7 @@ import engine.assets.image.Pixmap;
 import engine.graphics.color.PackedColorUtility;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 class ImageEditBranch extends BranchPackage {
@@ -32,7 +34,10 @@ class ImageEditBranch extends BranchPackage {
      * commonest color around and Scatter only moves colors, so no color the
      * image could not hold is ever written. A fill floods the four-connected
      * run of one color. Coordinates wrap on an image whose edges wrap and are
-     * clipped on any other. Every pixel that actually changes is recorded for
+     * clipped on any other; on a cube map image they are read on the plane of
+     * the face an edit is anchored on, run on past its edges onto the faces
+     * beyond, and a stroke from one face to another is drawn on the plane of
+     * the face it leaves, so a brush crosses every seam as one stroke. Every pixel that actually changes is recorded for
      * undo and grows the caller's region.
      */
 
@@ -67,7 +72,9 @@ class ImageEditBranch extends BranchPackage {
 
     // Brush \\
 
-    // A stamp every spacing from where the stroke stands toward a pixel, the stroke left on its last stamp
+    // A stamp every spacing from where the stroke stands toward a pixel, the stroke left on its last stamp; on a cube
+    // map image the pixel is laid on the plane of the face the stroke stands on, and each stamp put on the pixel it
+    // truly is
     void stroke(
             ImageDocumentInstance document,
             int toX,
@@ -77,19 +84,64 @@ class ImageEditBranch extends BranchPackage {
 
         int fromX = document.getStrokeX();
         int fromY = document.getStrokeY();
-        float length = (float) Math.hypot(toX - fromX, toY - fromY);
+        int targetX = toX;
+        int targetY = toY;
+
+        if (document.isCube()) {
+
+            if (!unfoldOntoStroke(document, toX, toY)) {
+                stamp(document, toX, toY, brush, region);
+                document.moveStroke(toX, toY);
+                return;
+            }
+
+            targetX = (int) Math.floor(document.getCubeTexel().getX()) + document.getAnchorFace()
+                    * document.getCubeFaceTexels();
+            targetY = (int) Math.floor(document.getCubeTexel().getY());
+        }
+
+        float length = (float) Math.hypot(targetX - fromX, targetY - fromY);
         float spacing = BrushUtility.resolveSpacing(brush.getBrush(), brush.getRadius());
         int stamps = (int) (length / spacing);
 
         for (int i = 1; i <= stamps; i++) {
 
             float t = i * spacing / length;
-            int x = Math.round(fromX + (toX - fromX) * t);
-            int y = Math.round(fromY + (toY - fromY) * t);
+            int x = Math.round(fromX + (targetX - fromX) * t);
+            int y = Math.round(fromY + (targetY - fromY) * t);
+            int index = toStrokePixel(document, fromX, x, y);
 
-            stamp(document, x, y, brush, region);
-            document.moveStroke(x, y);
+            if (index == EngineSetting.INDEX_NOT_FOUND)
+                continue;
+
+            int pixelX = index % document.getWidth();
+            int pixelY = index / document.getWidth();
+
+            stamp(document, pixelX, pixelY, brush, region);
+            document.moveStroke(pixelX, pixelY);
         }
+    }
+
+    // The pixel a stroke reaches laid on the plane of the face the stroke stands on, left in the document's texel
+    private boolean unfoldOntoStroke(ImageDocumentInstance document, int toX, int toY) {
+
+        document.anchorCube(document.getStrokeX());
+
+        return GlobeUtility.unfoldImageTexel(
+                document.getCubeFaceTexels(),
+                document.getAnchorFace(),
+                toX + EngineSetting.PIXEL_CENTER_OFFSET,
+                toY + EngineSetting.PIXEL_CENTER_OFFSET,
+                document.getCubeDirection(),
+                document.getCubeTexel());
+    }
+
+    // A point along a stroke as the pixel it truly is, read on the plane of the face the stroke left from
+    private int toStrokePixel(ImageDocumentInstance document, int fromX, int x, int y) {
+
+        document.anchorCube(fromX);
+
+        return toPixelIndex(document, x, y);
     }
 
     // A moving stroke reads the tip's pixels before any is written, so Swirl and Scatter move what was there
@@ -104,6 +156,8 @@ class ImageEditBranch extends BranchPackage {
         int radius = brush.getRadius();
         float reach = radius + EditorSetting.IMAGE_BRUSH_EDGE_PIXELS;
         float density = tip.getValue(BrushField.DENSITY);
+
+        document.anchorCube(centerX);
 
         if (brush.getStroke().isMoving())
             captureTip(document, centerX, centerY, radius);
@@ -332,6 +386,8 @@ class ImageEditBranch extends BranchPackage {
 
     void fill(ImageDocumentInstance document, int x, int y, int color, ImageRegionStruct region) {
 
+        document.anchorCube(x);
+
         int start = toPixelIndex(document, x, y);
 
         if (start == EngineSetting.INDEX_NOT_FOUND)
@@ -357,6 +413,7 @@ class ImageEditBranch extends BranchPackage {
                 continue;
 
             writePixel(document, pixelX, pixelY, color, region);
+            document.anchorCube(pixelX);
             pushFillNeighbor(document, pixelX + 1, pixelY, target);
             pushFillNeighbor(document, pixelX - 1, pixelY, target);
             pushFillNeighbor(document, pixelX, pixelY + 1, target);
@@ -385,6 +442,8 @@ class ImageEditBranch extends BranchPackage {
             float scale,
             float turnDegrees,
             ImageRegionStruct region) {
+
+        document.anchorCube(centerX);
 
         float radians = (float) Math.toRadians(turnDegrees);
         float cos = (float) Math.cos(radians);
@@ -457,8 +516,16 @@ class ImageEditBranch extends BranchPackage {
         region.include(pixelX, pixelY);
     }
 
-    // An edge pixel stands in for any point past it on an image that does not wrap
+    // An edge pixel stands in for any point past it on an image that does not wrap; a cube map image reads past a
+    // face's edge onto the face beyond
     int readPixel(ImageDocumentInstance document, int x, int y) {
+
+        if (document.isCube()) {
+
+            int index = toPixelIndex(document, x, y);
+
+            return document.getPixmap().getPixel(index % document.getWidth(), index / document.getWidth());
+        }
 
         int width = document.getWidth();
         int height = document.getHeight();
@@ -473,6 +540,9 @@ class ImageEditBranch extends BranchPackage {
         int width = document.getWidth();
         int height = document.getHeight();
 
+        if (document.isCube())
+            return toCubePixelIndex(document, x, y);
+
         if (document.isWrapping())
             return Math.floorMod(y, height) * width + Math.floorMod(x, width);
 
@@ -480,5 +550,16 @@ class ImageEditBranch extends BranchPackage {
             return EngineSetting.INDEX_NOT_FOUND;
 
         return y * width + x;
+    }
+
+    // A pixel on the plane of the anchored face, past its edges the pixel of the face beyond
+    private int toCubePixelIndex(ImageDocumentInstance document, int x, int y) {
+
+        int faceTexels = document.getCubeFaceTexels();
+        int face = document.getAnchorFace();
+        long pixel = GlobeUtility.resolveImagePixel(
+                faceTexels, face, x - face * faceTexels, y, document.getCubeTexel());
+
+        return Coordinate2Long.unpackY(pixel) * document.getWidth() + Coordinate2Long.unpackX(pixel);
     }
 }

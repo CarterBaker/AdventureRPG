@@ -21,6 +21,7 @@ import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedDetail;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlay;
 import application.bootstrap.geometrypipeline.skinnedbuffer.SkinnedOverlayStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.arpg.ArpgArrayStruct;
@@ -48,6 +49,7 @@ class PlayerRestoreBranch extends BranchPackage {
     private ItemManager itemManager;
     private RaceManager raceManager;
     private GenderManager genderManager;
+    private WorldStreamManager worldStreamManager;
 
     // Base \\
 
@@ -58,6 +60,7 @@ class PlayerRestoreBranch extends BranchPackage {
         this.itemManager = get(ItemManager.class);
         this.raceManager = get(RaceManager.class);
         this.genderManager = get(GenderManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     // Management \\
@@ -98,6 +101,7 @@ class PlayerRestoreBranch extends BranchPackage {
         player.setLocation(
                 WorldWrapUtility.wrapAroundChunk(parseVector(locationArpg, "position")),
                 WorldWrapUtility.wrapAroundWorld(player.getWorldHandle(), chunkCoordinate));
+        worldStreamManager.restartChartFor(player);
     }
 
     // Character \\

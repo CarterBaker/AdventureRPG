@@ -26,7 +26,8 @@ public enum ToolCanvas {
      * vertices. Biome colors name biomes, so they never blend; heights,
      * bone weights and a sculpted surface do. The world's heights are
      * their own canvas, raised, lowered, smoothed, flattened and erased
-     * back to level with the brush, never painted from a palette. A
+     * back to level with the brush, never painted from a palette. A globe's
+     * block cube is picked and turned inside its globe. A
      * character's rig and an animation's pose take the tools that pick and
      * drag its joints. A character's UV tab selects the vertices whose
      * edges it marks as seams and whose faces it unwraps; the UV Editor
@@ -70,6 +71,10 @@ public enum ToolCanvas {
             true,
             imageSize(),
             strength(EditorSetting.TOOL_STRENGTH_DEFAULT)),
+    CUBE(
+            EditorSetting.TOOL_CANVAS_CUBE,
+            new EditorTool[] { EditorTool.HAND, EditorTool.SELECT, EditorTool.ROTATE },
+            false),
     SETTLEMENTS(
             EditorSetting.TOOL_CANVAS_SETTLEMENTS,
             new EditorTool[] { EditorTool.HAND, EditorTool.SELECT, EditorTool.PLACE, EditorTool.ERASE },

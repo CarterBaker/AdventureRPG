@@ -3,6 +3,7 @@
 layout (location = 0) in vec2 aPos;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "liquid/includes/OceanSurface.glsl"
 
 out vec3  vWorldPos;
@@ -24,5 +25,5 @@ void main() {
     vTidal      = 1.0;
     vOceanState = vec4(state.seaState, state.chop, state.swell, 0.0);
 
-    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(curveToHorizon(worldPos), 1.0);
 }

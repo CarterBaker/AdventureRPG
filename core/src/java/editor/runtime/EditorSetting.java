@@ -784,6 +784,7 @@ public class EditorSetting {
     public static final int VIEW_CAMERA_BUTTON_PAN = Buttons.RIGHT;
     public static final float VIEW_CAMERA_DISTANCE_DEFAULT = 2.2f;
     public static final float VIEW_CAMERA_DISTANCE_MIN = 0.15f;
+    public static final float VIEW_CAMERA_SURFACE_DISTANCE_MIN = 0.0005f;
     public static final float VIEW_CAMERA_DISTANCE_MAX = 8f;
     public static final float VIEW_CAMERA_ZOOM_FACTOR = 1.12f;
     public static final float VIEW_CAMERA_NEAR_SHARE = 0.02f;
@@ -2363,6 +2364,9 @@ public class EditorSetting {
     public static final String WORLD_MAP_STATUS_SEPARATOR = "   |   ";
     public static final String WORLD_MAP_STATUS_SCALE = "Blocks per pixel ";
     public static final String WORLD_MAP_STATUS_SCALE_FORMAT = "%.3g";
+    public static final String WORLD_MAP_STATUS_LATITUDE = "Latitude ";
+    public static final String WORLD_MAP_STATUS_LONGITUDE = "   Longitude ";
+    public static final String WORLD_MAP_STATUS_DEGREES_FORMAT = "%.2f°";
     public static final String WORLD_MAP_FOLLOW_ON = "Following";
     public static final String WORLD_MAP_FOLLOW_OFF = "Follow";
     public static final String WORLD_MAP_DAY_NIGHT_ON = "Day/Night On";
@@ -2863,6 +2867,7 @@ public class EditorSetting {
     public static final String TOOL_HAND = "Hand";
     public static final String TOOL_CANVAS_BIOMES = "World Biomes";
     public static final String TOOL_CANVAS_HEIGHTS = "World Heights";
+    public static final String TOOL_CANVAS_CUBE = "World Cube";
     public static final String TOOL_CANVAS_SETTLEMENTS = "World Placements";
     public static final String TOOL_CANVAS_CAMERAS = "World Cameras";
     public static final String TOOL_CANVAS_CHARACTER_MESH = "Mesh";
@@ -3025,6 +3030,7 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_MODE_CAMERAS = "Cameras";
     public static final String WORLD_EDITOR_LAYER_BIOMES = "Biomes";
     public static final String WORLD_EDITOR_LAYER_HEIGHTS = "Heights";
+    public static final String WORLD_EDITOR_LAYER_CUBE = "Cube";
     public static final float WORLD_EDITOR_HEIGHT_PERCENT_SCALE = 100f;
     public static final String WORLD_EDITOR_HEIGHT_RAISE = "Raise ";
     public static final String WORLD_EDITOR_HEIGHT_LOWER = "Lower ";
@@ -3050,6 +3056,8 @@ public class EditorSetting {
     public static final String WORLD_EDITOR_STATUS_NO_BIOME =
             "No biome selected: list the biomes this world paints with in its Biomes field (Worlds tab)";
     public static final String WORLD_EDITOR_KEY_BIOMES = "biomes";
+    public static final String WORLD_EDITOR_KEY_CUBE_ROTATION = "cube_rotation";
+    public static final double WORLD_EDITOR_CUBE_DEGREE_STEP = 0.01;
     public static final String WORLD_EDITOR_STATUS_X = "X ";
     public static final String WORLD_EDITOR_STATUS_Y = "  Y ";
     public static final String WORLD_EDITOR_STATUS_UNPAINTED = "Unpainted color";

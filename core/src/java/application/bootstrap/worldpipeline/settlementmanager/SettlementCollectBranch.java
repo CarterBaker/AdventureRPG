@@ -3,10 +3,12 @@ package application.bootstrap.worldpipeline.settlementmanager;
 import application.bootstrap.worldpipeline.layout.LayoutPlanStruct;
 import application.bootstrap.worldpipeline.settlement.SettlementPlanStruct;
 import application.bootstrap.worldpipeline.settlement.SettlementSiteStruct;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class SettlementCollectBranch extends BranchPackage {
@@ -21,7 +23,9 @@ class SettlementCollectBranch extends BranchPackage {
      * roads before settlements, so a settlement's walls and
      * buildings stand over the roads leading in, and each in the fixed order
      * of its wrapped cell, so every caller lays and sees overlapping layouts
-     * alike.
+     * alike. On a globe the cells are walked in the stretch's own face frame
+     * and folded onto the cells they truly are, and every centre and bound is
+     * carried between frames before it is measured.
      */
 
     // Internal
@@ -44,7 +48,7 @@ class SettlementCollectBranch extends BranchPackage {
 
     // Collect \\
 
-    // Every layout reaching a rectangle of world blocks, which may lie across the world's wrap
+    // Every layout reaching a rectangle of world blocks, which may lie across the world's wrap or a globe's edges
     void collect(
             WorldHandle worldHandle,
             double minX,
@@ -98,6 +102,7 @@ class SettlementCollectBranch extends BranchPackage {
 
     // Links \\
 
+    // A torus cell owns its roads east and south; a globe pair of cells is walked from either, its road owned once
     private void collectLinks(
             SettlementCollectAsyncContainer scratch,
             WorldHandle worldHandle,
@@ -113,25 +118,41 @@ class SettlementCollectBranch extends BranchPackage {
         int lastX = (int) Math.floorDiv((long) Math.floor(maxX), cellSize) + 1;
         int firstZ = (int) Math.floorDiv((long) Math.floor(minZ), cellSize) - window;
         int lastZ = (int) Math.floorDiv((long) Math.floor(maxZ), cellSize) + 1;
+        boolean globe = worldHandle.isGlobe();
+        int sides = globe ? EngineSetting.SETTLEMENT_LINK_SIDES : EngineSetting.SETTLEMENT_LINK_DIRECTIONS;
 
         for (int cellZ = firstZ; cellZ <= lastZ; cellZ++) {
             for (int cellX = firstX; cellX <= lastX; cellX++) {
 
-                int wrappedX = settlementCacheBranch.wrapCellX(worldHandle, cellX);
-                int wrappedZ = settlementCacheBranch.wrapCellZ(worldHandle, cellZ);
-
                 for (int direction = 0; direction < EngineSetting.SETTLEMENT_LINK_DIRECTIONS; direction++) {
 
-                    if (!linkMayReach(worldHandle, wrappedX, wrappedZ, direction, minX, minZ, maxX, maxZ))
+                    int neighbourX = cellX + (direction == EngineSetting.SETTLEMENT_LINK_EAST ? 1 : 0);
+                    int neighbourZ = cellZ + (direction == EngineSetting.SETTLEMENT_LINK_SOUTH ? 1 : 0);
+
+                    long from = settlementCacheBranch.canonicalizeCell(worldHandle, cellX, cellZ, scratch.fold);
+                    int fromSide = (direction + scratch.fold.getTurns()) & 3;
+                    long to = settlementCacheBranch.canonicalizeCell(
+                            worldHandle, neighbourX, neighbourZ, scratch.fold);
+                    int toSide = (direction + 2 + scratch.fold.getTurns()) & 3;
+
+                    boolean fromOwns = !globe || from < to;
+                    long owner = fromOwns ? from : to;
+                    long other = fromOwns ? to : from;
+                    int side = globe ? (fromOwns ? fromSide : toSide) : direction;
+                    int ownerX = Coordinate2Long.unpackX(owner);
+                    int ownerZ = Coordinate2Long.unpackY(owner);
+                    int otherX = Coordinate2Long.unpackX(other);
+                    int otherZ = Coordinate2Long.unpackY(other);
+
+                    if (!linkMayReach(scratch, worldHandle, ownerX, ownerZ, otherX, otherZ, minX, minZ, maxX, maxZ))
                         continue;
 
-                    LayoutPlanStruct link = settlementCacheBranch.getLink(worldHandle, wrappedX, wrappedZ, direction);
+                    LayoutPlanStruct link = globe
+                            ? settlementCacheBranch.getGlobeLink(worldHandle, ownerX, ownerZ, side, otherX, otherZ)
+                            : settlementCacheBranch.getLink(worldHandle, ownerX, ownerZ, side);
 
-                    if (link != null && reaches(worldHandle, link, minX, minZ, maxX, maxZ))
-                        scratch.order2Layout.put(
-                                ((long) wrappedZ * countX + wrappedX) * EngineSetting.SETTLEMENT_LINK_DIRECTIONS
-                                        + direction,
-                                link);
+                    if (link != null && reaches(scratch, worldHandle, link, minX, minZ, maxX, maxZ))
+                        scratch.order2Layout.put(((long) ownerZ * countX + ownerX) * sides + side, link);
                 }
             }
         }
@@ -139,36 +160,40 @@ class SettlementCollectBranch extends BranchPackage {
 
     // True when both ends of a road stand and the straight run between them, widened, comes near the rectangle
     private boolean linkMayReach(
+            SettlementCollectAsyncContainer scratch,
             WorldHandle worldHandle,
-            int cellX,
-            int cellZ,
-            int direction,
+            int fromCellX,
+            int fromCellZ,
+            int toCellX,
+            int toCellZ,
             double minX,
             double minZ,
             double maxX,
             double maxZ) {
 
-        SettlementSiteStruct from = settlementCacheBranch.getSite(worldHandle, cellX, cellZ);
+        SettlementSiteStruct from = settlementCacheBranch.getSite(worldHandle, fromCellX, fromCellZ);
 
         if (from == null)
             return false;
 
-        SettlementSiteStruct to = settlementCacheBranch.getSite(
-                worldHandle,
-                settlementCacheBranch.wrapCellX(worldHandle,
-                        cellX + (direction == EngineSetting.SETTLEMENT_LINK_EAST ? 1 : 0)),
-                settlementCacheBranch.wrapCellZ(worldHandle,
-                        cellZ + (direction == EngineSetting.SETTLEMENT_LINK_SOUTH ? 1 : 0)));
+        SettlementSiteStruct to = settlementCacheBranch.getSite(worldHandle, toCellX, toCellZ);
 
         if (to == null)
             return false;
 
         double centerX = (minX + maxX) * 0.5;
         double centerZ = (minZ + maxZ) * 0.5;
-        double fromX = WorldWrapUtility.unwrapBlockX(worldHandle, from.getCenterX(), centerX);
-        double fromZ = WorldWrapUtility.unwrapBlockZ(worldHandle, from.getCenterZ(), centerZ);
-        double toX = WorldWrapUtility.unwrapBlockX(worldHandle, to.getCenterX(), fromX);
-        double toZ = WorldWrapUtility.unwrapBlockZ(worldHandle, to.getCenterZ(), fromZ);
+        FrameTransformStruct transform = scratch.transform;
+
+        transform.setFrames(worldHandle, from.getCenterX(), from.getCenterZ(), centerX, centerZ);
+
+        double fromX = transform.mapX(from.getCenterX(), from.getCenterZ());
+        double fromZ = transform.mapZ(from.getCenterX(), from.getCenterZ());
+
+        transform.setFrames(worldHandle, to.getCenterX(), to.getCenterZ(), fromX, fromZ);
+
+        double toX = transform.mapX(to.getCenterX(), to.getCenterZ());
+        double toZ = transform.mapZ(to.getCenterX(), to.getCenterZ());
         double reach = EngineSetting.SETTLEMENT_LINK_REACH_BLOCKS;
 
         return Math.max(fromX, toX) + reach >= minX && Math.min(fromX, toX) - reach <= maxX
@@ -193,27 +218,30 @@ class SettlementCollectBranch extends BranchPackage {
         int lastX = (int) Math.floorDiv((long) Math.floor(maxX) + reach, cellSize);
         int firstZ = (int) Math.floorDiv((long) Math.floor(minZ) - reach, cellSize);
         int lastZ = (int) Math.floorDiv((long) Math.floor(maxZ) + reach, cellSize);
-        long settlementOrder = (long) countX * countZ * EngineSetting.SETTLEMENT_LINK_DIRECTIONS;
+        int sides = worldHandle.isGlobe() ? EngineSetting.SETTLEMENT_LINK_SIDES : EngineSetting.SETTLEMENT_LINK_DIRECTIONS;
+        long settlementOrder = (long) countX * countZ * sides;
 
         for (int cellZ = firstZ; cellZ <= lastZ; cellZ++) {
             for (int cellX = firstX; cellX <= lastX; cellX++) {
 
-                int wrappedX = settlementCacheBranch.wrapCellX(worldHandle, cellX);
-                int wrappedZ = settlementCacheBranch.wrapCellZ(worldHandle, cellZ);
+                long cell = settlementCacheBranch.canonicalizeCell(worldHandle, cellX, cellZ, scratch.fold);
+                int wrappedX = Coordinate2Long.unpackX(cell);
+                int wrappedZ = Coordinate2Long.unpackY(cell);
                 SettlementSiteStruct site = settlementCacheBranch.getSite(worldHandle, wrappedX, wrappedZ);
 
-                if (site == null || !siteMayReach(worldHandle, site, minX, minZ, maxX, maxZ))
+                if (site == null || !siteMayReach(scratch, worldHandle, site, minX, minZ, maxX, maxZ))
                     continue;
 
                 SettlementPlanStruct plan = settlementCacheBranch.getPlan(worldHandle, wrappedX, wrappedZ);
 
-                if (plan != null && reaches(worldHandle, plan.getLayout(), minX, minZ, maxX, maxZ))
+                if (plan != null && reaches(scratch, worldHandle, plan.getLayout(), minX, minZ, maxX, maxZ))
                     scratch.order2Layout.put(settlementOrder + (long) wrappedZ * countX + wrappedX, plan.getLayout());
             }
         }
     }
 
     private boolean siteMayReach(
+            SettlementCollectAsyncContainer scratch,
             WorldHandle worldHandle,
             SettlementSiteStruct site,
             double minX,
@@ -222,8 +250,13 @@ class SettlementCollectBranch extends BranchPackage {
             double maxZ) {
 
         double reach = site.getSettlementHandle().getReachBlocks();
-        double centerX = WorldWrapUtility.unwrapBlockX(worldHandle, site.getCenterX(), (minX + maxX) * 0.5);
-        double centerZ = WorldWrapUtility.unwrapBlockZ(worldHandle, site.getCenterZ(), (minZ + maxZ) * 0.5);
+        FrameTransformStruct transform = scratch.transform;
+
+        transform.setFrames(
+                worldHandle, site.getCenterX(), site.getCenterZ(), (minX + maxX) * 0.5, (minZ + maxZ) * 0.5);
+
+        double centerX = transform.mapX(site.getCenterX(), site.getCenterZ());
+        double centerZ = transform.mapZ(site.getCenterX(), site.getCenterZ());
 
         return centerX + reach >= minX && centerX - reach <= maxX
                 && centerZ + reach >= minZ && centerZ - reach <= maxZ;
@@ -231,6 +264,7 @@ class SettlementCollectBranch extends BranchPackage {
 
     // True when a layout's bounds overlap the rectangle, brought into the layout's own frame
     private boolean reaches(
+            SettlementCollectAsyncContainer scratch,
             WorldHandle worldHandle,
             LayoutPlanStruct layout,
             double minX,
@@ -238,9 +272,26 @@ class SettlementCollectBranch extends BranchPackage {
             double maxX,
             double maxZ) {
 
-        double rectMinX = WorldWrapUtility.unwrapBlockX(worldHandle, minX, layout.getReferenceX());
-        double rectMinZ = WorldWrapUtility.unwrapBlockZ(worldHandle, minZ, layout.getReferenceZ());
+        if (!worldHandle.isGlobe()) {
 
-        return layout.overlaps(rectMinX, rectMinZ, rectMinX + (maxX - minX), rectMinZ + (maxZ - minZ));
+            double rectMinX = WorldWrapUtility.unwrapBlockX(worldHandle, minX, layout.getReferenceX());
+            double rectMinZ = WorldWrapUtility.unwrapBlockZ(worldHandle, minZ, layout.getReferenceZ());
+
+            return layout.overlaps(rectMinX, rectMinZ, rectMinX + (maxX - minX), rectMinZ + (maxZ - minZ));
+        }
+
+        FrameTransformStruct transform = scratch.transform;
+
+        transform.setFrames(
+                worldHandle, (minX + maxX) * 0.5, (minZ + maxZ) * 0.5, layout.getReferenceX(), layout.getReferenceZ());
+
+        double cornerAX = transform.mapX(minX, minZ);
+        double cornerAZ = transform.mapZ(minX, minZ);
+        double cornerBX = transform.mapX(maxX, maxZ);
+        double cornerBZ = transform.mapZ(maxX, maxZ);
+
+        return layout.overlaps(
+                Math.min(cornerAX, cornerBX), Math.min(cornerAZ, cornerBZ),
+                Math.max(cornerAX, cornerBX), Math.max(cornerAZ, cornerBZ));
     }
 }

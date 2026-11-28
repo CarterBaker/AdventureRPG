@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.worldmanager;
 
 import java.io.File;
 
+import application.bootstrap.worldpipeline.util.GlobeUtility;
 import application.bootstrap.worldpipeline.util.WorldPlacementArpgUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
@@ -57,6 +58,7 @@ public class WorldManager extends ManagerPackage {
         this.worldID2Placements = new Int2ObjectOpenHashMap<>();
 
         create(WorldLoader.class);
+        create(WorldShapeBufferSystem.class);
     }
 
     // Management \\
@@ -237,6 +239,17 @@ public class WorldManager extends ManagerPackage {
 
     private File resolveCompanionFile(WorldHandle worldHandle) {
         return ArpgUtility.resolveCompanionFile(worldHandle.getWorldFile());
+    }
+
+    // Shape \\
+
+    // A globe's block cube turned to new degrees about X, Y and Z, which every sample reads from then on, the
+    // generation revision bumped so everything generated from the old turn is laid again
+    public void setCubeRotation(WorldHandle worldHandle, float degreesX, float degreesY, float degreesZ) {
+
+        worldHandle.getCubeRotation().set(degreesX, degreesY, degreesZ);
+        GlobeUtility.resolveGlobeFromCube(worldHandle.getCubeRotation(), worldHandle.getGlobeFromCube());
+        generationRevision++;
     }
 
     public int getPlacementRevision() {

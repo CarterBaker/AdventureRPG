@@ -115,7 +115,7 @@ class CaveDressingBranch extends BranchPackage {
         CaveFrameStruct frame = volume.columnFrame;
 
         caveCarveBranch.fillColumnFrame(
-                worldHandle, latticeOriginX, latticeOriginZ,
+                worldHandle, column.point, latticeOriginX, latticeOriginZ,
                 latticeOriginX - chunkOriginX, latticeOriginZ - chunkOriginZ, false,
                 volume.columnLattice, frame, scanFromY, scanToY + 1);
         copyLakeSites(volume.chunkFrame, frame);
@@ -178,7 +178,7 @@ class CaveDressingBranch extends BranchPackage {
             return;
 
         TerrainCaveProfileStruct profile = caveRegionBranch.resolveProfile(
-                worldHandle, frame, chunkOriginX, chunkOriginZ,
+                worldHandle, column.point, frame, chunkOriginX, chunkOriginZ,
                 localX + 0.5f, floorY + 1 + span / 2, localZ + 0.5f,
                 column.groundHeightBlocks[columnIndex]);
 
@@ -375,7 +375,7 @@ class CaveDressingBranch extends BranchPackage {
         long chunkOriginZ = (long) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize;
 
         TerrainCaveProfileStruct profile = caveRegionBranch.resolveProfile(
-                worldHandle, volume.chunkFrame, chunkOriginX, chunkOriginZ,
+                worldHandle, column.point, volume.chunkFrame, chunkOriginX, chunkOriginZ,
                 localX + 0.5f, anchorY, localZ + 0.5f, column.groundHeightBlocks[columnIndex]);
 
         if (profile == null || !profile.speleothems)
@@ -459,7 +459,7 @@ class CaveDressingBranch extends BranchPackage {
         int groundHeight = column.groundHeightBlocks[columnIndex];
 
         TerrainCaveProfileStruct profile = caveRegionBranch.resolveProfile(
-                worldHandle, volume.chunkFrame, chunkOriginX, chunkOriginZ,
+                worldHandle, column.point, volume.chunkFrame, chunkOriginX, chunkOriginZ,
                 localX + 0.5f, worldY, localZ + 0.5f, groundHeight);
 
         if (profile == null || density <= -profile.shellBlocks)

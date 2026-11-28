@@ -133,11 +133,13 @@ public class WorldMapMenuSystem extends SystemPackage {
         WorldHandle worldHandle = worldMapViewSystem.getWorldHandle();
         double worldX = worldMapViewSystem.getCenterX();
         double worldZ = worldMapViewSystem.getCenterZ();
+        RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
+        boolean pointed = editorInputSystem.isPointerActive()
+                && worldMapViewSystem.locatePointer(rawInput.getMouseX(), rawInput.getMouseY());
 
-        if (editorInputSystem.isPointerActive()) {
-            RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
-            worldX = worldMapViewSystem.screenToWorldX(rawInput.getMouseX());
-            worldZ = worldMapViewSystem.screenToWorldZ(rawInput.getMouseY());
+        if (pointed) {
+            worldX = worldMapViewSystem.getPointerX();
+            worldZ = worldMapViewSystem.getPointerZ();
         }
 
         long blockX = (long) Math.floor(WorldWrapUtility.wrapBlockX(worldHandle, worldX));
@@ -150,10 +152,21 @@ public class WorldMapMenuSystem extends SystemPackage {
             biomeName = biomeManager.getDisplayName(sample.getBlend().getDominantBiome());
         }
 
-        return EditorSetting.WORLD_MAP_STATUS_X + blockX
+        String place = EditorSetting.WORLD_MAP_STATUS_X + blockX
                 + EditorSetting.WORLD_MAP_STATUS_Z + blockZ
                 + EditorSetting.WORLD_MAP_STATUS_SEPARATOR + biomeName
-                + EditorSetting.WORLD_MAP_STATUS_SEPARATOR + EditorSetting.WORLD_MAP_STATUS_SCALE
-                + String.format(EditorSetting.WORLD_MAP_STATUS_SCALE_FORMAT, worldMapViewSystem.getBlocksPerPixel());
+                + EditorSetting.WORLD_MAP_STATUS_SEPARATOR;
+
+        if (!worldMapViewSystem.isShown())
+            return place + EditorSetting.WORLD_MAP_STATUS_SCALE
+                    + String.format(EditorSetting.WORLD_MAP_STATUS_SCALE_FORMAT, worldMapViewSystem.getBlocksPerPixel());
+
+        if (!pointed)
+            return place;
+
+        return place + EditorSetting.WORLD_MAP_STATUS_LATITUDE
+                + String.format(EditorSetting.WORLD_MAP_STATUS_DEGREES_FORMAT, worldMapViewSystem.getPointerLatitude())
+                + EditorSetting.WORLD_MAP_STATUS_LONGITUDE
+                + String.format(EditorSetting.WORLD_MAP_STATUS_DEGREES_FORMAT, worldMapViewSystem.getPointerLongitude());
     }
 }

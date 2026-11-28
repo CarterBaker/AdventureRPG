@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.TerrainFeatureStruct;
 import engine.root.StructPackage;
 
@@ -13,12 +14,14 @@ public class TerrainSurfaceSampleStruct extends StructPackage {
      * that water's surface, and the colors of its top and of its slopes,
      * blended across every biome reaching it from the average albedo of the
      * blocks a chunk would dress it with. The biome blend and terrain features
-     * it was sampled through stay readable for anything that names the biome.
+     * it was sampled through stay readable for anything that names the biome,
+     * with the surface point it was read at.
      */
 
     // Biome Field
     private final BiomeBlendStruct blend = new BiomeBlendStruct();
     private final TerrainFeatureStruct features = new TerrainFeatureStruct();
+    private final SurfacePointStruct point = new SurfacePointStruct();
 
     // Ground
     float groundHeightBlocks;
@@ -38,6 +41,10 @@ public class TerrainSurfaceSampleStruct extends StructPackage {
 
     public TerrainFeatureStruct getFeatures() {
         return features;
+    }
+
+    public SurfacePointStruct getPoint() {
+        return point;
     }
 
     public float getGroundHeightBlocks() {

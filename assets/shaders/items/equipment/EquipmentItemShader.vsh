@@ -4,6 +4,7 @@ layout(location = 1) in float aNorIndex;
 layout(location = 2) in float aTile;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 
 // Carries the item's one-block cube onto its anchor on the posed character.
 uniform mat4 u_model;
@@ -20,5 +21,5 @@ void main() {
     vModelPosition = aPos;
     vFace          = int(aNorIndex);
     vViewPosition = (u_view * worldPosition).xyz;
-    gl_Position   = u_viewProjection * worldPosition;
+    gl_Position   = u_viewProjection * vec4(curveToHorizon(worldPosition.xyz), worldPosition.w);
 }

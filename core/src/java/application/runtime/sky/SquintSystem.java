@@ -144,6 +144,7 @@ public class SquintSystem extends SystemPackage {
             return 0f;
 
         CelestialUtility.resolveSunDirection(grid.getClockInstance().getVisualTimeOfDay(), sunDirection);
+        CelestialUtility.applyNorthHeading(grid.getClockInstance().getNorthHeading(), sunDirection);
 
         float glare = resolveSunHeight()
                 * resolveLook(camera.getDirection())

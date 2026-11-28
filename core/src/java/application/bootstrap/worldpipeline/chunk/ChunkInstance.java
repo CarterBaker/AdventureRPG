@@ -10,6 +10,7 @@ import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.tree.TreePaletteHandle;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.GenerationCacheStruct;
 import application.bootstrap.worldpipeline.worlditem.WorldItemInstancePaletteHandle;
@@ -32,7 +33,9 @@ public class ChunkInstance extends WorldRenderInstance {
      * ocean was last written against. It holds every tree that reaches it
      * from the moment it generates until it is reset, when TreeManager lets
      * them go, and draws them into a tree packet of its own, apart from its
-     * terrain, so a tree that changes never rebuilds the ground.
+     * terrain, so a tree that changes never rebuilds the ground. Its frame is
+     * the face cell it stands on and the turns from its grid's axes into that
+     * face's, fixed as it loads.
      */
 
     // Internal
@@ -47,6 +50,9 @@ public class ChunkInstance extends WorldRenderInstance {
 
     // Settings
     private int subChunkSpan;
+
+    // Frame — the face cell this chunk stands on and the turns from its grid's axes into that face's
+    private GlobeFrameStruct frame;
 
     // Merge Version
     private static final AtomicLong MERGE_VERSION_SEQUENCE = new AtomicLong();
@@ -77,6 +83,9 @@ public class ChunkInstance extends WorldRenderInstance {
         // Settings
         this.subChunkSpan = EngineSetting.CHUNK_SIZE * EngineSetting.SUB_BLOCK_DIVISIONS;
 
+        // Frame
+        this.frame = new GlobeFrameStruct();
+
         // Tide
         this.tideSurfaceLevels = EngineSetting.OCEAN_TIDE_UNAPPLIED;
 
@@ -89,6 +98,8 @@ public class ChunkInstance extends WorldRenderInstance {
             WorldRenderManager worldRenderManager,
             WorldHandle worldHandle,
             long coordinate,
+            long canonicalCoordinate,
+            int frameTurns,
             VAOHandle vaoHandle,
             short airBlockId,
             BlockManager blockManager,
@@ -96,6 +107,7 @@ public class ChunkInstance extends WorldRenderInstance {
             Long2ObjectLinkedOpenHashMap<ChunkInstance> activeChunks) {
 
         this.treeManager = treeManager;
+        this.frame.set(canonicalCoordinate, frameTurns);
 
         super.constructor(
                 worldRenderManager,
@@ -158,6 +170,18 @@ public class ChunkInstance extends WorldRenderInstance {
 
     public ChunkDataSyncContainer getChunkDataSyncContainer() {
         return chunkDataSyncContainer;
+    }
+
+    public GlobeFrameStruct getFrame() {
+        return frame;
+    }
+
+    public long getCanonicalCoordinate() {
+        return frame.getCanonicalCoordinate();
+    }
+
+    public int getFrameTurns() {
+        return frame.getTurns();
     }
 
     public SubChunkInstance[] getSubChunks() {

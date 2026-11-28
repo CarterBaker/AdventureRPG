@@ -1,6 +1,8 @@
 package application.bootstrap.worldpipeline.settlementmanager;
 
 import application.bootstrap.worldpipeline.layout.LayoutPlanStruct;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import engine.root.AsyncContainerPackage;
 import it.unimi.dsi.fastutil.longs.Long2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -11,8 +13,9 @@ public class SettlementCollectAsyncContainer extends AsyncContainerPackage {
      * Thread-local scratch for gathering the layouts that reach a stretch of
      * the world: each found layout under the key that orders it, roads before
      * settlements and cells in one fixed order, so every chunk lays
-     * overlapping layouts alike, and the gathered layouts handed to a
-     * single-point query.
+     * overlapping layouts alike, the gathered layouts handed to a
+     * single-point query, and the fold and transform a globe's cells and
+     * centres are carried through.
      */
 
     // Order
@@ -21,10 +24,16 @@ public class SettlementCollectAsyncContainer extends AsyncContainerPackage {
     // Query
     ObjectArrayList<LayoutPlanStruct> layouts;
 
+    // Globe
+    GlobeFrameStruct fold;
+    FrameTransformStruct transform;
+
     @Override
     protected void create() {
         this.order2Layout = new Long2ObjectAVLTreeMap<>();
         this.layouts = new ObjectArrayList<>();
+        this.fold = new GlobeFrameStruct();
+        this.transform = new FrameTransformStruct();
     }
 
     @Override

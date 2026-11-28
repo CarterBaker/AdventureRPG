@@ -24,12 +24,15 @@ import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.CoverageUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
+import application.bootstrap.worldpipeline.util.LiquidFlowUtility;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.util.TerrainFeatureStruct;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
 import application.bootstrap.worldpipeline.util.WorldElevationUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.graphics.color.Color;
 import engine.graphics.color.PackedColorUtility;
@@ -148,10 +151,16 @@ public class WorldGenerationManager extends ManagerPackage {
 
     // Column — once per chunk \\
 
-    public void computeColumn(WorldHandle worldHandle, long chunkCoordinate, GenerationCacheStruct terrainCache) {
+    // The column of a chunk a grid holds at chunkCoordinate, standing where its frame lays it
+    public void computeColumn(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            GlobeFrameStruct frame,
+            GenerationCacheStruct terrainCache) {
 
         TerrainColumnAsyncContainer column = terrainColumnContainer.getInstance();
         column.tideSurfaceLevels = tideManager.getSurfaceLevels();
+        column.point.setHome(worldHandle, chunkCoordinate, frame.getCanonicalCoordinate(), frame.getTurns());
 
         if (terrainCache.isValidFor(chunkCoordinate)) {
             applyCachedColumn(column, worldHandle, chunkCoordinate, terrainCache);
@@ -165,14 +174,11 @@ public class WorldGenerationManager extends ManagerPackage {
         long worldOffsetX = (long) chunkX * CHUNK_SIZE;
         long worldOffsetZ = (long) chunkZ * CHUNK_SIZE;
 
-        double worldWidthBlocks = worldHandle.getWorldScale().x;
-        double worldHeightBlocks = worldHandle.getWorldScale().y;
-
-        sampleMacroGrid(worldHandle, column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
-        sampleDetailGrid(column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
+        sampleMacroGrid(column, seed, worldOffsetX, worldOffsetZ);
+        sampleDetailGrid(column, seed, worldOffsetX, worldOffsetZ);
         resolveCornerHeights(column);
-        riverManager.gatherChunk(worldHandle, chunkCoordinate, column.riverGather);
-        resolveBlockColumns(worldHandle, column, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
+        riverManager.gatherChunk(worldHandle, frame.getCanonicalCoordinate(), column.riverGather);
+        resolveBlockColumns(worldHandle, column, seed, worldOffsetX, worldOffsetZ);
         resolveVeinPalette(worldHandle, column, worldOffsetX, worldOffsetZ);
         resolveTideFloors(worldHandle, chunkCoordinate, column);
 
@@ -187,11 +193,9 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     private void sampleMacroGrid(
-            WorldHandle worldHandle,
             TerrainColumnAsyncContainer column,
             long seed,
-            long worldOffsetX, long worldOffsetZ,
-            double worldWidthBlocks, double worldHeightBlocks) {
+            long worldOffsetX, long worldOffsetZ) {
 
         int stride = TerrainColumnAsyncContainer.MACRO_SAMPLE_STRIDE;
         int samplesPerAxis = TerrainColumnAsyncContainer.MACRO_SAMPLES_PER_AXIS;
@@ -205,16 +209,14 @@ public class WorldGenerationManager extends ManagerPackage {
                 double sampleWorldZ = worldOffsetZ + gz * stride;
 
                 BiomeBlendStruct blend = column.macroBlend[index];
+                SurfacePointStruct point = column.point.resolve(sampleWorldX, sampleWorldZ);
 
-                sampleTerrainField(worldHandle, sampleWorldX, sampleWorldZ, blend);
+                sampleTerrainField(point, blend);
 
-                TerrainShapeUtility.resolveFeatures(
-                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks,
-                        blend, column.macroFeatures[index]);
+                TerrainShapeUtility.resolveFeatures(seed, point, blend, column.macroFeatures[index]);
 
                 column.macroShapeGridBlocks[index] = TerrainShapeUtility.computeMacroShapeBlocks(
-                        seed, sampleWorldX, sampleWorldZ, worldWidthBlocks, worldHeightBlocks, blend,
-                        WorldElevationUtility.sampleElevation(worldHandle, sampleWorldX, sampleWorldZ));
+                        seed, point, blend, WorldElevationUtility.sampleElevation(point));
 
                 BiomeHandle dominantBiome = blend.getDominantBiome();
 
@@ -228,8 +230,7 @@ public class WorldGenerationManager extends ManagerPackage {
     private void sampleDetailGrid(
             TerrainColumnAsyncContainer column,
             long seed,
-            long worldOffsetX, long worldOffsetZ,
-            double worldWidthBlocks, double worldHeightBlocks) {
+            long worldOffsetX, long worldOffsetZ) {
 
         int stride = TerrainColumnAsyncContainer.DETAIL_SAMPLE_STRIDE;
         int samplesPerAxis = TerrainColumnAsyncContainer.DETAIL_SAMPLES_PER_AXIS;
@@ -244,13 +245,10 @@ public class WorldGenerationManager extends ManagerPackage {
                 blendFeatures(column, localX, localZ);
 
                 int index = gz * samplesPerAxis + gx;
-                long worldX = worldOffsetX + localX;
-                long worldZ = worldOffsetZ + localZ;
+                SurfacePointStruct point = column.point.resolve(worldOffsetX + localX, worldOffsetZ + localZ);
 
-                column.detailGridBlocks[index] = TerrainShapeUtility.computeDetailBlocks(
-                        seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, features);
-                column.ridgeGridBlocks[index] = TerrainShapeUtility.computeRidgeBlocks(
-                        seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, features);
+                column.detailGridBlocks[index] = TerrainShapeUtility.computeDetailBlocks(seed, point, features);
+                column.ridgeGridBlocks[index] = TerrainShapeUtility.computeRidgeBlocks(seed, point, features);
             }
         }
     }
@@ -295,8 +293,7 @@ public class WorldGenerationManager extends ManagerPackage {
             WorldHandle worldHandle,
             TerrainColumnAsyncContainer column,
             long seed,
-            long worldOffsetX, long worldOffsetZ,
-            double worldWidthBlocks, double worldHeightBlocks) {
+            long worldOffsetX, long worldOffsetZ) {
 
         int maxGroundHeight = Integer.MIN_VALUE;
         int minGroundHeight = Integer.MAX_VALUE;
@@ -333,22 +330,21 @@ public class WorldGenerationManager extends ManagerPackage {
                         : TerrainFeatureStruct.LAKE_LEVEL_UNDEFINED;
 
                 int landHeight = groundHeight;
+                long canonicalX = column.point.toHomeBlockX(localX, localZ);
+                long canonicalZ = column.point.toHomeBlockZ(localX, localZ);
 
-                resolveColumnRiver(
-                        column, worldHandle, worldOffsetX + localX, worldOffsetZ + localZ, columnIndex, features, true);
+                resolveColumnRiver(column, worldHandle, canonicalX, canonicalZ, columnIndex, features, true);
                 groundHeight = column.groundHeightBlocks[columnIndex];
 
-                int macroCorner = pickMacroCorner(
-                        seed, worldOffsetX + localX, worldOffsetZ + localZ, localX, localZ);
+                int macroCorner = pickMacroCorner(seed, canonicalX, canonicalZ, localX, localZ);
 
                 resolveColumnDressing(
-                        column, seed, worldOffsetX + localX, worldOffsetZ + localZ,
-                        localX, localZ, columnIndex, macroCorner, features);
+                        column, seed, canonicalX, canonicalZ, localX, localZ, columnIndex, macroCorner, features);
                 resolveRiverDressing(column, columnIndex, landHeight);
                 resolveColumnSmoothing(column, localX, localZ, columnIndex, features);
                 resolveColumnCarving(
                         column, seed, worldOffsetX + localX, worldOffsetZ + localZ,
-                        worldWidthBlocks, worldHeightBlocks, localX, localZ, columnIndex, features);
+                        localX, localZ, columnIndex, features);
 
                 int top = resolveColumnTop(column, columnIndex, TideUtility.BAND_MAX_Y);
 
@@ -378,8 +374,9 @@ public class WorldGenerationManager extends ManagerPackage {
     }
 
     // A river cuts the column's ground and stands its water before the column is dressed, so dressing, smoothing and
-    // caves all read the river's ground, and records the way its water runs and the tunnel a cave river hollows
-    // through it
+    // caves all read the river's ground, and records the way its water runs, turned from where the column truly
+    // stands into its chunk's axes, and the tunnel a cave river hollows through it; the column is given by the
+    // canonical block it stands on
     private void resolveColumnRiver(
             TerrainColumnAsyncContainer column,
             WorldHandle worldHandle,
@@ -397,7 +394,7 @@ public class WorldGenerationManager extends ManagerPackage {
         if (river.hasWater())
             column.columnLakeLevelBlocks[columnIndex] = river.getWaterLevelBlocks();
 
-        column.columnFlow[columnIndex] = river.getFlow();
+        column.columnFlow[columnIndex] = LiquidFlowUtility.turn(river.getFlow(), -column.point.getHomeTurns());
 
         column.columnTunnelFloorY[columnIndex] = river.getTunnelFloorY();
         column.columnTunnelCeilingY[columnIndex] = river.getTunnelCeilingY();
@@ -615,7 +612,6 @@ public class WorldGenerationManager extends ManagerPackage {
             TerrainColumnAsyncContainer column,
             long seed,
             long worldX, long worldZ,
-            double worldWidthBlocks, double worldHeightBlocks,
             int localX, int localZ,
             int columnIndex,
             TerrainFeatureStruct features) {
@@ -637,7 +633,7 @@ public class WorldGenerationManager extends ManagerPackage {
         boolean waterCovered = oceanFlooded || lakeWater
                 || (seaFlood && groundHeight < TideUtility.BAND_MAX_Y + EngineSetting.CAVE_ROOF_BLOCKS);
         boolean entrance = features.hasCaveEntrances() && !lakeWater && (seaFlood || !waterCovered)
-                && TerrainCarveUtility.isEntrance(seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks);
+                && TerrainCarveUtility.isEntrance(seed, column.point.resolve(worldX, worldZ));
 
         int roof = TerrainCarveUtility.computeRoofBlocks(
                 computeColumnSlope(column.cornerHeightBlocks, localX, localZ));
@@ -726,7 +722,7 @@ public class WorldGenerationManager extends ManagerPackage {
                 addVeinSlot(column, veins[i], groundHeight, groundHeight);
         }
 
-        caveRegionBranch.collectProfiles(worldHandle, worldOffsetX, worldOffsetZ, column.regionProfiles);
+        caveRegionBranch.collectProfiles(column.point, worldOffsetX, worldOffsetZ, column.regionProfiles);
 
         for (int i = 0; i < column.regionProfiles.size(); i++) {
 
@@ -1026,11 +1022,9 @@ public class WorldGenerationManager extends ManagerPackage {
         long worldOffsetX = (long) chunkX * CHUNK_SIZE;
         long worldOffsetZ = (long) chunkZ * CHUNK_SIZE;
 
-        double worldWidthBlocks = worldHandle.getWorldScale().x;
-        double worldHeightBlocks = worldHandle.getWorldScale().y;
-
-        sampleMacroGrid(worldHandle, probe, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
-        sampleDetailGrid(probe, seed, worldOffsetX, worldOffsetZ, worldWidthBlocks, worldHeightBlocks);
+        probe.point.setHome(worldHandle, chunkCoordinate, chunkCoordinate, 0);
+        sampleMacroGrid(probe, seed, worldOffsetX, worldOffsetZ);
+        sampleDetailGrid(probe, seed, worldOffsetX, worldOffsetZ);
 
         probe.computedWorldHandle = worldHandle;
         probe.computedChunkCoordinate = chunkCoordinate;
@@ -1082,10 +1076,7 @@ public class WorldGenerationManager extends ManagerPackage {
 
         resolveColumnRiver(probe, worldHandle, wrappedX, wrappedZ, columnIndex, features, false);
 
-        resolveColumnCarving(
-                probe, worldHandle.getSeed(), wrappedX, wrappedZ,
-                worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
-                localX, localZ, columnIndex, features);
+        resolveColumnCarving(probe, worldHandle.getSeed(), wrappedX, wrappedZ, localX, localZ, columnIndex, features);
 
         return probe;
     }
@@ -1097,9 +1088,10 @@ public class WorldGenerationManager extends ManagerPackage {
         CaveSiteProbeStruct point = probe.point;
 
         float shapedHeight = sampleShapedHeight(
-                worldHandle,
-                WorldWrapUtility.wrapBlockX(worldHandle, worldX),
-                WorldWrapUtility.wrapBlockZ(worldHandle, worldZ),
+                resolveSamplePoint(
+                        worldHandle,
+                        WorldWrapUtility.wrapBlockX(worldHandle, worldX),
+                        WorldWrapUtility.wrapBlockZ(worldHandle, worldZ)),
                 probe.blend, features);
         int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(shapedHeight);
 
@@ -1156,7 +1148,11 @@ public class WorldGenerationManager extends ManagerPackage {
             TerrainSurfaceSampleStruct outSample) {
 
         TerrainFeatureStruct features = outSample.getFeatures();
-        float shapedHeight = sampleShapedHeight(worldHandle, worldX, worldZ, outSample.getBlend(), features);
+        SurfacePointStruct point = outSample.getPoint();
+
+        point.setCanonicalHome(worldHandle, worldX, worldZ);
+
+        float shapedHeight = sampleShapedHeight(point.resolve(worldX, worldZ), outSample.getBlend(), features);
         int groundHeight = TerrainShapeUtility.finalizeGroundHeightBlocks(shapedHeight);
         boolean oceanReached = TerrainShapeUtility.isOceanReached(features);
         boolean lakeWater = TerrainShapeUtility.isLakeCovered(features, groundHeight);
@@ -1203,27 +1199,19 @@ public class WorldGenerationManager extends ManagerPackage {
 
     // The ground at a point shaped as terrain shapes it, leaving the point's blend and features filled
     private float sampleShapedHeight(
-            WorldHandle worldHandle,
-            double worldX,
-            double worldZ,
+            SurfacePointStruct point,
             BiomeBlendStruct outBlend,
             TerrainFeatureStruct outFeatures) {
 
-        long seed = worldHandle.getSeed();
-        double worldWidthBlocks = worldHandle.getWorldScale().x;
-        double worldHeightBlocks = worldHandle.getWorldScale().y;
+        long seed = point.getWorldHandle().getSeed();
 
-        sampleTerrainField(worldHandle, worldX, worldZ, outBlend);
-        TerrainShapeUtility.resolveFeatures(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend, outFeatures);
+        sampleTerrainField(point, outBlend);
+        TerrainShapeUtility.resolveFeatures(seed, point, outBlend, outFeatures);
 
         float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend,
-                WorldElevationUtility.sampleElevation(worldHandle, worldX, worldZ));
-        float ridge = TerrainShapeUtility.computeRidgeBlocks(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outFeatures);
-        float detail = TerrainShapeUtility.computeDetailBlocks(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outFeatures);
+                seed, point, outBlend, WorldElevationUtility.sampleElevation(point));
+        float ridge = TerrainShapeUtility.computeRidgeBlocks(seed, point, outFeatures);
+        float detail = TerrainShapeUtility.computeDetailBlocks(seed, point, outFeatures);
 
         return TerrainShapeUtility.shapeGroundHeightBlocks(macroShape, ridge, detail, outFeatures);
     }
@@ -1285,30 +1273,37 @@ public class WorldGenerationManager extends ManagerPackage {
             TerrainFeatureStruct outFeatures) {
 
         long seed = worldHandle.getSeed();
-        double worldWidthBlocks = worldHandle.getWorldScale().x;
-        double worldHeightBlocks = worldHandle.getWorldScale().y;
+        SurfacePointStruct point = resolveSamplePoint(worldHandle, worldX, worldZ);
 
-        sampleTerrainField(worldHandle, worldX, worldZ, outBlend);
-        TerrainShapeUtility.resolveFeatures(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend, outFeatures);
+        sampleTerrainField(point, outBlend);
+        TerrainShapeUtility.resolveFeatures(seed, point, outBlend, outFeatures);
 
         float macroShape = TerrainShapeUtility.computeMacroShapeBlocks(
-                seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, outBlend,
-                WorldElevationUtility.sampleElevation(worldHandle, worldX, worldZ));
+                seed, point, outBlend, WorldElevationUtility.sampleElevation(point));
 
         return TerrainShapeUtility.shapeGroundHeightBlocks(macroShape, 0f, 0f, outFeatures);
     }
 
     // Still Water \\
 
-    // The biome field at a position with the level of every lake standing relative to its host resolved
-    private void sampleTerrainField(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+    // The point a single-point sampler reads a position in the world's own coordinates at
+    private SurfacePointStruct resolveSamplePoint(WorldHandle worldHandle, double worldX, double worldZ) {
 
-        biomeManager.sampleBiomeField(worldHandle, worldX, worldZ, outBlend);
+        SurfacePointStruct point = probeColumnContainer.<TerrainColumnAsyncContainer>getInstance().samplePoint;
+
+        point.setCanonicalHome(worldHandle, worldX, worldZ);
+
+        return point.resolve(worldX, worldZ);
+    }
+
+    // The biome field at a point with the level of every lake standing relative to its host resolved
+    private void sampleTerrainField(SurfacePointStruct point, BiomeBlendStruct outBlend) {
+
+        biomeManager.sampleBiomeField(point, outBlend);
 
         for (int i = 0; i < outBlend.getCount(); i++)
             if (outBlend.getBiome(i).hasRelativeStillWater())
-                outBlend.setWaterLevelBlocks(i, resolveLakeLevel(worldHandle, outBlend, i));
+                outBlend.setWaterLevelBlocks(i, resolveLakeLevel(point.getWorldHandle(), outBlend, i));
     }
 
     // The host ground the absolute biomes lay at the lake's heart, offset by the lake, memoized per worker
@@ -1326,14 +1321,14 @@ public class WorldGenerationManager extends ManagerPackage {
 
         double centerX = WorldWrapUtility.wrapBlockX(worldHandle, blend.getLakeCenterX(index));
         double centerZ = WorldWrapUtility.wrapBlockZ(worldHandle, blend.getLakeCenterZ(index));
+        SurfacePointStruct heart = scratch.point;
 
-        biomeManager.sampleBiomeField(worldHandle, centerX, centerZ, scratch.blend);
+        heart.setCanonicalHome(worldHandle, centerX, centerZ);
+        heart.resolve(centerX, centerZ);
+        biomeManager.sampleBiomeField(heart, scratch.blend);
 
         float groundBlocks = TerrainShapeUtility.computeBaseShapeBlocks(
-                worldHandle.getSeed(), centerX, centerZ,
-                worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
-                scratch.blend,
-                WorldElevationUtility.sampleElevation(worldHandle, centerX, centerZ));
+                worldHandle.getSeed(), heart, scratch.blend, WorldElevationUtility.sampleElevation(heart));
 
         int level = Math.max(
                 EngineSetting.TERRAIN_MIN_HEIGHT_BLOCKS + 1,
@@ -1955,7 +1950,7 @@ public class WorldGenerationManager extends ManagerPackage {
                     && column.veinSlotMaxY[slot] >= offsetY;
 
         TerrainCarveUtility.fillVeinLattice(
-                worldHandle.getSeed(), worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
+                worldHandle.getSeed(), column.point,
                 (long) Coordinate2Long.unpackX(chunkCoordinate) * CHUNK_SIZE, offsetY,
                 (long) Coordinate2Long.unpackY(chunkCoordinate) * CHUNK_SIZE,
                 TerrainCarveUtility.LATTICE_SIDE, column.veinSeeds, column.activeVeins, column.veinCount,

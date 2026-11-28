@@ -18,7 +18,11 @@ import application.bootstrap.itempipeline.container.ContainerInstance;
 import application.bootstrap.itempipeline.container.ContainerSlotStruct;
 import application.bootstrap.itempipeline.item.ItemInstance;
 import application.bootstrap.progressionpipeline.gendermanager.GenderManager;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
+import application.bootstrap.worldpipeline.util.WorldPositionUtility;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.graphics.color.Color;
 import engine.root.BranchPackage;
 import engine.util.arpg.ArpgArrayStruct;
@@ -35,7 +39,9 @@ class PlayerSaveBranch extends BranchPackage {
      * name, its body size, its weight and, when it has one, its appearance —
      * skin and hair color, head proportion, and the feature worn in every
      * filled slot. The location records the world, the chunk coordinate, and
-     * the chunk-local position the player stands at. The inventory records
+     * the chunk-local position the player stands at, on a globe as the face
+     * cell its grid's chart lays it on, so a save never depends on the path
+     * the chart followed. The inventory records
      * the item in every filled equipment slot, how many a stack holds, the
      * slots left hidden, and — for any container item — everything packed
      * inside it with where it rests, however deeply nested. The look is the
@@ -45,12 +51,26 @@ class PlayerSaveBranch extends BranchPackage {
 
     // Internal
     private GenderManager genderManager;
+    private WorldStreamManager worldStreamManager;
+
+    // Location — scratch for the canonical place a save records
+    private WorldPositionStruct canonicalScratch;
+    private GlobeFrameStruct frameScratch;
 
     // Base \\
 
     @Override
+    protected void create() {
+
+        // Location
+        this.canonicalScratch = new WorldPositionStruct();
+        this.frameScratch = new GlobeFrameStruct();
+    }
+
+    @Override
     protected void get() {
         this.genderManager = get(GenderManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
     }
 
     // Management \\
@@ -247,7 +267,7 @@ class PlayerSaveBranch extends BranchPackage {
 
     private ArpgObjectStruct buildLocation(EntityInstance player) {
 
-        WorldPositionStruct worldPositionStruct = player.getWorldPositionStruct();
+        WorldPositionStruct worldPositionStruct = resolveSavedPosition(player);
         long chunkCoordinate = worldPositionStruct.getChunkCoordinate();
 
         ArpgObjectStruct chunkArpg = new ArpgObjectStruct();
@@ -259,6 +279,19 @@ class PlayerSaveBranch extends BranchPackage {
         locationArpg.add("chunk", chunkArpg);
         locationArpg.add("position", buildVector(worldPositionStruct.getPosition()));
         return locationArpg;
+    }
+
+    // The position a save records: on a globe the canonical form of where the grid following the player holds it
+    private WorldPositionStruct resolveSavedPosition(EntityInstance player) {
+
+        GridInstance grid = worldStreamManager.getGridForFocal(player);
+
+        if (grid == null)
+            return player.getWorldPositionStruct();
+
+        WorldPositionUtility.toCanonical(grid, player.getWorldPositionStruct(), frameScratch, canonicalScratch);
+
+        return canonicalScratch;
     }
 
     // Utility \\

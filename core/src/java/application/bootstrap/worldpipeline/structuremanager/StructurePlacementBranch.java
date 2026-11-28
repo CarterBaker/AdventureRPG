@@ -10,8 +10,11 @@ import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.structure.StructureRulesStruct;
 import application.bootstrap.worldpipeline.structure.StructureSurfaceType;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.util.PlacementLatticeStruct;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
@@ -35,6 +38,10 @@ class StructurePlacementBranch extends BranchPackage {
      * a settlement or road claims. A structure that stands in caves is
      * anchored on the highest dry cave floor down its anchor column with room
      * above it for the whole structure, found exactly as caves are carved.
+     * Everything is laid in the chunk's own coordinates: on a globe a
+     * structure's cell is the face cell it truly is and its turn is carried
+     * into the chunk's axes, a hand placement is laid out from the chunk's
+     * face, and every probe reads the ground where it truly stands.
      */
 
     // Internal
@@ -76,6 +83,7 @@ class StructurePlacementBranch extends BranchPackage {
     void generateStructures(
             WorldHandle worldHandle,
             long chunkCoordinate,
+            GlobeFrameStruct frame,
             SubChunkInstance[] subChunks,
             StructureHandle[] structureHandles,
             WorldPlacementStruct[] placements) {
@@ -87,6 +95,8 @@ class StructurePlacementBranch extends BranchPackage {
         scratch.chunkOriginX = (long) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize;
         scratch.chunkOriginZ = (long) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize;
         scratch.subChunks = subChunks;
+        scratch.home.setHome(worldHandle, chunkCoordinate, frame.getCanonicalCoordinate(), frame.getTurns());
+        scratch.lattice.setHome(scratch.home);
 
         for (int i = 0; i < structureHandles.length; i++) {
 
@@ -110,18 +120,13 @@ class StructurePlacementBranch extends BranchPackage {
         int reach = structureHandle.getHorizontalReachBlocks();
         int spacingBlocks = structureHandle.getFrequency().getSpacingBlocks();
 
-        StructurePlacementUtility.collectCells(
+        scratch.lattice.configure(spacingBlocks);
+        scratch.lattice.collectCells(
                 scratch.chunkOriginX - reach,
-                scratch.chunkOriginX + chunkSize - 1 + reach,
-                scratch.worldHandle.getWorldScale().x,
-                spacingBlocks,
-                scratch.cellsX);
-
-        StructurePlacementUtility.collectCells(
                 scratch.chunkOriginZ - reach,
+                scratch.chunkOriginX + chunkSize - 1 + reach,
                 scratch.chunkOriginZ + chunkSize - 1 + reach,
-                scratch.worldHandle.getWorldScale().y,
-                spacingBlocks,
+                scratch.cellsX,
                 scratch.cellsZ);
 
         for (int indexZ = 0; indexZ < scratch.cellsZ.size(); indexZ++)
@@ -134,12 +139,18 @@ class StructurePlacementBranch extends BranchPackage {
     private void generateCellPlacement(
             StructurePlacementAsyncContainer scratch,
             StructureHandle structureHandle,
-            int cellX,
-            int cellZ) {
+            int latticeX,
+            int latticeZ) {
 
         StructureFrequencyStruct frequency = structureHandle.getFrequency();
+        PlacementLatticeStruct lattice = scratch.lattice;
         int nameSeed = structureHandle.getNameSeed();
         long seed = scratch.worldHandle.getSeed();
+
+        lattice.resolveCell(latticeX, latticeZ);
+
+        int cellX = lattice.getKeyX();
+        int cellZ = lattice.getKeyZ();
 
         float chanceRoll = StructurePlacementUtility.rollCell(
                 seed, nameSeed, cellX, cellZ, EngineSetting.STRUCTURE_CHANCE_SALT);
@@ -147,20 +158,17 @@ class StructurePlacementBranch extends BranchPackage {
         if (chanceRoll >= frequency.getChance())
             return;
 
-        long anchorX = StructurePlacementUtility.computeCellAnchor(
-                cellX, frequency.getSpacingBlocks(), frequency.getSeparationBlocks(),
-                StructurePlacementUtility.rollCell(seed, nameSeed, cellX, cellZ,
-                        EngineSetting.STRUCTURE_OFFSET_X_SALT));
+        float offsetRollX = StructurePlacementUtility.rollCell(
+                seed, nameSeed, cellX, cellZ, EngineSetting.STRUCTURE_OFFSET_X_SALT);
+        float offsetRollZ = StructurePlacementUtility.rollCell(
+                seed, nameSeed, cellX, cellZ, EngineSetting.STRUCTURE_OFFSET_Z_SALT);
+        long anchorX = lattice.anchorX(offsetRollX, offsetRollZ, frequency.getSeparationBlocks());
+        long anchorZ = lattice.anchorZ(offsetRollX, offsetRollZ, frequency.getSeparationBlocks());
 
-        long anchorZ = StructurePlacementUtility.computeCellAnchor(
-                cellZ, frequency.getSpacingBlocks(), frequency.getSeparationBlocks(),
-                StructurePlacementUtility.rollCell(seed, nameSeed, cellX, cellZ,
-                        EngineSetting.STRUCTURE_OFFSET_Z_SALT));
-
-        int quarterTurns = frequency.hasRandomRotation()
+        int quarterTurns = (frequency.hasRandomRotation()
                 ? StructurePlacementUtility.rollQuarterTurns(StructurePlacementUtility.rollCell(
                         seed, nameSeed, cellX, cellZ, EngineSetting.STRUCTURE_ROTATION_SALT))
-                : 0;
+                : 0) + lattice.getChartTurns();
 
         if (!reachesChunk(scratch, structureHandle, anchorX, anchorZ))
             return;
@@ -168,8 +176,11 @@ class StructurePlacementBranch extends BranchPackage {
         if (!passesRules(scratch, structureHandle, anchorX, anchorZ, quarterTurns))
             return;
 
+        SurfacePointStruct anchor = scratch.home.resolveBlock(anchorX, anchorZ);
+
         if (!isUnderground(structureHandle) && settlementManager.isClaimed(
-                scratch.worldHandle, anchorX, anchorZ, structureHandle.getHorizontalReachBlocks()))
+                scratch.worldHandle, anchor.getCanonicalBlockX(), anchor.getCanonicalBlockZ(),
+                structureHandle.getHorizontalReachBlocks()))
             return;
 
         stampStructure(
@@ -192,12 +203,13 @@ class StructurePlacementBranch extends BranchPackage {
             StructureHandle structureHandle,
             StructureFixedPlacementStruct placement) {
 
-        long anchorX = WorldWrapUtility.wrapBlockX(scratch.worldHandle, placement.getWorldX());
-        long anchorZ = WorldWrapUtility.wrapBlockZ(scratch.worldHandle, placement.getWorldZ());
-        int quarterTurns = placement.getQuarterTurns();
+        long anchorX = scratch.home.toChartBlockX(placement.getWorldX(), placement.getWorldZ());
+        long anchorZ = scratch.home.toChartBlockZ(placement.getWorldX(), placement.getWorldZ());
 
         if (!reachesChunk(scratch, structureHandle, anchorX, anchorZ))
             return;
+
+        int quarterTurns = placement.getQuarterTurns() + scratch.home.resolveBlock(anchorX, anchorZ).getTurns();
 
         if (placement.isEnforceRules() && !passesRules(scratch, structureHandle, anchorX, anchorZ, quarterTurns))
             return;
@@ -223,11 +235,13 @@ class StructurePlacementBranch extends BranchPackage {
                 continue;
 
             StructureHandle structureHandle = structureManager.getStructureHandleFromStructureName(placement.getName());
-            long anchorX = WorldWrapUtility.wrapBlockX(scratch.worldHandle, placement.getWorldX());
-            long anchorZ = WorldWrapUtility.wrapBlockZ(scratch.worldHandle, placement.getWorldZ());
+            long anchorX = scratch.home.toChartBlockX(placement.getWorldX(), placement.getWorldZ());
+            long anchorZ = scratch.home.toChartBlockZ(placement.getWorldX(), placement.getWorldZ());
 
             if (!reachesChunk(scratch, structureHandle, anchorX, anchorZ))
                 continue;
+
+            int quarterTurns = placement.getQuarterTurns() + scratch.home.resolveBlock(anchorX, anchorZ).getTurns();
 
             stampStructure(
                     scratch, structureHandle,
@@ -236,7 +250,7 @@ class StructurePlacementBranch extends BranchPackage {
                                     placement.getArchitectureName())
                             : null,
                     anchorX, anchorZ,
-                    resolveAnchorY(scratch, structureHandle, anchorX, anchorZ), placement.getQuarterTurns());
+                    resolveAnchorY(scratch, structureHandle, anchorX, anchorZ), quarterTurns);
         }
     }
 
@@ -287,7 +301,7 @@ class StructurePlacementBranch extends BranchPackage {
         if (!rules.hasBiomeRule())
             return true;
 
-        biomeManager.sampleBiomeField(scratch.worldHandle, anchorX, anchorZ, scratch.anchorBlend);
+        biomeManager.sampleBiomeField(scratch.home.resolve(anchorX, anchorZ), scratch.anchorBlend);
 
         return rules.getBiomeIDs().contains(scratch.anchorBlend.getDominantBiome().getBiomeID());
     }
@@ -298,8 +312,8 @@ class StructurePlacementBranch extends BranchPackage {
             long anchorX,
             long anchorZ) {
         return switch (rules.getSurfaceType()) {
-            case LAND -> !worldGenerationManager.probeFlooded(scratch.worldHandle, anchorX, anchorZ);
-            case UNDERWATER -> worldGenerationManager.probeFlooded(scratch.worldHandle, anchorX, anchorZ);
+            case LAND -> !probeFlooded(scratch, anchorX, anchorZ);
+            case UNDERWATER -> probeFlooded(scratch, anchorX, anchorZ);
             case ANY, CAVE -> true;
         };
     }
@@ -346,8 +360,8 @@ class StructurePlacementBranch extends BranchPackage {
             int quarterTurns,
             int lowestY,
             int highestY) {
-        return worldGenerationManager.probeCaveFloor(
-                scratch.worldHandle,
+        return probeCaveFloor(
+                scratch,
                 anchorX + StructurePlacementUtility.rotateX(offsetX, offsetZ, quarterTurns),
                 anchorZ + StructurePlacementUtility.rotateZ(offsetX, offsetZ, quarterTurns),
                 lowestY, highestY, 1) != EngineSetting.CAVE_FLOOR_NONE;
@@ -364,8 +378,7 @@ class StructurePlacementBranch extends BranchPackage {
 
         int clearanceBlocks = Math.max(1, structureHandle.getYOffsetBlocks() + structureHandle.getMaxOffsetY() + 1);
 
-        return worldGenerationManager.probeCaveFloor(
-                scratch.worldHandle, anchorX, anchorZ, minY, maxY, clearanceBlocks);
+        return probeCaveFloor(scratch, anchorX, anchorZ, minY, maxY, clearanceBlocks);
     }
 
     private boolean isUnderground(StructureHandle structureHandle) {
@@ -378,7 +391,7 @@ class StructurePlacementBranch extends BranchPackage {
             long anchorX,
             long anchorZ) {
 
-        int groundHeight = worldGenerationManager.probeGroundHeight(scratch.worldHandle, anchorX, anchorZ);
+        int groundHeight = probeGroundHeight(scratch, anchorX, anchorZ);
 
         return groundHeight >= rules.getMinGroundHeightBlocks() && groundHeight <= rules.getMaxGroundHeightBlocks();
     }
@@ -403,7 +416,7 @@ class StructurePlacementBranch extends BranchPackage {
         int height10 = probeFootprintHeight(scratch, anchorX, anchorZ, maxX, minZ, quarterTurns);
         int height01 = probeFootprintHeight(scratch, anchorX, anchorZ, minX, maxZ, quarterTurns);
         int height11 = probeFootprintHeight(scratch, anchorX, anchorZ, maxX, maxZ, quarterTurns);
-        int anchorHeight = worldGenerationManager.probeGroundHeight(scratch.worldHandle, anchorX, anchorZ);
+        int anchorHeight = probeGroundHeight(scratch, anchorX, anchorZ);
 
         int lowest = Math.min(Math.min(Math.min(height00, height10), Math.min(height01, height11)), anchorHeight);
         int highest = Math.max(Math.max(Math.max(height00, height10), Math.max(height01, height11)), anchorHeight);
@@ -418,8 +431,8 @@ class StructurePlacementBranch extends BranchPackage {
             int offsetX,
             int offsetZ,
             int quarterTurns) {
-        return worldGenerationManager.probeGroundHeight(
-                scratch.worldHandle,
+        return probeGroundHeight(
+                scratch,
                 anchorX + StructurePlacementUtility.rotateX(offsetX, offsetZ, quarterTurns),
                 anchorZ + StructurePlacementUtility.rotateZ(offsetX, offsetZ, quarterTurns));
     }
@@ -445,9 +458,42 @@ class StructurePlacementBranch extends BranchPackage {
                     : floorY + 1 + structureHandle.getYOffsetBlocks();
         }
 
-        int groundHeight = worldGenerationManager.probeGroundHeight(scratch.worldHandle, anchorX, anchorZ);
+        int groundHeight = probeGroundHeight(scratch, anchorX, anchorZ);
 
         return groundHeight + 1 + structureHandle.getYOffsetBlocks();
+    }
+
+    // Probe — every block of the chunk's coordinates read where it truly stands \\
+
+    private int probeGroundHeight(StructurePlacementAsyncContainer scratch, long chartX, long chartZ) {
+
+        SurfacePointStruct point = scratch.home.resolveBlock(chartX, chartZ);
+
+        return worldGenerationManager.probeGroundHeight(
+                scratch.worldHandle, point.getCanonicalBlockX(), point.getCanonicalBlockZ());
+    }
+
+    private boolean probeFlooded(StructurePlacementAsyncContainer scratch, long chartX, long chartZ) {
+
+        SurfacePointStruct point = scratch.home.resolveBlock(chartX, chartZ);
+
+        return worldGenerationManager.probeFlooded(
+                scratch.worldHandle, point.getCanonicalBlockX(), point.getCanonicalBlockZ());
+    }
+
+    private int probeCaveFloor(
+            StructurePlacementAsyncContainer scratch,
+            long chartX,
+            long chartZ,
+            int minY,
+            int maxY,
+            int clearanceBlocks) {
+
+        SurfacePointStruct point = scratch.home.resolveBlock(chartX, chartZ);
+
+        return worldGenerationManager.probeCaveFloor(
+                scratch.worldHandle, point.getCanonicalBlockX(), point.getCanonicalBlockZ(),
+                minY, maxY, clearanceBlocks);
     }
 
     // Stamp \\

@@ -3,6 +3,7 @@ package application.bootstrap.worldpipeline.worldgenerationmanager;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
 import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.kernel.kernelpipeline.kernel.KernelArgumentInstance;
@@ -86,7 +87,7 @@ class CaveCarveBranch extends BranchPackage {
         int rows = TerrainCarveUtility.computeLatticeRows(fromY, toY);
 
         TerrainCarveUtility.fillCaveLattice(
-                worldHandle.getSeed(), worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
+                worldHandle.getSeed(), column.point,
                 (long) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize, originY,
                 (long) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize,
                 TerrainCarveUtility.LATTICE_SIDE, rows, column.hasSeaFeatures, column.caveLattice);
@@ -94,9 +95,11 @@ class CaveCarveBranch extends BranchPackage {
         frame.setLattice(column.caveLattice, TerrainCarveUtility.LATTICE_SIDE, rows, originY, 0f, 0f);
     }
 
-    // The lattice around one column, whose first point lies offsetX and offsetZ into the frame's coordinates
+    // The lattice around one column, whose first point lies offsetX and offsetZ into the frame's coordinates, read
+    // from the point the column's own home resolves
     void fillColumnFrame(
             WorldHandle worldHandle,
+            SurfacePointStruct point,
             long latticeOriginX,
             long latticeOriginZ,
             float offsetX,
@@ -111,7 +114,7 @@ class CaveCarveBranch extends BranchPackage {
         int rows = TerrainCarveUtility.computeLatticeRows(fromY, toY);
 
         TerrainCarveUtility.fillCaveLattice(
-                worldHandle.getSeed(), worldHandle.getWorldScale().x, worldHandle.getWorldScale().y,
+                worldHandle.getSeed(), point,
                 latticeOriginX, originY, latticeOriginZ,
                 TerrainCarveUtility.COLUMN_LATTICE_SIDE, rows, seaChannel, lattice);
 
@@ -303,7 +306,7 @@ class CaveCarveBranch extends BranchPackage {
                 volume.originY, volume.originY + CaveVolumeAsyncContainer.HEIGHT);
 
         caveLakeBranch.collectLakes(
-                worldHandle, frame,
+                worldHandle, column.point, frame,
                 (long) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize,
                 (long) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize,
                 chunkSize,
@@ -667,9 +670,10 @@ class CaveCarveBranch extends BranchPackage {
             return TerrainColumnAsyncContainer.NO_FLOOR;
 
         fillColumnFrame(
-                worldHandle, latticeOriginX, latticeOriginZ, 0f, 0f, probeColumn.hasSeaFeatures,
+                worldHandle, probeColumn.point, latticeOriginX, latticeOriginZ, 0f, 0f, probeColumn.hasSeaFeatures,
                 probe.lattice, frame, fromY, toY);
-        caveLakeBranch.collectLakes(worldHandle, frame, latticeOriginX, latticeOriginZ, 1, fromY, toY);
+        caveLakeBranch.collectLakes(
+                worldHandle, probeColumn.point, frame, latticeOriginX, latticeOriginZ, 1, fromY, toY);
 
         float frameX = wrappedX - latticeOriginX;
         float frameZ = wrappedZ - latticeOriginZ;

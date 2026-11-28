@@ -4,6 +4,7 @@ import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.river.RiverColumnStruct;
 import application.bootstrap.worldpipeline.river.RiverGatherStruct;
 import application.bootstrap.worldpipeline.util.LatticePointStruct;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.util.TerrainFeatureStruct;
 import application.bootstrap.worldpipeline.util.TideUtility;
@@ -28,7 +29,9 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
      * veins and those of every cave biome lining the chunk's regions, each
      * with the heights it can reach. The cave and vein lattices are refilled
      * per subchunk. Filled once per chunk by computeColumn() and read by
-     * every generateSubChunk() call.
+     * every generateSubChunk() call. Its point is homed on the chunk the
+     * column belongs to, so every sample around it resolves where it truly
+     * stands, and its sample point serves the single-point samplers.
      */
 
     static final int COLUMN_COUNT = EngineSetting.CHUNK_SIZE * EngineSetting.CHUNK_SIZE;
@@ -120,6 +123,10 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
     // Rivers
     RiverGatherStruct riverGather;
     RiverColumnStruct riverColumn;
+
+    // Surface
+    SurfacePointStruct point;
+    SurfacePointStruct samplePoint;
 
     // Whole Column
     int columnTopBlocks;
@@ -214,6 +221,8 @@ public class TerrainColumnAsyncContainer extends AsyncContainerPackage {
 
         this.riverGather = new RiverGatherStruct();
         this.riverColumn = new RiverColumnStruct();
+        this.point = new SurfacePointStruct();
+        this.samplePoint = new SurfacePointStruct();
 
         this.veinSeeds = new long[VEIN_PALETTE_MAX];
         this.veinSlotMinY = new int[VEIN_PALETTE_MAX];

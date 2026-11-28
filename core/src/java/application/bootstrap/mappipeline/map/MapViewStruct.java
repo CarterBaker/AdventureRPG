@@ -1,7 +1,9 @@
 package application.bootstrap.mappipeline.map;
 
+import application.bootstrap.worldpipeline.util.GlobeViewStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.StructPackage;
+
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MapViewStruct extends StructPackage {
@@ -13,7 +15,9 @@ public class MapViewStruct extends StructPackage {
      * quads to draw this frame and the pyramid level they come from. The draw
      * list is reused frame to frame, so resolving a view allocates nothing
      * once it has grown to the most quads it needs. The owner also chooses
-     * whether the shared day and night and weather overlays show over it.
+     * whether the shared day and night and weather overlays show over it. A
+     * globe world is seen on its globe, a ball of unit radius, through the
+     * camera its owner resolves into the view's GlobeViewStruct.
      */
 
     // View
@@ -27,6 +31,9 @@ public class MapViewStruct extends StructPackage {
     // Overlays
     private boolean showingDayNight;
     private boolean showingWeather;
+
+    // Globe
+    private final GlobeViewStruct globeView = new GlobeViewStruct();
 
     // Draws
     private final ObjectArrayList<MapDrawStruct> draws = new ObjectArrayList<>();
@@ -131,5 +138,9 @@ public class MapViewStruct extends StructPackage {
 
     public int getLevel() {
         return level;
+    }
+
+    public GlobeViewStruct getGlobeView() {
+        return globeView;
     }
 }

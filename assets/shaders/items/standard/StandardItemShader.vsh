@@ -6,6 +6,7 @@ layout(location = 3) in vec4  aInstance0; // chunkX(intBits), chunkZ(intBits), l
 layout(location = 4) in vec2  aInstance1; // localY, orientation
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "includes/PlayerPositionData.glsl"
 #include "includes/ItemRotationData.glsl"
 #include "includes/SettingsData.glsl"
@@ -41,5 +42,5 @@ void main() {
         relChunkZ * u_chunkSize + aInstance0.w + rotPos.z);
 
     vViewPosition = (u_view * vec4(worldPos, 1.0)).xyz;
-    gl_Position   = u_viewProjection * vec4(worldPos, 1.0);
+    gl_Position   = u_viewProjection * vec4(curveToHorizon(worldPos), 1.0);
 }

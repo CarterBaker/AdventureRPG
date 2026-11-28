@@ -36,12 +36,13 @@ public class MacroSettlementBranch extends BranchPackage {
 
     // Gather \\
 
-    // Worker — every layout reaching the tile, when one lattice cell is no wider than a building shows across
+    // Worker — every layout reaching the tile about its centre in the world's own coordinates, when one lattice cell
+    // is no wider than a building shows across
     void gatherLayouts(
             MacroBuildAsyncContainer scratch,
             WorldHandle worldHandle,
-            double originX,
-            double originZ,
+            double centerX,
+            double centerZ,
             float cellSizeBlocks) {
 
         scratch.layouts.clear();
@@ -49,19 +50,19 @@ public class MacroSettlementBranch extends BranchPackage {
         if (cellSizeBlocks > EngineSetting.SETTLEMENT_MACRO_MAX_CELL_BLOCKS)
             return;
 
-        double tolerance = cellSizeBlocks * 0.5;
-        double tileSize = EngineSetting.MACRO_TILE_SIZE_BLOCKS;
+        double reach = EngineSetting.MACRO_TILE_SIZE_BLOCKS * 0.5 + cellSizeBlocks * 0.5;
 
         settlementManager.collectLayouts(
                 worldHandle,
-                originX - tolerance, originZ - tolerance,
-                originX + tileSize + tolerance, originZ + tileSize + tolerance,
+                centerX - reach, centerZ - reach,
+                centerX + reach, centerZ + reach,
                 scratch.layouts);
     }
 
     // Sample \\
 
-    // Worker — what the gathered layouts show at one lattice point, read after its ground and canopy
+    // Worker — what the gathered layouts show at one lattice point in the world's own coordinates, read after its
+    // ground and canopy
     void sampleSettlement(
             MacroBuildAsyncContainer scratch,
             WorldHandle worldHandle,

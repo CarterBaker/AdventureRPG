@@ -4,6 +4,7 @@ import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.util.TerrainFeatureStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.util.PlacementLatticeStruct;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -37,6 +38,7 @@ public class CaveProbeAsyncContainer extends AsyncContainerPackage {
     // Lake Cells
     IntArrayList lakeCellsX;
     IntArrayList lakeCellsZ;
+    PlacementLatticeStruct lakeLattice;
     long[] lakeCellKeys;
     WorldHandle[] lakeCellWorlds;
     int[] lakeCellRevisions;
@@ -66,6 +68,7 @@ public class CaveProbeAsyncContainer extends AsyncContainerPackage {
 
         this.lakeCellsX = new IntArrayList();
         this.lakeCellsZ = new IntArrayList();
+        this.lakeLattice = new PlacementLatticeStruct();
         this.lakeCellKeys = new long[LAKE_CACHE_SIZE];
         this.lakeCellWorlds = new WorldHandle[LAKE_CACHE_SIZE];
         this.lakeCellRevisions = new int[LAKE_CACHE_SIZE];

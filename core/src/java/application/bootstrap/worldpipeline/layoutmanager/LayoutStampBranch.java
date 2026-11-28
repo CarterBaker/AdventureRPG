@@ -11,9 +11,9 @@ import application.bootstrap.worldpipeline.structuremanager.StructureManager;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.util.ChunkWriteUtility;
 import application.bootstrap.worldpipeline.util.RoadPathUtility;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -58,14 +58,23 @@ class LayoutStampBranch extends BranchPackage {
 
     // Stamp \\
 
-    void stamp(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance[] subChunks, LayoutPlanStruct plan) {
+    void stamp(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            SubChunkInstance[] subChunks,
+            LayoutPlanStruct plan,
+            FrameTransformStruct chunkToLayout) {
 
-        double chunkMinX = WorldWrapUtility.unwrapBlockX(
-                worldHandle, (double) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize, plan.getReferenceX());
-        double chunkMinZ = WorldWrapUtility.unwrapBlockZ(
-                worldHandle, (double) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize, plan.getReferenceZ());
-        double chunkMaxX = chunkMinX + chunkSize;
-        double chunkMaxZ = chunkMinZ + chunkSize;
+        double originX = (double) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize;
+        double originZ = (double) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize;
+        double cornerAX = chunkToLayout.mapX(originX, originZ);
+        double cornerAZ = chunkToLayout.mapZ(originX, originZ);
+        double cornerBX = chunkToLayout.mapX(originX + chunkSize, originZ + chunkSize);
+        double cornerBZ = chunkToLayout.mapZ(originX + chunkSize, originZ + chunkSize);
+        double chunkMinX = Math.min(cornerAX, cornerBX);
+        double chunkMinZ = Math.min(cornerAZ, cornerBZ);
+        double chunkMaxX = Math.max(cornerAX, cornerBX);
+        double chunkMaxZ = Math.max(cornerAZ, cornerBZ);
 
         if (!plan.overlaps(chunkMinX, chunkMinZ, chunkMaxX, chunkMaxZ))
             return;
@@ -73,12 +82,12 @@ class LayoutStampBranch extends BranchPackage {
         RoadPathStruct[] paths = plan.getPaths();
 
         for (int i = 0; i < paths.length; i++)
-            roadManager.stampPath(worldHandle, chunkCoordinate, subChunks, paths[i]);
+            roadManager.stampPath(worldHandle, chunkCoordinate, subChunks, paths[i], chunkToLayout);
 
         LayoutWallStruct[] walls = plan.getWalls();
 
         for (int i = 0; i < walls.length; i++)
-            stampWall(chunkCoordinate, subChunks, walls[i], chunkMinX, chunkMinZ);
+            stampWall(chunkCoordinate, subChunks, walls[i], chunkToLayout);
 
         LayoutLotStruct[] lots = plan.getLots();
 
@@ -90,9 +99,14 @@ class LayoutStampBranch extends BranchPackage {
                     || lot.getMaxZ() < chunkMinZ || lot.getMinZ() > chunkMaxZ)
                 continue;
 
+            double anchorX = lot.getAnchorX() + EngineSetting.BLOCK_CENTER_OFFSET;
+            double anchorZ = lot.getAnchorZ() + EngineSetting.BLOCK_CENTER_OFFSET;
+
             structureManager.stampStructure(
                     worldHandle, chunkCoordinate, subChunks, lot.getStructureHandle(), plan.getArchitectureHandle(),
-                    lot.getAnchorX(), lot.getAnchorZ(), lot.getAnchorY(), lot.getQuarterTurns());
+                    (long) Math.floor(chunkToLayout.unmapX(anchorX, anchorZ)),
+                    (long) Math.floor(chunkToLayout.unmapZ(anchorX, anchorZ)),
+                    lot.getAnchorY(), lot.getQuarterTurns() + chunkToLayout.getTurns());
         }
     }
 
@@ -102,20 +116,23 @@ class LayoutStampBranch extends BranchPackage {
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
             LayoutWallStruct layoutWall,
-            double chunkMinX,
-            double chunkMinZ) {
+            FrameTransformStruct chunkToLayout) {
 
         RoadPathStruct centerline = layoutWall.getCenterline();
         ArchitectureWallStruct wall = layoutWall.getWall();
         LayoutQueryAsyncContainer scratch = queryContainer.getInstance();
         RoadQueryStruct query = scratch.query;
         double halfThickness = wall.getHalfThicknessBlocks();
+        double originX = (double) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize;
+        double originZ = (double) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize;
 
         for (int localZ = 0; localZ < chunkSize; localZ++) {
             for (int localX = 0; localX < chunkSize; localX++) {
 
-                double x = chunkMinX + localX + EngineSetting.BLOCK_CENTER_OFFSET;
-                double z = chunkMinZ + localZ + EngineSetting.BLOCK_CENTER_OFFSET;
+                double columnX = originX + localX + EngineSetting.BLOCK_CENTER_OFFSET;
+                double columnZ = originZ + localZ + EngineSetting.BLOCK_CENTER_OFFSET;
+                double x = chunkToLayout.mapX(columnX, columnZ);
+                double z = chunkToLayout.mapZ(columnX, columnZ);
 
                 if (!RoadPathUtility.reaches(centerline, x, z, halfThickness))
                     continue;

@@ -10,6 +10,7 @@ import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.runtime.RuntimeSetting;
 import application.runtime.world.WorldSystem;
 import engine.root.SystemPackage;
@@ -36,6 +37,7 @@ public class AmbienceSoundSystem extends SystemPackage {
     private SoundCueManager soundCueManager;
     private PlayerManager playerManager;
     private BiomeManager biomeManager;
+    private WorldStreamManager worldStreamManager;
     private WorldSystem worldSystem;
     private SoundListenerSystem soundListenerSystem;
 
@@ -73,6 +75,7 @@ public class AmbienceSoundSystem extends SystemPackage {
         this.soundCueManager = get(SoundCueManager.class);
         this.playerManager = get(PlayerManager.class);
         this.biomeManager = get(BiomeManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.worldSystem = get(WorldSystem.class);
         this.soundListenerSystem = get(SoundListenerSystem.class);
     }
@@ -193,7 +196,7 @@ public class AmbienceSoundSystem extends SystemPackage {
         if (biome == null || worldHandle != biomeWorld || chunkCoordinate != biomeChunk) {
             this.biomeWorld = worldHandle;
             this.biomeChunk = chunkCoordinate;
-            this.biome = biomeManager.getBiome(worldHandle, chunkCoordinate);
+            this.biome = biomeManager.getBiome(worldHandle, worldStreamManager.toCanonicalChunk(chunkCoordinate));
         }
 
         return biome;

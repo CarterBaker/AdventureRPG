@@ -1,6 +1,6 @@
 package editor.bootstrap.worldeditorpipeline.worldeditormanager;
 
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.util.WorldImagePointStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
@@ -35,6 +35,9 @@ class WorldSelectionBranch extends BranchPackage {
     // Selection
     private ObjectArrayList<WorldPlacementStruct> selected;
     private int shownPlacementRevision;
+
+    // Point
+    private final WorldImagePointStruct imagePoint = new WorldImagePointStruct();
 
     // Base \\
 
@@ -88,7 +91,6 @@ class WorldSelectionBranch extends BranchPackage {
 
         WorldPlacementStruct[] placements = worldManager.getPlacements(worldHandle);
         WorldEditorMode mode = worldEditorManager.getMode();
-        double pixelBlocks = resolvePixelBlocks();
         double nearestSq = reachPixels * reachPixels;
         WorldPlacementStruct nearest = null;
 
@@ -97,10 +99,10 @@ class WorldSelectionBranch extends BranchPackage {
             if (!mode.holds(placements[i].getKind()))
                 continue;
 
-            double deltaX = WorldWrapUtility.wrappedBlockDeltaX(
-                    worldHandle, placements[i].getWorldX(), imageX * pixelBlocks) / pixelBlocks;
-            double deltaY = WorldWrapUtility.wrappedBlockDeltaZ(
-                    worldHandle, placements[i].getWorldZ(), imageY * pixelBlocks) / pixelBlocks;
+            imagePoint.locateImage(worldHandle, placements[i].getWorldX(), placements[i].getWorldZ());
+
+            double deltaX = imagePoint.imageDeltaX(worldHandle, imagePoint.getImageX(), imageX);
+            double deltaY = imagePoint.imageDeltaY(worldHandle, imagePoint.getImageY(), imageY);
             double distanceSq = deltaX * deltaX + deltaY * deltaY;
 
             if (distanceSq > nearestSq)
@@ -156,7 +158,6 @@ class WorldSelectionBranch extends BranchPackage {
 
         WorldPlacementStruct[] placements = worldManager.getPlacements(worldHandle);
         WorldEditorMode mode = worldEditorManager.getMode();
-        double pixelBlocks = resolvePixelBlocks();
 
         if (!add && !subtract)
             selected.clear();
@@ -166,8 +167,10 @@ class WorldSelectionBranch extends BranchPackage {
             if (!mode.holds(placements[i].getKind()))
                 continue;
 
-            double pixelX = WorldWrapUtility.wrapBlockX(worldHandle, placements[i].getWorldX()) / pixelBlocks;
-            double pixelY = WorldWrapUtility.wrapBlockZ(worldHandle, placements[i].getWorldZ()) / pixelBlocks;
+            imagePoint.locateImage(worldHandle, placements[i].getWorldX(), placements[i].getWorldZ());
+
+            double pixelX = imagePoint.getImageX();
+            double pixelY = imagePoint.getImageY();
 
             if (pixelX < minImageX || pixelX > maxImageX || pixelY < minImageY || pixelY > maxImageY)
                 continue;
@@ -206,17 +209,20 @@ class WorldSelectionBranch extends BranchPackage {
 
     // Edit \\
 
-    // Everything selected stood the same number of blocks away, each refused move leaving its placement as it was
-    void move(WorldHandle worldHandle, long deltaBlocksX, long deltaBlocksZ) {
+    // Everything selected moved as far across the image, each refused move leaving its placement as it was
+    void move(WorldHandle worldHandle, double deltaImageX, double deltaImageY) {
 
         String refusal = null;
 
         for (int i = 0; i < selected.size(); i++) {
 
             WorldPlacementStruct previous = selected.get(i);
-            WorldPlacementStruct moved = previous.moveTo(
-                    previous.getWorldX() + deltaBlocksX,
-                    previous.getWorldZ() + deltaBlocksZ);
+
+            imagePoint.locateImage(worldHandle, previous.getWorldX(), previous.getWorldZ());
+            imagePoint.locateBlock(
+                    worldHandle, imagePoint.getImageX() + deltaImageX, imagePoint.getImageY() + deltaImageY);
+
+            WorldPlacementStruct moved = previous.moveTo(imagePoint.getBlockX(), imagePoint.getBlockZ());
             String moveRefusal = worldPlacementBranch.replace(worldHandle, previous, moved);
 
             if (moveRefusal == null)
@@ -264,11 +270,5 @@ class WorldSelectionBranch extends BranchPackage {
 
     boolean hasSelection() {
         return !selected.isEmpty();
-    }
-
-    // Utility \\
-
-    private double resolvePixelBlocks() {
-        return EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
     }
 }

@@ -6,6 +6,7 @@ import application.bootstrap.worldpipeline.macrochunk.MacroStandInStruct;
 import application.bootstrap.worldpipeline.tree.TreeModelStruct;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
 import application.bootstrap.worldpipeline.worldgenerationmanager.TerrainSurfaceSampleStruct;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -77,6 +78,7 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
 
     // Surface
     TerrainSurfaceSampleStruct sample;
+    SurfacePointStruct home;
 
     @Override
     protected void create() {
@@ -104,6 +106,7 @@ public class MacroBuildAsyncContainer extends AsyncContainerPackage {
         this.layouts = new ObjectArrayList<>();
         this.layoutSurface = new LayoutSurfaceStruct();
         this.sample = new TerrainSurfaceSampleStruct();
+        this.home = new SurfacePointStruct();
     }
 
     @Override

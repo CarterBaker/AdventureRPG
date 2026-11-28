@@ -17,8 +17,9 @@ public enum WorldEditorLayer {
      * to pick from on the height layer.
      */
 
-    BIOMES(EditorSetting.WORLD_EDITOR_LAYER_BIOMES, ToolCanvas.BIOMES, PaletteContent.BIOMES, true, false),
-    HEIGHTS(EditorSetting.WORLD_EDITOR_LAYER_HEIGHTS, ToolCanvas.HEIGHTS, PaletteContent.NONE, false, true);
+    BIOMES(EditorSetting.WORLD_EDITOR_LAYER_BIOMES, ToolCanvas.BIOMES, PaletteContent.BIOMES, true, false, false),
+    HEIGHTS(EditorSetting.WORLD_EDITOR_LAYER_HEIGHTS, ToolCanvas.HEIGHTS, PaletteContent.NONE, false, true, false),
+    CUBE(EditorSetting.WORLD_EDITOR_LAYER_CUBE, ToolCanvas.CUBE, PaletteContent.NONE, false, true, true);
 
     // Values
     public static final WorldEditorLayer[] VALUES = values();
@@ -29,6 +30,7 @@ public enum WorldEditorLayer {
     private final PaletteContent paletteContent;
     private final boolean placing;
     private final boolean overlay;
+    private final boolean cube;
 
     // Constructor \\
 
@@ -37,12 +39,14 @@ public enum WorldEditorLayer {
             ToolCanvas toolCanvas,
             PaletteContent paletteContent,
             boolean placing,
-            boolean overlay) {
+            boolean overlay,
+            boolean cube) {
         this.label = label;
         this.toolCanvas = toolCanvas;
         this.paletteContent = paletteContent;
         this.placing = placing;
         this.overlay = overlay;
+        this.cube = cube;
     }
 
     // Accessible \\
@@ -67,5 +71,10 @@ public enum WorldEditorLayer {
     // True for the layer drawn over the biomes
     public boolean isOverlay() {
         return overlay;
+    }
+
+    // True for the globe's block cube, which is turned rather than painted and holds no image
+    public boolean isCube() {
+        return cube;
     }
 }

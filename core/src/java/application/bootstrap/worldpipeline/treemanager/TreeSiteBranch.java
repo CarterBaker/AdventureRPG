@@ -8,7 +8,9 @@ import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
+import application.bootstrap.worldpipeline.util.PlacementLatticeStruct;
 import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.TreeDistributionUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -35,7 +37,10 @@ class TreeSiteBranch extends BranchPackage {
      * it, rolled past the region asked for, and every roll is a pure function
      * of the world seed, the tree and the place, so every caller asking about
      * one site finds the same answer on its own. Sites are handed back from
-     * the thread's own scratch, read before its next search.
+     * the thread's own scratch, read before its next search. The region is
+     * given in a home chunk's coordinates and every site comes back in them;
+     * on a globe each cell is the face cell it truly is (PlacementLatticeStruct)
+     * and every biome, claim and seed is read where the site truly stands.
      */
 
     // Internal
@@ -60,9 +65,9 @@ class TreeSiteBranch extends BranchPackage {
 
     // Sites \\
 
-    // Every wild tree rooted in a block region of the wrapping world that stands once its neighbours are judged
+    // Every wild tree rooted in a block region of a home's coordinates that stands once its neighbours are judged
     void collectSites(
-            WorldHandle worldHandle,
+            SurfacePointStruct home,
             long minX,
             long minZ,
             long maxX,
@@ -73,7 +78,9 @@ class TreeSiteBranch extends BranchPackage {
         int margin = (int) Math.ceil(treeManager.getMaxClearanceBlocks() * 2f);
 
         scratch.reset();
-        scratch.worldHandle = worldHandle;
+        scratch.worldHandle = home.getWorldHandle();
+        scratch.point.copyHome(home);
+        scratch.lattice.setHome(home);
         scratch.minX = minX - margin;
         scratch.minZ = minZ - margin;
         scratch.spanX = (int) (maxX - minX + 1) + margin * 2;
@@ -118,9 +125,10 @@ class TreeSiteBranch extends BranchPackage {
         for (long z = firstZ; z <= lastZ; z += spacing)
             for (long x = firstX; x <= lastX; x += spacing) {
 
-                biomeManager.sampleBiomeField(scratch.worldHandle,
-                        WorldWrapUtility.wrapBlockX(scratch.worldHandle, x),
-                        WorldWrapUtility.wrapBlockZ(scratch.worldHandle, z),
+                biomeManager.sampleBiomeField(
+                        scratch.point.resolve(
+                                WorldWrapUtility.wrapBlockX(scratch.worldHandle, x),
+                                WorldWrapUtility.wrapBlockZ(scratch.worldHandle, z)),
                         scratch.blend);
 
                 BiomeHandle biome = scratch.blend.getDominantBiome();
@@ -143,13 +151,11 @@ class TreeSiteBranch extends BranchPackage {
         int spacing = kind.getSpacingBlocks();
         float clearance = TreeDistributionUtility.resolveClearance(treeHandle);
 
-        StructurePlacementUtility.collectCells(
-                scratch.minX - spread, scratch.minX + scratch.spanX - 1 + spread,
-                scratch.worldHandle.getWorldScale().x, spacing, scratch.cellsX);
-
-        StructurePlacementUtility.collectCells(
-                scratch.minZ - spread, scratch.minZ + scratch.spanZ - 1 + spread,
-                scratch.worldHandle.getWorldScale().y, spacing, scratch.cellsZ);
+        scratch.lattice.configure(spacing);
+        scratch.lattice.collectCells(
+                scratch.minX - spread, scratch.minZ - spread,
+                scratch.minX + scratch.spanX - 1 + spread, scratch.minZ + scratch.spanZ - 1 + spread,
+                scratch.cellsX, scratch.cellsZ);
 
         for (int indexZ = 0; indexZ < scratch.cellsZ.size(); indexZ++)
             for (int indexX = 0; indexX < scratch.cellsX.size(); indexX++)
@@ -163,13 +169,19 @@ class TreeSiteBranch extends BranchPackage {
             BiomeTreeStruct kind,
             TreeHandle treeHandle,
             float clearance,
-            int cellX,
-            int cellZ) {
+            int latticeX,
+            int latticeZ) {
 
-        long anchorX = StructurePlacementUtility.computeCellAnchor(cellX, kind.getSpacingBlocks(), 0,
-                roll(scratch, kind, cellX, cellZ, EngineSetting.TREE_OFFSET_X_SALT));
-        long anchorZ = StructurePlacementUtility.computeCellAnchor(cellZ, kind.getSpacingBlocks(), 0,
-                roll(scratch, kind, cellX, cellZ, EngineSetting.TREE_OFFSET_Z_SALT));
+        PlacementLatticeStruct lattice = scratch.lattice;
+
+        lattice.resolveCell(latticeX, latticeZ);
+
+        int cellX = lattice.getKeyX();
+        int cellZ = lattice.getKeyZ();
+        float offsetRollX = roll(scratch, kind, cellX, cellZ, EngineSetting.TREE_OFFSET_X_SALT);
+        float offsetRollZ = roll(scratch, kind, cellX, cellZ, EngineSetting.TREE_OFFSET_Z_SALT);
+        long anchorX = lattice.anchorX(offsetRollX, offsetRollZ, 0);
+        long anchorZ = lattice.anchorZ(offsetRollX, offsetRollZ, 0);
         float chanceRoll = roll(scratch, kind, cellX, cellZ, EngineSetting.TREE_CHANCE_SALT);
 
         switch (kind.getDistribution()) {
@@ -179,7 +191,8 @@ class TreeSiteBranch extends BranchPackage {
             }
             case FIELD -> {
                 if (chanceRoll < kind.getChance()
-                        && TreeDistributionUtility.isInPatch(scratch.worldHandle.getSeed(), kind, anchorX, anchorZ))
+                        && TreeDistributionUtility.isInPatch(
+                                scratch.worldHandle.getSeed(), kind, scratch.point.resolve(anchorX, anchorZ)))
                     placeSite(scratch, biome, treeHandle, clearance, anchorX, anchorZ);
             }
             case CLUSTERED -> {
@@ -213,9 +226,12 @@ class TreeSiteBranch extends BranchPackage {
             double angle = roll(scratch, kind, cellX, cellZ, salt ^ EngineSetting.TREE_CLUSTER_ANGLE_SALT)
                     * Math.PI * 2.0;
 
+            double spreadX = Math.cos(angle) * distance;
+            double spreadZ = Math.sin(angle) * distance;
+
             placeSite(scratch, biome, treeHandle, clearance,
-                    centerX + Math.round(Math.cos(angle) * distance),
-                    centerZ + Math.round(Math.sin(angle) * distance));
+                    centerX + Math.round(scratch.lattice.turnToChartX(spreadX, spreadZ)),
+                    centerZ + Math.round(scratch.lattice.turnToChartZ(spreadX, spreadZ)));
         }
     }
 
@@ -243,7 +259,10 @@ class TreeSiteBranch extends BranchPackage {
         if (scratch.siteKeys.contains(TreeInstance.toRegistryKey(anchorX, anchorZ, treeHandle.getTreeID())))
             return;
 
-        biomeManager.sampleBiomeField(worldHandle, anchorX + 0.5, anchorZ + 0.5, scratch.blend);
+        SurfacePointStruct point = scratch.point.resolve(
+                anchorX + EngineSetting.BLOCK_CENTER_OFFSET, anchorZ + EngineSetting.BLOCK_CENTER_OFFSET);
+
+        biomeManager.sampleBiomeField(point, scratch.blend);
 
         BiomeHandle anchorBiome = scratch.blend.getDominantBiome();
 
@@ -252,14 +271,16 @@ class TreeSiteBranch extends BranchPackage {
 
         if (settlementManager.isClaimed(
                 worldHandle,
-                anchorX + EngineSetting.BLOCK_CENTER_OFFSET,
-                anchorZ + EngineSetting.BLOCK_CENTER_OFFSET,
+                point.getCanonicalX(),
+                point.getCanonicalZ(),
                 EngineSetting.SETTLEMENT_TREE_CLEARANCE_BLOCKS))
             return;
 
         TreeSiteStruct site = scratch.nextSite();
         site.set(treeHandle, anchorX, anchorZ, relativeX, relativeZ, clearance,
-                resolveWildSeed(worldHandle, treeHandle, anchorX, anchorZ));
+                resolveWildSeed(
+                        worldHandle, treeHandle,
+                        (long) Math.floor(point.getCanonicalX()), (long) Math.floor(point.getCanonicalZ())));
         scratch.siteKeys.add(site.getRegistryKey());
     }
 

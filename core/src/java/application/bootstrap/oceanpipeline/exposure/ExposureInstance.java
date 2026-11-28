@@ -13,7 +13,9 @@ public class ExposureInstance extends InstancePackage {
      * water around it is, from 0 in a pond to 1 on the open sea. Values ease
      * toward their targets over time and survive a window shift, so a cell
      * resolving late never pops the waves. Sampled bilinearly between cell
-     * centres, exactly as OceanSurface.glsl reads the OceanData copy.
+     * centres, exactly as OceanSurface.glsl reads the OceanData copy. The
+     * keys name the cached cell each window cell, blur margin included,
+     * reads, resolved once per reference chunk.
      */
 
     // Window
@@ -27,16 +29,25 @@ public class ExposureInstance extends InstancePackage {
     private float[] exposure;
     private float[] shiftScratch;
 
+    // Keys
+    private long[] cellKeys;
+    private long keysReference;
+    private boolean keysCurrent;
+
     // Internal \\
 
     @Override
     protected void create() {
 
         int cellCount = EngineSetting.OCEAN_EXPOSURE_GRID_SIZE * EngineSetting.OCEAN_EXPOSURE_GRID_SIZE;
+        int span = EngineSetting.OCEAN_EXPOSURE_GRID_SIZE + EngineSetting.OCEAN_EXPOSURE_BLUR_RADIUS_CELLS * 2;
 
         // Values
         this.exposure = new float[cellCount];
         this.shiftScratch = new float[cellCount];
+
+        // Keys
+        this.cellKeys = new long[span * span];
     }
 
     // Constructor \\
@@ -48,6 +59,7 @@ public class ExposureInstance extends InstancePackage {
         this.originXBlocks = 0f;
         this.originZBlocks = 0f;
         this.placed = false;
+        this.keysCurrent = false;
         Arrays.fill(exposure, Float.NaN);
     }
 
@@ -63,6 +75,21 @@ public class ExposureInstance extends InstancePackage {
         this.originXBlocks = originXBlocks;
         this.originZBlocks = originZBlocks;
         this.placed = true;
+    }
+
+    // Keys \\
+
+    public boolean isKeysCurrent(long referenceCoordinate) {
+        return keysCurrent && keysReference == referenceCoordinate;
+    }
+
+    public void markKeys(long referenceCoordinate) {
+        this.keysReference = referenceCoordinate;
+        this.keysCurrent = true;
+    }
+
+    public long[] getCellKeys() {
+        return cellKeys;
     }
 
     private void shiftValues(int shiftX, int shiftZ) {

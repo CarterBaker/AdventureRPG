@@ -25,7 +25,8 @@ public class ViewGizmoSystem extends SystemPackage {
      * viewport that creates a ViewCameraSystem creates this beside it, after
      * the menu system that gives its window a menu target. Each bubble and
      * arm moves only when it crosses a step, to positions and lengths made
-     * once, so the gizmo costs nothing while the view rests.
+     * once, so the gizmo costs nothing while the view rests. While the view
+     * camera has nothing shown to frame the gizmo is hidden with it.
      */
 
     // Internal
@@ -34,6 +35,7 @@ public class ViewGizmoSystem extends SystemPackage {
 
     // Menus
     private MenuInstance gizmoMenu;
+    private boolean gizmoShown;
 
     // Steps — every step's position, x step then y step, each arm length in pixels, and the step, length and turn each
     // bubble and arm was last put at
@@ -89,12 +91,16 @@ public class ViewGizmoSystem extends SystemPackage {
     @Override
     protected void awake() {
         this.gizmoMenu = menuManager.openMenu(EditorSetting.VIEW_GIZMO_MENU, context.getWindow());
+        this.gizmoShown = true;
     }
 
     // Update \\
 
     @Override
     protected void update() {
+
+        if (!showWithSubject())
+            return;
 
         Vector3 right = viewCameraSystem.getRight();
         Vector3 up = viewCameraSystem.getUp();
@@ -110,6 +116,24 @@ public class ViewGizmoSystem extends SystemPackage {
             if (i % 2 == 0)
                 placeArm(i / 2, screenX, screenY);
         }
+    }
+
+    // The gizmo shown only while the view camera frames something, false while hidden
+    private boolean showWithSubject() {
+
+        boolean shown = viewCameraSystem.isSubjectShown();
+
+        if (shown != gizmoShown) {
+
+            if (shown)
+                gizmoMenu.show();
+            else
+                gizmoMenu.hide();
+
+            this.gizmoShown = shown;
+        }
+
+        return shown;
     }
 
     // An axis's bubble moved to the step nearest where it points, only when that step changes

@@ -5,13 +5,12 @@ import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementKind;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.bootstrap.worldpipeline.util.WorldPlacementArpgUtility;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.util.WorldImagePointStruct;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorMode;
 import editor.runtime.EditorSetting;
 import engine.root.BranchPackage;
-import engine.root.EngineSetting;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class WorldPlacementBranch extends BranchPackage {
@@ -41,6 +40,9 @@ class WorldPlacementBranch extends BranchPackage {
     private SettlementManager settlementManager;
     private WorldEditorManager worldEditorManager;
 
+    // Point
+    private final WorldImagePointStruct imagePoint = new WorldImagePointStruct();
+
     // Base \\
 
     @Override
@@ -57,7 +59,10 @@ class WorldPlacementBranch extends BranchPackage {
     // The placing mode's design stood on the block column under an image position, and edited from then on
     void place(WorldHandle worldHandle, double imageX, double imageY) {
 
-        WorldPlacementStruct placement = worldEditorManager.createDesign(toBlock(imageX), toBlock(imageY));
+        imagePoint.locateBlock(worldHandle, imageX, imageY);
+
+        WorldPlacementStruct placement = worldEditorManager.createDesign(
+                imagePoint.getBlockX(), imagePoint.getBlockZ());
 
         if (placement == null) {
             worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_STATUS_NO_PLACEABLE);
@@ -81,7 +86,7 @@ class WorldPlacementBranch extends BranchPackage {
     void clear(WorldHandle worldHandle, double imageX, double imageY) {
 
         WorldPlacementStruct nearest = worldEditorManager.findPlacementNear(
-                imageX, imageY, EditorSetting.WORLD_EDITOR_CLEAR_RADIUS_BLOCKS / resolvePixelBlocks());
+                imageX, imageY, EditorSetting.WORLD_EDITOR_CLEAR_RADIUS_BLOCKS / WorldImagePointStruct.resolvePixelBlocks());
 
         if (nearest == null) {
             worldEditorManager.setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_NEAR);
@@ -171,13 +176,32 @@ class WorldPlacementBranch extends BranchPackage {
     }
 
     int toPixelX(WorldHandle worldHandle, WorldPlacementStruct placement) {
-        return (int) Math.floor(
-                WorldWrapUtility.wrapBlockX(worldHandle, placement.getWorldX()) / resolvePixelBlocks());
+
+        imagePoint.locateImage(worldHandle, placement.getWorldX(), placement.getWorldZ());
+
+        return (int) Math.floor(imagePoint.getImageX());
     }
 
     int toPixelY(WorldHandle worldHandle, WorldPlacementStruct placement) {
-        return (int) Math.floor(
-                WorldWrapUtility.wrapBlockZ(worldHandle, placement.getWorldZ()) / resolvePixelBlocks());
+
+        imagePoint.locateImage(worldHandle, placement.getWorldX(), placement.getWorldZ());
+
+        return (int) Math.floor(imagePoint.getImageY());
+    }
+
+    // The block column under an image position, in image pixels with fractions kept
+    long toBlockX(WorldHandle worldHandle, double imageX, double imageY) {
+
+        imagePoint.locateBlock(worldHandle, imageX, imageY);
+
+        return imagePoint.getBlockX();
+    }
+
+    long toBlockZ(WorldHandle worldHandle, double imageX, double imageY) {
+
+        imagePoint.locateBlock(worldHandle, imageX, imageY);
+
+        return imagePoint.getBlockZ();
     }
 
     // Disk \\
@@ -211,15 +235,5 @@ class WorldPlacementBranch extends BranchPackage {
         worldEditorManager.restreamWorld(worldHandle);
 
         return true;
-    }
-
-    // Utility \\
-
-    long toBlock(double imagePosition) {
-        return (long) Math.floor(imagePosition * resolvePixelBlocks());
-    }
-
-    private double resolvePixelBlocks() {
-        return EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
     }
 }

@@ -5,6 +5,8 @@ import java.util.Arrays;
 import application.bootstrap.worldpipeline.biome.BiomeBlendStruct;
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
+import application.bootstrap.worldpipeline.util.PlacementLatticeStruct;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
@@ -22,7 +24,9 @@ public class TreeSiteAsyncContainer extends AsyncContainerPackage {
      * rolled so far with the keys already taken, and the buckets that sort
      * those sites by place so each is judged only against its neighbours. The
      * sites are pooled and kept warm between searches, so a search allocates
-     * nothing once its pool has grown.
+     * nothing once its pool has grown. The region is given in a home chunk's
+     * coordinates, its point resolving where any of them truly stands and its
+     * lattice laying the placement cells that place takes.
      */
 
     // Region — the widened region, its corner and its span in blocks
@@ -40,6 +44,10 @@ public class TreeSiteAsyncContainer extends AsyncContainerPackage {
     // Placement Cells
     IntArrayList cellsX;
     IntArrayList cellsZ;
+    PlacementLatticeStruct lattice;
+
+    // Surface
+    SurfacePointStruct point;
 
     // Sites — the pool, the first siteCount of it rolled this search
     ObjectArrayList<TreeSiteStruct> sites;
@@ -64,6 +72,10 @@ public class TreeSiteAsyncContainer extends AsyncContainerPackage {
         // Placement Cells
         this.cellsX = new IntArrayList();
         this.cellsZ = new IntArrayList();
+        this.lattice = new PlacementLatticeStruct();
+
+        // Surface
+        this.point = new SurfacePointStruct();
 
         // Sites
         this.sites = new ObjectArrayList<>();

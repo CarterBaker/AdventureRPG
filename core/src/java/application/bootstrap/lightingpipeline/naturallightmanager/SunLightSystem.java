@@ -10,8 +10,8 @@ public class SunLightSystem extends SystemPackage {
     /*
      * Computes sun direction, color, and intensity each frame from the current
      * visual time of day. Direction traces the sun's path through
-     * CelestialUtility — intensity peaks at noon and falls to zero at the
-     * horizon cutoff.
+     * CelestialUtility, turned onto the grid by its north heading — intensity
+     * peaks at noon and falls to zero at the horizon cutoff.
      */
 
     // Output
@@ -33,9 +33,10 @@ public class SunLightSystem extends SystemPackage {
 
     // Update \\
 
-    public void update(float visualTimeOfDay) {
+    public void update(float visualTimeOfDay, double northHeading) {
 
         CelestialUtility.resolveSunDirection(visualTimeOfDay, direction);
+        CelestialUtility.applyNorthHeading(northHeading, direction);
         color.set(1f, 1f, 1f);
         intensity = computeIntensity(visualTimeOfDay);
     }

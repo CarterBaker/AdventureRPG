@@ -17,6 +17,7 @@ flat out float vFall;
 out vec4  vOceanState;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "liquid/includes/OceanSurface.glsl"
 #include "liquid/includes/OceanTessellation.glsl"
 #include "surface/includes/SurfaceTessellationTier.glsl"
@@ -91,5 +92,5 @@ void main() {
     vFlow       = teFlow[0];
     vFall       = teFall[0];
 
-    gl_Position = u_viewProjection * vec4(applyShoreWarp(worldPos), 1.0);
+    gl_Position = u_viewProjection * vec4(curveToHorizon(applyShoreWarp(worldPos)), 1.0);
 }

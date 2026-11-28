@@ -1,5 +1,6 @@
 package application.bootstrap.weatherpipeline.util;
 
+import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
@@ -20,7 +21,7 @@ public final class WeatherScaleUtility extends EngineUtility {
     // Scale \\
 
     public static double resolveWorldScaleRatio(WorldHandle worldHandle) {
-        double circumferenceMeters = worldHandle.getWorldScale().x * (double) EngineSetting.BLOCK_SIZE;
+        double circumferenceMeters = WorldWrapUtility.getCircumferenceBlocks(worldHandle) * EngineSetting.BLOCK_SIZE;
         return circumferenceMeters / EngineSetting.WEATHER_REFERENCE_CIRCUMFERENCE_METERS;
     }
 

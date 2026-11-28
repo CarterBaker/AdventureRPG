@@ -60,8 +60,11 @@ class LayoutSurfaceBranch extends BranchPackage {
         for (int p = 0; p < plans.size(); p++) {
 
             LayoutPlanStruct plan = plans.get(p);
-            double x = WorldWrapUtility.unwrapBlockX(worldHandle, worldX, plan.getReferenceX());
-            double z = WorldWrapUtility.unwrapBlockZ(worldHandle, worldZ, plan.getReferenceZ());
+
+            scratch.transform.setFrames(worldHandle, worldX, worldZ, plan.getReferenceX(), plan.getReferenceZ());
+
+            double x = scratch.transform.mapX(worldX, worldZ);
+            double z = scratch.transform.mapZ(worldX, worldZ);
 
             if (!plan.overlaps(x - toleranceBlocks, z - toleranceBlocks, x + toleranceBlocks, z + toleranceBlocks))
                 continue;
@@ -186,8 +189,11 @@ class LayoutSurfaceBranch extends BranchPackage {
         for (int p = 0; p < plans.size(); p++) {
 
             LayoutPlanStruct plan = plans.get(p);
-            double x = WorldWrapUtility.unwrapBlockX(worldHandle, worldX, plan.getReferenceX());
-            double z = WorldWrapUtility.unwrapBlockZ(worldHandle, worldZ, plan.getReferenceZ());
+
+            scratch.transform.setFrames(worldHandle, worldX, worldZ, plan.getReferenceX(), plan.getReferenceZ());
+
+            double x = scratch.transform.mapX(worldX, worldZ);
+            double z = scratch.transform.mapZ(worldX, worldZ);
 
             if (!plan.overlaps(x - marginBlocks, z - marginBlocks, x + marginBlocks, z + marginBlocks))
                 continue;

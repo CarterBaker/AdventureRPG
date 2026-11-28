@@ -1,6 +1,7 @@
 package application.bootstrap.worldpipeline.layoutmanager;
 
 import application.bootstrap.worldpipeline.road.RoadQueryStruct;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
 import engine.root.AsyncContainerPackage;
 
 public class LayoutQueryAsyncContainer extends AsyncContainerPackage {
@@ -12,9 +13,11 @@ public class LayoutQueryAsyncContainer extends AsyncContainerPackage {
 
     // Query
     RoadQueryStruct query;
+    FrameTransformStruct transform;
 
     @Override
     protected void create() {
         this.query = new RoadQueryStruct();
+        this.transform = new FrameTransformStruct();
     }
 }

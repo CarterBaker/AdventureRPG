@@ -6,6 +6,8 @@ import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -59,7 +61,11 @@ class TreePlacementBranch extends BranchPackage {
     // Placement \\
 
     // Every tree reaching the chunk, each held once more by the registry for it
-    TreeInstance[] placeTrees(WorldHandle worldHandle, long chunkCoordinate, double currentDay) {
+    TreeInstance[] placeTrees(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            GlobeFrameStruct frame,
+            double currentDay) {
 
         TreePlacementAsyncContainer scratch = placementContainer.getInstance();
 
@@ -71,11 +77,12 @@ class TreePlacementBranch extends BranchPackage {
         scratch.chunkOriginX = (long) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize;
         scratch.chunkOriginZ = (long) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize;
         scratch.currentDay = currentDay;
+        scratch.home.setHome(worldHandle, chunkCoordinate, frame.getCanonicalCoordinate(), frame.getTurns());
 
         int reach = (int) Math.ceil(treeManager.getMaxReachBlocks());
 
         treeSiteBranch.collectSites(
-                worldHandle,
+                scratch.home,
                 scratch.chunkOriginX - reach,
                 scratch.chunkOriginZ - reach,
                 scratch.chunkOriginX + chunkSize - 1 + reach,
@@ -171,8 +178,12 @@ class TreePlacementBranch extends BranchPackage {
     // Ground \\
 
     // The top solid block under an anchor, TREE_GROUND_FLOODED where water stands over it
-    private int probeGround(TreePlacementAsyncContainer scratch, long anchorX, long anchorZ) {
+    private int probeGround(TreePlacementAsyncContainer scratch, long chartX, long chartZ) {
 
+        SurfacePointStruct point = scratch.home.resolve(
+                chartX + EngineSetting.BLOCK_CENTER_OFFSET, chartZ + EngineSetting.BLOCK_CENTER_OFFSET);
+        long anchorX = (long) Math.floor(point.getCanonicalX());
+        long anchorZ = (long) Math.floor(point.getCanonicalZ());
         long key = anchorX << Integer.SIZE | (anchorZ & 0xFFFFFFFFL);
         int ground = scratch.anchor2Ground.get(key);
 

@@ -25,6 +25,7 @@ flat out float vCoverage;
 flat out float vContent;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "includes/SettingsData.glsl"
 #include "includes/PlayerPositionData.glsl"
 #include "includes/BlockOrientationMapData.glsl"
@@ -155,5 +156,5 @@ void main() {
     vCoverage   = teCoverage[0];
     vContent    = teContent[0];
 
-    gl_Position = u_viewProjection * vec4(worldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(curveToHorizon(worldPos), 1.0);
 }

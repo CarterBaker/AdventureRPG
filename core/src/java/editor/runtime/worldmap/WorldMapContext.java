@@ -2,12 +2,16 @@ package editor.runtime.worldmap;
 
 import editor.runtime.input.EditorInputSystem;
 import editor.runtime.placementicon.PlacementIconSystem;
+import editor.runtime.viewcamera.ViewCameraProvider;
+import editor.runtime.viewcamera.ViewCameraSubject;
+import editor.runtime.viewcamera.ViewCameraSystem;
+import editor.runtime.viewcamera.ViewGizmoSystem;
 import editor.runtime.worldmap.menu.WorldMapMenuSystem;
 import editor.runtime.worldmap.render.WorldMapRenderSystem;
 import editor.runtime.worldmap.view.WorldMapViewSystem;
 import engine.root.ContextPackage;
 
-public class WorldMapContext extends ContextPackage {
+public class WorldMapContext extends ContextPackage implements ViewCameraProvider {
 
     /*
      * Editor tab showing the whole world from above, like a game's map. It
@@ -21,7 +25,9 @@ public class WorldMapContext extends ContextPackage {
      * marks the character's position and facing, and the view follows it
      * until dragged; dragging the arrow itself moves the character to
      * wherever it is dropped. The shared day and night and weather can be shown over
-     * it, and live world and biome edits sharpen into it as they land.
+     * it, and live world and biome edits sharpen into it as they land. A
+     * globe world is shown on its globe, orbited and zoomed by the shared
+     * view camera with its axis gizmo.
      */
 
     // Internal
@@ -40,11 +46,21 @@ public class WorldMapContext extends ContextPackage {
         this.placementIconSystem = create(PlacementIconSystem.class);
         this.worldMapRenderSystem = create(WorldMapRenderSystem.class);
         this.worldMapMenuSystem = create(WorldMapMenuSystem.class);
+        create(ViewCameraSystem.class);
+        create(ViewGizmoSystem.class);
     }
 
     @Override
     protected void awake() {
         getWindow().setCaptureEligible(false);
+    }
+
+    // View Camera \\
+
+    // The globe the view orbits, shown only while the world is one
+    @Override
+    public ViewCameraSubject getViewCameraSubject() {
+        return worldMapViewSystem;
     }
 
     // Management \\

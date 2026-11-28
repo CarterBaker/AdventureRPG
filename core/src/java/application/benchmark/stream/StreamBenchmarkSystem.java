@@ -8,6 +8,7 @@ import com.sun.management.ThreadMXBean;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.DynamicGeometryManager;
 import application.bootstrap.geometrypipeline.dynamicgeometrymanager.util.DynamicGeometryAsyncContainer;
 import application.bootstrap.geometrypipeline.quadpacket.QuadPacketInstance;
+import application.bootstrap.oceanpipeline.tidemanager.TideManager;
 import application.bootstrap.worldpipeline.block.BlockPaletteHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
@@ -38,7 +39,9 @@ public class StreamBenchmarkSystem extends SystemPackage {
      * median and 95th percentile time per call, the bytes allocated per call
      * and a checksum of the output, so two builds or two kernel variants are
      * proven identical before their times are compared. Generation calls the
-     * native kernels through KernelManager at the CPU level it resolved.
+     * native kernels through KernelManager at the CPU level it resolved. The
+     * tide is held still at its mean level first, so coastal water comes out
+     * the same whenever the run is made.
      */
 
     // Internal
@@ -50,6 +53,7 @@ public class StreamBenchmarkSystem extends SystemPackage {
     private BlockManager blockManager;
     private TreeManager treeManager;
     private KernelManager kernelManager;
+    private TideManager tideManager;
     private ThreadMXBean threadMXBean;
 
     // Corpus
@@ -96,6 +100,7 @@ public class StreamBenchmarkSystem extends SystemPackage {
         this.blockManager = get(BlockManager.class);
         this.treeManager = get(TreeManager.class);
         this.kernelManager = get(KernelManager.class);
+        this.tideManager = get(TideManager.class);
         this.threadMXBean = (ThreadMXBean) ManagementFactory.getThreadMXBean();
     }
 
@@ -107,6 +112,7 @@ public class StreamBenchmarkSystem extends SystemPackage {
 
         this.measured = true;
 
+        tideManager.holdStill();
         buildCorpus();
         measureGeneration();
         measureMeshing();
@@ -160,12 +166,14 @@ public class StreamBenchmarkSystem extends SystemPackage {
         return chunkInstance;
     }
 
-    // The stream's own configuration of a fresh or pooled chunk
+    // The stream's own configuration of a fresh or pooled chunk, its coordinate its own canonical face cell
     private void configureChunk(ChunkInstance chunkInstance, long coordinate) {
         chunkInstance.constructor(
                 worldRenderManager,
                 worldHandle,
                 coordinate,
+                coordinate,
+                0,
                 chunkStreamManager.getChunkVAO(),
                 airBlockId,
                 blockManager,

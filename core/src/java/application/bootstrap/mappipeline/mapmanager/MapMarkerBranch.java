@@ -4,7 +4,10 @@ import application.bootstrap.entitypipeline.entity.EntityInstance;
 import application.bootstrap.entitypipeline.playermanager.PlayerManager;
 import application.bootstrap.mappipeline.map.MapMarkerStruct;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
 import application.bootstrap.worldpipeline.util.WorldPositionStruct;
+import application.bootstrap.worldpipeline.util.WorldPositionUtility;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -21,11 +24,18 @@ class MapMarkerBranch extends BranchPackage {
      * per streaming grid with a focal entity, at that entity's position and
      * facing its window's camera across the ground. Every preview and Dev
      * window shares one world, so every map marks every player the same way.
+     * A marker stands at the world's own position, on a globe the face cell
+     * the grid's chart lays the entity on, its facing turned into that face's
+     * axes.
      */
 
     // Internal
     private WorldStreamManager worldStreamManager;
     private PlayerManager playerManager;
+
+    // Scratch
+    private final WorldPositionStruct canonicalScratch = new WorldPositionStruct();
+    private final GlobeFrameStruct frameScratch = new GlobeFrameStruct();
 
     // Base \\
 
@@ -62,9 +72,12 @@ class MapMarkerBranch extends BranchPackage {
     void resolveMarker(GridInstance grid, MapMarkerStruct marker) {
 
         EntityInstance focalEntity = grid.getFocalEntity();
-        WorldPositionStruct position = focalEntity.getWorldPositionStruct();
-        long chunkCoordinate = position.getChunkCoordinate();
-        Vector3 local = position.getPosition();
+
+        WorldPositionUtility.toCanonical(grid, focalEntity.getWorldPositionStruct(), frameScratch, canonicalScratch);
+
+        long chunkCoordinate = canonicalScratch.getChunkCoordinate();
+        Vector3 local = canonicalScratch.getPosition();
+        int turns = frameScratch.getTurns();
 
         marker.setPosition(
                 grid,
@@ -80,6 +93,8 @@ class MapMarkerBranch extends BranchPackage {
         float length = (float) Math.sqrt(direction.x * direction.x + direction.z * direction.z);
 
         if (length > 0f)
-            marker.setHeading(direction.x / length, direction.z / length);
+            marker.setHeading(
+                    (float) GlobeUtility.turnX(direction.x / length, direction.z / length, turns),
+                    (float) GlobeUtility.turnZ(direction.x / length, direction.z / length, turns));
     }
 }

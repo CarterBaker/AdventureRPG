@@ -11,7 +11,8 @@ class StarSphereSystem extends SystemPackage {
     /*
      * Turns the star sphere for one place each frame. The stars are fixed on
      * the sphere; the sphere turns with the grid's own time of day and the
-     * year's progress, and tilts its pole to the grid's latitude, so the sky
+     * year's progress, tilts its pole to the grid's latitude and stands it
+     * over the grid's true north, so the sky
      * any window sees is the true sky for its date, hour and place. The
      * resulting world-to-sphere rotation is read by NaturalLightManager and
      * pushed to that grid's CelestialData UBO.
@@ -41,7 +42,7 @@ class StarSphereSystem extends SystemPackage {
                 clockManager.getClockHandle().getVisualYearProgress());
         double latitude = CelestialUtility.resolveObserverLatitude(clockInstance.getLatitudeFactor());
 
-        CelestialUtility.resolveStarRotation(siderealTime, latitude, rotation);
+        CelestialUtility.resolveStarRotation(siderealTime, latitude, clockInstance.getNorthHeading(), rotation);
     }
 
     // Accessible \\

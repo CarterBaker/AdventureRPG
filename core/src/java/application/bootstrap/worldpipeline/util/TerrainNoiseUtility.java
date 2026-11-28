@@ -8,19 +8,20 @@ import engine.util.mathematics.extras.SeamlessAxisNoiseUtility;
 public final class TerrainNoiseUtility extends EngineUtility {
 
     /*
-     * Fractal noise for terrain, wrapped seamlessly around the world: X rides a
-     * circle in 3D noise space and Z wraps through SeamlessAxisNoiseUtility.
-     * The caller precomputes the circle position once per column, and results
-     * depend only on seed and position. Ridged fractals fold each octave into
+     * Fractal noise for terrain, read at a surface point so it has no seam on
+     * any world. On a torus X rides a circle in 3D noise space and Z wraps
+     * through SeamlessAxisNoiseUtility; on a globe the point's place on the
+     * ball is itself the 3D noise position, which no edge interrupts. Results
+     * depend only on seed and place. Ridged fractals fold each octave into
      * sharp crests weighted by the one before, and volume noise samples the
-     * world in three dimensions, blending toward the one-period-back sample
-     * only within a thin margin of each seam so it wraps on both axes.
+     * ground in three dimensions, the height running along the place's up: a
+     * torus blends toward the one-period-back sample only within a thin margin
+     * of each seam so it wraps on both axes.
      */
 
     static float sampleFractal(
             long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks,
+            SurfacePointStruct point,
             double baseWavelengthBlocks,
             int octaves, float persistence, float lacunarity) {
 
@@ -33,8 +34,7 @@ public final class TerrainNoiseUtility extends EngineUtility {
 
             long octaveSeed = seed ^ (EngineSetting.TERRAIN_OCTAVE_HASH_SALT * (octave * 2L + 1L));
 
-            sum += sampleSingle(octaveSeed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks, wavelength)
-                    * amplitude;
+            sum += sampleSingle(octaveSeed, point, wavelength) * amplitude;
             amplitudeSum += amplitude;
 
             amplitude *= persistence;
@@ -47,8 +47,7 @@ public final class TerrainNoiseUtility extends EngineUtility {
     // In 0 to 1, each octave folded into crests and weighted by the crest above it, so ridges branch like veins
     static float sampleRidged(
             long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks,
+            SurfacePointStruct point,
             double baseWavelengthBlocks,
             int octaves, float gain, float lacunarity) {
 
@@ -61,8 +60,7 @@ public final class TerrainNoiseUtility extends EngineUtility {
         for (int octave = 0; octave < octaves; octave++) {
 
             long octaveSeed = seed ^ (EngineSetting.TERRAIN_OCTAVE_HASH_SALT * (octave * 2L + 1L));
-            float crest = 1f - Math.abs(sampleSingle(
-                    octaveSeed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks, wavelength));
+            float crest = 1f - Math.abs(sampleSingle(octaveSeed, point, wavelength));
 
             crest *= crest * weight;
             weight = crest;
@@ -79,12 +77,26 @@ public final class TerrainNoiseUtility extends EngineUtility {
 
     public static float sampleVolume(
             long seed,
-            double worldX, double worldY, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks,
-            double wavelengthBlocks, float verticalScale) {
+            SurfacePointStruct point,
+            double worldY,
+            double wavelengthBlocks,
+            float verticalScale) {
 
-        double wrappedX = wrapIntoRange(worldX, worldWidthBlocks);
-        double wrappedZ = wrapIntoRange(worldZ, worldHeightBlocks);
+        if (point.isGlobe()) {
+
+            double lift = worldY * verticalScale;
+
+            return NoiseUtility.noise3_Fallback(
+                    seed,
+                    (point.getNoiseX() + point.getDirection().x * lift) / wavelengthBlocks,
+                    (point.getNoiseY() + point.getDirection().y * lift) / wavelengthBlocks,
+                    (point.getNoiseZ() + point.getDirection().z * lift) / wavelengthBlocks);
+        }
+
+        double worldWidthBlocks = point.getWrapWidth();
+        double worldHeightBlocks = point.getWrapHeight();
+        double wrappedX = wrapIntoRange(point.getX(), worldWidthBlocks);
+        double wrappedZ = wrapIntoRange(point.getZ(), worldHeightBlocks);
         double scaledY = worldY * verticalScale / wavelengthBlocks;
         double margin = wavelengthBlocks * EngineSetting.NOISE_SEAM_BLEND_WAVELENGTHS;
 
@@ -142,18 +154,24 @@ public final class TerrainNoiseUtility extends EngineUtility {
         return wrapped < 0.0 ? wrapped + range : wrapped;
     }
 
-    private static float sampleSingle(
-            long seed, double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks, double wavelengthBlocks) {
+    private static float sampleSingle(long seed, SurfacePointStruct point, double wavelengthBlocks) {
 
         double effectiveWavelength = Math.max(wavelengthBlocks, EngineSetting.DIVISION_EPSILON);
-        double embeddingRadius = worldWidthBlocks / (Math.PI * 2.0 * effectiveWavelength);
 
-        double ex = cosAngle * embeddingRadius;
-        double ey = sinAngle * embeddingRadius;
+        if (point.isGlobe())
+            return NoiseUtility.noise3_Fallback(
+                    seed,
+                    point.getNoiseX() / effectiveWavelength,
+                    point.getNoiseY() / effectiveWavelength,
+                    point.getNoiseZ() / effectiveWavelength);
+
+        double embeddingRadius = point.getWrapWidth() / (Math.PI * 2.0 * effectiveWavelength);
+
+        double ex = point.getCosAngle() * embeddingRadius;
+        double ey = point.getSinAngle() * embeddingRadius;
 
         return SeamlessAxisNoiseUtility.sample3D(
-                worldZ, effectiveWavelength, worldHeightBlocks, EngineSetting.NOISE_SEAM_BLEND_WAVELENGTHS,
+                point.getZ(), effectiveWavelength, point.getWrapHeight(), EngineSetting.NOISE_SEAM_BLEND_WAVELENGTHS,
                 seed, ex, ey);
     }
 }

@@ -62,11 +62,15 @@ class RiverPlanBranch extends BranchPackage {
         try {
 
             WorldHandle worldHandle = network.getWorldHandle();
-            int targetIndex = network.getDownstreamIndex(sourceIndex);
+            int targetIndex = network.getDownstreamIndex(sourceIndex, scratch.fold);
             double originX = network.getNodeX(sourceIndex);
             double originZ = network.getNodeZ(sourceIndex);
-            double endX = WorldWrapUtility.wrappedBlockDeltaX(worldHandle, network.getNodeX(targetIndex), originX);
-            double endZ = WorldWrapUtility.wrappedBlockDeltaZ(worldHandle, network.getNodeZ(targetIndex), originZ);
+
+            scratch.transform.measure(
+                    worldHandle, network.getNodeX(targetIndex), network.getNodeZ(targetIndex), originX, originZ);
+
+            double endX = scratch.transform.getDeltaX();
+            double endZ = scratch.transform.getDeltaZ();
             boolean seaward = !network.isRiver(targetIndex);
 
             int startLevel = network.getLevelBlocks(sourceIndex);
@@ -128,14 +132,15 @@ class RiverPlanBranch extends BranchPackage {
 
         double headingX = endX / chordLength;
         double headingZ = endZ / chordLength;
-        int upstreamIndex = network.findMainUpstream(sourceIndex);
+        int upstreamIndex = network.findMainUpstream(sourceIndex, scratch.fold);
 
         if (upstreamIndex != RiverNetworkStruct.INDEX_NONE) {
 
-            double tangentX = endX - WorldWrapUtility.wrappedBlockDeltaX(
-                    worldHandle, network.getNodeX(upstreamIndex), originX);
-            double tangentZ = endZ - WorldWrapUtility.wrappedBlockDeltaZ(
-                    worldHandle, network.getNodeZ(upstreamIndex), originZ);
+            scratch.transform.measure(
+                    worldHandle, network.getNodeX(upstreamIndex), network.getNodeZ(upstreamIndex), originX, originZ);
+
+            double tangentX = endX - scratch.transform.getDeltaX();
+            double tangentZ = endZ - scratch.transform.getDeltaZ();
             double tangentLength = Math.sqrt(tangentX * tangentX + tangentZ * tangentZ);
 
             if (tangentLength > EngineSetting.DIVISION_EPSILON) {

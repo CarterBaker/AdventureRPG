@@ -8,6 +8,7 @@ import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.registry.RegistryUtility;
@@ -105,9 +106,14 @@ public class StructureManager extends ManagerPackage {
 
     // Generation \\
 
-    public void generateStructures(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance[] subChunks) {
+    public void generateStructures(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            GlobeFrameStruct frame,
+            SubChunkInstance[] subChunks) {
         structurePlacementBranch.generateStructures(
-                worldHandle, chunkCoordinate, subChunks, structureHandles, worldManager.getPlacements(worldHandle));
+                worldHandle, chunkCoordinate, frame, subChunks, structureHandles,
+                worldManager.getPlacements(worldHandle));
     }
 
     // Worker — one structure's share of a chunk, built in an architecture or as authored when it is null, laid at an

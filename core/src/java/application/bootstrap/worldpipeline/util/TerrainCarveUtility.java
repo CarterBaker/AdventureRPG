@@ -22,6 +22,8 @@ public final class TerrainCarveUtility extends EngineUtility {
      * trilinearly, so every caller filling the lattice over any range reads
      * the same value at the same point, and a lattice cell's corners bound
      * every value inside it, which lets solid rock be skipped a cell at a time.
+     * Every lattice column is read at its surface point, so the fields run on
+     * unbroken across a globe's edges.
      */
 
     public static final int LATTICE_STEP = EngineSetting.CAVE_LATTICE_STEP_BLOCKS;
@@ -65,57 +67,58 @@ public final class TerrainCarveUtility extends EngineUtility {
     // side points per horizontal axis from the origin; the sea channel is only sampled where it can matter
     public static void fillCaveLattice(
             long seed,
-            double worldWidthBlocks, double worldHeightBlocks,
+            SurfacePointStruct point,
             long originX, int originY, long originZ,
             int side,
             int rows,
             boolean seaChannel,
             float[] outLattice) {
 
-        for (int row = 0; row < rows; row++) {
-            for (int z = 0; z < side; z++) {
-                for (int x = 0; x < side; x++) {
+        for (int z = 0; z < side; z++) {
+            for (int x = 0; x < side; x++) {
 
-                    double worldX = originX + (long) x * LATTICE_STEP;
+                point.resolve(originX + (long) x * LATTICE_STEP, originZ + (long) z * LATTICE_STEP);
+
+                for (int row = 0; row < rows; row++) {
+
                     double worldY = originY + row * LATTICE_STEP;
-                    double worldZ = originZ + (long) z * LATTICE_STEP;
                     int base = latticeIndex(side, x, row, z) * CAVE_CHANNELS;
 
                     outLattice[base + CHANNEL_SPAGHETTI_A] = TerrainNoiseUtility.sampleVolume(
                             seed ^ EngineSetting.CAVE_SPAGHETTI_SEED_SALT_A,
-                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            point, worldY,
                             EngineSetting.CAVE_SPAGHETTI_WAVELENGTH_BLOCKS,
                             EngineSetting.CAVE_SPAGHETTI_VERTICAL_SCALE);
 
                     outLattice[base + CHANNEL_SPAGHETTI_B] = TerrainNoiseUtility.sampleVolume(
                             seed ^ EngineSetting.CAVE_SPAGHETTI_SEED_SALT_B,
-                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            point, worldY,
                             EngineSetting.CAVE_SPAGHETTI_WAVELENGTH_BLOCKS,
                             EngineSetting.CAVE_SPAGHETTI_VERTICAL_SCALE);
 
                     outLattice[base + CHANNEL_SPAGHETTI_RADIUS] = TerrainNoiseUtility.sampleVolume(
                             seed ^ EngineSetting.CAVE_SPAGHETTI_RADIUS_SEED_SALT,
-                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            point, worldY,
                             EngineSetting.CAVE_SPAGHETTI_RADIUS_WAVELENGTH_BLOCKS, 1f);
 
                     outLattice[base + CHANNEL_CHEESE] = TerrainNoiseUtility.sampleVolume(
                             seed ^ EngineSetting.CAVE_CHEESE_SEED_SALT,
-                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            point, worldY,
                             EngineSetting.CAVE_CHEESE_WAVELENGTH_BLOCKS, EngineSetting.CAVE_CHEESE_VERTICAL_SCALE);
 
                     outLattice[base + CHANNEL_NOODLE_A] = TerrainNoiseUtility.sampleVolume(
                             seed ^ EngineSetting.CAVE_NOODLE_SEED_SALT_A,
-                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            point, worldY,
                             EngineSetting.CAVE_NOODLE_WAVELENGTH_BLOCKS, EngineSetting.CAVE_NOODLE_VERTICAL_SCALE);
 
                     outLattice[base + CHANNEL_NOODLE_B] = TerrainNoiseUtility.sampleVolume(
                             seed ^ EngineSetting.CAVE_NOODLE_SEED_SALT_B,
-                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            point, worldY,
                             EngineSetting.CAVE_NOODLE_WAVELENGTH_BLOCKS, EngineSetting.CAVE_NOODLE_VERTICAL_SCALE);
 
                     outLattice[base + CHANNEL_NOODLE_GATE] = TerrainNoiseUtility.sampleVolume(
                             seed ^ EngineSetting.CAVE_NOODLE_GATE_SEED_SALT,
-                            worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                            point, worldY,
                             EngineSetting.CAVE_NOODLE_GATE_WAVELENGTH_BLOCKS, 1f);
 
                     outLattice[base + CHANNEL_CHEESE] += outLattice[base + CHANNEL_SPAGHETTI_RADIUS]
@@ -125,7 +128,7 @@ public final class TerrainCarveUtility extends EngineUtility {
                     outLattice[base + CHANNEL_SEA] = seaChannel
                             ? TerrainNoiseUtility.sampleVolume(
                                     seed ^ EngineSetting.CAVE_SEA_SEED_SALT,
-                                    worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                                    point, worldY,
                                     EngineSetting.CAVE_SEA_WAVELENGTH_BLOCKS, EngineSetting.CAVE_SEA_VERTICAL_SCALE)
                             : 0f;
                 }
@@ -136,7 +139,7 @@ public final class TerrainCarveUtility extends EngineUtility {
     // Only the slots marked active are sampled; the rest keep stale values no caller reads
     public static void fillVeinLattice(
             long seed,
-            double worldWidthBlocks, double worldHeightBlocks,
+            SurfacePointStruct point,
             long originX, int originY, long originZ,
             int rows,
             long[] veinSeeds,
@@ -146,13 +149,14 @@ public final class TerrainCarveUtility extends EngineUtility {
 
         int channels = veinCount * VEIN_CHANNELS_PER_VEIN;
 
-        for (int row = 0; row < rows; row++) {
-            for (int z = 0; z < LATTICE_SIDE; z++) {
-                for (int x = 0; x < LATTICE_SIDE; x++) {
+        for (int z = 0; z < LATTICE_SIDE; z++) {
+            for (int x = 0; x < LATTICE_SIDE; x++) {
 
-                    double worldX = originX + (long) x * LATTICE_STEP;
+                point.resolve(originX + (long) x * LATTICE_STEP, originZ + (long) z * LATTICE_STEP);
+
+                for (int row = 0; row < rows; row++) {
+
                     double worldY = originY + row * LATTICE_STEP;
-                    double worldZ = originZ + (long) z * LATTICE_STEP;
                     int base = latticeIndex(LATTICE_SIDE, x, row, z) * channels;
 
                     for (int vein = 0; vein < veinCount; vein++) {
@@ -164,12 +168,12 @@ public final class TerrainCarveUtility extends EngineUtility {
                         int veinBase = base + vein * VEIN_CHANNELS_PER_VEIN;
 
                         outLattice[veinBase + CHANNEL_VEIN_RIBBON] = TerrainNoiseUtility.sampleVolume(
-                                veinSeed, worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                                veinSeed, point, worldY,
                                 EngineSetting.TERRAIN_VEIN_WAVELENGTH_BLOCKS, 1f);
 
                         outLattice[veinBase + CHANNEL_VEIN_GATE] = TerrainNoiseUtility.sampleVolume(
                                 veinSeed ^ EngineSetting.TERRAIN_VEIN_GATE_SEED_SALT,
-                                worldX, worldY, worldZ, worldWidthBlocks, worldHeightBlocks,
+                                point, worldY,
                                 EngineSetting.TERRAIN_VEIN_GATE_WAVELENGTH_BLOCKS, 1f);
                     }
                 }
@@ -374,16 +378,11 @@ public final class TerrainCarveUtility extends EngineUtility {
     // Entrances \\
 
     // The rare patches where caves may break through the ground, from a broad field over the world's surface
-    public static boolean isEntrance(
-            long seed,
-            double worldX, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks) {
-
-        double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
+    public static boolean isEntrance(long seed, SurfacePointStruct point) {
 
         float field = TerrainNoiseUtility.sampleFractal(
                 seed ^ EngineSetting.CAVE_ENTRANCE_SEED_SALT,
-                Math.cos(spatialAngle), Math.sin(spatialAngle), worldZ, worldWidthBlocks, worldHeightBlocks,
+                point,
                 EngineSetting.CAVE_ENTRANCE_WAVELENGTH_BLOCKS,
                 EngineSetting.TERRAIN_FEATURE_MASK_OCTAVES,
                 EngineSetting.TERRAIN_FEATURE_MASK_PERSISTENCE,

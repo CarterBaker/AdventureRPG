@@ -168,7 +168,7 @@ public class WorldStreamManager extends ManagerPackage {
         chunkStreamManager.restreamRegion(grid, region);
         macroStreamManager.restreamRegion(grid, region);
 
-        if (!region.reachesChunk(grid.getWorldHandle(), grid.getActiveChunkCoordinate()))
+        if (!region.reaches(grid, grid.getActiveChunkCoordinate(), 1))
             return;
 
         int windowID = grid.getWindowInstance().getWindowID();
@@ -276,6 +276,41 @@ public class WorldStreamManager extends ManagerPackage {
         }
 
         return null;
+    }
+
+    // The canonical face cell a loaded chunk stands on, for anything that reads the world by where a place truly is;
+    // a torus chunk, or one no grid holds, is its own
+    public long toCanonicalChunk(long chunkCoordinate) {
+
+        ChunkInstance chunk = getChunkInstance(chunkCoordinate);
+
+        return chunk != null ? chunk.getCanonicalCoordinate() : chunkCoordinate;
+    }
+
+    // The grid following an entity — null when none does
+    public GridInstance getGridForFocal(EntityInstance entity) {
+
+        Object[] elements = grids.elements();
+        int size = grids.size();
+
+        for (int i = 0; i < size; i++) {
+
+            GridInstance grid = (GridInstance) elements[i];
+
+            if (grid.getFocalEntity() == entity)
+                return grid;
+        }
+
+        return null;
+    }
+
+    // The entity was just placed at a canonical position: the chart of the grid following it starts over there
+    public void restartChartFor(EntityInstance entity) {
+
+        GridInstance grid = getGridForFocal(entity);
+
+        if (grid != null)
+            grid.restartChart();
     }
 
     // The grid that streams a chunk, whose weather and sea the world there follows — null when none does

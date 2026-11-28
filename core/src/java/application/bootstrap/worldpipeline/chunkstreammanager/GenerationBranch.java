@@ -96,7 +96,8 @@ public class GenerationBranch extends BranchPackage {
         WorldHandle worldHandle = chunkInstance.getWorldHandle();
         SubChunkInstance[] subChunks = chunkInstance.getSubChunks();
 
-        worldGenerationManager.computeColumn(worldHandle, chunkCoordinate, chunkInstance.getTerrainCache());
+        worldGenerationManager.computeColumn(
+                worldHandle, chunkCoordinate, chunkInstance.getFrame(), chunkInstance.getTerrainCache());
 
         for (int i = 0; i < EngineSetting.WORLD_HEIGHT; i++) {
             SubChunkInstance subChunk = subChunks[i];
@@ -107,9 +108,10 @@ public class GenerationBranch extends BranchPackage {
         }
 
         if (success) {
-            settlementManager.generateSettlements(worldHandle, chunkCoordinate, subChunks);
-            structureManager.generateStructures(worldHandle, chunkCoordinate, subChunks);
-            treeManager.generateTrees(worldHandle, chunkCoordinate, chunkInstance.getTreePaletteHandle());
+            settlementManager.generateSettlements(worldHandle, chunkCoordinate, chunkInstance.getFrame(), subChunks);
+            structureManager.generateStructures(worldHandle, chunkCoordinate, chunkInstance.getFrame(), subChunks);
+            treeManager.generateTrees(
+                    worldHandle, chunkCoordinate, chunkInstance.getFrame(), chunkInstance.getTreePaletteHandle());
             chunkInstance.setTideSurfaceLevels(worldGenerationManager.getColumnTideSurfaceLevels(chunkCoordinate));
             container.getData()[essentialIndex] = true;
             container.getData()[generationIndex] = true;

@@ -8,9 +8,12 @@ import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.river.RiverChangeStruct;
 import application.bootstrap.worldpipeline.river.RiverNetworkStruct;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.TerrainShapeUtility;
 import application.bootstrap.worldpipeline.util.TideUtility;
 import application.bootstrap.worldpipeline.util.WorldElevationUtility;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
+import application.bootstrap.worldpipeline.world.GlobeTexelStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.kernel.threadpipeline.thread.ThreadHandle;
 import engine.assets.image.Pixmap;
@@ -38,7 +41,12 @@ class RiverNetworkBranch extends BranchPackage {
      * water never climbs, and held at the highest tide or above. The first
      * network of a world is built on whichever thread first asks; a rebuild
      * after an edit runs in the background while the old network keeps
-     * serving, and leaves behind the span of cells it changed.
+     * serving, and leaves behind the span of cells it changed. A globe drains
+     * over whole cells of every cube face, each reading the globe's images
+     * where its pixel-sized parts truly stand; a step past a face's edge folds
+     * onto the cell it truly is, the direction back turned into that cell's
+     * axes, and near a corner a diagonal that does not lead straight back is
+     * never taken.
      */
 
     private static final byte UNVISITED = -2;
@@ -182,28 +190,38 @@ class RiverNetworkBranch extends BranchPackage {
                     + map.getHeight() + " pixels — rivers drain over cells of " + cellPixels
                     + " pixels a side, so both sides must divide by " + cellPixels + ".");
 
-        int cellCountX = map.getWidth() / cellPixels;
+        boolean globe = worldHandle.isGlobe();
+        int cellsPerFace = globe ? map.getHeight() / cellPixels : 0;
+        int cellCountX = globe ? cellsPerFace : map.getWidth() / cellPixels;
         int cellCountZ = map.getHeight() / cellPixels;
-        int cellCount = cellCountX * cellCountZ;
+        int cellCount = globe ? EngineSetting.GLOBE_FACE_COUNT * cellsPerFace * cellsPerFace : cellCountX * cellCountZ;
         double cellSizeBlocks = cellPixels * EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
+        GlobeFrameStruct scratch = new GlobeFrameStruct();
 
         int[] fillQuanta = new int[cellCount];
         float[] flow = new float[cellCount];
         short[] levelBlocks = new short[cellCount];
         byte[] downstream = new byte[cellCount];
 
-        sampleCells(worldHandle, cellCountX, cellCountZ, cellSizeBlocks, fillQuanta, flow, levelBlocks, downstream);
+        sampleCells(
+                worldHandle, cellCountX, cellsPerFace, cellSizeBlocks, fillQuanta, flow, levelBlocks, downstream);
 
         int[] order = new int[cellCount];
-        int orderCount = flood(worldHandle.getSeed(), cellCountX, cellCountZ, fillQuanta, downstream, order);
+        int orderCount = flood(
+                worldHandle.getSeed(), cellCountX, cellCountZ, cellsPerFace, scratch,
+                fillQuanta, downstream, order);
 
-        byte[] strength = gatherFlow(cellCountX, cellCountZ, downstream, order, orderCount, flow);
+        byte[] strength = gatherFlow(
+                cellCountX, cellCountZ, cellsPerFace, scratch, downstream, order, orderCount, flow);
 
-        resolveLevels(cellCountX, cellCountZ, fillQuanta, downstream, strength, order, orderCount, levelBlocks);
+        resolveLevels(
+                cellCountX, cellCountZ, cellsPerFace, scratch,
+                fillQuanta, downstream, strength, order, orderCount, levelBlocks);
 
         RiverNetworkStruct network = new RiverNetworkStruct(
-                worldHandle, biomeRevision, cellCountX, cellCountZ, cellSizeBlocks,
-                downstream, strength, levelBlocks, resolveNear(cellCountX, cellCountZ, downstream, strength));
+                worldHandle, biomeRevision, cellCountX, cellCountZ, cellsPerFace, cellSizeBlocks,
+                downstream, strength, levelBlocks,
+                resolveNear(cellCountX, cellCountZ, cellsPerFace, scratch, downstream, strength));
 
         log("Rivers drained \"" + worldHandle.getWorldName() + "\": " + cellCountX + " x " + cellCountZ
                 + " cells, " + countRivers(network) + " river cells, in "
@@ -217,7 +235,7 @@ class RiverNetworkBranch extends BranchPackage {
     private void sampleCells(
             WorldHandle worldHandle,
             int cellCountX,
-            int cellCountZ,
+            int cellsPerFace,
             double cellSizeBlocks,
             int[] fillQuanta,
             float[] flow,
@@ -225,81 +243,100 @@ class RiverNetworkBranch extends BranchPackage {
             byte[] downstream) {
 
         long seed = worldHandle.getSeed();
-        double worldWidthBlocks = worldHandle.getWorldScale().x;
-        double worldHeightBlocks = worldHandle.getWorldScale().y;
         Pixmap heightLayer = worldHandle.getHeightLayer();
+        SurfacePointStruct point = new SurfacePointStruct();
+        SurfacePointStruct part = new SurfacePointStruct();
         int cellPixels = EngineSetting.RIVER_CELL_PIXELS;
         int pixelsPerCell = cellPixels * cellPixels;
+        double blocksPerPixel = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
+        int faceTexels = worldHandle.getWorld().getHeight();
 
-        for (int cellZ = 0; cellZ < cellCountZ; cellZ++) {
+        for (int index = 0; index < downstream.length; index++) {
 
-            double worldZ = (cellZ + 0.5) * cellSizeBlocks;
+            int cellX = RiverNetworkStruct.toCellX(cellCountX, cellsPerFace, index);
+            int cellZ = RiverNetworkStruct.toCellZ(cellCountX, cellsPerFace, index);
+            double cornerX = cellX * cellSizeBlocks;
+            double cornerZ = cellZ * cellSizeBlocks;
 
-            for (int cellX = 0; cellX < cellCountX; cellX++) {
+            point.setCanonicalHome(worldHandle, cornerX + cellSizeBlocks * 0.5, cornerZ + cellSizeBlocks * 0.5);
+            point.resolve(cornerX + cellSizeBlocks * 0.5, cornerZ + cellSizeBlocks * 0.5);
 
-                int index = cellZ * cellCountX + cellX;
-                double spatialAngle = TerrainShapeUtility.toSpatialAngle((cellX + 0.5) * cellSizeBlocks,
-                        worldWidthBlocks);
-                double cosAngle = Math.cos(spatialAngle);
-                double sinAngle = Math.sin(spatialAngle);
-                float continentalness = TerrainShapeUtility.sampleContinentalness(
-                        seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
-                float erosion = TerrainShapeUtility.sampleErosion(
-                        seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
-                float roughness = TerrainShapeUtility.sampleDrainageRoughness(
-                        seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
+            float continentalness = TerrainShapeUtility.sampleContinentalness(seed, point);
+            float erosion = TerrainShapeUtility.sampleErosion(seed, point);
+            float roughness = TerrainShapeUtility.sampleDrainageRoughness(seed, point);
 
-                int oceanPixels = 0;
-                float heightSum = 0f;
-                float runoffSum = 0f;
-                int incisionSum = 0;
+            int oceanPixels = 0;
+            float heightSum = 0f;
+            float runoffSum = 0f;
+            int incisionSum = 0;
 
-                for (int offsetZ = 0; offsetZ < cellPixels; offsetZ++) {
-                    for (int offsetX = 0; offsetX < cellPixels; offsetX++) {
+            for (int offsetZ = 0; offsetZ < cellPixels; offsetZ++) {
+                for (int offsetX = 0; offsetX < cellPixels; offsetX++) {
 
-                        int pixelX = cellX * cellPixels + offsetX;
-                        int pixelZ = cellZ * cellPixels + offsetZ;
-                        BiomeHandle biome = biomeManager.getPaintedBiome(worldHandle, pixelX, pixelZ);
+                    int pixelX = cellX * cellPixels + offsetX;
+                    int pixelZ = cellZ * cellPixels + offsetZ;
 
-                        if (biome.hasOceanWater()) {
-                            oceanPixels++;
-                            continue;
-                        }
+                    if (cellsPerFace != 0) {
 
-                        BiomeRiverStruct river = biome.getRiver();
-                        float elevation = WorldElevationUtility.toElevation(
-                                WorldElevationUtility.toLevel(heightLayer.getPixel(pixelX, pixelZ)));
+                        double partX = cornerX + (offsetX + 0.5) * blocksPerPixel;
+                        double partZ = cornerZ + (offsetZ + 0.5) * blocksPerPixel;
+                        GlobeTexelStruct texel = part.getTexel();
 
-                        heightSum += TerrainShapeUtility.computeDrainageHeightBlocks(
-                                biome, continentalness, erosion, elevation);
-                        runoffSum += river.getRunoff();
-                        incisionSum += river.getIncisionBlocks();
+                        part.setCanonicalHome(worldHandle, partX, partZ);
+                        part.resolve(partX, partZ);
+                        pixelX = texel.getFace() * faceTexels
+                                + Math.max(0, Math.min(faceTexels - 1, (int) Math.floor(texel.getX())));
+                        pixelZ = Math.max(0, Math.min(faceTexels - 1, (int) Math.floor(texel.getY())));
                     }
+
+                    BiomeHandle biome = biomeManager.getPaintedBiome(worldHandle, pixelX, pixelZ);
+
+                    if (biome.hasOceanWater()) {
+                        oceanPixels++;
+                        continue;
+                    }
+
+                    BiomeRiverStruct river = biome.getRiver();
+                    float elevation = WorldElevationUtility.toElevation(
+                            WorldElevationUtility.toLevel(heightLayer.getPixel(pixelX, pixelZ)));
+
+                    heightSum += TerrainShapeUtility.computeDrainageHeightBlocks(
+                            biome, continentalness, erosion, elevation);
+                    runoffSum += river.getRunoff();
+                    incisionSum += river.getIncisionBlocks();
                 }
-
-                if (oceanPixels * 2 > pixelsPerCell) {
-                    downstream[index] = RiverNetworkStruct.DIRECTION_NONE;
-                    fillQuanta[index] = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS
-                            * EngineSetting.RIVER_FILL_QUANTA_PER_BLOCK;
-                    levelBlocks[index] = (short) EngineSetting.RIVER_LEVEL_NONE;
-                    continue;
-                }
-
-                int landPixels = pixelsPerCell - oceanPixels;
-                float heightBlocks = heightSum / landPixels + roughness * EngineSetting.RIVER_ROUGHNESS_BLOCKS;
-
-                downstream[index] = UNVISITED;
-                fillQuanta[index] = Math.max(0, Math.round(heightBlocks * EngineSetting.RIVER_FILL_QUANTA_PER_BLOCK));
-                flow[index] = runoffSum / landPixels;
-                levelBlocks[index] = (short) ((int) Math.floor(heightBlocks) - incisionSum / landPixels);
             }
+
+            if (oceanPixels * 2 > pixelsPerCell) {
+                downstream[index] = RiverNetworkStruct.DIRECTION_NONE;
+                fillQuanta[index] = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS
+                        * EngineSetting.RIVER_FILL_QUANTA_PER_BLOCK;
+                levelBlocks[index] = (short) EngineSetting.RIVER_LEVEL_NONE;
+                continue;
+            }
+
+            int landPixels = pixelsPerCell - oceanPixels;
+            float heightBlocks = heightSum / landPixels + roughness * EngineSetting.RIVER_ROUGHNESS_BLOCKS;
+
+            downstream[index] = UNVISITED;
+            fillQuanta[index] = Math.max(0, Math.round(heightBlocks * EngineSetting.RIVER_FILL_QUANTA_PER_BLOCK));
+            flow[index] = runoffSum / landPixels;
+            levelBlocks[index] = (short) ((int) Math.floor(heightBlocks) - incisionSum / landPixels);
         }
     }
 
     // Rises inland from every coastal sea cell, lowest ground first; each land cell drains to the neighbour that
     // reached it, a filled hollow lying level with its brim. A world with no sea drains to its lowest cell. Returns
     // how many land cells were ordered, each after the cell it drains into
-    private int flood(long seed, int cellCountX, int cellCountZ, int[] fillQuanta, byte[] downstream, int[] order) {
+    private int flood(
+            long seed,
+            int cellCountX,
+            int cellCountZ,
+            int cellsPerFace,
+            GlobeFrameStruct scratch,
+            int[] fillQuanta,
+            byte[] downstream,
+            int[] order) {
 
         LongHeapPriorityQueue queue = new LongHeapPriorityQueue();
         int directions = RiverNetworkStruct.getDirectionCount();
@@ -315,13 +352,13 @@ class RiverNetworkBranch extends BranchPackage {
                 continue;
             }
 
-            if (bordersLand(cellCountX, cellCountZ, downstream, index))
-                queue.enqueue(packEntry(seed, cellCountX, fillQuanta[index], index));
+            if (bordersLand(cellCountX, cellCountZ, cellsPerFace, scratch, downstream, index))
+                queue.enqueue(packEntry(seed, cellCountX, cellsPerFace, fillQuanta[index], index));
         }
 
         if (queue.isEmpty() && lowestLand != RiverNetworkStruct.INDEX_NONE) {
             downstream[lowestLand] = RiverNetworkStruct.DIRECTION_NONE;
-            queue.enqueue(packEntry(seed, cellCountX, fillQuanta[lowestLand], lowestLand));
+            queue.enqueue(packEntry(seed, cellCountX, cellsPerFace, fillQuanta[lowestLand], lowestLand));
         }
 
         int orderCount = 0;
@@ -331,28 +368,63 @@ class RiverNetworkBranch extends BranchPackage {
             long entry = queue.dequeueLong();
             int index = (int) entry;
             int quanta = fillQuanta[index];
-            int cellX = index % cellCountX;
-            int cellZ = index / cellCountX;
+            int cellX = RiverNetworkStruct.toCellX(cellCountX, cellsPerFace, index);
+            int cellZ = RiverNetworkStruct.toCellZ(cellCountX, cellsPerFace, index);
 
             if (!isSeaSeed(downstream, index, lowestLand))
                 order[orderCount++] = index;
 
             for (int direction = 0; direction < directions; direction++) {
 
-                int neighbour = wrapIndex(cellCountX, cellCountZ,
+                int neighbour = RiverNetworkStruct.toIndex(
+                        cellCountX, cellCountZ, cellsPerFace,
                         cellX + RiverNetworkStruct.getDirectionX(direction),
-                        cellZ + RiverNetworkStruct.getDirectionZ(direction));
+                        cellZ + RiverNetworkStruct.getDirectionZ(direction),
+                        scratch);
 
                 if (downstream[neighbour] != UNVISITED)
                     continue;
 
-                downstream[neighbour] = (byte) ((direction + directions / 2) % directions);
+                int back = resolveBackDirection(
+                        cellCountX, cellCountZ, cellsPerFace, scratch, direction, neighbour, index);
+
+                if (back == RiverNetworkStruct.DIRECTION_NONE)
+                    continue;
+
+                downstream[neighbour] = (byte) back;
                 fillQuanta[neighbour] = Math.max(fillQuanta[neighbour], quanta);
-                queue.enqueue(packEntry(seed, cellCountX, fillQuanta[neighbour], neighbour));
+                queue.enqueue(packEntry(seed, cellCountX, cellsPerFace, fillQuanta[neighbour], neighbour));
             }
         }
 
         return orderCount;
+    }
+
+    // The direction a neighbour reached by a step drains back along, in its own axes: the step's reverse, turned
+    // by the quarter turns the step folded through; DIRECTION_NONE near a corner where that does not lead back
+    private int resolveBackDirection(
+            int cellCountX,
+            int cellCountZ,
+            int cellsPerFace,
+            GlobeFrameStruct scratch,
+            int direction,
+            int neighbour,
+            int index) {
+
+        int directions = RiverNetworkStruct.getDirectionCount();
+        int turns = cellsPerFace == 0 ? 0 : scratch.getTurns();
+        int back = Math.floorMod(direction + directions / 2 + turns * (directions / 4), directions);
+
+        if (cellsPerFace == 0)
+            return back;
+
+        int returned = RiverNetworkStruct.toIndex(
+                cellCountX, cellCountZ, cellsPerFace,
+                RiverNetworkStruct.toCellX(cellCountX, cellsPerFace, neighbour) + RiverNetworkStruct.getDirectionX(back),
+                RiverNetworkStruct.toCellZ(cellCountX, cellsPerFace, neighbour) + RiverNetworkStruct.getDirectionZ(back),
+                scratch);
+
+        return returned == index ? back : RiverNetworkStruct.DIRECTION_NONE;
     }
 
     // Each land cell's runoff passed down to the cell it drains into, highest first; a cell whose gathered flow
@@ -360,6 +432,8 @@ class RiverNetworkBranch extends BranchPackage {
     private byte[] gatherFlow(
             int cellCountX,
             int cellCountZ,
+            int cellsPerFace,
+            GlobeFrameStruct scratch,
             byte[] downstream,
             int[] order,
             int orderCount,
@@ -372,7 +446,7 @@ class RiverNetworkBranch extends BranchPackage {
         for (int i = orderCount - 1; i >= 0; i--) {
 
             int index = order[i];
-            int target = resolveDownstream(cellCountX, cellCountZ, downstream, index);
+            int target = resolveDownstream(cellCountX, cellCountZ, cellsPerFace, scratch, downstream, index);
 
             if (flow[index] >= threshold) {
 
@@ -394,6 +468,8 @@ class RiverNetworkBranch extends BranchPackage {
     private void resolveLevels(
             int cellCountX,
             int cellCountZ,
+            int cellsPerFace,
+            GlobeFrameStruct scratch,
             int[] inflowLevels,
             byte[] downstream,
             byte[] strength,
@@ -415,7 +491,7 @@ class RiverNetworkBranch extends BranchPackage {
             }
 
             int level = Math.max(capBlocks, Math.min(levelBlocks[index], inflowLevels[index]));
-            int target = resolveDownstream(cellCountX, cellCountZ, downstream, index);
+            int target = resolveDownstream(cellCountX, cellCountZ, cellsPerFace, scratch, downstream, index);
 
             levelBlocks[index] = (short) level;
 
@@ -425,7 +501,13 @@ class RiverNetworkBranch extends BranchPackage {
     }
 
     // Every cell within reach of a river cell, as one bit each
-    private long[] resolveNear(int cellCountX, int cellCountZ, byte[] downstream, byte[] strength) {
+    private long[] resolveNear(
+            int cellCountX,
+            int cellCountZ,
+            int cellsPerFace,
+            GlobeFrameStruct scratch,
+            byte[] downstream,
+            byte[] strength) {
 
         long[] nearWords = new long[(downstream.length + Long.SIZE - 1) / Long.SIZE];
         int radius = RiverNetworkStruct.NEAR_RADIUS_CELLS;
@@ -435,13 +517,14 @@ class RiverNetworkBranch extends BranchPackage {
             if (strength[index] == 0 || downstream[index] == RiverNetworkStruct.DIRECTION_NONE)
                 continue;
 
-            int cellX = index % cellCountX;
-            int cellZ = index / cellCountX;
+            int cellX = RiverNetworkStruct.toCellX(cellCountX, cellsPerFace, index);
+            int cellZ = RiverNetworkStruct.toCellZ(cellCountX, cellsPerFace, index);
 
             for (int offsetZ = -radius; offsetZ <= radius; offsetZ++) {
                 for (int offsetX = -radius; offsetX <= radius; offsetX++) {
 
-                    int near = wrapIndex(cellCountX, cellCountZ, cellX + offsetX, cellZ + offsetZ);
+                    int near = RiverNetworkStruct.toIndex(
+                            cellCountX, cellCountZ, cellsPerFace, cellX + offsetX, cellZ + offsetZ, scratch);
                     nearWords[near >>> 6] |= 1L << (near & 63);
                 }
             }
@@ -458,6 +541,7 @@ class RiverNetworkBranch extends BranchPackage {
         if (previous == null)
             return null;
 
+        GlobeFrameStruct scratch = new GlobeFrameStruct();
         int minCellX = Integer.MAX_VALUE;
         int minCellZ = Integer.MAX_VALUE;
         int maxCellX = Integer.MIN_VALUE;
@@ -465,7 +549,7 @@ class RiverNetworkBranch extends BranchPackage {
 
         for (int index = 0; index < next.getCellCount(); index++) {
 
-            if (previous.getDownstreamIndex(index) == next.getDownstreamIndex(index)
+            if (previous.getDownstreamIndex(index, scratch) == next.getDownstreamIndex(index, scratch)
                     && previous.getStrength(index) == next.getStrength(index)
                     && previous.getLevelBlocks(index) == next.getLevelBlocks(index))
                 continue;
@@ -501,16 +585,24 @@ class RiverNetworkBranch extends BranchPackage {
         return count;
     }
 
-    private boolean bordersLand(int cellCountX, int cellCountZ, byte[] downstream, int index) {
+    private boolean bordersLand(
+            int cellCountX,
+            int cellCountZ,
+            int cellsPerFace,
+            GlobeFrameStruct scratch,
+            byte[] downstream,
+            int index) {
 
-        int cellX = index % cellCountX;
-        int cellZ = index / cellCountX;
+        int cellX = RiverNetworkStruct.toCellX(cellCountX, cellsPerFace, index);
+        int cellZ = RiverNetworkStruct.toCellZ(cellCountX, cellsPerFace, index);
 
         for (int direction = 0; direction < RiverNetworkStruct.getDirectionCount(); direction++) {
 
-            int neighbour = wrapIndex(cellCountX, cellCountZ,
+            int neighbour = RiverNetworkStruct.toIndex(
+                    cellCountX, cellCountZ, cellsPerFace,
                     cellX + RiverNetworkStruct.getDirectionX(direction),
-                    cellZ + RiverNetworkStruct.getDirectionZ(direction));
+                    cellZ + RiverNetworkStruct.getDirectionZ(direction),
+                    scratch);
 
             if (downstream[neighbour] == UNVISITED)
                 return true;
@@ -525,27 +617,32 @@ class RiverNetworkBranch extends BranchPackage {
         return downstream[index] == RiverNetworkStruct.DIRECTION_NONE && index != lowestLand;
     }
 
-    private int resolveDownstream(int cellCountX, int cellCountZ, byte[] downstream, int index) {
+    private int resolveDownstream(
+            int cellCountX,
+            int cellCountZ,
+            int cellsPerFace,
+            GlobeFrameStruct scratch,
+            byte[] downstream,
+            int index) {
 
         int direction = downstream[index];
 
         if (direction == RiverNetworkStruct.DIRECTION_NONE)
             return RiverNetworkStruct.INDEX_NONE;
 
-        return wrapIndex(cellCountX, cellCountZ,
-                index % cellCountX + RiverNetworkStruct.getDirectionX(direction),
-                index / cellCountX + RiverNetworkStruct.getDirectionZ(direction));
-    }
-
-    private int wrapIndex(int cellCountX, int cellCountZ, int cellX, int cellZ) {
-        return Math.floorMod(cellZ, cellCountZ) * cellCountX + Math.floorMod(cellX, cellCountX);
+        return RiverNetworkStruct.toIndex(
+                cellCountX, cellCountZ, cellsPerFace,
+                RiverNetworkStruct.toCellX(cellCountX, cellsPerFace, index) + RiverNetworkStruct.getDirectionX(direction),
+                RiverNetworkStruct.toCellZ(cellCountX, cellsPerFace, index) + RiverNetworkStruct.getDirectionZ(direction),
+                scratch);
     }
 
     // Lowest ground first, cells level with one another in the order their hash draws, the index in the low bits
-    private long packEntry(long seed, int cellCountX, int quanta, int index) {
+    private long packEntry(long seed, int cellCountX, int cellsPerFace, int quanta, int index) {
 
         long hash = BiomeFieldUtility.hashCell(seed ^ EngineSetting.RIVER_FLAT_SALT,
-                index % cellCountX, index / cellCountX);
+                RiverNetworkStruct.toCellX(cellCountX, cellsPerFace, index),
+                RiverNetworkStruct.toCellZ(cellCountX, cellsPerFace, index));
         long tie = (long) (BiomeFieldUtility.hash01(hash) * (1 << EngineSetting.RIVER_FLAT_TIE_BITS));
 
         return ((long) quanta << (Integer.SIZE + EngineSetting.RIVER_FLAT_TIE_BITS)) | (tie << Integer.SIZE) | index;

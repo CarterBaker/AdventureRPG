@@ -14,7 +14,8 @@ public class MoonLightSystem extends SystemPackage {
      * and the moon's place in its orbit, read live from the clock so it follows
      * world switches. The moon trails the sun by its phase — beside the sun
      * when new, opposite it when full — so it rises later every day, and rides
-     * above or below the sun's path by its orbital latitude. Its light grows
+     * above or below the sun's path by its orbital latitude, the whole path
+     * turned onto the grid by its north heading. Its light grows
      * with how much of its face is lit and with how close it passes, and a
      * calendar with no moon gives none.
      */
@@ -64,7 +65,7 @@ public class MoonLightSystem extends SystemPackage {
 
     // Update \\
 
-    public void update(float visualTimeOfDay) {
+    public void update(float visualTimeOfDay, double northHeading) {
 
         ClockHandle clockHandle = clockManager.getClockHandle();
         float illumination = clockHandle.getLunarIllumination();
@@ -72,6 +73,7 @@ public class MoonLightSystem extends SystemPackage {
         float moonT = (float) CelestialUtility.wrapFraction(visualTimeOfDay - clockHandle.getLunarPhase());
 
         CelestialUtility.resolveOrbitDirection(moonT, clockHandle.getLunarLatitude(), direction);
+        CelestialUtility.applyNorthHeading(northHeading, direction);
 
         float brightness = MOON_BRIGHTNESS_BASE + illumination * MOON_BRIGHTNESS_LUNAR_SCALE;
 

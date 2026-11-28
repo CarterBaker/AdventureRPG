@@ -31,6 +31,10 @@ public class WorldEditorToolSystem extends SystemPackage {
      * Ctrl adding and taking away, a drag from a placement moves everything
      * selected with it once released, and a drag from nothing draws a box.
      * Move begins nothing: its press drags the view as the pan button does.
+     * On a globe's Cube layer Select picks the world's entry and Rotate turns
+     * the cube from the point pressed on the ball to the point under the
+     * pointer, written once let go. Every press a tool takes is claimed, so
+     * the view camera never orbits under a stroke.
      * Nothing begins while the view is being panned. While the Settlement
      * Planner carries a design over the window while its picked layer places,
      * focused or not, the pointer is followed for the drop instead, the
@@ -70,6 +74,7 @@ public class WorldEditorToolSystem extends SystemPackage {
 
     // Stroke
     private boolean stroking;
+    private boolean turning;
 
     // Selection
     private boolean pressed;
@@ -115,6 +120,7 @@ public class WorldEditorToolSystem extends SystemPackage {
     @Override
     protected void dispose() {
         endStroke();
+        endTurn();
     }
 
     // Update \\
@@ -147,14 +153,24 @@ public class WorldEditorToolSystem extends SystemPackage {
             return;
         }
 
+        if (turning) {
+            updateTurn(rawInput);
+            return;
+        }
+
         if (pressed) {
             updatePress(rawInput);
             return;
         }
 
         if (!hovering || worldEditorViewSystem.isPanning()
-                || !editorInputSystem.isClicked(WorldEditorSetting.BUTTON_APPLY))
+                || !editorInputSystem.takeClick(WorldEditorSetting.BUTTON_APPLY))
             return;
+
+        if (layer.isCube()) {
+            pressCube();
+            return;
+        }
 
         if (worldEditorManager.getTool(layer) == EditorTool.SELECT) {
             press();
@@ -179,6 +195,7 @@ public class WorldEditorToolSystem extends SystemPackage {
             return;
 
         endStroke();
+        endTurn();
         pressed = false;
         boxing = false;
         moving = false;
@@ -191,14 +208,57 @@ public class WorldEditorToolSystem extends SystemPackage {
 
         ImageDocumentInstance image = worldEditorManager.getWorldImage();
 
+        worldEditorViewSystem.locate(screenX, screenY);
+
         mouseX = screenX;
         mouseY = screenY;
-        hoveredImageX = worldEditorViewSystem.screenToImageX(screenX);
-        hoveredImageY = worldEditorViewSystem.screenToImageY(screenY);
+        hoveredImageX = worldEditorViewSystem.getLocatedImageX();
+        hoveredImageY = worldEditorViewSystem.getLocatedImageY();
         hoveredX = (int) Math.floor(hoveredImageX);
         hoveredY = (int) Math.floor(hoveredImageY);
         hovering = pointerActive
+                && worldEditorViewSystem.isLocated()
                 && hoveredX >= 0 && hoveredY >= 0 && hoveredX < image.getWidth() && hoveredY < image.getHeight();
+    }
+
+    // Cube \\
+
+    // Select picks the world's entry; Rotate begins turning the cube from the point pressed
+    private void pressCube() {
+
+        EditorTool tool = worldEditorManager.getTool(layer);
+
+        if (tool == EditorTool.SELECT) {
+            worldEditorManager.selectCube();
+            return;
+        }
+
+        if (tool != EditorTool.ROTATE)
+            return;
+
+        worldEditorManager.beginCubeTurn(worldEditorViewSystem.getLocatedDirection());
+        turning = true;
+    }
+
+    // The cube follows the pointer over the ball while the button is held, and is written once let go
+    private void updateTurn(RawInputHandle rawInput) {
+
+        if (!rawInput.isButtonHeld(WorldEditorSetting.BUTTON_APPLY)) {
+            endTurn();
+            return;
+        }
+
+        if (hovering)
+            worldEditorManager.dragCubeTurn(worldEditorViewSystem.getLocatedDirection());
+    }
+
+    private void endTurn() {
+
+        if (!turning)
+            return;
+
+        worldEditorManager.endCubeTurn();
+        turning = false;
     }
 
     private void endStroke() {
@@ -214,8 +274,8 @@ public class WorldEditorToolSystem extends SystemPackage {
 
     private void press() {
 
-        double reach = Math.abs(worldEditorViewSystem.screenToImageX(mouseX + WorldEditorSetting.SELECT_REACH_PIXELS)
-                - hoveredImageX);
+        double reach = WorldEditorSetting.SELECT_REACH_PIXELS
+                * worldEditorViewSystem.resolveImagePixelsPerScreenPixel();
 
         pressed = true;
         boxing = false;
@@ -290,8 +350,8 @@ public class WorldEditorToolSystem extends SystemPackage {
             settlementPlannerManager.hoverDrop(
                     hoveredX,
                     hoveredY,
-                    worldEditorManager.toBlock(hoveredImageX),
-                    worldEditorManager.toBlock(hoveredImageY));
+                    worldEditorManager.toBlockX(hoveredImageX, hoveredImageY),
+                    worldEditorManager.toBlockZ(hoveredImageX, hoveredImageY));
     }
 
     // The carried design stood under the pointer and this window focused, nothing done off the image or while the

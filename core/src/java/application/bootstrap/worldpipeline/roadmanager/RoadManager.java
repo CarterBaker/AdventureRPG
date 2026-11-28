@@ -4,6 +4,7 @@ import application.bootstrap.worldpipeline.road.RoadHandle;
 import application.bootstrap.worldpipeline.road.RoadPathStruct;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.root.UtilityPackage.InternalException;
@@ -99,8 +100,9 @@ public class RoadManager extends ManagerPackage {
             WorldHandle worldHandle,
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
-            RoadPathStruct path) {
-        roadStampBranch.stamp(worldHandle, chunkCoordinate, subChunks, path);
+            RoadPathStruct path,
+            FrameTransformStruct chunkToPath) {
+        roadStampBranch.stamp(worldHandle, chunkCoordinate, subChunks, path, chunkToPath);
     }
 
     // Live Edit \\

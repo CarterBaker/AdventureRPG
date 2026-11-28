@@ -23,12 +23,15 @@ public final class TreeDistributionUtility extends EngineUtility {
     // Patch \\
 
     // True where a field kind's slow patch noise keeps woods rather than clearings
-    public static boolean isInPatch(long worldSeed, BiomeTreeStruct kind, double x, double z) {
+    public static boolean isInPatch(long worldSeed, BiomeTreeStruct kind, SurfacePointStruct point) {
 
-        float noise = NoiseUtility.noise2(
-                worldSeed ^ EngineSetting.TREE_PATCH_SALT ^ kind.getNameSeed(),
-                x / kind.getPatchWavelengthBlocks(),
-                z / kind.getPatchWavelengthBlocks());
+        long seed = worldSeed ^ EngineSetting.TREE_PATCH_SALT ^ kind.getNameSeed();
+        double wavelength = kind.getPatchWavelengthBlocks();
+        float noise = point.isGlobe()
+                ? NoiseUtility.noise3_Fallback(
+                        seed, point.getNoiseX() / wavelength, point.getNoiseY() / wavelength,
+                        point.getNoiseZ() / wavelength)
+                : NoiseUtility.noise2(seed, point.getX() / wavelength, point.getZ() / wavelength);
 
         return (noise + 1f) * 0.5f < kind.getPatchCoverage();
     }
@@ -40,10 +43,9 @@ public final class TreeDistributionUtility extends EngineUtility {
             long worldSeed,
             BiomeTreeStruct kind,
             TreeHandle treeHandle,
-            double x,
-            double z) {
+            SurfacePointStruct point) {
 
-        if (kind.getDistribution() == TreeDistribution.FIELD && !isInPatch(worldSeed, kind, x, z))
+        if (kind.getDistribution() == TreeDistribution.FIELD && !isInPatch(worldSeed, kind, point))
             return 0f;
 
         float trees = kind.getDistribution() == TreeDistribution.CLUSTERED

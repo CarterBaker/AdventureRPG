@@ -1,7 +1,8 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
-import application.bootstrap.worldpipeline.util.StructurePlacementUtility;
+import application.bootstrap.worldpipeline.util.PlacementLatticeStruct;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
@@ -56,6 +57,7 @@ class CaveLakeBranch extends BranchPackage {
     // frame's coordinates
     void collectLakes(
             WorldHandle worldHandle,
+            SurfacePointStruct home,
             CaveFrameStruct frame,
             long frameOriginX,
             long frameOriginZ,
@@ -68,12 +70,12 @@ class CaveLakeBranch extends BranchPackage {
 
         frame.clearLakeSites();
 
-        StructurePlacementUtility.collectCells(
-                frameOriginX - reach, frameOriginX + widthBlocks - 1 + reach,
-                worldHandle.getWorldScale().x, cellBlocks, probe.lakeCellsX);
-        StructurePlacementUtility.collectCells(
-                frameOriginZ - reach, frameOriginZ + widthBlocks - 1 + reach,
-                worldHandle.getWorldScale().y, cellBlocks, probe.lakeCellsZ);
+        probe.lakeLattice.setHome(home);
+        probe.lakeLattice.configure(cellBlocks);
+        probe.lakeLattice.collectCells(
+                frameOriginX - reach, frameOriginZ - reach,
+                frameOriginX + widthBlocks - 1 + reach, frameOriginZ + widthBlocks - 1 + reach,
+                probe.lakeCellsX, probe.lakeCellsZ);
 
         int lowestCellY = Math.floorDiv(minY, cellHeightBlocks);
         int highestCellY = Math.floorDiv(maxY, cellHeightBlocks);
@@ -81,38 +83,53 @@ class CaveLakeBranch extends BranchPackage {
         for (int indexZ = 0; indexZ < probe.lakeCellsZ.size(); indexZ++)
             for (int indexX = 0; indexX < probe.lakeCellsX.size(); indexX++)
                 collectColumn(
-                        worldHandle, probe, frame, frameOriginX, frameOriginZ,
+                        worldHandle, home, probe, frame, frameOriginX, frameOriginZ,
                         probe.lakeCellsX.getInt(indexX), probe.lakeCellsZ.getInt(indexZ),
                         lowestCellY, highestCellY, minY, maxY);
     }
 
     private void collectColumn(
             WorldHandle worldHandle,
+            SurfacePointStruct home,
             CaveProbeAsyncContainer probe,
             CaveFrameStruct frame,
             long frameOriginX,
             long frameOriginZ,
-            int cellX,
-            int cellZ,
+            int latticeX,
+            int latticeZ,
             int lowestCellY,
             int highestCellY,
             int minY,
             int maxY) {
 
+        PlacementLatticeStruct lattice = probe.lakeLattice;
         long seed = worldHandle.getSeed() ^ EngineSetting.CAVE_LAKE_SEED_SALT;
 
-        long anchorX = computeAnchor(cellX, TerrainCarveUtility.rollCell(
-                seed, EngineSetting.CAVE_LAKE_OFFSET_X_SALT, cellX, 0, cellZ));
-        long anchorZ = computeAnchor(cellZ, TerrainCarveUtility.rollCell(
-                seed, EngineSetting.CAVE_LAKE_OFFSET_Z_SALT, cellX, 0, cellZ));
-        float radiusX = lerp(
+        lattice.resolveCell(latticeX, latticeZ);
+
+        int cellX = lattice.getKeyX();
+        int cellZ = lattice.getKeyZ();
+        float offsetRollX = TerrainCarveUtility.rollCell(seed, EngineSetting.CAVE_LAKE_OFFSET_X_SALT, cellX, 0, cellZ);
+        float offsetRollZ = TerrainCarveUtility.rollCell(seed, EngineSetting.CAVE_LAKE_OFFSET_Z_SALT, cellX, 0, cellZ);
+        int separation = 2 * (int) Math.ceil(anchorMargin);
+        long anchorX = worldHandle.isGlobe()
+                ? lattice.anchorX(offsetRollX, offsetRollZ, separation)
+                : computeAnchor(cellX, offsetRollX);
+        long anchorZ = worldHandle.isGlobe()
+                ? lattice.anchorZ(offsetRollX, offsetRollZ, separation)
+                : computeAnchor(cellZ, offsetRollZ);
+        float rollRadiusX = lerp(
                 EngineSetting.CAVE_LAKE_MIN_RADIUS_BLOCKS, EngineSetting.CAVE_LAKE_MAX_RADIUS_BLOCKS,
                 TerrainCarveUtility.rollCell(seed, EngineSetting.CAVE_LAKE_RADIUS_X_SALT, cellX, 0, cellZ));
-        float radiusZ = lerp(
+        float rollRadiusZ = lerp(
                 EngineSetting.CAVE_LAKE_MIN_RADIUS_BLOCKS, EngineSetting.CAVE_LAKE_MAX_RADIUS_BLOCKS,
                 TerrainCarveUtility.rollCell(seed, EngineSetting.CAVE_LAKE_RADIUS_Z_SALT, cellX, 0, cellZ));
+        boolean across = (lattice.getChartTurns() & 1) != 0;
+        float radiusX = across ? rollRadiusZ : rollRadiusX;
+        float radiusZ = across ? rollRadiusX : rollRadiusZ;
 
-        int slot = resolveCellGround(worldHandle, probe, cellX, cellZ, anchorX, anchorZ, radiusX, radiusZ);
+        int slot = resolveCellGround(
+                worldHandle, home, probe, cellX, cellZ, anchorX, anchorZ, radiusX, radiusZ);
 
         if (!probe.lakeCellDry[slot] || probe.lakeCellLakes[slot] <= 0f)
             return;
@@ -179,6 +196,7 @@ class CaveLakeBranch extends BranchPackage {
     // edges of its guard
     private int resolveCellGround(
             WorldHandle worldHandle,
+            SurfacePointStruct home,
             CaveProbeAsyncContainer probe,
             int cellX,
             int cellZ,
@@ -204,7 +222,7 @@ class CaveLakeBranch extends BranchPackage {
 
         CaveSiteProbeStruct point = probe.point;
 
-        worldGenerationManager.probeCaveSite(worldHandle, anchorX, anchorZ, probe);
+        probeSite(worldHandle, home, probe, anchorX, anchorZ);
 
         boolean dry = point.dry;
         int ground = point.groundHeight;
@@ -216,7 +234,7 @@ class CaveLakeBranch extends BranchPackage {
             long edgeX = anchorX + (edge == 0 ? reachX : edge == 1 ? -reachX : 0L);
             long edgeZ = anchorZ + (edge == 2 ? reachZ : edge == 3 ? -reachZ : 0L);
 
-            worldGenerationManager.probeCaveSite(worldHandle, edgeX, edgeZ, probe);
+            probeSite(worldHandle, home, probe, edgeX, edgeZ);
 
             dry = point.dry;
             ground = Math.min(ground, point.groundHeight);
@@ -232,6 +250,20 @@ class CaveLakeBranch extends BranchPackage {
         probe.lakeCellFloor[slot] = floor;
 
         return slot;
+    }
+
+    // What the ground holds where a block of the home's coordinates truly stands
+    private void probeSite(
+            WorldHandle worldHandle,
+            SurfacePointStruct home,
+            CaveProbeAsyncContainer probe,
+            long chartX,
+            long chartZ) {
+
+        SurfacePointStruct site = home.resolveBlock(chartX, chartZ);
+
+        worldGenerationManager.probeCaveSite(
+                worldHandle, site.getCanonicalBlockX(), site.getCanonicalBlockZ(), probe);
     }
 
     // Math \\

@@ -3,9 +3,11 @@ package application.bootstrap.worldpipeline.macrochunk;
 import application.bootstrap.geometrypipeline.mesh.MeshInstance;
 import application.bootstrap.geometrypipeline.model.ModelInstance;
 import application.bootstrap.shaderpipeline.ubo.UBOInstance;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.InstancePackage;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MacroChunkInstance extends InstancePackage {
@@ -25,12 +27,18 @@ public class MacroChunkInstance extends InstancePackage {
      * every chunk of the tile the grid currently draws, together with the
      * anchor and drawn revision they were resolved against, and the water
      * slot records which patch of the grid's open water mask the tile wrote.
+     * Its frame is where the grid's chart lays the chunk at its heart, the
+     * home every sample of the tile is read through.
      */
 
     // Internal
     private MacroDataSyncContainer macroDataSyncContainer;
     private WorldHandle worldHandle;
     private long coordinate;
+
+    // Frame
+    private long homeChunk;
+    private GlobeFrameStruct frame;
 
     // GPU
     private MeshInstance meshInstance;
@@ -71,6 +79,7 @@ public class MacroChunkInstance extends InstancePackage {
     protected void create() {
 
         this.macroDataSyncContainer = create(MacroDataSyncContainer.class);
+        this.frame = new GlobeFrameStruct();
         this.coverageWords = new int[EngineSetting.MACRO_COVERAGE_WORD_COUNT];
         this.treeModels = new ObjectArrayList<>();
         this.fadingTreeModels = new ObjectArrayList<>();
@@ -82,6 +91,9 @@ public class MacroChunkInstance extends InstancePackage {
 
         this.worldHandle = worldHandle;
         this.coordinate = coordinate;
+        this.homeChunk = Coordinate2Long.pack(
+                Coordinate2Long.unpackX(coordinate) + EngineSetting.MACRO_CHUNK_SIZE / 2,
+                Coordinate2Long.unpackY(coordinate) + EngineSetting.MACRO_CHUNK_SIZE / 2);
 
         reset();
     }
@@ -205,6 +217,15 @@ public class MacroChunkInstance extends InstancePackage {
 
     public long getCoordinate() {
         return coordinate;
+    }
+
+    // The chunk at the tile's heart, the one its frame is resolved at
+    public long getHomeChunk() {
+        return homeChunk;
+    }
+
+    public GlobeFrameStruct getFrame() {
+        return frame;
     }
 
     public MeshInstance getMeshInstance() {

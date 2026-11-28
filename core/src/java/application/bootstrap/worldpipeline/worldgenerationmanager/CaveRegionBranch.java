@@ -1,10 +1,13 @@
 package application.bootstrap.worldpipeline.worldgenerationmanager;
 
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.TerrainCarveUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
+import engine.util.mathematics.extras.Coordinate2Long;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 class CaveRegionBranch extends BranchPackage {
@@ -56,6 +59,7 @@ class CaveRegionBranch extends BranchPackage {
     // frameOriginZ in the world, and the point is read where the block's centre falls in the frame
     TerrainCaveProfileStruct resolveProfile(
             WorldHandle worldHandle,
+            SurfacePointStruct home,
             CaveFrameStruct frame,
             long frameOriginX,
             long frameOriginZ,
@@ -75,9 +79,10 @@ class CaveRegionBranch extends BranchPackage {
         double warpedZ = frameOriginZ + frameZ
                 + caveCarveBranch.sampleFramePoint(frame, TerrainCarveUtility.CHANNEL_SPAGHETTI_B) * warpBlocks;
 
-        int cellX = resolveCell(warpedX, worldHandle.getWorldScale().x);
+        long cell = resolveRegionCell(home, warpedX, warpedZ);
+        int cellX = Coordinate2Long.unpackX(cell);
         int cellY = Math.floorDiv((int) Math.floor(warpedY), cellHeightBlocks);
-        int cellZ = resolveCell(warpedZ, worldHandle.getWorldScale().y);
+        int cellZ = Coordinate2Long.unpackY(cell);
 
         TerrainCaveEntryStruct entry = pickEntry(
                 worldHandle, resolveCellSurface(worldHandle, cellX, cellZ), cellX, cellY, cellZ);
@@ -90,31 +95,31 @@ class CaveRegionBranch extends BranchPackage {
 
     // Every cave profile any region reaching the chunk can hold, each once
     void collectProfiles(
-            WorldHandle worldHandle,
+            SurfacePointStruct home,
             long chunkOriginX,
             long chunkOriginZ,
             ObjectArrayList<TerrainCaveProfileStruct> outProfiles) {
 
         outProfiles.clear();
 
-        int fromX = resolveCell(chunkOriginX - warpBlocks, worldHandle.getWorldScale().x);
-        int toX = resolveCell(chunkOriginX + EngineSetting.CHUNK_SIZE + warpBlocks, worldHandle.getWorldScale().x);
-        int fromZ = resolveCell(chunkOriginZ - warpBlocks, worldHandle.getWorldScale().y);
-        int toZ = resolveCell(chunkOriginZ + EngineSetting.CHUNK_SIZE + warpBlocks, worldHandle.getWorldScale().y);
+        double fromX = chunkOriginX - warpBlocks;
+        double toX = chunkOriginX + EngineSetting.CHUNK_SIZE + warpBlocks;
+        double fromZ = chunkOriginZ - warpBlocks;
+        double toZ = chunkOriginZ + EngineSetting.CHUNK_SIZE + warpBlocks;
 
-        addCellProfiles(worldHandle, fromX, fromZ, outProfiles);
-        addCellProfiles(worldHandle, toX, fromZ, outProfiles);
-        addCellProfiles(worldHandle, fromX, toZ, outProfiles);
-        addCellProfiles(worldHandle, toX, toZ, outProfiles);
+        addCellProfiles(home.getWorldHandle(), resolveRegionCell(home, fromX, fromZ), outProfiles);
+        addCellProfiles(home.getWorldHandle(), resolveRegionCell(home, toX, fromZ), outProfiles);
+        addCellProfiles(home.getWorldHandle(), resolveRegionCell(home, fromX, toZ), outProfiles);
+        addCellProfiles(home.getWorldHandle(), resolveRegionCell(home, toX, toZ), outProfiles);
     }
 
     private void addCellProfiles(
             WorldHandle worldHandle,
-            int cellX,
-            int cellZ,
+            long cell,
             ObjectArrayList<TerrainCaveProfileStruct> outProfiles) {
 
-        TerrainCaveEntryStruct[] entries = resolveCellSurface(worldHandle, cellX, cellZ).caveEntries;
+        TerrainCaveEntryStruct[] entries = resolveCellSurface(
+                worldHandle, Coordinate2Long.unpackX(cell), Coordinate2Long.unpackY(cell)).caveEntries;
 
         for (int i = 0; i < entries.length; i++)
             if (!outProfiles.contains(entries[i].profile))
@@ -122,6 +127,30 @@ class CaveRegionBranch extends BranchPackage {
     }
 
     // Cells \\
+
+    // The region cell a place in a home's coordinates falls in, packed: its wrapped cell on a torus, on a globe the
+    // cell of the face it truly lies on, counted from that face's origin
+    private long resolveRegionCell(SurfacePointStruct home, double x, double z) {
+
+        WorldHandle worldHandle = home.getWorldHandle();
+
+        if (!worldHandle.isGlobe())
+            return Coordinate2Long.pack(
+                    resolveCell(x, worldHandle.getWorldScale().x), resolveCell(z, worldHandle.getWorldScale().y));
+
+        home.resolve(x, z);
+
+        int cellsPerFace = resolveCellsPerFace(worldHandle);
+
+        return Coordinate2Long.pack(
+                (int) GlobeUtility.faceOriginX(home.getFace(), cellsPerFace)
+                        + Math.min((int) (home.getFaceU() / cellBlocks), cellsPerFace - 1),
+                Math.min((int) (home.getFaceV() / cellBlocks), cellsPerFace - 1));
+    }
+
+    private int resolveCellsPerFace(WorldHandle worldHandle) {
+        return Math.max(1, GlobeUtility.getFaceBlocks(worldHandle) / cellBlocks);
+    }
 
     // A wrapped coordinate's cell; the last cell absorbs whatever part of a cell the world's width leaves over
     private int resolveCell(double coordinate, int worldSizeBlocks) {
@@ -174,6 +203,15 @@ class CaveRegionBranch extends BranchPackage {
 
         double centerX = (double) cellX * cellBlocks + cellBlocks * 0.5;
         double centerZ = (double) cellZ * cellBlocks + cellBlocks * 0.5;
+
+        if (worldHandle.isGlobe()) {
+
+            int cellsPerFace = resolveCellsPerFace(worldHandle);
+            int face = GlobeUtility.faceOf(cellX, cellsPerFace);
+
+            centerX = GlobeUtility.faceOriginX(face, GlobeUtility.getFaceBlocks(worldHandle))
+                    + (cellX - GlobeUtility.faceOriginX(face, cellsPerFace) + 0.5) * cellBlocks;
+        }
 
         biomeManager.sampleBiomeField(worldHandle, centerX, centerZ, probe.blend);
 

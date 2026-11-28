@@ -10,9 +10,9 @@ import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
 import application.bootstrap.worldpipeline.util.ChunkWriteUtility;
 import application.bootstrap.worldpipeline.util.RoadPathUtility;
 import application.bootstrap.worldpipeline.util.SubBlockUtility;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldgenerationmanager.WorldGenerationManager;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
@@ -59,7 +59,13 @@ class RoadStampBranch extends BranchPackage {
 
     // Stamp \\
 
-    void stamp(WorldHandle worldHandle, long chunkCoordinate, SubChunkInstance[] subChunks, RoadPathStruct path) {
+    // The road's share of a chunk, every column of the chunk carried into the frame the road was drawn in
+    void stamp(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            SubChunkInstance[] subChunks,
+            RoadPathStruct path,
+            FrameTransformStruct chunkToPath) {
 
         RoadHandle roadHandle = path.getRoadHandle();
         RoadStampAsyncContainer scratch = stampContainer.getInstance();
@@ -67,12 +73,16 @@ class RoadStampBranch extends BranchPackage {
 
         long chunkOriginX = (long) Coordinate2Long.unpackX(chunkCoordinate) * chunkSize;
         long chunkOriginZ = (long) Coordinate2Long.unpackY(chunkCoordinate) * chunkSize;
-        double planOriginX = WorldWrapUtility.unwrapBlockX(worldHandle, (double) chunkOriginX, path.getPointX(0));
-        double planOriginZ = WorldWrapUtility.unwrapBlockZ(worldHandle, (double) chunkOriginZ, path.getPointZ(0));
+        double cornerAX = chunkToPath.mapX(chunkOriginX, chunkOriginZ);
+        double cornerAZ = chunkToPath.mapZ(chunkOriginX, chunkOriginZ);
+        double cornerBX = chunkToPath.mapX(chunkOriginX + chunkSize, chunkOriginZ + chunkSize);
+        double cornerBZ = chunkToPath.mapZ(chunkOriginX + chunkSize, chunkOriginZ + chunkSize);
 
-        if (planOriginX + chunkSize < path.getMinX() || planOriginX > path.getMaxX()
-                || planOriginZ + chunkSize < path.getMinZ() || planOriginZ > path.getMaxZ())
+        if (Math.max(cornerAX, cornerBX) < path.getMinX() || Math.min(cornerAX, cornerBX) > path.getMaxX()
+                || Math.max(cornerAZ, cornerBZ) < path.getMinZ() || Math.min(cornerAZ, cornerBZ) > path.getMaxZ())
             return;
+
+        boolean globe = worldHandle.isGlobe();
 
         double halfWidth = roadHandle.getHalfWidthBlocks();
         double reach = halfWidth + Math.max(roadHandle.getShoulderWidthBlocks(), 1f);
@@ -82,8 +92,10 @@ class RoadStampBranch extends BranchPackage {
         for (int localZ = 0; localZ < chunkSize; localZ++) {
             for (int localX = 0; localX < chunkSize; localX++) {
 
-                double x = planOriginX + localX + EngineSetting.BLOCK_CENTER_OFFSET;
-                double z = planOriginZ + localZ + EngineSetting.BLOCK_CENTER_OFFSET;
+                double columnX = chunkOriginX + localX + EngineSetting.BLOCK_CENTER_OFFSET;
+                double columnZ = chunkOriginZ + localZ + EngineSetting.BLOCK_CENTER_OFFSET;
+                double x = chunkToPath.mapX(columnX, columnZ);
+                double z = chunkToPath.mapZ(columnX, columnZ);
 
                 if (!RoadPathUtility.reaches(path, x, z, 0.0))
                     continue;
@@ -97,7 +109,9 @@ class RoadStampBranch extends BranchPackage {
                 short surfaceBlockID = roadHandle.getSurfaceBlockIDs()[WeightedTableUtility.pick(
                         roadHandle.getSurfaceCumulativeWeights(),
                         BiomeFieldUtility.hash01(BiomeFieldUtility.hashCell(
-                                surfaceSeed, (int) (chunkOriginX + localX), (int) (chunkOriginZ + localZ))))];
+                                surfaceSeed,
+                                globe ? (int) Math.floor(x) : (int) (chunkOriginX + localX),
+                                globe ? (int) Math.floor(z) : (int) (chunkOriginZ + localZ))))];
 
                 switch (query.getSpan()) {
                     case GROUND -> layGround(

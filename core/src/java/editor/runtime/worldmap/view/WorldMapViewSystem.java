@@ -5,7 +5,9 @@ import application.bootstrap.mappipeline.map.MapMarkerStruct;
 import application.bootstrap.mappipeline.map.MapViewStruct;
 import application.bootstrap.mappipeline.mapmanager.MapManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.world.GlobeTexelStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
@@ -13,13 +15,17 @@ import application.kernel.inputpipeline.input.RawInputHandle;
 import application.kernel.windowpipeline.window.WindowInstance;
 import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import editor.runtime.input.EditorInputSystem;
+import editor.runtime.viewcamera.ViewCameraSubject;
+import editor.runtime.viewcamera.ViewCameraSystem;
 import editor.runtime.worldmap.WorldMapSetting;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector3Double;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-public class WorldMapViewSystem extends SystemPackage {
+public class WorldMapViewSystem extends SystemPackage implements ViewCameraSubject {
 
     /*
      * Where the world map looks and what it follows. The map shows the
@@ -37,7 +43,12 @@ public class WorldMapViewSystem extends SystemPackage {
      * hierarchy. The settled view is handed to the engine's map each frame,
      * which answers with the tiles to draw. Positions are world blocks,
      * wrapped like the world itself, and screen positions are window pixels
-     * with y up.
+     * with y up. A globe world is shown on its globe instead, a ball of unit
+     * radius the shared view camera orbits and closes on from its surface;
+     * following turns the view to look straight down on the character,
+     * orbiting lets go of it, a press is read where its pick ray strikes the
+     * ball, at the world's own position there, and the view's centre is the
+     * ground under the window's middle.
      */
 
     // Internal
@@ -79,6 +90,15 @@ public class WorldMapViewSystem extends SystemPackage {
     private boolean hasPlayer;
     private MapMarkerStruct playerMarker;
 
+    // Globe
+    private ViewCameraSystem viewCameraSystem;
+    private final Vector3Double globeDirection = new Vector3Double();
+    private final GlobeTexelStruct blockScratch = new GlobeTexelStruct();
+    private final Vector3 aimScratch = new Vector3();
+    private boolean globePressed;
+    private final Vector3Double dragPosition = new Vector3Double();
+    private final Vector3Double pointerPosition = new Vector3Double();
+
     // Base \\
 
     @Override
@@ -97,6 +117,7 @@ public class WorldMapViewSystem extends SystemPackage {
         this.mapManager = get(MapManager.class);
         this.worldEditorManager = get(WorldEditorManager.class);
         this.playerManager = get(PlayerManager.class);
+        this.viewCameraSystem = get(ViewCameraSystem.class);
     }
 
     // Update \\
@@ -106,6 +127,12 @@ public class WorldMapViewSystem extends SystemPackage {
 
         resolveGrid();
         resolvePlayer();
+
+        if (isShown()) {
+            updateGlobe();
+            return;
+        }
+
         syncMapView();
         handleZoom();
         handlePress();
@@ -135,6 +162,192 @@ public class WorldMapViewSystem extends SystemPackage {
 
         mapView.set(worldHandle, centerX, centerZ, blocksPerPixel, window.getWidth(), window.getHeight());
         mapView.setOverlays(showingDayNight, showingWeather);
+    }
+
+    // Globe \\
+
+    // The globe seen through the window's camera, followed, pressed and handed to the engine's map
+    private void updateGlobe() {
+
+        WindowInstance window = context.getWindow();
+
+        if (viewCameraSystem.isDragging())
+            following = false;
+
+        if (following && hasPlayer)
+            aimAtPlayer();
+
+        syncMapView();
+        mapView.getGlobeView().resolveCamera(window.getActiveCamera());
+
+        if (strikeWorld(window.getWidth() * 0.5f, window.getHeight() * 0.5f, dragPosition)) {
+            centerX = dragPosition.x;
+            centerZ = dragPosition.z;
+        }
+
+        handleGlobePress();
+        handleGlobeMarkerDrag();
+
+        if (window.getWidth() > 0 && window.getHeight() > 0)
+            mapManager.resolveView(mapView);
+    }
+
+    // The view turned to look straight down on the character, the point it turns about the globe's middle
+    private void aimAtPlayer() {
+
+        GlobeUtility.resolveDirection(worldHandle, playerMarker.getX(), playerMarker.getZ(), globeDirection);
+
+        aimScratch.set((float) -globeDirection.x, (float) -globeDirection.y, (float) -globeDirection.z);
+        viewCameraSystem.getViewCameraState().aim(aimScratch);
+        viewCameraSystem.getViewCameraState().getPan().set(0f, 0f, 0f);
+    }
+
+    // A press on the character's arrow picks it up and is the map's own; any other is the camera's, and one let go
+    // where it was pressed selects the biome struck
+    private void handleGlobePress() {
+
+        RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
+        float mouseX = rawInput.getMouseX();
+        float mouseY = rawInput.getMouseY();
+
+        if (editorInputSystem.isClicked(WorldMapSetting.BUTTON_PAN)) {
+
+            pressMouseX = mouseX;
+            pressMouseY = mouseY;
+
+            if (isOverGlobeMarker(mouseX, mouseY)) {
+                editorInputSystem.claim(WorldMapSetting.BUTTON_PAN);
+                draggingMarker = true;
+            } else
+                globePressed = true;
+        }
+
+        if (!globePressed || rawInput.isButtonHeld(WorldMapSetting.BUTTON_PAN))
+            return;
+
+        globePressed = false;
+
+        if (isClick(mouseX, mouseY) && strikeWorld(mouseX, mouseY, dragPosition))
+            worldEditorManager.selectBiomeAt(worldHandle, dragPosition.x, dragPosition.z);
+    }
+
+    private void handleGlobeMarkerDrag() {
+
+        if (!draggingMarker)
+            return;
+
+        RawInputHandle rawInput = editorInputSystem.getRawInputHandle();
+        float mouseX = rawInput.getMouseX();
+        float mouseY = rawInput.getMouseY();
+
+        if (strikeWorld(mouseX, mouseY, dragPosition)) {
+            this.dragX = dragPosition.x;
+            this.dragZ = dragPosition.z;
+        }
+
+        if (rawInput.isButtonHeld(WorldMapSetting.BUTTON_PAN))
+            return;
+
+        draggingMarker = false;
+
+        if (!isClick(mouseX, mouseY))
+            dropMarker();
+    }
+
+    // The world's own block position a window position strikes on the ball, its x and z left in out
+    private boolean strikeWorld(float screenX, float screenY, Vector3Double out) {
+
+        WindowInstance window = context.getWindow();
+
+        if (!mapView.getGlobeView().strike(
+                window.getActiveCamera(),
+                screenX / window.getWidth() * 2f - 1f,
+                screenY / window.getHeight() * 2f - 1f,
+                globeDirection))
+            return false;
+
+        GlobeUtility.locateBlock(worldHandle, globeDirection.x, globeDirection.y, globeDirection.z, blockScratch);
+
+        out.set(
+                GlobeUtility.faceOriginX(blockScratch.getFace(), GlobeUtility.getFaceBlocks(worldHandle))
+                        + blockScratch.getX(),
+                0.0,
+                blockScratch.getY());
+
+        return true;
+    }
+
+    private boolean isOverGlobeMarker(float screenX, float screenY) {
+
+        WindowInstance window = context.getWindow();
+
+        if (!hasPlayer)
+            return false;
+
+        GlobeUtility.resolveDirection(worldHandle, playerMarker.getX(), playerMarker.getZ(), globeDirection);
+
+        if (!mapView.getGlobeView().projectSurface(
+                globeDirection.x, globeDirection.y, globeDirection.z, window.getWidth(), window.getHeight()))
+            return false;
+
+        float deltaX = screenX - mapView.getGlobeView().getProjectedX();
+        float deltaY = screenY - mapView.getGlobeView().getProjectedY();
+        float radius = WorldMapSetting.MARKER_GRAB_RADIUS_PIXELS;
+
+        return deltaX * deltaX + deltaY * deltaY <= radius * radius;
+    }
+
+    // Pointer \\
+
+    // The world's own block position under a window position, false on a globe where the pointer misses the ball
+    public boolean locatePointer(float screenX, float screenY) {
+
+        if (isShown())
+            return strikeWorld(screenX, screenY, pointerPosition);
+
+        pointerPosition.set(screenToWorldX(screenX), 0.0, screenToWorldZ(screenY));
+
+        return true;
+    }
+
+    public double getPointerX() {
+        return pointerPosition.x;
+    }
+
+    public double getPointerZ() {
+        return pointerPosition.z;
+    }
+
+    // The latitude and longitude of the place last struck on the globe, in degrees
+    public double getPointerLatitude() {
+        return GlobeUtility.resolveLatitudeFactor(globeDirection) * EngineSetting.QUARTER_TURN_DEGREES;
+    }
+
+    public double getPointerLongitude() {
+        return GlobeUtility.resolveLongitudeFraction(globeDirection) * EngineSetting.DEGREES_PER_FULL_ROTATION;
+    }
+
+    // View Camera Subject \\
+
+    // The globe the view camera orbits: only a globe world is shown on one
+    @Override
+    public boolean isShown() {
+        return worldHandle != null && worldHandle.isGlobe();
+    }
+
+    @Override
+    public float getCenter(int axis) {
+        return 0f;
+    }
+
+    @Override
+    public float getBoundingRadius() {
+        return WorldMapSetting.GLOBE_RADIUS;
+    }
+
+    @Override
+    public float getSurfaceRadius() {
+        return WorldMapSetting.GLOBE_RADIUS;
     }
 
     // World \\

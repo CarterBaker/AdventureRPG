@@ -2,6 +2,7 @@ package editor.runtime.worldeditor.layer;
 
 import editor.bootstrap.layerspipeline.layers.LayerNodeStruct;
 import editor.bootstrap.worldeditorpipeline.util.WorldEditorLayer;
+import editor.bootstrap.worldeditorpipeline.worldeditormanager.WorldEditorManager;
 import engine.root.SystemPackage;
 import engine.util.arpg.ArpgUtility;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -14,8 +15,12 @@ public class WorldEditorLayerSystem extends SystemPackage {
      * shown when it opens. The Layers tab lists the stack top first, each
      * layer named by its enum name, picks the layer the tools work on and
      * shows or hides a layer, the revision moving with every change so the
-     * tab lays it out again.
+     * tab lays it out again. The Cube layer is listed only while the world is
+     * a globe, and a torus world's tools never work on it.
      */
+
+    // Internal
+    private WorldEditorManager worldEditorManager;
 
     // Layers
     private WorldEditorLayer layer;
@@ -35,6 +40,11 @@ public class WorldEditorLayerSystem extends SystemPackage {
 
         for (int i = 0; i < layer2Shown.length; i++)
             layer2Shown[i] = true;
+    }
+
+    @Override
+    protected void get() {
+        this.worldEditorManager = get(WorldEditorManager.class);
     }
 
     // Layers \\
@@ -65,10 +75,13 @@ public class WorldEditorLayerSystem extends SystemPackage {
 
             WorldEditorLayer listed = WorldEditorLayer.VALUES[i];
 
+            if (listed.isCube() && !isGlobe())
+                continue;
+
             roots.add(new LayerNodeStruct(
                     ArpgUtility.toEnumName(listed),
                     listed.getLabel(),
-                    listed == layer,
+                    listed == getLayer(),
                     true,
                     layer2Shown[i],
                     false));
@@ -77,8 +90,13 @@ public class WorldEditorLayerSystem extends SystemPackage {
 
     // Accessible \\
 
+    // The layer picked, the biomes in the cube's place on a world with no cube
     public WorldEditorLayer getLayer() {
-        return layer;
+        return layer.isCube() && !isGlobe() ? WorldEditorLayer.BIOMES : layer;
+    }
+
+    private boolean isGlobe() {
+        return worldEditorManager.getWorldHandle().isGlobe();
     }
 
     public boolean isShown(WorldEditorLayer shown) {

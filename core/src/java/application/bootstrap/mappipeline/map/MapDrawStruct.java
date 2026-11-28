@@ -12,7 +12,10 @@ public class MapDrawStruct extends StructPackage {
      * coarser tile, so the rectangle always belongs to the tile asked for.
      * The world region is the same rectangle as a share of the whole world,
      * unwrapped and with v running north to south, which the day and night
-     * and weather overlays are read across.
+     * and weather overlays are read across. On a globe the rectangle bounds
+     * where the tile shows on the ball, and the world region is the tile's
+     * square of its block face, as shares of the face, which the globe's
+     * shader keeps every pixel of the rectangle to.
      */
 
     // Texture
@@ -36,6 +39,9 @@ public class MapDrawStruct extends StructPackage {
     private float worldU1;
     private float worldV1;
 
+    // Face — the block face a globe tile lies on
+    private int face;
+
     // Management \\
 
     public void set(int texture, float left, float bottom, float right, float top) {
@@ -52,6 +58,10 @@ public class MapDrawStruct extends StructPackage {
         this.v0 = v0;
         this.u1 = u1;
         this.v1 = v1;
+    }
+
+    public void setFace(int face) {
+        this.face = face;
     }
 
     public void setWorldRegion(float worldU0, float worldV0, float worldU1, float worldV1) {
@@ -113,5 +123,9 @@ public class MapDrawStruct extends StructPackage {
 
     public float getWorldV1() {
         return worldV1;
+    }
+
+    public int getFace() {
+        return face;
     }
 }

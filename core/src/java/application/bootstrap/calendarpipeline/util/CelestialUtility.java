@@ -16,7 +16,9 @@ public class CelestialUtility extends EngineUtility {
      * turns once per sidereal day about the celestial pole, which stands due
      * north at an elevation equal to the observer's latitude, so the pole star
      * gives north and latitude while the turning sky gives the hour and the
-     * season.
+     * season. All of it is worked in the sky's own frame, up +Y, north +Z and
+     * east -X; a grid whose +Z is not true north turns it by its north
+     * heading.
      */
 
     private static final double TWO_PI = Math.PI * 2.0;
@@ -46,6 +48,24 @@ public class CelestialUtility extends EngineUtility {
                 (float) Math.sin(latitude));
     }
 
+    // North Heading \\
+
+    // Turns a direction from the sky's own frame into a grid's, whose true north lies northHeading radians from its
+    // +Z toward its +X
+    public static void applyNorthHeading(double northHeading, Vector3 direction) {
+
+        if (northHeading == 0.0)
+            return;
+
+        float cosHeading = (float) Math.cos(northHeading);
+        float sinHeading = (float) Math.sin(northHeading);
+        float x = direction.x;
+        float z = direction.z;
+
+        direction.x = x * cosHeading + z * sinHeading;
+        direction.z = z * cosHeading - x * sinHeading;
+    }
+
     // Star Sphere \\
 
     // Sidereal time as a fraction of a turn: one turn per day plus one more per year, so the stars rise a little
@@ -59,19 +79,29 @@ public class CelestialUtility extends EngineUtility {
         return latitudeFactor * Math.toRadians(EngineSetting.CELESTIAL_POLE_MAX_ELEVATION_DEGREES);
     }
 
-    // Rotation from world space into the star sphere's own fixed frame, whose +Z is the north celestial pole
-    public static void resolveStarRotation(double siderealTime, double latitude, Matrix4 out) {
+    // Rotation from a grid's space into the star sphere's own fixed frame, whose +Z is the north celestial pole —
+    // the grid first turned back by its north heading into the sky's own frame
+    public static void resolveStarRotation(double siderealTime, double latitude, double northHeading, Matrix4 out) {
 
         double turn = siderealTime * TWO_PI;
         float cosTurn = (float) Math.cos(turn);
         float sinTurn = (float) Math.sin(turn);
         float cosLatitude = (float) Math.cos(latitude);
         float sinLatitude = (float) Math.sin(latitude);
+        float cosHeading = (float) Math.cos(northHeading);
+        float sinHeading = (float) Math.sin(northHeading);
+
+        float m00 = cosTurn;
+        float m10 = sinTurn;
+        float m20 = 0f;
+        float m02 = sinTurn * sinLatitude;
+        float m12 = -cosTurn * sinLatitude;
+        float m22 = cosLatitude;
 
         out.set(
-                cosTurn, -sinTurn * cosLatitude, sinTurn * sinLatitude, 0f,
-                sinTurn, cosTurn * cosLatitude, -cosTurn * sinLatitude, 0f,
-                0f, sinLatitude, cosLatitude, 0f,
+                m00 * cosHeading + m02 * sinHeading, -sinTurn * cosLatitude, m02 * cosHeading - m00 * sinHeading, 0f,
+                m10 * cosHeading + m12 * sinHeading, cosTurn * cosLatitude, m12 * cosHeading - m10 * sinHeading, 0f,
+                m20 * cosHeading + m22 * sinHeading, sinLatitude, m22 * cosHeading - m20 * sinHeading, 0f,
                 0f, 0f, 0f, 1f);
     }
 

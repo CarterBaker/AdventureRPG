@@ -19,6 +19,10 @@ import editor.runtime.layerssource.LayersSourceSystem;
 import editor.runtime.placementicon.PlacementIconSystem;
 import editor.runtime.propertiessource.PropertiesSourceSystem;
 import editor.runtime.toolcanvas.ToolCanvasSystem;
+import editor.runtime.viewcamera.ViewCameraProvider;
+import editor.runtime.viewcamera.ViewCameraSubject;
+import editor.runtime.viewcamera.ViewCameraSystem;
+import editor.runtime.viewcamera.ViewGizmoSystem;
 import editor.runtime.worldeditor.layer.WorldEditorLayerSystem;
 import editor.runtime.worldeditor.menu.WorldEditorMenuSystem;
 import editor.runtime.worldeditor.render.WorldEditorRenderSystem;
@@ -29,7 +33,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class WorldEditorContext extends ContextPackage
         implements ToolCanvasProvider, WorldEditorLayerProvider, LayersProvider, PropertiesProvider, PaletteProvider,
-        FileMenuProvider {
+        FileMenuProvider, ViewCameraProvider {
 
     /*
      * Editor tab for the world's images, one image pixel per biome cell of
@@ -48,7 +52,10 @@ public class WorldEditorContext extends ContextPackage
      * the Biomes layer is picked, its fields in the Properties tab; the
      * images, their history and
      * every live update live in the editor and engine. The tab is a tool
-     * canvas for as long as it is open, working on the layer picked.
+     * canvas for as long as it is open, working on the layer picked. A
+     * globe world is shown on its globe, orbited and zoomed by the shared view
+     * camera with its axis gizmo, and gains the Cube layer, the block grid's
+     * cube inside the globe, picked and turned there.
      */
 
     // Internal
@@ -76,6 +83,8 @@ public class WorldEditorContext extends ContextPackage
         this.placementIconSystem = create(PlacementIconSystem.class);
         this.worldEditorRenderSystem = create(WorldEditorRenderSystem.class);
         this.worldEditorMenuSystem = create(WorldEditorMenuSystem.class);
+        create(ViewCameraSystem.class);
+        create(ViewGizmoSystem.class);
         this.toolCanvasSystem = create(ToolCanvasSystem.class);
         this.propertiesSourceSystem = create(PropertiesSourceSystem.class);
         this.fileMenuSourceSystem = create(FileMenuSourceSystem.class);
@@ -167,6 +176,14 @@ public class WorldEditorContext extends ContextPackage
     @Override
     public PaletteContent getPaletteContent() {
         return worldEditorLayerSystem.getLayer().getPaletteContent();
+    }
+
+    // View Camera \\
+
+    // The globe the view orbits, shown only while the world is one
+    @Override
+    public ViewCameraSubject getViewCameraSubject() {
+        return worldEditorViewSystem;
     }
 
     // File Menu \\

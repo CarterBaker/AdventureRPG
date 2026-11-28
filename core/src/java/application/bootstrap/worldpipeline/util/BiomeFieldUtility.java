@@ -3,9 +3,12 @@ package application.bootstrap.worldpipeline.util;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.biome.ProbableEdgeStruct;
 import application.bootstrap.worldpipeline.biome.ProbablePatchStruct;
+import application.bootstrap.worldpipeline.world.GlobeTexelStruct;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
+import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.NoiseUtility;
+import engine.util.mathematics.vectors.Vector3Double;
 
 public final class BiomeFieldUtility extends EngineUtility {
 
@@ -22,12 +25,14 @@ public final class BiomeFieldUtility extends EngineUtility {
      * outline runs, and a sharpness mask drawn per patch narrows it along
      * stretches of the outline into cliffs that fade back into rolling
      * ground. Everything depends only on seed and position, so neighboring
-     * chunks agree exactly.
+     * chunks agree exactly. On a globe the warp displaces a place's direction
+     * across the ball, the kernel reads across the image faces and the cells
+     * tile every cube face whole (see ScatterLatticeStruct), so nothing parts
+     * along an edge.
      */
 
     public static final int MAP_SAMPLE_COUNT = EngineSetting.BIOME_MAP_SAMPLE_COUNT;
 
-    private static final double BLOCKS_PER_PIXEL = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
     private static final double SHAPE_BOUND_RADIUS = 0.5;
     private static final double SHAPE_EXTENT_RADIUS = SHAPE_BOUND_RADIUS
             + EngineSetting.BIOME_PROBABLE_SHAPE_WARP_STRENGTH;
@@ -55,6 +60,43 @@ public final class BiomeFieldUtility extends EngineUtility {
                 seed ^ EngineSetting.HASH_FINALIZER_MULTIPLIER_2,
                 pixelX * EngineSetting.BIOME_BORDER_WARP_DETAIL_FREQUENCY,
                 pixelZ * EngineSetting.BIOME_BORDER_WARP_DETAIL_FREQUENCY);
+
+        return broad * EngineSetting.BIOME_BORDER_WARP_STRENGTH_PIXELS
+                + fine * EngineSetting.BIOME_BORDER_WARP_DETAIL_STRENGTH_PIXELS;
+    }
+
+    // The border warp of a globe place: a displacement of its direction across the ball, drawn from three noise
+    // fields read at the place's point on a ball one pixel to a unit, so borders wander alike over every image face
+    public static void warpGlobeDirection(long seed, Vector3Double direction, double radiusPixels, Vector3Double out) {
+
+        double pointX = direction.x * radiusPixels;
+        double pointY = direction.y * radiusPixels;
+        double pointZ = direction.z * radiusPixels;
+
+        double warpX = computeBorderWarpOffset3(seed, pointX, pointY, pointZ);
+        double warpY = computeBorderWarpOffset3(seed ^ EngineSetting.HASH_FINALIZER_MULTIPLIER_1, pointX, pointY, pointZ);
+        double warpZ = computeBorderWarpOffset3(seed ^ EngineSetting.HASH_FINALIZER_MULTIPLIER_2, pointX, pointY, pointZ);
+        double radial = warpX * direction.x + warpY * direction.y + warpZ * direction.z;
+
+        out.set(
+                direction.x + (warpX - radial * direction.x) / radiusPixels,
+                direction.y + (warpY - radial * direction.y) / radiusPixels,
+                direction.z + (warpZ - radial * direction.z) / radiusPixels);
+    }
+
+    private static double computeBorderWarpOffset3(long seed, double x, double y, double z) {
+
+        float broad = NoiseUtility.noise3_Fallback(
+                seed,
+                x * EngineSetting.BIOME_BORDER_WARP_FREQUENCY,
+                y * EngineSetting.BIOME_BORDER_WARP_FREQUENCY,
+                z * EngineSetting.BIOME_BORDER_WARP_FREQUENCY);
+
+        float fine = NoiseUtility.noise3_Fallback(
+                seed ^ EngineSetting.HASH_FINALIZER_MULTIPLIER_2,
+                x * EngineSetting.BIOME_BORDER_WARP_DETAIL_FREQUENCY,
+                y * EngineSetting.BIOME_BORDER_WARP_DETAIL_FREQUENCY,
+                z * EngineSetting.BIOME_BORDER_WARP_DETAIL_FREQUENCY);
 
         return broad * EngineSetting.BIOME_BORDER_WARP_STRENGTH_PIXELS
                 + fine * EngineSetting.BIOME_BORDER_WARP_DETAIL_STRENGTH_PIXELS;
@@ -96,6 +138,35 @@ public final class BiomeFieldUtility extends EngineUtility {
         outPixelX[3] = highX;
         outPixelZ[3] = highZ;
         outWeights[3] = weightX * weightZ;
+    }
+
+    // The four texels of a globe image around a texel position, past an image face's edge read on the face beside
+    public static void computeGlobeMapSamples(
+            GlobeTexelStruct texel,
+            int faceTexels,
+            GlobeTexelStruct scratch,
+            int[] outPixelX, int[] outPixelZ, float[] outWeights) {
+
+        double latticeX = texel.getX() - 0.5;
+        double latticeZ = texel.getY() - 0.5;
+
+        int baseX = floorToInt(latticeX);
+        int baseZ = floorToInt(latticeZ);
+
+        float weightX = contrast((float) (latticeX - baseX));
+        float weightZ = contrast((float) (latticeZ - baseZ));
+
+        for (int i = 0; i < MAP_SAMPLE_COUNT; i++) {
+
+            int stepX = i & 1;
+            int stepZ = i >> 1;
+            long pixel = GlobeUtility.resolveImagePixel(
+                    faceTexels, texel.getFace(), baseX + stepX, baseZ + stepZ, scratch);
+
+            outPixelX[i] = Coordinate2Long.unpackX(pixel);
+            outPixelZ[i] = Coordinate2Long.unpackY(pixel);
+            outWeights[i] = (stepX == 1 ? weightX : 1f - weightX) * (stepZ == 1 ? weightZ : 1f - weightZ);
+        }
     }
 
     // Probable Biome Scatter \\
@@ -161,8 +232,7 @@ public final class BiomeFieldUtility extends EngineUtility {
     public static void computeScatterCoverage(
             long seed,
             ProbableBiomeStruct probableBiome,
-            double pixelX, double pixelZ,
-            int mapWidth, int mapHeight,
+            ScatterLatticeStruct lattice,
             boolean exclusive,
             ProbablePatchStruct outPatch) {
 
@@ -173,20 +243,16 @@ public final class BiomeFieldUtility extends EngineUtility {
             return;
         }
 
-        double worldWidthBlocks = mapWidth * BLOCKS_PER_PIXEL;
-        double worldHeightBlocks = mapHeight * BLOCKS_PER_PIXEL;
+        lattice.configure(probableBiome.getCellSizeBlocks());
 
-        int cellCountX = computeScatterCellCount(worldWidthBlocks, probableBiome.getCellSizeBlocks());
-        int cellCountZ = computeScatterCellCount(worldHeightBlocks, probableBiome.getCellSizeBlocks());
-
-        double cellWidthBlocks = worldWidthBlocks / cellCountX;
-        double cellHeightBlocks = worldHeightBlocks / cellCountZ;
+        double cellWidthBlocks = lattice.getCellWidthBlocks();
+        double cellHeightBlocks = lattice.getCellHeightBlocks();
 
         double meanPatchesPerCell = probableBiome.getPatchDensity() * cellWidthBlocks * cellHeightBlocks;
         double emptyCellChance = Math.exp(-meanPatchesPerCell);
 
-        double blockX = pixelX * BLOCKS_PER_PIXEL;
-        double blockZ = pixelZ * BLOCKS_PER_PIXEL;
+        double blockX = lattice.getQueryX();
+        double blockZ = lattice.getQueryZ();
 
         double shapeReachRadius = probableBiome.getShapeReachRadius();
         double maxReachBlocks = probableBiome.getMaxSizeBlocks() * shapeReachRadius;
@@ -207,24 +273,26 @@ public final class BiomeFieldUtility extends EngineUtility {
         for (int cellZ = firstCellZ; cellZ <= lastCellZ; cellZ++) {
             for (int cellX = firstCellX; cellX <= lastCellX; cellX++) {
 
-                long draw = drawCell(scatterSeed, cellX, cellZ, cellCountX, cellCountZ);
+                lattice.resolveCell(cellX, cellZ);
+
+                long draw = drawCell(scatterSeed, lattice);
                 int patchCount = drawPatchCount(draw, meanPatchesPerCell, emptyCellChance);
 
                 for (int patch = 0; patch < patchCount; patch++) {
 
                     long patchHash = mix64(draw + patch + 1);
-                    double centerX = drawPatchCoordinate(cellX, patchHash, DRAW_CENTER_X, cellWidthBlocks);
-                    double centerZ = drawPatchCoordinate(cellZ, patchHash, DRAW_CENTER_Z, cellHeightBlocks);
-                    double offsetX = blockX - centerX;
-                    double offsetZ = blockZ - centerZ;
+                    double fractionX = drawPatchFraction(patchHash, DRAW_CENTER_X);
+                    double fractionZ = drawPatchFraction(patchHash, DRAW_CENTER_Z);
+                    double offsetX = blockX - lattice.toQueryX(fractionX, fractionZ);
+                    double offsetZ = blockZ - lattice.toQueryZ(fractionX, fractionZ);
 
                     if (offsetX * offsetX + offsetZ * offsetZ >= maxReachBlocks * maxReachBlocks)
                         continue;
 
                     double diameter = drawPatchDiameter(probableBiome, patchHash);
 
-                    double shapeX = offsetX / diameter;
-                    double shapeZ = offsetZ / diameter;
+                    double shapeX = lattice.toCellX(offsetX, offsetZ) / diameter;
+                    double shapeZ = lattice.toCellZ(offsetX, offsetZ) / diameter;
 
                     if (shapeX * shapeX + shapeZ * shapeZ >= shapeReachRadius * shapeReachRadius)
                         continue;
@@ -242,12 +310,13 @@ public final class BiomeFieldUtility extends EngineUtility {
                     float sharpness = computeSharpness(shapeHash, edge, shapeX, shapeZ);
                     float membership = computeOutlineMembership(edgeMetric, edge, sharpness);
 
-                    if (exclusive && membership > 0f)
+                    if (exclusive && membership > 0f) {
                         membership *= computeExclusiveShare(
-                                scatterSeed, probableBiome,
-                                cellCountX, cellCountZ, cellWidthBlocks, cellHeightBlocks,
+                                scatterSeed, probableBiome, lattice,
                                 meanPatchesPerCell, emptyCellChance,
-                                blockX, blockZ, patchHash);
+                                patchHash);
+                        lattice.resolveCell(cellX, cellZ);
+                    }
 
                     if (membership <= 0f)
                         continue;
@@ -258,7 +327,10 @@ public final class BiomeFieldUtility extends EngineUtility {
 
                     if (membership > bestMembership) {
                         bestMembership = membership;
-                        outPatch.set(0f, patchHash, shape, noise, shapeX, shapeZ, centerX, centerZ);
+                        outPatch.set(
+                                0f, patchHash, shape, noise, shapeX, shapeZ,
+                                lattice.toCanonicalX(fractionX, fractionZ),
+                                lattice.toCanonicalZ(fractionX, fractionZ));
                     }
                 }
             }
@@ -318,16 +390,18 @@ public final class BiomeFieldUtility extends EngineUtility {
     private static float computeExclusiveShare(
             long scatterSeed,
             ProbableBiomeStruct probableBiome,
-            int cellCountX, int cellCountZ,
-            double cellWidthBlocks, double cellHeightBlocks,
+            ScatterLatticeStruct lattice,
             double meanPatchesPerCell, double emptyCellChance,
-            double blockX, double blockZ,
             long patchHash) {
 
         ProbableEdgeStruct edge = probableBiome.getEdge();
         double reachRadius = probableBiome.getExclusiveReachRadius();
         double maxReachBlocks = probableBiome.getMaxSizeBlocks() * reachRadius;
         float divideStart = 1f + edge.getMaxBand();
+        double cellWidthBlocks = lattice.getCellWidthBlocks();
+        double cellHeightBlocks = lattice.getCellHeightBlocks();
+        double blockX = lattice.getQueryX();
+        double blockZ = lattice.getQueryZ();
 
         int firstCellX = floorToInt((blockX - maxReachBlocks) / cellWidthBlocks);
         int lastCellX = floorToInt((blockX + maxReachBlocks) / cellWidthBlocks);
@@ -339,7 +413,9 @@ public final class BiomeFieldUtility extends EngineUtility {
         for (int cellZ = firstCellZ; cellZ <= lastCellZ; cellZ++) {
             for (int cellX = firstCellX; cellX <= lastCellX; cellX++) {
 
-                long draw = drawCell(scatterSeed, cellX, cellZ, cellCountX, cellCountZ);
+                lattice.resolveCell(cellX, cellZ);
+
+                long draw = drawCell(scatterSeed, lattice);
                 int patchCount = drawPatchCount(draw, meanPatchesPerCell, emptyCellChance);
 
                 for (int patch = 0; patch < patchCount; patch++) {
@@ -349,15 +425,17 @@ public final class BiomeFieldUtility extends EngineUtility {
                     if (otherHash >= patchHash)
                         continue;
 
-                    double offsetX = blockX - drawPatchCoordinate(cellX, otherHash, DRAW_CENTER_X, cellWidthBlocks);
-                    double offsetZ = blockZ - drawPatchCoordinate(cellZ, otherHash, DRAW_CENTER_Z, cellHeightBlocks);
+                    double fractionX = drawPatchFraction(otherHash, DRAW_CENTER_X);
+                    double fractionZ = drawPatchFraction(otherHash, DRAW_CENTER_Z);
+                    double offsetX = blockX - lattice.toQueryX(fractionX, fractionZ);
+                    double offsetZ = blockZ - lattice.toQueryZ(fractionX, fractionZ);
 
                     if (offsetX * offsetX + offsetZ * offsetZ >= maxReachBlocks * maxReachBlocks)
                         continue;
 
                     double diameter = drawPatchDiameter(probableBiome, otherHash);
-                    double shapeX = offsetX / diameter;
-                    double shapeZ = offsetZ / diameter;
+                    double shapeX = lattice.toCellX(offsetX, offsetZ) / diameter;
+                    double shapeZ = lattice.toCellZ(offsetX, offsetZ) / diameter;
 
                     if (shapeX * shapeX + shapeZ * shapeZ >= reachRadius * reachRadius)
                         continue;
@@ -378,12 +456,9 @@ public final class BiomeFieldUtility extends EngineUtility {
         return share;
     }
 
-    private static int computeScatterCellCount(double worldExtentBlocks, double cellSizeBlocks) {
-        return Math.max(1, (int) (worldExtentBlocks / cellSizeBlocks));
-    }
-
-    private static long drawCell(long scatterSeed, int cellX, int cellZ, int cellCountX, int cellCountZ) {
-        return mix64(hashCell(scatterSeed, wrapIndex(cellX, cellCountX), wrapIndex(cellZ, cellCountZ)));
+    // The draw of the cell the lattice resolved last, keyed by the cell it truly is
+    private static long drawCell(long scatterSeed, ScatterLatticeStruct lattice) {
+        return mix64(hashCell(scatterSeed, (int) lattice.getCellKeyX(), lattice.getCellKeyZ()));
     }
 
     // The draw a patch takes at its place in the order, mixed on from its hash
@@ -397,8 +472,9 @@ public final class BiomeFieldUtility extends EngineUtility {
         return draw;
     }
 
-    private static double drawPatchCoordinate(int cell, long patchHash, int order, double cellSizeBlocks) {
-        return (cell + (double) toUnit(drawPatch(patchHash, order))) * cellSizeBlocks;
+    // A patch's center as a fraction across its cell along one of the cell's own axes
+    private static double drawPatchFraction(long patchHash, int order) {
+        return toUnit(drawPatch(patchHash, order));
     }
 
     // Diameters drawn log-uniformly between the entry's two sizes

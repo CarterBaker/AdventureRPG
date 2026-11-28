@@ -2,11 +2,13 @@ package application.bootstrap.worldpipeline.util;
 
 import java.io.File;
 
+import application.bootstrap.worldpipeline.world.GlobeTexelStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.EngineUtility;
 import engine.util.io.FileUtility;
+import engine.util.mathematics.extras.Coordinate2Long;
 
 public final class WorldElevationUtility extends EngineUtility {
 
@@ -15,7 +17,8 @@ public final class WorldElevationUtility extends EngineUtility {
      * raises and lowers the ground the biome field shapes. A pixel's level is
      * its red channel: neutral is no elevation, the darkest level -1 and the
      * brightest 1. Positions read the layer through a cubic B-spline over the
-     * four by four pixels around them, wrapping both ways as the world does,
+     * four by four pixels around them, wrapping both ways on a torus and
+     * reading across the image faces on a globe,
      * so painted levels become broad, smooth slopes rather than steps. The
      * layer's file is the world image's name with the height suffix, in the
      * same folder and format.
@@ -75,17 +78,39 @@ public final class WorldElevationUtility extends EngineUtility {
 
     // Sample \\
 
-    // Any thread — the layer's elevation at a world position, read live from the pixels the editor paints
-    public static float sampleElevation(WorldHandle worldHandle, double worldX, double worldZ) {
+    // Any thread — the layer's elevation at a surface point, read live from the pixels the editor paints
+    public static float sampleElevation(SurfacePointStruct point) {
 
+        WorldHandle worldHandle = point.getWorldHandle();
         Pixmap layer = worldHandle.getHeightLayer();
-        int width = layer.getWidth();
-        int height = layer.getHeight();
+
+        if (point.isGlobe()) {
+
+            GlobeTexelStruct texel = point.getTexel();
+
+            return sampleSpline(
+                    layer, texel.getX() - 0.5, texel.getY() - 0.5, texel.getFace(), layer.getHeight(),
+                    point.getTexelScratch());
+        }
 
         double blocksPerPixel = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
-        double latticeX = worldX / blocksPerPixel - 0.5;
-        double latticeZ = worldZ / blocksPerPixel - 0.5;
 
+        return sampleSpline(
+                layer, point.getX() / blocksPerPixel - 0.5, point.getZ() / blocksPerPixel - 0.5, -1, 0, null);
+    }
+
+    // The cubic B-spline over the four by four pixels around a lattice position: a torus layer (face -1) wraps both
+    // ways, a globe layer reads past an image face's edge onto the face beside it
+    private static float sampleSpline(
+            Pixmap layer,
+            double latticeX,
+            double latticeZ,
+            int face,
+            int faceTexels,
+            GlobeTexelStruct scratch) {
+
+        int width = layer.getWidth();
+        int height = layer.getHeight();
         int baseX = (int) Math.floor(latticeX) - 1;
         int baseZ = (int) Math.floor(latticeZ) - 1;
         float tx = (float) (latticeX - Math.floor(latticeX));
@@ -95,12 +120,26 @@ public final class WorldElevationUtility extends EngineUtility {
 
         for (int j = 0; j < SPLINE_TAPS; j++) {
 
-            int pixelZ = Math.floorMod(baseZ + j, height);
             float row = 0f;
 
-            for (int i = 0; i < SPLINE_TAPS; i++)
-                row += splineWeight(i, tx)
-                        * toElevation(toLevel(layer.getPixel(Math.floorMod(baseX + i, width), pixelZ)));
+            for (int i = 0; i < SPLINE_TAPS; i++) {
+
+                int pixelX;
+                int pixelZ;
+
+                if (face >= 0) {
+
+                    long pixel = GlobeUtility.resolveImagePixel(faceTexels, face, baseX + i, baseZ + j, scratch);
+
+                    pixelX = Coordinate2Long.unpackX(pixel);
+                    pixelZ = Coordinate2Long.unpackY(pixel);
+                } else {
+                    pixelX = Math.floorMod(baseX + i, width);
+                    pixelZ = Math.floorMod(baseZ + j, height);
+                }
+
+                row += splineWeight(i, tx) * toElevation(toLevel(layer.getPixel(pixelX, pixelZ)));
+            }
 
             elevation += row * splineWeight(j, tz);
         }

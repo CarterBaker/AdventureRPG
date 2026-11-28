@@ -43,6 +43,18 @@ public class LiquidFlowUtility extends EngineUtility {
         return code > STILL && code <= EngineSetting.LIQUID_FLOW_DIRECTIONS;
     }
 
+    // A running code turned by quarter turns, each taking +X to +Z, as water read in one frame's axes runs in
+    // another's; still, churning and falling water keep their codes
+    public static byte turn(byte code, int turns) {
+
+        if (!isRunning(code))
+            return code;
+
+        int directions = EngineSetting.LIQUID_FLOW_DIRECTIONS;
+
+        return (byte) (Math.floorMod(code - 1 + turns * (directions / 4), directions) + 1);
+    }
+
     // Fall Foot \\
 
     // The foot of a fall as one word: its cell in the subchunk, the pool face's extents along x and z, the drop held

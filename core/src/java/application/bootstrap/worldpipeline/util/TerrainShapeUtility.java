@@ -50,22 +50,22 @@ public final class TerrainShapeUtility extends EngineUtility {
     // Macro Shape \\
 
     public static float computeMacroShapeBlocks(
-            long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+            long seed, SurfacePointStruct point,
             BiomeBlendStruct blend,
             float elevation) {
-        return computeShapeBlocks(seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, blend, elevation, true);
+        return computeShapeBlocks(seed, point, blend, elevation, true);
     }
 
     // The ground the absolute biomes lay alone, with no relative biome's offset over it
     public static float computeBaseShapeBlocks(
-            long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+            long seed, SurfacePointStruct point,
             BiomeBlendStruct blend,
             float elevation) {
-        return computeShapeBlocks(seed, worldX, worldZ, worldWidthBlocks, worldHeightBlocks, blend, elevation, false);
+        return computeShapeBlocks(seed, point, blend, elevation, false);
     }
 
     private static float computeShapeBlocks(
-            long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+            long seed, SurfacePointStruct point,
             BiomeBlendStruct blend,
             float elevation,
             boolean withRelief) {
@@ -73,14 +73,9 @@ public final class TerrainShapeUtility extends EngineUtility {
         if (blend.isEmpty())
             return EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS;
 
-        double spatialAngle = toSpatialAngle(worldX, worldWidthBlocks);
-        double cosAngle = Math.cos(spatialAngle);
-        double sinAngle = Math.sin(spatialAngle);
-
-        float continentalness = sampleContinentalness(
-                seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
-        float erosion = sampleErosion(seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
-        float ridge = sampleRidge(seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks);
+        float continentalness = sampleContinentalness(seed, point);
+        float erosion = sampleErosion(seed, point);
+        float ridge = sampleRidge(seed, point);
 
         float oceanWeight = blend.getOceanWeight();
         float landReach = computeElevationReach(1f - oceanWeight);
@@ -124,18 +119,11 @@ public final class TerrainShapeUtility extends EngineUtility {
 
     // Macro Fields \\
 
-    // Where a world X sits on the circle the macro noise rides, so the fields wrap around the world
-    public static double toSpatialAngle(double worldX, double worldWidthBlocks) {
-        return (worldX / worldWidthBlocks) * (Math.PI * 2.0);
-    }
-
     public static float sampleContinentalness(
-            long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks) {
+            long seed, SurfacePointStruct point) {
         return TerrainNoiseUtility.sampleFractal(
                 seed ^ EngineSetting.TERRAIN_CONTINENTALNESS_SEED_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                point,
                 EngineSetting.TERRAIN_CONTINENTALNESS_WAVELENGTH_BLOCKS,
                 EngineSetting.TERRAIN_CONTINENTALNESS_OCTAVES,
                 EngineSetting.TERRAIN_CONTINENTALNESS_PERSISTENCE,
@@ -143,12 +131,10 @@ public final class TerrainShapeUtility extends EngineUtility {
     }
 
     public static float sampleErosion(
-            long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks) {
+            long seed, SurfacePointStruct point) {
         return TerrainNoiseUtility.sampleFractal(
                 seed ^ EngineSetting.TERRAIN_EROSION_SEED_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                point,
                 EngineSetting.TERRAIN_EROSION_WAVELENGTH_BLOCKS,
                 EngineSetting.TERRAIN_EROSION_OCTAVES,
                 EngineSetting.TERRAIN_EROSION_PERSISTENCE,
@@ -157,13 +143,11 @@ public final class TerrainShapeUtility extends EngineUtility {
 
     // The peaks-valleys field folded into crests, 1 on a ridge line and 0 in a valley
     public static float sampleRidge(
-            long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks) {
+            long seed, SurfacePointStruct point) {
 
         float peaksValleysRaw = TerrainNoiseUtility.sampleFractal(
                 seed ^ EngineSetting.TERRAIN_PV_SEED_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                point,
                 EngineSetting.TERRAIN_PV_WAVELENGTH_BLOCKS,
                 EngineSetting.TERRAIN_PV_OCTAVES,
                 EngineSetting.TERRAIN_PV_PERSISTENCE,
@@ -177,12 +161,10 @@ public final class TerrainShapeUtility extends EngineUtility {
     // A gentle swell in -1 to 1 over several drainage cells, so ground the macro fields leave as an even slope still
     // gathers its water into valleys rather than sheeting it down in parallel
     public static float sampleDrainageRoughness(
-            long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks) {
+            long seed, SurfacePointStruct point) {
         return TerrainNoiseUtility.sampleFractal(
                 seed ^ EngineSetting.RIVER_ROUGHNESS_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                point,
                 EngineSetting.RIVER_ROUGHNESS_WAVELENGTH_BLOCKS,
                 EngineSetting.RIVER_ROUGHNESS_OCTAVES,
                 EngineSetting.RIVER_ROUGHNESS_PERSISTENCE,
@@ -292,13 +274,9 @@ public final class TerrainShapeUtility extends EngineUtility {
     // Features \\
 
     public static void resolveFeatures(
-            long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+            long seed, SurfacePointStruct point,
             BiomeBlendStruct blend,
             TerrainFeatureStruct outFeatures) {
-
-        double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
-        double cosAngle = Math.cos(spatialAngle);
-        double sinAngle = Math.sin(spatialAngle);
 
         outFeatures.coastalWeight = blend.isEmpty() ? 0f : blend.getCoastalWeight();
         outFeatures.oceanWeight = blend.isEmpty() ? 0f : blend.getOceanWeight();
@@ -306,8 +284,8 @@ public final class TerrainShapeUtility extends EngineUtility {
 
         resolveDetail(blend, outFeatures);
         resolveRidges(blend, outFeatures);
-        resolveCliffs(seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks, blend, outFeatures);
-        resolveCoast(seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks, blend, outFeatures);
+        resolveCliffs(seed, point, blend, outFeatures);
+        resolveCoast(seed, point, blend, outFeatures);
         resolveCaves(blend, outFeatures);
         resolveLake(blend, outFeatures);
     }
@@ -339,8 +317,7 @@ public final class TerrainShapeUtility extends EngineUtility {
 
     private static void resolveCliffs(
             long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks,
+            SurfacePointStruct point,
             BiomeBlendStruct blend,
             TerrainFeatureStruct outFeatures) {
 
@@ -366,7 +343,7 @@ public final class TerrainShapeUtility extends EngineUtility {
 
         float mask = computeCoverageMask(
                 seed ^ EngineSetting.TERRAIN_CLIFF_MASK_SEED_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                point,
                 EngineSetting.TERRAIN_CLIFF_MASK_WAVELENGTH_BLOCKS,
                 coverage / strength,
                 EngineSetting.TERRAIN_CLIFF_MASK_EDGE);
@@ -378,8 +355,7 @@ public final class TerrainShapeUtility extends EngineUtility {
     // Only land shapes its shore, measured by the weight it holds itself rather than its shore buffer's
     private static void resolveCoast(
             long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks,
+            SurfacePointStruct point,
             BiomeBlendStruct blend,
             TerrainFeatureStruct outFeatures) {
 
@@ -415,7 +391,7 @@ public final class TerrainShapeUtility extends EngineUtility {
 
         float mask = computeCoverageMask(
                 seed ^ EngineSetting.TERRAIN_COAST_MASK_SEED_SALT,
-                cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                point,
                 EngineSetting.TERRAIN_COAST_MASK_WAVELENGTH_BLOCKS,
                 coverage / landWeight,
                 EngineSetting.TERRAIN_COAST_MASK_EDGE);
@@ -491,8 +467,7 @@ public final class TerrainShapeUtility extends EngineUtility {
     // 1 where the mask stands, 0 where it does not, with the share of the area it covers following coverage
     private static float computeCoverageMask(
             long seed,
-            double cosAngle, double sinAngle, double worldZ,
-            double worldWidthBlocks, double worldHeightBlocks,
+            SurfacePointStruct point,
             double wavelengthBlocks,
             float coverage,
             float edge) {
@@ -504,7 +479,7 @@ public final class TerrainShapeUtility extends EngineUtility {
             return 1f;
 
         float noise = TerrainNoiseUtility.sampleFractal(
-                seed, cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                seed, point,
                 wavelengthBlocks,
                 EngineSetting.TERRAIN_FEATURE_MASK_OCTAVES,
                 EngineSetting.TERRAIN_FEATURE_MASK_PERSISTENCE,
@@ -518,21 +493,18 @@ public final class TerrainShapeUtility extends EngineUtility {
     // Detail \\
 
     public static float computeDetailBlocks(
-            long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+            long seed, SurfacePointStruct point,
             TerrainFeatureStruct features) {
 
         if (features.detailLayerCount == 0)
             return 0f;
 
-        double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
-        double cosAngle = Math.cos(spatialAngle);
-        double sinAngle = Math.sin(spatialAngle);
         float detail = 0f;
 
         for (int i = 0; i < features.detailLayerCount; i++)
             detail += TerrainNoiseUtility.sampleFractal(
                     seed ^ EngineSetting.TERRAIN_DETAIL_SEED_SALT,
-                    cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                    point,
                     features.detailWavelengthBlocks[i],
                     EngineSetting.TERRAIN_DETAIL_OCTAVES,
                     EngineSetting.TERRAIN_DETAIL_PERSISTENCE,
@@ -544,21 +516,18 @@ public final class TerrainShapeUtility extends EngineUtility {
 
     // Centered on the ridged layer's typical value, so ridges carve gullies as much as they raise spines
     public static float computeRidgeBlocks(
-            long seed, double worldX, double worldZ, double worldWidthBlocks, double worldHeightBlocks,
+            long seed, SurfacePointStruct point,
             TerrainFeatureStruct features) {
 
         if (features.ridgeLayerCount == 0)
             return 0f;
 
-        double spatialAngle = (worldX / worldWidthBlocks) * (Math.PI * 2.0);
-        double cosAngle = Math.cos(spatialAngle);
-        double sinAngle = Math.sin(spatialAngle);
         float ridges = 0f;
 
         for (int i = 0; i < features.ridgeLayerCount; i++)
             ridges += (TerrainNoiseUtility.sampleRidged(
                     seed ^ EngineSetting.TERRAIN_RIDGE_SEED_SALT,
-                    cosAngle, sinAngle, worldZ, worldWidthBlocks, worldHeightBlocks,
+                    point,
                     features.ridgeWavelengthBlocks[i],
                     EngineSetting.TERRAIN_RIDGE_OCTAVES,
                     EngineSetting.TERRAIN_RIDGE_GAIN,

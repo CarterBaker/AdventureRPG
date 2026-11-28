@@ -1,6 +1,8 @@
 package application.bootstrap.worldpipeline.rivermanager;
 
 import application.bootstrap.worldpipeline.biome.BiomeHandle;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.worldgenerationmanager.TerrainSurfaceSampleStruct;
 import engine.root.AsyncContainerPackage;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
@@ -24,6 +26,10 @@ public class RiverPlanAsyncContainer extends AsyncContainerPackage {
     // Surface
     TerrainSurfaceSampleStruct sample;
 
+    // Globe — the fold a globe's drainage cells step through and the transform its hearts are measured by
+    GlobeFrameStruct fold;
+    FrameTransformStruct transform;
+
     // Centreline — offsets from the reach's origin
     DoubleArrayList lineX;
     DoubleArrayList lineZ;
@@ -46,6 +52,8 @@ public class RiverPlanAsyncContainer extends AsyncContainerPackage {
 
         // Surface
         this.sample = new TerrainSurfaceSampleStruct();
+        this.fold = new GlobeFrameStruct();
+        this.transform = new FrameTransformStruct();
 
         // Centreline
         this.lineX = new DoubleArrayList();

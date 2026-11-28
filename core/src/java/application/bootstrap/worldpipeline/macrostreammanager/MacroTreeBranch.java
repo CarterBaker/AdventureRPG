@@ -4,6 +4,7 @@ import application.bootstrap.worldpipeline.tree.TreeHandle;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
 import application.bootstrap.worldpipeline.tree.TreeStandIn;
 import application.bootstrap.worldpipeline.treemanager.TreeManager;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.util.TreeImpostorUtility;
 import application.bootstrap.worldpipeline.util.TreeLodUtility;
 import application.bootstrap.worldpipeline.util.TreeModelUtility;
@@ -100,7 +101,8 @@ public class MacroTreeBranch extends BranchPackage {
         return bySize.ordinal() < tier.ordinal() ? bySize : tier;
     }
 
-    // Worker — every tree rooted in the tile stood in, read from the lattice the tile was just sampled at
+    // Worker — every tree rooted in the tile stood in, read from the lattice the tile was just sampled at through the
+    // tile's home, so sites come back in the tile's own coordinates
     void sampleStandIns(MacroBuildAsyncContainer scratch, WorldHandle worldHandle, long coordinate) {
 
         scratch.standInCrowns.clear();
@@ -115,7 +117,7 @@ public class MacroTreeBranch extends BranchPackage {
         long originZ = (long) Coordinate2Long.unpackY(coordinate) * chunkSize;
 
         treeManager.collectSites(
-                worldHandle,
+                scratch.home,
                 originX,
                 originZ,
                 originX + tileSizeBlocks - 1,
@@ -234,8 +236,9 @@ public class MacroTreeBranch extends BranchPackage {
             return true;
 
         TerrainSurfaceSampleStruct sample = scratch.sample;
+        SurfacePointStruct anchor = scratch.home.resolve(site.getAnchorX(), site.getAnchorZ());
 
-        worldGenerationManager.sampleSurface(worldHandle, site.getAnchorX(), site.getAnchorZ(), sample);
+        worldGenerationManager.sampleSurface(worldHandle, anchor.getCanonicalX(), anchor.getCanonicalZ(), sample);
 
         return sample.isOpenWater() || sample.isLakeWater();
     }

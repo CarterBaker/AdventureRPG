@@ -73,7 +73,8 @@ public class MacroCanopyBranch extends BranchPackage {
             if (treeHandle == null)
                 continue;
 
-            float share = TreeDistributionUtility.resolveCoverage(worldHandle.getSeed(), kind, treeHandle, x, z);
+            float share = TreeDistributionUtility.resolveCoverage(
+                    worldHandle.getSeed(), kind, treeHandle, sample.getPoint());
 
             if (share <= 0f)
                 continue;

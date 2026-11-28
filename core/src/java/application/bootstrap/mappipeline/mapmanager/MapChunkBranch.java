@@ -9,14 +9,20 @@ import application.bootstrap.worldpipeline.block.BlockHandle;
 import application.bootstrap.worldpipeline.blockmanager.BlockManager;
 import application.bootstrap.worldpipeline.chunk.ChunkData;
 import application.bootstrap.worldpipeline.chunk.ChunkInstance;
+import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
 import application.bootstrap.worldpipeline.util.LiquidColumnUtility;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
+import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
 import engine.util.mathematics.extras.Coordinate2Long;
 import engine.util.mathematics.extras.Direction3Vector;
 import engine.util.memory.BufferUtility;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class MapChunkBranch extends BranchPackage {
 
@@ -29,7 +35,10 @@ public class MapChunkBranch extends BranchPackage {
      * generated tiles, so built, dug and grown blocks read in the same style.
      * A chunk is redrawn whenever its merge version moves, so edits appear as
      * soon as the chunk rebuilds. Blocks are read on the main thread, like
-     * every other gameplay query, under the budget MapManager hands in.
+     * every other gameplay query, under the budget MapManager hands in. On a
+     * globe a finest tile is a square of a block face: each of its chunks is
+     * the one a streaming grid's chart lays on that face cell, read in the
+     * chart's axes and turned into the face's as it is drawn.
      */
 
     // Internal
@@ -43,6 +52,10 @@ public class MapChunkBranch extends BranchPackage {
     // Settings
     private int chunkSize;
     private int chunksPerTile;
+
+    // Globe
+    private final SurfacePointStruct chartHome = new SurfacePointStruct();
+    private final GlobeFrameStruct frameScratch = new GlobeFrameStruct();
 
     // Scratch
     private int[] columnHeights;
@@ -87,17 +100,26 @@ public class MapChunkBranch extends BranchPackage {
     // Tile \\
 
     // Redraws the tile's stale chunks, at most budget of them, and returns what is left of the budget
-    int refreshTile(MapTileInstance tile, int budget) {
+    int refreshTile(MapTileInstance tile, WorldHandle worldHandle, int budget) {
 
         int originChunkX = tile.getTileX() * chunksPerTile;
         int originChunkZ = tile.getTileZ() * chunksPerTile;
+        GridInstance grid = worldHandle.isGlobe() ? findGrid(worldHandle) : null;
+
+        if (worldHandle.isGlobe() && grid == null)
+            return budget;
+
+        if (grid != null)
+            homeOnGrid(worldHandle, grid);
 
         for (int z = 0; z < chunksPerTile && budget > 0; z++) {
             for (int x = 0; x < chunksPerTile && budget > 0; x++) {
 
                 int chunkIndex = z * chunksPerTile + x;
-                ChunkInstance chunk = worldStreamManager.getChunkInstance(
-                        Coordinate2Long.pack(originChunkX + x, originChunkZ + z));
+                long coordinate = Coordinate2Long.pack(originChunkX + x, originChunkZ + z);
+                ChunkInstance chunk = grid != null
+                        ? findChartChunk(grid, coordinate)
+                        : worldStreamManager.getChunkInstance(coordinate);
 
                 if (chunk == null || !chunk.getChunkDataSyncContainer().hasData(ChunkData.GENERATION_DATA))
                     continue;
@@ -116,16 +138,53 @@ public class MapChunkBranch extends BranchPackage {
         return budget;
     }
 
+    // Globe \\
+
+    private GridInstance findGrid(WorldHandle worldHandle) {
+
+        ObjectArrayList<GridInstance> grids = worldStreamManager.getGrids();
+
+        for (int i = 0; i < grids.size(); i++)
+            if (grids.get(i).getWorldHandle() == worldHandle)
+                return grids.get(i);
+
+        return null;
+    }
+
+    // The chart's home at the grid's active chunk, so a face cell is found where the chart lays it
+    private void homeOnGrid(WorldHandle worldHandle, GridInstance grid) {
+
+        long activeChunk = grid.getActiveChunkCoordinate();
+
+        grid.resolveFrame(activeChunk, frameScratch);
+        chartHome.setHome(worldHandle, activeChunk, frameScratch.getCanonicalCoordinate(), frameScratch.getTurns());
+    }
+
+    // The chunk the grid holds on a face cell, none when the chart lays that cell elsewhere or does not hold it
+    private ChunkInstance findChartChunk(GridInstance grid, long canonicalChunk) {
+
+        long middleX = (long) Coordinate2Long.unpackX(canonicalChunk) * chunkSize + chunkSize / 2;
+        long middleZ = (long) Coordinate2Long.unpackY(canonicalChunk) * chunkSize + chunkSize / 2;
+        ChunkInstance chunk = grid.getActiveChunks().get(Coordinate2Long.pack(
+                (int) Math.floorDiv(chartHome.toChartBlockX(middleX, middleZ), chunkSize),
+                (int) Math.floorDiv(chartHome.toChartBlockZ(middleX, middleZ), chunkSize)));
+
+        return chunk != null && chunk.getCanonicalCoordinate() == canonicalChunk ? chunk : null;
+    }
+
     // Chunk \\
 
+    // Every column read in the chunk's own axes and laid where it stands in its face cell's, turned by the chunk's
+    // frame; a torus chunk is unturned
     private void drawChunk(MapTileInstance tile, ChunkInstance chunk, int chunkX, int chunkZ) {
 
         SubChunkInstance[] subChunks = chunk.getSubChunks();
         int topY = findHighestOccupiedY(subChunks);
+        int turns = chunk.getFrameTurns();
 
         for (int z = 0; z < chunkSize; z++)
             for (int x = 0; x < chunkSize; x++)
-                resolveColumn(subChunks, topY, x, z);
+                resolveColumn(subChunks, topY, x, z, toFaceColumn(x, z, turns));
 
         for (int z = 0; z < chunkSize; z++)
             for (int x = 0; x < chunkSize; x++)
@@ -156,9 +215,19 @@ public class MapChunkBranch extends BranchPackage {
         return EngineSetting.INDEX_NOT_FOUND;
     }
 
-    private void resolveColumn(SubChunkInstance[] subChunks, int topY, int x, int z) {
+    // A column of the chunk's own axes as its column of the face cell's, turned about the chunk's middle
+    private int toFaceColumn(int x, int z, int turns) {
 
-        int column = z * chunkSize + x;
+        int doubledX = 2 * x + 1 - chunkSize;
+        int doubledZ = 2 * z + 1 - chunkSize;
+        int faceX = (GlobeUtility.turnX(doubledX, doubledZ, turns) + chunkSize - 1) / 2;
+        int faceZ = (GlobeUtility.turnZ(doubledX, doubledZ, turns) + chunkSize - 1) / 2;
+
+        return faceZ * chunkSize + faceX;
+    }
+
+    private void resolveColumn(SubChunkInstance[] subChunks, int topY, int x, int z, int column) {
+
         int y = findBlockBelow(subChunks, topY, x, z);
 
         columnWaterDepths[column] = 0f;

@@ -31,13 +31,13 @@ class ExposureProbeBranch extends BranchPackage {
 
     // Probe \\
 
-    byte probeOpenWater(WorldHandle worldHandle, int wrappedCellX, int wrappedCellZ) {
+    byte probeOpenWater(WorldHandle worldHandle, int cellX, int cellZ) {
 
         int probesPerAxis = EngineSetting.OCEAN_EXPOSURE_PROBES_PER_AXIS;
         double cellBlocks = EngineSetting.OCEAN_EXPOSURE_CELL_BLOCKS;
         double stepBlocks = cellBlocks / probesPerAxis;
-        double originX = wrappedCellX * cellBlocks;
-        double originZ = wrappedCellZ * cellBlocks;
+        double originX = cellX * cellBlocks;
+        double originZ = cellZ * cellBlocks;
         int openCount = 0;
 
         for (int z = 0; z < probesPerAxis; z++) {

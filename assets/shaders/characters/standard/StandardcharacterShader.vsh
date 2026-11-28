@@ -11,6 +11,7 @@ layout(location = 7) in vec4 a_masks;           // freckles, blush, lips, liner
 layout(location = 8) in mat4 a_instanceModel;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "characters/includes/CharacterAppearance.glsl"
 #include "characters/includes/CharacterHair.glsl"
 #include "characters/includes/CharacterCloth.glsl"
@@ -114,5 +115,5 @@ void main() {
     v_instance        = gl_InstanceID;
     v_tile            = int(a_detail.y + 0.5);
 
-    gl_Position = u_viewProjection * worldPosition;
+    gl_Position = u_viewProjection * vec4(curveToHorizon(worldPosition.xyz), worldPosition.w);
 }

@@ -1,6 +1,8 @@
 package application.bootstrap.worldpipeline.river;
 
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.StructPackage;
@@ -16,7 +18,9 @@ public class RiverNetworkStruct extends StructPackage {
      * close enough to a river for one to reach it, so a query far from water
      * costs a single lookup. Each cell's heart is jittered by a hash so rivers
      * never run on the grid; a sink keeps its centre. Cells wrap both ways as
-     * the world does.
+     * a torus does; a globe's cells are whole cells of every cube face, laid
+     * face after face, a cell stepped to past a face's edge folded onto the
+     * cell it truly is, each cell's directions read in its own face's axes.
      */
 
     public static final byte DIRECTION_NONE = -1;
@@ -31,9 +35,10 @@ public class RiverNetworkStruct extends StructPackage {
     private final long seed;
     private final int biomeRevision;
 
-    // Grid
+    // Grid — a globe's cells per face side, none for a torus
     private final int cellCountX;
     private final int cellCountZ;
+    private final int cellsPerFace;
     private final double cellSizeBlocks;
 
     // Cells
@@ -49,6 +54,7 @@ public class RiverNetworkStruct extends StructPackage {
             int biomeRevision,
             int cellCountX,
             int cellCountZ,
+            int cellsPerFace,
             double cellSizeBlocks,
             byte[] downstream,
             byte[] strength,
@@ -63,6 +69,7 @@ public class RiverNetworkStruct extends StructPackage {
         // Grid
         this.cellCountX = cellCountX;
         this.cellCountZ = cellCountZ;
+        this.cellsPerFace = cellsPerFace;
         this.cellSizeBlocks = cellSizeBlocks;
 
         // Cells
@@ -86,36 +93,89 @@ public class RiverNetworkStruct extends StructPackage {
         return DIRECTION_X.length;
     }
 
-    public int toIndex(int cellX, int cellZ) {
-        return Math.floorMod(cellZ, cellCountZ) * cellCountX + Math.floorMod(cellX, cellCountX);
+    // The index of the cell a pair of cell coordinates names: wrapped on a torus, on a globe folded from the face
+    // the x is counted from, the turns from that face's axes into the cell's left in scratch
+    public static int toIndex(
+            int cellCountX,
+            int cellCountZ,
+            int cellsPerFace,
+            int cellX,
+            int cellZ,
+            GlobeFrameStruct scratch) {
+
+        if (cellsPerFace == 0)
+            return Math.floorMod(cellZ, cellCountZ) * cellCountX + Math.floorMod(cellX, cellCountX);
+
+        int face = GlobeUtility.faceOf(cellX, cellsPerFace);
+
+        GlobeUtility.foldPoint(
+                cellsPerFace, face,
+                2.0 * (cellX - GlobeUtility.faceOriginX(face, cellsPerFace)) + 1.0 - cellsPerFace,
+                2.0 * cellZ + 1.0 - cellsPerFace,
+                0.0, 0.0, 0, scratch);
+
+        int u = (int) Math.round((scratch.getFoldA() - 1.0 + cellsPerFace) * 0.5);
+        int v = (int) Math.round((scratch.getFoldB() - 1.0 + cellsPerFace) * 0.5);
+
+        return (scratch.getFace() * cellsPerFace + v) * cellsPerFace + u;
+    }
+
+    // A cell's coordinates: a globe cell's x counted from its own face's origin
+    public static int toCellX(int cellCountX, int cellsPerFace, int index) {
+
+        if (cellsPerFace == 0)
+            return index % cellCountX;
+
+        int perFace = cellsPerFace * cellsPerFace;
+
+        return (int) GlobeUtility.faceOriginX(index / perFace, cellsPerFace) + index % perFace % cellsPerFace;
+    }
+
+    public static int toCellZ(int cellCountX, int cellsPerFace, int index) {
+
+        if (cellsPerFace == 0)
+            return index / cellCountX;
+
+        return index % (cellsPerFace * cellsPerFace) / cellsPerFace;
+    }
+
+    public int toIndex(int cellX, int cellZ, GlobeFrameStruct scratch) {
+        return toIndex(cellCountX, cellCountZ, cellsPerFace, cellX, cellZ, scratch);
     }
 
     public int getCellX(int index) {
-        return index % cellCountX;
+        return toCellX(cellCountX, cellsPerFace, index);
     }
 
     public int getCellZ(int index) {
-        return index / cellCountX;
+        return toCellZ(cellCountX, cellsPerFace, index);
     }
 
+    // The cell a world position lies in, unwrapped on a globe so its index folds it
     public int toCellX(double worldX) {
-        return Math.floorMod((int) Math.floor(worldX / cellSizeBlocks), cellCountX);
+
+        int cellX = (int) Math.floor(worldX / cellSizeBlocks);
+
+        return cellsPerFace == 0 ? Math.floorMod(cellX, cellCountX) : cellX;
     }
 
     public int toCellZ(double worldZ) {
-        return Math.floorMod((int) Math.floor(worldZ / cellSizeBlocks), cellCountZ);
+
+        int cellZ = (int) Math.floor(worldZ / cellSizeBlocks);
+
+        return cellsPerFace == 0 ? Math.floorMod(cellZ, cellCountZ) : cellZ;
     }
 
     // Cells \\
 
-    public int getDownstreamIndex(int index) {
+    public int getDownstreamIndex(int index, GlobeFrameStruct scratch) {
 
         int direction = downstream[index];
 
         if (direction == DIRECTION_NONE)
             return INDEX_NONE;
 
-        return toIndex(getCellX(index) + DIRECTION_X[direction], getCellZ(index) + DIRECTION_Z[direction]);
+        return toIndex(getCellX(index) + DIRECTION_X[direction], getCellZ(index) + DIRECTION_Z[direction], scratch);
     }
 
     public boolean isSink(int index) {
@@ -140,7 +200,7 @@ public class RiverNetworkStruct extends StructPackage {
     }
 
     // The upstream neighbour carrying the strongest river into a cell, INDEX_NONE where no river flows in
-    public int findMainUpstream(int index) {
+    public int findMainUpstream(int index, GlobeFrameStruct scratch) {
 
         int cellX = getCellX(index);
         int cellZ = getCellZ(index);
@@ -149,9 +209,9 @@ public class RiverNetworkStruct extends StructPackage {
 
         for (int direction = 0; direction < DIRECTION_X.length; direction++) {
 
-            int neighbour = toIndex(cellX + DIRECTION_X[direction], cellZ + DIRECTION_Z[direction]);
+            int neighbour = toIndex(cellX + DIRECTION_X[direction], cellZ + DIRECTION_Z[direction], scratch);
 
-            if (!isRiver(neighbour) || getDownstreamIndex(neighbour) != index)
+            if (!isRiver(neighbour) || getDownstreamIndex(neighbour, scratch) != index)
                 continue;
 
             int neighbourStrength = getStrength(neighbour);

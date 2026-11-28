@@ -12,7 +12,8 @@ import application.bootstrap.renderpipeline.rendermanager.FBORenderSystem;
 import application.bootstrap.renderpipeline.rendermanager.RenderManager;
 import application.bootstrap.shaderpipeline.material.MaterialInstance;
 import application.bootstrap.shaderpipeline.materialmanager.MaterialManager;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.util.GlobeViewStruct;
+import application.bootstrap.worldpipeline.util.WorldImagePointStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.world.WorldPlacementStruct;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -36,7 +37,9 @@ import editor.runtime.worldeditor.tool.WorldEditorToolSystem;
 import editor.runtime.worldeditor.view.WorldEditorViewSystem;
 import engine.root.EngineSetting;
 import engine.root.SystemPackage;
+import engine.util.mathematics.matrices.Matrix3Double;
 import engine.util.mathematics.vectors.Vector2;
+import engine.util.mathematics.vectors.Vector3;
 import engine.util.mathematics.vectors.Vector4;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -56,7 +59,12 @@ public class WorldEditorRenderSystem extends SystemPackage {
      * hand-placed settlement, structure and camera through
      * PlacementIconSystem, those being moved drawn where they would stand,
      * and, while shown, an arrow for every player at their place and facing.
-     * Marker quads are pooled with their own materials.
+     * A globe world is drawn instead as one quad over the window whose shader
+     * casts the view camera's rays at the ball and reads both layers there,
+     * drawing the brush, the footprint, the box and, while the Cube layer is
+     * shown, the block grid's cube in the same pass; markers stand where the
+     * ball shows their place and hide behind it. Marker quads are pooled with
+     * their own materials.
      */
 
     // Internal
@@ -85,6 +93,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
     private ModelInstance brushModel;
     private ModelInstance footprintModel;
     private ModelInstance boxModel;
+    private ModelInstance globeModel;
     private MeshHandle quadMesh;
     private int markerMaterialID;
     private ObjectArrayList<ModelInstance> markerModels;
@@ -99,6 +108,16 @@ public class WorldEditorRenderSystem extends SystemPackage {
     // Layout
     private Vector4 viewRect;
     private Vector4 uvRect;
+    private Vector4 windowRect;
+
+    // Globe
+    private final Vector2 brushCenter = new Vector2();
+    private final Vector2 footprintCenter = new Vector2();
+    private final Vector4 boxRect = new Vector4();
+    private final Vector3 cubeAxisX = new Vector3();
+    private final Vector3 cubeAxisY = new Vector3();
+    private final Vector3 cubeAxisZ = new Vector3();
+    private final WorldImagePointStruct imagePoint = new WorldImagePointStruct();
 
     // Base \\
 
@@ -106,6 +125,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
     protected void create() {
         this.viewRect = new Vector4();
         this.uvRect = new Vector4(0f, 0f, 1f, 1f);
+        this.windowRect = new Vector4(-1f, -1f, 1f, 1f);
 
         // Models
         this.markerModels = new ObjectArrayList<>();
@@ -153,6 +173,8 @@ public class WorldEditorRenderSystem extends SystemPackage {
                 quadMesh, materialManager.cloneMaterial(WorldEditorSetting.MATERIAL_BRUSH));
         this.boxModel = modelManager.createModel(
                 quadMesh, materialManager.cloneMaterial(WorldEditorSetting.MATERIAL_BRUSH));
+        this.globeModel = modelManager.createModel(
+                quadMesh, materialManager.cloneMaterial(WorldEditorSetting.MATERIAL_GLOBE));
 
         fadeHeights();
         outlineBox();
@@ -168,11 +190,17 @@ public class WorldEditorRenderSystem extends SystemPackage {
         int texture = imageManager.useTexture(image);
 
         if (texture != 0 && window.getWidth() > 0 && window.getHeight() > 0) {
-            renderImage(window, image, texture);
-            renderHeights(window);
-            renderBrush(window);
-            renderFootprint(window);
-            renderBox(window);
+
+            if (worldEditorViewSystem.isShown())
+                renderGlobe(window, image, texture);
+            else {
+                renderImage(window, image, texture);
+                renderHeights(window);
+                renderBrush(window);
+                renderFootprint(window);
+                renderBox(window);
+            }
+
             renderMarkers(window);
         }
 
@@ -194,6 +222,125 @@ public class WorldEditorRenderSystem extends SystemPackage {
         material.setUniform(WorldEditorSetting.UNIFORM_TILE_TEXTURE, texture);
 
         renderManager.pushRenderCall(imageModel, sceneFbo, WorldEditorSetting.DEPTH_IMAGE, window);
+    }
+
+    // Globe \\
+
+    // The whole ball in one pass: both layers as shown, the brush, footprint and box, and the cube while shown
+    private void renderGlobe(WindowInstance window, ImageDocumentInstance image, int texture) {
+
+        MaterialInstance material = globeModel.getMaterial();
+        int heightTexture = imageManager.useTexture(worldEditorManager.getHeightImage());
+        boolean heightsShown = heightTexture != 0 && worldEditorLayerSystem.isShown(WorldEditorLayer.HEIGHTS);
+
+        material.setUniform(WorldEditorSetting.UNIFORM_VIEW_RECT, windowRect);
+        material.setUniform(WorldEditorSetting.UNIFORM_TILE_TEXTURE, texture);
+        material.setUniform(WorldEditorSetting.UNIFORM_HEIGHT_TEXTURE, heightsShown ? heightTexture : texture);
+        material.setUniform(WorldEditorSetting.UNIFORM_SHOW_BIOMES,
+                toSwitch(worldEditorLayerSystem.isShown(WorldEditorLayer.BIOMES)));
+        material.setUniform(WorldEditorSetting.UNIFORM_SHOW_HEIGHTS, toSwitch(heightsShown));
+        material.setUniform(WorldEditorSetting.UNIFORM_OVERLAY_ALPHA, WorldEditorSetting.HEIGHT_OVERLAY_ALPHA);
+        material.setUniform(WorldEditorSetting.UNIFORM_FACE_TEXELS, (float) image.getHeight());
+        GlobeViewStruct globeView = worldEditorViewSystem.getGlobeView();
+
+        material.setUniform(WorldEditorSetting.UNIFORM_GLOBE_CAMERA, globeView.getPosition());
+        material.setUniform(WorldEditorSetting.UNIFORM_GLOBE_FORWARD, globeView.getForward());
+        material.setUniform(WorldEditorSetting.UNIFORM_GLOBE_RIGHT, globeView.getRight());
+        material.setUniform(WorldEditorSetting.UNIFORM_GLOBE_UP, globeView.getUp());
+
+        aimGlobeBrush(material, image.getHeight());
+        aimGlobeFootprint(material, image.getHeight());
+        aimGlobeBox(material);
+        aimGlobeCube(material);
+
+        renderManager.pushRenderCall(globeModel, sceneFbo, WorldEditorSetting.DEPTH_IMAGE, window);
+    }
+
+    // The brush on the plane of the face the hovered pixel lies on, centred on that pixel, as a stroke stamps it
+    private void aimGlobeBrush(MaterialInstance material, int faceTexels) {
+
+        WorldEditorLayer layer = worldEditorToolSystem.getLayer();
+        boolean shown = worldEditorToolSystem.isHovering() && !worldEditorToolSystem.isDropping()
+                && worldEditorManager.isPainting(layer) && worldEditorManager.getTool(layer).isStroke();
+
+        if (!shown) {
+            material.setUniform(WorldEditorSetting.UNIFORM_BRUSH_FACE, WorldEditorSetting.GLOBE_NO_FACE);
+            return;
+        }
+
+        int pixelX = worldEditorToolSystem.getHoveredX();
+        int face = Math.floorDiv(pixelX, faceTexels);
+        BrushHandle brush = brushManager.getActiveBrush();
+
+        brushCenter.set(
+                (float) (pixelX - face * faceTexels + EngineSetting.PIXEL_CENTER_OFFSET),
+                (float) (worldEditorToolSystem.getHoveredY() + EngineSetting.PIXEL_CENTER_OFFSET));
+
+        material.setUniform(WorldEditorSetting.UNIFORM_BRUSH_FACE, (float) face);
+        material.setUniform(WorldEditorSetting.UNIFORM_BRUSH_CENTER, brushCenter);
+        material.setUniform(WorldEditorSetting.UNIFORM_BRUSH_RADIUS,
+                (float) (worldEditorManager.getBrushRadius(layer) + EngineSetting.PIXEL_CENTER_OFFSET));
+        material.setUniform(WorldEditorSetting.UNIFORM_BRUSH_SHAPE, (float) brush.getShape().ordinal());
+        material.setUniform(WorldEditorSetting.UNIFORM_BRUSH_RATIO, brush.getValue(BrushField.RATIO));
+        material.setUniform(
+                WorldEditorSetting.UNIFORM_BRUSH_ANGLE,
+                (float) Math.toRadians(brush.getValue(BrushField.ANGLE)));
+    }
+
+    // The design's reach about the exact point under the pointer, on the plane of the face it lies on
+    private void aimGlobeFootprint(MaterialInstance material, int faceTexels) {
+
+        int radiusBlocks = settlementPlannerManager.getFootprintRadiusBlocks();
+        boolean shown = worldEditorToolSystem.isHovering() && isStanding() && radiusBlocks > 0;
+        double imageX = worldEditorToolSystem.getHoveredImageX();
+        int face = Math.floorDiv(worldEditorToolSystem.getHoveredX(), faceTexels);
+
+        footprintCenter.set(
+                (float) (imageX - face * (double) faceTexels),
+                (float) worldEditorToolSystem.getHoveredImageY());
+
+        material.setUniform(WorldEditorSetting.UNIFORM_FOOTPRINT_FACE, (float) face);
+        material.setUniform(WorldEditorSetting.UNIFORM_FOOTPRINT_CENTER, footprintCenter);
+        material.setUniform(WorldEditorSetting.UNIFORM_FOOTPRINT_RADIUS,
+                shown ? (float) (radiusBlocks / WorldImagePointStruct.resolvePixelBlocks()) : 0f);
+    }
+
+    private void aimGlobeBox(MaterialInstance material) {
+
+        boolean boxing = worldEditorToolSystem.isBoxing();
+        double pressX = worldEditorToolSystem.getPressImageX();
+        double pressY = worldEditorToolSystem.getPressImageY();
+        double hoveredX = worldEditorToolSystem.getHoveredImageX();
+        double hoveredY = worldEditorToolSystem.getHoveredImageY();
+
+        boxRect.set(
+                (float) Math.min(pressX, hoveredX),
+                (float) Math.min(pressY, hoveredY),
+                (float) Math.max(pressX, hoveredX),
+                (float) Math.max(pressY, hoveredY));
+
+        material.setUniform(WorldEditorSetting.UNIFORM_SHOW_BOX, toSwitch(boxing));
+        material.setUniform(WorldEditorSetting.UNIFORM_BOX_RECT, boxRect);
+    }
+
+    // The block grid's cube as it is shown, turning under a drag, while the Cube layer is shown
+    private void aimGlobeCube(MaterialInstance material) {
+
+        Matrix3Double globeFromCube = worldEditorManager.getShownFromCube();
+
+        cubeAxisX.set((float) globeFromCube.getM00(), (float) globeFromCube.getM10(), (float) globeFromCube.getM20());
+        cubeAxisY.set((float) globeFromCube.getM01(), (float) globeFromCube.getM11(), (float) globeFromCube.getM21());
+        cubeAxisZ.set((float) globeFromCube.getM02(), (float) globeFromCube.getM12(), (float) globeFromCube.getM22());
+
+        material.setUniform(WorldEditorSetting.UNIFORM_SHOW_CUBE,
+                toSwitch(worldEditorLayerSystem.isShown(WorldEditorLayer.CUBE)));
+        material.setUniform(WorldEditorSetting.UNIFORM_CUBE_AXIS_X, cubeAxisX);
+        material.setUniform(WorldEditorSetting.UNIFORM_CUBE_AXIS_Y, cubeAxisY);
+        material.setUniform(WorldEditorSetting.UNIFORM_CUBE_AXIS_Z, cubeAxisZ);
+    }
+
+    private static float toSwitch(boolean on) {
+        return on ? 1f : 0f;
     }
 
     // Heights \\
@@ -289,7 +436,7 @@ public class WorldEditorRenderSystem extends SystemPackage {
         if (!worldEditorToolSystem.isHovering() || !isStanding() || radiusBlocks <= 0)
             return;
 
-        double radius = radiusBlocks / resolvePixelBlocks();
+        double radius = radiusBlocks / WorldImagePointStruct.resolvePixelBlocks();
         double pixelX = worldEditorToolSystem.getHoveredImageX();
         double pixelY = worldEditorToolSystem.getHoveredImageY();
 
@@ -325,11 +472,11 @@ public class WorldEditorRenderSystem extends SystemPackage {
             renderPlayerMarkers(window, worldHandle);
     }
 
-    // Every hand placement's icon over the image pixel it stands in, the selection where a drag would stand it
+    // Every hand placement's icon over the image pixel it stands in, the selection where a drag would stand it; on a
+    // globe a placement on the ball's far side shows none
     private void renderPlacementIcons(WindowInstance window, WorldHandle worldHandle) {
 
         WorldPlacementStruct[] placements = worldEditorManager.getPlacements();
-        double pixelBlocks = resolvePixelBlocks();
         boolean moving = worldEditorToolSystem.isMoving();
         double moveX = worldEditorToolSystem.getHoveredImageX() - worldEditorToolSystem.getPressImageX();
         double moveY = worldEditorToolSystem.getHoveredImageY() - worldEditorToolSystem.getPressImageY();
@@ -340,14 +487,17 @@ public class WorldEditorRenderSystem extends SystemPackage {
 
             boolean moved = moving && worldEditorManager.isPlacementSelected(placements[i]);
 
+            imagePoint.locateImage(worldHandle, placements[i].getWorldX(), placements[i].getWorldZ());
+
+            if (!worldEditorViewSystem.project(
+                    imagePoint.getImageX() + (moved ? moveX : 0.0),
+                    imagePoint.getImageY() + (moved ? moveY : 0.0)))
+                continue;
+
             placementIconSystem.push(
                     window, sceneFbo, WorldEditorSetting.DEPTH_MARKERS,
-                    worldEditorViewSystem.imageToScreenX(
-                            WorldWrapUtility.wrapBlockX(worldHandle, placements[i].getWorldX()) / pixelBlocks
-                                    + (moved ? moveX : 0.0)),
-                    worldEditorViewSystem.imageToScreenY(
-                            WorldWrapUtility.wrapBlockZ(worldHandle, placements[i].getWorldZ()) / pixelBlocks
-                                    + (moved ? moveY : 0.0)),
+                    worldEditorViewSystem.getProjectedX(),
+                    worldEditorViewSystem.getProjectedY(),
                     placements[i]);
         }
     }
@@ -377,14 +527,17 @@ public class WorldEditorRenderSystem extends SystemPackage {
             float headingX,
             float headingZ) {
 
-        double pixelBlocks = resolvePixelBlocks();
         float width = window.getWidth();
         float height = window.getHeight();
         float size = WorldEditorSetting.MARKER_SIZE_PIXELS;
-        float screenX = worldEditorViewSystem.imageToScreenX(
-                WorldWrapUtility.wrapBlockX(worldHandle, worldX) / pixelBlocks);
-        float screenY = worldEditorViewSystem.imageToScreenY(
-                WorldWrapUtility.wrapBlockZ(worldHandle, worldZ) / pixelBlocks);
+
+        imagePoint.locateImage(worldHandle, worldX, worldZ);
+
+        if (!worldEditorViewSystem.project(imagePoint.getImageX(), imagePoint.getImageY()))
+            return false;
+
+        float screenX = worldEditorViewSystem.getProjectedX();
+        float screenY = worldEditorViewSystem.getProjectedY();
 
         if (screenX < -size || screenY < -size || screenX > width + size || screenY > height + size)
             return false;
@@ -425,10 +578,6 @@ public class WorldEditorRenderSystem extends SystemPackage {
     }
 
     // Utility \\
-
-    private double resolvePixelBlocks() {
-        return EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
-    }
 
     // Image rectangle, y down, to normalized device coordinates as (left, bottom, right, top)
     private void setViewRect(WindowInstance window, double left, double top, double right, double bottom) {

@@ -25,7 +25,12 @@ public class ViewCameraSystem extends SystemPackage {
      * tool claimed the wheel that frame); zoomed in as
      * far as it goes, the wheel dollies the point it turns about forward along
      * the view, as Blender's dolly does, and the near plane follows the
-     * distance so nothing close to the lens is clipped. A drag
+     * distance so nothing close to the lens is clipped. A subject with a
+     * surface is framed from that surface: the distance is the camera's
+     * height above it, zooming closes on the ground down to a sliver of a
+     * radius without passing through it, and an orbit turns slower the lower
+     * the camera stands, so the ground under the pointer keeps pace with it,
+     * as globe viewers navigate. A drag
      * begins only on a press over the view that no tool of the window claimed
      * that frame, made with no other button held, so it reads input late,
      * after every tool has had the press. A view can be snapped to look back
@@ -122,8 +127,12 @@ public class ViewCameraSystem extends SystemPackage {
         if (!viewCameraSubject.isShown())
             return;
 
-        if (dragButton == EditorSetting.VIEW_CAMERA_BUTTON_ORBIT)
-            rotate(rawInput.getDeltaX(), rawInput.getDeltaY());
+        if (dragButton == EditorSetting.VIEW_CAMERA_BUTTON_ORBIT) {
+
+            float pace = resolveOrbitPace();
+
+            rotate(rawInput.getDeltaX() * pace, rawInput.getDeltaY() * pace);
+        }
         else if (dragButton == EditorSetting.VIEW_CAMERA_BUTTON_PAN)
             slide(rawInput.getDeltaX(), rawInput.getDeltaY());
 
@@ -141,6 +150,12 @@ public class ViewCameraSystem extends SystemPackage {
 
         float distance = viewCameraState.getDistance();
         float zoomed = distance * (float) Math.pow(EditorSetting.VIEW_CAMERA_ZOOM_FACTOR, -notches);
+
+        if (viewCameraSubject.getSurfaceRadius() > 0f) {
+            viewCameraState.setDistance(Math.clamp(
+                    zoomed, EditorSetting.VIEW_CAMERA_SURFACE_DISTANCE_MIN, EditorSetting.VIEW_CAMERA_DISTANCE_MAX));
+            return;
+        }
 
         if (zoomed < EditorSetting.VIEW_CAMERA_DISTANCE_MIN) {
 
@@ -238,7 +253,7 @@ public class ViewCameraSystem extends SystemPackage {
     private void slide(float deltaX, float deltaY) {
 
         CameraInstance camera = context.getWindow().getActiveCamera();
-        float reach = viewCameraState.getDistance() * viewCameraSubject.getBoundingRadius();
+        float reach = resolveHeight();
         Vector3 pan = viewCameraState.getPan();
         float step = 2f * reach * (float) Math.tan(Math.toRadians(camera.getFOV() * 0.5f))
                 / Math.max(1f, camera.getViewport().y);
@@ -280,7 +295,8 @@ public class ViewCameraSystem extends SystemPackage {
         if (!viewCameraSubject.isShown())
             return;
 
-        float reach = viewCameraState.getDistance() * viewCameraSubject.getBoundingRadius();
+        float height = resolveHeight();
+        float reach = viewCameraSubject.getSurfaceRadius() + height;
 
         target.set(
                 viewCameraSubject.getCenter(EngineSetting.AXIS_X),
@@ -289,9 +305,23 @@ public class ViewCameraSystem extends SystemPackage {
         position.set(target).subtract(view.x * reach, view.y * reach, view.z * reach);
         camera.setPosition(position);
         camera.setNearPlane(Math.clamp(
-                reach * EditorSetting.VIEW_CAMERA_NEAR_SHARE,
+                height * EditorSetting.VIEW_CAMERA_NEAR_SHARE,
                 EditorSetting.VIEW_CAMERA_NEAR_MIN,
                 EngineSetting.CAMERA_NEAR_PLANE));
+    }
+
+    // How far the camera stands off what is shown, or above its surface, in model blocks
+    private float resolveHeight() {
+        return viewCameraState.getDistance() * viewCameraSubject.getBoundingRadius();
+    }
+
+    // The share of a full orbit step a drag turns: all of it with no surface, and as the camera's height over its
+    // distance from the middle above one, so the ground under the pointer moves with it
+    private float resolveOrbitPace() {
+
+        float height = resolveHeight();
+
+        return height / (viewCameraSubject.getSurfaceRadius() + height);
     }
 
     // right = view × world up, up = right × view
@@ -310,6 +340,11 @@ public class ViewCameraSystem extends SystemPackage {
     }
 
     // Accessible \\
+
+    // True while what the camera frames is shown
+    public boolean isSubjectShown() {
+        return viewCameraSubject.isShown();
+    }
 
     // The view this camera looks through
     public ViewCameraStateStruct getViewCameraState() {

@@ -3,6 +3,7 @@ package editor.bootstrap.sceneassetspipeline.sceneassetsmanager;
 import application.bootstrap.physicspipeline.util.BlockCastStruct;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import editor.bootstrap.infopipeline.infomanager.InfoManager;
 import editor.bootstrap.sceneassetspipeline.sceneassets.SceneAssetKind;
 import editor.bootstrap.sceneassetspipeline.sceneassets.SceneAssetRowStruct;
@@ -34,6 +35,7 @@ public class SceneAssetsManager extends ManagerPackage {
 
     // Internal
     private BiomeManager biomeManager;
+    private WorldStreamManager worldStreamManager;
     private InfoManager infoManager;
     private SceneAssetsRowBranch sceneAssetsRowBranch;
 
@@ -99,6 +101,7 @@ public class SceneAssetsManager extends ManagerPackage {
     @Override
     protected void get() {
         this.biomeManager = get(BiomeManager.class);
+        this.worldStreamManager = get(WorldStreamManager.class);
         this.infoManager = get(InfoManager.class);
     }
 
@@ -160,7 +163,8 @@ public class SceneAssetsManager extends ManagerPackage {
 
         if (cast.isHit())
             sceneAssetsRowBranch.describePointed(section, cast,
-                    biomeManager.getBiome(worldHandle, cast.getChunkCoordinate()));
+                    biomeManager.getBiome(
+                            worldHandle, worldStreamManager.toCanonicalChunk(cast.getChunkCoordinate())));
         else
             sceneAssetsRowBranch.describeNothing(section);
 
@@ -216,7 +220,8 @@ public class SceneAssetsManager extends ManagerPackage {
         seenBlockIDs.add(cast.getBlock().getBlockID());
 
         if (seenChunks.add(cast.getChunkCoordinate()))
-            seenBiomeIDs.add(biomeManager.getBiome(scanWorld, cast.getChunkCoordinate()).getBiomeID());
+            seenBiomeIDs.add(biomeManager.getBiome(
+                    scanWorld, worldStreamManager.toCanonicalChunk(cast.getChunkCoordinate())).getBiomeID());
     }
 
     // The scan done: what it saw described again when it differs from what is shown

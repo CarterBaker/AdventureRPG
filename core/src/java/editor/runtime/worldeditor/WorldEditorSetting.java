@@ -21,6 +21,7 @@ public class WorldEditorSetting {
     public static final String MATERIAL_HEIGHTS = "editor/WorldEditorHeightMaterial";
     public static final String MATERIAL_BRUSH = "editor/WorldEditorBrushMaterial";
     public static final String MATERIAL_MARKER = "editor/WorldMapMarkerMaterial";
+    public static final String MATERIAL_GLOBE = "editor/WorldEditorGlobeMaterial";
 
     // Uniforms
     public static final String UNIFORM_VIEW_RECT = "u_viewRect";
@@ -33,6 +34,26 @@ public class WorldEditorSetting {
     public static final String UNIFORM_BRUSH_SHAPE = "u_shape";
     public static final String UNIFORM_BRUSH_RATIO = "u_ratio";
     public static final String UNIFORM_BRUSH_ANGLE = "u_angle";
+    public static final String UNIFORM_HEIGHT_TEXTURE = "u_heightTexture";
+    public static final String UNIFORM_SHOW_BIOMES = "u_showBiomes";
+    public static final String UNIFORM_SHOW_HEIGHTS = "u_showHeights";
+    public static final String UNIFORM_FACE_TEXELS = "u_faceTexels";
+    public static final String UNIFORM_GLOBE_CAMERA = "u_globeCamera";
+    public static final String UNIFORM_GLOBE_FORWARD = "u_globeForward";
+    public static final String UNIFORM_GLOBE_RIGHT = "u_globeRight";
+    public static final String UNIFORM_GLOBE_UP = "u_globeUp";
+    public static final String UNIFORM_BRUSH_FACE = "u_brushFace";
+    public static final String UNIFORM_BRUSH_CENTER = "u_brushCenter";
+    public static final String UNIFORM_BRUSH_RADIUS = "u_brushRadius";
+    public static final String UNIFORM_FOOTPRINT_FACE = "u_footprintFace";
+    public static final String UNIFORM_FOOTPRINT_CENTER = "u_footprintCenter";
+    public static final String UNIFORM_FOOTPRINT_RADIUS = "u_footprintRadius";
+    public static final String UNIFORM_SHOW_BOX = "u_showBox";
+    public static final String UNIFORM_BOX_RECT = "u_boxRect";
+    public static final String UNIFORM_SHOW_CUBE = "u_showCube";
+    public static final String UNIFORM_CUBE_AXIS_X = "u_cubeAxisX";
+    public static final String UNIFORM_CUBE_AXIS_Y = "u_cubeAxisY";
+    public static final String UNIFORM_CUBE_AXIS_Z = "u_cubeAxisZ";
 
     // Render Order
     public static final int DEPTH_IMAGE = 0;
@@ -50,6 +71,10 @@ public class WorldEditorSetting {
     public static final double MIN_IMAGE_PIXELS_PER_SCREEN_PIXEL = 0.03125;
     public static final double MAX_FIT_MULTIPLE = 2.0;
     public static final double ZOOM_STEP = 1.25;
+
+    // Globe — a globe world's image is shown on a ball of this radius the view camera orbits
+    public static final float GLOBE_RADIUS = 1f;
+    public static final float GLOBE_NO_FACE = -1f;
 
     // Mouse
     public static final int BUTTON_APPLY = Buttons.LEFT;

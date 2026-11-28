@@ -30,7 +30,7 @@ class SettlementCellStruct extends StructPackage {
     private SettlementPlanStruct plan;
     private boolean planned;
 
-    // Links — indexed east then south
+    // Links — indexed east, south, west then north, a torus cell owning only its east and south
     private final LayoutPlanStruct[] links;
     private final boolean[] linksResolved;
 
@@ -46,8 +46,8 @@ class SettlementCellStruct extends StructPackage {
         this.site = site;
 
         // Links
-        this.links = new LayoutPlanStruct[EngineSetting.SETTLEMENT_LINK_DIRECTIONS];
-        this.linksResolved = new boolean[EngineSetting.SETTLEMENT_LINK_DIRECTIONS];
+        this.links = new LayoutPlanStruct[EngineSetting.SETTLEMENT_LINK_SIDES];
+        this.linksResolved = new boolean[EngineSetting.SETTLEMENT_LINK_SIDES];
     }
 
     // Management \\

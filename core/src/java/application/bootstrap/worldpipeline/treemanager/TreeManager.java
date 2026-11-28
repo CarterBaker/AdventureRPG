@@ -17,6 +17,8 @@ import application.bootstrap.worldpipeline.tree.TreeShapeStruct;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
 import application.bootstrap.worldpipeline.util.TreeDistributionUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
 import engine.util.arpg.ArpgObjectStruct;
@@ -236,22 +238,26 @@ public class TreeManager extends ManagerPackage {
     // Generation \\
 
     // Streaming thread — the trees reaching a chunk handed to its palette, any it held before let go first
-    public void generateTrees(WorldHandle worldHandle, long chunkCoordinate, TreePaletteHandle treePaletteHandle) {
+    public void generateTrees(
+            WorldHandle worldHandle,
+            long chunkCoordinate,
+            GlobeFrameStruct frame,
+            TreePaletteHandle treePaletteHandle) {
 
         releaseTrees(treePaletteHandle);
-        treePaletteHandle.set(treePlacementBranch.placeTrees(worldHandle, chunkCoordinate, currentDay));
+        treePaletteHandle.set(treePlacementBranch.placeTrees(worldHandle, chunkCoordinate, frame, currentDay));
     }
 
     // Any thread — every wild tree rooted in a block region that stands once its neighbours are judged, handed back
     // from the thread's own scratch and read before the thread's next search
     public void collectSites(
-            WorldHandle worldHandle,
+            SurfacePointStruct home,
             long minX,
             long minZ,
             long maxX,
             long maxZ,
             ObjectArrayList<TreeSiteStruct> out) {
-        treeSiteBranch.collectSites(worldHandle, minX, minZ, maxX, maxZ, out);
+        treeSiteBranch.collectSites(home, minX, minZ, maxX, maxZ, out);
     }
 
     // Any thread — the LOD a tree rooted at a block column is drawn at, judged as every registered tree is

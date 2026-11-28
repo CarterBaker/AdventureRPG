@@ -10,8 +10,8 @@ import application.bootstrap.worldpipeline.road.RoadPathStruct;
 import application.bootstrap.worldpipeline.road.RoadQueryStruct;
 import application.bootstrap.worldpipeline.roadmanager.RoadManager;
 import application.bootstrap.worldpipeline.settlement.SettlementPlanStruct;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
 import application.bootstrap.worldpipeline.util.RoadPathUtility;
-import application.bootstrap.worldpipeline.util.WorldWrapUtility;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.BranchPackage;
 import engine.root.EngineSetting;
@@ -63,14 +63,17 @@ class SettlementLinkBranch extends BranchPackage {
             LayoutRandomStruct random = new LayoutRandomStruct(seed);
             double fromX = from.getLayout().getReferenceX();
             double fromZ = from.getLayout().getReferenceZ();
-            double shiftX = WorldWrapUtility.unwrapBlockX(worldHandle, to.getLayout().getReferenceX(), fromX)
-                    - to.getLayout().getReferenceX();
-            double shiftZ = WorldWrapUtility.unwrapBlockZ(worldHandle, to.getLayout().getReferenceZ(), fromZ)
-                    - to.getLayout().getReferenceZ();
+            FrameTransformStruct toFrame = scratch.transform;
+            FrameTransformStruct fromFrame = scratch.identity;
 
-            int fromExit = findExit(from, 0.0, 0.0, to.getLayout().getReferenceX() + shiftX,
-                    to.getLayout().getReferenceZ() + shiftZ);
-            int toExit = findExit(to, shiftX, shiftZ, fromX, fromZ);
+            toFrame.setFrames(
+                    worldHandle, to.getLayout().getReferenceX(), to.getLayout().getReferenceZ(), fromX, fromZ);
+            fromFrame.setFrames(worldHandle, fromX, fromZ, fromX, fromZ);
+
+            int fromExit = findExit(from, fromFrame,
+                    toFrame.mapX(to.getLayout().getReferenceX(), to.getLayout().getReferenceZ()),
+                    toFrame.mapZ(to.getLayout().getReferenceX(), to.getLayout().getReferenceZ()));
+            int toExit = findExit(to, toFrame, fromX, fromZ);
 
             ArchitectureHandle architectureHandle = from.getSite().getArchitectureHandle();
             boolean byRoad = from.getSite().getSettlementHandle().getLink() == LayoutRoadKind.ROAD
@@ -78,7 +81,8 @@ class SettlementLinkBranch extends BranchPackage {
 
             RoadPathUtility.buildCurve(
                     from.getExitX(fromExit), from.getExitZ(fromExit),
-                    to.getExitX(toExit) + shiftX, to.getExitZ(toExit) + shiftZ,
+                    toFrame.mapX(to.getExitX(toExit), to.getExitZ(toExit)),
+                    toFrame.mapZ(to.getExitX(toExit), to.getExitZ(toExit)),
                     EngineSetting.SETTLEMENT_LINK_BEND, random.nextSeed(), scratch.pointX, scratch.pointZ);
 
             RoadPathStruct road = roadManager.planPath(
@@ -96,19 +100,21 @@ class SettlementLinkBranch extends BranchPackage {
         }
     }
 
-    // The exit of a settlement, shifted into the frame the road is drawn in, facing a target point best
-    private int findExit(SettlementPlanStruct plan, double shiftX, double shiftZ, double targetX, double targetZ) {
+    // The exit of a settlement, carried into the frame the road is drawn in, facing a target point best
+    private int findExit(SettlementPlanStruct plan, FrameTransformStruct frame, double targetX, double targetZ) {
 
         int best = 0;
         double bestAlignment = -Double.MAX_VALUE;
 
         for (int i = 0; i < plan.getExitCount(); i++) {
 
-            double towardX = targetX - (plan.getExitX(i) + shiftX);
-            double towardZ = targetZ - (plan.getExitZ(i) + shiftZ);
+            double towardX = targetX - frame.mapX(plan.getExitX(i), plan.getExitZ(i));
+            double towardZ = targetZ - frame.mapZ(plan.getExitX(i), plan.getExitZ(i));
             double length = Math.max(EngineSetting.DIVISION_EPSILON,
                     Math.sqrt(towardX * towardX + towardZ * towardZ));
-            double alignment = (plan.getExitHeadingX(i) * towardX + plan.getExitHeadingZ(i) * towardZ) / length;
+            double headingX = frame.turnX(plan.getExitHeadingX(i), plan.getExitHeadingZ(i));
+            double headingZ = frame.turnZ(plan.getExitHeadingX(i), plan.getExitHeadingZ(i));
+            double alignment = (headingX * towardX + headingZ * towardZ) / length;
 
             if (alignment <= bestAlignment)
                 continue;

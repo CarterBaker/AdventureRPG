@@ -7,6 +7,7 @@ import application.bootstrap.worldpipeline.layout.LayoutSurfaceStruct;
 import application.bootstrap.worldpipeline.structure.StructureHandle;
 import application.bootstrap.worldpipeline.subchunk.SubChunkInstance;
 import application.bootstrap.worldpipeline.world.WorldHandle;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
 import engine.root.ManagerPackage;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -89,13 +90,14 @@ public class LayoutManager extends ManagerPackage {
 
     // Stamp \\
 
-    // Worker — a layout's share of a chunk
+    // Worker — a layout's share of a chunk, the chunk's columns carried into the layout's frame by the transform
     public void stampLayout(
             WorldHandle worldHandle,
             long chunkCoordinate,
             SubChunkInstance[] subChunks,
-            LayoutPlanStruct plan) {
-        layoutStampBranch.stamp(worldHandle, chunkCoordinate, subChunks, plan);
+            LayoutPlanStruct plan,
+            FrameTransformStruct chunkToLayout) {
+        layoutStampBranch.stamp(worldHandle, chunkCoordinate, subChunks, plan, chunkToLayout);
     }
 
     // Surface \\

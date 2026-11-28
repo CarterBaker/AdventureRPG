@@ -68,9 +68,10 @@ public class NaturalLightManager extends ManagerPackage {
     private void updateGridLighting(GridInstance grid) {
 
         float visualTimeOfDay = (float) grid.getClockInstance().getVisualTimeOfDay();
+        double northHeading = grid.getClockInstance().getNorthHeading();
 
-        sunLightSystem.update(visualTimeOfDay);
-        moonLightSystem.update(visualTimeOfDay);
+        sunLightSystem.update(visualTimeOfDay, northHeading);
+        moonLightSystem.update(visualTimeOfDay, northHeading);
         starSphereSystem.update(grid.getClockInstance());
 
         sunLight.setDirection(

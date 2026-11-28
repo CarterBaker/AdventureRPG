@@ -5,6 +5,7 @@ layout(location = 2) in vec2  aUV;
 layout(location = 3) in float aTile;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 
 // Carries the painted item onto the vehicle it stands on, its model position kept for a viewer's cutaway.
 uniform mat4 u_model;
@@ -21,5 +22,5 @@ void main() {
     vTile         = int(aTile + 0.5);
     vModelPosition = aPos;
     vViewPosition = (u_view * worldPosition).xyz;
-    gl_Position   = u_viewProjection * worldPosition;
+    gl_Position   = u_viewProjection * vec4(curveToHorizon(worldPosition.xyz), worldPosition.w);
 }

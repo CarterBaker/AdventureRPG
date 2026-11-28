@@ -10,9 +10,14 @@ import application.bootstrap.shaderpipeline.texturemanager.TextureManager;
 import application.bootstrap.worldpipeline.biomemanager.BiomeManager;
 import application.bootstrap.worldpipeline.grid.GridInstance;
 import application.bootstrap.worldpipeline.layout.LayoutPlanStruct;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
+import application.bootstrap.worldpipeline.util.GlobeViewStruct;
+import application.bootstrap.worldpipeline.world.GlobeCapStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.vectors.Vector3;
+import engine.util.mathematics.vectors.Vector3Double;
 import engine.util.memory.BufferUtility;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -42,6 +47,13 @@ public class MapManager extends ManagerPackage {
      * The editor may hand over one preview layout, drawn on every tile it
      * reaches as if it stood but never laid into the world; changing it marks
      * the tiles under the old and the new one stale.
+     * On a globe the pyramid stands on the block cube's six faces, level
+     * zero a face to a tile, so every tile is a square of one face; a view
+     * refines each face's tiles until a texel shows no wider than a pixel,
+     * keeping only those the camera sees above the horizon and inside the
+     * window, and hands each over with the window rectangle it shows in and
+     * its square of its face, which the globe's shader keeps it to. Edits
+     * reach the tiles within the cap of the globe they touch.
      */
 
     // Internal
@@ -57,6 +69,12 @@ public class MapManager extends ManagerPackage {
     private long worldWidthBlocks;
     private long worldHeightBlocks;
     private int maxLevel;
+
+    // Globe — the block face's side the tiles divide on a globe, else the world's own extent
+    private boolean globe;
+    private long spanWidthBlocks;
+    private long spanHeightBlocks;
+    private double radiusBlocks;
 
     // Palette
     private Long2ObjectOpenHashMap<MapTileInstance> key2MapTile;
@@ -74,6 +92,17 @@ public class MapManager extends ManagerPackage {
 
     // Scratch
     private ByteBuffer uploadBuffer;
+
+    // Drawable — the texture and its part a tile draws with, found by resolveDrawable
+    private int drawableTexture;
+    private float drawableU0;
+    private float drawableV0;
+    private float drawableU1;
+    private float drawableV1;
+
+    // Globe Scratch
+    private final Vector3Double globeDirection = new Vector3Double();
+    private final GlobeCapStruct editCap = new GlobeCapStruct();
 
     // Base \\
 
@@ -148,20 +177,25 @@ public class MapManager extends ManagerPackage {
         this.worldHandle = nextWorldHandle;
         this.worldWidthBlocks = nextWorldHandle.getWorldScale().x;
         this.worldHeightBlocks = nextWorldHandle.getWorldScale().y;
+        this.globe = nextWorldHandle.isGlobe();
+        this.spanWidthBlocks = globe ? GlobeUtility.getFaceBlocks(nextWorldHandle) : worldWidthBlocks;
+        this.spanHeightBlocks = globe ? GlobeUtility.getFaceBlocks(nextWorldHandle) : worldHeightBlocks;
+        this.radiusBlocks = globe ? GlobeUtility.getRadiusBlocks(nextWorldHandle) : 0.0;
 
         long finestTileBlocks = EngineSetting.MACRO_TILE_SIZE_BLOCKS;
 
-        if (worldWidthBlocks % finestTileBlocks != 0 || worldHeightBlocks % finestTileBlocks != 0)
-            throwException("World \"" + nextWorldHandle.getWorldName() + "\" spans " + worldWidthBlocks + "x"
-                    + worldHeightBlocks + " blocks, which the map's finest tile (" + finestTileBlocks
-                    + " blocks) does not divide.");
+        if (spanWidthBlocks % finestTileBlocks != 0 || spanHeightBlocks % finestTileBlocks != 0)
+            throwException("World \"" + nextWorldHandle.getWorldName() + "\" spans " + spanWidthBlocks + "x"
+                    + spanHeightBlocks + " blocks " + (globe ? "a face" : "") + ", which the map's finest tile ("
+                    + finestTileBlocks + " blocks) does not divide.");
 
-        // Every level's tiles must divide the world on both axes, so level zero is as coarse as that allows
+        // Every level's tiles must divide the world, or a globe's face, on both axes, so level zero is as coarse as
+        // that allows
         int levels = 0;
 
         while (levels + 1 < EngineSetting.MAP_MAX_LEVELS
-                && worldWidthBlocks % (finestTileBlocks << (levels + 1)) == 0
-                && worldHeightBlocks % (finestTileBlocks << (levels + 1)) == 0)
+                && spanWidthBlocks % (finestTileBlocks << (levels + 1)) == 0
+                && spanHeightBlocks % (finestTileBlocks << (levels + 1)) == 0)
             levels++;
 
         this.maxLevel = levels;
@@ -171,12 +205,22 @@ public class MapManager extends ManagerPackage {
         return (long) EngineSetting.MACRO_TILE_SIZE_BLOCKS << (maxLevel - level);
     }
 
+    // Tiles across the world, or across one face of a globe
     private int getTilesAcrossX(int level) {
-        return (int) (worldWidthBlocks / getTileBlocks(level));
+        return (int) (spanWidthBlocks / getTileBlocks(level));
     }
 
     private int getTilesAcrossZ(int level) {
-        return (int) (worldHeightBlocks / getTileBlocks(level));
+        return (int) (spanHeightBlocks / getTileBlocks(level));
+    }
+
+    // The first tile of a face along x, a globe's faces packed into x; a torus has one span from zero
+    private int getFaceOriginTile(int face, int level) {
+        return globe ? (int) (GlobeUtility.faceOriginX(face, (int) spanWidthBlocks) / getTileBlocks(level)) : 0;
+    }
+
+    private int getSpanCount() {
+        return globe ? EngineSetting.GLOBE_FACE_COUNT : 1;
     }
 
     // The coarsest level whose texels are no wider than a pixel, so a tile is never stretched past its detail
@@ -201,6 +245,11 @@ public class MapManager extends ManagerPackage {
 
         resolveWorld(view.getWorldHandle());
 
+        if (globe) {
+            resolveGlobeView(view);
+            return;
+        }
+
         int level = selectLevel(view.getBlocksPerPixel());
         long tileBlocks = getTileBlocks(level);
 
@@ -223,30 +272,42 @@ public class MapManager extends ManagerPackage {
 
         int wrappedX = (int) Math.floorMod(tileX, (long) getTilesAcrossX(level));
         int wrappedZ = (int) Math.floorMod(tileZ, (long) getTilesAcrossZ(level));
-        MapTileInstance tile = acquireTile(level, wrappedX, wrappedZ);
 
-        float left = view.worldToScreenX((double) tileX * tileBlocks);
-        float right = view.worldToScreenX((double) (tileX + 1) * tileBlocks);
-        float top = view.worldToScreenY((double) tileZ * tileBlocks);
-        float bottom = view.worldToScreenY((double) (tileZ + 1) * tileBlocks);
+        if (!resolveDrawable(level, wrappedX, wrappedZ))
+            return;
+
+        MapDrawStruct draw = view.nextDraw();
+
+        draw.set(
+                drawableTexture,
+                view.worldToScreenX((double) tileX * tileBlocks),
+                view.worldToScreenY((double) (tileZ + 1) * tileBlocks),
+                view.worldToScreenX((double) (tileX + 1) * tileBlocks),
+                view.worldToScreenY((double) tileZ * tileBlocks));
+        draw.setRegion(drawableU0, drawableV0, drawableU1, drawableV1);
+        setWorldRegion(draw, tileX, tileZ, tileBlocks);
+    }
+
+    // The texture a tile draws with: its own once uploaded, else the matching part of its nearest uploaded ancestor;
+    // false while neither is ready
+    private boolean resolveDrawable(int level, int tileX, int tileZ) {
+
+        MapTileInstance tile = acquireTile(level, tileX, tileZ);
 
         if (tile.isUploaded()) {
 
-            MapDrawStruct draw = view.nextDraw();
-
-            draw.set(tile.getTexture(), left, bottom, right, top);
-            setWorldRegion(draw, tileX, tileZ, tileBlocks);
+            setDrawable(tile.getTexture(), 0f, 0f, 1f, 1f);
 
             if (level == maxLevel && tile.markShownFinest(frame))
                 shownFinestTiles.add(tile);
 
-            return;
+            return true;
         }
 
         for (int ancestorLevel = level - 1; ancestorLevel >= 0; ancestorLevel--) {
 
             int depth = level - ancestorLevel;
-            MapTileInstance ancestor = key2MapTile.get(toKey(ancestorLevel, wrappedX >> depth, wrappedZ >> depth));
+            MapTileInstance ancestor = key2MapTile.get(toKey(ancestorLevel, tileX >> depth, tileZ >> depth));
 
             if (ancestor == null || !ancestor.isUploaded())
                 continue;
@@ -254,16 +315,155 @@ public class MapManager extends ManagerPackage {
             ancestor.touch(frame);
 
             float span = 1 << depth;
-            float u0 = (wrappedX - ((wrappedX >> depth) << depth)) / span;
-            float v0 = (wrappedZ - ((wrappedZ >> depth) << depth)) / span;
-            MapDrawStruct draw = view.nextDraw();
+            float u0 = (tileX - ((tileX >> depth) << depth)) / span;
+            float v0 = (tileZ - ((tileZ >> depth) << depth)) / span;
 
-            draw.set(ancestor.getTexture(), left, bottom, right, top);
-            draw.setRegion(u0, v0, u0 + 1f / span, v0 + 1f / span);
-            setWorldRegion(draw, tileX, tileZ, tileBlocks);
+            setDrawable(ancestor.getTexture(), u0, v0, u0 + 1f / span, v0 + 1f / span);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private void setDrawable(int texture, float u0, float v0, float u1, float v1) {
+        this.drawableTexture = texture;
+        this.drawableU0 = u0;
+        this.drawableV0 = v0;
+        this.drawableU1 = u1;
+        this.drawableV1 = v1;
+    }
+
+    // Globe View \\
+
+    // Every face's tiles refined from level zero, only those the camera sees drawn
+    private void resolveGlobeView(MapViewStruct view) {
+
+        view.beginDraws(0);
+        requestBaseTiles();
+
+        for (int face = 0; face < EngineSetting.GLOBE_FACE_COUNT; face++)
+            for (int tileZ = 0; tileZ < getTilesAcrossZ(0); tileZ++)
+                for (int tileX = 0; tileX < getTilesAcrossX(0); tileX++)
+                    refineGlobeTile(view, face, 0, getFaceOriginTile(face, 0) + tileX, tileZ);
+    }
+
+    // A tile beyond the horizon or off the window is skipped, one showing a texel wider than a pixel splits into its
+    // four children, and any other is drawn
+    private void refineGlobeTile(MapViewStruct view, int face, int level, int tileX, int tileZ) {
+
+        long tileBlocks = getTileBlocks(level);
+        GlobeViewStruct globeView = view.getGlobeView();
+        Vector3 camera = globeView.getPosition();
+        double cameraDistance = globeView.getCameraDistance();
+
+        GlobeUtility.resolveDirection(worldHandle, (tileX + 0.5) * tileBlocks, (tileZ + 0.5) * tileBlocks,
+                globeDirection);
+
+        double reach = tileBlocks * EngineSetting.MAP_GLOBE_TILE_REACH / radiusBlocks;
+        double towardCamera = (globeDirection.x * camera.x + globeDirection.y * camera.y
+                + globeDirection.z * camera.z) / cameraDistance;
+        double horizon = Math.acos(Math.min(1.0, 1.0 / cameraDistance));
+
+        if (Math.acos(Math.max(-1.0, Math.min(1.0, towardCamera))) - reach > horizon)
+            return;
+
+        double distance = globeView.distanceTo(globeDirection.x, globeDirection.y, globeDirection.z);
+        double nearest = Math.max(distance - reach, EngineSetting.DIVISION_EPSILON);
+        double shownPixels = tileBlocks / radiusBlocks / globeView.resolveSpanPerPixel(nearest, view.getHeight());
+
+        if (isOffWindow(globeView, distance, reach))
+            return;
+
+        if (level < maxLevel && shownPixels > EngineSetting.MAP_TILE_TEXELS) {
+
+            for (int childZ = 0; childZ < 2; childZ++)
+                for (int childX = 0; childX < 2; childX++)
+                    refineGlobeTile(view, face, level + 1, tileX * 2 + childX, tileZ * 2 + childZ);
 
             return;
         }
+
+        drawGlobeTile(view, face, level, tileX, tileZ, tileBlocks);
+    }
+
+    // True for a tile, its middle the direction last resolved, lying wholly outside the camera's view: the angle
+    // from the view's axis to its middle, less the angle the tile spans from the camera, beyond the view's widest
+    // reach, a corner of the window; never for a tile the camera stands within reach of
+    private boolean isOffWindow(GlobeViewStruct globeView, double distance, double reach) {
+
+        if (distance <= reach)
+            return false;
+
+        Vector3 camera = globeView.getPosition();
+        Vector3 forward = globeView.getForward();
+        Vector3 right = globeView.getRight();
+        Vector3 up = globeView.getUp();
+        double along = ((globeDirection.x - camera.x) * forward.x + (globeDirection.y - camera.y) * forward.y
+                + (globeDirection.z - camera.z) * forward.z) / distance;
+        double fromAxis = Math.acos(Math.max(-1.0, Math.min(1.0, along)));
+        double spanned = Math.asin(reach / distance);
+        double viewReach = Math.atan(Math.sqrt(right.x * right.x + right.y * right.y + right.z * right.z
+                + up.x * up.x + up.y * up.y + up.z * up.z));
+
+        return fromAxis - spanned > viewReach;
+    }
+
+    // The window rectangle a tile shows in, from where its corners, edges and middle fall, widened for the bow of its
+    // edges between them; the whole window when any of them lies behind the camera
+    private void drawGlobeTile(MapViewStruct view, int face, int level, int tileX, int tileZ, long tileBlocks) {
+
+        if (!resolveDrawable(level, tileX, tileZ))
+            return;
+
+        GlobeViewStruct globeView = view.getGlobeView();
+        float left = Float.MAX_VALUE;
+        float bottom = Float.MAX_VALUE;
+        float right = -Float.MAX_VALUE;
+        float top = -Float.MAX_VALUE;
+        boolean behind = false;
+        int steps = EngineSetting.MAP_GLOBE_TILE_BOUND_STEPS;
+
+        for (int stepZ = 0; stepZ <= steps && !behind; stepZ++) {
+            for (int stepX = 0; stepX <= steps && !behind; stepX++) {
+
+                GlobeUtility.resolveDirection(
+                        worldHandle,
+                        (tileX + stepX / (double) steps) * tileBlocks,
+                        (tileZ + stepZ / (double) steps) * tileBlocks,
+                        globeDirection);
+
+                behind = !globeView.project(
+                        globeDirection.x, globeDirection.y, globeDirection.z, view.getWidth(), view.getHeight());
+                left = Math.min(left, globeView.getProjectedX());
+                bottom = Math.min(bottom, globeView.getProjectedY());
+                right = Math.max(right, globeView.getProjectedX());
+                top = Math.max(top, globeView.getProjectedY());
+            }
+        }
+
+        float bow = Math.max(right - left, top - bottom) * EngineSetting.MAP_GLOBE_TILE_BOW_SHARE
+                + EngineSetting.MAP_GLOBE_TILE_BOW_PIXELS;
+
+        left = behind ? 0f : Math.max(0f, left - bow);
+        bottom = behind ? 0f : Math.max(0f, bottom - bow);
+        right = behind ? view.getWidth() : Math.min(view.getWidth(), right + bow);
+        top = behind ? view.getHeight() : Math.min(view.getHeight(), top + bow);
+
+        if (right <= left || top <= bottom)
+            return;
+
+        long faceOrigin = GlobeUtility.faceOriginX(face, (int) spanWidthBlocks);
+        MapDrawStruct draw = view.nextDraw();
+
+        draw.set(drawableTexture, left, bottom, right, top);
+        draw.setRegion(drawableU0, drawableV0, drawableU1, drawableV1);
+        draw.setFace(face);
+        draw.setWorldRegion(
+                (float) ((tileX * tileBlocks - faceOrigin) / (double) spanWidthBlocks),
+                (float) (tileZ * tileBlocks / (double) spanHeightBlocks),
+                (float) (((tileX + 1) * tileBlocks - faceOrigin) / (double) spanWidthBlocks),
+                (float) ((tileZ + 1) * tileBlocks / (double) spanHeightBlocks));
     }
 
     private void setWorldRegion(MapDrawStruct draw, long tileX, long tileZ, long tileBlocks) {
@@ -311,6 +511,11 @@ public class MapManager extends ManagerPackage {
         double pixelBlocks = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
         int margin = EngineSetting.MAP_EDIT_MARGIN_PIXELS;
 
+        if (globe) {
+            invalidateGlobePixels(minPixelX, minPixelZ, maxPixelX, maxPixelZ, margin * pixelBlocks / radiusBlocks);
+            return;
+        }
+
         invalidateWorldBlocks(
                 (minPixelX - margin) * pixelBlocks,
                 (minPixelZ - margin) * pixelBlocks,
@@ -331,6 +536,26 @@ public class MapManager extends ManagerPackage {
             if (overlapsWrapped(tileMinX, tileMinX + tileBlocks + reach * 2, minBlockX, maxBlockX, worldWidthBlocks)
                     && overlapsWrapped(
                             tileMinZ, tileMinZ + tileBlocks + reach * 2, minBlockZ, maxBlockZ, worldHeightBlocks))
+                tile.markStale();
+        }
+    }
+
+    // Every tile whose square of its face meets the cap of the globe the pixels touch
+    private void invalidateGlobePixels(int minPixelX, int minPixelZ, int maxPixelX, int maxPixelZ, double margin) {
+
+        editCap.clear();
+        editCap.includeImagePixels(worldHandle, minPixelX, minPixelZ, maxPixelX, maxPixelZ, margin);
+
+        for (MapTileInstance tile : key2MapTile.values()) {
+
+            long tileBlocks = getTileBlocks(tile.getLevel());
+
+            GlobeUtility.resolveDirection(
+                    worldHandle, (tile.getTileX() + 0.5) * tileBlocks, (tile.getTileZ() + 0.5) * tileBlocks,
+                    globeDirection);
+
+            if (editCap.reaches(globeDirection.x, globeDirection.y, globeDirection.z,
+                    tileBlocks * EngineSetting.MAP_GLOBE_TILE_REACH / radiusBlocks))
                 tile.markStale();
         }
     }
@@ -382,7 +607,11 @@ public class MapManager extends ManagerPackage {
     }
 
     // Tests the interval against the region and its copies one world over on either side
+    // A globe's faces lie apart along x and never wrap, so a span there overlaps only where it stands
     private boolean overlapsWrapped(double min, double max, double regionMin, double regionMax, double period) {
+
+        if (globe)
+            return min < regionMax && regionMin < max;
 
         if (regionMax - regionMin >= period)
             return true;
@@ -400,11 +629,13 @@ public class MapManager extends ManagerPackage {
 
     // Tiles \\
 
+    // Level zero across the world, or across every face of a globe
     private void requestBaseTiles() {
 
-        for (int tileZ = 0; tileZ < getTilesAcrossZ(0); tileZ++)
-            for (int tileX = 0; tileX < getTilesAcrossX(0); tileX++)
-                acquireTile(0, tileX, tileZ);
+        for (int span = 0; span < getSpanCount(); span++)
+            for (int tileZ = 0; tileZ < getTilesAcrossZ(0); tileZ++)
+                for (int tileX = 0; tileX < getTilesAcrossX(0); tileX++)
+                    acquireTile(0, getFaceOriginTile(span, 0) + tileX, tileZ);
     }
 
     private MapTileInstance acquireTile(int level, int tileX, int tileZ) {
@@ -476,7 +707,7 @@ public class MapManager extends ManagerPackage {
         int budget = EngineSetting.MAP_CHUNKS_PER_FRAME;
 
         for (int i = 0; i < shownFinestTiles.size() && budget > 0; i++)
-            budget = mapChunkBranch.refreshTile(shownFinestTiles.get(i), budget);
+            budget = mapChunkBranch.refreshTile(shownFinestTiles.get(i), worldHandle, budget);
 
         shownFinestTiles.clear();
     }

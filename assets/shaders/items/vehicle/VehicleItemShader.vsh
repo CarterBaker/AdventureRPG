@@ -4,6 +4,7 @@ layout(location = 1) in float aNorIndex;
 layout(location = 2) in float aTile;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 
 // Carries the vehicle's model grid, or one moving part of it, into the world.
 uniform mat4 u_model;
@@ -20,5 +21,5 @@ void main() {
     vModelPosition = aPos;
     vViewPosition  = (u_view * worldPosition).xyz;
     vFace          = int(aNorIndex);
-    gl_Position    = u_viewProjection * worldPosition;
+    gl_Position    = u_viewProjection * vec4(curveToHorizon(worldPosition.xyz), worldPosition.w);
 }

@@ -7,6 +7,7 @@ layout (location = 4) in vec4  aEdgeLow;
 layout (location = 5) in vec4  aEdgeHigh;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "trees/includes/TreeLeaf.glsl"
 
 // Carries the falling piece, in blocks from the centre of its tree's root, into the world.
@@ -38,5 +39,5 @@ void main() {
     vTile      = int(aTile + 0.5);
     vColor     = unpackTreeColor(aColor);
 
-    gl_Position = u_viewProjection * vec4(vWorldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(curveToHorizon(vWorldPos), 1.0);
 }

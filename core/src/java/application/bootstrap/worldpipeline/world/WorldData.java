@@ -4,6 +4,7 @@ import java.io.File;
 
 import engine.assets.image.Pixmap;
 import engine.root.DataPackage;
+import engine.util.mathematics.matrices.Matrix3Double;
 import engine.util.mathematics.vectors.Vector2Int;
 import engine.util.mathematics.vectors.Vector3;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -25,7 +26,11 @@ public class WorldData extends DataPackage {
      * loaded, and naturalSettlements whether settlements also grow on their
      * own wherever its biomes allow. warpedBorders lets the borders between
      * its biomes wander off the map's pixel edges, as a real world's do; a
-     * world without it keeps every border straight along those edges.
+     * world without it keeps every border straight along those edges. The
+     * shape says how its ground joins up, as a wrapping torus or a globe; a
+     * globe's cube rotation, in degrees about X, Y and Z, turns its block
+     * grid's cube inside the globe its images paint, held also as the matrix
+     * taking a direction on the cube into the globe's own frame.
      */
 
     // Identity
@@ -34,6 +39,11 @@ public class WorldData extends DataPackage {
     private final File worldFile;
     private final Pixmap world;
     private final Vector2Int worldScale;
+
+    // Shape
+    private final WorldShape shape;
+    private final Vector3 cubeRotation;
+    private final Matrix3Double globeFromCube;
 
     // Height
     private final File heightFile;
@@ -78,6 +88,9 @@ public class WorldData extends DataPackage {
             File worldFile,
             Pixmap world,
             Vector2Int worldScale,
+            WorldShape shape,
+            Vector3 cubeRotation,
+            Matrix3Double globeFromCube,
             File heightFile,
             Pixmap heightLayer,
             float gravityMultiplier,
@@ -98,6 +111,11 @@ public class WorldData extends DataPackage {
         this.worldFile = worldFile;
         this.world = world;
         this.worldScale = worldScale;
+
+        // Shape
+        this.shape = shape;
+        this.cubeRotation = cubeRotation;
+        this.globeFromCube = globeFromCube;
 
         // Height
         this.heightFile = heightFile;
@@ -151,6 +169,18 @@ public class WorldData extends DataPackage {
 
     public Vector2Int getWorldScale() {
         return worldScale;
+    }
+
+    public WorldShape getShape() {
+        return shape;
+    }
+
+    public Vector3 getCubeRotation() {
+        return cubeRotation;
+    }
+
+    public Matrix3Double getGlobeFromCube() {
+        return globeFromCube;
     }
 
     public File getHeightFile() {

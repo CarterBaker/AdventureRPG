@@ -16,7 +16,10 @@ import application.bootstrap.worldpipeline.gridslot.GridSlotHandle;
 import application.bootstrap.worldpipeline.macrochunk.MacroChunkInstance;
 import application.bootstrap.worldpipeline.macrochunk.MacroWaterInstance;
 import application.bootstrap.worldpipeline.megachunk.MegaChunkInstance;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
 import application.bootstrap.worldpipeline.util.WorldWrapUtility;
+import application.bootstrap.worldpipeline.world.GlobeChartStruct;
+import application.bootstrap.worldpipeline.world.GlobeFrameStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import application.bootstrap.worldpipeline.worldrendermanager.RenderType;
 import application.kernel.windowpipeline.window.WindowInstance;
@@ -46,7 +49,12 @@ public class GridInstance extends InstancePackage {
      * restarts the slot scan from the nearest slot. The grid follows a
      * GridRangeStruct and keeps a copy of the range it was last laid for,
      * which everything measuring the grid's reach reads, along with its own
-     * render settings UBO carrying that reach to the shaders.
+     * render settings UBO carrying that reach to the shaders. On a globe the
+     * grid's chunk coordinates are cells of its own flat chart of the cube,
+     * re-anchored at the active chunk each time it changes, and every chunk
+     * resolves its frame, the face cell it stands on and the turns into that
+     * face's axes, through the chart; a torus grid's coordinates are the
+     * world's own.
      */
 
     // Focal
@@ -75,6 +83,13 @@ public class GridInstance extends InstancePackage {
 
     // Active State
     private long activeChunkCoordinate;
+
+    // Globe Chart — the chart the grid's coordinates are cells of, the active chunk's frame in it, a restart asked
+    // for by a placement at a canonical position, and whether loaded frames need checking after a restart
+    private GlobeChartStruct globeChart;
+    private GlobeFrameStruct activeFrame;
+    private boolean chartRestart;
+    private boolean framesStale;
 
     // Location Time
     private ClockInstance clockInstance;
@@ -198,6 +213,10 @@ public class GridInstance extends InstancePackage {
 
         // Active State
         this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
+
+        // Globe Chart
+        this.globeChart = new GlobeChartStruct();
+        this.activeFrame = new GlobeFrameStruct();
 
         // Location Time
         this.clockInstance = clockInstance;
@@ -414,12 +433,92 @@ public class GridInstance extends InstancePackage {
             return false;
 
         activeChunkCoordinate = entityChunkCoordinate;
+        anchorChart();
         rebuildRenderQueue();
         return true;
     }
 
     public long getActiveChunkCoordinate() {
         return activeChunkCoordinate;
+    }
+
+    // Globe Chart \\
+
+    // The chart's first anchor is the focal entity's own coordinate, which a fresh grid holds on the face it stands
+    // on; every later anchor keeps the place and turns the chart already gave the new active chunk
+    private void anchorChart() {
+
+        WorldHandle worldHandle = getWorldHandle();
+
+        if (!worldHandle.isGlobe()) {
+            activeFrame.set(activeChunkCoordinate, 0);
+            return;
+        }
+
+        boolean restart = chartRestart
+                || !globeChart.isAnchored()
+                || globeChart.getWorldID() != worldHandle.getWorldID();
+
+        if (restart)
+            activeFrame.set(activeChunkCoordinate, 0);
+        else
+            resolveFrame(activeChunkCoordinate, activeFrame);
+
+        globeChart.anchor(
+                worldHandle.getWorldID(),
+                activeChunkCoordinate,
+                activeFrame.getCanonicalCoordinate(),
+                activeFrame.getTurns());
+
+        chartRestart = false;
+        framesStale |= restart;
+    }
+
+    // The focal entity was just placed at a canonical position — a teleport or a restore — so the chart starts over
+    // there the next time the active chunk is read
+    public void restartChart() {
+        this.chartRestart = true;
+        this.activeChunkCoordinate = Coordinate2Long.pack(-1, -1);
+    }
+
+    // True once after a chart restart, and every move near a corner: loaded chunks' frames need checking
+    public boolean takeStaleFrames() {
+
+        boolean stale = framesStale || isChartNearCorner();
+        framesStale = false;
+
+        return stale;
+    }
+
+    // Any thread — the face cell a chunk of this grid stands on and the turns into its axes
+    public void resolveFrame(long chunkCoordinate, GlobeFrameStruct out) {
+
+        if (!getWorldHandle().isGlobe()) {
+            out.set(chunkCoordinate, 0);
+            return;
+        }
+
+        GlobeUtility.resolveChartCell(
+                GlobeUtility.getFaceChunks(getWorldHandle()),
+                globeChart,
+                chunkCoordinate,
+                out);
+    }
+
+    // True while the grid's reach takes in a cube corner, the only place a move can change a loaded chunk's frame
+    public boolean isChartNearCorner() {
+
+        if (!getWorldHandle().isGlobe())
+            return false;
+
+        return GlobeUtility.isNearCorner(
+                GlobeUtility.getFaceChunks(getWorldHandle()),
+                activeFrame.getCanonicalCoordinate(),
+                (int) Math.ceil(Math.sqrt(radiusSquared)) + 1);
+    }
+
+    public long getActiveCanonicalCoordinate() {
+        return activeFrame.getCanonicalCoordinate();
     }
 
     // Macro Ring \\

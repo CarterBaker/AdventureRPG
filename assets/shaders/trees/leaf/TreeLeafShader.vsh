@@ -8,6 +8,7 @@ layout (location = 5) in vec4  aEdgeHigh;
 layout (location = 6) in float aCover;
 
 #include "includes/CameraData.glsl"
+#include "includes/WorldCurvature.glsl"
 #include "includes/GridCoordinateData.glsl"
 #include "trees/includes/TreeLeaf.glsl"
 #include "trees/includes/TreeFar.glsl"
@@ -50,5 +51,5 @@ void main() {
     vColor     = unpackTreeColor(aColor);
     vCover     = int(aCover + 0.5);
 
-    gl_Position = u_viewProjection * vec4(vWorldPos, 1.0);
+    gl_Position = u_viewProjection * vec4(curveToHorizon(vWorldPos), 1.0);
 }

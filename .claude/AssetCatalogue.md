@@ -714,6 +714,22 @@ One line per session that changed this file: the date, what was added or removed
   `shaders/postprocessing/lighting/LightingShader.fsh`, `shaders/includes/GBufferSurface.glsl`,
   `shaders/includes/SettingsData.glsl` and `ubos/SettingsData.arpg` (the Distant Paint and Distant Blocks settings
   removed).
+- 2026-11-27: Globe worlds, stage 1. Rewrote `schemas/Worlds.arpg` with the `shape` enum (torus or globe, default
+  torus) and `cube_rotation` (degrees about X, Y and Z turning a globe's block grid cube inside its globe).
+- 2026-11-27: Globe worlds, horizon. Added `ubos/WorldShapeData.arpg`, `shaders/includes/WorldShapeData.glsl` and
+  `shaders/includes/WorldCurvature.glsl` (a globe's ground falls away from the camera to a true horizon); regenerated
+  `surface/standard/StandardSurfaceShader.tes`, `surface/macro/MacroTerrainShader.vsh`, `liquid/WaterShader.tes`,
+  `liquid/MacroWaterShader.vsh`, every tree vertex shader, `characters/standard/StandardcharacterShader.vsh` and every
+  item vertex shader to draw through it.
+- 2026-11-28: Globe worlds, World Editor. Added `shaders/editor/worldeditor/WorldEditorGlobeShader.fsh` and `.arpg` and
+  `materials/editor/WorldEditorGlobeMaterial.arpg` (a globe world's image shown and painted on its globe, with the
+  block grid's cube inside it).
+- 2026-11-28: Globe worlds, TerraArcana. Rewrote `worlds/TerraArcana.arpg` as a globe (`shape: globe`,
+  `cube_rotation` [5, 30, -45], every cube corner in open sea) and regenerated `materials/editor/WorldEditorGlobeMaterial.arpg`
+  (the inner cube fades as the camera nears the ground). `TerraArcana.png` and `TerraArcana_Height.png` were converted
+  from the owner's map to cube faces and stay the owner's, uncatalogued.
+- 2026-11-28: Globe worlds, World Map. Added `shaders/editor/worldmap/WorldMapGlobeTileShader.fsh` and `.arpg` and
+  `materials/editor/WorldMapGlobeTileMaterial.arpg` (a globe world's map tiles drawn on its globe).
 
 ## Textures and Sprites (2603 files)
 
@@ -1854,7 +1870,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 - `TerraArcana`: (no suffix), Height
 
-## Shaders (204 files)
+## Shaders (208 files)
 
 ### `assets/shaders/characters/includes/`
 
@@ -1921,11 +1937,11 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 
 ### `assets/shaders/editor/worldeditor/`
 
-`WorldEditorBrushShader.fsh`, `WorldEditorHeightShader.fsh`
+`WorldEditorBrushShader.fsh`, `WorldEditorGlobeShader.fsh`, `WorldEditorHeightShader.fsh`
 
 ### `assets/shaders/editor/worldmap/`
 
-`WorldMapMarkerShader.fsh`, `WorldMapMarkerShader.vsh`, `WorldMapTileShader.fsh`, `WorldMapTileShader.vsh`
+`WorldMapGlobeTileShader.fsh`, `WorldMapMarkerShader.fsh`, `WorldMapMarkerShader.vsh`, `WorldMapTileShader.fsh`, `WorldMapTileShader.vsh`
 
 ### `assets/shaders/fonts/standard/`
 
@@ -1939,7 +1955,7 @@ is `AbyssalOoze_a.png` through `AbyssalOoze_spec.png`). `(no suffix)` is the bar
 `MoonLightData.glsl`, `NaturalNoiseData.glsl`, `NoiseUtility.glsl`, `OceanData.glsl`, `OrthoData.glsl`,
 `PlayerPositionData.glsl`, `PostProcessData.glsl`, `PrecipitationData.glsl`, `QuadRecord.glsl`, `SettingsData.glsl`,
 `SkyColorData.glsl`, `SliceData.glsl`, `SunLightData.glsl`, `TileTextures.glsl`, `TimeData.glsl`, `WeatherMapData.glsl`,
-`WeatherMapUtility.glsl`, `WindData.glsl`
+`WeatherMapUtility.glsl`, `WindData.glsl`, `WorldCurvature.glsl`, `WorldShapeData.glsl`
 
 ### `assets/shaders/items/equipment/`
 
@@ -2220,7 +2236,7 @@ Every sound is Ogg Vorbis. Sounds imported from `.claude/catalogue/` are the own
 `Rain.ogg`, `RainHeavy.ogg`, `Thunder_A.ogg`, `Thunder_B.ogg`, `Thunder_C.ogg`, `ThunderFar_A.ogg`, `ThunderFar_B.ogg`,
 `ThunderFar_C.ogg`, `Wind.ogg`, `WindStrong.ogg`
 
-## Data Files (3873 files)
+## Data Files (3878 files)
 
 Sealed `.arpg` content: definitions, meshes, animations, menus, schemas and the companions beside PNGs.
 
@@ -3012,8 +3028,8 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `TreeImpostorBakeBarkMaterial.arpg`, `TreeImpostorBakeLeafMaterial.arpg`, `TreeViewerBarkMaterial.arpg`,
 `TreeViewerImpostorMaterial.arpg`, `TreeViewerLeafMaterial.arpg`, `UVEditorBackgroundMaterial.arpg`,
 `UVEditorOverlayMaterial.arpg`,
-`WorldEditorBrushMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
-`WorldEditorImageMaterial.arpg`, `WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
+`WorldEditorBrushMaterial.arpg`, `WorldEditorGlobeMaterial.arpg`, `WorldEditorHeightMaterial.arpg`,
+`WorldEditorImageMaterial.arpg`, `WorldMapGlobeTileMaterial.arpg`, `WorldMapMarkerMaterial.arpg`, `WorldMapTileMaterial.arpg`
 
 ### `assets/materials/fonts/`
 
@@ -3353,11 +3369,11 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 
 ### `assets/shaders/editor/worldeditor/`
 
-`WorldEditorBrushShader.arpg`, `WorldEditorHeightShader.arpg`
+`WorldEditorBrushShader.arpg`, `WorldEditorGlobeShader.arpg`, `WorldEditorHeightShader.arpg`
 
 ### `assets/shaders/editor/worldmap/`
 
-`WorldMapMarkerShader.arpg`, `WorldMapTileShader.arpg`
+`WorldMapGlobeTileShader.arpg`, `WorldMapMarkerShader.arpg`, `WorldMapTileShader.arpg`
 
 ### `assets/shaders/fonts/standard/`
 
@@ -3860,7 +3876,7 @@ images replace a tile's and it is baked again, its baked files are the owner's t
 `GridCoordinateData.arpg`, `ItemRotationData.arpg`, `MacroCoverageData.arpg`, `MoonLightData.arpg`,
 `NaturalNoiseData.arpg`, `OceanData.arpg`, `OrthoData.arpg`, `PlayerPositionData.arpg`, `PostProcessData.arpg`,
 `PrecipitationData.arpg`, `SettingsData.arpg`, `SkyColorData.arpg`, `SliceData.arpg`, `SSAOData.arpg`,
-`SunLightData.arpg`, `TimeData.arpg`, `WeatherMapData.arpg`, `WindData.arpg`
+`SunLightData.arpg`, `TimeData.arpg`, `WeatherMapData.arpg`, `WindData.arpg`, `WorldShapeData.arpg`
 
 ### `assets/vehicles/`
 

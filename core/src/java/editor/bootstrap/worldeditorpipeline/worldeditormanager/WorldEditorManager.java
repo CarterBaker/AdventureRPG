@@ -29,6 +29,8 @@ import editor.runtime.EditorSetting;
 import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.matrices.Matrix3Double;
+import engine.util.mathematics.vectors.Vector3Double;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -84,6 +86,7 @@ public class WorldEditorManager extends ManagerPackage {
     private WorldHeightBranch worldHeightBranch;
     private WorldPlacementBranch worldPlacementBranch;
     private WorldSelectionBranch worldSelectionBranch;
+    private WorldCubeBranch worldCubeBranch;
 
     // World
     private WorldHandle worldHandle;
@@ -125,6 +128,7 @@ public class WorldEditorManager extends ManagerPackage {
         create(WorldTreeBranch.class);
         this.worldPlacementBranch = create(WorldPlacementBranch.class);
         this.worldSelectionBranch = create(WorldSelectionBranch.class);
+        this.worldCubeBranch = create(WorldCubeBranch.class);
 
         // Palette
         this.palette = new ObjectArrayList<>();
@@ -214,7 +218,8 @@ public class WorldEditorManager extends ManagerPackage {
         notifyChanged();
     }
 
-    // A layer opened on the world's own pixels, every region edited on it restreamed
+    // A layer opened on the world's own pixels, every region edited on it restreamed; a globe's layers are cube map
+    // faces side by side, each as tall as the image, so every edit runs across their seams
     private ImageDocumentInstance openLayerImage(
             WorldHandle layerWorldHandle,
             String imageName,
@@ -225,7 +230,12 @@ public class WorldEditorManager extends ManagerPackage {
             imageManager.addEditListener(imageName, region -> restreamPixels(
                     layerWorldHandle, region.getMinX(), region.getMinY(), region.getMaxX(), region.getMaxY()));
 
-        return imageManager.openImage(imageName, file, pixmap, true);
+        ImageDocumentInstance document = imageManager.openImage(imageName, file, pixmap, true);
+
+        if (layerWorldHandle.isGlobe())
+            document.setCubeFaces(pixmap.getHeight());
+
+        return document;
     }
 
     // Every map tile and preview chunk a change to these world pixels can reach, regenerated, and the world drained
@@ -549,8 +559,12 @@ public class WorldEditorManager extends ManagerPackage {
     }
 
     // The block column under an image position, in image pixels with fractions kept
-    public long toBlock(double imagePosition) {
-        return worldPlacementBranch.toBlock(imagePosition);
+    public long toBlockX(double imageX, double imageY) {
+        return worldPlacementBranch.toBlockX(getWorldHandle(), imageX, imageY);
+    }
+
+    public long toBlockZ(double imageX, double imageY) {
+        return worldPlacementBranch.toBlockZ(getWorldHandle(), imageX, imageY);
     }
 
     // The world image pixel a placement stands in
@@ -588,7 +602,7 @@ public class WorldEditorManager extends ManagerPackage {
     }
 
     public void moveSelection(double deltaImageX, double deltaImageY) {
-        worldSelectionBranch.move(getWorldHandle(), toBlock(deltaImageX), toBlock(deltaImageY));
+        worldSelectionBranch.move(getWorldHandle(), deltaImageX, deltaImageY);
     }
 
     // Everything selected taken away, only while placing
@@ -603,14 +617,53 @@ public class WorldEditorManager extends ManagerPackage {
 
     // History \\
 
+    // The cube layer steps through its turns, every other layer through its image's strokes
     public void undo(WorldEditorLayer layer) {
-        if (!imageManager.undo(getImage(layer)))
+
+        boolean undone = layer.isCube()
+                ? worldCubeBranch.undo(getWorldHandle())
+                : imageManager.undo(getImage(layer));
+
+        if (!undone)
             setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_TO_UNDO);
     }
 
     public void redo(WorldEditorLayer layer) {
-        if (!imageManager.redo(getImage(layer)))
+
+        boolean redone = layer.isCube()
+                ? worldCubeBranch.redo(getWorldHandle())
+                : imageManager.redo(getImage(layer));
+
+        if (!redone)
             setStatusMessage(EditorSetting.WORLD_EDITOR_MESSAGE_NOTHING_TO_REDO);
+    }
+
+    // Cube \\
+
+    // The world's entry picked, so the cube's turn is the Properties tab's to type
+    public void selectCube() {
+        worldCubeBranch.select(getWorldHandle());
+    }
+
+    public void beginCubeTurn(Vector3Double direction) {
+        worldCubeBranch.beginTurn(getWorldHandle(), direction);
+    }
+
+    public void dragCubeTurn(Vector3Double direction) {
+        worldCubeBranch.dragTurn(direction);
+    }
+
+    public void endCubeTurn() {
+        worldCubeBranch.endTurn(getWorldHandle());
+    }
+
+    // The cube as the view shows it, turning under a drag while one lasts
+    public Matrix3Double getShownFromCube() {
+        return worldCubeBranch.getShownFromCube(getWorldHandle());
+    }
+
+    public boolean isCubeTurning() {
+        return worldCubeBranch.isTurning();
     }
 
     // Disk \\

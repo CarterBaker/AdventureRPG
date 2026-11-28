@@ -51,6 +51,20 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   tab, which lists the biomes the world itself names in its `biomes` field (edited with the world in the Worlds tab)
   while the Biomes layer is picked, the chosen biome selected in the Hierarchy as the palette is shown, so its fields
   are the Properties tab's. The Biome Planner only plans.
+  A globe world (`shape: globe`) is shown on its globe instead (`WorldEditorViewSystem` as the shared view camera's
+  subject, framed from its surface so the wheel closes on the ground down to a single pixel), drawn by one ray-cast
+  pass (`editor/worldeditor/WorldEditorGlobeShader`); its images are cube map faces side by side
+  (`ImageDocumentInstance.setCubeFaces`), so every brush, fill and stroke runs across their seams and over the poles
+  as one (`ImageEditBranch`). Its Cube layer, over the others and listed only on a globe, shows the block grid's cube
+  inside the globe with its edges and corners traced on the surface: Select picks the world's entry, Rotate turns the
+  cube as a trackball, written to `cube_rotation` once let go (`WorldCubeBranch`, its own Undo and Redo), and the
+  entry's change turns the world and restreams it, typed in the Properties tab or turned by hand alike. Blocks and
+  image positions meet only through `WorldImagePointStruct`.
+- **World Map.** Shows the active world from above, its tiles generated on the fly (`MapManager`). A globe world is
+  shown on its globe, orbited and zoomed by the shared view camera: the tile pyramid stands on the block cube's faces,
+  refined per tile by how large it shows and culled at the horizon (`MapManager.resolveGlobeView`), each tile drawn as
+  a ray-cast quad kept to its square of its face (`editor/worldmap/WorldMapGlobeTileShader`). Every globe view, the
+  World Editor's and the map's, casts its rays and projects through one `GlobeViewStruct`.
 - **Content.** Entities and races, like all content, are picked in the Hierarchy and edited in the Properties tab.
 - **Tree Planner and Tree Viewer.** Trees are built in the Tree Planner, the generator a species grows by drawn as a
   graph of nodes (Tree, Trunk, Limbs, Twigs, Leaves, Wood, Growth), and seen in the Tree Viewer. While either is worked
@@ -230,7 +244,7 @@ any editor window, panel, tool, brush or value row. `.claude/CLAUDE.md` still ap
   keys are stable names (an enum's name, `region/mode`, a layer document's name), never IDs. The window keeps the layer
   picked itself and every system reads it there; a layer picked hands its tool canvas, Properties rows and File and Edit
   table to the shared tabs through the window's own providers, which answer for the layer picked.
-- **So far:** the World Editor (Heights over Biomes, each with an eye), the character Mesh, Topology, Sculpt, Weights,
+- **So far:** the World Editor (Heights over Biomes, and on a globe the Cube over both, each with an eye), the character Mesh, Topology, Sculpt, Weights,
   Rig and UV tabs (the Body and every region within it, one region picked for all of them; every region but the Body
   has an eye hiding its vertices on the part edited, `CharacterEditorManager.toggleRegionShown`), the character
   Paint tab (the paint layers of the map painted, each above the base with an eye), the Image Editor (every layer of

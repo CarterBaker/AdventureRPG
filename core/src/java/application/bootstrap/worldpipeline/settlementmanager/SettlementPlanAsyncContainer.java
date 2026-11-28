@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.settlementmanager;
 
 import application.bootstrap.worldpipeline.road.RoadPathStruct;
 import application.bootstrap.worldpipeline.road.RoadQueryStruct;
+import application.bootstrap.worldpipeline.util.FrameTransformStruct;
 import engine.root.AsyncContainerPackage;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -42,6 +43,10 @@ public class SettlementPlanAsyncContainer extends AsyncContainerPackage {
     FloatArrayList gateStarts;
     FloatArrayList gateEnds;
 
+    // Frames — a linked settlement's frame carried into the one a road is drawn in, and that frame itself
+    FrameTransformStruct transform;
+    FrameTransformStruct identity;
+
     @Override
     protected void create() {
         this.pointX = new DoubleArrayList();
@@ -57,6 +62,8 @@ public class SettlementPlanAsyncContainer extends AsyncContainerPackage {
         this.exitHeadingZ = new DoubleArrayList();
         this.gateStarts = new FloatArrayList();
         this.gateEnds = new FloatArrayList();
+        this.transform = new FrameTransformStruct();
+        this.identity = new FrameTransformStruct();
     }
 
     @Override

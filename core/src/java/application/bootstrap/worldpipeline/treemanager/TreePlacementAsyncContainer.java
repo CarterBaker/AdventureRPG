@@ -2,6 +2,7 @@ package application.bootstrap.worldpipeline.treemanager;
 
 import application.bootstrap.worldpipeline.tree.TreeInstance;
 import application.bootstrap.worldpipeline.tree.TreeSiteStruct;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.root.AsyncContainerPackage;
 import engine.root.EngineSetting;
@@ -17,7 +18,8 @@ public class TreePlacementAsyncContainer extends AsyncContainerPackage {
      * through, and the ground under recent anchors. Neighbouring chunks share
      * most of their anchors and generate on the same threads, so the ground
      * cache spares most terrain probes; it is emptied whenever it grows past
-     * its bound.
+     * its bound. The chunk is homed where its frame lays it, and the ground is
+     * kept by the canonical column it was probed at.
      */
 
     // Chunk
@@ -25,6 +27,7 @@ public class TreePlacementAsyncContainer extends AsyncContainerPackage {
     long chunkOriginX;
     long chunkOriginZ;
     double currentDay;
+    SurfacePointStruct home;
 
     // Sites
     ObjectArrayList<TreeSiteStruct> sites;
@@ -38,6 +41,9 @@ public class TreePlacementAsyncContainer extends AsyncContainerPackage {
 
     @Override
     protected void create() {
+
+        // Chunk
+        this.home = new SurfacePointStruct();
 
         // Sites
         this.sites = new ObjectArrayList<>();

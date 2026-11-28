@@ -9,6 +9,9 @@ import application.bootstrap.worldpipeline.biome.BiomeHandle;
 import application.bootstrap.worldpipeline.biome.ProbableBiomeStruct;
 import application.bootstrap.worldpipeline.biome.ProbablePatchStruct;
 import application.bootstrap.worldpipeline.util.BiomeFieldUtility;
+import application.bootstrap.worldpipeline.util.GlobeUtility;
+import application.bootstrap.worldpipeline.util.SurfacePointStruct;
+import application.bootstrap.worldpipeline.world.GlobeTexelStruct;
 import application.bootstrap.worldpipeline.world.WorldHandle;
 import engine.assets.image.Pixmap;
 import engine.root.EngineSetting;
@@ -16,6 +19,7 @@ import engine.root.ManagerPackage;
 import engine.root.UtilityPackage.InternalException;
 import engine.util.arpg.ArpgObjectStruct;
 import engine.util.mathematics.extras.Coordinate2Long;
+import engine.util.mathematics.vectors.Vector3Double;
 import engine.util.registry.RegistryUtility;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -259,18 +263,51 @@ public class BiomeManager extends ManagerPackage {
 
     // Biome Field \\
 
+    // Any thread — the field at a position in the world's own coordinates, a globe's face packed into x
     public void sampleBiomeField(WorldHandle worldHandle, double worldX, double worldZ, BiomeBlendStruct outBlend) {
+
+        BiomeFieldAsyncContainer scratch = fieldContainer.getInstance();
+        SurfacePointStruct point = scratch.canonicalPoint;
+
+        point.setCanonicalHome(worldHandle, worldX, worldZ);
+        sampleBiomeField(point.resolve(worldX, worldZ), outBlend);
+    }
+
+    // Any thread — the field at a surface point: the map read around it, its borders warped, then every probable
+    // biome's chain walked at the unwarped place
+    public void sampleBiomeField(SurfacePointStruct point, BiomeBlendStruct outBlend) {
 
         outBlend.reset();
 
         BiomeFieldAsyncContainer scratch = fieldContainer.getInstance();
-
+        WorldHandle worldHandle = point.getWorldHandle();
         Pixmap map = worldHandle.getWorld();
         long seed = worldHandle.getSeed();
 
+        if (point.isGlobe())
+            sampleGlobeMap(scratch, point, map, seed);
+        else
+            sampleTorusMap(scratch, point, map, seed);
+
+        int mapBiomeCount = collectMapBiomes(scratch, map);
+
+        scratch.probableSeed = seed ^ EngineSetting.BIOME_PROBABLE_SEED;
+
+        for (int i = 0; i < mapBiomeCount; i++) {
+            resolveChainLink(scratch, 0).resetRoot(scratch.mapBiomes[i]);
+            accumulateChain(scratch, scratch.mapBiomes[i], scratch.mapBiomeWeights[i], 0, outBlend);
+        }
+
+        outBlend.normalize();
+        resolveShoreBuffers(outBlend);
+    }
+
+    private void sampleTorusMap(BiomeFieldAsyncContainer scratch, SurfacePointStruct point, Pixmap map, long seed) {
+
+        WorldHandle worldHandle = point.getWorldHandle();
         double blocksPerPixel = EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE;
-        double pixelX = worldX / blocksPerPixel;
-        double pixelZ = worldZ / blocksPerPixel;
+        double pixelX = point.getX() / blocksPerPixel;
+        double pixelZ = point.getZ() / blocksPerPixel;
 
         double borderPixelX = pixelX;
         double borderPixelZ = pixelZ;
@@ -289,21 +326,36 @@ public class BiomeManager extends ManagerPackage {
                 borderPixelX, borderPixelZ, map.getWidth(), map.getHeight(),
                 scratch.mapPixelX, scratch.mapPixelZ, scratch.mapWeights);
 
-        int mapBiomeCount = collectMapBiomes(scratch, map);
+        scratch.lattice.setTorusQuery(
+                point.getX(), point.getZ(), worldHandle.getWorldScale().x, worldHandle.getWorldScale().y);
+    }
 
-        scratch.probableSeed = seed ^ EngineSetting.BIOME_PROBABLE_SEED;
-        scratch.probablePixelX = pixelX;
-        scratch.probablePixelZ = pixelZ;
-        scratch.mapWidth = map.getWidth();
-        scratch.mapHeight = map.getHeight();
+    private void sampleGlobeMap(BiomeFieldAsyncContainer scratch, SurfacePointStruct point, Pixmap map, long seed) {
 
-        for (int i = 0; i < mapBiomeCount; i++) {
-            resolveChainLink(scratch, 0).resetRoot(scratch.mapBiomes[i]);
-            accumulateChain(scratch, scratch.mapBiomes[i], scratch.mapBiomeWeights[i], 0, outBlend);
+        WorldHandle worldHandle = point.getWorldHandle();
+        int faceTexels = map.getHeight();
+        GlobeTexelStruct texel = point.getTexel();
+
+        if (worldHandle.hasWarpedBorders()) {
+
+            Vector3Double warped = scratch.warpedDirection;
+
+            BiomeFieldUtility.warpGlobeDirection(
+                    seed ^ EngineSetting.BIOME_BORDER_WARP_SEED,
+                    point.getDirection(),
+                    GlobeUtility.getRadiusBlocks(worldHandle)
+                            / (EngineSetting.CHUNKS_PER_PIXEL * (double) EngineSetting.CHUNK_SIZE),
+                    warped);
+            GlobeUtility.locateTexel(warped.x, warped.y, warped.z, faceTexels, scratch.warpedTexel);
+            texel = scratch.warpedTexel;
         }
 
-        outBlend.normalize();
-        resolveShoreBuffers(outBlend);
+        BiomeFieldUtility.computeGlobeMapSamples(
+                texel, faceTexels, point.getTexelScratch(),
+                scratch.mapPixelX, scratch.mapPixelZ, scratch.mapWeights);
+
+        scratch.lattice.setGlobeQuery(
+                GlobeUtility.getFaceBlocks(worldHandle), point.getFace(), point.getFaceU(), point.getFaceV());
     }
 
     // Merges map samples that resolve to the same biome, so each chain is walked once per position
@@ -408,10 +460,7 @@ public class BiomeManager extends ManagerPackage {
             ProbablePatchStruct outPatch) {
 
         BiomeFieldUtility.computeScatterCoverage(
-                scratch.probableSeed, probableBiome,
-                scratch.probablePixelX, scratch.probablePixelZ,
-                scratch.mapWidth, scratch.mapHeight,
-                exclusive, outPatch);
+                scratch.probableSeed, probableBiome, scratch.lattice, exclusive, outPatch);
     }
 
     // The link at a depth, grown once the first time a chain reaches that deep

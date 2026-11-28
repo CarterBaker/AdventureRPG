@@ -461,6 +461,7 @@ public class PlayerManager extends ManagerPackage {
                 blockZ);
         worldPositionStruct.setChunkCoordinate(
                 WorldWrapUtility.wrapAroundWorld(player.getWorldHandle(), chunkCoordinate));
+        worldStreamManager.restartChartFor(player);
         state.getGravityVelocity().set(0f);
         state.getHorizontalVelocity().set(0f);
 

@@ -23,7 +23,9 @@ public class TideManager extends ManagerPackage {
      * covers wherever the live surface is about to be on the way up and
      * still covers it on the way down, and no chunk is ever caught short of
      * the water drawn over it. World-streaming threads read the levels
-     * without a lock.
+     * without a lock. A run that must reproduce exactly, the benchmark, holds
+     * the sea still at its mean level, so the water it generates never
+     * depends on the hour it ran.
      */
 
     // Internal
@@ -33,6 +35,7 @@ public class TideManager extends ManagerPackage {
     private float tideOffsetBlocks;
     private float surfaceHeightBlocks;
     private volatile int surfaceLevels;
+    private boolean held;
 
     // Scratch
     private final Vector3 bodyDirection = new Vector3();
@@ -43,9 +46,7 @@ public class TideManager extends ManagerPackage {
     protected void create() {
 
         // Tide
-        this.tideOffsetBlocks = 0f;
-        this.surfaceHeightBlocks = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + 1f;
-        this.surfaceLevels = TideUtility.toVoxelSurfaceLevels(surfaceHeightBlocks);
+        settleAtMean();
     }
 
     @Override
@@ -57,6 +58,9 @@ public class TideManager extends ManagerPackage {
 
     @Override
     protected void update() {
+
+        if (held)
+            return;
 
         ClockHandle clockHandle = clockManager.getClockHandle();
         double timeOfDay = clockHandle.getRawTimeOfDay();
@@ -76,6 +80,20 @@ public class TideManager extends ManagerPackage {
                 * Math.max(-1.0, Math.min(1.0, lunarPull + solarPull)));
         surfaceHeightBlocks = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + 1f + tideOffsetBlocks;
         surfaceLevels = TideUtility.toVoxelSurfaceLevels(surfaceHeightBlocks);
+    }
+
+    // Hold \\
+
+    // The sea held still at its mean level from now on
+    public void holdStill() {
+        this.held = true;
+        settleAtMean();
+    }
+
+    private void settleAtMean() {
+        this.tideOffsetBlocks = 0f;
+        this.surfaceHeightBlocks = EngineSetting.TERRAIN_SEA_LEVEL_BLOCKS + 1f;
+        this.surfaceLevels = TideUtility.toVoxelSurfaceLevels(surfaceHeightBlocks);
     }
 
     // Height of the two tidal bulges a body raises under a direction toward it: 1 with the body overhead or

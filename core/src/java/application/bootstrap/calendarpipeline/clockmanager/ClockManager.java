@@ -13,6 +13,7 @@ import application.bootstrap.worldpipeline.worldmanager.WorldManager;
 import application.bootstrap.worldpipeline.worldstreammanager.WorldStreamManager;
 import engine.root.EngineSetting;
 import engine.root.ManagerPackage;
+import engine.util.mathematics.vectors.Vector3Double;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -60,6 +61,9 @@ public class ClockManager extends ManagerPackage {
     private ClockHandle clockHandle;
     private ClockInstance fallbackLocationTime;
 
+    // Location — main-thread scratch for a globe place's direction
+    private Vector3Double locationDirection;
+
     // Pause
     private IntOpenHashSet pausingWindowIDs;
     private long pausedElapsedMillis;
@@ -80,6 +84,7 @@ public class ClockManager extends ManagerPackage {
         // Clock
         this.clockHandle = create(ClockHandle.class);
         this.fallbackLocationTime = createClockInstance();
+        this.locationDirection = new Vector3Double();
 
         // Pause
         this.pausingWindowIDs = new IntOpenHashSet();
@@ -156,12 +161,13 @@ public class ClockManager extends ManagerPackage {
 
             GridInstance grid = (GridInstance) elements[i];
             WorldHandle locationWorld = grid.getWorldHandle();
-            long chunkCoordinate = grid.getActiveChunkCoordinate();
+            long chunkCoordinate = grid.getActiveCanonicalCoordinate();
 
             grid.getClockInstance().update(
                     computeVisualTimeOfDay(locationWorld, chunkCoordinate),
-                    WorldWrapUtility.wrappedPlanetaryOffset(locationWorld, chunkCoordinate),
-                    WorldWrapUtility.wrappedLatitudeFactor(locationWorld, chunkCoordinate));
+                    WorldWrapUtility.wrappedPlanetaryOffset(locationWorld, chunkCoordinate, locationDirection),
+                    WorldWrapUtility.wrappedLatitudeFactor(locationWorld, chunkCoordinate, locationDirection),
+                    WorldWrapUtility.wrappedNorthHeading(locationWorld, chunkCoordinate, locationDirection));
         }
     }
 
@@ -173,8 +179,8 @@ public class ClockManager extends ManagerPackage {
             return EngineSetting.CLOCK_NOON;
 
         return currentTracker.computeVisualTimeOfDay(
-                WorldWrapUtility.wrappedPlanetaryOffset(world, chunkCoordinate),
-                WorldWrapUtility.wrappedLatitudeFactor(world, chunkCoordinate));
+                WorldWrapUtility.wrappedPlanetaryOffset(world, chunkCoordinate, locationDirection),
+                WorldWrapUtility.wrappedLatitudeFactor(world, chunkCoordinate, locationDirection));
     }
 
     // Move \\
